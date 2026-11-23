@@ -1,7 +1,7 @@
-import { sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { RecordStreamCursor } from "pstdio-sync/relay";
-import { owners } from "../../db/schemas.pg";
+import { operations, owners } from "../../db/schemas.pg";
 import { receiptRoots } from "./ordered-receipts-state";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 
@@ -10,6 +10,24 @@ export const readOrderedOwner = async (tx: Pick<OrderedTransaction, "select">, o
   if (!row) throw new Error("Ordered owner has not been initialized");
   return row;
 };
+/** Capture the owner and empty-queue proof together before queueing an authored save. */
+export const readOrderedAuthoredState = async (tx: OrderedTransaction, owner: StorageOwner) => {
+  const pending = tx
+    .select({ id: operations.operation_id })
+    .from(operations)
+    .where(and(eq(operations.owner_id, owners.id), isNotNull(operations.envelope), isNull(operations.settled_epoch)));
+  const [row] = await tx
+    .select({
+      epoch: owners.epoch,
+      joined: owners.joined,
+      pending: sql<boolean>`EXISTS (${pending})`,
+    })
+    .from(owners)
+    .where(orderedOwnerWhere(owners, owner));
+  if (!row) throw new Error("Ordered owner has not been initialized");
+  return row;
+};
+
 export const orderedCursor = (row: typeof owners.$inferSelect): RecordStreamCursor => ({
   receiptRoot: receiptRoots(row.receipt_root).published,
   receiptStateId: receiptRoots(row.receipt_root).stateId,

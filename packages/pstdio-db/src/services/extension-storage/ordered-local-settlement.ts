@@ -1,5 +1,10 @@
 import type { StorageOwner } from "pstdio-sync";
-import { applyOrderedNativeOperation, type OrderedOperation, operationDependencies } from "pstdio-sync/records";
+import {
+  applyOrderedNativeOperation,
+  type OrderedDecision,
+  type OrderedOperation,
+  operationDependencies,
+} from "pstdio-sync/records";
 import { owners } from "../../db/schemas.pg";
 import type { createOrderedCanonicalBatch } from "./ordered-canonical-batch";
 import type { OrderedJournal } from "./ordered-journal";
@@ -11,6 +16,10 @@ import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
 
 type CanonicalBatch = ReturnType<typeof createOrderedCanonicalBatch>;
+export type OrderedLocalSettlement = {
+  ownerState: Pick<typeof owners.$inferSelect, "epoch" | "joined">;
+  queued: Awaited<ReturnType<OrderedJournal["queue"]>>;
+};
 
 const settlementJournal = async (
   journal: OrderedJournal,
@@ -24,6 +33,18 @@ const settlementJournal = async (
   return journal;
 };
 
+const localDependencies = async (journal: OrderedJournal, operation: OrderedOperation) => {
+  const decisions = new Map<string, OrderedDecision>();
+  const dependencies = [];
+  for (const [operationId, identity] of operationDependencies(operation)) {
+    const decision = await journal.knownDependency(operationId);
+    if (!decision || decision.fingerprint !== identity) return;
+    decisions.set(operationId, decision);
+    dependencies.push({ operationId, fingerprint: identity, epoch: decision.epoch });
+  }
+  return { decisions, dependencies };
+};
+
 /** Never-joined devices own their order. Joining Cloud permanently ends local settlement. */
 export const settleLocalOrderedSaves = async (
   journal: OrderedJournal,
@@ -31,28 +52,23 @@ export const settleLocalOrderedSaves = async (
   owner: StorageOwner,
   selected?: Awaited<ReturnType<OrderedJournal["pending"]>>,
   canonical?: CanonicalBatch,
+  authored?: OrderedLocalSettlement,
 ) => {
-  const row = await readOrderedOwner(tx, owner);
+  const row = authored?.ownerState ?? (await readOrderedOwner(tx, owner));
   if (orderedOwnerJoinedCloud(row)) return;
   const epoch = row.epoch ?? `local:${crypto.randomUUID()}`;
   if (!row.epoch) await tx.update(owners).set({ epoch }).where(orderedOwnerWhere(owners, owner));
   const changed = new Set<string>();
   let pending = false;
-  for await (const { operation, requestFingerprint } of selected ?? pendingOrderedOperations(journal)) {
-    const decisions = new Map();
-    const dependencies = [];
-    const required = operationDependencies(operation);
-    for (const [operationId, identity] of required) {
-      const decision = await journal.knownDependency(operationId);
-      if (!decision || decision.fingerprint !== identity) continue;
-      decisions.set(operationId, decision);
-      dependencies.push({ operationId, fingerprint: identity, epoch: decision.epoch });
-    }
+  const operations = authored ? [authored.queued] : (selected ?? pendingOrderedOperations(journal));
+  for await (const { operation, requestFingerprint } of operations) {
+    const resolved = await localDependencies(journal, operation);
     // A foreign editor source can carry an unknown Cloud parent; local authority cannot decide it.
-    if (dependencies.length !== required.size) {
+    if (!resolved) {
       pending = true;
       continue;
     }
+    const { decisions, dependencies } = resolved;
     const ids = operation.edits.map((edit) => edit.recordId);
     const native = isOrderedNativeRequest(requestFingerprint);
     const writes = await settlementJournal(journal, canonical, operation, native);

@@ -1,6 +1,7 @@
 import { type StorageObserver, type StorageOwner, StorageRevisionChangedError } from "pstdio-sync";
 import {
   commitCurrentBatch,
+  coreOwnerId,
   type OrderedMoveInput,
   observeOrderedRecord,
   orderedBody,
@@ -33,7 +34,7 @@ import { compileOrderedGroup } from "./ordered-record-compiler";
 import { moveOrderedRecordsIn } from "./ordered-record-move";
 import { readOrderedSaveOutcome } from "./ordered-save-outcome";
 import type { OrderedTransaction } from "./ordered-sql";
-import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
+import { orderedOwnerJoinedCloud, readOrderedAuthoredState } from "./ordered-stream-state";
 import { writeOrderedTextAsset } from "./ordered-text-asset";
 import type { RecordDependencies } from "./record-dependencies";
 import {
@@ -62,11 +63,16 @@ const prepareCommitViews = async (
   cache: ReturnType<typeof createOrderedCommitCache>,
 ) => {
   const cached = await cache.read(tx, ids);
-  if (cached) return { ...cached, recordIds: [] as string[] };
-  const row = await readOrderedOwner(tx, owner);
-  if (!(await orderedOwnerJoinedCloud(row)) && !(await journal.pendingFor(ids, { limit: 1 })).length)
-    return { views: await journal.canonical(ids), events: [], recordIds: [] as string[] };
-  return rebaseOrderedProjection(journal, tx, owner, ids);
+  if (cached) return { ...cached, recordIds: [] as string[], local: undefined };
+  const row = await readOrderedAuthoredState(tx, owner);
+  if (!orderedOwnerJoinedCloud(row) && (!row.pending || !(await journal.pendingFor(ids, { limit: 1 })).length))
+    return {
+      views: await journal.canonical(ids),
+      events: [],
+      recordIds: [] as string[],
+      local: !row.pending && owner.extensionId !== coreOwnerId ? row : undefined,
+    };
+  return { ...(await rebaseOrderedProjection(journal, tx, owner, ids)), local: undefined };
 };
 
 const notifyNativeFileSave = (
@@ -176,7 +182,7 @@ export const createOrderedResourceRecords = (
       await deps.assets.verifyComplete(assets);
     }
     await rememberOrderedTextGeneration(tx, owner, operation, projected.length > 0);
-    await journal.queue(operation, identity);
+    const queued = await journal.queue(operation, identity);
     const saved = await publishCommittedOrderedGroup({
       journal,
       tx,
@@ -184,6 +190,8 @@ export const createOrderedResourceRecords = (
       operation,
       projected,
       before: views,
+      localOwner: prepared.local,
+      queued,
     });
     return {
       ...saved,

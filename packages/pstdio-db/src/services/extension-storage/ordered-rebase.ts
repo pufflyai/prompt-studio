@@ -8,7 +8,7 @@ import {
 } from "pstdio-sync/records";
 import { createOrderedCanonicalBatch } from "./ordered-canonical-batch";
 import type { OrderedJournal } from "./ordered-journal";
-import { settleLocalOrderedSaves } from "./ordered-local-settlement";
+import { type OrderedLocalSettlement, settleLocalOrderedSaves } from "./ordered-local-settlement";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
 import { canProjectOrderedNumbers } from "./ordered-number-canonical";
 import type { OrderedNumberRepair } from "./ordered-number-limits";
@@ -126,12 +126,13 @@ export const rebaseOrderedProjection = async (
   tx: OrderedTransaction,
   owner: StorageOwner,
   changed: string[],
+  authored?: OrderedLocalSettlement,
 ) => {
   // Number admission reads canonical SQL directly. Other owners can publish the
   // settled author group's confirmed state in the same row write as its projection.
   const canonical = owner.extensionId === coreOwnerId ? undefined : createOrderedCanonicalBatch(journal);
   const source = journal;
-  const local = await settleLocalOrderedSaves(journal, tx, owner, undefined, canonical);
+  const local = await settleLocalOrderedSaves(journal, tx, owner, undefined, canonical, authored);
   changed = [...new Set([...changed, ...(local?.changed ?? [])])];
   journal = canonical?.journal ?? journal;
   const hasPending = !canonical || (local?.pending ?? true);

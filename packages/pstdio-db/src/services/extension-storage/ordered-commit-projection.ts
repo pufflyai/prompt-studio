@@ -1,6 +1,7 @@
 import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId, type OrderedOperation, type OrderedRecord, operationDependencies } from "pstdio-sync/records";
 import type { OrderedJournal } from "./ordered-journal";
+import type { OrderedLocalSettlement } from "./ordered-local-settlement";
 import { publishOrderedProjection } from "./ordered-projection";
 import { rebaseOrderedProjection } from "./ordered-rebase";
 import { canAppendOrderedProjection } from "./ordered-return";
@@ -17,10 +18,13 @@ export const publishCommittedOrderedGroup = async (input: {
   operation: OrderedOperation;
   projected: OrderedRecord[];
   before: ReadonlyMap<string, OrderedRecord>;
+  localOwner?: OrderedLocalSettlement["ownerState"];
+  queued: OrderedLocalSettlement["queued"];
 }) => {
-  const { journal, tx, owner, operation, projected } = input;
+  const { journal, tx, owner, operation, projected, localOwner, queued } = input;
   // A base over this device's own pending saves projects optimistically like an independent save.
   if (
+    localOwner ||
     owner.extensionId === coreOwnerId ||
     operationDependencies(operation, { base: false }).size > 0 ||
     !(await canAppendOrderedProjection(tx, owner))
@@ -30,6 +34,7 @@ export const publishCommittedOrderedGroup = async (input: {
       tx,
       owner,
       operation.edits.map((edit) => edit.recordId),
+      localOwner && { ownerState: localOwner, queued },
     );
   const shared = await publishOrderedSharedProjection(input);
   return {
