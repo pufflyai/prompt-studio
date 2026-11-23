@@ -41,15 +41,15 @@ shared through `@pstdio/sdk/extensions`; native rendering stays in the host. The
 SDK-only dependency removes the UI package's rendering/editor dependency tree from
 each project install without changing message identity or stream behavior.
 
-This provider has an independent version/changelog and its own changeset. It stays outside the host fixed group. `private: true` follows bundled/PSX core-extension conventions. Keep published dependency checks enabled; supporting native chat SDK/UI packages must actually publish before the draft consumer PR can leave `waiting-for-release`. Local qualification does not establish published compatibility.
+This provider has an independent version, changelog, and changeset. It stays outside
+the host fixed group. `private: true` follows bundled/PSX core-extension conventions.
 
 Browser-local drafts use `ChatViewBody.browserDraft` and require extension API
-`^0.5.1`. Pin the supporting published SDK and pass `published_extensions` before
-release; the current SDK pin predates this option.
+`^0.5.1`.
 
 ## Current implementation checkpoint
 
-Default catalog, provider refs, production native view/list/commands, contextual workspace previews and thin legacy definitions are wired. The implementation is unfinished. Clean installed browser acceptance, complete harness/draft/stream lifetime and performance qualification, and release checks remain. The superseded dashboard chat/list implementation has been removed; retained caller tests load the production provider declarations. Existing unit checks do not establish installed parity. The browser-draft consumer stacks on prerequisite #2332.
+Default catalog, provider refs, production native view/list/commands, contextual workspace previews and thin legacy definitions are wired. The implementation is unfinished. Clean installed browser acceptance, complete harness/draft/stream lifetime and performance qualification, and release checks remain. The superseded dashboard chat/list implementation has been removed; retained caller tests load the production provider declarations. Existing unit checks do not establish installed parity.
 
 ## Quota recovery
 
