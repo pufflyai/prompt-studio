@@ -1,0 +1,94 @@
+name: Session repair review
+on:
+  push:
+    branches: [validation/local-review/pr-2387-dc37a41e2a]
+    paths: [.github/workflows/session-repair-review.yml]
+permissions:
+  contents: read
+jobs:
+  review:
+    name: Review plan (${{ matrix.lane }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: [source, browser, packaged, desktop]
+    env:
+      REVIEW_HEAD: dc37a41e2a775e856eab55a5b91ebfb6bfec6201
+      REVIEW_BASE: aaf35b1403edccc9a4909f3f87f08890d03a2c02
+      REVIEW_LANE: ${{ matrix.lane }}
+      PASSED_LOCAL_RUN_KEYS: '["643deb993729768efa133dde3ef99e4265e0c85969ed578b665f320e0ef77af7","a71d06aeb01b05cc0c6bd6cfff2d3acef0df72cfe5bdae159ce5e783f0ab58ac","87d790d2ec2ae4fd9306fe0f66ca30f62c04e733b74c4cd41e284f37033ee17d","04f51765c47399b324019dc5f5c49f81ea69ce3ec6597e3296371a64cc6f115e","d4a58860cd58c6b473dc1369cf59ed152ce91bcd6b64aa8274c454fc80f519ea","adacc1e23f5f6264f0d22b28217b59d1330e02b370fd022d30745a373fb11703","ba58d9e6009fa5f390b25d899735124c560471faea1c61aef31d55ed8f900cde","621a857e18c397cd73096fabf6c9b488fadbc6a927431787f017a08aecbb6071","4fa5448b6c3fd259b39d22f41bb11604840536ddbf179d51daf0dbc35c4619f9","02831f58cece3b8c93a0e9ca285f7a5299500b5272f7c16e6279da249a7f8f1b","ddac4ce2018eabe42dc3cc8299faaa57dc0497d26b788d6683fcc4e9f6d33c6a","208589b2621f0326a01c3b952e743933d45adbef2a80e765f0493848a575d641","236c609b153e171dcedc68b2cefd4b8b924f810c69aa8f0815e89529698535b3","036a6f364a2505752d2acb7f0302b52c6a34a382963e6b3d3baccbe7e7e536a2","7e5799826fc865e54bd0bcfce4e2c3972c7766b9084c76c4acbd441a0ca08449","38d6530365940f49f0e0fe533c7234acc0af3c452cfcb1e734eaa5cebc7bb342","1d5009495f4aac2dfabb1a298b6a7565d12e919e3feeb34e65152bc014a3f41d","30180750f472ab95933cc42fdffa1e54817b77204524c47ef5652a3bd5ac0b70","1344a81d2a4c930b5e8b77570414d865db8368380df972f3c4fe471873ef47a9","5e5331e40b63236f6ea41c9e47f2334bda2930f9fb1d6d5b0e27259787e34a44","bd5c2f1b2e6b798263de0abdaa130d6b495e580dddf83dd7f0fc0beefd990cfb","178eb09b2a7dfa50e1e6aa582b54b0c3f4c89e177b500a2b10b14e8a78ab8538","a6d6c7b98a775f11b263a1f80efa1b4f2a693790500189ea05fdce3f72b23c08","85bc74c13c0bb7128941fae52e7070d615d288fa7652d6e48484c73967f00dbb","233d8969f77dc716f279ba897d6aaba2c91b2486a9bf9fc655cb0a5ee52dd38f","c43e5f6bd53348d12cadcde16d889e08a1a326399fed987eb0f0f0e3322d6042","ef0b8675075b59549af9b0be3c0769f234d4ebdedf5bf8ca311dee3bb0ab5382","09f5ea4d555f25a16b9711f99d1c149a010cc6e9f5dcaca33368283de43346cf","13ace790847b86e6a83236409d92e4d2155679a26e70425cb360b6e28c5e1ec1","9f9949b2f70b3e4eecefa260dcaf321982ad6ff4f9728904c7963d7b0600749b","2c7df7054ab49cc4c92f8618df1360d76e30f35deaf2c8f59bd41c84bb779343","a42c13db5182cc8290ec17db03151a5c8772dbf5f3d1820399f02474dbe0c1ed","2557761110292dd700955c92e1d66b21d4dff44f33fbfcbf9ec463443e42346c","a166c4b9c4b21d50e7e9e4717f15166ac376b09236e647096729f72411b7b39e","0b5e13689abe8c6cd2537675e740af436c519cc6737a6c8e2069a89fd1bdf1e6","21105c6f02d2fcea0653e041cd134fa7e4292bdce8b249947459a94e9346bc26","cd2318eba32bdf1bc9d06d1c87db4b9071d9d759a2dac37ca95277c3dd8a0401","b53eac305e96449af8319f48d6c6fea5d41dfc33712c2bb933de2d7a8cdfee68","6e0a9844bf7f3ac8a7ca4a53b1df80f14cee0294f1c9abfde0e3c5f5ac915923","6e65815ea3aa8b61462a46b9c1dc5a247b235287723db1e1fa0e7199724985b1","40a480b9df269958b6b640c06a3b9dc61824cfcc0c439946056674505d9d6dbc","1a04f073e9dce6288a3676329787ead871a235fd7fd90da4eca584e9541a470a","1ecff3faca4c984f7738532426bd1554c7da9eeb2214cf15ef8096861b537feb","db507a26f18376eae598d792c81450dd5afd171e536cc7331864efba1a413a60","74d6efba88a85a19a8fd95306796b6414c2e25608bc503122420d336c44994ab","93d5e37403fb7ed3a5ce1ae7f5c1c0f43cac71ed57a9cb7756019de6ca160f86","6123f5337b0c05c110dac028de124f7d53f943a691876bfb15a6beedd1a8a180","c73bb51a5dfe52d557818bd698533f56943ac828e531cf59938a3a7d5c759042","2f56576b74528f996eb4393eed073c12b095722b3ebf6b0eb9ca5e6169953992","f6fbd162288358058276f052cba3fc82b8e633a39de25460de732808373cc4a8","486807c8b2c7499c5c5c9e76047ce9518f60db8e9dc7aa578a1614877c83f76e","8890ef7711671beaa5d42f02c1be695a11857537924799a9260f96c0dc61ca27","6fe4b240515558abd169521d47bfb2c5e41cee3191c5d22819206e50133ae214","6b587795f1e0c514a98185b7ad95e8bde5ace9b5e061ca0663740d529f615dbd","268b9d1edc4b06f55b8c2fd264090f1bd7a44da8b6dfbcc37d1893b11b9c804a"]'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: dc37a41e2a775e856eab55a5b91ebfb6bfec6201
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - name: Install browser prerequisites
+        run: bunx playwright@1.60.0 install --with-deps chromium firefox
+      - name: Prepare the canonical review plan
+        run: |
+          test "$(git rev-parse HEAD)" = "$REVIEW_HEAD"
+          docker info --format '{{.ServerVersion}}'
+          bun install --frozen-lockfile
+          bun scripts/ci/run-local-review.ts --base "$REVIEW_BASE" \
+            --test packages/canvas-tests/src/ui/pstdio-workbench/session-reopen.p1.spec.ts \
+            --test packages/canvas-tests/src/ui/ui/chat-tail-resize.p1.spec.ts \
+            --test packages/pstdio-api/src/features/sessions/session-queue-dispatch.p1.test.ts \
+            --list > "$RUNNER_TEMP/review.json"
+      - name: Complete the outstanding review checks
+        run: |
+          xvfb-run --auto-servernum bun -e '
+            import { createHash } from "node:crypto";
+            import { mkdtemp } from "node:fs/promises";
+            import { join } from "node:path";
+            import { tmpdir } from "node:os";
+            import { executePlan } from "./scripts/ci/run-test-plan";
+            import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+            import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+            const { testPlan: plan } = await Bun.file(join(process.env.RUNNER_TEMP, "review.json")).json();
+            const localGreen = new Set(JSON.parse(process.env.PASSED_LOCAL_RUN_KEYS));
+            const key = (run) => createHash("sha256").update(JSON.stringify([
+              run.runner, run.priority, run.owner, run.artifact, run.smoke ?? null, [...run.files].sort(),
+            ])).digest("hex");
+            const lane = (runner) => {
+              if (runner === "desktop") return "desktop";
+              if (runner.startsWith("packaged-")) return "packaged";
+              if (["app", "component"].includes(runner)) return "browser";
+              return "source";
+            };
+            const runs = plan.runs.filter((run) => lane(run.runner) === process.env.REVIEW_LANE);
+            const carried = runs.filter((run) => localGreen.has(key(run)));
+            const runIds = runs.filter((run) => !localGreen.has(key(run))).map((run) => run.id);
+            console.log(JSON.stringify({ head: plan.source, planDigest: plan.digest, carried: carried.map((run) => run.id), runIds }));
+            if (!runIds.length) {
+              if (runs.length === 0) throw new Error("The canonical plan did not contain this lane.");
+              process.exit(0);
+            }
+            const directory = await mkdtemp(join(tmpdir(), "pstdio-session-review-"));
+            try {
+              const result = await executePlan(plan, {
+                root: process.cwd(),
+                runIds,
+                env: { ...localReviewEnvironment(directory), CI_PROFILE: "production" },
+              });
+              process.exitCode = result.outcome === "success" ? 0 : 1;
+            } finally {
+              const cleanup = await cleanupReviewCompose(directory);
+              if (cleanup.some((entry) => entry.outcome !== "success")) process.exitCode = 1;
+            }
+          '
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: session-review-${{ matrix.lane }}
+          path: |
+            ${{ runner.temp }}/review.json
+            test-results/ci/planned/**/execution.json
+          if-no-files-found: warn
