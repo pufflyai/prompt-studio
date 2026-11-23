@@ -1,9 +1,11 @@
+import type { WebviewEditingSession } from "@pstdio/sdk/extensions";
+import { useEffect, useRef } from "react";
 import { BookForm } from "./book-form";
 import type { BookClient } from "./client";
 import { acceptanceConditions, chapterFields, draftChapterFor, findingFields, ruleFields, splitRefs } from "./forms";
 import { createRuleReference, ruleSchema } from "./model";
 import type { BookData } from "./read";
-import type { Draft } from "./records";
+import { changed, type Draft } from "./records";
 export type FormMode = "rule" | "finding" | "chapter";
 interface Props {
   mode: FormMode;
@@ -17,6 +19,36 @@ interface Props {
 export function AuthoringForm(props: Props) {
   const { mode, chapter, data, client, onClose, onSaved, onDraftSaved } = props;
   const draftChapter = draftChapterFor(mode, chapter);
+  const { workspaceId } = data;
+  const draft = data.drafts.find((item) => item.chapter === draftChapter);
+  const editing = useRef<Promise<WebviewEditingSession<{ draft: string }>> | undefined>(undefined);
+  useEffect(
+    () => () => {
+      const previous = editing.current;
+      editing.current = undefined;
+      void previous?.then((session) => session.close()).catch(() => {});
+    },
+    [],
+  );
+  const saveDraft = async (values: Record<string, unknown>) => {
+    if (!editing.current) {
+      const opening = client.editing.open({
+        key: JSON.stringify(["authoring-draft", workspaceId, draftChapter]),
+        initial: { draft: JSON.stringify(draft?.values ?? {}) },
+        save: {
+          commandId: `${changed.extensionId}.command.drafts.save-editing`,
+          params: { workspaceId, chapter: draftChapter },
+        },
+      });
+      editing.current = opening;
+      void opening.catch(() => {
+        if (editing.current === opening) editing.current = undefined;
+      });
+    }
+    const session = await editing.current;
+    await session.commit([{ path: ["draft"], value: JSON.stringify(values) }]);
+    onDraftSaved({ id: `${workspaceId}-${draftChapter}`, workspaceId, chapter: draftChapter, values });
+  };
   const fields = {
     rule: ruleFields(),
     finding: findingFields,
@@ -71,17 +103,10 @@ export function AuthoringForm(props: Props) {
       title={title}
       fields={fields}
       submitLabel={mode === "rule" ? "Create suggestion" : "Create"}
-      draft={data.drafts.find((item) => item.chapter === draftChapter)}
+      draft={draft}
       onSubmit={submit}
       onClose={onClose}
-      onSaveDraft={async (values) => {
-        const draft = await client.commands["drafts.save"]({
-          workspaceId: data.workspaceId,
-          chapter: draftChapter,
-          values,
-        });
-        onDraftSaved(draft);
-      }}
+      onSaveDraft={saveDraft}
       onDiscard={async () => {
         await client.commands["drafts.discard"]({ workspaceId: data.workspaceId, chapter: draftChapter });
       }}

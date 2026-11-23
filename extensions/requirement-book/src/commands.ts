@@ -1,8 +1,9 @@
 import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
+import { draftCommands } from "./draft-commands";
 import { bookCommands } from "./import";
 import { chapterSchema, emptyBook, findRule, ruleSchema } from "./model";
 import { readBook, requireBook } from "./read";
-import { announce, type Draft, deleteRecord, saveRecord } from "./records";
+import { announce } from "./records";
 import { git, readRepository, resolveWorkspace, writeRepository } from "./repository";
 import { reviewCommands } from "./review-commands";
 import { suggestionCommands } from "./suggestions";
@@ -11,6 +12,7 @@ export const commands = {
   ...suggestionCommands,
   ...bookCommands,
   ...reviewCommands,
+  ...draftCommands,
   read: defineCommand({
     id: "read",
     title: l10n("book.read", "Read the requirement book"),
@@ -91,42 +93,7 @@ export const commands = {
       };
     },
   }),
-  "drafts.save": defineCommand({
-    id: "drafts.save",
-    title: l10n("book.draft.save", "Save an authoring draft"),
-    cli: true,
-    mutating: true,
-    params: {
-      workspaceId: params.text(),
-      chapter: params.number({ required: true }),
-      values: params.json<Record<string, unknown>, { required: true }>({ required: true }),
-    },
-    async run(ctx, input) {
-      const { workspace } = await resolveWorkspace(ctx, input.workspaceId);
-      const draft: Draft = {
-        id: `${workspace.id}-${input.chapter}`,
-        workspaceId: workspace.id,
-        chapter: input.chapter,
-        values: input.values,
-      };
-      await saveRecord(ctx.storage, "draft", draft);
-      await announce(ctx, workspace.id);
-      return draft;
-    },
-  }),
-  "drafts.discard": defineCommand({
-    id: "drafts.discard",
-    title: l10n("book.draft.discard", "Discard an authoring draft"),
-    cli: true,
-    mutating: true,
-    params: { workspaceId: params.text(), chapter: params.number({ required: true }) },
-    async run(ctx, input) {
-      const { workspace } = await resolveWorkspace(ctx, input.workspaceId);
-      await deleteRecord(ctx.storage, "draft", `${workspace.id}-${input.chapter}`);
-      await announce(ctx, workspace.id);
-      return { discarded: true };
-    },
-  }),
+
   "rules.validate": defineCommand({
     id: "rules.validate",
     title: l10n("book.rule.validate", "Validate a requirement"),

@@ -45,7 +45,7 @@ export function BookForm(props: FormProps) {
     setSaving(true);
     setError("");
     try {
-      await queue.current.catch(() => {});
+      await persist(values);
       await onSubmit(values);
       await onDiscard();
       onClose();

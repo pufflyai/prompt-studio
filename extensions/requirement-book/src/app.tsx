@@ -102,7 +102,7 @@ export function BookApp(props: Props) {
       />
       {state.form && (
         <AuthoringForm
-          key={`${state.form}-${state.chapter}`}
+          key={JSON.stringify([data.workspaceId, state.form, state.chapter])}
           mode={state.form}
           chapter={state.chapter}
           data={data}
