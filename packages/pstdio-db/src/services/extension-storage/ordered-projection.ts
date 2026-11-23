@@ -11,6 +11,7 @@ import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { decodeProjectionValue } from "./record-projection-codec";
 import { writeProjectedRecords } from "./record-projection-rows";
 import { refreshResourceQueryValues } from "./resource-query-values";
+import { createRetainedPages } from "./retained-pages";
 import { removeRetainedRecords } from "./retained-records";
 
 export { orderedBody, orderedProjection } from "pstdio-sync/records";
@@ -81,6 +82,8 @@ export const publishOrderedProjection = async (
     FROM jsonb_to_recordset(${batch}::jsonb) AS input(record_id text,meta jsonb,base text,deleted boolean,value jsonb,asset jsonb,shared jsonb,native_sources jsonb)
     WHERE target.owner_id=(SELECT id FROM owners WHERE project_id=${owner.workbenchId} AND extension_id=${owner.extensionId}) AND target.record_id=input.record_id`);
   const retained = previous.filter((row) => row.retained).map((row) => row.recordId);
+  const pages = createRetainedPages(tx, owner, "tombstones");
+  for (const { recordId } of records) if (!before.has(recordId) && (await pages.has(recordId))) retained.push(recordId);
   if (retained.length) await removeRetainedRecords(tx, owner, retained);
   noteRecordPublication(
     tx,

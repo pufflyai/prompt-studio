@@ -98,10 +98,10 @@ test("a compacted native record survives a disk restart and damaged retention re
         ],
       }),
     ).rejects.toThrow("Invalid retained page");
-    expect((await open().read("sibling")).exists).toBe(false);
     await withOrderedOwner(connection.db, owner, async (_journal, tx) => {
       await saveOrderedMarker(tx, owner, rootKey, page);
     });
+    expect((await open().read("sibling")).exists).toBe(false);
     await open().commit({ operationId: "restore-native", edits: [{ recordId: "card", deleted: false }] });
     expect((await open().read("card")).value).toEqual({ description: "edited native 日本語" });
   } finally {

@@ -4,7 +4,7 @@ import type { OrderedRecord } from "pstdio-sync/records";
 import { records } from "../../db/schemas.pg";
 import { confirmedRecordBase, stableRecordColumns } from "./ordered-record-row";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
-import { readCanonicalRecord } from "./retained-records";
+import { readCanonicalRecord, readRetainedRecord } from "./retained-records";
 
 const dirty = new WeakMap<object, Map<string, Set<string>>>();
 /** Savepoint bookkeeping follows SQL release/rollback together with the staged bodies. */
@@ -107,7 +107,12 @@ export const orderedProjectionFacets = async (tx: OrderedTransaction, owner: Sto
       facets.set(record.recordId, {
         ...stableRecordColumns(record),
         base: pending.has(record.recordId)
-          ? (row?.base ?? confirmedRecordBase(row ? await readCanonicalRecord(tx, owner, row) : undefined))
+          ? (row?.base ??
+            confirmedRecordBase(
+              row
+                ? await readCanonicalRecord(tx, owner, row)
+                : (await readRetainedRecord(tx, owner, record.recordId))?.record,
+            ))
           : null,
       });
     }

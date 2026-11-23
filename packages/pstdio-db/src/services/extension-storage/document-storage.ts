@@ -1,4 +1,4 @@
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { canonicalOwner } from "pstdio-api-contracts/extension-host";
 import { type AssetStore, hasDocumentUserData, type StorageObserver, type StorageOwner } from "pstdio-sync";
 import { createDocumentStorage } from "pstdio-sync/records";
@@ -7,7 +7,7 @@ import type { StorageTextDeclaration } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { deleteStorageDocuments } from "../../db/delete-storage-documents";
 import { documents as storage_documents } from "../../db/schemas/documents";
-import { records } from "../../db/schemas.pg";
+import { owners } from "../../db/schemas/owners";
 import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
 import { createEnvironmentDBService } from "../environment/environment";
 import { createDocumentCache } from "./document-cache";
@@ -22,6 +22,7 @@ import { createOrderedStreamStore } from "./ordered-stream-store";
 import { createProjectionStatistics } from "./projection-statistics";
 import { resourceDocumentId } from "./resource-document-persistence";
 import type { NumberChange } from "./resource-number-repair";
+import { retainedPageKey } from "./retained-page-format";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 import { storageOwnerKey } from "./storage-owner-key";
 
@@ -47,11 +48,17 @@ const notifyNumbers = (listeners: Set<(event: NumberChange) => void>, events: Nu
   for (const event of events) for (const listener of listeners) listener(event);
 };
 
-const hasProjectedRecords = async (db: DbClient, owner: StorageOwner) => {
+const hasRecordData = async (db: DbClient, owner: StorageOwner) => {
   const [record] = await db
-    .select({ id: records.record_id })
-    .from(records)
-    .where(and(eq(records.owner_id, storageOwnerKey(owner)), isNotNull(records.revision)))
+    .select({ id: owners.id })
+    .from(owners)
+    .where(
+      and(
+        eq(owners.id, storageOwnerKey(owner)),
+        sql`(EXISTS(SELECT 1 FROM records r WHERE r.owner_id=${owners.id} AND r.revision IS NOT NULL)
+          OR EXISTS(SELECT 1 FROM documents d WHERE d.owner_id=${owners.id} AND d.key=${retainedPageKey("tombstones", "")}))`,
+      ),
+    )
     .limit(1);
   return !!record;
 };
@@ -190,7 +197,7 @@ export const createDocumentStorageDBService = (
     async hasData(owner: StorageOwner) {
       owner = canonicalOwner(owner);
       assertStorageOwnerAdmitted(db, owner);
-      if (await hasProjectedRecords(db, owner)) return true;
+      if (await hasRecordData(db, owner)) return true;
       const documents = await db
         .select({ id: storage_documents.key })
         .from(storage_documents)

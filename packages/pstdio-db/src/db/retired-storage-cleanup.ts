@@ -3,6 +3,7 @@ import type { StorageOwner } from "pstdio-sync";
 import { compactStorageTombstones } from "../services/extension-storage/compact-tombstones";
 import { legacyNodeRows } from "../services/extension-storage/index-node-upgrade";
 import { pruneStorageOperations } from "../services/extension-storage/prune-operations";
+import { purgeStorageTombstones } from "../services/extension-storage/purge-tombstones";
 import { storageOwnerKey } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
 import { deleteStorageDocuments } from "./delete-storage-documents";
@@ -67,6 +68,7 @@ export const createStorageCleanup = (db: DbClient, path: string, owners: Storage
   return async (stopped: () => boolean) => {
     await retiredRows(stopped);
     if (!stopped()) await compactStorageTombstones(db, stopped);
+    if (!stopped()) await purgeStorageTombstones(db, stopped);
     if (!stopped()) await pruneStorageOperations(db, stopped);
   };
 };

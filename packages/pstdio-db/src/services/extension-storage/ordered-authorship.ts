@@ -35,6 +35,13 @@ export const createOrderedAuthorship = (
     const row = await operation(id);
     return row ? (operationReceipt(row.receipt, epoch)?.indexed ?? false) : false;
   },
+  async publishedReceipt(id: string, epoch: string) {
+    const row = await operation(id);
+    const receipt = row && operationReceipt(row.receipt, epoch);
+    if (!receipt?.indexed || !receipt.indexedAt) return;
+    if (!Number.isFinite(Date.parse(receipt.indexedAt))) throw new Error("Invalid receipt coverage time");
+    return receipt;
+  },
   async requestIdentity(id: string) {
     return (await operation(id))?.request_fingerprint ?? undefined;
   },

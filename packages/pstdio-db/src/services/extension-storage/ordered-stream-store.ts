@@ -31,6 +31,7 @@ import { readOrderedPending } from "./ordered-stream-pending";
 import { orderedCursor, readOrderedOwner, saveOrderedCursor } from "./ordered-stream-state";
 import { createRecordStreamReferences, type RecordStreamDependencies } from "./record-stream-references";
 import type { NumberChange } from "./resource-number-repair";
+import { hasRetainedRecords } from "./retained-records";
 
 const hasCanonicalRecords = async (tx: OrderedTransaction, owner: StorageOwner) =>
   (
@@ -39,7 +40,7 @@ const hasCanonicalRecords = async (tx: OrderedTransaction, owner: StorageOwner) 
       .from(canonical)
       .where(and(orderedOwnerWhere(canonical, owner), canonicalRecordPredicate(canonical)))
       .limit(1)
-  ).length > 0;
+  ).length > 0 || (await hasRetainedRecords(tx, owner));
 
 // Once per runtime and owner: later connections reuse the files this pass left in order.
 const collectedOwners = new WeakMap<DbClient, Set<string>>();

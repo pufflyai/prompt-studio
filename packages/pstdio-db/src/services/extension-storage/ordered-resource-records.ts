@@ -231,11 +231,11 @@ export const createOrderedResourceRecords = (
         try {
           return await run(
             {
-              read: async (id) => (await readOrderedRecords(tx, owner, [id], deps.observer))[0]!,
-              readMany: (ids) => readOrderedRecords(tx, owner, ids, deps.observer),
-              readCurrentMany: (ids) => readProjectedRevisions(tx, owner, ids),
-              query: (query) => queryIn(tx, query),
-              outcome: (id) => journal.authoredOutcome(id),
+              read: (id) => queue.run(async () => (await readOrderedRecords(tx, owner, [id], deps.observer))[0]!),
+              readMany: (ids) => queue.run(() => readOrderedRecords(tx, owner, ids, deps.observer)),
+              readCurrentMany: (ids) => queue.run(() => readProjectedRevisions(tx, owner, ids)),
+              query: (query) => queue.run(() => queryIn(tx, query)),
+              outcome: (id) => queue.run(() => journal.authoredOutcome(id)),
               commit: (group) =>
                 queue.run(async () => {
                   const result = await commitIn(journal, tx, group, ownRevisions);
@@ -247,7 +247,7 @@ export const createOrderedResourceRecords = (
             tx,
           );
         } finally {
-          // Promise.all can reject before another admitted save finishes. Drain before rollback.
+          // Drain every admitted read and save before releasing the owner transaction.
           await queue.settled();
         }
       });

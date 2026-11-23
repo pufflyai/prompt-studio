@@ -13,6 +13,9 @@ import { storage_ordered_records as canonical } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
 import { canonicalRecordPredicate } from "./ordered-record-row";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import { retainedHash } from "./retained-page-format";
+import { createRetainedPages } from "./retained-pages";
+import { type RetainedRecord, validateRetainedRecord } from "./retained-records";
 
 type Index = ReturnType<typeof createOrderedReceiptIndex>;
 const occurrence = (stamp: string) => {
@@ -101,6 +104,17 @@ export const queueOrderedCheckpointRepairs = async (input: {
   const covered = (stamp: string) => lookup(input.checkpointRoot, "checkpoint:", stamp, false);
   const known = (stamp: string) => lookup(input.localRoot, "local:", stamp, true);
   const repaired: string[] = [];
+  const repair = async (local: OrderedRecord) => {
+    const edit = await recordRepair(local, remote.get(local.recordId), covered, known);
+    if (!edit) return;
+    const operation = await prepareOrderedOperation(
+      { operationId: `checkpoint-repair:${crypto.randomUUID()}`, edits: [edit] },
+      remote,
+    );
+    await journal.queue(operation, await fingerprint(operation as unknown as Json));
+    repaired.push(local.recordId);
+  };
+  const present = new Set<string>();
   let after: string | undefined;
   while (true) {
     const rows = await tx
@@ -115,17 +129,12 @@ export const queueOrderedCheckpointRepairs = async (input: {
       )
       .orderBy(canonical.record_id)
       .limit(1_000);
-    if (!rows.length) return repaired;
-    for (const local of (await journal.canonical(rows.map((row) => row.id))).values()) {
-      const edit = await recordRepair(local, remote.get(local.recordId), covered, known);
-      if (!edit) continue;
-      const operation = await prepareOrderedOperation(
-        { operationId: `checkpoint-repair:${crypto.randomUUID()}`, edits: [edit] },
-        remote,
-      );
-      await journal.queue(operation, await fingerprint(operation as unknown as Json));
-      repaired.push(local.recordId);
-    }
+    if (!rows.length) break;
+    for (const row of rows) present.add(retainedHash(row.id));
+    for (const local of (await journal.canonical(rows.map((row) => row.id))).values()) await repair(local);
     after = rows.at(-1)!.id;
   }
+  for await (const { key, value } of createRetainedPages<RetainedRecord>(tx, owner, "tombstones").entries(present))
+    await repair((await validateRetainedRecord(key, value)).record);
+  return repaired;
 };

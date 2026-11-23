@@ -12,6 +12,7 @@ import { decodeOrderedEntry, type OrderedStreamEntry, type RecordStreamCursor } 
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import { storage_ordered_records as canonical, records as current, owners as projections } from "../../db/schemas.pg";
 import { dirtyOrderedReceipts } from "./ordered-checkpoint";
+import { checkpointCanonicalRecords } from "./ordered-checkpoint-records";
 import { queueOrderedCheckpointRepairs } from "./ordered-checkpoint-repair";
 import type { OrderedJournal } from "./ordered-journal";
 import { settleLocalOrderedSaves } from "./ordered-local-settlement";
@@ -23,7 +24,7 @@ import { receiptRoots, sameReceiptRoot, saveReceiptRoots } from "./ordered-recei
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner, saveOrderedCursor } from "./ordered-stream-state";
 import { captureProjectedRecordChanges } from "./projected-record-changes";
-import { clearRetainedRecords, readCanonicalRecords } from "./retained-records";
+import { clearRetainedRecords } from "./retained-records";
 
 const checkpointEntries = async (remote: Map<string, Uint8Array[]>) => {
   const entries = [];
@@ -109,11 +110,7 @@ export const adoptOrderedCheckpoint = async (input: {
   // Capture locally settled records before replacing canonical state, including saves made
   // while our own founding upload was in flight. The tail must precede their new saves.
   const local = !(await orderedOwnerJoinedCloud(owned))
-    ? await readCanonicalRecords(
-        tx,
-        owner,
-        await tx.select().from(canonical).where(orderedOwnerWhere(canonical, owner)),
-      )
+    ? [...(await checkpointCanonicalRecords(tx, owner)).values()]
     : [];
   const previous = receiptRoots(owned.receipt_root);
   const records = entries.flatMap((entry) => (entry.type === "record" ? [entry.record] : []));

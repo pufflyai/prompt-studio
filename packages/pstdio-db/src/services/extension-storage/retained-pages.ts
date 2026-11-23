@@ -1,7 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { documents } from "../../db/schemas/documents";
-import { trackDocumentFiles } from "./document-files";
+import { readFileDocumentHead } from "./document-file-persistence";
+import { documentFilesFor, trackDocumentFiles } from "./document-files";
 import { readOrderedMarker, saveOrderedMarker } from "./ordered-native-metadata";
 import { encodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import {
@@ -125,26 +126,56 @@ export const createRetainedPages = <T>(tx: OrderedTransaction, owner: StorageOwn
     await write(prefix, entries);
     return true;
   };
+  const find = async (key: string) => {
+    const hash = retainedHash(key);
+    let prefix = "";
+    let required = false;
+    while (true) {
+      const page = await read(prefix, required);
+      if (!page) return;
+      if (page.type === "leaf") return page.entries.find((entry) => entry.hash === hash);
+      const digit = hash[prefix.length]!;
+      if (!page.children.includes(digit)) return;
+      prefix += digit;
+      required = true;
+    }
+  };
+  const entries = async function* (
+    skip: ReadonlySet<string> = new Set(),
+    prefix = "",
+    required = false,
+  ): AsyncGenerator<{ key: string; value: T }> {
+    const page = await read(prefix, required);
+    if (!page) return;
+    if (page.type === "branch") {
+      for (const digit of [...page.children].sort()) yield* entries(skip, prefix + digit, true);
+    } else for (const entry of page.entries) if (!skip.has(entry.hash)) yield await load(entry);
+  };
   return {
+    entries,
+    async has(key: string) {
+      return !!(await find(key));
+    },
+    /** Snapshot extent comes from the authenticated file head, not its small SQL descriptor. */
+    async bytes(key: string) {
+      const entry = await find(key);
+      if (!entry) return;
+      if ("inline" in entry.content) return encodeOrderedJson(entry.content.inline).byteLength;
+      const [row] = await tx
+        .select()
+        .from(documents)
+        .where(and(orderedOwnerWhere(documents, owner), eq(documents.key, retainedValueKey(namespace, entry.hash))));
+      if (!row) throw new Error("The retained value is missing");
+      const head = await readFileDocumentHead(documentFilesFor(tx), owner.workbenchId, row);
+      if (head.updates.length) throw new Error("A retained value cannot contain document updates");
+      return head.snapshot.bytes;
+    },
     async get(key: string) {
-      const hash = retainedHash(key);
-      let prefix = "";
-      let required = false;
-      while (true) {
-        const page = await read(prefix, required);
-        if (!page) return;
-        if (page.type === "leaf") {
-          const entry = page.entries.find((entry) => entry.hash === hash);
-          if (!entry) return;
-          const saved = await load(entry);
-          if (saved.key !== key) throw new Error("Retained page hash collision");
-          return saved.value;
-        }
-        const digit = hash[prefix.length]!;
-        if (!page.children.includes(digit)) return;
-        prefix += digit;
-        required = true;
-      }
+      const entry = await find(key);
+      if (!entry) return;
+      const saved = await load(entry);
+      if (saved.key !== key) throw new Error("Retained page hash collision");
+      return saved.value;
     },
     async set(edits: { key: string; value: T | undefined }[]) {
       if (edits.length > 100) throw new Error("Write at most 100 retained entries per batch");

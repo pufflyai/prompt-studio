@@ -7,7 +7,7 @@ import { records } from "../../db/schemas.pg";
 import { noteCanonicalRecordWrite } from "./ordered-record-publication";
 import { confirmedRecordBase, stableRecordColumns } from "./ordered-record-row";
 import { type OrderedTransaction, orderedAddress, orderedOwnerWhere as ownerWhere } from "./ordered-sql";
-import { readCanonicalRecord } from "./retained-records";
+import { hasRetainedRecords, readCanonicalRecord, readRetainedRecord } from "./retained-records";
 
 const confirmed = alias(records, "confirmed_record");
 const bodyUnlessPending = (column: SQLWrapper) =>
@@ -24,6 +24,19 @@ const canonicalColumns = {
   base: confirmed.base,
 };
 
+const hydrateRetainedCanonical = async (
+  tx: OrderedTransaction,
+  owner: StorageOwner,
+  ids: string[],
+  found: Map<string, OrderedRecord>,
+) => {
+  if (!ids.length || !(await hasRetainedRecords(tx, owner))) return;
+  for (const id of ids) {
+    const saved = await readRetainedRecord(tx, owner, id);
+    if (saved) found.set(id, saved.record);
+  }
+};
+
 export const createOrderedCanonical = (tx: OrderedTransaction, owner: StorageOwner) => ({
   async canonical(ids: string[]) {
     const found = new Map<string, OrderedRecord>();
@@ -36,6 +49,9 @@ export const createOrderedCanonical = (tx: OrderedTransaction, owner: StorageOwn
         const record = await readCanonicalRecord(tx, owner, row);
         if (record) found.set(row.record_id, record);
       }
+      const present = new Set(rows.map((row) => row.record_id));
+      const missing = ids.slice(offset, offset + 100).filter((id) => !present.has(id));
+      await hydrateRetainedCanonical(tx, owner, missing, found);
     }
     return found;
   },
