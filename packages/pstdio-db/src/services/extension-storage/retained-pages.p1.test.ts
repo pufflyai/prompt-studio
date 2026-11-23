@@ -59,7 +59,9 @@ test("private retained pages split bounded groups, preserve large identities and
       }
     });
     expect(await storage.documents.list(owner)).toEqual(["records"]);
-    expect(await storage.hasData(owner)).toBe(false);
+    // Recovery values remain user data even though their private documents stay hidden.
+    expect(await storage.hasData(owner)).toBe(true);
+    expect(await storage.hasData(other)).toBe(false);
     const key = retainedPageKey("tombstones", "");
     await expect(storage.documents.open(key).transaction(owner, async () => {})).rejects.toThrow("Private");
     await expect(storage.documents.discard(owner, key)).rejects.toThrow("Private");
@@ -86,6 +88,7 @@ test("retained page changes roll back together and owner deletion prevents an ol
     await withOrderedOwner(f.db, owner, async (_journal, tx) => {
       await createRetainedPages(tx, owner, "authorship").set([{ key: "command", value: { original: true } }]);
     });
+    expect(await createDocumentStorageDBService(f.db).hasData(owner)).toBe(false);
     await expect(
       withOrderedOwner(f.db, owner, async (_journal, tx) => {
         const pages = createRetainedPages(tx, owner, "authorship");
