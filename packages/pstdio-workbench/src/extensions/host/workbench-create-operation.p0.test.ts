@@ -47,3 +47,35 @@ test("an uncorrelated create keeps the submitted content and no read can guess i
   await workbench.dispose();
   queries.dispose();
 });
+
+test.each(["error", "rejected"] as const)("retains the correct recovery after command outcome %s", async (status) => {
+  const queries = createScopedQueryClient({ runtimeId: "desktop", extensionId: "pstdio" });
+  const operations = getWorkbenchOperations(queries);
+  const workbench = createWorkbench({ queries });
+  try {
+    const result = executeWorkbenchExtensionCommand(
+      {
+        projectId: "project",
+        workbench,
+        operations,
+        metadata: { commands: [command] },
+        createCommandIds: new Set([command.id]),
+        executeCommand: () => ({ outcome: { status, ok: false, reason: "The command could not finish" } }),
+      },
+      command.id,
+      { params: { content: "Original text" } },
+    );
+    const expected = status === "error" ? "unknown" : "rejected";
+    await expect(result).rejects.toMatchObject({
+      name: expected === "unknown" ? "UnresolvedSubmissionError" : "CommandOutcomeError",
+    });
+    expect(operations.getSnapshot().recovery[0]).toMatchObject({
+      status: expected,
+      canCheck: false,
+      draft: { content: "Original text" },
+    });
+  } finally {
+    await workbench.dispose();
+    queries.dispose();
+  }
+});
