@@ -92,7 +92,13 @@ export const createChatSessionDraft = (
       pending = { version: changes, execute: captured ?? input.captureSaveDraft?.() ?? input.saveDraft! };
     start();
   };
+  const applyHydration = (draft: ChatDraft) => {
+    const current = input.read();
+    const values = input.values.hydrate(current.values, draft.values);
+    input.publish({ ...(changes === 0 ? draft : hydrateChatDraft(current, draft)), values }, true);
+  };
   return {
+    storedDraft: { restore: applyHydration, reportError: fail },
     error: () => error,
     edits: () => edits,
     changes: () => changes,
@@ -119,9 +125,7 @@ export const createChatSessionDraft = (
           .then((value) => {
             const draft = chatDraftSchema.parse(value);
             hydrated = true;
-            const current = input.read();
-            const values = input.values.hydrate(current.values, draft.values);
-            input.publish({ ...(changes === 0 ? draft : hydrateChatDraft(current, draft)), values }, true);
+            applyHydration(draft);
           })
           .catch(input.fail)
           .finally(() => {

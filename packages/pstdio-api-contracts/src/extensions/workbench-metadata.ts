@@ -127,6 +127,7 @@ export const workbenchExtensionViewBodySchema = z.discriminatedUnion("kind", [
     kind: z.literal("chat"),
     draftKey: z.string().min(1),
     legacySessionDraft: z.boolean().optional(),
+    browserDraft: z.object({ acknowledgeRecoveryHandlerId: z.string().optional() }).optional(),
     initial: chatRendererSnapshotSchema.optional(),
     queryHandlerId: z.string(),
     actionHandlerId: z.string(),
