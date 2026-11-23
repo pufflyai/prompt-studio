@@ -208,6 +208,7 @@ const buildApp = async (
       projectService,
       provisionWorkspacesUsingSource: (sourcePath) => provisionWorkspacesUsingSource(deps, sourcePath),
       getProjectExtensionDeps: () => deps,
+      getTargetDeps: () => deps,
       workspaceService,
       storageRoot,
     });

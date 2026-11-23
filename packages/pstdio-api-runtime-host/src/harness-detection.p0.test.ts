@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import type { HarnessContext, HarnessProvider, ProcessRunInput } from "pstdio-api-contracts/extension-kernel";
+import { failedProcessHandle } from "pstdio-extensions";
 import { detectHarness } from "./harness-detection";
 
 const createProbe = () => {
@@ -17,7 +18,17 @@ const createProbe = () => {
   const context: HarnessContext = {
     extensionId: "test.probe",
     name: "probe",
-    process: { run, runOrThrow: run, spawnDetached: async () => ({ pid: 0 }) },
+    process: {
+      run,
+      runOrThrow: run,
+      spawnDetached: async () => ({ pid: 0 }),
+      spawn: () => failedProcessHandle(new Error("Unused")),
+    },
+    targetFiles: {
+      readText: async () => {
+        throw new Error("No test target files configured.");
+      },
+    },
     logger: { info: log, warn: log, error: log },
     net: { findFreePort: async () => 0 },
     connections: {
@@ -158,6 +169,12 @@ test("availability waits for process work started by its detection provider", as
       runOrThrow: run,
       spawnDetached: async () => {
         throw new Error("Unused");
+      },
+      spawn: () => failedProcessHandle(new Error("Unused")),
+    },
+    targetFiles: {
+      readText: async () => {
+        throw new Error("No test target files configured.");
       },
     },
     net: { findFreePort: async () => 0 },

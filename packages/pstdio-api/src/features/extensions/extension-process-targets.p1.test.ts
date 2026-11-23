@@ -1,0 +1,270 @@
+import { afterAll, beforeAll, expect, test } from "bun:test";
+import { existsSync, readFileSync } from "node:fs";
+import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { homedir, tmpdir } from "node:os";
+import { join, relative } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { createTestApp } from "../../test-utils/create-test-app";
+import { remoteReadOnlyCapabilities } from "../workspaces/workspace-provider-identity";
+import { readTargetText } from "./extension-targets";
+
+let root: string;
+let handle: Awaited<ReturnType<typeof createTestApp>>;
+let closed = false;
+const projects = { main: "", other: "" };
+const workspaces = { remote: "", bare: "", other: "" };
+let instanceId = "";
+const providerRef = { version: 1, data: { machine: "devbox-7" } };
+const previous = { home: process.env.PSTDIO_HOME, defaults: process.env.PSTDIO_DEFAULT_EXTENSIONS };
+
+type Seen = { extensionId: string; projectId: string; commandId?: string; provider: boolean; input: unknown };
+const seen = () => (globalThis as { __targetCalls?: Seen[] }).__targetCalls ?? [];
+
+const entry = `
+const record = (ctx, input) => {
+  globalThis.__targetCalls ??= [];
+  globalThis.__targetCalls.push({
+    extensionId: ctx.extensionId,
+    projectId: ctx.projectId,
+    commandId: ctx.commandId,
+    provider: typeof ctx.localDirectory === "function",
+    input,
+  });
+};
+const ready = (input) => ({ state: "ready", executionKind: "remote", providerRef: input.providerRef, capabilities: { files: "none", diff: false, merge: false, rebase: false, delete: true } });
+export default {
+  commands: [
+    {
+      id: "spawn",
+      ref: { kind: "command", id: "spawn" },
+      title: "Spawn",
+      async run(ctx, params) {
+        const handle = ctx.process.spawn(params);
+        let startError = null;
+        await handle.started.catch((error) => { startError = error.code ?? error.message; });
+        let stdout = "";
+        let exit;
+        for await (const event of handle.events()) {
+          if (event.type === "stdout") stdout += new TextDecoder().decode(event.data);
+          if (event.type === "exit") exit = event.exit;
+        }
+        return { stdout, exit, startError };
+      },
+    },
+    {
+      id: "keep",
+      ref: { kind: "command", id: "keep" },
+      title: "Keep",
+      async run(ctx, params) {
+        await ctx.process.spawn({ command: params.command, lifetime: "extension" }).started;
+      },
+    },
+  ],
+  workspaceTypes: [
+    {
+      id: "remote",
+      ref: { kind: "workspace-type", id: "remote" },
+      label: "Remote",
+      create: ready,
+      resolve: ready,
+      spawn(ctx, input) {
+        record(ctx, input);
+        return ctx.process.spawn({ command: [process.execPath, "-e", "process.stdout.write('ran remotely')"] });
+      },
+      readText(ctx, input) {
+        record(ctx, input);
+        return "remote text at " + input.path;
+      },
+    },
+    { id: "bare", ref: { kind: "workspace-type", id: "bare" }, label: "Bare", create: ready, resolve: ready },
+  ],
+};
+`;
+
+const writeTree = async () => {
+  await writeFile(
+    join(root, "tree.ts"),
+    `const grandchild = Bun.spawn([process.execPath, "-e", "setInterval(() => {}, 1000)"], { stdout: "inherit", stderr: "inherit" });
+await Bun.write(process.argv[2], JSON.stringify([process.pid, grandchild.pid]));
+setInterval(() => {}, 1000);`,
+  );
+};
+
+const addRemoteWorkspace = async (projectId: string, type: "remote" | "bare") => {
+  const workspace = await handle.deps.workspaceService.createStandalone({
+    project_id: projectId,
+    provider_id: `example.spawner.workspace-type.${type}`,
+  });
+  await handle.deps.workspaceService.updateProviderProjection(workspace.id, {
+    execution_kind: "remote",
+    provider_state: "ready",
+    provider_capabilities_json: remoteReadOnlyCapabilities,
+    provider_ref_json: providerRef,
+  });
+  return workspace.id;
+};
+
+const enable = (projectId: string) =>
+  handle.deps.extensionService.enableInstalledSourceForProject({
+    projectId,
+    installName: "spawner",
+    extensionId: "example.spawner",
+    name: "spawner",
+    displayName: "Spawner",
+    sourcePath: join(root, "spawner"),
+    sourceKind: "local_path",
+    manifest: {},
+  });
+
+beforeAll(async () => {
+  root = await realpath(await mkdtemp(join(tmpdir(), "process-targets-")));
+  process.env.PSTDIO_HOME = join(root, "home");
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+  await writeTree();
+  const source = join(root, "spawner");
+  await mkdir(source);
+  await writeFile(
+    join(source, "package.json"),
+    JSON.stringify({
+      name: "spawner",
+      version: "1.0.0",
+      publisher: "example",
+      main: "./extension.ts",
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+    }),
+  );
+  await writeFile(join(source, "extension.ts"), entry);
+  handle = await createTestApp({ databasePath: ":memory:", storageRoot: join(root, "storage") });
+  for (const name of ["main", "other"] as const) {
+    const project = await handle.deps.projectService.create({ name });
+    projects[name] = project.id;
+    const folder = join(root, name);
+    await mkdir(folder);
+    await writeFile(join(folder, "notes.txt"), `${name} notes`);
+    const home = await handle.deps.workspaceService.ensureDefault({ project_id: project.id, root_path: folder, name });
+    if (name === "other") workspaces.other = home.id;
+    const installed = await enable(project.id);
+    if (name === "main") instanceId = installed.instance.id;
+  }
+  workspaces.remote = await addRemoteWorkspace(projects.main, "remote");
+  workspaces.bare = await addRemoteWorkspace(projects.main, "bare");
+});
+
+afterAll(async () => {
+  if (!closed) await handle?.close();
+  process.env.PSTDIO_HOME = previous.home;
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = previous.defaults;
+  await rm(root, { recursive: true, force: true });
+});
+
+const execute = async (projectId: string, command: string, params: Record<string, unknown>) => {
+  const response = await handle.app.request(
+    `/v1/projects/${projectId}/extensions/commands/example.spawner.command.${command}/execute`,
+    { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ params }) },
+  );
+  return ((await response.json()) as { outcome: { ok: boolean; value: unknown; error?: unknown } }).outcome;
+};
+const spawn = async (params: Record<string, unknown>, projectId = projects.main) =>
+  (await execute(projectId, "spawn", params)).value as { stdout: string; exit: unknown; startError: string | null };
+const alive = (pid: number) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+const waitFor = async (check: () => boolean, timeoutMs = 5_000) => {
+  const until = Date.now() + timeoutMs;
+  while (!check() && Date.now() < until) await Bun.sleep(20);
+  return check();
+};
+const keep = async (projectId: string, marker: string) => {
+  expect((await execute(projectId, "keep", { command: [process.execPath, join(root, "tree.ts"), marker] })).ok).toBe(
+    true,
+  );
+  await waitFor(() => existsSync(marker) && readFileSync(marker, "utf8").length > 0);
+  return JSON.parse(readFileSync(marker, "utf8")) as number[];
+};
+
+test("a command's child runs in its project's workspace by default", async () => {
+  const result = await spawn({ command: [process.execPath, "-e", "process.stdout.write(process.cwd())"] });
+  expect(result).toEqual({ stdout: join(root, "main"), exit: { code: 0, signal: null }, startError: null });
+});
+
+test("a workspace of another project is rejected before anything starts", async () => {
+  const marker = join(root, "cross-project");
+  const result = await spawn({
+    command: [process.execPath, "-e", `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "ran")`],
+    workspaceId: workspaces.other,
+  });
+  expect(result.startError).toBe("process_target_unavailable");
+  expect(existsSync(marker)).toBe(false);
+  await expect(
+    readTargetText(handle.deps, { projectId: projects.main, workspaceId: workspaces.other, path: "notes.txt" }),
+  ).rejects.toMatchObject({ code: "target_file_unavailable" });
+});
+
+test("a remote workspace's provider starts the child with its own context and providerRef; a cwd never runs locally", async () => {
+  const before = seen().length;
+  const result = await spawn({ command: ["agent", "serve"], cwd: "/srv/repo", workspaceId: workspaces.remote });
+  expect(result).toEqual({ stdout: "ran remotely", exit: { code: 0, signal: null }, startError: null });
+  expect(seen().slice(before)).toEqual([
+    {
+      extensionId: "example.spawner",
+      projectId: projects.main,
+      provider: true,
+      input: {
+        projectId: projects.main,
+        workspaceId: workspaces.remote,
+        providerRef,
+        process: { command: ["agent", "serve"], cwd: "/srv/repo", workspaceId: workspaces.remote, lifetime: "call" },
+      },
+    },
+  ]);
+});
+
+test("a remote workspace without provider support fails clearly instead of running here", async () => {
+  const marker = join(root, "unsupported");
+  const result = await spawn({
+    command: [process.execPath, "-e", `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "ran")`],
+    cwd: root,
+    workspaceId: workspaces.bare,
+  });
+  expect(result.startError).toBe("process_target_unsupported");
+  expect(existsSync(marker)).toBe(false);
+  await expect(
+    readTargetText(handle.deps, { projectId: projects.main, workspaceId: workspaces.bare, path: "~/.claude/x.jsonl" }),
+  ).rejects.toMatchObject({ code: "target_file_unsupported" });
+});
+
+test("target files read local paths relative to the workspace or the home, and remote ones through the provider", async () => {
+  const read = (workspaceId: string, path: string) =>
+    readTargetText(handle.deps, { projectId: projects.main, workspaceId, path });
+  const home = await handle.deps.workspaceService.getDefault(projects.main);
+  expect(await read(home!.id, "notes.txt")).toBe("main notes");
+  expect(await read(home!.id, `~/${relative(homedir(), join(root, "main", "notes.txt"))}`)).toBe("main notes");
+  const before = seen().length;
+  expect(await read(workspaces.remote, "~/.claude/projects/s.jsonl")).toBe("remote text at ~/.claude/projects/s.jsonl");
+  expect(seen().slice(before)).toMatchObject([
+    { provider: true, input: { workspaceId: workspaces.remote, providerRef, path: "~/.claude/projects/s.jsonl" } },
+  ]);
+});
+
+test("an extension-owned child survives its command and unchanged catalog rebuilds, and stops on disable", async () => {
+  const pids = await keep(projects.main, join(root, "kept-main"));
+  expect(pids.every(alive)).toBe(true);
+  handle.deps.extensionRuntimeCatalog.invalidate({ projectId: projects.main, reason: "webviews_built" });
+  await Bun.sleep(300);
+  expect(pids.every(alive)).toBe(true);
+  await handle.deps.extensionService.setProjectExtensionEnabled(instanceId, false);
+  expect(await waitFor(() => !pids.some(alive))).toBe(true);
+});
+
+test("shutdown stops extension-owned children", async () => {
+  const pids = await keep(projects.other, join(root, "kept-other"));
+  expect(pids.every(alive)).toBe(true);
+  closed = true;
+  await handle.close();
+  expect(await waitFor(() => !pids.some(alive))).toBe(true);
+});

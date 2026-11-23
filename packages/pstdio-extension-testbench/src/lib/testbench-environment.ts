@@ -271,6 +271,9 @@ export const createBenchEnvironment = async (
       run: async () => ({ exitCode: 0, stderr: "", stdout: "" }),
       runOrThrow: async () => ({ exitCode: 0, stderr: "", stdout: "" }),
       spawnDetached: async () => ({ pid: 0 }),
+      spawn: () => {
+        throw new Error("Streaming processes require the host runtime.");
+      },
     },
     net: { findFreePort: async () => 0 },
     settings: {

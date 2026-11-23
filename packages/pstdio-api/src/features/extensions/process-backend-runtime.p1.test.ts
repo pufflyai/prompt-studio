@@ -215,6 +215,25 @@ export default {
       },
     },
     {
+      id: "spawn",
+      ref: { kind: "command", id: "spawn" },
+      title: "Spawn",
+      async run(ctx, params) {
+        const handle = ctx.process.spawn({ command: params.command });
+        await handle.started;
+        await handle.write("hello ");
+        await handle.write(new TextEncoder().encode("worker"));
+        await handle.end();
+        const seen = [];
+        for await (const event of handle.events())
+          seen.push(event.type === "exit" ? event : { type: event.type, text: new TextDecoder().decode(event.data) });
+        const late = ctx.process.spawn({ command: params.command, lifetime: "extension" });
+        const marker = await late.started.then(() => "started", (error) => error.code);
+        await late.kill();
+        return { seen, exited: await handle.exited, idType: typeof handle.id, extension: marker };
+      },
+    },
+    {
       id: "spin",
       ref: { kind: "command", id: "spin" },
       title: "Spin",
@@ -593,4 +612,26 @@ test("a process-mode handler opens a terminal session, writes to it and reads it
   const value = outcome.value as { text: string; last: string };
   expect(value.text).toContain("got:hello");
   expect(value.last).toBe("exit");
+});
+
+test("a process-mode handler spawns a host-owned child, writes its stdin and streams its output to the exit", async () => {
+  const script = `for await (const chunk of Bun.stdin.stream()) process.stdout.write(new TextDecoder().decode(chunk).toUpperCase());`;
+  const { outcome } = await execute("spawn", { command: [process.execPath, "-e", script] });
+  expect(outcome.ok).toBe(true);
+  const value = outcome.value as {
+    seen: { type: string; text?: string; exit?: unknown }[];
+    exited: unknown;
+    idType: string;
+    extension: string;
+  };
+  expect(
+    value.seen
+      .filter((event) => event.type === "stdout")
+      .map((event) => event.text)
+      .join(""),
+  ).toBe("HELLO WORKER");
+  expect(value.seen.at(-1)).toEqual({ type: "exit", exit: { code: 0, signal: null } });
+  expect(value.exited).toEqual({ code: 0, signal: null });
+  expect(value.idType).toBe("string");
+  expect(value.extension).toBe("started");
 });

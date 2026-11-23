@@ -26,6 +26,7 @@ import type { HarnessProvider } from "./harness";
 import type { JsonObject, JsonValue, MaybePromise, Struct } from "./json";
 import type { PageContribution } from "./pages";
 import type { ParamObjectSchema, ParamsOf } from "./params";
+import type { ProcessHandle, ProcessSpawnInput } from "./process-spawn";
 import type { PackageAssetDescriptor } from "./resources";
 import type { StatusBarItemContribution } from "./status-bar";
 import type { ExtensionStorageDeclaration } from "./storage-logs";
@@ -210,6 +211,26 @@ export interface WorkspaceTypeProvider extends ContributionDefinition<"workspace
   resolve(ctx: ExtensionContextBase, input: WorkspaceProviderResolveInput): MaybePromise<WorkspaceProviderResult>;
   cancel?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<WorkspaceProviderResult>;
   delete?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<void>;
+  /**
+   * Runs `ctx.process.spawn` for a remote workspace. `ctx` is this provider's own context. The host
+   * owns the returned handle and kills it when its caller's lifetime ends. Without this method,
+   * spawning on the workspace fails with `process_target_unsupported`.
+   */
+  spawn?(ctx: ExtensionContextBase, input: WorkspaceProviderSpawnInput): MaybePromise<ProcessHandle>;
+  /**
+   * Reads a text file on a remote workspace for `targetFiles.readText`. Expand `~` on the target.
+   * Without this method, reads fail with `target_file_unsupported`.
+   */
+  readText?(ctx: ExtensionContextBase, input: WorkspaceProviderReadTextInput): MaybePromise<string>;
+}
+
+export interface WorkspaceProviderSpawnInput extends WorkspaceProviderResolveInput {
+  process: ProcessSpawnInput;
+}
+
+export interface WorkspaceProviderReadTextInput extends WorkspaceProviderResolveInput {
+  /** Native to the target. Absolute, relative to the workspace root, or starting with `~`. */
+  path: string;
 }
 
 export interface ExtensionConnectionContribution extends ContributionDefinition<"connection"> {
