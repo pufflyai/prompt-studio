@@ -44,7 +44,7 @@ export interface AutoBuildButtonProps {
   disabled?: boolean;
   configuration?: Omit<AutoBuildFormProps, "onClose" | "t">;
   onStop: () => Promise<boolean>;
-  onOpenSession: (session: AutoBuildSession) => void;
+  onOpenSession: (session: AutoBuildSession) => unknown;
   t: (key: string, fallback?: string) => string;
 }
 

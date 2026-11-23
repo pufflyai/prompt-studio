@@ -54,7 +54,7 @@ export function AutoBuildControl(props: AutoBuildControlProps) {
         stuck={autoBuild.mode?.stuck}
         error={autoBuild.mode?.configurationError ?? autoBuild.mode?.error}
         onOpenSession={(session) =>
-          void host.call("navigation.open", {
+          host.call("navigation.open", {
             target: {
               kind: "panel",
               panel: sessionBrowser.panels.conversation,

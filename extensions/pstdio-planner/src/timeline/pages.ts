@@ -11,7 +11,7 @@ import { ticketPreviewPanel } from "./ticket-preview";
 
 export const timelineActionsView = defineView({
   id: "timeline-actions",
-  title: "Timeline actions",
+  title: l10n("timeline.actions.title", "Timeline actions"),
   body: {
     kind: "webview",
     entry: packageAsset("./view/header-entry.tsx", import.meta.url),
