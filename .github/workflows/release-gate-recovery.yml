@@ -9,7 +9,7 @@ jobs:
   release-gates:
     runs-on: ubuntu-24.04
     env:
-      SOURCE_SHA: 889efc0c96cd08df4d113482aa7f0855ee781e93
+      SOURCE_SHA: 8e8d48516277ebf0cfd1ae3749a30e74d2397fe9
       NX_DAEMON: "false"
     steps:
       - uses: actions/checkout@v5
@@ -39,6 +39,8 @@ jobs:
             jq -er '[.[] | select(.isPrerelease and (.isDraft | not) and (.tagName | test("^pstdio@[0-9]+\\.[0-9]+\\.[0-9]+-nightly\\.[0-9]+$")))] | max_by(.publishedAt).tagName')
           [[ "$stable" =~ ^pstdio@[0-9]+\.[0-9]+\.[0-9]+$ ]]
           [[ "$nightly" =~ ^pstdio@[0-9]+\.[0-9]+\.[0-9]+-nightly\.[0-9]+$ ]]
+          test "$stable" = pstdio@0.48.0
+          test "$nightly" = pstdio@0.49.0-nightly.20261123154303
           jq -cn --arg source "$SOURCE_SHA" --arg stable "$stable" --arg nightly "$nightly" \
             '{source:$source,stable:$stable,nightly:$nightly}' | tee "$evidence/identity.json"
           echo "stable=$stable" >> "$GITHUB_OUTPUT"
