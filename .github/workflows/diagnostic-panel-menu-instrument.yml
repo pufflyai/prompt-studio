@@ -1,0 +1,42 @@
+name: Packaged panel menu instrumentation
+on:
+  push:
+    branches: [diagnostics/packaged-panel-menu-instrument]
+permissions:
+  contents: read
+jobs:
+  packaged-browser:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [natural, terminal-gate]
+    env:
+      PANEL_MENU_DIAGNOSTIC: ${{ matrix.variant }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - name: Prepare Ubuntu Chromium and the packaged runtime
+        run: |
+          bunx playwright@1.60.0 install --with-deps chromium firefox
+          bun install --frozen-lockfile
+          bun run build -- --scope pstdio --include-dependencies
+      - name: Run the instrumented packaged browser journey
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
+          PSTDIO_EXTENSION_RELEASE_REF: 9c7214e72500f9a9287026bfd14f7fb6bec999bf
+        run: |
+          xvfb-run --auto-servernum bun run --cwd packages/e2e test:packaged:browser src/packaged/packaged-empty-panels.p2.spec.ts
+      - name: Preserve browser context, menu events and runtime logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: focus-${{ matrix.variant }}
+          path: |
+            packages/e2e/test-results/packaged-browser/
+            packages/e2e/test-results/packaged-runtime/

@@ -10,6 +10,7 @@ import { type Browser, chromium, expect, test } from "../scripts/playwright-test
 import { verifyEmptyPanelAddition } from "./packaged-empty-panel-addition";
 import { buildBinary } from "./packaged-helpers";
 import { verifyPanelInsertionTargets } from "./packaged-panel-insertion";
+import { startPanelMenuDiagnostic } from "./packaged-panel-menu-diagnostic";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 test.afterEach(stopPendingTestProcesses);
@@ -24,6 +25,7 @@ test("adding a tool keeps the other empty panel open", async () => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-empty-panels-")));
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
+  let diagnostic: Awaited<ReturnType<typeof startPanelMenuDiagnostic>>;
   try {
     const started = await test.step("Start the packaged runtime", () =>
       startPackagedServe(root, {
@@ -48,6 +50,7 @@ test("adding a tool keeps the other empty panel open", async () => {
     phase("project created; launch browser");
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
+    diagnostic = await startPanelMenuDiagnostic(page, test.info());
     phase("browser ready; sign in");
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await signInBrowser(page, started.descriptor);
@@ -67,9 +70,10 @@ test("adding a tool keeps the other empty panel open", async () => {
       .getByRole("tab", { name: "Menu content", exact: true })
       .getByRole("button", { name: "Close Menu content", exact: true })
       .click();
-    await test.step("Place panels and cancel from the grab point", () => verifyPanelInsertionTargets(page));
+    await test.step("Place panels and cancel from the grab point", () => verifyPanelInsertionTargets(page, diagnostic));
   } finally {
     phase("cleanup");
+    await diagnostic?.finish();
     await browser?.close();
     if (child) await stopProcess(child);
     rmSync(root, { recursive: true, force: true });

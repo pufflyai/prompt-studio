@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import type { PanelMenuDiagnostic } from "./packaged-panel-menu-diagnostic";
 
-export const verifyPanelInsertionTargets = async (page: Page) => {
+export const verifyPanelInsertionTargets = async (page: Page, diagnostic?: PanelMenuDiagnostic) => {
   const main = page.locator('[data-workbench-panel="main"]');
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
   await expect(mainHeader).toBeVisible();
@@ -53,6 +54,7 @@ export const verifyPanelInsertionTargets = async (page: Page) => {
   await expect(page.locator("[data-workbench-panel-drag-shield]")).toHaveCSS("cursor", "grabbing");
   await expect(page.locator("[data-workbench-edge-drop][data-drop-active]")).toHaveCount(0);
   await page.mouse.up();
+  await diagnostic?.beforeReload();
   await page.reload();
   // The collection must restore its tab policy before its placement menu is ready.
   await expect(main.getByRole("tab", { selected: true })).toBeVisible();
@@ -62,7 +64,8 @@ export const verifyPanelInsertionTargets = async (page: Page) => {
     const header = page.getByLabel(region === "side" ? "Side panel header" : "Bottom panel header", { exact: true });
     await expect(header).toHaveAttribute("data-panel-draggable", "true");
     await header.focus();
-    await header.press("Shift+F10");
+    if (await diagnostic?.beforeRestoredMenu(header, main, region)) await page.keyboard.press("Shift+F10");
+    else await header.press("Shift+F10");
     await expect(page.getByRole("menuitem", { name: /^Move panel to / })).toHaveCount(1);
     await expect(
       page.getByRole("menuitem", { name: `Move panel to ${region === "side" ? "right" : "bottom"}`, exact: true }),
@@ -76,6 +79,7 @@ export const verifyPanelInsertionTargets = async (page: Page) => {
       })
       .toBe(true);
   }
+  await diagnostic?.record("first panel restore finished");
   await verifyNearbyTabTargets(page);
 };
 
