@@ -21,7 +21,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = 9b9c31eda11af772c2711c210725272a580c4317
+          git diff --exit-code 9b9c31eda11af772c2711c210725272a580c4317 HEAD -- scripts/ci
           gh run download 45208140719 --name quarantined-browser-results-attempt-1 --dir "$RUNNER_TEMP/replay/native"
           gh run download 45208140719 --name test-plan-results-quarantined_browser_tests-0-4bd600db7d9f18bd-attempt-1 --dir "$RUNNER_TEMP/replay/planned"
           gh run download 45208140719 --name test-plan-attempt-1 --dir "$RUNNER_TEMP/replay/plan"
@@ -84,7 +84,8 @@ jobs:
 
           const archived = await read("planned/execution.json");
           const plan = await read("plan/plan.json");
-          assert.equal(plan.source.sha, "889efc0c96cd08df4d113482aa7f0855ee781e93");
+          assert.equal(plan.source.sha, "8ff120db023c17226b9632473f257fae1cbc3f0d");
+          assert.deepEqual(archived.source, plan.source);
           assert.equal(archived.planDigest, plan.digest);
           const recorded = archived.results.find((row) => row.runId === "520ee16666d5fb6b6b1de2fe");
           assert.equal(recorded.complete, false);
