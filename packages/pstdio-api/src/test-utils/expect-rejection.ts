@@ -6,7 +6,7 @@ type RejectionMatchers = {
 
 /**
  * Use instead of `expect(promise).rejects`: while Bun 1.4.4's `.rejects` waits it delivers no Worker
- * messages, so a rejection that needs a database-worker round trip (TEST_DATABASE_WORKER=1) hangs.
+ * messages, so a rejection that needs a database-worker round trip hangs.
  * This awaits the rejection first, then applies the matcher; `toThrow*` sees a function that throws it.
  * `.resolves` has the same problem, so tests write `expect(await promise)` instead.
  */
