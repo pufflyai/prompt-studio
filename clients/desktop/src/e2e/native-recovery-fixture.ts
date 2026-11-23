@@ -1,4 +1,5 @@
 import { once } from "node:events";
+import { pathToFileURL } from "node:url";
 import { app, dialog, shell } from "electron";
 
 app.setName("PromptStudioNativeRecoveryFixture");
@@ -15,7 +16,7 @@ shell.showItemInFolder = (path) => {
 };
 
 try {
-  await import(process.env.PSTDIO_NATIVE_TEST_MAIN!);
+  await import(pathToFileURL(process.env.PSTDIO_NATIVE_TEST_MAIN!).href);
 } catch (error) {
   process.send!({ fixtureError: String(error) });
   app.exit(1);

@@ -37,7 +37,8 @@ const repairPrompt = (pull: RemovedPull) =>
     `Push the fix to the pull request with \`git push origin HEAD:${pull.headRefName}\`, then wait for its CI and fix any new failure.`,
     "If a failure is not caused by this pull request, do not change the pull request to hide it: find or create the ticket for that check and report it.",
     "For a merge conflict, rebase the branch onto the latest main and resolve the conflicts.",
-    "Never raise a timeout or budget, skip a test, or add retries. Report what you changed and whether the pull request is ready to queue again.",
+    "Follow the timeout policy in documentation/guidance/0004-ci.md, rules 0004.3.3 and 0004.3.4. Ordinary functional test, fixture, hook, readiness and functional-only job timeouts may be adjusted without separate approval. Keep finite allowances, preserve the workload and assertions, and verify affected behavior and cleanup. Benchmark budgets and benchmark execution allowances, including shared settings that also affect benchmarks, require approval for the exact new value.",
+    "Do not skip a test or add retries. Report what you changed and whether the pull request is ready to queue again.",
   ].join("\n");
 
 export const repairRemovedCommand = defineCommand({

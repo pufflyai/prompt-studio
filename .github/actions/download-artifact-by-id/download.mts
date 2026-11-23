@@ -12,7 +12,15 @@ export interface DownloadOptions extends TransferOptions {
   token: string;
   repository: string;
   apiUrl: string;
+  results?: ResultsContext;
   log?: (line: string) => void;
+}
+
+interface ResultsContext {
+  url: string;
+  token: string;
+  runId: string;
+  repository: string;
 }
 
 interface ArtifactMetadata {
@@ -21,6 +29,17 @@ interface ArtifactMetadata {
   expires_at: string;
   digest?: string;
   workflow_run: { id: number };
+}
+
+interface ResultsArtifact {
+  database_id?: string;
+  databaseId?: string;
+  workflow_run_backend_id?: string;
+  workflowRunBackendId?: string;
+  workflow_job_run_backend_id?: string;
+  workflowJobRunBackendId?: string;
+  name: string;
+  digest?: string;
 }
 
 export const parseArtifactIds = (value: string) => {
@@ -82,13 +101,14 @@ export const extractZip = (zip: Buffer, destination: string) => {
 const apiError = async (response: Response) => {
   const body = await response.text();
   try {
-    return `HTTP ${response.status}: ${(JSON.parse(body) as { message?: string }).message ?? body}`;
+    const { message, msg } = JSON.parse(body) as { message?: string; msg?: string };
+    return `HTTP ${response.status}: ${message ?? msg ?? body}`;
   } catch {
     return `HTTP ${response.status}: ${body.slice(0, 500)}`;
   }
 };
 
-const fetchArtifact = async (options: DownloadOptions, id: string, headers: Record<string, string>) => {
+const fetchRestArtifact = async (options: DownloadOptions, id: string, headers: Record<string, string>) => {
   const api = `${options.apiUrl}/repos/${options.repository}/actions/artifacts/${id}`;
   const metadata = await request(options, api, { headers });
   if (metadata.status === 404) throw new Error(`Artifact ${id} was not found in ${options.repository}`);
@@ -104,14 +124,84 @@ const fetchArtifact = async (options: DownloadOptions, id: string, headers: Reco
   // The signed storage URL must not receive the repository token.
   if (response.status >= 300 && response.status < 400 && location) response = await request(options, location, {});
   if (!response.ok) throw new Error(`Cannot download artifact ${id}: ${await apiError(response)}`);
-  return { artifact, zip: await readBody(options, response) };
+  return {
+    name: artifact.name,
+    digest: artifact.digest,
+    runId: String(artifact.workflow_run.id),
+    zip: await readBody(options, response),
+  };
+};
+
+const resultsScope = (token: string) => {
+  const invalid = new Error("The Actions runtime token has no valid Actions Results scope");
+  let scp: unknown;
+  try {
+    const payload = Buffer.from(token.split(".")[1] ?? "", "base64url").toString("utf8");
+    scp = (JSON.parse(payload) as { scp?: unknown }).scp;
+  } catch {
+    throw invalid;
+  }
+  const scope =
+    typeof scp === "string" ? scp.split(" ").find((value) => value.startsWith("Actions.Results:")) : undefined;
+  const parts = scope?.split(":") ?? [];
+  if (parts.length !== 3 || !parts[1] || !parts[2]) throw invalid;
+  return { workflow_run_backend_id: parts[1], workflow_job_run_backend_id: parts[2] };
+};
+
+const fetchResultsArtifact = async (options: DownloadOptions, results: ResultsContext, id: string) => {
+  const scope = resultsScope(results.token);
+  const post = async <T,>(method: string, body: Record<string, string>) => {
+    const endpoint = new URL(`/twirp/github.actions.results.api.v1.ArtifactService/${method}`, results.url).href;
+    const response = await request(options, endpoint, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${results.token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      redirect: "error",
+    });
+    if (!response.ok)
+      throw new Error(`Actions Results ${method} failed for artifact ${id}: ${await apiError(response)}`);
+    return JSON.parse((await readBody(options, response)).toString("utf8")) as T;
+  };
+
+  // Protobuf JSON encodes Int64Value as a decimal string rather than a JSON object or number.
+  const exactId = BigInt(id).toString();
+  const { artifacts = [] } = await post<{ artifacts?: ResultsArtifact[] }>("ListArtifacts", {
+    ...scope,
+    id_filter: exactId,
+  });
+  const [artifact] = artifacts;
+  if (!artifact) throw new Error(`Artifact ${id} was not found in ${options.repository} run ${options.runId}`);
+  const run = artifact.workflow_run_backend_id ?? artifact.workflowRunBackendId;
+  const job = artifact.workflow_job_run_backend_id ?? artifact.workflowJobRunBackendId;
+  if (
+    artifacts.length !== 1 ||
+    (artifact.database_id ?? artifact.databaseId) !== exactId ||
+    run !== scope.workflow_run_backend_id ||
+    !job ||
+    !artifact.name
+  ) {
+    throw new Error(`Actions Results returned an unexpected identity for artifact ${id}`);
+  }
+  const signed = await post<{ signed_url?: string; signedUrl?: string }>("GetSignedArtifactURL", {
+    workflow_run_backend_id: run,
+    workflow_job_run_backend_id: job,
+    name: artifact.name,
+  });
+  const url = signed.signed_url ?? signed.signedUrl;
+  if (!url) throw new Error(`Actions Results did not provide a download URL for artifact ${id}`);
+  const response = await request(options, url, {});
+  if (!response.ok) throw new Error(`Cannot download artifact ${id}: ${await apiError(response)}`);
+  return { name: artifact.name, digest: artifact.digest, runId: results.runId, zip: await readBody(options, response) };
 };
 
 // Like download-artifact, restart a dropped or stalled transfer with a fresh signed URL.
 const downloadArtifact = async (options: DownloadOptions, id: string, headers: Record<string, string>) => {
+  const { results, runId, repository } = options;
+  const sameRun = results && results.runId === runId && results.repository.toLowerCase() === repository.toLowerCase();
   for (let attempt = 1; ; attempt++) {
     try {
-      return await fetchArtifact(options, id, headers);
+      if (sameRun) return await fetchResultsArtifact(options, results, id);
+      return await fetchRestArtifact(options, id, headers);
     } catch (error) {
       if (!(error instanceof TransientTransferError) || attempt === attempts) throw error;
       (options.log ?? console.log)(`Retrying artifact ${id} after attempt ${attempt}: ${error.message}`);
@@ -131,15 +221,13 @@ export const downloadArtifacts = async (options: DownloadOptions) => {
   const destination = resolve(options.path);
   const downloaded: Array<{ id: string; name: string; path: string; files: number }> = [];
   for (const id of parseArtifactIds(options.artifactIds)) {
-    const { artifact, zip } = await downloadArtifact(options, id, headers);
-    if (artifact.digest && artifact.digest !== `sha256:${createHash("sha256").update(zip).digest("hex")}`)
-      log(
-        `::warning::Artifact '${artifact.name}' digest validation failed. Please verify the integrity of the artifact.`,
-      );
-    const target = options.mergeMultiple ? destination : join(destination, artifact.name);
+    const { name, digest, runId, zip } = await downloadArtifact(options, id, headers);
+    if (digest && digest !== `sha256:${createHash("sha256").update(zip).digest("hex")}`)
+      log(`::warning::Artifact '${name}' digest validation failed. Please verify the integrity of the artifact.`);
+    const target = options.mergeMultiple ? destination : join(destination, name);
     const files = extractZip(zip, target);
-    log(`Downloaded ${artifact.name} (ID ${id}, run ${artifact.workflow_run.id}, ${files} files) to ${target}`);
-    downloaded.push({ id, name: artifact.name, path: target, files });
+    log(`Downloaded ${name} (ID ${id}, run ${runId}, ${files} files) to ${target}`);
+    downloaded.push({ id, name, path: target, files });
   }
   return downloaded;
 };

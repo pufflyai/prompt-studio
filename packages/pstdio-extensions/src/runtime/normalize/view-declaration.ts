@@ -132,6 +132,10 @@ export const viewDeclarationSchema = z
     ref: localRefSchema("view"),
     title: localizableStringSchema,
     icon: z.string().optional(),
+    header: z
+      .object({ view: localRefSchema("view") })
+      .strict()
+      .optional(),
     body,
   })
   .strict();

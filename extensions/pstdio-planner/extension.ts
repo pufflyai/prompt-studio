@@ -32,7 +32,14 @@ import { ticketText } from "./src/text-source";
 import { readStatusSettings, saveStatusSettings } from "./src/ticket-status-settings";
 import { commands as timelineCommands } from "./src/timeline/commands";
 import { gateCleanup } from "./src/timeline/commands/gate-cleanup";
-import { timelineNavigation, timelinePage, timelineView } from "./src/timeline/pages";
+import {
+  autoBuildPage,
+  autoBuildView,
+  timelineActionsView,
+  timelineNavigation,
+  timelinePage,
+  timelineView,
+} from "./src/timeline/pages";
 import { createPlannerUi, ticketResourceKind } from "./src/ui-contributions";
 
 const plannerUi = createPlannerUi(import.meta.url);
@@ -150,8 +157,8 @@ export default defineExtension({
     saveStatusSettings,
     savePlannerSettings,
   ],
-  views: [...plannerUi.views, timelineView],
-  pages: [...plannerUi.pages, timelinePage],
+  views: [...plannerUi.views, timelineView, timelineActionsView, autoBuildView],
+  pages: [...plannerUi.pages, timelinePage, autoBuildPage],
   placements: plannerUi.placements,
   viewMenus: plannerUi.viewMenus,
   resourceKinds: [ticketResourceKind],

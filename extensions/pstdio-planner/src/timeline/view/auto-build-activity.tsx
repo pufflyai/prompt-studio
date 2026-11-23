@@ -46,29 +46,8 @@ interface AutoBuildActivityProps
 }
 
 export function AutoBuildActivity(props: AutoBuildActivityProps) {
-  const {
-    open,
-    trigger,
-    disabled,
-    enabled,
-    paused,
-    onOpenChange,
-    onStop,
-    onConfigure,
-    onPause,
-    onResume,
-    reviewRequests = [],
-    requestErrors = [],
-    onOpenRequests,
-    actionError,
-    onDismissActionError,
-    t,
-    ...sessions
-  } = props;
-  const { supervisor, completed, failed, onOpenSession } = sessions;
-  const supervisorActive = ["queued", "in_progress", "awaiting_input"].includes(supervisor?.status ?? "");
+  const { open, trigger, onOpenChange, paused, t } = props;
   const content = useRef<HTMLDivElement>(null);
-  const danger = useRecipe({ recipe: psTheme.getRecipe("button") })({ variant: "destructive" });
   const styles = useSlotRecipe({ recipe: psTheme.getSlotRecipe("popover") })({ variant: "widget" });
   return (
     <Popover.Root
@@ -100,71 +79,98 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
               }
               actions={<AutoBuildHelp t={t} />}
             />
-            <Popover.Body display="flex" flexDirection="column" minH="0" flex="1" p="0">
-              <ScrollArea flex="1" minH="0" h="0" viewportProps={{ minH: "0", flex: "1" }}>
-                <Stack gap="md" p="sm">
-                  <AutoBuildWarnings {...sessions} enabled={enabled} t={t} />
-                  {reviewRequests.some(({ state }) => state === "open") || requestErrors.length ? (
-                    <AutoBuildRequests onOpen={onOpenRequests} t={t} />
-                  ) : null}
-                  <Stack gap="2xs">
-                    <Text textStyle="label/2XS/medium" color="fg.muted">
-                      {t("timeline.autoBuild.supervisor", "Supervisor")}
-                    </Text>
-                    {supervisor ? (
-                      <AutoBuildSessionRow
-                        session={supervisor}
-                        sleeping={enabled && !completed && !supervisorActive && !failed}
-                        onOpen={onOpenSession}
-                      />
-                    ) : (
-                      <EmptyState size="sm" title={t("timeline.autoBuild.noSupervisor", "No supervisor")} />
-                    )}
-                  </Stack>
-                  <AutoBuildSessions {...sessions} t={t} />
-                </Stack>
-              </ScrollArea>
-            </Popover.Body>
-            <Popover.Footer flexShrink="0" p="sm">
-              <Stack w="full" alignItems="end">
-                <Box position="relative" w="full" h="3.5rem">
-                  <AutoBuildAlert
-                    failed={failed}
-                    error={sessions.error}
-                    actionError={actionError}
-                    onDismissActionError={onDismissActionError}
-                    t={t}
-                  />
-                </Box>
-                {enabled ? (
-                  <Button size="sm" variant="outline" disabled={disabled} onClick={() => void onPause?.()}>
-                    <Pause />
-                    {t("timeline.autoBuild.pause", "Pause")}
-                  </Button>
-                ) : null}
-                {!enabled && paused ? (
-                  <HStack gap="xs">
-                    <Button size="sm" variant="outline" disabled={disabled} onClick={() => void onResume?.()}>
-                      <Play />
-                      {t("timeline.autoBuild.resume", "Resume")}
-                    </Button>
-                    <Button size="sm" css={danger} disabled={disabled} onClick={onStop}>
-                      <Square />
-                      {t("timeline.autoBuild.stop", "Stop Auto Build")}
-                    </Button>
-                  </HStack>
-                ) : null}
-                {!enabled && !paused ? (
-                  <Button size="sm" variant="outline" disabled={disabled} onClick={onConfigure}>
-                    <Play />
-                    {t("timeline.autoBuild.start", "Auto Build")}
-                  </Button>
-                ) : null}
-              </Stack>
-            </Popover.Footer>
+            <AutoBuildActivityContent {...props} />
           </Popover.Content>
         </Popover.Positioner>
       </Portal>
     </Popover.Root>
+  );
+}
+
+export function AutoBuildActivityContent(props: Omit<AutoBuildActivityProps, "open" | "trigger" | "onOpenChange">) {
+  const {
+    disabled,
+    enabled,
+    paused,
+    onStop,
+    onConfigure,
+    onPause,
+    onResume,
+    reviewRequests = [],
+    requestErrors = [],
+    onOpenRequests,
+    actionError,
+    onDismissActionError,
+    t,
+    ...sessions
+  } = props;
+  const { supervisor, completed, failed, onOpenSession } = sessions;
+  const supervisorActive = ["queued", "in_progress", "awaiting_input"].includes(supervisor?.status ?? "");
+  const danger = useRecipe({ recipe: psTheme.getRecipe("button") })({ variant: "destructive" });
+  return (
+    <>
+      <Box display="flex" flexDirection="column" minH="0" flex="1" p="0">
+        <ScrollArea flex="1" minH="0" h="0" viewportProps={{ minH: "0", flex: "1" }}>
+          <Stack gap="md" p="sm">
+            <AutoBuildWarnings {...sessions} enabled={enabled} t={t} />
+            {reviewRequests.some(({ state }) => state === "open") || requestErrors.length ? (
+              <AutoBuildRequests onOpen={onOpenRequests} t={t} />
+            ) : null}
+            <Stack gap="2xs">
+              <Text textStyle="label/2XS/medium" color="fg.muted">
+                {t("timeline.autoBuild.supervisor", "Supervisor")}
+              </Text>
+              {supervisor ? (
+                <AutoBuildSessionRow
+                  session={supervisor}
+                  sleeping={enabled && !completed && !supervisorActive && !failed}
+                  onOpen={onOpenSession}
+                />
+              ) : (
+                <EmptyState size="sm" title={t("timeline.autoBuild.noSupervisor", "No supervisor")} />
+              )}
+            </Stack>
+            <AutoBuildSessions {...sessions} t={t} />
+          </Stack>
+        </ScrollArea>
+      </Box>
+      <Box flexShrink="0" p="sm">
+        <Stack w="full" alignItems="end">
+          <Box position="relative" w="full" h="3.5rem">
+            <AutoBuildAlert
+              failed={failed}
+              error={sessions.error}
+              actionError={actionError}
+              onDismissActionError={onDismissActionError}
+              t={t}
+            />
+          </Box>
+          {enabled ? (
+            <Button size="sm" variant="outline" disabled={disabled} onClick={() => void onPause?.()}>
+              <Pause />
+              {t("timeline.autoBuild.pause", "Pause")}
+            </Button>
+          ) : null}
+          {!enabled && paused ? (
+            <HStack gap="xs">
+              <Button size="sm" variant="outline" disabled={disabled} onClick={() => void onResume?.()}>
+                <Play />
+                {t("timeline.autoBuild.resume", "Resume")}
+              </Button>
+              <Button size="sm" css={danger} disabled={disabled} onClick={onStop}>
+                <Square />
+                {t("timeline.autoBuild.stop", "Stop Auto Build")}
+              </Button>
+            </HStack>
+          ) : null}
+          {!enabled && !paused ? (
+            <Button size="sm" variant="outline" disabled={disabled} onClick={onConfigure}>
+              <Play />
+              {t("timeline.autoBuild.start", "Auto Build")}
+            </Button>
+          ) : null}
+        </Stack>
+      </Box>
+    </>
   );
 }

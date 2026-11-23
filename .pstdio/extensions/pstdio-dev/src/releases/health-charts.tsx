@@ -2,18 +2,20 @@ import { Box, HStack, Stack, Text } from "@chakra-ui/react";
 import { psTheme } from "@pstdio/ui";
 import { barY, defineChart, dot, lineY, stack } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react";
-import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
-import { scalePoint } from "@tanstack/charts/scales/point";
 import { tooltip } from "@tanstack/charts/tooltip";
+import { useState } from "react";
+import type { Aggregation } from "../webview/period";
+import { periodChartMargin, periodTitle, timelineScale } from "../webview/period-chart";
+import { publicationRows, releaseMarks } from "./health-chart-timeline";
+import type { HealthBucket } from "./health-timeline";
+import { SeriesLegend } from "./series-legend";
 import { TEST_CATEGORIES, type TestCategory } from "./test-counts";
 import type { ReleaseHealth } from "./types";
 
 const color = (value: string) => psTheme.token.var(`colors.${value}`);
+const formatCount = (value: number) => value.toLocaleString();
 
-export const totalTests = (run: ReleaseHealth) => run.counts.passed + run.counts.failed + run.counts.skipped;
-export const quarantinedTests = (run: ReleaseHealth) => run.counts.quarantined ?? 0;
-export const hasCategories = (run: ReleaseHealth) => Boolean(run.categories && Object.keys(run.categories).length);
 export const formatDuration = (seconds: number) => {
   const rounded = Math.round(seconds);
   if (rounded < 60) return `${rounded}s`;
@@ -24,18 +26,6 @@ export const formatDuration = (seconds: number) => {
   const remaining = minutes % 60;
   return remaining ? `${hours}h ${remaining}m` : `${hours}h`;
 };
-const durationTick = (seconds: number) => {
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
-  return `${(seconds / 3600).toFixed(1)}h`;
-};
-const runTime = (run: ReleaseHealth) =>
-  new Date(run.createdAt).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 
 // Alternate light and dark blue shades so neighbouring stacks stay visibly separate.
 const CATEGORY_COLORS: Record<TestCategory, string> = {
@@ -47,41 +37,12 @@ const CATEGORY_COLORS: Record<TestCategory, string> = {
   performance: "vis.sequential.blue.low-1",
   quarantine: "vis.sequential.blue.high-2",
 };
-const CATEGORY_ORDER: string[] = TEST_CATEGORIES.map((category) => category.id);
-type SegmentCategory = TestCategory | "pending";
-interface TestSegment {
-  run: string;
-  entry: ReleaseHealth;
-  category: SegmentCategory;
-  count: number;
-}
-const fillOf = (category: SegmentCategory) => (category === "pending" ? "fg.muted" : CATEGORY_COLORS[category]);
+const categories = [...TEST_CATEGORIES, { id: "pending" as const, label: "Uncategorized" }];
+type TestSeries = (typeof categories)[number]["id"];
+const categoryColor = (category: TestSeries) => (category === "pending" ? "fg.muted" : CATEGORY_COLORS[category]);
+const categoryLegend = categories.map(({ id, label }) => ({ id, label, color: categoryColor(id) }));
 
-const segmentsOf = (entry: ReleaseHealth): TestSegment[] => {
-  if (!hasCategories(entry)) {
-    return [{ run: String(entry.id), entry, category: "pending", count: totalTests(entry) }];
-  }
-  return TEST_CATEGORIES.flatMap((category) => {
-    const count = entry.categories?.[category.id] ?? 0;
-    return count ? [{ run: String(entry.id), entry, category: category.id, count }] : [];
-  });
-};
-
-const CategoryLegend = () => (
-  <HStack gap="md" flexWrap="wrap">
-    {TEST_CATEGORIES.map((category) => (
-      <HStack key={category.id} gap="2xs">
-        <Box boxSize="2" borderRadius="sm" bg={CATEGORY_COLORS[category.id]} />
-        <Text textStyle="label/XS" color="fg.muted">
-          {category.label}
-        </Text>
-      </HStack>
-    ))}
-  </HStack>
-);
-
-export const CategoryBreakdown = (props: { run: ReleaseHealth }) => {
-  const { run } = props;
+export const CategoryBreakdown = ({ run }: { run: ReleaseHealth }) => {
   const measured = TEST_CATEGORIES.flatMap((category) => {
     const value = run.categories?.[category.id];
     return value ? [{ ...category, value }] : [];
@@ -93,7 +54,7 @@ export const CategoryBreakdown = (props: { run: ReleaseHealth }) => {
         <HStack key={category.id} gap="2xs">
           <Box boxSize="2" borderRadius="sm" bg={CATEGORY_COLORS[category.id]} />
           <Text textStyle="label/XS" color="fg.muted">
-            {category.label} {category.value.toLocaleString()}
+            {category.label} {formatCount(category.value)}
           </Text>
         </HStack>
       ))}
@@ -101,69 +62,103 @@ export const CategoryBreakdown = (props: { run: ReleaseHealth }) => {
   );
 };
 
-interface TotalTestsPlotProps {
-  runs: ReleaseHealth[];
+const bucketMetrics = (bucket: HealthBucket) => {
+  const measured = bucket.runs.filter(({ counts }) => counts.reports > 0);
+  const timed = bucket.runs.filter(({ runDurationSeconds }) => runDurationSeconds !== undefined);
+  const passed = measured.reduce((sum, run) => sum + run.counts.passed, 0);
+  const failed = measured.reduce((sum, run) => sum + run.counts.failed, 0);
+  const skipped = measured.reduce((sum, run) => sum + run.counts.skipped, 0);
+  const quarantined = measured.reduce((sum, run) => sum + (run.counts.quarantined ?? 0), 0);
+  const total = passed + failed + skipped;
+  const segments = TEST_CATEGORIES.flatMap((category) => {
+    const count = measured.reduce((sum, run) => sum + (run.categories?.[category.id] ?? 0), 0);
+    return count ? [{ date: bucket.date, category: category.id, count }] : [];
+  });
+  const pending = total - segments.reduce((sum, segment) => sum + segment.count, 0);
+  const duration = timed.length
+    ? timed.reduce((sum, run) => sum + run.runDurationSeconds!, 0) / timed.length
+    : undefined;
+  return {
+    ...bucket,
+    measured,
+    timed,
+    total,
+    passed,
+    failed,
+    skipped,
+    quarantined,
+    duration,
+    segments:
+      pending > 0 ? [...segments, { date: bucket.date, category: "pending" as const, count: pending }] : segments,
+  };
+};
+
+type RunBucket = ReturnType<typeof bucketMetrics>;
+interface RunPlotProps {
+  buckets: RunBucket[];
+  aggregation: Aggregation;
   onChoose: (id: number) => void;
 }
 
-// Total tests stack their categories on one shared count scale.
-export const TotalTestsPlot = (props: TotalTestsPlotProps) => {
-  const { runs, onChoose } = props;
-  const segments = runs.flatMap(segmentsOf);
+const testRows = (bucket: RunBucket) => [
+  { label: "Test runs with reports", value: `${bucket.measured.length}/${bucket.runs.length}` },
+  { label: "Total", value: formatCount(bucket.total) },
+  { label: "Passed", value: formatCount(bucket.passed), color: color("fg.success") },
+  { label: "Failed", value: formatCount(bucket.failed), color: color("fg.error") },
+  { label: "Quarantined", value: formatCount(bucket.quarantined), color: color("fg.warning") },
+  { label: "Skipped / unrun", value: formatCount(bucket.skipped) },
+];
+
+const testSegments = (bucket: RunBucket, selected?: TestSeries) => {
+  if (!selected) return bucket.segments;
+  if (!bucket.measured.length) return [];
+  const count = bucket.segments.find(({ category }) => category === selected)?.count ?? 0;
+  return [{ date: bucket.date, category: selected, count }];
+};
+
+const TotalTestsPlot = ({ buckets, aggregation, onChoose }: RunPlotProps) => {
+  const [selection, setSelection] = useState<TestSeries>();
+  const byDate = new Map(buckets.map((bucket) => [bucket.date, bucket]));
+  const uncategorized = buckets.some(({ segments }) => segments.some(({ category }) => category === "pending"));
+  const legend = uncategorized ? categoryLegend : categoryLegend.filter(({ id }) => id !== "pending");
+  const selected = legend.find(({ id }) => id === selection);
+  const segments = buckets.flatMap((bucket) => testSegments(bucket, selected?.id));
   const definition = defineChart({
+    margin: periodChartMargin,
     marks: [
       barY(segments, {
-        x: "run",
+        x: "date",
         y: "count",
         z: "category",
-        layout: stack({ order: CATEGORY_ORDER }),
+        layout: stack({ order: categories.map(({ id }) => id) }),
         maxThickness: 64,
-        fill: (item) => color(fillOf(item.category)),
+        fill: ({ category }) => color(categoryColor(category)),
         stroke: color("bg"),
         strokeWidth: 1,
       }),
+      ...releaseMarks(buckets),
     ],
-    scales: {
-      x: {
-        scale: () =>
-          scaleBand<string>()
-            .domain(runs.map((run) => String(run.id)))
-            .padding(0.2),
-        axis: {
-          ticks: {
-            format: (id: string) => {
-              const run = runs.find((entry) => String(entry.id) === id);
-              return run ? runTime(run) : id;
-            },
-          },
-        },
-      },
-      y: { scale: scaleLinear, nice: true, grid: true },
-    },
+    scales: { x: timelineScale(buckets, aggregation), y: { scale: scaleLinear, nice: true, grid: true } },
     focus: "group-x",
     tooltip: {
       use: tooltip,
       anchor: "group-center",
       content: (points) => {
-        const run = points[0]!.datum.entry;
-        const categoryRows = hasCategories(run)
-          ? TEST_CATEGORIES.flatMap((category) => {
-              const value = run.categories?.[category.id] ?? 0;
-              return value
-                ? [{ label: category.label, value: value.toLocaleString(), color: color(CATEGORY_COLORS[category.id]) }]
-                : [];
-            })
-          : [{ label: "Tests (categorized on next refresh)", value: totalTests(run).toLocaleString() }];
+        const bucket = byDate.get(String(points[0]!.xValue))!;
         return {
-          title: `${new Date(run.createdAt).toLocaleString()} · ${run.sha.slice(0, 7)}`,
+          title: periodTitle(bucket.date, aggregation),
           rows: [
-            { label: "Total", value: totalTests(run).toLocaleString() },
-            ...categoryRows,
-            { label: "Failed", value: run.counts.failed.toLocaleString(), color: color("fg.error") },
-            { label: "Skipped / unrun", value: run.counts.skipped.toLocaleString() },
-            { label: "Verification", value: run.conclusion ?? run.status },
-            { label: "Publication", value: run.published ? "Published" : "Unpublished" },
-            { label: "Reported test jobs", value: `${run.reportedJobs}/${run.testJobs}` },
+            ...(bucket.measured.length
+              ? [
+                  ...(selected ? [] : testRows(bucket)),
+                  ...testSegments(bucket, selected?.id).map(({ category, count }) => ({
+                    label: categories.find(({ id }) => id === category)!.label,
+                    value: formatCount(count),
+                    color: color(categoryColor(category)),
+                  })),
+                ]
+              : []),
+            ...publicationRows(bucket),
           ],
         };
       },
@@ -172,14 +167,19 @@ export const TotalTestsPlot = (props: TotalTestsPlotProps) => {
   return (
     <Stack gap="2xs">
       <Text textStyle="label/M/medium">Total tests</Text>
-      <CategoryLegend />
+      <SeriesLegend label="Test category legend" items={legend} selected={selected?.id} onSelect={setSelection} />
       <Box color="fg.muted" textStyle="label/XS">
         <Chart
           definition={definition}
           height={220}
-          ariaLabel="Total tests by release run, stacked by test category, oldest first"
+          ariaLabel={
+            selected
+              ? `${selected.label} test executions by ${aggregation}, UTC`
+              : `Total test executions by ${aggregation}, UTC`
+          }
           onFocusChange={(focused) => {
-            if (focused) onChoose(Number(focused.datum.run));
+            const run = byDate.get(String(focused?.xValue))?.measured.at(-1);
+            if (run) onChoose(run.id);
           }}
         />
       </Box>
@@ -187,62 +187,62 @@ export const TotalTestsPlot = (props: TotalTestsPlotProps) => {
   );
 };
 
-interface HealthPlotProps {
-  runs: ReleaseHealth[];
-  title: string;
-  fill: string;
-  value: (run: ReleaseHealth) => number;
-  ariaLabel: string;
-  onChoose: (id: number) => void;
-}
+const metricConfig = {
+  failed: { title: "Failed tests", fill: "fg.error" },
+  quarantined: { title: "Quarantined tests", fill: "fg.warning" },
+  duration: { title: "Average run duration", fill: "vis.categorical.1" },
+} as const;
 
-export const HealthPlot = (props: HealthPlotProps) => {
-  const { runs, title, fill, value, ariaLabel, onChoose } = props;
-  const bars = runs.map((entry) => ({ run: String(entry.id), entry, count: value(entry) }));
+const RunMetricPlot = ({
+  buckets,
+  aggregation,
+  onChoose,
+  metric,
+}: RunPlotProps & { metric: keyof typeof metricConfig }) => {
+  const { title, fill } = metricConfig[metric];
+  const duration = metric === "duration";
+  const points = buckets.flatMap((bucket) => {
+    const value = bucket[metric];
+    if (value === undefined || (!duration && !bucket.measured.length)) return [];
+    return [{ date: bucket.date, value }];
+  });
+  if (!points.length) return null;
+  const byDate = new Map(buckets.map((bucket) => [bucket.date, bucket]));
+  const marks = duration
+    ? [
+        lineY(points, { x: "date", y: "value", stroke: color(fill), strokeWidth: 2 }),
+        dot(points, { x: "date", y: "value", fill: color(fill), r: 3 }),
+      ]
+    : [barY(points, { x: "date", y: "value", fill: color(fill), maxThickness: 64 })];
   const definition = defineChart({
-    marks: [
-      barY(bars, {
-        x: "run",
-        y: "count",
-        maxThickness: 64,
-        fill: color(fill),
-      }),
-    ],
+    margin: periodChartMargin,
+    marks: [...marks, ...releaseMarks(buckets)],
     scales: {
-      x: {
-        scale: () =>
-          scaleBand<string>()
-            .domain(runs.map((run) => String(run.id)))
-            .padding(0.2),
-        axis: {
-          ticks: {
-            format: (id: string) => {
-              const run = runs.find((entry) => String(entry.id) === id);
-              return run ? runTime(run) : id;
-            },
-          },
-        },
+      x: timelineScale(buckets, aggregation),
+      y: {
+        scale: scaleLinear,
+        nice: true,
+        grid: true,
+        axis: duration ? { ticks: { format: formatDuration } } : undefined,
       },
-      y: { scale: scaleLinear, nice: true, grid: true },
     },
     focus: "group-x",
     tooltip: {
       use: tooltip,
       anchor: "group-center",
-      content: (points) => {
-        const run = points[0]!.datum.entry;
+      content: (items) => {
+        const bucket = byDate.get(String(items[0]!.xValue))!;
+        const durationRows =
+          bucket.duration === undefined
+            ? []
+            : [
+                { label: "Average duration", value: formatDuration(bucket.duration) },
+                { label: "Runs timed", value: formatCount(bucket.timed.length) },
+              ];
+        const evidenceRows = bucket.measured.length ? testRows(bucket) : [];
         return {
-          title: `${new Date(run.createdAt).toLocaleString()} · ${run.sha.slice(0, 7)}`,
-          rows: [
-            { label: "Total", value: totalTests(run).toLocaleString() },
-            { label: "Passed", value: run.counts.passed.toLocaleString(), color: color("fg.success") },
-            { label: "Failed", value: run.counts.failed.toLocaleString(), color: color("fg.error") },
-            { label: "Quarantined", value: quarantinedTests(run).toLocaleString(), color: color("fg.warning") },
-            { label: "Skipped / unrun", value: run.counts.skipped.toLocaleString() },
-            { label: "Verification", value: run.conclusion ?? run.status },
-            { label: "Publication", value: run.published ? "Published" : "Unpublished" },
-            { label: "Reported test jobs", value: `${run.reportedJobs}/${run.testJobs}` },
-          ],
+          title: periodTitle(bucket.date, aggregation),
+          rows: [...(duration ? durationRows : evidenceRows), ...publicationRows(bucket)],
         };
       },
     },
@@ -254,9 +254,11 @@ export const HealthPlot = (props: HealthPlotProps) => {
         <Chart
           definition={definition}
           height={180}
-          ariaLabel={ariaLabel}
+          ariaLabel={`${title} by ${aggregation}, UTC`}
           onFocusChange={(focused) => {
-            if (focused) onChoose(Number(focused.datum.run));
+            const bucket = byDate.get(String(focused?.xValue));
+            const run = (duration ? bucket?.timed : bucket?.measured)?.at(-1);
+            if (run) onChoose(run.id);
           }}
         />
       </Box>
@@ -264,83 +266,23 @@ export const HealthPlot = (props: HealthPlotProps) => {
   );
 };
 
-interface DurationPlotProps {
-  runs: ReleaseHealth[];
+export const ReleaseRunPlots = ({
+  buckets,
+  aggregation,
+  onChoose,
+}: {
+  buckets: HealthBucket[];
+  aggregation: Aggregation;
   onChoose: (id: number) => void;
-}
-
-export const DurationPlot = (props: DurationPlotProps) => {
-  const { runs, onChoose } = props;
-  const points = runs.flatMap((entry) =>
-    entry.runDurationSeconds === undefined ? [] : [{ run: String(entry.id), entry, seconds: entry.runDurationSeconds }],
-  );
-  const definition = defineChart({
-    marks: [
-      lineY(points, { x: "run", y: "seconds", stroke: color("vis.categorical.1"), strokeWidth: 2 }),
-      dot(points, {
-        x: "run",
-        y: "seconds",
-        fill: color("vis.categorical.1"),
-        r: 4,
-        stroke: color("bg"),
-        strokeWidth: 2,
-      }),
-    ],
-    scales: {
-      x: {
-        scale: () =>
-          scalePoint<string>()
-            .domain(runs.map((run) => String(run.id)))
-            .padding(0.5),
-        axis: {
-          ticks: {
-            format: (id: string) => {
-              const run = runs.find((entry) => String(entry.id) === id);
-              return run ? runTime(run) : id;
-            },
-          },
-        },
-      },
-      y: {
-        scale: scaleLinear,
-        nice: true,
-        grid: true,
-        axis: { ticks: { format: (value: number) => durationTick(value) } },
-      },
-    },
-    focus: "group-x",
-    tooltip: {
-      use: tooltip,
-      anchor: "group-center",
-      content: (points) => {
-        const run = points[0]!.datum.entry;
-        return {
-          title: `${new Date(run.createdAt).toLocaleString()} · ${run.sha.slice(0, 7)}`,
-          rows: [
-            { label: "Run duration", value: formatDuration(run.runDurationSeconds ?? 0) },
-            { label: "Total tests", value: totalTests(run).toLocaleString() },
-            { label: "Failed", value: run.counts.failed.toLocaleString(), color: color("fg.error") },
-            { label: "Quarantined", value: quarantinedTests(run).toLocaleString(), color: color("fg.warning") },
-            { label: "Verification", value: run.conclusion ?? run.status },
-            { label: "Reported test jobs", value: `${run.reportedJobs}/${run.testJobs}` },
-          ],
-        };
-      },
-    },
-  });
+}) => {
+  const metrics = buckets.map(bucketMetrics);
+  const measured = metrics.some((bucket) => bucket.measured.length);
   return (
-    <Stack gap="2xs">
-      <Text textStyle="label/M/medium">Total duration</Text>
-      <Box color="fg.muted" textStyle="label/XS">
-        <Chart
-          definition={definition}
-          height={180}
-          ariaLabel="Total release run duration by run, oldest first"
-          onFocusChange={(focused) => {
-            if (focused) onChoose(Number(focused.datum.run));
-          }}
-        />
-      </Box>
-    </Stack>
+    <>
+      {measured ? <TotalTestsPlot buckets={metrics} aggregation={aggregation} onChoose={onChoose} /> : null}
+      <RunMetricPlot buckets={metrics} aggregation={aggregation} onChoose={onChoose} metric="failed" />
+      <RunMetricPlot buckets={metrics} aggregation={aggregation} onChoose={onChoose} metric="quarantined" />
+      <RunMetricPlot buckets={metrics} aggregation={aggregation} onChoose={onChoose} metric="duration" />
+    </>
   );
 };

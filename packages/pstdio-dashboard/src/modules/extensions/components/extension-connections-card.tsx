@@ -64,6 +64,12 @@ const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
             projectId,
           )}
         </Text>
+        {definition.scope === "global" && (
+          <Text textStyle="label/XS" color="fg.muted">
+            {t("projectSettings.extensionsPanel.connections.globalScope")}
+          </Text>
+        )}
+
         <Text textStyle="label/XS" color={configured?.configured ? "fg.success" : "fg.muted"}>
           {configured?.configured
             ? t("projectSettings.extensionsPanel.connections.connected")

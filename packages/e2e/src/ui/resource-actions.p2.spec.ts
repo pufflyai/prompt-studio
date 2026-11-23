@@ -8,7 +8,7 @@ import {
   expectResourceMenuItems as expectMenuItems,
   prepareResourceActionsDashboard as prepareDashboard,
 } from "./helpers/resource-actions";
-import { openProjectHome, showSidenavEntry } from "./helpers/sidenav-navigation";
+import { leaveSidenavLevel, showSidenavEntry } from "./helpers/sidenav-navigation";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 
 test("shows the same ticket and workspace actions on rows and open page headers", async ({ page, request }) => {
@@ -44,7 +44,7 @@ test("shows the same ticket and workspace actions on rows and open page headers"
         exact: true,
       }),
     ).toBeVisible();
-    await openProjectHome(page, "Resource Actions");
+    await leaveSidenavLevel(page);
     const workspacesNavigation = await showSidenavEntry(page, "Workspaces");
     await workspacesNavigation.click();
     const ticketsNavigation = sidenav.getByRole("option", { name: "Tickets", exact: true }).first();
@@ -63,7 +63,7 @@ test("shows the same ticket and workspace actions on rows and open page headers"
         exact: true,
       }),
     ).toBeVisible();
-    await openProjectHome(page, "Resource Actions");
+    await leaveSidenavLevel(page);
     await workspacesNavigation.click();
     await expect(ticketsNavigation).toBeVisible();
     await ticketsNavigation.click();
@@ -103,7 +103,7 @@ test("shows the same ticket and workspace actions on rows and open page headers"
     await breadcrumbAction.click();
     await expect(page.getByRole("menuitem", { name: "Run attempt", exact: true })).toBeHidden();
 
-    await openProjectHome(page, "Resource Actions");
+    await leaveSidenavLevel(page);
     await workspacesNavigation.click();
     const workspaceRow = page
       .getByRole("region", { name: "Main", exact: true })

@@ -88,13 +88,14 @@ export const getBridgeWebviewHostEventPublisher = (
   workbench: WorkbenchCore,
   instance: WorkbenchPanelInstance,
   projectId = workbench.pages.store.getState().projectId ?? undefined,
+  renderedViewId = instance.viewId ?? instance.panelId,
 ) => {
   let owners = hostEventPublishersByWorkbench.get(workbench.layout.store);
   if (!owners) {
     owners = new Map();
     hostEventPublishersByWorkbench.set(workbench.layout.store, owners);
   }
-  const key = JSON.stringify([projectId, instance.instanceId]);
+  const key = JSON.stringify([projectId, instance.instanceId, renderedViewId]);
   const retained = owners.get(key);
   if (retained) return retained.hostEvents;
   const hostEvents = createHostEventPublisher();
@@ -111,7 +112,7 @@ export const getBridgeWebviewHostEventPublisher = (
   const watch = watchClosedTerminalPlacements(workbench, viewId, undefined, projectId, (closedId) => {
     if (closedId === instance.instanceId) dispose();
   });
-  owners.set(key, { hostEvents, projectId, viewId, dispose });
+  owners.set(key, { hostEvents, projectId, viewId: renderedViewId, dispose });
   return hostEvents;
 };
 

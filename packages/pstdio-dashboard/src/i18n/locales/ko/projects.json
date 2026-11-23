@@ -95,6 +95,7 @@
       "connections": {
         "title": "연결",
         "description": "이 확장 프로그램을 원격 서비스에 연결합니다. 자격 증명은 Prompt Studio 호스트에 유지됩니다.",
+        "globalScope": "이 기기의 모든 로컬 프로젝트에서 공유됩니다.",
         "endpoint": "엔드포인트",
         "credential": "자격 증명",
         "credentialUnchanged": "현재 자격 증명을 유지하려면 비워 두세요",

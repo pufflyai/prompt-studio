@@ -221,6 +221,9 @@ export const toViewRecord = (
     extensionId: view.extensionId,
     title: view.contribution.title,
     icon: view.contribution.icon,
+    header: view.contribution.header
+      ? { view: normalizedRef(view.contribution.header.view, view.extensionId) }
+      : undefined,
     body: webview ? { kind: "webview", webview } : toNativeViewBody(view),
   };
 };

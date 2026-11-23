@@ -3,6 +3,7 @@ import { createPlannerTicket } from "../helpers/planner-api";
 import { nativePublicTextEditor } from "../helpers/verify-public-text-editor";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
+import { leaveSidenavLevel } from "./helpers/sidenav-navigation";
 
 // Cold project/tool setup precedes the complete navigation and note-projection journey.
 test.setTimeout(120_000);
@@ -87,11 +88,8 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");
 
-  // The breadcrumb leaves a level: the project crumb returns to the last root-level page.
-  await page
-    .locator('[data-workbench-region="nav"]')
-    .getByRole("button", { name: new RegExp(`${project.name}$`) })
-    .click();
+  // Leaving the level restores the last root-level page.
+  await leaveSidenavLevel(page);
   await expect(page).toHaveURL(/\/tickets$/);
   await expect(row("Sessions")).toBeVisible();
 
@@ -101,9 +99,6 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   await expect(headerRows).toHaveText(["Search", "Tickets", "Home"]);
   await expect(sidenav.getByRole("button", { name: "Help", exact: true })).toBeVisible();
   await expect(row("Settings")).toBeVisible();
-  await page
-    .locator('[data-workbench-region="nav"]')
-    .getByRole("button", { name: new RegExp(`${project.name}$`) })
-    .click();
+  await leaveSidenavLevel(page);
   await expect(row("Sessions")).toBeVisible();
 });

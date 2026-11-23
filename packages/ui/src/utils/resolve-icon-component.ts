@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import * as lucideIcons from "lucide-react";
 import { optionIcons } from "@/components/primitives/icon-options";
 import { MessagesCircle } from "./messages-circle-icon";
+import { TextPen } from "./text-pen-icon";
 
 const iconComponents = new Set<unknown>(Object.values(lucideIcons.icons));
 
@@ -17,6 +18,7 @@ export const resolveIconComponent = (name: string) => {
   if (option) return option.icon;
   const pascalName = toPascalCase(name);
   if (pascalName === "MessagesCircle") return MessagesCircle;
+  if (pascalName === "TextPen") return TextPen;
   for (const candidate of [name, pascalName, `${pascalName}Icon`]) {
     const component = (lucideIcons as Record<string, unknown>)[candidate];
     if (iconComponents.has(component)) return component as LucideIcon;

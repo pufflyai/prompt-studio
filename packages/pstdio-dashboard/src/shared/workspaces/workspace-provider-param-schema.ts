@@ -10,7 +10,13 @@ export const workspaceProviderText = (value: unknown) => {
 };
 
 const workspaceProviderOptions = (value: unknown) => {
-  if (Array.isArray(value)) return value.map((option) => ({ ...option, label: workspaceProviderText(option.label) }));
+  if (Array.isArray(value))
+    return value.map((option) => ({
+      ...option,
+      label: isLocalizedString(option.localizedLabel)
+        ? (option.localizedLabel.default ?? workspaceProviderText(option.label))
+        : workspaceProviderText(option.localizedLabel ?? option.label),
+    }));
   const source = value as ParamOptionSource;
   return {
     commandId: commandRefId(source.command),

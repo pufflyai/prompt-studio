@@ -1,8 +1,10 @@
+import { Box, Flex, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { Header } from "@pstdio/ui";
 import type { CollectionViewsSource } from "@pstdio/ui/collection-view";
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { useState } from "react";
-import { AutoBuildButton } from "./auto-build-button";
+import { AutoBuildDialogPreview } from "./auto-build-dialog.story-fixture";
 import { PlanHeader } from "./plan-header";
 import { TimelinePresentationProvider } from "./timeline-presentation";
 import { timelineInitialState } from "./timeline-query";
@@ -47,36 +49,12 @@ function HeaderStory(props: { filtered?: boolean; running?: boolean; obsoletePro
     onSetDefaultView: async (id) => setDefaultViewId(id ?? "all"),
   };
   return (
-    <PlanHeader
-      data={{
-        rows: [
-          { id: "one", title: "Build the shared header", attributes: { status: "progress" } },
-          { id: "two", title: "Review the result", attributes: { status: "ready" } },
-        ],
-        attributes: [
-          { id: "title", label: "Title", type: { kind: "string" }, filterable: true },
-          {
-            id: "status",
-            label: "Status",
-            type: {
-              kind: "enum",
-              options: [
-                { value: "progress", label: "In progress", icon: "circle" },
-                { value: "ready", label: "Ready", icon: "circle" },
-              ],
-            },
-            filterable: true,
-            displayable: true,
-          },
-        ],
-        storageKey: `timeline-header-story:${filtered ? "filtered" : "all"}:${obsoleteProperties ? "obsolete" : "current"}`,
-      }}
-      viewsSource={source}
-      search={search}
-      onSearchChange={setSearch}
-      resultLabel="2 of 2"
-      actions={
-        <AutoBuildButton
+    <Box minW="0" w="full">
+      <Header>
+        <Text flex="1" textStyle="label/S/medium">
+          Project Timeline
+        </Text>
+        <AutoBuildDialogPreview
           enabled={running ?? false}
           sessions={[]}
           running={0}
@@ -85,8 +63,39 @@ function HeaderStory(props: { filtered?: boolean; running?: boolean; obsoletePro
           onStop={async () => true}
           t={(_key, fallback) => fallback ?? _key}
         />
-      }
-    />
+      </Header>
+      <Flex direction="column">
+        <PlanHeader
+          data={{
+            rows: [
+              { id: "one", title: "Build the shared header", attributes: { status: "progress" } },
+              { id: "two", title: "Review the result", attributes: { status: "ready" } },
+            ],
+            attributes: [
+              { id: "title", label: "Title", type: { kind: "string" }, filterable: true },
+              {
+                id: "status",
+                label: "Status",
+                type: {
+                  kind: "enum",
+                  options: [
+                    { value: "progress", label: "In progress", icon: "circle" },
+                    { value: "ready", label: "Ready", icon: "circle" },
+                  ],
+                },
+                filterable: true,
+                displayable: true,
+              },
+            ],
+            storageKey: `timeline-header-story:${filtered ? "filtered" : "all"}:${obsoleteProperties ? "obsolete" : "current"}`,
+          }}
+          viewsSource={source}
+          search={search}
+          onSearchChange={setSearch}
+          resultLabel="2 of 2"
+        />
+      </Flex>
+    </Box>
   );
 }
 const meta: CanvasMeta<typeof HeaderStory> = {

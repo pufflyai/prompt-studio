@@ -1,5 +1,5 @@
 import type { ScopedQueryClient } from "@pstdio/sdk/extensions";
-import { type ChatRendererAction, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
+import { type ChatRendererAction, contributionRefId, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import { type ComponentType, createElement } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchPanelRenderInput } from "../../core";
@@ -241,6 +241,7 @@ export const createChatRendererOwner = (
           id: view.id,
           title: text(view.title, view.id),
           icon: view.icon,
+          header: view.header ? { viewId: contributionRefId(view.header.view) } : undefined,
           body: {
             kind: "react",
             render: (render) => {

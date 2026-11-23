@@ -85,7 +85,7 @@ export type WorkbenchRenderers = WorkbenchRendererRegistry &
 
 export type WorkbenchTreeViews = Pick<
   TreeRendererRegistry,
-  "getTreeState" | "setNodeExpanded" | "setSectionExpanded" | "setSelectedNode"
+  "getTreeState" | "setLoading" | "setNodeExpanded" | "setSectionExpanded" | "setSelectedNode"
 >;
 
 export interface WorkbenchCoreContributionContext {

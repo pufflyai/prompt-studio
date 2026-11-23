@@ -8,13 +8,14 @@ import {
   type WorkbenchWidgetPlacement,
   workbenchPanelRegions,
 } from "../layout/layout-model";
+import { workbenchPanelMenuRegions } from "../layout/layout-regions";
 import { defaultArrangement, resolveArrangement } from "../layout/panel-positions";
 import type { WorkbenchModeActivationContext, WorkbenchModeContribution } from "./mode-registry-types";
 
 const modePanelRegions = {
-  main: ["main-header", "main-left-menu", "main", "main-right-menu"],
-  secondary: ["secondary-header", "secondary-left-menu", "secondary", "secondary-right-menu"],
-  side: ["side-header", "side-left-menu", "side", "side-right-menu"],
+  main: ["main-header", "main", ...Object.values(workbenchPanelMenuRegions.main)],
+  secondary: ["secondary-header", "secondary", ...Object.values(workbenchPanelMenuRegions.secondary)],
+  side: ["side-header", "side", ...Object.values(workbenchPanelMenuRegions.side)],
 } as const satisfies Record<WorkbenchPanelRegion, readonly WorkbenchRegion[]>;
 
 const allModeRegions = Object.values(modePanelRegions).flat();
