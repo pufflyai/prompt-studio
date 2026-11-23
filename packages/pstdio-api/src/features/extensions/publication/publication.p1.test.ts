@@ -200,23 +200,12 @@ test("three devices discover encrypted packages, preserve private overrides and 
   await expect(sync(1)).rejects.toThrow();
   expect((await sourceFor(1)).installedSource.id).toBe(previous);
   peer.missing(false);
-  let remainingByteLength = 0;
-  peer.interrupt(async (blob) => {
-    const identity = JSON.stringify([blob.sha256, blob.byteLength, "application/octet-stream"]);
-    const operationId = `sync-receive:${new Bun.CryptoHasher("sha256").update(identity).digest("hex")}`;
-    const owner = publishedOwner(projectId);
-    const transfers = apps[1]!.deps.assetTransferService;
-    let partial = await transfers.get(owner, operationId);
-    while (partial?.status !== "staging" || partial.uploadedByteLength === 0) {
-      await Bun.sleep(0);
-      partial = await transfers.get(owner, operationId);
-    }
-    remainingByteLength = blob.byteLength - partial.uploadedByteLength;
-  });
-  await expect(sync(1)).rejects.toThrow();
-  expect(remainingByteLength).toBeGreaterThan(0);
+  peer.truncateNextRead();
+  await expect(sync(1)).rejects.toThrow("ASSET_INTEGRITY_MISMATCH");
+  expect((await sourceFor(1)).installedSource.id).toBe(previous);
+  const beforeResume = peer.offsets.length;
   await sync(1);
-  expect(peer.offsets.at(-1)).toBeGreaterThan(0);
+  expect(peer.offsets.slice(beforeResume).some((offset) => offset > 0)).toBe(true);
   await activate(1);
   await sync(0);
   await activate(0);
