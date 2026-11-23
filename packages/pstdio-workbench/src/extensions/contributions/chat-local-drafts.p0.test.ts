@@ -256,3 +256,33 @@ test("pending work rewritten by an older client during migration keeps its newer
       session.dispose();
     }
   }));
+
+test("a failed browser recovery read blocks replacement writes until recovery is read", () =>
+  withStorage(async (records) => {
+    const localKey = "pstdio-workbench:chat-draft:scope";
+    records.set(localKey, JSON.stringify(draft));
+    let denied = true;
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: (key: string) => {
+          if (denied && key === localKey) throw new Error("Storage denied");
+          return records.get(key) ?? null;
+        },
+        setItem: (key: string, value: string) => records.set(key, value),
+      },
+    });
+    const local = createLocalChatDrafts("scope", () => undefined);
+    const session = createChatSession({ query: async () => ({}), action: async () => undefined });
+    try {
+      local.restore(session);
+      denied = false;
+      expect(() => local.save({ text: "New typing", attachments: [], values: {} })).toThrow("Storage denied");
+      expect(records.get(localKey)).toBe(JSON.stringify(draft));
+      local.restore(session);
+      expect(session.getSnapshot().draft).toEqual(draft);
+      local.save(session.getSnapshot().draft);
+    } finally {
+      await session.dispose();
+    }
+  }));
