@@ -3,7 +3,7 @@ import { createPlannerTicket } from "../helpers/planner-api";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 
-test("the project crumb leaves a Sidenav level for the last root-level page", async ({ page, request }) => {
+test("Back to project leaves a Sidenav level for the last root-level page", async ({ page, request }) => {
   const response = await request.post(`${uiOrigin}/v1/projects`, {
     data: folderProjectInput({ name: "Level exit" }),
   });
@@ -28,9 +28,7 @@ test("the project crumb leaves a Sidenav level for the last root-level page", as
 
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   const row = (name: string) => sidenav.getByRole("option", { name, exact: true });
-  const projectCrumb = page
-    .locator('[data-workbench-region="nav"]')
-    .getByRole("button", { name: new RegExp(`${project.name}$`) });
+  const backToProject = sidenav.getByRole("button", { name: "Back to project", exact: true });
 
   await row("Tickets").click();
   await expect(page).toHaveURL(/\/tickets$/);
@@ -40,8 +38,7 @@ test("the project crumb leaves a Sidenav level for the last root-level page", as
   await row("Exit session").click();
   await expect(page).toHaveURL(/\/extensions\/pstdio\.session-browser\/conversation\?resource=/);
 
-  // The breadcrumb leads with the project crumb, which returns to the board the user came from.
-  await projectCrumb.click();
+  await backToProject.click();
   await expect(page).toHaveURL(/\/tickets$/);
   await expect(row("Sessions")).toBeVisible();
 
@@ -50,7 +47,7 @@ test("the project crumb leaves a Sidenav level for the last root-level page", as
   await expect(page).toHaveURL(/\/extensions\/pstdio\.session-browser\/conversations\/compose$/);
   await page.reload();
   await expect(row("Exit session")).toBeVisible();
-  await projectCrumb.click();
+  await backToProject.click();
   await expect(page).toHaveURL(/\/tickets$/);
   await expect(row("Sessions")).toBeVisible();
 });
