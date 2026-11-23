@@ -25,6 +25,7 @@ import {
   withBackgroundPreparation,
 } from "pstdio-extensions";
 import { readPublishedWebviewRevision, recordPublishedWebviewRevision } from "pstdio-extensions/prepared-cache";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { checkCandidateSource } from "./extension-candidate";
 import { createExtensionInstallBatch } from "./extension-install-batch";
 import { loadExtensionSource } from "./extension-runtime";
@@ -996,7 +997,7 @@ test("a frontend edited after inspection cannot publish under its earlier identi
   };
   const buildInputs = inspectManagedWebviewBuildInputs(input);
   writeFileSync(input.entryPath, 'console.log("changed after inspection");');
-  await expect(prepareWebviewArtifact({ ...input, buildInputs }, new AbortController().signal)).rejects.toThrow(
+  await expectRejection(prepareWebviewArtifact({ ...input, buildInputs }, new AbortController().signal)).toThrow(
     "changed while preparing",
   );
 });

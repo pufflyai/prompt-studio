@@ -3,6 +3,7 @@ import * as fs from "node:fs/promises";
 import { lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import {
   inspectManagedProjectFolder,
   prepareManagedProjectFolder,
@@ -42,8 +43,8 @@ test("an interrupted empty staging reservation is safely recreated and completed
     const prepared = await prepareManagedProjectFolder(id);
     expect(await inspectManagedProjectFolder(id, prepared)).toEqual({ removesManagedFolder: true });
     expect(await readFile(record, "utf8")).toBe(await identity(folder));
-    await expect(lstat(stage)).rejects.toMatchObject({ code: "ENOENT" });
-    await expect(lstat(`${record}.creation`)).rejects.toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(stage)).toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(`${record}.creation`)).toMatchObject({ code: "ENOENT" });
   }));
 
 test("an unverified nonempty staging reservation is retained", () =>
@@ -53,9 +54,9 @@ test("an unverified nonempty staging reservation is retained", () =>
     await receipt(record, directory, null);
     await mkdir(stage);
     await writeFile(join(stage, "local"), "Do not discard unverified files");
-    await expect(prepareManagedProjectFolder(id)).rejects.toBeDefined();
+    await expectRejection(prepareManagedProjectFolder(id)).toBeDefined();
     expect(await readFile(join(stage, "local"), "utf8")).toBe("Do not discard unverified files");
-    await expect(lstat(folder)).rejects.toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(folder)).toMatchObject({ code: "ENOENT" });
     expect(await readFile(`${record}.creation`, "utf8")).toContain(directory);
   }));
 
@@ -82,7 +83,7 @@ test("a destination created before publication remains unverified and unchanged"
         removesManagedFolder: false,
         retainsUnverifiedFolder: true,
       });
-      await expect(lstat(record)).rejects.toMatchObject({ code: "ENOENT" });
+      await expectRejection(lstat(record)).toMatchObject({ code: "ENOENT" });
     } finally {
       moving.mockRestore();
     }
@@ -113,8 +114,8 @@ test("removal accepts a verified published creation before the final marker exis
     await receipt(record, crypto.randomUUID(), await identity(folder));
     expect(await inspectManagedProjectFolder(id, await realpath(folder))).toEqual({ removesManagedFolder: true });
     await removeManagedProjectFolder(id, await realpath(folder));
-    await expect(lstat(folder)).rejects.toMatchObject({ code: "ENOENT" });
-    await expect(lstat(`${record}.creation`)).rejects.toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(folder)).toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(`${record}.creation`)).toMatchObject({ code: "ENOENT" });
   }));
 
 test("a disappearing existing destination is not silently recreated without ownership", () =>
@@ -131,8 +132,8 @@ test("a disappearing existing destination is not silently recreated without owne
       return value;
     }) as typeof fs.lstat);
     try {
-      await expect(prepareManagedProjectFolder(id)).rejects.toMatchObject({ code: "ENOENT" });
-      await expect(stat(folder)).rejects.toMatchObject({ code: "ENOENT" });
+      await expectRejection(prepareManagedProjectFolder(id)).toMatchObject({ code: "ENOENT" });
+      await expectRejection(stat(folder)).toMatchObject({ code: "ENOENT" });
     } finally {
       reading.mockRestore();
     }
@@ -171,7 +172,7 @@ test("removal never records an identity different from its ownership proof", () 
     try {
       await removeManagedProjectFolder(id, prepared);
       expect(await read(join(folder, "local"), "utf8")).toBe("Retain unverified user data");
-      await expect(stat(`${record}.removal`)).rejects.toMatchObject({ code: "ENOENT" });
+      await expectRejection(stat(`${record}.removal`)).toMatchObject({ code: "ENOENT" });
     } finally {
       readingIdentity.mockRestore();
       readingMarker.mockRestore();
@@ -194,7 +195,7 @@ test.each([
       await mkdir(stage);
       await receipt(record, directory, null);
     }
-    await expect(removeManagedProjectFolder(id, null)).rejects.toThrow("incomplete");
+    await expectRejection(removeManagedProjectFolder(id, null)).toThrow("incomplete");
     if (phase === "marker") expect(await readFile(record, "utf8")).toBe(await identity(folder));
     else expect(await readFile(`${record}.creation`, "utf8")).toContain(directory);
     expect((await lstat(phase === "stage" ? stage : folder)).isDirectory()).toBe(true);
@@ -205,8 +206,8 @@ test("successful removal clears an interrupted first receipt write", () =>
     await writeFile(`${record}.creation.pending`, "Interrupted write");
     await writeFile(`${record}.pending`, "Interrupted marker write");
     await removeManagedProjectFolder(id, null);
-    await expect(lstat(`${record}.creation.pending`)).rejects.toMatchObject({ code: "ENOENT" });
-    await expect(lstat(`${record}.pending`)).rejects.toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(`${record}.creation.pending`)).toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(`${record}.pending`)).toMatchObject({ code: "ENOENT" });
   }));
 
 test("an alternate bound folder can evict a safely empty abandoned creation stage", () =>
@@ -220,9 +221,9 @@ test("an alternate bound folder can evict a safely empty abandoned creation stag
     await writeFile(join(alternate, "local"), "Keep the chosen folder");
     await removeManagedProjectFolder(id, alternate);
     expect(await readFile(join(alternate, "local"), "utf8")).toBe("Keep the chosen folder");
-    await expect(lstat(stage)).rejects.toMatchObject({ code: "ENOENT" });
-    await expect(lstat(`${record}.creation`)).rejects.toMatchObject({ code: "ENOENT" });
-    await expect(lstat(folder)).rejects.toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(stage)).toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(`${record}.creation`)).toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(folder)).toMatchObject({ code: "ENOENT" });
   }));
 
 test("an alternate bound folder preserves user data while removing a receipt-proven managed copy", () =>
@@ -235,6 +236,6 @@ test("an alternate bound folder preserves user data while removing a receipt-pro
     await writeFile(join(alternate, "local"), "Keep the chosen folder");
     await removeManagedProjectFolder(id, alternate);
     expect(await readFile(join(alternate, "local"), "utf8")).toBe("Keep the chosen folder");
-    await expect(lstat(folder)).rejects.toMatchObject({ code: "ENOENT" });
-    await expect(lstat(`${record}.creation`)).rejects.toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(folder)).toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(`${record}.creation`)).toMatchObject({ code: "ENOENT" });
   }));

@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { documentPeer } from "../../features/extensions/publication/document-peer.fixture";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createRecoveryCatalog } from "../project-recovery/catalog";
 import { createRecoveryChunkStore } from "../project-recovery/chunks";
 import { openRecoveryJournal } from "../project-recovery/journal";
@@ -123,7 +124,7 @@ test("each device captures its folder automatically and downloads every complete
       const status = await restarted.status();
       return status.downloaded && !status.pending && !status.capturing;
     });
-    await expect(readFile(join(folder, ".pstignore"))).rejects.toThrow();
+    await expectRejection(readFile(join(folder, ".pstignore"))).toThrow();
     expect((await downloaded())!.manifest.capture.files).toBe(first.manifest.capture.files + 1);
   } finally {
     controller.abort();

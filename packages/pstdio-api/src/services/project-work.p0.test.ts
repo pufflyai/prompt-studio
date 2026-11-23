@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { createProjectWork, ProjectRemovalInProgress } from "./project-work";
 
 test("closing admission drains work already owned by that project", async () => {
@@ -11,7 +12,7 @@ test("closing admission drains work already owned by that project", async () => 
   });
   await Promise.resolve();
   work.freeze("project");
-  await expect(work.run("project", async () => "rejected")).rejects.toThrow("removing");
+  await expectRejection(work.run("project", async () => "rejected")).toThrow("removing");
   const drained = work.drain("project");
   mayContinue.resolve();
   expect(await admitted).toBe("saved");
@@ -23,9 +24,9 @@ test("an admitted writer cannot open a new command stream after project admissio
   const mayContinue = Promise.withResolvers<void>();
   const admitted = work.run("project", async () => {
     await mayContinue.promise;
-    await expect(
+    await expectRejection(
       work.run("project", async () => "stream opened", undefined, { cancelOnFreeze: true }),
-    ).rejects.toBeInstanceOf(ProjectRemovalInProgress);
+    ).toBeInstanceOf(ProjectRemovalInProgress);
   });
   await Promise.resolve();
   work.freeze("project");

@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setImmediate as nextTurn } from "node:timers/promises";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createNativeStore } from "./native-store";
 import * as privateFiles from "./private-file";
 
@@ -208,7 +209,7 @@ test("a rejected credential read does not retain ownership over a later save", a
     await store.save(login);
     const read = spyOn(privateFiles, "readPrivateFile").mockImplementation(controlledRead);
     restore.push(() => read.mockRestore());
-    await expect(store.read()).rejects.toThrow("Credential read interrupted");
+    await expectRejection(store.read()).toThrow("Credential read interrupted");
     await store.save(newer);
     expect(await store.read()).toEqual(newer);
   } finally {

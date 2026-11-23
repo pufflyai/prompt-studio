@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createExtensionProcessEnvironment, createInvocationScope, type InvocationScope } from "pstdio-extensions";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createProcessApi } from "./extension-process-api";
 import { createProcessEnvironmentPermissions, type ProcessEnvironmentSource } from "./process-environment/permissions";
 import { spawnProcessHandle } from "./process-handle";
@@ -95,9 +96,11 @@ describe("envFromHost", () => {
     const { api } = await setup();
     const marker = join(root, "denied");
 
-    await expect(api.run({ command: reporter(marker), envFromHost: ["EXTENSION_AGENT_TOKEN"] })).rejects.toMatchObject({
-      code: "process_environment_not_granted",
-    });
+    await expectRejection(api.run({ command: reporter(marker), envFromHost: ["EXTENSION_AGENT_TOKEN"] })).toMatchObject(
+      {
+        code: "process_environment_not_granted",
+      },
+    );
     expect(existsSync(marker)).toBe(false);
   });
 
@@ -152,13 +155,13 @@ describe("envFromHost", () => {
     const { api } = await setup(["EXTENSION_AGENT_TOKEN"]);
     const marker = join(root, "override");
 
-    await expect(
+    await expectRejection(
       api.run({
         command: reporter(marker),
         env: { EXTENSION_AGENT_TOKEN: "forged" },
         envFromHost: ["EXTENSION_AGENT_TOKEN"],
       }),
-    ).rejects.toThrow("envFromHost");
+    ).toThrow("envFromHost");
     expect(existsSync(marker)).toBe(false);
   });
 
@@ -166,9 +169,9 @@ describe("envFromHost", () => {
     const { api } = await setup(["EXTENSION_MISSING_TOKEN"]);
     const marker = join(root, "missing");
 
-    await expect(
+    await expectRejection(
       api.run({ command: reporter(marker), envFromHost: ["EXTENSION_MISSING_TOKEN"] }),
-    ).rejects.toMatchObject({
+    ).toMatchObject({
       code: "process_environment_unavailable",
     });
     expect(existsSync(marker)).toBe(false);
@@ -177,9 +180,9 @@ describe("envFromHost", () => {
   test("a host-level process API without a permission owner refuses envFromHost", async () => {
     const marker = join(root, "unowned");
 
-    await expect(
+    await expectRejection(
       createProcessApi().run({ command: reporter(marker), envFromHost: ["EXTENSION_AGENT_TOKEN"] }),
-    ).rejects.toMatchObject({ code: "process_environment_not_granted" });
+    ).toMatchObject({ code: "process_environment_not_granted" });
     expect(existsSync(marker)).toBe(false);
   });
 

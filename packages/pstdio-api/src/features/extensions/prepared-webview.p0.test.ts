@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { Worker } from "node:worker_threads";
 import { stopExtensionPreparation } from "pstdio-extensions";
 import { createPreparationClient } from "pstdio-extensions/preparation-client";
+import { expectRejection } from "../../test-utils/expect-rejection";
 
 const roots: string[] = [];
 const clients: ReturnType<typeof createPreparationClient>[] = [];
@@ -99,12 +100,12 @@ test("batch frontend preparation retains the actionable missing-dependency diagn
   const entryPath = join(root, "main.ts");
   writeFileSync(entryPath, 'import "missing-view-dependency"; export default true;');
   const { prepareWebviewArtifacts } = await import("./prepared-webview");
-  await expect(
+  await expectRejection(
     prepareWebviewArtifacts(
       [{ packagePath: root, entryPath, packageName: "missing-view", installName: "missing-view" }],
       new AbortController().signal,
     ),
-  ).rejects.toThrow(`Missing extension webview dependencies: missing-view-dependency. Run \`bun install\` in ${root}.`);
+  ).toThrow(`Missing extension webview dependencies: missing-view-dependency. Run \`bun install\` in ${root}.`);
 });
 
 test("prepared webviews serve their own styles and share content-addressed fonts", async () => {

@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { packageFilesMatch, packExtension, unpackExtension } from "./package";
 
 test("published packages preserve exact files, omit local inputs, and reject links", async () => {
@@ -26,7 +27,7 @@ test("published packages preserve exact files, omit local inputs, and reject lin
     expect(await Bun.file(join(target, ".env")).exists()).toBe(false);
     expect(await Bun.file(join(target, "node_modules", "local.ts")).exists()).toBe(false);
     await symlink(join(source, "image.bin"), join(source, "linked.bin"));
-    await expect(packExtension(source)).rejects.toThrow("symbolic link");
+    await expectRejection(packExtension(source)).toThrow("symbolic link");
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -43,9 +44,9 @@ test("package extraction rejects traversal and duplicate paths before writing fi
       ],
       [{ path: "C:/outside", bytes: "", executable: false }],
     ]) {
-      await expect(
+      await expectRejection(
         unpackExtension(new Blob([JSON.stringify({ version: 1, files })]), join(root, "stage")),
-      ).rejects.toThrow();
+      ).toThrow();
       expect(await Bun.file(join(root, "outside")).exists()).toBe(false);
     }
   } finally {

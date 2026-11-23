@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { openPublishedCatalog } from "../publication/catalog";
 import { createStorageApi } from "./storage";
 
@@ -68,7 +69,7 @@ test("declared extension logs preserve owner scopes and publication write permis
     expect((await waiting).done).toBe(true);
     expect((await first.api.log("comments").read({ after: 0 })).entries).toEqual([]);
     expect((await second.api.log("comments").read({ after: 0 })).entries).toEqual([]);
-    await expect(first.api.log("undeclared").read({ after: 0 })).rejects.toThrow("not declared");
+    await expectRejection(first.api.log("undeclared").read({ after: 0 })).toThrow("not declared");
     const asset = await app.deps.assetTransferService.stage(
       { workbenchId: first.project.id, extensionId: "pstdio.published-extensions" },
       crypto.randomUUID(),
@@ -78,7 +79,7 @@ test("declared extension logs preserve owner scopes and publication write permis
       { extensionId: "example.logs", revision: asset.sha256, version: "2.0.0", enabled: true },
       asset,
     );
-    await expect(comments.append("old writer")).rejects.toThrow("Update");
+    await expectRejection(comments.append("old writer")).toThrow("Update");
     expect((await comments.read({ after: 0 })).entries).toHaveLength(1);
   } finally {
     process.env.PSTDIO_DEFAULT_EXTENSIONS = previous;

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import type { createExtensionService } from "../../services/extension-service";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { folderProjectInput } from "../../test-utils/folder-project-input";
 import { writeProvisionHarnessExtension } from "../../test-utils/write-provision-harness-extension";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
@@ -220,7 +221,7 @@ describe("extension-backed skill catalog", () => {
     } while (cursor);
     expect(pagedNames).toEqual(["healthy"]);
     expect(await handle.deps.skillService.getByName(project.id, "healthy")).toMatchObject({ name: "healthy" });
-    await expect(handle.deps.skillService.getByName(project.id, "catalog-skill")).rejects.toThrow(
+    await expectRejection(handle.deps.skillService.getByName(project.id, "catalog-skill")).toThrow(
       "Package asset is missing",
     );
 

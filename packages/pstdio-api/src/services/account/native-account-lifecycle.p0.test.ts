@@ -2,6 +2,7 @@ import { expect, spyOn, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { AccountRequestError, createNativeAccount } from "./native-account";
 
 const projects = {
@@ -59,14 +60,14 @@ test("starting without a device sender retains the unavailable action instead of
       async () => {},
     );
     await account.refresh();
-    await expect(
+    await expectRejection(
       account.sendDeviceCommand(
         "project",
         "device",
         { type: "session.interrupt", id: "session" },
         new AbortController().signal,
       ),
-    ).rejects.toThrow("not connected to Cloud");
+    ).toThrow("not connected to Cloud");
   } finally {
     await account.close();
     await rm(root, { recursive: true, force: true });

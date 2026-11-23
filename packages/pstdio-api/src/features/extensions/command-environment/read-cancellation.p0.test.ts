@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts";
 import { createCommandRunner, normalizeExtensionSources } from "pstdio-extensions";
 import { createTestCommandEnvironment } from "../../../test-utils/create-test-command-environment";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createResourcesApi } from "./resources";
 import { createSessionsApi } from "./sessions";
 import { createWorkspacesApi } from "./workspaces";
@@ -54,7 +55,7 @@ test("cancellation during workspace resolution prevents the next session lookup"
   const reading = sessions.query({ workspaceId: "w" });
   controller.abort();
   workspace.resolve({ id: "w", project_id: "p" });
-  await expect(reading).rejects.toThrow();
+  await expectRejection(reading).toThrow();
   expect(childReads).toBe(0);
 });
 
@@ -214,6 +215,6 @@ test("cancelling a batch of resource identities during ownership resolution skip
   const pending = api.identityMany({ kind: "note", ids: ["one"] });
   controller.abort();
   catalog.resolve({ runtime: { resourceKinds: [{ extensionId: "notes", localId: "note" }] } });
-  await expect(pending).rejects.toThrow();
+  await expectRejection(pending).toThrow();
   expect(reads).toBe(0);
 });

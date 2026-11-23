@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { writeFile } from "node:fs/promises";
 import type { TerminalSessionRequest } from "pstdio-api-contracts";
 import { acceptPreparedRevision, prepareExtensionRevision } from "pstdio-extensions";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createWorkspaceContextFixture } from "../extensions/workspace-context.test-fixture";
 import { nativeTerminalAttachmentKey, openNativeTerminalSession } from "./native-terminal-session";
 
@@ -56,13 +57,13 @@ test("the callback resolves a project workspace, then the view owns the PTY beyo
 });
 
 test("native views reject a resource from another project before invoking it", async () => {
-  await expect(
+  await expectRejection(
     openNativeTerminalSession(
       fixture.deps,
       { ...binding, resource: { type: "workspace", id: "foreign", projectId: "other" } },
       new AbortController().signal,
     ),
-  ).rejects.toThrow(/project/i);
+  ).toThrow(/project/i);
   expect(requests).toEqual([]);
   expect(fixture.values.has("native-launch-called")).toBe(false);
 });
@@ -90,13 +91,13 @@ test("foreground titles preserve a terminal attachment while workspace changes u
 });
 
 test("only a terminal view in the enabled project runtime can open a native PTY", async () => {
-  await expect(
+  await expectRejection(
     openNativeTerminalSession(
       fixture.deps,
       { ...binding, viewId: "other.extension.view.console" },
       new AbortController().signal,
     ),
-  ).rejects.toThrow(/view/i);
+  ).toThrow(/view/i);
   expect(requests).toEqual([]);
 });
 
@@ -110,7 +111,7 @@ for (const change of [
 ]) {
   test(`native workspace authorization rejects ${JSON.stringify(change)}`, async () => {
     Object.assign(fixture.workspace, change);
-    await expect(openNativeTerminalSession(fixture.deps, binding, new AbortController().signal)).rejects.toThrow(
+    await expectRejection(openNativeTerminalSession(fixture.deps, binding, new AbortController().signal)).toThrow(
       /workspace/i,
     );
     expect(requests).toEqual([]);
@@ -142,7 +143,7 @@ test("removing the device copy closes a retained native terminal and refuses rea
   await work.drain(binding.projectId);
   await work.closeResources(binding.projectId);
   expect(kills).toBe(1);
-  await expect(nativeTerminalAttachmentKey(fixture.deps, binding, new AbortController().signal)).rejects.toThrow(
+  await expectRejection(nativeTerminalAttachmentKey(fixture.deps, binding, new AbortController().signal)).toThrow(
     "removing",
   );
   await session.kill();

@@ -2,6 +2,7 @@ import { afterEach, test as baseTest, expect } from "bun:test";
 import { mkdtemp, readFile, rm, symlink, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { sourceRecoveryPolicy } from "./capture-source";
 import { nativeRecoverySupported } from "./native-recovery.fixture";
 import { createProjectFolderPolicy, createRecoveryPolicy } from "./policy";
@@ -95,10 +96,10 @@ test("a .pstignore with a byte-order mark keeps it in the recorded text but not 
 baseTest("an invalid or linked policy blocks capture instead of broadening coverage", async () => {
   const root = await folder();
   await writeFile(join(root, ".pstignore"), new Uint8Array([0xff]));
-  await expect(readRecoveryPolicy(root)).rejects.toThrow();
+  await expectRejection(readRecoveryPolicy(root)).toThrow();
   await unlink(join(root, ".pstignore"));
   await writeFile(join(root, "rules"), "private/\n");
   await symlink("rules", join(root, ".pstignore"));
-  await expect(readRecoveryPolicy(root)).rejects.toThrow();
+  await expectRejection(readRecoveryPolicy(root)).toThrow();
   expect(() => createRecoveryPolicy("private\u0000data")).toThrow();
 });

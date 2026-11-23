@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readAcceptedRevision } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { folderProjectInput } from "../../test-utils/folder-project-input";
 import { writeProvisionHarnessExtension } from "../../test-utils/write-provision-harness-extension";
 import { provisionProjectWorkspaces } from "../workspaces/provision-coordinator";
@@ -232,7 +233,7 @@ describe("installed extension runtime skills", () => {
     });
     await runtime.ready;
     try {
-      await expect(onSourceChanged(sourcePath)).rejects.toThrow("Skill reconciliation interrupted");
+      await expectRejection(onSourceChanged(sourcePath)).toThrow("Skill reconciliation interrupted");
       fail = false;
       await onSourceChanged(sourcePath);
       await onSourceChanged(sourcePath);

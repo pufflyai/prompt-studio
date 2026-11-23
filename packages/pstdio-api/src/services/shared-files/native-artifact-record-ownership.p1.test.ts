@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { sql, storage_ordered_operations } from "pstdio-db";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { artifactFilesFixture } from "./artifact-files.fixture";
 import { withStorageObservation } from "./storage-observation";
 
@@ -40,11 +41,11 @@ test("a native file metadata change remains ordered and stale file observations 
     const updatedAt = "2026-11-05T00:00:00.000Z";
     await f.storage.records.writeTextAsset({ recordId, content: "changed", replace: { ...value, updatedAt } });
     expect((await f.storage.records.read(recordId)).value).toMatchObject({ updatedAt });
-    await expect(
+    await expectRejection(
       withStorageObservation(observed.versions, () =>
         f.storage.records.writeTextAsset({ recordId, content: "must not replace", replace: value }),
       ),
-    ).rejects.toThrow("changed since it was loaded");
+    ).toThrow("changed since it was loaded");
     expect(await mount.readText("note.md")).toBe("changed");
   } finally {
     await f.close();

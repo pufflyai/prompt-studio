@@ -6,6 +6,7 @@ import { createMemoryDocumentStore } from "pstdio-sync";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { createDocumentSync, type DocumentRelay } from "pstdio-sync/relay";
 import type { StateEnvelope, StateInfo, StoredUpdate, UpdateEnvelope } from "pstdio-sync-contracts";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { captureRecoveryFolder } from "./capture";
 import { createRecoveryCatalog } from "./catalog";
 import { createRecoveryChunkStore } from "./chunks";
@@ -70,7 +71,7 @@ test("private catalog retains independent sources and the previous complete copy
     source: { id: "workspace", deviceId: "first", name: "first", folder: first!.folder },
     capture: await captureRecoveryFolder({ root: first!.folder, chunks: first!.chunks }),
   });
-  await expect(
+  await expectRejection(
     first!.catalog.publish({
       chunks: first!.chunks,
       candidate: newer,
@@ -81,11 +82,11 @@ test("private catalog retains independent sources and the previous complete copy
         },
       },
     }),
-  ).rejects.toThrow("Quota reached");
+  ).toThrow("Quota reached");
   expect((await first!.catalog.list()).map((entry) => entry.root)).toEqual([first!.candidate]);
-  await expect(
+  await expectRejection(
     second!.catalog.publish({ chunks: first!.chunks, candidate: first!.candidate, transport }),
-  ).rejects.toThrow("another source device");
+  ).toThrow("another source device");
   let latest: (StateEnvelope & StateInfo) | null = null;
   const updates: StoredUpdate[] = [];
   const sent: UpdateEnvelope[] = [];

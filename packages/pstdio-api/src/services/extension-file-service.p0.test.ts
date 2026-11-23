@@ -3,6 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { documents as storage_documents } from "pstdio-db";
 import { NativeSourcePendingError } from "pstdio-sync";
 import { storageRecordId } from "pstdio-sync/records";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { createExtensionFileService } from "./extension-file-service";
 import { blobFilesFixture } from "./shared-files/blob-files.fixture";
 
@@ -30,7 +31,7 @@ test("pending native text keeps file metadata and deletion available without ser
     expect((await f.service.list(f.scope))?.map((file) => file.id)).toEqual([file.id]);
     const found = (await f.service.getOwnedFile({ ...f.scope, file_id: file.id }))!;
     expect(found.id).toBe(file.id);
-    await expect(f.service.read(found)).rejects.toBeInstanceOf(NativeSourcePendingError);
+    await expectRejection(f.service.read(found)).toBeInstanceOf(NativeSourcePendingError);
     expect(await f.service.remove({ ...f.scope, file_id: file.id })).toBe(true);
   } finally {
     await f.close();
@@ -128,7 +129,7 @@ test("interrupted legacy cleanup keeps ownership until the durable replacement c
         },
       },
     });
-    await expect(interrupted.list(f.scope)).rejects.toThrow("storage interrupted");
+    await expectRejection(interrupted.list(f.scope)).toThrow("storage interrupted");
     expect(await f.extensionFilesDBService.getOwnedFile({ ...f.scope, file_id: file.id })).not.toBeNull();
     expect((await f.service.list(f.scope))?.map((file) => file.id)).toEqual([file.id]);
     expect(await f.extensionFilesDBService.getOwnedFile({ ...f.scope, file_id: file.id })).toBeNull();

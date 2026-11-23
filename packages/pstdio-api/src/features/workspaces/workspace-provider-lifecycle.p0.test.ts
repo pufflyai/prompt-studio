@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { WorkspaceProviderResult } from "pstdio-api-contracts/extension-kernel";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { makeWorkspace, remoteWorkspaceCapabilities } from "./workspace-provider.test-fixture";
 import { cancelProviderBackedWorkspace, deleteProviderBackedWorkspace } from "./workspace-provider-lifecycle";
 
@@ -127,7 +128,7 @@ describe("deleteProviderBackedWorkspace", () => {
     });
     const { deps, updateProviderProjection } = makeDeps({ delete: async () => {} }, workspace);
 
-    await expect(deleteProviderBackedWorkspace(deps, workspace as never)).rejects.toThrow(/reference/i);
+    await expectRejection(deleteProviderBackedWorkspace(deps, workspace as never)).toThrow(/reference/i);
 
     expect(updateProviderProjection.mock.calls.at(-1)?.[1]).toMatchObject({
       provider_state: "deleting",
@@ -205,7 +206,7 @@ describe("deleteProviderBackedWorkspace without an installed provider", () => {
       extensionRuntimeCatalog: { get: async () => ({ runtime: { workspaceTypes: [] } }) },
     } as never;
 
-    await expect(deleteProviderBackedWorkspace(deps, workspace as never)).rejects.toThrow(/not available/);
+    await expectRejection(deleteProviderBackedWorkspace(deps, workspace as never)).toThrow(/not available/);
     expect(updateProviderProjection).toHaveBeenCalledWith(
       workspace.id,
       expect.objectContaining({

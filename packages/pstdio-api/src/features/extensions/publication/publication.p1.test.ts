@@ -9,6 +9,7 @@ import { createExtensionDocumentSync } from "../../../services/relay/documents";
 import { projectSyncStatus } from "../../../services/relay/project-status";
 import { startPublishedExtensions } from "../../../services/relay/publications";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createStorageApi } from "../command-environment/storage";
 import { loadExtensionSource } from "../extension-runtime";
 import { createTestExtensionSource } from "../test-utils/create-test-extension-source";
@@ -197,11 +198,11 @@ test("three devices discover encrypted packages, preserve private overrides and 
   await sync(0);
   const previous = (await sourceFor(1)).installedSource.id;
   peer.missing(true);
-  await expect(sync(1)).rejects.toThrow();
+  await expectRejection(sync(1)).toThrow();
   expect((await sourceFor(1)).installedSource.id).toBe(previous);
   peer.missing(false);
   peer.truncateNextRead();
-  await expect(sync(1)).rejects.toThrow("ASSET_INTEGRITY_MISMATCH");
+  await expectRejection(sync(1)).toThrow("ASSET_INTEGRITY_MISMATCH");
   expect((await sourceFor(1)).installedSource.id).toBe(previous);
   const beforeResume = peer.offsets.length;
   await sync(1);
@@ -233,11 +234,11 @@ test("three devices discover encrypted packages, preserve private overrides and 
     await packExtension(source),
   );
   const current = await sourceFor(1);
-  await expect(
+  await expectRejection(
     activatePublishedSet(apps[1]!.deps, projectId, [
       { publication: { ...publicationSchema.parse((await read(1)).value), revision: bad.sha256 }, asset: bad },
     ]),
-  ).rejects.toThrow("cannot activate");
+  ).toThrow("cannot activate");
   expect((await sourceFor(1)).installedSource.id).toBe(current.installedSource.id);
 });
 

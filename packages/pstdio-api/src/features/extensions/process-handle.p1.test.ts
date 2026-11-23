@@ -4,6 +4,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ProcessEvent } from "pstdio-api-contracts/extension-kernel";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { spawnProcessHandle } from "./process-handle";
 
 let root: string;
@@ -64,7 +65,7 @@ test("a child receives incremental stdin and its output arrives in order before 
   await handle.write(new TextEncoder().encode("world"));
   await handle.end();
   await handle.end();
-  await expect(handle.write("late")).rejects.toThrow("closed");
+  await expectRejection(handle.write("late")).toThrow("closed");
   const events = await output;
   expect(text(events, "stdout")).toBe("HELLO WORLD");
   expect(text(events, "stderr")).toBe("done");
@@ -171,15 +172,10 @@ test("a command that cannot start rejects started with a code and still reports 
   try {
     const handle = spawnProcessHandle({ argv: [join(root, "missing-command")], env });
     // The Windows launcher reports this failure over IPC. Await that reply before matching it.
-    expect(
-      await handle.started.then(
-        () => "started",
-        (error: unknown) => error,
-      ),
-    ).toMatchObject({ code: "process_command_not_found" });
+    await expectRejection(handle.started).toMatchObject({ code: "process_command_not_found" });
     expect(await handle.exited).toEqual({ code: null, signal: null });
     expect(await collect(handle.events())).toEqual([{ type: "exit", exit: { code: null, signal: null } }]);
-    await expect(handle.write("x")).rejects.toThrow();
+    await expectRejection(handle.write("x")).toThrow();
     await handle.kill();
     await Bun.sleep(20);
     expect(unhandled).toEqual([]);

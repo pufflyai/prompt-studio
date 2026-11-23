@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { nativeDocumentSourceSchema } from "pstdio-api-contracts";
 import { createWorkspaceFileMount } from "../../features/extensions/command-environment/workspace-files";
 import { createWorkspaceContextFixture } from "../../features/extensions/workspace-context.test-fixture";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { withStorageObservation } from "../shared-files/storage-observation";
 import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./file-source";
 import { resolveNativeLoadedSource } from "./source-binding";
@@ -41,18 +42,18 @@ test("native workspace documents bind the selected workspace without aliasing pr
   expect(selected.copy?.content).toBe("worktree edit");
   expect(project.copy?.content).toBe("selected folder");
   expect(selected.documentKey).not.toBe(project.documentKey);
-  await expect(
+  await expectRejection(
     resolveNativeLoadedSource(fixture.deps, {
       owner: { ...owner, workbenchId: "other-project" },
       source,
       content: read.value,
       versions: read.versions,
     }),
-  ).rejects.toMatchObject({ code: "native_document_source_unavailable" });
+  ).toMatchObject({ code: "native_document_source_unavailable" });
   worktree.provider_capabilities_json.files = "none";
-  await expect(
+  await expectRejection(
     resolveNativeLoadedSource(fixture.deps, { owner, source, content: read.value, versions: read.versions }),
-  ).rejects.toMatchObject({ code: "native_document_source_unavailable" });
+  ).toMatchObject({ code: "native_document_source_unavailable" });
 });
 
 test("a scoped text provider resolves and saves the selected worktree with stale-write protection", async () => {
@@ -91,12 +92,12 @@ test("a scoped text provider resolves and saves the selected worktree with stale
   expect(await readFile(join(fixture.root, "notes.txt"), "utf8")).toBe("selected folder");
   const refreshed = await loadNativeMarkdownFile(fixture.deps, target);
   await writeFile(join(root, "notes.txt"), "external edit");
-  await expect(
+  await expectRejection(
     saveNativeMarkdownFile(fixture.deps, {
       ...target,
       content: "stale",
       fileStorageVersions: refreshed.fileStorageVersions,
     }),
-  ).rejects.toThrow("changed since it was loaded");
+  ).toThrow("changed since it was loaded");
   expect(await readFile(join(root, "notes.txt"), "utf8")).toBe("external edit");
 });

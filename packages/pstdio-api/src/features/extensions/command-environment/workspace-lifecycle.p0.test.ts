@@ -1,6 +1,7 @@
 import { expect, mock, test } from "bun:test";
 import { createWorkspaceMaintenance } from "../../../services/workspace-maintenance";
 import { createTestCommandEnvironment } from "../../../test-utils/create-test-command-environment";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 
 const makeEnabledSources = () => [
   {
@@ -251,10 +252,10 @@ test("does not expose or mutate a workspace owned by another project", async () 
   );
 
   await expect(env.workspaces.get("other-workspace")).resolves.toBeNull();
-  await expect(env.workspaces.removeWorktree("other-workspace")).rejects.toThrow(
+  await expectRejection(env.workspaces.removeWorktree("other-workspace")).toThrow(
     "Workspace not found: other-workspace",
   );
-  await expect(env.workspaces.delete("other-workspace")).rejects.toThrow("Workspace not found: other-workspace");
+  await expectRejection(env.workspaces.delete("other-workspace")).toThrow("Workspace not found: other-workspace");
   expect(cleanup).not.toHaveBeenCalled();
   expect(softDelete).not.toHaveBeenCalled();
 });

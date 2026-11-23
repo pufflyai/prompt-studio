@@ -12,6 +12,7 @@ import {
 } from "pstdio-db";
 import { configureExtensionPreparationWorker, stopExtensionPreparation } from "pstdio-extensions";
 import { EventBus } from "../features/sync/event-bus";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { createExtensionService } from "./extension-service";
 import { createProjectService } from "./project-service";
 import { createSyncService } from "./sync-service";
@@ -51,9 +52,9 @@ test("unavailable preparation leaves an installed tool and its enabled registrat
     configureExtensionPreparationWorker(() => {
       throw new Error("Worker unavailable");
     });
-    await expect(
+    await expectRejection(
       service.uninstallProjectExtension({ projectId: project.id, instanceId: enabled.instance.id }),
-    ).rejects.toThrow("Worker unavailable");
+    ).toThrow("Worker unavailable");
     expect(existsSync(join(sourcePath, "extension.ts"))).toBe(true);
     expect(await sources.getBySourcePath(sourcePath)).not.toBeNull();
     expect(await instances.get(enabled.instance.id)).toMatchObject({ enabled: true });

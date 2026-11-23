@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createProjectWork } from "../../../services/project-work";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createDeviceAutomationFixture } from "../device-automations.fixture";
 import { executeScheduledCommand } from "./execution";
 
@@ -43,7 +44,7 @@ test("project removal cancels a scheduled command and drains its process cleanup
     await Bun.sleep(0);
     expect(drained).toBe(false);
     expect(signal.aborted).toBe(true);
-    await expect(executeScheduledCommand(input)).rejects.toThrow("removing its copy");
+    await expectRejection(executeScheduledCommand(input)).toThrow("removing its copy");
     finish.resolve();
     await running;
     await drain;

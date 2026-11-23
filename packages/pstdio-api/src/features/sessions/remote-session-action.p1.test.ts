@@ -10,6 +10,7 @@ import { createPersonalHistoryStore } from "../../services/personal-history/stor
 import { withDeviceCommandAttachments } from "../../services/relay/device-command-attachments";
 import { createDeviceCommandExecutor } from "../../services/relay/device-command-executor";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { inertSessionChannelHooks } from "./session-store.test-utils";
 
@@ -36,14 +37,14 @@ const verifyUncertainSubmissionCleanup = async (input: {
     await execute(jsonSchema.parse(JSON.parse(JSON.stringify(value))), { signal: new AbortController().signal });
     throw new Error("Lost acknowledgement");
   };
-  await expect(
+  await expectRejection(
     withDeviceCommandAttachments(
       source.deps,
       projectId,
       { ...command, input: { ...command.input, agent: "missing.harness" } },
       loseReply,
     ),
-  ).rejects.toThrow("Lost acknowledgement");
+  ).toThrow("Lost acknowledgement");
   expect(await target.deps.fileService.get(fileId)).toBeNull();
   expect(await source.deps.fileService.get(fileId)).not.toBeNull();
 
@@ -56,13 +57,13 @@ const verifyUncertainSubmissionCleanup = async (input: {
     return file;
   });
   try {
-    await expect(
+    await expectRejection(
       withDeviceCommandAttachments(source.deps, projectId, command, async (value) => {
         cancelled.signal.throwIfAborted();
         actions.push(value.type);
         return execute(jsonSchema.parse(JSON.parse(JSON.stringify(value))), { signal: cancelled.signal });
       }),
-    ).rejects.toThrow("User cancelled before dispatch");
+    ).toThrow("User cancelled before dispatch");
   } finally {
     importing.mockRestore();
   }
@@ -70,7 +71,7 @@ const verifyUncertainSubmissionCleanup = async (input: {
   expect(await target.deps.fileService.get(fileId)).toBeNull();
 
   // A lost final reply must retain files that the target already submitted successfully.
-  await expect(withDeviceCommandAttachments(source.deps, projectId, command, loseReply)).rejects.toThrow(
+  await expectRejection(withDeviceCommandAttachments(source.deps, projectId, command, loseReply)).toThrow(
     "Lost acknowledgement",
   );
   expect(await target.deps.fileService.get(fileId)).not.toBeNull();

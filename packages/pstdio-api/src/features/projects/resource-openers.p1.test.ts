@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createResourcesApi } from "../extensions/command-environment/resources";
 
 test("configured public openers present host and extension resources independently of their data owner", async () => {
@@ -95,7 +96,7 @@ test("configured public openers present host and extension resources independent
       kind: "page",
       page: { id: "alternate" },
     });
-    await expect(api.resolveOpenings([{ ...refs[0]!, projectId: "another" }])).rejects.toThrow("another project");
+    await expectRejection(api.resolveOpenings([{ ...refs[0]!, projectId: "another" }])).toThrow("another project");
     await fixture.deps.extensionService.setProjectExtensionEnabled(installed.instance.id, false);
     expect((await api.resolveOpenings([refs[0]!]))[0]?.target).toBeUndefined();
     expect(await fixture.deps.workspaceService.get(workspace.id)).toBeDefined();

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { installExtensionSource } from "./install-extension-source";
 import { makeExtension, writeManifest } from "./install-extension-source-test-fixtures";
 
@@ -25,7 +26,7 @@ describe("installExtensionSource API version gate", () => {
     writeManifest(source, { engines: { pstdio: "^99.0.0" }, packageManager: "bun@1.3.13" });
     const runCommand = mock(async () => ({ exitCode: 0, stderr: "", stdout: "" }));
 
-    await expect(installExtensionSource({ source, env: { PSTDIO_HOME: pstdioHome }, runCommand })).rejects.toThrow(
+    await expectRejection(installExtensionSource({ source, env: { PSTDIO_HOME: pstdioHome }, runCommand })).toThrow(
       "^99.0.0",
     );
 
@@ -124,13 +125,13 @@ describe("installExtensionSource package scripts", () => {
     });
     writeFileSync(join(source, "extension.ts"), 'throw new Error("invalid extension");\n');
 
-    await expect(
+    await expectRejection(
       installExtensionSource({
         source,
         env: { HOME: root, PATH: process.env.PATH, PSTDIO_HOME: pstdioHome },
         homedir: () => root,
       }),
-    ).rejects.toThrow("Extension validation failed");
+    ).toThrow("Extension validation failed");
 
     expect(existsSync(marker)).toBe(false);
     expect(existsSync(join(pstdioHome, "extensions", "dropped-extension"))).toBe(false);
@@ -148,7 +149,7 @@ test("an upgrade preserves the installed files when its resolved version is olde
   const first = await installExtensionSource({ source, ...options });
   const before = readFileSync(join(first.targetPath, "package.json"), "utf8");
   writeManifest(source, { version: "0.1.0" });
-  await expect(
+  await expectRejection(
     installExtensionSource({
       source,
       ...options,
@@ -156,6 +157,6 @@ test("an upgrade preserves the installed files when its resolved version is olde
       installedSourcePath: first.targetPath,
       upgradeFromVersion: first.metadata.version,
     }),
-  ).rejects.toThrow(/older|downgrade/i);
+  ).toThrow(/older|downgrade/i);
   expect(readFileSync(join(first.targetPath, "package.json"), "utf8")).toBe(before);
 });

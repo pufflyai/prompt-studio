@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createTestExtensionSource } from "../test-utils/create-test-extension-source";
 import { activatePublishedSet } from "./activate";
 import { openPublishedCatalog, publishedOwner } from "./catalog";
@@ -71,18 +72,18 @@ test("verified revisions retain extension data and share enable choices; failed 
   await app.deps.extensionService.setProjectExtensionEnabled(previous.instance.id, false);
   await writeFile(join(source, "extension.ts"), "throw new Error('invalid publication'); export default {};");
   const broken = await stage(project.id, source);
-  await expect(
+  await expectRejection(
     activatePublication(app.deps, project.id, { ...broken.publication, enabled: true }, broken.asset),
-  ).rejects.toThrow();
+  ).toThrow();
   expect((await installed(project.id)).instance.enabled).toBe(false);
   expect((await installed(project.id)).installedSource.source_path).toBe(previous.installedSource.source_path);
   expect(await readFile(join(previous.installedSource.source_path, "extension.ts"), "utf8")).toContain(
     "export default {}",
   );
   const absent = { ...first.asset, sha256: "f".repeat(64) };
-  await expect(
+  await expectRejection(
     activatePublication(app.deps, project.id, { ...first.publication, revision: absent.sha256 }, absent),
-  ).rejects.toThrow();
+  ).toThrow();
   expect((await installed(project.id)).installedSource.source_path).toBe(previous.installedSource.source_path);
   await writeFile(join(source, "extension.ts"), "export default {commands: []};");
   const next = await stage(project.id, source);
@@ -168,7 +169,7 @@ test("editing the active source during preparation preserves the new local overr
     `await Bun.write(${JSON.stringify(draft)}, "private draft"); export default {};`,
   );
   const next = await stage(project.id, source);
-  await expect(activatePublication(app.deps, project.id, next.publication, next.asset)).rejects.toThrow(
+  await expectRejection(activatePublication(app.deps, project.id, next.publication, next.asset)).toThrow(
     "Local override changed",
   );
   expect(await activatePublication(app.deps, project.id, next.publication, next.asset)).toBe("local-override");
@@ -261,12 +262,12 @@ test("a failed member of a new set leaves every previous source active", async (
     await packExtension(secondPath),
   );
   const { activatePublishedSet } = await import("./activate");
-  await expect(
+  await expectRejection(
     activatePublishedSet(app.deps, project.id, [
       { publication: next.publication, asset: next.asset },
       { publication: { ...next.publication, extensionId: "test.second", revision: badAsset.sha256 }, asset: badAsset },
     ]),
-  ).rejects.toThrow();
+  ).toThrow();
   expect((await installed(project.id)).installedSource.id).toBe(previous.installedSource.id);
   expect(await app.deps.extensionService.listProjectExtensionInstances(project.id)).toHaveLength(1);
 });
@@ -296,6 +297,6 @@ test("a complete set rejects conflicting resource prefixes before switching any 
     });
   }
   const { activatePublishedSet } = await import("./activate");
-  await expect(activatePublishedSet(app.deps, project.id, entries)).rejects.toThrow("prefix");
+  await expectRejection(activatePublishedSet(app.deps, project.id, entries)).toThrow("prefix");
   expect(await app.deps.extensionService.listProjectExtensionInstances(project.id)).toHaveLength(0);
 });
