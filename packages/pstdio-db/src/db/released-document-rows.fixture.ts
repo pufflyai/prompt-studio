@@ -10,7 +10,23 @@ import { owners } from "./schemas/owners";
 import { recovery_point_owners } from "./schemas/recovery-points";
 
 type Saved = { document: typeof documents.$inferSelect; project: string; extension: string };
+type ReleasedRows = Record<string, Record<string, unknown>[]>;
 const hex = (bytes: Uint8Array) => `\\x${Buffer.from(bytes).toString("hex")}`;
+const appendRows = (output: ReleasedRows, inputs: ReleasedRows[]) => {
+  for (const input of inputs)
+    for (const [table, rows] of Object.entries(input)) for (const row of rows) output[table]!.push(row);
+};
+const readFileRows = async <Input, Output>(inputs: Input[], read: (input: Input) => Promise<Output>) => {
+  const output: Output[] = [];
+  for (let offset = 0; offset < inputs.length; offset += 8) {
+    // Drain every reader before releasing the transaction, including on failure.
+    const results = await Promise.allSettled(inputs.slice(offset, offset + 8).map(read));
+    const failure = results.find((result) => result.status === "rejected");
+    if (failure?.status === "rejected") throw failure.reason;
+    for (const result of results) if (result.status === "fulfilled") output.push(result.value);
+  }
+  return output;
+};
 const appendDocument = async (
   output: Record<string, Record<string, unknown>[]>,
   files: ReturnType<typeof documentFilesFor>,
@@ -90,14 +106,33 @@ export const releasedDocumentRows = async (connection: Pick<Awaited<ReturnType<t
       .innerJoin(owners, eq(owners.id, documents.owner_id));
     const byId = new Map(rows.map((row) => [row.document.id, row]));
     const files = documentFilesFor(tx);
-    for (const value of rows) await appendDocument(output, files, value, byId);
+    const restored = await readFileRows(rows, async (value) => {
+      const documentRows: typeof output = Object.fromEntries(Object.keys(output).map((name) => [name, []]));
+      await appendDocument(documentRows, files, value, byId);
+      return documentRows;
+    });
+    appendRows(output, restored);
     const copies = await tx
       .select({ copy: file_projections, project: owners.project_id, extension: owners.extension_id })
       .from(file_projections)
       .innerJoin(owners, eq(owners.id, file_projections.owner_id));
     const artifactRoots = new Set<string>();
-    for (const { copy, project, extension } of copies) {
+    const restoredCopies = await readFileRows(copies, async (value) => {
+      const { copy, project } = value;
       const [kind, key] = JSON.parse(copy.root) as string[];
+      const read = async (sha256: string | null, bytes: number | null) =>
+        sha256 === null || bytes === null
+          ? null
+          : hex(await files.read(project, copy.document_id!, "copy", { sha256, bytes }));
+      return {
+        ...value,
+        kind,
+        key,
+        baseline: kind === "artifact" ? null : await read(copy.baseline_sha256, copy.baseline_bytes),
+        pending: kind === "artifact" ? null : await read(copy.pending_sha256, copy.pending_bytes),
+      };
+    });
+    for (const { copy, project, extension, kind, key, baseline, pending } of restoredCopies) {
       if (kind === "artifact") {
         if (!artifactRoots.has(key!)) {
           output.artifact_file_projection_roots!.push({ projection_key: key });
@@ -106,17 +141,13 @@ export const releasedDocumentRows = async (connection: Pick<Awaited<ReturnType<t
         if (copy.state !== null)
           output.artifact_file_projections!.push({ projection_key: key, path: copy.path, state: copy.state });
       } else {
-        const read = async (sha256: string | null, bytes: number | null) =>
-          sha256 === null || bytes === null
-            ? null
-            : hex(await files.read(project, copy.document_id!, "copy", { sha256, bytes }));
         output.native_document_file_projections!.push({
           workbench_id: project,
           extension_id: extension,
           document_key: copy.path,
           projection_key: key,
-          baseline: await read(copy.baseline_sha256, copy.baseline_bytes),
-          pending: await read(copy.pending_sha256, copy.pending_bytes),
+          baseline,
+          pending,
           completed_revision: copy.completed_revision,
         });
       }
@@ -146,8 +177,9 @@ export const countDocumentUpdates = async (db: Awaited<ReturnType<typeof createD
       .from(documents)
       .innerJoin(owners, eq(owners.id, documents.owner_id))
       .where(rooms ? eq(documents.kind, "room") : ne(documents.kind, "room"));
-    let count = 0;
-    for (const { row, project } of rows)
-      count += (await readFileDocumentHead(documentFilesFor(tx), project, row)).updates.length;
-    return count;
+    const counts = await readFileRows(
+      rows,
+      async ({ row, project }) => (await readFileDocumentHead(documentFilesFor(tx), project, row)).updates.length,
+    );
+    return counts.reduce((sum, count) => sum + count, 0);
   });
