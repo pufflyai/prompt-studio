@@ -1,0 +1,80 @@
+import { expect, test } from "bun:test";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { makeCommandContext } from "../../commands/command-context.fixture";
+import { putTicket } from "../../data/ticket-context.fixture";
+import { planPlacements, readPlanMetadata } from "./placement-store";
+import { readPlanCommand } from "./read-plan";
+
+test("the first Timeline page initializes its execution prefix and continues without losing unloaded work", async () => {
+  const storage = createMemoryStorage();
+  const ids = Array.from({ length: 203 }, (_, i) => `ticket-${String(203 - i).padStart(4, "0")}`);
+  let position: string | undefined;
+  for (const [i, id] of [...ids, "archived"].entries()) {
+    position = storage.positions.between(position);
+    await putTicket(storage, {
+      id,
+      shorthand: `T-${i + 1}`,
+      title: id,
+      content: "Large body. ".repeat(100),
+      statusId: "ready",
+      archived: id === "archived",
+      position,
+      dependsOn: i === 0 ? [ids.at(-1)!] : [],
+      createdAt: "before",
+      updatedAt: "after",
+    });
+  }
+  await readPlanMetadata(storage);
+  for (const [i, ticketId] of [ids[0], "archived", "missing"].entries())
+    await planPlacements(storage).put(ticketId, { ticketId, deadlineId: null, position: String(i) });
+  const ctx = makeCommandContext({ storage, params: {} });
+  const page = (offset: number) => ({ limit: 50, offset, fields: ["id"], search: "" });
+  const first = await readPlanCommand.run(ctx, { page: page(0) });
+  expect(first.ticketRows.map(({ id }) => id)).toEqual(ids.slice(0, 50));
+  expect(first.page.total).toBe(203);
+  expect(first.sections[0].globalCounts?.total).toBe(203);
+  expect(first.sections[0].rows[0].flags).toContain("out-of-order");
+  expect((await storage.records.aggregate({ index: "timeline-placements" })).count).toBe(103);
+
+  // The existing continuation contract rejects a revision changed by initialization.
+  // The renderer restarts the same offset once without its old cursor/revision.
+  await expect(
+    readPlanCommand.run(ctx, {
+      page: { ...page(100), revision: first.page.revision },
+    }),
+  ).rejects.toThrow("stale");
+  const later = await readPlanCommand.run(ctx, { page: page(100) });
+  expect(later.ticketRows.map(({ id }) => id)).toEqual(ids.slice(100, 150));
+  expect(later.sections[0].rows.map(({ step }) => step)).toEqual(Array.from({ length: 50 }, (_, i) => i + 101));
+  expect((await storage.records.aggregate({ index: "timeline-placements" })).count).toBe(203);
+  const last = await readPlanCommand.run(ctx, { page: page(200) });
+  expect(last.ticketRows.map(({ id }) => id)).toEqual(ids.slice(200));
+  expect(last.sections[0].globalCounts?.total).toBe(203);
+});
+
+test("a cycle broken in the first execution prefix still flags its unloaded later prerequisite", async () => {
+  const storage = createMemoryStorage();
+  const ids = Array.from({ length: 103 }, (_, i) => `cycle-${String(i).padStart(3, "0")}`);
+  let position: string | undefined;
+  for (const [i, id] of ids.entries()) {
+    position = storage.positions.between(position);
+    await putTicket(storage, {
+      id,
+      shorthand: `C-${i + 1}`,
+      title: id,
+      content: "",
+      statusId: "ready",
+      archived: false,
+      position,
+      dependsOn: [ids[(i + 1) % ids.length]],
+      createdAt: "before",
+      updatedAt: "after",
+    });
+  }
+  const result = await readPlanCommand.run(makeCommandContext({ storage, params: {} }), {
+    page: { limit: 1, offset: 0, fields: ["id"], search: "" },
+  });
+  expect(result.sections[0].rows[0]).toMatchObject({ id: ids[0], flags: ["waiting", "out-of-order"] });
+  expect(await planPlacements(storage).get(ids[1])).toBeUndefined();
+  expect(result.sections[0].counts.total).toBe(103);
+});

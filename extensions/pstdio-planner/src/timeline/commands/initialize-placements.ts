@@ -5,8 +5,28 @@ import { nextPlacementBatch } from "./placement-batch";
 import { readPlanMetadata } from "./placement-store";
 
 /** Order the remaining metadata in the database, then create one bounded placement batch. */
-const initializePlacements = async (storage: ExtensionStorageApi, completedStatusIds: string[]) => {
+const initializePlacements = async (
+  storage: ExtensionStorageApi,
+  completedStatusIds: string[],
+  requiredActiveCount?: number,
+) => {
   await readPlanMetadata(storage);
+  let initialized = 0;
+  if (requiredActiveCount !== undefined) {
+    initialized = (
+      await storage.records.aggregate({
+        index: "timeline-placement-order",
+        where: {
+          exists: {
+            index: "ticket-view",
+            on: [{ sourceField: "ticketId", relatedField: "id" }],
+            where: { field: "archived", op: "ne", value: true },
+          },
+        },
+      })
+    ).count;
+    if (initialized >= requiredActiveCount) return;
+  }
   const tail = await storage.records.query({
     index: "timeline-placements",
     fields: ["position"],
@@ -24,12 +44,17 @@ const initializePlacements = async (storage: ExtensionStorageApi, completedStatu
       return { id: ticketId, value: { ticketId, deadlineId: null, position } };
     });
     await createCollectionRecordsIfAbsent(storage, "timeline.placements", placements);
+    initialized += placements.length;
+    if (requiredActiveCount !== undefined && initialized >= requiredActiveCount) return;
   }
 };
 
 export const initializePlanPlacements = (
   ctx: Pick<ExtensionContextBase, "storage" | "projectId" | "extensionId">,
   completedStatusIds: string[],
+  requiredActiveCount?: number,
 ) =>
   // Serialize each owner's tail read and all pending batches, including read-triggered initialization.
-  withQueuedWriteGuard(ctx, "plan-initialization", () => initializePlacements(ctx.storage, completedStatusIds));
+  withQueuedWriteGuard(ctx, "plan-initialization", () =>
+    initializePlacements(ctx.storage, completedStatusIds, requiredActiveCount),
+  );

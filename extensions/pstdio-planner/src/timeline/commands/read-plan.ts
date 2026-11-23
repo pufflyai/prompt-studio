@@ -14,6 +14,7 @@ import { initializePlanPlacements } from "./initialize-placements";
 import { readPlanMetadata } from "./placement-store";
 import { planPageRows } from "./plan-page-rows";
 import { planQuerySummary } from "./plan-query-summary";
+import { planReadWindow } from "./plan-read-window";
 import { readTrack } from "./track-commands";
 
 export interface PlanDisplay extends MilestoneDisplay {
@@ -34,7 +35,6 @@ export const readPlanCommand = defineCommand({
   async run(ctx, input) {
     await ensureTicketStorage(ctx);
     const workflow = usableWorkflowStatuses(await readWorkflowStatuses(ctx));
-    await initializePlanPlacements(ctx, workflow.completedStatusIds);
     const metadata = await readPlanMetadata(ctx.storage);
     const hidden = input.display?.collapsedMilestones ?? [];
     const visible: StoragePredicate[] = [];
@@ -83,6 +83,8 @@ export const readPlanCommand = defineCommand({
           .filter(({ date }) => date < new Intl.DateTimeFormat("en-CA").format(new Date()))
           .map(({ id }) => id),
       });
+    const { executionOffset, initializationCount } = planReadWindow(input, visible.length > 0);
+    await initializePlanPlacements(ctx, workflow.completedStatusIds, initializationCount);
     const view = await readTicketViewPage(ctx, input, {
       where: input.ticketId ? { all: [activeTicket, { field: "id", op: "eq", value: input.ticketId }] } : activeTicket,
       visible: visible.length ? { all: visible } : undefined,
@@ -112,24 +114,6 @@ export const readPlanCommand = defineCommand({
         "gate",
       ],
     });
-    const hasRules = (filter?: KanbanRendererQueryParams["filter"]): boolean => {
-      if (!filter) return false;
-      // Timeline already selects active work. Its default saved-view rule does not narrow that order.
-      if (filter.conjunction !== "and") return Boolean(filter.rules.length || filter.groups?.some(hasRules));
-      return Boolean(
-        filter.rules.some(
-          (rule) =>
-            rule.attributeId !== "archived" ||
-            rule.condition !== "is-any-of" ||
-            !Array.isArray(rule.value) ||
-            !rule.value.includes("active"),
-        ) || filter.groups?.some(hasRules),
-      );
-    };
-    const executionOffset =
-      !input.ticketId && !hasRules(input.filter) && !input.page?.search.trim() && !visible.length
-        ? (input.page?.offset ?? 0)
-        : undefined;
     const page = await planPageRows(ctx, view, executionOffset);
     // Selection outside the visible window needs only its row and section.
     const summary = input.ticketId
