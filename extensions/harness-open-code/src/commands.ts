@@ -12,12 +12,13 @@ type Service = ReturnType<typeof createOpencodeService>;
 export const opencodeCommandState = async (
   input: HarnessCommandDiscoveryContext,
   service: Service,
+  signal?: AbortSignal,
 ): Promise<HarnessCommandState> => ({
   slashCommands: true,
   modes: [],
   commands: [
     { name: "/compact", description: "Compact OpenCode's native conversation." },
-    ...(await service.getCommands(input.cwd)),
+    ...(await service.getCommands(input.cwd, signal)),
   ],
 });
 export const prepareOpencodeOperation = (

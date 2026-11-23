@@ -29,11 +29,6 @@ type OpencodeHarnessDeps = {
   pollIntervalMs?: number;
 };
 
-const defaultDeps: OpencodeHarnessDeps = {
-  detect: detectOpencode,
-  getModelsOutput: readOpencodeModels,
-};
-
 const opencodeParams = {
   variant: params.select({
     label: "Thinking",
@@ -70,18 +65,25 @@ export const createOpencodeHarness = (
   overrides: Partial<OpencodeHarnessDeps> = {},
   serviceOverrides: Parameters<typeof createOpencodeService>[0] = {},
 ): Omit<HarnessProvider, "ref"> => {
-  const deps = { ...defaultDeps, ...overrides };
+  const deps = { detect: detectOpencode, ...overrides };
   const services = createOpencodeHarnessService(serviceOverrides);
   const serviceFor = services.get;
   let modelCache: { expiresAt: number; value: Promise<ReturnType<typeof parseOpencodeModels>> } | undefined;
+
+  const getModelsOutput =
+    deps.getModelsOutput ??
+    ((ctx: HarnessContext, version?: string) => {
+      const number = version?.match(/\d+\.\d+\.\d+/)?.[0] ?? "";
+      if (!Bun.semver.satisfies(number, ">=2.4.0")) return readOpencodeModels(ctx);
+      return services.run(ctx, async (signal) => (await serviceFor(ctx)).getModelCatalog(signal));
+    });
 
   const listModels = async (ctx: HarnessContext) => {
     const detection = await deps.detect(ctx);
     if (!detection.available) return [];
     if (modelCache && modelCache.expiresAt > Date.now()) return modelCache.value;
 
-    const value = deps
-      .getModelsOutput(ctx, detection.version)
+    const value = getModelsOutput(ctx, detection.version)
       .then(parseOpencodeModels)
       .catch(() => {
         modelCache = undefined;
@@ -127,7 +129,8 @@ export const createOpencodeHarness = (
           input.messageId,
         ),
       })),
-    getCommandState: (ctx, input) => services.run(ctx, async () => opencodeCommandState(input, await serviceFor(ctx))),
+    getCommandState: (ctx, input) =>
+      services.run(ctx, async (signal) => opencodeCommandState(input, await serviceFor(ctx), signal)),
     prepareOperation: async (ctx, input, operation) => {
       const prepared = prepareOpencodeOperation(input, operation, await serviceFor(ctx));
       return {
