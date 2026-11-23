@@ -79,8 +79,12 @@ for (const loseDownloadResponse of [false, true]) {
           },
         }),
       );
+      const removing = Promise.withResolvers<void>();
+      const finishRemoval = Promise.withResolvers<void>();
       await page.route(`**${endpoint}/remove-local`, async (route) => {
         expect(route.request().postDataJSON()).toEqual({ discardUnsynced: true, expectedAccount: account });
+        removing.resolve();
+        await finishRemoval.promise;
         presence = "cloud-only";
         const removed = await request.delete(`${uiOrigin}/v1/projects/${id}`);
         expect(removed.status()).toBe(204);
@@ -117,6 +121,12 @@ for (const loseDownloadResponse of [false, true]) {
       await discard.press("Space");
       await expect(discard).toBeChecked();
       await submit.click();
+      try {
+        await removing.promise;
+        await expect(submit).toBeDisabled();
+      } finally {
+        finishRemoval.resolve();
+      }
 
       await expect(page.getByText("Cloud only", { exact: true })).toBeVisible();
       await page.reload();

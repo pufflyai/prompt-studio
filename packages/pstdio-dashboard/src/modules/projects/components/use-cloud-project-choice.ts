@@ -7,6 +7,7 @@ import { getRuntimeCollections } from "@/lib/sync/collections";
 import { useCollectionSelection } from "@/lib/sync/use-collection-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getCloudCopyDownloads } from "../data/cloud-copy-download";
+import { useCloudLocalRemoval } from "../data/cloud-local-removal";
 import { useCloudProjectDeletions } from "../data/cloud-project-deletion-operations";
 import { cloudProjectCatalogKey, useCloudProjectCatalog } from "../data/project-catalog";
 import { findDashboardProject } from "../data/project-data";
@@ -112,6 +113,7 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
   const requested = owner.scope === scope && owner.requested;
   const [deletionScope, setDeletionScope] = useState<string>();
   const deletion = useCloudProjectDeletions();
+  const copyBusy = useCloudLocalRemoval().active(id);
   const deleting = Boolean(receipt || deletionScope === scope || deletion.active(id));
   useEffect(() => {
     if (receipt) setDeletionScope(scope);
@@ -150,7 +152,7 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
   const failure = downloadMessage(download.error ?? sharedError ?? cloud.error ?? sync.error, entry, sync.data?.state);
   const pending = Boolean(active && !unresolved);
   const showProgress = (downloading || pending) && !deleting && !failure && entry?.presence !== "downloaded";
-  const canDownload = Boolean(entry?.actions.download && !active && !deleting && (!downloading || failure));
+  const canDownload = Boolean(entry?.actions.download && !copyBusy && !deleting && (!downloading || failure));
   const showDownload = !receipt && !deleting && entry?.presence !== "removing";
 
   return {
