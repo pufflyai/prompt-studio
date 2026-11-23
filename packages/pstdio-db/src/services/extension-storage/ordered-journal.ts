@@ -9,6 +9,7 @@ import {
 } from "pstdio-sync/records";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_ordered_operations as operations } from "../../db/schemas.pg";
+import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
 import { admitOrderedOperation } from "./ordered-admission";
 import {
   createOrderedAuthorship,
@@ -19,7 +20,6 @@ import { createOrderedCanonical } from "./ordered-canonical";
 import { createOrderedDependencyCache } from "./ordered-dependency-cache";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
 import { fenceOrderedNativeText, forgetOrderedTextGeneration } from "./ordered-native-recovery";
-import { ensureOrderedOwner } from "./ordered-owner";
 import { operationIndexedAt, operationReceipt, operationReceiptsIndexed } from "./ordered-receipt-values";
 import { createOrderedReceiptCache } from "./ordered-receipts-cache";
 import { finishOrderedRecordWrites } from "./ordered-record-publication";
@@ -308,18 +308,20 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
 };
 
 /** The journal exists before a connection does. Projection/cursor writes share this transaction. */
-export const withOrderedOwner = <T>(
+export const withOrderedOwner = async <T>(
   db: DbClient,
   owner: StorageOwner,
   run: (journal: OrderedJournal, tx: Transaction) => Promise<T>,
-) =>
-  ensureOrderedOwner(db, owner).then(() =>
-    db.transaction(async (tx) => {
-      await lockRecordOwner(tx, owner);
-      const result = await run(createOrderedJournal(tx, owner), tx);
-      await finishOrderedRecordWrites(tx, owner);
-      return result;
-    }),
-  );
+) => {
+  assertStorageOwnerAdmitted(db, owner);
+  return db.transaction(async (tx) => {
+    // The marker's ensure path creates the owner inside this project lock and
+    // transaction. A separate pre-transaction ensure repeats that same lookup.
+    await lockRecordOwner(tx, owner);
+    const result = await run(createOrderedJournal(tx, owner), tx);
+    await finishOrderedRecordWrites(tx, owner);
+    return result;
+  });
+};
 
 export type OrderedJournal = ReturnType<typeof createOrderedJournal>;

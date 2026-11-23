@@ -76,7 +76,6 @@ export const ensureFileDocument = async (
 ) => {
   if (input.key.startsWith('["editor-room",'))
     throw new Error("Private editor rooms cannot be opened as shared documents");
-  const ownerId = await ensureStorageOwner(tx, input.owner);
   const [existing] = await tx.select().from(documents).where(fileDocumentWhere(input.owner, input.key)).for("update");
   if (existing) {
     if (existing.kind === "room") throw new Error("A private editor room cannot be opened as a shared document");
@@ -86,6 +85,7 @@ export const ensureFileDocument = async (
     }
     return { row: existing, initialize: false };
   }
+  const ownerId = await ensureStorageOwner(tx, input.owner);
   return {
     row: await insertFileDocument(tx, files, { ...input, ownerId, snapshot: new Uint8Array([0, 0]) }),
     initialize: true,
