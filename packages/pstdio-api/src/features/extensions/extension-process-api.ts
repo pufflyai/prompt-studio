@@ -137,7 +137,7 @@ export interface ProcessApiOptions {
    * Where `spawn` runs for a workspace id, or for the invocation's workspace when it is omitted.
    * Absent for host-level probes, whose children run on this device with the cwd they pass.
    */
-  resolveTarget?: (workspaceId?: string) => Promise<ProcessTarget | undefined>;
+  resolveTarget?: (workspaceId: string | undefined, signal: AbortSignal) => Promise<ProcessTarget | undefined>;
   /** Owns `spawn` children with call lifetime when there is no invocation scope, such as a harness operation. */
   callOwner?: ProcessOwner;
   /** Owns `spawn` children with extension lifetime, looked up on first use. Without it, extension lifetime is refused. */
@@ -182,15 +182,15 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
   const scopeOwner = options.scope ? createProcessOwner() : undefined;
   options.scope?.register(async () => {
     closed = true;
-    await scopeOwner?.close();
-    await Promise.all(
-      [...running].map((stop) => stop(new Error("Invocation ended while the command was still running."))),
-    );
+    await Promise.all([
+      scopeOwner?.close(),
+      ...[...running].map((stop) => stop(new Error("Invocation ended while the command was still running."))),
+    ]);
   });
 
   // Granted values go into the child's environment only. A child that echoes one does not hand
   // it back to the extension through the result.
-  const prepareEnvironment = async (input: ProcessRunInput) => {
+  const prepareEnvironment = async (input: ProcessRunInput, active = ensureActive) => {
     // A granted name the host has no value for is skipped rather than failing a host-started process.
     const names =
       input.envFromHost ?? (await options.grantedNames?.())?.filter((name) => process.env[name] !== undefined) ?? [];
@@ -207,7 +207,7 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
       );
     const lease = await options.hostEnvironment(names);
     try {
-      ensureActive();
+      active();
       const env = createExtensionProcessEnvironment(process.env, input.env, process.platform, names);
       const requested = new Set(names.map((name) => name.toUpperCase()));
       const secrets = Object.entries(env).flatMap(([name, value]) =>
