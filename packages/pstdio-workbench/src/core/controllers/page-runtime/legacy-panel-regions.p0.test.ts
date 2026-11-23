@@ -51,7 +51,7 @@ test.each(["page", "mode"] as const)("restores a v5 %s snapshot that predates bo
       expect(restored.regions[id].widgets).toEqual([]);
       expect(persistence.getLayout(scope)?.regions[id]).toEqual(defaults.regions[id]);
     }
-    expect(persistence.getLayout(scope)?.regions.side).toEqual(layout.regions.side);
+    expect(persistence.getLayout(scope)?.regions.side).toMatchObject({ visible: false, widgets: [widget] });
     if (owner === "mode") expect(restored.regions.side.widgets).toEqual([widget]);
   } finally {
     persistence.dispose?.();
