@@ -88,10 +88,10 @@ test("a native check that hands off to the browser clears its progress", async (
   const workbench = createWorkbench();
   let notify = () => {};
   const installed = { level: "info" as const, title: "Update installed" };
-  let notice: { kind: "progress"; title: string | null; outcome?: typeof installed } = {
+  let notice: { kind: "progress"; title: string | null; installed?: typeof installed } = {
     kind: "progress",
     title: "Checking for updates",
-    outcome: installed,
+    installed,
   };
   const stop = connectDesktopUpdateNotices(
     {

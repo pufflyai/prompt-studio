@@ -15,6 +15,7 @@ const progressTitles = {
 
 export const createDesktopUpdateNotifications = (options: DesktopUpdateNotificationsOptions) => {
   let pending: DesktopUpdateOutcome | undefined;
+  let pendingInstallation: DesktopUpdateOutcome | undefined;
   // Keep the current phase available after a reload. Null delivers the clear once.
   let progressTitle: string | null | undefined;
   const show = (title: string, message: string, level: DesktopUpdateOutcome["level"] = "info") => {
@@ -29,11 +30,13 @@ export const createDesktopUpdateNotifications = (options: DesktopUpdateNotificat
   return {
     take(): DesktopUpdateNotice | undefined {
       const outcome = pending;
+      const installed = pendingInstallation;
       pending = undefined;
+      pendingInstallation = undefined;
       const title = progressTitle;
-      if (title === undefined) return outcome;
+      if (title === undefined && !installed) return outcome;
       if (title === null) progressTitle = undefined;
-      return { kind: "progress", title, ...(outcome ? { outcome } : {}) };
+      return { kind: "progress", title, ...(outcome ? { outcome } : {}), ...(installed ? { installed } : {}) };
     },
     progress(phase: DesktopUpdatePhase | undefined) {
       if (!phase && !progressTitle) return;
@@ -55,10 +58,12 @@ export const createDesktopUpdateNotifications = (options: DesktopUpdateNotificat
     installed: () => {
       try {
         if (options.receipt.consumeInstalled(options.currentVersion)) {
-          show(
-            "Prompt Studio was updated successfully.",
-            `You're now running Prompt Studio ${options.currentVersion}.`,
-          );
+          pendingInstallation = {
+            level: "info",
+            title: "Prompt Studio was updated successfully.",
+            message: `You're now running Prompt Studio ${options.currentVersion}.`,
+          };
+          options.onNotice();
         }
       } catch (error) {
         options.logError(error instanceof Error ? error : new Error(String(error)));

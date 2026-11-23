@@ -6,7 +6,9 @@ interface UpdateNotice {
   message?: string;
 }
 
-type UpdateNoticeEvent = UpdateNotice | { kind: "progress"; title: string | null; outcome?: UpdateNotice };
+type UpdateNoticeEvent =
+  | UpdateNotice
+  | { kind: "progress"; title?: string | null; outcome?: UpdateNotice; installed?: UpdateNotice };
 
 interface DesktopUpdateNoticeBridge {
   onUpdateNotice: (listener: () => void) => () => void;
@@ -25,6 +27,7 @@ const hasUpdateNotices = (bridge: unknown): bridge is DesktopUpdateNoticeBridge 
 
 const updateNoticeId = "desktop.update";
 const updateProgressId = "desktop.update.progress";
+const installedNoticeId = "desktop.update.installed";
 
 export const connectDesktopUpdateNotices = (
   bridge: unknown,
@@ -61,8 +64,9 @@ export const connectDesktopUpdateNotices = (
       return;
     }
     if (notice.title) publish(updateProgressId, { title: notice.title, level: "info" });
-    else clearProgress();
+    else if (notice.title === null) clearProgress();
     if (notice.outcome) publish(updateNoticeId, notice.outcome);
+    if (notice.installed) publish(installedNoticeId, notice.installed);
   };
 
   let receiving = false;

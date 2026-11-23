@@ -34,7 +34,7 @@ export type DesktopUpdateOutcome = { level: "info" | "error"; title: string; mes
 
 export type DesktopUpdateNotice =
   | DesktopUpdateOutcome
-  | { kind: "progress"; title: string | null; outcome?: DesktopUpdateOutcome };
+  | { kind: "progress"; title?: string | null; outcome?: DesktopUpdateOutcome; installed?: DesktopUpdateOutcome };
 
 export interface PromptStudioDesktopApi {
   cancelQuit: () => Promise<void>;

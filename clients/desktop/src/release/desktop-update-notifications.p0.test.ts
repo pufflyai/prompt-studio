@@ -59,9 +59,28 @@ test("an interactive check keeps an unread installed update notice", () => {
   expect(checking).toMatchObject({
     kind: "progress",
     title: expect.any(String),
-    outcome: { level: "info", message: expect.stringContaining("2.0.0") },
+    installed: { level: "info", message: expect.stringContaining("2.0.0") },
   });
 
   notifications.progress(undefined);
   expect(notifications.take()).toEqual({ kind: "progress", title: null });
+});
+
+test("installation and check outcomes both survive a fast check before the workbench connects", () => {
+  const notifications = createDesktopUpdateNotifications({
+    currentVersion: "2.0.0",
+    receipt: { recordDownload: () => {}, consumeInstalled: () => true },
+    onNotice: () => {},
+    logError: () => {},
+  });
+  notifications.installed();
+  notifications.progress("checking");
+  notifications.notAvailable();
+  expect(notifications.take()).toMatchObject({
+    kind: "progress",
+    title: null,
+    installed: { message: expect.stringContaining("2.0.0") },
+    outcome: { level: "info" },
+  });
+  expect(notifications.take()).toBeUndefined();
 });

@@ -93,6 +93,8 @@ export const getNotificationStatusOperations = createRuntimeState((owner) => {
       intent: { id, status } satisfies NotificationIntent,
       draft: { id, title, status },
       async write(signal) {
+        const row = read();
+        if (row?.project_id === projectId && row.status === "expired") throw new Error("This notification expired.");
         const result = await api.setStatus(projectId, id, { status }, { signal });
         if (!result) throw new Error("This notification is no longer available.");
         return result;
@@ -104,8 +106,14 @@ export const getNotificationStatusOperations = createRuntimeState((owner) => {
         if (before === read()) accept(confirmed);
       },
       async check(signal) {
+        const before = read();
         const confirmed = await verify(signal);
         if (confirmed.status === status) return { status: "confirmed", result: confirmed };
+        if (confirmed.status === "expired") {
+          signal.throwIfAborted();
+          if (before === read()) accept(confirmed);
+          return { status: "rejected", error: new Error("This notification expired.") };
+        }
         return { status: "unknown" };
       },
       classify: classifyApiWrite,

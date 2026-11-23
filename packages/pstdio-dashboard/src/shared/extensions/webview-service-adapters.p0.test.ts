@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 import type { Notification } from "@pstdio/sdk/api";
+import { getWorkbenchOperations } from "@pstdio/workbench";
+import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { createRuntimeCollections } from "@/lib/sync/collections";
 import { getNotificationStatusOperations } from "@/shared/notifications/notification-status-operations";
 import { createDashboardWebviewNotificationsAdapter } from "./webview-service-adapters";
@@ -114,6 +116,48 @@ test("resolving a notification by ID previews its status in the shared center", 
   } finally {
     release.resolve();
     config.__PSTDIO_CONFIG__ = original;
+    await runtime.dispose();
+    await server.stop(true);
+  }
+});
+
+test("exact expiry retires an unknown resolve and settles a queued dismissal", async () => {
+  const expired = { projectId: "project", id: "notice", status: "expired" };
+  let writes = 0;
+  const server = Bun.serve({
+    port: 0,
+    fetch(request) {
+      const path = new URL(request.url).pathname;
+      if (!path.includes("/notifications/")) return new Response(null, { status: 404 });
+      if (request.method === "POST") {
+        writes += 1;
+        return Response.json({ error: "Response lost" }, { status: 503 });
+      }
+      return Response.json(expired);
+    },
+  });
+  const runtime = createRuntimeCollections({ baseUrl: server.url.origin, token: "" });
+  const operations = getWorkbenchOperations(getDashboardScopedQueries(runtime));
+  try {
+    runtime.getCollection("notifications");
+    runtime.getWriter("notifications")!.upsert({ id: "notice", project_id: "project", status: "open" });
+    const adapter = createDashboardWebviewNotificationsAdapter({
+      runtime,
+      projectId: "project",
+      extensionId: "notes",
+      showError: () => {},
+      showNotice: () => {},
+    });
+    await expect(adapter.resolve!({ id: "notice" })).rejects.toThrow("Response lost");
+    const recovery = operations.getSnapshot().recovery[0]!;
+    const dismissing = adapter.resolve!({ id: "notice", status: "dismissed" });
+    void dismissing.catch(() => {});
+    await operations.check(recovery.id);
+    expect(operations.getSnapshot().recovery.find(({ id }) => id === recovery.id)?.status).toBe("rejected");
+    await expect(dismissing).rejects.toThrow("expired");
+    expect(operations.getSnapshot().pending).toEqual([]);
+    expect(writes).toBe(1);
+  } finally {
     await runtime.dispose();
     await server.stop(true);
   }

@@ -99,14 +99,13 @@ export const executeWorkbenchExtensionCommandResponse = async (
       input.signal,
     ),
   );
-  const command =
-    context.metadata?.commands.find((candidate) => candidate.id === commandId) ??
-    context.workbench.commands?.getCommand(commandId)?.command;
+  const declaredCommand = context.metadata?.commands.find((candidate) => candidate.id === commandId);
+  const command = declaredCommand ?? context.workbench.commands?.getCommand(commandId)?.command;
   // Start writing before awaiting the remote command, while the selecting gesture is active.
   const response = await (command?.copyResultToClipboard
     ? applyCommandClipboard({
         response: pendingResponse,
-        mutating: command.mutating,
+        mutating: declaredCommand?.mutating,
         signal: input.signal,
         isViewerCurrent: invocation.isViewerCurrent,
         reportError: context.workbench.notifications.captureActionError("Copy command result"),
