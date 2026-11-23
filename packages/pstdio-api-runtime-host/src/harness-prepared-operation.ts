@@ -30,7 +30,8 @@ export const adaptSession = (session: HarnessSession): HarnessSession => ({
 
 /**
  * Native command preparation. The operation's `call` children belong to it from preparation until
- * the turn it starts is done, or until it ends without starting one.
+ * the turn it starts is done, or until it ends without starting one. A caller that gives up before
+ * invoking calls `release()`.
  */
 export const createHarnessOperationPreparation =
   (input: {
@@ -62,9 +63,15 @@ export const createHarnessOperationPreparation =
       call.close();
       throw error;
     }
+    let invoked = false;
     return {
       execution: prepared.execution,
+      /** Ends the operation's children when it will never be invoked. No effect after `invoke`. */
+      release: () => {
+        if (!invoked) call.close();
+      },
       invoke: async (invocation: Parameters<PreparedHarnessOperation["invoke"]>[0]) => {
+        invoked = true;
         try {
           ensureActive();
           const result = await retained.invoke(
@@ -88,5 +95,5 @@ export const createHarnessOperationPreparation =
           throw error;
         }
       },
-    } satisfies PreparedHarnessOperation;
+    } satisfies PreparedHarnessOperation & { release(): void };
   };

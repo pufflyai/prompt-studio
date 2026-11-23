@@ -75,10 +75,9 @@ export const createScopedHostApis = (
     provisioningWorkspaceId: input.eventId === workspaceEvents.provision.id ? input.workspaceId : undefined,
     eventId: input.eventId,
   };
-  const resolveTarget = async (workspaceId?: string) => {
-    if (signal?.aborted) throw signal.reason;
-    return resolveProcessTarget(deps, { ...target, workspaceId: workspaceId ?? input.workspaceId });
-  };
+  // Cancellation belongs to the spawn: a child with extension lifetime outlives its invocation.
+  const resolveTarget = (workspaceId: string | undefined, spawnSignal: AbortSignal) =>
+    resolveProcessTarget(deps, { ...target, workspaceId: workspaceId ?? input.workspaceId }, spawnSignal);
   const terminal = hosts.terminal && resolveCwd ? createWorkspaceTerminal(hosts.terminal, resolveCwd) : hosts.terminal;
 
   return {

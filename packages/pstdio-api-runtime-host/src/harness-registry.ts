@@ -106,7 +106,7 @@ export type HarnessHandle = {
     input: HarnessCommandContext,
     operation: HarnessOperation,
     options?: HarnessCallOptions,
-  ): Promise<PreparedHarnessOperation>;
+  ): Promise<PreparedHarnessOperation & { release(): void }>;
   dispose(): Promise<void>;
 };
 

@@ -63,7 +63,9 @@ for await (const event of child.events()) {
 - `write(data)` writes to stdin in call order and waits for the pipe to accept the data. `end()`
   closes stdin after earlier writes; later writes reject.
 - `kill(signal?)` stops the child and everything it started. It sends `SIGTERM`, waits 500 ms, then
-  forces the stop. It can be called before `started` settles and resolves after cleanup.
+  forces the stop, and resolves after cleanup. A kill while the target is still opening, such as a
+  remote provider that has not answered, resolves at once: `started` rejects with
+  `process_owner_closed`, and a child that still arrives is stopped.
 - `events()` yields `stdout` and `stderr` chunks as `Uint8Array` and always ends with one `exit`
   event. It has one consumer. Order is kept within each stream, but not between the two streams.
 - `id` identifies the handle to your code. It is not an OS pid, and no host API accepts it. In the
@@ -81,7 +83,8 @@ does not wait for you to read it.
   child started by `start`, `resume`, `reattach` or a native command lives until that turn's `done`
   settles. Children of other harness calls, such as `detect` or `listModels`, end when the call
   settles.
-- `extension` ends when the extension is disabled or removed, its source content changes, the
+- `extension` does not depend on the call after `spawn` returns, so a handler may return before the
+  child starts. It ends when the extension is disabled or removed, its source content changes, the
   project is removed, or Prompt Studio shuts down. A rebuild that leaves the source unchanged keeps
   it. In a harness it lasts for that harness instance in the project. Workspace provider callbacks
   have no extension lifetime; their children start in the provider's process directory, as `run`
