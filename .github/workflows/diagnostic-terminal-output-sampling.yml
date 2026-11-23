@@ -20,9 +20,6 @@ jobs:
           - label: fixed-with-gate
             revision: de172f0bbb9561254400453b9d5899f1a3fb7445
             gate: true
-          - label: fixed-native
-            revision: de172f0bbb9561254400453b9d5899f1a3fb7445
-            gate: false
     env:
       CI_PROFILE: production
       CI_PRIORITY: P2
