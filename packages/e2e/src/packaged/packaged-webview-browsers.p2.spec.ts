@@ -253,7 +253,7 @@ const verifyPackagedBehavior = async (browserCase: (typeof webviewBrowsers)[numb
           body: JSON.stringify({ params: { file_path: "report.html" }, source: "api" }),
         },
       );
-      expect(published.ok()).toBe(true);
+      expect(published.status).toBe(200);
       const { outcome } = await published.json();
       expect(outcome.status, outcome.reason).toBe("success");
       await page.goto(`${started.baseUrl}${outcome.value.url}`);
