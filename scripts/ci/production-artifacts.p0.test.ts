@@ -36,3 +36,10 @@ test("a missing required artifact is still reported", () => {
     "Missing production artifacts: release-build-attempt-1",
   );
 });
+
+test.each([{ expired: true }, { digest: "" }])("an unavailable artifact fails production identity checks", (change) => {
+  const unavailable = listed.map((artifact) => (artifact.name === names[4] ? { ...artifact, ...change } : artifact));
+  expect(() => selectProductionArtifacts(unavailable, 1, "nightly")).toThrow(
+    "validation-app-darwin-arm64: artifact identity is unavailable or ambiguous",
+  );
+});

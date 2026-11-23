@@ -43,12 +43,14 @@ if (import.meta.main) {
     return result.stdout;
   };
   const pages = JSON.parse(
-    read([
-      "api",
-      "--paginate",
-      "--slurp",
-      `repos/${process.env.GITHUB_REPOSITORY}/actions/runs/${certificate.candidate.artifactRunId}/artifacts?per_page=100`,
-    ]),
+    certificate.candidate.artifactRunId === process.env.GITHUB_RUN_ID
+      ? readFileSync("certified-artifacts.json", "utf8")
+      : read([
+          "api",
+          "--paginate",
+          "--slurp",
+          `repos/${process.env.GITHUB_REPOSITORY}/actions/runs/${certificate.candidate.artifactRunId}/artifacts?per_page=100`,
+        ]),
   );
   const actual = pages.flatMap((page: { artifacts: Artifact[] }) => page.artifacts) as Artifact[];
   const versionSha = spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim();

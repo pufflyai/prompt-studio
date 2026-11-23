@@ -77,7 +77,11 @@ jobs:
         id: platforms
         env:
           CHANNEL: ${{ inputs.channel }}
-        run: bun scripts/ci/production-platforms.ts
+          ARTIFACT_ATTEMPT: ${{ inputs.artifact_attempt }}
+        run: |
+          bun scripts/ci/production-platforms.ts
+          names=$(bun -e 'import { productionArtifactNames } from "./scripts/ci/production-artifacts"; console.log(productionArtifactNames(Number(process.env.ARTIFACT_ATTEMPT), process.env.CHANNEL).join(","))')
+          echo "artifact_names=$names" >> "$GITHUB_OUTPUT"
       - name: Check out the exact candidate after selecting workflow policy
         uses: actions/checkout@v5
         with:
@@ -86,6 +90,23 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
+      - name: Check out the workflow's artifact inventory action
+        if: inputs.artifact_run_id == github.run_id
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: __test-tmp__/workflow-actions
+          persist-credentials: false
+          sparse-checkout: |
+            /.github/actions/list-artifact-inventory/
+            /.github/actions/download-artifact-by-id/
+          sparse-checkout-cone-mode: false
+      - name: Inventory the current run's candidate artifacts
+        if: inputs.artifact_run_id == github.run_id
+        uses: ./__test-tmp__/workflow-actions/.github/actions/list-artifact-inventory
+        with:
+          names: ${{ steps.platforms.outputs.artifact_names }}
+          path: production-artifacts.json
       - name: Download immutable candidate build identity
         uses: actions/download-artifact@v4
         with:
@@ -103,7 +124,9 @@ jobs:
           VERSION_SHA: ${{ inputs.ref }}
           CHANNEL: ${{ inputs.channel }}
         run: |
-          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/runs/$ARTIFACT_RUN_ID/artifacts?per_page=100" > production-artifacts.json
+          if [ "$ARTIFACT_RUN_ID" != "$GITHUB_RUN_ID" ]; then
+            gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/runs/$ARTIFACT_RUN_ID/artifacts?per_page=100" > production-artifacts.json
+          fi
           bun scripts/ci/production-payload.ts check
           bun scripts/ci/production-artifacts.ts production-artifacts.json
       - name: Preserve candidate identity
