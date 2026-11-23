@@ -6,7 +6,11 @@ import { records as current, owners as projections } from "../../db/schemas.pg";
 import { orderedCommitVersionColumns } from "./ordered-commit-cache";
 import { projectOrderedNativeAssets } from "./ordered-native-assets";
 import { refreshOrderedNativeVersions } from "./ordered-native-versions";
-import { noteRecordPublication, orderedProjectionFacets } from "./ordered-record-publication";
+import {
+  noteRecordPublication,
+  type OrderedPublicationBaseline,
+  orderedProjectionFacets,
+} from "./ordered-record-publication";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { decodeProjectionValue } from "./record-projection-codec";
 import { writeProjectedRecords } from "./record-projection-rows";
@@ -22,30 +26,37 @@ export const publishOrderedProjection = async (
   tx: OrderedTransaction,
   owner: StorageOwner,
   records: OrderedRecord[],
-  options: { confirmed?: ReadonlyMap<string, OrderedRecord>; hasPending?: boolean } = {},
+  options: {
+    confirmed?: ReadonlyMap<string, OrderedRecord>;
+    hasPending?: boolean;
+    previous?: OrderedPublicationBaseline;
+  } = {},
 ) => {
   if (!records.length) return { records: [], projected: 0 };
   const facets = await orderedProjectionFacets(tx, owner, records, options);
-  const previous = await tx
-    .select({
-      recordId: current.record_id,
-      deleted: current.deleted,
-      revision: current.revision,
-      lifetime: current.record_lifetime,
-      nativeSources: current.native_sources,
-      retained: sql<boolean>`${current.meta}->>'retained'='1'`,
-    })
-    .from(current)
-    .where(
-      and(
-        orderedOwnerWhere(current, owner),
-        sql`${current.revision} IS NOT NULL`,
-        inArray(
-          current.record_id,
-          records.map(({ recordId }) => recordId),
-        ),
-      ),
-    );
+  const ids = records.map(({ recordId }) => recordId).filter((id) => !options.previous?.has(id));
+  const loaded = ids.length
+    ? await tx
+        .select({
+          recordId: current.record_id,
+          deleted: current.deleted,
+          revision: current.revision,
+          lifetime: current.record_lifetime,
+          nativeSources: current.native_sources,
+          retained: sql<boolean>`coalesce(${current.meta}->>'retained'='1', false)`,
+        })
+        .from(current)
+        .where(
+          and(orderedOwnerWhere(current, owner), sql`${current.revision} IS NOT NULL`, inArray(current.record_id, ids)),
+        )
+    : [];
+  const previous = [
+    ...loaded,
+    ...records.flatMap(({ recordId }) => {
+      const row = options.previous?.get(recordId);
+      return row ? [{ ...row }] : [];
+    }),
+  ];
   for (const row of previous)
     row.nativeSources = row.deleted
       ? {}

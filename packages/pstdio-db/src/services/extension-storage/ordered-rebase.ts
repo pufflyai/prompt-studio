@@ -130,6 +130,7 @@ export const rebaseOrderedProjection = async (
   // Number admission reads canonical SQL directly. Other owners can publish the
   // settled author group's confirmed state in the same row write as its projection.
   const canonical = owner.extensionId === coreOwnerId ? undefined : createOrderedCanonicalBatch(journal);
+  const source = journal;
   const local = await settleLocalOrderedSaves(journal, tx, owner, undefined, canonical);
   changed = [...new Set([...changed, ...(local?.changed ?? [])])];
   journal = canonical?.journal ?? journal;
@@ -150,7 +151,9 @@ export const rebaseOrderedProjection = async (
   const saved = await publishOrderedProjection(tx, owner, [...views.values()], {
     confirmed: canonical?.staged,
     hasPending,
+    previous: hasPending ? undefined : canonical?.previous,
   });
+  source.forgetCanonicalReads?.();
   await markOrderedNumberProjectionCurrent(tx, owner);
   return { ...saved, projected: saved.projected + removed, views, events, suppressed, recordIds: ids };
 };

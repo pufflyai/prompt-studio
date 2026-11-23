@@ -56,7 +56,7 @@ export const settleLocalOrderedSaves = async (
     const ids = operation.edits.map((edit) => edit.recordId);
     const native = isOrderedNativeRequest(requestFingerprint);
     const writes = await settlementJournal(journal, canonical, operation, native);
-    const before = await writes.canonical(ids);
+    const before = await writes.canonical(ids, canonical?.previous);
     if (native) {
       const result = await applyOrderedNativeOperation(before, operation, epoch, decisions);
       await writes.saveCanonical(result.records);

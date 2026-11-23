@@ -6,6 +6,17 @@ import { confirmedRecordBase, orderedRecordMetadata, stableRecordColumns } from 
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { readCanonicalRecord, readRetainedRecord } from "./retained-records";
 
+type RecordRow = typeof records.$inferSelect;
+export type OrderedPublicationRow = {
+  recordId: string;
+  deleted: boolean;
+  revision: string | null;
+  lifetime: string;
+  nativeSources: RecordRow["native_sources"];
+  retained: boolean;
+};
+export type OrderedPublicationBaseline = Map<string, OrderedPublicationRow | null>;
+
 const dirty = new WeakMap<object, Map<string, Set<string>>>();
 /** Savepoint bookkeeping follows SQL release/rollback together with the staged bodies. */
 export const withOrderedRecordSavepoint = async <T>(

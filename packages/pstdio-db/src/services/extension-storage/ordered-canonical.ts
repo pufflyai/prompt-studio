@@ -4,7 +4,7 @@ import type { StorageOwner } from "pstdio-sync";
 import type { OrderedRecord } from "pstdio-sync/records";
 import type { Json } from "pstdio-sync-contracts";
 import { records } from "../../db/schemas.pg";
-import { noteCanonicalRecordWrite } from "./ordered-record-publication";
+import { noteCanonicalRecordWrite, type OrderedPublicationBaseline } from "./ordered-record-publication";
 import { confirmedRecordBase, stableRecordColumns } from "./ordered-record-row";
 import { type OrderedTransaction, orderedAddress, orderedOwnerWhere as ownerWhere } from "./ordered-sql";
 import { hasRetainedRecords, readCanonicalRecord, readRetainedRecord } from "./retained-records";
@@ -37,20 +37,55 @@ const hydrateRetainedCanonical = async (
   }
 };
 
-export const createOrderedCanonical = (tx: OrderedTransaction, owner: StorageOwner) => ({
-  async canonical(ids: string[]) {
+const readCanonicalPage = async (
+  tx: OrderedTransaction,
+  owner: StorageOwner,
+  page: string[],
+  previous?: OrderedPublicationBaseline,
+) => {
+  const where = and(ownerWhere(confirmed, owner), inArray(confirmed.record_id, page));
+  if (!previous) return tx.select(canonicalColumns).from(confirmed).where(where);
+  const rows = await tx
+    .select({
+      ...canonicalColumns,
+      revision: confirmed.revision,
+      visibleSources: confirmed.native_sources,
+      retained: sql<boolean>`coalesce(${confirmed.meta}->>'retained'='1', false)`,
+    })
+    .from(confirmed)
+    .where(where);
+  for (const id of page) previous.set(id, null);
+  for (const row of rows)
+    if (row.revision !== null)
+      previous.set(row.record_id, {
+        recordId: row.record_id,
+        deleted: row.deleted,
+        revision: row.revision,
+        lifetime: row.record_lifetime,
+        nativeSources: row.visibleSources,
+        retained: row.retained,
+      });
+  return rows;
+};
+
+type CanonicalRecords = {
+  canonical(ids: string[], previous?: OrderedPublicationBaseline): Promise<Map<string, OrderedRecord>>;
+  saveCanonical(records: OrderedRecord[]): Promise<void>;
+  forgetCanonicalReads?(): void;
+};
+
+export const createOrderedCanonical = (tx: OrderedTransaction, owner: StorageOwner): CanonicalRecords => ({
+  async canonical(ids, previous) {
     const found = new Map<string, OrderedRecord>();
     for (let offset = 0; offset < ids.length; offset += 100) {
-      const rows = await tx
-        .select(canonicalColumns)
-        .from(confirmed)
-        .where(and(ownerWhere(confirmed, owner), inArray(confirmed.record_id, ids.slice(offset, offset + 100))));
+      const page = ids.slice(offset, offset + 100);
+      const rows = await readCanonicalPage(tx, owner, page, previous);
       for (const row of rows) {
         const record = await readCanonicalRecord(tx, owner, row);
         if (record) found.set(row.record_id, record);
       }
       const present = new Set(rows.map((row) => row.record_id));
-      const missing = ids.slice(offset, offset + 100).filter((id) => !present.has(id));
+      const missing = page.filter((id) => !present.has(id));
       await hydrateRetainedCanonical(tx, owner, missing, found);
     }
     return found;
