@@ -235,9 +235,12 @@ for (const mode of ["gone", "full", "resume", "failure"]) {
         })
       ).json();
       sessionId = session.id;
+      // The run leaves the store after its status is saved and the queue has drained.
       for (
         let attempt = 0;
-        (await handle.deps.sessionService.get(session.id))?.status !== "completed" && attempt < 50;
+        ((await handle.deps.sessionService.get(session.id))?.status !== "completed" ||
+          handle.deps.sessionService.store.get(session.id)) &&
+        attempt < 200;
         attempt++
       )
         await Bun.sleep(10);

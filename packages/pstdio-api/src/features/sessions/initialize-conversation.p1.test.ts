@@ -209,9 +209,13 @@ test("a failed optional position write recovers and cannot block a later questio
       questions: [{ question: "Choose?" }],
     });
     void question.catch(() => undefined);
-    await Bun.sleep(0);
-    await entry.contentPublications.catch(() => undefined);
-    await Bun.sleep(0);
+    // The ask saves its status after database round trips, which take longer than a tick in worker mode.
+    for (
+      let attempt = 0;
+      (await deps.sessionService.get(session.id))?.status !== "awaiting_input" && attempt < 100;
+      attempt++
+    )
+      await Bun.sleep(10);
     expect((await deps.sessionService.get(session.id))?.status).toBe("awaiting_input");
   } finally {
     await handle.close();
