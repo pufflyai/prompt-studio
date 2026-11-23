@@ -27,6 +27,18 @@ export interface HostInvocation {
 
 type Call = Extract<WorkerToHostMessage, { type: "call" | "fn-call" }>;
 
+/**
+ * Calls one worker may have the host answering at once. Past it, calls are refused rather than
+ * queued, so a worker that floods the host cannot grow its memory without bound. Long-polling calls
+ * such as an events iterator's `next()` count too, which is why this refuses instead of waiting.
+ */
+export const HOST_CALL_LIMITS = { inFlight: 4096 };
+
+const overloaded = () =>
+  Object.assign(new Error("The extension made too many host calls at once. Retry after some of them finish."), {
+    code: "extension_overloaded",
+  });
+
 export const createHostCalls = (
   send: (message: HostToWorkerMessage) => boolean,
   invocation: (invocationId: string) => HostInvocation | undefined,
@@ -35,6 +47,7 @@ export const createHostCalls = (
 ) => {
   const pending = createPendingCalls<Enter>();
   const hostCallOwner = new AsyncLocalStorage<string>();
+  let answering = 0;
   const inFlight = new Map<string, number>();
   let nextRequest = 0;
 
@@ -89,7 +102,9 @@ export const createHostCalls = (
 
   const answer = async (message: Call) => {
     const { invocationId, requestId } = message;
+    answering += 1;
     try {
+      if (answering > HOST_CALL_LIMITS.inFlight) throw overloaded();
       const running = invocation(invocationId);
       if (!running) throw new BackendUnavailableError("The invocation is no longer running.");
       // Cancellation ends callback scopes. The table still permits calls to existing cleanup references.
@@ -130,6 +145,8 @@ export const createHostCalls = (
         ok: false,
         error: serializeBackendError(error),
       });
+    } finally {
+      answering -= 1;
     }
   };
 
