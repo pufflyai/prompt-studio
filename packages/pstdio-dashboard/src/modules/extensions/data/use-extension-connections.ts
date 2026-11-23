@@ -1,45 +1,115 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  checkExtensionConnection,
-  configureExtensionConnection,
-  deleteExtensionConnection,
-  listExtensionConnections,
-} from "./extension-connections-api";
+import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import { classifyApiWrite, getWorkbenchOperations, operationSubject } from "@pstdio/workbench";
+import { useQuery } from "@tanstack/react-query";
+import { useSyncExternalStore } from "react";
+import { getRuntimeApiClient } from "@/lib/api";
+import { getDashboardQueryClient } from "@/lib/query-client";
+import { getDashboardScopedQueries } from "@/lib/scoped-queries";
+import { createRuntimeState } from "@/lib/sync/runtime-state";
+import { dashboardCommandIds } from "@/shared/app/commands";
 
-const connectionsKey = (projectId: string) => ["extension-connections", projectId] as const;
+export type ConnectionDefinition = NonNullable<WorkbenchExtensionMetadata["connections"]>[number];
+type ConnectionTarget = Pick<ConnectionDefinition, "extensionId" | "localId" | "scope">;
+type ConnectionChange = { action: "configure"; baseUrl: string; secret?: string } | { action: "revoke" | "check" };
 
-export const useExtensionConnections = (projectId: string) =>
-  useQuery({
-    queryKey: connectionsKey(projectId),
-    queryFn: () => listExtensionConnections(projectId),
-  });
+const connectionsKey = (authority: string) => ["extension-connections", authority] as const;
+const connectionSubject = (projectId: string, target: ConnectionTarget) =>
+  operationSubject(
+    "extension-connection",
+    target.scope === "global" ? undefined : projectId,
+    target.extensionId,
+    target.localId,
+  );
+const titles = {
+  configure: "Configure extension connection",
+  revoke: "Revoke extension connection",
+  check: "Check extension connection",
+};
+const endpoint = (value: string) => (URL.canParse(value) ? new URL(value).origin : undefined);
 
-export const useConfigureExtensionConnection = (projectId: string) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (input: { extensionId: string; connectionId: string; baseUrl: string; secret?: string }) =>
-      configureExtensionConnection(projectId, input.extensionId, input.connectionId, {
-        baseUrl: input.baseUrl,
-        secret: input.secret,
-      }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["extension-connections"] }),
-  });
+export const getExtensionConnectionOperations = createRuntimeState((owner) => {
+  const queries = getDashboardScopedQueries(owner);
+  const operations = getWorkbenchOperations(queries);
+  const client = getDashboardQueryClient(owner);
+  const api = getRuntimeApiClient(owner).extensions;
+  const authority = () => {
+    const { runtimeId, accountId, accountOrigin } = queries.getScope();
+    return JSON.stringify([runtimeId, accountOrigin, accountId]);
+  };
+  const active = (projectId: string, target: ConnectionTarget) =>
+    operations.getSnapshot().pending.find((item) => item.subjects.includes(connectionSubject(projectId, target)));
+  return {
+    authority,
+    active,
+    read: api.listConnections,
+    subscribe: operations.subscribe,
+    snapshot: operations.getSnapshot,
+    async change(projectId: string, target: ConnectionTarget, requested: ConnectionChange, expected: string) {
+      if (authority() !== expected) throw new Error("This connection belongs to a closed account.");
+      if (active(projectId, target)) throw new Error("This connection has a pending change. Check System activity.");
+      const { extensionId, localId, scope } = target;
+      const { action } = requested;
+      const address = [projectId, extensionId, localId] as const;
+      let configuration =
+        requested.action === "configure" ? { baseUrl: requested.baseUrl, secret: requested.secret } : undefined;
+      const origin = configuration && endpoint(configuration.baseUrl);
+      const verifyRevocation = async (signal: AbortSignal) => {
+        signal.throwIfAborted();
+        const { connections } = await api.listConnections(projectId);
+        const record = connections.find((item) => item.extensionId === extensionId && item.connectionId === localId);
+        return record?.configured === false
+          ? { status: "confirmed" as const, result: undefined }
+          : { status: "unknown" as const };
+      };
+      return operations.submit<void>({
+        domain: "extension.connection",
+        projectId: scope === "global" ? undefined : projectId,
+        subjects: [connectionSubject(projectId, target)],
+        title: titles[action],
+        sourceCommand: { id: dashboardCommandIds.openExtensions },
+        intent: action,
+        draft: { extensionId, connectionId: localId, origin },
+        classify: classifyApiWrite,
+        async write(signal) {
+          signal.throwIfAborted();
+          const input = configuration;
+          configuration = undefined;
+          if (input) await api.configureConnection(...address, input);
+          else if (action === "revoke") await api.deleteConnection(...address);
+          else await api.checkConnection(...address);
+        },
+        async reconcile(_result, signal) {
+          signal.throwIfAborted();
+          await client.invalidateQueries({ queryKey: connectionsKey(expected) });
+        },
+        check: action === "revoke" ? verifyRevocation : undefined,
+      }).result;
+    },
+  };
+});
+
+export const useExtensionConnectionActions = (projectId: string, target: ConnectionTarget) => {
+  const service = getExtensionConnectionOperations();
+  useSyncExternalStore(service.subscribe, service.snapshot, service.snapshot);
+  const expected = service.authority();
+  const active = service.active(projectId, target);
+  return {
+    busy: Boolean(active),
+    phase:
+      active?.status === "queued" || active?.status === "writing" || active?.status === "reconciling"
+        ? active.intent
+        : undefined,
+    run: (change: ConnectionChange) => service.change(projectId, target, change, expected),
+  };
 };
 
-export const useCheckExtensionConnection = (projectId: string) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (input: { extensionId: string; connectionId: string }) =>
-      checkExtensionConnection(projectId, input.extensionId, input.connectionId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["extension-connections"] }),
+export const useExtensionConnections = (projectId: string) => {
+  const service = getExtensionConnectionOperations();
+  useSyncExternalStore(service.subscribe, service.snapshot, service.snapshot);
+  const authority = service.authority();
+  const query = useQuery({
+    queryKey: [...connectionsKey(authority), projectId],
+    queryFn: () => service.read(projectId),
   });
-};
-
-export const useDeleteExtensionConnection = (projectId: string) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (input: { extensionId: string; connectionId: string }) =>
-      deleteExtensionConnection(projectId, input.extensionId, input.connectionId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["extension-connections"] }),
-  });
+  return { ...query, authority };
 };
