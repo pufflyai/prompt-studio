@@ -336,7 +336,8 @@ test("keeps tab-menu focus when the terminal renderer finishes loading", async (
     const reset = page.getByRole("menuitem", { name: "Reset layout", exact: true });
     await expect(reset).toBeVisible();
     const menu = page.getByRole("menu");
-    await menu.press("End");
+    await expect(menu).toBeFocused();
+    await page.keyboard.press("End");
     await expect(reset).toHaveAttribute("data-highlighted", "");
     await expect(menu).toBeFocused();
     release.resolve();
