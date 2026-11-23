@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useAgents } from "@/shared/agents/use-agents";
 import { dashboardExtensionDetailPage, dashboardExtensionsPage } from "@/shared/app/resources";
+import { useProjectedAutomationPreferences } from "@/shared/extensions/automation-preferences";
 import { usePendingExtensionSourceChanges } from "@/shared/extensions/use-extension-mutation";
 import {
   useMarketplaceExtensionContributions,
@@ -37,6 +38,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const agentsQuery = useAgents(projectId);
   const agents = projectId && agentsQuery.isSuccess ? agentsQuery.data : undefined;
   const setAutomationEnabled = useSetExtensionAutomationEnabled(projectId);
+  const automationPreferences = useProjectedAutomationPreferences(projectId, metadataQuery.data?.automations);
   const actions = useExtensionPanelActions(projectId, extensionsQuery.data?.upgradeConcurrency);
   const { filters, setFilters } = actions;
   const returnFocus = useRef<{ id: string; left: boolean } | undefined>(undefined);
@@ -184,7 +186,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         extensions={extensions}
         marketplace={marketplace}
         diagnostics={metadataQuery.data?.diagnostics ?? []}
-        automations={metadataQuery.data?.automations ?? []}
+        automations={automationPreferences.rows}
         harnesses={metadataQuery.isSuccess ? metadataQuery.data?.harnesses : undefined}
         agents={agents}
         actionStates={actions.actions}
@@ -193,7 +195,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         onDismissBatch={actions.dismissBatch}
         onRetryAction={actions.retry}
         batch={actions.batch}
-        togglingAutomation={setAutomationEnabled.isPending}
+        togglingAutomation={automationPreferences.instances}
         onToggle={(extension, enabled) => void actions.handleToggle(extension, enabled)}
         onToggleAutomation={(extension, automation, enabled) =>
           setAutomationEnabled.mutateAsync({ instanceId: extension.id, automationId: automation.id, enabled })

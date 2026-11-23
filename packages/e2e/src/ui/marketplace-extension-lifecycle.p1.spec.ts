@@ -113,17 +113,25 @@ test("disables and enables an extension automation", async ({ page, request }) =
   await expect(automationCheckbox).toBeChecked();
 
   const disableAutomationReads = await holdProjectExtensionReads(page, project.id);
+  const patch = Promise.withResolvers<import("@playwright/test").Route>();
+  await page.route("**/automations/**", (route) => patch.resolve(route), { times: 1 });
   const disableAutomationResponse = page.waitForResponse(
     (response) => response.request().method() === "PATCH" && response.url().includes("/automations/"),
   );
   await automationSwitch.click();
+  const heldPatch = await patch.promise;
+  try {
+    await expect(automationCheckbox).not.toBeChecked();
+    await expect(automationCheckbox).toBeDisabled();
+    await page
+      .getByRole("navigation", { name: "breadcrumb" })
+      .getByRole("button", { name: "Extensions", exact: true })
+      .click();
+    await expect(installedRow.getByTestId("extension-automation-status")).toContainText("0/1");
+  } finally {
+    await heldPatch.continue();
+  }
   expect((await disableAutomationResponse).status()).toBe(200);
-  await expect(automationCheckbox).not.toBeChecked();
-  await page
-    .getByRole("navigation", { name: "breadcrumb" })
-    .getByRole("button", { name: "Extensions", exact: true })
-    .click();
-  await expect(installedRow.getByTestId("extension-automation-status")).toContainText("0/1");
   await disableAutomationReads.wait();
   await disableAutomationReads.release();
 

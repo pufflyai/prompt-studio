@@ -2,6 +2,7 @@ import type { CommandExecuteRequest, UpgradeProjectExtensionResponse } from "@ps
 import type { ScopedQuery } from "@pstdio/sdk/extensions";
 import { useScopedQuery } from "@pstdio/sdk/extensions/react";
 import { addLocalExtensionFolder, type DroppedExtensionFolder } from "./api";
+import { getAutomationPreferences } from "./automation-preferences";
 import { publishExtensionCommandEvent } from "./extension-webview-broadcast";
 import { getProjectExtensionQueries } from "./project-extension-queries";
 import { trackExtensionSourceChange, useExtensionMutation } from "./use-extension-mutation";
@@ -45,11 +46,8 @@ export const useSetProjectExtensionEnabled = (projectId: string | undefined) =>
   });
 export const useSetExtensionAutomationEnabled = (projectId: string | undefined) =>
   useExtensionMutation(projectId, "automation", {
-    run: (
-      { instanceId, automationId, enabled }: { instanceId: string; automationId: string; enabled: boolean },
-      { api, projectId },
-    ) => api.extensions.setAutomationEnabled(projectId, instanceId, automationId, enabled),
-    accept: (automation, variables, cache) => cache.storeAutomation(variables.instanceId, automation),
+    run: (input: { instanceId: string; automationId: string; enabled: boolean }, target) =>
+      getAutomationPreferences(target.owner).update(target.projectId, input, target.assertCurrent),
   });
 export const useReloadProjectExtension = (projectId: string | undefined) =>
   useExtensionMutation(projectId, "reload", {
