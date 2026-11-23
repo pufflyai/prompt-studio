@@ -63,3 +63,9 @@ export const LongContent: Story = {
     },
   },
 };
+
+export const PendingDesktopQuit: Story = {
+  id: "desktop-quitconfirmation--pending",
+  args: { pending: "quit" },
+  decorators: Light.decorators,
+};
