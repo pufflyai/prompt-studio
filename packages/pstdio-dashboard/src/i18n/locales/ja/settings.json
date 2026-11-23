@@ -53,7 +53,10 @@
     "defaultPanel": "既定（{{panel}}）",
     "newSession": "新しいセッション",
     "sidePanel": "サイドパネル",
-    "unavailableSidePanel": "利用できないパネル"
+    "unavailableSidePanel": "利用できないパネル",
+    "floatingPanelMovement": "フローティングパネルの移動",
+    "snapToAlignment": "配置にスナップ",
+    "moveFreely": "自由に移動"
   },
   "updates": {
     "title": "アップデートチャネル",

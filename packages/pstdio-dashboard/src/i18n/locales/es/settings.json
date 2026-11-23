@@ -53,7 +53,10 @@
     "defaultPanel": "Predeterminado ({{panel}})",
     "newSession": "Nueva sesión",
     "sidePanel": "Panel lateral",
-    "unavailableSidePanel": "Panel no disponible"
+    "unavailableSidePanel": "Panel no disponible",
+    "floatingPanelMovement": "Movimiento del panel flotante",
+    "snapToAlignment": "Ajustar a la alineación",
+    "moveFreely": "Mover libremente"
   },
   "updates": {
     "title": "Canal de actualización",

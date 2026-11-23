@@ -4,6 +4,7 @@ import { homeFrame } from "../helpers/home-loading";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
+import { verifyFreeFloatingSidePanel } from "./helpers/floating-side-panel";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
@@ -180,6 +181,14 @@ test.describe("Session bubble workspace selection", () => {
   test("moves the bubble and floating panel to the chosen position", async ({ page, request }, info) => {
     projectId = (await createProjectViaApi(request, "Movable Side Panel")).id;
     await verifyMovableSidePanel(page, projectId, info);
+  });
+
+  test("freely moves and resizes the floating panel without losing its content", async ({ page, request }, info) => {
+    projectId = (await createProjectViaApi(request, "Free floating Side Panel")).id;
+    await bypassOnboarding(page, projectId);
+    await page.goto(`/projects/${projectId}`);
+    await expect(homeFrame(page).getByText("Free floating Side Panel", { exact: true })).toBeVisible();
+    await verifyFreeFloatingSidePanel(page, info);
   });
 
   // Critical risk: choosing a default must work with existing tabs and preserve their drafts.

@@ -1,6 +1,11 @@
 import { contributionRefId, sessionBrowser } from "@pstdio/sdk/extensions";
 import { ParamEditorRow } from "@pstdio/ui/param-editor";
-import { getSidePanelBubblePanels, sidePanelBubblePreferences, type WorkbenchCore } from "@pstdio/workbench";
+import {
+  floatingSidePanelPreferences,
+  getSidePanelBubblePanels,
+  sidePanelBubblePreferences,
+  type WorkbenchCore,
+} from "@pstdio/workbench";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { useTranslation } from "react-i18next";
 
@@ -23,6 +28,9 @@ export const SidePanelBubbleSettings = (props: { workbench: WorkbenchCore }) => 
   );
   const savedPanel = useWorkbenchStore(workbench.preferences.store, () =>
     workbench.preferences.getValue(sidePanelBubblePreferences.panel),
+  );
+  const movement = useWorkbenchStore(workbench.preferences.store, () =>
+    workbench.preferences.getValue(floatingSidePanelPreferences.movement) === "free" ? "free" : "snap",
   );
   const selected = typeof savedPanel === "string" ? savedPanel : "default";
   const shown = selected === "default" && !sessionsAvailable ? "none" : selected;
@@ -64,6 +72,23 @@ export const SidePanelBubbleSettings = (props: { workbench: WorkbenchCore }) => 
         onChange={(_id, value) => {
           if (typeof value !== "string") return;
           return workbench.preferences.setValue(sidePanelBubblePreferences.panel, value, { scope: "user" });
+        }}
+      />
+      <ParamEditorRow
+        fullWidth
+        param={{
+          id: "floating-side-panel-movement",
+          name: t("appearance.floatingPanelMovement"),
+          type: "selection",
+          defaultValue: movement,
+          options: [
+            { id: "snap", name: t("appearance.snapToAlignment") },
+            { id: "free", name: t("appearance.moveFreely") },
+          ],
+        }}
+        onChange={(_id, value) => {
+          if (value !== "snap" && value !== "free") return;
+          return workbench.preferences.setValue(floatingSidePanelPreferences.movement, value, { scope: "user" });
         }}
       />
     </>

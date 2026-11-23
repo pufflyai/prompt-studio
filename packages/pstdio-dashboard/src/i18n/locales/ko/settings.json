@@ -53,7 +53,10 @@
     "defaultPanel": "기본값 ({{panel}})",
     "newSession": "새 세션",
     "sidePanel": "사이드 패널",
-    "unavailableSidePanel": "사용할 수 없는 패널"
+    "unavailableSidePanel": "사용할 수 없는 패널",
+    "floatingPanelMovement": "플로팅 패널 이동",
+    "snapToAlignment": "정렬 위치에 맞추기",
+    "moveFreely": "자유롭게 이동"
   },
   "updates": {
     "title": "업데이트 채널",

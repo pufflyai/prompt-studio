@@ -22,6 +22,10 @@ export const useSidePanelPosition = (workbench: WorkbenchCore) => {
   const [preview, setPreview] = useState<{ alignment: Alignment; offset: number; drop?: Alignment }>();
   const drag = useRef<{ x: number; width: number; moved: boolean; offset: number } | null>(null);
   const suppressClick = useRef(false);
+  const cancelDrag = () => {
+    drag.current = null;
+    setPreview(undefined);
+  };
   const save = (value: Alignment) =>
     runUserAction(workbench, "Move Side Panel", () =>
       workbench.preferences.setValue(sidePanelBubblePreferences.alignment, value, { scope: "user" }),
@@ -30,6 +34,7 @@ export const useSidePanelPosition = (workbench: WorkbenchCore) => {
   return {
     alignment: shownAlignment,
     dropAlignment: preview?.drop,
+    cancelDrag,
     frameProps: {
       left: "6",
       right: "6",
@@ -73,9 +78,9 @@ export const useSidePanelPosition = (workbench: WorkbenchCore) => {
         setPreview(accepted);
         void save(next).finally(() => setPreview((value) => (value === accepted ? undefined : value)));
       },
-      onPointerCancel: () => {
-        drag.current = null;
-        setPreview(undefined);
+      onPointerCancel: cancelDrag,
+      onLostPointerCapture: () => {
+        if (drag.current) cancelDrag();
       },
       onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
         if (event.target !== event.currentTarget) return;

@@ -42,7 +42,8 @@ export default meta;
 type Story = CanvasFrame<typeof meta>;
 export const Default: Story = {
   id: "settings-appearance--default",
-  description: "Choose the default Side Panel and show or hide its bubble alongside the theme preferences.",
+  description:
+    "Choose the default Side Panel, show or hide its bubble, and choose Snap to alignment or Move freely for the floating panel alongside the theme preferences.",
 };
 export const RelatedResourcePreference: Story = {
   id: "settings-appearance--related-resource-preference",

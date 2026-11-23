@@ -53,7 +53,10 @@
     "defaultPanel": "預設（{{panel}}）",
     "newSession": "新增工作階段",
     "sidePanel": "側邊面板",
-    "unavailableSidePanel": "面板無法使用"
+    "unavailableSidePanel": "面板無法使用",
+    "floatingPanelMovement": "浮動面板移動",
+    "snapToAlignment": "對齊吸附",
+    "moveFreely": "自由移動"
   },
   "updates": {
     "title": "更新通道",

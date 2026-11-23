@@ -1,6 +1,7 @@
 ---
 "pstdio": minor
 "@pstdio/workbench": minor
+"@pstdio/ui": minor
 ---
 
-Move the floating Side Panel and its bubble together; choose its default panel and bubble visibility in Appearance settings.
+Move the Side Panel with compact snap indicators or free positioning, resize its floating surface, and choose the bubble visibility and default panel in Appearance settings.

@@ -68,7 +68,10 @@
     "defaultPanel": "Default ({{panel}})",
     "newSession": "New session",
     "sidePanel": "Side Panel",
-    "unavailableSidePanel": "Unavailable panel"
+    "unavailableSidePanel": "Unavailable panel",
+    "floatingPanelMovement": "Floating panel movement",
+    "snapToAlignment": "Snap to alignment",
+    "moveFreely": "Move freely"
   },
   "updates": {
     "title": "Update channel",

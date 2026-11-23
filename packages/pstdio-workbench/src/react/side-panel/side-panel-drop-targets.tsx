@@ -12,26 +12,15 @@ export const SidePanelDropTargets = (props: SidePanelDropTargetsProps) => {
   if (!alignment) return null;
   return (
     <Portal>
-      <Flex
-        aria-hidden
-        position="fixed"
-        left="0"
-        right="0"
-        bottom={bottom}
-        h="12"
-        zIndex="overlay"
-        pointerEvents="none"
-      >
+      <Flex aria-hidden position="fixed" left="0" right="0" bottom={bottom} h="6" zIndex="overlay" pointerEvents="none">
         {sidePanelAlignments.map((slot) => (
-          <Box
-            key={slot}
-            data-side-panel-drop-slot={slot}
-            data-drop-active={slot === alignment || undefined}
-            position="relative"
-            flex="1"
-            minW="0"
-            layerStyle="panelDropZone"
-          />
+          <Flex key={slot} flex="1" align="center" justify="center">
+            <Box
+              data-side-panel-drop-slot={slot}
+              data-drop-active={slot === alignment || undefined}
+              layerStyle="panelSnapIndicator"
+            />
+          </Flex>
         ))}
       </Flex>
     </Portal>

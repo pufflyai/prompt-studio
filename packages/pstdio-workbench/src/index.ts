@@ -252,6 +252,7 @@ export {
   createWorkbenchStore,
   defaultPageResourceCodec,
   dockedWorkbenchRegions,
+  floatingSidePanelPreferences,
   getKeybindingSteps,
   getNavigationTargetKey,
   getSidePanelBubblePanels,

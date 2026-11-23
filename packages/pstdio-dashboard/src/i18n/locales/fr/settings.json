@@ -53,7 +53,10 @@
     "defaultPanel": "Par défaut ({{panel}})",
     "newSession": "Nouvelle session",
     "sidePanel": "Panneau latéral",
-    "unavailableSidePanel": "Panneau indisponible"
+    "unavailableSidePanel": "Panneau indisponible",
+    "floatingPanelMovement": "Mouvement du panneau flottant",
+    "snapToAlignment": "Aligner automatiquement",
+    "moveFreely": "Déplacer librement"
   },
   "updates": {
     "title": "Canal de mise à jour",

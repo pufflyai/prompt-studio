@@ -81,7 +81,7 @@ export const AttachedOnly: Story = {
 export const DefaultBubble: Story = {
   id: "pstdio-workbench-reference-core-api-side-panel--default-bubble",
   description:
-    "Drag the bubble or the floating panel header between left, center, and right. Three drop areas appear during dragging, with the destination highlighted. Both share their position and alignment menu. Choose the default panel and bubble visibility in Appearance settings. Alt+Shift+Left/Right also changes alignment.",
+    "Drag the bubble between left, center, and right using three small bottom-edge markers. The floating header context menu and Appearance settings choose Snap to alignment or Move freely. Snap mode shares the bubble alignment; free mode moves in both directions. Resize the floating panel from its edges and corners. Size and free position survive close and reload. Choose the default panel and bubble visibility in Appearance. Alt+Shift+Left/Right changes alignment.",
   render: () => <SidePanelStory />,
 };
 export const CustomBubbleIcon: Story = {

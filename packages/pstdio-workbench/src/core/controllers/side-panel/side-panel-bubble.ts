@@ -4,6 +4,7 @@ import { isWorkbenchPanelPlacementVisible } from "../../registries/layout/panel-
 import type { PreferenceRegistry } from "../../registries/preferences/preference-registry";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { openPanelWidget } from "../composition/panel-widget-open";
+import { floatingSidePanelPreferences } from "./floating-side-panel-preferences";
 
 export const sidePanelBubblePreferences = {
   visible: "workbench.sidePanelBubble.visible",
@@ -22,6 +23,13 @@ export const registerSidePanelBubblePreferences = (preferences: PreferenceRegist
         enum: ["left", "center", "right"],
       },
       [sidePanelBubblePreferences.panel]: { type: "string", scope: "user", default: "default" },
+      [floatingSidePanelPreferences.movement]: {
+        type: "string",
+        scope: "user",
+        default: "snap",
+        enum: ["snap", "free"],
+      },
+      [floatingSidePanelPreferences.frame]: { type: "object", scope: "user", default: {} },
     },
   });
 

@@ -53,7 +53,10 @@
     "defaultPanel": "默认（{{panel}}）",
     "newSession": "新建会话",
     "sidePanel": "侧边面板",
-    "unavailableSidePanel": "面板不可用"
+    "unavailableSidePanel": "面板不可用",
+    "floatingPanelMovement": "浮动面板移动",
+    "snapToAlignment": "对齐吸附",
+    "moveFreely": "自由移动"
   },
   "updates": {
     "title": "更新渠道",

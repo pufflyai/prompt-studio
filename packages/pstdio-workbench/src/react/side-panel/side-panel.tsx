@@ -18,9 +18,10 @@ import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
 import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
+import { FloatingSidePanelResizeHandles } from "./floating-side-panel-resize-handles";
 import { SidePanelBubble } from "./side-panel-bubble";
 import { SidePanelDropTargets } from "./side-panel-drop-targets";
-import { useSidePanelPosition } from "./use-side-panel-position";
+import { useFloatingSidePanel } from "./use-floating-side-panel";
 
 interface WorkbenchSidePanelProps {
   workbench: WorkbenchCore;
@@ -32,7 +33,7 @@ interface WorkbenchSidePanelProps {
 }
 
 const floatingPanelBottom = (bottomOffset: string | undefined) =>
-  bottomOffset ? `calc(${bottomOffset} + 0.75rem)` : "3";
+  bottomOffset ? `calc(${bottomOffset} + 0.75rem)` : "0.75rem";
 
 const launcherBottom = (bottomOffset: string | undefined) => (bottomOffset ? `calc(${bottomOffset} + 1.5rem)` : "6");
 
@@ -127,7 +128,14 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
   const policy = usePanelPolicy(workbench, "side");
   const visible = available && canFloat && (fullscreen.active ? fullscreen.sideOpen : mode === "floating");
   const launcherVisible = useSidePanelLauncherVisible(workbench, available);
-  const position = useSidePanelPosition(workbench);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const position = useFloatingSidePanel({
+    workbench,
+    panelRef,
+    visible,
+    resizable: policy.resizable,
+    bottom: floatingPanelBottom(bottomOffset),
+  });
   const bubbleRef = useRef<HTMLButtonElement>(null);
   const previousFullscreen = useRef(fullscreen);
   useLayoutEffect(() => {
@@ -157,14 +165,15 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
       <SidePanelDropTargets alignment={position.dropAlignment} bottom={bottomOffset} />
       {/* Both presentation slots stay connected so hiding cannot release a live iframe. */}
       <BubblePanel
+        ref={panelRef}
         isOpen={visible}
         aria-label="Side Panel"
         testId="workbench-side-panel-floating"
         closeLabel="Close Side Panel"
         containerProps={{
+          bottom: floatingPanelBottom(bottomOffset),
           ...position.frameProps,
           "data-workbench-panel": "side",
-          bottom: floatingPanelBottom(bottomOffset),
           bg: workbenchBackgrounds.main,
         }}
         popOutLabel="Reattach Side Panel"
@@ -226,7 +235,12 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
         }
         onPopOut={() => workbench.sidePanel.setMode("attached")}
         menu={visible ? <WorkbenchSidePanelHeader header={header} /> : undefined}
-        overlay={<WorkbenchTabDropTarget region="side" visible={visible} />}
+        overlay={
+          <>
+            <WorkbenchTabDropTarget region="side" visible={visible} />
+            {visible && policy.resizable ? <FloatingSidePanelResizeHandles resizeProps={position.resizeProps} /> : null}
+          </>
+        }
       >
         <WorkbenchFocusRegion workbench={workbench} region="side" display="flex" flex="1" minH="0">
           <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />
