@@ -87,6 +87,11 @@ test("a long statement in the worker leaves the calling thread responsive", asyn
   expect(longestGap).toBeLessThan(100);
 });
 
+test("retired-row cleanup runs in the worker and stops when the caller says so", async () => {
+  await database.cleanupRetiredRows(() => false);
+  await database.cleanupRetiredRows(() => true);
+});
+
 test("an on-disk database keeps its lock in the worker and releases it on close", async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-db-worker-"));
   const dbPath = path.join(root, "database");

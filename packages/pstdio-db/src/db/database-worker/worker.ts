@@ -19,6 +19,7 @@ const opening = new AbortController();
 let database: Awaited<ReturnType<typeof createDb>> | undefined;
 const transactions = new Map<number, { tx: Transaction; finish: (commit: boolean) => void }>();
 let nextTransaction = 0;
+let cleanupStopped = false;
 const ROLLBACK = Symbol("rollback");
 
 const queryOptions = (options: RemoteQueryOptions | undefined) => ({
@@ -118,7 +119,11 @@ const handle = (request: DatabaseWorkerRequest) => {
       });
       return;
     case "cleanup":
-      void reply(request.id, () => database!.cleanupRetiredRows());
+      cleanupStopped = false;
+      void reply(request.id, () => database!.cleanupRetiredRows(() => cleanupStopped));
+      return;
+    case "stop-cleanup":
+      cleanupStopped = true;
       return;
     case "close":
       void reply(request.id, async () => {
