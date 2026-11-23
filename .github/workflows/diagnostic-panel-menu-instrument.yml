@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [natural, terminal-gate]
+        variant: [natural, terminal-gate, early-restored-focus]
     env:
       PANEL_MENU_DIAGNOSTIC: ${{ matrix.variant }}
     steps:
@@ -31,7 +31,7 @@ jobs:
           E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
           PSTDIO_EXTENSION_RELEASE_REF: 9c7214e72500f9a9287026bfd14f7fb6bec999bf
         run: |
-          xvfb-run --auto-servernum bun run --cwd packages/e2e test:packaged:browser src/packaged/packaged-empty-panels.p2.spec.ts
+          xvfb-run --auto-servernum bun run --cwd packages/e2e test:packaged:browser src/packaged/packaged-empty-panels.p2.spec.ts --trace off
       - name: Preserve browser context, menu events and runtime logs
         if: always()
         uses: actions/upload-artifact@v4

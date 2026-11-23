@@ -6,7 +6,8 @@ type PanelMenuDiagnostic = Awaited<ReturnType<typeof startPanelMenuDiagnostic>>;
 
 export const startPanelMenuDiagnostic = async (page: Page, info: TestInfo) => {
   if (!process.env.PANEL_MENU_DIAGNOSTIC) return;
-  const gateTerminal = process.env.PANEL_MENU_DIAGNOSTIC === "terminal-gate";
+  const early = process.env.PANEL_MENU_DIAGNOSTIC === "early-restored-focus";
+  const gateTerminal = early || process.env.PANEL_MENU_DIAGNOSTIC === "terminal-gate";
   let terminalRequested = false;
   const gate = Promise.withResolvers<void>();
   await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
@@ -92,6 +93,26 @@ export const startPanelMenuDiagnostic = async (page: Page, info: TestInfo) => {
     beforeReload: async () => {
       await record("before first panel restore");
       if (!gateTerminal) return;
+      if (early)
+        await page.addInitScript(() => {
+          if (window !== window.top) return;
+          const observer = new MutationObserver(() => {
+            const tab = document.querySelector('[data-workbench-panel="main"] [role="tab"][aria-selected="true"]');
+            const header = document.querySelector<HTMLElement>(
+              '[data-workbench-panel-header="side"][data-panel-draggable="true"]',
+            );
+            if (!tab?.checkVisibility() || !header?.checkVisibility()) return;
+            observer.disconnect();
+            Reflect.set(window, "firstRestoredFocusAt", performance.now());
+            header.focus();
+          });
+          observer.observe(document, {
+            attributes: true,
+            attributeFilter: ["data-panel-draggable", "aria-selected"],
+            childList: true,
+            subtree: true,
+          });
+        });
       await page.route(terminalChunk, async (route) => {
         terminalRequested = true;
         await gate.promise;
@@ -100,6 +121,8 @@ export const startPanelMenuDiagnostic = async (page: Page, info: TestInfo) => {
     },
     beforeRestoredMenu: async (header: Locator, main: Locator, region: string) => {
       if (!gateTerminal || region !== "side") return false;
+      if (early) expect(await page.evaluate(() => Reflect.get(window, "firstRestoredFocusAt"))).toBeGreaterThan(0);
+      else await header.focus();
       await expect.poll(() => terminalRequested).toBe(true);
       await expect(header).toBeFocused();
       await record("side header focused with terminal engine blocked");

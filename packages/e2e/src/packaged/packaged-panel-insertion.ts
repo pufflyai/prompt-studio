@@ -63,9 +63,11 @@ export const verifyPanelInsertionTargets = async (page: Page, diagnostic?: Panel
     await expect(panel).toBeVisible();
     const header = page.getByLabel(region === "side" ? "Side panel header" : "Bottom panel header", { exact: true });
     await expect(header).toHaveAttribute("data-panel-draggable", "true");
-    await header.focus();
     if (await diagnostic?.beforeRestoredMenu(header, main, region)) await page.keyboard.press("Shift+F10");
-    else await header.press("Shift+F10");
+    else {
+      await header.focus();
+      await header.press("Shift+F10");
+    }
     await expect(page.getByRole("menuitem", { name: /^Move panel to / })).toHaveCount(1);
     await expect(
       page.getByRole("menuitem", { name: `Move panel to ${region === "side" ? "right" : "bottom"}`, exact: true }),
