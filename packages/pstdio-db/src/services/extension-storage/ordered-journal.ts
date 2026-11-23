@@ -167,7 +167,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
   const readDecision = async (id: string, epoch: string) => (await receipts.cachedReceipt(id, epoch))?.decision;
   const pendingWhere = () =>
     and(ownerWhere(operations, owner), isNotNull(operations.envelope), isNull(operations.settled_epoch));
-  const dependencies = createOrderedDependencyCache(tx, owner, cachedDecision, operation);
+  const dependencies = createOrderedDependencyCache(tx, owner, cachedDecision, retained);
   return {
     authoredOutcome: (id: string) => readOrderedSaveOutcome(tx, owner, id),
     knownDependency: dependencies.known,
