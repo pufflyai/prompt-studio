@@ -3,7 +3,7 @@ import type { ResourceRef as ExtensionResourceRef, Notification, NotificationAct
 import { getIndexedRows, type SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource, createDashboardSessionResource } from "@/shared/app/resources";
 
-import { getNotificationStatusOperations } from "./notification-status-operations";
+import { getNotificationStatusOperations } from "@/shared/notifications/notification-status-operations";
 
 const pendingStatuses = new Set(["open", "read"]);
 const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 } as const;

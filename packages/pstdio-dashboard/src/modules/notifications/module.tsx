@@ -5,6 +5,7 @@ import { getRuntimeCollections } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { getNotificationStatusOperations } from "@/shared/notifications/notification-status-operations";
 import { getInstallationSettings, notificationsEnabled } from "@/shared/settings/synced-settings";
 import {
   dashboardNavigationSections,
@@ -12,7 +13,6 @@ import {
 } from "@/shared/workbench/dashboard-navigation-contribution";
 import { NotificationCenterWidget } from "./components/notification-center-widget";
 import { countPendingNotifications } from "./data/dashboard-notifications";
-import { getNotificationStatusOperations } from "./data/notification-status-operations";
 
 export const DASHBOARD_NOTIFICATIONS_KEYBINDING = "Alt+Shift+N";
 

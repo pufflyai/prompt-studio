@@ -184,6 +184,8 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
         serviceQueries.requireCurrent,
       ),
       notifications: createDashboardWebviewNotificationsAdapter({
+        runtime: owner,
+        assertCurrent: serviceQueries.requireCurrent,
         projectId,
         extensionId,
         showError,

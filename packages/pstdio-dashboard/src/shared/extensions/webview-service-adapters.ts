@@ -2,8 +2,9 @@ import type {
   ExtensionWebviewNotificationsAdapter,
   ExtensionWebviewSettingsAdapter,
 } from "@pstdio/workbench/extensions";
-import { getApiClient } from "@/lib/api";
-import type { RuntimeCollections } from "@/lib/sync/collections";
+import { getRuntimeApiClient } from "@/lib/api";
+import { getRuntimeCollections, type RuntimeCollections } from "@/lib/sync/collections";
+import { getNotificationStatusOperations } from "@/shared/notifications/notification-status-operations";
 import { getExtensionSettingOperations } from "./extension-setting-operations";
 import { getCachedDashboardExtensionMetadata } from "./workbench-extension-contributions";
 
@@ -55,12 +56,15 @@ export const createDashboardWebviewSettingsAdapter = (
 };
 
 export const createDashboardWebviewNotificationsAdapter = (input: {
+  runtime?: RuntimeCollections;
+  assertCurrent?(): void;
   projectId?: string;
   extensionId: string;
   showNotice: (notice: { type?: "info" | "success" | "warning"; title?: string; description?: string }) => void;
   showError: (notice: { title?: string; description?: string }) => void;
 }) => {
   const projectId = input.projectId;
+  const runtime = input.runtime ?? getRuntimeCollections();
   return {
     show: (notice) => {
       if (notice.type === "error") {
@@ -71,19 +75,21 @@ export const createDashboardWebviewNotificationsAdapter = (input: {
     },
     ...(projectId
       ? ({
-          create: (notice) => getApiClient().extensions.createNotification(projectId, input.extensionId, notice),
+          create: (notice) => {
+            input.assertCurrent?.();
+            return getRuntimeApiClient(runtime).extensions.createNotification(projectId, input.extensionId, notice);
+          },
           resolve: async (request) => {
+            input.assertCurrent?.();
             const status = request.status ?? "done";
             if (request.dedupeKey !== undefined)
-              return getApiClient().notifications.resolveByDedupeKey(projectId, {
+              return getRuntimeApiClient(runtime).notifications.resolveByDedupeKey(projectId, {
                 dedupeKey: request.dedupeKey,
                 status,
               });
             if (!request.id) throw new Error("notification.resolve requires id or dedupeKey.");
             if (status === "expired") throw new Error("notification.resolve by id does not support expired.");
-            return status === "dismissed"
-              ? getApiClient().notifications.dismiss(projectId, request.id)
-              : getApiClient().notifications.markDone(projectId, request.id);
+            return getNotificationStatusOperations(runtime).updateById(projectId, request.id, status);
           },
         } satisfies ExtensionWebviewNotificationsAdapter)
       : {}),

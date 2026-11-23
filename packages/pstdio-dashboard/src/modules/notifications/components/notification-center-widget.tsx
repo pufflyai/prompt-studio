@@ -14,8 +14,8 @@ import { useActionError } from "@/shared/components/use-action-error";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
 import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
+import { getNotificationStatusOperations } from "@/shared/notifications/notification-status-operations";
 import { createDashboardNotifications, toWorkbenchResource } from "../data/dashboard-notifications";
-import { getNotificationStatusOperations } from "../data/notification-status-operations";
 
 interface NotificationCenterWidgetProps {
   input: WorkbenchPanelRenderInput;

@@ -11,7 +11,12 @@ import { createRuntimeState } from "@/lib/sync/runtime-state";
 import { dashboardCommandIds } from "@/shared/app/commands";
 
 const domain = "notification.status";
-type NotificationStatus = "read" | "dismissed";
+type NotificationStatus = "read" | "dismissed" | "done";
+const statusTitles = {
+  read: "Mark notification as read",
+  dismissed: "Dismiss notification",
+  done: "Resolve notification",
+} satisfies Record<NotificationStatus, string>;
 
 interface NotificationIntent {
   id: string;
@@ -58,9 +63,15 @@ export const getNotificationStatusOperations = createRuntimeState((owner) => {
     return patches.get(projectId) ?? noPatches;
   };
 
-  const update = async (notification: Notification, status: NotificationStatus) => {
+  const update = async (notification: Pick<Notification, "id" | "projectId" | "title">, status: NotificationStatus) => {
     const { projectId, id, title } = notification;
     const read = () => owner.getCollection("notifications").state.get(id);
+    const verify = async (signal: AbortSignal) => {
+      const notification = await api.get(projectId, id, { signal });
+      if (notification.id !== id || notification.projectId !== projectId)
+        throw new SyntaxError("The server returned a different notification.");
+      return notification;
+    };
     const resource = { projectId, id, type: "notification", extensionId: "pstdio", label: title };
     const accept = (confirmed: Notification) => {
       const row = read();
@@ -78,18 +89,22 @@ export const getNotificationStatusOperations = createRuntimeState((owner) => {
       projectId,
       subjects: [resourceOperationSubject(resource)],
       sourceCommand: { id: dashboardCommandIds.openNotifications },
-      title: status === "read" ? "Mark notification as read" : "Dismiss notification",
+      title: statusTitles[status],
       intent: { id, status } satisfies NotificationIntent,
-      draft: { title, status },
-      write: (signal) => api.setStatus(projectId, id, { status }, { signal }),
+      draft: { id, title, status },
+      async write(signal) {
+        const result = await api.setStatus(projectId, id, { status }, { signal });
+        if (!result) throw new Error("This notification is no longer available.");
+        return result;
+      },
       async reconcile(_saved, signal) {
         const before = read();
-        const confirmed = await api.get(projectId, id, { signal });
+        const confirmed = await verify(signal);
         signal.throwIfAborted();
         if (before === read()) accept(confirmed);
       },
       async check(signal) {
-        const confirmed = await api.get(projectId, id, { signal });
+        const confirmed = await verify(signal);
         if (confirmed.status === status) return { status: "confirmed", result: confirmed };
         return { status: "unknown" };
       },
@@ -97,5 +112,14 @@ export const getNotificationStatusOperations = createRuntimeState((owner) => {
     }).result;
   };
 
-  return { readPatches, subscribe: operations.subscribe, update };
+  return {
+    readPatches,
+    subscribe: operations.subscribe,
+    update,
+    updateById(projectId: string, id: string, status: NotificationStatus) {
+      const row = owner.getCollection("notifications").state.get(id);
+      const title = row?.project_id === projectId && typeof row.title === "string" ? row.title : "Notification";
+      return update({ id, projectId, title }, status);
+    },
+  };
 });
