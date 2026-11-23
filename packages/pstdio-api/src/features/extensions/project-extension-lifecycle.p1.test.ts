@@ -111,13 +111,13 @@ test.each([
       ] as ExtensionRuntime["workspaceTypes"],
     },
   });
-  await expect(
-    createProjectExtensionLifecycle(deps as never).uninstall({
+  expect(
+    await createProjectExtensionLifecycle(deps as never).uninstall({
       projectId: "project-1",
       instanceId: "instance-1",
       deleteUserData: false,
     }),
-  ).resolves.toBe("removed");
+  ).toBe("removed");
 });
 
 describe("project extension lifecycle", () => {
@@ -193,7 +193,7 @@ describe("project extension lifecycle", () => {
     expect(settled).toBe(false);
 
     finishProvisioning?.();
-    await expect(resultPromise).resolves.toMatchObject({ enabled: false });
+    expect(await resultPromise).toMatchObject({ enabled: false });
   });
 
   test("returns the committed automation preference", async () => {
@@ -298,13 +298,13 @@ describe("project extension lifecycle", () => {
         ] as ExtensionRuntime["workspaceTypes"],
       },
     });
-    await expect(
-      createProjectExtensionLifecycle(deps as never).uninstall({
+    expect(
+      await createProjectExtensionLifecycle(deps as never).uninstall({
         projectId: "project-1",
         instanceId: "instance-1",
         deleteUserData: false,
       }),
-    ).resolves.toBe("removed");
+    ).toBe("removed");
   });
 
   test("keeps connection credentials when extension uninstall fails", async () => {
@@ -340,9 +340,9 @@ describe("project extension lifecycle", () => {
     deps.extensionConnectionService.removeExtension.mockRejectedValue(new Error("connection cleanup failed"));
     const lifecycle = createProjectExtensionLifecycle(deps as never);
 
-    await expect(
-      lifecycle.uninstall({ projectId: "project-1", instanceId: "instance-1", deleteUserData: true }),
-    ).resolves.toBe("removed");
+    expect(await lifecycle.uninstall({ projectId: "project-1", instanceId: "instance-1", deleteUserData: true })).toBe(
+      "removed",
+    );
   });
 });
 

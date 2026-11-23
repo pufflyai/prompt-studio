@@ -42,6 +42,6 @@ describe("terminal foreground probe", () => {
   });
 
   test("returns null for a process that does not exist", async () => {
-    await expect(readTerminalForeground(2 ** 22 + 12345)).resolves.toBeNull();
+    expect(await readTerminalForeground(2 ** 22 + 12345)).toBeNull();
   });
 });
