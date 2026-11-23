@@ -48,6 +48,7 @@ const pgliteRecoveryHint = (error: unknown, dbPath: string) => {
 };
 
 export const openAppDatabase = async (path: string, lifecycle: AppLifecycle = {}, inWorker = false) => {
+  apiLogger.info({ event: "db.open", thread: inWorker ? "worker" : "api" }, "Opening the database");
   try {
     return await (inWorker ? createDbInWorker : createDb)({
       path,
