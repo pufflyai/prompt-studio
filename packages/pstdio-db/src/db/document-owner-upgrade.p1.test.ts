@@ -86,35 +86,44 @@ const readRestoredTable = async (
     )
   ).rows.map(({ row }) => row);
 };
-for (const interruption of ["normal", "schema", "restore"])
-  test(`document tails, retry identities, records and numbers survive ${interruption} owner upgrade`, async () => {
+for (const interruption of ["normal", "schema", "restore"]) {
+  const name = `document tails, retry identities, records and numbers survive ${interruption} owner upgrade`;
+  const check = async () => {
+    const phases: Record<string, number> = {};
+    let phaseStart = performance.now();
+    const markPhase = (phase: string) => {
+      if (interruption !== "restore") return;
+      const now = performance.now();
+      phases[phase] = Math.round(now - phaseStart);
+      phaseStart = now;
+    };
     const root = await mkdtemp(join(tmpdir(), "document-owner-upgrade-"));
     const previous = await createTextLogOwnerFixture(root);
     let closed = false;
     let store: Awaited<ReturnType<typeof createDb>> | undefined;
     try {
       await previous.pglite.exec(`INSERT INTO projects (id,name,shorthand,created_at,updated_at)
-        VALUES ('project-a','A','A','2026-11-22','2026-11-22'),('project-b','B','B','2026-11-22','2026-11-22');
-        INSERT INTO storage_documents SELECT 'project-a','pstdio',CASE WHEN n=0 THEN 'records' ELSE 'document-' || lpad(n::text,3,'0') END,
-          decode('00ff0180','hex'),3,1 FROM generate_series(0,200) n;
-        INSERT INTO storage_documents SELECT 'project-b',extension_id,document_id,state,revision,folded_revision FROM storage_documents WHERE document_id='records';
-        INSERT INTO storage_documents SELECT 'project-a','example.other',document_id,state,revision,folded_revision FROM storage_documents WHERE workbench_id='project-b';
-        INSERT INTO storage_document_updates SELECT workbench_id,extension_id,document_id,r,decode(CASE WHEN r=2 THEN '' ELSE 'ff00' END,'hex') FROM storage_documents CROSS JOIN generate_series(2,3) r;
-        INSERT INTO storage_document_operations SELECT workbench_id,extension_id,document_id,'same-operation','exact-' || document_id FROM storage_documents;
-        INSERT INTO storage_record_projections (workbench_id,extension_id,document_id,revision,live_count) SELECT workbench_id,extension_id,'records',73,1 FROM storage_documents WHERE document_id='records';
-        INSERT INTO storage_current_records (workbench_id,extension_id,record_id,deleted,value,query_values,revision,record_lifetime)
-          SELECT workbench_id,extension_id,document_id,false,'{"state":"open"}'::jsonb,'{"things":{"state":"open"}}'::jsonb,'same-revision','life-' || document_id FROM storage_documents;
-        INSERT INTO storage_resource_projections SELECT workbench_id,extension_id,document_id,73 FROM storage_documents WHERE document_id='records' AND extension_id='pstdio';
-        INSERT INTO storage_resource_identities SELECT workbench_id,'same-resource','example.items','item','IT-700','IT',700 FROM storage_resource_projections;
-        INSERT INTO storage_resource_aliases SELECT workbench_id,resource_id,'IT-900','IT',900 FROM storage_resource_identities;
-        INSERT INTO storage_record_indexes SELECT workbench_id,extension_id,'things',
-          '{"name":"things","fields":{"state":{"type":"string","path":["state"],"derive":{"kind":"string"}}},"countBy":["state"]}'::jsonb,'old-query-' || workbench_id || '-' || extension_id FROM storage_record_projections;`);
+      VALUES ('project-a','A','A','2026-11-22','2026-11-22'),('project-b','B','B','2026-11-22','2026-11-22');
+      INSERT INTO storage_documents SELECT 'project-a','pstdio',CASE WHEN n=0 THEN 'records' ELSE 'document-' || lpad(n::text,3,'0') END,
+        decode('00ff0180','hex'),3,1 FROM generate_series(0,200) n;
+      INSERT INTO storage_documents SELECT 'project-b',extension_id,document_id,state,revision,folded_revision FROM storage_documents WHERE document_id='records';
+      INSERT INTO storage_documents SELECT 'project-a','example.other',document_id,state,revision,folded_revision FROM storage_documents WHERE workbench_id='project-b';
+      INSERT INTO storage_document_updates SELECT workbench_id,extension_id,document_id,r,decode(CASE WHEN r=2 THEN '' ELSE 'ff00' END,'hex') FROM storage_documents CROSS JOIN generate_series(2,3) r;
+      INSERT INTO storage_document_operations SELECT workbench_id,extension_id,document_id,'same-operation','exact-' || document_id FROM storage_documents;
+      INSERT INTO storage_record_projections (workbench_id,extension_id,document_id,revision,live_count) SELECT workbench_id,extension_id,'records',73,1 FROM storage_documents WHERE document_id='records';
+      INSERT INTO storage_current_records (workbench_id,extension_id,record_id,deleted,value,query_values,revision,record_lifetime)
+        SELECT workbench_id,extension_id,document_id,false,'{"state":"open"}'::jsonb,'{"things":{"state":"open"}}'::jsonb,'same-revision','life-' || document_id FROM storage_documents;
+      INSERT INTO storage_resource_projections SELECT workbench_id,extension_id,document_id,73 FROM storage_documents WHERE document_id='records' AND extension_id='pstdio';
+      INSERT INTO storage_resource_identities SELECT workbench_id,'same-resource','example.items','item','IT-700','IT',700 FROM storage_resource_projections;
+      INSERT INTO storage_resource_aliases SELECT workbench_id,resource_id,'IT-900','IT',900 FROM storage_resource_identities;
+      INSERT INTO storage_record_indexes SELECT workbench_id,extension_id,'things',
+        '{"name":"things","fields":{"state":{"type":"string","path":["state"],"derive":{"kind":"string"}}},"countBy":["state"]}'::jsonb,'old-query-' || workbench_id || '-' || extension_id FROM storage_record_projections;`);
       await previous.pglite.exec(`INSERT INTO storage_documents (workbench_id,extension_id,document_id,state)
-        SELECT id,'pstdio','["host-local-migration","first-party-identities-v1"]',decode('0000','hex') FROM projects`);
+      SELECT id,'pstdio','["host-local-migration","first-party-identities-v1"]',decode('0000','hex') FROM projects`);
       // This fixture exercises exact structural rewrites of already-ordered owners.
       // Real legacy Yjs conversion and failure isolation have their own admission tests.
       await previous.pglite.exec(`INSERT INTO storage_ordered_owners (workbench_id,extension_id)
-        SELECT workbench_id,extension_id FROM storage_record_projections`);
+      SELECT workbench_id,extension_id FROM storage_record_projections`);
       const original: Record<string, unknown>[][] = [];
       for (const table of tables)
         original.push(
@@ -124,6 +133,7 @@ for (const interruption of ["normal", "schema", "restore"])
             )
           ).rows.map(({ row }) => row),
         );
+      markPhase("fixture and original rows");
       if (interruption !== "normal") {
         await prepareOrderedOwnerUpgrade(previous.db, previous.path);
         await prepareOwnerIndexUpgrade(previous.db, previous.path);
@@ -131,10 +141,11 @@ for (const interruption of ["normal", "schema", "restore"])
         const finish = await prepareDocumentOwnerUpgrade(previous.db, previous.path);
         for (const table of tables) expect((await previous.pglite.query(`SELECT * FROM ${table}`)).rows).toEqual([]);
         await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        markPhase("snapshot export and schema migration");
         if (interruption === "restore") {
           await previous.pglite.exec(`CREATE FUNCTION stop_document_restore() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
-            IF NEW.owner_id=(SELECT id FROM owners WHERE project_id='project-b' AND extension_id='pstdio') THEN RAISE EXCEPTION 'stop document restoration'; END IF; RETURN NEW; END $$;
-            CREATE TRIGGER stop_document_restore BEFORE UPDATE ON documents FOR EACH ROW EXECUTE FUNCTION stop_document_restore()`);
+          IF NEW.owner_id=(SELECT id FROM owners WHERE project_id='project-b' AND extension_id='pstdio') THEN RAISE EXCEPTION 'stop document restoration'; END IF; RETURN NEW; END $$;
+          CREATE TRIGGER stop_document_restore BEFORE UPDATE ON documents FOR EACH ROW EXECUTE FUNCTION stop_document_restore()`);
           await expect(finish!()).rejects.toThrow("Failed query");
           expect(await countDocumentUpdates(previous.db, false)).toBe(400);
           for (const table of tables)
@@ -142,6 +153,7 @@ for (const interruption of ["normal", "schema", "restore"])
           await previous.pglite.exec("DROP TRIGGER stop_document_restore ON documents");
         }
       }
+      markPhase("interrupted restore");
       await previous.close();
       closed = true;
       store = await createDb({ path: previous.path });
@@ -163,12 +175,21 @@ for (const interruption of ["normal", "schema", "restore"])
         ).toHaveLength(original[i]!.length);
         expect(await Bun.file(`${previous.path}-${table}-owners-upgrade.jsonl`).exists()).toBe(false);
       }
+      markPhase("resume and verify restored data");
       await store.close();
       store = await createDb({ path: previous.path });
       expect(sorted(await restored())).toEqual(sorted(original));
+      markPhase("reopen and verify durable data");
     } finally {
       if (!closed) await previous.close();
       await store?.close();
       await rm(root, { recursive: true, force: true });
+      if (interruption === "restore") {
+        markPhase("cleanup");
+        console.info("Interrupted document owner upgrade phases (ms)", JSON.stringify(phases));
+      }
     }
-  });
+  };
+  // The interrupted variant attempts a failed restore and verifies durability on a second reopen.
+  test(name, check, interruption === "restore" ? 10_000 : undefined);
+}
