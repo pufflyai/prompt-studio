@@ -19,7 +19,7 @@ interface TemplateSummary {
   type: string;
 }
 
-interface TemplateContent extends TemplateSummary {
+export interface TemplateContent extends TemplateSummary {
   content: string;
 }
 
@@ -60,13 +60,17 @@ export const getProjectTemplateAssets = async (projectId: string) => {
   ).flat();
 };
 
-export const getProjectTemplate = (template: ProjectTemplateAsset) =>
-  executeExtensionCommandValue<TemplateContent | null>(template.projectId, template.commands.read, {
+export const getProjectTemplate = (template: ProjectTemplateAsset, run = executeExtensionCommandValue) =>
+  run<TemplateContent | null>(template.projectId, template.commands.read, {
     name: template.name,
   });
 
-export const saveProjectTemplate = (template: ProjectTemplateAsset, content: string) =>
-  executeExtensionCommandValue<TemplateContent>(template.projectId, template.commands.save, {
+export const saveProjectTemplate = (
+  template: ProjectTemplateAsset,
+  content: string,
+  run = executeExtensionCommandValue,
+) =>
+  run<TemplateContent | null>(template.projectId, template.commands.save, {
     name: template.name,
     title: template.title,
     type: template.localType,
