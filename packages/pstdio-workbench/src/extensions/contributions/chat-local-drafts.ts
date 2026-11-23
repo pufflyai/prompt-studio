@@ -5,6 +5,7 @@ import type { LegacyChatDraftTransfer } from "./chat-legacy-draft";
 import type { ChatSession } from "./chat-session";
 
 const clientKey = "pstdio-workbench:chat-draft-client";
+const browserOwners = new WeakMap<Storage, Map<string, symbol>>();
 
 export const createLocalChatDrafts = (key: string, readLegacy: () => LegacyChatDraftTransfer | undefined) => {
   // Recovery receipts require durable browser storage, never the workbench's memory fallback.
@@ -21,11 +22,19 @@ export const createLocalChatDrafts = (key: string, readLegacy: () => LegacyChatD
   };
   const localKey = `pstdio-workbench:chat-draft:${key}`;
   const pendingKey = `pstdio-workbench:chat-draft-pending:${key}`;
+  const owners = (browserStorage && browserOwners.get(browserStorage)) ?? new Map<string, symbol>();
+  const owner = Symbol();
+  if (browserStorage) browserOwners.set(browserStorage, owners);
+  owners.set(localKey, owner);
+  const current = () => owners.get(localKey) === owner;
+  let restoreFailure: { cause: unknown } | undefined;
   const parse = (raw: string | null) => (raw === null ? undefined : chatDraftSchema.parse(JSON.parse(raw)));
   const read = (key: string) => parse(storage().getItem(key));
-  const save = (draft: ChatDraft) => {
+  const write = (draft: ChatDraft) => {
+    const store = storage();
+    if (!current()) throw new Error("The native draft owner was replaced.");
     const raw = JSON.stringify(draft);
-    if (storage().getItem(localKey) !== raw) storage().setItem(localKey, raw);
+    if (store.getItem(localKey) !== raw) store.setItem(localKey, raw);
   };
   const clientId = () => {
     try {
@@ -42,7 +51,16 @@ export const createLocalChatDrafts = (key: string, readLegacy: () => LegacyChatD
   };
   return {
     clientId: clientId(),
-    save,
+    dispose() {
+      if (!current()) return;
+      owners.delete(localKey);
+      if (browserStorage && !owners.size) browserOwners.delete(browserStorage);
+    },
+    save(draft: ChatDraft) {
+      // An incomplete migration still needs its original sources on the next open.
+      if (restoreFailure) throw restoreFailure.cause;
+      write(draft);
+    },
     restore(session: ChatSession) {
       try {
         const local = read(localKey);
@@ -51,17 +69,20 @@ export const createLocalChatDrafts = (key: string, readLegacy: () => LegacyChatD
         const legacy = readLegacy();
         const sources = [local, pending, legacy?.draft].filter((draft) => draft !== undefined);
         const primary = sources[0];
+        restoreFailure = undefined;
         if (!primary) return;
         const draft = sources.slice(1).reduce(hydrateChatDraft, primary);
-        save(draft);
+        session.storedDraft.restore(draft);
+        write(draft);
         if (pending && storage().getItem(pendingKey) === pendingRaw) storage().removeItem?.(pendingKey);
         legacy?.acknowledge();
-        session.changeDraft(draft);
       } catch (error) {
-        session.reportError(error);
+        restoreFailure = { cause: error };
+        session.storedDraft.reportError(error);
       }
     },
     contains(draft: ChatDraft) {
+      if (!current()) return false;
       const saved = read(localKey);
       if (!saved) return false;
       const contents = new Set([saved, ...(saved.recovered ?? [])].map(chatDraftContentKey));

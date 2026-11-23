@@ -151,7 +151,7 @@ test("a failed merge of existing, pending and legacy drafts leaves every recover
       value: {
         getItem: (key: string) => records.get(key) ?? null,
         setItem: (key: string, value: string) => {
-          if (key === localKey) throw new Error("Storage full");
+          if (key === localKey && JSON.parse(value).recovered?.length) throw new Error("Storage full");
           records.set(key, value);
         },
         removeItem: (key: string) => records.delete(key),
@@ -164,16 +164,71 @@ test("a failed merge of existing, pending and legacy drafts leaves every recover
         acknowledged++;
       },
     }));
-    const session = createChatSession({ query: async () => ({}), action: async () => undefined });
+    const session = createChatSession({
+      query: async () => ({}),
+      action: async () => undefined,
+      stageDraft: drafts.save,
+      saveDraft: async (draft) => drafts.save(draft),
+    });
     try {
       drafts.restore(session);
+      const restored = session.getSnapshot().draft;
+      session.changeDraft({ text: "New typing" });
+      await session.flushDraft();
       expect(session.getSnapshot().error).toBe("Storage full");
       expect(acknowledged).toBe(0);
       expect(records.get(localKey)).toBe(JSON.stringify(local));
       expect(records.get(pendingKey)).toBe(JSON.stringify(pending));
+      expect(restored).toEqual({ ...local, recovered: [pending, draft] });
     } finally {
       session.dispose();
     }
+  }));
+
+test("restored browser controls keep their saved values when host defaults change", () =>
+  withStorage(async (records) => {
+    records.set("pstdio-workbench:chat-draft:scope", JSON.stringify(draft));
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: (key: string) => records.get(key) ?? null,
+        setItem: (key: string, value: string) => records.set(key, value),
+      },
+    });
+    const session = createChatSession({
+      initial: { values: draft.values },
+      query: async () => ({}),
+      action: async () => undefined,
+    });
+    try {
+      createLocalChatDrafts("scope", () => undefined).restore(session);
+      session.accept({
+        revision: 1,
+        snapshot: { values: { harness: { harnessId: "agent", model: "new-default" } } },
+      });
+      expect(session.getSnapshot().draft.values).toEqual(draft.values);
+    } finally {
+      session.dispose();
+    }
+  }));
+
+test("an old browser draft owner cannot overwrite typing saved by its replacement", () =>
+  withStorage(async (records) => {
+    const localKey = "pstdio-workbench:chat-draft:scope";
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: (key: string) => records.get(key) ?? null,
+        setItem: (key: string, value: string) => records.set(key, value),
+      },
+    });
+    const old = createLocalChatDrafts("scope", () => undefined);
+    old.save(draft);
+    const replacement = createLocalChatDrafts("scope", () => undefined);
+    const newer = { ...draft, text: "New typing in the replacement" };
+    replacement.save(newer);
+    expect(() => old.save({ text: "", attachments: [], values: {} })).toThrow("draft owner was replaced");
+    expect(records.get(localKey)).toBe(JSON.stringify(newer));
   }));
 
 test("pending work rewritten by an older client during migration keeps its newer recovery source", () =>

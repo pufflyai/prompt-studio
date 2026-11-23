@@ -122,7 +122,7 @@ export const createChatSessionProvider = (source: {
   return {
     session,
     queries,
-    releaseDrafts: drafts?.dispose,
+    releaseDrafts: localDrafts?.dispose ?? drafts?.dispose,
     draftClientId: localDrafts?.clientId,
     isSource: (render: WorkbenchPanelRenderInput) =>
       watchSource?.workbench.views.store === render.workbench.views.store,

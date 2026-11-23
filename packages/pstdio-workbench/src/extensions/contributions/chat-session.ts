@@ -319,6 +319,7 @@ export const createChatSession = (input: ChatSessionInput) => {
       if (!retired) drafts.change(update);
     },
     ...createChatSubmissionHandoff(() => state.pending, publish),
+    storedDraft: drafts.storedDraft,
     ...createChatDraftRestoration({
       active: () => !retired,
       read: () => state,
