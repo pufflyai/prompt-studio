@@ -64,14 +64,6 @@ export const createOrderedAuthorship = (
       if (row) return row.request ?? undefined;
       return (await retained(id))?.request_fingerprint ?? undefined;
     },
-    async dropSettledEnvelope(id: string) {
-      const row = await operation(id);
-      if (!row?.settled_epoch) throw new Error("Only a decided save can drop its envelope");
-      await tx
-        .update(operations)
-        .set({ envelope: null, admission: null })
-        .where(and(orderedOwnerWhere(operations, owner), eq(operations.operation_id, id)));
-    },
   };
 };
 

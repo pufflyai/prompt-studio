@@ -46,6 +46,12 @@ import {
 const savedOutcome = async (journal: OrderedJournal, operationId: string) =>
   (await journal.authoredOutcome(operationId))!;
 
+// Authored input is independent of the SQL baseline. Capture it before any asynchronous work.
+const prepareCommitRequest = async (input: StorageGroup) => {
+  const group = structuredClone(input);
+  return { group, identity: await fingerprint(group as unknown as Json) };
+};
+
 // Settled local records already are the visible baseline. Avoid publishing the same
 // unchanged projection and recomputing every observation before each local save.
 const prepareCommitViews = async (
@@ -123,14 +129,11 @@ export const createOrderedResourceRecords = (
   const commitIn = async (
     journal: OrderedJournal,
     tx: OrderedTransaction,
-    input: StorageGroup,
+    { group, identity }: Awaited<ReturnType<typeof prepareCommitRequest>>,
     ownRevisions?: Map<string, string>,
   ) => {
     // Retain only this group's canonical reads. Text and core-number policy keep their SQL-visible path.
     journal = createOrderedCommitJournal(journal, owner);
-    // Capture before the first asynchronous boundary; retries bind the entire authored request.
-    const group = structuredClone(input);
-    const identity = await fingerprint(group as unknown as Json);
     const previous = await journal.requestIdentity(group.operationId);
     if (previous) {
       if (previous !== identity) throw new Error("Operation identity reused with changed payload");
@@ -204,9 +207,9 @@ export const createOrderedResourceRecords = (
     return result.outcome;
   };
   const commit = async (group: StorageGroup) => {
-    const owned = structuredClone(group);
+    const request = await prepareCommitRequest(group);
     return write(async () => {
-      const result = await withOrderedOwner(db, owner, (journal, tx) => commitIn(journal, tx, owned));
+      const result = await withOrderedOwner(db, owner, (journal, tx) => commitIn(journal, tx, request));
       return notify(result);
     });
   };
@@ -238,7 +241,7 @@ export const createOrderedResourceRecords = (
               outcome: (id) => queue.run(() => journal.authoredOutcome(id)),
               commit: (group) =>
                 queue.run(async () => {
-                  const result = await commitIn(journal, tx, group, ownRevisions);
+                  const result = await commitIn(journal, tx, await prepareCommitRequest(group), ownRevisions);
                   for (const record of result.records) ownRevisions.set(record.recordId, record.revision);
                   results.push(result);
                   return result.outcome;
@@ -301,7 +304,7 @@ export const createOrderedResourceRecords = (
             tx,
             owner,
             observer: deps.observer,
-            commit: () => commitIn(journal, tx, group),
+            commit: async () => commitIn(journal, tx, await prepareCommitRequest(group)),
           });
         });
         notifyNativeFileSave(saved, owner, deps, commitCache);

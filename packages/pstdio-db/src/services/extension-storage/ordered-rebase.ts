@@ -87,12 +87,13 @@ const projectPending = async (
   owner: StorageOwner,
   changed: string[],
   blocked: ReadonlySet<string>,
+  hasPending: boolean,
 ) => {
-  const ids = await pendingClosure(journal, changed);
+  const ids = hasPending ? await pendingClosure(journal, changed) : changed;
   const views = await journal.canonical(ids);
   const numberAccounting = owner.extensionId === coreOwnerId ? createOrderedNumberAccounting(views) : undefined;
   const suppressed = new Set(blocked);
-  for await (const { operation, requestFingerprint } of pendingOrderedOperations(journal, ids)) {
+  for await (const { operation, requestFingerprint } of hasPending ? pendingOrderedOperations(journal, ids) : []) {
     if (suppressed.has(operation.operationId)) continue;
     // This is a local projection decision, never a fabricated canonical receipt. A child
     // cannot project structs/observations from a parent already excluded by this rebase.
@@ -129,22 +130,27 @@ export const rebaseOrderedProjection = async (
   // Number admission reads canonical SQL directly. Other owners can publish the
   // settled author group's confirmed state in the same row write as its projection.
   const canonical = owner.extensionId === coreOwnerId ? undefined : createOrderedCanonicalBatch(journal);
-  changed = [...new Set([...changed, ...(await settleLocalOrderedSaves(journal, tx, owner, undefined, canonical))])];
+  const local = await settleLocalOrderedSaves(journal, tx, owner, undefined, canonical);
+  changed = [...new Set([...changed, ...(local?.changed ?? [])])];
   journal = canonical?.journal ?? journal;
-  changed = [...new Set([...changed, ...(await foldOrderedSaves(journal, tx, owner, changed))])];
+  const hasPending = !canonical || (local?.pending ?? true);
+  if (hasPending) changed = [...new Set([...changed, ...(await foldOrderedSaves(journal, tx, owner, changed))])];
   const { ids, views, events, suppressed } = await projectWithOrderedNumberPolicy(
     journal,
     tx,
     owner,
     changed,
-    (ids, blocked) => projectPending(journal, tx, owner, ids, blocked),
+    (ids, blocked) => projectPending(journal, tx, owner, ids, blocked, hasPending),
   );
   const removed = await removeOrderedProjection(
     tx,
     owner,
     ids.filter((id) => !views.has(id)),
   );
-  const saved = await publishOrderedProjection(tx, owner, [...views.values()], canonical?.staged);
+  const saved = await publishOrderedProjection(tx, owner, [...views.values()], {
+    confirmed: canonical?.staged,
+    hasPending,
+  });
   await markOrderedNumberProjectionCurrent(tx, owner);
   return { ...saved, projected: saved.projected + removed, views, events, suppressed, recordIds: ids };
 };

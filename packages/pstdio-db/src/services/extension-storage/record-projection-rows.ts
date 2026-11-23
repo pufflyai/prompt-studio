@@ -4,7 +4,7 @@ import { assertStorageLimits } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { jsonBatches } from "./json-batches";
 import { type NativeProjectedRecord, projectNativeRecordText } from "./native-record-projection";
-import type { stableRecordColumns } from "./ordered-record-row";
+import type { orderedProjectionFacets } from "./ordered-record-publication";
 import { derivedQueryValues, readDerivedQueryIndexes } from "./record-derived-fields";
 import { encodeProjectionValue } from "./record-projection-codec";
 import { identityQueryKey } from "./resource-query-values";
@@ -12,7 +12,7 @@ import { storageOwnerKey } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 type OrderedPublication = {
-  facets: ReadonlyMap<string, ReturnType<typeof stableRecordColumns> & { base: Uint8Array | null }>;
+  facets: Awaited<ReturnType<typeof orderedProjectionFacets>>;
   previous: ReadonlyMap<string, { revision: string | null; lifetime: string }>;
 };
 
@@ -42,7 +42,7 @@ export const writeProjectedRecords = async (
     const previous = ordered?.previous.get(record.recordId);
     if (!previous || previous.revision !== record.revision || previous.lifetime !== lifetime)
       visibleChanges.add(record.recordId);
-    const deletedBody = record.deleted ? facet : undefined;
+    const deletedBody = facet?.body;
     return {
       record_id: record.recordId,
       deleted: record.deleted,

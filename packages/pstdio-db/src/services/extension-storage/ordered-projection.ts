@@ -3,6 +3,7 @@ import type { StorageOwner } from "pstdio-sync";
 import type { OrderedRecord } from "pstdio-sync/records";
 import { assertStorageLimits } from "pstdio-sync-contracts";
 import { records as current, owners as projections } from "../../db/schemas.pg";
+import { orderedCommitVersionColumns } from "./ordered-commit-cache";
 import { projectOrderedNativeAssets } from "./ordered-native-assets";
 import { refreshOrderedNativeVersions } from "./ordered-native-versions";
 import { noteRecordPublication, orderedProjectionFacets } from "./ordered-record-publication";
@@ -21,10 +22,10 @@ export const publishOrderedProjection = async (
   tx: OrderedTransaction,
   owner: StorageOwner,
   records: OrderedRecord[],
-  confirmed?: ReadonlyMap<string, OrderedRecord>,
+  options: { confirmed?: ReadonlyMap<string, OrderedRecord>; hasPending?: boolean } = {},
 ) => {
   if (!records.length) return { records: [], projected: 0 };
-  const facets = await orderedProjectionFacets(tx, owner, records, confirmed);
+  const facets = await orderedProjectionFacets(tx, owner, records, options);
   const previous = await tx
     .select({
       recordId: current.record_id,
@@ -77,12 +78,16 @@ export const publishOrderedProjection = async (
     records.map(({ recordId }) => recordId),
   );
   await refreshOrderedNativeVersions(tx, owner, records, previous);
-  if (projected)
-    await tx
-      .update(projections)
-      .set({ revision: sql`${projections.revision} + 1`, live_count: sql`${projections.live_count} + ${delta}` })
-      .where(orderedOwnerWhere(projections, owner));
-  return { records: materialized, projected };
+  const version = projected
+    ? (
+        await tx
+          .update(projections)
+          .set({ revision: sql`${projections.revision} + 1`, live_count: sql`${projections.live_count} + ${delta}` })
+          .where(orderedOwnerWhere(projections, owner))
+          .returning(orderedCommitVersionColumns)
+      )[0]
+    : undefined;
+  return { records: materialized, projected, version: version && JSON.stringify(version) };
 };
 
 /** A refused optimistic creation becomes absent, rather than a retained tombstone. */

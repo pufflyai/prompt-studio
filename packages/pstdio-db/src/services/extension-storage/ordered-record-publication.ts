@@ -2,7 +2,7 @@ import { and, inArray, isNull, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { OrderedRecord } from "pstdio-sync/records";
 import { records } from "../../db/schemas.pg";
-import { confirmedRecordBase, stableRecordColumns } from "./ordered-record-row";
+import { confirmedRecordBase, orderedRecordMetadata, stableRecordColumns } from "./ordered-record-row";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { readCanonicalRecord, readRetainedRecord } from "./retained-records";
 
@@ -77,21 +77,30 @@ export const orderedProjectionFacets = async (
   tx: OrderedTransaction,
   owner: StorageOwner,
   input: OrderedRecord[],
-  confirmed?: ReadonlyMap<string, OrderedRecord>,
+  { confirmed, hasPending = true }: { confirmed?: ReadonlyMap<string, OrderedRecord>; hasPending?: boolean },
 ) => {
-  const facets = new Map<string, ReturnType<typeof stableRecordColumns> & { base: Uint8Array | null }>();
+  const facets = new Map<
+    string,
+    {
+      meta: ReturnType<typeof orderedRecordMetadata>;
+      body?: Pick<ReturnType<typeof stableRecordColumns>, "value" | "asset" | "shared" | "native_sources">;
+      base: Uint8Array | null;
+    }
+  >();
   for (let offset = 0; offset < input.length; offset += 100) {
     const page = input.slice(offset, offset + 100),
       ids = page.map((record) => record.recordId);
-    const touched = await tx.execute<{
-      record_id: string;
-    }>(sql`SELECT DISTINCT unnest(touches) AS record_id FROM operations
+    const touched = hasPending
+      ? await tx.execute<{
+          record_id: string;
+        }>(sql`SELECT DISTINCT unnest(touches) AS record_id FROM operations
       WHERE owner_id=(SELECT id FROM owners WHERE project_id=${owner.workbenchId} AND extension_id=${owner.extensionId})
         AND envelope IS NOT NULL AND settled_epoch IS NULL AND touches && ARRAY[${sql.join(
           ids.map((id) => sql`${id}`),
           sql`, `,
-        )}]::text[]`);
-    const pending = new Set(touched.rows.map((row) => row.record_id));
+        )}]::text[]`)
+      : undefined;
+    const pending = new Set(touched?.rows.map((row) => row.record_id));
     const storedIds = ids.filter((id) => pending.has(id) && !confirmed?.has(id));
     const rows = storedIds.length
       ? await tx
@@ -103,8 +112,10 @@ export const orderedProjectionFacets = async (
     for (const record of page) {
       const row = before.get(record.recordId);
       const staged = confirmed?.get(record.recordId);
+      const body = record.deleted ? stableRecordColumns(record) : undefined;
       facets.set(record.recordId, {
-        ...stableRecordColumns(record),
+        meta: body?.meta ?? orderedRecordMetadata(record),
+        body,
         base: pending.has(record.recordId)
           ? (row?.base ??
             confirmedRecordBase(

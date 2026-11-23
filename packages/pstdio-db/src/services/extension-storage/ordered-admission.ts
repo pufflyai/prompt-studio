@@ -29,7 +29,7 @@ export const admitOrderedOperation = async (tx: OrderedTransaction, owner: Stora
       ),
     )
     .returning({ id: operations.operation_id });
-  if (saved) return;
+  if (saved) return identity;
   const [row] = await tx
     .select({
       fingerprint: operations.fingerprint,
