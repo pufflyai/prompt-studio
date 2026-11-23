@@ -48,7 +48,16 @@ const pgliteRecoveryHint = (error: unknown, dbPath: string) => {
 export const openAppDatabase = async (path: string, lifecycle: AppLifecycle = {}, inWorker = false) => {
   apiLogger.info({ event: "db.open", thread: inWorker ? "worker" : "api" }, "Opening the database");
   try {
-    return await (inWorker ? createDbInWorker : createDb)({
+    // A worker that dies leaves the database unusable and its lock released, so the runtime must stop:
+    // an uncaught error takes the same fatal shutdown path as any other.
+    const onUnexpectedExit = (error: Error) =>
+      setTimeout(() => {
+        throw error;
+      });
+    const open = inWorker
+      ? (input: Parameters<typeof createDb>[0]) => createDbInWorker({ ...input, onUnexpectedExit })
+      : createDb;
+    return await open({
       path,
       deferCleanup: true,
       onPhase: (phase) => {
