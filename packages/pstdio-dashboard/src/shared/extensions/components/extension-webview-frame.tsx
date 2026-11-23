@@ -36,6 +36,7 @@ import {
   createDashboardWebviewSettingsAdapter,
 } from "../webview-service-adapters";
 import { createDashboardWebviewServiceQueries } from "../webview-service-queries";
+import { getCachedDashboardExtensionMetadata } from "../workbench-extension-contributions";
 import { executeWebviewCommand, webviewCommandSlot } from "./extension-webview-command";
 import { BridgedWebviewSurface, StaticWebviewSurface, type WebviewDescriptor } from "./extension-webview-surfaces";
 import { PausedExtensionView } from "./paused-extension-view";
@@ -166,9 +167,10 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
           slot: webviewCommandSlot({ projectId, webviewId, slotKind: props.slotKind }),
           workbench: props.workbench,
           projectId,
-          executeExtensionCommand: (input) =>
+          declarations: getCachedDashboardExtensionMetadata(projectId, owner),
+          executeExtensionCommand: (input, commandSignal) =>
             executeCommand.mutateAsync({
-              signal,
+              signal: commandSignal,
               commandId: input.commandId,
               body: {
                 metadata: input.metadata,

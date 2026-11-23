@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbench } from "@pstdio/workbench";
+import { PstdioConnectionError } from "@pstdio/sdk/client";
+import { createScopedQueryClient } from "@pstdio/sdk/extensions";
+import { createWorkbench, getWorkbenchOperations } from "@pstdio/workbench";
+import { emptyWorkbenchExtensionMetadata, registerWorkbenchExtensionContributions } from "@pstdio/workbench/extensions";
 import { executeWebviewCommand } from "./extension-webview-command";
 
 describe("executeWebviewCommand", () => {
@@ -208,4 +211,98 @@ test("dashboard native commands receive resource and cancellation context", asyn
     },
   });
   expect(result).toMatchObject({ outcome: { value: { resource: { type: "note", id: "1" }, aborted: true } } });
+});
+
+test("the dashboard workspace form retains one unresolved create across reopened webviews", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
+  const workbench = createWorkbench({ queries });
+  workbench.pageLocations.setProject("project");
+  const params = { providerId: "provider", params: { name: "Draft workspace" } };
+  let writes = 0;
+  const input = {
+    commandId: "pstdio.workspaces.command.create",
+    projectId: "project",
+    params,
+    workbench,
+    executeExtensionCommand: async () => {
+      writes++;
+      throw new PstdioConnectionError(new Error("Workspace response lost"));
+    },
+  };
+  try {
+    for (let opening = 0; opening < 2; opening++) {
+      expect(await executeWebviewCommand(input)).toMatchObject({
+        outcome: { status: "error", code: "workspace_create_unconfirmed" },
+      });
+    }
+    expect(writes).toBe(1);
+    expect(getWorkbenchOperations(queries).getSnapshot().recovery).toMatchObject([
+      { title: "Create workspace", status: "unknown", draft: { params } },
+    ]);
+  } finally {
+    await workbench.dispose();
+    queries.dispose();
+  }
+});
+
+test("an extension create in a dashboard webview shares its recovery with the native command", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
+  const workbench = createWorkbench({ queries });
+  workbench.pageLocations.setProject("project");
+  const extensionId = "example.notes";
+  const commandId = `${extensionId}.command.create`;
+  const declarations = {
+    ...emptyWorkbenchExtensionMetadata,
+    commands: [{ id: commandId, extensionId, title: "Create note" }],
+    keybindings: [
+      {
+        id: `${extensionId}.keybinding.create`,
+        extensionId,
+        layer: "create",
+        action: { kind: "command", target: { command: { kind: "command", id: "create", extensionId } } },
+        key: "N",
+        canonicalChord: "N",
+        parsed: { key: "N", ctrl: false, shift: false, alt: false, meta: false, modifiers: [] },
+      },
+    ],
+  } satisfies Parameters<typeof registerWorkbenchExtensionContributions>[0]["metadata"];
+  let nativeWrites = 0;
+  const registration = registerWorkbenchExtensionContributions({
+    metadata: declarations,
+    projectId: "project",
+    queries,
+    workbench,
+    executeCommand: () => {
+      nativeWrites++;
+      return {};
+    },
+  });
+  const input = { commandId, projectId: "project", params: { title: "Draft note" }, workbench, declarations };
+  const rejected = {
+    outcome: { ok: false, status: "rejected", code: "review", reason: "Review first", data: { revision: 2 } },
+  };
+  try {
+    expect(await executeWebviewCommand({ ...input, executeExtensionCommand: async () => rejected })).toBe(rejected);
+    expect(
+      await executeWebviewCommand({
+        ...input,
+        executeExtensionCommand: async () => {
+          throw new PstdioConnectionError(new Error("Note response lost"));
+        },
+      }),
+    ).toMatchObject({ outcome: { code: "resource_create_unconfirmed" } });
+    await expect(workbench.commands.executeCommand(commandId, { title: "Another draft" })).rejects.toMatchObject({
+      name: "UnresolvedSubmissionError",
+    });
+    expect(nativeWrites).toBe(0);
+    expect(getWorkbenchOperations(queries).getSnapshot().recovery.at(-1)).toMatchObject({
+      title: "Create note",
+      status: "unknown",
+      draft: input.params,
+    });
+  } finally {
+    registration.dispose();
+    await workbench.dispose();
+    queries.dispose();
+  }
 });

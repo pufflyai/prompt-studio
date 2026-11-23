@@ -152,6 +152,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
         const { id, projectId, title, domain } = preview;
         recovery.push({
           id,
+          subjects: preview.subjects,
           projectId,
           title,
           domain,

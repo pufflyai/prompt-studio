@@ -1,10 +1,16 @@
-import type { ResourceRef, WebviewCommandsExecuteParams } from "@pstdio/sdk/extensions";
+import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { UnresolvedSubmissionError } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { getWorkbenchOperations, operationSubject } from "../../core/registries/mutations/operations";
 import { getWorkbenchQueries } from "../../core/workbench-queries";
 import { unwrapCommandValue } from "../host/command-response";
 import { runTrackedCreate } from "../host/workbench-create-operation";
+
+export interface WebviewOperationRequest {
+  commandId: string;
+  params?: Record<string, unknown>;
+  resource?: ResourceRef;
+}
 
 const commandPrefix = "pstdio.workspaces.command.";
 const createCommand = `${commandPrefix}create`;
@@ -28,7 +34,7 @@ export const runWorkspaceWebviewMutation = async (input: {
   workbench: WorkbenchCore;
   projectId: string;
   resource?: ResourceRef;
-  request: WebviewCommandsExecuteParams;
+  request: WebviewOperationRequest;
   signal?: AbortSignal;
   execute(signal?: AbortSignal): Promise<unknown>;
 }) => {
@@ -58,13 +64,7 @@ export const runWorkspaceWebviewMutation = async (input: {
           draft: { commandId, params },
           write,
         },
-        (recovery) =>
-          recovery.find(
-            (entry) =>
-              entry.projectId === projectId &&
-              entry.status === "unknown" &&
-              (entry.draft as { commandId?: string } | undefined)?.commandId === commandId,
-          ),
+        (recovery) => recovery.find((entry) => entry.status === "unknown" && entry.subjects.includes(subject)),
       );
     } catch (error) {
       if (error instanceof UnresolvedSubmissionError) return interruptedCreation;

@@ -28,6 +28,7 @@ const createExtensionHostAdapters = (
     executeCommand: input.executeCommand,
     extensionIdForWebview: (webviewId) => input.metadata.panels.find((panel) => panel.id === webviewId)?.extensionId,
     files: input.webviewFiles,
+    metadata: input.metadata,
     projectId: input.projectId,
     slotKind,
   });

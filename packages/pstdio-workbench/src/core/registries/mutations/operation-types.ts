@@ -47,6 +47,7 @@ export interface OperationPreview {
 
 export interface OperationRecovery {
   id: symbol;
+  subjects: readonly string[];
   domain: string;
   projectId?: string;
   title: string;

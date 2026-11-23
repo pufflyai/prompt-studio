@@ -1,4 +1,5 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import { commandRefId } from "@pstdio/sdk/extensions";
 import { UnresolvedSubmissionError } from "@pstdio/ui";
 import { text } from "pstdio-extensions/workbench";
 import { classifyApiWrite } from "../../core/registries/mutations/operation-failures";
@@ -56,17 +57,34 @@ export const runTrackedCreate = async <T>(
   }
 };
 
-export const runCreateOperation = (
+export const declaredCreateCommandIds = (
+  metadata: Partial<Pick<WorkbenchExtensionMetadata, "kanbanRenderers" | "keybindings">>,
+) =>
+  new Set([
+    ...(metadata.kanbanRenderers ?? []).flatMap((renderer) =>
+      renderer.createRow ? [renderer.createRow.commandId] : [],
+    ),
+    ...(metadata.keybindings ?? []).flatMap((binding) => {
+      if (binding.layer !== "create" || binding.action.kind !== "command") return [];
+      const command = binding.action.target.command;
+      return [commandRefId({ extensionId: command.extensionId ?? binding.extensionId, id: command.id })];
+    }),
+  ]);
+
+export const runCreateOperation = async <T>(
   operations: WorkbenchOperations,
   projectId: string,
   command: WorkbenchExtensionMetadata["commands"][number],
   draft: Record<string, unknown> | undefined,
-  write: (signal: AbortSignal) => Promise<unknown>,
-) =>
-  runTrackedCreate(operations, {
-    projectId,
-    subjects: [operationSubject("create", projectId, command.extensionId, crypto.randomUUID())],
-    title: text(command.title, "Create resource"),
-    draft,
-    write,
-  });
+  write: (signal: AbortSignal) => Promise<T>,
+) => {
+  const subject = operationSubject("create", projectId, command.id);
+  const { pending } = operations.getSnapshot();
+  if (pending.some((entry) => entry.status !== "unknown" && entry.subjects.includes(subject)))
+    throw new Error("This creation is already in progress.");
+  return runTrackedCreate(
+    operations,
+    { projectId, subjects: [subject], title: text(command.title, "Create resource"), draft, write },
+    (entries) => entries.find((entry) => entry.status === "unknown" && entry.subjects.includes(subject)),
+  );
+};

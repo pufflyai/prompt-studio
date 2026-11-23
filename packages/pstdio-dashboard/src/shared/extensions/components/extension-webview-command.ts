@@ -1,6 +1,10 @@
 import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
 import type { WorkbenchCore } from "@pstdio/workbench";
-import { createExtensionSlot, executeWorkbenchExtensionCommandResponse } from "@pstdio/workbench/extensions";
+import {
+  createExtensionSlot,
+  executeWorkbenchExtensionCommandResponse,
+  runWorkbenchWebviewCommandOperation,
+} from "@pstdio/workbench/extensions";
 
 interface ExtensionCommandInput {
   commandId: string;
@@ -13,7 +17,8 @@ interface ExtensionCommandInput {
 interface ExecuteWebviewCommandInput extends ExtensionCommandInput {
   placement?: PlacementIdentity;
   isViewerCurrent?(): boolean;
-  executeExtensionCommand: (input: ExtensionCommandInput) => Promise<unknown>;
+  executeExtensionCommand: (input: ExtensionCommandInput, signal?: AbortSignal) => Promise<unknown>;
+  declarations?: Parameters<typeof runWorkbenchWebviewCommandOperation>[0]["metadata"];
   signal?: AbortSignal;
   workbench?: WorkbenchCore;
   projectId?: string;
@@ -32,16 +37,26 @@ export const executeWebviewCommand = async (input: ExecuteWebviewCommandInput) =
     });
     return { commandId, extensionId: "pstdio", eventIds: [], outcome: { ok: true, status: "success", value } };
   }
-  const execute = () =>
-    executeExtensionCommand({ commandId, metadata, params, workspaceId, resource, ...(slot ? { slot } : {}) });
-  if (workbench && input.projectId) {
-    return executeWorkbenchExtensionCommandResponse(
-      { projectId: input.projectId, workbench, executeCommand: execute },
-      commandId,
-      { placement: input.placement, signal: input.signal, isViewerCurrent: input.isViewerCurrent },
-    );
+  const execute = (signal?: AbortSignal) =>
+    executeExtensionCommand({ commandId, metadata, params, workspaceId, resource, ...(slot ? { slot } : {}) }, signal);
+  const projectId = input.projectId;
+  if (workbench && projectId) {
+    return runWorkbenchWebviewCommandOperation({
+      workbench,
+      projectId,
+      resource,
+      request: { commandId, params, resource },
+      metadata: input.declarations,
+      signal: input.signal,
+      execute: (signal) =>
+        executeWorkbenchExtensionCommandResponse(
+          { projectId, workbench, executeCommand: (_ignoredId, _ignoredBody, commandSignal) => execute(commandSignal) },
+          commandId,
+          { placement: input.placement, signal, isViewerCurrent: input.isViewerCurrent },
+        ),
+    });
   }
-  return execute();
+  return execute(input.signal);
 };
 
 export const webviewCommandSlot = (input: {

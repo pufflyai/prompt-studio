@@ -1,10 +1,10 @@
-import type { CommandExecuteRequest } from "@pstdio/sdk/api";
+import type { CommandExecuteRequest, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { WebviewArtifactsReadParams, WebviewHostCapabilityResults } from "pstdio-api-contracts/extension-kernel";
 import { createExtensionSlot, executeWorkbenchExtensionCommandResponse } from "../host/workbench-extension-command";
 import type { CreateBridgeWebviewHostAdapters } from "./bridge-webview-renderer";
 import type { ExtensionWebviewFilesAdapter } from "./extension-webview-host-adapters";
+import { runWorkbenchWebviewCommandOperation } from "./webview-command-operations";
 import { createWorkbenchWebviewHostAdapters } from "./webview-host-capabilities";
-import { runWorkspaceWebviewMutation } from "./workspace-webview-mutations";
 
 type ExtensionWebviewSlotKind = NonNullable<CommandExecuteRequest["slot"]>["kind"];
 export type ExtensionWebviewFileCapabilities = ExtensionWebviewFilesAdapter;
@@ -20,6 +20,7 @@ interface CreateWorkbenchExtensionWebviewAdaptersInput {
   extensionIdForWebview(webviewId: string): string | undefined;
   files?: ExtensionWebviewFileCapabilities;
   projectId: string;
+  metadata?: WorkbenchExtensionMetadata;
   slotKind: ExtensionWebviewSlotKind;
 }
 
@@ -56,16 +57,15 @@ export const createWorkbenchExtensionWebviewAdapters =
     return {
       ...base,
       executeCommand: (request: Parameters<typeof base.executeCommand>[0], signal?: AbortSignal) =>
-        extensionId === "pstdio.workspaces"
-          ? runWorkspaceWebviewMutation({
-              workbench: context.workbench,
-              projectId: input.projectId,
-              resource: context.placement.resource,
-              request,
-              signal,
-              execute: (current) => base.executeCommand(request, current),
-            })
-          : base.executeCommand(request, signal),
+        runWorkbenchWebviewCommandOperation({
+          workbench: context.workbench,
+          projectId: input.projectId,
+          resource: context.placement.resource,
+          request,
+          signal,
+          metadata: input.metadata,
+          execute: (current) => base.executeCommand(request, current),
+        }),
       files: input.files,
       artifacts: input.artifacts
         ? { read: (params) => input.artifacts!.read(params, { webviewId: context.webviewId }) }
