@@ -1,10 +1,10 @@
 import { Button, HStack, Stack } from "@chakra-ui/react";
 import { ListRow } from "@pstdio/ui";
 import { useState } from "react";
-import { WorkbenchThemeProvider } from "../../src/react/theme/workbench-theme-provider";
+import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { ResourceLinkProgress } from "./resource-link-progress";
 
-export default { title: "Proposals/PS-289 Resource links" };
+export default { title: "Product/Workbench/Resource links/Link changes" };
 
 export const LinkChangeFeedback = () => {
   const [state, setState] = useState<"idle" | "pending" | "unconfirmed">("idle");
