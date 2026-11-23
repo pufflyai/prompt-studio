@@ -1,0 +1,126 @@
+name: Released browser quarantine evidence replay
+on:
+  push:
+    branches: [diagnostics/release-browser-quarantine-replay]
+permissions:
+  actions: read
+  contents: read
+jobs:
+  replay:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Download the native report and exact planned evidence
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = 9b9c31eda11af772c2711c210725272a580c4317
+          gh run download 45208140719 --name quarantined-browser-results-attempt-1 --dir "$RUNNER_TEMP/replay/native"
+          gh run download 45208140719 --name test-plan-results-quarantined_browser_tests-0-4bd600db7d9f18bd-attempt-1 --dir "$RUNNER_TEMP/replay/planned"
+          gh run download 45208140719 --name test-plan-attempt-1 --dir "$RUNNER_TEMP/replay/plan"
+      - name: Replay the recorded assertions, preserving failure and ownership checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show 889efc0c96cd08df4d113482aa7f0855ee781e93:scripts/ci/quarantine-reports.ts > scripts/ci/quarantine-reports-before-replay.ts
+          mkdir -p "$RUNNER_TEMP/replay/bin"
+          cat > "$RUNNER_TEMP/replay/bin/bun" <<'RUNNER'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          cp "$REPLAY_PLANNED/$CI_PLAN_RUN_ID/browser.json" "$CI_PLAN_BROWSER_EVIDENCE"
+          if [[ "$CI_PLAN_RUN_ID" == 520ee16666d5fb6b6b1de2fe ]]; then exit 1; fi
+          RUNNER
+          chmod +x "$RUNNER_TEMP/replay/bin/bun"
+          cat > scripts/ci/quarantine-artifact-replay.ts <<'SCRIPT'
+          import assert from "node:assert/strict";
+          import { resolve } from "node:path";
+          import * as before from "./quarantine-reports-before-replay";
+          import { verifyPlaywrightQuarantineReport } from "./quarantine-reports";
+          import { runPlannedTest } from "./run-planned-test";
+          import { quarantineRegistry } from "./test-quarantine";
+          import { reconcileTestResults } from "./verify-test-results";
+
+          const fixture = resolve(process.env.RUNNER_TEMP!, "replay");
+          const read = (path) => Bun.file(resolve(fixture, path)).json();
+          const report = await read("native/test-results/ui-quarantine/results.json");
+          const nativeRoot = resolve(report.config.rootDir, "../../../..");
+          const expected = quarantineRegistry.filter((entry) => entry.runner === "playwright-ui");
+          assert.equal(expected.length, 2);
+          assert.throws(() => before.verifyPlaywrightQuarantineReport(report, expected, nativeRoot), /Unexpected quarantine failure/);
+          assert.deepEqual(verifyPlaywrightQuarantineReport(report, expected, nativeRoot), { executed: 2, failures: 1 });
+
+          const specimen = (value) => {
+            for (const suite of value.suites) {
+              const records = [...(suite.specs ?? []), ...(suite.suites ?? []).flatMap((part) => part.specs ?? [])];
+              for (const record of records) {
+                if (record.title === "opens host terminal tabs from the Secondary Panel")
+                  return record.tests[0].results[0];
+              }
+            }
+            throw new Error("Recorded assertion missing");
+          };
+          for (const error of ["Unexpected assertion", "Expected pattern: /wrong/"]) {
+            const unrelated = structuredClone(report);
+            specimen(unrelated).errors.push({ message: error });
+            assert.throws(() => verifyPlaywrightQuarantineReport(unrelated, expected, nativeRoot), /Unexpected quarantine failure/);
+          }
+          assert.throws(() => verifyPlaywrightQuarantineReport({ ...report, errors: ["setup failed"] }, expected, nativeRoot), /Incomplete browser quarantine report/);
+          assert.throws(() => verifyPlaywrightQuarantineReport({ ...report, suites: [] }, expected, nativeRoot), /Incomplete browser quarantine report/);
+          assert.throws(() => verifyPlaywrightQuarantineReport(report, expected.map((entry) => ({ ...entry, file: "packages/e2e/src/ui/other.p2.spec.ts" })), nativeRoot), /execute exactly once/);
+          const skipped = structuredClone(report);
+          specimen(skipped).status = "skipped";
+          assert.throws(() => verifyPlaywrightQuarantineReport(skipped, expected, nativeRoot), /execute exactly once/);
+          const repeated = structuredClone(report);
+          const original = specimen(repeated);
+          const duplicate = JSON.parse(JSON.stringify(repeated).replace(JSON.stringify([original]), JSON.stringify([original, { ...original, retry: 1 }])));
+          assert.throws(() => verifyPlaywrightQuarantineReport(duplicate, expected, nativeRoot), /execute exactly once/);
+
+          const archived = await read("planned/execution.json");
+          const plan = await read("plan/plan.json");
+          assert.equal(plan.source.sha, "889efc0c96cd08df4d113482aa7f0855ee781e93");
+          assert.equal(archived.planDigest, plan.digest);
+          const recorded = archived.results.find((row) => row.runId === "520ee16666d5fb6b6b1de2fe");
+          assert.equal(recorded.complete, false);
+          assert.match(recorded.reason, /Unexpected quarantine failure/);
+          assert.equal(recorded.exitCode, 1);
+
+          const replayed = [];
+          for (const record of archived.results) {
+            const run = plan.runs.find((row) => row.id === record.runId);
+            const result = {
+              runId: run.id, planDigest: plan.digest, source: plan.source, executionId: archived.executionId,
+              outcome: "not-run", complete: false, exitCode: null, reports: [],
+            };
+            await runPlannedTest(plan, run, result, {
+              root: process.cwd(), directory: resolve(fixture, "replayed"), executionId: archived.executionId,
+              signal: new AbortController().signal,
+              env: { PATH: resolve(fixture, "bin") + ":" + process.env.PATH, REPLAY_PLANNED: resolve(fixture, "planned") },
+            });
+            replayed.push(result);
+          }
+          const known = replayed.find((row) => row.runId === recorded.runId);
+          assert.equal(known.outcome, "quarantined-failure");
+          assert.equal(known.nativeFailure, true);
+          assert.deepEqual(known.quarantine, { executed: 2, failures: 1 });
+          assert.deepEqual(
+            reconcileTestResults(plan, replayed, archived.executionId, archived.runIds),
+            { outcome: "success", complete: true, errors: [] },
+          );
+          await Bun.write(resolve(fixture, "replayed-execution.json"), JSON.stringify(replayed, null, 2));
+          console.log("Recorded native and planned failure signatures matched. Setup, missing, skip, retry, wrong owner and different errors still fail.");
+          SCRIPT
+          bun scripts/ci/quarantine-artifact-replay.ts
+      - name: Preserve the replayed plan classification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-quarantine-replayed-execution
+          path: ${{ runner.temp }}/replay/replayed-execution.json
+          if-no-files-found: warn
