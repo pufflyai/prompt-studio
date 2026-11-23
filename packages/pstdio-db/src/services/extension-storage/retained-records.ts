@@ -68,15 +68,6 @@ export const canonicalRetainedRecord = (row: CanonicalRecordRow, saved: Retained
   return record;
 };
 
-export const readCanonicalRecords = async (tx: OrderedTransaction, owner: StorageOwner, rows: CanonicalRecordRow[]) => {
-  const records: OrderedRecord[] = [];
-  for (const row of rows) {
-    const record = await readCanonicalRecord(tx, owner, row);
-    if (record) records.push(record);
-  }
-  return records;
-};
-
 /** Obsolete deleted values leave the private index when ordinary publication replaces them. */
 export const removeRetainedRecords = async (tx: OrderedTransaction, owner: StorageOwner, ids: string[]) => {
   const pages = createRetainedPages<RetainedRecord>(tx, owner, "tombstones");
