@@ -6,7 +6,11 @@ import { type ChatPendingSubmission, createChatPendingSubmission } from "./chat-
 
 type Submit = Extract<ChatRendererAction, { type: "submit" }>;
 type Handler = (action: ChatRendererAction) => Promise<unknown>;
-export type TrackChatSubmission = <T>(action: Submit, execute: () => Promise<T>, discard: () => void) => Promise<T>;
+export type TrackChatSubmission = <T>(
+  action: Submit,
+  execute: () => Promise<T>,
+  discard: () => string | undefined,
+) => Promise<T>;
 
 /** The resource owner keeps a single in-flight handoff even while its presentation is closed. */
 export const createChatSubmissionRunner = (input: {
@@ -45,7 +49,14 @@ export const createChatSubmissionRunner = (input: {
     source.publish({ sending: true, pending: [...(before.pending ?? []), ...(pending ? [pending] : [])] });
     const execute = () => source.execute(action, handler);
     const discard = () => {
-      if (source.read().active !== false && pending) discardPendingChatSubmission(source, pending.message.id);
+      if (!pending) return;
+      const current = source.read();
+      if (current.active !== false) {
+        discardPendingChatSubmission(source, pending.message.id);
+        return;
+      }
+      const retained = current.pending?.find((item) => item.message.id === pending.message.id && item.recoveryAdded);
+      return retained ? chatDraftContentKey(retained) : undefined;
     };
     submission = (
       source.trackSubmission && !action.questionResponse ? source.trackSubmission(action, execute, discard) : execute()

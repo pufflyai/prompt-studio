@@ -17,6 +17,7 @@ const trackChatSubmissions = (
   resource: ResourceRef | undefined,
   extensionId: string,
   projectId: string,
+  discardRecovered: (key: string) => void,
 ): Pick<ChatSessionInput, "hasRetainedSubmission" | "trackSubmission" | "subscribeSubmissions"> => {
   if (
     !resource ||
@@ -42,7 +43,10 @@ const trackChatSubmissions = (
           title: creating ? "Start session" : "Send message",
           draft: { text: action.text, attachments: action.attachments },
           write: execute,
-          onDiscard: discard,
+          onDiscard: () => {
+            const key = discard();
+            if (key) discardRecovered(key);
+          },
         },
         findUnresolved,
         creating ? "Session creation could not be confirmed." : "Message delivery could not be confirmed.",
@@ -82,7 +86,9 @@ export const createChatSessionProvider = (source: {
   const acknowledgeRecovery = body.browserDraft?.acknowledgeRecoveryHandlerId;
   const providerSave = !local && body.saveDraftHandlerId;
   const session = createChatSession({
-    ...trackChatSubmissions(queries, source.normalized ?? resource, view.extensionId, input.projectId),
+    ...trackChatSubmissions(queries, source.normalized ?? resource, view.extensionId, input.projectId, (key) =>
+      localDrafts?.discardRecovery(key),
+    ),
     inspectResources: () => render.workbench.commandPalette.open(),
     queryContext: {
       queries,
