@@ -9,30 +9,31 @@ interface StreamDeps {
   syncService: Pick<ReturnType<typeof createSyncService>, "getFullState">;
 }
 
+/**
+ * Events a slow client may leave unread before the stream replaces them with a fresh snapshot.
+ * Rows are replaceable state, so a snapshot carries everything the dropped events would have.
+ */
+export const SYNC_STREAM_LIMITS = { events: 5_000, bytes: 8 * 1024 * 1024 };
+
 const formatSSE = (event: SyncEvent) => ({
   data: JSON.stringify({ table: event.table, data: event.data, seq: event.seq }),
   event: event.op === "set" ? ("sync:set" as const) : ("sync:delete" as const),
   id: String(event.seq),
 });
 
-export const streamHandler = (deps: StreamDeps) => {
+export const streamHandler = (deps: StreamDeps, limits = SYNC_STREAM_LIMITS) => {
   return (c: Context<AppBindings>) => {
     const sinceParam = c.req.query("since");
     const since = sinceParam ? Number(sinceParam) : null;
 
     return streamSSE(c, async (stream) => {
-      // Subscribe BEFORE snapshot to buffer any events emitted during bootstrap.
-      // This closes the race window where events could be lost between
-      // reading state and subscribing.
-      const buffer: SyncEvent[] = [];
-      let cleanup = deps.eventBus.subscribe((event) => {
-        buffer.push(event);
-      });
-
-      stream.onAbort(() => {
-        cleanup();
-      });
-
+      // Subscribe BEFORE the snapshot so events emitted during bootstrap are queued, not lost.
+      // The same bounded queue then serves the live stream.
+      const queue: { seq: number; message: ReturnType<typeof formatSSE> }[] = [];
+      let queuedBytes = 0;
+      let resnapshot = false;
+      let live = false;
+      let draining = false;
       let snapshotSeq = 0;
 
       const writeSnapshot = async () => {
@@ -44,6 +45,41 @@ export const streamHandler = (deps: StreamDeps) => {
           event: "init",
         });
       };
+
+      const drain = async () => {
+        if (draining || !live) return;
+        draining = true;
+        while (resnapshot || queue.length > 0) {
+          if (resnapshot) {
+            resnapshot = false;
+            await writeSnapshot();
+            continue;
+          }
+          const { seq, message } = queue.shift()!;
+          queuedBytes -= message.data.length;
+          if (seq > snapshotSeq) await stream.writeSSE(message);
+        }
+        draining = false;
+      };
+
+      const cleanup = deps.eventBus.subscribe((event) => {
+        if (!resnapshot) {
+          const message = formatSSE(event);
+          queue.push({ seq: event.seq, message });
+          queuedBytes += message.data.length;
+          if (queue.length > limits.events || queuedBytes > limits.bytes) {
+            // The client fell behind: drop what it has not read and send current state instead.
+            queue.length = 0;
+            queuedBytes = 0;
+            resnapshot = true;
+          }
+        }
+        void drain();
+      });
+
+      stream.onAbort(() => {
+        cleanup();
+      });
 
       const writeMissedEvents = async (sinceSeq: number) => {
         const missed = deps.eventBus.getSince(sinceSeq);
@@ -71,33 +107,8 @@ export const streamHandler = (deps: StreamDeps) => {
       };
 
       await writeInitialEvents();
-
-      // Writes can yield to new events. Drain the owned queue before switching subscribers.
-      while (buffer.length > 0) {
-        const event = buffer.shift()!;
-        if (event.seq > snapshotSeq) await stream.writeSSE(formatSSE(event));
-      }
-
-      // Switch to live drain mode
-      const queue: SyncEvent[] = [];
-      let draining = false;
-
-      const drain = async () => {
-        if (draining) return;
-        draining = true;
-        while (queue.length > 0) {
-          const event = queue.shift()!;
-          await stream.writeSSE(formatSSE(event));
-        }
-        draining = false;
-      };
-
-      // Replace buffer subscriber with live queue subscriber
-      cleanup();
-      cleanup = deps.eventBus.subscribe((event) => {
-        queue.push(event);
-        drain();
-      });
+      live = true;
+      await drain();
 
       while (true) {
         await stream.sleep(8_000);
