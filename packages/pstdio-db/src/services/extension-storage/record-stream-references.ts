@@ -12,15 +12,25 @@ export interface RecordStreamDependencies {
   metadata: DocumentStore["transaction"];
 }
 export const createRecordStreamReferences = (owner: StorageOwner, deps: RecordStreamDependencies) => {
+  const getMany = (hashes: string[]) =>
+    deps.metadata(owner, async ({ document }) => {
+      const saved = document.getMap("record-blobs");
+      const references = new Map<string, AssetReference>();
+      for (const sha256 of hashes) {
+        const parsed = assetReferenceSchema.safeParse(saved.get(sha256));
+        if (parsed.success) references.set(sha256, parsed.data);
+      }
+      return references;
+    });
+  const setMany = (references: AssetReference[]) =>
+    deps.metadata(owner, async ({ document }) => {
+      const saved = document.getMap("record-blobs");
+      for (const reference of references) saved.set(reference.asset.sha256, reference);
+    });
   return {
-    get: (sha256: string) =>
-      deps.metadata(owner, async ({ document }) => {
-        const parsed = assetReferenceSchema.safeParse(document.getMap("record-blobs").get(sha256));
-        return parsed.success ? parsed.data : undefined;
-      }),
-    set: (reference: AssetReference) =>
-      deps.metadata(owner, async ({ document }) => {
-        document.getMap("record-blobs").set(reference.asset.sha256, reference);
-      }),
+    get: async (sha256: string) => (await getMany([sha256])).get(sha256),
+    set: (reference: AssetReference) => setMany([reference]),
+    getMany,
+    setMany,
   };
 };
