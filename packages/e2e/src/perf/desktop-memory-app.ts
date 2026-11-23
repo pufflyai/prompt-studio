@@ -14,13 +14,9 @@ export const prepareMemoryExtensions = async (root: string, signal: AbortSignal,
   const defaults = catalog.extensions.filter((entry) => entry.default || entry.alwaysEnabled);
   const entries = [
     ...defaults.map((entry) => ({ name: entry.installName, path: entry.origin.path })),
-    // Workspaces supplies the file browser. The deterministic harness supplies the completed conversation.
-    ...(includeFixtures
-      ? [
-          { name: "pstdio-workspaces", path: "extensions/pstdio-workspaces" },
-          { name: "workbench-fixture", path: "packages/workbench-fixture" },
-        ]
-      : []),
+    // The deterministic harness supplies the completed conversation. Workspaces, which supplies the file browser,
+    // is a default; a second copy under another name stops default setup with conflicting directories.
+    ...(includeFixtures ? [{ name: "workbench-fixture", path: "packages/workbench-fixture" }] : []),
   ];
   const sources: { installName: string; source: string }[] = [];
   for (const entry of entries) {
