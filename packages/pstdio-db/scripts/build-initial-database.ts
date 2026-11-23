@@ -18,7 +18,7 @@ export const buildInitialDatabase = async (destination: string) => {
     const migrationsFolder = join(import.meta.dirname, "../drizzle");
     const inputs = await startupImageInputs(migrationsFolder);
     await migrate(connection, { migrationsFolder });
-    await retireLegacyRecordTables(connection, migrationsFolder);
+    await retireLegacyRecordTables(db, migrationsFolder);
     // The runtime opens only template1. A first start writes every file in the image, which is slow
     // on Windows, and the two unused databases are over half of those files.
     await db.exec("DROP DATABASE postgres");

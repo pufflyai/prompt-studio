@@ -3,6 +3,7 @@ import type { StorageOwner } from "pstdio-sync";
 import { type OrderedOperation, type OrderedRecord, orderedBody, orderedProjection } from "pstdio-sync/records";
 import { records as current, owners as projections } from "../../db/schemas.pg";
 import { jsonBatches } from "./json-batches";
+import { orderedCommitVersionColumns } from "./ordered-commit-cache";
 import { noteRecordPublication } from "./ordered-record-publication";
 import { confirmedRecordBase, orderedRecordMetadata } from "./ordered-record-row";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
@@ -76,14 +77,15 @@ export const publishOrderedSharedProjection = async (input: {
     projected += changed.rows.length;
   }
   if (projected !== records.length) throw new Error("The shared record projection baseline changed");
-  await tx
+  const [version] = await tx
     .update(projections)
     .set({ revision: sql`${projections.revision} + 1` })
-    .where(orderedOwnerWhere(projections, owner));
+    .where(orderedOwnerWhere(projections, owner))
+    .returning(orderedCommitVersionColumns);
   noteRecordPublication(
     tx,
     owner,
     visible.map((record) => record.recordId),
   );
-  return { records, projected };
+  return { records, projected, version: version && JSON.stringify(version) };
 };

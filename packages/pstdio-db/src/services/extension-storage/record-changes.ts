@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
+import { documents } from "../../db/schemas/documents";
 import { records as current, owners as recordOwners } from "../../db/schemas.pg";
 import { ensureFileDocument } from "./document-file-persistence";
 import { documentFilesFor } from "./document-files";
@@ -18,6 +19,16 @@ const ownerWhere = (owner: StorageOwner) => and(eq(recordOwners.id, storageOwner
 /** Locks the owner's projection row, which serializes its record writes, and returns its revision. */
 export const lockRecordOwner = async (tx: Transaction, owner: StorageOwner) => {
   await lockStorageProject(tx, owner.workbenchId);
+  const [locked] = await tx
+    .select({ revision: recordOwners.revision, kind: documents.kind })
+    .from(recordOwners)
+    .innerJoin(documents, and(eq(documents.owner_id, recordOwners.id), eq(documents.key, "records")))
+    .where(ownerWhere(owner))
+    .for("update");
+  if (locked) {
+    if (locked.kind === "room") throw new Error("A private editor room cannot be opened as a shared document");
+    return locked.revision;
+  }
   await ensureFileDocument(tx, documentFilesFor(tx), { owner, key: "records", kind: "local" });
   const [row] = await tx
     .select({ revision: recordOwners.revision })

@@ -1,9 +1,8 @@
 import { join } from "node:path";
-import { sql } from "drizzle-orm";
-import type { DbClient } from "./connection.pglite";
+import type { PGlite } from "@electric-sql/pglite";
 
 /** Only generated companion SQL may retire the released conversion inputs. */
-export const retireLegacyRecordTables = async (db: Pick<DbClient, "transaction">, folder: string) => {
+export const retireLegacyRecordTables = async (db: PGlite, folder: string) => {
   const journal = await Bun.file(join(folder, "meta/_journal.json")).json();
   const statements: string[] = [];
   for (const entry of journal.entries as { tag: string }[]) {
@@ -13,10 +12,9 @@ export const retireLegacyRecordTables = async (db: Pick<DbClient, "transaction">
   if (!statements.length) throw new Error("Missing generated legacy retirement migration");
   await db.transaction(async (tx) => {
     const [{ present }] = (
-      await tx.execute<{ present: boolean }>(sql`
-      SELECT to_regclass('public.storage_record_sync') IS NOT NULL AS present`)
+      await tx.query<{ present: boolean }>("SELECT to_regclass('public.storage_record_sync') IS NOT NULL AS present")
     ).rows;
     if (!present) return;
-    for (const statement of statements) if (statement.trim()) await tx.execute(sql.raw(statement));
+    await tx.exec(statements.join("\n"));
   });
 };

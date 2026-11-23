@@ -261,7 +261,7 @@ export const createDb = async (options?: {
       const hasInputs = await hasUpgradeSnapshots(dbPath);
       if (!hasInputs && (fresh || (await hasCurrentPgliteSchema(openedPglite, migrationsFolder)))) {
         await migratePglite(openedPglite, migrationsFolder);
-        await retireLegacyRecordTables(db, migrationsFolder);
+        await retireLegacyRecordTables(openedPglite, migrationsFolder);
         migrated = true;
         return;
       }
@@ -311,7 +311,7 @@ export const createDb = async (options?: {
       await finishSessionWorkspaceUpgrade?.();
       await finishFileOwnersUpgrade();
       if (await upgradeLegacyRecords(db, dbPath, { signal: options?.signal, failed: options?.onLegacyConversionError }))
-        await retireLegacyRecordTables(db, migrationsFolder);
+        await retireLegacyRecordTables(openedPglite, migrationsFolder);
       await finishRecordRows?.();
       migrated = true;
     });

@@ -26,7 +26,7 @@ import { nextOrderedUpload } from "./ordered-receipts-upload";
 import { canonicalRecordPredicate } from "./ordered-record-row";
 import { recordOrderedReplaced } from "./ordered-return-review";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
-import { admissibleOrderedFrame, applyOrderedStreamFrame } from "./ordered-stream-frames";
+import { applyOrderedStreamFrame, decodeOrderedStreamFrame } from "./ordered-stream-frames";
 import { readOrderedPending } from "./ordered-stream-pending";
 import { orderedCursor, readOrderedOwner, saveOrderedCursor } from "./ordered-stream-state";
 import { createRecordStreamReferences, type RecordStreamDependencies } from "./record-stream-references";
@@ -166,11 +166,11 @@ export const createOrderedStreamStore = (db: DbClient, owner: StorageOwner, deps
           return applyNative(journal, tx, admission, epoch, root);
         };
         for (const [position, frame] of frames.entries()) {
-          if (!frame || !(await admissibleOrderedFrame(frame))) {
-            rejected.push(position);
-            continue;
+          const entries = await decodeOrderedStreamFrame(frame);
+          if (!entries) rejected.push(position);
+          else {
+            for (const id of await applyOrderedStreamFrame(journal, tx, entries, epoch, group, native)) changed.add(id);
           }
-          for (const id of await applyOrderedStreamFrame(journal, tx, frame, epoch, group, native)) changed.add(id);
         }
         await batch?.flush();
         await displaced.reauthor(journal, tx, changed);
@@ -196,7 +196,7 @@ export const createOrderedStreamStore = (db: DbClient, owner: StorageOwner, deps
       const incoming = new Map(remote);
       const rejectedFrames: number[] = [];
       for (const [position, frame] of tail.entries()) {
-        if (!frame || !(await admissibleOrderedFrame(frame))) {
+        if (!frame || !(await decodeOrderedStreamFrame(frame))) {
           rejectedFrames.push(position);
           continue;
         }
