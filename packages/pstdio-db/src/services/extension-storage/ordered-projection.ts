@@ -40,8 +40,6 @@ export const publishOrderedProjection = async (
         .select({
           recordId: current.record_id,
           deleted: current.deleted,
-          revision: current.revision,
-          lifetime: current.record_lifetime,
           nativeSources: current.native_sources,
           retained: sql<boolean>`coalesce(${current.meta}->>'retained'='1', false)`,
         })
@@ -72,7 +70,7 @@ export const publishOrderedProjection = async (
       sum + Number(!record.deleted) - Number(before.has(record.recordId) && !before.get(record.recordId)!.deleted),
     0,
   );
-  const projected = await writeProjectedRecords(tx, owner, materialized, { facets, previous: before });
+  const projected = await writeProjectedRecords(tx, owner, materialized, facets);
   const retained = previous.filter((row) => row.retained).map((row) => row.recordId);
   const pages = createRetainedPages(tx, owner, "tombstones");
   for (const { recordId } of records) if (!before.has(recordId) && (await pages.has(recordId))) retained.push(recordId);

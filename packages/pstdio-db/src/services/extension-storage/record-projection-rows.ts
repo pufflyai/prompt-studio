@@ -11,10 +11,7 @@ import { identityQueryKey } from "./resource-query-values";
 import { storageOwnerKey } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
-type OrderedPublication = {
-  facets: Awaited<ReturnType<typeof orderedProjectionFacets>>;
-  previous: ReadonlyMap<string, { revision: string | null; lifetime: string }>;
-};
+type OrderedFacets = Awaited<ReturnType<typeof orderedProjectionFacets>>;
 
 const jsonInput = (value: unknown) =>
   value === null || value === undefined ? sql`NULL::jsonb` : sql`${JSON.stringify(value)}::jsonb`;
@@ -31,17 +28,12 @@ export const writeProjectedRecords = async (
   tx: Transaction,
   owner: StorageOwner,
   records: NativeProjectedRecord[],
-  ordered?: OrderedPublication,
+  facets?: OrderedFacets,
 ) => {
   let projected = 0;
   const derived = await readDerivedQueryIndexes(tx, owner);
-  const visibleChanges = new Set<string>();
   const rows = records.map((record) => {
-    const facet = ordered?.facets.get(record.recordId);
-    const lifetime = record.recordLifetime ?? "";
-    const previous = ordered?.previous.get(record.recordId);
-    if (!previous || previous.revision !== record.revision || previous.lifetime !== lifetime)
-      visibleChanges.add(record.recordId);
+    const facet = facets?.get(record.recordId);
     const deletedBody = facet?.body;
     return {
       record_id: record.recordId,
@@ -55,7 +47,7 @@ export const writeProjectedRecords = async (
         ? deletedBody.native_sources
         : encodeProjectionValue((record.nativeSources ?? {}) as never),
       native_versions: record.nativeVersions ?? {},
-      record_lifetime: lifetime,
+      record_lifetime: record.recordLifetime ?? "",
       meta: facet?.meta ?? null,
       base: facet?.base ? Buffer.from(facet.base).toString("hex") : null,
     };
@@ -76,34 +68,50 @@ export const writeProjectedRecords = async (
         FROM jsonb_to_recordset(${batch}::jsonb)
           AS input(record_id text, deleted boolean, value jsonb, query_values jsonb, asset jsonb, shared jsonb, revision text, native_sources jsonb, native_versions jsonb, record_lifetime text, meta jsonb, base text)`;
   };
-  const visibleChanged = sql`(records.revision IS DISTINCT FROM excluded.revision OR records.record_lifetime <> excluded.record_lifetime)`;
-  const bodyChanged = ordered ? sql`(${visibleChanged} OR excluded.deleted)` : visibleChanged;
-  const replace = (column: string, when = visibleChanged) =>
-    sql`CASE WHEN ${when} THEN excluded.${sql.identifier(column)} ELSE records.${sql.identifier(column)} END`;
+  const published = facets ? new Set<string>() : undefined;
   for (const input of inputs()) {
     const changed = await tx.execute<{ record_id: string }>(sql`
       INSERT INTO records (owner_id, record_id, deleted, value, query_values, asset, shared, revision, native_sources, native_versions, record_lifetime, meta, base)
       ${input}
       ON CONFLICT (owner_id, record_id) DO UPDATE SET
-        deleted = excluded.deleted, value = ${replace("value", bodyChanged)},
-        query_values = CASE WHEN ${visibleChanged} THEN excluded.query_values || ${owner.extensionId === "pstdio" ? sql`CASE WHEN records.query_values ? ${identityQueryKey} THEN jsonb_build_object(${identityQueryKey}::text, records.query_values -> ${identityQueryKey}) ELSE '{}'::jsonb END` : sql`'{}'::jsonb`} ELSE records.query_values END,
-        asset = ${replace("asset", bodyChanged)}, shared = ${replace("shared", bodyChanged)},
-        revision = excluded.revision, native_sources = ${replace("native_sources", bodyChanged)}, native_versions = ${replace("native_versions")},
+        deleted = excluded.deleted, value = excluded.value,
+        query_values = excluded.query_values || ${owner.extensionId === "pstdio" ? sql`CASE WHEN records.query_values ? ${identityQueryKey} THEN jsonb_build_object(${identityQueryKey}::text, records.query_values -> ${identityQueryKey}) ELSE '{}'::jsonb END` : sql`'{}'::jsonb`},
+        asset = excluded.asset, shared = excluded.shared, revision = excluded.revision,
+        native_sources = excluded.native_sources, native_versions = excluded.native_versions,
         record_lifetime = excluded.record_lifetime
-        ${ordered ? sql`, meta = excluded.meta, base = excluded.base` : sql``}
-      WHERE ${visibleChanged}
-        ${
-          ordered
-            ? sql`OR records.meta IS DISTINCT FROM excluded.meta OR records.base IS DISTINCT FROM excluded.base
-          OR (excluded.deleted AND (records.value, records.asset, records.shared, records.native_sources)
-            IS DISTINCT FROM (excluded.value, excluded.asset, excluded.shared, excluded.native_sources))`
-            : sql``
-        }
+        ${facets ? sql`, meta = excluded.meta, base = excluded.base` : sql``}
+      WHERE records.revision IS DISTINCT FROM excluded.revision OR records.record_lifetime <> excluded.record_lifetime
       RETURNING record_id
     `);
-    projected += ordered
-      ? changed.rows.filter(({ record_id }) => visibleChanges.has(record_id)).length
-      : changed.rows.length;
+    projected += changed.rows.length;
+    for (const { record_id } of changed.rows) published?.add(record_id);
+  }
+  // A confirmation may advance the saved base while leaving the same visible revision.
+  // Its private facets still need publication. It must not advance the owner revision.
+  if (published && projected !== rows.length) {
+    const unchanged = rows
+      .filter(({ record_id }) => !published.has(record_id))
+      .map(({ record_id, deleted, value, asset, shared, native_sources, meta, base }) => ({
+        record_id,
+        deleted,
+        value,
+        asset,
+        shared,
+        native_sources,
+        meta,
+        base,
+      }));
+    for (const batch of jsonBatches(unchanged))
+      await tx.execute(sql`UPDATE records target SET meta=input.meta,base=decode(input.base,'hex'),
+        value=CASE WHEN input.deleted THEN input.value ELSE target.value END,
+        asset=CASE WHEN input.deleted THEN input.asset ELSE target.asset END,
+        shared=CASE WHEN input.deleted THEN input.shared ELSE target.shared END,
+        native_sources=CASE WHEN input.deleted THEN input.native_sources ELSE target.native_sources END
+        FROM jsonb_to_recordset(${batch}::jsonb) AS input(record_id text,deleted boolean,value jsonb,asset jsonb,shared jsonb,native_sources jsonb,meta jsonb,base text)
+        WHERE target.owner_id=${storageOwnerKey(owner)} AND target.record_id=input.record_id
+          AND (target.meta IS DISTINCT FROM input.meta OR target.base IS DISTINCT FROM decode(input.base,'hex')
+            OR (input.deleted AND (target.value,target.asset,target.shared,target.native_sources)
+              IS DISTINCT FROM (input.value,input.asset,input.shared,input.native_sources)))`);
   }
   return projected;
 };

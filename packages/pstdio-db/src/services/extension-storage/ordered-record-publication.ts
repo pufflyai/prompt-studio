@@ -10,8 +10,6 @@ type RecordRow = typeof records.$inferSelect;
 export type OrderedPublicationRow = {
   recordId: string;
   deleted: boolean;
-  revision: string | null;
-  lifetime: string;
   nativeSources: RecordRow["native_sources"];
   retained: boolean;
 };

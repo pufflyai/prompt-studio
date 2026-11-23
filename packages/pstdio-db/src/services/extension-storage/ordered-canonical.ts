@@ -48,7 +48,7 @@ const readCanonicalPage = async (
   const rows = await tx
     .select({
       ...canonicalColumns,
-      revision: confirmed.revision,
+      published: sql<boolean>`${confirmed.revision} IS NOT NULL`,
       visibleSources: confirmed.native_sources,
       retained: sql<boolean>`coalesce(${confirmed.meta}->>'retained'='1', false)`,
     })
@@ -56,12 +56,10 @@ const readCanonicalPage = async (
     .where(where);
   for (const id of page) previous.set(id, null);
   for (const row of rows)
-    if (row.revision !== null)
+    if (row.published)
       previous.set(row.record_id, {
         recordId: row.record_id,
         deleted: row.deleted,
-        revision: row.revision,
-        lifetime: row.record_lifetime,
         nativeSources: row.visibleSources,
         retained: row.retained,
       });
