@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { ChatAttachment, ChatQueuedRequest, ChatRendererSnapshot } from "@pstdio/sdk/extensions";
 import { type ChatLinkHandler, ChatPanel } from "@pstdio/ui/chat-ui";
-import { type ComponentProps, type ComponentType, useState, useSyncExternalStore } from "react";
+import { type ComponentProps, type ComponentType, useCallback, useState, useSyncExternalStore } from "react";
 import { visibleChatDraftAttachments } from "../../../extensions/contributions/chat-pending-submission";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-param-field";
@@ -127,8 +127,20 @@ const NativeChatContent = (props: NativeChatViewProps) => {
   );
 };
 
-const useUnresolvedSubmission = (session: ChatSession) =>
-  useSyncExternalStore(session.subscribeCreate, session.hasUnresolvedSubmission, session.hasUnresolvedSubmission);
+const useUnresolvedSubmission = (session: ChatSession) => {
+  const subscribe = useCallback(
+    (changed: () => void) => {
+      const stopSubmissions = session.subscribeSubmissions(changed);
+      const stopView = session.subscribeToView(changed);
+      return () => {
+        stopSubmissions();
+        stopView();
+      };
+    },
+    [session],
+  );
+  return useSyncExternalStore(subscribe, session.hasUnresolvedSubmission, session.hasUnresolvedSubmission);
+};
 
 const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevision: number; unresolved: boolean }) => {
   const { session, conversationKey, renderParamField, unresolved } = props;

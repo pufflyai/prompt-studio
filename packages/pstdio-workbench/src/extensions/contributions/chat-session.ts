@@ -26,8 +26,12 @@ import { createChatSubmissionHandoff } from "./chat-submission-handoff";
 
 export interface ChatSessionInput {
   initial?: ChatRendererSnapshot;
-  trackCreate?: <T>(action: Extract<ChatRendererAction, { type: "submit" }>, execute: () => Promise<T>) => Promise<T>;
-  subscribeCreate?: (listener: () => void) => () => void;
+  trackSubmission?: <T>(
+    action: Extract<ChatRendererAction, { type: "submit" }>,
+    execute: () => Promise<T>,
+  ) => Promise<T>;
+  hasRetainedSubmission?: () => boolean;
+  subscribeSubmissions?: (listener: () => void) => () => void;
   inspectResources?: () => void;
   queryContext?: ChatQueryContext;
   onIdle?(): void;
@@ -273,7 +277,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     return result;
   };
   const submit = createChatSubmissionRunner({
-    trackCreate: input.trackCreate,
+    trackSubmission: input.trackSubmission,
     read: () => ({ ...state, edits: drafts.edits() }),
     execute,
     publish: (update) => publish({ ...update, ...(update.sending ? { error: drafts.error() } : {}) }),

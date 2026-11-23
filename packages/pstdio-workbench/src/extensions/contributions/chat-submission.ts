@@ -13,7 +13,7 @@ export const createChatSubmissionRunner = (input: {
   publish(update: { sending: boolean; pending?: ChatPendingSubmission[]; error?: string }): void;
   changeDraft(draft: Partial<ChatDraft>): void;
   fail(error: unknown): void;
-  trackCreate?: <T>(action: Submit, execute: () => Promise<T>) => Promise<T>;
+  trackSubmission?: <T>(action: Submit, execute: () => Promise<T>) => Promise<T>;
   markRecoverable(): void;
 }) => {
   let submission: Promise<void> | undefined;
@@ -36,7 +36,9 @@ export const createChatSubmissionRunner = (input: {
       : undefined;
     source.publish({ sending: true, pending: [...(before.pending ?? []), ...(pending ? [pending] : [])] });
     const execute = () => source.execute(action, handler);
-    submission = (source.trackCreate && !action.questionResponse ? source.trackCreate(action, execute) : execute())
+    submission = (
+      source.trackSubmission && !action.questionResponse ? source.trackSubmission(action, execute) : execute()
+    )
       .then((result) => {
         const current = source.read();
         // Submitted-input tags are an explicit alternative to a canonical user echo

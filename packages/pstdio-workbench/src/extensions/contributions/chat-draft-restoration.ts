@@ -9,7 +9,8 @@ export const hasUnresolvedChatSubmission = (pending?: ChatPendingSubmission[]) =
 
 export const createChatDraftRestoration = (input: {
   active: () => boolean;
-  subscribeCreate?: (listener: () => void) => () => void;
+  hasRetainedSubmission?: () => boolean;
+  subscribeSubmissions?: (listener: () => void) => () => void;
   inspectResources?: () => void;
   read: () => { draft: ChatDraft; pending?: ChatPendingSubmission[] };
   values: ReturnType<typeof createChatSnapshot>["values"];
@@ -26,8 +27,9 @@ export const createChatDraftRestoration = (input: {
     input.publish({ pending: restored.pending });
   };
   return {
-    hasUnresolvedSubmission: () => hasUnresolvedChatSubmission(input.read().pending),
-    subscribeCreate: input.subscribeCreate ?? (() => () => {}),
+    hasUnresolvedSubmission: () =>
+      Boolean(input.hasRetainedSubmission?.()) || hasUnresolvedChatSubmission(input.read().pending),
+    subscribeSubmissions: input.subscribeSubmissions ?? (() => () => {}),
     inspectResources: input.inspectResources,
     discardUnresolvedSubmission(id: string) {
       if (!input.active()) return;

@@ -15,7 +15,7 @@ test("a lost new-session response keeps the prompt and prevents a second submiss
       writes++;
       throw new PstdioConnectionError(new Error("Response lost"));
     },
-    trackCreate: (action, execute) =>
+    trackSubmission: (action, execute) =>
       runTrackedCreate(operations, {
         projectId: "project",
         subjects: ["draft-session"],
