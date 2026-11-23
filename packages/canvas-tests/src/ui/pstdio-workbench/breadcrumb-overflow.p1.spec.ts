@@ -52,4 +52,9 @@ test("a clipped breadcrumb reveals the full document name on hover", async ({ pa
     .hover({ position: { x: 1, y: 6 } });
   await expect(tooltip).toHaveText(parentName);
   await expect(tooltip).toBeVisible();
+
+  await preview.getByRole("button", { name: "Restore breadcrumb width" }).click();
+  await parentLabel.locator("..").locator("svg").hover();
+  await page.clock.runFor(500);
+  await expect(tooltip).toHaveCount(0);
 });
