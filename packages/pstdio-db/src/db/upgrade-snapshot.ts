@@ -35,6 +35,35 @@ const hasSnapshot = async (path: string) => {
     return false;
   }
 };
+const snapshotWriter = (path: string) => {
+  let file: Awaited<ReturnType<typeof open>> | undefined;
+  let lines: string[] = [];
+  let bufferedBytes = 0;
+  const flush = async () => {
+    if (!lines.length) return;
+    file ??= await open(path, "w", 0o600);
+    await file.writeFile(lines.join(""));
+    lines = [];
+    bufferedBytes = 0;
+  };
+  return {
+    async append(row: Row) {
+      const line = `${JSON.stringify(row)}\n`;
+      const bytes = Buffer.byteLength(line);
+      if (bufferedBytes && bufferedBytes + bytes > 64 * 1024) await flush();
+      lines.push(line);
+      bufferedBytes += bytes;
+      // An oversized row leaves alone; ordinary batches stay within 64 KiB.
+      if (bufferedBytes >= 64 * 1024) await flush();
+    },
+    async sync() {
+      await flush();
+      file ??= await open(path, "w", 0o600);
+      await file.sync();
+    },
+    close: () => file?.close(),
+  };
+};
 const captureRows = async (
   db: DbClient,
   source: UpgradeSource & { keepEmpty?: boolean },
@@ -43,16 +72,14 @@ const captureRows = async (
 ) => {
   const memory: Row[] = [];
   const temporary = snapshot && `${snapshot}.tmp`;
-  let file: Awaited<ReturnType<typeof open>> | undefined;
+  const writer = temporary ? snapshotWriter(temporary) : undefined;
   let captured = false;
   try {
     for await (const released of readUpgradeRows(db, source)) {
       const row = await normalize(released);
       captured = true;
-      if (temporary) {
-        file ??= await open(temporary, "w", 0o600);
-        await file.writeFile(`${JSON.stringify(row)}\n`);
-      } else memory.push(row);
+      if (writer) await writer.append(row);
+      else memory.push(row);
     }
     if (!captured && !source.keepEmpty) {
       if (temporary) await rm(temporary, { force: true });
@@ -60,13 +87,12 @@ const captureRows = async (
     }
     // An explicit empty marker records work that must finish after DDL. Ordinary
     // empty sources contain no data to preserve and need no durable file.
-    if (temporary) file ??= await open(temporary, "w", 0o600);
-    await file?.sync();
+    await writer?.sync();
   } catch (error) {
     if (temporary) await rm(temporary, { force: true });
     throw error;
   } finally {
-    await file?.close();
+    await writer?.close();
   }
   if (temporary && snapshot) {
     await rename(temporary, snapshot);
