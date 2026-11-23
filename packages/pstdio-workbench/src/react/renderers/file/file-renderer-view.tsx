@@ -1,5 +1,5 @@
 import { Box, Button, Center, Flex, Text } from "@chakra-ui/react";
-import { resourceKey } from "@pstdio/sdk/extensions";
+import { type PageParams, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {
   RegisteredFileRendererContribution,
@@ -22,17 +22,13 @@ import {
   type FileEditControllerState,
 } from "./file-renderer-edit-state";
 import { createFileRendererLoadKey, isCurrentLoadedFile } from "./file-renderer-load-key";
-import {
-  acceptFileRendererLoad,
-  type LoadedFile,
-  readCachedFileContent,
-  saveLoadedFile,
-  storeCachedFileContent,
-} from "./file-renderer-load-state";
+import { acceptFileRendererLoad, type LoadedFile, matchesFileScope } from "./file-renderer-load-state";
 import { FileRendererPathHeader } from "./file-renderer-path-header";
+import { prepareFileRendererSave } from "./file-renderer-save-operation";
 import { useFileSectionSelection } from "./file-renderer-sections";
 import { FileRendererStatusNotice } from "./file-renderer-status-notice";
 import { SelectedTextEditor } from "./selected-text-editor";
+import { useFileRendererAuthority } from "./use-file-renderer-authority";
 
 interface WorkbenchFileRendererViewProps {
   workbench: WorkbenchCore;
@@ -87,27 +83,19 @@ const fileRendererOwnerKey = (
   queryScope: RegisteredFileRendererContribution["queryScope"],
 ) => JSON.stringify([placement ? rendererReadKey(placement) : ["file", contributionId, loadKey], queryScope]);
 
-export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps) => {
-  const { workbench, contribution } = props;
-  const resource = props.placement?.resource;
-  const openPlacements = useOpenPlacementIds(workbench);
-  const open = !props.placement?.placementIdentity || openPlacements.has(props.placement.instanceId);
-  const position = props.placement?.position;
-  const sectionNavigation = getFileSectionNavigation(resource);
-  const requestedSection = props.placement?.section;
-  const targetAnchor = requestedSection?.anchors.at(-1);
-  const editorSectionNavigation =
-    requestedSection && targetAnchor
-      ? { anchors: [...requestedSection.anchors], targetId: targetAnchor.id }
-      : getEditorSectionNavigation(workbench, sectionNavigation);
-  const pageParams = usePageParams(workbench, props.placement);
-  const loadKey = createFileRendererLoadKey({
-    fileRendererId: contribution.id,
-    resource,
-    pageParams,
-    documentKey: contribution.documentKey?.(resource),
-  });
-  const manualSave = contribution.saveMode === "manual";
+const useFileRendererBinding = (input: {
+  workbench: WorkbenchCore;
+  contribution: RegisteredFileRendererContribution;
+  resource?: ResourceRef;
+  pageParams?: PageParams;
+  placement?: WorkbenchPanelInstance;
+  loadKey: string;
+  cacheKey: string;
+  manualSave: boolean;
+  authority: ReturnType<typeof useFileRendererAuthority>;
+}) => {
+  const { workbench, contribution, resource, pageParams, placement, loadKey, cacheKey, manualSave } = input;
+  const { queries, cache } = input.authority;
   const [loaded, setLoaded] = useState<LoadedFile | null>(null);
   const [error, setError] = useState<{
     loadKey: string;
@@ -116,8 +104,6 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   const [editState, setEditState] = useState<FileEditControllerState>({ dirty: false, saving: false });
   const controllerRef = useRef<FileEditController | null>(null);
   const retryReadRef = useRef<(() => void) | undefined>(undefined);
-  const rendererRef = useRef<HTMLDivElement>(null);
-  useFileSectionSelection(workbench, resource, sectionNavigation);
   // Contribution refresh re-registers an identical contribution as a new
   // object, and a save that changes the document title produces a new resource
   // object with a fresh label. The load key uses resource values instead of
@@ -125,29 +111,39 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   const contributionRef = useRef(contribution);
   const resourceRef = useRef(resource);
   const pageParamsRef = useRef(pageParams);
-  const placementRef = useRef(props.placement);
+  const placementRef = useRef(placement);
   useLayoutEffect(() => {
     contributionRef.current = contribution;
     resourceRef.current = resource;
     pageParamsRef.current = pageParams;
-    placementRef.current = props.placement;
+    placementRef.current = placement;
   });
   const contributionId = contribution.id;
   const hasSave = Boolean(contribution.save);
-  const ownerKey = fileRendererOwnerKey(props.placement, contributionId, loadKey, contribution.queryScope);
-  const instanceId = props.placement?.instanceId ?? contributionId;
+  const ownerKey = fileRendererOwnerKey(placement, contributionId, loadKey, contribution.queryScope);
+  const instanceId = placement?.instanceId ?? contributionId;
   // Re-binding a singleton widget to another resource changes `resource` and reloads.
   useLayoutEffect(() => {
     let cancelled = false;
     let removed = false;
+    let retired = false;
     const boundResource = resourceRef.current;
     const boundContribution = contributionRef.current;
+    const boundPageParams = pageParamsRef.current;
+    const scope = {
+      ...queries.getScope(),
+      ...boundContribution.queryScope,
+      projectId: boundContribution.queryScope?.projectId ?? boundResource?.projectId,
+    };
+    const stopRetirement = queries.subscribeScopeRetirement((scopeFilter) => {
+      if (matchesFileScope(scope, scopeFilter)) retired = true;
+    });
     const read = workbench.views.reads.bind(ownerKey);
     let controller: FileEditController | null = null;
     setError(null);
     // A recently viewed document mounts immediately from the cache; the load
     // below reconciles it (unchanged content keeps the editor mounted).
-    const cached = readCachedFileContent(loadKey);
+    const cached = cache.read(cacheKey);
     let baseline = cached;
     setLoaded(cached ? { ...cached, editorRevision: 1, loadKey } : null);
     const load = (reason: "refresh" | "retry" = "refresh") => {
@@ -158,15 +154,16 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           sourceId: contributionId,
           load: (signal) => contributionRef.current.load(resourceRef.current, signal, pageParamsRef.current),
           onValue: (next) => {
-            if (cancelled || removed) return;
+            if (cancelled || removed || retired) return;
             const updateLoaded = acceptFileRendererLoad(next, loadKey, controller);
             if (!updateLoaded) return;
             baseline = next;
+            cache.store(cacheKey, next, scope);
             setError(null);
             setLoaded(updateLoaded);
           },
           onError: (loadError) => {
-            if (cancelled || removed) return;
+            if (cancelled || removed || retired) return;
             setError({ loadKey, message: describeError(loadError) });
           },
         },
@@ -183,17 +180,27 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           },
           debounceMs: SAVE_DEBOUNCE_MS,
           saveMode: manualSave ? "manual" : "auto",
-          saveKey: loadKey,
+          saveKey: cacheKey,
+          saveOwner: queries,
           load: () => load(),
           onStateChange: (state) => {
             if (!cancelled) setEditState(state);
           },
-          save: async (value, origin) => {
-            const saved = await saveLoadedFile(boundContribution, boundResource, value, origin, baseline);
-            baseline = saved.content;
-            if (baseline && !removed) storeCachedFileContent(loadKey, baseline);
-            return saved.result;
-          },
+          prepareSave: prepareFileRendererSave({
+            queries,
+            scope,
+            contribution: boundContribution,
+            resource: boundResource,
+            pageParams: boundPageParams,
+            loadKey: cacheKey,
+            readBaseline: () => baseline,
+            available: () => !removed && !retired,
+            accept(receipt, value) {
+              baseline = receipt.content;
+              if (baseline) cache.store(cacheKey, baseline, scope);
+              controller?.confirmSave(value, receipt.result?.revision);
+            },
+          }),
         })
       : null;
     controllerRef.current = controller;
@@ -209,7 +216,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       return retain && identity ? [identity] : [];
     });
     const refreshSubscription = getWorkbenchRenderers(workbench).onDidRefreshFileRenderer((event) => {
-      if (removed || event.fileRendererId !== contributionId) return;
+      if (removed || retired || event.fileRendererId !== contributionId) return;
       const controller = controllerRef.current;
       if (controller) controller.handleRefreshEvent(event);
       else load();
@@ -217,6 +224,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     return () => {
       cancelled = true;
       read.dispose();
+      stopRetirement();
       retryReadRef.current = undefined;
       refreshSubscription.dispose();
       removalSubscription.dispose();
@@ -224,7 +232,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       if (!manualSave) controller?.flush();
       if (controllerRef.current === controller) controllerRef.current = null;
     };
-  }, [contributionId, hasSave, workbench, loadKey, ownerKey, instanceId, manualSave]);
+  }, [contributionId, hasSave, workbench, loadKey, ownerKey, instanceId, manualSave, queries, cache, cacheKey]);
   useEffect(() => {
     if (manualSave) return;
     const flush = () => controllerRef.current?.flush();
@@ -238,6 +246,47 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [manualSave]);
+  return { loaded, error, editState, controllerRef, retryReadRef };
+};
+
+export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps) => {
+  const { workbench, contribution } = props;
+  const resource = props.placement?.resource;
+  const openPlacements = useOpenPlacementIds(workbench);
+  const open = !props.placement?.placementIdentity || openPlacements.has(props.placement.instanceId);
+  const position = props.placement?.position;
+  const sectionNavigation = getFileSectionNavigation(resource);
+  const requestedSection = props.placement?.section;
+  const targetAnchor = requestedSection?.anchors.at(-1);
+  const editorSectionNavigation =
+    requestedSection && targetAnchor
+      ? { anchors: [...requestedSection.anchors], targetId: targetAnchor.id }
+      : getEditorSectionNavigation(workbench, sectionNavigation);
+  const pageParams = usePageParams(workbench, props.placement);
+  const queryScope = contribution.queryScope ?? { projectId: resource?.projectId };
+  const authority = useFileRendererAuthority(workbench, queryScope);
+  const documentKey = createFileRendererLoadKey({
+    fileRendererId: contribution.id,
+    resource,
+    pageParams,
+    documentKey: contribution.documentKey?.(resource),
+  });
+  const cacheKey = `${documentKey}:${JSON.stringify([queryScope.projectId, queryScope.extensionId])}`;
+  const loadKey = `${cacheKey}:${authority.generation}`;
+  const manualSave = contribution.saveMode === "manual";
+  const { loaded, error, editState, controllerRef, retryReadRef } = useFileRendererBinding({
+    workbench,
+    contribution,
+    resource,
+    pageParams,
+    placement: props.placement,
+    loadKey,
+    cacheKey,
+    manualSave,
+    authority,
+  });
+  const rendererRef = useRef<HTMLDivElement>(null);
+  useFileSectionSelection(workbench, resource, sectionNavigation);
   const currentLoaded = isCurrentLoadedFile(loaded, loadKey) ? loaded : null;
   const loadError = error?.loadKey === loadKey ? error.message : undefined;
   if (currentLoaded?.textEditor)
