@@ -200,8 +200,9 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
                 onPointerDown={(event) => {
                   const target = event.target as Element;
                   if (
+                    !event.currentTarget.contains(target) ||
                     target.closest(
-                      'button,a,input,textarea,select,[role="tab"],[role="button"],[contenteditable="true"]',
+                      'button,a,input,textarea,select,[role="tab"],[role="button"],[role^="menuitem"],[contenteditable="true"]',
                     )
                   )
                     return;

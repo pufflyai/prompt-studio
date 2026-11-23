@@ -35,7 +35,7 @@ const SurfaceFeedback = () => {
     <Stack gap="md">
       <Text>
         Existing panels show an outline only when targeted. Panel alignment and insertion marks stay compact and
-        borderless. Widget drop indicators retain their original height, using the same floating-panel drop colors.
+        borderless. Widget drop indicators use dots at their original height, using the same floating-panel drop colors.
       </Text>
       <Button onClick={() => setActive((value) => !value)}>{active ? "Show idle" : "Show active"}</Button>
       <HStack gap="lg" align="start">
@@ -43,7 +43,12 @@ const SurfaceFeedback = () => {
           <Text>Drop onto an existing panel</Text>
           <Box position="relative" boxSize="24" layerStyle={active ? "tabDropZone" : undefined} />
           <Text>Widget landing</Text>
-          <Box position="relative" boxSize="24" layerStyle="panelDropZone" data-drop-active={active || undefined} />
+          <Box
+            position="relative"
+            boxSize="24"
+            layerStyle="widgetDropIndicator"
+            data-drop-active={active || undefined}
+          />
           <Text>Panel edge</Text>
           <Box
             position="relative"

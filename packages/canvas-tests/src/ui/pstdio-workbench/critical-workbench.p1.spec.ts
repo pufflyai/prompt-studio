@@ -70,6 +70,37 @@ test("resource previews share a tray and retain pinned tabs", async ({ page }) =
   await expect(beta).toHaveAttribute("aria-selected", "true");
 });
 
+// Critical: floating-panel drag handling must not block commands in portaled dropdown menus.
+for (const movement of ["snap", "free"] as const) {
+  test(`floating panel dropdowns create sessions in ${movement} mode`, async ({ page }) => {
+    const preview = await openCanvasPreview(
+      page,
+      "packages/pstdio-workbench/src/react/region/panel-arrangement.canvas.tsx#DetachedSide",
+    );
+    const panel = preview.getByTestId("workbench-side-panel-floating");
+    const header = panel.locator('[data-workbench-panel-header="side"]');
+    if (movement === "free") {
+      await header.press("Shift+F10");
+      await preview.getByRole("menuitem", { name: "Move freely", exact: true }).click();
+    }
+    await expect(panel).toHaveAttribute("data-floating-panel-movement", movement);
+    const original = panel.getByRole("tab", { name: "Session with a longer name 1", exact: true });
+    await original.click();
+    await panel.getByRole("textbox", { name: "Retained draft" }).fill("Keep the original draft");
+    await header.getByRole("button", { name: "Add panel", exact: true }).click();
+    await preview.getByRole("menuitem", { name: "Create session", exact: true }).click();
+    await expect(panel.getByRole("tab")).toHaveCount(3);
+    await expect(panel.getByRole("tab", { name: "New session", exact: true })).toHaveAttribute("aria-selected", "true");
+    await original.click();
+    await expect(panel.getByRole("textbox", { name: "Retained draft" })).toHaveValue("Keep the original draft");
+    await original.click({ button: "right" });
+    await preview.getByRole("menuitem", { name: "New session", exact: true }).click();
+    await expect(panel.getByRole("tab")).toHaveCount(4);
+    await original.click();
+    await expect(panel.getByRole("textbox", { name: "Retained draft" })).toHaveValue("Keep the original draft");
+  });
+}
+
 // Critical: moving a live panel must preserve its unsaved input.
 test("moving a panel preserves its draft", async ({ page }) => {
   const preview = await openCanvasPreview(

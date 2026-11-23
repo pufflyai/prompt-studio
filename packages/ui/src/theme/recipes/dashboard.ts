@@ -150,16 +150,15 @@ export const dashboardRecipe = defineSlotRecipe({
       pointerEvents: "none",
     },
     highlight: {
-      layerStyle: "panelDropZone",
+      layerStyle: "widgetDropIndicator",
       position: "absolute",
       inset: "0",
       borderRadius: "inherit",
-      _after: { borderRadius: "inherit" },
       pointerEvents: "none",
       zIndex: "2",
     },
     rowDropIndicator: {
-      layerStyle: "dropIndicator",
+      layerStyle: "widgetDropIndicator",
       position: "absolute",
       left: "md",
       right: "md",

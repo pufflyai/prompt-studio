@@ -98,6 +98,23 @@ export const layerStyles = defineLayerStyles({
     },
   },
   panelDropZone: { value: compactDropZone },
+  widgetDropIndicator: {
+    value: {
+      _after: {
+        content: '""',
+        position: "absolute",
+        top: "50%",
+        left: "50%",
+        width: "2",
+        height: "2",
+        borderRadius: "full",
+        bg: "bg.drop.muted/40",
+        transform: "translate(-50%, -50%)",
+        pointerEvents: "none",
+      },
+      "&[data-drop-active]::after": { bg: "bg.drop" },
+    },
+  },
   bubbleButton: { value: { aspectRatio: "square" } },
   dropTarget: {
     value: {
