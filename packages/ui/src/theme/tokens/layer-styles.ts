@@ -1,5 +1,22 @@
 import { defineLayerStyles } from "@chakra-ui/react";
 
+const compactDropZone = {
+  _after: {
+    content: '""',
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    width: "12",
+    height: "1.5",
+    transform: "translate(-50%, -50%)",
+    borderRadius: "pill",
+    bg: "bg.drop.muted/40",
+    pointerEvents: "none",
+  },
+  "&[data-orientation=vertical]::after": { width: "1.5", height: "12" },
+  "&[data-drop-active]::after": { bg: "bg.drop" },
+} as const;
+
 export const layerStyles = defineLayerStyles({
   documentContent: { value: { width: "full", minWidth: "0", maxWidth: "document-content", marginInline: "auto" } },
   resourceActivityNotice: {
@@ -67,33 +84,8 @@ export const layerStyles = defineLayerStyles({
       pointerEvents: "none",
     },
   },
-  tabDropZone: {
-    value: {
-      _after: {
-        content: '""',
-        position: "absolute",
-        inset: "3xs",
-        borderWidth: "1px",
-        borderColor: "bg.drop",
-        borderRadius: "compact",
-        pointerEvents: "none",
-      },
-    },
-  },
-  panelDropZone: {
-    value: {
-      _after: {
-        content: '""',
-        position: "absolute",
-        inset: "3xs",
-        borderWidth: "1px",
-        borderColor: "bg.drop.muted/40",
-        borderRadius: "compact",
-        pointerEvents: "none",
-      },
-      "&[data-drop-active]::after": { borderColor: "bg.drop", bg: "bg.drop/20" },
-    },
-  },
+  tabDropZone: { value: compactDropZone },
+  panelDropZone: { value: compactDropZone },
   bubbleButton: { value: { aspectRatio: "square" } },
   dropTarget: {
     value: {
@@ -149,6 +141,7 @@ export const layerStyles = defineLayerStyles({
         borderTopLeftRadius: "xs",
         borderColor: "currentColor",
         pointerEvents: "none",
+        opacity: "0",
       },
       "&[data-resize-direction=ne]": {
         left: "auto",
@@ -163,8 +156,14 @@ export const layerStyles = defineLayerStyles({
           borderTopRightRadius: "xs",
         },
       },
-      _hover: { color: "bg.drop" },
-      _focusVisible: { color: "bg.drop", outline: "2px solid", outlineColor: "bg.drop", outlineOffset: "-2px" },
+      _hover: { _before: { opacity: "1" } },
+      _active: { _before: { opacity: "1" } },
+      _focusVisible: {
+        outline: "1px solid",
+        outlineColor: "fg.muted",
+        outlineOffset: "-1px",
+        _before: { opacity: "1" },
+      },
     },
   },
   panelDragSurface: {

@@ -107,7 +107,9 @@ in Appearance or the floating header context menu. Snap is the default. Free
 movement follows the pointer horizontally and vertically without snap indicators;
 Alt+Shift+arrow keys move a focused floating header. The bubble keeps its alignment.
 Resize from the top-left corner when aligned right, the top-right corner when aligned left,
-or either top corner when centered. Small corner highlights mark the available handles.
+or either top corner when centered. Muted corner strokes appear on close hover,
+keyboard focus or while resizing. Docking targets use short borderless marks with
+the floating-panel highlight color, and reserve narrow strips at panel edges.
 In snap mode, its left and right gaps
 match its bottom gap. Resizing retains the selected horizontal anchor throughout
 the gesture and after release; free resizing keeps the opposite corner fixed. Focus a resize handle and use arrow keys to resize; Shift uses larger steps. Size and free position persist

@@ -34,6 +34,9 @@ const PanelInsertionTarget = (props: PanelInsertionTargetProps) => {
   });
   const highlighted = panel ? panelDrop === edge : drop?.region === region && drop.panelPosition === edge;
   const vertical = edge === "left" || edge === "right";
+  const footprint = vertical
+    ? { w: "3", h: "full", "data-orientation": "vertical" }
+    : { w: "full", h: "3", "data-orientation": "horizontal" };
   const targetId = panel ? `panel-${edge}` : region;
   return (
     <>
@@ -44,8 +47,7 @@ const PanelInsertionTarget = (props: PanelInsertionTargetProps) => {
           data-workbench-edge-position={edge}
           position="absolute"
           {...tabEdgeAnchors[edge]}
-          w={vertical ? "12" : "full"}
-          h={vertical ? "full" : "12"}
+          {...footprint}
           zIndex="overlay"
         />
       ) : null}
@@ -57,8 +59,7 @@ const PanelInsertionTarget = (props: PanelInsertionTargetProps) => {
           data-drop-active={highlighted || undefined}
           position="relative"
           flexShrink={0}
-          w={vertical ? "12" : "full"}
-          h={vertical ? "full" : "12"}
+          {...footprint}
           layerStyle="panelDropZone"
         />
       ) : null}
