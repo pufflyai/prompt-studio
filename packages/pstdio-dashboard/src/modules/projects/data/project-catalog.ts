@@ -10,6 +10,9 @@ import { subscribeToExtensionEventFeed } from "@/shared/extensions/extension-web
 
 export const cloudProjectCatalogKey = ["cloud-project-catalog"] as const;
 
+export const cloudCatalogKeyFor = (managerOrigin?: string, accountId?: string, deviceId?: string) =>
+  [...cloudProjectCatalogKey, managerOrigin, accountId, deviceId] as const;
+
 export const useCloudProjectCatalog = () => {
   const runtime = getRuntimeCollections();
   const status = useScopedQuery(getDashboardAccountStatusQuery(runtime)).data;
@@ -27,7 +30,7 @@ export const useCloudProjectCatalog = () => {
   }, [signedIn, queryClient]);
 
   const catalog = useQuery({
-    queryKey: [...cloudProjectCatalogKey, login?.managerOrigin, login?.accountId, login?.deviceId],
+    queryKey: cloudCatalogKeyFor(login?.managerOrigin, login?.accountId, login?.deviceId),
     enabled: signedIn,
     queryFn: async ({ signal }) => {
       const catalog = await getRuntimeApiClient(runtime).account.projectsCatalog({ signal });

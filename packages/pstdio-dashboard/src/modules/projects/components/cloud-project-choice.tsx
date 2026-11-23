@@ -17,6 +17,7 @@ export const CloudProjectChoice = ({ input }: { input: WorkbenchPanelRenderInput
     downloading,
     canDownload,
     downloadPending,
+    downloadBlocking,
     sync,
     refresh,
     setDeletionScope,
@@ -61,7 +62,7 @@ export const CloudProjectChoice = ({ input }: { input: WorkbenchPanelRenderInput
               name={name}
               account={account}
               receipt={receipt}
-              canDelete={Boolean(entry?.actions.deleteCloud)}
+              canDelete={Boolean(entry?.actions.deleteCloud && !downloadBlocking)}
               cloudOnly
               key={scope}
               onSubmitted={() => setDeletionScope(scope)}

@@ -7,6 +7,7 @@ import { getRuntimeCollections } from "@/lib/sync/collections";
 import { useCollectionSelection } from "@/lib/sync/use-collection-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getCloudCopyDownloads } from "../data/cloud-copy-download";
+import { useCloudProjectDeletions } from "../data/cloud-project-deletion-operations";
 import { cloudProjectCatalogKey, useCloudProjectCatalog } from "../data/project-catalog";
 import { findDashboardProject } from "../data/project-data";
 
@@ -70,11 +71,15 @@ const useCloudCopyDownload = (
   }, [entry?.presence, id, input.instance.instanceId, input.workbench, requested, localName, deleting]);
 
   const checkedDownload = useRef<symbol>(undefined);
+  const statusObserved =
+    entry?.presence === "downloaded" ||
+    Boolean(entry?.downloadError) ||
+    (active?.status === "unconfirmed" && entry?.presence === "downloading");
   useEffect(() => {
-    if (entry?.presence !== "downloaded" || !unresolved?.canCheck || checkedDownload.current === unresolved.id) return;
+    if (!statusObserved || !unresolved?.canCheck || checkedDownload.current === unresolved.id) return;
     checkedDownload.current = unresolved.id;
     void operations.check(unresolved.id);
-  }, [entry?.presence, operations, unresolved?.id, unresolved?.canCheck]);
+  }, [statusObserved, operations, unresolved?.id, unresolved?.canCheck]);
 
   const requestDownload = () => {
     if (!operations.state(id).active) download.mutate({ id, account, owner, name: entry?.name ?? id });
@@ -106,7 +111,8 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
   if (owner.scope !== scope) setOwner({ scope, requested: false });
   const requested = owner.scope === scope && owner.requested;
   const [deletionScope, setDeletionScope] = useState<string>();
-  const deleting = Boolean(receipt || deletionScope === scope);
+  const deletion = useCloudProjectDeletions();
+  const deleting = Boolean(receipt || deletionScope === scope || deletion.active(id));
   useEffect(() => {
     if (receipt) setDeletionScope(scope);
   }, [receipt, scope]);
@@ -144,7 +150,7 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
   const failure = downloadMessage(download.error ?? sharedError ?? cloud.error ?? sync.error, entry, sync.data?.state);
   const pending = Boolean(active && !unresolved);
   const showProgress = (downloading || pending) && !deleting && !failure && entry?.presence !== "downloaded";
-  const canDownload = Boolean(entry?.actions.download && !active && (!downloading || failure));
+  const canDownload = Boolean(entry?.actions.download && !active && !deleting && (!downloading || failure));
   const showDownload = !receipt && !deleting && entry?.presence !== "removing";
 
   return {
@@ -157,6 +163,7 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
     deleting,
     downloading: downloading || pending,
     canDownload,
+    downloadBlocking: Boolean(active),
     downloadPending: pending,
     sync,
     refresh,

@@ -227,6 +227,13 @@ test("Cloud deletion recovers from a lost request and resumes the same operation
   try {
     await expect(choice.getByText("Deleting cloud project", { exact: true })).toBeVisible();
     await expect(choice.getByRole("button", { name: "Retry", exact: true })).toHaveCount(0);
+    await choice.getByRole("button", { name: "Back", exact: true }).click();
+    await page
+      .getByRole("dialog", { name: "Projects", exact: true })
+      .getByRole("option", { name, exact: true })
+      .click();
+    await expect(choice.getByText("Deleting cloud project", { exact: true })).toBeVisible();
+    await expect(choice.getByRole("button", { name: "Download", exact: true })).toHaveCount(0);
   } finally {
     releaseFirst.resolve();
   }

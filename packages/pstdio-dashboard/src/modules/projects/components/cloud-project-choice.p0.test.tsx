@@ -162,10 +162,14 @@ test("an old account's pending download cannot open the new account's same-ID co
   }
 });
 
-test("two views share download admission and a lost response opens only the completed local copy", async () => {
+test.each([
+  false,
+  true,
+])("two views recover the same copy after a lost download response (folder error %p)", async (folderError) => {
   const id = "recovered-project";
   const account = { managerOrigin: "https://accounts.example.test", accountId: "account-a" };
   let presence = "cloud-only";
+  let downloadError: string | undefined;
   let downloads = 0;
   const started = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
@@ -188,6 +192,11 @@ test("two views share download admission and a lost response opens only the comp
         started.resolve();
         await release.promise;
         presence = "downloading";
+        if (downloads > 1) {
+          downloadError = undefined;
+          return Response.json({ projectId: id, presence });
+        }
+        if (folderError) downloadError = "Could not prepare the project folder";
         return Response.json({ error: "Download response lost" }, { status: 503 });
       }
       if (url.pathname === "/v1/account/projects")
@@ -201,6 +210,7 @@ test("two views share download admission and a lost response opens only the comp
               name: "Recovered notes",
               online: true,
               presence,
+              downloadError,
               actions: { download: presence !== "downloaded", removeLocal: false, deleteCloud: false },
             },
           ],
@@ -272,11 +282,18 @@ test("two views share download admission and a lost response opens only the comp
       release.resolve();
       await until(() => Boolean(choice.failure) && Boolean(peer!.failure));
     });
-    expect(peer!.canDownload).toBe(false);
-    await act(async () => {
-      peer!.requestDownload();
-      peerRenderer?.unmount();
-    });
+    if (folderError) {
+      await act(async () => until(() => choice.canDownload && peer!.canDownload));
+      expect(downloads).toBe(1);
+      await act(async () => {
+        choice.requestDownload();
+        await until(() => downloads === 2);
+      });
+    } else {
+      expect(peer!.canDownload).toBe(false);
+      await act(async () => peer!.requestDownload());
+    }
+    await act(async () => peerRenderer?.unmount());
     await act(async () => {
       presence = "downloaded";
       owner.getWriter("projects")!.upsert({
@@ -296,7 +313,7 @@ test("two views share download admission and a lost response opens only the comp
       },
     ]);
     expect(closed).toBe(1);
-    expect(downloads).toBe(1);
+    expect(downloads).toBe(folderError ? 2 : 1);
   } finally {
     release.resolve();
     await act(async () => {

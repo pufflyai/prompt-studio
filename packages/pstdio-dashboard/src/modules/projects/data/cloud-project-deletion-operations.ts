@@ -1,11 +1,13 @@
 import type { CloudProjectDeletion, ProjectCopyAccount } from "@pstdio/sdk/client";
-import { classifyApiWrite, getWorkbenchOperations, operationSubject } from "@pstdio/workbench";
+import { classifyApiWrite, getWorkbenchOperations } from "@pstdio/workbench";
 import { useSyncExternalStore } from "react";
 import { getRuntimeApiClient } from "@/lib/api";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { createRuntimeState } from "@/lib/sync/runtime-state";
 import { dashboardCommandIds } from "@/shared/app/commands";
+
+import { cloudProjectCopySubject } from "./cloud-copy-download";
 
 export const cloudProjectDeletionKey = (id: string, account?: ProjectCopyAccount) =>
   ["project-cloud-deletion", account?.managerOrigin, account?.accountId, id] as const;
@@ -36,10 +38,12 @@ const getCloudProjectDeletions = createRuntimeState((owner) => {
       const { accountId, accountOrigin } = queries.getScope();
       if (accountId !== expectedAccount.accountId || accountOrigin !== expectedAccount.managerOrigin)
         throw new Error("The active Cloud account changed. Reopen this action to confirm again.");
-      if (active(id)) throw new Error("This project's Cloud deletion is already in progress.");
+      const subject = cloudProjectCopySubject(id);
+      if (operations.getSnapshot().pending.some((entry) => entry.subjects.includes(subject)))
+        throw new Error("This project already has a pending Cloud change.");
       return operations.submit({
         domain,
-        subjects: [operationSubject("cloud-project-deletion", id)],
+        subjects: [subject],
         title: `Delete cloud project “${name}”`,
         sourceCommand: { id: dashboardCommandIds.openProjects },
         draft: { projectId: id, name },
