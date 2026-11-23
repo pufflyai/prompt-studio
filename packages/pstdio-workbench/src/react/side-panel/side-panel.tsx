@@ -202,7 +202,7 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
                   if (
                     !event.currentTarget.contains(target) ||
                     target.closest(
-                      'button,a,input,textarea,select,[role="tab"],[role="button"],[role^="menuitem"],[contenteditable="true"]',
+                      'button,a,input,textarea,select,[role="tab"],[role="button"],[role="slider"],[role^="menuitem"],[contenteditable="true"]',
                     )
                   )
                     return;
