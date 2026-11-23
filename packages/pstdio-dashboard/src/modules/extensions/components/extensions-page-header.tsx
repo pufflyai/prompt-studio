@@ -25,6 +25,7 @@ export const ExtensionsPageHeader = ({ input }: { input: WorkbenchPanelRenderInp
       upgrade={
         (upgradable.length > 0 || actions.batch) && (
           <ExtensionUpgradeProgress
+            compact
             batch={actions.batch}
             onUpgrade={() => void actions.handleUpgradeAll(upgradable)}
             onDismiss={actions.dismissBatch}
