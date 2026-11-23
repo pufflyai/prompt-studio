@@ -28,6 +28,7 @@ import { normalizeTemplateParamIdentities } from "./template-param-identities";
 import { registerTextSources } from "./text-sources";
 import { registerTranslations } from "./translations";
 import { registerUiModel } from "./ui-model";
+import { validateViewHeaders } from "./view-headers";
 import { registerWebviewValidation } from "./webview-validation";
 
 type NormalizeExtensionSourcesOptions = {
@@ -133,6 +134,7 @@ export const normalizeExtensionSources = (
   validateCompositionRelationships(runtime);
   validateResourcePrefixes(runtime);
   validatePageDefinitions(runtime);
+  validateViewHeaders(runtime);
   validatePageNavigationTargets(runtime);
   normalizeResourcePresentations(runtime);
 

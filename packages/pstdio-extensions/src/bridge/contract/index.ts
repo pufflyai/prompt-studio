@@ -62,6 +62,7 @@ export type HostEventMessage = {
 };
 
 export type HostApi = {
+  sizingUpdate?: (message: Pick<InitMessage, "sizing">) => void;
   visibilityUpdate: (visible: boolean) => void;
   keyboardUpdate: (shortcuts: readonly WebviewKeyboardShortcut[]) => void;
   restoreFocus: () => void;

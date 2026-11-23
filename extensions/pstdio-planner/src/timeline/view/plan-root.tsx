@@ -12,7 +12,6 @@ import {
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { PlannerReadError } from "../../views/planner-read-error";
-import { AutoBuildControl } from "./auto-build-control";
 import { BackgroundMenu } from "./background-menu";
 import { formatDay } from "./flags";
 import { PlanGraph } from "./plan-graph";
@@ -154,7 +153,6 @@ function PlanContent(props: PlanContentProps) {
         search={search}
         onSearchChange={setSearch}
         resultLabel={`${sections.reduce((total, section) => total + section.rows.length, 0)} of ${filtered.length}`}
-        actions={<AutoBuildControl host={host} client={client} t={t} data={queryData} />}
       />
       <Flex flex="1" minH="0" minW="0">
         <Box flex="1" minH="0" minW="0">

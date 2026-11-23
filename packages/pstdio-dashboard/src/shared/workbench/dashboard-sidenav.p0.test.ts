@@ -1,10 +1,10 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { createWorkbench, type WorkbenchCore } from "@pstdio/workbench";
+import { createLevelNavigation, createWorkbench, type WorkbenchCore } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { setDashboardExtensionsRegisteredProject } from "@/shared/extensions/extension-readiness";
-import { registerDashboardSidenav } from "./dashboard-sidenav";
+import { registerDashboardSidenav, updateDashboardSidenav } from "./dashboard-sidenav";
 import { treeViewBody, treeViewSections } from "./workbench-view-test-helpers";
 
 const registerModePage = (workbench: WorkbenchCore, modeId: string, pageId: string, resourceKind?: string) => {
@@ -93,12 +93,25 @@ describe("registerDashboardSidenav", () => {
       declarationIndex: 0,
       viewId: "provider.sessions",
     });
-    expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).expandedNodeIds).toEqual([
+    expect(
+      workbench.treeViews.getTreeState(
+        dashboardWidgetIds.dashboardSidenav,
+        createLevelNavigation(workbench).getStateScope(),
+      ).expandedNodeIds,
+    ).toEqual(["provider.tree:sessions"]);
+    workbench.treeViews.setNodeExpanded(
+      dashboardWidgetIds.dashboardSidenav,
       "provider.tree:sessions",
-    ]);
-    workbench.treeViews.setNodeExpanded(dashboardWidgetIds.dashboardSidenav, "provider.tree:sessions", false);
+      false,
+      createLevelNavigation(workbench).getStateScope(),
+    );
     workbench.views.refreshView("provider.sessions");
-    expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).expandedNodeIds).toEqual([]);
+    expect(
+      workbench.treeViews.getTreeState(
+        dashboardWidgetIds.dashboardSidenav,
+        createLevelNavigation(workbench).getStateScope(),
+      ).expandedNodeIds,
+    ).toEqual([]);
   });
   test("applies section defaults from contributions registered after the sidenav", () => {
     const workbench = createWorkbench();
@@ -115,10 +128,12 @@ describe("registerDashboardSidenav", () => {
       defaultExpandedSectionIds: ["files", "sessions"],
       getSections: () => [],
     });
-    expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).expandedSectionIds).toEqual([
-      "files",
-      "sessions",
-    ]);
+    expect(
+      workbench.treeViews.getTreeState(
+        dashboardWidgetIds.dashboardSidenav,
+        createLevelNavigation(workbench).getStateScope(),
+      ).expandedSectionIds,
+    ).toEqual(["files", "sessions"]);
   });
   test("applies page navigation defaults when the page becomes active", async () => {
     const workbench = createWorkbench();
@@ -156,7 +171,25 @@ describe("registerDashboardSidenav", () => {
     registerDashboardSidenav(workbench);
     workbench.pageLocations.setProject("project-1");
     await workbench.navigation.openTarget({ kind: "page", page: pageRef });
-    expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).expandedSectionIds).toContain("files");
+    expect(
+      workbench.treeViews.getTreeState(
+        dashboardWidgetIds.dashboardSidenav,
+        createLevelNavigation(workbench).getStateScope(),
+      ).expandedSectionIds,
+    ).toContain("files");
+    workbench.treeViews.setSectionExpanded(
+      dashboardWidgetIds.dashboardSidenav,
+      "files",
+      false,
+      createLevelNavigation(workbench).getStateScope(),
+    );
+    updateDashboardSidenav(workbench);
+    expect(
+      workbench.treeViews.getTreeState(
+        dashboardWidgetIds.dashboardSidenav,
+        createLevelNavigation(workbench).getStateScope(),
+      ).expandedSectionIds,
+    ).not.toContain("files");
   });
   test("reads mode sections without a concrete resource and passes one when selected", async () => {
     const workbench = createWorkbench();
@@ -262,7 +295,10 @@ test("the project header preserves contribution order and retains unrelated entr
   const header = () =>
     body.getHeader!({
       viewId: dashboardWidgetIds.dashboardSidenav,
-      state: core.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav),
+      state: core.treeViews.getTreeState(
+        dashboardWidgetIds.dashboardSidenav,
+        createLevelNavigation(core).getStateScope(),
+      ),
       refresh() {},
       setSelectedNode() {},
     });

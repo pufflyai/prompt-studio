@@ -76,7 +76,7 @@ export const createDashboardModules = (input: CreateDashboardModulesInput & { se
       projectSelectionPersistence: input.projectSelectionPersistence,
       projectTabs: input.projectTabs,
     }),
-    createHeadersModule(input.projectTabs),
+    createHeadersModule(),
     createKeyboardShortcutsModule(),
     createHelpModule(),
     createCommandPaletteModule(),

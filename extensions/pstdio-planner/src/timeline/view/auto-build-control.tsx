@@ -1,7 +1,8 @@
-import { Stack } from "@chakra-ui/react";
+import { Button, Stack } from "@chakra-ui/react";
 import { type GuestHost, sessionBrowser } from "@pstdio/sdk/extensions";
 import { PlannerReadError } from "../../views/planner-read-error";
 import { AutoBuildButton } from "./auto-build-button";
+import { AutoBuildDialogContent } from "./auto-build-dialog-content";
 import type { timelineQueryData } from "./timeline-query";
 import { useAutoBuild } from "./use-auto-build";
 import type { PlanClient } from "./use-plan";
@@ -10,17 +11,29 @@ interface AutoBuildControlProps {
   host: GuestHost;
   client: PlanClient;
   t: (key: string, fallback?: string) => string;
-  data: ReturnType<typeof timelineQueryData>;
+  data?: ReturnType<typeof timelineQueryData>;
+  onOpen?: () => void;
+  onClose?: () => void;
 }
 
 // Capacity and supervisor updates belong to the control, so they do not rerender the graph.
 export function AutoBuildControl(props: AutoBuildControlProps) {
   const { host, client, t, data } = props;
   const autoBuild = useAutoBuild(client);
+  if (props.onOpen && autoBuild.readError) {
+    return (
+      <Button size="xs" variant="outline" onClick={autoBuild.retry} title={autoBuild.readError.message}>
+        {t("timeline.autoBuild.retry", "Retry Auto Build")}
+      </Button>
+    );
+  }
+  const Control = props.onClose ? AutoBuildDialogContent : AutoBuildButton;
   return (
-    <Stack position="relative" gap="xs">
+    <Stack position="relative" gap="xs" h={props.onClose ? "full" : undefined} minH="0">
       <PlannerReadError error={autoBuild.readError} retry={autoBuild.retry} />
-      <AutoBuildButton
+      <Control
+        onOpen={props.onOpen}
+        onClose={props.onClose}
         enabled={autoBuild.mode?.enabled ?? false}
         paused={autoBuild.mode?.state === "paused"}
         reviewRequests={autoBuild.mode?.reviewRequests}
@@ -41,7 +54,7 @@ export function AutoBuildControl(props: AutoBuildControlProps) {
         stuck={autoBuild.mode?.stuck}
         error={autoBuild.mode?.configurationError ?? autoBuild.mode?.error}
         onOpenSession={(session) =>
-          void host.call("navigation.open", {
+          host.call("navigation.open", {
             target: {
               kind: "panel",
               panel: sessionBrowser.panels.conversation,
@@ -54,7 +67,7 @@ export function AutoBuildControl(props: AutoBuildControlProps) {
         onDismissActionError={autoBuild.dismissError}
         disabled={!autoBuild.mode || autoBuild.saving}
         configuration={
-          autoBuild.mode
+          autoBuild.mode && data
             ? {
                 prompt: autoBuild.mode.prompt,
                 supervisorModel: autoBuild.mode.supervisorModel,

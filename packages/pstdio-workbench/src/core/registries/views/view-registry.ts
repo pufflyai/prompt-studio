@@ -51,6 +51,7 @@ export interface WorkbenchViewContribution {
   id: string;
   title: string;
   icon?: string;
+  header?: { viewId: string };
   body: WorkbenchViewBody;
 }
 

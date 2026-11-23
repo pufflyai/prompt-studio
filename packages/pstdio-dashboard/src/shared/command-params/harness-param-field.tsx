@@ -13,6 +13,7 @@ import { type CommandParamFieldProps, commandParamName } from "@pstdio/workbench
 import { findAgentModel, resolveAgentModelParams } from "pstdio-api-contracts/agent-model-params";
 import { useEffect } from "react";
 import { resolveSynchronizedModel } from "@/shared/agents/agent-model-selection";
+import { useHarnessParamPresentation } from "@/shared/agents/harness-param-presentation";
 import { useAgentModels } from "@/shared/agents/use-agent-models";
 import { useAgents } from "@/shared/agents/use-agents";
 import { useHarnessParamDefaults } from "@/shared/agents/use-harness-param-defaults";
@@ -87,7 +88,12 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
   const defaultAgent = project?.default_agent_id;
   const baseParamSchema = harnessParamDefaults.data?.schema ?? selectedAgentInfo?.params;
   const selectedModelInfo = findAgentModel(models, model);
-  const effectiveParamSchema = resolveAgentModelParams(baseParamSchema, selectedModelInfo);
+  const effectiveParamSchema = useHarnessParamPresentation(
+    baseParamSchema,
+    selectedModelInfo,
+    selectedAgentInfo?.extensionId,
+    projectId,
+  );
   const effectiveParamDefaults = resolveHarnessParamDefaults(effectiveParamSchema, harnessParamDefaults.data?.defaults);
   const effectiveParams = filterHarnessParamValues(effectiveParamSchema, params);
 

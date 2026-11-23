@@ -18,8 +18,8 @@ Run inside the project folder, or pass `--project-id <project-id>` to an extensi
 
 ```sh
 pst pstdio.notes --help
-pst pstdio.notes notes create --help
-pst pstdio.notes notes create --title "Meeting notes" --json
+pst pstdio.notes create --help
+pst pstdio.notes create --title "Meeting notes" --json
 ```
 
 Command and option descriptions use extension translations. The CLI reads `LC_ALL`, then
@@ -79,4 +79,4 @@ A success outcome exits with code 0. Other outcomes exit with code 1. Ctrl+C abo
 
 Resource discussion and structured implementation/review evidence are core commands under [`pst resources activity`](0012-resource-activity.md). The owner chooses which capabilities a resource supports; sessions keep their own conversation.
 
-*Updated at: 2026-11-12*
+*Updated at: 2026-11-22*

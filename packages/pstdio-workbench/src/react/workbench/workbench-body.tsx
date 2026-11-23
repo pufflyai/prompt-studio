@@ -3,6 +3,7 @@ import { ResizableSplitLayout } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchRegionSize } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchNavChrome } from "../header/workbench-nav-chrome";
+import { WorkbenchMenuHeaderProvider } from "../panel-menu/floating-menu-context";
 import { WorkbenchPanelMenuLayout } from "../panel-menu/panel-menu";
 import { WorkbenchPanelDropFrame } from "../region/panel-drop-frame";
 import { WorkbenchRegion } from "../region/region";
@@ -76,30 +77,32 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   );
 
   const mainContent = (
-    <Grid
-      data-workbench-panel="main"
-      data-workbench-page={pageId}
-      gridTemplateRows="auto minmax(0, 1fr)"
-      h="full"
-      minH="0"
-      minW="0"
-      w="full"
-      bg={workbenchBackgrounds.main}
-      layerStyle="panel"
-      position="relative"
-    >
-      <WorkbenchNavChrome
-        workbench={workbench}
-        hasNav={hasNav}
-        hasMainHeader={hasMainHeader}
-        panelControls={panelControls}
-        fullscreenControlsInTitleBar={fullscreenControlsInTitleBar}
-      />
-      <WorkbenchTabDropTarget region="main" />
-      <Box gridRow="2" h="full" minH="0" minW="0" overflow="hidden">
-        {mainPanelWithMenus}
-      </Box>
-    </Grid>
+    <WorkbenchMenuHeaderProvider workbench={workbench} panel="main">
+      <Grid
+        data-workbench-panel="main"
+        data-workbench-page={pageId}
+        gridTemplateRows="auto minmax(0, 1fr)"
+        h="full"
+        minH="0"
+        minW="0"
+        w="full"
+        bg={workbenchBackgrounds.main}
+        layerStyle="panel"
+        position="relative"
+      >
+        <WorkbenchNavChrome
+          workbench={workbench}
+          hasNav={hasNav}
+          hasMainHeader={hasMainHeader}
+          panelControls={panelControls}
+          fullscreenControlsInTitleBar={fullscreenControlsInTitleBar}
+        />
+        <WorkbenchTabDropTarget region="main" />
+        <Box gridRow="2" h="full" minH="0" minW="0" overflow="hidden">
+          {mainPanelWithMenus}
+        </Box>
+      </Grid>
+    </WorkbenchMenuHeaderProvider>
   );
 
   return (

@@ -1,7 +1,7 @@
 import { Stack, Text } from "@chakra-ui/react";
 import { LoadingState } from "@pstdio/ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useAgents } from "@/shared/agents/use-agents";
 import { dashboardExtensionDetailPage, dashboardExtensionsPage } from "@/shared/app/resources";
@@ -15,7 +15,7 @@ import {
 import { AvailableExtensionDetail } from "./available-extension-detail";
 import { marketplaceActionKey } from "./extension-actions";
 import { ExtensionDetailContainer } from "./extension-detail-container";
-import { defaultExtensionFilters } from "./extension-filters";
+
 import { ExtensionReplacementConfirmation } from "./extension-replacement-confirmation";
 import { ExtensionsPanelView } from "./extensions-panel-view";
 import { useExtensionPanelActions } from "./use-extension-panel-actions";
@@ -37,7 +37,8 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const agentsQuery = useAgents(projectId);
   const agents = projectId && agentsQuery.isSuccess ? agentsQuery.data : undefined;
   const setAutomationEnabled = useSetExtensionAutomationEnabled(projectId);
-  const [filters, setFilters] = useState(defaultExtensionFilters);
+  const actions = useExtensionPanelActions(projectId, extensionsQuery.data?.upgradeConcurrency);
+  const { filters, setFilters } = actions;
   const returnFocus = useRef<{ id: string; left: boolean } | undefined>(undefined);
   const focusTargets = useRef(new Map<string, HTMLElement>());
   // React Activity disconnects effects while a cached page is hidden. Its cleanup
@@ -62,7 +63,6 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
       resource: { type: "extension", extensionId: "pstdio", id, label: displayName },
     });
   };
-  const actions = useExtensionPanelActions(projectId, extensionsQuery.data?.upgradeConcurrency);
   useEffect(() => {
     // Workbench can retain separate list/detail panels. The list owns its return target
     // until it has actually left the screen; a render on the way out must not consume it.
@@ -84,11 +84,11 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         extensionsQuery.data.extensions.find((extension) => extension.installName === catalogName)?.id);
     const target =
       focusTargets.current.get(installedId ? `installed:${installedId}` : requested.id) ??
-      focusTargets.current.get("search");
+      document.getElementById(`extension-search-${settingsInput.instance.instanceId}`);
     if (!target?.getClientRects().length) return;
     target.focus();
     if (target.ownerDocument.activeElement === target) returnFocus.current = undefined;
-  }, [selection, settingsInput.visible, actions.installedIds, extensionsQuery.data]);
+  }, [selection, settingsInput.visible, actions.installedIds, extensionsQuery.data, settingsInput.instance.instanceId]);
   const registerFocusTarget = (id: string, node: HTMLElement | null) => {
     if (node) focusTargets.current.set(id, node);
     else focusTargets.current.delete(id);
@@ -176,6 +176,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
       {replacementDialog}
       <ExtensionsPanelView
         projectId={projectId}
+        header={null}
         filters={filters}
         onFiltersChange={setFilters}
         rowRef={registerFocusTarget}

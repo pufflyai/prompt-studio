@@ -16,24 +16,39 @@ export const LogoLoader = (props: LogoLoaderProps) => {
   useEffect(() => {
     const element = path.current;
     if (!element) return;
-    // Reduced motion shows the still mark instead of the tumbling ring.
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      pose(element, logoAtRest);
-      return;
-    }
-    // Write the path directly each frame so the animation never re-renders React.
-    const start = performance.now();
-    let request = 0;
-    const tick = (now: number) => {
-      pose(element, logoLoaderFrameAt((now - start) / 1000));
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let request: number | undefined;
+    const stop = () => {
+      if (request === undefined) return;
+      cancelAnimationFrame(request);
+      request = undefined;
+    };
+    const syncMotion = () => {
+      if (preference.matches) {
+        stop();
+        pose(element, logoAtRest);
+        return;
+      }
+      if (request !== undefined) return;
+
+      // Write the path directly each frame so the animation never re-renders React.
+      const start = performance.now();
+      const tick = (now: number) => {
+        pose(element, logoLoaderFrameAt((now - start) / 1000));
+        request = requestAnimationFrame(tick);
+      };
       request = requestAnimationFrame(tick);
     };
-    request = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(request);
+    preference.addEventListener("change", syncMotion);
+    syncMotion();
+    return () => {
+      preference.removeEventListener("change", syncMotion);
+      stop();
+    };
   }, []);
   return (
     <chakra.svg viewBox="0 0 26 26" overflow="visible" aria-hidden="true" boxSize={boxSize} color={color} {...rest}>
-      <path ref={path} d={logoPath(logoLoaderFrameAt(0))} fill="currentColor" fillRule="evenodd" />
+      <path ref={path} d={logoPath(logoAtRest)} fill="currentColor" fillRule="evenodd" />
     </chakra.svg>
   );
 };

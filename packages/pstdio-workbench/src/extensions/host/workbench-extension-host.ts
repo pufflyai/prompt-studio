@@ -20,6 +20,7 @@ import { localizeParamSchema } from "../contributions/param-schema-localization"
 import { registerWorkbenchExtensionTerminalRenderers } from "../contributions/terminal-renderer-contributions";
 import { registerWorkbenchExtensionTreeRenderers } from "../contributions/tree-renderer-contributions";
 import { registerResourceKinds } from "./resource-kind-contributions";
+import { registerResourcePageMenus } from "./resource-page-menus";
 import {
   createExtensionSlot,
   executeWorkbenchExtensionCommand,
@@ -278,6 +279,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     disposables.push(...registerStatusBarItems(input));
     disposables.push(...registerResourceKinds(input));
     disposables.push(...registerModes(input));
+    disposables.push(...registerResourcePageMenus(input));
     disposables.push(...registerModePlacements(input));
     disposables.push(...registerPages(input));
     terminals.commit();

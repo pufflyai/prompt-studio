@@ -19,12 +19,14 @@ export type ConnectionRequestAudit = ConnectionKey & {
   responseBytes: number;
 };
 
+export type ConnectionCleanupContext = { operation: string; secretRef?: string } & Partial<ConnectionKey>;
+
 export type ExtensionConnectionServiceDeps = {
   connectionsDBService: ReturnType<typeof createExtensionConnectionsDBService>;
   secretStore: ConnectionSecretStore;
   getContribution: (input: ConnectionKey) => Promise<ExtensionConnectionContribution | null | undefined>;
-  isExtensionInstalled?: (projectId: string, extensionId: string) => Promise<boolean>;
-  onCleanupError?: (error: unknown, context: { operation: string; secretRef?: string }) => void;
+  isExtensionInstalled?: (projectId: string | null, extensionId: string) => Promise<boolean>;
+  onCleanupError?: (error: unknown, context: ConnectionCleanupContext) => void;
   fetch?: typeof fetch;
   onRequestComplete?: (audit: ConnectionRequestAudit) => void | Promise<void>;
 };
@@ -35,6 +37,7 @@ export type StoredConnection = NonNullable<
 
 export const toConnectionRecord = (stored: StoredConnection) => ({
   id: stored.id,
+  ...(stored.project_id === null ? { scope: "global" as const } : {}),
   extensionId: stored.extension_id,
   connectionId: stored.contribution_id,
   baseUrl: stored.base_url,
@@ -44,8 +47,8 @@ export const toConnectionRecord = (stored: StoredConnection) => ({
   updatedAt: stored.updated_at,
 });
 
-export const connectionKey = (input: ConnectionKey) => ({
-  projectId: input.projectId,
+export const connectionKey = (input: ConnectionKey, scope?: "project" | "global") => ({
+  projectId: scope === "global" ? null : input.projectId,
   extensionId: canonicalExtensionId(input.extensionId),
   contributionId: input.connectionId,
 });
