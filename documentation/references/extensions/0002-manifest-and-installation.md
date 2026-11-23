@@ -42,7 +42,9 @@ Optional fields:
 - `pstdio.scope`: install/load scope, either `user` or `repo`. Defaults to `user`.
 - `pstdio.backendRuntime`: set to `"process"` to run the backend in its own worker process instead
   of the API process. See [Process runtime](#process-runtime). Leave it out to keep the current
-  in-process behavior.
+  in-process behavior. The in-process runtime is deprecated: `pst extensions check <path>` warns
+  (`extension_in_process_runtime_deprecated`) when backend code would run in the API process, and
+  a later release makes the process runtime the only one.
 - `pstdio.processEnvironment`: names of host environment variables the extension may ask the host
   to pass to the children it starts, such as `["ANTHROPIC_API_KEY"]`. See
   [Host environment names](#host-environment-names).
