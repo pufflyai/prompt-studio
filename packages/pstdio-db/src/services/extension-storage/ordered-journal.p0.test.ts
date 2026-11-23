@@ -159,7 +159,7 @@ test("only the exact admitted decision settles a save; a late old receipt cannot
   const input = await operation();
   const request = await fingerprint({ request: "original" });
   await f.run(async (journal) => {
-    await journal.queue(input, request);
+    expect((await journal.queueWithStatus(input, request)).enqueued).toBe(true);
     const admission = { epoch: "new", operation: input, dependencies: [] };
     await journal.admit(admission);
     await journal.recordDecision(decision(input.fingerprint, "old"), "old-wrapper");
@@ -172,7 +172,10 @@ test("only the exact admitted decision settles a save; a late old receipt cannot
     expect(await journal.outcome(input.operationId)).toEqual(exact);
     expect(await journal.localOperation(input.operationId)).toBeUndefined();
     expect(await journal.requestIdentity(input.operationId)).toBe(request);
-    expect((await journal.queue(input, request)).operation).toEqual(input);
+    expect(await journal.queueWithStatus(input, request)).toMatchObject({
+      enqueued: false,
+      save: { operation: input },
+    });
     expect(await journal.cachedDecision(input.operationId, "old")).toEqual(decision(input.fingerprint, "old"));
   });
 });

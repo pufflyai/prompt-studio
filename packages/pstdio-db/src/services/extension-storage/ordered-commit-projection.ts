@@ -19,12 +19,13 @@ export const publishCommittedOrderedGroup = async (input: {
   projected: OrderedRecord[];
   before: ReadonlyMap<string, OrderedRecord>;
   localOwner?: OrderedLocalSettlement["ownerState"];
-  queued: OrderedLocalSettlement["queued"];
+  queued: Awaited<ReturnType<OrderedJournal["queueWithStatus"]>>;
 }) => {
   const { journal, tx, owner, operation, projected, localOwner, queued } = input;
+  const local = localOwner && queued.enqueued ? { ownerState: localOwner, queued: queued.save } : undefined;
   // A base over this device's own pending saves projects optimistically like an independent save.
   if (
-    localOwner ||
+    local ||
     owner.extensionId === coreOwnerId ||
     operationDependencies(operation, { base: false }).size > 0 ||
     !(await canAppendOrderedProjection(tx, owner))
@@ -34,7 +35,7 @@ export const publishCommittedOrderedGroup = async (input: {
       tx,
       owner,
       operation.edits.map((edit) => edit.recordId),
-      localOwner && { ownerState: localOwner, queued },
+      local,
     );
   const shared = await publishOrderedSharedProjection(input);
   return {

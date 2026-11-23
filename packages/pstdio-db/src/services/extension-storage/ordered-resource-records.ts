@@ -182,7 +182,7 @@ export const createOrderedResourceRecords = (
       await deps.assets.verifyComplete(assets);
     }
     await rememberOrderedTextGeneration(tx, owner, operation, projected.length > 0);
-    const queued = await journal.queue(operation, identity);
+    const queued = await journal.queueWithStatus(operation, identity);
     const saved = await publishCommittedOrderedGroup({
       journal,
       tx,

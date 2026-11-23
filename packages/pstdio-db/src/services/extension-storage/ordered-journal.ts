@@ -92,7 +92,8 @@ const queueOrderedOperation = async (
   input = await verifyOrderedOperation(input);
   if (await retained(input.operationId)) {
     const previous = await bindOperationIdentity(tx, owner, input.operationId, input.fingerprint, retained);
-    if (previous.request_fingerprint) return retryOrderedLocalOperation(previous, input, requestFingerprint);
+    if (previous.request_fingerprint)
+      return { save: retryOrderedLocalOperation(previous, input, requestFingerprint), enqueued: false };
   }
   if (isOrderedNativeRequest(requestFingerprint)) {
     validateOrderedNativeOperation(input);
@@ -125,13 +126,26 @@ const queueOrderedOperation = async (
         isNull(operations.settled_epoch),
       ),
     })
-    .returning();
+    .returning({
+      sequence: operations.local_sequence,
+      admission: operations.admission,
+      delivered: operations.delivered,
+    });
   if (!saved) {
     const row = (await operation(input.operationId))!;
     if (row.fingerprint !== input.fingerprint) throw identityError();
-    return retryOrderedLocalOperation(row, input, requestFingerprint);
+    return { save: retryOrderedLocalOperation(row, input, requestFingerprint), enqueued: false };
   }
-  return local(saved!)!;
+  return {
+    save: {
+      sequence: saved.sequence,
+      operation: input,
+      requestFingerprint,
+      admission: saved.admission ? decode<OrderedAdmission>(saved.admission) : null,
+      delivered: saved.delivered,
+    },
+    enqueued: true,
+  };
 };
 
 /** All calls run inside the same project/owner lock as their projection and relay cursor. */
@@ -168,14 +182,18 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
   const pendingWhere = () =>
     and(ownerWhere(operations, owner), isNotNull(operations.envelope), isNull(operations.settled_epoch));
   const dependencies = createOrderedDependencyCache(tx, owner, cachedDecision, retained);
+  const queueWithStatus = (input: OrderedOperation, requestFingerprint: string) =>
+    queueOrderedOperation(tx, owner, input, requestFingerprint, operation, retained);
   return {
     authoredOutcome: (id: string) => readOrderedSaveOutcome(tx, owner, id),
     knownDependency: dependencies.known,
     cachedDecision,
     bindIdentity: bind,
     ...createOrderedAuthorship(tx, owner, operation, retained),
-    queue: (input: OrderedOperation, requestFingerprint: string) =>
-      queueOrderedOperation(tx, owner, input, requestFingerprint, operation, retained),
+    queueWithStatus,
+    async queue(input: OrderedOperation, requestFingerprint: string) {
+      return (await queueWithStatus(input, requestFingerprint)).save;
+    },
     async pending(options: { after?: number; limit?: number } = {}) {
       const rows = await tx
         .select()
