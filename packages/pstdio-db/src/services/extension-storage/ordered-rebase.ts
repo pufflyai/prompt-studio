@@ -6,6 +6,7 @@ import {
   type OrderedOperation,
   projectOrderedNativeOperation,
 } from "pstdio-sync/records";
+import { createOrderedCanonicalBatch } from "./ordered-canonical-batch";
 import type { OrderedJournal } from "./ordered-journal";
 import { settleLocalOrderedSaves } from "./ordered-local-settlement";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
@@ -125,7 +126,11 @@ export const rebaseOrderedProjection = async (
   owner: StorageOwner,
   changed: string[],
 ) => {
-  changed = [...new Set([...changed, ...(await settleLocalOrderedSaves(journal, tx, owner))])];
+  // Number admission reads canonical SQL directly. Other owners can publish the
+  // settled author group's confirmed state in the same row write as its projection.
+  const canonical = owner.extensionId === coreOwnerId ? undefined : createOrderedCanonicalBatch(journal);
+  changed = [...new Set([...changed, ...(await settleLocalOrderedSaves(journal, tx, owner, undefined, canonical))])];
+  journal = canonical?.journal ?? journal;
   changed = [...new Set([...changed, ...(await foldOrderedSaves(journal, tx, owner, changed))])];
   const { ids, views, events, suppressed } = await projectWithOrderedNumberPolicy(
     journal,
@@ -139,7 +144,7 @@ export const rebaseOrderedProjection = async (
     owner,
     ids.filter((id) => !views.has(id)),
   );
-  const saved = await publishOrderedProjection(tx, owner, [...views.values()]);
+  const saved = await publishOrderedProjection(tx, owner, [...views.values()], canonical?.staged);
   await markOrderedNumberProjectionCurrent(tx, owner);
   return { ...saved, projected: saved.projected + removed, views, events, suppressed, recordIds: ids };
 };

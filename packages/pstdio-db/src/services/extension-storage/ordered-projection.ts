@@ -3,7 +3,6 @@ import type { StorageOwner } from "pstdio-sync";
 import type { OrderedRecord } from "pstdio-sync/records";
 import { assertStorageLimits } from "pstdio-sync-contracts";
 import { records as current, owners as projections } from "../../db/schemas.pg";
-import { jsonBatches } from "./json-batches";
 import { projectOrderedNativeAssets } from "./ordered-native-assets";
 import { refreshOrderedNativeVersions } from "./ordered-native-versions";
 import { noteRecordPublication, orderedProjectionFacets } from "./ordered-record-publication";
@@ -22,13 +21,16 @@ export const publishOrderedProjection = async (
   tx: OrderedTransaction,
   owner: StorageOwner,
   records: OrderedRecord[],
+  confirmed?: ReadonlyMap<string, OrderedRecord>,
 ) => {
   if (!records.length) return { records: [], projected: 0 };
-  const facets = await orderedProjectionFacets(tx, owner, records);
+  const facets = await orderedProjectionFacets(tx, owner, records, confirmed);
   const previous = await tx
     .select({
       recordId: current.record_id,
       deleted: current.deleted,
+      revision: current.revision,
+      lifetime: current.record_lifetime,
       nativeSources: current.native_sources,
       retained: sql<boolean>`${current.meta}->>'retained'='1'`,
     })
@@ -58,29 +60,7 @@ export const publishOrderedProjection = async (
       sum + Number(!record.deleted) - Number(before.has(record.recordId) && !before.get(record.recordId)!.deleted),
     0,
   );
-  const projected = await writeProjectedRecords(tx, owner, materialized);
-  for (const batch of jsonBatches(
-    records.map((record) => {
-      const facet = facets.get(record.recordId)!;
-      return {
-        record_id: record.recordId,
-        meta: facet.meta,
-        base: facet.base === null ? null : Buffer.from(facet.base).toString("hex"),
-        deleted: record.deleted,
-        value: facet.value,
-        asset: facet.asset,
-        shared: facet.shared,
-        native_sources: facet.native_sources,
-      };
-    }),
-  ))
-    await tx.execute(sql`UPDATE records target SET meta=input.meta,base=decode(input.base,'hex'),
-    value=CASE WHEN input.deleted THEN input.value ELSE target.value END,
-    asset=CASE WHEN input.deleted THEN input.asset ELSE target.asset END,
-    shared=CASE WHEN input.deleted THEN input.shared ELSE target.shared END,
-    native_sources=CASE WHEN input.deleted THEN input.native_sources ELSE target.native_sources END
-    FROM jsonb_to_recordset(${batch}::jsonb) AS input(record_id text,meta jsonb,base text,deleted boolean,value jsonb,asset jsonb,shared jsonb,native_sources jsonb)
-    WHERE target.owner_id=(SELECT id FROM owners WHERE project_id=${owner.workbenchId} AND extension_id=${owner.extensionId}) AND target.record_id=input.record_id`);
+  const projected = await writeProjectedRecords(tx, owner, materialized, { facets, previous: before });
   const retained = previous.filter((row) => row.retained).map((row) => row.recordId);
   const pages = createRetainedPages(tx, owner, "tombstones");
   for (const { recordId } of records) if (!before.has(recordId) && (await pages.has(recordId))) retained.push(recordId);

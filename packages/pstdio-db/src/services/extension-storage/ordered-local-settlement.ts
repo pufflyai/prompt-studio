@@ -1,7 +1,8 @@
 import type { StorageOwner } from "pstdio-sync";
-import { applyOrderedNativeOperation, operationDependencies } from "pstdio-sync/records";
+import { applyOrderedNativeOperation, type OrderedOperation, operationDependencies } from "pstdio-sync/records";
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import { owners } from "../../db/schemas.pg";
+import type { createOrderedCanonicalBatch } from "./ordered-canonical-batch";
 import type { OrderedJournal } from "./ordered-journal";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
 import { applyOrderedNumberPolicy } from "./ordered-number-admission";
@@ -10,12 +11,27 @@ import { applyBoundedOrderedOperation } from "./ordered-policy";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
 
+type CanonicalBatch = ReturnType<typeof createOrderedCanonicalBatch>;
+
+const settlementJournal = async (
+  journal: OrderedJournal,
+  batch: CanonicalBatch | undefined,
+  operation: OrderedOperation,
+  native: boolean,
+) => {
+  if (!batch) return journal;
+  if (!native && !operation.edits.some((edit) => edit.texts?.length)) return batch.journal;
+  await batch.flush();
+  return journal;
+};
+
 /** Never-joined devices own their order. Joining Cloud permanently ends local settlement. */
 export const settleLocalOrderedSaves = async (
   journal: OrderedJournal,
   tx: OrderedTransaction,
   owner: StorageOwner,
   selected?: Awaited<ReturnType<OrderedJournal["pending"]>>,
+  canonical?: CanonicalBatch,
 ) => {
   const row = await readOrderedOwner(tx, owner);
   if (await orderedOwnerJoinedCloud(row)) return [];
@@ -34,10 +50,12 @@ export const settleLocalOrderedSaves = async (
     // A foreign editor source can carry an unknown Cloud parent; local authority cannot decide it.
     if (dependencies.length !== operationDependencies(operation).size) continue;
     const ids = operation.edits.map((edit) => edit.recordId);
-    const before = await journal.canonical(ids);
-    if (isOrderedNativeRequest(requestFingerprint)) {
+    const native = isOrderedNativeRequest(requestFingerprint);
+    const writes = await settlementJournal(journal, canonical, operation, native);
+    const before = await writes.canonical(ids);
+    if (native) {
       const result = await applyOrderedNativeOperation(before, operation, epoch, decisions);
-      await journal.saveCanonical(result.records);
+      await writes.saveCanonical(result.records);
       await journal.completeNative(operation, result.state);
     } else {
       const admission = { epoch, operation, dependencies };
@@ -50,7 +68,7 @@ export const settleLocalOrderedSaves = async (
         await applyBoundedOrderedOperation(before, operation, epoch, undefined, decisions),
         false,
       );
-      await journal.saveCanonical(result.records);
+      await writes.saveCanonical(result.records);
       await journal.recordDecision(result.decision, await fingerprint(admission as unknown as Json));
       await journal.dropSettledEnvelope(operation.operationId);
       for (const record of result.records) changed.add(record.recordId);

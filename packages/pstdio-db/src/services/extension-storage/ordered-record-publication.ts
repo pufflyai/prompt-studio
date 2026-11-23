@@ -73,7 +73,12 @@ export const finishOrderedRecordWrites = async (tx: OrderedTransaction, owner: S
 };
 
 /** Capture a confirmed base before replacing any query body with an optimistic overlay. */
-export const orderedProjectionFacets = async (tx: OrderedTransaction, owner: StorageOwner, input: OrderedRecord[]) => {
+export const orderedProjectionFacets = async (
+  tx: OrderedTransaction,
+  owner: StorageOwner,
+  input: OrderedRecord[],
+  confirmed?: ReadonlyMap<string, OrderedRecord>,
+) => {
   const facets = new Map<string, ReturnType<typeof stableRecordColumns> & { base: Uint8Array | null }>();
   for (let offset = 0; offset < input.length; offset += 100) {
     const page = input.slice(offset, offset + 100),
@@ -87,31 +92,26 @@ export const orderedProjectionFacets = async (tx: OrderedTransaction, owner: Sto
           sql`, `,
         )}]::text[]`);
     const pending = new Set(touched.rows.map((row) => row.record_id));
-    const rows = pending.size
+    const storedIds = ids.filter((id) => pending.has(id) && !confirmed?.has(id));
+    const rows = storedIds.length
       ? await tx
           .select()
           .from(records)
-          .where(
-            and(
-              orderedOwnerWhere(records, owner),
-              inArray(
-                records.record_id,
-                ids.filter((id) => pending.has(id)),
-              ),
-            ),
-          )
+          .where(and(orderedOwnerWhere(records, owner), inArray(records.record_id, storedIds)))
       : [];
     const before = new Map(rows.map((row) => [row.record_id, row]));
     for (const record of page) {
       const row = before.get(record.recordId);
+      const staged = confirmed?.get(record.recordId);
       facets.set(record.recordId, {
         ...stableRecordColumns(record),
         base: pending.has(record.recordId)
           ? (row?.base ??
             confirmedRecordBase(
-              row
-                ? await readCanonicalRecord(tx, owner, row)
-                : (await readRetainedRecord(tx, owner, record.recordId))?.record,
+              staged ??
+                (row
+                  ? await readCanonicalRecord(tx, owner, row)
+                  : (await readRetainedRecord(tx, owner, record.recordId))?.record),
             ))
           : null,
       });
