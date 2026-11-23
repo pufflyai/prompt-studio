@@ -37,6 +37,17 @@ const insertAutomationRun = (
     created_at: stamp,
   });
 
+test("identity migration leaves projects without legacy data free of migration documents and owners", async () => {
+  const { db, close } = await setup();
+  try {
+    await migrateExtensionIdentities(db);
+    expect(await db.select().from(s.documents)).toEqual([]);
+    expect(await db.select().from(s.owners)).toEqual([]);
+  } finally {
+    await close();
+  }
+});
+
 test("migration retains complete owner history, immutable bytes, sequence positions and source/instance IDs", async () => {
   const { db, close, now } = await setup();
   try {
@@ -296,13 +307,11 @@ test.each(
   const planner = "pstdio.pstdio-planner";
   const details = { type: "ticket", id: "target", metadata: { text: planner } };
   try {
-    if (marked) await migrateExtensionIdentities(db);
-    else
-      await seedDocumentHistory(db, {
-        owner_id: await ensureStorageOwner(db, { workbenchId: "project", extensionId: old }),
-        document_id: "other-owner",
-        state: new Uint8Array([17]),
-      });
+    await seedDocumentHistory(db, {
+      owner_id: await ensureStorageOwner(db, { workbenchId: "project", extensionId: marked ? "pstdio" : old }),
+      document_id: marked ? '["host-local-migration","first-party-identities-v1"]' : "other-owner",
+      state: marked ? new Uint8Array([0, 0]) : new Uint8Array([17]),
+    });
     await db.insert(s.resource_links).values({
       source_owner: await ensureStorageOwner(db, {
         workbenchId: "project",

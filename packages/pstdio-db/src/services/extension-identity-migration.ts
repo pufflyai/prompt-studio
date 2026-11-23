@@ -4,19 +4,15 @@ import {
   type ExtensionIdentityRename,
   extensionIdentityRenames,
 } from "pstdio-api-contracts/extension-host";
-import * as Y from "yjs";
 import type { DbClient } from "../db/connection.pglite";
 import * as s from "../db/schemas.pg";
 import { unadmittedExtensionProjects, unadmittedStorageOwners } from "../db/storage-admission";
 import { availableIdentityProject, mergeTextOwnerHistories, textOnlyOwnerSql } from "./extension-identity-storage";
-import { ensureFileDocument, saveFileDocumentState } from "./extension-storage/document-file-persistence";
-import { documentFilesFor } from "./extension-storage/document-files";
 import { indexNodeFilesFor } from "./extension-storage/index-node-files";
 
 const otherTables = [s.owners, s.board_views, s.preferences, s.credentials, s.resource_prefixes, s.resource_numbers];
 const ownerColumn = sql.identifier("extension_id");
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
-const markerId = '["host-local-migration","first-party-identities-v1"]';
 
 export class ExtensionIdentityConflictError extends Error {
   readonly code = "extension_identity_conflict";
@@ -97,9 +93,6 @@ export const migrateExtensionIdentities = async (
       [`${from.publisher}.${from.name}`, `${to.publisher}.${to.name}`].includes(options.extensionId),
   );
   if (!renames.length) return false;
-  const projects = await db.execute(sql`SELECT id FROM ${s.projects} p WHERE NOT EXISTS
-    (SELECT 1 FROM ${s.documents} d JOIN owners o ON d.owner_id=o.id WHERE o.project_id = p.id AND o.extension_id = 'pstdio' AND d.key = ${markerId})`);
-  const pending = projects.rows.map((row) => String(row.id));
   const oldIds = renames.map(({ from }) => `${from.publisher}.${from.name}`);
   const blocked = unadmittedStorageOwners(db).flatMap((owner) =>
     oldIds
@@ -145,13 +138,11 @@ export const migrateExtensionIdentities = async (
   const gated = await db.execute(sql`SELECT extension_id FROM ${s.installed_extension_sources}
     WHERE last_error_json->>'code' = 'extension_identity_conflict'`);
   const gatedOwners = new Set(gated.rows.map((row) => String(row.extension_id)));
-  let conflicted = false;
   let renamed = false;
   for (const { from: previous, to: canonical } of renames) {
     const from = `${previous.publisher}.${previous.name}`;
     const to = `${canonical.publisher}.${canonical.name}`;
     const excluded = unadmittedExtensionProjects(db, from);
-    if (excluded.length) conflicted = true;
     if (!presentOwners.has(from) && !gatedOwners.has(from) && !gatedOwners.has(to)) continue;
     try {
       if (!renamed) await options.beforeChange?.();
@@ -187,26 +178,8 @@ export const migrateExtensionIdentities = async (
       await options.onRenamed?.({ from, to });
     } catch (error) {
       if (!(error instanceof ExtensionIdentityConflictError) || !options.onConflict) throw error;
-      conflicted = true;
       await options.onConflict(error);
     }
-  }
-  if (!conflicted && !options.extensionId && pending.length) {
-    // This device-local marker never enters the owner's encrypted directory or another computer's migration state.
-    const document = new Y.Doc();
-    document.getMap("data-migrations").set("first-party-identities", 1);
-    const state = Y.encodeStateAsUpdate(document);
-    document.destroy();
-    for (const workbenchId of pending)
-      await db.transaction(async (tx) => {
-        const owner = { workbenchId, extensionId: "pstdio" };
-        const { initialize } = await ensureFileDocument(tx, documentFilesFor(tx), {
-          owner,
-          key: markerId,
-          kind: "local",
-        });
-        if (initialize) await saveFileDocumentState(tx, owner, markerId, state);
-      });
   }
   await moveRenamedIndexNodes(db, renames);
   return renamed;

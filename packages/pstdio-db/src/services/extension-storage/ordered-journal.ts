@@ -20,7 +20,7 @@ import { createOrderedCanonical } from "./ordered-canonical";
 import { createOrderedDependencyCache } from "./ordered-dependency-cache";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
 import { fenceOrderedNativeText, forgetOrderedTextGeneration } from "./ordered-native-recovery";
-import { operationIndexedAt, operationReceipt, operationReceiptsIndexed } from "./ordered-receipt-values";
+import { recordOperationReceipt } from "./ordered-receipt-values";
 import { createOrderedReceiptCache } from "./ordered-receipts-cache";
 import { finishOrderedRecordWrites } from "./ordered-record-publication";
 import { readOrderedSaveOutcome } from "./ordered-save-outcome";
@@ -236,43 +236,20 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
       if (isOrderedNativeRequest(row.request_fingerprint)) throw identityError();
       if (row.admission_epoch === decision.epoch && row.admission_fingerprint !== admissionFingerprint)
         throw new Error("The decision does not match the admitted identity");
-      const retained = operationReceipt(row.receipt, decision.epoch);
-      if (retained && (retained.state !== decision.state || retained.admissionFingerprint !== admissionFingerprint))
-        throw new Error("An ordered decision is immutable");
-      const receipt = Object.fromEntries([
-        ...Object.entries(row.receipt),
-        [
-          decision.epoch,
-          {
-            state: decision.state,
-            admissionFingerprint,
-            indexed: !!retained?.indexed || !!options.indexed,
-            ...(retained?.indexedAt || options.indexed
-              ? { indexedAt: retained?.indexedAt ?? new Date().toISOString() }
-              : {}),
-          },
-        ],
-      ]);
+      const receipt = recordOperationReceipt(row.receipt, decision, admissionFingerprint, options.indexed);
+      // Historical decisions remain queryable but never settle a wrapper admitted in another epoch.
+      const envelope = row.admission_epoch === decision.epoch && !row.settled_epoch ? row.envelope : null;
+      if (envelope && decision.state === "refused")
+        await fenceOrderedNativeText(tx, owner, decode<OrderedOperation>(envelope));
       await tx
         .update(operations)
         .set({
-          receipt,
-          receipt_epoch: decision.epoch,
-          receipt_indexed: operationReceiptsIndexed(receipt),
-          indexed_at: operationIndexedAt(receipt),
+          ...receipt,
+          ...(envelope ? { settled_epoch: decision.epoch, touches: [], envelope: null, admission: null } : {}),
         })
         .where(operationWhere(decision.operationId));
       await dependencies.remember(decision);
-      // Historical decisions remain queryable but never settle a wrapper admitted in another epoch.
-      if (row.envelope && row.admission_epoch === decision.epoch && !row.settled_epoch) {
-        if (decision.state === "refused")
-          await fenceOrderedNativeText(tx, owner, decode<OrderedOperation>(row.envelope));
-        await tx
-          .update(operations)
-          .set({ settled_epoch: decision.epoch, touches: [], envelope: null, admission: null })
-          .where(operationWhere(decision.operationId));
-        await forgetOrderedTextGeneration(tx, owner, decision.operationId);
-      }
+      if (envelope) await forgetOrderedTextGeneration(tx, owner, decision.operationId);
     },
     async outcome(id: string) {
       const row = await operation(id);

@@ -1,3 +1,4 @@
+import type { OrderedDecision } from "pstdio-sync/records";
 import type { OperationReceipts } from "../../db/schemas/storage-ordered-records";
 
 export const operationReceipt = (receipts: OperationReceipts, epoch: string) =>
@@ -12,4 +13,31 @@ export const operationIndexedAt = (receipts: OperationReceipts) => {
   const times = values.map((receipt) => Date.parse(receipt.indexedAt!));
   if (times.some((time) => !Number.isFinite(time))) throw new Error("Invalid receipt coverage time");
   return new Date(Math.max(...times)).toISOString();
+};
+
+export const recordOperationReceipt = (
+  previous: OperationReceipts,
+  { epoch, state }: OrderedDecision,
+  admissionFingerprint: string,
+  indexed = false,
+) => {
+  const retained = operationReceipt(previous, epoch);
+  if (retained && (retained.state !== state || retained.admissionFingerprint !== admissionFingerprint))
+    throw new Error("An ordered decision is immutable");
+  const indexedAt = retained?.indexedAt || indexed ? (retained?.indexedAt ?? new Date().toISOString()) : undefined;
+  const receipt = {
+    ...previous,
+    [epoch]: {
+      state,
+      admissionFingerprint,
+      indexed: !!retained?.indexed || !!indexed,
+      ...(indexedAt === undefined ? {} : { indexedAt }),
+    },
+  };
+  return {
+    receipt,
+    receipt_epoch: epoch,
+    receipt_indexed: operationReceiptsIndexed(receipt),
+    indexed_at: operationIndexedAt(receipt),
+  };
 };
