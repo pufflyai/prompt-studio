@@ -143,6 +143,48 @@ fails with `target_file_unsupported`; the host never reads a local file instead.
 belong to the calling project. It reads with the same access as other extension file APIs and is
 not a sandbox.
 
+## Host diagnostics
+
+On `main`, after 0.48.0 (extension API 0.5.1), `ctx.diagnostics.capture(input)` profiles the
+Prompt Studio API process, which runs the host's routes and services. It also collects the
+[runtime operations](0027-performance-diagnostics.md#backend-operation-instrumentation) the host
+publishes during the capture, such as database queries. Extension backends run in their own
+[workers](0002-manifest-and-installation.md#process-runtime), so profiling inside a handler, or
+subscribing to the operation channel there, sees only that worker. Publish the supporting host and
+SDK before a separately released extension adopts it.
+
+```ts
+const { summary, data } = await ctx.diagnostics.capture({ kind: "cpu", durationMs: 15_000, signal: ctx.signal });
+
+await ctx.diagnostics.capture({
+  kind: "armed",
+  durationMs: 60 * 60_000,
+  cpuPercent: 60,
+  checkpoint: (data) => ctx.extensionFiles.writeText("spike.json", JSON.stringify(data)),
+});
+```
+
+| `kind` | Records | Limit |
+| --- | --- | --- |
+| `cpu` | A V8 CPU profile in `data.profile`. `summary.unit` is `samples`. | `durationMs` up to 60,000 |
+| `coverage` | Function-call counts in `data.coverage`. `summary.unit` is `calls`. | `durationMs` up to 60,000 |
+| `armed` | Samples host CPU every 2 seconds while profiling in windows of about 30 seconds. It stops when one sample reaches `cpuPercent` (a percentage of one core, up to 10,000) or when `durationMs` passes. `data.profiles` keeps the latest two windows. | `durationMs` up to 24 hours |
+
+- `summary` lists the 20 most frequent functions with memory before and after. `data` holds the
+  complete evidence, the host pid and the operation trace: the latest 60 seconds, at most 1,000
+  events and 512 KiB, with `dropped` counting the rest.
+- `checkpoint(data)` runs after each armed window and at the end, so evidence survives a host that
+  stops mid-capture. One write runs at a time; a newer checkpoint replaces one still waiting, and
+  `data.skippedCheckpoints` counts them. A rejected checkpoint fails the capture.
+- Aborting `signal`, cancelling the invocation, or the invocation ending stops the profiler and
+  rejects with the abort reason.
+- One capture runs per host at a time. Another rejects with `diagnostics_busy`. Invalid input or a
+  duration above the limit rejects with `diagnostics_invalid_input`.
+- Only first-party extensions may capture: an id with the `pstdio.` publisher that is listed in
+  the packaged extension catalog, including a local checkout of one. Others reject with
+  `diagnostics_forbidden`. Profiles contain host source paths, call stacks and runtime
+  identifiers, so keep them in extension-owned local storage.
+
 ## Host environment values
 
 A child started with `ctx.process` gets a small set of runtime variables, such as `PATH` and
@@ -866,4 +908,4 @@ Installation continues in the background and survives a runtime restart. Selecti
 
 The call takes no project argument. Older hosts omit `ctx.extensions`; extensions that need it declare API `^0.3.1`.
 
-*Updated at: 2026-11-12*
+*Updated at: 2026-11-23*
