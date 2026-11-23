@@ -326,7 +326,7 @@ const buildApp = async (
     sessions.connectQueueDrain();
     sessions.connectIdleTurn((sessionId) => deliverIdleFollowUp(deps, sessionId));
 
-    const close = await startAppLifecycle({
+    const { close, startupSettled } = await startAppLifecycle({
       deps,
       closeSessionHooks: sessions.closeHooks,
       notificationWakeTimer,
@@ -342,7 +342,7 @@ const buildApp = async (
     });
     const connected = await account.connectAccountRelay({ app, close, deps, eventBus });
     stopDeadRowCleanup = startAppDeadRowCleanup(database, requestQuietPeriod.isQuiet);
-    return { ...connected, extensionsReady: extensionStartup };
+    return { ...connected, extensionsReady: extensionStartup, startupSettled };
   } catch (error) {
     // createApp closes the database on a failed startup; the cleanup must not outlive it.
     await stopDeadRowCleanup();
