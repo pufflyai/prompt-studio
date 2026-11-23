@@ -122,12 +122,19 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
     title: "Danger zone",
     body: {
       kind: "react",
-      render: (input) => (
-        <ProjectDangerZone
-          projectId={getDashboardSelectedProjectId(ctx)}
-          onDeleted={() => void input.workbench.commands.executeCommand(dashboardCommandIds.clearSelectedProject)}
-        />
-      ),
+      render: (input) => {
+        const projectId = getDashboardSelectedProjectId(ctx);
+        return (
+          <ProjectDangerZone
+            key={projectId}
+            projectId={projectId}
+            onDeleted={() => {
+              if (projectId === getDashboardSelectedProjectId(ctx))
+                void input.workbench.commands.executeCommand(dashboardCommandIds.clearSelectedProject);
+            }}
+          />
+        );
+      },
     },
   });
 

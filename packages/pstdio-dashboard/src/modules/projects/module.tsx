@@ -11,6 +11,7 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { CreateProjectWidget } from "./components/create-project-widget";
 import { ProjectFolderWidget } from "./components/project-folder-widget";
 import { ProjectPickerWidget } from "./components/project-picker-widget";
+import { getLocalProjectDeletion } from "./data/local-project-deletion";
 import { createDashboardProjects } from "./data/project-data";
 import { registerProjectOpening } from "./project-opening";
 import {
@@ -134,7 +135,9 @@ const registerProjects = (ctx: WorkbenchModuleContext) => {
     kind: "project",
     list: (query) => {
       const normalizedQuery = query.trim().toLowerCase();
+      const deletion = getLocalProjectDeletion();
       const projects = createDashboardProjects().filter((project) => {
+        if (deletion.hidden(project.id)) return false;
         if (!normalizedQuery) return true;
         return (
           project.name.toLowerCase().includes(normalizedQuery) ||
@@ -171,6 +174,7 @@ const registerProjectCommands = (
     },
     {
       async execute(selection) {
+        if (selection.project?.id && getLocalProjectDeletion().hidden(selection.project.id)) return;
         if (
           selection.project?.id &&
           (await openCloudChoice(selection.project.id, selection.cloudCopyChoice, selection.project.name))
