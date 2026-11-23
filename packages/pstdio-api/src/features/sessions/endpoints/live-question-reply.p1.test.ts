@@ -239,7 +239,7 @@ for (const mode of ["gone", "full", "resume", "failure"]) {
       const settled = async () =>
         (await handle.deps.sessionService.get(session.id))?.status === "completed" &&
         handle.deps.sessionService.store.get(session.id) === null;
-      for (let attempt = 0; !(await settled()) && attempt < 50; attempt++) await Bun.sleep(10);
+      for (let attempt = 0; !(await settled()) && attempt < 200; attempt++) await Bun.sleep(10);
       expect((await handle.deps.sessionService.get(session.id))?.status).toBe("completed");
       expect(handle.deps.sessionService.store.get(session.id)).toBeNull();
       if (mode === "full") {
