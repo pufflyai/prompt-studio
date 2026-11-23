@@ -1,0 +1,132 @@
+name: Hosted release gate recovery
+on:
+  push:
+    branches: [diagnostics/release-gate-recovery]
+    paths: [.github/workflows/release-gate-recovery.yml]
+permissions:
+  contents: read
+jobs:
+  release-gates:
+    runs-on: ubuntu-24.04
+    env:
+      SOURCE_SHA: 3d9a9bca4596e9257e21c06345d05aff48b2cb6f
+      NX_DAEMON: "false"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - name: Identify the candidate and published baselines
+        id: identity
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/release-gates"
+          mkdir -p "$evidence"
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          df -h . "$RUNNER_TEMP" | tee "$evidence/disk-before.txt"
+          stable=$(gh release view --json tagName --jq .tagName)
+          nightly=$(gh release list --limit 100 --json tagName,isPrerelease,isDraft,publishedAt |
+            jq -er '[.[] | select(.isPrerelease and (.isDraft | not) and (.tagName | test("^pstdio@[0-9]+\\.[0-9]+\\.[0-9]+-nightly\\.[0-9]+$")))] | max_by(.publishedAt).tagName')
+          [[ "$stable" =~ ^pstdio@[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$nightly" =~ ^pstdio@[0-9]+\.[0-9]+\.[0-9]+-nightly\.[0-9]+$ ]]
+          jq -cn --arg source "$SOURCE_SHA" --arg stable "$stable" --arg nightly "$nightly" \
+            '{source:$source,stable:$stable,nightly:$nightly}' | tee "$evidence/identity.json"
+          echo "stable=$stable" >> "$GITHUB_OUTPUT"
+          echo "nightly=$nightly" >> "$GITHUB_OUTPUT"
+      - name: Install the frozen dependencies with the release build setup
+        id: install
+        shell: bash
+        run: |
+          set -euo pipefail
+          bun scripts/ci/install-native-dependencies.ts 2>&1 | tee "$RUNNER_TEMP/release-gates/install.log"
+      - name: Check Changesets status
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          bunx changeset status 2>&1 | tee "$RUNNER_TEMP/release-gates/changesets.log"
+      - name: Check Biome errors
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          bunx biome check --diagnostic-level=error . 2>&1 | tee "$RUNNER_TEMP/release-gates/biome.log"
+      - name: Compile one candidate with its exact extension source
+        id: build
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        shell: bash
+        env:
+          PSTDIO_EXTENSION_RELEASE_REF: ${{ env.SOURCE_SHA }}
+        run: |
+          set -euo pipefail
+          bun run build -- --scope pstdio --include-dependencies 2>&1 | tee "$RUNNER_TEMP/release-gates/build.log"
+          test -x dist/pstdio
+          sha256sum dist/pstdio | tee "$RUNNER_TEMP/release-gates/candidate.sha256"
+      - name: Provision Chromium for the upgraded workbench
+        id: chromium
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        shell: bash
+        working-directory: packages/e2e
+        run: |
+          set -euo pipefail
+          bun x --no-install playwright install chromium --with-deps --no-shell 2>&1 |
+            tee "$RUNNER_TEMP/release-gates/chromium.log"
+      - name: Verify active and aged projects from both published releases
+        if: ${{ !cancelled() && steps.chromium.outcome == 'success' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STABLE_TAG: ${{ steps.identity.outputs.stable }}
+          NIGHTLY_TAG: ${{ steps.identity.outputs.nightly }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          evidence="$RUNNER_TEMP/release-gates"
+          read -r digest _ < "$evidence/candidate.sha256"
+          status=0
+          for channel in stable nightly; do
+            tag="$STABLE_TAG"
+            if [[ "$channel" == nightly ]]; then tag="$NIGHTLY_TAG"; fi
+            test -n "$tag"
+            if ! bun --no-env-file packages/e2e/src/packaged/project-upgrade.ts \
+              --from "$tag" --candidate dist/pstdio --candidate-ref "$SOURCE_SHA" \
+              --evidence "$evidence/$channel" 2>&1 | tee "$evidence/$channel.log"; then
+              status=1
+            fi
+            runs=("$evidence/$channel"/run-*)
+            if [[ "${#runs[@]}" != 1 ]]; then
+              echo "::error::$channel did not produce exactly one upgrade evidence directory"
+              status=1
+              continue
+            fi
+            for profile in active aged; do
+              if jq -e '.status == "passed"' "${runs[0]}/$profile/result.json" &&
+                jq -e --arg source "$SOURCE_SHA" --arg tag "$tag" --arg profile "$profile" --arg digest "$digest" \
+                  '.candidateRef == $source and .from == $tag and .profile == $profile and .candidateDigest == $digest' \
+                  "${runs[0]}/$profile/versions.json"; then
+                echo "$channel $profile passed from $tag"
+              else
+                echo "::error::$channel $profile did not report a passing result for the exact candidate"
+                status=1
+              fi
+            done
+          done
+          df -h . "$RUNNER_TEMP" | tee "$evidence/disk-after.txt"
+          exit "$status"
+      - name: Preserve release gate logs and upgrade evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-gates-${{ env.SOURCE_SHA }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/release-gates/
+          if-no-files-found: error
