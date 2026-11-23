@@ -15,7 +15,8 @@ export const CloudProjectChoice = ({ input }: { input: WorkbenchPanelRenderInput
     scope,
     deleting,
     downloading,
-    download,
+    canDownload,
+    downloadPending,
     sync,
     refresh,
     setDeletionScope,
@@ -73,13 +74,8 @@ export const CloudProjectChoice = ({ input }: { input: WorkbenchPanelRenderInput
             Back
           </Button>
           {showDownload && (
-            <Button
-              size="sm"
-              disabled={!entry?.actions.download || (!downloading && download.isPending)}
-              loading={download.isPending}
-              onClick={requestDownload}
-            >
-              {downloading || download.error ? "Retry" : "Download"}
+            <Button size="sm" disabled={!canDownload} loading={downloadPending} onClick={requestDownload}>
+              {failure ? "Retry" : "Download"}
             </Button>
           )}
         </HStack>
