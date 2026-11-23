@@ -14,19 +14,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - pr: 2366
-            head: 58638646820cf9b118a83d3476ad76fbd66e9659
-            prior: 45166061699
-            failed: 4dccdfb6923873f7c4fb463c 336206f55e684f82a16be354 0a571ca5be1d73edc4c82bd7 dcc71406c9fb01f7190ca388 90079ca2d7a4656c210d8f93 a5f8c184aa9f9c7a8b390d95 efab1885100feb29dbd697ae f46ca03b80f367e0e2125b48
-          - pr: 2377
-            head: d8e4f454581e5091bd3b15ee64ebb1d9b0f5d453
-            prior: 45168534634
-            failed: 4dccdfb6923873f7c4fb463c 879019d00d1dd93730e9cf20 72480638f874d13d0838a290
+          - pr: 2379
+            head: 0e6236808a87ab147f247283cc0d46bc1ab75d7c
     env:
       REVIEW_HEAD: ${{ matrix.head }}
-      REVIEW_PRIOR: ${{ matrix.prior }}
-      REVIEW_FAILED: ${{ matrix.failed }}
-      REVIEW_PR: ${{ matrix.pr }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -45,15 +36,10 @@ jobs:
           node-version: "26.7.0"
       - name: Install required browser engines
         run: bunx playwright@1.60.0 install --with-deps chromium firefox
-      - name: Recover the original plan
-        if: matrix.prior != null
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Read the review plan
         run: |
-          gh run download "$REVIEW_PRIOR" --name "release-repair-review-$REVIEW_PR" --dir "$RUNNER_TEMP/prior-review"
-          jq -e '.plan.testPlan' "$RUNNER_TEMP"/prior-review/*.json > "$RUNNER_TEMP"/review-plan.json
-      - name: Run the checks blocked by missing browsers
-        if: matrix.prior != null
+          bun run test:review --base origin/main --test packages/canvas-tests/src/ui/ui/chat-tail-resize.p1.spec.ts --list | jq -e '.testPlan' > "$RUNNER_TEMP/review-plan.json"
+      - name: Execute the review plan desktop checks with the native sandbox
         run: |
           bun install --frozen-lockfile
           xvfb-run --auto-servernum bun -e '
@@ -66,7 +52,8 @@ jobs:
 
             const directory = await mkdtemp(join(tmpdir(), "pstdio-review-replay-"));
             const plan = await Bun.file(join(process.env.RUNNER_TEMP, "review-plan.json")).json();
-            const runIds = process.env.REVIEW_FAILED.split(" ");
+            const runIds = plan.runs.filter((run) => run.runner === "desktop").map((run) => run.id);
+            if (!runIds.length) throw new Error("The review plan did not include desktop checks");
             try {
               const result = await executePlan(plan, {
                 root: process.cwd(),
