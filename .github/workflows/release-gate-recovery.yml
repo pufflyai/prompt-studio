@@ -9,7 +9,7 @@ jobs:
   release-gates:
     runs-on: ubuntu-24.04
     env:
-      SOURCE_SHA: 8e8d48516277ebf0cfd1ae3749a30e74d2397fe9
+      SOURCE_SHA: e78df2fe1265d95a42d15a6f9f8bcc29fa4ee655
       NX_DAEMON: "false"
     steps:
       - uses: actions/checkout@v5
