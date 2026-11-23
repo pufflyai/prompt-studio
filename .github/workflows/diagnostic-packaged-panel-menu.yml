@@ -1,0 +1,80 @@
+name: Packaged panel menu comparison
+on:
+  push:
+    branches: [diagnostics/packaged-panel-menu]
+permissions:
+  actions: read
+  contents: read
+jobs:
+  packaged-browser:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: main
+            revision: aaf35b1403edccc9a4909f3f87f08890d03a2c02
+          - label: artifact-inventory
+            revision: 9c7214e72500f9a9287026bfd14f7fb6bec999bf
+    env:
+      REVIEW_HEAD: ${{ matrix.revision }}
+      REVIEW_BASE: 36b459b9fa98c1f3f48dcb1426989d85f7fb5003
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ matrix.revision }}
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - name: Prepare the original Linux browser environment
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$REVIEW_HEAD"
+          docker info --format '{{.ServerVersion}}'
+          bunx playwright@1.60.0 install --with-deps chromium firefox
+          bun run test:review --base "$REVIEW_BASE" --test scripts/ci/production-artifacts.p0.test.ts --list |
+            jq -e '.testPlan' > "$RUNNER_TEMP/review-plan.json"
+      - name: Run the unchanged packaged browser invocation
+        shell: bash
+        run: |
+          bun install --frozen-lockfile
+          xvfb-run --auto-servernum bun -e '
+            import { mkdtemp } from "node:fs/promises";
+            import { join } from "node:path";
+            import { tmpdir } from "node:os";
+            import { executePlan } from "./scripts/ci/run-test-plan";
+            import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+            import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+
+            const directory = await mkdtemp(join(tmpdir(), "pstdio-review-replay-"));
+            const plan = await Bun.file(join(process.env.RUNNER_TEMP, "review-plan.json")).json();
+            const run = plan.runs.find(({ id }) => id === "90079ca2d7a4656c210d8f93");
+            if (plan.source.sha !== process.env.REVIEW_HEAD || run?.files.length !== 7)
+              throw new Error("Expected the same seven-file packaged invocation at the requested revision");
+            console.log({planDigest: plan.digest, source: plan.source, run});
+            try {
+              const result = await executePlan(plan, {
+                root: process.cwd(),
+                runIds: [run.id],
+                env: { ...localReviewEnvironment(directory), CI_PROFILE: "production" },
+              });
+              process.exitCode = result.outcome === "success" ? 0 : 1;
+            } finally {
+              const cleanup = await cleanupReviewCompose(directory);
+              if (cleanup.some((entry) => entry.outcome !== "success")) process.exitCode = 1;
+            }
+          '
+      - name: Preserve traces, error context, and test outcomes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: packaged-panel-menu-${{ matrix.label }}
+          path: |
+            ${{ runner.temp }}/review-plan.json
+            test-results/ci/planned/
+            packages/e2e/test-results/packaged-browser/
+          if-no-files-found: error
