@@ -48,7 +48,8 @@
     "pstdio-theme",
     "design-studies",
     "remote-testing",
-    "pocketcoder"
+    "pocketcoder",
+    "pstdio-cloud-access"
   ],
   "snapshot": {
     "useCalculatedVersion": true,

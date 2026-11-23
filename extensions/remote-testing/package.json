@@ -26,5 +26,9 @@
   "devDependencies": {
     "@types/bun": "1.4.2",
     "typescript": "5.9.3"
+  },
+  "exports": {
+    "./storage-signing": "./src/storage-signing.ts",
+    "./google-token": "./src/google-token.ts"
   }
 }

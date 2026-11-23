@@ -53,6 +53,13 @@ pst pocketcoder.remote-testing templates branch --kind tests --path /path/to/wor
 
 ## Set up
 
+An operator can deploy [Cloud access](../../documentation/guides/development/0022-cloud-access.md)
+to install this setup and renew per-person or per-run controller credentials
+automatically. The client uses the current gcloud login for people or metadata identity for
+Google-hosted VMs. It configures a separate Cloud run storage connection, which
+keeps bucket and signing authority on the central service. Manual setup below keeps Application Default
+Credentials as its default.
+
 Provision a PocketCoder deployment separately: a controller with the
 `remote-tests` template, a Cloud Storage bucket and a URL signer account.
 

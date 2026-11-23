@@ -1,6 +1,6 @@
 import { defineCommand, l10n, params, workbenchPages } from "@pstdio/sdk/extensions";
 import { collectRun, startCollection, waitForCollection } from "./collection";
-import { connectionApi } from "./connection";
+import { connectionApi, storageConnection } from "./connection";
 import { changed, googleToken, projectRoot, runDeps } from "./context";
 import { cleanupEnvironmentCommand, recoverEnvironmentCleanup } from "./environment-cleanup";
 import { createEnvironment, isBusy, listEnvironments, stopEnvironment } from "./environments";
@@ -33,7 +33,10 @@ export const status = defineCommand({
     if (problems.length) return { available: false, problems };
     try {
       const environments = await listEnvironments(connectionApi(ctx.connections), ctx.projectId);
-      await googleToken(ctx);
+      const mode = (await ctx.settings.all()).googleAuthentication;
+      if (mode === "broker")
+        await connectionApi(ctx.connections, storageConnection.id)({ method: "POST", path: "/v1/storage/check" });
+      else await googleToken(ctx);
       return {
         available: true,
         template: `${settings.templateName}@${settings.templateVersion}`,

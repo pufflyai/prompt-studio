@@ -9,6 +9,17 @@ export interface Settings {
 }
 
 export const settingsSchema = {
+  googleAuthentication: {
+    type: "string",
+    title: l10n("remote-testing.google-authentication", "Google authentication"),
+    scope: "device",
+    default: "application-default",
+    enum: ["application-default", "gcloud", "metadata", "broker"] as string[],
+    description: l10n(
+      "remote-testing.google-authentication.description",
+      "Use Cloud access for scoped run storage, or configure Application Default Credentials, gcloud, or VM metadata manually.",
+    ),
+  },
   previewBridgePath: {
     type: "string",
     title: l10n("remote-testing.preview-helper.title", "Preview URL helper"),

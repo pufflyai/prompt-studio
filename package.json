@@ -74,7 +74,8 @@
     ".pstdio/extensions/shape-art",
     "services/telemetry",
     "services/psx",
-    "design"
+    "design",
+    "services/cloud-access"
   ],
   "devDependencies": {
     "@biomejs/biome": "2.4.10",

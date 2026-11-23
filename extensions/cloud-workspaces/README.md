@@ -15,6 +15,11 @@ The Remote Testing companion provides source upload, cloud execution, result col
 
 ## Connect a deployment
 
+For automatic setup using Google sign-in or ephemeral VM identity, use the
+[Cloud access client](../../documentation/guides/development/0022-cloud-access.md).
+An operator must first deploy its enrollment service. The client installs these
+private extensions and renews the device's named connections automatically.
+
 Open Cloud Workspaces in extension settings. Configure **Deployed PocketCoder controller** with your controller endpoint and an expiring key. This is one global connection on the device: configuring or revoking it in any local project applies to every project that enables the extension.
 
 Use `templates:read`, `workspaces:read`, `conversations:read`, and `logs:read` to browse the deployment. Add `workspaces:create` and `workspaces:cancel` to launch and stop workspaces. Limit keys to the required template families. The controller decides which machines and templates the principal may see.

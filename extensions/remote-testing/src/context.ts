@@ -1,26 +1,23 @@
 import { join } from "node:path";
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { publishBranchTemplate } from "./branch-templates";
+import { brokerStorage } from "./broker-storage";
 import { connectionApi } from "./connection";
 import { enqueueEnvironmentCleanup } from "./environment-cleanup";
 import { changed } from "./events";
+import { createGoogleTokenProvider, type GoogleAuthentication } from "./google-token";
 import type { RunDeps } from "./runs";
 import { readSettings } from "./settings";
 import { gcsStorage } from "./storage";
 
-let cachedToken: { value: string; until: number } | undefined;
+const tokenProvider = createGoogleTokenProvider();
 
-// The developer's Application Default Credentials; refreshed by gcloud, never stored here.
 async function googleToken(ctx: ExtensionContextBase) {
-  if (cachedToken && cachedToken.until > Date.now()) return cachedToken.value;
-  const result = await ctx.process.run({
-    command: ["gcloud", "auth", "application-default", "print-access-token"],
-    timeoutMs: 30_000,
-  });
-  if (result.exitCode !== 0)
-    throw new Error(`Google login is missing. Run: gcloud auth application-default login\n${result.stderr.trim()}`);
-  cachedToken = { value: result.stdout.trim(), until: Date.now() + 30 * 60_000 };
-  return cachedToken.value;
+  const values = await ctx.settings.all();
+  const mode = values.googleAuthentication ?? "application-default";
+  if (!["application-default", "gcloud", "metadata"].includes(String(mode)))
+    throw new Error("Select a supported Google authentication method.");
+  return tokenProvider(mode as GoogleAuthentication, ctx.process);
 }
 
 export async function projectRoot(ctx: ExtensionContextBase) {
@@ -31,18 +28,22 @@ export async function projectRoot(ctx: ExtensionContextBase) {
 }
 
 export async function runDeps(ctx: ExtensionContextBase): Promise<RunDeps> {
-  const { settings, problems } = readSettings(await ctx.settings.all());
+  const values = await ctx.settings.all();
+  const { settings, problems } = readSettings(values);
   if (problems.length) throw new Error(`Remote testing is not configured. ${problems.join(" ")}`);
   return {
     projectId: ctx.projectId,
     api: connectionApi(ctx.connections),
     cleanupEnvironment: (input) => enqueueEnvironmentCleanup(ctx, input),
     publishTemplate: (kind, source, signal) => publishBranchTemplate(ctx, kind, source, signal),
-    storage: gcsStorage({
-      bucket: settings.storageBucket,
-      signer: settings.signerAccount,
-      token: () => googleToken(ctx),
-    }),
+    storage:
+      values.googleAuthentication === "broker"
+        ? brokerStorage(ctx.connections)
+        : gcsStorage({
+            bucket: settings.storageBucket,
+            signer: settings.signerAccount,
+            token: () => googleToken(ctx),
+          }),
     store: ctx.storage,
     process: ctx.process,
     settings,

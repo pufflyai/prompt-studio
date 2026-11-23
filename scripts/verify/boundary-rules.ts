@@ -10,6 +10,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   // dependency for their benchmark files.
   "pstdio-benchmarks": [],
   "pstdio-account-manager": ["pstdio-sync-contracts", "pstdio-service-telemetry"],
+  "pstdio-cloud-access": ["pstdio-paths", "remote-testing"],
   "pstdio-psx": ["pstdio-extensions"],
   "pstdio-relay": ["pstdio-account-manager", "pstdio-sync", "pstdio-sync-contracts", "pstdio-service-telemetry"],
   "pstdio-api-contracts": ["pstdio-sync-contracts"],

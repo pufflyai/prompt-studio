@@ -235,6 +235,14 @@ Compose files and the reusable DigitalOcean Terraform module in `infra/terraform
 `infra/local/` is the local development stack and the example extensions it
 installs. Service code does not belong in `infra/`.
 
+The private `pstdio-cloud-access` service under `services/cloud-access/` owns
+Google identity enrollment and per-run PocketCoder credentials. It uses
+`pstdio-paths` for host supervisor ownership and the Remote Testing companion's
+public, dependency-free Google-token and object-signing subpaths. It does not load
+extension callbacks or import the API host. Its client configures existing named
+connections through the public HTTP API; its server keeps controller administration
+and bucket-signing authority centrally. See [Cloud access](../../guides/development/0022-cloud-access.md).
+
 ## Shared relay
 
 The private `pstdio-relay` workspace lives under `services/relay/`. It is a separate

@@ -82,5 +82,8 @@
   "remote-testing.remote-tests": "Tests à distance",
   "remote-testing.runs": "Exécutions",
   "remote-testing.environments": "Environnements",
-  "remote-testing.resume-environment-cleanup": "Reprendre le nettoyage des environnements"
+  "remote-testing.resume-environment-cleanup": "Reprendre le nettoyage des environnements",
+  "remote-testing.google-authentication": "Authentification Google",
+  "remote-testing.google-authentication.description": "Utiliser Cloud access pour le stockage limité à l’exécution, ou configurer manuellement les identifiants par défaut de l’application, gcloud ou les métadonnées de la VM.",
+  "remote-testing.cloud-storage": "Stockage des exécutions cloud"
 }

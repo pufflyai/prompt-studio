@@ -24,6 +24,17 @@ export const templatePublisher = defineConnection({
   allowedPathPrefixes: ["/v1/templates"],
 });
 
+export const storageConnection = defineConnection({
+  id: "cloud-storage",
+  scope: "global",
+  label: l10n("remote-testing.cloud-storage", "Cloud run storage"),
+  transport: "http",
+  auth: { type: "bearer" },
+  allowedMethods: ["POST"],
+  allowedPathPrefixes: ["/v1/storage/"],
+  check: { method: "POST", path: "/v1/storage/check" },
+});
+
 export type Api = <T>(input: {
   method: "GET" | "POST";
   path: string;

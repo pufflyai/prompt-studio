@@ -8,7 +8,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { createBranchTemplate, openPromptStudio, runPromptStudio } from "./src/branch-commands";
 import { commands } from "./src/commands";
-import { connection, templatePublisher } from "./src/connection";
+import { connection, storageConnection, templatePublisher } from "./src/connection";
 import { recoverEnvironmentCleanup } from "./src/environment-cleanup";
 import { settingsSchema } from "./src/settings";
 import { environmentsView, navigation, remoteTestsPage, runsView } from "./src/workbench";
@@ -16,7 +16,7 @@ import { environmentsView, navigation, remoteTestsPage, runsView } from "./src/w
 export default defineExtension({
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
   settings: { properties: settingsSchema },
-  connections: [connection, templatePublisher],
+  connections: [connection, templatePublisher, storageConnection],
   commands: [...commands, createBranchTemplate, runPromptStudio, openPromptStudio],
   schedules: [
     defineSchedule({
