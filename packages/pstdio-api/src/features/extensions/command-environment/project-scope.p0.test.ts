@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createWorkspaceMaintenance } from "../../../services/workspace-maintenance";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createSessionsApi } from "./sessions";
 import { createWorkspacesApi } from "./workspaces";
 
@@ -40,22 +41,22 @@ describe("command environment project scope", () => {
     });
 
     expect(await workspaces.get("workspace-other")).toBeNull();
-    await expect(workspaces.cancel("workspace-other")).rejects.toThrow("Workspace not found");
-    await expect(
+    await expectRejection(workspaces.cancel("workspace-other")).toThrow("Workspace not found");
+    await expectRejection(
       workspaces.create({
         project_id: "project-other",
         shorthand_base: "remote",
         provider_id: "example.remote",
       }),
-    ).rejects.toThrow("project");
+    ).toThrow("project");
     expect(deleteProviderBackedWorkspace).not.toHaveBeenCalled();
 
     expect(await sessions.get("session-other")).toBeNull();
-    await expect(sessions.query({ workspaceId: "workspace-other" })).rejects.toThrow("Workspace not found");
-    await expect(sessions.followup({ sessionId: "session-other", prompt: "cross project" })).rejects.toThrow(
+    await expectRejection(sessions.query({ workspaceId: "workspace-other" })).toThrow("Workspace not found");
+    await expectRejection(sessions.followup({ sessionId: "session-other", prompt: "cross project" })).toThrow(
       "Session not found",
     );
-    await expect(sessions.addAnchors("session-other", [])).rejects.toThrow("Session not found");
+    await expectRejection(sessions.addAnchors("session-other", [])).toThrow("Session not found");
   });
 
   test("enforces provider actions and never fabricates a remote target for an unready local workspace", async () => {
@@ -91,8 +92,8 @@ describe("command environment project scope", () => {
       deleteProviderBackedWorkspace,
     } as never);
 
-    await expect(workspaces.resolve(workspace.id)).rejects.toThrow("Local workspace execution target");
-    await expect(workspaces.delete(workspace.id)).rejects.toThrow("does not allow deletion");
+    await expectRejection(workspaces.resolve(workspace.id)).toThrow("Local workspace execution target");
+    await expectRejection(workspaces.delete(workspace.id)).toThrow("does not allow deletion");
     expect(deleteProviderBackedWorkspace).not.toHaveBeenCalled();
 
     workspace = {
@@ -100,6 +101,6 @@ describe("command environment project scope", () => {
       is_default: true,
       provider_capabilities_json: { ...workspace.provider_capabilities_json, delete: true },
     };
-    await expect(workspaces.delete(workspace.id)).rejects.toThrow("Default workspace");
+    await expectRejection(workspaces.delete(workspace.id)).toThrow("Default workspace");
   });
 });

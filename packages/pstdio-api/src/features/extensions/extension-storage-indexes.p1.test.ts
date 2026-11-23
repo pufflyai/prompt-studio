@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
 import { createDb, createExtensionStorageDBService, createProjectsDBService } from "pstdio-db";
 import { normalizeExtensionSources } from "pstdio-extensions";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { installExtensionStorageIndexes } from "./extension-storage-indexes";
 
 const runtimeFor = (names: [string, string]) =>
@@ -69,22 +70,24 @@ test("failed multi-extension index installation preserves every previous runtime
     const storage = await service.open({ owner: { workbenchId: project.id, extensionId: "example.index-0" } });
     await storage.records.commit({ operationId: "seed", edits: [{ recordId: "one", replace: { title: "Saved" } }] });
     await db.execute(sql`ALTER TABLE storage_record_indexes ADD CONSTRAINT reject_new_b CHECK (name <> 'new-b')`);
-    await expect(installExtensionStorageIndexes(service, project.id, runtimeFor(["new-a", "new-b"]))).rejects.toThrow();
+    await expectRejection(
+      installExtensionStorageIndexes(service, project.id, runtimeFor(["new-a", "new-b"])),
+    ).toThrow();
     expect((await storage.records.query({ index: "old-a" })).records.map((record) => record.recordId)).toEqual(["one"]);
     const other = await service.open({ owner: { workbenchId: project.id, extensionId: "example.index-1" } });
     expect((await other.records.query({ index: "old-b" })).records).toEqual([]);
-    await expect(storage.records.query({ index: "new-a" })).rejects.toThrow("not installed");
+    await expectRejection(storage.records.query({ index: "new-a" })).toThrow("not installed");
     await db.execute(sql`ALTER TABLE storage_record_indexes DROP CONSTRAINT reject_new_b`);
-    await expect(
+    await expectRejection(
       installExtensionStorageIndexes(service, project.id, runtimeFor(["new-a", "new-b"]), () => {
         throw new Error("Candidate generation was superseded");
       }),
-    ).rejects.toThrow("superseded");
+    ).toThrow("superseded");
     expect((await storage.records.query({ index: "old-a" })).records.map((record) => record.recordId)).toEqual(["one"]);
     expect((await other.records.query({ index: "old-b" })).records).toEqual([]);
     await installExtensionStorageIndexes(service, project.id, runtimeFor(["new-a", "new-b"]));
     expect((await storage.records.query({ index: "new-a" })).records.map((record) => record.recordId)).toEqual(["one"]);
-    await expect(storage.records.query({ index: "old-a" })).rejects.toThrow("not installed");
+    await expectRejection(storage.records.query({ index: "old-a" })).toThrow("not installed");
   } finally {
     await connection.close();
   }

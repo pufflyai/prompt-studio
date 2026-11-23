@@ -1,6 +1,7 @@
 import { expect, spyOn, test } from "bun:test";
 import { createSyncSpace, openLive, sealLive } from "pstdio-sync/encryption";
 import type { SpaceKey } from "pstdio-sync-contracts";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createNativeSessionPresence } from "../native-documents/session-presence";
 import { createNativeDocumentLive, nativePresenceTopic } from "./native-document-live";
 
@@ -173,7 +174,7 @@ test("live presence stays encrypted, binds the sender, and uses new keys after r
     bridge.setSpace(next);
     await Promise.all(s.publishing);
     const rotated = sent.at(-1)!;
-    await expect(openLive(old, { ...rotated, deviceId: "sender" })).rejects.toThrow();
+    await expectRejection(openLive(old, { ...rotated, deviceId: "sender" })).toThrow();
     expect(JSON.parse(new TextDecoder().decode(await openLive(next, { ...rotated, deviceId: "sender" }))).label).toBe(
       "Alice private",
     );

@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { ensureWorkspaceConfig, removeWorkspaceConfig } from "./workspace-config";
 
 let host: Awaited<ReturnType<typeof createTestApp>>;
@@ -41,7 +42,7 @@ test.each([
     await symlink(join(outside, entry), join(folder, ".pstdio", entry), "file");
   }
 
-  await expect(ensureWorkspaceConfig(folder, folder, workspace.id, project.id, host.deps)).rejects.toThrow("symlink");
+  await expectRejection(ensureWorkspaceConfig(folder, folder, workspace.id, project.id, host.deps)).toThrow("symlink");
   expect(await readFile(join(outside, "config.json"), "utf8")).toBe(config);
   expect(await readFile(join(outside, ".gitignore"), "utf8")).toBe("user-content\n");
   await removeWorkspaceConfig(folder, project.id, workspace.id);

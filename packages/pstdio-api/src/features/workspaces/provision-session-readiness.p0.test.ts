@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createWorkspaceSessionService } from "../../services/workspace-session-service";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { watchSessionQueueReadiness } from "../sessions/session-queue-readiness";
 import { provisionProjectWorkspaces } from "./provision-coordinator";
 import { maintenanceFixture } from "./provision-maintenance.test-fixture";
@@ -90,11 +91,11 @@ test("interrupted maintenance keeps restart session recovery gated until the rec
   const directory = await mkdtemp(join(tmpdir(), "workspace-maintenance-recovery-"));
   try {
     const interrupted = createWorkspaceMaintenance(directory);
-    await expect(
+    await expectRejection(
       interrupted.run("ws-0", async () => {
         throw new Error("Host interrupted before setup could settle");
       }),
-    ).rejects.toThrow("Host interrupted");
+    ).toThrow("Host interrupted");
     // Constructing new service instances models startup before background provisioning starts.
     const recovered = createWorkspaceMaintenance(directory);
     const f = sessionFixture();

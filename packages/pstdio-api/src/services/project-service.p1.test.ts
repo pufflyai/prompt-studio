@@ -15,6 +15,7 @@ import {
   projects,
 } from "pstdio-db";
 import { EventBus } from "../features/sync/event-bus";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { createProjectService } from "./project-service";
 import { createSyncService } from "./sync-service";
 
@@ -47,12 +48,12 @@ describe("ProjectService", () => {
   test("failed initialization withdraws project rows already published by defaults", async () => {
     const id = crypto.randomUUID();
     const events = recordEvents();
-    await expect(
+    await expectRejection(
       service.create({ id, name: "Failed setup" }, async () => {
         await service.setDefaults(id, { default_agent_id: "test.harness.agent" });
         throw new Error("Initialization failed");
       }),
-    ).rejects.toThrow("Initialization failed");
+    ).toThrow("Initialization failed");
     expect(await service.get(id)).toBeNull();
     expect(events).toEqual([
       { table: "projects", op: "set", data: expect.objectContaining({ id }) },

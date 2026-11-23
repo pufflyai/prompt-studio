@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { createInvocationScope } from "pstdio-extensions";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import type { WorkspacesRouteDeps } from "./deps";
 import { createWorkspaceProviderProcess } from "./workspace-provider-process";
 
@@ -36,9 +37,9 @@ test("explicit process directories retain workspace ownership checks", async () 
     scope,
   );
   try {
-    await expect(
+    await expectRejection(
       process.runOrThrow({ cwd: tmpdir(), command: ["bun", "-e", "process.stdout.write('unexpected')"] }),
-    ).rejects.toThrow(/does not own/);
+    ).toThrow(/does not own/);
   } finally {
     await scope.close();
   }

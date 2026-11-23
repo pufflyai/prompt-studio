@@ -7,6 +7,7 @@ import { createInvocationScope } from "pstdio-extensions";
 import { artifactFilesFixture } from "../../../services/shared-files/artifact-files.fixture";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { createTestCommandEnvironment } from "../../../test-utils/create-test-command-environment";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createOpeningBoundaryFixture } from "../../projects/resource-opening-boundaries.test-fixture";
 import { createArtifactMountWriteLedger } from "../artifact-mount-watch/write-ledger";
 import { createResourcesApi } from "./resources";
@@ -69,7 +70,7 @@ test("cancelling scoped reads leaves artifact, project and extension saves indep
     ]) {
       expect(await readFile(join(root, path), "utf8")).toBe("Saved draft");
     }
-    for (const mount of mounts) await expect(mount.readText("draft.md")).rejects.toThrow();
+    for (const mount of mounts) await expectRejection(mount.readText("draft.md")).toThrow();
   } finally {
     await shared.close();
     await rm(root, { recursive: true, force: true });
@@ -102,9 +103,9 @@ test("anchor edits keep their project checks after a reader is cancelled", async
       expect((await service.get(ownId))?.anchors_json).toEqual([anchor]);
       await api.removeAnchors(ownId, [anchor]);
       expect((await service.get(ownId))?.anchors_json).toEqual([]);
-      await expect(api.addAnchors(foreignId, [anchor])).rejects.toThrow("not found");
-      await expect(api.removeAnchors(foreignId, [anchor])).rejects.toThrow("not found");
-      await expect(api.get(ownId)).rejects.toThrow();
+      await expectRejection(api.addAnchors(foreignId, [anchor])).toThrow("not found");
+      await expectRejection(api.removeAnchors(foreignId, [anchor])).toThrow("not found");
+      await expectRejection(api.get(ownId)).toThrow();
     }
   } finally {
     await app.close();
@@ -130,7 +131,7 @@ for (const operation of ["add", "remove", "removed"] as const) {
       const page = await reader.queryAnchors({ resource: source });
       expect(page.items).toHaveLength(operation === "add" ? 1 : 0);
       if (operation === "add") expect(page.items[0]?.target).toMatchObject(target);
-      await expect(writer.queryAnchors({ resource: source })).rejects.toThrow();
+      await expectRejection(writer.queryAnchors({ resource: source })).toThrow();
     } finally {
       await fixture.close();
     }
@@ -158,13 +159,13 @@ test("cancelled resource writers retain project, owner and anchor policy checks"
     const source = { type: "item", id: "one" };
     const foreignTarget = { type: "workspace", extensionId: "pstdio", id: foreignWorkspace.id };
     const protectedTarget = { type: "protected", extensionId: "example.guard", id: "one" };
-    await expect(writer.addAnchors(source, [foreignTarget])).rejects.toThrow("another project");
-    await expect(writer.removeAnchors(source, [foreignTarget])).rejects.toThrow("another project");
-    await expect(writer.addAnchors(source, [protectedTarget])).rejects.toThrow("Owner rejected");
-    await expect(writer.removeAnchors(source, [protectedTarget])).rejects.toThrow("Owner rejected");
-    await expect(writer.removed({ ...source, projectId: foreign.id })).rejects.toThrow("another project");
-    await expect(writer.removed({ ...source, extensionId: "example.guard" })).rejects.toThrow("another extension");
-    await expect(writer.removed({ type: "unknown", id: "one" })).rejects.toThrow("not owned");
+    await expectRejection(writer.addAnchors(source, [foreignTarget])).toThrow("another project");
+    await expectRejection(writer.removeAnchors(source, [foreignTarget])).toThrow("another project");
+    await expectRejection(writer.addAnchors(source, [protectedTarget])).toThrow("Owner rejected");
+    await expectRejection(writer.removeAnchors(source, [protectedTarget])).toThrow("Owner rejected");
+    await expectRejection(writer.removed({ ...source, projectId: foreign.id })).toThrow("another project");
+    await expectRejection(writer.removed({ ...source, extensionId: "example.guard" })).toThrow("another extension");
+    await expectRejection(writer.removed({ type: "unknown", id: "one" })).toThrow("not owned");
   } finally {
     await fixture.close();
   }

@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { enableGitWorkspaceProvider } from "../../test-utils/git-workspace-provider.fixture";
 import { createProjectExtensionLifecycle } from "../extensions/project-extension-lifecycle";
 import { provisionProviderWorkspace } from "./workspace-provider-creation";
@@ -153,13 +154,13 @@ test("installed Git lifecycle uses the public provider for existing IDs and pres
     provider_state: "ready",
   });
   const [{ instance }] = await handle.deps.extensionService.listProjectExtensionInstances(projectId);
-  await expect(
+  await expectRejection(
     createProjectExtensionLifecycle(handle.deps).uninstall({
       projectId,
       instanceId: instance!.id,
       deleteUserData: true,
     }),
-  ).rejects.toThrow("provider-backed workspace");
+  ).toThrow("provider-backed workspace");
   const toggle = async (enabled: boolean) =>
     handle.app.request(`/v1/projects/${projectId}/extensions/${instance!.id}`, {
       method: "PATCH",

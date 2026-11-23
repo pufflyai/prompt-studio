@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { defaultLocalWorkspaceCapabilities } from "pstdio-db";
 import { git } from "pstdio-wt";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { runWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
 import { createWorkspacesApi } from "./workspaces";
 
@@ -43,12 +44,12 @@ test("extensions rename workspace display names without changing their identity"
     shorthand: workspace.workspace_shorthand,
     rootPath: workspace.root_path,
   });
-  await expect(api().rename(workspace.id, { name: " " })).rejects.toThrow();
+  await expectRejection(api().rename(workspace.id, { name: " " })).toThrow();
   const home = await handle.deps.workspaceService.ensureDefault({
     project_id: workspace.project_id,
     name: "Project folder",
   });
-  await expect(api().rename(home.id, { name: "Other" })).rejects.toThrow("Default workspace");
+  await expectRejection(api().rename(home.id, { name: "Other" })).toThrow("Default workspace");
 });
 
 test("extensions browse, find, edit, move and delete workspace files through the host", async () => {
@@ -61,7 +62,7 @@ test("extensions browse, find, edit, move and delete workspace files through the
     editable: true,
     content: "original\n",
   });
-  await expect(files.createFile(workspace.id, "docs/notes.md", { content: "replace" })).rejects.toThrow(
+  await expectRejection(files.createFile(workspace.id, "docs/notes.md", { content: "replace" })).toThrow(
     "already exists",
   );
   expect((await files.listFiles(workspace.id)).entries.map((entry) => entry.path)).toEqual(["docs"]);
@@ -74,7 +75,7 @@ test("extensions browse, find, edit, move and delete workspace files through the
   expect(await readFile(join(path, "renamed/notes.md"), "utf8")).toBe("saved\n");
   await files.deleteEntry(workspace.id, "renamed");
   expect((await files.listFiles(workspace.id)).entries).toEqual([]);
-  await expect(files.writeFile(workspace.id, "missing.md", { content: "save" })).rejects.toThrow();
+  await expectRejection(files.writeFile(workspace.id, "missing.md", { content: "save" })).toThrow();
 });
 
 test("extension file listings expose Git-ignore decorations through the command environment", async () => {
@@ -148,11 +149,11 @@ test("scoped workspace operations reject other projects and cancelled invocation
     () => api.diffSummary(id, "current"),
   ];
   for (const operation of operations(first.api(), other.workspace.id))
-    await expect(operation()).rejects.toThrow("Workspace not found");
+    await expectRejection(operation()).toThrow("Workspace not found");
   const controller = new AbortController();
   controller.abort();
   for (const operation of operations(first.api(controller.signal), first.workspace.id))
-    await expect(operation()).rejects.toThrow();
+    await expectRejection(operation()).toThrow();
   expect((await handle.deps.workspaceService.get(first.workspace.id))?.name).toBe(first.workspace.name);
 });
 
@@ -164,32 +165,32 @@ test("workspace file operations enforce live provider capabilities and safe path
     provider_capabilities_json: { ...defaultLocalWorkspaceCapabilities, files: "read", diff: false },
   });
   expect(await files.readFile(workspace.id, "notes.txt")).toMatchObject({ content: "keep", editable: false });
-  await expect(files.writeFile(workspace.id, "notes.txt", { content: "changed" })).rejects.toThrow();
-  await expect(files.createDirectory(workspace.id, "docs")).rejects.toThrow();
-  await expect(files.createFile(workspace.id, "new.txt", { content: "changed" })).rejects.toThrow();
-  await expect(files.moveEntry(workspace.id, "notes.txt", "other.txt")).rejects.toThrow();
-  await expect(files.deleteEntry(workspace.id, "notes.txt")).rejects.toThrow();
-  await expect(files.diffFiles(workspace.id, "current")).rejects.toThrow();
+  await expectRejection(files.writeFile(workspace.id, "notes.txt", { content: "changed" })).toThrow();
+  await expectRejection(files.createDirectory(workspace.id, "docs")).toThrow();
+  await expectRejection(files.createFile(workspace.id, "new.txt", { content: "changed" })).toThrow();
+  await expectRejection(files.moveEntry(workspace.id, "notes.txt", "other.txt")).toThrow();
+  await expectRejection(files.deleteEntry(workspace.id, "notes.txt")).toThrow();
+  await expectRejection(files.diffFiles(workspace.id, "current")).toThrow();
   await handle.deps.workspaceService.updateProviderProjection(workspace.id, {
     provider_capabilities_json: defaultLocalWorkspaceCapabilities,
   });
   await mkdir(join(path, ".git/hooks"), { recursive: true });
   await writeFile(join(path, ".git/config"), "protected");
   await symlink(join(path, ".git"), join(path, "metadata-alias"), "dir");
-  await expect(files.listFiles(workspace.id, { path: ".git" })).rejects.toThrow("Git metadata");
-  await expect(files.readFile(workspace.id, "metadata-alias/config")).rejects.toThrow("Git metadata");
-  await expect(files.createFile(workspace.id, "metadata-alias/hooks/new-hook", { content: "changed" })).rejects.toThrow(
-    "Git metadata",
-  );
+  await expectRejection(files.listFiles(workspace.id, { path: ".git" })).toThrow("Git metadata");
+  await expectRejection(files.readFile(workspace.id, "metadata-alias/config")).toThrow("Git metadata");
+  await expectRejection(
+    files.createFile(workspace.id, "metadata-alias/hooks/new-hook", { content: "changed" }),
+  ).toThrow("Git metadata");
   await symlink(root, join(path, "outside"), "dir");
   for (const entry of ["../secret.txt", "outside/secret.txt", ".git/config"]) {
-    await expect(files.readFile(workspace.id, entry)).rejects.toThrow();
-    await expect(files.createFile(workspace.id, entry, { content: "escape" })).rejects.toThrow();
-    await expect(files.moveEntry(workspace.id, "notes.txt", entry)).rejects.toThrow();
+    await expectRejection(files.readFile(workspace.id, entry)).toThrow();
+    await expectRejection(files.createFile(workspace.id, entry, { content: "escape" })).toThrow();
+    await expectRejection(files.moveEntry(workspace.id, "notes.txt", entry)).toThrow();
   }
   await handle.deps.workspaceService.updateProviderProjection(workspace.id, { execution_kind: "remote" });
-  await expect(files.listFiles(workspace.id)).rejects.toThrow();
-  await expect(files.diffSummary(workspace.id, "current")).rejects.toThrow();
+  await expectRejection(files.listFiles(workspace.id)).toThrow();
+  await expectRejection(files.diffSummary(workspace.id, "current")).toThrow();
   expect(await readFile(join(path, "notes.txt"), "utf8")).toBe("keep");
 });
 
@@ -197,28 +198,28 @@ test("workspace operations recheck readiness, deletion and disabled file access"
   const { workspace, api } = await fixture();
   const scoped = api();
   await handle.deps.workspaceService.updateProviderProjection(workspace.id, { provider_state: "failed" });
-  await expect(scoped.listFiles(workspace.id)).rejects.toThrow("ready local");
-  await expect(scoped.diffFiles(workspace.id, "current")).rejects.toThrow("ready local");
+  await expectRejection(scoped.listFiles(workspace.id)).toThrow("ready local");
+  await expectRejection(scoped.diffFiles(workspace.id, "current")).toThrow("ready local");
   await handle.deps.workspaceService.updateProviderProjection(workspace.id, { provider_state: "ready" });
   await handle.deps.workspaceService.setInitializing(workspace.id, true);
-  await expect(scoped.listFiles(workspace.id)).rejects.toThrow("ready local");
+  await expectRejection(scoped.listFiles(workspace.id)).toThrow("ready local");
   await handle.deps.workspaceService.setInitializing(workspace.id, false);
   await handle.deps.workspaceService.updateProviderProjection(workspace.id, {
     provider_capabilities_json: { ...defaultLocalWorkspaceCapabilities, files: "none" },
   });
-  await expect(scoped.listFiles(workspace.id)).rejects.toThrow("ready local");
+  await expectRejection(scoped.listFiles(workspace.id)).toThrow("ready local");
   await handle.deps.workspaceService.softDelete(workspace.id);
-  await expect(scoped.rename(workspace.id, { name: "Revived" })).rejects.toThrow("Workspace not found");
-  await expect(scoped.diffSummary(workspace.id, "current")).rejects.toThrow("Workspace not found");
+  await expectRejection(scoped.rename(workspace.id, { name: "Revived" })).toThrow("Workspace not found");
+  await expectRejection(scoped.diffSummary(workspace.id, "current")).toThrow("Workspace not found");
 });
 
 test("workspace changes reject a missing or non-Git execution root", async () => {
   const { workspace, path, api } = await fixture();
   const scoped = api();
   const assertUnavailable = async () => {
-    await expect(scoped.diffFiles(workspace.id, "current")).rejects.toThrow();
-    await expect(scoped.diffSummary(workspace.id, "fork_point")).rejects.toThrow();
-    await expect(scoped.diffFile(workspace.id, "current", "notes.txt")).rejects.toThrow();
+    await expectRejection(scoped.diffFiles(workspace.id, "current")).toThrow();
+    await expectRejection(scoped.diffSummary(workspace.id, "fork_point")).toThrow();
+    await expectRejection(scoped.diffFile(workspace.id, "current", "notes.txt")).toThrow();
   };
   await assertUnavailable();
   await rm(path, { recursive: true });

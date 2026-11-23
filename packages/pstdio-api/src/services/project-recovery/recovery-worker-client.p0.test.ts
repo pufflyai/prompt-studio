@@ -3,6 +3,7 @@ import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { captureRecoveryFolder } from "./capture";
 import { createRecoveryChunkStore } from "./chunks";
 import { readRecoveryManifest } from "./manifest";
@@ -67,14 +68,14 @@ test("cancelling stops the worker with the caller's reason", async () => {
     signal: controller.signal,
   });
   controller.abort(reason);
-  await expect(capture).rejects.toBe(reason);
+  await expectRejection(capture).toBe(reason);
 });
 
 test("worker failures keep the error kinds a person's status is built from", async () => {
   const f = await fixture();
   const signal = new AbortController().signal;
   const missing = captureRecoveryFolderInWorker({ root: join(f.root, "gone"), chunks: f.chunks, gitRoots: [], signal });
-  await expect(missing).rejects.toMatchObject({ code: "ENOENT" });
+  await expectRejection(missing).toMatchObject({ code: "ENOENT" });
   if (process.getuid?.() === 0) return;
   await writeFile(join(f.folder, "locked"), "unreadable");
   await chmod(join(f.folder, "locked"), 0o000);

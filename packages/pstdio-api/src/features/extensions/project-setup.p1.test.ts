@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { packageAsset, viewDataEvents } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { writeExtension } from "./default-extensions-test-fixtures";
 import { createProjectExtensionLifecycle } from "./project-extension-lifecycle";
 
@@ -66,7 +67,7 @@ test("only enabled project setup is offered, honoring its shared device visibili
         catalogEvents.push(data);
     });
     await deps.extensionSettingsService.get(context, "hidden");
-    await expect(deps.extensionSettingsService.set(context, "hidden", "invalid")).rejects.toThrow();
+    await expectRejection(deps.extensionSettingsService.set(context, "hidden", "invalid")).toThrow();
     await deps.extensionSettingsService.delete(context, "hidden");
     expect(catalogEvents).toEqual([]);
     await deps.extensionSettingsService.set(context, "hidden", true);

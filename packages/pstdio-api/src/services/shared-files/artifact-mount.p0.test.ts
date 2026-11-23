@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { mkdir, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { artifactFilesFixture } from "./artifact-files.fixture";
 import { createSharedArtifactMount } from "./artifact-mount";
 
@@ -81,8 +82,8 @@ test("file mounts reject paths and symlinks outside their declared root", async 
   await mkdir(dirname(outside), { recursive: true });
   await writeFile(outside, "private");
   await symlink(outside, f.pathFor("documents/escape.md"));
-  await expect(f.mount().readText("../other/secret.md")).rejects.toThrow();
-  await expect(f.mount().readText("escape.md")).rejects.toThrow();
+  await expectRejection(f.mount().readText("../other/secret.md")).toThrow();
+  await expectRejection(f.mount().readText("escape.md")).toThrow();
   expect(await readFile(outside, "utf8")).toBe("private");
 });
 
@@ -97,7 +98,7 @@ test("an unchanged point read does not scan an unrelated file, while its own bou
   await rm(f.pathFor("documents/other.md"));
   await symlink(outside, f.pathFor("documents/other.md"));
   expect(await mount.readText("safe.md")).toBe("safe");
-  await expect(mount.readText("other.md")).rejects.toThrow("escapes");
+  await expectRejection(mount.readText("other.md")).toThrow("escapes");
 });
 
 test("point reads observe remote replacements and deletions without returning stale disk bytes", async () => {
@@ -108,7 +109,7 @@ test("point reads observe remote replacements and deletions without returning st
   await f.replace("documents/note.md", "after");
   expect(await mount.readText("note.md")).toBe("after");
   await f.replace("documents/note.md", null);
-  await expect(mount.readText("note.md")).rejects.toThrow("not found");
+  await expectRejection(mount.readText("note.md")).toThrow("not found");
   expect(await mount.exists("note.md")).toBe(false);
 });
 

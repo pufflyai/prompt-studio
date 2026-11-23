@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createResourceLinksApi } from "./resource-links";
 import { createResourcesApi } from "./resources";
 import { createSessionsApi } from "./sessions";
@@ -100,27 +101,27 @@ test("public resource links enforce owner policies atomically and publish commit
       },
     ];
     for (const legacy of legacyApis) {
-      await expect(legacy.api.addAnchors(legacy.id, [{ ...target, id: "protected" }])).rejects.toThrow(
+      await expectRejection(legacy.api.addAnchors(legacy.id, [{ ...target, id: "protected" }])).toThrow(
         "Protected link",
       );
       await legacy.api.addAnchors(legacy.id, [{ ...target, id: "role-guard" }]);
-      await expect(legacy.api.removeAnchors(legacy.id, [{ ...target, id: "role-guard" }])).rejects.toThrow(
+      await expectRejection(legacy.api.removeAnchors(legacy.id, [{ ...target, id: "role-guard" }])).toThrow(
         "Protected link",
       );
     }
     const priorWorkspaces = await app.deps.workspaceService.list(project.id);
     const priorSessions = await app.deps.sessionService.list(project.id);
-    await expect(
+    await expectRejection(
       app.deps.workspaceService.createStandalone({ project_id: project.id, anchors: [{ ...target, id: "protected" }] }),
-    ).rejects.toThrow("Protected link");
-    await expect(
+    ).toThrow("Protected link");
+    await expectRejection(
       app.deps.sessionService.create({
         project_id: project.id,
         title: "Rejected",
         agent: "test",
         anchors: [{ ...target, id: "protected" }],
       }),
-    ).rejects.toThrow("Protected link");
+    ).toThrow("Protected link");
     expect(await app.deps.workspaceService.list(project.id)).toEqual(priorWorkspaces);
     expect(await app.deps.sessionService.list(project.id)).toEqual(priorSessions);
     const seq = count();
@@ -129,25 +130,25 @@ test("public resource links enforce owner policies atomically and publish commit
     const incoming = await api.listAnchors({ resource: target, direction: "incoming" });
     expect(incoming.items).toHaveLength(1);
     expect(incoming.items[0]?.source).toMatchObject({ projectId: project.id, extensionId: "example.notes" });
-    await expect(
+    await expectRejection(
       api.addAnchors(source, [
         { ...target, id: "valid" },
         { ...target, id: "protected" },
       ]),
-    ).rejects.toThrow("Protected link");
+    ).toThrow("Protected link");
     expect((await api.listAnchors({ resource: source })).items).toHaveLength(1);
-    await expect(api.addAnchors(source, [{ ...target, projectId: "other" }])).rejects.toThrow("another project");
-    await expect(api.addAnchors(source, [{ ...target, id: "mutate" }])).rejects.toThrow("cannot mutate");
+    await expectRejection(api.addAnchors(source, [{ ...target, projectId: "other" }])).toThrow("another project");
+    await expectRejection(api.addAnchors(source, [{ ...target, id: "mutate" }])).toThrow("cannot mutate");
     const guardedTarget = { ...target, id: "role-guard" };
     await api.addAnchors(source, [guardedTarget]);
-    await expect(api.removeAnchors(source, [guardedTarget])).rejects.toThrow("Protected link");
+    await expectRejection(api.removeAnchors(source, [guardedTarget])).toThrow("Protected link");
     await createResourcesApi(app.deps, { projectId: project.id, extensionId: "example.art" }).removed(guardedTarget);
     expect((await api.listAnchors({ resource: source })).items).toHaveLength(1);
     await app.deps.extensionService.setProjectExtensionEnabled(art.instance.id, false);
-    await expect(api.removeAnchors(source, [target])).rejects.toThrow("disabled");
+    await expectRejection(api.removeAnchors(source, [target])).toThrow("disabled");
     for (const legacy of legacyApis) {
-      await expect(legacy.api.addAnchors(legacy.id, [target])).rejects.toThrow("disabled");
-      await expect(legacy.api.removeAnchors(legacy.id, [{ ...target, id: "role-guard" }])).rejects.toThrow("disabled");
+      await expectRejection(legacy.api.addAnchors(legacy.id, [target])).toThrow("disabled");
+      await expectRejection(legacy.api.removeAnchors(legacy.id, [{ ...target, id: "role-guard" }])).toThrow("disabled");
     }
     expect((await api.listAnchors({ resource: source })).items).toHaveLength(1);
     await app.deps.extensionService.uninstallProjectExtension({
@@ -208,8 +209,8 @@ test("generic and legacy host links share source checks, timestamps and change e
     const count = () =>
       app.deps.eventBus.getSince(0).filter((event) => event.table === "resource_anchor_events").length;
     const before = count();
-    await expect(resources.addAnchors({ ...source, id: "missing" }, [target])).rejects.toThrow("not found");
-    await expect(resources.addAnchors(source, [{ ...target, id: foreign.id }])).rejects.toThrow("another project");
+    await expectRejection(resources.addAnchors({ ...source, id: "missing" }, [target])).toThrow("not found");
+    await expectRejection(resources.addAnchors(source, [{ ...target, id: foreign.id }])).toThrow("another project");
     expect(count()).toBe(before);
     await resources.addAnchors(source, [target, target]);
     expect(count()).toBe(before + 1);

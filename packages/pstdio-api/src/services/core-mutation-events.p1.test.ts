@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../test-utils/create-test-app";
+import { expectRejection } from "../test-utils/expect-rejection";
 
 test("domain mutations publish project, file, and skill changes once", async () => {
   const root = mkdtempSync(join(tmpdir(), "mutation-events-"));
@@ -56,15 +57,15 @@ test("failed initialization leaves no project or file mutation event", async () 
   const app = await createTestApp();
   try {
     const { projectService, fileService, eventBus } = app.deps;
-    await expect(
+    await expectRejection(
       projectService.create({ name: "Failed" }, async () => {
         throw new Error("initialize");
       }),
-    ).rejects.toThrow("initialize");
+    ).toThrow("initialize");
     expect(eventBus.getSince(0).filter((event) => event.table === "projects")).toEqual([]);
     const project = await projectService.create({ name: "Files" });
     let fileId = "";
-    await expect(
+    await expectRejection(
       fileService.upload(
         { project_id: project.id, file_name: "file.txt", file_kind: "extension", data: Buffer.from("file") },
         async (file) => {
@@ -72,7 +73,7 @@ test("failed initialization leaves no project or file mutation event", async () 
           throw new Error("ownership");
         },
       ),
-    ).rejects.toThrow("ownership");
+    ).toThrow("ownership");
     expect(await fileService.get(fileId)).toBeNull();
     expect(eventBus.getSince(0).filter((event) => event.table === "files")).toEqual([]);
   } finally {
@@ -84,14 +85,14 @@ test("failed initialization withdraws a published workspace without inventing a 
   const app = await createTestApp();
   let workspaceId = "";
   try {
-    await expect(
+    await expectRejection(
       app.deps.projectService.create({ name: "Failed workspace setup" }, async (project) => {
         workspaceId = (
           await app.deps.workspaceService.ensureDefault({ project_id: project.id, name: "Project folder" })
         ).id;
         throw new Error("Workspace initialization failed");
       }),
-    ).rejects.toThrow("Workspace initialization failed");
+    ).toThrow("Workspace initialization failed");
     const events = app.deps.eventBus.getSince(0);
     expect(events.filter((event) => event.table === "projects")).toEqual([]);
     expect(

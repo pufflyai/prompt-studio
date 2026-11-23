@@ -6,6 +6,7 @@ import { sql } from "drizzle-orm";
 import { createDb, createFilesDBService, createProjectsDBService, createSessionsDBService } from "pstdio-db";
 import { createFilesStorageService } from "pstdio-storage";
 import { EventBus } from "../features/sync/event-bus";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { createFileService } from "./file-service";
 import { createSessionService } from "./session-service";
 
@@ -43,7 +44,7 @@ test("a failed database commit restores the checkpoint bytes and emits no remova
     );
     const removals: unknown[] = [];
     bus.subscribe((event) => removals.push(event));
-    await expect(service.remove(session.id, files)).rejects.toThrow("Commit rejected");
+    await expectRejection(service.remove(session.id, files)).toThrow("Commit rejected");
     expect((await raw.get(session.id))?.session_file_id).toBe(file.id);
     expect(await files.get(file.id)).not.toBeNull();
     expect(readFileSync(file.storage_path, "utf8")).toBe("[]");

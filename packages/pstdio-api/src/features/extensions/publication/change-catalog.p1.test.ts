@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createTestExtensionSource } from "../test-utils/create-test-extension-source";
 import { activatePublishedSet } from "./activate";
 import { openPublishedCatalog, publishedEntries, publishedOwner } from "./catalog";
@@ -79,14 +80,14 @@ test("a rollback that cannot run on this device is not shared", async () => {
   const working = await select(projectId, source);
   await catchUp(projectId);
 
-  await expect(
+  await expectRejection(
     changePublishedCatalog(app.deps, projectId, {
       kind: "rollback",
       extensionId,
       revision: broken,
       expectedRevision: (await selection(projectId)).revision,
     }),
-  ).rejects.toThrow("broken revision");
+  ).toThrow("broken revision");
   expect((await selection(projectId)).value).toEqual({ revision: working, enabled: true });
   expect((await installed(projectId)).installedSource.loaded_revision).toBe(working);
 });
@@ -138,14 +139,14 @@ test("a change that loses the shared save returns this device to the shared set"
     },
   };
 
-  await expect(
+  await expectRejection(
     changePublishedCatalog(deps, projectId, {
       kind: "rollback",
       extensionId,
       revision: first,
       expectedRevision: (await selection(projectId)).revision,
     }),
-  ).rejects.toThrow(PublicationChangedError);
+  ).toThrow(PublicationChangedError);
   const current = await installed(projectId);
   expect(current.installedSource.loaded_revision).toBe(second);
   expect(current.instance.enabled).toBe(false);
@@ -191,14 +192,14 @@ test("a change that loses the shared save still reports the conflict when return
   // The competing choice names a package this device does not have, so returning to it fails.
   const deps = racingDeps(() => share(projectId, { revision: "f".repeat(64), enabled: true }));
 
-  await expect(
+  await expectRejection(
     changePublishedCatalog(deps, projectId, {
       kind: "enabled",
       extensionId,
       enabled: false,
       expectedRevision: (await selection(projectId)).revision,
     }),
-  ).rejects.toThrow(PublicationChangedError);
+  ).toThrow(PublicationChangedError);
 });
 
 test("returning to the shared set does not undo a newer shared choice", async () => {
@@ -211,14 +212,14 @@ test("returning to the shared set does not undo a newer shared choice", async ()
     () => share(projectId, { revision: second, enabled: true }),
   );
 
-  await expect(
+  await expectRejection(
     changePublishedCatalog(deps, projectId, {
       kind: "rollback",
       extensionId,
       revision: first,
       expectedRevision: (await selection(projectId)).revision,
     }),
-  ).rejects.toThrow(PublicationChangedError);
+  ).toThrow(PublicationChangedError);
   const current = await installed(projectId);
   expect(current.installedSource.loaded_revision).toBe(second);
   expect(current.instance.enabled).toBe(true);

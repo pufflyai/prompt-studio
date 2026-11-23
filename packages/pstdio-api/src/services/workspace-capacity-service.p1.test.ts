@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { createWorkspaceCapacityService } from "./workspace-capacity-service";
 
 test("workspace limits survive service recreation and stay on their device", async () => {
@@ -25,7 +26,7 @@ test("workspace limits survive service recreation and stay on their device", asy
     expect(await device("one").hasCapacity("active-workspace")).toBe(true);
     expect(await device("one").hasCapacity("new-workspace")).toBe(false);
     for (const limit of [0, -1, 1.5, Number.POSITIVE_INFINITY]) {
-      await expect(device("one").update({ limit })).rejects.toThrow();
+      await expectRejection(device("one").update({ limit })).toThrow();
     }
     expect(await device("one").get()).toMatchObject({ limit: 1 });
     await device("one").update({ limit: null });

@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { createClient } from "@pstdio/sdk/client";
 import { createTextEditingClient } from "@pstdio/sdk/extensions";
 import { selected, textEditingFixture } from "../../services/text-editing/text-editing.test-fixture";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createTextStreamTestApp } from "./stream.test-utils";
 
 const fixtures: Awaited<ReturnType<typeof textEditingFixture>>[] = [];
@@ -30,9 +31,9 @@ test("the authenticated client edits through the same selected source admission 
     await session.project();
     expect(session.getSnapshot().text.toString()).toBe("Agent selected folder");
     expect(await Bun.file(`${fixture.root}/notes.txt`).text()).toBe("Agent selected folder");
-    await expect(
+    await expectRejection(
       connection.request({ operation: "open", memberId: crypto.randomUUID(), input: { sourceId: "body", params: {} } }),
-    ).rejects.toMatchObject({ code: "session_closed" });
+    ).toMatchObject({ code: "session_closed" });
     await session.close();
   } finally {
     await guest.close();

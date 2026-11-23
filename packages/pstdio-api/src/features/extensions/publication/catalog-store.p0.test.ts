@@ -4,6 +4,7 @@ import { createSyncSpace } from "pstdio-sync/encryption";
 import { createDocumentStorage } from "pstdio-sync/records";
 import { createDocumentSync, type DocumentRelay } from "pstdio-sync/relay";
 import type { Asset, StoredUpdate } from "pstdio-sync-contracts";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createPublicationCatalog } from "./catalog-store";
 
 test("a provider replacement preserves newer choices and switches both selectors atomically", async () => {
@@ -26,9 +27,9 @@ test("a provider replacement preserves newer choices and switches both selectors
   const oldRevision = (await catalog.read(old.extensionId)).revision;
   const nextRevision = (await catalog.read(next.extensionId)).revision;
   await catalog.select({ ...old, enabled: false }, oldAsset, oldRevision);
-  await expect(
+  await expectRejection(
     catalog.select(next, nextAsset, nextRevision, { extensionId: old.extensionId, expectedRevision: oldRevision }),
-  ).rejects.toThrow("changed");
+  ).toThrow("changed");
   expect((await catalog.read(next.extensionId)).value).toBeNull();
   expect((await catalog.read(old.extensionId)).value).toMatchObject({ enabled: false });
   await catalog.select(next, nextAsset, nextRevision, {
@@ -79,8 +80,8 @@ test("distinct publication selector histories stop activation and writes without
     ],
   });
   const catalog = createPublicationCatalog({ records: storage.records, verifyComplete: async () => {} });
-  await expect(catalog.read("pstdio.notes")).rejects.toThrow(/conflict/i);
-  await expect(catalog.list()).rejects.toThrow(/conflict/i);
+  await expectRejection(catalog.read("pstdio.notes")).toThrow(/conflict/i);
+  await expectRejection(catalog.list()).toThrow(/conflict/i);
   expect(await storage.records.list()).toHaveLength(2);
 });
 
@@ -106,7 +107,7 @@ test("republishing restores a deleted selection and stale selections cannot over
   expect((await catalog.read(publication.extensionId)).deleted).toBe(false);
   const beforeDisable = await catalog.read(publication.extensionId);
   await catalog.select({ ...publication, enabled: false }, asset, beforeDisable.revision);
-  await expect(catalog.select(publication, asset, beforeDisable.revision)).rejects.toThrow("changed");
+  await expectRejection(catalog.select(publication, asset, beforeDisable.revision)).toThrow("changed");
   expect((await catalog.read(publication.extensionId)).value!.enabled).toBe(false);
 });
 

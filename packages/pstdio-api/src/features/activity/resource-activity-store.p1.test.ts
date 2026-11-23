@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { resourceKey } from "pstdio-api-contracts/extension-kernel";
 import { createDb, createExtensionStorageDBService, createProjectsDBService } from "pstdio-db";
 import { canonicalJson, type Json } from "pstdio-sync-contracts";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createResourceActivityStore } from "./resource-activity-store";
 
 const resource = { projectId: "", extensionId: "test.owner", type: "note", id: "same-id" };
@@ -28,11 +29,11 @@ test("resource discussions persist independently, paginate and resolve without r
         author,
       ),
     ).toEqual(comment);
-    await expect(store.append(ref, { key: "comment-1", kind: "comment", body: "Changed" }, author)).rejects.toThrow(
+    await expectRejection(store.append(ref, { key: "comment-1", kind: "comment", body: "Changed" }, author)).toThrow(
       "key",
     );
     await store.append(other, { key: "comment-1", kind: "comment", body: "Separate" }, author);
-    await expect(store.get(other, comment.id)).rejects.toThrow("resource");
+    await expectRejection(store.get(other, comment.id)).toThrow("resource");
     await store.append(ref, { key: "reply-1", kind: "comment", body: "I agree", replyToId: comment.id }, author);
     const first = await store.query(ref, { limit: 1 });
     expect(first.items).toHaveLength(1);
@@ -40,7 +41,7 @@ test("resource discussions persist independently, paginate and resolve without r
     expect((await store.query(ref, { cursor: first.nextCursor!, limit: 1 })).items).toHaveLength(1);
     await store.append(other, { key: "another-resource-write", kind: "comment", body: "Remote update" }, author);
     expect((await store.query(ref, { cursor: first.nextCursor!, limit: 1 })).items).toHaveLength(1);
-    await expect(store.query(other, { cursor: first.nextCursor!, limit: 1 })).rejects.toThrow("another resource");
+    await expectRejection(store.query(other, { cursor: first.nextCursor!, limit: 1 })).toThrow("another resource");
     expect(await store.unresolved(ref)).toBe(1);
     await store.resolve(ref, comment.id, true);
     expect(await store.unresolved(ref)).toBe(0);
@@ -57,7 +58,7 @@ test("resource discussions persist independently, paginate and resolve without r
       },
       author,
     );
-    await expect(store.resolve(ref, outcome.id, true)).rejects.toThrow("discussion");
+    await expectRejection(store.resolve(ref, outcome.id, true)).toThrow("discussion");
     const reopened = createResourceActivityStore(storage, project.id);
     expect((await reopened.get(ref, outcome.id)).revision?.headSha).toBe("a".repeat(40));
     expect((await reopened.query(other, {})).items.map((entry) => entry.body)).toEqual(["Remote update", "Separate"]);
@@ -169,7 +170,7 @@ test("activity retries preserve legacy receipts and concurrent new publications"
       ],
     });
     expect(await store.append(ref, input, author)).toEqual(entry);
-    await expect(store.append(ref, { ...input, body: "Changed" }, author)).rejects.toThrow("key");
+    await expectRejection(store.append(ref, { ...input, body: "Changed" }, author)).toThrow("key");
     const created = await Promise.all(
       Array.from({ length: 3 }, () =>
         store.append(ref, { key: "new", kind: "comment", body: "One publication" }, author),
@@ -184,7 +185,7 @@ test("activity retries preserve legacy receipts and concurrent new publications"
     expect((await store.append(ref, { key: "new", kind: "comment", body: "One publication" }, author)).resolved).toBe(
       true,
     );
-    await expect(store.append(ref, { key: "new", kind: "comment", body: "Changed" }, author)).rejects.toThrow("key");
+    await expectRejection(store.append(ref, { key: "new", kind: "comment", body: "Changed" }, author)).toThrow("key");
   } finally {
     await db.close();
   }

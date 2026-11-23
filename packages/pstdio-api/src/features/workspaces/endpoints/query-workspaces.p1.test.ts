@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createWorkspacesApi } from "../../extensions/command-environment/workspaces";
 
 test("workspace queries page within a project and keep canonical fields", async () => {
@@ -62,7 +63,7 @@ test("SDK workspace queries scope both link directions before pagination", async
       ),
     });
     const contextApi = createWorkspacesApi(deps, { projectId: project.id }, {} as never);
-    await expect(contextApi.query({ anchors: Array.from({ length: 101 }, () => selected) })).rejects.toThrow();
+    await expectRejection(contextApi.query({ anchors: Array.from({ length: 101 }, () => selected) })).toThrow();
     const page = await client.workspaces.query(project.id, { anchors: [selected], limit: 1 });
     const next = await client.workspaces.query(project.id, { anchors: [selected], limit: 1, cursor: page.nextCursor! });
     expect(new Set([...page.items, ...next.items].map(({ id }) => id))).toEqual(new Set([first.id, second.id]));

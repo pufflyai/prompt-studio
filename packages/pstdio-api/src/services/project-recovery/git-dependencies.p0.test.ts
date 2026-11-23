@@ -3,6 +3,7 @@ import { appendFile, mkdir, mkdtemp, readdir, realpath, rm, symlink, writeFile }
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { captureRecoveryFolder } from "./capture";
 import { createRecoveryChunkStore } from "./chunks";
 import { readRecoveryManifest } from "./manifest";
@@ -124,7 +125,7 @@ test("shared Git administration that changes during capture keeps the capture pe
   const worktree = join(root, "worktree");
   git(repository, "worktree", "add", "-q", worktree);
   let changed = false;
-  await expect(
+  await expectRejection(
     captureRecoveryFolder({
       root: worktree,
       chunks,
@@ -136,7 +137,7 @@ test("shared Git administration that changes during capture keeps the capture pe
         }
       },
     }),
-  ).rejects.toMatchObject({ code: "recovery_capture_incomplete" });
+  ).toMatchObject({ code: "recovery_capture_incomplete" });
   expect(changed).toBe(true);
 });
 
@@ -179,8 +180,8 @@ baseTest("a scan refuses a root that does not resolve to the validated path befo
   const alias = join(root, "alias");
   await symlink(join(repository, ".git"), alias);
   const before = await readdir(chunks.directory);
-  await expect(
+  await expectRejection(
     scanRecoveryRoot({ root: alias, expectedRoot: alias, chunks, policy: { text: null } }),
-  ).rejects.toThrow();
+  ).toThrow();
   expect(await readdir(chunks.directory)).toEqual(before);
 });

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { packExtension, type RegistryRelease } from "pstdio-extensions/distribution";
 import { installExtensionSource, toExtensionEnableInput } from "../features/extensions/install-extension-source";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { createExtensionUpgradeService, type ExtensionService } from "./extension-upgrade-service";
 import { createRegistryExtensionSource, type RegistryUpgradeSource } from "./registry-extension-source";
 
@@ -124,7 +125,7 @@ test("refuses a modified download and preserves the working files", async () => 
   const before = await readFile(join(installed.targetPath, "extension.ts"), "utf8");
   const release = await f.publish("0.45.2");
   release.sha256 = "0".repeat(64);
-  await expect(f.upgrade(recorded)).rejects.toThrow("SHA-256");
+  await expectRejection(f.upgrade(recorded)).toThrow("SHA-256");
   expect(await readFile(join(installed.targetPath, "extension.ts"), "utf8")).toBe(before);
 });
 test("keeps the installed extension when the candidate cannot load or the registry is unavailable", async () => {
@@ -132,9 +133,9 @@ test("keeps the installed extension when the candidate cannot load or the regist
   const { installed, recorded } = await f.first();
   const before = await readFile(join(installed.targetPath, "extension.ts"), "utf8");
   await f.publish("0.45.2", hostApi, true);
-  await expect(f.upgrade(recorded)).rejects.toThrow();
+  await expectRejection(f.upgrade(recorded)).toThrow();
   expect(await readFile(join(installed.targetPath, "extension.ts"), "utf8")).toBe(before);
   await f.server.stop(true);
-  await expect(f.upgrade(recorded)).rejects.toThrow("unreachable");
+  await expectRejection(f.upgrade(recorded)).toThrow("unreachable");
   expect(await readFile(join(installed.targetPath, "extension.ts"), "utf8")).toBe(before);
 });

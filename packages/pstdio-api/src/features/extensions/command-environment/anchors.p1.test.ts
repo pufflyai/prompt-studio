@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createSessionsApi } from "./sessions";
 import { createWorkspacesApi } from "./workspaces";
 
@@ -84,10 +85,10 @@ for (const target of ["workspace", "session"] as const) {
     await api.removeAnchors(owned.id, [first]);
     await api.removeAnchors(owned.id, [first]);
     expect((await api.get(owned.id))?.anchors_json).toEqual([differentType, second]);
-    await expect(api.addAnchors(foreign.id, [first])).rejects.toThrow("not found");
-    await expect(api.removeAnchors(foreign.id, [first])).rejects.toThrow("not found");
-    await expect(api.addAnchors("missing", [first])).rejects.toThrow("not found");
-    await expect(api.removeAnchors("missing", [first])).rejects.toThrow("not found");
+    await expectRejection(api.addAnchors(foreign.id, [first])).toThrow("not found");
+    await expectRejection(api.removeAnchors(foreign.id, [first])).toThrow("not found");
+    await expectRejection(api.addAnchors("missing", [first])).toThrow("not found");
+    await expectRejection(api.removeAnchors("missing", [first])).toThrow("not found");
     expect(env.eventBus.getSince(0).at(-1)).toMatchObject({
       table: target === "workspace" ? "workspaces" : "sessions",
       op: "set",

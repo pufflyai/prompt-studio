@@ -3,6 +3,7 @@ import { rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createTextEditingClient, type GuestHost } from "@pstdio/sdk/extensions";
 import type { TextEditingRequest } from "pstdio-api-contracts/extension-kernel";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { editorView, selected, textEditingFixture } from "./text-editing.test-fixture";
 
 const fixtures: Awaited<ReturnType<typeof textEditingFixture>>[] = [];
@@ -48,7 +49,7 @@ test("one failed close finalizer restores every member of the same placement", a
   const second = await f.open();
   const draft = second.createDraft();
   draft.text.insert(0, "unfinished ");
-  await expect(f.text.prepareClose(f.address)).rejects.toMatchObject({ code: "draft_active" });
+  await expectRejection(f.text.prepareClose(f.address)).toMatchObject({ code: "draft_active" });
   expect(first.getSnapshot().closing).toBe(false);
   expect(second.getSnapshot().closing).toBe(false);
   first.transact((text) => text.insert(0, "kept "));
@@ -120,7 +121,7 @@ test("a draft refused as read only can be explicitly cancelled before ordinary c
   const draft = session.createDraft();
   draft.text.insert(0, "not admitted ");
   await writeFile(join(f.root, "read-only"), "");
-  await expect(draft.commit()).rejects.toMatchObject({ code: "source_read_only" });
+  await expectRejection(draft.commit()).toMatchObject({ code: "source_read_only" });
   expect(session.getSnapshot().text.toString()).toBe("selected folder");
   draft.cancel();
   expect(session.getSnapshot().pending).toBe(false);
@@ -147,7 +148,7 @@ test("an admitted draft with a lost acknowledgement cannot be cancelled and repl
   draft.cancel();
   expect(session.getSnapshot().pending).toBe(true);
   release.resolve();
-  await expect(committing).rejects.toThrow("Connection lost");
+  await expectRejection(committing).toThrow("Connection lost");
   draft.cancel();
   expect(session.getSnapshot().pending).toBe(true);
   await writeFile(join(f.root, "read-only"), "");
@@ -170,14 +171,14 @@ test("a later read-only refusal cannot make an uncertain draft admission cancell
     if (input.operation === "open" && input.pendingUpdate)
       throw new Error("Transport ended without an admission result");
   });
-  await expect(draft.commit()).rejects.toThrow("Transport ended");
+  await expectRejection(draft.commit()).toThrow("Transport ended");
   f.before();
   await writeFile(join(f.root, "read-only"), "");
-  await expect(draft.commit()).rejects.toMatchObject({ code: "source_read_only" });
+  await expectRejection(draft.commit()).toMatchObject({ code: "source_read_only" });
   draft.cancel();
   expect(session.getSnapshot().pending).toBe(true);
   expect(draft.text.toString()).toBe("recover selected folder");
-  await expect(session.close()).rejects.toMatchObject({ code: "source_read_only" });
+  await expectRejection(session.close()).toMatchObject({ code: "source_read_only" });
   await rm(join(f.root, "read-only"));
   await draft.commit();
   expect(session.getSnapshot().text.toString()).toBe("recover selected folder");
@@ -199,7 +200,7 @@ test("an acknowledged draft stays settled when its member cleanup acknowledgemen
   });
   const draft = session.createDraft();
   draft.text.insert(0, "durable ");
-  await expect(draft.commit()).rejects.toThrow("cleanup acknowledgement lost");
+  await expectRejection(draft.commit()).toThrow("cleanup acknowledgement lost");
   expect(session.getSnapshot().pending).toBe(false);
   draft.cancel();
   await session.close();
@@ -219,7 +220,7 @@ test("ordinary close releases an acknowledged draft whose cleanup request never 
   });
   const draft = session.createDraft();
   draft.text.insert(0, "saved ");
-  await expect(draft.commit()).rejects.toThrow("cleanup request interrupted");
+  await expectRejection(draft.commit()).toThrow("cleanup request interrupted");
   await draft.commit();
   await session.close();
   expect(f.documents.sources.current({ workbenchId: "project-1", extensionId: "example.context" })).toEqual([]);

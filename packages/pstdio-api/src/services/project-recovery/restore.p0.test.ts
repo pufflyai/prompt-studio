@@ -17,6 +17,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { captureRecoveryFolder } from "./capture";
 import { createRecoveryChunkStore, recoveryChunkBytes } from "./chunks";
 import { nativeRecoverySupported } from "./native-recovery.fixture";
@@ -135,7 +136,7 @@ test("a restore keeps the applied .pstignore and leaves excluded paths out", asy
   await rm(join(folder, ".pstignore"));
   const absent = join(root, "absent");
   await restore(await capture(), absent);
-  await expect(lstat(join(absent, ".pstignore"))).rejects.toThrow();
+  await expectRejection(lstat(join(absent, ".pstignore"))).toThrow();
   expect(await readFile(join(absent, "nested/node_modules/package/index.js"), "utf8")).toBe("excluded");
 });
 
@@ -157,13 +158,13 @@ test("an existing destination is refused without writes, even an empty folder or
   const candidate = await capture();
   await mkdir(join(root, "empty"));
   await symlink(join(root, "elsewhere"), join(root, "link"));
-  await expect(restore(candidate, join(root, "empty"))).rejects.toMatchObject({ code: "destination_exists" });
-  await expect(restore(candidate, join(root, "link"))).rejects.toMatchObject({ code: "destination_exists" });
-  await expect(restore(candidate, join(root, "missing/parent"))).rejects.toMatchObject({
+  await expectRejection(restore(candidate, join(root, "empty"))).toMatchObject({ code: "destination_exists" });
+  await expectRejection(restore(candidate, join(root, "link"))).toMatchObject({ code: "destination_exists" });
+  await expectRejection(restore(candidate, join(root, "missing/parent"))).toMatchObject({
     code: "destination_parent_missing",
   });
   expect(await readdir(join(root, "empty"))).toEqual([]);
-  await expect(lstat(join(root, "elsewhere"))).rejects.toThrow();
+  await expectRejection(lstat(join(root, "elsewhere"))).toThrow();
   expect(await siblings(root)).toEqual([]);
 });
 
@@ -185,7 +186,7 @@ test("a destination created during the restore is kept and the restore attaches 
       await writeFile(join(destination, "local-work"), "created by another program");
     },
   });
-  await expect(restoring).rejects.toMatchObject({ code: "destination_created" });
+  await expectRejection(restoring).toMatchObject({ code: "destination_created" });
   expect(await readdir(destination)).toEqual(["local-work"]);
   expect(await readFile(join(destination, "local-work"), "utf8")).toBe("created by another program");
   expect(await siblings(root)).toEqual([]);
@@ -209,9 +210,9 @@ test("cancelling a restore removes its staging folder and leaves no destination"
       if (files === 3) controller.abort();
     },
   });
-  await expect(restoring).rejects.toThrow();
+  await expectRejection(restoring).toThrow();
   expect(controller.signal.aborted).toBe(true);
-  await expect(lstat(join(root, "restored"))).rejects.toThrow();
+  await expectRejection(lstat(join(root, "restored"))).toThrow();
   expect(await siblings(root)).toEqual([]);
   expect(await readdir(join(root, "recovery", "restores")).catch(() => [])).toEqual([]);
 });
@@ -271,11 +272,11 @@ test("a copy that writes through a restored link, outside its folders or twice i
     [file("twice"), file("twice")],
   ]) {
     const { root, restore } = await crafted(entries);
-    await expect(restore()).rejects.toMatchObject({ code: "unsafe_entry" });
+    await expectRejection(restore()).toMatchObject({ code: "unsafe_entry" });
     expect((await readdir(root)).sort()).toEqual(["project", "recovery"]);
   }
   // Traversal never parses as an entry at all.
-  await expect(crafted([file("../escape")])).rejects.toThrow();
+  await expectRejection(crafted([file("../escape")])).toThrow();
 });
 
 test("names that collide on the destination filesystem are refused and nothing is attached", async () => {
@@ -288,8 +289,8 @@ test("names that collide on the destination filesystem are refused and nothing i
     );
   })();
   if (caseInsensitive) {
-    await expect(restore()).rejects.toMatchObject({ code: "name_collision", path: "README" });
-    await expect(lstat(join(root, "restored"))).rejects.toThrow();
+    await expectRejection(restore()).toMatchObject({ code: "name_collision", path: "README" });
+    await expectRejection(lstat(join(root, "restored"))).toThrow();
     expect(await siblings(root)).toEqual([]);
   } else expect((await readdir((await restore()).path)).sort()).toEqual(["README", "Readme"]);
 });
@@ -313,7 +314,7 @@ test("a repository restores as working Git with staged, unpushed and hook state,
   expect(git(destination, "diff", "--cached")).toBe(git(folder, "diff", "--cached"));
   expect(git(destination, "status", "--porcelain")).toBe(git(folder, "status", "--porcelain"));
   expect(git(destination, "fsck", "--no-progress")).toBe("");
-  await expect(lstat(join(root, "hook-ran"))).rejects.toThrow();
+  await expectRejection(lstat(join(root, "hook-ran"))).toThrow();
 });
 
 test("a linked worktree restores its registered administration inside the folder with no source paths", async () => {
@@ -361,7 +362,7 @@ test("an unregistered worktree restores its files but never claims working Git",
   expect(result.git).toBe("incomplete");
   expect(result.rewritten).toEqual([]);
   expect(result.omitted).toEqual([{ path: ".git", reason: "git-link-outside-folder" }]);
-  await expect(lstat(join(root, "restored", ".git"))).rejects.toThrow();
+  await expectRejection(lstat(join(root, "restored", ".git"))).toThrow();
 });
 
 test("a worktree whose administration was not restored never shares the source repository", async () => {
@@ -381,7 +382,7 @@ test("a worktree whose administration was not restored never shares the source r
   const result = await restore(await capture([]), destination);
   expect(result.git).toBe("incomplete");
   expect(result.omitted).toEqual([{ path: ".git", reason: "git-link-outside-folder" }]);
-  await expect(lstat(join(destination, ".git"))).rejects.toThrow();
+  await expectRejection(lstat(join(destination, ".git"))).toThrow();
   await writeFile(join(destination, "tracked"), "changed in the restored folder");
   Bun.spawnSync(["git", "add", "tracked"], { cwd: destination });
   Bun.spawnSync(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "restored"], {
@@ -459,7 +460,7 @@ test("a failed staging cleanup keeps the original error and its journal entry fo
       controller.abort(new Error("cancelled by the person"));
     },
   });
-  await expect(restoring).rejects.toThrow("cancelled by the person");
+  await expectRejection(restoring).toThrow("cancelled by the person");
   await chmod(parent, 0o700);
   expect(await siblings(parent)).toHaveLength(1);
   expect(await readdir(join(root, "recovery", "restores"))).toHaveLength(1);
@@ -477,14 +478,14 @@ test("destination names and paths beyond the platform limits are refused with th
   const candidate = await capture();
   // A long name still fits beside its staging folder.
   await restore(candidate, join(root, "n".repeat(240)));
-  await expect(restore(candidate, join(root, "n".repeat(256)))).rejects.toMatchObject({
+  await expectRejection(restore(candidate, join(root, "n".repeat(256)))).toMatchObject({
     code: "destination_too_long",
   });
   const limit = process.platform === "darwin" ? 1024 : 4096;
   let parent = root;
   while (Buffer.byteLength(parent) < limit - 300) parent = join(parent, "p".repeat(100));
   await mkdir(parent, { recursive: true });
-  await expect(restore(candidate, join(parent, "restored"))).rejects.toMatchObject({
+  await expectRejection(restore(candidate, join(parent, "restored"))).toMatchObject({
     code: "destination_too_long",
     path: `${deep}/${deep}/file`,
   });

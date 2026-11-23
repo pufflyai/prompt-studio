@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { readFile, writeFile } from "node:fs/promises";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { artifactFilesFixture } from "./artifact-files.fixture";
 import { createSharedArtifactMount } from "./artifact-mount";
 import { fileProjection } from "./file-state";
@@ -51,7 +52,7 @@ test("materialization checks workspace write permission even for an ordinary rea
     });
     expect(await mount.readText("note.md")).toBe("local readable copy");
     await f.replace("documents/note.md", "incoming remote change");
-    await expect(mount.readText("note.md")).rejects.toThrow("does not allow file write access");
+    await expectRejection(mount.readText("note.md")).toThrow("does not allow file write access");
     expect(await readFile(f.pathFor("documents/note.md"), "utf8")).toBe("local readable copy");
   } finally {
     await f.close();
@@ -83,9 +84,9 @@ test("a native save refuses to overwrite an outside edit made since its load", a
     await f.mount().writeText("note.md", "base");
     const loaded = await withStorageObservation({}, () => f.mount().readText("note.md"));
     await writeFile(f.pathFor("documents/note.md"), "outside edit");
-    await expect(
+    await expectRejection(
       withStorageObservation(loaded.versions, () => f.mount().writeText("note.md", "stale editor text")),
-    ).rejects.toThrow("changed since it was loaded");
+    ).toThrow("changed since it was loaded");
     expect(await f.mount().readText("note.md")).toBe("outside edit");
     expect(await readFile(f.pathFor("documents/note.md"), "utf8")).toBe("outside edit");
   } finally {
@@ -124,7 +125,7 @@ test("a native save rechecks its loaded revision after staging bytes", async () 
     } finally {
       resume.resolve();
     }
-    await expect(saved).rejects.toThrow("changed since it was loaded");
+    await expectRejection(saved).toThrow("changed since it was loaded");
     expect(await f.mount().readText("note.md")).toBe("concurrent record edit");
   } finally {
     await f.close();
@@ -177,7 +178,7 @@ test("a download rechecks workspace permission before installing its bytes", asy
         },
       },
     );
-    await expect(mount.refresh()).rejects.toThrow("now read-only");
+    await expectRejection(mount.refresh()).toThrow("now read-only");
     expect(await readFile(f.pathFor("documents/note.md"), "utf8")).toBe("base");
   } finally {
     await f.close();

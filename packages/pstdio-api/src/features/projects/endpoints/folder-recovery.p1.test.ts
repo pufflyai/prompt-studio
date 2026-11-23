@@ -8,6 +8,7 @@ import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { nativeRecoverySupported } from "../../../services/project-recovery/native-recovery.fixture";
 import { startFolderRecovery } from "../../../services/relay/folder-recovery";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import type { AppBindings } from "../../../types";
 import { documentPeer } from "../../extensions/publication/document-peer.fixture";
 import { createProjectRoutes } from "../routes";
@@ -131,7 +132,7 @@ test("a new device restores another device's folder copy while that device is of
     expect(restoredExtension?.instance.enabled ?? false).toBe(false);
     if (await Bun.file(marker).exists())
       console.log("Recovery fixture module executed at", await readFile(marker, "utf8"));
-    await expect(lstat(marker)).rejects.toThrow();
+    await expectRejection(lstat(marker)).toThrow();
 
     // The restored folder is now this device's source and keeps the copy's policy.
     await until(async () => (await call<ProjectFolderSource[]>("sources")).body.some((item) => item.current));
