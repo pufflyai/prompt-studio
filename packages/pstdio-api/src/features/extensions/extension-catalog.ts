@@ -66,6 +66,10 @@ const parseCatalogText = (text: string) => parseExtensionCatalog(JSON.parse(text
 
 export const packagedExtensionCatalog = parseExtensionCatalog(packagedCatalogData);
 
+/** Where a source checkout of Prompt Studio keeps a catalog extension. A packaged host has none. */
+export const hostCheckoutPath = (entry: ExtensionCatalogEntry) =>
+  join(import.meta.dirname, "../../../../../", entry.origin.path);
+
 const writeAtomic = async (path: string, content: string) => {
   await mkdir(dirname(path), { recursive: true });
   const tempPath = `${path}.${crypto.randomUUID()}.tmp`;

@@ -5,10 +5,12 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { closeBackendWorkers } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { packagedExtensionCatalog } from "./extension-catalog";
 
 let root: string;
 let handle: Awaited<ReturnType<typeof createTestApp>>;
 let projectId: string;
+let folderProjectId: string;
 const previous = { home: process.env.PSTDIO_HOME, defaults: process.env.PSTDIO_DEFAULT_EXTENSIONS };
 
 const command = (id: string, run: string) =>
@@ -75,11 +77,25 @@ export default {
 };
 `;
 
-const install = async (publisher: string, name: string) => {
-  const source = join(root, `${publisher}-${name}`);
-  await mkdir(source);
+const performanceOrigin = packagedExtensionCatalog.extensions.find(
+  (entry) => entry.installName === "performance",
+)!.origin;
+// How a catalog install records its source: the catalog's Git origin at a commit.
+const catalogSource = {
+  sourceKind: "git" as const,
+  sourceRef: `${performanceOrigin.url}@${"a".repeat(40)}#${performanceOrigin.path}`,
+};
+
+const install = async (
+  project: string,
+  publisher: string,
+  name: string,
+  source: { sourceKind: "git" | "local_path"; sourceRef?: string } = { sourceKind: "local_path" },
+) => {
+  const folder = join(root, `${project}-${publisher}-${name}`);
+  await mkdir(folder);
   await writeFile(
-    join(source, "package.json"),
+    join(folder, "package.json"),
     JSON.stringify({
       name,
       version: "1.0.0",
@@ -88,17 +104,25 @@ const install = async (publisher: string, name: string) => {
       engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
-  await writeFile(join(source, "extension.ts"), entry);
+  await writeFile(join(folder, "extension.ts"), entry);
   await handle.deps.extensionService.enableInstalledSourceForProject({
-    projectId,
+    projectId: project,
     installName: name,
     extensionId: `${publisher}.${name}`,
     name,
     displayName: name,
-    sourcePath: source,
-    sourceKind: "local_path",
+    sourcePath: folder,
+    ...source,
     manifest: {},
   });
+};
+
+const createProject = async (name: string) => {
+  const id = (await handle.deps.projectService.create({ name })).id;
+  const folder = join(root, `${name}-folder`);
+  await mkdir(folder);
+  await handle.deps.workspaceService.ensureDefault({ project_id: id, root_path: folder, name: "Project folder" });
+  return id;
 };
 
 beforeAll(async () => {
@@ -106,16 +130,12 @@ beforeAll(async () => {
   process.env.PSTDIO_HOME = join(root, "home");
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
   handle = await createTestApp({ databasePath: ":memory:", storageRoot: join(root, "storage") });
-  projectId = (await handle.deps.projectService.create({ name: "Diagnostics" })).id;
-  const folder = join(root, "project");
-  await mkdir(folder);
-  await handle.deps.workspaceService.ensureDefault({
-    project_id: projectId,
-    root_path: folder,
-    name: "Project folder",
-  });
-  await install("pstdio", "performance");
-  await install("example", "profiler");
+  projectId = await createProject("Diagnostics");
+  await install(projectId, "pstdio", "performance", catalogSource);
+  await install(projectId, "example", "profiler");
+  // Any folder can claim a catalog id. Installed from a local folder, it stays third-party.
+  folderProjectId = await createProject("Claimed");
+  await install(folderProjectId, "pstdio", "performance");
 });
 
 afterAll(async () => {
@@ -126,9 +146,9 @@ afterAll(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-const execute = async (extensionId: string, name: string) => {
+const execute = async (extensionId: string, name: string, project = projectId) => {
   const response = await handle.app.request(
-    `/v1/projects/${projectId}/extensions/commands/${extensionId}.command.${name}/execute`,
+    `/v1/projects/${project}/extensions/commands/${extensionId}.command.${name}/execute`,
     { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ params: {} }) },
   );
   const { outcome } = (await response.json()) as { outcome: { ok: boolean; value: unknown } };
@@ -166,4 +186,8 @@ test("a second concurrent capture is refused and the worker's signal stops the f
 
 test("an extension outside the first-party catalog is refused", async () => {
   expect((await execute("example.profiler", "refused")) as unknown).toBe("diagnostics_forbidden");
+});
+
+test("a local folder that claims a catalog id is refused", async () => {
+  expect((await execute("pstdio.performance", "refused", folderProjectId)) as unknown).toBe("diagnostics_forbidden");
 });
