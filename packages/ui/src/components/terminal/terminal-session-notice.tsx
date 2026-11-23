@@ -1,4 +1,4 @@
-import type { TerminalSessionError } from "../../src/components/terminal/types";
+import type { TerminalSessionError } from "./types";
 import "./terminal-session-notice.css";
 
 export const TerminalSessionNotice = ({ error, color }: { error?: TerminalSessionError; color?: string }) => (

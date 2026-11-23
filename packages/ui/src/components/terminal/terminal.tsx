@@ -4,6 +4,7 @@ import "./terminal.css";
 import { useContext, useEffect, useRef, useState } from "react";
 import { SplitPanelMotionContext } from "../layout/split-panel-motion-context";
 import { bindSessionToSink, type TerminalSink } from "./bind-session";
+import { TerminalSessionNotice } from "./terminal-session-notice";
 import { resolveTerminalTheme, type TerminalThemeName } from "./terminal-theme";
 import type { TerminalBridge, TerminalSessionAdapter, TerminalSessionRequest } from "./types";
 import { useTerminalSession } from "./use-terminal-session";
@@ -265,7 +266,11 @@ export const Terminal = (props: TerminalProps) => {
     fitTerminal(fitRef.current, motionRootRef?.current);
   }, [terminalReady, resolvedTheme, fontFamily, fontSize, motionRootRef]);
 
-  const { session } = useTerminalSession({ bridge, request: initialSessionRequestRef.current, killOnUnmount });
+  const { session, status, error } = useTerminalSession({
+    bridge,
+    request: initialSessionRequestRef.current,
+    killOnUnmount,
+  });
 
   useEffect(() => {
     if (!terminalReady) return;
@@ -309,6 +314,8 @@ export const Terminal = (props: TerminalProps) => {
   }, [autoFocus]);
 
   if (initializationError) throw initializationError;
+  const opening = status === "idle" || status === "opening" || (status === "open" && !terminalReady);
+  const openError = session ? undefined : (error ?? undefined);
 
   // The mount element fills its box absolutely so xterm sizes to the panel
   // rather than growing it: inside a scrollable host, a self-sized terminal
@@ -325,6 +332,7 @@ export const Terminal = (props: TerminalProps) => {
       }}
     >
       <div ref={containerRef} className="pstdio-terminal" style={{ position: "absolute", inset: 0 }} />
+      {(opening || openError) && <TerminalSessionNotice error={openError} color={resolvedTheme.foreground} />}
     </div>
   );
 };

@@ -7,3 +7,7 @@
   overflow-wrap: anywhere;
   pointer-events: none;
 }
+
+.pstdio-terminal-session-notice[role="alert"] {
+  pointer-events: auto;
+}

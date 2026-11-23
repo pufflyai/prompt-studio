@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { TerminalSessionNotice } from "./terminal-session-notice";
 
 const meta = {
-  title: "Proposals/PS-289 Terminal session feedback",
+  title: "Design system/Components/Media/Terminal session feedback",
   component: TerminalSessionNotice,
   render: (args) => (
     <div style={{ position: "relative", width: "min(720px, 90vw)", height: "320px", background: "#1e1e1e" }}>
