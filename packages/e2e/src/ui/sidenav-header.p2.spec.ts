@@ -71,6 +71,9 @@ const row = (sidenav: Locator, name: (typeof allSectionRowNames)[number]) =>
         .first()
     : sidenav.getByRole("option", { name, exact: true }).first();
 
+const projectControl = (page: Page) =>
+  page.getByRole("banner", { name: "App header", exact: true }).getByRole("button", { name: /PS-174 Sidenav$/ });
+
 const expectSidenavSections = async (
   sidenav: Locator,
   visibleNames: readonly (typeof allSectionRowNames)[number][] = allSectionRowNames,
@@ -107,13 +110,13 @@ test("removes and restores owner-scoped collections across project and session p
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   await row(sidenav, "Tickets").click();
   const nav = page.locator('[data-workbench-region="nav"]');
-  const projectButton = nav.getByRole("button", { name: /PS-174 Sidenav$/ });
+  const projectButton = projectControl(page);
   await expect(projectButton).toBeVisible({ timeout: 30_000 });
   const projectBox = await projectButton.boundingBox();
   const breadcrumbBox = await nav.getByRole("navigation", { name: "breadcrumb" }).boundingBox();
   expect(projectBox).not.toBeNull();
   expect(breadcrumbBox).not.toBeNull();
-  expect(projectBox!.x).toBeLessThan(breadcrumbBox!.x);
+  expect(projectBox!.y + projectBox!.height).toBeLessThanOrEqual(breadcrumbBox!.y);
   await expectSidenavSections(sidenav);
 
   // Project chrome persists; virtualized tree rows may unmount while scrolling.
@@ -155,8 +158,7 @@ test("customizes the Sidenav from any point and persists section visibility", as
   await page.goto(`/projects/${project.id}`);
 
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  const projectButton = page.locator('[data-workbench-region="nav"]').getByRole("button", { name: /PS-174 Sidenav$/ });
-  await expect(projectButton).toBeVisible({ timeout: 30_000 });
+  await expect(projectControl(page)).toBeVisible({ timeout: 30_000 });
   await expectSidenavSections(sidenav);
 
   await row(sidenav, "Search").click({ button: "right" });
