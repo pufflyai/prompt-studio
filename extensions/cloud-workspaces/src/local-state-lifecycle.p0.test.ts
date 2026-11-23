@@ -3,19 +3,18 @@ import { randomUUID } from "node:crypto";
 import * as fs from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { writeControllerFixture } from "./controller.test-fixture";
 import { createInstances } from "./instances";
 
 async function controllerFixture() {
   const root = await fs.mkdtemp(join(tmpdir(), "pc-state-races-"));
   const id = randomUUID();
   const directory = join(root, id);
-  const binary = join(root, "controller.ts");
   await fs.mkdir(directory);
   await fs.writeFile(join(directory, "empty.env"), "");
-  await fs.writeFile(
-    binary,
-    `#!${process.execPath}
-import { mkdir, rm, writeFile } from "node:fs/promises";
+  const binary = await writeControllerFixture(
+    root,
+    `import { mkdir, rm, writeFile } from "node:fs/promises";
 const args = process.argv.slice(2);
 if (args.includes("status")) { const running = await Bun.file("state/server.json").exists(); console.log(JSON.stringify({ state: running ? "running" : "not_running" })); process.exit(running ? 0 : 1); }
 if (args.includes("start")) {
@@ -26,7 +25,6 @@ if (args.includes("start")) {
 if (args.includes("stop")) await rm("state/server.json", { force: true });
 if (args.includes("superuser")) console.log(JSON.stringify({ token: "fixture", key: { expires_at: "2099-01-01T00:00:00Z" } }));
 `,
-    { mode: 0o700 },
   );
   await fs.writeFile(
     join(directory, "instance.json"),

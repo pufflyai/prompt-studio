@@ -1,7 +1,8 @@
 import { expect, spyOn, test } from "bun:test";
 import * as fs from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
+import { writeControllerFixture } from "./controller.test-fixture";
 import { createInstances } from "./instances";
 
 test("failed instance initialization leaves the instance list usable", async () => {
@@ -9,7 +10,7 @@ test("failed instance initialization leaves the instance list usable", async () 
   const write = fs.writeFile;
   const failure = new Error("No space for empty.env");
   const writing = spyOn(fs, "writeFile").mockImplementation(async (...args: Parameters<typeof fs.writeFile>) => {
-    if (String(args[0]).endsWith("/empty.env")) throw failure;
+    if (basename(String(args[0])) === "empty.env") throw failure;
     return write(...args);
   });
   try {
@@ -55,7 +56,6 @@ test("instance initialization uses the supplied port allocator and keeps control
 
 test("a failed launch keeps the instance state when the rollback cannot confirm the controller stopped", async () => {
   const root = await fs.mkdtemp(join(tmpdir(), "cloud-instance-rollback-"));
-  const binary = join(root, "controller.ts");
   const instancesRoot = join(root, "instances");
   let directory = "";
   let publications = 0;
@@ -69,10 +69,9 @@ test("a failed launch keeps the instance state when the rollback cannot confirm 
       return Response.json({ error: { code: "publish_failed", message: "Template rejected" } }, { status: 503 });
     },
   });
-  await fs.writeFile(
-    binary,
-    `#!${process.execPath}
-import { mkdir, writeFile } from "node:fs/promises";
+  const binary = await writeControllerFixture(
+    root,
+    `import { mkdir, writeFile } from "node:fs/promises";
 const args = process.argv.slice(2);
 if (args.includes("status")) {
   if (await Bun.file("publication-failed").exists()) { console.error("Probe unavailable after publication"); process.exit(1); }
@@ -83,7 +82,6 @@ if (args.includes("start")) { await mkdir("state", { recursive: true }); await w
 if (args.includes("stop")) await writeFile("stop-attempted", "yes");
 if (args.includes("superuser")) console.log(JSON.stringify({ token: "fixture", key: { expires_at: "2099-01-01T00:00:00Z" } }));
 `,
-    { mode: 0o700 },
   );
   let ports = 0;
   try {
