@@ -13,18 +13,17 @@ interface SidePanelBubbleProps {
   buttonRef: RefObject<HTMLButtonElement | null>;
   isOpen: boolean;
   bottom: string;
-  bottomOffset?: string;
   icon?: ReactNode;
   onOpen?: () => void | Promise<void>;
 }
 
 export const SidePanelBubble = (props: SidePanelBubbleProps) => {
-  const { workbench, buttonRef, isOpen, bottom, bottomOffset, icon, onOpen } = props;
+  const { workbench, buttonRef, isOpen, bottom, icon, onOpen } = props;
   const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
-  const position = useSidePanelPosition(workbench);
+  const position = useSidePanelPosition(workbench, "6");
   return (
     <>
-      <SidePanelDropTargets alignment={position.dropAlignment} bottom={bottomOffset} />
+      <SidePanelDropTargets alignment={position.dropAlignment} bottom={bottom} surface="bubble" />
       <ResourceContextMenu actions={position.actions}>
         <BubbleButton
           ref={buttonRef}

@@ -66,11 +66,31 @@ const verifyMovableSidePanel = async (
   await page.getByRole("menuitem", { name: "Align center", exact: true }).click();
   await expect.poll(() => centerX(bubble)).toBeCloseTo(viewport.width / 2, 0);
   const bounds = (await bubble.boundingBox())!;
+  const bubbleInset = await bubble.evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element.parentElement!).right),
+  );
   await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
   await page.mouse.down();
   await page.mouse.move(bounds.x + bounds.width / 2 - 8, bounds.y + bounds.height / 2, { steps: 3 });
   await expect.poll(() => centerX(bubble)).toBeLessThan(viewport.width / 2 - 4);
   await expect(targets).toHaveCount(3);
+  await expect.poll(() => page.locator('[data-side-panel-drop-slot="center"]').boundingBox()).toEqual(bounds);
+  const leftCircle = page.locator('[data-side-panel-drop-slot="left"]');
+  const rightCircle = page.locator('[data-side-panel-drop-slot="right"]');
+  await expect.poll(async () => (await leftCircle.boundingBox())!.x).toBeCloseTo(bubbleInset, 0);
+  await expect
+    .poll(async () => (await rightCircle.boundingBox())!.x + bounds.width)
+    .toBeCloseTo(viewport.width - bubbleInset, 0);
+  await expect
+    .poll(() =>
+      leftCircle.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const radius = getComputedStyle(element).borderRadius;
+        const corner = Number.parseFloat(radius) * (radius.includes("%") ? box.width / 100 : 1);
+        return box.width === box.height && corner >= box.width / 2;
+      }),
+    )
+    .toBe(true);
   for (const slot of ["left", "center", "right"])
     await expect(page.locator(`[data-side-panel-drop-slot="${slot}"]`)).toBeVisible();
   await expect(page.locator('[data-side-panel-drop-slot="center"]')).toHaveAttribute("data-drop-active", "true");
@@ -102,6 +122,11 @@ const verifyMovableSidePanel = async (
   const side = page.getByTestId("workbench-side-panel-floating");
   await expect(side).toBeVisible();
   await expect.poll(() => centerX(side)).toBeLessThan(viewport.width / 3);
+  await expect(side).toHaveCSS("transform", "none");
+  const panelBounds = (await side.boundingBox())!;
+  const statusBounds = (await page.locator('[data-workbench-region="status"]').boundingBox())!;
+  const bottomGap = statusBounds.y - panelBounds.y - panelBounds.height;
+  expect(panelBounds.x).toBeCloseTo(bottomGap, 0);
   const draft = side.getByTestId("content-editable").filter({ visible: true });
   await draft.fill("Keep this draft while moving the panel");
   const header = (await side.locator('[data-workbench-panel-header="side"]').boundingBox())!;
@@ -109,6 +134,11 @@ const verifyMovableSidePanel = async (
   await page.mouse.down();
   await page.mouse.move((viewport.width * 2) / 3 + 15, header.y + header.height / 2, { steps: 8 });
   await expect(page.locator('[data-side-panel-drop-slot="right"]')).toHaveAttribute("data-drop-active", "true");
+  const leftMarker = (await page.locator('[data-side-panel-drop-slot="left"]').boundingBox())!;
+  const rightMarker = (await page.locator('[data-side-panel-drop-slot="right"]').boundingBox())!;
+  expect(leftMarker.x).toBeCloseTo(bottomGap, 0);
+  expect(rightMarker.x + rightMarker.width).toBeCloseTo(viewport.width - bottomGap, 0);
+  expect(leftMarker.y + leftMarker.height).toBeCloseTo(panelBounds.y + panelBounds.height, 0);
   await page.screenshot({ path: info.outputPath("panel-drop-targets.png") });
   await page.mouse.move(viewport.width - 40, header.y + header.height / 2, { steps: 8 });
   await expect(targets).toHaveCount(3);

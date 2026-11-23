@@ -2,6 +2,7 @@ import { Box, Flex, IconButton, Text } from "@chakra-ui/react";
 import {
   AttachedPanel,
   BubblePanel,
+  floatingPanelGeometry,
   Header,
   PANEL_HEADER_CONTROL_SIZE,
   ResourceContextMenu,
@@ -18,7 +19,7 @@ import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
 import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
-import { FloatingSidePanelResizeHandles } from "./floating-side-panel-resize-handles";
+import { FloatingSidePanelResizeHandle } from "./floating-side-panel-resize-handle";
 import { SidePanelBubble } from "./side-panel-bubble";
 import { SidePanelDropTargets } from "./side-panel-drop-targets";
 import { useFloatingSidePanel } from "./use-floating-side-panel";
@@ -33,7 +34,7 @@ interface WorkbenchSidePanelProps {
 }
 
 const floatingPanelBottom = (bottomOffset: string | undefined) =>
-  bottomOffset ? `calc(${bottomOffset} + 0.75rem)` : "0.75rem";
+  bottomOffset ? `calc(${bottomOffset} + ${floatingPanelGeometry.inset}px)` : `${floatingPanelGeometry.inset}px`;
 
 const launcherBottom = (bottomOffset: string | undefined) => (bottomOffset ? `calc(${bottomOffset} + 1.5rem)` : "6");
 
@@ -164,12 +165,11 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
           buttonRef={bubbleRef}
           isOpen={visible}
           bottom={launcherBottom(bottomOffset)}
-          bottomOffset={bottomOffset}
           icon={bubbleIcon}
           onOpen={onOpen}
         />
       ) : null}
-      <SidePanelDropTargets alignment={position.dropAlignment} bottom={bottomOffset} />
+      <SidePanelDropTargets alignment={position.dropAlignment} bottom={floatingPanelBottom(bottomOffset)} />
       {/* Both presentation slots stay connected so hiding cannot release a live iframe. */}
       <BubblePanel
         ref={panelRef}
@@ -246,7 +246,7 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
         overlay={
           <>
             <WorkbenchTabDropTarget region="side" visible={visible} />
-            {visible && policy.resizable ? <FloatingSidePanelResizeHandles resizeProps={position.resizeProps} /> : null}
+            {visible && policy.resizable ? <FloatingSidePanelResizeHandle resizeProps={position.resizeProps} /> : null}
           </>
         }
       >

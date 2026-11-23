@@ -93,8 +93,11 @@ Native Chakra menu choices use `Menu.ItemText` and `Menu.ItemIndicator` with the
 The floating Side Panel hides its launcher while open and restores it when closed.
 Drag the bubble or unused floating header space to the left, center, or right.
 Both share their saved alignment and move visibly while dragging. During a snap drag,
-three short markers appear above the status area; the pointer's destination is
-highlighted. Releasing saves that alignment. Right-click either surface for
+three destination indicators appear above the status area, with the pointer's
+destination highlighted. Bubble indicators are circles matching the bubble's exact
+size and resting positions. Floating-panel indicators are short markers at the
+bottom-left, center and bottom-right anchors, using the same gap as the panel's
+bottom edge. Releasing saves that alignment. Right-click either surface for
 **Align left**, **Align center**, or **Align right**. While the bubble or floating
 header has focus, Alt+Shift+Left/Right changes alignment. These user preferences
 persist across projects and reloads.
@@ -103,8 +106,8 @@ Choose **Snap to alignment** or **Move freely** under **Floating panel movement*
 in Appearance or the floating header context menu. Snap is the default. Free
 movement follows the pointer horizontally and vertically without snap indicators;
 Alt+Shift+arrow keys move a focused floating header. The bubble keeps its alignment.
-Resize the floating panel from any edge or corner. Focus a resize handle and use
-arrow keys to resize; Shift uses larger steps. Size and free position persist
+Resize the floating panel only from its top-left corner. Its left and right gaps
+match its bottom gap. Focus the top-left resize handle and use arrow keys to resize; Shift uses larger steps. Size and free position persist
 across close/reopen and reload. Escape cancels an active move or resize.
 A smaller viewport fits the panel temporarily
 without replacing its saved frame. Panel policy can disable resizing.

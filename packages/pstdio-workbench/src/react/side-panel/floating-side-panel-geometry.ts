@@ -10,7 +10,6 @@ export interface FloatingPanelViewport {
   width: number;
   height: number;
 }
-export type FloatingPanelResizeDirection = "n" | "s" | "w" | "e" | "nw" | "ne" | "sw" | "se";
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 const panelArea = (viewport: FloatingPanelViewport) => {
@@ -32,7 +31,6 @@ export const fitFloatingPanel = (frame: FloatingPanelFrame, viewport: FloatingPa
 
 export const resizeFloatingPanel = (
   frame: FloatingPanelFrame,
-  direction: FloatingPanelResizeDirection,
   delta: { x: number; y: number },
   viewport: FloatingPanelViewport,
 ) => {
@@ -41,15 +39,9 @@ export const resizeFloatingPanel = (
   const bottom = frame.y + frame.height;
   const minWidth = Math.min(floatingPanelGeometry.minWidth, area.width);
   const minHeight = Math.min(floatingPanelGeometry.minHeight, area.height);
-  const x = direction.includes("w") ? clamp(frame.x + delta.x, area.inset, right - minWidth) : frame.x;
-  const y = direction.includes("n") ? clamp(frame.y + delta.y, area.inset, bottom - minHeight) : frame.y;
-  const width = direction.includes("e")
-    ? clamp(frame.width + delta.x, minWidth, viewport.width - area.inset - x)
-    : right - x;
-  const height = direction.includes("s")
-    ? clamp(frame.height + delta.y, minHeight, viewport.height - area.inset - y)
-    : bottom - y;
-  return fitFloatingPanel({ x, y, width, height }, viewport);
+  const x = clamp(frame.x + delta.x, area.inset, right - minWidth);
+  const y = clamp(frame.y + delta.y, area.inset, bottom - minHeight);
+  return fitFloatingPanel({ x, y, width: right - x, height: bottom - y }, viewport);
 };
 
 export const readFloatingPanelFrame = (element: HTMLElement) => ({

@@ -15,7 +15,7 @@ const margins = {
   right: { marginLeft: "auto", marginRight: "0" },
 };
 
-export const useSidePanelPosition = (workbench: WorkbenchCore) => {
+export const useSidePanelPosition = (workbench: WorkbenchCore, inset = `${floatingPanelGeometry.inset}px`) => {
   const alignment = useWorkbenchStore(
     workbench.preferences.store,
     () => workbench.preferences.getValue(sidePanelBubblePreferences.alignment) as Alignment,
@@ -47,8 +47,8 @@ export const useSidePanelPosition = (workbench: WorkbenchCore) => {
     dropAlignment: preview?.drop,
     cancelDrag,
     frameProps: {
-      left: `${floatingPanelGeometry.inset}px`,
-      right: `${floatingPanelGeometry.inset}px`,
+      left: inset,
+      right: inset,
       ...margins[shownAlignment],
       style: { translate: `${preview?.offset ?? 0}px 0` },
     },
