@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { getApiClient } from "@/lib/api";
 import { FolderPicker } from "@/shared/filesystem/folder-picker";
+import { useProjectFolderAssignment } from "@/shared/projects/project-folder-operations";
 import { ProjectSetupStatus } from "@/shared/projects/project-setup-status";
 import { useProject } from "@/shared/projects/use-project";
 
@@ -14,6 +15,7 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
   const [name, setName] = useState("");
   const [attaching, setAttaching] = useState(false);
   const client = useQueryClient();
+  const folderAssignment = useProjectFolderAssignment(projectId);
   const rename = useMutation({
     mutationFn: (name: string) => getApiClient().projects.update(projectId!, { name }),
   });
@@ -28,12 +30,8 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
     setName(project?.name ?? "");
   }, [project?.name]);
   const attach = useMutation({
-    mutationFn: (path: string) =>
-      getApiClient().projects.attachInitialWorkspace(projectId!, { provider_id: "pstdio.root", params: { path } }),
-    onSuccess: async () => {
-      await client.invalidateQueries({ queryKey });
-      setAttaching(false);
-    },
+    mutationFn: (path: string) => folderAssignment.assign({ mode: "attach", path }),
+    onSuccess: () => setAttaching(false),
   });
   const retry = useMutation({
     mutationFn: () => getApiClient().projects.retrySetup(projectId!),
@@ -85,7 +83,7 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
         !home?.provider_operation_id &&
         !query.isPending &&
         !settingUp && (
-          <Button variant="outline" onClick={() => setAttaching(true)}>
+          <Button variant="outline" disabled={folderAssignment.busy} onClick={() => setAttaching(true)}>
             Attach project folder
           </Button>
         )}
@@ -100,8 +98,12 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
         <Dialog.Positioner>
           <Dialog.Content>
             <FolderPicker
-              isOpening={attach.isPending}
-              error={attach.error?.message}
+              isOpening={folderAssignment.working}
+              selectionDisabled={folderAssignment.busy}
+              error={
+                attach.error?.message ??
+                (folderAssignment.error instanceof Error ? folderAssignment.error.message : undefined)
+              }
               onClose={() => setAttaching(false)}
               onSelect={async (path) => {
                 try {

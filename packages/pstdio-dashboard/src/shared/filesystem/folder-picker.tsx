@@ -7,6 +7,7 @@ interface FolderPickerProps {
   onSelect: (path: string) => Promise<void>;
   onClose: () => void;
   isOpening?: boolean;
+  selectionDisabled?: boolean;
   initialPath?: string;
   error?: string;
 }
@@ -68,6 +69,7 @@ export const FolderPicker = (props: FolderPickerProps) => {
       isUnavailable={!listing && !loading}
       isLoading={loading}
       isOpening={props.isOpening}
+      selectionDisabled={props.selectionDisabled}
       error={error || props.error}
       onClose={props.onClose}
       onSelect={() => {
