@@ -16,9 +16,14 @@ export const createRemotePglite = (worker: Worker) => {
   const call = (request: Request): Promise<unknown> => {
     if (failure) return Promise.reject(failure);
     const id = next++;
+    try {
+      worker.postMessage({ ...request, id } as DatabaseWorkerRequest);
+    } catch (error) {
+      // A value that cannot be cloned fails only its own call; nothing is left pending.
+      return Promise.reject(error);
+    }
     const reply = Promise.withResolvers<unknown>();
     pending.set(id, reply);
-    worker.postMessage({ ...request, id } as DatabaseWorkerRequest);
     return reply.promise;
   };
 
@@ -66,5 +71,5 @@ export const createRemotePglite = (worker: Worker) => {
     },
   };
 
-  return { pglite, call, receive, fail };
+  return { pglite, call, receive, fail, busy: () => pending.size > 0 };
 };

@@ -50,9 +50,13 @@ const settledTransactions = new Map<number, Promise<void>>();
 
 // The transaction stays open until the API thread ends it, so its callback waits on that message.
 const begin = (id: number) => {
+  if (!database) {
+    send({ type: "reply", id, ok: false, error: serializeDatabaseError(new Error("The database is not open.")) });
+    return;
+  }
   const txId = nextTransaction++;
   let started = false;
-  const settled = database!.pglite
+  const settled = database.pglite
     .transaction(async (tx) => {
       started = true;
       const commit = await new Promise<boolean>((finish) => {
@@ -120,7 +124,10 @@ const handle = (request: DatabaseWorkerRequest) => {
       return;
     case "cleanup":
       cleanupStopped = false;
-      void reply(request.id, () => database!.cleanupRetiredRows(() => cleanupStopped));
+      void reply(request.id, async () => {
+        if (!database) throw new Error("The database is not open.");
+        await database.cleanupRetiredRows(() => cleanupStopped);
+      });
       return;
     case "stop-cleanup":
       cleanupStopped = true;
