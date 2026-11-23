@@ -1,21 +1,27 @@
 import { Box, Button, HStack, Icon, IconButton, Stack, Tabs, Text } from "@chakra-ui/react";
 import { AlertMessage, EmptyState } from "@pstdio/ui";
 import { DataTable, type RowData } from "@pstdio/ui/data-table";
-import { Github } from "lucide-react";
+import { CalendarDays, Github, Layers } from "lucide-react";
 import { useState } from "react";
 import { PageFrame } from "../webview/page-frame";
-import {
-  CategoryBreakdown,
-  DurationPlot,
-  formatDuration,
-  HealthPlot,
-  hasCategories,
-  quarantinedTests,
-  TotalTestsPlot,
-} from "./health-charts";
+import { type Aggregation, aggregationOptions, type DateRange, rangeOptions } from "../webview/period";
+
+// Release health can be grouped by hour; other pages keep day, week and month.
+const healthAggregationOptions: { value: Aggregation; label: string }[] = [
+  { value: "hour", label: "Hour" },
+  ...aggregationOptions,
+];
+
+import { SelectMenu } from "../webview/select-menu";
+import { BugOriginsPlot } from "./bug-origins-plot";
+import { CategoryBreakdown, formatDuration, ReleaseRunPlots } from "./health-charts";
+import { buildHealthTimeline } from "./health-timeline";
+import { PullRequestMergesPlot } from "./pull-request-merges-plot";
+import { ReleaseEtaPlot } from "./release-eta-plot";
 import type { HealthHistory, ReleaseHealth } from "./types";
 
 export interface HealthViewProps extends HealthHistory {
+  today: string;
   refreshing: boolean;
   onRefresh: () => void;
   onOpen: (url: string) => void;
@@ -118,18 +124,37 @@ const RunDetail = (props: { run: ReleaseHealth; onOpen: (url: string) => void })
 };
 
 export const HealthView = (props: HealthViewProps) => {
-  const { runs, error, refreshing, onRefresh, onOpen } = props;
+  const {
+    today,
+    runs,
+    pullRequestMerges,
+    pullRequestMergesDaily,
+    pullRequestMergesHourly,
+    pullRequestMergesError,
+    bugOriginCoverage,
+    publications,
+    publicationsError,
+    error,
+    refreshing,
+    onRefresh,
+    onOpen,
+  } = props;
   const [tab, setTab] = useState("overview");
   const [chosen, setChosen] = useState<number>();
-  const selected = runs.find((run) => run.id === chosen) ?? runs.at(-1);
-  const measured = runs.filter((run) => run.counts.reports > 0);
-  const uncategorized = measured.filter((run) => !hasCategories(run)).length;
-  const empty = (
-    <EmptyState
-      title={refreshing ? "Collecting release results" : "No release results yet"}
-      description="Refresh to read release verification results from GitHub."
-    />
-  );
+  const [range, setRange] = useState<DateRange>("30");
+  const [aggregation, setAggregation] = useState<Aggregation>("day");
+  const { buckets, selectedRuns } = buildHealthTimeline({
+    today,
+    range,
+    aggregation,
+    runs,
+    merges: pullRequestMergesDaily ?? pullRequestMerges ?? [],
+    hourlyMerges: pullRequestMergesHourly,
+    publications: publications ?? [],
+  });
+  const selected = selectedRuns.find((run) => run.id === chosen) ?? selectedRuns.at(-1);
+  const emptyTitle = runs.length ? "No release runs in this range" : "No release results yet";
+  const empty = <EmptyState title={refreshing && !runs.length ? "Collecting release results" : emptyTitle} />;
   return (
     <Tabs.Root
       value={tab}
@@ -149,6 +174,22 @@ export const HealthView = (props: HealthViewProps) => {
               <Tabs.Trigger value="overview">Overview</Tabs.Trigger>
               <Tabs.Trigger value="runs">Runs</Tabs.Trigger>
             </Tabs.List>
+            <SelectMenu
+              label="Range"
+              icon={<CalendarDays />}
+              value={range}
+              options={rangeOptions}
+              onValueChange={(value) => setRange(value as DateRange)}
+            />
+            {tab === "overview" ? (
+              <SelectMenu
+                label="Aggregation"
+                icon={<Layers />}
+                value={aggregation}
+                options={healthAggregationOptions}
+                onValueChange={(value) => setAggregation(value as Aggregation)}
+              />
+            ) : null}
             <Button size="xs" variant="ghost" loading={refreshing} onClick={onRefresh} ml="auto">
               Refresh
             </Button>
@@ -161,56 +202,39 @@ export const HealthView = (props: HealthViewProps) => {
           </AlertMessage>
         ) : null}
         <Tabs.Content value="overview">
-          {!runs.length ? (
-            empty
-          ) : (
-            <Stack gap="lg">
-              {measured.length ? (
-                <Stack gap="lg">
-                  <Stack gap="2xs">
-                    <TotalTestsPlot runs={measured} onChoose={setChosen} />
-                    {uncategorized ? (
-                      <Text textStyle="label/XS" color="fg.muted">
-                        {uncategorized === 1
-                          ? "1 run shows only its total in gray because its category split has not refreshed yet."
-                          : `${uncategorized} runs show only their totals in gray because their category splits have not refreshed yet.`}
-                      </Text>
-                    ) : null}
-                  </Stack>
-                  <HealthPlot
-                    runs={measured}
-                    title="Failed tests"
-                    fill="fg.error"
-                    value={(run) => run.counts.failed}
-                    ariaLabel="Failed tests by release run, oldest first"
-                    onChoose={setChosen}
-                  />
-                  <HealthPlot
-                    runs={measured}
-                    title="Quarantined tests"
-                    fill="fg.warning"
-                    value={quarantinedTests}
-                    ariaLabel="Quarantined tests by release run, oldest first"
-                    onChoose={setChosen}
-                  />
-                  {measured.some((run) => run.runDurationSeconds !== undefined) ? (
-                    <DurationPlot runs={measured} onChoose={setChosen} />
-                  ) : null}
-                </Stack>
-              ) : null}
-              <Text textStyle="label/S/regular" color="fg.muted">
-                Counts include quarantined cases. Missing reports and unfinished jobs are listed in Runs.
-              </Text>
-            </Stack>
-          )}
+          <Stack gap="lg">
+            {publicationsError ? (
+              <AlertMessage status="warning" title="Release dates could not be refreshed">
+                {publicationsError}
+              </AlertMessage>
+            ) : null}
+            {buckets.some((bucket) => bucket.publications.length) ? (
+              <HStack color="fg.muted" gap="xs">
+                <Box w="4" borderTopWidth="1px" borderTopStyle="dashed" borderColor="currentColor" />
+                <Text textStyle="label/XS">Published pstdio releases · UTC</Text>
+              </HStack>
+            ) : null}
+            {selectedRuns.length ? (
+              <ReleaseEtaPlot runs={selectedRuns} grouping={aggregation} onChoose={setChosen} />
+            ) : null}
+            <PullRequestMergesPlot buckets={buckets} aggregation={aggregation} error={pullRequestMergesError} />
+            {bugOriginCoverage ? (
+              <BugOriginsPlot buckets={buckets} aggregation={aggregation} coverage={bugOriginCoverage} />
+            ) : null}
+            {!selectedRuns.length ? (
+              empty
+            ) : (
+              <ReleaseRunPlots buckets={buckets} aggregation={aggregation} onChoose={setChosen} />
+            )}
+          </Stack>
         </Tabs.Content>
         <Tabs.Content value="runs">
-          {!runs.length ? (
+          {!selectedRuns.length ? (
             empty
           ) : (
             <Stack gap="lg">
               <Box h="32rem" minW="0" overflow="hidden">
-                <RunsTable runs={runs} selected={selected} onChoose={setChosen} onOpen={onOpen} />
+                <RunsTable runs={selectedRuns} selected={selected} onChoose={setChosen} onOpen={onOpen} />
               </Box>
               {selected ? (
                 <Box px="lg" pb="lg">

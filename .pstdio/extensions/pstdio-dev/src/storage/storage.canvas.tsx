@@ -1,6 +1,7 @@
 import { Box, Button, HStack } from "@chakra-ui/react";
 import { useState } from "react";
 import type { StorageReport } from "../diagnostics/storage";
+import { schemaFixture } from "./schema-fixture";
 import { StorageView } from "./storage-view";
 
 const GB = 1e9;
@@ -89,6 +90,10 @@ export const StorageReportView = () => {
       <Box flex="1" minH="0">
         <StorageView
           report={state === "report" || state === "error" ? report : null}
+          schema={schemaFixture}
+          schemaLoading={state === "measuring"}
+          schemaError={state === "error" ? "The schema snapshot could not be read." : null}
+          onReloadSchema={() => {}}
           measuring={state === "measuring"}
           error={state === "error" ? "ENOENT: no such file or directory, scandir '~/.pstdio/pstdio.db/base'" : null}
           onMeasure={() => {}}

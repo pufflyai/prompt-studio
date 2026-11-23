@@ -1,5 +1,7 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
+import { listReleases } from "../benchmarks/github";
 import { CANDIDATE_LIMIT, listReleaseJobs, listReleaseRuns, type ReleaseRun, releaseSelection } from "./github";
+import { readMergeTimeline, syncMergeTimeline } from "./pull-request-merges";
 import {
   countTests,
   emptyCounts,
@@ -13,18 +15,56 @@ import type { HealthHistory } from "./types";
 
 type Context = Pick<ExtensionContextBase, "process" | "extensionFiles">;
 const HISTORY = "releases/history.json";
+const PUBLICATIONS = "releases/publications.json";
 const filesOf = (ctx: Context) => {
   if (!ctx.extensionFiles) throw new Error("Release history needs a project.");
   return ctx.extensionFiles;
 };
-export const readHealth = async (ctx: Context) => {
+const readReleaseHistory = async (ctx: Context) => {
   const files = filesOf(ctx);
   const history: HealthHistory = (await files.exists(HISTORY))
     ? JSON.parse(await files.readText(HISTORY))
     : { runs: [] };
   return history;
 };
+
+export const readHealth = async (ctx: Context) => {
+  const [history, merges, publications] = await Promise.all([
+    readReleaseHistory(ctx),
+    readMergeTimeline(filesOf(ctx)),
+    readPublications(ctx),
+  ]);
+  return {
+    ...history,
+    pullRequestMerges: merges.days ?? history.pullRequestMerges,
+    pullRequestMergesDaily: merges.allDays ?? history.pullRequestMerges,
+    pullRequestMergesWeekly: merges.weeks,
+    pullRequestMergesHourly: merges.hours,
+    pullRequestMergesError: merges.error,
+    bugOriginCoverage: merges.bugOriginCoverage,
+    ...publications,
+  };
+};
 const writeHealth = (ctx: Context, value: HealthHistory) => filesOf(ctx).writeText(HISTORY, JSON.stringify(value));
+
+type PublicationCache = Pick<HealthHistory, "publications" | "publicationsError">;
+const readPublications = async (ctx: Context) => {
+  const files = filesOf(ctx);
+  return (await files.exists(PUBLICATIONS)) ? (JSON.parse(await files.readText(PUBLICATIONS)) as PublicationCache) : {};
+};
+
+const syncPublications = async (ctx: Context) => {
+  const result = await listReleases(ctx).then(
+    (releases) => ({
+      publications: releases
+        .filter(({ tag }) => tag.startsWith("pstdio@"))
+        .map(({ tag, publishedAt }) => ({ tag, publishedAt }))
+        .sort((a, b) => a.publishedAt.localeCompare(b.publishedAt)),
+    }),
+    async (error: unknown) => ({ ...(await readPublications(ctx)), publicationsError: String(error) }),
+  );
+  await filesOf(ctx).writeText(PUBLICATIONS, JSON.stringify(result));
+};
 
 const readRun = async (ctx: Context, run: ReleaseRun) => {
   const jobs = await listReleaseJobs(ctx, run);
@@ -32,6 +72,7 @@ const readRun = async (ctx: Context, run: ReleaseRun) => {
   const selected = jobs.filter((job) => isTestJob(job.name) && job.conclusion !== "skipped");
   const counts = emptyCounts();
   const categories: TestCategoryCounts = {};
+  const failedCategories: TestCategoryCounts = {};
   const errors: string[] = [];
   let reportedJobs = 0;
   for (const job of selected.filter((entry) => entry.status === "completed")) {
@@ -62,6 +103,7 @@ const readRun = async (ctx: Context, run: ReleaseRun) => {
       if (isQuarantineJob(job.name)) counts.quarantined = (counts.quarantined ?? 0) + result.passed + result.failed;
       const category = testJobCategory(job.name);
       categories[category] = (categories[category] ?? 0) + result.passed + result.failed + result.skipped;
+      if (result.failed) failedCategories[category] = (failedCategories[category] ?? 0) + result.failed;
     } catch (error) {
       errors.push(`${job.name}: ${String(error)}`);
     }
@@ -79,6 +121,7 @@ const readRun = async (ctx: Context, run: ReleaseRun) => {
     conclusion: run.conclusion,
     counts,
     categories,
+    failedCategories,
     runDurationSeconds:
       run.status === "completed" && Number.isFinite(started) && Number.isFinite(finished) && finished > started
         ? Math.round((finished - started) / 1000)
@@ -94,8 +137,8 @@ const readRun = async (ctx: Context, run: ReleaseRun) => {
   };
 };
 
-export const syncHealth = async (ctx: Context, changed: () => Promise<unknown>) => {
-  const history = await readHealth(ctx);
+const syncReleaseRuns = async (ctx: Context, changed: () => Promise<unknown>) => {
+  const history = await readReleaseHistory(ctx);
   try {
     const runs = await listReleaseRuns(ctx);
     let candidates = 0;
@@ -109,6 +152,7 @@ export const syncHealth = async (ctx: Context, changed: () => Promise<unknown>) 
         previous.reportedJobs === previous.testJobs &&
         previous.counts.quarantined !== undefined &&
         previous.categories !== undefined &&
+        previous.failedCategories !== undefined &&
         previous.runDurationSeconds !== undefined
       ) {
         candidates++;
@@ -163,4 +207,20 @@ export const syncHealth = async (ctx: Context, changed: () => Promise<unknown>) 
     throw error;
   }
   return { runs: history.runs.length };
+};
+
+export const syncHealth = async (
+  ctx: Context & Pick<ExtensionContextBase, "commands">,
+  changed: () => Promise<unknown>,
+) => {
+  const files = filesOf(ctx);
+  const [runs, merges, publications] = await Promise.allSettled([
+    syncReleaseRuns(ctx, changed),
+    syncMergeTimeline(ctx, files).then(changed),
+    syncPublications(ctx).then(changed),
+  ]);
+  if (runs.status === "rejected") throw runs.reason;
+  if (merges.status === "rejected") throw merges.reason;
+  if (publications.status === "rejected") throw publications.reason;
+  return runs.value;
 };
