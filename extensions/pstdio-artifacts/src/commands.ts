@@ -40,6 +40,7 @@ const publish = defineCommand({
   id: "publish",
   title: l10n("commands.publish", "Publish artifact"),
   cli: true,
+  mutating: true,
   params: {
     file_path: params.text({ label: l10n("params.filePath", "HTML file"), required: true }),
     url: params.text({ label: l10n("params.url", "Existing artifact URL") }),
