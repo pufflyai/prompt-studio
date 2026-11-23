@@ -4,10 +4,10 @@ export const verifyPackagedPanelMenuTabs = async (page: Page, origin: string, pr
   await page.goto(`${origin}/projects/${projectId}/extensions/test.menu/menu`);
   const header = page.locator('[data-workbench-panel-header="main"]');
   const subheader = page.locator('[data-workbench-content-header="main"]:visible');
-  const attachedMenu = page.locator('[data-workbench-panel-menu="main-left"]');
+  const attachedMenu = page.getByRole("region", { name: "Main left menu", exact: true });
   await expect(attachedMenu).toBeVisible();
   await expect(header).toBeVisible();
-  await page.getByRole("separator", { name: "Resize Main left menu", exact: true }).dblclick();
+  await page.getByRole("separator", { name: "Resize Attached menu", exact: true }).dblclick();
   const tab = header.getByRole("tab", { name: "Menu content", exact: true });
   await expect(tab).toBeVisible();
   await expect(header.getByRole("tab")).toHaveCount(1);
