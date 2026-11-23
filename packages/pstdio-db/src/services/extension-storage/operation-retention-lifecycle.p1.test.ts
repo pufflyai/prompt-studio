@@ -42,6 +42,29 @@ test("pruned authored outcomes and exact retries survive a disk restart without 
   }
 });
 
+test("malformed retained authorship rejects outcomes and changed retries without publishing a replacement", async () => {
+  const f = await createOperationRetentionFixture();
+  const seed = { operationId: "damaged-save", edits: [{ recordId: "card", replace: "original" }] };
+  try {
+    await f.records.commit(seed);
+    await f.sync.synchronize();
+    expect(await pruneSettledOperations(f.db, f.owner, new Date(Date.now() + 8 * 86_400_000))).toBe(1);
+    for (const value of [false, null, 0, "", {}]) {
+      await withOrderedOwner(f.db, f.owner, async (_journal, tx) => {
+        await createRetainedPages<unknown>(tx, f.owner, "authorship").set([{ key: seed.operationId, value }]);
+      });
+      await expect(f.records.outcome(seed.operationId)).rejects.toThrow("Invalid retained operation");
+      await expect(
+        f.records.commit({ ...seed, edits: [{ recordId: "card", replace: "replacement" }] }),
+      ).rejects.toThrow("Invalid retained operation");
+      expect((await f.records.read("card")).value).toBe("original");
+      expect(await f.db.select().from(operations)).toHaveLength(0);
+    }
+  } finally {
+    await f.close();
+  }
+});
+
 test("failed operation pruning rolls back private authorship and foreign receipts never claim a local outcome", async () => {
   const f = await createOperationRetentionFixture();
   try {

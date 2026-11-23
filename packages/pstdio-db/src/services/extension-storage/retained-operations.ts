@@ -11,8 +11,11 @@ export type RetainedOperationValue = Omit<RetainedOperation, "owner_id">;
 
 export const readRetainedOperation = async (tx: OrderedTransaction, owner: StorageOwner, id: string) => {
   const row = await createRetainedPages<RetainedOperationValue>(tx, owner, "authorship").get(id);
-  if (!row) return;
+  if (row === undefined) return;
   if (
+    !row ||
+    typeof row !== "object" ||
+    Array.isArray(row) ||
     row.operation_id !== id ||
     row.envelope !== null ||
     row.admission !== null ||
