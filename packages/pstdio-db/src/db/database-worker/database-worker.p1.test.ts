@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { sql } from "drizzle-orm";
 import { projects } from "../schemas.pg";
-import { createDbInWorker } from "./open";
+import { createDbInWorker, waitForDatabaseWorkersIdle } from "./open";
 
 let database: Awaited<ReturnType<typeof createDbInWorker>>;
 const phases: string[] = [];
@@ -107,3 +107,63 @@ test("an on-disk database keeps its lock in the worker and releases it on close"
     fs.rmSync(root, { recursive: true, force: true });
   }
 }, 30_000);
+
+test("an error at commit time rejects the transaction, as in-process", async () => {
+  await database.db.execute(sql`CREATE TABLE IF NOT EXISTS worker_parent (id integer primary key)`);
+  await database.db.execute(
+    sql`CREATE TABLE IF NOT EXISTS worker_child (parent integer REFERENCES worker_parent (id) DEFERRABLE INITIALLY DEFERRED)`,
+  );
+  const failed = await database.db
+    .transaction(async (tx) => {
+      await tx.execute(sql`INSERT INTO worker_child VALUES (42)`);
+    })
+    .catch((error: Error) => error);
+  expect(failed).toMatchObject({ code: "23503" });
+  expect((await database.db.execute(sql`SELECT count(*)::int AS n FROM worker_child`)).rows).toEqual([{ n: 0 }]);
+});
+
+test("a parameter that cannot cross the thread fails its call and leaves nothing pending", async () => {
+  const failed = await database.pglite.query("SELECT $1::text AS x", [{ run: () => 1 }]).catch((error: Error) => error);
+  expect(failed).toBeInstanceOf(Error);
+  await waitForDatabaseWorkersIdle(1_000);
+  expect((await database.pglite.query<{ x: number }>("SELECT 1 AS x")).rows).toEqual([{ x: 1 }]);
+});
+
+test("a worker that stops unexpectedly is reported once and later calls fail at once", async () => {
+  let worker: Worker | undefined;
+  const reported: Error[] = [];
+  const crashing = await createDbInWorker({
+    path: ":memory:",
+    onUnexpectedExit: (error) => reported.push(error),
+    createWorker: (specifier) => {
+      worker = new Worker(specifier);
+      return worker;
+    },
+  });
+  worker!.terminate();
+  for (let attempt = 0; reported.length === 0 && attempt < 100; attempt++) await Bun.sleep(10);
+  expect(reported).toHaveLength(1);
+  const later = await crashing.pglite.query("SELECT 1").catch((error: Error) => error);
+  expect(String(later)).toContain("database worker stopped");
+  await crashing.close();
+  expect(reported).toHaveLength(1);
+});
+
+test("closing twice is harmless and a call after close fails instead of hanging", async () => {
+  const closing = await createDbInWorker({ path: ":memory:" });
+  await Promise.all([closing.close(), closing.close()]);
+  const after = await closing.pglite.query("SELECT 1").catch((error: Error) => error);
+  expect(after).toBeInstanceOf(Error);
+});
+
+test("a fatal exit can wait for a statement already running in the worker", async () => {
+  let finished = false;
+  const running = database.db
+    .execute(sql`SELECT count(*) FROM generate_series(1, 3000000) AS a CROSS JOIN generate_series(1, 2) AS b`)
+    .then(() => {
+      finished = true;
+    });
+  await waitForDatabaseWorkersIdle(10_000);
+  expect(finished).toBe(true);
+  await running;
+});
