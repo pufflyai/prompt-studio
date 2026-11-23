@@ -1,7 +1,7 @@
 export { and, eq, sql } from "drizzle-orm";
 export type { DbClient, DbOpenPhase } from "./db/connection.pglite";
 export { createDb } from "./db/connection.pglite";
-export { createDbInWorker } from "./db/database-worker/open";
+export { createDbInWorker, waitForDatabaseWorkersIdle } from "./db/database-worker/open";
 export { startDeadRowCleanup } from "./db/dead-row-cleanup";
 export { resolveDbPath } from "./db/paths";
 export * from "./db/schemas.pg";
