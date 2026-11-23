@@ -65,6 +65,7 @@ export const initialPreview = <T>(
   intent: input.intent,
   status: "queued",
   startedAt: Date.now(),
+  ...(input.showPending ? { showPending: true } : {}),
 });
 
 export const snapshotForOperations = (entries: Iterable<Entry>, owner: string): OperationSnapshot => {

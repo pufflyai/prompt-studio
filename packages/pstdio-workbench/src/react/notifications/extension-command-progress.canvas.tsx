@@ -1,8 +1,9 @@
-import { Button, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Button, HStack, Stack } from "@chakra-ui/react";
 import { AlertMessage } from "@pstdio/ui";
 import { useState } from "react";
+import { OperationProgressIndicator } from "./operation-recovery";
 
-export default { title: "Proposals/PS-289 Extension command progress" };
+export default { title: "Workbench/Feedback/Extension command progress" };
 
 export const PublicationProgress = () => {
   const [phase, setPhase] = useState<"idle" | "pending" | "unknown">("idle");
@@ -19,12 +20,7 @@ export const PublicationProgress = () => {
           Lose response
         </Button>
       </HStack>
-      {phase === "pending" && (
-        <HStack role="status" gap="xs">
-          <Spinner size="xs" />
-          <Text textStyle="label/XS/medium">Publish artifact</Text>
-        </HStack>
-      )}
+      {phase === "pending" && <OperationProgressIndicator title="Publish artifact" />}
       {phase === "unknown" && (
         <AlertMessage compact status="error" title="Publish artifact" onClose={() => setPhase("idle")}>
           Publication could not be confirmed. Inspect the artifact before discarding this attempt.

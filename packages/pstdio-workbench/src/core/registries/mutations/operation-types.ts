@@ -24,6 +24,7 @@ export interface OperationInput<T> {
   draft?: unknown;
   describeRecovery?(): string;
   releaseOnDiscard?: boolean;
+  showPending?: true;
   onDiscard?(): void;
   write(signal: AbortSignal): T | Promise<T>;
   reconcile?(result: T, signal: AbortSignal): void | Promise<void>;
@@ -43,6 +44,7 @@ export interface OperationPreview {
   intent?: unknown;
   status: OperationStatus;
   startedAt: number;
+  showPending?: true;
 }
 
 export interface OperationRecovery {

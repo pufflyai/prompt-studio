@@ -5,7 +5,7 @@ import { useLayoutEffect } from "react";
 import type { WorkbenchCore } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchActionErrors } from "./action-errors";
-import { OperationRecoveryItem, useOperationRecovery } from "./operation-recovery";
+import { OperationProgressIndicator, OperationRecoveryItem, useOperationActivity } from "./operation-recovery";
 import { isSystemNotice } from "./system-error-state";
 
 export const systemActivityItemId = "workbench.system-activity";
@@ -43,17 +43,19 @@ export const useSystemActivityStatusItem = (workbench: WorkbenchCore, visible: b
 
 const useSystemNotices = (workbench: WorkbenchCore) => {
   const notifications = useWorkbenchStore(workbench.notifications.store, (state) => state.notifications);
-  const recovery = useOperationRecovery(workbench);
+  const { pending, recovery } = useOperationActivity(workbench);
   const notices = Object.values(notifications)
     .filter(isSystemNotice)
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   const error = notices.find((notice) => notice.level === "error") ?? recovery[0];
   const errorOnly = Boolean(error) && notices.every((notice) => notice.level === "error");
+  const normalLabel = notices.length ? "System notices" : "System activity";
   return {
     notices,
+    pending,
     recovery,
-    summary: error ?? notices[0],
-    label: errorOnly ? "System errors" : "System notices",
+    summary: error ?? notices[0] ?? pending[0],
+    label: errorOnly ? "System errors" : normalLabel,
     error,
     errorOnly,
   };
@@ -61,6 +63,7 @@ const useSystemNotices = (workbench: WorkbenchCore) => {
 
 const SystemNoticeIndicator = ({ workbench }: { workbench: WorkbenchCore }) => {
   const { summary, error } = useSystemNotices(workbench);
+  if (summary && "showPending" in summary) return <OperationProgressIndicator title={summary.title} />;
   return (
     <HStack gap="xs" minW="0" color={error ? "fg.error" : undefined}>
       <Icon as={error ? TriangleAlert : Bell} boxSize="4" />
@@ -72,8 +75,8 @@ const SystemNoticeIndicator = ({ workbench }: { workbench: WorkbenchCore }) => {
 };
 
 const WorkbenchSystemNotices = ({ workbench }: { workbench: WorkbenchCore }) => {
-  const { notices, recovery, label, error, errorOnly } = useSystemNotices(workbench);
-  const count = notices.length + recovery.length;
+  const { notices, pending, recovery, label, error, errorOnly } = useSystemNotices(workbench);
+  const count = notices.length + recovery.length + pending.length;
   return (
     <>
       <PopoverHeader
@@ -112,6 +115,9 @@ const WorkbenchSystemNotices = ({ workbench }: { workbench: WorkbenchCore }) => 
         }}
       >
         <Stack gap="sm" minW="0">
+          {pending.map((entry) => (
+            <OperationProgressIndicator key={entry.id.description} title={entry.title} />
+          ))}
           {recovery.map((entry) => (
             <OperationRecoveryItem key={entry.id.description} workbench={workbench} entry={entry} />
           ))}

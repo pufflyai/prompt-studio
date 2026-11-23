@@ -3,7 +3,7 @@ import { PstdioConnectionError } from "@pstdio/sdk/client";
 import { createScopedQueryClient } from "@pstdio/sdk/extensions";
 import { createWorkbench, getWorkbenchOperations } from "@pstdio/workbench";
 import { emptyWorkbenchExtensionMetadata, registerWorkbenchExtensionContributions } from "@pstdio/workbench/extensions";
-import { executeWebviewCommand } from "./extension-webview-command";
+import { createFrameCommandAdapters, executeWebviewCommand } from "./extension-webview-command";
 
 describe("executeWebviewCommand", () => {
   test("runs registered workbench commands in the host", async () => {
@@ -300,6 +300,79 @@ test("an extension create in a dashboard webview shares its recovery with the na
       status: "unknown",
       draft: input.params,
     });
+  } finally {
+    registration.dispose();
+    await workbench.dispose();
+    queries.dispose();
+  }
+});
+
+test("declared extension actions share foreground progress while editing keeps its existing journal", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
+  const workbench = createWorkbench({ queries });
+  workbench.pageLocations.setProject("project");
+  const operations = getWorkbenchOperations(queries);
+  const commandId = "example.artifacts.command.publish";
+  const metadata = {
+    ...emptyWorkbenchExtensionMetadata,
+    commands: [{ id: commandId, extensionId: "example.artifacts", title: "Publish artifact", mutating: true }],
+  };
+  let nativeWrites = 0;
+  const registration = registerWorkbenchExtensionContributions({
+    workbench,
+    projectId: "project",
+    queries,
+    metadata,
+    executeCommand: () => {
+      nativeWrites++;
+      return { outcome: { status: "success", ok: true } };
+    },
+  });
+  const held = Promise.withResolvers<never>();
+  const sent = Promise.withResolvers<void>();
+  let commandWrites = 0;
+  let editingWrites = 0;
+  let writeSignal: AbortSignal | undefined;
+  const frame = createFrameCommandAdapters({
+    workbench,
+    projectId: "project",
+    declarations: () => metadata,
+    clearError() {},
+    execute: async ({ params }, signal) => {
+      if (params?.source === "editor") {
+        editingWrites++;
+        return { outcome: { status: "success", ok: true } };
+      }
+      commandWrites++;
+      writeSignal = signal;
+      sent.resolve();
+      return held.promise;
+    },
+  });
+  try {
+    const signal = new AbortController();
+    const publish = Promise.resolve(
+      frame.executeCommand({ commandId, params: { source: "form" } }, signal.signal),
+    ).catch((error: unknown) => error);
+    await sent.promise;
+    expect(operations.getSnapshot().pending).toMatchObject([
+      { title: "Publish artifact", status: "writing", showPending: true },
+    ]);
+    await expect(workbench.commands.executeCommand(commandId)).rejects.toThrow("still pending");
+    await frame.executeEditingCommand({ commandId, params: { source: "editor" } });
+    expect(operations.getSnapshot().pending).toHaveLength(1);
+    signal.abort();
+    expect(writeSignal?.aborted).toBe(false);
+    const lost = new PstdioConnectionError(new Error("Response lost"));
+    held.reject(lost);
+    expect(await publish).toBe(lost);
+    expect(operations.getSnapshot().recovery).toMatchObject([
+      { status: "unknown", draft: { commandId }, canCheck: false },
+    ]);
+    expect(operations.getSnapshot().recovery[0]?.draft).toEqual({ commandId });
+    expect(nativeWrites).toBe(0);
+    expect(commandWrites).toBe(1);
+    expect(editingWrites).toBe(1);
   } finally {
     registration.dispose();
     await workbench.dispose();

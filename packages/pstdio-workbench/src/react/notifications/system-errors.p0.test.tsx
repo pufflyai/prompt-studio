@@ -92,3 +92,46 @@ test("scoped recovery keeps the widget reachable after an alert is dismissed", a
     environment.IS_REACT_ACT_ENVIRONMENT = previous;
   }
 });
+
+test("System activity shows an extension action while leaving quiet writes silent", async () => {
+  const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const previous = environment.IS_REACT_ACT_ENVIRONMENT;
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  const queries = createScopedQueryClient({ runtimeId: "desktop", extensionId: "pstdio" });
+  const workbench = createWorkbench({ queries });
+  workbench.pageLocations.setProject("project");
+  const operations = getWorkbenchOperations(queries);
+  const Status = () => <span>{useSystemActivityStatusItem(workbench, true)}</span>;
+  let tree: ReturnType<typeof create>;
+  const quiet = Promise.withResolvers<void>();
+  const publication = Promise.withResolvers<void>();
+  const start = (title: string, write: () => Promise<void>, showPending?: true) =>
+    operations.submit({ domain: "fixture", projectId: "project", subjects: [title], title, showPending, write }).result;
+  try {
+    await act(async () => {
+      tree = create(<Status />);
+    });
+    await act(async () => {
+      void start("Save file", () => quiet.promise);
+    });
+    expect(workbench.statusBar.listVisibleItems()).toHaveLength(0);
+    await act(async () => {
+      void start("Publish artifact", () => publication.promise, true);
+    });
+    expect(tree!.root.findByType("span").children).toEqual(["System activity: Publish artifact"]);
+    expect(workbench.statusBar.getItem(systemActivityItemId)?.popoverViewId).toBeDefined();
+    await act(async () => {
+      publication.resolve();
+    });
+    expect(workbench.statusBar.listVisibleItems()).toHaveLength(0);
+  } finally {
+    await act(async () => {
+      publication.resolve();
+      quiet.resolve();
+      tree!.unmount();
+    });
+    await workbench.dispose();
+    queries.dispose();
+    environment.IS_REACT_ACT_ENVIRONMENT = previous;
+  }
+});

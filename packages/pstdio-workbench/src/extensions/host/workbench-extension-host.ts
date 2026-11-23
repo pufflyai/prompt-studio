@@ -75,6 +75,7 @@ const registerCommands = (
           executeWorkbenchExtensionCommand(context, command.id, {
             ...executionContext,
             params: asParams(args),
+            foreground: true,
             resource: executionContext?.resource,
             signal: executionContext?.signal,
             region: executionContext?.region,

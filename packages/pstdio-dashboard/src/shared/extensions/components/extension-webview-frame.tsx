@@ -37,7 +37,7 @@ import {
 } from "../webview-service-adapters";
 import { createDashboardWebviewServiceQueries } from "../webview-service-queries";
 import { getCachedDashboardExtensionMetadata } from "../workbench-extension-contributions";
-import { executeWebviewCommand, webviewCommandSlot } from "./extension-webview-command";
+import { createFrameCommandAdapters, webviewCommandSlot } from "./extension-webview-command";
 import { BridgedWebviewSurface, StaticWebviewSurface, type WebviewDescriptor } from "./extension-webview-surfaces";
 import { PausedExtensionView } from "./paused-extension-view";
 import type { WebviewLoadingKind } from "./webview-loading";
@@ -159,33 +159,17 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       performanceQueries: serviceQueries.performance,
       hostEvents,
       terminal,
-      executeCommand: (commandInput, signal, invocation) => {
-        clearError();
-        return executeWebviewCommand({
-          ...commandInput,
-          placement: props.placement?.placementIdentity,
-          isViewerCurrent: invocation?.isViewerCurrent,
-          signal,
-          resource: commandInput.resource ?? resource ?? props.placement?.resource,
-          slot: webviewCommandSlot({ projectId, webviewId, slotKind: props.slotKind }),
-          workbench: props.workbench,
-          projectId,
-          declarations: getCachedDashboardExtensionMetadata(projectId, owner),
-          executeExtensionCommand: (input, commandSignal) =>
-            executeCommand.mutateAsync({
-              signal: commandSignal,
-              commandId: input.commandId,
-              body: {
-                metadata: input.metadata,
-                params: input.params,
-                workspaceId: input.workspaceId,
-                resource: input.resource,
-                slot: input.slot,
-                source: "dashboard",
-              },
-            }),
-        });
-      },
+      ...createFrameCommandAdapters({
+        workbench: props.workbench,
+        projectId,
+        placement: props.placement?.placementIdentity,
+        resource: resource ?? props.placement?.resource,
+        slot: webviewCommandSlot({ projectId, webviewId, slotKind: props.slotKind }),
+        declarations: () => getCachedDashboardExtensionMetadata(projectId, owner),
+        clearError,
+        execute: ({ commandId, ...body }, signal) =>
+          executeCommand.mutateAsync({ signal, commandId, body: { ...body, source: "dashboard" } }),
+      }),
       streamCommand: projectId
         ? (input, signal) => {
             const { commandId, ...body } = input;

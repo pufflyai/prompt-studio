@@ -1,19 +1,33 @@
-import { Button, HStack, Text } from "@chakra-ui/react";
+import { Button, HStack, Spinner, Text } from "@chakra-ui/react";
 import { AlertMessage } from "@pstdio/ui";
 import { useSyncExternalStore } from "react";
 import type { WorkbenchCore } from "../../core";
 import type { OperationRecovery } from "../../core/registries/mutations/operation-types";
 import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import { getWorkbenchQueries } from "../../core/workbench-queries";
+import { extensionCommandOperation } from "../../extensions/host/workbench-command-operation";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchActionErrors } from "./action-errors";
 
-export const useOperationRecovery = (workbench: WorkbenchCore) => {
+export const useOperationActivity = (workbench: WorkbenchCore) => {
   const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
   const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
-  const { recovery } = useSyncExternalStore(operations.subscribe, operations.getSnapshot, operations.getSnapshot);
-  return recovery.filter((entry) => entry.projectId === undefined || entry.projectId === projectId);
+  const snapshot = useSyncExternalStore(operations.subscribe, operations.getSnapshot, operations.getSnapshot);
+  const visible = (entry: { projectId?: string }) => entry.projectId === undefined || entry.projectId === projectId;
+  return {
+    pending: snapshot.pending.filter(
+      (entry) => entry.showPending && visible(entry) && entry.status !== "unknown" && entry.status !== "unconfirmed",
+    ),
+    recovery: snapshot.recovery.filter(visible),
+  };
 };
+
+export const OperationProgressIndicator = ({ title }: { title: string }) => (
+  <HStack gap="xs" role="status">
+    <Spinner size="xs" />
+    <Text textStyle="label/XS/medium">{title}</Text>
+  </HStack>
+);
 
 export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: OperationRecovery }) => {
   const { workbench, entry } = props;
@@ -30,7 +44,11 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
   };
   const failure = entry.error instanceof Error ? entry.error.message : "The change could not be confirmed.";
   const message = status === "unknown" ? (entry.description ?? "The result could not be confirmed.") : failure;
-  const canInspect = status === "unknown" && (entry.domain === "resource.create" || (!sourceCommand && entry.source));
+  const canInspect =
+    status === "unknown" &&
+    (entry.domain === "resource.create" ||
+      entry.domain === extensionCommandOperation ||
+      (!sourceCommand && entry.source));
   return (
     <AlertMessage
       status="error"
@@ -81,7 +99,7 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
                   .catch(report("Copy draft"));
               }}
             >
-              Copy draft
+              {entry.domain === extensionCommandOperation ? "Copy action details" : "Copy draft"}
             </Button>
             <Button size="2xs" variant="destructive" onClick={discard}>
               Discard draft

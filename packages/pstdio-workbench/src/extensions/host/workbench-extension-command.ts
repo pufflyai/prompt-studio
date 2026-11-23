@@ -13,6 +13,7 @@ import { copyCommandResult } from "./command-clipboard";
 import { unwrapCommandValue } from "./command-response";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 import { remoteWorkspaceLaunchCommand, runRemoteWorkspaceLaunch } from "./remote-workspace-launch";
+import { runWorkbenchCommandOperation } from "./workbench-command-operation";
 import { runCreateOperation } from "./workbench-create-operation";
 import { runResourceMutation } from "./workbench-resource-mutation";
 export interface WorkbenchExtensionCommandContext {
@@ -38,6 +39,7 @@ export interface ExecuteWorkbenchExtensionCommandInput {
   workspaceId?: string;
   signal?: AbortSignal;
   metadata?: Record<string, unknown>;
+  foreground?: true;
   params?: Record<string, unknown>;
   resource?: ResourceRef;
   slot?: CommandExecuteRequest["slot"];
@@ -154,6 +156,15 @@ export const executeWorkbenchExtensionCommand = async (
     });
   }
   const create = context.createCommandIds?.has(commandId);
+  const foreground = input.foreground || input.slot?.kind === "menu";
+  if (operations && command?.mutating && !command.resourceMutation && !create && foreground)
+    return runWorkbenchCommandOperation({
+      operations,
+      projectId: context.projectId,
+      command,
+      source: input.resource,
+      write: send,
+    });
   const persist =
     operations && command && create
       ? () => runCreateOperation(operations, context.projectId, command, resolved, send)
