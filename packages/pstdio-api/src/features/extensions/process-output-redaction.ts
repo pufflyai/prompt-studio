@@ -1,40 +1,61 @@
-type Match = { start: number; length: number };
+import type { ProcessEvent, ProcessHandle } from "pstdio-api-contracts/extension-kernel";
 
-/** Reuses each value's next match until the already-redacted span passes it. */
-const leftmostMatch = (text: string, values: string[], next: number[], position: number) => {
-  let match: Match | undefined;
-  for (const [index, value] of values.entries()) {
-    if (next[index]! >= 0 && next[index]! < position) next[index] = text.indexOf(value, position);
-    const start = next[index]!;
-    if (start >= 0 && (!match || start < match.start || (start === match.start && value.length > match.length)))
-      match = { start, length: value.length };
+const REDACTED = new TextEncoder().encode("[Redacted]");
+
+const indexOf = (haystack: Uint8Array, needle: Uint8Array, from: number) => {
+  outer: for (let start = from; start <= haystack.length - needle.length; start++) {
+    for (let offset = 0; offset < needle.length; offset++)
+      if (haystack[start + offset] !== needle[offset]) continue outer;
+    return start;
   }
-  return match;
+  return -1;
 };
 
-/** Expands a match in one forward sweep over every value that overlaps it. */
-const coveredEnd = (text: string, values: string[], start: number, end: number) => {
-  let covered = end;
-  for (let at = start; at < covered; at++) {
-    for (const value of values) {
-      if (at + value.length > covered && text.startsWith(value, at)) covered = at + value.length;
-    }
-  }
-  return covered;
-};
-
-/** Hides granted values in collected output, including overlapping ones. */
-export const redactText = (text: string, values: string[]) => {
-  const secrets = [...new Set(values.filter(Boolean))];
-  if (!secrets.length) return text;
-  const next = secrets.map((value) => text.indexOf(value));
-  let result = "";
+// Replaces every secret, leftmost first and longest on ties.
+const replaceSecrets = (bytes: Uint8Array, secrets: Uint8Array[]) => {
+  const parts: Uint8Array[] = [];
   let position = 0;
-  while (position < text.length) {
-    const match = leftmostMatch(text, secrets, next, position);
+  while (true) {
+    let match: { start: number; length: number } | undefined;
+    for (const secret of secrets) {
+      const start = indexOf(bytes, secret, position);
+      if (start >= 0 && (!match || start < match.start || (start === match.start && secret.length > match.length)))
+        match = { start, length: secret.length };
+    }
     if (!match) break;
-    result += `${text.slice(position, match.start)}[Redacted]`;
-    position = coveredEnd(text, secrets, match.start, match.start + match.length);
+    parts.push(bytes.subarray(position, match.start), REDACTED);
+    position = match.start + match.length;
   }
-  return result + text.slice(position);
+  parts.push(bytes.subarray(position));
+  return Buffer.concat(parts);
+};
+
+/**
+ * Hides granted host values in a child's streamed output, as `run` does for collected output.
+ * Each stream holds back fewer bytes than the longest value, so a value split across chunks is
+ * still found; the held bytes are released before the final exit event.
+ */
+export const redactProcessOutput = (handle: ProcessHandle, values: string[]): ProcessHandle => {
+  const secrets = values.filter(Boolean).map((value) => new TextEncoder().encode(value));
+  if (secrets.length === 0) return handle;
+  const keep = Math.max(...secrets.map((secret) => secret.length)) - 1;
+
+  const redacted = async function* (source: AsyncIterable<ProcessEvent>): AsyncGenerator<ProcessEvent> {
+    const held = { stdout: new Uint8Array(), stderr: new Uint8Array() };
+    for await (const event of source) {
+      if (event.type === "exit") {
+        for (const type of ["stdout", "stderr"] as const)
+          if (held[type].length) yield { type, data: replaceSecrets(held[type], secrets) };
+        yield event;
+        return;
+      }
+      const bytes = replaceSecrets(Buffer.concat([held[event.type], event.data]), secrets);
+      // A held tail never contains a whole secret, so replacing it again later is safe.
+      const split = Math.max(0, bytes.length - keep);
+      held[event.type] = bytes.subarray(split);
+      if (split > 0) yield { type: event.type, data: bytes.subarray(0, split) };
+    }
+  };
+
+  return { ...handle, events: () => ({ [Symbol.asyncIterator]: () => redacted(handle.events()) }) };
 };

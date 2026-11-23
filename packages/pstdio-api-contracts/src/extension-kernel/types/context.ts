@@ -15,6 +15,7 @@ import type { ExtensionConnectionsApi, ExtensionLoggerApi } from "./connections"
 import type { EventDeliveryResult, EventRef } from "./events";
 import type { JsonObject, JsonValue, MaybePromise, Struct } from "./json";
 import type { NavigationTarget } from "./navigation-target";
+import type { ProcessHandle, ProcessSpawnInput } from "./process-spawn";
 import type { ResourceActivityApi } from "./resource-activity";
 import type { ExtensionResourcesApi, RendererContext, ResourceRef } from "./resources";
 import type { ExtensionViewsApi } from "./saved-views";
@@ -181,6 +182,12 @@ export interface ExtensionProcessApi {
    * The extension owns the child's lifetime and must arrange its cleanup.
    */
   spawnDetached(input: Omit<ProcessRunInput, "timeoutMs">): Promise<{ pid?: number }>;
+  /**
+   * Starts a child with writable stdin and streamed stdout and stderr, and returns its handle at
+   * once. The host owns the child: it stops it when its `lifetime` ends. Start failures reject
+   * `started` with a coded error; `exited` and the final `exit` event still arrive.
+   */
+  spawn(input: ProcessSpawnInput): ProcessHandle;
 }
 
 export type { TerminalEvent, TerminalSessionHandle, TerminalSessionRequest } from "../../extensions.terminal";
