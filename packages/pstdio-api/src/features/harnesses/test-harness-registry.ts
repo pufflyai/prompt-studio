@@ -7,6 +7,7 @@ import {
   type HarnessSessionResources,
 } from "pstdio-api-runtime-host";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
+import { failedProcessHandle } from "pstdio-extensions";
 import type { HarnessRegistryService } from "./harness-registry-service";
 
 // Test support: an in-memory harness registry mirroring the namespaced ids the
@@ -60,6 +61,12 @@ export const createTestHarnessRegistry = (
         run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
         runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
         spawnDetached: async () => ({}),
+        spawn: () => failedProcessHandle(new Error("No test process configured.")),
+      },
+      targetFiles: {
+        readText: async () => {
+          throw new Error("No test target files configured.");
+        },
       },
       net: { findFreePort: async () => 0 },
       connections: {
