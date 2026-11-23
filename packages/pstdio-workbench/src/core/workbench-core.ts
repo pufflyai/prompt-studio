@@ -221,6 +221,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const composition = createCoreCompositionController(() => core);
   const viewers = createWorkbenchViewerController(() => core);
   const modules = createWorkbenchModuleRegistry(() => core);
+  const { getTreeState, setLoading, setNodeExpanded, setSectionExpanded, setSelectedNode } = renderers;
 
   core = {
     activation,
@@ -253,12 +254,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     navigationTrees,
     panelMenuState,
     preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
-    treeViews: {
-      getTreeState: renderers.getTreeState,
-      setNodeExpanded: renderers.setNodeExpanded,
-      setSectionExpanded: renderers.setSectionExpanded,
-      setSelectedNode: renderers.setSelectedNode,
-    },
+    treeViews: { getTreeState, setLoading, setNodeExpanded, setSectionExpanded, setSelectedNode },
     commandPaletteResources: createCommandPaletteResourceRegistry(),
     resources,
     views,

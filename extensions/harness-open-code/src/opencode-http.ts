@@ -1,6 +1,6 @@
 export type OpencodeFetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
-const GET_TIMEOUT_MS = 15_000;
+export const OPENCODE_GET_TIMEOUT_MS = 15_000;
 const POST_TIMEOUT_MS = 300_000;
 
 export const parseJsonValue = (value: string) => {
@@ -50,7 +50,7 @@ export const requestJson = async <T>(
   options: { method: string; headers: Record<string, string>; body?: unknown; signal?: AbortSignal },
 ) => {
   options.signal?.throwIfAborted();
-  const timeoutMs = options.method === "GET" ? GET_TIMEOUT_MS : POST_TIMEOUT_MS;
+  const timeoutMs = options.method === "GET" ? OPENCODE_GET_TIMEOUT_MS : POST_TIMEOUT_MS;
   const endpoint = new URL(url);
   const headers = { ...options.headers };
   if (endpoint.password) {

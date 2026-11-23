@@ -25,7 +25,7 @@ export const ExtensionsPanelHeader = ({
   return (
     <HStack gap="sm" w="full" minW="0" justify="end">
       {upgrade}
-      <InputGroup startElement={<Icon as={Search} boxSize="3.5" />} w="64" maxW="full">
+      <InputGroup startElement={<Icon as={Search} boxSize="3.5" />} w="64" minW="16" maxW="full">
         <Input
           id={searchId}
           ref={searchRef}

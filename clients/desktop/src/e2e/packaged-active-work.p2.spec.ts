@@ -45,22 +45,15 @@ for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
       );
       const showSecondary = app.page.getByRole("button", { name: "Show Bottom Panel", exact: true });
       if (await showSecondary.isVisible()) await showSecondary.click();
+      // The empty panel offers Terminal as soon as the extension registers, with one action to open it.
       await app.page
-        .locator('[data-workbench-panel-header="secondary"]')
-        .getByRole("button", { name: "Add panel" })
-        .click();
-      const openTerminal = app.page.getByRole("menuitem", { name: "Open terminal", exact: true });
-      const emptyTerminal = app.page
         .getByRole("region", { name: "Secondary Panel", exact: true })
-        .getByRole("button", { name: "Open terminal", exact: true });
-      const input = app.page.getByRole("textbox", { name: "Terminal input" });
-      // Late contributions can expose the empty-panel button after Add panel was clicked.
-      await expect(openTerminal.or(emptyTerminal).or(input).first()).toBeVisible();
-      if (await openTerminal.isVisible()) await openTerminal.click();
-      else if (await emptyTerminal.isVisible()) await emptyTerminal.click();
+        .getByRole("button", { name: "Open terminal", exact: true })
+        .click();
       const socket = await socketOpened;
       expect(new URL(socket.url()).origin).toBe(app.runtime.origin.replace(/^http/, "ws"));
       const readTerminals = async () => (await readRuntimeActivity(app!.runtime)).terminals;
+      const input = app.page.getByRole("textbox", { name: "Terminal input" });
       await expect(input).toBeVisible();
       if (process.platform !== "win32") {
         await expect.poll(async () => (await readRuntimeActivity(app!.runtime)).terminals).toHaveLength(0);

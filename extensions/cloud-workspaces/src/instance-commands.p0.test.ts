@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
+import { writeControllerFixture } from "./controller.test-fixture";
 import { createInstanceCommands } from "./instance-commands";
 import { createInstances } from "./instances";
 
@@ -25,17 +26,21 @@ test("Stop reports a failed status check instead of claiming the instance stoppe
 });
 
 test.each([
-  ["a hung or failed status check", "exit 1", true],
-  ["an unhealthy controller", `echo '{"state":"unhealthy"}'; exit 1`, true],
-  ["a controller that is not running", `echo '{"state":"not_running"}'; exit 1`, false],
+  ["a failed status check", "", true],
+  ["an unhealthy controller", '{"state":"unhealthy"}', true],
+  ["a controller that is not running", '{"state":"not_running"}', false],
 ])("Stop with %s", async (_, status, failed) => {
   const root = await mkdtemp(join(tmpdir(), "cloud-instance-stop-"));
   const instanceId = randomUUID();
-  const binary = join(root, "pocketcoder");
   try {
-    await writeFile(binary, `#!/bin/sh\nshift 2\ncase "$1 $2" in\n  "server status") ${status} ;;\nesac\n`, {
-      mode: 0o755,
-    });
+    const binary = await writeControllerFixture(
+      root,
+      `if (process.argv.includes("status")) {
+        const status = ${JSON.stringify(status)};
+        if (status) console.log(status);
+        process.exit(1);
+      }`,
+    );
     await mkdir(join(root, instanceId));
     // A managed record distinguishes a failed probe from a fresh or cleanly stopped instance.
     await mkdir(join(root, instanceId, "state"));

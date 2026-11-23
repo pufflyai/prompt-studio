@@ -81,14 +81,12 @@ jobs:
         with:
           name: windows-signed-baseline
           path: windows-baseline
-          run-id: ${{ github.run_id }}
-          github-token: ${{ github.token }}
       - uses: actions/download-artifact@v4
         with:
           name: windows-signed-candidate
           path: windows-candidate
           run-id: ${{ inputs.candidate-run-id || github.run_id }}
-          github-token: ${{ github.token }}
+          github-token: ${{ inputs.candidate-run-id && inputs.candidate-run-id != github.run_id && github.token || '' }}
       - name: Verify installed application and signed Squirrel update
         run: bun clients/desktop/scripts/verify-windows-installation.ts windows-baseline windows-candidate
       - name: Upload installation evidence

@@ -91,7 +91,8 @@ jobs:
         with:
           name: release-build-attempt-${{ inputs.artifact_attempt }}
           run-id: ${{ inputs.artifact_run_id }}
-          github-token: ${{ github.token }}
+          # The runtime artifact service handles this run without using the installation's REST quota.
+          github-token: ${{ inputs.artifact_run_id != github.run_id && github.token || '' }}
       - name: Record immutable candidate artifact identities
         id: record
         env:
