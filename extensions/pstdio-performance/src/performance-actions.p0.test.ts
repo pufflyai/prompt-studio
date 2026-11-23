@@ -85,3 +85,32 @@ test("an extension control stays busy under one admission while another extensio
   await first;
   expect(actions.snapshot().pendingExtensions.size).toBe(0);
 });
+
+test("a failed read-back keeps the acknowledged overlay value visible without replay", async () => {
+  let enabled = false;
+  let failRead = false;
+  let writes = 0;
+  const actions = createPerformanceActions({
+    readOverlay: async () => {
+      if (failRead) throw new Error("Read-back unavailable");
+      return overlayState(enabled);
+    },
+    async writeOverlay(next) {
+      writes += 1;
+      enabled = next;
+      failRead = true;
+    },
+    copy: async () => false,
+    setPaused: async () => {},
+  });
+  await actions.refreshOverlay();
+  await expect(actions.setOverlay(true)).rejects.toThrow("Read-back unavailable");
+  expect(actions.snapshot().renderOverlay).toEqual(overlayState(true));
+
+  await actions.refreshOverlay();
+  expect(actions.snapshot().renderOverlay).toEqual(overlayState(true));
+  failRead = false;
+  await actions.refreshOverlay();
+  expect(actions.snapshot().renderOverlay).toEqual(overlayState(true));
+  expect(writes).toBe(1);
+});

@@ -33,11 +33,16 @@ export const createPerformanceActions = (input: PerformanceActionsInput) => {
     async refreshOverlay(signal?: AbortSignal) {
       if (state.overlayIntent !== undefined || signal?.aborted) return;
       const revision = ++overlayRevision;
-      const renderOverlay = await input.readOverlay().catch(() => undefined);
-      if (revision === overlayRevision && !signal?.aborted) publish({ renderOverlay });
+      await input.readOverlay().then(
+        (renderOverlay) => {
+          if (revision === overlayRevision && !signal?.aborted) publish({ renderOverlay });
+        },
+        () => {},
+      );
     },
     async setOverlay(enabled: boolean) {
-      if (!state.renderOverlay?.supported || state.overlayIntent !== undefined) return;
+      const before = state.renderOverlay;
+      if (!before?.supported || state.overlayIntent !== undefined) return;
       overlayRevision += 1;
       publish({ overlayIntent: enabled });
       try {
@@ -49,6 +54,8 @@ export const createPerformanceActions = (input: PerformanceActionsInput) => {
           if (!renderOverlay?.supported || renderOverlay.enabled !== enabled) throw error;
           return;
         }
+        // The control acknowledges the new value before the follow-up read completes.
+        publish({ renderOverlay: { ...before, enabled } });
         publish({ renderOverlay: await input.readOverlay() });
       } finally {
         publish({ overlayIntent: undefined });
