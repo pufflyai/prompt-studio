@@ -280,6 +280,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
     disposables.push(
       context.workbench.views.registerView({
         id: record.id,
+        header: record.headerViewId ? { viewId: record.headerViewId } : undefined,
         title: localize(record.title, record.id),
         icon: record.icon,
         body: {

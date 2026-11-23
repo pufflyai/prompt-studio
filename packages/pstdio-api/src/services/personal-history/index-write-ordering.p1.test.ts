@@ -4,6 +4,59 @@ import { createSyncSpace } from "pstdio-sync/encryption";
 import { logRelayFixture } from "./log-transport.fixture";
 import { createPersonalHistoryStore } from "./store";
 
+test("a batch promotes an identical migration seed that arrives during its prior-row read", async () => {
+  const connection = await createDb({ path: ":memory:" });
+  try {
+    const projectId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    await connection.db
+      .insert(projects)
+      .values({ id: projectId, name: "Seed ordering", shorthand: "S", created_at: now, updated_at: now });
+    const storage = createExtensionStorageDBService(connection.db);
+    const history = createPersonalHistoryStore({
+      projectId,
+      accountId: "alice",
+      managerOrigin: "https://manager.example",
+      documents: storage.documents,
+      index: storage.personalHistoryIndex,
+      logs: storage.logs,
+    });
+    const writerId = await storage.logs.writerId();
+    const device = { id: writerId, ownerId: "alice", name: "Laptop" };
+    await history.readRecords("sessions");
+    const row = { id: "target", title: "Local intent" };
+    const get = storage.personalHistoryIndex.get;
+    let arrived = false;
+    storage.personalHistoryIndex.get = async (owner, kind, id) => {
+      if (!arrived && kind === "sessions" && id === row.id) {
+        arrived = true;
+        await storage.personalHistoryIndex.accept(owner, "migrator", 1, [
+          {
+            entryId: "migration",
+            sequence: 1,
+            index: 0,
+            delta: { deviceId: writerId, seedId: "migrator", kind, id, value: { ...row, device } },
+          },
+        ]);
+      }
+      return get(owner, kind, id);
+    };
+    await history.patchRecords("sessions", device, [row, { id: "other", title: "Other" }]);
+    expect(await storage.personalHistoryIndex.isSeeded(history.owner, "sessions", writerId, row.id)).toBe(false);
+    const stream = await storage.logs.stream(history.owner, {
+      name: "index",
+      writer: "device",
+      scope: "project",
+      stream: writerId,
+    });
+    expect((await stream.pending(100)).map(({ entry }) => entry.value)).toContainEqual(
+      expect.objectContaining({ id: row.id, value: { ...row, device } }),
+    );
+  } finally {
+    await connection.close();
+  }
+});
+
 for (const interleaving of ["acknowledged", "newer-pending"] as const) {
   test(`a delayed index projection cannot replace ${interleaving} state`, async () => {
     const connection = await createDb({ path: ":memory:" });

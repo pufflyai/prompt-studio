@@ -14,14 +14,16 @@ const readProjectId = (value: unknown) => {
 
 // The placement carries the View identity. The panel id identifies only the host
 // chrome created for that placement and must not be used to recover its content.
-export const resolveExtensionView = (input: Pick<WorkbenchPanelRenderInput, "instance" | "panel" | "workbench">) => {
+export const resolveExtensionView = (
+  input: Pick<WorkbenchPanelRenderInput, "instance" | "panel" | "workbench" | "viewId">,
+) => {
   const projectId =
     readProjectId(input.instance.resource?.metadata) ??
     readProjectId(input.panel.config) ??
     getDashboardSelectedProjectId(input.workbench);
   if (!projectId) return undefined;
   const metadata = getCachedDashboardExtensionMetadata(projectId);
-  const view = metadata?.views.find((candidate) => candidate.id === input.instance.viewId);
+  const view = metadata?.views.find((candidate) => candidate.id === (input.viewId ?? input.instance.viewId));
   if (view?.body.kind !== "webview") return undefined;
   const extension = metadata?.extensions.find((candidate) => candidate.id === view.extensionId);
   return {

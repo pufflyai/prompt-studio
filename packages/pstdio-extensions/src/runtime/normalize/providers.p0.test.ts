@@ -105,7 +105,7 @@ describe("registerProviders", () => {
                     label: "Mode",
                     defaultValue: "agent",
                     options: [
-                      { label: "Agent", value: "agent" },
+                      { label: "Agent", localizedLabel: l10n("mode.agent", "Agent"), value: "agent" },
                       { label: "Plan", value: "plan" },
                     ],
                   }),
@@ -121,7 +121,14 @@ describe("registerProviders", () => {
 
     expect(runtime.harnesses).toHaveLength(1);
     expect(runtime.harnesses[0]?.provider.params).toMatchObject({
-      mode: { type: "select", defaultValue: "agent" },
+      mode: {
+        type: "select",
+        defaultValue: "agent",
+        options: [
+          { label: "Agent", localizedLabel: l10n("mode.agent", "Agent"), value: "agent" },
+          { label: "Plan", value: "plan" },
+        ],
+      },
       dryRun: { type: "boolean", defaultValue: false },
     });
   });

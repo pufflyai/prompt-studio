@@ -1,6 +1,5 @@
 import { Fieldset, Flex, Skeleton, Stack } from "@chakra-ui/react";
 import { type HostStorage, HostStorageProvider } from "@pstdio/ui";
-import { AutoBuildButton } from "./auto-build-button";
 import { PlanHeader } from "./plan-header";
 
 // Loading controls must never initialize or overwrite the person's saved view.
@@ -17,24 +16,7 @@ export function PlanLoading(props: PlanLoadingProps) {
     <Flex direction="column" h="full" minH="0" minW="0">
       <Fieldset.Root disabled border="0" p="0" m="0" minW="0">
         <HostStorageProvider storage={loadingStorage}>
-          <PlanHeader
-            data={loadingData}
-            search=""
-            onSearchChange={() => {}}
-            resultLabel=""
-            actions={
-              <AutoBuildButton
-                disabled
-                enabled={false}
-                sessions={[]}
-                running={0}
-                capacity={0}
-                onOpenSession={() => {}}
-                onStop={async () => true}
-                t={t}
-              />
-            }
-          />
+          <PlanHeader data={loadingData} search="" onSearchChange={() => {}} resultLabel="" />
         </HostStorageProvider>
       </Fieldset.Root>
       <Flex

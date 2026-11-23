@@ -145,16 +145,22 @@ const createStore = (input: PersonalHistoryInput) => {
       await index.ready();
       const changes: Parameters<typeof index.write>[0][] = [];
       const seen = new Map<string, Json>();
+      const captured: { id: string; value: Json; old: Json | Record<string, unknown> | undefined }[] = [];
       for (const row of rows) {
         const value = JSON.parse(JSON.stringify({ ...row, device })) as Json;
         const old = seen.has(row.id) ? seen.get(row.id) : await input.index.get(owner, kind, row.id);
+        captured.push({ id: row.id, value, old });
+        seen.set(row.id, value);
+      }
+      // Include migration seeds that arrive during the awaited prior-row reads.
+      const seeded = rows.length > 1 ? await input.index.seeded(owner, kind, device.id) : undefined;
+      for (const { id, value, old } of captured) {
         if (
           !old ||
-          (await input.index.isSeeded(owner, kind, device.id, row.id)) ||
+          (seeded ? seeded.has(id) : await input.index.isSeeded(owner, kind, device.id, id)) ||
           canonicalJson(old as Json) !== canonicalJson(value)
         )
-          changes.push({ deviceId: device.id, kind, id: row.id, value });
-        seen.set(row.id, value);
+          changes.push({ deviceId: device.id, kind, id, value });
       }
       for (const id of removed) changes.push({ deviceId: device.id, kind, id, value: null });
       await index.writeMany(changes);

@@ -1,0 +1,32 @@
+# Local dependencies and generated runtime files.
+node_modules/
+dist/
+.pstdio/
+.git/
+coverage/
+*.log
+*.pid
+
+# Credentials stay in host-managed storage.
+.env
+.env.*
+.npmrc
+.netrc
+.yarnrc
+.yarnrc.yml
+.config/
+.ssh/
+.aws/
+.gcloud/
+owner.json
+credentials.json
+*credentials*.json
+service-account*.json
+application_default_credentials.json
+*-key.json
+*-secret.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore

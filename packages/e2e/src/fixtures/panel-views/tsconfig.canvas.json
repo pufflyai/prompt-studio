@@ -1,0 +1,5 @@
+{
+  "extends": "../../../tsconfig.canvas.json",
+  "include": ["*.canvas.tsx"],
+  "exclude": []
+}

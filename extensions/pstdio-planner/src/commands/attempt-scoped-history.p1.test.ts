@@ -101,5 +101,5 @@ test(
     expect(third.events).toHaveLength(6);
     expect(new Set([...first.events, ...second.events, ...third.events].map(({ id }) => id)).size).toBe(206);
   },
-  process.platform === "linux" ? 10_000 : undefined,
+  process.platform === "linux" || (process.platform === "darwin" && process.arch === "x64") ? 10_000 : undefined,
 );

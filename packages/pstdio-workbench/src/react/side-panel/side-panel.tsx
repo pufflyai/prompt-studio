@@ -12,7 +12,7 @@ import { type ReactNode, useLayoutEffect, useRef } from "react";
 import type { WorkbenchCore } from "../../core";
 import { sidePanelBubblePreferences } from "../../core/controllers/side-panel/side-panel-bubble";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
-import { WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
+
 import { PanelHeader } from "../region/panel-header";
 import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
 import { usePanelPolicy } from "../shared/use-panel-policy";
@@ -74,9 +74,16 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
         layerStyle="panel"
         header={
           attached ? (
-            <PanelHeader workbench={workbench} region="side" variant="main" flexShrink={0} gap="sm">
+            <PanelHeader
+              workbench={workbench}
+              region="side"
+              variant="main"
+              borderBottomWidth="1px"
+              borderColor="border.subtle"
+              flexShrink={0}
+              gap="sm"
+            >
               <WorkbenchSidePanelHeader header={header} />
-              <WorkbenchPanelMenuOpeners workbench={workbench} panel="side" />
               {canFloat ? (
                 <Tooltip content="Float Side Panel">
                   <IconButton
@@ -181,6 +188,8 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
           visible && policy.showHeader ? (
             <ResourceContextMenu actions={position.actions}>
               <Header
+                borderBottomWidth="1px"
+                borderColor="border.subtle"
                 variant="main"
                 gap="sm"
                 aria-label="Side panel header"
@@ -200,7 +209,6 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
                 }}
               >
                 <WorkbenchSidePanelHeader header={header} />
-                <WorkbenchPanelMenuOpeners workbench={workbench} panel="side" />
                 {!fullscreen.active ? (
                   <Tooltip content="Reattach Side Panel">
                     <IconButton

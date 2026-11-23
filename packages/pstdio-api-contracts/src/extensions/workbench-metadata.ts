@@ -150,6 +150,7 @@ export const workbenchExtensionViewBodySchema = z.discriminatedUnion("kind", [
 ]);
 
 export const workbenchExtensionViewRecordSchema = z.object({
+  header: z.object({ view: viewRefSchema }).optional(),
   id: z.string(),
   localId: z.string(),
   extensionId: z.string(),
@@ -192,7 +193,7 @@ const workbenchExtensionViewMenuRecordSchema = z.object({
   extensionId: z.string(),
   owner: viewRefSchema,
   view: viewRefSchema,
-  side: z.enum(["left", "right"]),
+  side: z.enum(["left", "right", "bottom"]),
   group: z.string().optional(),
   placement: z.enum(["first", "default", "last"]).optional(),
   hostTreeHeader: z.enum(["default", "none"]).optional(),

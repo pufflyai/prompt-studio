@@ -5,6 +5,7 @@ import type {
   TreeRendererRegistry,
   TreeViewSection,
 } from "../../../core";
+import { treeStateKey } from "../../../core/registries/renderers/tree-state-scope";
 import { settleReadBatch } from "../../../core/registries/views/settle-read-batch";
 
 const isUnregisteredTreeError = (trees: TreeRendererRegistry, treeId: string, error: unknown) =>
@@ -64,11 +65,11 @@ export const loadExpandedTreeChildren = async (
   return childrenByNodeId;
 };
 
-export const expandDefaultTreeSections = (trees: TreeRendererRegistry, treeId: string) => {
+export const expandDefaultTreeSections = (trees: TreeRendererRegistry, treeId: string, stateScope?: string) => {
   const tree = trees.getTreeRenderer(treeId);
-  if (!tree) return;
+  if (!tree || (stateScope && trees.treeStore.getState().statesByTreeId[treeStateKey(treeId, stateScope)])) return;
   for (const sectionId of tree.defaultExpandedSectionIds ?? []) {
-    trees.setSectionExpanded(treeId, sectionId, true);
+    trees.setSectionExpanded(treeId, sectionId, true, stateScope);
   }
 };
 

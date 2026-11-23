@@ -5,6 +5,7 @@ import {
   definePlacement,
   defineResourceKind,
   defineView,
+  defineViewMenu,
   packageAsset,
   params,
   workbenchModes,
@@ -50,10 +51,22 @@ export const deleteLetter = defineCommand({
     await ctx.resources.removed(ctx.resource);
   },
 });
+export const headerContext = defineCommand({
+  id: "header-context",
+  title: "Read header context",
+  run: (ctx) => ctx.resource?.id ?? "landing",
+});
+
 export const createPanelViewFixture = (baseUrl: string) => {
+  const toolbar = defineView({
+    id: "letter-toolbar",
+    title: "Letter toolbar",
+    body: { kind: "webview", entry: packageAsset("./letter-toolbar.tsx", baseUrl), capabilities: ["commands.execute"] },
+  });
   const reader = defineView({
     id: "letter-reader",
     title: "Letter viewer",
+    header: { view: toolbar.ref },
     icon: "Mail",
     body: {
       kind: "webview",
@@ -69,6 +82,22 @@ export const createPanelViewFixture = (baseUrl: string) => {
       kind: "webview",
       entry: packageAsset("./letter-browser.tsx", baseUrl),
       capabilities: ["navigation.open"],
+    },
+  });
+  const activity = defineView({
+    id: "letter-activity",
+    title: "Letter activity",
+    icon: "Activity",
+    body: {
+      kind: "tree",
+      defaultExpandedSectionIds: ["events"],
+      body: async () => [
+        {
+          id: "events",
+          label: "Events",
+          nodes: Array.from({ length: 20 }, (_, index) => ({ id: `event-${index + 1}`, label: `Event ${index + 1}` })),
+        },
+      ],
     },
   });
   const kind = defineResourceKind({ id: "letter", label: "Letter", icon: "Mail" });
@@ -143,10 +172,16 @@ export const createPanelViewFixture = (baseUrl: string) => {
     main: { kind: "view", view: browser.ref, cardinality: "one" },
     slots: [],
   });
+  const emptyMenu = defineView({ id: "empty-menu", title: "Empty menu", body: { kind: "tree", body: async () => [] } });
   return {
-    commands: [addLetterViewer, completeLetter, deleteLetter],
+    commands: [addLetterViewer, completeLetter, deleteLetter, headerContext],
     resourceKinds: [kind],
-    views: [reader, browser],
+    views: [reader, browser, toolbar, activity, emptyMenu],
+    viewMenus: [
+      defineViewMenu({ id: "letter-tools", owner: reader.ref, view: browser.ref, side: "right" }),
+      defineViewMenu({ id: "letter-activity", owner: reader.ref, view: activity.ref, side: "bottom" }),
+      defineViewMenu({ id: "empty-tools", owner: browser.ref, view: emptyMenu.ref, side: "right" }),
+    ],
     placements: [viewer, browserPanel],
     pages: [mailbox, letter, collection],
     navigationItems: [
