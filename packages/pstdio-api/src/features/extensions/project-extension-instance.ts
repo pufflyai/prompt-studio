@@ -13,11 +13,16 @@ const publicExtensionIds = new Set(
 export const publicExtensionVisibility = (extensionId: string | undefined) =>
   extensionId && publicExtensionIds.has(canonicalExtensionId(extensionId)) ? ("public" as const) : ("unknown" as const);
 
+/** A Prompt Studio extension from the packaged catalog, including a local checkout of one. */
+export const isFirstPartyExtension = (extensionId: string) => {
+  const id = canonicalExtensionId(extensionId);
+  return id.startsWith("pstdio.") && publicExtensionIds.has(id);
+};
+
 export const extensionSourceAuthor = (extensionId: string, sourceKind: string) => {
   const id = canonicalExtensionId(extensionId);
   // A checkout of a bundled first-party extension retains its publisher identity.
-  if (id.startsWith("pstdio.") && publicExtensionIds.has(id))
-    return { kind: "publisher" as const, publisher: "pstdio" };
+  if (isFirstPartyExtension(id)) return { kind: "publisher" as const, publisher: "pstdio" };
   if (sourceKind === "local_path") return { kind: "self" as const };
   return { kind: "publisher" as const, publisher: id.split(".")[0]! };
 };

@@ -12,6 +12,7 @@ import type {
   WorkbenchAttachmentInvocationContext,
 } from "./commands";
 import type { ExtensionConnectionsApi, ExtensionLoggerApi } from "./connections";
+import type { ExtensionDiagnosticsApi } from "./diagnostics";
 import type { EventDeliveryResult, EventRef } from "./events";
 import type { JsonObject, JsonValue, MaybePromise, Struct } from "./json";
 import type { NavigationTarget } from "./navigation-target";
@@ -260,6 +261,8 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   extensions?: ExtensionManagementApi;
   /** This device's Cloud account, its devices and each project's sync status. */
   account: ExtensionAccountApi;
+  /** Host process profiling for first-party extensions. Present in command, hook and event contexts. */
+  diagnostics?: ExtensionDiagnosticsApi;
 }
 
 export interface CommandStreamWriter<TChunk extends JsonValue = JsonValue> {
