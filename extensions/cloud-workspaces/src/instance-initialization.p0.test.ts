@@ -69,9 +69,11 @@ test("a failed launch keeps the instance state when the rollback cannot confirm 
       return Response.json({ error: { code: "publish_failed", message: "Template rejected" } }, { status: 503 });
     },
   });
-  const binary = await writeControllerFixture(
-    root,
-    `import { mkdir, writeFile } from "node:fs/promises";
+  let ports = 0;
+  try {
+    const binary = await writeControllerFixture(
+      root,
+      `import { mkdir, writeFile } from "node:fs/promises";
 const args = process.argv.slice(2);
 if (args.includes("status")) {
   if (await Bun.file("publication-failed").exists()) { console.error("Probe unavailable after publication"); process.exit(1); }
@@ -82,9 +84,7 @@ if (args.includes("start")) { await mkdir("state", { recursive: true }); await w
 if (args.includes("stop")) await writeFile("stop-attempted", "yes");
 if (args.includes("superuser")) console.log(JSON.stringify({ token: "fixture", key: { expires_at: "2099-01-01T00:00:00Z" } }));
 `,
-  );
-  let ports = 0;
-  try {
+    );
     const instances = createInstances(instancesRoot);
     const result = await instances
       .launch({ name: "Publish fails", binary, manifests: [{}] }, async () => {

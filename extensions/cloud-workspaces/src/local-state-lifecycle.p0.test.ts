@@ -10,11 +10,12 @@ async function controllerFixture() {
   const root = await fs.mkdtemp(join(tmpdir(), "pc-state-races-"));
   const id = randomUUID();
   const directory = join(root, id);
-  await fs.mkdir(directory);
-  await fs.writeFile(join(directory, "empty.env"), "");
-  const binary = await writeControllerFixture(
-    root,
-    `import { mkdir, rm, writeFile } from "node:fs/promises";
+  try {
+    await fs.mkdir(directory);
+    await fs.writeFile(join(directory, "empty.env"), "");
+    const binary = await writeControllerFixture(
+      root,
+      `import { mkdir, rm, writeFile } from "node:fs/promises";
 const args = process.argv.slice(2);
 if (args.includes("status")) { const running = await Bun.file("state/server.json").exists(); console.log(JSON.stringify({ state: running ? "running" : "not_running" })); process.exit(running ? 0 : 1); }
 if (args.includes("start")) {
@@ -25,12 +26,16 @@ if (args.includes("start")) {
 if (args.includes("stop")) await rm("state/server.json", { force: true });
 if (args.includes("superuser")) console.log(JSON.stringify({ token: "fixture", key: { expires_at: "2099-01-01T00:00:00Z" } }));
 `,
-  );
-  await fs.writeFile(
-    join(directory, "instance.json"),
-    JSON.stringify({ id, name: "Saved", binary, state: "stopped", url: "http://127.0.0.1:4000", agentPort: 4001 }),
-  );
-  return { root, directory, id, binary, instances: createInstances(root) };
+    );
+    await fs.writeFile(
+      join(directory, "instance.json"),
+      JSON.stringify({ id, name: "Saved", binary, state: "stopped", url: "http://127.0.0.1:4000", agentPort: 4001 }),
+    );
+    return { root, directory, id, binary, instances: createInstances(root) };
+  } catch (error) {
+    await fs.rm(root, { recursive: true, force: true });
+    throw error;
+  }
 }
 
 test("the saved instance list stays available while another launch allocates ports", async () => {
