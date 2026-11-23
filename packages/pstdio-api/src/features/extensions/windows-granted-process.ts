@@ -32,7 +32,8 @@ const launcherSource = `
       return;
     }
     await new Promise((resolve, reject) => process.send({ pid: child.pid }, (error) => error ? reject(error) : resolve()));
-    process.exit(await child.exited);
+    const exitCode = await child.exited;
+    process.send({ exitCode }, () => process.exit(0));
   });
 `;
 
@@ -78,6 +79,7 @@ export const watchJobExit = (job: JobExit, launcherExited: Promise<unknown>, onF
 export const startWindowsGrantedProcess = (input: StartInput) => {
   const job = createWindowsProcessJob();
   const started = Promise.withResolvers<number>();
+  const reportedExit = Promise.withResolvers<number | undefined>();
   started.promise.catch(() => {});
   const output = input.detached ? "ignore" : "pipe";
   const launchError = (commandMissing = false) => {
@@ -98,11 +100,18 @@ export const startWindowsGrantedProcess = (input: StartInput) => {
       windowsHide: true,
       detached: input.detached,
       ipc: (message, launcher) => {
-        if (message && typeof message.pid === "number") started.resolve(message.pid);
+        if (message && typeof message.pid === "number") {
+          started.resolve(message.pid);
+          return;
+        }
+        if (message && typeof message.exitCode === "number") reportedExit.resolve(message.exitCode);
         else started.reject(launchError(message?.commandMissing === true));
         launcher.disconnect();
       },
-      onDisconnect: () => started.reject(launchError()),
+      onDisconnect: () => {
+        started.reject(launchError());
+        reportedExit.resolve(undefined);
+      },
     });
     job.attachLauncher(child.pid);
     child.send({
@@ -123,7 +132,17 @@ export const startWindowsGrantedProcess = (input: StartInput) => {
     throw error;
   }
 
-  const exited = Promise.all([started.promise, child.exited]).then(([, exitCode]) => exitCode);
+  let terminationRequested = false;
+  // The launcher reports natural status over IPC. Job termination uses launcher code 1, which
+  // a program can also exit with before the remaining members of its job are stopped.
+  const completion = Promise.all([started.promise, child.exited, reportedExit.promise]).then(
+    ([, launcherCode, reportedCode]) => ({
+      code: reportedCode ?? launcherCode,
+      terminated: reportedCode === undefined && terminationRequested && launcherCode === 1,
+    }),
+  );
+  const exited = completion.then(({ code }) => code);
+  const jobTerminated = completion.then(({ terminated }) => terminated, () => false);
   exited.catch(() => {});
   const { treeExited, check } = watchJobExit(job, child.exited, (error) => {
     apiLogger.warn(
@@ -135,9 +154,13 @@ export const startWindowsGrantedProcess = (input: StartInput) => {
     child,
     pid: started.promise,
     exited,
+    jobTerminated,
     treeExited,
     async stop() {
-      if (job.hasProcesses()) job.terminate();
+      if (job.hasProcesses()) {
+        job.terminate();
+        terminationRequested = true;
+      }
       if (!(await exitedWithin(check(), input.stopTimeoutMs)))
         throw new Error("The Windows process job did not exit after it was stopped.");
     },
