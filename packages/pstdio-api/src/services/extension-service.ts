@@ -112,6 +112,28 @@ const projectOfInstance = async (instances: ExtensionServiceDeps["extensionInsta
   return instance?.scope_type === "project" ? instance.scope_id : null;
 };
 
+// The project can be removed between a sync's check and its instance. Its removal already cleaned up
+// the project's sources, so whatever the sync added for it must go too.
+const attachUnlessRemoved = async <Source extends { id: string }, Attached extends { instance: { id: string } }>(
+  deps: ExtensionServiceDeps,
+  projectId: string,
+  installedSource: Source,
+  attach: (projectId: string, installedSource: Source) => Promise<Attached>,
+) => {
+  const installedSourceId = installedSource.id;
+  const attached = await attach(projectId, installedSource).catch(async (error) => {
+    if (await deps.projectService.get(projectId)) throw error;
+    return null;
+  });
+  if (attached && (await deps.projectService.get(projectId))) return attached;
+  if (attached && (await deps.extensionInstancesService.remove(attached.instance.id)))
+    deps.eventBus?.emit("extension_instances", "delete", attached.instance);
+  const users = await deps.extensionInstancesService.list({ installed_extension_id: installedSourceId });
+  if (users.length === 0 && (await deps.installedExtensionSourcesService.remove(installedSourceId)))
+    deps.eventBus?.emit("installed_extension_sources", "delete", { id: installedSourceId });
+  throw new ProjectNotFoundError(projectId);
+};
+
 export const createExtensionService = (deps: ExtensionServiceDeps) => {
   const mutateSource = createExtensionSourceMutations();
   const emitInstalledSource = (source: unknown) => {
@@ -257,7 +279,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
       const { installedSource } = await resolveProjectInstalledSource(input, (source) =>
         attachInstalledSource(source, notify),
       );
-      return attachProjectInstance(input.projectId, installedSource);
+      return attachUnlessRemoved(deps, input.projectId, installedSource, attachProjectInstance);
     });
 
   const attachRegisteredSourceForProject = async (input: { projectId: string; installedSourceId: string }) => {

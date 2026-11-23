@@ -16,6 +16,7 @@ import { provisionProjectWorkspaces } from "../features/workspaces/provision-coo
 import { reconcileProviderWorkspaces } from "../features/workspaces/workspace-provider-reconciliation";
 import { apiLogger } from "../lib/logger";
 import { traceSetupPhase } from "../lib/setup-phase";
+import { ProjectNotFoundError } from "../services/extension-service";
 import { adoptExtractedDefaultTools } from "./extracted-default-tools";
 import { canRefreshWorkspacesTool, refreshingWorkspacesEntry } from "./workspaces-tool-upgrade";
 
@@ -213,6 +214,9 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
       installedExtensionSourcesService: deps.installedExtensionSourcesService,
       projectId: project.id,
       workspaceService: deps.workspaceService,
+    }).catch((error) => {
+      // A project removed while startup ran has nothing left to sync.
+      if (!(error instanceof ProjectNotFoundError)) throw error;
     });
   }
   registerBackgroundTask(
