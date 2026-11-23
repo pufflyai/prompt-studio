@@ -87,16 +87,16 @@ describe("installExtensionSource replacement", () => {
       throw new Error("cleanup failed");
     });
 
-    await expect(removePathBestEffort("/locked/staging", remove)).resolves.toBeUndefined();
+    expect(await removePathBestEffort("/locked/staging", remove)).toBeUndefined();
     expect(remove).toHaveBeenCalledWith("/locked/staging");
   });
 
   test("does not let asynchronous cleanup errors replace the install result", async () => {
-    await expect(
-      removePathBestEffort("/locked/staging", async () => {
+    expect(
+      await removePathBestEffort("/locked/staging", async () => {
         throw new Error("cleanup failed");
       }),
-    ).resolves.toBeUndefined();
+    ).toBeUndefined();
   });
 
   test("force=true replaces an existing install", async () => {

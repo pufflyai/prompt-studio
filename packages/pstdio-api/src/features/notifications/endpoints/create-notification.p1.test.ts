@@ -90,17 +90,17 @@ describe("notification routes", () => {
     expect(createRes.status).toBe(201);
     const created = (await createRes.json()) as { id: string; title: string; status: string };
     expect(created).toMatchObject({ title: "Ticket proposal refined", status: "open" });
-    await expect(syncEvent).resolves.toMatchObject({ table: "notifications", op: "set" });
+    expect(await syncEvent).toMatchObject({ table: "notifications", op: "set" });
 
     const listRes = await app.request(`/v1/projects/${project.id}/notifications`);
     expect(listRes.status).toBe(200);
-    await expect(listRes.json()).resolves.toMatchObject({
+    expect(await listRes.json()).toMatchObject({
       items: [{ id: created.id, title: "Ticket proposal refined" }],
     });
 
     const countRes = await app.request(`/v1/projects/${project.id}/notifications/count`);
     expect(countRes.status).toBe(200);
-    await expect(countRes.json()).resolves.toEqual({ count: 1 });
+    expect(await countRes.json()).toEqual({ count: 1 });
   });
 
   test("resolves live notifications by dedupe key", async () => {
@@ -170,7 +170,7 @@ describe("notification routes", () => {
     });
 
     expect(createRes.status).toBe(201);
-    await expect(createRes.json()).resolves.toMatchObject({
+    expect(await createRes.json()).toMatchObject({
       origin: "extension",
       source: "api",
       sourceExtensionId: expect.any(String),

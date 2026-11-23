@@ -99,7 +99,7 @@ describe("createProcessApi", () => {
       }) as never,
     });
 
-    await expect(api.spawnDetached({ command: ["pstdio-probe-not-real", "--version"] })).resolves.toEqual({ pid: 123 });
+    expect(await api.spawnDetached({ command: ["pstdio-probe-not-real", "--version"] })).toEqual({ pid: 123 });
     expect(calls).toHaveLength(1);
     expect((calls[0] as { command: string[] }).command.join(" ")).toContain("pstdio-probe-not-real");
     expect((calls[0] as { command: string[] }).command.at(-1)).toBe("--version");
