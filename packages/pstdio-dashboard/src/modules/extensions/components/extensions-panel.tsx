@@ -1,4 +1,5 @@
-import { Flex, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Stack, Text } from "@chakra-ui/react";
+import { LoadingState } from "@pstdio/ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -101,11 +102,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   );
 
   if (extensionsQuery.isLoading) {
-    return (
-      <Flex flex="1" justifyContent="center" alignItems="center" padding="lg">
-        <Spinner />
-      </Flex>
-    );
+    return <LoadingState />;
   }
 
   if (extensionsQuery.error) {

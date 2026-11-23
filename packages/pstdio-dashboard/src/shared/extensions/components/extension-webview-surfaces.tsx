@@ -1,4 +1,4 @@
-import { Box, Center, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Box, Center, Stack, Text } from "@chakra-ui/react";
 import type { LocalizableString } from "@pstdio/sdk/api";
 import { useUiScope } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
@@ -12,6 +12,7 @@ import {
 } from "pstdio-extensions/bridge/host";
 import { useState } from "react";
 import { buildApiUrl } from "@/lib/api";
+import { WebviewLoading, type WebviewLoadingKind } from "./webview-loading";
 
 export type WebviewDescriptor = {
   entry: { kind: "package-asset"; path: string; baseUrl: string };
@@ -59,11 +60,7 @@ export const StaticWebviewSurface = (props: {
 
   return (
     <Box position="relative" width="100%" height="100%" minH="0" bg={webviewSurfaceBackground}>
-      {state === "loading" ? (
-        <Center position="absolute" inset="0" bg={webviewSurfaceBackground} color="fg.muted" zIndex={1}>
-          <Spinner size="sm" />
-        </Center>
-      ) : null}
+      {state === "loading" ? <WebviewLoading kind="page" background={webviewSurfaceBackground} /> : null}
       {state === "error" ? <WebviewLoadError /> : null}
       <iframe
         title={title}
@@ -84,6 +81,7 @@ export const BridgedWebviewSurface = (props: {
   visible?: boolean;
   workbench?: WorkbenchCore;
   sizing?: ExtensionFrameProps["sizing"];
+  loading: WebviewLoadingKind;
   capabilities: ExtensionFrameProps["capabilities"];
   extensionProps: ExtensionFrameProps["props"];
   hostEvents?: ExtensionFrameProps["hostEvents"];
@@ -114,11 +112,7 @@ export const BridgedWebviewSurface = (props: {
       flexDirection="column"
     >
       {error ? <WebviewLoadError detail={error} /> : null}
-      {!error && !ready ? (
-        <Center position="absolute" inset="0" bg={webviewSurfaceBackground} color="fg.muted" zIndex={1}>
-          <Spinner size="sm" />
-        </Center>
-      ) : null}
+      {!error && !ready ? <WebviewLoading kind={props.loading} background={webviewSurfaceBackground} /> : null}
       <ExtensionFrame
         visible={props.visible}
         {...keyboard}

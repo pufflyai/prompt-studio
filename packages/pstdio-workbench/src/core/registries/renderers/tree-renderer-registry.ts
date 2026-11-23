@@ -220,13 +220,13 @@ export const createTreeRendererRegistry = (input: CreateTreeRendererRegistryInpu
     },
 
     getTreeState(id, stateScope) {
-      const state =
-        treeStore.getState().statesByTreeId[treeStateKey(id, stateScope)] ?? createDefaultState(requireTree(id));
+      const { statesByTreeId } = treeStore.getState();
+      const state = statesByTreeId[treeStateKey(id, stateScope)] ?? createDefaultState(requireTree(id));
       return {
         expandedNodeIds: [...state.expandedNodeIds],
         expandedSectionIds: [...state.expandedSectionIds],
         selectedNodeId: state.selectedNodeId,
-        loading: state.loading,
+        loading: statesByTreeId[id]?.loading,
       };
     },
 

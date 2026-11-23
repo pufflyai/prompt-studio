@@ -4,6 +4,7 @@ import { sizesToContentHeight } from "pstdio-extensions/bridge/contract";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { ExtensionWebviewFrame } from "@/shared/extensions/components/extension-webview-frame";
+import { webviewLoadingKind } from "@/shared/extensions/components/webview-loading";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 
@@ -77,6 +78,7 @@ export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput })
           key={JSON.stringify([projectId, view.id])}
           visible={input.visible}
           sizing={sizing}
+          loading={webviewLoadingKind(input.panel.region, contentHeight)}
           extensionId={view.extensionId}
           extensionInstanceId={extensionInstanceId}
           installName={installName}

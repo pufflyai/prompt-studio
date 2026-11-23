@@ -1,5 +1,5 @@
-import { Box, Button, Heading, HStack, Icon, Spinner, Stack, Text } from "@chakra-ui/react";
-import { EmptyState, resolveIconComponent, ScrollArea, WindowTitleBar } from "@pstdio/ui";
+import { Box, Button, Heading, HStack, Icon, Stack, Text } from "@chakra-ui/react";
+import { EmptyState, LogoLoader, resolveIconComponent, ScrollArea, WindowTitleBar } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import { DesktopStartingState } from "./desktop-starting-state";
@@ -82,7 +82,7 @@ const RecoveryState = (props: {
 const ClosingState = () => {
   return (
     <Stack align="center" gap="lg" role="status" aria-live="polite">
-      <Spinner size="lg" color="fg.muted" aria-hidden="true" _motionReduce={{ display: "none" }} />
+      <LogoLoader />
       <Stack align="center" gap="xs" textAlign="center">
         <Heading textStyle="heading/M">Closing Prompt Studio</Heading>
         <Text color="fg.muted" textStyle="paragraph/M/regular">
