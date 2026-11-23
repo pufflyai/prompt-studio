@@ -294,3 +294,12 @@ export {
   type NativeDocumentSessionInput,
   type NativeDocumentSessionSnapshot,
 } from "./core/native-documents/native-document-session";
+export { classifyApiWrite } from "./core/registries/mutations/operation-failures";
+export type { OperationRecovery, OperationSourceCommand } from "./core/registries/mutations/operation-types";
+export {
+  getWorkbenchOperations,
+  OperationCapacityError,
+  operationSubject,
+  resourceOperationSubject,
+  type WorkbenchOperations,
+} from "./core/registries/mutations/operations";

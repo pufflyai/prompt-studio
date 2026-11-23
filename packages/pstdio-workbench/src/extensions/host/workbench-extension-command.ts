@@ -130,8 +130,14 @@ export const executeWorkbenchExtensionCommand = async (
     ? { ...resolveCommandResourceParams(command.params, input.params, { resource: input.resource }), ...input.params }
     : input.params;
   const params = command?.confirmation ? { ...resolved, [command.confirmation.confirmedParam]: true } : resolved;
-  const persist = async () =>
-    unwrapCommandValue(await executeWorkbenchExtensionCommandResponse(context, commandId, { ...input, params }));
+  const persist = async (signal?: AbortSignal) =>
+    unwrapCommandValue(
+      await executeWorkbenchExtensionCommandResponse(context, commandId, {
+        ...input,
+        params,
+        signal: signal && input.signal ? AbortSignal.any([signal, input.signal]) : (signal ?? input.signal),
+      }),
+    );
   return command
     ? runResourceMutation(context, command, params, { resource: input.resource, signal: input.signal }, persist)
     : persist();

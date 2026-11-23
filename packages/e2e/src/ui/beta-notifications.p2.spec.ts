@@ -27,18 +27,48 @@ test("makes notifications opt-in and reflects settings from another client", asy
   await page.getByText("Beta features", { exact: true }).first().click();
   const toggle = page.getByRole("checkbox", { name: "Notifications", exact: true });
   await expect(toggle).not.toBeChecked();
-  await page.route("**/v1/settings", (route) =>
-    route.request().method() === "PATCH"
-      ? route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "Save failed" }) })
-      : route.continue(),
-  );
+  const writing = Promise.withResolvers<void>();
+  const reject = Promise.withResolvers<void>();
+  await page.route("**/v1/settings", async (route) => {
+    if (route.request().method() !== "PATCH") return route.continue();
+    writing.resolve();
+    await reject.promise;
+    await route.fulfill({
+      status: 422,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "Save failed" }),
+    });
+  });
   await page.locator("label").filter({ has: toggle }).click();
-  await expect(page.getByRole("alert")).toBeVisible();
+  try {
+    await writing.promise;
+    await expect(toggle).toBeChecked();
+    await expect(nav).toBeVisible();
+    await expect(page.getByRole("checkbox", { name: "Machine tokens" })).toBeEnabled();
+  } finally {
+    reject.resolve();
+  }
+  await expect(page.getByRole("alert").filter({ hasText: "Save failed" })).toBeVisible();
   await expect(toggle).not.toBeChecked();
+  await expect(nav).toHaveCount(0);
   await page.unroute("**/v1/settings");
-  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await page.getByRole("button", { name: "Dismiss alert", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Save failed" })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(toggle).not.toBeVisible();
+  const activity = page.locator('[data-status-bar-item="workbench.system-activity"]');
+  await activity.click();
+  await expect(page.getByRole("button", { name: "Copy draft" })).toBeVisible();
+  await page.getByRole("button", { name: "Return to source" }).click();
+  await expect(toggle).toBeVisible();
   await page.locator("label").filter({ has: toggle }).click();
   await expect(nav).toBeVisible();
+  await expect
+    .poll(async () => {
+      const response = await request.get(`${apiBase}/v1/settings`);
+      return (await response.json()).notifications_enabled;
+    })
+    .toBe(true);
   await page.reload();
   await expect(nav).toBeVisible();
   await page.keyboard.press("Escape");

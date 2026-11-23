@@ -227,6 +227,7 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
   const connectionLost = current.error instanceof PstdioConnectionError;
   return {
     ...current,
+    acceptedValue: warm?.error ? current.value : (warm?.data ?? current.value),
     error: connectionLost ? undefined : current.error?.message,
     loading: current.loading || (connectionLost && current.value === undefined),
     retry: () => retryRef.current?.() ?? Promise.resolve(),

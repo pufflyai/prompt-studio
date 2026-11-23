@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
+import { createScopedQueryClient } from "@pstdio/sdk/extensions";
 import { act, create } from "react-test-renderer";
 import { createWorkbench } from "../../core";
+import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import { systemActivityItemId, useSystemActivityStatusItem } from "./system-errors";
 
 test("system notices appear only while needed and keep the person's widget alignment", async () => {
@@ -42,6 +44,51 @@ test("system notices appear only while needed and keep the person's widget align
       tree!.unmount();
     });
     workbench.dispose();
+    environment.IS_REACT_ACT_ENVIRONMENT = previous;
+  }
+});
+
+test("scoped recovery keeps the widget reachable after an alert is dismissed", async () => {
+  const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const previous = environment.IS_REACT_ACT_ENVIRONMENT;
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  const queries = createScopedQueryClient({ runtimeId: "desktop", accountId: "person", extensionId: "pstdio" });
+  const workbench = createWorkbench({ queries });
+  const operations = getWorkbenchOperations(queries);
+  const Status = () => {
+    useSystemActivityStatusItem(workbench, true);
+    return null;
+  };
+  let tree: ReturnType<typeof create>;
+  await act(async () => {
+    tree = create(<Status />);
+  });
+  try {
+    await act(async () => {
+      const attempt = operations.submit({
+        domain: "settings",
+        subjects: ["installation"],
+        title: "Change settings",
+        draft: true,
+        write: () => {
+          throw new Error("Change rejected");
+        },
+        classify: () => "rejected",
+      });
+      await expect(attempt.result).rejects.toThrow("Change rejected");
+      operations.dismiss(attempt.id);
+    });
+    expect(workbench.statusBar.getItem(systemActivityItemId)?.popoverViewId).toBeDefined();
+    await act(async () => queries.setAuthority({ accountId: "other" }));
+    expect(workbench.statusBar.listVisibleItems()).toHaveLength(0);
+    await act(async () => queries.setAuthority({ accountId: "person" }));
+    expect(workbench.statusBar.getItem(systemActivityItemId)?.popoverViewId).toBeDefined();
+  } finally {
+    await act(async () => {
+      tree!.unmount();
+    });
+    await workbench.dispose();
+    queries.dispose();
     environment.IS_REACT_ACT_ENVIRONMENT = previous;
   }
 });

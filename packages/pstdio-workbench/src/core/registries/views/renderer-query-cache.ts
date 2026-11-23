@@ -166,6 +166,13 @@ export const createRendererQueryCache = (sharedQueries?: ScopedQueryClient) => {
         ? (query.getSnapshot() as ReturnType<ScopedQuery<T>["getSnapshot"]>)
         : undefined;
     },
+    async refreshObserved(identity: RendererQueryIdentity) {
+      const owner = entries.get(keyFor(identity))?.owner;
+      if (!owner || owner.query.isDisposed()) return;
+      owner.version++;
+      owner.currentProgress = undefined;
+      await owner.query.refreshObserved();
+    },
     refresh<T>(request: RendererReadRequest<T>, retry = false) {
       const owner = prepare(request);
       owner.version++;

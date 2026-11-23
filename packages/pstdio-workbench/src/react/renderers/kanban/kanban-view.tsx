@@ -2,7 +2,6 @@ import { Box, Stack } from "@chakra-ui/react";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import type { ResourceContextAction } from "@pstdio/ui";
 import {
-  applyKanbanMove,
   KanbanRenderer,
   type KanbanRendererProps,
   KanbanRendererSkeleton,
@@ -22,10 +21,12 @@ import { rendererResourceDependency } from "../../../core/registries/renderers/r
 import { reportUserActionError, runUserAction } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
+import { projectBoardRows } from "../collection-operation-projection";
 import { kanbanPageFields, kanbanSearchFields, rendererPagePresentation } from "../renderer-page-fields";
 import { rendererQueryKey } from "../renderer-query-key";
 import { RendererReadNotice } from "../renderer-read-notice";
 import { shareEqualValue } from "../share-equal-value";
+import { useCollectionOperations } from "../use-collection-operations";
 import { usePageParams } from "../use-page-params";
 import { useRendererPages } from "../use-renderer-pages";
 import { useRendererRead } from "../use-renderer-read";
@@ -67,6 +68,7 @@ const WorkbenchKanbanViewFrame = (props: WorkbenchKanbanViewFrameProps) => {
   );
 };
 
+const emptyRows: KanbanRendererRow[] = [];
 const noopSubscribe = () => () => {};
 
 export const isKanbanRowResource = (resource: unknown): resource is ResourceRef =>
@@ -172,20 +174,21 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   // so overlapping reads see it before React renders it.
   const lastLoaded = useRef<unknown>(undefined);
 
-  const read = useRendererRead<Awaited<ReturnType<typeof loadKanbanRows>>>({
-    enabled: views.ready,
-    workbench,
-    ownerKey: rendererReadKey(placement),
+  const query = {
     sourceId: contribution.id,
-    queryEvents: contribution.queryEvents,
     queryScope: contribution.queryScope,
     queryKey: rendererQueryKey([contribution.id, resourceKey(placement.resource)]),
     dependency: rendererResourceDependency(placement.resource),
+    refreshKey: rendererQueryKey([settings, filter, sorts, pageParams, ...(paged ? [pages.refreshKey] : [])]),
+  };
+  const read = useRendererRead<Awaited<ReturnType<typeof loadKanbanRows>>>({
+    ...query,
+    enabled: views.ready,
+    workbench,
+    ownerKey: rendererReadKey(placement),
+    queryEvents: contribution.queryEvents,
     onAccept: pages.accept,
     onInvalidate: pages.reset,
-    // Paged providers apply search before selecting rows; legacy providers keep local search.
-    refreshKey: rendererQueryKey([settings, filter, sorts, pageParams, ...(paged ? [pages.refreshKey] : [])]),
-
     load: async (signal, _publish, accepted) => {
       const state = { settings, filter, sorts, pageParams, resource: placement.resource };
       const loaded = await loadKanbanRows(contribution, state, pages, signal, accepted);
@@ -197,7 +200,9 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     },
     subscribe: contribution.subscribe,
   });
-  const rows = read.value?.rows ?? [];
+  const acceptedRows = read.acceptedValue?.rows ?? emptyRows;
+  const mutations = useCollectionOperations(workbench, query, acceptedRows);
+  const rows = projectBoardRows(acceptedRows, mutations.pending, contribution.id, query.queryScope?.projectId);
   const presentation = resolveKanbanQueryPresentation(contribution, read.value, declaredAttributes);
   pageAttributes.accept(read.value?.attributes, paged);
   // Use the read's and pages' own functions, not the `read` and `pages` objects, which change on
@@ -267,12 +272,8 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
         onAttributeChange={
           contribution.onAttributeChange
             ? (rowId, attributeId, value) =>
-                mutate(
-                  (snapshot) => ({
-                    ...snapshot,
-                    rows: applyKanbanMove(snapshot.rows, { rowId, attributes: { [attributeId]: value } }),
-                  }),
-                  () => contribution.onAttributeChange!(rowId, attributeId, value),
+                mutations.submit({ rowId, attributes: { [attributeId]: value } }, () =>
+                  contribution.onAttributeChange!(rowId, attributeId, value),
                 )
             : undefined
         }
@@ -280,22 +281,15 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
           contribution.onMove || contribution.onAttributeChange
             ? (move) => {
                 const mutation = prepareKanbanMove(contribution, move);
-                return mutate(
-                  (value) => ({ ...value, rows: applyKanbanMove(value.rows, mutation.move) }),
-                  mutation.save,
-                );
+                return mutations.submit(mutation.move, mutation.save);
               }
             : undefined
         }
         onReorder={
           contribution.onReorder
             ? (rowId, beforeRowId) =>
-                mutate(
-                  (value) => ({
-                    ...value,
-                    rows: applyKanbanMove(value.rows, { rowId, attributes: {}, order: { beforeRowId } }),
-                  }),
-                  () => contribution.onReorder!(rowId, beforeRowId),
+                mutations.submit({ rowId, attributes: {}, order: { beforeRowId } }, () =>
+                  contribution.onReorder!(rowId, beforeRowId),
                 )
             : undefined
         }

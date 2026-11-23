@@ -143,6 +143,7 @@ export interface ResourceRegistry {
   onDidDetectHierarchyCycle(listener: (cycle: ResourceHierarchyCycle) => void): Disposable;
 }
 export interface CreateResourceRegistryInput {
+  preview?: ReturnType<typeof createResourcePreview>;
   remove?(resource: ResourceRef, retained: readonly PlacementIdentity[]): void;
   // Resolves the active primary resource so listResources can scope provider candidates.
   getPrimary?: () => ResourceRef | undefined;
@@ -166,7 +167,7 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
   });
   return {
     store,
-    preview: createResourcePreview(),
+    preview: input.preview ?? createResourcePreview(),
     getRemovalVersion: () => removalVersion,
     getRemovalEpoch: () => removalEpoch,
     wasRemovedSince: (resource, version) => (removals.get(resourceKey(resource)) ?? 0) > version,

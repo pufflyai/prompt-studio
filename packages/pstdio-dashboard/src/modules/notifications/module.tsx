@@ -1,11 +1,11 @@
 import type { Disposable, TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { createCollectionSelection } from "@/lib/sync/collection-selection";
-import { getRuntimeCollections, subscribeCollections } from "@/lib/sync/collections";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { notificationsEnabled } from "@/shared/settings/synced-settings";
+import { getInstallationSettings, notificationsEnabled } from "@/shared/settings/synced-settings";
 import {
   dashboardNavigationSections,
   registerDashboardNavigationContribution,
@@ -106,8 +106,12 @@ export const createNotificationsModule = () =>
         }
         refreshSidenavs(ctx);
       };
-      const unsubscribe = subscribeCollections((change) => {
-        if (!change || change.table === "settings") refresh();
+      let previousEnabled = notificationsEnabled();
+      const unsubscribe = getInstallationSettings().subscribe(() => {
+        const enabled = notificationsEnabled();
+        if (enabled === previousEnabled) return;
+        previousEnabled = enabled;
+        refresh();
       });
       let stopNotifications = () => {};
       const observeNotifications = () => {

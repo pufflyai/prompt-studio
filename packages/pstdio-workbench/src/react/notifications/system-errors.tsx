@@ -5,6 +5,7 @@ import { useLayoutEffect } from "react";
 import type { WorkbenchCore } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchActionErrors } from "./action-errors";
+import { OperationRecoveryItem, useOperationRecovery } from "./operation-recovery";
 import { isSystemNotice } from "./system-error-state";
 
 export const systemActivityItemId = "workbench.system-activity";
@@ -42,13 +43,15 @@ export const useSystemActivityStatusItem = (workbench: WorkbenchCore, visible: b
 
 const useSystemNotices = (workbench: WorkbenchCore) => {
   const notifications = useWorkbenchStore(workbench.notifications.store, (state) => state.notifications);
+  const recovery = useOperationRecovery(workbench);
   const notices = Object.values(notifications)
     .filter(isSystemNotice)
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
-  const error = notices.find((notice) => notice.level === "error");
+  const error = notices.find((notice) => notice.level === "error") ?? recovery[0];
   const errorOnly = Boolean(error) && notices.every((notice) => notice.level === "error");
   return {
     notices,
+    recovery,
     summary: error ?? notices[0],
     label: errorOnly ? "System errors" : "System notices",
     error,
@@ -69,7 +72,8 @@ const SystemNoticeIndicator = ({ workbench }: { workbench: WorkbenchCore }) => {
 };
 
 const WorkbenchSystemNotices = ({ workbench }: { workbench: WorkbenchCore }) => {
-  const { notices, label, error, errorOnly } = useSystemNotices(workbench);
+  const { notices, recovery, label, error, errorOnly } = useSystemNotices(workbench);
+  const count = notices.length + recovery.length;
   return (
     <>
       <PopoverHeader
@@ -81,12 +85,13 @@ const WorkbenchSystemNotices = ({ workbench }: { workbench: WorkbenchCore }) => 
               size="sm"
               variant="subtle"
               colorPalette={error ? "red" : "gray"}
-              aria-label={`${notices.length} ${label.toLowerCase()}`}
+              aria-label={`${count} ${label.toLowerCase()}`}
             >
-              <Tag.Label>{notices.length}</Tag.Label>
+              <Tag.Label>{count}</Tag.Label>
             </Tag.Root>
             <Button
               size="2xs"
+              disabled={notices.length === 0}
               variant="ghost"
               onClick={() => {
                 for (const notice of notices) workbench.notifications.dismiss(notice.id);
@@ -107,6 +112,9 @@ const WorkbenchSystemNotices = ({ workbench }: { workbench: WorkbenchCore }) => 
         }}
       >
         <Stack gap="sm" minW="0">
+          {recovery.map((entry) => (
+            <OperationRecoveryItem key={entry.id.description} workbench={workbench} entry={entry} />
+          ))}
           {notices.map((notice) => (
             <AlertMessage
               key={notice.id}

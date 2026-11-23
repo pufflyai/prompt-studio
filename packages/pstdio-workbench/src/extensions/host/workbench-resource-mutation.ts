@@ -1,4 +1,5 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import { text } from "pstdio-extensions/workbench";
 import type { WorkbenchCommandExecutionContext } from "../../core";
 import { runCommandConfirmation } from "./workbench-command-confirmation";
 import type { WorkbenchExtensionCommandContext } from "./workbench-extension-command";
@@ -8,7 +9,7 @@ export const runResourceMutation = async (
   command: WorkbenchExtensionMetadata["commands"][number],
   params: Record<string, unknown> | undefined,
   execution: WorkbenchCommandExecutionContext | undefined,
-  persist: () => Promise<unknown>,
+  persist: (signal?: AbortSignal) => Promise<unknown>,
 ) => {
   const withoutPreview = () =>
     command.confirmation
@@ -29,20 +30,13 @@ export const runResourceMutation = async (
   const rawLabel = mutation.kind === "rename" ? params?.[mutation.labelParam] : undefined;
   // Leave invalid input to the command; never display a title that it cannot save.
   if (mutation.kind === "rename" && (typeof rawLabel !== "string" || !rawLabel.trim())) return withoutPreview();
-  const mutate = async () => {
-    const preview = context.workbench.resources.preview.begin(
+  const mutate = async () =>
+    context.workbench.resources.preview.submit(
       resource,
+      persist,
       mutation.kind === "remove" ? { removed: true } : { label: (rawLabel as string).trim() },
+      text(command.title, "Change resource"),
     );
-    try {
-      const result = await context.workbench.resources.preview.persist(resource, persist);
-      await preview.commit();
-      return result;
-    } catch (error) {
-      preview.rollback();
-      throw error;
-    }
-  };
   if (mutation.kind !== "remove" && !command.confirmation) return mutate();
   return runCommandConfirmation(context, command, params, mutate, resource.label, execution?.signal);
 };

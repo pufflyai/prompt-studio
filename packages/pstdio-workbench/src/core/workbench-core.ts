@@ -36,12 +36,14 @@ import { createLayoutModel } from "./registries/layout/layout-model";
 import { createMenuRegistry } from "./registries/menus/menu-registry";
 import { createWorkbenchModePlacementRegistry } from "./registries/modes/mode-placement-registry";
 import { createWorkbenchModeRegistry } from "./registries/modes/mode-registry";
+import { getWorkbenchOperations } from "./registries/mutations/operations";
 import { actionErrorTarget } from "./registries/notifications/action-error-target";
 import { createNotificationRegistry } from "./registries/notifications/notification-registry";
 import { pageContentOwners } from "./registries/pages/page-content";
 import { createWorkbenchPlaceholderRegistry } from "./registries/placeholders/placeholder-registry";
 import { createWorkbenchShellPlacementRegistry } from "./registries/placements/shell-placement-registry";
 import { createPreferenceRegistry } from "./registries/preferences/preference-registry";
+import { createResourcePreview } from "./registries/resources/resource-preview";
 import { createResourceRegistry } from "./registries/resources/resource-registry";
 import { createSettingsRegistry } from "./registries/settings/settings-registry";
 import { createStatusRegistry } from "./registries/statuses/status-registry";
@@ -172,6 +174,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const resources = createResourceRegistry({
+    preview: createResourcePreview(getWorkbenchOperations(queryContext.queries)),
     remove: (resource, retained) => removeWorkbenchResource(core, resource, retained, layoutCache.removeResource),
     getPrimary: () => core.getPrimaryResource(),
     resolveView: views.getView,
