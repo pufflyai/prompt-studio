@@ -481,6 +481,8 @@
         "src/views/ticket-review-requests.tsx",
         "src/commands/reorder-ticket.diagnostic.ts",
         "src/timeline/view/entry.tsx",
+        "src/timeline/view/header-entry.tsx",
+        "src/timeline/view/auto-build-entry.tsx",
         "src/**/*.canvas.tsx"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
