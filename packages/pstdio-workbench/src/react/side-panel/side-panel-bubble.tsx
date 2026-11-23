@@ -36,7 +36,7 @@ export const SidePanelBubble = (props: SidePanelBubbleProps) => {
           containerProps={{ ...position.frameProps, bottom, w: "fit-content" }}
           {...position.dragProps}
           onClick={(event) => {
-            if (position.consumeClick()) {
+            if (position.consumeClick() && event.detail !== 0) {
               event.preventDefault();
               return;
             }
