@@ -1,0 +1,45 @@
+name: Artifact inventory protocol smoke
+on:
+  push:
+    branches: [diagnostics/release-artifact-inventory]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  producer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      id: ${{ steps.upload.outputs.artifact-id }}
+      digest: ${{ steps.upload.outputs.artifact-digest }}
+    steps:
+      - run: echo inventory-smoke > inventory-smoke.txt
+      - uses: actions/upload-artifact@v4
+        id: upload
+        with:
+          name: inventory-protocol-smoke
+          path: inventory-smoke.txt
+          if-no-files-found: error
+  consumer:
+    needs: producer
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/list-artifact-inventory
+        with:
+          names: inventory-protocol-smoke
+          path: inventory.json
+      - name: Compare inventory to the other job's upload outputs
+        env:
+          ID: ${{ needs.producer.outputs.id }}
+          DIGEST: ${{ needs.producer.outputs.digest }}
+        run: |
+          jq -e --argjson id "$ID" --arg digest "sha256:$DIGEST" \
+            '. == [{"artifacts":[{"id":$id,"name":"inventory-protocol-smoke","digest":$digest,"expired":false}]}]' \
+            inventory.json
+      - uses: ./.github/actions/download-artifact-by-id
+        with:
+          artifact-ids: ${{ needs.producer.outputs.id }}
+          merge-multiple: true
+      - run: test "$(cat inventory-smoke.txt)" = inventory-smoke
