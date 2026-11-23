@@ -46,11 +46,11 @@ import {
 const savedOutcome = async (journal: OrderedJournal, operationId: string) =>
   (await journal.authoredOutcome(operationId))!;
 
-// Authored input is independent of the SQL baseline. Capture it before any asynchronous work.
-const prepareCommitRequest = async (input: StorageGroup) => {
-  const group = structuredClone(input);
-  return { group, identity: await fingerprint(group as unknown as Json) };
-};
+// The authored request's identity is independent of the SQL baseline.
+const prepareCommitRequest = async (group: StorageGroup) => ({
+  group,
+  identity: await fingerprint(group as unknown as Json),
+});
 
 // Settled local records already are the visible baseline. Avoid publishing the same
 // unchanged projection and recomputing every observation before each local save.
@@ -126,6 +126,11 @@ export const createOrderedResourceRecords = (
       initialized = undefined;
       throw error;
     }));
+  const afterReady = <T>(task: () => Promise<T>) =>
+    write(async () => {
+      await ready();
+      return task();
+    });
   const commitIn = async (
     journal: OrderedJournal,
     tx: OrderedTransaction,
@@ -207,10 +212,10 @@ export const createOrderedResourceRecords = (
     return result.outcome;
   };
   const commit = async (group: StorageGroup) => {
-    const request = await prepareCommitRequest(group);
+    const captured = structuredClone(group);
     return write(async () => {
-      const result = await withOrderedOwner(db, owner, (journal, tx) => commitIn(journal, tx, request));
-      return notify(result);
+      const request = await prepareCommitRequest(captured);
+      return notify(await withOrderedOwner(db, owner, (journal, tx) => commitIn(journal, tx, request)));
     });
   };
   const transaction = <T>(
@@ -241,7 +246,12 @@ export const createOrderedResourceRecords = (
               outcome: (id) => queue.run(() => journal.authoredOutcome(id)),
               commit: (group) =>
                 queue.run(async () => {
-                  const result = await commitIn(journal, tx, await prepareCommitRequest(group), ownRevisions);
+                  const result = await commitIn(
+                    journal,
+                    tx,
+                    await prepareCommitRequest(structuredClone(group)),
+                    ownRevisions,
+                  );
                   for (const record of result.records) ownRevisions.set(record.recordId, record.revision);
                   results.push(result);
                   return result.outcome;
@@ -261,20 +271,9 @@ export const createOrderedResourceRecords = (
   return {
     ...queries,
     defineIndexes: (...input: Parameters<typeof queries.defineIndexes>) =>
-      write(async () => {
-        await ready();
-        return queries.defineIndexes(...input);
-      }),
-    query: (...input: Parameters<typeof queries.query>) =>
-      write(async () => {
-        await ready();
-        return queries.query(...input);
-      }),
-    aggregate: (...input: Parameters<typeof queries.aggregate>) =>
-      write(async () => {
-        await ready();
-        return queries.aggregate(...input);
-      }),
+      afterReady(() => queries.defineIndexes(...input)),
+    query: (...input: Parameters<typeof queries.query>) => afterReady(() => queries.query(...input)),
+    aggregate: (...input: Parameters<typeof queries.aggregate>) => afterReady(() => queries.aggregate(...input)),
     conflicts: async () => [] as StorageConflict[],
     inspect: (_id: string) =>
       Promise.reject<StorageConflictInspection>(
@@ -288,10 +287,7 @@ export const createOrderedResourceRecords = (
     bindText: (input: OrderedSourceInput) => write(() => bindText(db, owner, deps, input)),
     /** Host-only: move live records to new IDs with their text history and native sources. */
     move: (input: OrderedMoveInput) =>
-      write(async () => {
-        await ready();
-        return moveOrderedRecordsIn(db, owner, deps, input, () => commitCache.committed(undefined));
-      }),
+      afterReady(() => moveOrderedRecordsIn(db, owner, deps, input, () => commitCache.committed(undefined))),
     writeTextAsset: (input: { recordId: string; content: string; replace: StorageGroup["edits"][number]["replace"] }) =>
       write(async () => {
         const group = {

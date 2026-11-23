@@ -172,6 +172,32 @@ test("never-joined saves settle immediately without retaining envelopes; exact r
   ).toHaveLength(1);
 });
 
+test("concurrent authored saves enter project work in order and own their captured inputs", async () => {
+  const [first] = await peers(":memory:", true);
+  const gate = Promise.withResolvers<void>();
+  const leases: string[] = [];
+  const service = createDocumentStorageDBService(first.db, undefined, undefined, async (id, work) => {
+    leases.push(id);
+    await gate.promise;
+    return work();
+  });
+  const records = service.open({ owner: first.owner }).records;
+  const value = { count: 1 };
+  const create = records.commit({ operationId: "create", edits: [{ recordId: "card", replace: value }] });
+  const update = records.commit({
+    operationId: "update",
+    edits: [{ recordId: "card", set: { "/label": "kept" } }],
+  });
+  const admitted = [...leases];
+  value.count = -1;
+  gate.resolve();
+
+  await Promise.all([create, update]);
+  expect(admitted).toEqual([first.owner.workbenchId, first.owner.workbenchId]);
+  expect((await records.read("card")).value).toEqual({ count: 1, label: "kept" });
+  await service.flushStatistics();
+});
+
 test("first adoption submits the local canonical records unconditionally after the remote tail", async () => {
   const [first, second] = await peers();
   await first.records.commit({
