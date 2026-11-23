@@ -219,6 +219,6 @@ describe("closeBeforeFatalExit", () => {
   });
 
   test("does not reject when close fails", async () => {
-    await expect(closeBeforeFatalExit(() => Promise.reject(new Error("close failed")))).resolves.toBeUndefined();
+    expect(await closeBeforeFatalExit(() => Promise.reject(new Error("close failed")))).toBeUndefined();
   });
 });

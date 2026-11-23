@@ -187,7 +187,7 @@ describe("createCommandEnvironment host primitives", () => {
       },
     );
 
-    await expect(env.workspaces.list()).resolves.toMatchObject([
+    expect(await env.workspaces.list()).toMatchObject([
       { id: "ws-1", project_id: "project-1", root_path: null },
       { id: "ws-2", project_id: "project-1", root_path: null },
     ]);
@@ -360,7 +360,7 @@ describe("createCommandEnvironment session scopes", () => {
       { project: projectContext, projectId: "project-1" },
     );
 
-    await expect(sessions.get("session-foreign")).resolves.toBeNull();
+    expect(await sessions.get("session-foreign")).toBeNull();
     await expectRejection(sessions.query({ workspaceId: "workspace-foreign" })).toThrow(
       "Workspace not found: workspace-foreign",
     );
@@ -611,7 +611,7 @@ describe("createCommandEnvironment workspaces", () => {
       },
     );
 
-    await expect(env.workspaces.getByShorthand("PS-1_A1")).resolves.toMatchObject({
+    expect(await env.workspaces.getByShorthand("PS-1_A1")).toMatchObject({
       id: "ws-1",
       project_id: "project-1",
       root_path: null,
@@ -664,7 +664,7 @@ describe("createCommandEnvironment workspaces", () => {
       },
     );
 
-    await expect(env.workspaces.resolve("default")).resolves.toMatchObject({
+    expect(await env.workspaces.resolve("default")).toMatchObject({
       state: "ready",
       executionKind: "local",
       executionTarget: { kind: "local", rootPath: "/repo" },
@@ -790,7 +790,7 @@ describe("createCommandEnvironment settings", () => {
       },
     );
 
-    await expect(env.settings.get("counter.step")).resolves.toBe(1);
+    expect(await env.settings.get("counter.step")).toBe(1);
     await expectRejection(env.settings.get("missing")).toMatchObject({ code: "extension_setting_unknown_key" });
     await expectRejection(env.settings.set("counter.step", "large")).toMatchObject({
       code: "extension_setting_invalid",
@@ -825,7 +825,7 @@ describe("createCommandEnvironment settings", () => {
 
     await env.storage.set("counter.step", 99);
 
-    await expect(env.settings.get("counter.step")).resolves.toBe(1);
+    expect(await env.settings.get("counter.step")).toBe(1);
   });
 });
 

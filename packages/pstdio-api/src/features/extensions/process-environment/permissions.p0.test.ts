@@ -116,7 +116,7 @@ describe("process environment permissions", () => {
     const { sourceIdentity } = await permissions.read("project-1", "acme.agent");
     await permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity });
 
-    await expect(permissions.authorize("project-1", source("hash-1"), ["GH_TOKEN"])).resolves.toBeDefined();
+    expect(await permissions.authorize("project-1", source("hash-1"), ["GH_TOKEN"])).toBeDefined();
     await expectRejection(
       permissions.authorize("project-1", source("hash-1"), ["GH_TOKEN", "ANTHROPIC_API_KEY"]),
     ).toMatchObject({

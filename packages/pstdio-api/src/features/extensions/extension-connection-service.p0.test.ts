@@ -117,9 +117,9 @@ describe("extension connection service", () => {
       fetch,
     });
 
-    await expect(
-      service.remove({ projectId: "project-1", extensionId: "pstdio.remote", connectionId: "control-plane" }),
-    ).resolves.toBe(true);
+    expect(
+      await service.remove({ projectId: "project-1", extensionId: "pstdio.remote", connectionId: "control-plane" }),
+    ).toBe(true);
     expect(remove).toHaveBeenCalledTimes(1);
   });
 
