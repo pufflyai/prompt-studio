@@ -43,7 +43,7 @@ const WorkbenchBreadcrumbTitle = (props: { item: WorkbenchBreadcrumbItem; dragga
     // The trail can crop an ancestor label that still fits inside its own element.
     const observer = new IntersectionObserver(
       ([entry]) => {
-        setClippedByTrail(entry.isIntersecting && entry.intersectionRect.width < entry.boundingClientRect.width);
+        setClippedByTrail(entry.intersectionRect.width < entry.boundingClientRect.width);
       },
       { root: trail, threshold: [0, 1] },
     );

@@ -6,11 +6,11 @@ import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchBreadcrumbView } from "./breadcrumb-view";
 
 const DocumentBreadcrumb = () => {
-  const [width, setWidth] = useState<"full" | "60" | "20">("full");
+  const [width, setWidth] = useState<"full" | "60" | "24" | "16">("full");
   const [workbench] = useState(() => {
     const w = createWorkbench();
     const ref = (id: string) => ({ kind: "page" as const, extensionId: "story", id });
-    const ticket = { type: "ticket", id: "one", label: "PS-1 Annual planning" };
+    const ticket = { type: "ticket", id: "one", label: "PS-1 Annual planning", icon: "file-text" };
     const document = { ...ticket, metadata: { document: "brief" } };
     w.modes.registerMode({ id: "project", activate() {} });
     w.resources.registerKind({ kind: "ticket", label: "Ticket" });
@@ -75,8 +75,11 @@ const DocumentBreadcrumb = () => {
           <Button size="xs" variant="outline" onClick={() => setWidth("60")}>
             Narrow breadcrumb
           </Button>
-          <Button size="xs" variant="outline" onClick={() => setWidth("20")}>
+          <Button size="xs" variant="outline" onClick={() => setWidth("24")}>
             Narrow to parent
+          </Button>
+          <Button size="xs" variant="outline" onClick={() => setWidth("16")}>
+            Narrow to parent icon
           </Button>
           <Button size="xs" variant="outline" onClick={() => setWidth("full")}>
             Restore breadcrumb width

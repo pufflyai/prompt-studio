@@ -26,7 +26,7 @@ test("a clipped breadcrumb reveals the full document name on hover", async ({ pa
   await page.clock.runFor(500);
   await expect(tooltip).toHaveCount(0);
 
-  await preview.getByRole("button", { name: "Narrow to parent" }).click();
+  await preview.getByRole("button", { name: "Narrow to parent", exact: true }).click();
   const parentName = "PS-1 Annual planning";
   const parentLabel = preview.getByRole("navigation").getByText(parentName, { exact: true });
   expect(
@@ -37,6 +37,19 @@ test("a clipped breadcrumb reveals the full document name on hover", async ({ pa
     ),
   ).toBe(true);
   await parentLabel.hover({ position: { x: 4, y: 6 } });
+  await expect(tooltip).toHaveText(parentName);
+  await expect(tooltip).toBeVisible();
+
+  await preview.getByRole("button", { name: "Narrow to parent icon", exact: true }).click();
+  expect(
+    await parentLabel.evaluate(
+      (element) => element.getBoundingClientRect().left >= element.closest("nav")!.getBoundingClientRect().right,
+    ),
+  ).toBe(true);
+  await parentLabel
+    .locator("..")
+    .locator("svg")
+    .hover({ position: { x: 1, y: 6 } });
   await expect(tooltip).toHaveText(parentName);
   await expect(tooltip).toBeVisible();
 });
