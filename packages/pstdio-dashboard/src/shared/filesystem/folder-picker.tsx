@@ -7,10 +7,11 @@ interface FolderPickerProps {
   onSelect: (path: string) => Promise<void>;
   onClose: () => void;
   isOpening?: boolean;
+  initialPath?: string;
   error?: string;
 }
 export const FolderPicker = (props: FolderPickerProps) => {
-  const [navigation, setNavigation] = useState({ path: "~" });
+  const [navigation, setNavigation] = useState({ path: props.initialPath ?? "~" });
   const setPath = (path: string) => setNavigation({ path });
   const [listing, setListing] = useState<DirectoryListResponse>();
   const [drives, setDrives] = useState<FilesystemDrive[]>([]);
