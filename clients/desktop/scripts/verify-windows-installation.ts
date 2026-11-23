@@ -272,7 +272,11 @@ try {
   }, updatedProject.id);
   await openPackagedProject(active.page, updatedProject);
   // Preserved projects restore the Sessions page. A replacement project opens it from the root.
-  if (retirement) await active.page.getByRole("option", { name: "Sessions", exact: true }).click();
+  if (retirement) {
+    await active.page.getByRole("option", { name: "Sessions", exact: true }).click();
+  } else {
+    await expect(active.page).toHaveURL(/\/extensions\/pstdio\.session-browser\/conversations\/compose(?:[?#]|$)/);
+  }
   // Installed harnesses can replace the empty-state title with account setup.
   await expect(active.page.getByLabel("Main").getByRole("log")).toBeVisible();
   assert.equal(readFileSync(join(projectPath, "persisted.txt"), "utf8"), "Signed Windows update preservation\n");
