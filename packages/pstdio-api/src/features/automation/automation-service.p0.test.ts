@@ -17,7 +17,7 @@ describe("automation service recovery", () => {
 
     expect(await service.recoverQueuedRuns()).toBe(1);
     await Bun.sleep(0);
-    await expect(service.close()).resolves.toBeUndefined();
+    expect(await service.close()).toBeUndefined();
   });
 
   test("aborts active command execution before orderly shutdown waits", async () => {

@@ -84,14 +84,14 @@ describe("extension settings service", () => {
   test("returns defaults and persists values to the declared owner", async () => {
     const service = createService();
 
-    await expect(service.get(context, "counter.step")).resolves.toMatchObject({
+    expect(await service.get(context, "counter.step")).toMatchObject({
       key: "counter.step",
       value: 1,
       source: "default",
     });
 
     await service.set(context, "counter.step", 3);
-    await expect(service.get(context, "counter.step")).resolves.toMatchObject({
+    expect(await service.get(context, "counter.step")).toMatchObject({
       key: "counter.step",
       value: 3,
       source: "stored",
