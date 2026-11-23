@@ -12,6 +12,7 @@ import { isPageContent } from "../../core/registries/pages/page-main";
 import { copyCommandResult } from "./command-clipboard";
 import { unwrapCommandValue } from "./command-response";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
+import { remoteWorkspaceLaunchCommand, runRemoteWorkspaceLaunch } from "./remote-workspace-launch";
 import { runCreateOperation } from "./workbench-create-operation";
 import { runResourceMutation } from "./workbench-resource-mutation";
 export interface WorkbenchExtensionCommandContext {
@@ -134,15 +135,24 @@ export const executeWorkbenchExtensionCommand = async (
     ? { ...resolveCommandResourceParams(command.params, input.params, { resource: input.resource }), ...input.params }
     : input.params;
   const params = command?.confirmation ? { ...resolved, [command.confirmation.confirmedParam]: true } : resolved;
-  const send = async (signal?: AbortSignal) =>
+  const send = async (signal?: AbortSignal, id = commandId, bodyParams = params) =>
     unwrapCommandValue(
-      await executeWorkbenchExtensionCommandResponse(context, commandId, {
+      await executeWorkbenchExtensionCommandResponse(context, id, {
         ...input,
-        params,
+        params: bodyParams,
         signal: signal && input.signal ? AbortSignal.any([signal, input.signal]) : (signal ?? input.signal),
       }),
     );
   const operations = context.operations;
+  if (operations && commandId === remoteWorkspaceLaunchCommand) {
+    return runRemoteWorkspaceLaunch({
+      commands: context.metadata?.commands ?? [],
+      operations,
+      projectId: context.projectId,
+      params,
+      execute: (id, values, signal) => send(signal, id, values),
+    });
+  }
   const create = context.createCommandIds?.has(commandId);
   const persist =
     operations && command && create

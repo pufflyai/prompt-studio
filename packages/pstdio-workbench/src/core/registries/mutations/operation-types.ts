@@ -22,6 +22,7 @@ export interface OperationInput<T> {
   source?: ResourceRef;
   sourceCommand?: OperationSourceCommand;
   draft?: unknown;
+  describeRecovery?(): string;
   releaseOnDiscard?: boolean;
   write(signal: AbortSignal): T | Promise<T>;
   reconcile?(result: T, signal: AbortSignal): void | Promise<void>;
@@ -50,6 +51,7 @@ export interface OperationRecovery {
   source?: ResourceRef;
   sourceCommand?: OperationSourceCommand;
   draft?: unknown;
+  description?: string;
   status: OperationFailure | "unconfirmed";
   error: unknown;
   dismissed: boolean;

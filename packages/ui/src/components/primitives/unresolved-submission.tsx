@@ -13,8 +13,9 @@ export class UnresolvedSubmissionError extends Error {
   constructor(
     readonly recovery: SubmissionRecovery,
     cause?: unknown,
+    message = "Creation could not be confirmed.",
   ) {
-    super("Creation could not be confirmed.", { cause });
+    super(message, { cause });
     this.name = "UnresolvedSubmissionError";
   }
 }

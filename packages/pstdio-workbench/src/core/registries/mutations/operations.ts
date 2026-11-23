@@ -38,6 +38,7 @@ interface Entry {
   source?: ResourceRef;
   sourceCommand?: OperationSourceCommand;
   draft?: unknown;
+  describeRecovery?: () => string;
   releaseOnDiscard?: boolean;
   acknowledged?: boolean;
   error?: unknown;
@@ -119,6 +120,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
           source: entry.source,
           sourceCommand: entry.sourceCommand,
           draft: entry.draft,
+          description: entry.describeRecovery?.(),
           status,
           error: entry.error,
           dismissed: entry.dismissed,
@@ -220,6 +222,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
         source: input.source,
         sourceCommand: input.sourceCommand,
         draft: input.draft,
+        describeRecovery: input.describeRecovery,
         releaseOnDiscard: input.releaseOnDiscard,
         dismissed: false,
       };

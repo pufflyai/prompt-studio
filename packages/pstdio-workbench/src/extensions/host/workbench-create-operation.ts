@@ -5,9 +5,13 @@ import { classifyApiWrite } from "../../core/registries/mutations/operation-fail
 import type { OperationInput, OperationRecovery } from "../../core/registries/mutations/operation-types";
 import { operationSubject, type WorkbenchOperations } from "../../core/registries/mutations/operations";
 
-type CreateOperation<T> = Pick<OperationInput<T>, "projectId" | "subjects" | "title" | "source" | "draft" | "write">;
+type CreateOperation<T> = Pick<
+  OperationInput<T>,
+  "projectId" | "subjects" | "title" | "source" | "draft" | "write" | "classify"
+>;
+type RecoveryMessage = string | ((draft: unknown) => string);
 
-const unresolved = (operations: WorkbenchOperations, id: symbol, error: unknown, message?: string) => {
+const unresolved = (operations: WorkbenchOperations, id: symbol, error: unknown) => {
   const find = () => operations.getSnapshot().recovery.find((entry) => entry.id === id);
   return new UnresolvedSubmissionError(
     {
@@ -24,7 +28,7 @@ const unresolved = (operations: WorkbenchOperations, id: symbol, error: unknown,
       isRetained: () => Boolean(find()),
     },
     error,
-    message,
+    find()?.description,
   );
 };
 
@@ -32,21 +36,23 @@ export const runTrackedCreate = async <T>(
   operations: WorkbenchOperations,
   input: CreateOperation<T>,
   findUnresolved?: (recovery: readonly OperationRecovery[]) => OperationRecovery | undefined,
-  message?: string,
+  message?: RecoveryMessage,
 ) => {
   const previous = findUnresolved?.(operations.getSnapshot().recovery);
-  if (previous) throw unresolved(operations, previous.id, previous.error, message);
+  if (previous) throw unresolved(operations, previous.id, previous.error);
+  const classify = input.classify ?? classifyApiWrite;
   const attempted = operations.submit({
     ...input,
     domain: "resource.create",
-    classify: classifyApiWrite,
+    describeRecovery: message ? () => (typeof message === "function" ? message(input.draft) : message) : undefined,
+    classify,
     releaseOnDiscard: true,
   });
   try {
     return await attempted.result;
   } catch (error) {
-    if (classifyApiWrite(error) !== "unknown") throw error;
-    throw unresolved(operations, attempted.id, error, message);
+    if (classify(error) !== "unknown") throw error;
+    throw unresolved(operations, attempted.id, error);
   }
 };
 
