@@ -486,7 +486,7 @@
       "name": "session-browser",
       "version": "0.3.0",
       "dependencies": {
-        "@pstdio/sdk": "0.48.0-preview.sha-1dea002d5091620d9cee41520eca2cb634450299",
+        "@pstdio/sdk": "0.49.0-preview.sha-88a76aaa26ec0339ef661e70b1fb4e322eb93688",
       },
       "devDependencies": {
         "@types/bun": "1.4.4",
@@ -5996,7 +5996,7 @@
 
     "serialize-error/type-fest": ["type-fest@0.13.1", "", {}, "sha512-34R7HTnG0XIJcBSn5XhDd7nNFPRcXYRZrBB2O2jdKqYODldSzBAqzsWoZYYvduky73toYS/ESqxPvkDf/F0XMg=="],
 
-    "session-browser/@pstdio/sdk": ["@pstdio/sdk@0.48.0-preview.sha-1dea002d5091620d9cee41520eca2cb634450299", "", { "dependencies": { "@noble/hashes": "^2.4.0", "@tanstack/query-core": "5.90.20", "mustache": "^4.2.0", "yjs": "^13.6.29", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "19.2.4" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-PGb+lSDpUVUqzUmNVUZC+WVlo+TFwNhuF1XVMxA58a45xSEs2iQu2ZEoa4Aj9JFlFC6T3uNPUYraGKES9k7I2Q=="],
+    "session-browser/@pstdio/sdk": ["@pstdio/sdk@0.49.0-preview.sha-88a76aaa26ec0339ef661e70b1fb4e322eb93688", "", { "dependencies": { "@noble/hashes": "^2.4.0", "@tanstack/query-core": "5.90.20", "mustache": "^4.2.0", "yjs": "^13.6.29", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "19.2.4" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-QYi+yd0LsRdoM4mPSi2m7pRANepwZ8vVVm27y3xPIgy+K+OcWl3rqWnpk14ZIozYgF0BckPc3pJotZlPX5QYEw=="],
 
     "shape-art/@pstdio/sdk": ["@pstdio/sdk@0.47.0-preview.sha-32f3947e89f98a0abcb3ee8ddba2efe30061a893", "", { "dependencies": { "@noble/hashes": "^2.4.0", "mustache": "^4.2.0", "yjs": "^13.6.29", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-x6aZqAEhllvMlbhkq2to9LDUVCc4be8OyzNvuzL1ixQfj/rdA3JbVJ6SxrD7PBRhq8s3On06GI0pSsusQpZDmQ=="],
 
