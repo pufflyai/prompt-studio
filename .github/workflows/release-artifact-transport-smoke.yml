@@ -1,0 +1,36 @@
+name: Release artifact transport smoke
+on:
+  push:
+    branches: [test/release-repair-review-20261123]
+    paths: [.github/workflows/release-artifact-transport-smoke.yml]
+permissions:
+  contents: read
+jobs:
+  produce:
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-id: ${{ steps.artifact.outputs.artifact-id }}
+    steps:
+      - name: Create evidence
+        run: printf '%s\n' 'Same-run release evidence' > evidence.txt
+      - uses: actions/upload-artifact@v4
+        id: artifact
+        with:
+          name: release-evidence-smoke
+          path: evidence.txt
+  consume:
+    runs-on: ubuntu-latest
+    needs: produce
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: 5697c89671d63099af2612bcef01443dba3cea95
+          persist-credentials: false
+      - uses: ./.github/actions/download-artifact-by-id
+        with:
+          artifact-ids: ${{ needs.produce.outputs.artifact-id }}
+          path: test-results/artifact-transport-smoke
+          merge-multiple: true
+          github-token: deliberately-invalid-rest-token
+      - name: Require the exact uploaded evidence
+        run: test "$(cat test-results/artifact-transport-smoke/evidence.txt)" = 'Same-run release evidence'
