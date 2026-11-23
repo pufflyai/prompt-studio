@@ -33,7 +33,10 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const { projectId, settingsInput } = props;
   const { t } = useTranslation("projects");
   const extensionsQuery = useProjectExtensions(projectId);
-  const sourceChangingIds = usePendingExtensionSourceChanges(projectId);
+  const hasPendingSourceChange = usePendingExtensionSourceChanges(projectId);
+  const sourceChangingIds = new Set(
+    extensionsQuery.data?.extensions.filter(({ id }) => hasPendingSourceChange(id)).map(({ id }) => id),
+  );
   const metadataQuery = useProjectExtensionMetadata(projectId);
   const agentsQuery = useAgents(projectId);
   const agents = projectId && agentsQuery.isSuccess ? agentsQuery.data : undefined;

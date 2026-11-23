@@ -40,7 +40,6 @@ export const getAutomationPreferences = createRuntimeState((owner) => {
         sourceCommand: { id: dashboardCommandIds.openExtensions },
         draft: preference,
         intent: preference,
-        releaseOnDiscard: true,
         classify: classifyApiWrite,
         write(signal) {
           signal.throwIfAborted();
@@ -74,12 +73,16 @@ export const useProjectedAutomationPreferences = (
 ) => {
   const preferences = getAutomationPreferences();
   const { pending } = useSyncExternalStore(preferences.subscribe, preferences.snapshot, preferences.snapshot);
-  const intents = pending.flatMap((entry) =>
-    entry.projectId === projectId && entry.domain === domain && entry.intent
-      ? [entry.intent as AutomationPreference]
-      : [],
+  const active = pending.filter((entry) => entry.projectId === projectId && entry.domain === domain);
+  const subjects = new Set(active.flatMap((entry) => entry.subjects));
+  const intents = active.flatMap((entry) => (entry.intent ? [entry.intent as AutomationPreference] : []));
+  const instances = new Set(
+    automations.flatMap(({ extensionInstanceId }) =>
+      projectId && extensionInstanceId && subjects.has(extensionInventorySubject(projectId, extensionInstanceId))
+        ? [extensionInstanceId]
+        : [],
+    ),
   );
-  const instances = new Set(intents.map(({ instanceId }) => instanceId));
   const rows = automations.map((row) => {
     const intent = intents.find(
       ({ instanceId, automationId }) => row.extensionInstanceId === instanceId && row.id === automationId,

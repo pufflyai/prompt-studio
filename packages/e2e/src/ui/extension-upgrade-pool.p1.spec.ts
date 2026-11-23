@@ -282,6 +282,8 @@ test("keeps install retries and toggle progress attached to their controls acros
     .filter({ has: page.getByText(`Delete ${catalog.displayName}`, { exact: true }) });
   await expect(deletionRecovery.getByRole("button", { name: "Copy draft" })).toBeEnabled();
   await expect(deletionRecovery.getByRole("button", { name: "Return to source" })).toBeEnabled();
+  await deletionRecovery.getByRole("button", { name: "Discard draft" }).click();
+  await expect(rowToggle).toBeDisabled();
   await expect(deletions).toHaveLength(1);
   await page.unrouteAll({ behavior: "ignoreErrors" });
 });

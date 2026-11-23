@@ -48,8 +48,8 @@ export const trackExtensionSourceChange = <T>(
     sourceCommand: { id: dashboardCommandIds.openExtensions },
     intent: input.instanceId,
     draft: input.draft ?? { instanceId: input.instanceId },
-    describeRecovery: () => "Check the extension in Extensions before discarding this attempt.",
-    releaseOnDiscard: true,
+    describeRecovery: () =>
+      "Check the extension in Extensions. Changes to this source are held while its outcome is uncertain.",
     classify: classifyApiWrite,
     write(signal) {
       signal.throwIfAborted();
@@ -63,13 +63,12 @@ export const trackExtensionSourceChange = <T>(
 export const usePendingExtensionSourceChanges = (projectId: string | undefined) => {
   const operations = getWorkbenchOperations(getDashboardScopedQueries());
   const { pending } = useSyncExternalStore(operations.subscribe, operations.getSnapshot, operations.getSnapshot);
-  return new Set(
-    pending.flatMap((entry) =>
-      entry.projectId === projectId && entry.domain === sourceChangeDomain && typeof entry.intent === "string"
-        ? [entry.intent]
-        : [],
-    ),
+  const subjects = new Set(
+    pending
+      .filter((entry) => entry.projectId === projectId && entry.domain === sourceChangeDomain)
+      .flatMap((entry) => entry.subjects),
   );
+  return (instanceId: string) => Boolean(projectId && subjects.has(extensionInventorySubject(projectId, instanceId)));
 };
 
 /** Each invocation keeps its original authority, even when React Query updates observer options. */
