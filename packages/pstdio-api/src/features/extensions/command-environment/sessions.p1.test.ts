@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createSessionsApi } from "./sessions";
 
 let handle: Awaited<ReturnType<typeof createTestApp>>;
@@ -63,16 +64,16 @@ test("session readers expose harness and usage through an explicit public mappin
   expect(page.items[0]).not.toHaveProperty("session_file_id");
   const foreign = await handle.deps.projectService.create({ name: "foreign" });
   const foreignWorkspace = await handle.deps.workspaceService.createStandalone({ project_id: foreign.id });
-  await expect(api.query({ workspaceId: foreignWorkspace.id })).rejects.toThrow("Workspace not found");
+  await expectRejection(api.query({ workspaceId: foreignWorkspace.id })).toThrow("Workspace not found");
   const controller = new AbortController();
   controller.abort();
-  await expect(
+  await expectRejection(
     createSessionsApi(handle.deps, {
       projectId: project.id,
       project: { ...project, shorthand: "P" },
       signal: controller.signal,
     }).query(),
-  ).rejects.toThrow();
+  ).toThrow();
 });
 
 import type { HarnessStartInput } from "pstdio-api-contracts";

@@ -8,6 +8,7 @@ import {
   installExtensionSource,
   RepoScopedExtensionNeedsProjectFolderError,
 } from "../features/extensions/install-extension-source";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { createExtensionSourceInstaller } from "./extension-source-installer";
 
 let root: string;
@@ -86,7 +87,7 @@ test("installs catalog refs chosen by the host and respects an explicit branch a
 test("does not treat a remote execution path as a host project folder", async () => {
   const install = installer({ root_path: join(root, "remote"), execution_kind: "remote" });
   const files = [new File([manifest("repo")], "package.json"), new File(["export default {};"], "extension.ts")];
-  await expect(
+  await expectRejection(
     install("project", {
       kind: "upload",
       folderName: "tool",
@@ -95,7 +96,7 @@ test("does not treat a remote execution path as a host project folder", async ()
       skipInstall: true,
       development: false,
     }),
-  ).rejects.toBeInstanceOf(RepoScopedExtensionNeedsProjectFolderError);
+  ).toBeInstanceOf(RepoScopedExtensionNeedsProjectFolderError);
 });
 
 test("rejects project source symlinks that leave the owning workspace", async () => {
@@ -105,10 +106,10 @@ test("rejects project source symlinks that leave the owning workspace", async ()
   source(outside);
   symlinkSync(outside, join(project, "linked"), "junction");
   const install = installer({ root_path: project, execution_kind: "local" });
-  await expect(
+  await expectRejection(
     install("project", {
       source: { kind: "project-folder", path: "linked" },
       skipInstall: true,
     }),
-  ).rejects.toThrow("leaves the host project");
+  ).toThrow("leaves the host project");
 });

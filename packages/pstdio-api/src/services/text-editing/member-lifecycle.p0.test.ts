@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import * as Y from "yjs";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { resolveNativeTextAccess } from "../native-documents/source-access";
 import { createProjectWork } from "../project-work";
 import { createTextEditingService } from "./service";
@@ -111,11 +112,11 @@ test("re-registering while release waits gives the new membership ownership of i
     await abandoned;
     const current = await replacement;
     expect(current.handle).not.toBe(previous.handle);
-    await expect(f.text.request(f.address, { operation: "snapshot", handle: previous.handle })).rejects.toMatchObject({
+    await expectRejection(f.text.request(f.address, { operation: "snapshot", handle: previous.handle })).toMatchObject({
       code: "session_closed",
     });
     expect(await f.text.request(f.address, { operation: "snapshot", handle: current.handle })).toHaveProperty("state");
-    await expect(f.text.request(f.address, { operation: "close", handle: previous.handle })).rejects.toMatchObject({
+    await expectRejection(f.text.request(f.address, { operation: "close", handle: previous.handle })).toMatchObject({
       code: "session_closed",
     });
     await Promise.resolve();
@@ -233,10 +234,10 @@ test("a release rejected during removal can retry its handle and finish the clos
   });
   work.freeze("project-1");
   try {
-    await expect(f.text.request(f.address, { operation: "close", handle: opened.handle })).rejects.toBeDefined();
+    await expectRejection(f.text.request(f.address, { operation: "close", handle: opened.handle })).toBeDefined();
     expect(prepared).toBe(false);
     expect(f.documents.sources.current({ workbenchId: "project-1", extensionId: "example.context" })).not.toEqual([]);
-    await expect(f.documents.resolveSource({ ...selected, projectId: "project-1" })).rejects.toThrow(
+    await expectRejection(f.documents.resolveSource({ ...selected, projectId: "project-1" })).toThrow(
       "removing its copy",
     );
     work.release("project-1");
@@ -295,8 +296,8 @@ test("disconnect retains failed room cleanup for a later retry", async () => {
   await f.open();
   work.freeze("project-1");
   try {
-    await expect(f.text.disconnect(f.address)).rejects.toBeDefined();
-    await expect(f.text.request(f.address, { operation: "current" })).rejects.toMatchObject({
+    await expectRejection(f.text.disconnect(f.address)).toBeDefined();
+    await expectRejection(f.text.request(f.address, { operation: "current" })).toMatchObject({
       code: "connection_expired",
     });
     work.release("project-1");

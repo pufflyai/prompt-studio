@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { commandRefId } from "@pstdio/sdk/extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { provisionProjectWorkspaces } from "./provision-coordinator";
 import { findWorkspaceProvider, runWorkspaceProviderOperation } from "./workspace-provider-runtime";
 
@@ -197,7 +198,7 @@ const discoveryAndDirectoryTests = (s: LocalProviderState) => {
 
   test("provider directory access protects default and foreign workspaces", async () => {
     const home = await s.handle.deps.workspaceService.getDefault(s.projectId);
-    await expect(s.providerDirectory(home!.id)).rejects.toThrow(/Default workspace/);
+    await expectRejection(s.providerDirectory(home!.id)).toThrow(/Default workspace/);
     const other = await s.handle.deps.projectService.create({ name: "Other project" });
     const foreign = await s.handle.deps.workspaceService.create({
       project_id: other.id,
@@ -205,7 +206,7 @@ const discoveryAndDirectoryTests = (s: LocalProviderState) => {
       shorthand_base: "FOREIGN",
       provider_state: "provisioning",
     });
-    await expect(s.providerDirectory(foreign.id)).rejects.toThrow(/does not own/);
+    await expectRejection(s.providerDirectory(foreign.id)).toThrow(/does not own/);
     expect(await readFile(join(s.sourceFolder, "revision.txt"), "utf8")).toBe("review");
   });
 
@@ -222,7 +223,7 @@ const discoveryAndDirectoryTests = (s: LocalProviderState) => {
     const path = join(s.root, "home", "workspaces", workspace.id);
     await mkdir(join(s.root, "home", "workspaces"), { recursive: true });
     await symlink(outside, path, process.platform === "win32" ? "junction" : "dir");
-    await expect(s.providerDirectory(workspace.id)).rejects.toThrow(/owned directory/);
+    await expectRejection(s.providerDirectory(workspace.id)).toThrow(/owned directory/);
     expect(await readFile(join(outside, "keep.txt"), "utf8")).toBe("Retain this");
   });
 
@@ -266,7 +267,7 @@ const discoveryAndDirectoryTests = (s: LocalProviderState) => {
       while (!existsSync(marker) && Date.now() < deadline) await Bun.sleep(10);
       pid = Number(await readFile(marker, "utf8"));
       controller.abort();
-      await expect(pending).rejects.toThrow(/aborted/);
+      await expectRejection(pending).toThrow(/aborted/);
       expect(() => process.kill(pid!, 0)).toThrow();
     } finally {
       controller.abort();
@@ -334,8 +335,8 @@ const validationAndOwnershipTests = (s: LocalProviderState) => {
       retained = ctx;
       return ctx.localDirectory!();
     });
-    await expect(retained!.localDirectory!()).rejects.toThrow(/ended/);
-    await expect(directory.files.writeText("late.txt", "Too late")).rejects.toThrow(/ended/);
+    await expectRejection(retained!.localDirectory!()).toThrow(/ended/);
+    await expectRejection(directory.files.writeText("late.txt", "Too late")).toThrow(/ended/);
   });
 
   test.each(["timeout", "return"] as const)("provider %s releases its still-running child", async (phase) => {
@@ -373,7 +374,7 @@ const validationAndOwnershipTests = (s: LocalProviderState) => {
       { timeoutMs: phase === "timeout" ? 1000 : undefined },
     );
     try {
-      if (phase === "timeout") await expect(pending).rejects.toThrow(/timed out/);
+      if (phase === "timeout") await expectRejection(pending).toThrow(/timed out/);
       else await pending;
       expect(pid).toBeGreaterThan(0);
       expect(() => process.kill(pid!, 0)).toThrow();
@@ -411,7 +412,7 @@ const validationAndOwnershipTests = (s: LocalProviderState) => {
         pending = ctx.localDirectory!();
       });
       gate.resolve();
-      await expect(pending!).rejects.toThrow(/ended/);
+      await expectRejection(pending!).toThrow(/ended/);
       expect(existsSync(join(s.root, "home", "workspaces", workspace.id))).toBe(false);
     } finally {
       gate.resolve();

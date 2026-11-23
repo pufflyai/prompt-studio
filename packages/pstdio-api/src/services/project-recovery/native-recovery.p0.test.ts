@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { captureRecoveryFolder } from "./capture";
 import { createRecoveryChunkStore } from "./chunks";
 import { nativeRecoverySupported } from "./native-recovery.fixture";
@@ -35,11 +36,11 @@ test.skipIf(nativeRecoverySupported)(
       expect(await readFile(join(source, "draft"), "utf8")).toBe("source work");
       expect(await readdir(chunks.directory)).toEqual([]);
       const { dev, ino } = await stat(root, { bigint: true });
-      await expect(
+      await expectRejection(
         publishRecoveryStaging({ parent: root, identity: { dev, ino }, from: "staging", to: "existing" }),
-      ).rejects.toMatchObject({ code: "ENOTSUP" });
-      await expect(checkRecoveryDestination(destination)).rejects.toMatchObject({ code: "unsupported" });
-      await expect(checkRecoveryDestination(join(root, "new"))).rejects.toMatchObject({ code: "unsupported" });
+      ).toMatchObject({ code: "ENOTSUP" });
+      await expectRejection(checkRecoveryDestination(destination)).toMatchObject({ code: "unsupported" });
+      await expectRejection(checkRecoveryDestination(join(root, "new"))).toMatchObject({ code: "unsupported" });
       expect(await readFile(join(destination, "draft"), "utf8")).toBe("destination work");
       expect(await readFile(join(staging, "draft"), "utf8")).toBe("staged work");
       expect((await readdir(root)).sort()).toEqual(["chunks", "existing", "source", "staging"]);

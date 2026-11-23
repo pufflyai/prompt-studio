@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { ProjectFolderMissingError } from "../../projects/project-folder-missing";
 import { provisionProjectWorkspaces } from "../../workspaces/provision-coordinator";
 import { createWorkspaceFileMount, resolveWorkspaceFilesPath } from "./workspace-files";
@@ -15,10 +16,10 @@ test("file and process access in a project without a folder on this device repor
     const project = await app.deps.projectService.create({ name: "Cloud notes" });
     await app.deps.workspaceService.ensureDefault({ project_id: project.id, name: "Project folder" });
 
-    await expect(resolveWorkspaceFilesPath(app.deps, { projectId: project.id }, "read")).rejects.toBeInstanceOf(
+    await expectRejection(resolveWorkspaceFilesPath(app.deps, { projectId: project.id }, "read")).toBeInstanceOf(
       ProjectFolderMissingError,
     );
-    await expect(resolveLocalWorkspaceTarget(app.deps, { projectId: project.id }, "process")).rejects.toBeInstanceOf(
+    await expectRejection(resolveLocalWorkspaceTarget(app.deps, { projectId: project.id }, "process")).toBeInstanceOf(
       ProjectFolderMissingError,
     );
   } finally {

@@ -13,6 +13,7 @@ import { installExtensionSource, toExtensionEnableInput } from "../features/exte
 import { makeExtension } from "../features/extensions/install-extension-source-test-fixtures";
 import { toProjectExtensionInstance } from "../features/extensions/project-extension-instance";
 import { EventBus } from "../features/sync/event-bus";
+import { expectRejection } from "../test-utils/expect-rejection";
 import type { SyncInstalledSourceInput } from "./extension-service";
 import { createExtensionService } from "./extension-service";
 import { createProjectService } from "./project-service";
@@ -381,7 +382,9 @@ test("preserves a synchronization error when the following refresh also fails", 
     },
   });
 
-  await expect(failingService.syncInstalledSourceForProject(createServiceInput(project.id))).rejects.toBe(primaryError);
+  await expectRejection(failingService.syncInstalledSourceForProject(createServiceInput(project.id))).toBe(
+    primaryError,
+  );
   expect(refreshes).toBe(1);
   expect(await installedExtensionSourcesService.getByInstallName("planner")).not.toBeNull();
   expect(await extensionInstancesService.list()).toHaveLength(1);
@@ -402,7 +405,9 @@ test("reports a refresh error after synchronization succeeds", async () => {
     },
   });
 
-  await expect(failingService.syncInstalledSourceForProject(createServiceInput(project.id))).rejects.toBe(refreshError);
+  await expectRejection(failingService.syncInstalledSourceForProject(createServiceInput(project.id))).toBe(
+    refreshError,
+  );
   expect(await installedExtensionSourcesService.getByInstallName("planner")).not.toBeNull();
   expect(await extensionInstancesService.list()).toHaveLength(1);
 });

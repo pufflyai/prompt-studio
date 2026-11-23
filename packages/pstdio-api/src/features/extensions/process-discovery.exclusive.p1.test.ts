@@ -4,6 +4,7 @@ import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import cmdShim from "cmd-shim";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createProcessApi } from "./extension-process-api";
 
 const roots: string[] = [];
@@ -124,7 +125,7 @@ test("stops a timed-out wrapper and the child it started", async () => {
   // Reading the PID file below proves the wrapper started its child before the
   // deadline, so slow startup cannot make this test pass without testing cleanup.
   const running = createProcessApi().run({ command: [command], timeoutMs: 1500 });
-  await expect(running).rejects.toThrow("timed out");
+  await expectRejection(running).toThrow("timed out");
   const pid = Number(await Bun.file(pidFile).text());
   // Signal 0 and SIGKILL to PID 0 would target this test's own process group.
   expect(pid).toBeGreaterThan(0);

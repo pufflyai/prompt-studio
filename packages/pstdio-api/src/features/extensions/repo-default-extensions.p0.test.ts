@@ -2,6 +2,7 @@ import { describe, expect, mock, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { installRepoDefaultExtensions } from "./default-extensions";
 import { writeExtension } from "./default-extensions-test-fixtures";
 
@@ -98,7 +99,7 @@ test("a failed default installation batch removes only the defaults it created",
   writeExtension(existing, "existing", "repo");
   writeFileSync(join(existing, "custom.txt"), "keep");
   try {
-    await expect(
+    await expectRejection(
       installRepoDefaultExtensions({
         repoPath: repo,
         defaultExtensions: [
@@ -107,7 +108,7 @@ test("a failed default installation batch removes only the defaults it created",
           { source, installName: "../invalid", skipInstall: true },
         ],
       }),
-    ).rejects.toThrow();
+    ).toThrow();
     expect(existsSync(join(repo, ".pstdio", "extensions", "created"))).toBe(false);
     expect(readFileSync(join(existing, "custom.txt"), "utf8")).toBe("keep");
   } finally {

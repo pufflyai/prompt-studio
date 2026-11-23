@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { join } from "node:path";
 import { createTestCronDriver } from "pstdio-scheduler/testing";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import {
   assignDeviceAutomation,
   openDeviceAutomations,
@@ -104,7 +105,7 @@ test("replicated automation runs only on its assigned device and a disable lets 
   expect(schedulers[0]!.activity()).toHaveLength(0);
   await clocks[1]!.fireAll();
   expect(calls).toHaveLength(1);
-  await expect(assignDeviceAutomation(b.deps, projectId, { scheduleId, deviceId: "other" })).rejects.toThrow(
+  await expectRejection(assignDeviceAutomation(b.deps, projectId, { scheduleId, deviceId: "other" })).toThrow(
     "assigned",
   );
 });

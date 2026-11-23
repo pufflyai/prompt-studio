@@ -1,5 +1,6 @@
 import { expect, spyOn, test } from "bun:test";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 
 test("HTTP links host resources with project scope and preserves links in sync snapshots", async () => {
   const app = await createTestApp();
@@ -39,10 +40,10 @@ test("HTTP links host resources with project scope and preserves links in sync s
     expect(state.workspaces).toContainEqual(
       expect.objectContaining({ id: first.id, anchors_json: [expect.objectContaining(target)] }),
     );
-    await expect(request("add", { resource: source, anchors: [{ ...target, id: foreign.id }] })).rejects.toThrow(
+    await expectRejection(request("add", { resource: source, anchors: [{ ...target, id: foreign.id }] })).toThrow(
       "another project",
     );
-    await expect(request("query", { resource: source, limit: 101 })).rejects.toThrow();
+    await expectRejection(request("query", { resource: source, limit: 101 })).toThrow();
     await request("remove", { resource: source, refs: [target] });
     expect((await request("query", { resource: source })).items).toEqual([]);
     await request("remove", { resource: target, refs: [source] });

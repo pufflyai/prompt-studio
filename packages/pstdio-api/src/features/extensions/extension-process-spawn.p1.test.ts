@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ProcessEvent, ProcessHandle, ProcessSpawnInput } from "pstdio-api-contracts/extension-kernel";
 import { createInvocationScope, createProcessOwner, processError } from "pstdio-extensions";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createProcessApi } from "./extension-process-api";
 import { createExtensionProcessOwners } from "./extension-process-owners";
 import { createProcessEnvironmentPermissions, type ProcessEnvironmentSource } from "./process-environment/permissions";
@@ -114,7 +115,7 @@ test("a spawn after its owner closed fails with a code, settles exited and ends 
     await scope.close();
     const marker = join(root, "late");
     const handle = api.spawn({ command: bun("tree.ts", marker) });
-    await expect(handle.started).rejects.toMatchObject({ code: "process_owner_closed" });
+    await expectRejection(handle.started).toMatchObject({ code: "process_owner_closed" });
     expect(await handle.exited).toEqual({ code: null, signal: null });
     expect(await collect(handle.events())).toEqual([{ type: "exit", exit: { code: null, signal: null } }]);
     // Observing only `exited` must not leave a rejected promise behind.
@@ -147,7 +148,7 @@ test("extension lifetime is refused where nothing owns it", async () => {
     command: bun("echo.ts"),
     lifetime: "extension",
   });
-  await expect(handle.started).rejects.toMatchObject({ code: "process_owner_closed" });
+  await expectRejection(handle.started).toMatchObject({ code: "process_owner_closed" });
 });
 
 test("a local child gets only the safe base environment and explicit values, in the selected workspace", async () => {
@@ -198,7 +199,7 @@ test("a remote target receives the request and an explicit cwd never starts a lo
     workspaceId: "ws-remote",
     envFromHost: ["SPAWN_AGENT_TOKEN"],
   });
-  await expect(withHostValues.started).rejects.toMatchObject({ code: "process_target_unsupported" });
+  await expectRejection(withHostValues.started).toMatchObject({ code: "process_target_unsupported" });
   expect(requests).toHaveLength(1);
 });
 
@@ -275,7 +276,7 @@ test("an unsupported target fails clearly before anything starts", async () => {
     }) as unknown as typeof Bun.spawn,
   });
   const handle = api.spawn({ command: ["agent"], workspaceId: "ws-remote" });
-  await expect(handle.started).rejects.toMatchObject({ code: "process_target_unsupported" });
+  await expectRejection(handle.started).toMatchObject({ code: "process_target_unsupported" });
   expect(await handle.exited).toEqual({ code: null, signal: null });
   expect(localSpawns).toBe(0);
 });
@@ -384,7 +385,7 @@ test("closing an owner does not wait for a target that is still opening, and a l
   expect(await running).toBe("stopped");
   expect(await waitFor(() => !pids.some(alive))).toBe(true);
   expect(targetSignal?.aborted).toBe(true);
-  await expect(handle.started).rejects.toMatchObject({ code: "process_owner_closed" });
+  await expectRejection(handle.started).toMatchObject({ code: "process_owner_closed" });
   expect(await handle.exited).toEqual({ code: null, signal: null });
   expect(await Promise.race([handle.treeExited!.then(() => "drained"), Bun.sleep(300).then(() => "pending")])).toBe(
     "drained",

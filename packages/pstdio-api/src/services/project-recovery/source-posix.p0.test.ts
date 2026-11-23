@@ -2,6 +2,7 @@ import { afterEach, test as baseTest, expect } from "bun:test";
 import { mkdir, mkdtemp, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { nativeRecoverySupported } from "./native-recovery.fixture";
 import { openRecoverySource } from "./source-posix";
 
@@ -38,7 +39,7 @@ test("held source directories never descend through a replaced parent symlink", 
       } finally {
         replaced.close();
       }
-      await expect(source.root.open("child", true)).rejects.toThrow();
+      await expectRejection(source.root.open("child", true)).toThrow();
     } finally {
       child.close();
     }
@@ -56,7 +57,7 @@ test("source enumeration preserves UTF-8 names and link target text without read
   try {
     expect([...source.root.children()].sort()).toEqual(["café.txt", "external"]);
     expect(source.root.readlink("external")).toBe("/missing/private-target");
-    await expect(source.root.open("../outside")).rejects.toThrow();
+    await expectRejection(source.root.open("../outside")).toThrow();
   } finally {
     source.close();
   }

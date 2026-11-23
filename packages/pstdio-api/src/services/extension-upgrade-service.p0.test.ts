@@ -4,6 +4,7 @@ import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import type { BundledExtensionSources } from "pstdio-extensions/distribution";
 import { packagedExtensionCatalog } from "../features/extensions/extension-catalog";
 import { namedSourceRef } from "../features/extensions/install-extension-source";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { parseExtensionSourceRef, resolveExtensionReleaseCommit } from "./extension-source-ref";
 import { createExtensionUpgradeService } from "./extension-upgrade-service";
 import { ExtensionUpgradeUnavailableError } from "./extension-upgrade-unavailable-error";
@@ -430,7 +431,7 @@ describe("catalog extension installation and upgrades", () => {
       workspaceService: emptyWorkspaceService,
     });
 
-    expect(service.upgrade("project-1", "instance-1")).rejects.toBeInstanceOf(ExtensionUpgradeUnavailableError);
+    await expectRejection(service.upgrade("project-1", "instance-1")).toBeInstanceOf(ExtensionUpgradeUnavailableError);
   });
 
   test("upgrades a source-ref extension without a catalog entry", async () => {

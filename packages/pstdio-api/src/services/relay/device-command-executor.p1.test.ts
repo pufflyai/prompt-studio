@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import type { HarnessExit } from "pstdio-api-contracts";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createDeviceCommandExecutor } from "./device-command-executor";
 
 test("a remote interrupt stops only the target turn, preserves history and refuses another project's session", async () => {
@@ -51,7 +52,7 @@ test("a remote interrupt stops only the target turn, preserves history and refus
     expect(sessions.store.get(target.id)?.conversation?.getMessages()).toEqual(
       expect.arrayContaining([expect.objectContaining({ id: "history" })]),
     );
-    await expect(execute({ type: "machine.stop" }, { signal })).rejects.toThrow();
+    await expectRejection(execute({ type: "machine.stop" }, { signal })).toThrow();
     expect(stops).toEqual([target.id]);
   } finally {
     await app.close();
@@ -69,12 +70,12 @@ test("a relay call that is already cancelled does not interrupt a turn", async (
     });
     const controller = new AbortController();
     controller.abort(new Error("Relay disconnected"));
-    await expect(
+    await expectRejection(
       createDeviceCommandExecutor(app.deps, project.id)(
         { type: "session.interrupt", id: session.id },
         { signal: controller.signal },
       ),
-    ).rejects.toThrow("Relay disconnected");
+    ).toThrow("Relay disconnected");
     expect(await app.deps.sessionService.get(session.id)).toMatchObject({ status: "in_progress" });
   } finally {
     await app.close();

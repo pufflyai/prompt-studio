@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { git } from "pstdio-wt";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { EventBus } from "../sync/event-bus";
 import { observeWorkspaceDiff } from "./workspace-diff-observation";
 
@@ -67,9 +68,9 @@ test.each([
     const third = await observeWorkspaceDiff(deps, { project_id: "project", workspace_id: "workspace" }, () => {});
     expect(third.identity).not.toBe(second.identity);
     third.close();
-    await expect(
+    await expectRejection(
       observeWorkspaceDiff(deps, { project_id: "other", workspace_id: "workspace" }, () => {}),
-    ).rejects.toThrow("not available");
+    ).toThrow("not available");
   } finally {
     first.close();
     second.close();
@@ -147,7 +148,7 @@ test("cancelling diff watch admission releases its native observations without a
   try {
     await registered.promise;
     abort.abort();
-    await expect(pending).rejects.toHaveProperty("name", "AbortError");
+    await expectRejection(pending).toHaveProperty("name", "AbortError");
     expect(closed).toBe(watches);
     await Bun.sleep(250);
     expect(changes).toBe(0);

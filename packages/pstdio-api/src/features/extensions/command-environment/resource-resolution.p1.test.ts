@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createResourcesApi } from "./resources";
 
 test("resource batches use enabled owners, preserve identity, and resolve host workspaces", async () => {
@@ -100,8 +101,10 @@ test("resource batches use enabled owners, preserve identity, and resolve host w
       },
     });
     expect(result.find((r) => r.resource.id === "no-destination")?.target).toBeUndefined();
-    await expect(api.resolveMany([{ ...ref("one"), projectId: "another-project" }])).rejects.toThrow("another project");
-    await expect(api.resolveMany(Array.from({ length: 101 }, () => ref("one")))).rejects.toThrow("100");
+    await expectRejection(api.resolveMany([{ ...ref("one"), projectId: "another-project" }])).toThrow(
+      "another project",
+    );
+    await expectRejection(api.resolveMany(Array.from({ length: 101 }, () => ref("one")))).toThrow("100");
     await app.deps.extensionService.setProjectExtensionEnabled(installed.instance.id, false);
     expect(await api.resolveMany([ref("one")])).toEqual([]);
   } finally {

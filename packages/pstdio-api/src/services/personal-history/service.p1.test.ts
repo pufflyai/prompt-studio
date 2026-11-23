@@ -8,6 +8,7 @@ import { createResourceLinksApi } from "../../features/extensions/command-enviro
 import { streamPersonalSession } from "../../features/sessions/endpoints/stream-personal-session";
 import { inertSessionChannelHooks } from "../../features/sessions/session-store.test-utils";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createNativeStore } from "../account/native-store";
 import { capturePersonalHistory } from "./capture";
 import { transferPersonalIndex } from "./index-transfer.fixture";
@@ -51,12 +52,12 @@ const verifyChangeDeviceAdmission = async (
   expect(await admitChangeResource(destination.deps, projectId, { ...ref, device: undefined }, "pstdio")).toMatchObject(
     { device },
   );
-  await expect(
+  await expectRejection(
     admitChangeResource(destination.deps, projectId, { ...ref, device: { ...device, ownerId: "wrong" } }, "pstdio"),
-  ).rejects.toThrow("device");
-  await expect(
+  ).toThrow("device");
+  await expectRejection(
     admitChangeResource(destination.deps, projectId, { ...ref, device: { ...device, id: "wrong" } }, "pstdio"),
-  ).rejects.toThrow("device");
+  ).toThrow("device");
 };
 
 const verifyMetadataOwnership = async (

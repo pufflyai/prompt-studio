@@ -1,5 +1,6 @@
 import { expect, mock, test } from "bun:test";
 import { params } from "@pstdio/sdk/extensions";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { WorkspaceTargetUnavailableError } from "../extensions/command-environment/workspace-target";
 import type { WorkspacesRouteDeps } from "./deps";
 import { listWorkspaceProviders } from "./workspace-provider-catalog";
@@ -65,7 +66,7 @@ test("an unavailable installed provider is omitted and rejects creation without 
   expect(await listWorkspaceProviders(fixture.deps, "project")).toMatchObject([
     { id: fixture.staticId, params: { revision: { defaultValue: "static-fallback" } } },
   ]);
-  await expect(resolveWorkspaceParams(fixture.deps, "project", fixture.id, {})).rejects.toThrow(/unavailable/);
+  await expectRejection(resolveWorkspaceParams(fixture.deps, "project", fixture.id, {})).toThrow(/unavailable/);
 });
 
 test("discovery while its project workspace is provisioning rejects creation as unavailable", async () => {
@@ -99,9 +100,9 @@ test("provider semantic validation receives resolved defaults and rejects creati
     workspaceService: { getDefault: async () => null, createStandalone },
     workspaceProviderRuntime: { find: async () => ({ context: { projectId: "project" }, provider }) },
   } as never;
-  await expect(
+  await expectRejection(
     createProviderBackedWorkspace(deps, { projectId: "project", providerId: "example.local", standalone: true }),
-  ).rejects.toThrow(/Invalid params.*Revision is unavailable/);
+  ).toThrow(/Invalid params.*Revision is unavailable/);
   expect(validateParams).toHaveBeenCalledTimes(1);
   expect(createStandalone).not.toHaveBeenCalled();
 });
@@ -132,7 +133,7 @@ test("cancelling a paused provider validation prevents late workspace allocation
   await started.promise;
   controller.abort();
   release.resolve();
-  await expect(creating).rejects.toThrow(/abort/i);
+  await expectRejection(creating).toThrow(/abort/i);
   expect(createStandalone).not.toHaveBeenCalled();
 });
 

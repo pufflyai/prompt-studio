@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createDb, createExtensionConnectionsDBService, createProjectsDBService } from "pstdio-db";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createMemoryConnectionSecretStore } from "./connection-secret-store";
 import { createExtensionConnectionService, createExtensionConnectionsApi } from "./extension-connection-service";
 import { contribution } from "./extension-connection-service.test-fixture";
@@ -33,9 +34,9 @@ test("one global connection serves new projects and shares updates and revocatio
     expect((await api("second").request(contribution.id, { method: "GET", path: "/v1/workspaces" })).status).toBe(200);
     expect(received).toEqual(["Bearer shared-credential"]);
     expect((await service.list("second"))[0]).toMatchObject({ scope: "global", configured: true });
-    await expect(
+    await expectRejection(
       api("project-only").request(contribution.id, { method: "GET", path: "/v1/workspaces" }),
-    ).rejects.toThrow("not configured");
+    ).toThrow("not configured");
     expect(await service.list("project-only")).toEqual([]);
     await service.configure({
       ...input,
@@ -58,7 +59,7 @@ test("one global connection serves new projects and shares updates and revocatio
     expect(await secrets.listRefs()).toHaveLength(1);
     expect(await db.listAll()).toHaveLength(1);
     await reloaded.remove({ ...input, projectId: "new-project" });
-    await expect(api("second").request(contribution.id, { method: "GET", path: "/v1/workspaces" })).rejects.toThrow(
+    await expectRejection(api("second").request(contribution.id, { method: "GET", path: "/v1/workspaces" })).toThrow(
       "not configured",
     );
     expect(await secrets.listRefs()).toEqual([]);

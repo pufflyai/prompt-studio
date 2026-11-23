@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { openPublishedCatalog } from "../publication/catalog";
 import { createStorageApi } from "./storage";
 
@@ -51,9 +52,9 @@ test("the declared text facade saves through record authority and respects publi
     const outcome = await text.edit([{ kind: "text.insert", index: 1, text: "X" }]);
     expect(outcome.state).toBe("saved-locally");
     expect((await storage.records.read("note")).value).toEqual({ body: "aXb" });
-    await expect(
+    await expectRejection(
       storage.text("note", "/undeclared").edit([{ kind: "text.insert", index: 0, text: "x" }]),
-    ).rejects.toThrow("declared");
+    ).toThrow("declared");
     const asset = await app.deps.assetTransferService.stage(
       { workbenchId: project.id, extensionId: "pstdio.published-extensions" },
       crypto.randomUUID(),
@@ -63,7 +64,7 @@ test("the declared text facade saves through record authority and respects publi
       { extensionId: "example.notes", revision: asset.sha256, version: "2.0.0", enabled: true },
       asset,
     );
-    await expect(text.edit([{ kind: "text.insert", index: 0, text: "stale" }])).rejects.toThrow("Update");
+    await expectRejection(text.edit([{ kind: "text.insert", index: 0, text: "stale" }])).toThrow("Update");
     expect((await storage.records.read("note")).value).toEqual({ body: "aXb" });
   } finally {
     process.env.PSTDIO_DEFAULT_EXTENSIONS = previous;

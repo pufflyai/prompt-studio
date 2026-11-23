@@ -5,6 +5,7 @@ import { createNativeSourceKey } from "pstdio-api-contracts";
 import type { JsonObject } from "pstdio-api-contracts/extension-kernel";
 import { createWorkspaceContextFixture } from "../../features/extensions/workspace-context.test-fixture";
 import { EventBus } from "../../features/sync/event-bus";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./file-source";
 import { resolveNativeLoadedSource } from "./source-binding";
 
@@ -95,12 +96,14 @@ test("a text source resolves and projects through its owner and refreshes subscr
     { projectId: "project-1", eventId: "example.context.event.changed" },
     { projectId: "project-1", eventId: "example.context.event.changed", resourceIds: ["another-document"] },
   ]);
-  await expect(loadNativeMarkdownFile(fixture.deps, { ...input, extensionId: "foreign.owner" })).rejects.toMatchObject({
-    code: "native_document_source_unavailable",
-  });
-  await expect(
+  await expectRejection(loadNativeMarkdownFile(fixture.deps, { ...input, extensionId: "foreign.owner" })).toMatchObject(
+    {
+      code: "native_document_source_unavailable",
+    },
+  );
+  await expectRejection(
     loadNativeMarkdownFile(fixture.deps, { ...input, textDocument: { sourceId: "body", params: {} } }),
-  ).rejects.toThrow("Missing required param");
+  ).toThrow("Missing required param");
 });
 
 test("a native workspace source preserves its UTF-8 byte-order mark", async () => {
@@ -115,13 +118,13 @@ test.each([
 ])("a %s workspace source during full-source validation remains recoverable", async (kind) => {
   await rm(join(fixture.root, "notes.txt"));
   if (kind === "directory") await mkdir(join(fixture.root, "notes.txt"));
-  await expect(
+  await expectRejection(
     loadNativeMarkdownFile(fixture.deps, {
       ...target,
       projectId: "project-1",
       resource: { ...target.resource, metadata: { content: "loaded before deletion" } },
     }),
-  ).rejects.toMatchObject({ code: "native_document_source_unavailable" });
+  ).toMatchObject({ code: "native_document_source_unavailable" });
 });
 
 test("source validation preserves unexpected workspace database failures", async () => {
@@ -179,14 +182,14 @@ test("native Markdown saves through the declared handler with its original rende
 test("a native save preserves workspace file bytes changed after its load", async () => {
   const loaded = await loadNativeMarkdownFile(fixture.deps, { ...target, projectId: "project-1" });
   await writeFile(join(fixture.root, "notes.txt"), "outside edit");
-  await expect(
+  await expectRejection(
     saveNativeMarkdownFile(fixture.deps, {
       ...target,
       projectId: "project-1",
       content: "stale editor text",
       fileStorageVersions: loaded.fileStorageVersions,
     }),
-  ).rejects.toThrow("changed since it was loaded");
+  ).toThrow("changed since it was loaded");
   expect(await readFile(join(fixture.root, "notes.txt"), "utf8")).toBe("outside edit");
 });
 
@@ -201,37 +204,37 @@ test("native Markdown declines read-only, Monaco, code and image views", async (
     { emptyState: { title: "Select a file" } },
   ];
   for (const metadata of cases)
-    await expect(
+    await expectRejection(
       loadNativeMarkdownFile(fixture.deps, {
         ...target,
         projectId: "project-1",
         resource: { ...target.resource, metadata },
       }),
-    ).rejects.toMatchObject({ code: "native_document_not_editable" });
+    ).toMatchObject({ code: "native_document_not_editable" });
 });
 
 test("a missing view cannot create a native document by guessing an identity", async () => {
-  await expect(
+  await expectRejection(
     loadNativeMarkdownFile(fixture.deps, { ...target, projectId: "project-1", fileRendererId: "missing.view" }),
-  ).rejects.toMatchObject({ code: "native_document_view_unavailable" });
+  ).toMatchObject({ code: "native_document_view_unavailable" });
 });
 
 test("a file view without a save handler cannot create an editable native document", async () => {
-  await expect(
+  await expectRejection(
     loadNativeMarkdownFile(fixture.deps, {
       projectId: "project-1",
       fileRendererId: "example.context.view.read-only",
       resource: undefined,
     }),
-  ).rejects.toMatchObject({ code: "native_document_not_editable" });
+  ).toMatchObject({ code: "native_document_not_editable" });
 });
 
 test("invalid extension file content is rejected before document seeding", async () => {
-  await expect(
+  await expectRejection(
     loadNativeMarkdownFile(fixture.deps, {
       ...target,
       projectId: "project-1",
       resource: { ...target.resource, metadata: { content: 42 } },
     }),
-  ).rejects.toMatchObject({ code: "native_document_load_failed" });
+  ).toMatchObject({ code: "native_document_load_failed" });
 });

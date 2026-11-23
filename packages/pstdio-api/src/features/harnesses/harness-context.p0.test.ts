@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import type { ExtensionConnectionsApi } from "pstdio-api-contracts/extension-kernel";
 import { createProcessOwner, type RuntimeHarnessRecord } from "pstdio-extensions";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import type { ExtensionTargets } from "../extensions/extension-targets";
 import { createHarnessContextFactory } from "./harness-context";
 
@@ -41,10 +42,10 @@ test("session processes and history reads route through the calling project's wo
 test("a host-level harness call cannot target a workspace", async () => {
   const { calls, factory } = setup();
   const ctx = await factory(record, undefined, createProcessOwner());
-  await expect(ctx.targetFiles.readText({ workspaceId: "w1", path: "x" })).rejects.toMatchObject({
+  await expectRejection(ctx.targetFiles.readText({ workspaceId: "w1", path: "x" })).toMatchObject({
     code: "target_file_unavailable",
   });
-  await expect(ctx.process.spawn({ command: ["claude"], workspaceId: "w1" }).started).rejects.toMatchObject({
+  await expectRejection(ctx.process.spawn({ command: ["claude"], workspaceId: "w1" }).started).toMatchObject({
     code: "process_target_unavailable",
   });
   expect(calls).toEqual([]);

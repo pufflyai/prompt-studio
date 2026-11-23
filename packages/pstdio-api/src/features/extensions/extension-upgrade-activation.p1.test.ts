@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { buildExtensionWebview } from "./extension-webview-builder";
 import { installExtensionSource } from "./install-extension-source";
 import { writeExtension } from "./test-utils/webview-build-fixture";
@@ -38,7 +39,7 @@ test("a failed webview activation preserves the previous extension and its worki
   const previous = await readFile(join(installed.targetPath, "src/main.tsx"), "utf8");
   await write("1.0.1");
   await writeFile(join(source, "src/main.tsx"), "const = ;");
-  await expect(installExtensionSource({ ...options, force: true })).rejects.toThrow("webview");
+  await expectRejection(installExtensionSource({ ...options, force: true })).toThrow("webview");
   expect(JSON.parse(await readFile(join(installed.targetPath, "package.json"), "utf8")).version).toBe("1.0.0");
   expect(await readFile(join(installed.targetPath, "src/main.tsx"), "utf8")).toBe(previous);
 });

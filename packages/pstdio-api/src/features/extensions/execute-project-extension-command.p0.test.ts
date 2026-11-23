@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
 import { apiLogger } from "../../lib/logger";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { executeProjectExtensionCommand } from "./execute-project-extension-command";
 import { createWorkspaceContextFixture } from "./workspace-context.test-fixture";
 
@@ -80,7 +81,7 @@ test("cancelling a workspace lookup prevents command execution", async () => {
   controller.abort();
   release.resolve();
   await executing.catch(() => undefined);
-  await expect(executing).rejects.toMatchObject({ name: "AbortError" });
+  await expectRejection(executing).toMatchObject({ name: "AbortError" });
 });
 
 test("streamed commands deliver chunks and still return the final outcome", async () => {
@@ -144,7 +145,7 @@ test("closing project admission cancels a command stream before draining its wor
     expect(signal.aborted).toBe(true);
     await work.drain("project-1");
     expect((await executing).outcome).toMatchObject({ ok: false, code: "command_stream_cancelled" });
-    await expect(execute()).rejects.toThrow("removing");
+    await expectRejection(execute()).toThrow("removing");
     work.release("project-1");
     command.run = async () => "available again";
     expect((await execute()).outcome.ok).toBe(true);

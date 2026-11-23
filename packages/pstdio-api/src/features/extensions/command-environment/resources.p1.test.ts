@@ -9,6 +9,7 @@ import { compileOrderedGroup } from "pstdio-sync/records";
 import { createRecordStreamSync, encodeOrderedEntry } from "pstdio-sync/relay";
 import { numberRelayFixture } from "../../../services/relay/resource-number-sync.fixture";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createResourcesApi } from "./resources";
 
 test("enabled extensions allocate declared prefixes and reject conflicting installations", async () => {
@@ -60,7 +61,7 @@ test("enabled extensions allocate declared prefixes and reject conflicting insta
           idPrefix,
         }),
     });
-    await expect(api("example.planner").allocate({ kind: "item", idPrefix: "INVALID" })).rejects.toThrow("ID prefix");
+    await expectRejection(api("example.planner").allocate({ kind: "item", idPrefix: "INVALID" })).toThrow("ID prefix");
     const first = await api("example.planner").allocate({ kind: "item", idPrefix: "tk" });
     expect(first.id).toMatch(/^tk_[0-9A-Za-z]{22}$/);
     expect(first.shorthand).toBe(`${project.shorthand}-1`);
@@ -68,10 +69,10 @@ test("enabled extensions allocate declared prefixes and reject conflicting insta
     const identity = { ...first, kind: "planner", aliases: [] };
     expect(await resources.identity({ kind: "planner", id: first.id })).toEqual(identity);
     expect(await resources.identityMany({ kind: "planner", ids: ["missing", first.id] })).toEqual([null, identity]);
-    await expect(resources.identityMany({ kind: "reports", ids: [first.id] })).rejects.toThrow("not owned");
+    await expectRejection(resources.identityMany({ kind: "reports", ids: [first.id] })).toThrow("not owned");
     expect(await resources.findByShorthand({ kind: "planner", shorthand: first.shorthand })).toEqual([identity]);
-    await expect(resources.identity({ kind: "reports", id: first.id })).rejects.toThrow("not owned");
-    await expect(resources.findByShorthand({ kind: "reports", shorthand: first.shorthand })).rejects.toThrow(
+    await expectRejection(resources.identity({ kind: "reports", id: first.id })).toThrow("not owned");
+    await expectRejection(resources.findByShorthand({ kind: "reports", shorthand: first.shorthand })).toThrow(
       "not owned",
     );
     const dispatched = Promise.withResolvers<unknown>();
@@ -136,8 +137,8 @@ test("enabled extensions allocate declared prefixes and reject conflicting insta
     expect(conflict).toMatchObject({ message: expect.stringContaining("example.reports") });
     expect((await api("example.reports").allocate({ kind: "item" })).shorthand).toBe("RP-2");
     await install("derived-conflict", project.shorthand);
-    await expect(api("example.derived-conflict").allocate({ kind: "item" })).rejects.toThrow("example.planner");
-    await expect(api("example.reports").allocate({ kind: "undeclared" })).rejects.toThrow("no allocation prefix");
+    await expectRejection(api("example.derived-conflict").allocate({ kind: "item" })).toThrow("example.planner");
+    await expectRejection(api("example.reports").allocate({ kind: "undeclared" })).toThrow("no allocation prefix");
     await app.deps.extensionService.uninstallProjectExtension({
       projectId: project.id,
       instanceId: reports.instance.id,

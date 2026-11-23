@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createStorageApi } from "./storage";
 
 test("host storage exposes document groups, verified assets, legacy access, and isolated workbench scopes", async () => {
@@ -113,7 +114,7 @@ test("host storage exposes document groups, verified assets, legacy access, and 
     expect(await first.get<string>("setting")).toBe("new API");
     expect((await other.records.read(other.records.id("setting"))).exists).toBe(false);
     const missing = { ...asset, sha256: "0".repeat(64) };
-    await expect(
+    await expectRejection(
       first.records.commit({
         operationId: "incomplete",
         edits: [
@@ -124,7 +125,7 @@ test("host storage exposes document groups, verified assets, legacy access, and 
           },
         ],
       }),
-    ).rejects.toThrow();
+    ).toThrow();
     expect((await first.records.read(first.records.id("partial"))).exists).toBe(false);
     expect(
       (

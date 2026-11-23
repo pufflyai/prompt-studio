@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createDb, createExtensionStorageDBService, projects } from "pstdio-db";
 import { createSyncSpace } from "pstdio-sync/encryption";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createSessionLogFiles } from "./log-files";
 import { logRelayFixture } from "./log-transport.fixture";
 import { createPersonalHistoryStore } from "./store";
@@ -153,7 +154,7 @@ test("a lost snapshot acknowledgement reloads its base and the next index change
     };
   };
   await source.patchRecords("sessions", device, [{ id: "session", title: "Snapshot" }]);
-  await expect(source.synchronizeIndex(device.id, true, space, losing)).rejects.toThrow(
+  await expectRejection(source.synchronizeIndex(device.id, true, space, losing)).toThrow(
     "Lost snapshot acknowledgement",
   );
   await source.patchRecords("sessions", device, [{ id: "session", title: "After failure" }]);

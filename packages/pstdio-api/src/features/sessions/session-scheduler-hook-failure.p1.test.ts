@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { folderProjectInput } from "../../test-utils/folder-project-input";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { createSessionScheduler } from "./session-scheduler";
@@ -45,7 +46,7 @@ describe("session scheduler pre-start hook failures", () => {
       const project = await projectRes.json();
       const scheduler = createSessionScheduler(handle.deps);
 
-      await expect(
+      await expectRejection(
         scheduler.createSession({
           projectId: project.id,
           title: "Hook failure",
@@ -55,7 +56,7 @@ describe("session scheduler pre-start hook failures", () => {
             throw new Error("link failed");
           },
         }),
-      ).rejects.toThrow("link failed");
+      ).toThrow("link failed");
 
       expect(await handle.deps.sessionService.listByStatus("failed")).toHaveLength(1);
 

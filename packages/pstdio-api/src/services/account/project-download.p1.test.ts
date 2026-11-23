@@ -3,6 +3,7 @@ import { lstat, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { nativeAccountFile } from "./native-account";
 import { createAccountHostFixture } from "./native-host.fixture";
 import { createNativeStore } from "./native-store";
@@ -217,7 +218,7 @@ test("only explicit Download restores a cloud-only copy and prepares its local f
     expect(await host.account.catalogProjects()).toMatchObject({ projects: [{ id, presence: "downloading" }] });
     expect(await host.projects.get(id)).toBeNull();
     await host.account.prepareDownloadedProject(id);
-    await expect(lstat(folder)).rejects.toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(folder)).toMatchObject({ code: "ENOENT" });
 
     complete.resolve();
     await finished.promise;

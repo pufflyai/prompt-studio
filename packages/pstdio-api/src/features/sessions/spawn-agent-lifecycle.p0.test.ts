@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { HarnessSession } from "pstdio-api-contracts";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { checkpointFileService, createTrackedSessionStore } from "./session-store.test-utils";
 import { spawnAgentSession } from "./spawn-agent";
@@ -53,7 +54,7 @@ describe("spawnAgentSession lifecycle", () => {
     controller.abort(new DOMException("cancelled", "AbortError"));
     finishStart({ agentSessionId: "accepted-1", done: new Promise(() => {}), stop });
 
-    await expect(spawning).rejects.toThrow();
+    await expectRejection(spawning).toThrow();
     expect(stop).toHaveBeenCalledTimes(1);
     expect(sessionService.store.get("s_cancelled_start")?.session ?? null).toBeNull();
   });
@@ -115,7 +116,7 @@ describe("spawnAgentSession lifecycle", () => {
     controller.abort(new DOMException("cancelled", "AbortError"));
     persistence.resolve(null);
 
-    await expect(spawning).rejects.toThrow();
+    await expectRejection(spawning).toThrow();
     expect(stop).toHaveBeenCalledTimes(1);
     expect(sessionService.store.get("s_cancelled_persist")?.session ?? null).toBeNull();
     expect(sessionService.transitionStatus).toHaveBeenCalledWith("s_cancelled_persist", "cancelled", expect.anything());
@@ -146,7 +147,7 @@ describe("spawnAgentSession lifecycle", () => {
     controller.abort(new DOMException("cancelled", "AbortError"));
     persistence.resolve(null);
 
-    await expect(spawning).rejects.toThrow("remote delete failed");
+    await expectRejection(spawning).toThrow("remote delete failed");
     expect(sessionService.transitionStatus).not.toHaveBeenCalled();
     expect(sessionService.store.get("s_cleanup_failed")?.session?.agentSessionId).toBe("accepted-1");
   });

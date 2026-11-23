@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { withBackgroundPreparation } from "pstdio-extensions";
 import { withPreparationContinuation } from "pstdio-extensions/preparation-client";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { folderProjectInput } from "../../test-utils/folder-project-input";
 import { writeExtension } from "./default-extensions-test-fixtures";
 import { listProjectExtensionInventory } from "./project-extension-inventory";
@@ -51,7 +52,7 @@ test("inventory change checks leave a live frontend continuation admitted and st
     });
     const cancelled = new AbortController();
     cancelled.abort(new Error("Inventory request closed"));
-    await expect(listProjectExtensionInventory(handle.deps, id, cancelled.signal)).rejects.toThrow(
+    await expectRejection(listProjectExtensionInventory(handle.deps, id, cancelled.signal)).toThrow(
       "Inventory request closed",
     );
   } finally {

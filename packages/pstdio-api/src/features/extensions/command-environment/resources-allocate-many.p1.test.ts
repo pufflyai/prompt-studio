@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createResourcesApi } from "./resources";
 
 test("an extension numbers many resources of its own kind in one call", async () => {
@@ -49,8 +50,8 @@ test("an extension numbers many resources of its own kind in one call", async ()
       ),
     ).toEqual(["IT-2", "IT-3", "IT-4"]);
     expect((await resources.allocate({ kind: "item" })).shorthand).toBe("IT-5");
-    await expect(resources.allocateMany({ kind: "item", count: 101 })).rejects.toThrow("1 to 100");
-    await expect(resources.allocateMany({ kind: "other", count: 2 })).rejects.toThrow("no allocation prefix");
+    await expectRejection(resources.allocateMany({ kind: "item", count: 101 })).toThrow("1 to 100");
+    await expectRejection(resources.allocateMany({ kind: "other", count: 2 })).toThrow("no allocation prefix");
   } finally {
     await app.close();
     rmSync(root, { recursive: true, force: true });

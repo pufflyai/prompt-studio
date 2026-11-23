@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { git } from "pstdio-wt";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import type { AppBindings } from "../../types";
 import { createWorkspacePresentationApi } from "../extensions/command-environment/workspace-presentation";
 import { getWorkspaceDiffSummaryHandler, getWorkspaceDiffSummaryRoute } from "./endpoints/get-workspace-diff-summary";
@@ -98,7 +99,7 @@ test.each([
     expect(() => process.kill(child!.pid!, 0)).not.toThrow();
     abort.abort();
     expect(child.killed).toBe(true);
-    await expect(response).rejects.toBe(abort.signal.reason);
+    await expectRejection(response).toBe(abort.signal.reason);
     expect(childClosed).toBe(true);
   } finally {
     if (child && !child.killed) child.stdin?.end();

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import type { JsonObject } from "pstdio-api-contracts";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createResourcesApi } from "../extensions/command-environment/resources";
 import { executeProjectExtensionCommand } from "../extensions/execute-project-extension-command";
 import { resolveResourceOpenings } from "./resource-openers";
@@ -40,11 +41,11 @@ for (const stage of ["describe", "inspect"] as const) {
         }),
       });
       const api = createResourcesApi(fixture.deps, { projectId: fixture.project.id, extensionId: "example.guard" });
-      await expect(
+      await expectRejection(
         api.addAnchors({ type: "protected", id: "outer" }, [
           { type: "item", extensionId: "example.reader", id: "target" },
         ]),
-      ).rejects.toThrow("Owner rejected");
+      ).toThrow("Owner rejected");
       const attempted = await executeProjectExtensionCommand(fixture.deps, {
         projectId: fixture.project.id,
         commandId: "example.reader.command.attempted",

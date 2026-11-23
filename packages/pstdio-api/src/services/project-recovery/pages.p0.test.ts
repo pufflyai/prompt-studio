@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createRecoveryChunkStore } from "./chunks";
 import { createRecoveryPages } from "./pages";
 
@@ -63,7 +64,7 @@ test("a malformed inventory never becomes a valid restore source", async () => {
       JSON.stringify({ kind: "inventory-leaf", version: 1, entries: [{ kind: "file", path: "missing-data" }] }),
     ),
   );
-  await expect(pages.read(root)).rejects.toThrow();
+  await expectRejection(pages.read(root)).toThrow();
   const unknown = await chunks.stage(new TextEncoder().encode('{"kind":"unknown","version":1}'));
-  await expect(pages.read(unknown)).rejects.toThrow();
+  await expectRejection(pages.read(unknown)).toThrow();
 });

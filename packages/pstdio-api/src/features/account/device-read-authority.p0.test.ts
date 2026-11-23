@@ -6,6 +6,7 @@ import { createClient } from "@pstdio/sdk/client";
 import { Hono } from "hono";
 import { createNativeAccount } from "../../services/account/native-account";
 import { createNativeStore } from "../../services/account/native-store";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createAccountRoutes } from "./routes";
 
 test("device reads fence both account and manager before admission and after a held response", async () => {
@@ -77,7 +78,7 @@ test("device reads fence both account and manager before admission and after a h
     await store.save({ ...login, managerOrigin: second.url.origin });
     release.resolve();
     expect(await reading).toEqual({ ok: false });
-    await expect(client.account.devices({ expected })).rejects.toThrow();
+    await expectRejection(client.account.devices({ expected })).toThrow();
     expect(otherReads).toBe(0);
     expect(
       (await client.account.devices({ expected: { ...expected, managerOrigin: second.url.origin } }))[0]?.name,

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { createClient } from "@pstdio/sdk/client";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import type { AppBindings } from "../../types";
 import {
   openSessionStreamHandler,
@@ -77,14 +78,14 @@ test("file explorer observations share one stream and see external entries witho
     expect((await client.workspaces.listFiles("workspace")).entries.map((entry) => entry.path)).toEqual([
       "external.txt",
     ]);
-    await expect(
+    await expectRejection(
       client.workspaces.watchFiles("workspace", {
         projectId: "wrong",
         signal: secondAbort.signal,
         onReady() {},
         onChange() {},
       }),
-    ).rejects.toThrow("not available");
+    ).toThrow("not available");
     eventBus.emit("workspaces", "delete", { id: "workspace" });
     await second;
   } finally {
