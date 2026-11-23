@@ -35,9 +35,9 @@ export const createLogTransfers = (input: LogSyncInput) => {
     const saved: LogDelivery["blobs"] = [];
     const nodes = createEncryptedManifestNodes(space, {
       ...blobs,
-      put: async (id, bytes, children) => {
+      put: async (id, bytes, children, edges) => {
         saved.push({ blobId: id, bytes: encodeBytes(bytes), children });
-        await blobs.put(id, bytes, children);
+        await blobs.put(id, bytes, children, edges);
       },
     });
     const selected: typeof pending = [];

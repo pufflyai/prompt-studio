@@ -290,8 +290,8 @@ export const Terminal = (props: TerminalProps) => {
     const focus = () => {
       const current = document.activeElement;
       const container = containerRef.current;
-      // A menu can already own focus when this terminal mounts, before deferred construction begins.
-      if (current?.closest('[role="menu"]')) return;
+      // A menu or keyboard-focused panel header may already own focus when this terminal mounts.
+      if (current?.closest('[role="menu"]') || current?.matches("header[tabindex]")) return;
       // A closing popup that held focus at the request returns focus to its own control. That is not a new choice.
       const restored = current
         ?.getAttribute("aria-controls")

@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   createDb,
   createExtensionInstancesDBService,
@@ -6,6 +9,8 @@ import {
   createInstalledExtensionSourcesDBService,
   createProjectsDBService,
 } from "pstdio-db";
+import { installExtensionSource, toExtensionEnableInput } from "../features/extensions/install-extension-source";
+import { makeExtension } from "../features/extensions/install-extension-source-test-fixtures";
 import { toProjectExtensionInstance } from "../features/extensions/project-extension-instance";
 import { EventBus } from "../features/sync/event-bus";
 import type { SyncInstalledSourceInput } from "./extension-service";
@@ -83,6 +88,41 @@ test("keeps unchanged source metadata stable when runtime views contain callback
   const second = await nativeViews.syncInstalledSourceForProject(source());
   expect(second?.installedSource.updated_at).toBe(first?.installedSource.updated_at);
   expect(refreshes).toBe(0);
+});
+
+test("notifies watchers when an enabled extension is reinstalled with identical bytes", async () => {
+  const source = await mkdtemp(join(tmpdir(), "extension-reinstall-"));
+  try {
+    makeExtension(source, { namespace: "watcher-reinstall" });
+    const project = await projectService.create({ name: "Extension Project" });
+    const changedSourcePaths: Array<string | undefined> = [];
+    const notifyingService = createExtensionService({
+      extensionInstancesService,
+      installedExtensionSourcesService,
+      extensionUserDataService,
+      recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
+      projectService,
+      onInstalledSourcesChanged: (sourcePath) => {
+        changedSourcePaths.push(sourcePath);
+      },
+    });
+    const install = async (force: boolean) => {
+      const installed = await installExtensionSource({ source, force, skipInstall: true, retainBackup: true });
+      return notifyingService.enableInstalledSourceForProject({
+        projectId: project.id,
+        installName: installed.installName,
+        ...toExtensionEnableInput(installed),
+      });
+    };
+    const first = await install(false);
+    changedSourcePaths.length = 0;
+    const second = await install(true);
+
+    expect(second.installedSource.updated_at).toBe(first.installedSource.updated_at);
+    expect(changedSourcePaths).toEqual([first.installedSource.source_path]);
+  } finally {
+    await rm(source, { recursive: true, force: true });
+  }
 });
 
 describe("extensionService installed source sync", () => {

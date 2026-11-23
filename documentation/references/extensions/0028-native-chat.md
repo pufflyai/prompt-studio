@@ -171,14 +171,38 @@ not locally owned. Replacing the complete draft values (including restoring a
 recovered draft) releases ownership of removed keys, allowing current defaults to
 fill those keys again.
 
-`loadDraft` and `saveDraft` use extension-owned project storage. Persist the complete
+Views can opt into browser storage with `browserDraft: {}`. This keeps unsent text,
+attachment references, controls and recovered drafts in the current browser profile,
+scoped by host, project, view and resource. Main and Side share that local draft.
+The query receives its control `values`; actions and stream commands receive a
+`draftClientId` identifying the browser profile. Providers can use that identity to
+route accepted-input recovery to the sending browser without sharing unsent drafts.
+If the identity cannot be stored, it is omitted; accepted input must stay unowned
+and recoverable instead of being assigned an identity that disappears on reload.
+
+An optional `browserDraft.acknowledgeRecovery(ctx, input)` callback receives the
+original recovered `draft`, `draftKey`, `draftClientId` and renderer context only
+after every nonempty primary and recovered body has a durable local copy. The host
+preserves newer typing alongside the recovered bodies. Failed, denied or absent
+browser storage reports an error and never acknowledges recovery. Providers must
+keep their recovery source until this callback confirms it. The browser mode cannot
+be combined with `loadDraft` or `saveDraft` callbacks. It requires the additive
+`view.chat.browser-draft.v1` capability, an `engines.pstdio` minimum of `^0.5.1`,
+and a supporting published SDK and host. Released SDK 0.48.0 exposes API 0.5.0 and
+does not contain this option.
+
+Sessions uses this generic browser mode. Its separate `legacySessionDraft` option
+only transfers an older host Sessions draft after a successful save; it does not
+choose the view's ongoing persistence mode.
+
+For views with a provider-managed loader, `loadDraft` and `saveDraft` control persistence. Persist the complete
 `ChatDraft`, including `recovered`. Saves wait for hydration and follow edit order.
 When typing races an older saved draft, both texts and attachment lists survive.
 Restore saved draft swaps them without discarding current work. Failed hydration
 prevents overwriting unread storage; save errors stay visible. Saves may finish
 after the view closes. Project and draft identity must also scope storage keys.
 
-The native host synchronously stages unacknowledged edits in browser storage,
+For provider-managed drafts, the native host synchronously stages unacknowledged edits in browser storage,
 scoped by project, view and canonical resource/draft identity. A document reload
 can restore text, uploaded-file references and control values before provider
 reads finish. The provider remains the durable draft owner: matching save
@@ -224,8 +248,6 @@ that public context for workspace navigation and scoped links; it grants no loca
 execution ownership or cross-project access.
 A logical default workspace can have no local folder. Harnesses with optional cwd
 can start there; harnesses requiring files receive the existing folder setup error.
-Use project `ctx.storage.files` and a small record pointer for durable draft bodies
-when a project has no folder.
 `resolveLink` confirms resource candidates and returns a label, icon and href;
 `resolveImage` resolves image sources through scoped file APIs. Opening links
 dispatches `openLink`; resource buttons dispatch `openResource`. Use public
