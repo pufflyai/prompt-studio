@@ -1,3 +1,4 @@
+export { type BackendCaptureTiming, captureBackendDiagnostic } from "./backend-capture/capture";
 export { measureBackendResponse, type PerformanceBackend } from "./backend-response";
 export { type KernelProcessReading, PerformanceCaptureCollector } from "./performance-capture";
 export { summarizePerformanceEvidence } from "./performance-evidence";

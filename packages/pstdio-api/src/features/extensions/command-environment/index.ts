@@ -24,6 +24,7 @@ import { createAccountApi } from "./account";
 import { createActivityApi } from "./activity";
 import { createArtifactsApi } from "./artifacts";
 import { createAutomationApi } from "./automation";
+import { createDiagnosticsApi } from "./diagnostics";
 import { createExtensionFilesApi } from "./extension-files";
 import { createFilesApi } from "./files";
 import { createNotifyApi } from "./notifications";
@@ -178,6 +179,7 @@ export const createCommandEnvironment = (
       files: createFilesApi(deps, input.projectId, signal),
       skills: { list: () => createReadBoundary(signal)(() => deps.skillService.list(input.projectId)) },
       settings,
+      diagnostics: createDiagnosticsApi(input.extensionId, scope),
       extensions: {
         list: () => createReadBoundary(signal)(() => listProjectExtensionInventory(deps, input.projectId, signal)),
         // Accepted selections continue after the command ends, so cancellation applies only before acceptance.

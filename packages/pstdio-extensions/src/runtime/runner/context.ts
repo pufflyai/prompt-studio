@@ -236,6 +236,7 @@ export const createContextFactory = (
       logger: createLogger(ids.extensionId),
       settings: hostApis.settings,
       account: hostApis.account ?? unavailableAccount,
+      diagnostics: hostApis.diagnostics,
     });
   },
 
