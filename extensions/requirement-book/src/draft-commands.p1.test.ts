@@ -31,7 +31,8 @@ test("authoring writes persist the exact submitted draft in its own workspace an
   await commands["drafts.save-editing"].run(ctx, {
     workspaceId: "first",
     chapter,
-    changes: [{ path: ["draft"], value: JSON.stringify(submitted) }],
+    operationId: "authoring-edit-one",
+    draft: JSON.stringify(submitted),
   });
   expect((await readRecord<Draft>(storage, "draft", "first--2")).value?.values).toEqual(submitted);
   expect((await readRecord<Draft>(storage, "draft", "second--2")).value?.values).toEqual(saved);
@@ -40,8 +41,20 @@ test("authoring writes persist the exact submitted draft in its own workspace an
     commands["drafts.save-editing"].run(ctx, {
       workspaceId: "first",
       chapter,
-      changes: [{ path: ["unrelated"], value: JSON.stringify({ title: "Wrong path" }) }],
+      operationId: "bad-edit",
+      draft: "[]",
     }),
   ).rejects.toThrow();
   expect((await readRecord<Draft>(storage, "draft", "first--2")).value?.values).toEqual(submitted);
+
+  const newer = { title: "A later edit from another editor" };
+  await commands["drafts.save"].run(ctx, { workspaceId: "first", chapter, values: newer });
+  const recovered = await commands["drafts.save-editing"].run(ctx, {
+    workspaceId: "first",
+    chapter,
+    operationId: "authoring-edit-one",
+    draft: JSON.stringify(submitted),
+  });
+  expect((await readRecord<Draft>(storage, "draft", "first--2")).value?.values).toEqual(newer);
+  expect(recovered).toEqual({ value: { draft: JSON.stringify(newer) } });
 });

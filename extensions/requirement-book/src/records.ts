@@ -61,13 +61,14 @@ export const saveRecord = async <T extends { id: string }>(
   kind: string,
   value: T,
   expectedRevision?: string,
+  operationId = storage.ids.create(),
 ) => {
   const recordId = storage.records.id(`${kind}/${value.id}`);
   const current = await storage.records.read(recordId);
   if (expectedRevision !== undefined && expectedRevision !== current.revision)
     throw new Error("The record changed. Reload before saving.");
   const outcome = await storage.records.commit({
-    operationId: storage.ids.create(),
+    operationId,
     edits: [
       {
         recordId,
@@ -77,7 +78,8 @@ export const saveRecord = async <T extends { id: string }>(
       },
     ],
   });
-  if (outcome.state === "needs-attention") throw new Error("The record changed. Reload before saving.");
+  if (outcome.state === "needs-attention" || outcome.state === "refused")
+    throw new Error("The record changed. Reload before saving.");
   return value;
 };
 export const listRecords = async <T>(storage: ExtensionStorageApi, kind: string) => {

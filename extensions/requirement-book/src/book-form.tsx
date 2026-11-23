@@ -2,6 +2,7 @@ import { Button, CloseButton, Dialog, Field, HStack, Input, Portal, Stack, Text,
 import { ScrollArea } from "@pstdio/ui";
 import type { KanbanRendererCreateRowConfig } from "@pstdio/ui/kanban-renderer";
 import { useRef, useState } from "react";
+import { submitBookForm } from "./book-form-submission";
 import { BookSelect } from "./book-select";
 import type { Draft } from "./records";
 
@@ -17,10 +18,11 @@ interface FormProps {
 }
 export function BookForm(props: FormProps) {
   const { title, fields, submitLabel, draft, onSubmit, onClose, onSaveDraft, onDiscard } = props;
-  const [values, setValues] = useState<Record<string, unknown>>(() => ({
+  const [input, setValues] = useState<Record<string, unknown>>();
+  const values = input ?? {
     ...Object.fromEntries(fields.map((field) => [field.id, field.defaultValue ?? ""])),
     ...draft?.values,
-  }));
+  };
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const queue = useRef(Promise.resolve());
@@ -45,10 +47,12 @@ export function BookForm(props: FormProps) {
     setSaving(true);
     setError("");
     try {
-      await persist(values);
-      await onSubmit(values);
-      await onDiscard();
-      onClose();
+      await submitBookForm({
+        persist: () => persist(values),
+        submit: () => onSubmit(values),
+        discard: onDiscard,
+        close: onClose,
+      });
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : String(failure));
     } finally {
