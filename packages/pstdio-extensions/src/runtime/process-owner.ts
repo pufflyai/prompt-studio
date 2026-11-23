@@ -22,10 +22,10 @@ export interface ProcessOwner {
   close(): Promise<void>;
 }
 
-export const createProcessOwner = (): ProcessOwner => {
+export const createProcessOwner = () => {
   const running = new Set<Stoppable>();
   let closing: Promise<void> | undefined;
-  return {
+  const owner: ProcessOwner = {
     get closed() {
       return closing !== undefined;
     },
@@ -42,6 +42,7 @@ export const createProcessOwner = (): ProcessOwner => {
       return closing;
     },
   };
+  return owner;
 };
 
 /** Total stdin bytes a handle queues while its target is still being opened. */
@@ -58,14 +59,28 @@ const byteLength = (data: string | Uint8Array) =>
 
 /**
  * A handle returned at once for a child whose target opens asynchronously. Writes wait for the
- * open in call order; a kill before it opens stops the child as soon as it exists. A failed open
- * rejects `started` with its coded error, settles `exited` without a code and ends `events` with exit.
+ * open in call order. A failed open rejects `started` with its coded error, settles `exited`
+ * without a code and ends `events` with exit.
+ *
+ * A kill while the target is still opening never waits for it: it aborts `cancel`, settles the
+ * handle as stopped, and stops a child that still arrives in the background.
  */
-export const createProcessHandleProxy = (open: Promise<OpenedHandle>): ProcessHandle => {
+export const createProcessHandleProxy = (open: Promise<OpenedHandle>, cancel = new AbortController()) => {
   open.catch(() => {});
-  const started = open.then((handle) => handle.started);
+  let opened = false;
+  void open.then(
+    () => {
+      opened = true;
+    },
+    () => {},
+  );
+  const stopped = Promise.withResolvers<never>();
+  stopped.promise.catch(() => {});
+  const gate = Promise.race([open, stopped.promise]);
+  gate.catch(() => {});
+  const started = gate.then((handle) => handle.started);
   started.catch(() => {});
-  const exited = open.then(
+  const exited = gate.then(
     (handle) => handle.exited.catch(() => NO_EXIT),
     () => NO_EXIT,
   );
@@ -84,23 +99,23 @@ export const createProcessHandleProxy = (open: Promise<OpenedHandle>): ProcessHa
     queued += size;
     let handle: OpenedHandle;
     try {
-      handle = await open;
+      handle = await gate;
     } finally {
       queued -= size;
     }
     return handle.write(data);
   };
 
-  const events = (): AsyncIterable<ProcessEvent> => {
+  const events = () => {
     if (claimed) throw new Error("A process handle has one output consumer.");
     claimed = true;
     return {
       async *[Symbol.asyncIterator]() {
         let handle: OpenedHandle;
         try {
-          handle = await open;
+          handle = await gate;
         } catch {
-          yield { type: "exit", exit: NO_EXIT };
+          yield { type: "exit", exit: NO_EXIT } satisfies ProcessEvent;
           return;
         }
         yield* await handle.events();
@@ -108,27 +123,41 @@ export const createProcessHandleProxy = (open: Promise<OpenedHandle>): ProcessHa
     };
   };
 
-  return {
+  const stopWhileOpening = () => {
+    const reason = processError("process_owner_closed", "The process was stopped before it started.");
+    cancel.abort(reason);
+    stopped.reject(reason);
+    void open.then(
+      (handle) => handle.kill("SIGKILL"),
+      () => {},
+    );
+    return Promise.resolve();
+  };
+
+  const handle: ProcessHandle = {
     id: crypto.randomUUID(),
     started,
     exited,
     write,
     end: () =>
-      open.then(
+      gate.then(
         (handle) => handle.end(),
         () => {},
       ),
     kill: (signal) => {
       // An exited child's process group may already belong to another process.
       if (settled) return Promise.resolve();
-      killing ??= open.then(
-        (handle) => handle.kill(signal),
-        () => {},
-      );
+      killing ??= opened
+        ? open.then(
+            (handle) => handle.kill(signal),
+            () => {},
+          )
+        : stopWhileOpening();
       return killing;
     },
     events,
   };
+  return handle;
 };
 
 /** A handle for a child that never started. */
