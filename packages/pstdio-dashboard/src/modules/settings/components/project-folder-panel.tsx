@@ -7,7 +7,6 @@ import { getApiClient } from "@/lib/api";
 import { FolderPicker } from "@/shared/filesystem/folder-picker";
 import { ProjectSetupStatus } from "@/shared/projects/project-setup-status";
 import { useProject } from "@/shared/projects/use-project";
-import { useUpdateProjectDefaults } from "../data/use-project-defaults";
 
 export const ProjectFolderPanel = (props: { projectId?: string }) => {
   const { projectId } = props;
@@ -15,7 +14,9 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
   const [name, setName] = useState("");
   const [attaching, setAttaching] = useState(false);
   const client = useQueryClient();
-  const update = useUpdateProjectDefaults(projectId);
+  const rename = useMutation({
+    mutationFn: (name: string) => getApiClient().projects.update(projectId!, { name }),
+  });
   const queryKey = ["project-workspaces", projectId];
   const query = useQuery({
     queryKey,
@@ -42,14 +43,14 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
   });
   useSettingsChanges({
     dirty: Boolean(project) && name !== project?.name,
-    saving: update.isPending,
+    saving: rename.isPending,
     disabled: !name.trim(),
     onSave: async () => {
-      await update.mutateAsync({ name: name.trim() });
+      await rename.mutateAsync(name.trim());
     },
     onReset: () => {
       setName(project?.name ?? "");
-      update.reset();
+      rename.reset();
     },
   });
   const settingUp = home?.initializing || home?.provider_state === "provisioning";
@@ -60,7 +61,7 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
       <ParamEditor
         changeDelay={0}
         fullWidth
-        readOnly={update.isPending}
+        readOnly={rename.isPending}
         params={[
           { id: "name", name: "Project name", type: "text", singleLine: true, defaultValue: name },
           {
