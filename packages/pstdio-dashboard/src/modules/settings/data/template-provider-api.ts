@@ -28,6 +28,8 @@ export const templateTypesForProject = (projectId: string) =>
     .filter((type) => type.commands)
     .sort((left, right) => (left.order ?? 0) - (right.order ?? 0) || left.id.localeCompare(right.id));
 
+export const projectTemplateAssetsQueryKey = (projectId: string | undefined) => ["project-template-assets", projectId];
+
 export const getProjectTemplateAssets = async (projectId: string) => {
   const types = templateTypesForProject(projectId);
   const summariesByListCommand = new Map<string, Promise<TemplateSummary[]>>();
@@ -77,5 +79,5 @@ export const saveProjectTemplate = (
     content,
   });
 
-export const deleteProjectTemplate = (template: ProjectTemplateAsset) =>
-  executeExtensionCommandValue(template.projectId, template.commands.delete, { name: template.name });
+export const deleteProjectTemplate = (template: ProjectTemplateAsset, run = executeExtensionCommandValue) =>
+  run(template.projectId, template.commands.delete, { name: template.name });

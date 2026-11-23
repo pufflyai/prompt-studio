@@ -1,12 +1,11 @@
 import { Box, IconButton, Stack } from "@chakra-ui/react";
-import { DeleteConfirmationModal, SettingsContentSkeleton } from "@pstdio/ui";
+import { AlertMessage, DeleteConfirmationModal, SettingsContentSkeleton } from "@pstdio/ui";
 import { CodeEditor } from "@pstdio/ui/diff";
 import { SettingsHeaderContent, useSettingsChanges } from "@pstdio/workbench/react";
 import { Trash2 } from "lucide-react";
-import { useState } from "react";
-import { flushSync } from "react-dom";
+import { useEffect, useState } from "react";
 import type { ProjectTemplateAsset } from "../data/template-provider-api";
-import { useDeleteProjectTemplate, useTemplateEditor } from "../data/use-templates";
+import { useTemplateEditor } from "../data/use-templates";
 
 interface TemplateSettingsEditorProps {
   template: ProjectTemplateAsset;
@@ -28,14 +27,19 @@ export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
 
 const TemplateEditorForm = (props: TemplateSettingsEditorProps & { query: ReturnType<typeof useTemplateEditor> }) => {
   const { template, onDeleted, query } = props;
-  const { data, isLoading, pending } = query;
-  const deleteTemplate = useDeleteProjectTemplate();
+  const { data, isLoading, pending, deleting } = query;
   const [draft, setDraft] = useState<string>();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
-  const projected = typeof pending?.intent === "string" ? pending.intent : data?.content;
+  const projected = !deleting && typeof pending?.intent === "string" ? pending.intent : data?.content;
   const content = draft ?? projected ?? "";
-  const saving = Boolean(pending && pending.status !== "unknown" && pending.status !== "unconfirmed");
+  const working = Boolean(pending && pending.status !== "unknown" && pending.status !== "unconfirmed");
+  const deleteUnconfirmed = deleting && !working;
+  const [deleteError, setDeleteError] = useState<string>();
+
+  useEffect(() => {
+    if (data === null && !pending) onDeleted();
+  }, [data, pending, onDeleted]);
   const save = async () => {
     await query.save(content);
     setDraft((previous) => (previous === content ? undefined : previous));
@@ -43,15 +47,19 @@ const TemplateEditorForm = (props: TemplateSettingsEditorProps & { query: Return
 
   useSettingsChanges({
     dirty: Boolean(data) && draft !== undefined && draft !== data?.content,
-    saving: saving || deleteTemplate.isPending,
+    saving: working,
     disabled: !data || Boolean(pending),
     onSave: save,
     onReset: () => setDraft(undefined),
   });
   const remove = async () => {
-    await deleteTemplate.mutateAsync(template);
-    flushSync(() => setDraft(undefined));
-    onDeleted();
+    setDeleteError(undefined);
+    try {
+      await query.remove(draft);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Could not delete template.");
+      throw error;
+    }
   };
 
   return (
@@ -61,7 +69,7 @@ const TemplateEditorForm = (props: TemplateSettingsEditorProps & { query: Return
           size="sm"
           variant="destructive-ghost"
           aria-label="Delete template"
-          disabled={isLoading || pending !== undefined || deleteTemplate.isPending}
+          disabled={isLoading || !data || pending !== undefined}
           onClick={() => setIsDeleteOpen(true)}
         >
           <Trash2 />
@@ -76,7 +84,7 @@ const TemplateEditorForm = (props: TemplateSettingsEditorProps & { query: Return
             fileName={`${template.name}.md`}
             code={content}
             onChange={setDraft}
-            isEditable={Boolean(data) && !saving && !deleteTemplate.isPending}
+            isEditable={Boolean(data) && !working}
             showLineNumbers
           />
         </Box>
@@ -90,7 +98,13 @@ const TemplateEditorForm = (props: TemplateSettingsEditorProps & { query: Return
         headline="Delete template"
         notificationText={`This permanently deletes "${template.title}". Reset changes cannot restore a deleted template.`}
         buttonText="Delete template"
-      />
+      >
+        {deleteUnconfirmed ? (
+          <AlertMessage status="warning">Template deletion could not be confirmed. See System activity.</AlertMessage>
+        ) : (
+          deleteError && <AlertMessage status="error">{deleteError}</AlertMessage>
+        )}
+      </DeleteConfirmationModal>
     </Stack>
   );
 };

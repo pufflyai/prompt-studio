@@ -1,7 +1,7 @@
 import { getCommandValue } from "@pstdio/sdk/extensions";
 import { classifyApiWrite, getWorkbenchOperations, operationSubject } from "@pstdio/workbench";
 import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useSyncExternalStore } from "react";
 import { getRuntimeApiClient } from "@/lib/api";
 import { getDashboardQueryClient } from "@/lib/query-client";
@@ -11,17 +11,19 @@ import {
   deleteProjectTemplate,
   getProjectTemplate,
   type ProjectTemplateAsset,
+  projectTemplateAssetsQueryKey,
   saveProjectTemplate,
   type TemplateContent,
 } from "./template-provider-api";
 
-const domain = "settings.template-save";
+const saveDomain = "settings.template-save";
+const deleteDomain = "settings.template-delete";
 const templateQueryKey = (template: ProjectTemplateAsset, scopeKey: string) =>
   ["project-template", scopeKey, template.projectId, template.id] as const;
 const templateSubject = (template: ProjectTemplateAsset) =>
   operationSubject("template", template.projectId, template.id);
 
-export const getTemplateSaves = createRuntimeState((owner) => {
+export const getTemplateOperations = createRuntimeState((owner) => {
   const queries = getDashboardScopedQueries(owner);
   const operations = getWorkbenchOperations(queries);
   const client = getDashboardQueryClient(owner);
@@ -37,10 +39,26 @@ export const getTemplateSaves = createRuntimeState((owner) => {
       return getCommandValue(response.outcome) as T;
     };
   const active = (template: ProjectTemplateAsset) =>
-    operations
-      .getSnapshot()
-      .pending.find((entry) => entry.domain === domain && entry.subjects.includes(templateSubject(template)));
+    operations.getSnapshot().pending.find((entry) => entry.subjects.includes(templateSubject(template)));
   const read = (template: ProjectTemplateAsset, signal: AbortSignal) => getProjectTemplate(template, runner(signal));
+  const assertAuthority = (expected: string) => {
+    if (scopeKey() !== expected) throw new Error("This template belongs to a closed account.");
+  };
+  const sourceCommand = (template: ProjectTemplateAsset) => ({
+    id: WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
+    args: { panelId: "templates", itemId: template.id },
+  });
+  const accept = async (
+    template: ProjectTemplateAsset,
+    scope: string,
+    value: TemplateContent | null,
+    signal: AbortSignal,
+  ) => {
+    const queryKey = templateQueryKey(template, scope);
+    await client.cancelQueries({ queryKey, exact: true });
+    signal.throwIfAborted();
+    client.setQueryData(queryKey, value);
+  };
   return {
     scopeKey,
     read,
@@ -48,33 +66,25 @@ export const getTemplateSaves = createRuntimeState((owner) => {
     snapshot: operations.getSnapshot,
     subscribe: operations.subscribe,
     async save(template: ProjectTemplateAsset, content: string, expectedScope: string) {
-      const assertAuthority = () => {
-        if (scopeKey() !== expectedScope) throw new Error("This template belongs to a closed account.");
-      };
-      assertAuthority();
-      if (active(template)) throw new Error("This template has an unfinished save. Check System activity.");
+      assertAuthority(expectedScope);
+      if (active(template)) throw new Error("This template has an unfinished change. Check System activity.");
       return operations.submit<TemplateContent>({
-        domain,
+        domain: saveDomain,
         projectId: template.projectId,
         subjects: [templateSubject(template)],
         title: `Save ${template.title}`,
-        sourceCommand: { id: WORKBENCH_SETTINGS_OPEN_COMMAND_ID, args: { panelId: "templates", itemId: template.id } },
+        sourceCommand: sourceCommand(template),
         draft: content,
         intent: content,
         classify: classifyApiWrite,
         async write(signal) {
-          assertAuthority();
+          assertAuthority(expectedScope);
           const saved = await saveProjectTemplate(template, content, runner(signal));
           if (!saved || saved.name !== template.name || saved.type !== template.localType)
             throw new SyntaxError("The saved template could not be confirmed.");
           return saved;
         },
-        async reconcile(saved, signal) {
-          const queryKey = templateQueryKey(template, expectedScope);
-          await client.cancelQueries({ queryKey, exact: true });
-          signal.throwIfAborted();
-          client.setQueryData(queryKey, saved);
-        },
+        reconcile: (saved, signal) => accept(template, expectedScope, saved, signal),
         async check(signal) {
           const saved = await read(template, signal);
           return saved?.name === template.name && saved.type === template.localType && saved.content === content
@@ -83,22 +93,47 @@ export const getTemplateSaves = createRuntimeState((owner) => {
         },
       }).result;
     },
+    async remove(template: ProjectTemplateAsset, draft: string | undefined, expectedScope: string) {
+      assertAuthority(expectedScope);
+      if (active(template)) throw new Error("This template has an unfinished change. Check System activity.");
+      return operations.submit<void>({
+        domain: deleteDomain,
+        projectId: template.projectId,
+        subjects: [templateSubject(template)],
+        title: `Delete ${template.title}`,
+        sourceCommand: sourceCommand(template),
+        draft,
+        releaseOnDiscard: true,
+        classify: classifyApiWrite,
+        async write(signal) {
+          assertAuthority(expectedScope);
+          await deleteProjectTemplate(template, runner(signal));
+        },
+        async reconcile(_result, signal) {
+          if ((await read(template, signal)) !== null) throw new Error("The template is still available.");
+          await accept(template, expectedScope, null, signal);
+          void client.invalidateQueries({ queryKey: projectTemplateAssetsQueryKey(template.projectId), exact: true });
+        },
+      }).result;
+    },
   };
 });
 
 export const useTemplateEditor = (template: ProjectTemplateAsset) => {
-  const saves = getTemplateSaves();
-  useSyncExternalStore(saves.subscribe, saves.snapshot, saves.snapshot);
-  const scope = saves.scopeKey();
-  const pending = saves.active(template);
+  const templates = getTemplateOperations();
+  useSyncExternalStore(templates.subscribe, templates.snapshot, templates.snapshot);
+  const scope = templates.scopeKey();
+  const pending = templates.active(template);
   const result = useQuery({
     queryKey: templateQueryKey(template, scope),
-    queryFn: ({ signal }) => saves.read(template, signal),
+    queryFn: ({ signal }) => templates.read(template, signal),
   });
-  return { ...result, pending, scope, save: (content: string) => saves.save(template, content, scope) };
+  return {
+    ...result,
+    pending,
+    deleting: pending?.domain === deleteDomain,
+    scope,
+    save: (content: string) => templates.save(template, content, scope),
+    remove: (draft: string | undefined) => templates.remove(template, draft, scope),
+  };
 };
-
-export const useDeleteProjectTemplate = () =>
-  useMutation({
-    mutationFn: deleteProjectTemplate,
-  });

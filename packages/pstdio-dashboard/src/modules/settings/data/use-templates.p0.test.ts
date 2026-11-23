@@ -4,7 +4,7 @@ import { getDashboardQueryClient } from "@/lib/query-client";
 import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { createRuntimeCollections } from "@/lib/sync/collections";
 import type { ProjectTemplateAsset } from "./template-provider-api";
-import { getTemplateSaves } from "./use-templates";
+import { getTemplateOperations } from "./use-templates";
 
 const template: ProjectTemplateAsset = {
   id: "planner.prompt:review",
@@ -46,17 +46,19 @@ test("a lost template save keeps the same text across views and checks the exact
     },
   });
   const owner = createRuntimeCollections({ baseUrl: server.url.origin, token: "test-token" });
-  const saves = getTemplateSaves(owner);
+  const saves = getTemplateOperations(owner);
   const scope = saves.scopeKey();
   const operations = getWorkbenchOperations(getDashboardScopedQueries(owner));
   const client = getDashboardQueryClient(owner);
   try {
     const sending = saves.save(template, "New text", scope);
     await entered.promise;
-    expect(getTemplateSaves(owner).active(template)?.intent).toBe("New text");
+    expect(getTemplateOperations(owner).active(template)?.intent).toBe("New text");
     release.resolve();
     await expect(sending).rejects.toThrow("Response lost");
-    await expect(getTemplateSaves(owner).save(template, "Another version", scope)).rejects.toThrow("unfinished save");
+    await expect(getTemplateOperations(owner).save(template, "Another version", scope)).rejects.toThrow(
+      "unfinished change",
+    );
     const recovery = operations.getSnapshot().recovery[0]!;
     expect(recovery).toMatchObject({ status: "unknown", draft: "New text", canCheck: true });
     await operations.check(recovery.id);
@@ -68,6 +70,77 @@ test("a lost template save keeps the same text across views and checks the exact
       content: stored,
     });
     expect(writes).toBe(1);
+  } finally {
+    release.resolve();
+    await owner.dispose();
+    await server.stop(true);
+  }
+});
+
+test.each([
+  200, 503,
+])("template deletion keeps one write and separates a receipt from a lost response (%i)", async (status) => {
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const stored = { name: "review", title: "Review", type: "prompt", content: "Original" };
+  let current: typeof stored | null = stored;
+  let deletes = 0;
+  let reads = 0;
+  const server = Bun.serve({
+    port: 0,
+    async fetch(request) {
+      const path = new URL(request.url).pathname;
+      if (path.endsWith("/delete/execute")) {
+        deletes++;
+        expect((await request.json()).params).toEqual({ name: "review" });
+        entered.resolve();
+        await release.promise;
+        const response =
+          status === 200
+            ? { outcome: { ok: true, status: "success", value: { deleted: true } } }
+            : { error: "Response lost" };
+        return Response.json(response, { status });
+      }
+      if (path.endsWith("/read/execute")) {
+        reads++;
+        expect((await request.json()).params).toEqual({ name: "review" });
+        return Response.json({ outcome: { ok: true, status: "success", value: current } });
+      }
+      return Response.json({ error: "Unexpected request" }, { status: 404 });
+    },
+  });
+  const owner = createRuntimeCollections({ baseUrl: server.url.origin, token: "test-token" });
+  const templates = getTemplateOperations(owner);
+  const scope = templates.scopeKey();
+  const operations = getWorkbenchOperations(getDashboardScopedQueries(owner));
+  const client = getDashboardQueryClient(owner);
+  const queryKey = ["project-template", scope, template.projectId, template.id];
+  try {
+    client.setQueryData(queryKey, stored);
+    const removing = templates.remove(template, "Unsaved edit", scope);
+    await entered.promise;
+    expect(getTemplateOperations(owner).active(template)?.title).toBe("Delete Review");
+    await expect(templates.save(template, "New text", scope)).rejects.toThrow("unfinished change");
+    release.resolve();
+    await expect(removing).rejects.toThrow(status === 200 ? "still available" : "Response lost");
+    const recovery = operations.getSnapshot().recovery[0]!;
+    expect(recovery).toMatchObject({
+      status: status === 200 ? "unconfirmed" : "unknown",
+      canCheck: status === 200,
+      draft: "Unsaved edit",
+    });
+    expect(client.getQueryData(queryKey)).toEqual(stored);
+    current = null;
+    if (status === 200) {
+      await operations.check(recovery.id);
+      expect(client.getQueryData(queryKey)).toBeNull();
+      expect(templates.active(template)).toBeUndefined();
+      expect(reads).toBe(2);
+    } else {
+      expect(templates.active(template)?.status).toBe("unknown");
+      expect(reads).toBe(0);
+    }
+    expect(deletes).toBe(1);
   } finally {
     release.resolve();
     await owner.dispose();
