@@ -13,15 +13,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - pr: 2366
-            head: 58638646820cf9b118a83d3476ad76fbd66e9659
-            test: clients/desktop/src/e2e/desktop-active-work.p2.spec.ts
-          - pr: 2368
-            head: d7f102222a3142508ac5f9fe1cc6a62078051f86
-            test: packages/canvas-tests/src/ui/pstdio-workbench/tree-pagination.p1.spec.ts
-          - pr: 2373
-            head: 3ad792cf9f26e485b4f73181031bcd935b5374d9
-            test: packages/e2e/src/ui/extension-upgrade-pool.p1.spec.ts
+          - pr: 2377
+            head: d8e4f454581e5091bd3b15ee64ebb1d9b0f5d453
+            test: extensions/harness-open-code/src/harness-catalog-lifecycle.p0.test.ts
     env:
       REVIEW_HEAD: ${{ matrix.head }}
       REVIEW_TEST: ${{ matrix.test }}
