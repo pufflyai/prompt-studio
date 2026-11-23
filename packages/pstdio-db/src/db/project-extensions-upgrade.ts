@@ -1,8 +1,8 @@
 import { isDeepStrictEqual } from "node:util";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { DbClient } from "./connection.pglite";
 import { timestampToIso } from "./schemas/iso-timestamp";
-import { project_extensions, projects } from "./schemas.pg";
+import { project_extensions } from "./schemas.pg";
 import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
 
 type Legacy = {
@@ -21,7 +21,15 @@ export const prepareProjectExtensionsUpgrade = (db: DbClient, path: string) =>
   prepareUpgradeSnapshot(
     db,
     path,
-    { table: "extension_instances", keys: ["id"], name: "project-extensions", archive: "extension-instances" },
+    {
+      table: "extension_instances",
+      keys: ["id"],
+      name: "project-extensions",
+      archive: "extension-instances",
+      select: sql`SELECT i.id,to_jsonb(i) AS released,p.id AS project
+        FROM extension_instances i LEFT JOIN projects p
+          ON i.scope_type='project' AND p.id=i.scope_id`,
+    },
     async (input) => {
       const { released, project } = input as unknown as { released: Legacy; project: string | null };
       // Non-project and orphan scopes have no target in the project-only schema.
@@ -50,12 +58,5 @@ export const prepareProjectExtensionsUpgrade = (db: DbClient, path: string) =>
         throw new Error("Project extension restoration conflicts with existing configuration.");
       if (!existing) await db.insert(project_extensions).values(expected);
     },
-    async (row) => {
-      const released = row as unknown as Legacy;
-      const [project] =
-        released.scope_type === "project"
-          ? await db.select({ id: projects.id }).from(projects).where(eq(projects.id, released.scope_id))
-          : [];
-      return { released, project: project?.id ?? null };
-    },
+    async (row) => ({ released: row.released, project: row.project }),
   );
