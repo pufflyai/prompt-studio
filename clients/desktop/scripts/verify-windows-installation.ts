@@ -271,7 +271,8 @@ try {
     if (!response.ok) throw new Error(`Sessions installation failed: ${response.status} ${await response.text()}`);
   }, updatedProject.id);
   await openPackagedProject(active.page, updatedProject);
-  await active.page.getByRole("option", { name: "Sessions", exact: true }).click();
+  // Preserved projects restore the Sessions page. A replacement project opens it from the root.
+  if (retirement) await active.page.getByRole("option", { name: "Sessions", exact: true }).click();
   // Installed harnesses can replace the empty-state title with account setup.
   await expect(active.page.getByLabel("Main").getByRole("log")).toBeVisible();
   assert.equal(readFileSync(join(projectPath, "persisted.txt"), "utf8"), "Signed Windows update preservation\n");
