@@ -62,6 +62,14 @@ const filesOf = (ctx: Pick<ExtensionContextBase, "extensionFiles">) => {
   return ctx.extensionFiles;
 };
 
+// Syncs from several pages, or a follower finishing, can prune a retired run while another reader lists it.
+// A path that no longer exists is gone, not an error.
+const unlessGone = <T>(files: ReturnType<typeof filesOf>, path: string, action: Promise<T>) =>
+  action.catch(async (error: unknown) => {
+    if (await files.exists(path)) throw error;
+    return undefined;
+  });
+
 export const changed = (ctx: StoreContext, runId?: string) =>
   ctx.events.emit(benchmarksChanged, runId ? { runId } : {});
 
@@ -154,7 +162,9 @@ export const readResults = async (ctx: Pick<ExtensionContextBase, "extensionFile
   const results = await Promise.all(
     entries.map(async (entry): Promise<CachedResult[]> => {
       const [, kind, id] = entry.path.split("/");
-      const file = parseResultFile(await files.readText(entry.path));
+      const text = await unlessGone(files, entry.path, files.readText(entry.path));
+      if (text === undefined) return [];
+      const file = parseResultFile(text);
       if (!current(file.startedAt)) return [];
       if (kind === "releases") return [{ source: { kind: "release", version: id }, file }];
       return [{ source: { kind: "run", runId: id }, file }];
@@ -168,10 +178,11 @@ const pruneRetired = async (ctx: StoreContext) => {
   const files = filesOf(ctx);
   const retired = new Set<string>();
   for (const entry of await files.list("benchmarks/runs/*/*.json")) {
-    const { startedAt } = parseResultFile(await files.readText(entry.path));
-    if (!current(startedAt)) retired.add(entry.path.split("/").slice(0, 3).join("/"));
+    const text = await unlessGone(files, entry.path, files.readText(entry.path));
+    if (text !== undefined && !current(parseResultFile(text).startedAt))
+      retired.add(entry.path.split("/").slice(0, 3).join("/"));
   }
-  for (const dir of retired) await files.delete(dir);
+  for (const dir of retired) await unlessGone(files, dir, files.delete(dir));
 };
 
 const syncReleases = async (ctx: StoreContext) => {
