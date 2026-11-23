@@ -6,6 +6,7 @@ import type { ExtensionConnectionRequest, ExtensionConnectionsApi } from "pstdio
 import type { HarnessRegistry } from "pstdio-api-runtime-host";
 import { createHarnessRegistry } from "pstdio-api-runtime-host";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
+import { failedProcessHandle } from "pstdio-extensions";
 import type { ProcessEnvironmentSource } from "../extensions/process-environment/permissions";
 import type { EnabledExtensionSource } from "../extensions/project-extension-runtime-snapshot";
 import { createHarnessRegistryService } from "./harness-registry-service";
@@ -22,6 +23,12 @@ const buildFakeRegistry = (records: RuntimeHarnessRecord[]): HarnessRegistry =>
       run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
       runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
       spawnDetached: async () => ({}),
+      spawn: () => failedProcessHandle(new Error("No test process configured.")),
+    },
+    targetFiles: {
+      readText: async () => {
+        throw new Error("No test target files configured.");
+      },
     },
     net: { findFreePort: async () => 0 },
     connections: {

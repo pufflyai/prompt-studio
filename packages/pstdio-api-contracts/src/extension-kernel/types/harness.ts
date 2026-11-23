@@ -38,6 +38,7 @@ import type { ExtensionNetApi, ExtensionProcessApi } from "./context";
 import type { ContributionDefinition } from "./contribution-identity";
 import type { MaybePromise } from "./json";
 import type { BooleanParam, ParamOption, SelectParam } from "./params";
+import type { ExtensionTargetFilesApi } from "./process-spawn";
 
 export type { AgentModel } from "../../agents";
 export type {
@@ -104,6 +105,8 @@ export interface HarnessContext {
   connections: ExtensionConnectionsApi;
   logger: ExtensionLoggerApi;
   state: HarnessStateApi;
+  /** Reads files on a session's workspace target, such as native history. */
+  targetFiles: ExtensionTargetFilesApi;
 }
 
 export interface HarnessStateApi {

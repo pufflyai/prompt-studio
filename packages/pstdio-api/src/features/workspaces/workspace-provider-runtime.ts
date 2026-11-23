@@ -32,7 +32,7 @@ export interface WorkspaceProviderRuntime {
   ): Promise<WorkspaceProviderHandle | undefined>;
 }
 
-const providerLogger = {
+export const providerLogger = {
   info: (message: string, metadata?: Record<string, unknown>) =>
     apiLogger.info({ event: "workspace.provider.log", metadata: metadata ?? {} }, message),
   warn: (message: string, metadata?: Record<string, unknown>) =>

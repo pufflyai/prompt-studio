@@ -25,8 +25,9 @@ export type BackendSurface =
   | { kind: "migrate"; projectId: string }
   | { kind: "object"; members: Record<string, BackendSurface> }
   /**
-   * A synchronous host method that opens a live handle, such as `terminal.openSession`. The worker
-   * returns its own handle at once and forwards each member to the host's handle once it opens.
+   * A synchronous host method that opens a live handle, such as `terminal.openSession` or
+   * `process.spawn`. The worker returns its own handle at once and forwards each member to the
+   * host's handle once it opens.
    */
   | { kind: "handle"; members: Record<string, HandleMember> }
   /** A synchronous scope selection, such as `storage.collection(name)`, evaluated for each host call. */
@@ -48,10 +49,12 @@ export type BackendSurface =
   | { kind: "local"; name: "middlewareResult"; type: MiddlewareResultType };
 
 /**
- * `id` is created in the worker, because the host's id arrives only after the handle opens.
- * `notify` members return nothing and run in call order; `iterate` members have one consumer.
+ * `id` is created in the worker, because the host's id arrives only after the handle opens, so it
+ * differs from the host handle's id. `notify` and `async` members reach the host in call order;
+ * `iterate` members have one consumer. `promise` members are the host handle's promises, such as
+ * `exited`; they reject when the handle cannot open, for example because the backend stopped.
  */
-type HandleMember = "id" | "notify" | "async" | "iterate";
+type HandleMember = "id" | "notify" | "async" | "iterate" | "promise";
 
 type MiddlewareResultType = "continue" | "patchParams" | "replaceParams" | "replaceInvocation" | "reject";
 
@@ -253,25 +256,20 @@ const lazyIterable = (open: () => Promise<unknown>): AsyncIterable<unknown> => (
   },
 });
 
-// Members run in call order on the host's handle. A failed open rejects every later member call.
+// Calls reach the host's handle in call order, each without waiting for the one before, so a kill
+// is never held behind a write the child does not read. A failed open rejects every member call.
 const openHandle = (opened: Promise<unknown>, members: Record<string, HandleMember>) => {
   opened.catch(() => {});
-  let tail: Promise<unknown> = Promise.resolve();
-  const run = (name: string, args: unknown[]) => {
-    const next = tail
-      .then(() => opened)
-      .then((host) => (host as Record<string, (...args: unknown[]) => unknown>)[name]!(...args));
-    // Order only: the queue must not keep a result, such as an iterator, reachable.
-    tail = next.then(
-      () => {},
-      () => {},
-    );
-    return next;
-  };
+  const run = (name: string, args: unknown[]) =>
+    opened.then((host) => (host as Record<string, (...args: unknown[]) => unknown>)[name]!(...args));
   const handle: Record<string, unknown> = {};
   for (const [name, member] of Object.entries(members)) {
     if (member === "id") handle[name] = crypto.randomUUID();
-    else if (member === "notify")
+    else if (member === "promise") {
+      const value = opened.then((host) => (host as Record<string, unknown>)[name]);
+      value.catch(() => {});
+      handle[name] = value;
+    } else if (member === "notify")
       handle[name] = (...args: unknown[]) => {
         run(name, args).catch(() => {});
       };
