@@ -85,7 +85,15 @@ const writeFrames = async (ctx: CommandContext, id: string, revision: number, ev
 
 const recoverProviderDraft = async (ctx: CommandContext, id?: string, draftClientId?: string, draftKey?: string) => {
   if (!draftClientId || !draftKey) return 0;
-  const recoverDraft = await recoverSavedDraft(ctx, draftKey);
+  let recoverDraft: ChatDraft | undefined;
+  try {
+    recoverDraft = await recoverSavedDraft(ctx, draftKey);
+  } catch {
+    await writeFrames(ctx, id ?? draftKey, 0, {
+      snapshot: { notice: "Could not recover the saved draft. The original was kept." },
+    });
+    return 1;
+  }
   if (!recoverDraft) return 0;
   await writeFrames(ctx, id ?? draftKey, 0, { recoverDraft });
   return 1;

@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { acknowledgeSavedDraft, recoverSavedDraft } from "./draft-recovery";
 import { watchConversation } from "./watch";
+import { createWatchObservationFixture } from "./watch-observation.test-fixture";
 
 const savedDraft = {
   text: "Work saved before the upgrade",
@@ -121,4 +122,33 @@ test.each([
   await expect(acknowledgeSavedDraft(ctx, "saved", savedDraft)).rejects.toThrow("The saved draft needs recovery");
   expect((await storage.records.read(recordId)).value).toEqual({ fileId: file.id });
   expect(await storage.files.getBytes(file.id)).toEqual(bytes);
+});
+
+test("a corrupt provider draft reports recovery trouble while the session stream connects", async () => {
+  const fixture = createWatchObservationFixture();
+  const { storage } = fixture.ctx;
+  const file = await storage.files.put({
+    name: "draft-saved.json",
+    mimeType: "application/json",
+    data: new TextEncoder().encode("null"),
+  });
+  const recordId = storage.records.id("draft:saved");
+  await storage.records.commit({
+    operationId: storage.ids.create(),
+    edits: [{ recordId, replace: { fileId: file.id } }],
+  });
+  const watching = watchConversation(fixture.ctx, { type: "session", id: "s" }, "browser", "saved");
+  try {
+    await Promise.race([fixture.connected, watching]);
+    expect(fixture.counts.stream).toBe(1);
+    expect(fixture.frames).toContainEqual(
+      expect.objectContaining({
+        snapshot: expect.objectContaining({ notice: expect.stringContaining("saved draft") }),
+      }),
+    );
+    expect((await storage.records.read(recordId)).value).toEqual({ fileId: file.id });
+  } finally {
+    fixture.controller.abort();
+    await watching;
+  }
 });

@@ -57,9 +57,9 @@ const conversation = defineView({
     legacySessionDraft: true,
     browserDraft: {
       acknowledgeRecovery: async (ctx, { renderer, draftKey, draft, draftClientId }) => {
-        await acknowledgeSavedDraft(ctx, draftKey, draft);
         const id = sessionId(renderer.resource);
         if (id) await acknowledgeNativeInputs(ctx, id, draft, draftClientId);
+        await acknowledgeSavedDraft(ctx, draftKey, draft);
       },
     },
     initial: {
