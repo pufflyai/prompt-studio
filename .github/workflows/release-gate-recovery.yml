@@ -9,7 +9,7 @@ jobs:
   release-gates:
     runs-on: ubuntu-24.04
     env:
-      SOURCE_SHA: 3d9a9bca4596e9257e21c06345d05aff48b2cb6f
+      SOURCE_SHA: 889efc0c96cd08df4d113482aa7f0855ee781e93
       NX_DAEMON: "false"
     steps:
       - uses: actions/checkout@v5
@@ -54,6 +54,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Changesets resolves the configured local branch name even in a detached checkout.
+          git update-ref refs/heads/main refs/remotes/origin/main
           bunx changeset status 2>&1 | tee "$RUNNER_TEMP/release-gates/changesets.log"
       - name: Check Biome errors
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
