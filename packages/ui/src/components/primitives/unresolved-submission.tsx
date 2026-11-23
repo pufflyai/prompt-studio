@@ -10,13 +10,12 @@ interface SubmissionRecovery {
 }
 
 export class UnresolvedSubmissionError extends Error {
-  constructor(
-    readonly recovery: SubmissionRecovery,
-    cause?: unknown,
-    message = "Creation could not be confirmed.",
-  ) {
+  readonly recovery: SubmissionRecovery;
+
+  constructor(recovery: SubmissionRecovery, cause?: unknown, message = "Creation could not be confirmed.") {
     super(message, { cause });
     this.name = "UnresolvedSubmissionError";
+    this.recovery = recovery;
   }
 }
 
