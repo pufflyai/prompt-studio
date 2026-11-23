@@ -1,5 +1,13 @@
 # Prompt Studio Skills
 
+## 0.46.1
+
+_2026-11-23_
+
+### Patch Changes
+
+- 7afa556: Make session cleanup reads reliable, expose conversation exports and Planner template provenance and reset, and document failure-preserving CLI pipelines.
+
 ## 0.46.0
 
 _2026-11-21_

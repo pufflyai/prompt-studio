@@ -1,5 +1,13 @@
 # pstdio-session-browser
 
+## 0.3.1
+
+_2026-11-23_
+
+### Patch Changes
+
+- b571ea5: Keep the Sessions list loaded when switching conversations in Main.
+
 ## 0.3.0
 
 _2026-11-21_

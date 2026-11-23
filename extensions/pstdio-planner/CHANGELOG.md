@@ -1,5 +1,15 @@
 # pstdio-planner
 
+## 0.48.1
+
+_2026-11-23_
+
+### Patch Changes
+
+- 8ea199b: Prefer configured cloud test workspaces and app previews during implementation.
+- fff48a5: Move Project Timeline Auto Build into its contributed page header and open its controls in a host dialog, preserving shared compact styling and resource context.
+- 7afa556: Make session cleanup reads reliable, expose conversation exports and Planner template provenance and reset, and document failure-preserving CLI pipelines.
+
 ## 0.48.0
 
 _2026-11-21_

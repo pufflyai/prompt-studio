@@ -1,5 +1,26 @@
 # @pstdio/workbench
 
+## 0.49.0
+
+_2026-11-23_
+
+### Minor Changes
+
+- 47960a3: Keep view controls and resource menus with their live page or tab, support movable menu headers and bottom menu presets, and align web app headers with desktop. Add the public header-view contract and TextPen icon for extension consumers.
+
+### Patch Changes
+
+- f7e08bd: Load a fresh canvas preview when returning after leaving during loading.
+- 8707810: Open a linked resource in only one panel by comparing its declared owner and project before its tool has confirmed the link. Preserve saved tabs and keep resources from different owners, projects, and documents distinct.
+
+  Keep the live viewer and its follower panels mounted when the owner refreshes a pasted link's title and metadata.
+
+  Preserve each codec-defined revision and retained follower when reopening links or restoring a project.
+
+- d7bb3ed: Show the animated Prompt Studio logo while pages, panels and dialogs load, with new `LoadingState` and `LogoLoader` components; the action bar, navigation and status bar show skeletons instead.
+- 16b4a08: Keep board columns and status choices intact when views share or restore query results.
+- 9dd9fff: Dismiss popovers and tooltips when navigating away from retained views. Preserve unfinished popup fields when a retained workbench is suspended.
+
 ## 0.48.0
 
 _2026-11-21_

@@ -1,5 +1,13 @@
 # canvas
 
+## 0.1.2
+
+_2026-11-23_
+
+### Patch Changes
+
+- f7e08bd: Switch between canvases faster by sharing preview assets and project fonts, and keep the two most recent designs live.
+
 ## 0.1.1
 
 _2026-11-21_

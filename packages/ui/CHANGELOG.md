@@ -1,5 +1,18 @@
 # @pstdio/ui
 
+## 0.49.0
+
+_2026-11-23_
+
+### Minor Changes
+
+- d7bb3ed: Show the animated Prompt Studio logo while pages, panels and dialogs load, with new `LoadingState` and `LogoLoader` components; the action bar, navigation and status bar show skeletons instead.
+
+### Patch Changes
+
+- 47960a3: Keep view controls and resource menus with their live page or tab, support movable menu headers and bottom menu presets, and align web app headers with desktop. Add the public header-view contract and TextPen icon for extension consumers.
+- 9dd9fff: Dismiss popovers and tooltips when navigating away from retained views. Preserve unfinished popup fields when a retained workbench is suspended.
+
 ## 0.48.0
 
 _2026-11-21_
