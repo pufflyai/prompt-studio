@@ -19,6 +19,8 @@ const AutoBuildForm = lazy(async () => {
 
 export interface AutoBuildButtonProps {
   enabled: boolean;
+  /** Header guests delegate full-sized surfaces to host dialog navigation. */
+  onOpen?: () => void;
   paused?: boolean;
   reviewRequests?: ReviewRequestView[];
   requestErrors?: string[];
@@ -42,7 +44,7 @@ export interface AutoBuildButtonProps {
   disabled?: boolean;
   configuration?: Omit<AutoBuildFormProps, "onClose" | "t">;
   onStop: () => Promise<boolean>;
-  onOpenSession: (session: AutoBuildSession) => void;
+  onOpenSession: (session: AutoBuildSession) => unknown;
   t: (key: string, fallback?: string) => string;
 }
 
@@ -102,6 +104,11 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
             variant="outline"
             disabled={disabled}
             onClick={(event) => {
+              if (props.onOpen) {
+                event.preventDefault();
+                props.onOpen();
+                return;
+              }
               if (inspectable) return;
               event.preventDefault();
               setContent("configuration");
@@ -114,6 +121,7 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
         open={content === "sessions"}
         failed={failed}
         onOpenChange={(open) => {
+          if (props.onOpen) return;
           if (open) setContent("sessions");
           else close();
         }}

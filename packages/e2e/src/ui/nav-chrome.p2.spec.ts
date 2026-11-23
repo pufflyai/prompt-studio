@@ -28,7 +28,7 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
   await page.setViewportSize({ width: 1280, height: 720 });
 };
 
-test("keeps history, breadcrumbs and panel controls in the navigation header", async ({ page, request }) => {
+test("keeps project and panel controls above page navigation", async ({ page, request }) => {
   test.setTimeout(45_000);
   await deleteAllProjects(request);
   const project = await createProject(request);
@@ -52,13 +52,16 @@ test("keeps history, breadcrumbs and panel controls in the navigation header", a
 
   const back = nav.getByRole("button", { name: "Navigate back" });
   const forward = nav.getByRole("button", { name: "Navigate forward" });
-  const controls = page.getByRole("group", { name: "Panel controls" });
+  const appHeader = page.getByRole("banner", { name: "App header", exact: true });
+  const controls = appHeader.getByRole("group", { name: "Panel controls" });
   const showSecondary = controls.getByRole("button", { name: "Show Bottom Panel" });
 
   await expect(
     page.locator('[data-workbench-region="status"]').getByRole("group", { name: "Panel controls" }),
   ).toHaveCount(0);
-  await expect(nav.getByRole("group", { name: "Panel controls" })).toBeVisible();
+  await expect(appHeader.getByRole("button", { name: "Switch project", exact: true })).toBeVisible();
+  await expect(nav.getByRole("button", { name: "Switch project", exact: true })).toHaveCount(0);
+  await expect(nav.getByRole("group", { name: "Panel controls" })).toHaveCount(0);
   await expect(back).toBeVisible();
   await expect(forward).toBeVisible();
   await expect(nav.locator("[data-workbench-breadcrumb-action-slot]")).toBeVisible();
@@ -75,7 +78,7 @@ test("keeps history, breadcrumbs and panel controls in the navigation header", a
   // Side Panel exactly as the Workspaces view does. Global controls stay in host chrome.
   await expect(controls.getByRole("button", { name: "Show Side Panel" })).toHaveAttribute("aria-pressed", "false");
 
-  // Navigation and Main share one header, so history and panel controls appear exactly once.
+  // App controls and page navigation each have a single owner.
   await expect(page.getByRole("button", { name: "Navigate back", exact: true })).toHaveCount(1);
   await expect(page.getByRole("button", { name: "Navigate forward", exact: true })).toHaveCount(1);
   await expect(page.getByRole("group", { name: "Panel controls" })).toHaveCount(1);
@@ -83,7 +86,7 @@ test("keeps history, breadcrumbs and panel controls in the navigation header", a
   const sidenavSeparator = page.getByRole("separator", { name: "Resize sidenav" });
   await expect(sidenavSeparator).toBeVisible();
   await sidenavSeparator.press("Home");
-  const closedSidenav = nav.getByRole("button", { name: "Show Sidenav" });
+  const closedSidenav = controls.getByRole("button", { name: "Show Sidenav" });
   await expect(closedSidenav).toHaveAttribute("aria-pressed", "false");
 
   await page.getByText("Own navigation chrome", { exact: true }).click();

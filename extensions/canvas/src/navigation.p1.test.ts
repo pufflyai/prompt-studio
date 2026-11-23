@@ -1,12 +1,19 @@
 import { expect, test } from "bun:test";
 import type { TreeNode } from "@pstdio/sdk/extensions";
 import extension from "../extension";
-import { canvasPage, homePage } from "./navigation";
+import { canvasMain, canvasPage, canvasPanel, homePage } from "./navigation";
 import { resolveCanvasCommand } from "./resource";
 import { testContext, testManifest } from "./test-build";
 
 const leaves = (nodes: TreeNode[]): TreeNode[] =>
   nodes.flatMap((node) => (node.children ? leaves(node.children) : [node]));
+
+test("design links share the Main viewer and retain resource-specific panel placement", () => {
+  expect(canvasPage.main).toMatchObject({ kind: "panels", landing: canvasMain.ref });
+  expect(canvasMain.item).toMatchObject({ kind: "view" });
+  expect(canvasPage).toMatchObject({ panelView: canvasPanel.ref });
+  expect(canvasPanel.item).toMatchObject({ kind: "binding", binding: { cardinality: "many" } });
+});
 
 test("the canvas navigation panel exposes each grouped resource on overview and detail pages", async () => {
   const { ctx } = await testContext();
@@ -26,7 +33,6 @@ test("the canvas navigation panel exposes each grouped resource on overview and 
     for (const node of resources)
       expect(node.target).toMatchObject({
         kind: "page",
-        open: "preview",
         resource: {
           type: "canvas",
           id: node.resource!.id,

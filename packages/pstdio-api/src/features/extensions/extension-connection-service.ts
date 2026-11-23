@@ -3,6 +3,7 @@ import type { ExtensionConnectionsApi } from "pstdio-api-contracts/extension-ker
 import type { ConnectionSecretStore } from "./connection-secret-store";
 import { createExtensionConnectionRequestService } from "./extension-connection-request-service";
 import {
+  type ConnectionCleanupContext,
   type ConnectionKey,
   connectionKey,
   type ExtensionConnectionServiceDeps,
@@ -19,19 +20,16 @@ const prepareProjectConnectionRemoval = async (deps: ExtensionConnectionServiceD
   };
 };
 
-const reportCleanupError = (
-  deps: ExtensionConnectionServiceDeps,
-  error: unknown,
-  context: { operation: string; secretRef?: string },
-) => {
-  deps.onCleanupError?.(error, context);
-};
+const reportCleanupError = (deps: ExtensionConnectionServiceDeps, error: unknown, context: ConnectionCleanupContext) =>
+  Promise.resolve()
+    .then(() => deps.onCleanupError?.(error, context))
+    .catch(() => {});
 
 const deleteSecret = async (deps: ExtensionConnectionServiceDeps, secretRef: string, operation: string) => {
   try {
     await deps.secretStore.delete(secretRef);
   } catch (error) {
-    reportCleanupError(deps, error, { operation, secretRef });
+    await reportCleanupError(deps, error, { operation, secretRef });
   }
 };
 
@@ -43,13 +41,9 @@ const removeExtensionConnections = async (
   const configured = await deps.connectionsDBService.listByExtension(projectId, extensionId);
   for (const connection of configured) {
     try {
-      await removeConnection(deps, {
-        projectId,
-        extensionId,
-        connectionId: connection.contribution_id,
-      });
+      await removeStoredConnection(deps, { projectId, extensionId, contributionId: connection.contribution_id });
     } catch (error) {
-      reportCleanupError(deps, error, { operation: "remove_extension_connection" });
+      await reportCleanupError(deps, error, { operation: "remove_extension_connection" });
     }
   }
 };
@@ -65,13 +59,13 @@ const reconcileConnections = async (deps: ExtensionConnectionServiceDeps) => {
       installed.set(ownerKey, ownerExists);
       try {
         if (await ownerExists) continue;
-        await removeConnection(deps, {
+        await removeStoredConnection(deps, {
           projectId: connection.project_id,
           extensionId: connection.extension_id,
-          connectionId: connection.contribution_id,
+          contributionId: connection.contribution_id,
         });
       } catch (error) {
-        reportCleanupError(deps, error, { operation: "reconcile_extension_connection" });
+        await reportCleanupError(deps, error, { operation: "reconcile_extension_connection" });
       }
     }
   }
@@ -122,13 +116,40 @@ const retirePreviousSecret = async (
   }
 };
 
+const retireProjectCopies = async (deps: ExtensionConnectionServiceDeps, input: ConnectionKey) => {
+  const identity = { extensionId: canonicalExtensionId(input.extensionId), connectionId: input.connectionId };
+  let copies: StoredConnection[];
+  try {
+    copies = await deps.connectionsDBService.listAll();
+  } catch (error) {
+    await reportCleanupError(deps, error, { ...identity, operation: "list_global_connection_copies" });
+    return;
+  }
+  for (const copy of copies) {
+    if (
+      copy.project_id === null ||
+      copy.extension_id !== identity.extensionId ||
+      copy.contribution_id !== identity.connectionId
+    )
+      continue;
+    const ownerKey = { ...identity, projectId: copy.project_id };
+    try {
+      const owner = await deps.getContribution(ownerKey);
+      if (owner?.scope !== "global") continue;
+      await removeStoredConnection(deps, connectionKey(ownerKey));
+    } catch (error) {
+      await reportCleanupError(deps, error, { ...ownerKey, operation: "remove_global_connection_copy" });
+    }
+  }
+};
+
 const configureConnection = async (
   deps: ExtensionConnectionServiceDeps,
   input: ConnectionKey & { baseUrl: string; secret?: string },
 ) => {
   const contribution = await deps.getContribution(input);
   if (!contribution) throw new Error(`Connection is not declared: ${input.connectionId}`);
-  const key = connectionKey(input);
+  const key = connectionKey(input, contribution.scope);
   const existing = await deps.connectionsDBService.get(key);
   const { secretRef, newSecretRef } = await resolveConfiguredSecret(deps, existing, input.secret);
   let stored: StoredConnection;
@@ -145,11 +166,11 @@ const configureConnection = async (
     throw error;
   }
   await retirePreviousSecret(deps, key, existing, newSecretRef);
+  if (contribution.scope === "global") await retireProjectCopies(deps, input);
   return toConnectionRecord(stored);
 };
 
-const removeConnection = async (deps: ExtensionConnectionServiceDeps, input: ConnectionKey) => {
-  const key = connectionKey(input);
+const removeStoredConnection = async (deps: ExtensionConnectionServiceDeps, key: ReturnType<typeof connectionKey>) => {
   const existing = await deps.connectionsDBService.get(key);
   if (!existing) return false;
   const removed = await deps.connectionsDBService.remove(key);
@@ -177,9 +198,30 @@ export const createExtensionConnectionService = (input: ExtensionConnectionServi
   };
   const configure = (input: ConnectionKey & { baseUrl: string; secret?: string }) =>
     mutate(() => configureConnection(deps, input));
-  const list = async (projectId: string) =>
-    (await deps.connectionsDBService.listByProject(projectId)).map(toConnectionRecord);
-  const remove = (input: ConnectionKey) => mutate(() => removeConnection(deps, input));
+  const list = async (projectId: string) => {
+    const rows = [
+      ...(await deps.connectionsDBService.listByProject(projectId)),
+      ...(await deps.connectionsDBService.listGlobal()),
+    ];
+    const visible = await Promise.all(
+      rows.map(async (row) => {
+        const definition = await deps.getContribution({
+          projectId,
+          extensionId: row.extension_id,
+          connectionId: row.contribution_id,
+        });
+        if (!definition || (definition.scope === "global") !== (row.project_id === null)) return null;
+        return toConnectionRecord(row);
+      }),
+    );
+    return visible.filter((row) => row !== null);
+  };
+  const remove = (input: ConnectionKey) =>
+    mutate(async () => {
+      const contribution = await deps.getContribution(input);
+      if (!contribution) throw new Error(`Connection is not declared: ${input.connectionId}`);
+      return removeStoredConnection(deps, connectionKey(input, contribution.scope));
+    });
   const reconcile = () => mutate(() => reconcileConnections(deps));
   const prepareProjectRemoval = async (projectId: string) => {
     const removeSecrets = await mutate(() => prepareProjectConnectionRemoval(deps, projectId));

@@ -2,7 +2,7 @@
 name: fix-release-pipeline
 description: Get Prompt Studio's release pipeline (nightly, verify or stable Release Packages runs) green in one pass. Find every blocker at once, run the release-only gates locally, triage by root cause, fix in parallel and verify before dispatching the next run. Use when a nightly fails to publish, a verify or stable run is red, or the user asks to make the release pipeline green or stable.
 metadata:
-  version: 0.0.1
+  version: 0.0.2
 ---
 
 # Fix the release pipeline in one pass
@@ -30,6 +30,8 @@ Do all of these in parallel. Don't wait for one before starting the next.
 
 ## 2. Triage every failure by root cause
 
+Follow the repository timeout policy in `documentation/guidance/0004-ci.md`, rules 0004.3.3 and 0004.3.4: ordinary functional test, fixture, hook, readiness and functional-only job allowances may be adjusted without separate approval. Keep finite allowances, preserve the workload and assertions, and verify affected behavior and cleanup. Benchmark budgets and benchmark execution allowances require approval for the exact new value, including shared settings that also affect benchmarks.
+
 Collect all failing tests and jobs from the run and the local gates into one list, then group them:
 
 | Kind | Typical signal | Usual fix |
@@ -39,10 +41,10 @@ Collect all failing tests and jobs from the run and the local gates into one lis
 | Product regression | Many journeys fail after one merge | `git log <last green>..<red>` and bisect the culprit PR |
 | Spec drift | A journey waits for retired UI after an intentional product change | Update the spec to the new user path and keep its assertions |
 | Platform-only | Windows `EBUSY`/`EPERM`, macOS timing | Native fix, verified with the `ci:windows` diagnostic |
-| Time limit | A job is cancelled at its `timeout-minutes` | Find the slow phase and split the work. Never raise a limit without explicit approval |
+| Time limit | A job is cancelled at its `timeout-minutes` | Find the slow phase. Adjust an ordinary functional allowance or split the work under the timeout policy |
 | Performance | P3 or B1–B8 limit misses | Since the release split, performance no longer gates certification. Check the current policy before treating it as a blocker |
 | Flake | Passes and fails on the same code | Prove it with several CI samples, then fix, or quarantine with evidence |
-| Job time limit, no failing test | A shard is `cancelled` near its `timeout-minutes` while every finished test passed | Compare passing durations with the limit. Add shards in `scripts/ci/test-selection.ts` instead of raising the limit |
+| Job time limit, no failing test | A shard is `cancelled` near its `timeout-minutes` while every finished test passed | Compare passing durations with the limit. Adjust a functional-only job allowance or add shards in `scripts/ci/test-selection.ts`; benchmark-related limits follow the approval rule |
 | Artifact infrastructure | `None of the provided artifact IDs were found`, `CreateArtifact` timeouts | Downloads go through `.github/actions/download-artifact-by-id`, because download-artifact v4 lists only 100 artifacts. Diagnostic uploads must not fail a passed check |
 | Lost webview click | A click into an extension webview has no effect right after a popover opens | Wait for the host to paint first (trial-click the host iframe). See lessons-learned 0033 |
 
@@ -55,10 +57,10 @@ A failure that appears only after a merge is a regression in that merge. Find th
 ## 3. Fix in parallel, one batch
 
 - Give each root cause to a separate agent or PR. Ask the user to raise the concurrent-subagent limit for release work if it is 1.
-- Ask the user **up front** for every product decision the failures need (intended behaviour, budgets, timeouts, overrides), in one question set rather than one per run.
+- Ask the user **up front** for every product decision the failures need (intended behaviour, budgets, benchmark-related timeouts, overrides), in one question set rather than one per run.
 - Keep fixes small and owned: one root cause per PR, a regression test that fails before the fix, and a changeset only when a shipped package changes.
 - Have each PR reviewed independently, for example with `/code-review medium <pr>`, before queueing. Reviews catch fixes that weaken assertions or block unrelated upgrades.
-- Never raise a timeout or budget, add retries or skip platforms without the user's explicit approval of that exact value.
+- Apply the timeout policy above; ordinary functional allowance adjustments need no separate approval. Do not add retries or skip platforms without the user's explicit approval.
 - When time is short and the user asks for it, quarantine cases that take longer to fix. Add them to `scripts/ci/test-quarantine.json` with owner, evidence and removal criteria, scoped to the failing platforms. Verify with `CI_PROFILE=production RELEASE_CHANNEL=nightly bun scripts/ci/pull-request-ci-scope.ts` that stable runs list them as `quarantineIds`.
 - If the user explicitly overrides a release gate, keep the check running and reporting, and mark the gate `TEMPORARY` with a comment saying to restore it before the stable release.
 

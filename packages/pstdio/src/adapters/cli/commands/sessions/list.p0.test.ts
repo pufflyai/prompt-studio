@@ -128,3 +128,17 @@ test("session list forwards time and resource filters", async () => {
     }),
   );
 });
+
+for (const filter of [
+  { "anchor-id": "ticket-id" },
+  { "anchor-type": "ticket" },
+  { "anchor-type": "", "anchor-id": "" },
+  { "anchor-type": "ticket", "anchor-id": "   " },
+]) {
+  test(`rejects incomplete anchor filter ${JSON.stringify(filter)} before reading sessions`, async () => {
+    const deps = makeDeps();
+    await expect(createHandler(deps)(argv(filter))).rejects.toThrow("Provide both --anchor-type and --anchor-id");
+    expect(deps.listSessions).not.toHaveBeenCalled();
+    expect(deps.log).not.toHaveBeenCalled();
+  });
+}

@@ -1,0 +1,94 @@
+diff --git a/dist/presence.machine.js b/dist/presence.machine.js
+index a2c276acfaaef4b6e4e8dc888f1d57f77d12bcc3..48f4f3cddf22505964021d4197893b1aa7eebc11 100644
+--- a/dist/presence.machine.js
++++ b/dist/presence.machine.js
+@@ -49,6 +49,7 @@ var machine = (0, import_core.createMachine)({
+       }))
+     };
+   },
++  entry: ["syncPresence"],
+   exit: ["cleanupNode"],
+   watch({ track, prop, send }) {
+     track([() => prop("present")], () => {
+@@ -78,6 +79,7 @@ var machine = (0, import_core.createMachine)({
+     unmountSuspended: {
+       effects: ["trackAnimationEvents"],
+       on: {
++        "UNMOUNT.SUSPEND": { target: "unmountSuspended", reenter: true },
+         MOUNT: {
+           target: "mounted",
+           actions: ["setPrevAnimationName"]
+@@ -122,19 +124,24 @@ var machine = (0, import_core.createMachine)({
+         refs.set("node", null);
+         refs.set("styles", null);
+       },
+-      syncPresence: ({ context, refs, send, prop }) => {
++      syncPresence: ({ context, refs, send, prop, state }) => {
+         const presentProp = prop("present");
+         if (presentProp) {
+           return send({ type: "MOUNT", src: "presence.changed" });
+         }
++        if (state.matches("unmounted")) return;
+         const node = refs.get("node");
+         if (!presentProp && node?.ownerDocument.visibilityState === "hidden") {
+           return send({ type: "UNMOUNT", src: "visibilitychange" });
+         }
+         (0, import_dom_query.raf)(() => {
++          if (prop("present") || state.matches("unmounted")) return;
++          const unfinished = refs.get("node")?.getAnimations?.().some(
++            (animation) => animation.pending || (animation.playState !== "finished" && animation.playState !== "idle")
++          );
+           const animationName = getAnimationName(refs.get("styles"));
+           context.set("unmountAnimationName", animationName);
+-          if (animationName === "none" || animationName === context.get("prevAnimationName") || refs.get("styles")?.display === "none" || refs.get("styles")?.animationDuration === "0s") {
++          if (unfinished === false || animationName === "none" || (animationName === context.get("prevAnimationName") && !state.matches("unmountSuspended")) || refs.get("styles")?.display === "none" || refs.get("styles")?.animationDuration === "0s") {
+             send({ type: "UNMOUNT", src: "presence.changed" });
+           } else {
+             send({ type: "UNMOUNT.SUSPEND" });
+diff --git a/dist/presence.machine.mjs b/dist/presence.machine.mjs
+index 5849f73df2cb3434d38f23676f4c0cb44acdc9a0..673b57115c168ce07484de46487c83ab77140c23 100644
+--- a/dist/presence.machine.mjs
++++ b/dist/presence.machine.mjs
+@@ -25,6 +25,7 @@ var machine = createMachine({
+       }))
+     };
+   },
++  entry: ["syncPresence"],
+   exit: ["cleanupNode"],
+   watch({ track, prop, send }) {
+     track([() => prop("present")], () => {
+@@ -54,6 +55,7 @@ var machine = createMachine({
+     unmountSuspended: {
+       effects: ["trackAnimationEvents"],
+       on: {
++        "UNMOUNT.SUSPEND": { target: "unmountSuspended", reenter: true },
+         MOUNT: {
+           target: "mounted",
+           actions: ["setPrevAnimationName"]
+@@ -98,19 +100,24 @@ var machine = createMachine({
+         refs.set("node", null);
+         refs.set("styles", null);
+       },
+-      syncPresence: ({ context, refs, send, prop }) => {
++      syncPresence: ({ context, refs, send, prop, state }) => {
+         const presentProp = prop("present");
+         if (presentProp) {
+           return send({ type: "MOUNT", src: "presence.changed" });
+         }
++        if (state.matches("unmounted")) return;
+         const node = refs.get("node");
+         if (!presentProp && node?.ownerDocument.visibilityState === "hidden") {
+           return send({ type: "UNMOUNT", src: "visibilitychange" });
+         }
+         raf(() => {
++          if (prop("present") || state.matches("unmounted")) return;
++          const unfinished = refs.get("node")?.getAnimations?.().some(
++            (animation) => animation.pending || (animation.playState !== "finished" && animation.playState !== "idle")
++          );
+           const animationName = getAnimationName(refs.get("styles"));
+           context.set("unmountAnimationName", animationName);
+-          if (animationName === "none" || animationName === context.get("prevAnimationName") || refs.get("styles")?.display === "none" || refs.get("styles")?.animationDuration === "0s") {
++          if (unfinished === false || animationName === "none" || (animationName === context.get("prevAnimationName") && !state.matches("unmountSuspended")) || refs.get("styles")?.display === "none" || refs.get("styles")?.animationDuration === "0s") {
+             send({ type: "UNMOUNT", src: "presence.changed" });
+           } else {
+             send({ type: "UNMOUNT.SUSPEND" });

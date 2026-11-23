@@ -103,3 +103,27 @@ test("the catalog lookup table is excluded without discarding other runtime lazy
   expect(files).toContain("dialog.js");
   expect(files).not.toContain("editor.js");
 });
+
+test("reads shared fonts in one mount read and sends only missing font bytes", async () => {
+  const graph: FrameManifest = {
+    ...manifest,
+    modules: {
+      ...manifest.modules,
+      "theme.css": module("theme", ["a.woff2", "b.woff2", "c.woff2"]),
+      ...Object.fromEntries(
+        ["a.woff2", "b.woff2", "c.woff2"].map((name) => [name, { ...module(name), file: "modules/shared.fonts.json" }]),
+      ),
+    },
+  };
+  let fontReads = 0;
+  const result = await readFrameAssets(graph, { source: "button", cached: ["a.woff2"] }, async (path) => {
+    if (path !== "modules/shared.fonts.json") return path;
+    fontReads++;
+    return JSON.stringify({ "a.woff2": "aa", "b.woff2": "bb", "c.woff2": "cc" });
+  });
+  expect(fontReads).toBe(1);
+  expect(result.fonts).toEqual(["a.woff2", "b.woff2", "c.woff2"]);
+  expect(result.files["a.woff2"]).toBeUndefined();
+  expect(result.files["b.woff2"]).toBe("bb");
+  expect(result.files["c.woff2"]).toBe("cc");
+});

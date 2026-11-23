@@ -22,7 +22,7 @@ export const landingChaptersSlotRecipe = defineSlotRecipe({
       maxWidth: "8xl",
       mx: "auto",
       px: { base: "lg", md: "xl" },
-      py: "3xl",
+      py: "2xl",
       containerType: "inline-size",
     },
     intro: { display: "flex", flexDirection: "column", gap: "sm", maxWidth: "3xl", pb: "xs", "& dt, & dd": { m: 0 } },
@@ -46,7 +46,6 @@ export const landingChaptersSlotRecipe = defineSlotRecipe({
       gridTemplateColumns: "minmax(0, 1fr)",
       gap: "xl",
       alignItems: "center",
-      py: "xs",
       // Chapters alternate scene and text on wide screens.
       "@container (min-width: 52rem)": {
         gridTemplateColumns: "minmax(15rem, 18rem) minmax(0, 1fr)",
@@ -55,7 +54,8 @@ export const landingChaptersSlotRecipe = defineSlotRecipe({
       },
     },
     copy: { display: "flex", flexDirection: "column", gap: "sm" },
-    scene: { minWidth: 0 },
+    // Scenes scale with their column; capping the width keeps each chapter about a screen tall.
+    scene: { minWidth: 0, width: "full", maxWidth: "38rem", justifySelf: "center", my: "-md" },
     cta: {
       display: "flex",
       flexDirection: "column",

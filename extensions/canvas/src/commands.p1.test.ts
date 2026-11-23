@@ -39,7 +39,7 @@ test("reads a canvas with one frame per export and reports the build's state", a
   expect(
     (await commands["canvas.read"].run((await testContext({ ...testManifest(), canvases: [] })).ctx, {})).status,
   ).toBe("empty");
-  const future = { ...testManifest(), format: 2 } as unknown as ReturnType<typeof testManifest>;
+  const future = { ...testManifest(), format: 3 } as unknown as ReturnType<typeof testManifest>;
   expect((await commands["canvas.read"].run((await testContext(future)).ctx, {})).status).toBe("unsupported");
 });
 

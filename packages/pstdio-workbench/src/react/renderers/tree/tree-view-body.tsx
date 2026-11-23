@@ -1,4 +1,3 @@
-import { Skeleton, Stack } from "@chakra-ui/react";
 import {
   EmptyState,
   type ResourceContextAction,
@@ -7,16 +6,7 @@ import {
   type TreeListSection,
 } from "@pstdio/ui";
 import type { ReactNode, RefObject } from "react";
-
-const TREE_SKELETON_WIDTHS = ["70%", "50%", "82%", "60%", "44%", "76%"];
-
-const TreeViewSkeleton = () => (
-  <Stack gap="sm" px="sm" py="xs" aria-hidden>
-    {TREE_SKELETON_WIDTHS.map((width, index) => (
-      <Skeleton variant="none" key={`${width}-${index}`} height="4" width={width} borderRadius="xs" />
-    ))}
-  </Stack>
-);
+import { TreeViewSkeleton } from "./tree-view-skeleton";
 
 interface TreeViewBodyProps {
   error?: string | null;

@@ -1,12 +1,15 @@
-export const FRAME_STARTUP_CONCURRENCY = 4;
+// Importing multiple isolated React runtimes at once delays the first visible preview.
+const FRAME_STARTUP_CONCURRENCY = 1;
 
 export const createFrameStartupQueue = () => {
   const jobs = new Set<{ start: () => void; priority: number; started: boolean }>();
   let active = 0;
   let scheduled: ReturnType<typeof setTimeout> | undefined;
   let disposed = false;
+  let paused = false;
   const pump = () => {
     scheduled = undefined;
+    if (paused) return;
     const waiting = [...jobs].filter((job) => !job.started).sort((a, b) => a.priority - b.priority);
     for (const job of waiting) {
       if (active === FRAME_STARTUP_CONCURRENCY) break;
@@ -16,7 +19,7 @@ export const createFrameStartupQueue = () => {
     }
   };
   const schedule = () => {
-    if (!disposed && scheduled === undefined) scheduled = setTimeout(pump, 0);
+    if (!disposed && !paused && scheduled === undefined) scheduled = setTimeout(pump, 0);
   };
   return {
     enqueue: (start: () => void, priority: number) => {
@@ -38,6 +41,10 @@ export const createFrameStartupQueue = () => {
           schedule();
         },
       };
+    },
+    setPaused: (next: boolean) => {
+      paused = next;
+      if (!paused) schedule();
     },
     dispose: () => {
       disposed = true;

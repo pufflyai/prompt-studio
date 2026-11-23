@@ -7,6 +7,7 @@ import {
   packageAsset,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
+import { insightsPage, sessionsTable } from "./insights/view";
 
 const trends = defineView({
   id: "trends",
@@ -145,6 +146,12 @@ const performanceTree = defineView({
             target: { kind: "page", page: healthPage.ref },
           },
           {
+            id: "session-insights",
+            label: l10n("insights.navigation.label", "Session insights"),
+            icon: sessionsTable.icon,
+            target: { kind: "page", page: insightsPage.ref },
+          },
+          {
             id: "diagnostics",
             label: l10n("navigation.diagnostics", "Diagnostics"),
             icon: "stethoscope",
@@ -196,8 +203,8 @@ const storagePage = definePage({
   main: { kind: "view", view: storage.ref, cardinality: "one", presentation: "page" },
   slots: [],
 });
-export const pages = [performancePage, comparePage, runsPage, healthPage, startupPage, storagePage];
-export const views = [trends, compare, runs, runOptions, performanceTree, health, startup, storage];
+export const pages = [performancePage, comparePage, runsPage, healthPage, startupPage, storagePage, insightsPage];
+export const views = [trends, compare, runs, runOptions, performanceTree, health, startup, storage, sessionsTable];
 export const navigationTrees = [
   defineNavigationTree({
     id: "performance",

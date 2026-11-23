@@ -48,7 +48,7 @@ export const usePanelPositionActions = (workbench: WorkbenchCore, region: Workbe
 };
 
 const interactive =
-  'button,a,input,textarea,select,iframe,[role="tab"],[role="treeitem"],[role="button"],[role="menuitem"],[contenteditable="true"],[data-workbench-tab],[data-tree-list-focus-id]';
+  'button,a,input,textarea,select,iframe,[role="tab"],[role="treeitem"],[role="button"],[role="menuitem"],[contenteditable="true"],[data-workbench-tab],[data-tree-list-focus-id],[data-action-bar-item]';
 
 /** Only unused header space starts a whole-panel drag. Tab and control gestures keep their owners. */
 export const usePanelDragSurface = (workbench: WorkbenchCore, region: WorkbenchPositionedRegion) => {
@@ -74,6 +74,7 @@ export const usePanelDragSurface = (workbench: WorkbenchCore, region: WorkbenchP
   });
   const empty = (event: MouseEvent | TouchEvent) => {
     const target = event.target as Element;
+    if (!event.currentTarget.contains(target)) return false;
     const control = target.closest(interactive);
     const handle = content && target.closest("[data-workbench-page-drag-handle]");
     return handle ? !control || !handle.contains(control) : !control;

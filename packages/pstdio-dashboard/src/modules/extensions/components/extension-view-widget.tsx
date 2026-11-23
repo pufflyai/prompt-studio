@@ -4,6 +4,7 @@ import { sizesToContentHeight } from "pstdio-extensions/bridge/contract";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { ExtensionWebviewFrame } from "@/shared/extensions/components/extension-webview-frame";
+import { webviewLoadingKind } from "@/shared/extensions/components/webview-loading";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 
@@ -14,14 +15,16 @@ const readProjectId = (value: unknown) => {
 
 // The placement carries the View identity. The panel id identifies only the host
 // chrome created for that placement and must not be used to recover its content.
-export const resolveExtensionView = (input: Pick<WorkbenchPanelRenderInput, "instance" | "panel" | "workbench">) => {
+export const resolveExtensionView = (
+  input: Pick<WorkbenchPanelRenderInput, "instance" | "panel" | "workbench" | "viewId">,
+) => {
   const projectId =
     readProjectId(input.instance.resource?.metadata) ??
     readProjectId(input.panel.config) ??
     getDashboardSelectedProjectId(input.workbench);
   if (!projectId) return undefined;
   const metadata = getCachedDashboardExtensionMetadata(projectId);
-  const view = metadata?.views.find((candidate) => candidate.id === input.instance.viewId);
+  const view = metadata?.views.find((candidate) => candidate.id === (input.viewId ?? input.instance.viewId));
   if (view?.body.kind !== "webview") return undefined;
   const extension = metadata?.extensions.find((candidate) => candidate.id === view.extensionId);
   return {
@@ -75,6 +78,7 @@ export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput })
           key={JSON.stringify([projectId, view.id])}
           visible={input.visible}
           sizing={sizing}
+          loading={webviewLoadingKind(input.panel.region, contentHeight)}
           extensionId={view.extensionId}
           extensionInstanceId={extensionInstanceId}
           installName={installName}

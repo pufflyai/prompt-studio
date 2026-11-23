@@ -18,7 +18,7 @@ type Story = CanvasFrame<typeof meta>;
 export const Home: Story = {
   id: "landing-iso-scenes--home",
   description:
-    "Agents code a tool, carry the block onto the workbench, and pat it into shape. When the four slots are full one clicks + for a new tab. Pick up a finished tool and an agent chases it back.",
+    "One tool at a time grows on the workbench. Agents write an improvement beside it, carry the block in, and pat it into the panel: the ticket board gains columns, assignees and a list view; then + opens the image editor, the 3D editor and the UI editor. Drag a block onto the panel to install it, drag a hand to make it drop what it carries, or click a hand to high five.",
 };
 export const Why: Story = {
   id: "landing-iso-scenes--why",

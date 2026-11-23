@@ -212,6 +212,7 @@ export interface WorkbenchWidgetPlacement {
   pageContext?: ViewLocation["pageContext"];
   resourceKey?: string;
   ownerResourceKey?: string;
+  menuOwnerWidgetId?: string;
   title?: string;
   pinned?: boolean;
   closable?: boolean;
@@ -235,6 +236,7 @@ export interface WorkbenchPanelInstance {
   pageContext?: ViewLocation["pageContext"];
   resourceKey?: string;
   ownerResourceKey?: string;
+  menuOwnerWidgetId?: string;
   title?: string;
   pinned?: boolean;
   closable: boolean;
@@ -277,6 +279,7 @@ export interface WorkbenchLayoutStoreState {
 }
 
 export interface OpenWidgetInput {
+  menuOwnerWidgetId?: string;
   pageContext?: ViewLocation["pageContext"];
   viewId?: string | null;
   resource?: ResourceRef | null;

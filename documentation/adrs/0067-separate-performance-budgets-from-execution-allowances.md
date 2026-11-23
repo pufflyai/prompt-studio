@@ -25,7 +25,9 @@ The release workflow runs benchmarks in their own step before the functional pac
 
 Extraction keeps the existing startup contracts. Before this change, the cold-start check was the first launch of the signed app only on Intel macOS, which runs only `@essential` tests. On other platforms, two packaged launches ran before it. The cold-start benchmark therefore runs last in its file: Intel runs it alone, as the first launch, and other platforms run it after the warm-attach and recovery benchmarks. The non-Intel budgets do not cover macOS or Windows first-launch checks. Measuring the first launch on those platforms needs its own budget decision.
 
-Changing either kind of limit needs approval for the exact value. An allowance proposal uses phase timings from representative local runs and from the applicable CI platforms. A timed-out run is a lower bound, not a duration. Adding tests justifies reviewing the job allowance or sharding, not a longer per-test limit.
+Policy clarified on 2026-11-22: benchmark budgets and benchmark execution allowances need approval for the exact new value. Ordinary functional test, fixture, hook, readiness and functional-only job allowances may be adjusted without separate approval. Shared settings that also affect benchmarks retain the approval requirement. Follow the [timeout policy](../guidance/0004-ci.md#3-ci-timeouts-and-performance-budgets).
+
+A benchmark allowance proposal uses phase timings from representative local runs and applicable CI platforms. A timed-out run is a lower bound, not a duration. Adding tests justifies reviewing the job allowance or sharding, not a longer per-test limit.
 
 ## Alternatives
 

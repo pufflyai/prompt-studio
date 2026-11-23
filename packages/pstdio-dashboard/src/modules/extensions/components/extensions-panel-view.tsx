@@ -7,7 +7,7 @@ import type {
   WorkbenchExtensionHarnessRecord,
 } from "@pstdio/sdk/api";
 import type { AgentInfo } from "pstdio-api-contracts";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
@@ -18,11 +18,12 @@ import { ExtensionFolderDropZone } from "./extension-folder-drop-zone";
 import { unavailableExtensionHarnesses } from "./extension-harness-availability";
 import { ExtensionListRow } from "./extension-list-row";
 import { ExtensionUpgradeProgress } from "./extension-upgrade-progress";
-import { ExtensionsPanelHeader } from "./extensions-panel-header";
+import { ExtensionsColumnHeader, ExtensionsPanelHeader } from "./extensions-panel-header";
 import { MarketplaceExtensionRow } from "./marketplace-extension-row";
 
 export interface ExtensionsPanelViewProps {
   projectId?: string;
+  header?: ReactNode;
   filters?: ExtensionFilters;
   onFiltersChange?: (filters: ExtensionFilters) => void;
   rowRef?: (id: string, node: HTMLDivElement | null) => void;
@@ -121,21 +122,28 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
       <PageContentLayout
         testId="extensions-panel"
         header={
-          <ExtensionsPanelHeader
-            searchRef={props.searchRef}
-            filters={filters}
-            onFiltersChange={onFiltersChange}
-            upgrade={
-              (upgradable.length > 0 || batch) && (
-                <ExtensionUpgradeProgress
-                  batch={batch}
-                  onUpgrade={() => onUpgradeAll?.(upgradable)}
-                  onDismiss={onDismissBatch}
-                  canUpgrade={upgradable.length > 0}
-                />
-              )
-            }
-          />
+          <Stack gap="0">
+            {props.header === undefined ? (
+              <ExtensionsPanelHeader
+                searchRef={props.searchRef}
+                filters={filters}
+                onFiltersChange={onFiltersChange}
+                upgrade={
+                  (upgradable.length > 0 || batch) && (
+                    <ExtensionUpgradeProgress
+                      batch={batch}
+                      onUpgrade={() => onUpgradeAll?.(upgradable)}
+                      onDismiss={onDismissBatch}
+                      canUpgrade={upgradable.length > 0}
+                    />
+                  )
+                }
+              />
+            ) : (
+              props.header
+            )}
+            <ExtensionsColumnHeader />
+          </Stack>
         }
       >
         {visible.length === 0 && (

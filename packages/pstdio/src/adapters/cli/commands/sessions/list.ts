@@ -11,7 +11,7 @@ export const builder = (yargs: Argv) =>
     .option("project-id", { type: "string", describe: "Project ID" })
     .option("status", { type: "string", describe: "Filter by status" })
     .option("agent", { type: "string", describe: "Filter by agent" })
-    .option("workspace-id", { type: "string", describe: "Filter by workspace ID" })
+    .option("workspace-id", { type: "string", describe: "Filter by workspace ID or shorthand" })
     .option("created-from", { type: "string", describe: "Filter by created from" })
     .option("created-to", { type: "string", describe: "Filter by created to" })
     .option("updated-from", { type: "string", describe: "Filter by updated from" })
@@ -53,6 +53,10 @@ const defaultDeps: Deps = {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ListArgs>) => {
+    const hasAnchor = argv["anchor-type"] !== undefined || argv["anchor-id"] !== undefined;
+    if (hasAnchor && (!argv["anchor-type"]?.trim() || !argv["anchor-id"]?.trim()))
+      throw new Error("Provide both --anchor-type and --anchor-id.");
+
     let projectId = argv["project-id"];
 
     if (!projectId) {
