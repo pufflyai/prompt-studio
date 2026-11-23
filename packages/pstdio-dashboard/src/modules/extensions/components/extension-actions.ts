@@ -1,11 +1,11 @@
 import {
   classifyApiWrite,
   type OperationRecovery,
-  operationSubject,
   type ResourceRef,
   type WorkbenchOperations,
 } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
+import { extensionInventorySubject } from "@/shared/extensions/use-extension-mutation";
 import type { ExtensionActionState } from "./extension-action-feedback";
 import { defaultExtensionFilters, type ExtensionFilters } from "./extension-filters";
 
@@ -93,7 +93,7 @@ export const createExtensionActions = (tracker?: InventoryTracker) => {
     options: ActionOptions<T> = {},
   ) => {
     if (active.has(id) || tracker?.isCurrent?.() === false) return false;
-    const subject = tracker && operationSubject("extension-inventory", tracker.projectId, id);
+    const subject = tracker && extensionInventorySubject(tracker.projectId, id);
     const blocked = tracker?.operations
       .getSnapshot()
       .pending.some(

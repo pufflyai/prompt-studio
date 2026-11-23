@@ -79,7 +79,10 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
   const handleReload = () => {
     clearError();
     reload.mutate(
-      { instanceId: extension.id },
+      {
+        instanceId: extension.id,
+        title: `${t("projectSettings.extensionsPanel.reload.action")} ${extension.displayName}`,
+      },
       {
         onSuccess: (updated) => {
           if (updated.status !== "loaded") showError({ title: t("projectSettings.extensionsPanel.reload.failed") });
@@ -93,7 +96,11 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
   const handleUninstall = async () => {
     clearError();
     try {
-      await uninstall.mutateAsync({ instanceId: extension.id, deleteUserData });
+      await uninstall.mutateAsync({
+        instanceId: extension.id,
+        title: `${t("projectSettings.extensionsPanel.deleteConfirm.button")} ${extension.displayName}`,
+        deleteUserData,
+      });
       onBack();
     } catch (error) {
       showError({
@@ -170,6 +177,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
           setDeleteUserData(false);
         }}
         onDelete={handleUninstall}
+        confirmDisabled={props.sourceChanging}
         headline={t("projectSettings.extensionsPanel.deleteConfirm.headline")}
         notificationText={t(
           extension.scope === "global"

@@ -4,7 +4,7 @@ import { useScopedQuery } from "@pstdio/sdk/extensions/react";
 import { addLocalExtensionFolder, type DroppedExtensionFolder } from "./api";
 import { publishExtensionCommandEvent } from "./extension-webview-broadcast";
 import { getProjectExtensionQueries } from "./project-extension-queries";
-import { useExtensionMutation } from "./use-extension-mutation";
+import { trackExtensionSourceChange, useExtensionMutation } from "./use-extension-mutation";
 import { surfaceWebviewCommandOutcome } from "./webview-command-outcome";
 
 const useCatalogQuery = <T>(query: ScopedQuery<T>, active: boolean) => {
@@ -53,7 +53,10 @@ export const useSetExtensionAutomationEnabled = (projectId: string | undefined) 
   });
 export const useReloadProjectExtension = (projectId: string | undefined) =>
   useExtensionMutation(projectId, "reload", {
-    run: ({ instanceId }: { instanceId: string }, { api, projectId }) => api.extensions.reload(projectId, instanceId),
+    run: ({ instanceId, title }: { instanceId: string; title: string }, target) =>
+      trackExtensionSourceChange(target, { instanceId, title }, () =>
+        target.api.extensions.reload(target.projectId, instanceId),
+      ),
     accept: (_result, _value, cache) => cache.refresh(),
   });
 export const useUpgradeProjectExtension = (projectId: string | undefined) =>
@@ -89,8 +92,12 @@ export const useUpdateProjectExtensionSetting = (projectId: string | undefined) 
   });
 export const useUninstallProjectExtension = (projectId: string | undefined) =>
   useExtensionMutation(projectId, "uninstall", {
-    run: ({ instanceId, deleteUserData }: { instanceId: string; deleteUserData?: boolean }, { api, projectId }) =>
-      api.extensions.uninstall(projectId, instanceId, deleteUserData),
+    run: (input: { instanceId: string; title: string; deleteUserData?: boolean }, target) =>
+      trackExtensionSourceChange(
+        target,
+        { ...input, draft: { instanceId: input.instanceId, deleteUserData: input.deleteUserData === true } },
+        () => target.api.extensions.uninstall(target.projectId, input.instanceId, input.deleteUserData),
+      ),
     accept: (_result, variables, cache) => cache.removeExtension(variables.instanceId),
   });
 export const useExecuteExtensionCommand = (

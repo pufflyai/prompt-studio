@@ -205,8 +205,10 @@ test("keeps install retries and toggle progress attached to their controls acros
   expect(installs).toHaveLength(3);
 
   const toggles: Route[] = [];
-  await page.route(`**/v1/projects/${project.id}/extensions/${instance.id}`, async (route) => {
+  const deletions: Route[] = [];
+  await page.route(`**/v1/projects/${project.id}/extensions/${instance.id}*`, async (route) => {
     if (route.request().method() === "PATCH") toggles.push(route);
+    else if (route.request().method() === "DELETE") deletions.push(route);
     else await route.fallback();
   });
   const toggleName = { name: `Toggle ${catalog.displayName}`, exact: true };
@@ -254,5 +256,32 @@ test("keeps install retries and toggle progress attached to their controls acros
   await expect(installedRow.locator('[data-part="thumb"] [data-testid="extension-toggle-spinner"]')).toHaveCount(0);
   await expect(installedRow.getByRole("alert")).toHaveCount(0);
   await expect(installedRow.getByTestId("extension-row-upgrade")).toHaveCount(0);
+
+  await installedRow.press("Enter");
+  await detail.getByTestId("extension-delete").click();
+  const confirmDelete = page.getByRole("dialog", { name: "Delete extension?" });
+  const deleteData = confirmDelete.getByRole("checkbox", { name: /Also delete this extension/ });
+  await deleteData.press("Space");
+  await expect(deleteData).toBeChecked();
+  const deleteButton = confirmDelete.getByRole("button", { name: "Delete", exact: true });
+  await deleteButton.click();
+  await expect.poll(() => deletions.length).toBe(1);
+  expect(new URL(deletions[0]!.request().url()).searchParams.get("deleteUserData")).toBe("true");
+  await expect(deleteButton).toBeDisabled();
+  await deletions[0]!.abort("failed");
+  await expect(confirmDelete.getByRole("alert")).toContainText("Failed to delete extension");
+  await expect(deleteButton).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(confirmDelete).toBeHidden();
+  await page.goBack();
+  await expect(installedRow).toBeVisible();
+  await expect(rowToggle).toBeDisabled();
+  await page.locator('[data-status-bar-item="workbench.system-activity"]').click();
+  const deletionRecovery = page
+    .getByRole("alert")
+    .filter({ has: page.getByText(`Delete ${catalog.displayName}`, { exact: true }) });
+  await expect(deletionRecovery.getByRole("button", { name: "Copy draft" })).toBeEnabled();
+  await expect(deletionRecovery.getByRole("button", { name: "Return to source" })).toBeEnabled();
+  await expect(deletions).toHaveLength(1);
   await page.unrouteAll({ behavior: "ignoreErrors" });
 });
