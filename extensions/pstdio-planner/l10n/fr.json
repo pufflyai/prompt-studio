@@ -54,6 +54,7 @@
   "requests.view.title": "Attention requise",
   "requests.page.title": "Attention requise",
   "commands.autoBuild.configure": "Configurer la construction automatique",
+  "timeline.actions.title": "Actions de la chronologie",
   "timeline.autoBuild.start": "Construire automatiquement",
   "timeline.autoBuild.stop": "Arrêter Auto Build",
   "timeline.autoBuild.cancel": "Annuler",
