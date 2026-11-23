@@ -48,6 +48,7 @@ const controlsValues = (defaults: ControlValueMap | undefined, result: ControlsQ
   controlValuesSchema.parse(
     resolveParamEditorValues(result?.params ?? [], result?.groups ?? [], { ...defaults, ...result?.values }),
   );
+const writeOptions = { refreshAfterHandlerFailure: true };
 const initialState: ControlsViewState = {
   params: [],
   groups: [],
@@ -139,8 +140,10 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
     const revision = ++changes.current;
     if (contribution.updateValue)
       void runUserAction(workbench, "Update value", async () => {
-        await mutations.submit({ rowId, attributes: { [id]: value } }, () =>
-          contribution.updateValue!({ controlId: id, value, values, resource }),
+        await mutations.submit(
+          { rowId, attributes: { [id]: value } },
+          () => contribution.updateValue!({ controlId: id, value, values, resource }),
+          writeOptions,
         );
         setState((previous) => {
           if (previous.changed[id] !== revision) return previous;
@@ -166,6 +169,7 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
           if (reset) await contribution.reset?.({ resource });
           else await contribution.apply?.({ values: state.values, resource });
         },
+        writeOptions,
       );
       setState((previous) => {
         const changed = Object.fromEntries(
@@ -194,7 +198,7 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
               ...previous,
               changed: {},
               error: undefined,
-              values: controlsValues(contribution.defaultValues, read.value),
+              values: controlsValues(contribution.defaultValues, read.acceptedValue),
             })),
         }
       : undefined,
