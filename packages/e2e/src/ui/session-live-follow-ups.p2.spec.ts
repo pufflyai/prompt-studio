@@ -51,11 +51,24 @@ test("updates active and inactive session tab indicators from live state", async
   const { header, sessions } = await setup(page, request);
   const tab = header.getByRole("tab", { name: "Session A", exact: true });
   const other = header.getByRole("tab", { name: "Session B", exact: true });
+  // A cancelled run keeps its status until another run starts.
+  const statuses = [
+    "in_progress",
+    "awaiting_input",
+    "failed",
+    "in_progress",
+    "cancelled",
+    "in_progress",
+    "disconnected",
+    "in_progress",
+    "completed",
+  ];
   for (const active of [false, true]) {
     if (active) await tab.click();
-    for (const status of ["in_progress", "awaiting_input", "failed", "cancelled", "disconnected", "completed"]) {
+    await expect(tab).toHaveAttribute("aria-selected", String(active));
+    for (const status of statuses) {
       const response = await request.patch(`${apiBase}/v1/sessions/${sessions[0]!.id}/status`, { data: { status } });
-      expect(response.ok()).toBe(true);
+      await expect(response).toBeOK();
       await expect(tab.locator(`[aria-label="Session status: ${status}"]`)).toBeVisible();
       await expect(other.locator('[aria-label="Session status: completed"]')).toBeVisible();
     }
