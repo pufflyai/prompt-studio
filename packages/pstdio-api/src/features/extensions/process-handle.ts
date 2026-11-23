@@ -161,15 +161,18 @@ export const spawnProcessHandle = (
   };
 
   let killing: Promise<void> | undefined;
+  let requestedSignal: NodeJS.Signals | undefined;
   let groupFinished = false;
   let outputClosed = Promise.resolve();
   let cleanup: Promise<unknown> = exited.promise;
   if (child && lifetime) {
     const running = child;
     const pumps = Promise.allSettled([pump(running.stdout, "stdout"), pump(running.stderr, "stderr")]);
-    const status = Promise.all([started.promise, lifetime.exited]).then(
-      ([, code]) => {
-        const signal = process.platform === "win32" || running.signalCode == null ? null : String(running.signalCode);
+    const status = Promise.all([started.promise, lifetime.exited, lifetime.jobTerminated]).then(
+      ([, code, jobTerminated]) => {
+        const nativeSignal = running.signalCode == null ? null : String(running.signalCode);
+        const windowsSignal = jobTerminated ? (requestedSignal ?? null) : null;
+        const signal = process.platform === "win32" ? windowsSignal : nativeSignal;
         return { code: signal ? null : code, signal };
       },
       () => ({ code: null, signal: null }),
@@ -191,7 +194,10 @@ export const spawnProcessHandle = (
 
   const stopGroup = async (signal: "SIGTERM" | "SIGINT" | "SIGKILL") => {
     if (!child || groupFinished) return;
-    if (process.platform === "win32") return lifetime?.stop();
+    if (process.platform === "win32") {
+      requestedSignal = signal;
+      return lifetime?.stop();
+    }
     await signalProcessTree(child, signal);
     if (signal !== "SIGKILL") {
       if (await treeExitedWithin(child, KILL_GRACE_MS)) return;
