@@ -179,7 +179,14 @@ export const createCommandEnvironment = (
       files: createFilesApi(deps, input.projectId, signal),
       skills: { list: () => createReadBoundary(signal)(() => deps.skillService.list(input.projectId)) },
       settings,
-      diagnostics: createDiagnosticsApi(input.extensionId, scope),
+      diagnostics: createDiagnosticsApi(
+        {
+          extensionId: input.extensionId,
+          source: enabledSource.installedSource,
+          releaseRegistry: deps.extensionUpgradeService?.registry,
+        },
+        scope,
+      ),
       extensions: {
         list: () => createReadBoundary(signal)(() => listProjectExtensionInventory(deps, input.projectId, signal)),
         // Accepted selections continue after the command ends, so cancellation applies only before acceptance.
