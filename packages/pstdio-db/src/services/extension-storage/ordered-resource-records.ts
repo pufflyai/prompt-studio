@@ -300,7 +300,7 @@ export const createOrderedResourceRecords = (
             tx,
             owner,
             observer: deps.observer,
-            commit: async () => commitIn(journal, tx, await prepareCommitRequest(group)),
+            commit: async () => commitIn(journal, tx, await prepareCommitRequest(structuredClone(group))),
           });
         });
         notifyNativeFileSave(saved, owner, deps, commitCache);
