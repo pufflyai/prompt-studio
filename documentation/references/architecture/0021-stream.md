@@ -48,6 +48,8 @@ Created once in `app.ts` and passed through `RouteDeps` to every endpoint that p
 
 `GET /v1/sync/stream?since=<seq>` — replays missed events from the ring buffer, then switches to live streaming. Heartbeat every 8-seconds.
 
+A client that reads too slowly gets a new `init` snapshot instead of a growing queue. Once more than 5,000 events or 8 MiB wait unread on its connection, the host drops them and sends current state; rows are replaceable, so the snapshot carries what the dropped events would have. Later events follow with higher sequence numbers.
+
 ### Cascade deletes
 
 Before deleting a parent row, the server walks the FK graph depth-first, emits `sync:delete` for each dependent row (children first, parent last), then executes the database delete.
