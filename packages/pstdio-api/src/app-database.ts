@@ -4,7 +4,6 @@ import {
   createAssetTransfersDBService,
   createAutomationDBService,
   createBoardViewsDBService,
-  createDb,
   createDbInWorker,
   createEnvironmentDBService,
   createExtensionAutomationPreferencesDBService,
@@ -45,25 +44,23 @@ const pgliteRecoveryHint = (error: unknown, dbPath: string) => {
   return `PGlite failed to open ${dbPath}. ${pgliteRecoverySteps(dbPath)}.`;
 };
 
-export const openAppDatabase = async (path: string, lifecycle: AppLifecycle = {}, inWorker = false) => {
-  apiLogger.info({ event: "db.open", thread: inWorker ? "worker" : "api" }, "Opening the database");
+// The database runs in its own thread (PS-525): PGlite executes and decodes statements synchronously,
+// so a long query or a burst of writes there leaves requests, health checks and cancellation free.
+export const openAppDatabase = async (path: string, lifecycle: AppLifecycle = {}) => {
   try {
-    // A worker that dies leaves the database unusable and its lock released, so the runtime must stop:
-    // an uncaught error takes the same fatal shutdown path as any other.
-    const onUnexpectedExit = (error: Error) =>
-      setTimeout(() => {
-        throw error;
-      });
-    const open = inWorker
-      ? (input: Parameters<typeof createDb>[0]) => createDbInWorker({ ...input, onUnexpectedExit })
-      : createDb;
-    return await open({
+    return await createDbInWorker({
       path,
       deferCleanup: true,
       onPhase: (phase) => {
         logStartupPhase(phase);
         if (phase === "database_locked") lifecycle.onDatabaseLockAcquired?.();
       },
+      // A worker that dies leaves the database unusable and its lock released, so the runtime must stop:
+      // an uncaught error takes the same fatal shutdown path as any other.
+      onUnexpectedExit: (error) =>
+        setTimeout(() => {
+          throw error;
+        }),
     });
   } catch (err) {
     const hint = pgliteRecoveryHint(err, path);

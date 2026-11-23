@@ -8,7 +8,6 @@ describe("resolveAppConfig", () => {
       env: {
         HOME: resolve("/home/tester"),
         PSTDIO_DB_PATH: "~/data/database",
-        PSTDIO_DATABASE_WORKER: "1",
         PSTDIO_AUTOMATION_RUNS_PER_MINUTE: "12.8",
         PSTDIO_EVENT_BUS_BUFFER_SIZE: "25.9",
         PSTDIO_EXTENSION_RELEASE_REF: "pstdio@1.2.3",
@@ -21,7 +20,7 @@ describe("resolveAppConfig", () => {
 
     expect(config).toEqual({
       automation: { runsPerMinute: 12 },
-      database: { path: resolve("/home/tester/data/database"), worker: true },
+      database: { path: resolve("/home/tester/data/database") },
       extensions: {
         buildWebviews: false,
         release: { source: "workspace", ref: "pstdio@1.2.3", root: "/workspace/pstdio" },
@@ -41,7 +40,6 @@ describe("resolveAppConfig", () => {
     expect(config.extensions.release).toEqual({ source: "git", ref: "pstdio@2.0.0" });
     expect(config.sync.eventBufferSize).toBe(1000);
     expect(config.automation.runsPerMinute).toBe(60);
-    expect(config.database.worker).toBeUndefined();
   });
 
   test("rejects a workspace source without a release ref", () => {
