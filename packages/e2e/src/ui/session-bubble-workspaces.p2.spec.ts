@@ -68,12 +68,19 @@ const verifyMovableSidePanel = async (
   const bounds = (await bubble.boundingBox())!;
   await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
   await page.mouse.down();
-  await page.mouse.move(bounds.x + bounds.width / 2 - 30, bounds.y + bounds.height / 2, { steps: 3 });
-  await expect.poll(() => centerX(bubble)).toBeLessThan(viewport.width / 2 - 20);
+  await page.mouse.move(bounds.x + bounds.width / 2 - 8, bounds.y + bounds.height / 2, { steps: 3 });
+  await expect.poll(() => centerX(bubble)).toBeLessThan(viewport.width / 2 - 4);
   await expect(targets).toHaveCount(3);
   for (const slot of ["left", "center", "right"])
     await expect(page.locator(`[data-side-panel-drop-slot="${slot}"]`)).toBeVisible();
   await expect(page.locator('[data-side-panel-drop-slot="center"]')).toHaveAttribute("data-drop-active", "true");
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  await expect(targets).toHaveCount(0);
+  await expect(page.getByTestId("workbench-side-panel-floating")).toBeHidden();
+  await expect.poll(() => centerX(bubble)).toBeCloseTo(viewport.width / 2, 0);
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+  await page.mouse.down();
   await page.mouse.move(40, bounds.y + bounds.height / 2, { steps: 8 });
   await expect(page.locator('[data-side-panel-drop-slot="left"]')).toHaveAttribute("data-drop-active", "true");
   await page.screenshot({ path: info.outputPath("bubble-drop-targets.png") });

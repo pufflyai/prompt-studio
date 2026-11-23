@@ -105,7 +105,8 @@ movement follows the pointer horizontally and vertically without snap indicators
 Alt+Shift+arrow keys move a focused floating header. The bubble keeps its alignment.
 Resize the floating panel from any edge or corner. Focus a resize handle and use
 arrow keys to resize; Shift uses larger steps. Size and free position persist
-across close/reopen and reload. A smaller viewport fits the panel temporarily
+across close/reopen and reload. Escape cancels an active move or resize.
+A smaller viewport fits the panel temporarily
 without replacing its saved frame. Panel policy can disable resizing.
 The public `floatingSidePanelPreferences` keys store movement (`snap` or `free`)
 and the user frame (`x`, `y`, `width`, `height`); an empty frame uses the default size.

@@ -1,5 +1,6 @@
 import { floatingPanelGeometry } from "@pstdio/ui";
 import { type RefObject, useEffect, useEffectEvent, useLayoutEffect, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import type { WorkbenchCore } from "../../core";
 import { floatingSidePanelPreferences } from "../../core/controllers/side-panel/floating-side-panel-preferences";
 import { runUserAction } from "../../core/shared/run-user-action";
@@ -22,8 +23,10 @@ export const useFloatingSidePanel = (options: FloatingSidePanelOptions) => {
   const movement = useWorkbenchStore(workbench.preferences.store, () =>
     workbench.preferences.getValue(floatingSidePanelPreferences.movement) === "free" ? "free" : "snap",
   );
-  const saved = useWorkbenchStore(workbench.preferences.store, () =>
-    workbench.preferences.getValue(floatingSidePanelPreferences.frame),
+  // Local storage deserializes a fresh frame on each read; snapshots compare its scalar fields.
+  const saved = useWorkbenchStore(
+    workbench.preferences.store,
+    useShallow(() => workbench.preferences.getValue(floatingSidePanelPreferences.frame)),
   );
   const gesture = useFloatingPanelGesture({ workbench, panelRef, movement, visible, resizable });
   const cancelSnap = useEffectEvent(snap.cancelDrag);

@@ -1,3 +1,4 @@
+import { floatingPanelGeometry } from "@pstdio/ui";
 import { type KeyboardEvent, type PointerEvent, useRef, useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import { sidePanelBubblePreferences } from "../../core/controllers/side-panel/side-panel-bubble";
@@ -20,10 +21,20 @@ export const useSidePanelPosition = (workbench: WorkbenchCore) => {
     () => workbench.preferences.getValue(sidePanelBubblePreferences.alignment) as Alignment,
   );
   const [preview, setPreview] = useState<{ alignment: Alignment; offset: number; drop?: Alignment }>();
-  const drag = useRef<{ x: number; width: number; moved: boolean; offset: number } | null>(null);
+  const drag = useRef<{
+    x: number;
+    width: number;
+    moved: boolean;
+    offset: number;
+    target: HTMLElement;
+    pointerId: number;
+  } | null>(null);
   const suppressClick = useRef(false);
   const cancelDrag = () => {
+    const current = drag.current;
     drag.current = null;
+    if (current?.moved) suppressClick.current = true;
+    if (current?.target.hasPointerCapture(current.pointerId)) current.target.releasePointerCapture(current.pointerId);
     setPreview(undefined);
   };
   const save = (value: Alignment) =>
@@ -36,8 +47,8 @@ export const useSidePanelPosition = (workbench: WorkbenchCore) => {
     dropAlignment: preview?.drop,
     cancelDrag,
     frameProps: {
-      left: "6",
-      right: "6",
+      left: `${floatingPanelGeometry.inset}px`,
+      right: `${floatingPanelGeometry.inset}px`,
       ...margins[shownAlignment],
       style: { translate: `${preview?.offset ?? 0}px 0` },
     },
@@ -58,6 +69,8 @@ export const useSidePanelPosition = (workbench: WorkbenchCore) => {
           width: event.currentTarget.ownerDocument.documentElement.clientWidth,
           moved: false,
           offset: 0,
+          target: event.currentTarget,
+          pointerId: event.pointerId,
         };
         event.currentTarget.setPointerCapture(event.pointerId);
       },
@@ -83,6 +96,12 @@ export const useSidePanelPosition = (workbench: WorkbenchCore) => {
         if (drag.current) cancelDrag();
       },
       onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+        if (event.key === "Escape" && drag.current) {
+          event.preventDefault();
+          event.stopPropagation();
+          cancelDrag();
+          return;
+        }
         if (event.target !== event.currentTarget) return;
         if (!event.altKey || !event.shiftKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
         event.preventDefault();

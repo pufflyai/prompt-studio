@@ -87,6 +87,7 @@ export const useFloatingPanelGesture = (options: FloatingPanelGestureOptions) =>
       if (direction ? !resizable : movement !== "free") return;
       event.preventDefault();
       event.stopPropagation();
+      event.currentTarget.focus({ preventScroll: true });
       const origin = readFloatingPanelFrame(panelRef.current);
       gesture.current = {
         movement,
@@ -134,6 +135,12 @@ export const useFloatingPanelGesture = (options: FloatingPanelGestureOptions) =>
       ...pointerProps(),
       cursor: gesture.current ? "grabbing" : "grab",
       onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+        if (event.key === "Escape" && gesture.current) {
+          event.preventDefault();
+          event.stopPropagation();
+          cancel();
+          return;
+        }
         if (event.target !== event.currentTarget || !event.altKey || !event.shiftKey || !panelRef.current) return;
         const delta = arrowDelta(event);
         if (!delta) return;
@@ -151,7 +158,12 @@ export const useFloatingPanelGesture = (options: FloatingPanelGestureOptions) =>
     resizeProps: (direction: FloatingPanelResizeDirection) => ({
       ...pointerProps(direction),
       onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
-        if (event.key === "Escape") return cancel();
+        if (event.key === "Escape" && gesture.current) {
+          event.preventDefault();
+          event.stopPropagation();
+          cancel();
+          return;
+        }
         const delta = arrowDelta(event);
         if (!delta || !resizable || !panelRef.current) return;
         if (delta.x && !/[we]/.test(direction)) return;

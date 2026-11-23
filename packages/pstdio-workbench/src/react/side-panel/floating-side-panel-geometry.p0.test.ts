@@ -6,8 +6,8 @@ const frame = { x: 400, y: 200, width: 480, height: 400 };
 
 test("free movement keeps the entire panel inside the viewport", () => {
   expect(fitFloatingPanel({ ...frame, x: -100, y: 1200 }, viewport)).toEqual({
-    x: 12,
-    y: 388,
+    x: 24,
+    y: 376,
     width: 480,
     height: 400,
   });
@@ -41,18 +41,18 @@ test("resizing stops at the viewport boundary", () => {
   expect(resizeFloatingPanel(frame, "se", { x: 2000, y: 2000 }, viewport)).toEqual({
     x: 400,
     y: 200,
-    width: 868,
-    height: 588,
+    width: 856,
+    height: 576,
   });
 });
 
 test("a smaller viewport fits the panel without overwriting its saved frame", () => {
   const saved = { x: 700, y: 300, width: 480, height: 400 };
   expect(fitFloatingPanel(saved, { width: 300, height: 180 })).toEqual({
-    x: 12,
-    y: 12,
-    width: 276,
-    height: 156,
+    x: 24,
+    y: 24,
+    width: 252,
+    height: 132,
   });
   expect(fitFloatingPanel(saved, viewport)).toEqual(saved);
 });
