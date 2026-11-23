@@ -1,0 +1,9 @@
+.pstdio-terminal-session-notice {
+  position: absolute;
+  inset: 0;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
