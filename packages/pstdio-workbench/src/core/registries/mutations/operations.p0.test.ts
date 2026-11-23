@@ -214,7 +214,80 @@ test("account retirement fences queued execution and isolates recovery even with
   gate.resolve();
   await Promise.resolve();
   expect(laterWrites).toBe(0);
-  expect(operations.getSnapshot().recovery.map(({ draft }) => draft)).toEqual(["Newer"]);
+  expect(operations.getSnapshot().recovery.map(({ draft }) => draft)).toEqual(["Old", "Newer"]);
+});
+
+test("retirement during reconciliation preserves recovery when the old read settles", async () => {
+  const { queries, operations, subject } = setup();
+  const reconciling = Promise.withResolvers<void>();
+  const oldRead = Promise.withResolvers<void>();
+  const attempt = operations.submit({
+    projectId: "project",
+    subjects: [subject],
+    domain: "title",
+    title: "Rename ticket",
+    intent: "Original draft",
+    draft: "Original draft",
+    write: () => undefined,
+    reconcile: () => {
+      reconciling.resolve();
+      return oldRead.promise;
+    },
+  });
+  await reconciling.promise;
+  queries.setAuthority({ accountId: "work" });
+  await expect(attempt.result).rejects.toThrow("authority");
+  oldRead.reject(new Error("Old read failed"));
+  await Promise.resolve();
+  expect(operations.getSnapshot()).toEqual({ pending: [], recovery: [] });
+
+  queries.setAuthority({ accountId: "personal" });
+  expect(operations.getSnapshot().recovery[0]).toMatchObject({
+    id: attempt.id,
+    draft: "Original draft",
+    status: "unconfirmed",
+    canCheck: false,
+  });
+
+  // An explicit new action is owned by the new authority lease.
+  const executed = Promise.withResolvers<void>();
+  const next = operations.submit({
+    projectId: "project",
+    subjects: [subject],
+    domain: "title",
+    title: "Rename ticket",
+    write: () => executed.resolve(),
+  });
+  await Promise.resolve();
+  expect(operations.getSnapshot().pending[0]?.status).toBe("writing");
+  await executed.promise;
+  await next.result;
+  expect(operations.getSnapshot().recovery[0]?.draft).toBe("Original draft");
+});
+
+test("late transport rejection cannot reclassify retired recovery", async () => {
+  const { queries, operations, subject } = setup();
+  const transport = Promise.withResolvers<void>();
+  const attempt = operations.submit({
+    projectId: "project",
+    subjects: [subject],
+    domain: "title",
+    title: "Rename ticket",
+    draft: "Original draft",
+    write: () => transport.promise,
+    classify: () => "rejected",
+  });
+  await Promise.resolve();
+  queries.setAuthority({ accountId: "work" });
+  await expect(attempt.result).rejects.toThrow("authority");
+  transport.reject(new Error("Old write failed"));
+  await Promise.resolve();
+  queries.setAuthority({ accountId: "personal" });
+  expect(operations.getSnapshot().recovery[0]).toMatchObject({
+    id: attempt.id,
+    status: "unknown",
+    draft: "Original draft",
+  });
 });
 
 test("capacity preserves all retained drafts and sends no new write", async () => {

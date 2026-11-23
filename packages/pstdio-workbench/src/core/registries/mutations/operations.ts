@@ -39,6 +39,7 @@ interface Entry {
   sourceCommand?: OperationSourceCommand;
   draft?: unknown;
   releaseOnDiscard?: boolean;
+  acknowledged?: boolean;
   error?: unknown;
   dismissed: boolean;
 }
@@ -122,12 +123,12 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
       scheduled = false;
       const occupied = new Set<string>();
       for (const entry of entries.values()) {
-        if (entry.owner !== owner || entry.preview.status === "rejected") continue;
+        if (entry.owner !== owner || entry.controller.signal.aborted || entry.preview.status === "rejected") continue;
         const { subjects, status } = entry.preview;
         const available = subjects.every((subject) => !occupied.has(subject));
         // Queued multi-resource writes retain their place for every affected subject.
         for (const subject of subjects) occupied.add(subject);
-        if (available && status === "queued" && !entry.controller.signal.aborted) void entry.execute?.();
+        if (available && status === "queued") void entry.execute?.();
       }
     });
   };
@@ -159,7 +160,8 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
       entry.execute = undefined;
       entry.check = undefined;
       if (status === "queued" || status === "writing" || status === "reconciling") {
-        changeStatus(entry, status === "queued" ? "rejected" : "unknown");
+        const outcome = entry.acknowledged ? "unconfirmed" : status === "queued" ? "rejected" : "unknown";
+        changeStatus(entry, outcome);
         entry.error = error;
         entry.reject(error);
       }
@@ -219,20 +221,22 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
       };
       const signal = entry.controller.signal;
       const reconcile = async (value: T) => {
-        if (signal.aborted) return finish(entry);
+        if (signal.aborted) return;
+        entry.acknowledged = true;
         changeStatus(entry, "reconciling");
         entry.check = undefined;
         publish();
-        if (signal.aborted) return finish(entry);
+        if (signal.aborted) return;
         try {
           if (input.reconcile) await input.reconcile(value, signal);
           signal.throwIfAborted();
           await refreshOperationReads(reads, entry.preview, signal, input.originatingRead);
         } catch (error) {
-          if (signal.aborted) return finish(entry);
+          if (signal.aborted) return;
           entry.check = () => reconcile(value);
           return fail(entry, error, "unconfirmed");
         }
+        if (signal.aborted) return;
         finish(entry);
         result.resolve(value);
       };
@@ -261,14 +265,12 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
         entry.execute = undefined;
         changeStatus(entry, "writing");
         publish();
-        if (signal.aborted) {
-          const error = signal.reason;
-          return fail(entry, error, "rejected");
-        }
+        if (signal.aborted) return;
         let value: T;
         try {
           value = await input.write(signal);
         } catch (error) {
+          if (signal.aborted) return;
           const outcome = input.classify?.(error) ?? "unknown";
           if (outcome === "rejected") entry.check = undefined;
           return fail(entry, error, outcome);
