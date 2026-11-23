@@ -2,6 +2,7 @@ import { describe, expect, it, mock } from "bun:test";
 import type { HarnessSession, HarnessStartInput } from "pstdio-api-contracts";
 import type { HarnessContext, HarnessProvider } from "pstdio-api-contracts/extension-kernel";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
+import { failedProcessHandle } from "pstdio-extensions";
 import { createHarnessRegistry } from "./harness-registry";
 
 const session = (overrides?: Partial<HarnessSession>): HarnessSession => ({
@@ -18,6 +19,12 @@ const buildContext = (record: RuntimeHarnessRecord, options?: { projectId?: stri
     run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
     runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
     spawnDetached: async () => ({ pid: 1 }),
+    spawn: () => failedProcessHandle(new Error("No test process configured.")),
+  },
+  targetFiles: {
+    readText: async () => {
+      throw new Error("No test target files configured.");
+    },
   },
   net: { findFreePort: async () => 0 },
   connections: {

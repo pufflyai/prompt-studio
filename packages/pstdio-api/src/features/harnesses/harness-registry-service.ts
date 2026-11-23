@@ -2,17 +2,16 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { AgentAvailabilityType } from "pstdio-api-contracts";
 import { type ExtensionConnectionsApi, isLocalizedString } from "pstdio-api-contracts/extension-kernel";
-import type { HarnessContextFactory, HarnessHandle, HarnessRegistry } from "pstdio-api-runtime-host";
+import type { HarnessHandle, HarnessRegistry } from "pstdio-api-runtime-host";
 import {
   createHarnessRegistry,
   createHarnessSessionResources,
   type HarnessSessionResources,
 } from "pstdio-api-runtime-host";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
-import { markHostContext } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { installMissingDefaultExtensions } from "../extensions/default-extensions";
-import { createProcessApi, findFreePort, hostStartedGrants } from "../extensions/extension-process-api";
+import type { ExtensionTargets } from "../extensions/extension-targets";
 import { resolvePstdioHome } from "../extensions/install-extension-source";
 import { selectExistingSources } from "../extensions/installed-extension-runtime";
 import type {
@@ -25,8 +24,9 @@ import {
   ExtensionRuntimeProjectMissingError,
   resolveEnabledSourceForRecord,
 } from "../extensions/project-extension-runtime-snapshot";
+import { ExtensionRuntimeProjectMissingError } from "../extensions/project-extension-runtime-snapshot";
+import { createHarnessContextFactory } from "./harness-context";
 import { createHarnessRegistryLifecycle } from "./harness-registry-lifecycle";
-import { createHarnessStateApi } from "./harness-state";
 
 export type HarnessScopeOptions = {
   /** Restrict to harnesses from extensions enabled for this project. */
@@ -70,15 +70,6 @@ export const toAvailabilityInfo = (detection: {
   ...(detection.reason ? { reason: detection.reason } : {}),
 });
 
-const harnessLogger = (extensionId: string) => ({
-  info: (message: string, metadata?: Record<string, unknown>) =>
-    apiLogger.info({ ...metadata, extension_id: extensionId }, message),
-  warn: (message: string, metadata?: Record<string, unknown>) =>
-    apiLogger.warn({ ...metadata, extension_id: extensionId }, message),
-  error: (message: string, metadata?: Record<string, unknown>) =>
-    apiLogger.error({ ...metadata, extension_id: extensionId }, message),
-});
-
 const createUnavailableConnections = () =>
   ({
     request: async () => {
@@ -107,37 +98,22 @@ export const createHarnessRegistryService = (input: {
   createConnectionsApi?: (scope: { projectId: string; extensionId: string }) => ExtensionConnectionsApi;
   /** Host values the user allowed a harness extension in a project reach its processes. */
   processEnvironment?: Pick<ProcessEnvironmentPermissions, "grantedNames" | "authorize">;
+  /** Routes session processes and target file reads to a workspace of the calling project. */
+  targets?: ExtensionTargets;
 }): HarnessRegistryService => {
   const unavailableConnections = createUnavailableConnections();
-  // Marked so a process-mode harness reaches this context through its worker's allowlist.
-  const buildContext =
-    (
-      sourceForRecord?: (record: Parameters<HarnessContextFactory>[0]) => ProcessEnvironmentSource | undefined,
-    ): HarnessContextFactory =>
-    (record, options) => {
-      const extensionId = record.extensionId;
-      const logger = harnessLogger(extensionId);
-      const processOptions = {
-        extensionId,
-        ...hostStartedGrants(input.processEnvironment, options?.projectId, sourceForRecord?.(record)),
-      };
-      return markHostContext(
-        {
-          projectId: options?.projectId,
-          extensionId,
-          name: record.name,
-          process: createProcessApi(processOptions),
-          net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
-          connections:
-            options?.projectId && input.createConnectionsApi
-              ? input.createConnectionsApi({ projectId: options.projectId, extensionId })
-              : unavailableConnections,
-          logger,
-          state: createHarnessStateApi(extensionId),
-        },
-        { logger, withScope: (scope) => ({ process: createProcessApi({ ...processOptions, scope }) }) },
-      );
-    };
+  const buildContext = (
+    sourceForRecord?: (record: Parameters<HarnessContextFactory>[0]) => ProcessEnvironmentSource | undefined,
+  ) =>
+    createHarnessContextFactory({
+      connections: (projectId, extensionId) =>
+        projectId && input.createConnectionsApi
+          ? input.createConnectionsApi({ projectId, extensionId })
+          : unavailableConnections,
+      targets: input.targets,
+      processEnvironment: input.processEnvironment,
+      sourceForRecord,
+    });
 
   // Sources registered in the DB only exist once a project synced them, but agents are
   // host-wide and must resolve before the first project: also scan the user extensions root.

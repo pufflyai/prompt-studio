@@ -75,6 +75,13 @@ export {
 } from "./process-environment";
 export { parseProcessEnvironmentDeclaration } from "./process-environment-declaration";
 export {
+  createProcessHandleProxy,
+  createProcessOwner,
+  failedProcessHandle,
+  type ProcessOwner,
+  processError,
+} from "./process-owner";
+export {
   type BuildEnvironmentInput,
   type CommandExecuteInput,
   type CommandRunner,

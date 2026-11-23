@@ -156,6 +156,7 @@ export const createAppCloser = (input: {
   stopQueueReadiness: () => Promise<void>;
   sessionQueueLifecycle: RouteDeps["sessionQueueLifecycle"];
   harnessRegistry: RouteDeps["harnessRegistry"];
+  extensionProcessOwners: Pick<RouteDeps["extensionProcessOwners"], "dispose">;
   extensionInstallations: RouteDeps["extensionInstallations"];
   nativeDocuments: Pick<RouteDeps["nativeDocuments"], "dispose">;
   textEditing: Pick<RouteDeps["textEditing"], "dispose">;
@@ -198,6 +199,7 @@ export const createAppCloser = (input: {
         await traceShutdownPhase("extension_runtime", () => input.extensionRuntime.dispose());
         await traceShutdownPhase("artifact_mounts", () => input.artifactMountWatch.dispose());
         await traceShutdownPhase("extension_scheduler", () => input.extensionScheduler.dispose());
+        await traceShutdownPhase("extension_processes", () => input.extensionProcessOwners.dispose());
         // Workers call back into host storage, so they stop before the database closes.
         await stopBackendWorkers();
         await traceShutdownPhase("automation", () => input.automationService.close());
@@ -309,6 +311,7 @@ export const startAppLifecycle = async (input: {
     stopQueueReadiness,
     sessionQueueLifecycle: input.deps.sessionQueueLifecycle,
     harnessRegistry: input.deps.harnessRegistry,
+    extensionProcessOwners: input.deps.extensionProcessOwners,
     extensionInstallations: input.deps.extensionInstallations,
     nativeDocuments: input.deps.nativeDocuments,
     textEditing: input.deps.textEditing,

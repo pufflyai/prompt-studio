@@ -39,6 +39,95 @@ native diagnostics describe relationships; they do not identify children owned b
 `spawnDetached` is the exception. Its children are meant to outlive the host, so the extension
 owns their lifetime.
 
+## Streaming processes
+
+On `main`, after 0.48.0 (extension API 0.5.1), `ctx.process.spawn(input)` starts a child with
+writable stdin and streamed stdout and stderr. Use it for long-running tools that you talk to while
+they run, such as an agent CLI or a language server. Publish the supporting host and SDK before a
+separately released extension adopts it.
+
+```ts
+const child = ctx.process.spawn({ command: ["my-agent", "--stdio"], env: { MODE: "json" } });
+await child.write(JSON.stringify(request) + "\n");
+for await (const event of child.events()) {
+  if (event.type === "stdout") handle(event.data);
+  if (event.type === "exit") break;
+}
+```
+
+`spawn` returns its handle at once:
+
+- `started` settles when the child runs. It rejects with a coded error when the child cannot start.
+- `exited` settles with `{ code, signal }` after the child and its cleanup finish. It never rejects.
+  A child that never started reports `{ code: null, signal: null }`.
+- `write(data)` writes to stdin in call order and waits for the pipe to accept the data. `end()`
+  closes stdin after earlier writes; later writes reject.
+- `kill(signal?)` stops the child and everything it started. It sends `SIGTERM`, waits 500 ms, then
+  forces the stop. It can be called before `started` settles and resolves after cleanup.
+- `events()` yields `stdout` and `stderr` chunks as `Uint8Array` and always ends with one `exit`
+  event. It has one consumer. Order is kept within each stream, but not between the two streams.
+- `id` identifies the handle to your code. It is not an OS pid, and no host API accepts it. In the
+  [process runtime](0002-manifest-and-installation.md#process-runtime) the worker creates its own id.
+
+The host keeps at most 8 MiB of unread output per child, shared by both streams. At that point it
+stops reading, so the child blocks on its next write until you read more. Stopping the iteration
+early does not stop the child; kill it or let its lifetime end. When the child exits by itself, its
+remaining output is delivered before `exit`. A kill or an ended lifetime discards unread output and
+does not wait for you to read it.
+
+`lifetime` decides who owns the child:
+
+- `call` (default) ends with the command, hook or schedule run that started it. In a harness, a
+  child started by `start`, `resume`, `reattach` or a native command lives until that turn's `done`
+  settles. Children of other harness calls, such as `detect` or `listModels`, end when the call
+  settles.
+- `extension` ends when the extension is disabled or removed, its source content changes, the
+  project is removed, or Prompt Studio shuts down. A rebuild that leaves the source unchanged keeps
+  it. In a harness it lasts for that harness instance in the project. Workspace provider callbacks
+  have no extension lifetime; their children start in the provider's process directory, as `run`
+  does.
+
+A spawn whose owner has already ended fails with `process_owner_closed` and starts nothing.
+
+The child runs on a workspace target. Commands and hooks use their invocation's workspace; pass
+`workspaceId` to choose another workspace of the same project. A harness session passes
+`input.workspace.workspaceId`; detection and model calls pass none and run on this device. A
+workspace of another project fails with `process_target_unavailable`. `cwd` is a path on that target:
+a relative `cwd` resolves against the workspace root, and a `cwd` never moves the child to another
+target.
+
+A remote workspace runs the child through its provider's `spawn` method. When the provider has
+none, the call fails with `process_target_unsupported` and nothing starts on this device.
+`envFromHost` is only available for local children.
+
+The environment is the same as for `run`: the small runtime base, your `env`, and the host values
+you request with `envFromHost`. The host replaces granted values with `[Redacted]` in the streamed
+output, also when a value is split across chunks. A child whose grant is revoked is stopped first.
+
+Error codes on `started`: `process_command_not_found`, `process_target_unsupported`,
+`process_target_unavailable` and `process_owner_closed`.
+
+### Remote workspace providers
+
+A workspace type whose workspaces run elsewhere can add two optional methods:
+
+- `spawn(ctx, { projectId, workspaceId, providerRef, process })` returns a process handle with the
+  same contract. `ctx` is the provider's own context. The host owns the returned handle: it kills it
+  when the caller's lifetime ends, and keeps the provider's call open until the child exits, so
+  local helper processes the provider starts for it live exactly as long.
+- `readText(ctx, { projectId, workspaceId, providerRef, path })` reads a UTF-8 text file on the
+  target for `targetFiles.readText`. Expand `~` on the target.
+
+### Target files
+
+Harness contexts have `ctx.targetFiles.readText({ workspaceId, path })` for files that live with
+the agent on the workspace target, such as native session history. `path` is native to the target:
+`~` expands to the target's home, and a relative path resolves against the workspace root. A local
+workspace reads from this device. A remote workspace reads through its provider's `readText`, or
+fails with `target_file_unsupported`; the host never reads a local file instead. The workspace must
+belong to the calling project. It reads with the same access as other extension file APIs and is
+not a sandbox.
+
 ## Host environment values
 
 A child started with `ctx.process` gets a small set of runtime variables, such as `PATH` and
@@ -54,7 +143,7 @@ name:
    await ctx.process.run({ command: ["claude", "-p", prompt], envFromHost: ["ANTHROPIC_API_KEY"] });
    ```
 
-`run`, `runOrThrow` and `spawnDetached` accept `envFromHost`. Before starting the child, the host
+`run`, `runOrThrow`, `spawnDetached` and `spawn` accept `envFromHost`. Before starting the child, the host
 checks each name against the declaration and against the user's grant for this project and this
 exact extension source. The call then fails, and no child starts, when:
 

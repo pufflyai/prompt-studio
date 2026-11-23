@@ -8,6 +8,7 @@ import { workspaceEvents } from "pstdio-api-contracts/extension-kernel";
 import type { InvocationScope, ScopedHostApis } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createProcessApi } from "../extension-process-api";
+import { resolveProcessTarget } from "../extension-targets";
 import type { ProcessEnvironmentSource } from "../process-environment/permissions";
 import { createSessionsApi } from "./sessions";
 import type { CommandEnvironmentRuntimeDeps } from "./types";
@@ -69,6 +70,15 @@ export const createScopedHostApis = (
     if (signal?.aborted) throw signal.reason;
     return location.root;
   };
+  const target = {
+    projectId: input.projectId,
+    provisioningWorkspaceId: input.eventId === workspaceEvents.provision.id ? input.workspaceId : undefined,
+    eventId: input.eventId,
+  };
+  const resolveTarget = async (workspaceId?: string) => {
+    if (signal?.aborted) throw signal.reason;
+    return resolveProcessTarget(deps, { ...target, workspaceId: workspaceId ?? input.workspaceId });
+  };
   const terminal = hosts.terminal && resolveCwd ? createWorkspaceTerminal(hosts.terminal, resolveCwd) : hosts.terminal;
 
   return {
@@ -78,6 +88,8 @@ export const createScopedHostApis = (
     process: createProcessApi({
       scope,
       resolveCwd,
+      resolveTarget,
+      extensionOwner: () => deps.extensionProcessOwners.owner(input.projectId, input.source),
       extensionId: input.extensionId,
       hostEnvironment: (names) => deps.extensionProcessEnvironment.authorize(input.projectId, input.source, names),
     }),
