@@ -1,4 +1,4 @@
-import { Box, Button, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import type { SessionMessage } from "@pstdio/sdk/extensions";
 import { AlertMessage, EmptyState } from "@pstdio/ui";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
@@ -199,6 +199,7 @@ export const ConversationFailure = () => {
 
 export const ReopenSession = () => {
   const [open, setOpen] = useState(true);
+  const [panelVisible, setPanelVisible] = useState(true);
   const [session] = useState(() =>
     createChatSession({
       initial: {
@@ -219,12 +220,22 @@ export const ReopenSession = () => {
   );
   return (
     <Stack h="100vh" p="sm">
-      <Button alignSelf="start" onClick={() => setOpen((current) => !current)}>
-        {open ? "Close session" : "Reopen session"}
-      </Button>
-      <Box flex="1" minH="0">
+      <HStack>
+        <Button disabled={!panelVisible} onClick={() => setOpen((current) => !current)}>
+          {open ? "Close session" : "Reopen session"}
+        </Button>
+        <Button disabled={!open} onClick={() => setPanelVisible((current) => !current)}>
+          {panelVisible ? "Hide panel" : "Show panel"}
+        </Button>
+      </HStack>
+      <Box flex="1" minH="0" display={panelVisible ? "block" : "none"}>
         <Activity mode={open ? "visible" : "hidden"}>
-          <NativeChatView session={session} conversationKey="reopen-session" action={undefined} visible={open} />
+          <NativeChatView
+            session={session}
+            conversationKey="reopen-session"
+            action={undefined}
+            visible={open && panelVisible}
+          />
         </Activity>
       </Box>
     </Stack>
