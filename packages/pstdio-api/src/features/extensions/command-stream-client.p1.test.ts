@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 
 let handle: Awaited<ReturnType<typeof createTestApp>>;
 let server: ReturnType<typeof Bun.serve>;
@@ -131,7 +132,7 @@ test("the legacy event adapter retains a disconnect cause for webview hosts", as
   expect((await iterator.next()).value).toEqual({ type: "data", data: "first" });
   server.stop(true);
   try {
-    await expect(iterator.next()).rejects.toMatchObject({
+    await expectRejection(iterator.next()).toMatchObject({
       code: "command_stream_disconnected",
       cause: expect.any(Error),
     });

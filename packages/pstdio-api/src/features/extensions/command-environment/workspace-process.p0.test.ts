@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { TerminalSessionRequest } from "pstdio-api-contracts/extension-kernel";
 import { createInvocationScope } from "pstdio-extensions";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createWorkspaceContextFixture } from "../workspace-context.test-fixture";
 import { createCommandEnvironment } from "./index";
 
@@ -90,8 +91,8 @@ for (const change of [
   test(`processes and terminals recheck workspace availability: ${JSON.stringify(change)}`, async () => {
     const env = environment();
     Object.assign(fixture.workspace, change);
-    await expect(env.process.run({ command, cwd: fixture.root })).rejects.toThrow("local process target");
-    await expect(env.process.spawnDetached({ command, cwd: fixture.root })).rejects.toThrow("local process target");
+    await expectRejection(env.process.run({ command, cwd: fixture.root })).toThrow("local process target");
+    await expectRejection(env.process.spawnDetached({ command, cwd: fixture.root })).toThrow("local process target");
     expect(await events(env.terminal!.openSession({ ...terminalRequest, cwd: fixture.root }))).toEqual([
       { kind: "error", message: expect.stringContaining("local process target") },
       { kind: "exit", code: null, signal: null },
@@ -146,5 +147,5 @@ test("closing an invocation during process target resolution prevents a late spa
   const pending = environment().withScope!(scope).process.run({ command });
   await scope.close();
   resolveWorkspace();
-  await expect(pending).rejects.toThrow("Invocation ended");
+  await expectRejection(pending).toThrow("Invocation ended");
 });

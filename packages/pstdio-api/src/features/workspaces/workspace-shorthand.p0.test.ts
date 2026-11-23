@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createWorkspacesApi } from "../extensions/command-environment/workspaces";
 import { createProviderBackedWorkspace } from "./workspace-provider-service";
 
@@ -25,15 +26,15 @@ describe("workspace shorthand identifiers", () => {
       workspaceService: { create, getDefault: async () => null },
       workspaceProviderRuntime: { find },
     } as never;
-    await expect(
+    await expectRejection(
       createProviderBackedWorkspace(deps, {
         projectId: "project-1",
         providerId: "cloud.remote",
         shorthandBase: shorthand,
       }),
-    ).rejects.toThrow("Workspace shorthand");
+    ).toThrow("Workspace shorthand");
     const workspaces = createWorkspacesApi(deps, { projectId: "project-1" }, {} as never);
-    await expect(workspaces.create({ provider_id: "cloud.remote", shorthand_base: shorthand })).rejects.toThrow(
+    await expectRejection(workspaces.create({ provider_id: "cloud.remote", shorthand_base: shorthand })).toThrow(
       "Workspace shorthand",
     );
     expect(create).not.toHaveBeenCalled();

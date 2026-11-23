@@ -11,6 +11,7 @@ import {
   createProjectsDBService,
 } from "pstdio-db";
 import { EventBus } from "../features/sync/event-bus";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { createExtensionService, ProjectNotFoundError } from "./extension-service";
 import { createProjectService } from "./project-service";
 import { createSyncService } from "./sync-service";
@@ -320,7 +321,7 @@ describe("extensionService", () => {
   });
 
   test("fails with ProjectNotFoundError when the project does not exist", async () => {
-    await expect(
+    await expectRejection(
       service.enableInstalledSourceForProject({
         projectId: "missing",
         installName: "planner",
@@ -331,7 +332,7 @@ describe("extensionService", () => {
         sourcePath: "/extensions/planner",
         manifest: {},
       }),
-    ).rejects.toBeInstanceOf(ProjectNotFoundError);
+    ).toBeInstanceOf(ProjectNotFoundError);
   });
 
   test("allows a project to enable same-namespace extensions from different sources", async () => {

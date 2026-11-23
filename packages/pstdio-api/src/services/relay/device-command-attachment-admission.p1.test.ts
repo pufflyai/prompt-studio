@@ -5,6 +5,7 @@ import { DeviceCommandInputError } from "pstdio-sync/relay";
 import { deviceCommandInputLimit } from "pstdio-sync-contracts";
 import { uploadSessionAttachment } from "../../features/sessions/session-attachment-upload";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { DeviceCommandAttachmentError, withDeviceCommandAttachments } from "./device-command-attachments";
 
 test.each([
@@ -37,12 +38,12 @@ test.each([
         attachments,
       },
     };
-    await expect(
+    await expectRejection(
       withDeviceCommandAttachments(app.deps, project.id, command, async () => {
         sent = true;
         return null;
       }),
-    ).rejects.toBeInstanceOf(DeviceCommandInputError);
+    ).toBeInstanceOf(DeviceCommandInputError);
     expect(sent).toBe(false);
   } finally {
     await app.close();
@@ -99,7 +100,7 @@ test.each([
     if (change === "growth") await truncate(path, deviceCommandInputLimit);
     else await rm(path);
     let sent = false;
-    await expect(
+    await expectRejection(
       withDeviceCommandAttachments(
         app.deps,
         project.id,
@@ -112,7 +113,7 @@ test.each([
           return null;
         },
       ),
-    ).rejects.toBeInstanceOf(change === "growth" ? DeviceCommandInputError : DeviceCommandAttachmentError);
+    ).toBeInstanceOf(change === "growth" ? DeviceCommandInputError : DeviceCommandAttachmentError);
     expect(sent).toBe(false);
   } finally {
     await app.close();

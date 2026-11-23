@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { writeFile } from "node:fs/promises";
 import { saveTextDocument } from "pstdio-sync/text";
 import * as Y from "yjs";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { artifactFilesFixture } from "./artifact-files.fixture";
 
 test("a bound artifact projects peer text once and merges outside edits against its physical copy", async () => {
@@ -30,13 +31,13 @@ test("a file source declaration cannot bind transformed bytes as the original as
   const f = await artifactFilesFixture();
   try {
     await f.mount().writeText("note.md", "---\ntitle: Keep\n---\n\nBody");
-    await expect(
+    await expectRejection(
       f.storage.records.bindText({
         recordId: f.recordId("documents/note.md"),
         documentKey: "3".repeat(64),
         content: "Body",
       }),
-    ).rejects.toThrow("full source");
+    ).toThrow("full source");
     expect(await f.mount().readText("note.md")).toBe("---\ntitle: Keep\n---\n\nBody");
   } finally {
     await f.close();
@@ -82,7 +83,7 @@ test.each([
 
     await mount.delete("note.md");
     expect(await mount.exists("note.md")).toBe(false);
-    await expect(f.deps.extensionStorageService.resolveNativeRecordAddress(f.owner, source)).rejects.toMatchObject({
+    await expectRejection(f.deps.extensionStorageService.resolveNativeRecordAddress(f.owner, source)).toMatchObject({
       code: "native_source_retired",
     });
     await mount.writeText("note.md", content);

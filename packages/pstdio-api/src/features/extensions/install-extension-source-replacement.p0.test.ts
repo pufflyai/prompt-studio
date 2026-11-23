@@ -3,6 +3,7 @@ import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, wr
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { installExtensionSource, removePathBestEffort } from "./install-extension-source";
 
 // The host never runs package scripts and installs exactly what a shipped lockfile names.
@@ -207,7 +208,7 @@ describe("installExtensionSource replacement", () => {
   test("preserves the live install when replacement preparation fails", async () => {
     writeExistingInstall();
 
-    await expect(
+    await expectRejection(
       installExtensionSource({
         source,
         force: true,
@@ -215,7 +216,7 @@ describe("installExtensionSource replacement", () => {
         homedir: () => "/unused",
         runCommand: mock(async () => ({ exitCode: 1, stderr: "registry unavailable", stdout: "" })),
       }),
-    ).rejects.toThrow("Dependency install failed");
+    ).toThrow("Dependency install failed");
 
     expect(readFileSync(join(target, "extension.ts"), "utf8")).toContain("old: true");
     expect(readFileSync(join(target, "old.txt"), "utf8")).toBe("old");
@@ -225,14 +226,14 @@ describe("installExtensionSource replacement", () => {
   test("does not publish a new source when dependency installation fails", async () => {
     const runCommand = mock(async () => ({ exitCode: 1, stderr: "registry unavailable", stdout: "" }));
 
-    await expect(
+    await expectRejection(
       installExtensionSource({
         source,
         env: { PSTDIO_HOME: pstdioHome },
         homedir: () => "/unused",
         runCommand,
       }),
-    ).rejects.toThrow("Dependency install failed");
+    ).toThrow("Dependency install failed");
 
     expect(existsSync(join(target, "extension.ts"))).toBe(false);
     expect(runCommand).toHaveBeenCalledWith("bun", ownedCopyInstallArgs, {

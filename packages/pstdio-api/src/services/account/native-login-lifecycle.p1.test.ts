@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createAccountHostFixture } from "./native-host.fixture";
 
 test("replacing sign-in closes the previous callback and exposes one native attempt to every reader", async () => {
@@ -18,7 +19,7 @@ test("replacing sign-in closes the previous callback and exposes one native atte
     expect(host.account.loginStatus(first.id)).toEqual({ status: "failed" });
     const callback = new URL(new URL(first.url).searchParams.get("callback")!);
     // No code is sent: this checks closure without contacting any account service.
-    await expect(fetch(callback)).rejects.toThrow();
+    await expectRejection(fetch(callback)).toThrow();
     expect(await host.account.status()).toMatchObject({ loginAttempt: { id: second.id, status: "pending" } });
     expect(notifications).toBeGreaterThan(before);
     await host.account.cancelLogin(second.id);
@@ -46,7 +47,7 @@ test("concurrent starts admit only the latest callback and logout drains it", as
     await host.account.logout();
     expect(host.account.loginStatus(second.id)).toEqual({ status: "failed" });
     const callback = new URL(new URL(second.url).searchParams.get("callback")!);
-    await expect(fetch(callback)).rejects.toThrow();
+    await expectRejection(fetch(callback)).toThrow();
     expect(await host.account.status()).toEqual({
       login: null,
       cloudProjects: [],

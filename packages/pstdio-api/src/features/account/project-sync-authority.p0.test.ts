@@ -7,6 +7,7 @@ import { Hono } from "hono";
 import { createNativeAccount } from "../../services/account/native-account";
 import type { CloudReturn } from "../../services/account/native-cloud-return";
 import { createNativeStore } from "../../services/account/native-store";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createAccountRoutes } from "./routes";
 
 const fixture = async () => {
@@ -114,10 +115,10 @@ test.each(["sync", "away"] as const)("project sync fences identity changes durin
 test("project sync distinguishes expected local identity from omitted authority", async () => {
   const f = await fixture();
   try {
-    await expect(f.account.projectSyncStatus("project", undefined, null)).rejects.toThrow();
-    await expect(
+    await expectRejection(f.account.projectSyncStatus("project", undefined, null)).toThrow();
+    await expectRejection(
       f.account.projectSyncStatus("project", undefined, { accountId: "other", managerOrigin: f.login.managerOrigin }),
-    ).rejects.toThrow();
+    ).toThrow();
     expect(f.state.syncReads).toBe(0);
     expect(f.state.awayReads).toBe(0);
     expect(await f.account.projectSyncStatus("project")).toMatchObject({ state: "synced", offlineReady: true });
@@ -126,12 +127,12 @@ test("project sync distinguishes expected local identity from omitted authority"
       state: "local",
       offlineReady: false,
     });
-    await expect(
+    await expectRejection(
       f.account.projectSyncStatus("project", undefined, {
         accountId: f.login.accountId,
         managerOrigin: f.login.managerOrigin,
       }),
-    ).rejects.toThrow();
+    ).toThrow();
   } finally {
     await f.close();
   }
@@ -149,7 +150,7 @@ test("the SDK project-sync route validates local and account expectations before
     );
     expect(invalid.status).toBe(400);
     expect(f.state.syncReads).toBe(0);
-    await expect(client.account.projectSyncStatus("project", { expected: null })).rejects.toThrow();
+    await expectRejection(client.account.projectSyncStatus("project", { expected: null })).toThrow();
     expect(f.state.syncReads).toBe(0);
     expect(
       await client.account.projectSyncStatus("project", {

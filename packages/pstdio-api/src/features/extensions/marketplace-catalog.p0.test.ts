@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import catalogData from "../../../files/extension-catalog.json";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { loadExtensionCatalog, packagedExtensionCatalog, parseExtensionCatalog } from "./extension-catalog";
 
 const entry = (installName: string) => ({
@@ -93,7 +94,7 @@ describe("extension catalog", () => {
         pstdioHome,
       });
 
-      await expect(
+      await expectRejection(
         loadExtensionCatalog({
           env: { PSTDIO_EXTENSION_CATALOG: "https://second.example/extensions.json" },
           fetch: async () => {
@@ -101,7 +102,7 @@ describe("extension catalog", () => {
           },
           pstdioHome,
         }),
-      ).rejects.toThrow("second offline");
+      ).toThrow("second offline");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

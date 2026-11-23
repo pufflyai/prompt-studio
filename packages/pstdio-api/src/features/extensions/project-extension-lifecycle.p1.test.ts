@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { type ExtensionRuntime, normalizeExtensionSources } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createTestDocumentStorage } from "../../test-utils/create-test-document-storage";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { loadExtensionSource } from "./extension-runtime";
 import { createProjectExtensionLifecycle } from "./project-extension-lifecycle";
 import { openPublishedCatalog, publishExtension } from "./publication/catalog";
@@ -254,9 +255,9 @@ describe("project extension lifecycle", () => {
     ]);
     const lifecycle = createProjectExtensionLifecycle(deps as never);
 
-    await expect(
+    await expectRejection(
       lifecycle.uninstall({ projectId: "project-1", instanceId: "instance-1", deleteUserData: true }),
-    ).rejects.toThrow("provider-backed workspace");
+    ).toThrow("provider-backed workspace");
     expect(deps.extensionConnectionService.removeExtension).not.toHaveBeenCalled();
     expect(deps.extensionService.uninstallProjectExtension).not.toHaveBeenCalled();
   });
@@ -274,9 +275,9 @@ describe("project extension lifecycle", () => {
       { id: "workspace-1", provider_id: providerId },
     ]);
     const lifecycle = createProjectExtensionLifecycle(deps as never);
-    await expect(
+    await expectRejection(
       lifecycle.uninstall({ projectId: "project-1", instanceId: "instance-1", deleteUserData: true }),
-    ).rejects.toThrow("provider-backed workspace");
+    ).toThrow("provider-backed workspace");
     expect(deps.extensionService.uninstallProjectExtension).not.toHaveBeenCalled();
   });
 
@@ -311,9 +312,9 @@ describe("project extension lifecycle", () => {
     deps.extensionService.uninstallProjectExtension.mockRejectedValue(new Error("extension uninstall failed"));
     const lifecycle = createProjectExtensionLifecycle(deps as never);
 
-    await expect(
+    await expectRejection(
       lifecycle.uninstall({ projectId: "project-1", instanceId: "instance-1", deleteUserData: true }),
-    ).rejects.toThrow("extension uninstall failed");
+    ).toThrow("extension uninstall failed");
     expect(deps.extensionConnectionService.removeExtension).not.toHaveBeenCalled();
   });
 
@@ -391,7 +392,7 @@ describe("published extension lifecycle", () => {
     await publish(project.id, published, "test.prefix-published");
     await install(project.id, "prefix-local", "prefix-local", prefixed);
 
-    await expect(lifecycle.setEnabled(project.id, published, true)).rejects.toThrow("prefix");
+    await expectRejection(lifecycle.setEnabled(project.id, published, true)).toThrow("prefix");
     expect((await selection(project.id, "test.prefix-published")).value).toMatchObject({ enabled: false });
   });
 
@@ -439,9 +440,9 @@ describe("published extension lifecycle", () => {
     await publish(project.id, instanceId, "test.busy");
     const published = await selection(project.id, "test.busy");
 
-    await expect(
+    await expectRejection(
       failingUninstall().uninstall({ projectId: project.id, instanceId, deleteUserData: true }),
-    ).rejects.toThrow("source folder is busy");
+    ).toThrow("source folder is busy");
     expect(await selection(project.id, "test.busy")).toMatchObject({ deleted: false, value: published.value });
   });
 
@@ -454,7 +455,7 @@ describe("published extension lifecycle", () => {
       await app.deps.projectService.delete(project.id);
     });
 
-    await expect(lifecycle.uninstall({ projectId: project.id, instanceId, deleteUserData: true })).rejects.toThrow(
+    await expectRejection(lifecycle.uninstall({ projectId: project.id, instanceId, deleteUserData: true })).toThrow(
       "source folder is busy",
     );
   });
@@ -473,7 +474,7 @@ describe("published extension lifecycle", () => {
       });
     });
 
-    await expect(lifecycle.uninstall({ projectId: project.id, instanceId, deleteUserData: true })).rejects.toThrow(
+    await expectRejection(lifecycle.uninstall({ projectId: project.id, instanceId, deleteUserData: true })).toThrow(
       "source folder is busy",
     );
     expect(await selection(project.id, "test.raced")).toMatchObject({ deleted: false, value: newer });

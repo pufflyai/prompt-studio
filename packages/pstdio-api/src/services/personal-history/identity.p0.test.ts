@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { EventBus } from "../../features/sync/event-bus";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createPersonalIdentity } from "./identity";
 
 test("a stale account read cannot overwrite or return an identity after its change notification", async () => {
@@ -60,7 +61,7 @@ test("a transient identity read failure does not poison later reads without an a
     eventBus: new EventBus(),
     changed: () => {},
   });
-  await expect(identity.read()).rejects.toThrow("Transient login read");
+  await expectRejection(identity.read()).toThrow("Transient login read");
   expect(await identity.read()).toBeNull();
   expect(calls).toBe(2);
 });

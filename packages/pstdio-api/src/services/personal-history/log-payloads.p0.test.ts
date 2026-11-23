@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createSessionLogFiles } from "./log-files";
 
 test("personal generic log payloads persist as immutable files outside SQL entry pointers", async () => {
@@ -14,7 +15,7 @@ test("personal generic log payloads persist as immutable files outside SQL entry
     expect(pointer.byteLength).toBeLessThan(100);
     expect(await createSessionLogFiles(root).payloads("account", "session").decode(pointer)).toEqual(value);
     expect(await files.readPosition("account", "session")).toEqual({ after: 0 });
-    await expect(payloads.decode(new TextEncoder().encode("../../another-account"))).rejects.toThrow("pointer");
+    await expectRejection(payloads.decode(new TextEncoder().encode("../../another-account"))).toThrow("pointer");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

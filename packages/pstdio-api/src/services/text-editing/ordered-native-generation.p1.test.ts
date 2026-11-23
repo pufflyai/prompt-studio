@@ -7,6 +7,7 @@ import { createDb, createExtensionStorageDBService, projects } from "pstdio-db";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { createRecordStreamSync } from "pstdio-sync/relay";
 import * as Y from "yjs";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { numberRelayFixture } from "../relay/resource-number-sync.fixture";
 import { selected, textEditingFixture } from "./text-editing.test-fixture";
 
@@ -137,10 +138,10 @@ test("a real refused field group fences SDK deltas and full-state reopen while p
       input: { grant: grant! },
       sourceState: Buffer.from(Y.encodeStateAsUpdate(session.getSnapshot().text.doc!)).toString("base64"),
     };
-    await expect(
+    await expectRejection(
       f.text.request(freshAddress, { ...recovery, generation: opened!.snapshot.generation }),
-    ).rejects.toMatchObject({ code: "source_retired" });
-    await expect(f.text.request(freshAddress, recovery)).rejects.toMatchObject({ code: "source_retired" });
+    ).toMatchObject({ code: "source_retired" });
+    await expectRejection(f.text.request(freshAddress, recovery)).toMatchObject({ code: "source_retired" });
     expect(await canonical.read()).toBe("source");
     const healthy = await f.text.request(freshAddress, { operation: "open", memberId, input: { grant: grant! } });
     const healthyDocument = new Y.Doc();

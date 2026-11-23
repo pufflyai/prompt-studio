@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { nativeAccountFile } from "./native-account";
 import { createNativeStore } from "./native-store";
 
@@ -35,7 +36,7 @@ test("device signing keys persist privately and an old login cannot create keys 
       await crypto.subtle.verify("Ed25519", trusted, await crypto.subtle.sign("Ed25519", key, message), message),
     ).toBe(true);
     await store.save({ ...login, token: "new-login" });
-    await expect(store.signingKeys(login.token)).rejects.toThrow("Device login changed");
+    await expectRejection(store.signingKeys(login.token)).toThrow("Device login changed");
     expect((await store.signingKeys("new-login")).publicKey).not.toBe(first.publicKey);
   } finally {
     await rm(root, { recursive: true, force: true });

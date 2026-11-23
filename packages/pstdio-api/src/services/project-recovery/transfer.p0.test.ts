@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { captureRecoveryFolder } from "./capture";
 import { createRecoveryChunkStore, type RecoveryChunk, recoveryChunkBytes } from "./chunks";
 import { nativeRecoverySupported } from "./native-recovery.fixture";
@@ -74,9 +75,9 @@ test("publication waits for every acknowledged child, reuses a retained candidat
     published.push(reference);
   };
   f.lose();
-  await expect(
+  await expectRejection(
     publishRecoveryCapture({ chunks: f.chunks, candidate: f.candidate, transport: f.transport, complete }),
-  ).rejects.toThrow("Acknowledgement lost");
+  ).toThrow("Acknowledgement lost");
   expect(published).toEqual([]);
   expect(f.remote.has(f.candidate.blobId)).toBe(false);
   const first = f.puts[0]!;
@@ -135,7 +136,7 @@ test("download rejects corrupted encrypted bytes and cancellation never publishe
   let completed = false;
   const controller = new AbortController();
   controller.abort(new Error("Capture cancelled"));
-  await expect(
+  await expectRejection(
     publishRecoveryCapture({
       chunks: f.chunks,
       candidate: f.candidate,
@@ -145,7 +146,7 @@ test("download rejects corrupted encrypted bytes and cancellation never publishe
         completed = true;
       },
     }),
-  ).rejects.toThrow("Capture cancelled");
+  ).toThrow("Capture cancelled");
   expect(completed).toBe(false);
   await publishRecoveryCapture({
     chunks: f.chunks,
@@ -154,7 +155,7 @@ test("download rejects corrupted encrypted bytes and cancellation never publishe
     complete: async () => {},
   });
   const receiver = await createRecoveryChunkStore({ root: join(f.root, "receiver"), space: f.chunks.space });
-  await expect(
+  await expectRejection(
     downloadRecoveryCapture({
       chunks: receiver,
       candidate: f.candidate,
@@ -167,5 +168,5 @@ test("download rejects corrupted encrypted bytes and cancellation never publishe
         },
       },
     }),
-  ).rejects.toThrow();
+  ).toThrow();
 });

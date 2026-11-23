@@ -3,6 +3,7 @@ import * as fs from "node:fs/promises";
 import { lstat, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import {
   inspectManagedProjectFolder,
   prepareManagedProjectFolder,
@@ -18,13 +19,13 @@ test("a failed ownership record can be retried without leaving an unowned app-cr
   const ownership = join(root, "project-folder-ownership");
   try {
     await mkdir(join(ownership, `project-${id}`), { recursive: true });
-    await expect(prepareManagedProjectFolder(id)).rejects.toBeDefined();
-    await expect(lstat(folder)).rejects.toMatchObject({ code: "ENOENT" });
+    await expectRejection(prepareManagedProjectFolder(id)).toBeDefined();
+    await expectRejection(lstat(folder)).toMatchObject({ code: "ENOENT" });
     await rm(join(ownership, `project-${id}`), { recursive: true });
     const prepared = await prepareManagedProjectFolder(id);
     expect(await inspectManagedProjectFolder(id, prepared)).toEqual({ removesManagedFolder: true });
     await removeManagedProjectFolder(id, prepared);
-    await expect(lstat(folder)).rejects.toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(folder)).toMatchObject({ code: "ENOENT" });
     await mkdir(folder);
     await writeFile(join(folder, "user.txt"), "Keep pre-existing files");
     await prepareManagedProjectFolder(id);
@@ -95,16 +96,16 @@ test("interrupted cleanup resumes its claimed folder and leaves a replacement in
     await remove(path, options);
   });
   try {
-    await expect(removeManagedProjectFolder(id, prepared)).rejects.toThrow("Interrupted deletion");
+    await expectRejection(removeManagedProjectFolder(id, prepared)).toThrow("Interrupted deletion");
     deleting.mockRestore();
-    await expect(prepareManagedProjectFolder(id)).rejects.toThrow("cleanup is incomplete");
+    await expectRejection(prepareManagedProjectFolder(id)).toThrow("cleanup is incomplete");
     expect(claimedPath).not.toBe(folder);
     expect(await readFile(join(String(claimedPath), "owned.txt"), "utf8")).toBe("Owned contents");
     await mkdir(folder);
     await writeFile(join(folder, "user.txt"), "Replacement survives retry");
     await removeManagedProjectFolder(id, prepared);
     expect(await readFile(join(folder, "user.txt"), "utf8")).toBe("Replacement survives retry");
-    await expect(lstat(String(claimedPath))).rejects.toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(String(claimedPath))).toMatchObject({ code: "ENOENT" });
   } finally {
     deleting.mockRestore();
     if (previous === undefined) delete process.env.PSTDIO_HOME;
@@ -133,11 +134,11 @@ test("a folder replaced just before claiming is retained and cleanup reports inc
     await rename(from, to);
   });
   try {
-    await expect(removeManagedProjectFolder(id, prepared)).rejects.toThrow("Files were retained");
+    await expectRejection(removeManagedProjectFolder(id, prepared)).toThrow("Files were retained");
     expect(await readFile(join(String(claimedPath), "user.txt"), "utf8")).toBe("Retain this replacement");
     expect(await readFile(join(root, "original", "owned.txt"), "utf8")).toBe("Original contents");
     moving.mockRestore();
-    await expect(removeManagedProjectFolder(id, prepared)).rejects.toThrow("Files were retained");
+    await expectRejection(removeManagedProjectFolder(id, prepared)).toThrow("Files were retained");
     expect(await readFile(join(String(claimedPath), "user.txt"), "utf8")).toBe("Retain this replacement");
   } finally {
     moving.mockRestore();
@@ -181,13 +182,13 @@ test("another process holds managed preparation and removal until its claim leas
     ]);
     clearTimeout(watchdog);
     expect(new TextDecoder().decode(output.value).trim()).toBe("owned");
-    await expect(removeManagedProjectFolder(id, folder)).rejects.toThrow("Another Prompt Studio process");
-    await expect(prepareManagedProjectFolder(id)).rejects.toThrow("Another Prompt Studio process");
+    await expectRejection(removeManagedProjectFolder(id, folder)).toThrow("Another Prompt Studio process");
+    await expectRejection(prepareManagedProjectFolder(id)).toThrow("Another Prompt Studio process");
     expect(await readFile(join(folder, "owned.txt"), "utf8")).toBe("Retain while another owner is active");
     child.kill("SIGKILL");
     await child.exited;
     await removeManagedProjectFolder(id, folder);
-    await expect(lstat(folder)).rejects.toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(folder)).toMatchObject({ code: "ENOENT" });
   } finally {
     clearTimeout(watchdog);
     child.kill("SIGKILL");
@@ -223,14 +224,14 @@ test("ownership survives a failed marker publication when rollback also fails", 
     return remove(path, ...args);
   });
   try {
-    await expect(prepareManagedProjectFolder(id)).rejects.toThrow("Marker publication denied");
+    await expectRejection(prepareManagedProjectFolder(id)).toThrow("Marker publication denied");
     writing.mockRestore();
     moving.mockRestore();
     removing.mockRestore();
     const prepared = await prepareManagedProjectFolder(id);
     expect(await inspectManagedProjectFolder(id, prepared)).toEqual({ removesManagedFolder: true });
     await removeManagedProjectFolder(id, prepared);
-    await expect(lstat(folder)).rejects.toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(folder)).toMatchObject({ code: "ENOENT" });
   } finally {
     writing.mockRestore();
     moving.mockRestore();

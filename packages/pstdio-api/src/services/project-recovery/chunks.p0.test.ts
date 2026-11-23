@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createRecoveryChunkStore, recoveryChunkBytes } from "./chunks";
 
 const roots: string[] = [];
@@ -40,7 +41,7 @@ test("another device can verify retained chunks but another account cannot decry
   const encrypted = await first.encrypted(reference);
   await second.receive(reference, encrypted);
   expect(await second.read(reference)).toEqual(plain);
-  await expect(other.receive(reference, encrypted)).rejects.toThrow();
+  await expectRejection(other.receive(reference, encrypted)).toThrow();
   expect((await other.stage(plain)).blobId).not.toBe(reference.blobId);
 });
 
@@ -50,28 +51,28 @@ test("a changed ciphertext or declared extent never becomes a complete recovery 
   const reference = await first.stage(new TextEncoder().encode("intact"));
   const encrypted = await first.encrypted(reference);
   encrypted[encrypted.length - 1] ^= 1;
-  await expect(second.receive(reference, encrypted)).rejects.toThrow();
-  await expect(
+  await expectRejection(second.receive(reference, encrypted)).toThrow();
+  await expectRejection(
     second.receive({ ...reference, byteLength: reference.byteLength + 1 }, await first.encrypted(reference)),
-  ).rejects.toThrow();
+  ).toThrow();
   const path = join(first.directory, `${reference.blobId}.blob`);
   const bytes = await readFile(path);
   bytes[bytes.length - 1] ^= 1;
   await writeFile(path, bytes);
-  await expect(first.read(reference)).rejects.toThrow();
+  await expectRejection(first.read(reference)).toThrow();
 });
 
 test("staging keeps one bounded chunk and refuses a project-wide encryption audience", async () => {
   const chunks = await store();
   const full = new Uint8Array(recoveryChunkBytes).fill(27);
   expect(await chunks.read(await chunks.stage(full))).toEqual(full);
-  await expect(chunks.stage(new Uint8Array(recoveryChunkBytes + 1))).rejects.toThrow();
+  await expectRejection(chunks.stage(new Uint8Array(recoveryChunkBytes + 1))).toThrow();
   const space = await createSyncSpace({
     projectId: "project",
     spaceOwner: null,
     keys: [{ generation: 1, secret: "A".repeat(43) }],
   });
-  await expect(createRecoveryChunkStore({ root: chunks.root, space })).rejects.toThrow();
+  await expectRejection(createRecoveryChunkStore({ root: chunks.root, space })).toThrow();
 });
 
 test("file bytes matching a manifest page keep an independent immutable retention role", async () => {

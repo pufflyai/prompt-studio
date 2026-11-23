@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createWorkspaceMaintenance } from "../../services/workspace-maintenance";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createWorkspacesApi } from "../extensions/command-environment/workspaces";
 import { deleteWorkspaceHandler } from "./endpoints/delete-workspace";
 import { deleteWorkspace } from "./workspace-deletion";
@@ -97,7 +98,7 @@ test("a queued deletion honors a capability revoked during maintenance", async (
   });
   release.resolve();
   await writer;
-  await expect(deletion).rejects.toThrow("Workspace provider does not allow deletion.");
+  await expectRejection(deletion).toThrow("Workspace provider does not allow deletion.");
   expect(providerCalls).toBe(0);
 });
 
@@ -148,7 +149,7 @@ test("forgetting rechecks the latest workspace and preserves a recovered provide
     },
   } as never;
 
-  await expect(deleteWorkspace(deps, old as never, { forget: true })).rejects.toThrow(/no backing reference/);
+  await expectRejection(deleteWorkspace(deps, old as never, { forget: true })).toThrow(/no backing reference/);
   expect(deleted).toBe(false);
 });
 
@@ -192,7 +193,7 @@ test.each(["cancel", "archive"])("forget retries unfinished session cleanup afte
     },
   } as never;
 
-  await expect(deleteWorkspace(deps, workspace as never, { forget: true })).rejects.toThrow(
+  await expectRejection(deleteWorkspace(deps, workspace as never, { forget: true })).toThrow(
     `temporary ${phase} failure`,
   );
   await deleteWorkspace(deps, workspace as never, { forget: true });

@@ -3,6 +3,7 @@ import * as fs from "node:fs/promises";
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { acquireRecoveryJournalLease, openRecoveryJournal, recoveryJournalKey } from "./journal";
 import { projectRecoveryRoot, removeProjectFolderRecovery } from "./project-paths";
 
@@ -40,7 +41,7 @@ test("removing project recovery retains a foreign process's journal and lease un
     expect(new TextDecoder().decode(output.value).trim()).toBe("owned");
     const bytes = await readFile(path, "utf8");
     const inode = (await stat(leasePath)).ino;
-    await expect(removeProjectFolderRecovery(root, "project")).rejects.toThrow("Another Prompt Studio process");
+    await expectRejection(removeProjectFolderRecovery(root, "project")).toThrow("Another Prompt Studio process");
     expect(await readFile(path, "utf8")).toBe(bytes);
     expect((await stat(leasePath)).ino).toBe(inode);
     child.kill("SIGKILL");
@@ -92,12 +93,12 @@ test("independent source owners can share a project while removal waits for both
   try {
     expect(first).not.toBeNull();
     expect(second).not.toBeNull();
-    await expect(removeProjectFolderRecovery(root, "project")).rejects.toThrow("Another Prompt Studio process");
+    await expectRejection(removeProjectFolderRecovery(root, "project")).toThrow("Another Prompt Studio process");
     await first!();
-    await expect(removeProjectFolderRecovery(root, "project")).rejects.toThrow("Another Prompt Studio process");
+    await expectRejection(removeProjectFolderRecovery(root, "project")).toThrow("Another Prompt Studio process");
     await second!();
     await removeProjectFolderRecovery(root, "project");
-    await expect(stat(owned)).rejects.toMatchObject({ code: "ENOENT" });
+    await expectRejection(stat(owned)).toMatchObject({ code: "ENOENT" });
   } finally {
     await first?.();
     await second?.();

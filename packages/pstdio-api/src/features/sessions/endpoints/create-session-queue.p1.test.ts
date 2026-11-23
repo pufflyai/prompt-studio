@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessExit, HarnessSession, HarnessStartInput } from "pstdio-api-contracts";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import {
   createTestHarnessRecord,
@@ -145,7 +146,7 @@ describe("POST /v1/sessions queueing", () => {
       agent: FAKE_ID,
     });
 
-    await expect(handle.deps.sessionService.transitionStatus(session.id, "queued")).rejects.toThrow(
+    await expectRejection(handle.deps.sessionService.transitionStatus(session.id, "queued")).toThrow(
       "Queued status is scheduler-owned",
     );
   });

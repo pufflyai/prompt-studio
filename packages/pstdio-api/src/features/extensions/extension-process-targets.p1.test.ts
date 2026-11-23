@@ -6,6 +6,7 @@ import { join, relative } from "node:path";
 import { EXTENSION_API_VERSION, type ProcessExit, type ProcessHandle } from "pstdio-api-contracts/extension-kernel";
 import { createProcessOwner } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { remoteReadOnlyCapabilities } from "../workspaces/workspace-provider-identity";
 import { createProcessApi } from "./extension-process-api";
 import { createExtensionProcessOwners } from "./extension-process-owners";
@@ -268,9 +269,9 @@ test("a workspace of another project is rejected before anything starts", async 
   });
   expect(result.startError).toBe("process_target_unavailable");
   expect(existsSync(marker)).toBe(false);
-  await expect(
+  await expectRejection(
     readTargetText(handle.deps, { projectId: projects.main, workspaceId: workspaces.other, path: "notes.txt" }),
-  ).rejects.toMatchObject({ code: "target_file_unavailable" });
+  ).toMatchObject({ code: "target_file_unavailable" });
 });
 
 test("a remote workspace's provider starts the child with its own context and providerRef; a cwd never runs locally", async () => {
@@ -301,9 +302,9 @@ test("a remote workspace without provider support fails clearly instead of runni
   });
   expect(result.startError).toBe("process_target_unsupported");
   expect(existsSync(marker)).toBe(false);
-  await expect(
+  await expectRejection(
     readTargetText(handle.deps, { projectId: projects.main, workspaceId: workspaces.bare, path: "~/.claude/x.jsonl" }),
-  ).rejects.toMatchObject({ code: "target_file_unsupported" });
+  ).toMatchObject({ code: "target_file_unsupported" });
 });
 
 test("a command that leaves a spawn opening on an unresponsive provider still ends, and the provider's call is closed", async () => {

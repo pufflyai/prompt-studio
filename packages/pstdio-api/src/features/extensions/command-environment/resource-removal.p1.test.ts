@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createResourcesApi } from "./resources";
 
 test("resource removal publishes a scoped fact to every subscriber and rejects foreign ownership", async () => {
@@ -62,9 +63,9 @@ test("resource removal publishes a scoped fact to every subscriber and rejects f
       }),
     ]);
     expect(received[1]).toEqual(received[0]);
-    await expect(resources.removed({ type: "ticket", id: "one" })).rejects.toThrow("not owned");
-    await expect(resources.removed({ type: "note", id: "one", projectId: "other" })).rejects.toThrow("project");
-    await expect(resources.removed({ type: "note", id: "one", extensionId: "other.extension" })).rejects.toThrow(
+    await expectRejection(resources.removed({ type: "ticket", id: "one" })).toThrow("not owned");
+    await expectRejection(resources.removed({ type: "note", id: "one", projectId: "other" })).toThrow("project");
+    await expectRejection(resources.removed({ type: "note", id: "one", extensionId: "other.extension" })).toThrow(
       "extension",
     );
     expect(received[0]).toHaveLength(1);

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { createInvocationScope } from "pstdio-extensions";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import {
   createTestHarnessRecord,
@@ -30,8 +31,8 @@ const fixture = async () => {
 test("extensions rename, archive, inspect activity, and delete inactive sessions", async () => {
   const { api, session } = await fixture();
   expect(await api.rename(session.id, " Renamed ")).toMatchObject({ title: "Renamed" });
-  await expect(api.rename(session.id, "  ")).rejects.toThrow();
-  await expect(api.delete(session.id)).rejects.toThrow("Stop active or queued work");
+  await expectRejection(api.rename(session.id, "  ")).toThrow();
+  await expectRejection(api.delete(session.id)).toThrow("Stop active or queued work");
   await api.stop(session.id);
   expect(await api.archive(session.id)).toMatchObject({ archived: true });
   expect((await api.listActivity(session.id)).items).toContainEqual(
@@ -98,7 +99,7 @@ test("extensions resolve pending tool approvals", async () => {
   await api.approve(session.id, { id: "approval", decision: "deny" });
   expect(await approval).toMatchObject({ decision: "deny" });
   handle.deps.sessionService.store.remove(session.id);
-  await expect(api.approve(session.id, { id: "approval", decision: "approve" })).rejects.toThrow();
+  await expectRejection(api.approve(session.id, { id: "approval", decision: "approve" })).toThrow();
 });
 
 test("extension follow-ups deliver structured answers to the active native question", async () => {
@@ -125,9 +126,9 @@ test("extensions remove and reorder pending follow-ups with revision guards", as
   await service.insertEntryForActive({ id: session.id, prompt: "Second", request_kind: "follow_up" });
   const { requests } = await api.getQueuedFollowUps(session.id);
   const second = requests[1];
-  await expect(
+  await expectRejection(
     api.moveQueuedFollowUp(session.id, second.queuePosition, { direction: "up", steps: 0 }),
-  ).rejects.toThrow();
+  ).toThrow();
   const moved = await api.moveQueuedFollowUp(session.id, second.queuePosition, {
     direction: "up",
     expectedRevision: second.revision,
@@ -135,7 +136,7 @@ test("extensions remove and reorder pending follow-ups with revision guards", as
   });
   expect(moved.queuePosition).toBe(requests[0].queuePosition);
   expect((await api.getQueuedMessages(session.id)).messages).toHaveLength(2);
-  await expect(api.removeQueuedFollowUp(session.id, moved.queuePosition, "stale")).rejects.toThrow();
+  await expectRejection(api.removeQueuedFollowUp(session.id, moved.queuePosition, "stale")).toThrow();
   const updated = (await api.getQueuedFollowUps(session.id)).requests[0];
   expect(updated.prompt).toBe("Second");
   await api.removeQueuedFollowUp(session.id, updated.queuePosition, updated.revision);
@@ -147,8 +148,8 @@ test("extensions upload, read, submit, and delete project session attachments", 
   const attachment = await api.uploadAttachment({ name: "note.txt", data: new TextEncoder().encode("A note") });
   expect(new TextDecoder().decode(await api.readAttachment(attachment.fileId))).toBe("A note");
   await api.deleteAttachment(attachment.fileId);
-  await expect(api.readAttachment(attachment.fileId)).rejects.toThrow();
-  await expect(api.uploadAttachment({ name: "file.exe", data: new Uint8Array() })).rejects.toThrow();
+  await expectRejection(api.readAttachment(attachment.fileId)).toThrow();
+  await expectRejection(api.uploadAttachment({ name: "file.exe", data: new Uint8Array() })).toThrow();
 });
 
 test("session operations reject foreign sessions and cancelled invocations", async () => {
@@ -171,7 +172,7 @@ test("session operations reject foreign sessions and cancelled invocations", asy
     () => api.stream(id, () => {}),
     () => api.retainResources(id),
   ])
-    await expect(action()).rejects.toThrow("Session not found");
+    await expectRejection(action()).toThrow("Session not found");
   const controller = new AbortController();
   const cancelled = createSessionsApi(handle.deps, {
     projectId: foreign.project.id,
@@ -179,9 +180,9 @@ test("session operations reject foreign sessions and cancelled invocations", asy
     signal: controller.signal,
   });
   controller.abort();
-  await expect(cancelled.rename(id, "Changed")).rejects.toThrow();
-  await expect(cancelled.getConversation(id)).rejects.toThrow();
-  await expect(cancelled.stream(id, () => {})).rejects.toThrow();
+  await expectRejection(cancelled.rename(id, "Changed")).toThrow();
+  await expectRejection(cancelled.getConversation(id)).toThrow();
+  await expectRejection(cancelled.stream(id, () => {})).toThrow();
   expect((await foreign.api.get(id))?.title).toBe("Session");
 });
 
@@ -211,18 +212,18 @@ test("extensions discover and invoke native commands before and after session cr
     const project = await response.json();
     const api = createSessionsApi(isolated.deps, { projectId: project.id, project: { ...project, shorthand: "NC" } });
     const harness = { harnessId: testHarnessId("commands") };
-    await expect(
+    await expectRejection(
       api.create({ title: "Mixed", harness, prompt: "Work", operation: { kind: "command", text: "/plan" } }),
-    ).rejects.toThrow("cannot be combined");
+    ).toThrow("cannot be combined");
     expect((await api.getDraftHarnessCommands({ harness })).commands[0].name).toBe("/plan");
     expect(await isolated.deps.sessionService.list(project.id)).toBeEmpty();
     const session = await api.create({ title: "Native", harness, operation: { kind: "command", text: "/plan" } });
     expect(session.operationResult).toEqual({ status: "completed", message: "Native result" });
     await api.stream(session.id, () => {});
     expect((await api.getHarnessCommands(session.id)).commands[0].name).toBe("/plan");
-    await expect(
+    await expectRejection(
       api.invokeHarnessOperation(session.id, { kind: "command", text: "/plan" }, "outdated-harness"),
-    ).rejects.toThrow("harness changed");
+    ).toThrow("harness changed");
     expect(await api.invokeHarnessOperation(session.id, { kind: "command", text: "/plan" }, harness.harnessId)).toEqual(
       { status: "completed", message: "Native result" },
     );
@@ -255,15 +256,15 @@ test("session attachment access rejects foreign files and preserves submitted fi
   const { api, session } = await fixture();
   const foreign = await fixture();
   const attachment = await api.uploadAttachment({ name: "note.txt", data: new TextEncoder().encode("A note") });
-  await expect(foreign.api.readAttachment(attachment.fileId)).rejects.toThrow("not found");
-  await expect(foreign.api.deleteAttachment(attachment.fileId)).rejects.toThrow("not found");
+  await expectRejection(foreign.api.readAttachment(attachment.fileId)).toThrow("not found");
+  await expectRejection(foreign.api.deleteAttachment(attachment.fileId)).toThrow("not found");
   await handle.deps.sessionService.insertEntryForActive({
     id: session.id,
     prompt: "Read",
     request_kind: "follow_up",
     attachments_json: [{ file_id: attachment.fileId }],
   });
-  await expect(api.deleteAttachment(attachment.fileId)).rejects.toThrow("already submitted");
+  await expectRejection(api.deleteAttachment(attachment.fileId)).toThrow("already submitted");
 });
 
 test("ending an invocation stops its stream without stopping the session", async () => {

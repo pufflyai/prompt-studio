@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createResourcesApi } from "./resources";
 
 test("resource links use the enabled owner after replacing an extension source", async () => {
@@ -58,7 +59,7 @@ test("resource links name an undeclared kind instead of calling its owner ambigu
     const project = await app.deps.projectService.create({ name: "Undeclared kind" });
     const api = createResourcesApi(app.deps, { projectId: project.id, extensionId: "example.caller" });
     const source = { type: "project", id: project.id };
-    await expect(api.addAnchors(source, [{ type: "missing-kind", id: "target", role: "context" }])).rejects.toThrow(
+    await expectRejection(api.addAnchors(source, [{ type: "missing-kind", id: "target", role: "context" }])).toThrow(
       /no enabled extension declares resource kind "missing-kind"/i,
     );
   } finally {

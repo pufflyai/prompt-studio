@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { HarnessSession } from "pstdio-api-contracts";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { checkpointFileService, createTrackedSessionStore } from "./session-store.test-utils";
 import { reattachAgentSession, resumeAgentSession, spawnAgentSession } from "./spawn-agent";
@@ -132,7 +133,7 @@ describe("workspace readiness gate", () => {
     const { registry, resume } = buildHarness();
     const sessionService = createSessionServiceMock();
 
-    await expect(
+    await expectRejection(
       resumeAgentSession(
         { sessionId: "s_1", agentSessionId: "agent_1", agentId: CLAUDE_CODE_ID, prompt: "continue", cwd: "/repo" },
         {
@@ -143,7 +144,7 @@ describe("workspace readiness gate", () => {
           workspaceSessionService: erroredWorkspace,
         } as unknown as Parameters<typeof resumeAgentSession>[1],
       ),
-    ).rejects.toThrow(/failed to provision/);
+    ).toThrow(/failed to provision/);
 
     expect(resume).not.toHaveBeenCalled();
   });
@@ -153,7 +154,7 @@ describe("workspace readiness gate", () => {
     const registry = createTestHarnessRegistry([createTestHarnessRecord("claude-code", { provider: { reattach } })]);
     const sessionService = createSessionServiceMock();
 
-    await expect(
+    await expectRejection(
       reattachAgentSession({ sessionId: "s_1", agentSessionId: "agent_1", agentId: CLAUDE_CODE_ID, cwd: "/repo" }, {
         harnessRegistry: registry,
         fileService: checkpointFileService,
@@ -161,7 +162,7 @@ describe("workspace readiness gate", () => {
         eventBus: { emit: () => {} },
         workspaceSessionService: erroredWorkspace,
       } as unknown as Parameters<typeof reattachAgentSession>[1]),
-    ).rejects.toThrow(/failed to provision/);
+    ).toThrow(/failed to provision/);
 
     expect(reattach).not.toHaveBeenCalled();
   });
@@ -171,7 +172,7 @@ describe("workspace readiness gate", () => {
     const registry = createTestHarnessRegistry([createTestHarnessRecord("claude-code", { provider: { start } })]);
     const sessionService = createSessionServiceMock();
 
-    await expect(
+    await expectRejection(
       spawnAgentSession({ sessionId: "s_1", agentId: CLAUDE_CODE_ID, prompt: "start", cwd: undefined }, {
         harnessRegistry: registry,
         fileService: checkpointFileService,
@@ -188,7 +189,7 @@ describe("workspace readiness gate", () => {
           }),
         },
       } as unknown as Parameters<typeof spawnAgentSession>[1]),
-    ).rejects.toThrow(/worktree add failed/);
+    ).toThrow(/worktree add failed/);
 
     expect(start).not.toHaveBeenCalled();
   });

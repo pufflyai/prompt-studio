@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defaultLocalWorkspaceCapabilities } from "pstdio-db";
 import { createTestCommandEnvironment } from "../../../test-utils/create-test-command-environment";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { makeWorkspace } from "../../workspaces/workspace-provider.test-fixture";
 
 const roots: string[] = [];
@@ -85,9 +86,9 @@ test("project file mounts recheck capabilities and never fall back from remote t
   await writeFile(join(root, "notes.md"), "home");
   expect(await env.projectFiles!.readText("notes.md")).toBe("home");
   home.provider_capabilities_json.files = "read";
-  await expect(env.projectFiles!.writeText("notes.md", "changed")).rejects.toThrow("write");
+  await expectRejection(env.projectFiles!.writeText("notes.md", "changed")).toThrow("write");
   home.execution_kind = "remote";
-  await expect(env.projectFiles!.readText("notes.md")).rejects.toThrow("local");
+  await expectRejection(env.projectFiles!.readText("notes.md")).toThrow("local");
   expect(await readFile(join(root, "notes.md"), "utf8")).toBe("home");
 });
 

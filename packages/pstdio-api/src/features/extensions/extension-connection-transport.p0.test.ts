@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { contribution, createConnectionTestService } from "./extension-connection-service.test-fixture";
 
 describe("extension connection transport", () => {
@@ -9,14 +10,14 @@ describe("extension connection transport", () => {
       allowedPathPrefixes: [""],
     });
 
-    await expect(
+    await expectRejection(
       service.request({
         projectId: "project-1",
         extensionId: "pstdio.remote",
         connectionId: "control-plane",
         input: { method: "GET", path: "/v1/private" },
       }),
-    ).rejects.toThrow("not allowed");
+    ).toThrow("not allowed");
     expect(fetchFn).not.toHaveBeenCalled();
   });
 
@@ -38,14 +39,14 @@ describe("extension connection transport", () => {
       body: responseBody,
     })) as unknown as typeof fetch);
 
-    await expect(
+    await expectRejection(
       service.request({
         projectId: "project-1",
         extensionId: "pstdio.remote",
         connectionId: "control-plane",
         input: { method: "GET", path: "/v1/workspaces/remote-1" },
       }),
-    ).rejects.toThrow("too large");
+    ).toThrow("too large");
     expect(cancel).toHaveBeenCalled();
   });
 
@@ -61,14 +62,14 @@ describe("extension connection transport", () => {
 
     for (const upstream of inputs) {
       const service = createConnectionTestService((async () => upstream) as unknown as typeof fetch);
-      await expect(
+      await expectRejection(
         service.request({
           projectId: "project-1",
           extensionId: "pstdio.remote",
           connectionId: "control-plane",
           input: { method: "GET", path: "/v1/workspaces/remote-1" },
         }),
-      ).rejects.toThrow("reflected");
+      ).toThrow("reflected");
     }
   });
 
@@ -97,7 +98,7 @@ describe("extension connection transport", () => {
       }
     };
 
-    await expect(consume()).rejects.toThrow("reflected");
+    await expectRejection(consume()).toThrow("reflected");
   });
 
   test("rejects a JSON-escaped credential in a streaming response", async () => {
@@ -130,7 +131,7 @@ describe("extension connection transport", () => {
       }
     };
 
-    await expect(consume()).rejects.toThrow("reflected");
+    await expectRejection(consume()).toThrow("reflected");
     exposed += decoder.decode();
     expect(exposed).not.toContain("credential\\u002dcanary");
   });

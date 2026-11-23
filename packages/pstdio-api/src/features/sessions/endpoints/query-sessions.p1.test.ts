@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { createClient } from "@pstdio/sdk/client";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createSessionsApi } from "../../extensions/command-environment/sessions";
 
 let handle: Awaited<ReturnType<typeof createTestApp>>;
@@ -118,13 +119,13 @@ test("SDK session iteration cancels before fetching and while yielding a cached 
   const beforeStart = new AbortController();
   beforeStart.abort();
   requests = 0;
-  await expect(client.sessions.iterate(project.id, {}, { signal: beforeStart.signal }).next()).rejects.toThrow();
+  await expectRejection(client.sessions.iterate(project.id, {}, { signal: beforeStart.signal }).next()).toThrow();
   expect(requests).toBe(0);
   const controller = new AbortController();
   const iterator = client.sessions.iterate(project.id, {}, { signal: controller.signal });
   expect((await iterator.next()).done).toBe(false);
   controller.abort();
-  await expect(iterator.next()).rejects.toThrow();
+  await expectRejection(iterator.next()).toThrow();
   expect(requests).toBe(1);
 });
 

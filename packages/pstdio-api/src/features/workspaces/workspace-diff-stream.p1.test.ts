@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { createClient } from "@pstdio/sdk/client";
 import { git } from "pstdio-wt";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import type { AppBindings } from "../../types";
 import {
   openSessionStreamHandler,
@@ -87,14 +88,14 @@ test("SDK diff observations share one stream and refresh actual totals after an 
     await writeFile(join(root, "external.txt"), "A new line\n");
     await changed.promise;
     expect((await client.workspaces.diffSummary("workspace", "current"))?.additions).toBe(1);
-    await expect(
+    await expectRejection(
       client.workspaces.watchDiff("workspace", {
         projectId: "wrong",
         signal: secondAbort.signal,
         onReady() {},
         onChange() {},
       }),
-    ).rejects.toThrow("not available");
+    ).toThrow("not available");
     eventBus.emit("workspaces", "delete", { id: "workspace" });
     await second;
   } finally {

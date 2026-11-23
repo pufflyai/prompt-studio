@@ -3,6 +3,7 @@ import { lstat, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createRecoveryChunkStore } from "./chunks";
 import { moveLegacyRecoveryChunks } from "./legacy-project-cache";
 import { removeProjectFolderRecovery } from "./project-paths";
@@ -28,7 +29,7 @@ test("offline cleanup recognizes only the legacy namespace with an authenticated
     // A retry after the move can still remove the entire namespace through the scoped path.
     await moveLegacyRecoveryChunks(root, "evicted", [ownedRoot]);
     await removeProjectFolderRecovery(root, "evicted");
-    await expect(lstat(owned.directory)).rejects.toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(owned.directory)).toMatchObject({ code: "ENOENT" });
     expect(await other.read(otherRoot)).toEqual(bytes);
   } finally {
     await rm(root, { recursive: true, force: true });

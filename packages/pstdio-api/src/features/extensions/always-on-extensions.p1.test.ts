@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { folderProjectInput } from "../../test-utils/folder-project-input";
 import { isAlwaysEnabledExtensionSource } from "./always-on-extensions";
 import { writeExtension } from "./default-extensions-test-fixtures";
@@ -52,7 +53,7 @@ test("host-marked extensions stay enabled in existing and new projects", async (
     process.env.PSTDIO_EXTENSION_CATALOG = join(root, "catalog-required.json");
     writeFileSync(process.env.PSTDIO_EXTENSION_CATALOG, JSON.stringify(catalog));
     // A required provider also wins while discovery is restoring a disabled instance.
-    await expect(deps.extensionService.setProjectExtensionEnabled(optional!.instance.id, true)).rejects.toMatchObject({
+    await expectRejection(deps.extensionService.setProjectExtensionEnabled(optional!.instance.id, true)).toMatchObject({
       name: "AlwaysEnabledExtensionError",
     });
     const claims = await Promise.allSettled([

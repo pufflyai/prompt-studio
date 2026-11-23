@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { HarnessSession } from "pstdio-api-contracts";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { createSessionStore } from "./session-store";
 import { checkpointFileService, createTrackedSessionStore } from "./session-store.test-utils";
@@ -49,7 +50,7 @@ describe("persisted session cancellation", () => {
     await Bun.sleep(0);
     accepted.resolve(pendingSession(stop));
 
-    await expect(spawning).rejects.toThrow("cancelled");
+    await expectRejection(spawning).toThrow("cancelled");
     expect(stop).toHaveBeenCalledTimes(1);
     expect(sessionService.store.setSession).not.toHaveBeenCalled();
   });
@@ -76,7 +77,7 @@ describe("persisted session cancellation", () => {
     await Bun.sleep(0);
     accepted.resolve(pendingSession(stop));
 
-    await expect(resuming).rejects.toThrow("cancelled");
+    await expectRejection(resuming).toThrow("cancelled");
     expect(stop).toHaveBeenCalledTimes(1);
     expect(sessionService.store.setSession).not.toHaveBeenCalled();
   });
@@ -107,7 +108,7 @@ describe("persisted session cancellation", () => {
     store.markCancellationRequested("session_1");
     releaseStatusRead.resolve();
 
-    await expect(spawning).rejects.toThrow("cancelled");
+    await expectRejection(spawning).toThrow("cancelled");
     expect(start).not.toHaveBeenCalled();
     expect(store.get("session_1")).toBeNull();
   });

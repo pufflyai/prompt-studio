@@ -12,6 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { acquireFileMutationLock } from "pstdio-paths";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { ExtensionAlreadyInstalledError, promotePreparedSource } from "./promote-extension-source";
 
 test("a missing-only install recognizes a winner before checking its unused dependency reuse plan", async () => {
@@ -23,7 +24,7 @@ test("a missing-only install recognizes a winner before checking its unused depe
     mkdirSync(join(installed, "node_modules"), { recursive: true });
     writeFileSync(join(prepared, "package.json"), JSON.stringify({ version: "1.0.0" }));
     writeFileSync(join(installed, "package.json"), JSON.stringify({ version: "2.0.0" }));
-    await expect(promotePreparedSource(prepared, installed, false, true)).rejects.toBeInstanceOf(
+    await expectRejection(promotePreparedSource(prepared, installed, false, true)).toBeInstanceOf(
       ExtensionAlreadyInstalledError,
     );
     expect(JSON.parse(readFileSync(join(installed, "package.json"), "utf8")).version).toBe("2.0.0");
@@ -43,7 +44,7 @@ test("a replacement cannot preserve dependencies from a different installed sour
     writeFileSync(join(installed, "package.json"), JSON.stringify({ dependencies: { demo: "2.0.0" } }));
     writeFileSync(join(installed, "node_modules/demo/version.txt"), "2.0.0");
 
-    await expect(promotePreparedSource(prepared, installed, true, true)).rejects.toThrow(
+    await expectRejection(promotePreparedSource(prepared, installed, true, true)).toThrow(
       "Installed extension dependencies changed while preparing the replacement",
     );
     expect(JSON.parse(readFileSync(join(installed, "package.json"), "utf8")).dependencies.demo).toBe("2.0.0");
@@ -136,7 +137,7 @@ test("a failed backup rename preserves the installed tool and an unrelated backu
     writeFileSync(join(prepared, "version.txt"), "replacement");
     writeFileSync(join(installed, "version.txt"), "working installation");
     writeFileSync(join(backup, "version.txt"), "unrelated backup");
-    await expect(promotePreparedSource(prepared, installed, true, false)).rejects.toThrow();
+    await expectRejection(promotePreparedSource(prepared, installed, true, false)).toThrow();
     expect(readFileSync(join(installed, "version.txt"), "utf8")).toBe("working installation");
     expect(readFileSync(join(backup, "version.txt"), "utf8")).toBe("unrelated backup");
     expect(readFileSync(join(prepared, "version.txt"), "utf8")).toBe("replacement");

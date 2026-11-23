@@ -6,6 +6,7 @@ import { createTextEditingClient } from "@pstdio/sdk/extensions";
 import type { TextEditingConnectionInput } from "pstdio-api-contracts";
 import type { TextOpenInput } from "pstdio-api-contracts/extension-kernel";
 import { editorView, selected, textEditingFixture } from "../../services/text-editing/text-editing.test-fixture";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createTextStreamTestApp } from "./stream.test-utils";
 
 const fixtures: Awaited<ReturnType<typeof textEditingFixture>>[] = [];
@@ -104,7 +105,7 @@ test("a public session reacquires its source after service restart and recovers 
     // Retire the old stream before renewing the source after the forced socket close.
     await disconnected.promise;
     release.resolve();
-    await expect(flushing).rejects.toBeDefined();
+    await expectRejection(flushing).toBeDefined();
     await f.session.retry();
     expect(f.session.getSnapshot().text.toString()).toBe("once saved selected folder later");
     expect(f.session.getSnapshot().pending).toBe(false);
@@ -131,7 +132,7 @@ test("restart recovery refuses a different source before admitting the retained 
     // Retire the old socket before testing renewed admission's source identity.
     await disconnected.promise;
     f.session.transact((text) => text.insert(0, "keep old recovery "));
-    await expect(f.session.flush()).rejects.toMatchObject({ code: "source_retired" });
+    await expectRejection(f.session.flush()).toMatchObject({ code: "source_retired" });
     expect(f.session.getSnapshot().pending).toBe(true);
     expect(f.session.getSnapshot().text.toString()).toBe("keep old recovery selected folder");
     expect(await readFile(join(f.root, "replacement.txt"), "utf8")).toBe("Replacement source");
@@ -171,7 +172,7 @@ test("close after restart still asks an unopened renewed member to finish or can
     const draft = f.session.createDraft();
     draft.text.insert(0, "tentative ");
     await f.restart();
-    await expect(f.guest.close()).rejects.toMatchObject({ code: "draft_active" });
+    await expectRejection(f.guest.close()).toMatchObject({ code: "draft_active" });
     expect(f.session.getSnapshot().closing).toBe(false);
     expect(draft.text.toString()).toBe("tentative selected folder");
     draft.cancel();
@@ -191,7 +192,7 @@ test("a lost prepared-close acknowledgement keeps input closed until the host co
     }
   });
   try {
-    await expect(f.guest.close()).rejects.toBeDefined();
+    await expectRejection(f.guest.close()).toBeDefined();
     expect(f.session.getSnapshot().closing).toBe(true);
     expect(() => f.session.transact((text) => text.insert(0, "after preparation "))).toThrow();
     await f.guest.close();
