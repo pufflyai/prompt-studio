@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { writeControllerFixture } from "./controller.test-fixture";
 import { runCli } from "./local-cli";
 
 test("controller output preserves Unicode split across stdout and stderr chunks", async () => {
@@ -33,14 +34,15 @@ for (const stream of [process.stdout, process.stderr]) {
 
 test("CLI output keeps characters that span output chunks", async () => {
   const directory = await mkdtemp(join(tmpdir(), "cloud-local-cli-"));
-  const binary = join(directory, "pocketcoder");
-  // Write the two bytes of "é" in separate chunks on both streams.
-  await writeFile(
-    binary,
-    "#!/bin/sh\nprintf '\\303'; printf '\\303' >&2; sleep 0.2; printf '\\251'; printf '\\251' >&2\n",
-    { mode: 0o755 },
-  );
   try {
+    // Write the two bytes of "é" in separate chunks on both streams.
+    const binary = await writeControllerFixture(
+      directory,
+      `for (const stream of [process.stdout, process.stderr]) stream.write(Buffer.from([0xc3]));
+await Bun.sleep(200);
+for (const stream of [process.stdout, process.stderr]) stream.write(Buffer.from([0xa9]));
+`,
+    );
     expect(await runCli(binary, directory, {}, [])).toEqual({ exitCode: 0, stdout: "é", stderr: "é" });
   } finally {
     await rm(directory, { recursive: true, force: true });

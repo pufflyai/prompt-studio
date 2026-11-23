@@ -68,6 +68,8 @@ test.each([
     id: "editable-source",
     kind: "sources",
     rows: [{ install_name: "fixture", source_path: sourcePath }],
+    sourcePaths: [],
+    reconcileAll: true,
   };
   if (phase === "new source attachment") await client.run("watch.update", { ...input, rows: [] }, options);
   if (phase === "reattachment") {
@@ -107,9 +109,11 @@ test("a focused update attaches every newly listed source before reconciling it"
     id: "batch",
     kind: "sources",
     rows: paths.map((path) => ({ install_name: path, source_path: path })),
+    sourcePaths: [],
+    reconcileAll: false,
   };
   await client.run("watch.update", { ...input, rows: [] }, options);
-  await client.run("watch.update", { ...input, sourcePath: paths[0] }, options);
+  await client.run("watch.update", { ...input, sourcePaths: [paths[0]] }, options);
   const changed = Promise.withResolvers<void>();
   const unsubscribe = client.subscribe((event) => {
     if (event.watchId === input.id && event.sourcePath === paths[1]) changed.resolve();
@@ -117,7 +121,7 @@ test("a focused update attaches every newly listed source before reconciling it"
   try {
     await writeFile(join(paths[1]!, "SKILL.md"), "New steps");
     // A later focused refresh must not establish its watch after this edit.
-    await client.run("watch.update", { ...input, sourcePath: paths[1] }, options);
+    await client.run("watch.update", { ...input, sourcePaths: [paths[1]] }, options);
     await changed.promise;
     expect(await readFile(join(paths[1]!, "SKILL.md"), "utf8")).toBe("New steps");
   } finally {
@@ -138,7 +142,8 @@ test("an attachment failure leaves a repaired source eligible for reconciliation
   const input = {
     id: "repair",
     kind: "sources",
-    sourcePath,
+    sourcePaths: [sourcePath],
+    reconcileAll: false,
     rows: [{ install_name: "fixture", source_path: sourcePath }],
   };
   await client.run("watch.update", { ...input, rows: [] }, options);
@@ -174,6 +179,8 @@ test("reattachment identifies offline source changes before slow frontend reconc
     id: "offline",
     kind: "sources",
     rows: [{ install_name: "source", source_path: sourcePath, source_hash: "opaque-source-version" }],
+    sourcePaths: [],
+    reconcileAll: true,
   };
   const options = { home: join(root, "home") };
   const revision = await client.run("runtime.prepare", { sourcePath }, options);

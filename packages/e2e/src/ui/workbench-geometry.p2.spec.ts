@@ -51,17 +51,18 @@ test("reopens the Main right menu from a single-resource page", async ({ page, r
   await expect(ticketLink).toBeVisible();
 
   const mainPanelHeader = page.locator('[data-workbench-panel-header="main"]');
-  const rightMenu = page.locator('[data-workbench-panel-menu="main-right"]');
-  const opener = mainPanelHeader.getByRole("button", { name: "Open Main right menu" });
+  const rightMenu = page.getByRole("region", { name: "Main right menu", exact: true });
+  const opener = mainPanelHeader.getByRole("button", { name: "Open Main right menu: Activity", exact: true });
+  const closer = mainPanelHeader.getByRole("button", { name: "Close Main right menu: Activity", exact: true });
   await expect(rightMenu).toBeVisible();
-  await expect(opener).toHaveCount(0);
+  await expect(closer).toHaveAttribute("aria-expanded", "true");
 
-  await page.getByRole("separator", { name: "Resize Main right menu" }).press("Home");
+  await page.getByRole("separator", { name: "Resize Activity", exact: true }).press("Home");
   await expect(rightMenu).toBeHidden();
   await opener.click();
 
   await expect(rightMenu).toBeVisible();
   await expect(page.getByRole("menu", { name: "Main right menu controls" })).toHaveCount(0);
-  await expect(opener).toHaveCount(0);
+  await expect(closer).toHaveAttribute("aria-expanded", "true");
   await expect(ticketLink).toBeVisible();
 });

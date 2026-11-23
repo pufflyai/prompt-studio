@@ -81,7 +81,7 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
       .where(
         and(isNull(session_queue_entries.dispatch_started_at), isNull(session_queue_entries.steering_delivery_json)),
       )
-      .orderBy(session_queue_entries.created_at, session_queue_entries.queue_position);
+      .orderBy(session_queue_entries.queue_position);
   };
 
   const listPendingBySession = async (sessionId: string) => {

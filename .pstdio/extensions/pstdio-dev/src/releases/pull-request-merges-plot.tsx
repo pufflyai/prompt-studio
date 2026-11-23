@@ -14,9 +14,9 @@ import { PULL_REQUEST_TYPES, type PullRequestMergeBucket, type PullRequestType }
 
 const complexityFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
 const categories: Record<PullRequestType, { label: string; color: string }> = {
-  bug: { label: "Bug", color: "vis.categorical.4" },
-  feature: { label: "Feature", color: "vis.categorical.1" },
-  chore: { label: "Chore", color: "vis.categorical.6" },
+  bug: { label: "Bug", color: "red.500" },
+  feature: { label: "Feature", color: "blue.500" },
+  chore: { label: "Chore", color: "gray.500" },
 };
 const mergeLegend = PULL_REQUEST_TYPES.map((id) => ({ id, ...categories[id] }));
 

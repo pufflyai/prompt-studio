@@ -52,6 +52,7 @@ export const nativeMessagesResponse = (messages: OpencodeSessionMessage[]) => {
 
 export const acceptedPrompt = () => Response.json({ data: { id: "msg_prompt" } });
 export const emptyMessages = () => Response.json({ data: [], cursor: {} });
+export const readyPluginInventory = () => Response.json({ data: [{ id: "native", state: { status: "active" } }] });
 
 const messageParts = (message: OpencodeSessionMessage) => {
   if ("parts" in message) return message.parts ?? [];

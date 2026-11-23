@@ -117,6 +117,7 @@ const PanelViewPortal = (props: {
   sizing?: WorkbenchPanelRenderInput["sizing"];
   region?: ViewRegion;
   active: boolean;
+  placementOpen: boolean;
 }) => {
   const { workbench, placement, slot, headerSlot, headerActive, region, active } = props;
   const view = useWorkbenchStore(workbench.views.store, () =>
@@ -194,6 +195,7 @@ const PanelViewPortal = (props: {
               placement={placement}
               region={region}
               visible={active}
+              placementOpen={props.placementOpen}
               sizing={props.sizing}
             />
           </Activity>
@@ -297,6 +299,7 @@ const ProjectViewHosts = (props: { workbench: WorkbenchCore; slots: ViewSlots })
             key={key}
             workbench={workbench}
             placement={placement}
+            placementOpen={open.has(placement.widgetId)}
             region={region}
             slot={region ? slots.content[region]?.node : undefined}
             sizing={slots.content[region as ViewRegion]?.sizing}
