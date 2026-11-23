@@ -1,0 +1,72 @@
+{
+  "title": "Logo loader",
+  "description": "The Prompt Studio mark as a monochrome loader, driven by a rigid-body simulation. The square turns like a washing machine drum, and the ring cut out of it falls under gravity, is carried up by the moving walls (friction) and bounces off them (restitution). The loop's start spot is solved so one drum cycle returns the ring to where it began. Success: the drum flicks the ring up on a ballistic arc that peaks just above its logo position, and it snaps into place on the way down with a clunk. Failure: the drum spins up off-balance, seizes at a crooked angle, and the ring is slammed into the low corner. Both exits hold their final pose.",
+  "duration": 9.6,
+  "markers": [
+    {
+      "at": 3.2,
+      "label": "Loop"
+    },
+    {
+      "at": 6.4,
+      "label": "Loop"
+    },
+    {
+      "at": 7,
+      "label": "Result"
+    },
+    {
+      "at": 7.33,
+      "label": "Snap"
+    },
+    {
+      "at": 7.7,
+      "label": "Seize"
+    }
+  ],
+  "group": "Brand",
+  "canvas": {
+    "width": 720,
+    "height": 420
+  },
+  "params": [
+    {
+      "id": "drum",
+      "name": "Drum motion",
+      "type": "selection",
+      "options": [
+        {
+          "id": "alternate",
+          "name": "Turn and return"
+        },
+        {
+          "id": "oneway",
+          "name": "One direction"
+        }
+      ],
+      "default": {
+        "left": "oneway",
+        "right": "alternate"
+      }
+    },
+    {
+      "id": "bounce",
+      "name": "Bounce",
+      "type": "selection",
+      "options": [
+        {
+          "id": "lively",
+          "name": "Lively (restitution 0.6)"
+        },
+        {
+          "id": "soft",
+          "name": "Soft (restitution 0.35)"
+        }
+      ],
+      "default": {
+        "left": "soft",
+        "right": "lively"
+      }
+    }
+  ]
+}

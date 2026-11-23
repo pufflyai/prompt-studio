@@ -54,8 +54,11 @@ test("Planner keeps long dependency chains usable with a bounded card window", a
     });
     await signInBrowser(page, started.descriptor);
     await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.planner/ticket-timeline`);
-    const timeline = page.locator('[data-workbench-region="main"]').frameLocator("iframe");
-    await expect(timeline.locator("[data-timeline-viewport]")).toBeVisible();
+    const timeline = page.frameLocator('iframe[title="Project Timeline"]');
+    const viewport = timeline.locator("[data-timeline-viewport]");
+    // Start the graph assertion after the guest mounts, since project registration and webview setup run first.
+    await expect(timeline.getByRole("region", { name: "Loading timeline", exact: true }).or(viewport)).toBeVisible();
+    await expect(viewport).toBeVisible();
     await expectPlannerWindow(timeline, execute, track.id);
     expect(errors).toEqual([]);
   } finally {

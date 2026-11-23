@@ -92,15 +92,16 @@ export const useTreeViewState = (
   const presentationKey = stateScope ?? JSON.stringify([navigation.projectId, treeViewId]);
   const presentation = useTreePresentationState(workbench, presentationKey);
   const stateKey = treeStateKey(treeViewId, stateScope);
-  const declared = useWorkbenchStore(getWorkbenchRenderers(workbench).treeStore, (state) => state.trees[treeViewId]);
+  const { treeStore } = getWorkbenchRenderers(workbench);
+  const declared = useWorkbenchStore(treeStore, (state) => state.trees[treeViewId]);
   const fallback = {
     expandedNodeIds: declared?.defaultExpandedNodeIds ?? [],
     expandedSectionIds: declared?.defaultExpandedSectionIds ?? [],
   };
-  const treeState =
-    useWorkbenchStore(getWorkbenchRenderers(workbench).treeStore, (state) => state.statesByTreeId[stateKey]) ??
-    fallback;
-  return { ...navigation, stateScope, presentationKey, presentation, treeState };
+  const scopedState = useWorkbenchStore(treeStore, (state) => state.statesByTreeId[stateKey]) ?? fallback;
+  // The host's loading flag applies to this tree regardless of its current resource scope.
+  const loading = useWorkbenchStore(treeStore, (state) => state.statesByTreeId[treeViewId]?.loading);
+  return { ...navigation, stateScope, presentationKey, presentation, treeState: { ...scopedState, loading } };
 };
 export const useTreeScrollRestoration = (
   scroll: RefObject<HTMLDivElement | null>,

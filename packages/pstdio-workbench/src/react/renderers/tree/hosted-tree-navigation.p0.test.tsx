@@ -308,6 +308,33 @@ test("resource navigation presentation survives transfer from project navigation
   }
 });
 
+test("a resource-scoped navigation tree reflects the host's loading state", async () => {
+  const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const previous = environment.IS_REACT_ACT_ENVIRONMENT;
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  const w = filesWorkbench(true);
+  let current!: ReturnType<typeof useTreeViewState>;
+  const Probe = () => {
+    current = useTreeViewState(w, "tree", file("src/app.ts"), undefined, true);
+    return null;
+  };
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => {
+      renderer = create(<Probe />);
+    });
+    expect(current.stateScope).toBeDefined();
+    await act(async () => w.treeViews.setLoading("tree", true));
+    expect(current.treeState.loading).toBe(true);
+    await act(async () => w.treeViews.setLoading("tree", false));
+    expect(current.treeState.loading).toBe(false);
+  } finally {
+    await act(async () => renderer?.unmount());
+    await w.dispose();
+    environment.IS_REACT_ACT_ENVIRONMENT = previous;
+  }
+});
+
 test("tree presentation keeps live drafts while expiring old closed-resource filters", async () => {
   const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
   const previous = environment.IS_REACT_ACT_ENVIRONMENT;

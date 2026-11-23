@@ -1,7 +1,9 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { createLevelNavigation, createWorkbench, type WorkbenchCore } from "@pstdio/workbench";
+import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { setDashboardExtensionsRegisteredProject } from "@/shared/extensions/extension-readiness";
 import { registerDashboardSidenav, updateDashboardSidenav } from "./dashboard-sidenav";
 import { treeViewBody, treeViewSections } from "./workbench-view-test-helpers";
 
@@ -30,6 +32,19 @@ const registerModePage = (workbench: WorkbenchCore, modeId: string, pageId: stri
   return page;
 };
 describe("registerDashboardSidenav", () => {
+  test("keeps the navigation loading until the selected project's extension entries are registered", () => {
+    const workbench = createWorkbench();
+    registerDashboardSidenav(workbench);
+    const loading = () => workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).loading;
+
+    selectDashboardProject(workbench, { id: "project-1", name: "One" });
+    expect(loading()).toBe(true);
+    setDashboardExtensionsRegisteredProject(workbench, "project-1");
+    expect(loading()).toBe(false);
+
+    selectDashboardProject(workbench, { id: "project-2", name: "Two" });
+    expect(loading()).toBe(true);
+  });
   test("supplies the same host navigation in every mode that retains host chrome", () => {
     const workbench = createWorkbench();
     const modes = ["project", "acme.notes.mode.review"];
