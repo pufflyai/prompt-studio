@@ -36,8 +36,12 @@ export const relatedScalarMembershipSql = (
   const join = selection.on[0];
   if (selectedSourceValues(sourceWhere, join.sourceField)) return;
   if (join.op || semanticField(source, join.sourceField) || semanticField(target, join.relatedField)) return;
-  const sourceType = queryField(source, join.sourceField).type;
-  const targetType = queryField(target, join.relatedField).type;
+  const sourceField = queryField(source, join.sourceField);
+  const targetField = queryField(target, join.relatedField);
+  // Lookup expressions can produce normalized strings with a different JSON representation.
+  if (sourceField.lookup || targetField.lookup) return;
+  const sourceType = sourceField.type;
+  const targetType = targetField.type;
   if (!(["string", "number", "boolean"] as string[]).includes(sourceType) || sourceType !== targetType) return;
   const left = recordFieldSql(source, join.sourceField, sourceAlias, resolve, owner);
   const right = recordFieldSql(target, join.relatedField, targetAlias, resolve, owner);
