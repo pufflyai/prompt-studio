@@ -1,8 +1,8 @@
-import { Button, Text } from "@chakra-ui/react";
+import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import type { SessionMessage } from "@pstdio/sdk/extensions";
 import { AlertMessage, EmptyState } from "@pstdio/ui";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
-import { useState } from "react";
+import { Activity, useState } from "react";
 import { createChatSession } from "../../../extensions/contributions/chat-session";
 import { NativeChatDraftRecovery } from "./native-chat-draft-recovery";
 import type { NativeChatHostProps } from "./native-chat-host";
@@ -195,4 +195,38 @@ export const ConversationFailure = () => {
     });
   });
   return <NativeChatView session={session} conversationKey="connection-failure" action={undefined} />;
+};
+
+export const ReopenSession = () => {
+  const [open, setOpen] = useState(true);
+  const [session] = useState(() =>
+    createChatSession({
+      initial: {
+        messages: Array.from(
+          { length: 24 },
+          (_, index): SessionMessage => ({
+            id: `reply-${index + 1}`,
+            role: "assistant",
+            parts: [
+              { type: "text", text: `Response ${index + 1}. ${"The workspace review is ready to read. ".repeat(8)}` },
+            ],
+          }),
+        ),
+      },
+      query: async () => ({}),
+      action: async () => ({}),
+    }),
+  );
+  return (
+    <Stack h="100vh" p="sm">
+      <Button alignSelf="start" onClick={() => setOpen((current) => !current)}>
+        {open ? "Close session" : "Reopen session"}
+      </Button>
+      <Box flex="1" minH="0">
+        <Activity mode={open ? "visible" : "hidden"}>
+          <NativeChatView session={session} conversationKey="reopen-session" action={undefined} visible={open} />
+        </Activity>
+      </Box>
+    </Stack>
+  );
 };

@@ -30,12 +30,14 @@ export const ConversationRoot = chakra(
   },
 );
 
-export type ConversationContentProps = Omit<React.ComponentProps<typeof ScrollArea>, "contentProps" | "viewportRef">;
+export type ConversationContentProps = Omit<React.ComponentProps<typeof ScrollArea>, "contentProps" | "viewportRef"> & {
+  followOnShow?: boolean;
+};
 
 export const ConversationContent = (props: ConversationContentProps) => {
-  const { children, ...rest } = props;
+  const { children, followOnShow = false, ...rest } = props;
   const { contentRef, scrollRef } = useStickToBottomContext();
-  useConversationVisibility();
+  useConversationVisibility(followOnShow);
 
   return (
     <ScrollArea

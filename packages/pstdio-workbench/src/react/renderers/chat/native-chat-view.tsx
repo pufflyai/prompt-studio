@@ -192,6 +192,7 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
         return (
           <ChatPanel
             conversationKey={conversationKey}
+            followOnShow
             onVisibleMessageIdsChange={observation.onVisibleMessageIdsChange}
             onVisibleQuestionChange={observation.onVisibleQuestionChange}
             linkHandler={host.linkHandler ?? props.linkHandler}

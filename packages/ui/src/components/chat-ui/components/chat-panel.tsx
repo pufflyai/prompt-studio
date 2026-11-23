@@ -29,6 +29,8 @@ import { WorkingIndicator } from "./working-indicator";
 export interface ChatPanelProps extends ChatLinkProps {
   /** Stable conversation identity used to reset ready state when switching sessions. */
   conversationKey?: string;
+  /** Return to the latest message when a retained conversation is shown again. */
+  followOnShow?: boolean;
   messages: SessionMessage[];
   /** IDs intersecting the settled conversation viewport, excluding virtual overscan. */
   onVisibleMessageIdsChange?: (ids: string[]) => void;
@@ -261,7 +263,10 @@ export const ChatPanel = (props: ChatPanelProps) => {
           <Flex className="ps-chat-panel" css={panelStyles}>
             <ChatPrimitives.Root key={messageListKey}>
               <AutoScroll conversationKey={messageListKey ?? null} userMessageCount={userMessageCount} />
-              <ChatPrimitives.Viewport visibility={isMessageViewportReady ? "visible" : "hidden"}>
+              <ChatPrimitives.Viewport
+                followOnShow={props.followOnShow}
+                visibility={isMessageViewportReady ? "visible" : "hidden"}
+              >
                 {hasMessages ? (
                   <>
                     <ChatMessageList
