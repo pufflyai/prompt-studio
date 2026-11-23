@@ -51,7 +51,7 @@ const RecoveryState = (props: {
   const { actions, state } = props;
   const availableActions = new Set(state.error.actions);
   const [feedback] = useState(createDesktopRecoveryFeedback);
-  const statuses = useSyncExternalStore(feedback.subscribe, feedback.snapshot);
+  const statuses = useSyncExternalStore(feedback.subscribe, feedback.snapshot, feedback.snapshot);
   const run = (action: DesktopRecoveryAction, execute: () => Promise<void>) => {
     void feedback.run(action, execute);
   };
