@@ -8,6 +8,7 @@ import type { ComponentProps } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { setDashboardExtensionsRegisteredProject } from "@/shared/extensions/extension-readiness";
 import { openSessionsPage } from "@/shared/workbench/page-navigation";
 import { treeViewBody, treeViewSections } from "@/shared/workbench/workbench-view-test-helpers";
 import { createSidenavModule } from "../sidenav/module";
@@ -60,6 +61,8 @@ test("switching conversations in Main keeps the loaded Sessions list and selects
         .findAllByType(TreeList)
         .map(({ props }) => props as ComponentProps<typeof TreeList>)
         .find(({ sections }) => sections.some((section) => section.nodes.some((node) => node.label === "First")));
+    expect(sessionList()).toBeUndefined();
+    await act(async () => setDashboardExtensionsRegisteredProject(workbench, "project-1"));
     expect(sessionList()).toBeDefined();
     expect(reads).toBe(1);
 
