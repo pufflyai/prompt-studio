@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createProjectWork } from "../project-work";
 import { createNativeProjectionQueue } from "./projection-queue";
 
@@ -44,7 +45,7 @@ test("a failed projection rejects when no newer change is queued", async () => {
     },
     failed: (_address, error) => reported.push(error),
   });
-  await expect(queue.through(address, 1)).rejects.toBe(failure);
+  await expectRejection(queue.through(address, 1)).toBe(failure);
   await queue.drain();
   expect(calls).toBe(1);
   expect(reported).toEqual([failure]);
@@ -122,7 +123,7 @@ test("a trailing projection uses the admitted editor lease while removal drains"
     expect(await result).toBeUndefined();
     await watcher;
     await work.drain("project");
-    await expect(queue.request(address)).rejects.toThrow("removing its copy");
+    await expectRejection(queue.request(address)).toThrow("removing its copy");
   } finally {
     editorResume.resolve();
     resume.resolve();

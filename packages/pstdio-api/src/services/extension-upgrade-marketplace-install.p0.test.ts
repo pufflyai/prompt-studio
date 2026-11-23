@@ -1,6 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 import { join, resolve } from "node:path";
 import { RepoScopedExtensionNeedsProjectFolderError } from "../features/extensions/install-extension-source";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { createExtensionUpgradeService } from "./extension-upgrade-service";
 
 const repoToolsCatalog = {
@@ -156,8 +157,8 @@ describe("marketplace extension installation", () => {
       workspaceService: { getDefault: async () => ({ root_path: null, execution_kind: "remote" }) },
     });
 
-    await expect(
+    await expectRejection(
       service.installSource("project-1", { source: { kind: "catalog", name: "repo-tools" } }),
-    ).rejects.toBeInstanceOf(RepoScopedExtensionNeedsProjectFolderError);
+    ).toBeInstanceOf(RepoScopedExtensionNeedsProjectFolderError);
   });
 });

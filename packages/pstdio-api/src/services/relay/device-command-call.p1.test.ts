@@ -1,6 +1,7 @@
 import { expect, spyOn, test } from "bun:test";
 import { apiLogger } from "../../lib/logger";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { withDeviceCommandAttachments } from "./device-command-attachments";
 import { createDeviceCommandCaller } from "./device-command-call";
 
@@ -17,7 +18,7 @@ test("a missing local attachment keeps its actionable message instead of suggest
           return null;
         }),
     }));
-    await expect(
+    await expectRejection(
       call(
         project.id,
         "other-device",
@@ -27,7 +28,7 @@ test("a missing local attachment keeps its actionable message instead of suggest
         },
         new AbortController().signal,
       ),
-    ).rejects.toThrow("Session attachment not found on this device");
+    ).toThrow("Session attachment not found on this device");
     expect(sent).toBe(false);
     expect(warning).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -48,9 +49,9 @@ test("an unexpected device failure logs its cause and exposes the connection gui
   const warning = spyOn(apiLogger, "warn").mockImplementation(() => {});
   try {
     const call = createDeviceCommandCaller(() => ({ call: async () => Promise.reject(cause) }));
-    await expect(
+    await expectRejection(
       call("project", "other-device", { type: "session.interrupt", id: "session" }, new AbortController().signal),
-    ).rejects.toThrow("Check that the device is online and signed in.");
+    ).toThrow("Check that the device is online and signed in.");
     expect(warning).toHaveBeenCalledWith(
       { event: "relay.device_command.failed", workbenchId: "project", deviceId: "other-device", err: cause },
       "Device action failed",

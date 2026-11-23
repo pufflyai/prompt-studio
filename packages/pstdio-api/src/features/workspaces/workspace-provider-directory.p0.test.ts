@@ -4,6 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInvocationScope } from "pstdio-extensions";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import type { WorkspacesRouteDeps } from "./deps";
 import {
   createWorkspaceProviderDirectory,
@@ -41,7 +42,7 @@ test("directory cleanup excludes active invocations until their resource cleanup
     await createWorkspaceProviderDirectory(deps, input, scope)();
     const closing = scope.close();
     await cleanupStarted.promise;
-    await expect(removeInactiveWorkspaceProviderDirectory(deps, input, "operation")).rejects.toThrow(/active/);
+    await expectRejection(removeInactiveWorkspaceProviderDirectory(deps, input, "operation")).toThrow(/active/);
     expect(existsSync(directory.path)).toBe(true);
     release.resolve();
     await closing;

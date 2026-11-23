@@ -6,6 +6,7 @@ import { createNativeAccount } from "../../../services/account/native-account";
 import { createNativeStore } from "../../../services/account/native-store";
 import { createSharedArtifactMount } from "../../../services/shared-files/artifact-mount";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createStorageApi } from "../command-environment/storage";
 import { createTestExtensionSource } from "../test-utils/create-test-extension-source";
 import { openPublishedCatalog } from "./catalog";
@@ -231,7 +232,7 @@ test("local overrides sync their edits but never run data migrations; older vers
     await mount.writeText("note.md", "shared artifact");
     await select("2.0.0");
     expect(await mount.readText("note.md")).toBe("shared artifact");
-    await expect(mount.writeText("note.md", "old writer")).rejects.toThrow("Update");
+    await expectRejection(mount.writeText("note.md", "old writer")).toThrow("Update");
     const upload = await app.app.request(`/v1/projects/${project.id}/extensions/${instance.id}/files`, {
       method: "POST",
       headers: { "content-type": "application/octet-stream" },
@@ -243,17 +244,17 @@ test("local overrides sync their edits but never run data migrations; older vers
     });
     expect(deletion.status).toBe(409);
     expect(await storage.get<string>("note")).toBe("private code, shared data");
-    await expect(storage.set("note", "old writer")).rejects.toThrow("Update");
-    await expect(
+    await expectRejection(storage.set("note", "old writer")).toThrow("Update");
+    await expectRejection(
       storage.records.commit({
         operationId: crypto.randomUUID(),
         edits: [{ recordId: storage.records.id("note"), replace: "old writer" }],
       }),
-    ).rejects.toThrow("Update");
-    await expect(storage.collection("notes").put("one", {})).rejects.toThrow("Update");
-    await expect(storage.collection("notes").updateIfUnchanged("one", "revision", {})).rejects.toThrow("Update");
-    await expect(storage.files.put({ name: "old.txt", data: new Uint8Array([1]) })).rejects.toThrow("Update");
-    await expect(
+    ).toThrow("Update");
+    await expectRejection(storage.collection("notes").put("one", {})).toThrow("Update");
+    await expectRejection(storage.collection("notes").updateIfUnchanged("one", "revision", {})).toThrow("Update");
+    await expectRejection(storage.files.put({ name: "old.txt", data: new Uint8Array([1]) })).toThrow("Update");
+    await expectRejection(
       app.deps.extensionFileService.upload({
         project_id: project.id,
         extension_instance_id: instance.id,
@@ -262,14 +263,14 @@ test("local overrides sync their edits but never run data migrations; older vers
         file_name: "bypass.txt",
         data: Buffer.from("old writer"),
       }),
-    ).rejects.toThrow("Update");
-    await expect(
+    ).toThrow("Update");
+    await expectRejection(
       app.deps.extensionFileService.remove({
         project_id: project.id,
         extension_instance_id: instance.id,
         file_id: file.id,
       }),
-    ).rejects.toThrow("Update");
+    ).toThrow("Update");
     expect((await storage.files.getBytes(file.id))[0]).toBe(1);
     await storage.migrate(2, async () => {
       migrations++;
@@ -318,7 +319,7 @@ test("a selection whose package cannot be read blocks shared writes and migratio
     extensionId: "test.damaged-access",
     extensionInstanceId: instance.id,
   });
-  await expect(storage.set("note", "write")).rejects.toThrow("Update");
+  await expectRejection(storage.set("note", "write")).toThrow("Update");
   let migrations = 0;
   await storage.migrate(1, async () => {
     migrations++;

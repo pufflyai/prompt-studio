@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { captureRecoveryFolder } from "./capture";
 import { createRecoveryChunkStore } from "./chunks";
 import { readRecoveryManifest } from "./manifest";
@@ -41,16 +42,16 @@ test("local retention keeps every current capture graph and removes only superse
   const current = await capture();
   const before = await readdir(chunks.directory);
 
-  await expect(
+  await expectRejection(
     pruneRecoveryStore({ chunks, roots: [current, { ...previous, blobId: "BBBBBBBBBBBBBBBBBBBBBB" }], graceMs: 0 }),
-  ).rejects.toThrow();
+  ).toThrow();
   expect(await readdir(chunks.directory)).toEqual(before);
 
   expect(await pruneRecoveryStore({ chunks, roots: [current], graceMs: 60_000 })).toEqual({ removed: 0 });
   const { removed } = await pruneRecoveryStore({ chunks, roots: [current], graceMs: 0 });
   expect(removed).toBeGreaterThan(0);
   await verifyRecoveryCapture(chunks, await readRecoveryManifest(chunks, current));
-  await expect(readRecoveryManifest(chunks, previous)).rejects.toThrow();
+  await expectRejection(readRecoveryManifest(chunks, previous)).toThrow();
   const read: string[] = [];
   await captureRecoveryFolder({ root: folder, chunks, progress: (event) => void read.push(event.path) });
   expect(read).toEqual([]);

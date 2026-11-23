@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { inertSessionChannelHooks } from "../../sessions/session-store.test-utils";
 import { createSessionsApi } from "./sessions";
 
@@ -58,7 +59,7 @@ test("extension stop waits for harness acknowledgement and propagates stop failu
   await stopping.promise;
   expect((await service.get(row.id))?.status).toBe("in_progress");
   stopped.reject(new Error("Native stop failed"));
-  await expect(cancellation).rejects.toThrow("Native stop failed");
+  await expectRejection(cancellation).toThrow("Native stop failed");
   expect((await service.get(row.id))?.status).toBe("in_progress");
   service.store.setSession(row.id, { done: new Promise(() => {}), stop: async () => {} });
   await api.stop(row.id);
@@ -83,7 +84,7 @@ test("extension stop rejects a replacement execution instead of claiming it stop
   const replacement = service.store.create(row.id, inertSessionChannelHooks);
   await service.resume(row.id);
   stopped.resolve();
-  await expect(cancellation).rejects.toThrow("Session execution changed before stopping");
+  await expectRejection(cancellation).toThrow("Session execution changed before stopping");
   expect((await service.get(row.id))?.status).toBe("in_progress");
   expect(replacement.cancellationRequested).toBe(false);
 });
@@ -92,8 +93,8 @@ test("extension stop cannot mutate foreign or missing sessions or run after comm
   const { service, api } = await fixture();
   const foreign = await handle.deps.projectService.create({ name: "Foreign" });
   const row = await service.create({ project_id: foreign.id, title: "Foreign", agent: "test" });
-  await expect(api.stop(row.id)).rejects.toThrow("Session not found");
-  await expect(api.stop("missing")).rejects.toThrow("Session not found");
+  await expectRejection(api.stop(row.id)).toThrow("Session not found");
+  await expectRejection(api.stop("missing")).toThrow("Session not found");
   const controller = new AbortController();
   controller.abort();
   const cancelled = createSessionsApi(handle.deps, {
@@ -101,6 +102,6 @@ test("extension stop cannot mutate foreign or missing sessions or run after comm
     project: { ...foreign, shorthand: "F" },
     signal: controller.signal,
   });
-  await expect(cancelled.stop(row.id)).rejects.toThrow();
+  await expectRejection(cancelled.stop(row.id)).toThrow();
   expect((await service.get(row.id))?.status).toBe("in_progress");
 });

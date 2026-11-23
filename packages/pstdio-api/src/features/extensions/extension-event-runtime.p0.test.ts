@@ -7,6 +7,7 @@ import { folderWorkspaceCapabilities } from "pstdio-db";
 import { apiLogger } from "../../lib/logger";
 import { createProjectWork } from "../../services/project-work";
 import { createTestDocumentStorage } from "../../test-utils/create-test-document-storage";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { EventBus } from "../sync/event-bus";
 import { fireExtensionEvent } from "./extension-event-runtime";
 import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
@@ -201,12 +202,12 @@ describe("extension event scope and diagnostics", () => {
       },
     }) as never;
 
-    await expect(
+    await expectRejection(
       fireExtensionEvent(deps, "project-1", "workspace.provision", {
         workspaceId: "workspace-2",
         workspaceDir: "/tmp/forged",
       }),
-    ).rejects.toThrow("Workspace not found for project.");
+    ).toThrow("Workspace not found for project.");
     expect(writes).toEqual([]);
   });
 

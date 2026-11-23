@@ -7,6 +7,7 @@ import { folderWorkspaceCapabilities } from "pstdio-db";
 import { artifactFilesFixture } from "../../../services/shared-files/artifact-files.fixture";
 import { blobFilesFixture } from "../../../services/shared-files/blob-files.fixture";
 import { createTestDocumentStorage } from "../../../test-utils/create-test-document-storage";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createArtifactMountWriteLedger } from "../artifact-mount-watch/write-ledger";
 import { createFilesApi } from "./files";
 import { createCommandEnvironment } from "./index";
@@ -161,7 +162,7 @@ describe("createCommandEnvironment host primitives", () => {
     expect(readFileSync(join(repoPath, ".pstdio/.gitignore"), "utf8")).toContain(
       "/extension-storage/pstdio.extension-lab/",
     );
-    await expect(env.extensionFiles?.readText("../secret.md")).rejects.toThrow("escapes");
+    await expectRejection(env.extensionFiles!.readText("../secret.md")).toThrow("escapes");
   });
 
   test("lists the project workspaces from extension context helpers", async () => {
@@ -235,7 +236,7 @@ describe("createCommandEnvironment host primitives", () => {
     expect(await env.projectFiles.readText(".pstdio/extension-storage/pstdio-planner/tickets/PS-1/ticket.md")).toBe(
       "# hi",
     );
-    await expect(env.projectFiles.writeText("../escape.md", "x")).rejects.toThrow(/escapes/);
+    await expectRejection(env.projectFiles.writeText("../escape.md", "x")).toThrow(/escapes/);
   });
 
   test("separates default project files from selected workspace files", async () => {
@@ -360,19 +361,19 @@ describe("createCommandEnvironment session scopes", () => {
     );
 
     await expect(sessions.get("session-foreign")).resolves.toBeNull();
-    await expect(sessions.query({ workspaceId: "workspace-foreign" })).rejects.toThrow(
+    await expectRejection(sessions.query({ workspaceId: "workspace-foreign" })).toThrow(
       "Workspace not found: workspace-foreign",
     );
-    await expect(sessions.create({ title: "Forged", prompt: "x", workspaceId: "workspace-foreign" })).rejects.toThrow(
+    await expectRejection(sessions.create({ title: "Forged", prompt: "x", workspaceId: "workspace-foreign" })).toThrow(
       "Workspace not found: workspace-foreign",
     );
-    await expect(
+    await expectRejection(
       sessions.create({ title: "Forged", prompt: "x", originalSessionId: "session-foreign" }),
-    ).rejects.toThrow("Session not found: session-foreign");
-    await expect(sessions.followup({ sessionId: "session-foreign", prompt: "x" })).rejects.toThrow(
+    ).toThrow("Session not found: session-foreign");
+    await expectRejection(sessions.followup({ sessionId: "session-foreign", prompt: "x" })).toThrow(
       "Session not found: session-foreign",
     );
-    await expect(sessions.addAnchors("session-foreign", [])).rejects.toThrow("Session not found: session-foreign");
+    await expectRejection(sessions.addAnchors("session-foreign", [])).toThrow("Session not found: session-foreign");
     expect(listByWorkspace).not.toHaveBeenCalled();
     expect(updateSession).not.toHaveBeenCalled();
   });
@@ -393,9 +394,9 @@ describe("createCommandEnvironment file scopes", () => {
       "project-1",
     );
 
-    await expect(files.readText("file-foreign")).rejects.toThrow("File not found: file-foreign");
-    await expect(files.writeText("file-foreign", "changed")).rejects.toThrow("File not found: file-foreign");
-    await expect(files.delete("file-foreign")).rejects.toThrow("File not found: file-foreign");
+    await expectRejection(files.readText("file-foreign")).toThrow("File not found: file-foreign");
+    await expectRejection(files.writeText("file-foreign", "changed")).toThrow("File not found: file-foreign");
+    await expectRejection(files.delete("file-foreign")).toThrow("File not found: file-foreign");
     expect(update).not.toHaveBeenCalled();
     expect(remove).not.toHaveBeenCalled();
   });
@@ -444,11 +445,11 @@ describe("createCommandEnvironment", () => {
     });
 
     expect(result.stdout.trim()).toBe("ok");
-    await expect(
+    await expectRejection(
       env.process.runOrThrow({
         command: ["bun", "-e", "console.error('nope'); process.exit(7)"],
       }),
-    ).rejects.toThrow("nope");
+    ).toThrow("nope");
   });
 
   test("mounts declared artifact roots under the default repo", async () => {
@@ -786,8 +787,8 @@ describe("createCommandEnvironment settings", () => {
     );
 
     await expect(env.settings.get("counter.step")).resolves.toBe(1);
-    await expect(env.settings.get("missing")).rejects.toMatchObject({ code: "extension_setting_unknown_key" });
-    await expect(env.settings.set("counter.step", "large")).rejects.toMatchObject({
+    await expectRejection(env.settings.get("missing")).toMatchObject({ code: "extension_setting_unknown_key" });
+    await expectRejection(env.settings.set("counter.step", "large")).toMatchObject({
       code: "extension_setting_invalid",
     });
   });

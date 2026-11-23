@@ -6,6 +6,7 @@ import { type WorkspaceCapabilities, workspaceEvents } from "pstdio-api-contract
 import { createProjectsDBService, folderWorkspaceCapabilities } from "pstdio-db";
 import { apiLogger } from "../../../lib/logger";
 import { artifactFilesFixture } from "../../../services/shared-files/artifact-files.fixture";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createArtifactMountWriteLedger } from "../artifact-mount-watch/write-ledger";
 import { createCommandEnvironment } from "./index";
 
@@ -85,12 +86,12 @@ test("read-only providers allow reads and reject every file mutation", async () 
   const env = environment();
   for (const mount of mounts(env)) {
     expect(await mount.readText("notes.txt")).toBe("keep");
-    await expect(mount.writeText("notes.txt", "changed")).rejects.toThrow("write");
-    await expect(mount.writeBytes("bytes.txt", new Uint8Array([1]))).rejects.toThrow("write");
-    await expect(mount.delete("notes.txt")).rejects.toThrow("write");
+    await expectRejection(mount.writeText("notes.txt", "changed")).toThrow("write");
+    await expectRejection(mount.writeBytes("bytes.txt", new Uint8Array([1]))).toThrow("write");
+    await expectRejection(mount.delete("notes.txt")).toThrow("write");
     expect(await mount.readText("notes.txt")).toBe("keep");
   }
-  await expect(env.workspaceFiles!.syncDir("generated", [{ path: "tool.txt", content: "changed" }])).rejects.toThrow(
+  await expectRejection(env.workspaceFiles!.syncDir("generated", [{ path: "tool.txt", content: "changed" }])).toThrow(
     "write",
   );
 });
@@ -100,16 +101,16 @@ test("file capabilities are checked again after a mount has been used", async ()
   for (const mount of all) expect(await mount.readText("notes.txt")).toBe("keep");
   workspace.provider_capabilities_json = { ...folderWorkspaceCapabilities, files: "none" };
   for (const mount of all) {
-    await expect(mount.readText("notes.txt")).rejects.toThrow("read");
-    await expect(mount.list()).rejects.toThrow("read");
-    await expect(mount.writeText("notes.txt", "changed")).rejects.toThrow("write");
+    await expectRejection(mount.readText("notes.txt")).toThrow("read");
+    await expectRejection(mount.list()).toThrow("read");
+    await expectRejection(mount.writeText("notes.txt", "changed")).toThrow("write");
   }
 });
 
 test("only provisioning hooks can access their own initializing workspace", async () => {
   workspace.initializing = true;
   workspace.setup_error = "previous setup failed";
-  for (const mount of mounts(environment())) await expect(mount.readText("notes.txt")).rejects.toThrow("ready");
+  for (const mount of mounts(environment())) await expectRejection(mount.readText("notes.txt")).toThrow("ready");
   for (const mount of mounts(environment(workspaceEvents.provision.id))) {
     await mount.writeText("notes.txt", "retry");
     expect(await mount.readText("notes.txt")).toBe("retry");
@@ -122,21 +123,21 @@ test("provisioning one workspace cannot bypass another workspace's initializatio
   const home = { ...workspace, id: "workspace-home" };
   const env = environment(workspaceEvents.provision.id, () => home);
   await env.workspaceFiles!.writeText("notes.txt", "provisioning");
-  await expect(env.projectFiles!.readText("notes.txt")).rejects.toThrow("ready");
-  await expect(env.extensionFiles!.readText("notes.txt")).rejects.toThrow("ready");
-  await expect(env.artifacts.mount("reports").readText("notes.txt")).rejects.toThrow("ready");
+  await expectRejection(env.projectFiles!.readText("notes.txt")).toThrow("ready");
+  await expectRejection(env.extensionFiles!.readText("notes.txt")).toThrow("ready");
+  await expectRejection(env.artifacts.mount("reports").readText("notes.txt")).toThrow("ready");
 });
 
 test("workspace targets reject failed, remote, and cross-project access", async () => {
   const env = environment();
   workspace.provider_state = "failed";
-  for (const mount of mounts(env)) await expect(mount.readText("notes.txt")).rejects.toThrow("ready");
+  for (const mount of mounts(env)) await expectRejection(mount.readText("notes.txt")).toThrow("ready");
   workspace.provider_state = "ready";
   workspace.execution_kind = "remote";
-  for (const mount of mounts(env)) await expect(mount.readText("notes.txt")).rejects.toThrow("local");
+  for (const mount of mounts(env)) await expectRejection(mount.readText("notes.txt")).toThrow("local");
   workspace.execution_kind = "local";
   workspace.project_id = "another-project";
-  for (const mount of mounts(env)) await expect(mount.readText("notes.txt")).rejects.toThrow("local file target");
+  for (const mount of mounts(env)) await expectRejection(mount.readText("notes.txt")).toThrow("local file target");
 });
 
 test("workspace sync keeps a file it does not own and logs where it is", async () => {

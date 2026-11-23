@@ -1,6 +1,7 @@
 import { expect, spyOn, test } from "bun:test";
 import { createDeviceCommandExecutor } from "../../../services/relay/device-command-executor";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -54,7 +55,7 @@ test("scoped remote conversation and resource reads preserve the personal worksp
     const foreign = await handle.deps.projectService.create({ name: "Foreign project" });
     const other = createSessionsApi(handle.deps, { projectId: foreign.id, project: { ...foreign, shorthand: "FP" } });
     expect(await other.get(remote.id)).toBeNull();
-    await expect(other.getConversation(remote.id)).rejects.toThrow("Session not found");
+    await expectRejection(other.getConversation(remote.id)).toThrow("Session not found");
     expect(await handle.deps.sessionService.get(remote.id)).toBeNull();
   } finally {
     for (const undo of restore) undo();
@@ -112,7 +113,7 @@ test("remote creation preserves the device's actionable rejection", async () => 
   try {
     const project = await handle.deps.projectService.create({ name: "Remote rejection" });
     const api = createSessionsApi(handle.deps, { projectId: project.id, project: { ...project, shorthand: "RR" } });
-    await expect(api.create({ title: "Run", prompt: "Hello", deviceId: "laptop" })).rejects.toThrow(
+    await expectRejection(api.create({ title: "Run", prompt: "Hello", deviceId: "laptop" })).toThrow(
       "Sign in to the harness on Laptop before starting.",
     );
     expect(send).toHaveBeenCalledTimes(1);
@@ -189,7 +190,7 @@ test("public session controls relay online-owner queue, question, approval, foll
       expectedRevision: queued.revision,
     });
     expect(updated.prompt).toBe("Edited");
-    await expect(api.removeQueuedFollowUp(session.id, queued.queuePosition, queued.revision)).rejects.toThrow();
+    await expectRejection(api.removeQueuedFollowUp(session.id, queued.queuePosition, queued.revision)).toThrow();
     await api.removeQueuedFollowUp(session.id, updated.queuePosition, updated.revision);
     const hold = await api.retainResources(session.id);
     hold.close();
@@ -205,7 +206,7 @@ test("public session controls relay online-owner queue, question, approval, foll
     const foreign = await reader.deps.projectService.create({ name: "Foreign" });
     const other = createSessionsApi(reader.deps, { projectId: foreign.id, project: { ...foreign, shorthand: "F" } });
     const before = sent.length;
-    await expect(other.stop(session.id)).rejects.toThrow("Session not found");
+    await expectRejection(other.stop(session.id)).toThrow("Session not found");
     expect(sent).toHaveLength(before);
   } finally {
     for (const undo of restore) undo();

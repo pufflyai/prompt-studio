@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createProjectWork, ProjectRemovalInProgress } from "../project-work";
 import { selected, textEditingFixture } from "./text-editing.test-fixture";
 
@@ -30,12 +31,12 @@ test("grant a record field from one verified source observation and reject incom
     await records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: { body: "complete note" } }] });
     const connect = () => f.text.connect("project-1", { kind: "agent", target: selected });
     await writeFile(join(f.root, "provided.txt"), "partial");
-    await expect(connect()).rejects.toThrow("complete source bytes");
+    await expectRejection(connect()).toThrow("complete source bytes");
     await writeFile(join(f.root, "provided.txt"), "complete note");
     expect(await connect()).toHaveProperty("token");
     expect(reloads).toBe(0);
     projectWork.freeze(owner.workbenchId);
-    await expect(connect()).rejects.toBeInstanceOf(ProjectRemovalInProgress);
+    await expectRejection(connect()).toBeInstanceOf(ProjectRemovalInProgress);
   } finally {
     await f.cleanup();
   }

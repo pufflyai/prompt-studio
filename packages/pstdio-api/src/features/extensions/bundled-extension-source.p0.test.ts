@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { type BundledExtensionSources, packExtensionSource } from "pstdio-extensions/distribution";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { prepareBundledExtensionSource } from "./bundled-extension-source";
 
 const roots: string[] = [];
@@ -57,7 +58,7 @@ test("prepares bundled extension sources with their lockfile and commit without 
   expect(await prepareBundledExtensionSource(origin, root, "development", { files })).toBeNull();
   const controller = new AbortController();
   controller.abort();
-  await expect(
+  await expectRejection(
     prepareBundledExtensionSource(origin, root, "release", { files, signal: controller.signal }),
-  ).rejects.toThrow();
+  ).toThrow();
 });

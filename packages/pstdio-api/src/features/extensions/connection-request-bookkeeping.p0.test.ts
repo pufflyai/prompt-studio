@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createExtensionConnectionService } from "./extension-connection-service";
 import { connection, contribution } from "./extension-connection-service.test-fixture";
 
@@ -54,7 +55,7 @@ for (const scope of ["project", "global"] as const) {
     "network",
   ] as const)(`${scope} request bookkeeping preserves the upstream outcome (%s)`, async (mode) => {
     const f = fixture(scope, mode);
-    if (mode === "network") await expect(f.service.request(input)).rejects.toBe(f.failure);
+    if (mode === "network") await expectRejection(f.service.request(input)).toBe(f.failure);
     else expect(await f.service.request(input)).toMatchObject({ status: 200, body: { created: true } });
     expect(f.requests()).toBe(1);
     expect(f.lookups()).toBe(1);

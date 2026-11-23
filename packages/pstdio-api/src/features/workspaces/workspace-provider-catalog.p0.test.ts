@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { workspaceProviderDescriptorSchema } from "pstdio-api-contracts";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import type { WorkspacesRouteDeps } from "./deps";
 import { listWorkspaceProviders } from "./workspace-provider-catalog";
 
@@ -20,7 +21,7 @@ describe("installed workspace provider catalog", () => {
       },
     } as unknown as WorkspacesRouteDeps;
 
-    await expect(listWorkspaceProviders(deps, "project-1")).rejects.toBe(failure);
+    await expectRejection(listWorkspaceProviders(deps, "project-1")).toBe(failure);
   });
 
   test("preserves provider-declared choices without a Git source", async () => {

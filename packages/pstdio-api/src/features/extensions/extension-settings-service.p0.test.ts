@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createExtensionSettingsService } from "./extension-settings-service";
 
 const definitions = [
@@ -100,13 +101,13 @@ describe("extension settings service", () => {
   test("rejects unknown keys and invalid values", async () => {
     const service = createService();
 
-    await expect(service.get(context, "not.declared")).rejects.toMatchObject({
+    await expectRejection(service.get(context, "not.declared")).toMatchObject({
       code: "extension_setting_unknown_key",
     });
-    await expect(service.set(context, "counter.enabled", "yes")).rejects.toMatchObject({
+    await expectRejection(service.set(context, "counter.enabled", "yes")).toMatchObject({
       code: "extension_setting_invalid",
     });
-    await expect(service.set(context, "greeting.tone", "sarcastic")).rejects.toMatchObject({
+    await expectRejection(service.set(context, "greeting.tone", "sarcastic")).toMatchObject({
       code: "extension_setting_invalid",
     });
   });

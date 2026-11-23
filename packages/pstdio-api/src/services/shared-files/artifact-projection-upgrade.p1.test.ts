@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { artifactFilesFixture } from "./artifact-files.fixture";
 import { upgradeArtifactFileProjections } from "./artifact-projection-upgrade";
 import { artifactProjectionKey, fileProjection, projectionAddress } from "./file-state";
@@ -54,7 +55,7 @@ test("a failed startup import keeps its original and requests do not retry or ov
     });
     const projection = fileProjection(key, f.deps.extensionStorageService.fileProjections);
     for (let attempt = 0; attempt < 2; attempt++)
-      await expect(projection.read(["documents/note.md"])).rejects.toThrow("startup");
+      await expectRejection(projection.read(["documents/note.md"])).toThrow("startup");
     expect(failures).toHaveLength(1);
     expect(await Bun.file(address.path).text()).toBe("invalid JSON");
     expect((await f.deps.extensionStorageService.fileProjections.open(address.key).read()).initialized).toBe(false);

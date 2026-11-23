@@ -1,4 +1,5 @@
 import { expect, mock, test } from "bun:test";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { SessionCancellationCleanupError } from "../sessions/session-request-cancellation";
 import { createAutomationRunExecutor } from "./automation-execution";
 
@@ -28,7 +29,7 @@ test("automation execution stays running when session cancellation cleanup is un
     },
   });
 
-  await expect(executor.executeRun(running.id, controller.signal)).rejects.toBeInstanceOf(
+  await expectRejection(executor.executeRun(running.id, controller.signal)).toBeInstanceOf(
     SessionCancellationCleanupError,
   );
   expect(transitionRun).not.toHaveBeenCalled();

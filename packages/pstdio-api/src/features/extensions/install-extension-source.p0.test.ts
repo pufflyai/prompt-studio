@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import {
   ExtensionAlreadyInstalledError,
   installExtensionSource,
@@ -101,14 +102,14 @@ describe("installExtensionSource scope", () => {
     const source = join(root, "repo-extension");
     makeExtension(source, { pstdio: { scope: "repo" } });
 
-    await expect(
+    await expectRejection(
       installExtensionSource({
         source,
         skipInstall: true,
         env: { PSTDIO_HOME: pstdioHome },
         homedir: () => "/unused",
       }),
-    ).rejects.toBeInstanceOf(RepoScopedExtensionNeedsProjectFolderError);
+    ).toBeInstanceOf(RepoScopedExtensionNeedsProjectFolderError);
 
     expect(existsSync(join(pstdioHome, "extensions", "repo-extension", "extension.ts"))).toBe(false);
   });
@@ -170,14 +171,14 @@ describe("installExtensionSource", () => {
     mkdirSync(target, { recursive: true });
     writeFileSync(join(target, "extension.ts"), "export default {};");
 
-    await expect(
+    await expectRejection(
       installExtensionSource({
         source,
         skipInstall: true,
         env: { PSTDIO_HOME: pstdioHome },
         homedir: () => "/unused",
       }),
-    ).rejects.toBeInstanceOf(ExtensionAlreadyInstalledError);
+    ).toBeInstanceOf(ExtensionAlreadyInstalledError);
   });
 
   test("existsOk=true reuses an existing install without re-copying", async () => {
@@ -315,14 +316,14 @@ describe("installExtensionSource", () => {
   });
 
   test("rejects an unknown extension name before cloning", async () => {
-    await expect(
+    await expectRejection(
       installExtensionSource({
         source: "missing-extension",
         hostReleaseRef: "pstdio@0.27.0",
         skipInstall: true,
         env: { PSTDIO_HOME: pstdioHome },
       }),
-    ).rejects.toThrow("No catalog entry for extension: missing-extension");
+    ).toThrow("No catalog entry for extension: missing-extension");
   });
 
   test("validates a source that already occupies its install directory without touching it", async () => {
@@ -349,7 +350,7 @@ describe("installExtensionSource", () => {
     const source = join(pstdioHome, "extensions", "self-copy", "inner");
     makeExtension(source);
 
-    await expect(
+    await expectRejection(
       installExtensionSource({
         source,
         installName: "self-copy",
@@ -358,7 +359,7 @@ describe("installExtensionSource", () => {
         env: { PSTDIO_HOME: pstdioHome },
         homedir: () => "/unused",
       }),
-    ).rejects.toThrow("Refusing to copy an extension into itself");
+    ).toThrow("Refusing to copy an extension into itself");
 
     expect(readFileSync(join(source, "package.json"), "utf8")).toContain("test");
   });

@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createAutomationDBService, createDb, createProjectsDBService } from "pstdio-db";
 import { normalizeExtensionSources } from "pstdio-extensions";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { digestTokenSecret, inputHash } from "./automation-policy";
 import { createAutomationService } from "./automation-service";
 
@@ -74,7 +75,7 @@ test("historical exact grants and completed idempotent runs retain their secrets
     const request = (commandId: string) =>
       service.createRun({ rawToken, projectId: project.id, idempotencyKey: "retained", body: { ...body, commandId } });
     expect(await request(canonical)).toMatchObject({ id: run.id, commandId: canonical, status: "succeeded" });
-    await expect(request("alice.pstdio-notes.command.notes.create")).rejects.toMatchObject({ status: 403 });
+    await expectRejection(request("alice.pstdio-notes.command.notes.create")).toMatchObject({ status: 403 });
     expect((await db.getToken(tokenId))!.token).toMatchObject({
       token_digest: digest,
       command_scopes_json: [historical],

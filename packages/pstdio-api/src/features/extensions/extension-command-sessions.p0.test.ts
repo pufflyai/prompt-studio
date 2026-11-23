@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createProjectWork } from "../../services/project-work";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createSessionQueueLifecycle } from "../sessions/session-queue-lifecycle";
 import { createTrackedSessionStore } from "../sessions/session-store.test-utils";
 import { createCommandEnvironment } from "./command-environment";
@@ -236,9 +237,9 @@ describe("createCommandEnvironment sessions attachments", () => {
 
   test("rejects model options the harness does not declare", async () => {
     const env = createSessionEnvironment({ start: startedHarness(), params: {} });
-    await expect(
+    await expectRejection(
       env.sessions.create({ title: "Research", harness: { harnessId: "fake-agent", params: { effort: "high" } } }),
-    ).rejects.toThrow();
+    ).toThrow();
   });
 
   test("forwards attachment refs from extension follow-ups", async () => {

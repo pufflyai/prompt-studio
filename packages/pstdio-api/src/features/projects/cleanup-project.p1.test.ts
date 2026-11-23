@@ -3,9 +3,9 @@ import { mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { ensureWorkspaceConfig } from "../workspaces/workspace-config";
 import { cleanupProjectArtifacts, evictProjectCopy } from "./cleanup-project";
-
 import { prepareManagedProjectFolder } from "./managed-project-folder";
 
 describe("cleanupProjectArtifacts", () => {
@@ -22,13 +22,13 @@ describe("cleanupProjectArtifacts", () => {
       await ensureWorkspaceConfig(root, root, workspace.id, project.id, host.deps);
       const config = join(root, ".pstdio/config.json");
       const original = await readFile(config, "utf8");
-      await expect(
+      await expectRejection(
         cleanupProjectArtifacts(host.deps, project.id, {
           removeProjectStorage: () => {
             throw new Error("storage busy");
           },
         }),
-      ).rejects.toThrow("storage busy");
+      ).toThrow("storage busy");
       expect(await readFile(config, "utf8")).toBe(original);
     } finally {
       await host.close();
@@ -89,7 +89,7 @@ describe("cleanupProjectArtifacts", () => {
     const removeProjectStorage = mock(() => {});
     const softDelete = mock(async () => {});
 
-    await expect(
+    await expectRejection(
       cleanupProjectArtifacts(
         {
           workspaceService: {
@@ -111,7 +111,7 @@ describe("cleanupProjectArtifacts", () => {
           removeProjectStorage,
         },
       ),
-    ).rejects.toThrow("Workspace backing resource could not be removed: local-1");
+    ).toThrow("Workspace backing resource could not be removed: local-1");
     expect(softDelete).not.toHaveBeenCalled();
     expect(removeProjectStorage).not.toHaveBeenCalled();
   });
@@ -139,7 +139,7 @@ test("an interrupted unbound creation stops eviction before project artifacts or
   try {
     const project = await host.deps.projectService.create({ name: "Interrupted creation" });
     await prepareManagedProjectFolder(project.id);
-    await expect(evictProjectCopy(host.deps, project.id)).rejects.toThrow("incomplete");
+    await expectRejection(evictProjectCopy(host.deps, project.id)).toThrow("incomplete");
     expect(effects).toEqual([]);
     expect(await host.deps.projectService.get(project.id)).toBeDefined();
   } finally {

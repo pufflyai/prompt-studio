@@ -1,6 +1,7 @@
 import { describe, expect, mock, spyOn, test } from "bun:test";
 import { inertSessionChannelHooks } from "../features/sessions/session-store.test-utils";
 import { apiLogger } from "../lib/logger";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { createSessionService } from "./session-service";
 
 const buildDeps = () => {
@@ -141,7 +142,7 @@ describe("SessionService", () => {
         },
       });
 
-      await expect(service.cancel("s1")).rejects.toThrow("remote delete failed");
+      await expectRejection(service.cancel("s1")).toThrow("remote delete failed");
 
       expect(mocks.updateStatus).not.toHaveBeenCalledWith("s1", "cancelled");
       expect(mocks.updateStatus).not.toHaveBeenCalledWith("s1", "failed");

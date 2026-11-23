@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import * as Y from "yjs";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { editorView, selected, textEditingFixture } from "./text-editing.test-fixture";
 
 test("the source identity fence checks the actual resolved authority before creating a room", async () => {
@@ -30,14 +31,14 @@ test("the source identity fence checks the actual resolved authority before crea
     const next = crypto.randomUUID();
     await f.text.request(address, { operation: "register", memberId: next });
     replace = true;
-    await expect(
+    await expectRejection(
       f.text.request(address, {
         operation: "open",
         memberId: next,
         input: { grant },
         sourceIdentity: opened.sourceIdentity,
       }),
-    ).rejects.toMatchObject({ code: "source_retired" });
+    ).toMatchObject({ code: "source_retired" });
     expect(f.documents.sources.current({ workbenchId: "project-1", extensionId: "example.context" })).toEqual([]);
     expect(await readFile(join(root, "replacement.txt"), "utf8")).toBe("Replacement source");
   } finally {
@@ -74,7 +75,7 @@ test("the actual source access rejects recovery after its owner withdraws the se
     const next = crypto.randomUUID();
     await f.text.request(address, { operation: "register", memberId: next });
     withdraw = true;
-    await expect(
+    await expectRejection(
       f.text.request(address, {
         operation: "open",
         memberId: next,
@@ -83,7 +84,7 @@ test("the actual source access rejects recovery after its owner withdraws the se
         sourceState: opened.snapshot.state,
         pendingUpdate: Buffer.from(Y.encodeStateAsUpdate(document, vector)).toString("base64"),
       }),
-    ).rejects.toMatchObject({ code: "capability_denied" });
+    ).toMatchObject({ code: "capability_denied" });
     expect(f.documents.sources.current({ workbenchId: "project-1", extensionId: "example.context" })).toEqual([]);
     expect(await readFile(join(root, "notes.txt"), "utf8")).toBe("selected folder");
   } finally {

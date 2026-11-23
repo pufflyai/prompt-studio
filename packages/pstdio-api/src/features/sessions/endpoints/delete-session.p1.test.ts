@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createTestHarnessRegistry, testHarnessId } from "../../harnesses/test-harness-registry";
 import { checkpointConversation } from "../session-checkpoint";
 import { createSessionScheduler } from "../session-scheduler";
@@ -115,7 +116,7 @@ test("an inactive session with a failed checkpoint and retained history can stil
   });
   unlinkSync(file.storage_path);
   mkdirSync(file.storage_path);
-  await expect(checkpointConversation(session.id, entry, app.deps)).rejects.toThrow();
+  await expectRejection(checkpointConversation(session.id, entry, app.deps)).toThrow();
   expect((await entry.conversationReady).closed).toBe(true);
   expect(entry.checkpointPromise).toBeUndefined();
   rmSync(file.storage_path, { recursive: true });
@@ -202,9 +203,9 @@ test("rejects active, awaiting-input, queued, and pending work without losing da
 test("a stale follow-up cannot dispatch or recreate a deleted session", async () => {
   const session = await create();
   expect((await remove(session.id)).status).toBe(204);
-  await expect(
+  await expectRejection(
     createSessionScheduler(app.deps).startOrQueueExisting({ session, prompt: "stale follow-up" }),
-  ).rejects.toThrow("Session not found");
+  ).toThrow("Session not found");
   expect(app.deps.sessionService.store.get(session.id)).toBeNull();
   expect(await app.deps.sessionService.get(session.id)).toBeNull();
 });

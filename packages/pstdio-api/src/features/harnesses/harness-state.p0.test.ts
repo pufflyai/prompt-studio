@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createHarnessStateApi } from "./harness-state";
 
 const roots: string[] = [];
@@ -19,7 +20,7 @@ for (const operation of ["get", "set", "delete"] as const) {
       symlinkSync(target, join(home, "state/pstdio.private.json"));
       const state = createHarnessStateApi("pstdio.private", { env: { PSTDIO_HOME: home } });
       const pending = operation === "set" ? state.set("serverUrl", "replacement") : state[operation]("serverUrl");
-      await expect(pending).rejects.toThrow();
+      await expectRejection(pending).toThrow();
       expect(statSync(target).mode & 0o777).toBe(0o644);
       expect(readFileSync(target, "utf8")).toBe('{"serverUrl":"unchanged"}');
     },
@@ -37,7 +38,7 @@ test.skipIf(process.platform === "win32")(
     writeFileSync(join(target, "pstdio.private.json"), "{}");
     symlinkSync(target, join(home, "state"), "dir");
     const state = createHarnessStateApi("pstdio.private", { env: { PSTDIO_HOME: home } });
-    await expect(state.get("serverUrl")).rejects.toThrow();
+    await expectRejection(state.get("serverUrl")).toThrow();
     expect(statSync(target).mode & 0o777).toBe(0o755);
   },
 );
@@ -112,7 +113,7 @@ test("does not replace malformed harness state", async () => {
   writeFileSync(statePath, "{broken");
   const state = createHarnessStateApi("pstdio.first", { env: { PSTDIO_HOME: home } });
 
-  await expect(state.get("serverUrl")).rejects.toThrow();
-  await expect(state.set("serverUrl", "http://127.0.0.1:4096")).rejects.toThrow();
+  await expectRejection(state.get("serverUrl")).toThrow();
+  await expectRejection(state.set("serverUrl", "http://127.0.0.1:4096")).toThrow();
   expect(readFileSync(statePath, "utf8")).toBe("{broken");
 });
