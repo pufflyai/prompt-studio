@@ -1,5 +1,7 @@
-import { Box, Input, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, Input, Stack } from "@chakra-ui/react";
 import { useRef } from "react";
+import { ActionErrorSlot } from "@/components/primitives/action-error-slot";
+import { AlertMessage } from "@/components/primitives/alert";
 import { Slider } from "@/components/primitives/slider";
 import { ParamEditorLabel } from "../param-editor-label";
 import { useNumberEditing } from "./number-editing";
@@ -36,45 +38,50 @@ export const NumberEditingInput = (props: NumberInputProps) => {
     onCancel: () => onCancel?.(),
   });
   const cancelledSlider = useRef(false);
+  const feedback = useRef<HTMLDivElement>(null);
   const editable = !disabled && !readOnly;
   const label = unit ? `${name} (${unit})` : name;
   return (
-    <Stack gap="xs" minW="0" w="full">
-      {!hideLabel && <ParamEditorLabel name={label} description={description} />}
-      <Input
-        id={id}
-        aria-label={label}
-        size={size}
-        type="number"
-        min={min}
-        max={max}
-        step={step}
-        disabled={disabled}
-        readOnly={readOnly}
-        value={input.value}
-        placeholder={mixed ? "Mixed" : undefined}
-        aria-invalid={input.invalid || Boolean(input.error)}
-        onFocus={input.focus}
-        onChange={(event) => {
-          if (editable) input.change(event.target.value);
-        }}
-        onBlur={() => {
-          input.blur();
-          if (editable) void input.commit();
-        }}
-        onKeyDown={(event) => {
-          if (!editable || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
-          if (event.key === "Escape") {
-            event.preventDefault();
-            event.stopPropagation();
-            input.cancel();
-          }
-          if (event.key === "Enter") {
-            event.preventDefault();
-            event.currentTarget.blur();
-          }
-        }}
-      />
+    <Stack gap="xs" minW="0" w="full" position="relative">
+      <HStack justify="space-between" gap="xs" minW="0">
+        {!hideLabel && <ParamEditorLabel name={label} description={description} />}
+        <Input
+          id={id}
+          aria-label={label}
+          size={size}
+          w={hideLabel ? "full" : "5rem"}
+          flexShrink="0"
+          type="number"
+          min={min}
+          max={max}
+          step={step}
+          disabled={disabled}
+          readOnly={readOnly}
+          value={input.value}
+          placeholder={mixed ? "Mixed" : undefined}
+          aria-invalid={input.invalid || Boolean(input.error)}
+          onFocus={input.focus}
+          onChange={(event) => {
+            if (editable) input.change(event.target.value);
+          }}
+          onBlur={(event) => {
+            input.blur();
+            if (editable && !feedback.current?.contains(event.relatedTarget)) void input.commit();
+          }}
+          onKeyDown={(event) => {
+            if (!editable || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
+            if (event.key === "Escape") {
+              event.preventDefault();
+              event.stopPropagation();
+              input.cancel();
+            }
+            if (event.key === "Enter") {
+              event.preventDefault();
+              event.currentTarget.blur();
+            }
+          }}
+        />
+      </HStack>
       {!hideSlider && min !== undefined && max !== undefined && (
         <Box px="xs">
           <Slider
@@ -109,15 +116,14 @@ export const NumberEditingInput = (props: NumberInputProps) => {
           />
         </Box>
       )}
-      {input.invalid && (
-        <Text role="alert" color="fg.error" textStyle="label/XS">
-          Enter a valid value{unit ? ` in ${unit}` : ""}.
-        </Text>
-      )}
-      {input.error && (
-        <Text role="alert" color="fg.error" textStyle="label/XS">
-          {input.error}
-        </Text>
+      {(input.invalid || input.error) && (
+        <ActionErrorSlot edge="below">
+          <Box ref={feedback}>
+            <AlertMessage status="error" compact>
+              {input.invalid ? `Enter a valid value${unit ? ` in ${unit}` : ""}.` : input.error}
+            </AlertMessage>
+          </Box>
+        </ActionErrorSlot>
       )}
     </Stack>
   );

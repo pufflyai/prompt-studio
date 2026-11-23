@@ -183,6 +183,39 @@ test("a rejected numeric preview stays editable and reports its failure inline",
   });
 });
 
+test("completed numeric edits ignore failures from their earlier preview", async () => {
+  const preview = Promise.withResolvers<void>();
+  const commits: number[] = [];
+  let input!: ReturnType<typeof useNumberEditing>;
+  const Field = () => {
+    input = useNumberEditing({
+      value: 80,
+      onPreview: () => preview.promise,
+      onCancel() {},
+      onCommit: (value) => {
+        commits.push(value);
+      },
+    });
+    return null;
+  };
+  let view!: ReturnType<typeof create>;
+  await act(async () => {
+    view = create(<Field />);
+  });
+  await act(async () => {
+    input.change("60");
+    await input.commit();
+  });
+  expect(commits).toEqual([60]);
+  await act(async () => {
+    preview.reject(new Error("Old preview unavailable"));
+  });
+  expect(input.error).toBe("");
+  await act(async () => {
+    view.unmount();
+  });
+});
+
 test("closing a numeric control cancels an unfinished slider drag and completes a typed property", async () => {
   const commits: number[] = [];
   let cancels = 0;
@@ -278,6 +311,12 @@ test("failed cancellation retains the draft and can be retried without committin
   });
   expect(input.value).toBe("60");
   expect(input.error).toBe("Cancellation unavailable");
+  await act(async () => {
+    input.blur();
+    await input.commit();
+  });
+  expect(commits).toBe(0);
+  expect(input.value).toBe("60");
   fails = false;
   await act(async () => {
     await input.cancel();
@@ -288,4 +327,37 @@ test("failed cancellation retains the draft and can be retried without committin
   await act(async () => {
     view.unmount();
   });
+});
+
+test("disposing a draft after failed cancellation retries cancellation without saving it", async () => {
+  const commits: number[] = [];
+  let cancellations = 0;
+  let input!: ReturnType<typeof useNumberEditing>;
+  const Field = () => {
+    input = useNumberEditing({
+      value: 80,
+      onPreview() {},
+      onCommit: (value) => {
+        commits.push(value);
+      },
+      onCancel: () => {
+        if (++cancellations === 1) throw new Error("Cancellation unavailable");
+      },
+    });
+    return null;
+  };
+  let view!: ReturnType<typeof create>;
+  await act(async () => {
+    view = create(<Field />);
+  });
+  await act(async () => {
+    input.change("60");
+    await input.cancel();
+  });
+  expect(input.error).toBe("Cancellation unavailable");
+  await act(async () => {
+    view.unmount();
+  });
+  expect(commits).toEqual([]);
+  expect(cancellations).toBe(2);
 });

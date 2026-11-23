@@ -40,6 +40,10 @@ test("numeric input completes once and preserves validation, cancellation and pr
   await input.press("Enter");
   await expect(input).toHaveAttribute("aria-invalid", "true");
   await expect(edits).toHaveText("0");
+  await preview.getByRole("alert").getByRole("button", { name: "Dismiss", exact: true }).click();
+  await expect(preview.getByRole("alert")).toHaveCount(0);
+  await expect(input).toHaveValue("");
+  await expect(input).toHaveAttribute("aria-invalid", "true");
   await input.press("Escape");
   await expect(input).toHaveValue("80");
   await input.fill("40");
@@ -60,4 +64,37 @@ test("numeric input completes once and preserves validation, cancellation and pr
   await preview.getByRole("button", { name: "Disable control", exact: true }).click();
   await expect(input).toBeDisabled();
   await expect(edits).toHaveText("1");
+});
+
+// Critical: a failed Escape must never become a durable save through blur, dismissal or disposal.
+test("failed cancellation can be dismissed and retried without saving the cancelled value", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/param-editor/inputs/number-input.canvas.tsx#Editing",
+  );
+  const input = preview.getByRole("spinbutton", { name: "Opacity (%)", exact: true });
+  const edits = preview.getByLabel("Completed edits", { exact: true });
+  await preview.getByRole("button", { name: "Fail next cancellation", exact: true }).click();
+  await input.fill("60");
+  await input.press("Escape");
+  const dismiss = preview.getByRole("alert").getByRole("button", { name: "Dismiss", exact: true });
+  await expect(dismiss).toBeVisible();
+  await dismiss.focus();
+  await dismiss.press("Enter");
+  await expect(preview.getByRole("alert")).toHaveCount(0);
+  await expect(input).toHaveValue("60");
+  await expect(edits).toHaveText("0");
+  await preview.getByRole("button", { name: "Close control", exact: true }).click();
+  await expect(edits).toHaveText("0");
+  await expect(preview.getByLabel("Accepted opacity", { exact: true })).toHaveText("80");
+  await preview.getByRole("button", { name: "Reopen control", exact: true }).click();
+  await preview.getByRole("button", { name: "Fail next cancellation", exact: true }).click();
+  await input.fill("50");
+  await input.press("Escape");
+  await expect(preview.getByRole("alert")).toBeVisible();
+  await input.press("Escape");
+  await expect(input).toHaveValue("80");
+  await expect(preview.getByRole("alert")).toHaveCount(0);
+  await expect(preview.getByLabel("Preview opacity", { exact: true })).toHaveText("80");
+  await expect(edits).toHaveText("0");
 });
