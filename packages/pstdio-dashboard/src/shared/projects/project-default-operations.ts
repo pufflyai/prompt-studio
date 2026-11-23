@@ -9,6 +9,7 @@ const domain = "project.defaults";
 
 export const createProjectDefaultOperations = <T extends ProjectDefaults>(input: {
   operations: WorkbenchOperations;
+  read(projectId: string, signal: AbortSignal): Promise<T>;
   write(projectId: string, patch: ProjectDefaultPatch, signal: AbortSignal): Promise<T>;
 }) => ({
   snapshot: input.operations.getSnapshot,
@@ -34,6 +35,13 @@ export const createProjectDefaultOperations = <T extends ProjectDefaults>(input:
       draft: patch,
       write: (signal) => input.write(projectId, patch, signal),
       reconcile,
+      async check(signal) {
+        const result = await input.read(projectId, signal);
+        const fields = Object.keys(patch) as (keyof ProjectDefaultPatch)[];
+        return fields.every((field) => Object.is(result[field], patch[field]))
+          ? { status: "confirmed", result }
+          : { status: "unknown" };
+      },
       classify: classifyApiWrite,
     });
   },

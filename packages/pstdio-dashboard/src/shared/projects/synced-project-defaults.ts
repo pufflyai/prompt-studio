@@ -9,6 +9,7 @@ export const getProjectDefaultOperations = createRuntimeState((owner) => {
   const api = getRuntimeApiClient(owner).projects;
   const operations = createProjectDefaultOperations({
     operations: getWorkbenchOperations(getDashboardScopedQueries(owner)),
+    read: (projectId, signal) => api.get(projectId, { signal }),
     write: (projectId, patch, signal) => api.update(projectId, patch, { signal }),
   });
   const read = (projectId: string) => owner.getCollection("projects").state.get(projectId);

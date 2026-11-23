@@ -7,6 +7,22 @@ const issueDomain = "machine-token.issue";
 const revokeDomain = "machine-token.revoke";
 const sourceCommand = { id: WORKBENCH_SETTINGS_OPEN_COMMAND_ID, args: { panelId: "machine-tokens" } };
 
+export const acceptMachineTokenRevocation = (
+  current: ListAutomationTokensResponse | undefined,
+  result: ListAutomationTokensResponse,
+  tokenId: string,
+) => {
+  if (!current) return result;
+  const confirmed = result.tokens.find((token) => token.id === tokenId);
+  return {
+    ...current,
+    tokens: current.tokens.flatMap((token) => {
+      if (token.id !== tokenId) return [token];
+      return confirmed ? [confirmed] : [];
+    }),
+  };
+};
+
 export const createMachineTokenOperations = (
   operations: WorkbenchOperations,
   api: Pick<AutomationClient, "issueToken" | "listTokens" | "revokeToken">,

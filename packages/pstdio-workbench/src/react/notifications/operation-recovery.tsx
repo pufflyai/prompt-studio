@@ -23,7 +23,7 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
   const report = (title: string) => workbench.notifications.captureActionError(title, target);
   const failure = entry.error instanceof Error ? entry.error.message : "The change could not be confirmed.";
   const message = status === "unknown" ? (entry.description ?? "The result could not be confirmed.") : failure;
-  const canInspect = status === "unknown" && entry.domain === "resource.create";
+  const canInspect = status === "unknown" && (entry.domain === "resource.create" || (!sourceCommand && entry.source));
   return (
     <AlertMessage
       status="error"
@@ -47,7 +47,15 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
           </Button>
         ) : null}
         {canInspect && (
-          <Button size="2xs" onClick={() => workbench.commandPalette.open({ view: "main" })}>
+          <Button
+            size="2xs"
+            onClick={() =>
+              workbench.commandPalette.open({
+                view: "main",
+                initialQuery: entry.domain === "resource.presentation" ? entry.source?.label : undefined,
+              })
+            }
+          >
             Inspect resources
           </Button>
         )}

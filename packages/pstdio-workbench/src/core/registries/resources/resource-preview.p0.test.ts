@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
+import { PstdioConnectionError } from "@pstdio/sdk/client";
+import { createScopedQueryClient } from "@pstdio/sdk/extensions";
+import { getWorkbenchOperations } from "../mutations/operations";
 import { createResourcePreview, resolveResourcePreview } from "./resource-preview";
+import { createResourceRegistry } from "./resource-registry";
 
 const resource = { type: "note", id: "one", extensionId: "notes", projectId: "project", label: "Original" };
 test("shows a rename immediately and keeps it until the authoritative refresh completes", async () => {
@@ -44,4 +48,36 @@ test("projects immutable preview snapshots without changing the resource identit
   rename.rollback();
   expect(resolveResourcePreview(resource, after)?.label).toBe("New");
   expect(resolveResourcePreview(resource, previews.store.getState().changes)).toEqual(resource);
+});
+
+test("restores an uncertain removal until a peer observes the exact resource removed", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
+  const operations = getWorkbenchOperations(queries);
+  const preview = createResourcePreview(operations);
+  const peer = createResourceRegistry({ preview: createResourcePreview(operations) });
+  const lost = new PstdioConnectionError(new Error("Response lost"));
+  const attempt = preview.submit(
+    resource,
+    async () => {
+      throw lost;
+    },
+    { removed: true },
+    "Delete note",
+  );
+  expect(preview.resolve(resource)).toBeUndefined();
+  await expect(attempt).rejects.toBe(lost);
+  expect(preview.resolve(resource)).toEqual(resource);
+  const entry = operations.getSnapshot().recovery[0];
+  expect(entry).toMatchObject({
+    status: "unknown",
+    canCheck: true,
+    source: resource,
+    draft: { id: "one", type: "note" },
+  });
+  peer.removed({ ...resource, id: "another" });
+  await operations.check(entry.id);
+  expect(operations.getSnapshot().recovery).toHaveLength(1);
+  peer.removed(resource);
+  await Bun.sleep(0);
+  expect(operations.getSnapshot().recovery).toEqual([]);
 });

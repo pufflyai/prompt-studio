@@ -26,6 +26,7 @@ const mayRetryEditingCommand = (error: unknown) =>
 
 export type TrackEditingCommand = (
   job: CommandEditingJob,
+  queued: readonly CommandEditingJob[],
   write: (signal?: AbortSignal) => Promise<WebviewEditingCommandResult>,
   accept: (result: WebviewEditingCommandResult) => void,
   classify: (error: unknown) => OperationFailure,
@@ -63,7 +64,9 @@ export const createCommandEditingJournal = (input: {
           }
         };
         if (input.track) {
-          return input.track(job, write, accepted, (error) => (mayRetryEditingCommand(error) ? "rejected" : "unknown"));
+          return input.track(job, writer.jobs, write, accepted, (error) =>
+            mayRetryEditingCommand(error) ? "rejected" : "unknown",
+          );
         }
         accepted(await write());
       }),

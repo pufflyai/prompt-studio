@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import type { Settings, UpdateSettingsInput } from "@pstdio/sdk/api";
+import { PstdioConnectionError } from "@pstdio/sdk/client";
 import { createScopedQueryClient } from "@pstdio/sdk/extensions";
 import { getWorkbenchOperations } from "@pstdio/workbench";
 import { createSettingsOperations } from "./settings-operations";
@@ -75,4 +76,34 @@ test("a rejected settings write preserves the draft across consumers and project
   second.resolve({ ...initial, machine_tokens_enabled: true });
   await later.result;
   expect(operations.getSnapshot().recovery[0]?.draft).toEqual({ notifications_enabled: true });
+});
+
+test("a point read can confirm unknown settings before releasing later work", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
+  let confirmed = initial;
+  let cache = initial;
+  let writes = 0;
+  const owner = createSettingsOperations({
+    operations: getWorkbenchOperations(queries),
+    read: () => cache,
+    accept: (value) => {
+      cache = value;
+    },
+    update: async (input) => {
+      if (++writes === 1) throw new PstdioConnectionError(new Error("Response lost"));
+      confirmed = { ...confirmed, ...input };
+      return confirmed;
+    },
+    reload: async () => confirmed,
+  });
+  const first = owner.submit({ notifications_enabled: true });
+  const later = owner.submit({ max_concurrent_sessions: 5 });
+  await expect(first.result).rejects.toThrow();
+  await owner.check(first.id);
+  expect(writes).toBe(1);
+  confirmed = { ...initial, notifications_enabled: true };
+  await owner.check(first.id);
+  await later.result;
+  expect(writes).toBe(2);
+  expect(cache).toEqual({ ...initial, notifications_enabled: true, max_concurrent_sessions: 5 });
 });

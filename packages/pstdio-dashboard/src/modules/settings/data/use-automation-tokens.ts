@@ -5,7 +5,7 @@ import { useSyncExternalStore } from "react";
 import { getRuntimeApiClient } from "@/lib/api";
 import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { createRuntimeState } from "@/lib/sync/runtime-state";
-import { createMachineTokenOperations } from "./machine-token-operations";
+import { acceptMachineTokenRevocation, createMachineTokenOperations } from "./machine-token-operations";
 
 const getMachineTokens = createRuntimeState((owner) => {
   const queries = getDashboardScopedQueries(owner);
@@ -35,8 +35,10 @@ export const useMachineTokens = (projectId: string) => {
   const revoke = useMutation({
     mutationFn: (tokenId: string) =>
       actions.revoke(projectId, tokenId, (result) => {
-        void client.cancelQueries({ queryKey, exact: true });
-        client.setQueryData(queryKey, result);
+        void client.cancelQueries({ queryKey, exact: true }, { revert: false });
+        client.setQueryData<typeof result>(queryKey, (current) =>
+          acceptMachineTokenRevocation(current, result, tokenId),
+        );
       }),
   });
   const presentation = actions.project(projectId);

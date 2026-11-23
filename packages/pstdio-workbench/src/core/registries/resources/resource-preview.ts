@@ -12,6 +12,10 @@ interface ResourceIntent {
 
 export type ResourcePreviewChanges = ReadonlyMap<symbol, ResourceIntent>;
 
+const removalObservers = new WeakMap<object, (resource: ResourceRef) => void>();
+export const observeResourceRemoval = (preview: object, resource: ResourceRef) =>
+  removalObservers.get(preview)?.(resource);
+
 export const resolveResourcePreview = (resource: ResourceRef, changes: ResourcePreviewChanges) => {
   let result: ResourceRef | undefined = resource;
   const subject = resourceOperationSubject(resource);
@@ -30,11 +34,20 @@ const createPreview = (operations: WorkbenchOperations) => {
   const domain = "resource.presentation";
   const refreshers = new Set<(resource: ResourceRef) => Promise<void>>();
   const local = new Map<symbol, ResourceIntent>();
+  const removals = new Map<symbol, { subject: string; observed: boolean; uncertain: boolean }>();
   const publish = () => {
     const changes = new Map(local);
-    for (const entry of operations.getSnapshot().pending) {
-      if (entry.domain === domain && entry.intent) changes.set(entry.id, entry.intent as ResourceIntent);
+    const { pending } = operations.getSnapshot();
+    const retired = new Set(removals.keys());
+    for (const entry of pending) {
+      retired.delete(entry.id);
+      if (entry.domain !== domain || !entry.intent) continue;
+      const intent = entry.intent as ResourceIntent;
+      const removal = removals.get(entry.id);
+      if (removal && entry.status === "unknown") removal.uncertain = true;
+      if (!removal?.uncertain || removal.observed) changes.set(entry.id, intent);
     }
+    for (const id of retired) removals.delete(id);
     const previous = store.getState().changes;
     if (previous.size !== changes.size || [...changes].some(([id, intent]) => previous.get(id) !== intent)) {
       store.setState({ changes });
@@ -49,21 +62,36 @@ const createPreview = (operations: WorkbenchOperations) => {
     save: (signal: AbortSignal) => Promise<T>,
     change?: ResourceChange,
     title?: string,
-  ) =>
-    operations.submit({
+  ) => {
+    const subject = resourceOperationSubject(resource);
+    const removal = change && "removed" in change ? { subject, observed: false, uncertain: false } : undefined;
+    const label = change && "label" in change ? change.label : undefined;
+    const draft = removal ? { id: resource.id, type: resource.type, label: resource.label } : label;
+    const attempt = operations.submit({
       domain,
       projectId: resource.projectId,
-      subjects: [resourceOperationSubject(resource)],
+      subjects: [subject],
       title: title ?? resource.label ?? resource.type,
       source: resource,
       intent: change ? { resource, change } : undefined,
-      draft: change && "label" in change ? change.label : undefined,
+      draft,
       write: save,
       reconcile: change ? () => refresh(resource) : undefined,
       classify: classifyApiWrite,
-    }).result;
+      check:
+        removal &&
+        (async () => (removal.observed ? { status: "confirmed", result: undefined as T } : { status: "unknown" })),
+    });
+    if (removal) {
+      removals.set(attempt.id, removal);
+      void attempt.result.catch(() => {
+        if (removal.observed) void operations.check(attempt.id);
+      });
+    }
+    return attempt.result;
+  };
 
-  return {
+  const preview = {
     store,
     resolve(resource: ResourceRef) {
       return resolveResourcePreview(resource, store.getState().changes);
@@ -92,6 +120,16 @@ const createPreview = (operations: WorkbenchOperations) => {
       };
     },
   };
+  removalObservers.set(preview, (resource) => {
+    const subject = resourceOperationSubject(resource);
+    for (const entry of operations.getSnapshot().pending) {
+      const removal = removals.get(entry.id);
+      if (entry.status === "queued" || !removal || removal.subject !== subject) continue;
+      removal.observed = true;
+      if (entry.status === "unknown") void operations.check(entry.id);
+    }
+  });
+  return preview;
 };
 
 const previews = new WeakMap<WorkbenchOperations, ReturnType<typeof createPreview>>();

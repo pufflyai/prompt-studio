@@ -14,7 +14,9 @@ const retiredError = () => new Error("The original authority is no longer active
 
 export class OperationCapacityError extends Error {
   constructor() {
-    super("Recover or discard a previous draft before submitting more work.");
+    super(
+      "The workbench is holding its limit of pending changes and drafts. Finish a change or recover a draft to free space.",
+    );
     this.name = "OperationCapacityError";
   }
 }

@@ -18,7 +18,8 @@ const confirmation = (state: DesktopLifecycleState) =>
 
 const createDesktopQuitDecision = (bridge: DesktopLifecycleBridge) => {
   let snapshot: QuitDecision = { activity: null };
-  let revision = 0;
+  let nativeRevision = 0;
+  let subscriptionGeneration = 0;
   let stopNative: (() => void) | undefined;
   let active: QuitAttempt | undefined;
   let checking: QuitAttempt | undefined;
@@ -28,6 +29,7 @@ const createDesktopQuitDecision = (bridge: DesktopLifecycleBridge) => {
     for (const listener of listeners) listener();
   };
   const observe = (state: DesktopLifecycleState) => {
+    nativeRevision++;
     const activity = confirmation(state);
     if (!activity) active = undefined;
     publish(activity ? { ...snapshot, activity } : { activity: null });
@@ -36,12 +38,12 @@ const createDesktopQuitDecision = (bridge: DesktopLifecycleBridge) => {
     const attempt = active;
     if (!attempt || checking === attempt) return;
     checking = attempt;
-    const before = revision;
+    const before = nativeRevision;
     try {
       const state = await bridge.getStartupState();
-      if (active !== attempt || before !== revision) return;
+      if (active !== attempt) return;
       active = undefined;
-      const activity = confirmation(state);
+      const activity = before === nativeRevision ? confirmation(state) : snapshot.activity;
       publish(activity ? { activity, error: attempt.error } : { activity: null });
     } catch {
       if (active === attempt) {
@@ -60,14 +62,12 @@ const createDesktopQuitDecision = (bridge: DesktopLifecycleBridge) => {
     subscribe(listener: () => void) {
       listeners.add(listener);
       if (!stopNative) {
-        stopNative = bridge.onStartupState((state) => {
-          revision++;
-          observe(state);
-        });
-        const before = revision;
+        stopNative = bridge.onStartupState(observe);
+        const before = nativeRevision;
+        const generation = subscriptionGeneration;
         void bridge.getStartupState().then(
           (state) => {
-            if (before === revision) observe(state);
+            if (before === nativeRevision && generation === subscriptionGeneration) observe(state);
           },
           () => {},
         );
@@ -75,7 +75,7 @@ const createDesktopQuitDecision = (bridge: DesktopLifecycleBridge) => {
       return () => {
         listeners.delete(listener);
         if (listeners.size) return;
-        revision++;
+        subscriptionGeneration++;
         stopNative?.();
         stopNative = undefined;
       };

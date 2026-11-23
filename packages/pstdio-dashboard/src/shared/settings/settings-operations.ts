@@ -93,6 +93,13 @@ export const createSettingsOperations = (input: SettingsOperationInput) => {
           // The live stream may have delivered a more recent settings snapshot during this request.
           if (before === input.read()) input.accept(result);
         },
+        async check(signal) {
+          const result = await input.reload(signal);
+          const fields = Object.keys(patch) as (keyof UpdateSettingsInput)[];
+          return fields.every((field) => Object.is(result[field], patch[field]))
+            ? { status: "confirmed", result }
+            : { status: "unknown" };
+        },
         classify: classifyApiWrite,
       });
     },

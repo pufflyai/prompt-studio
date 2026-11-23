@@ -19,11 +19,12 @@ export const createCommandEditingRecovery = (
     }
   });
   const { signal } = controller;
-  const track: TrackEditingCommand = async (job, write, accept, classify) => {
+  const track: TrackEditingCommand = async (job, queued, write, accept, classify) => {
     signal.throwIfAborted();
     const previous = receipts.get(job);
     if (previous) await operations.transfer(previous, () => true);
     signal.throwIfAborted();
+    const outstanding = () => (queued.includes(job) ? queued : [job, ...queued]);
 
     const attempt = operations.submit({
       domain: "command.editing",
@@ -33,7 +34,13 @@ export const createCommandEditingRecovery = (
       draft: {
         commandId: open.command.commandId,
         get changes() {
-          return job.changes;
+          return outstanding().flatMap((pending) => pending.changes);
+        },
+        get commands() {
+          return outstanding().map(({ params: { operationId: _operationId, ...params }, channel }) => ({
+            params,
+            channel,
+          }));
         },
       },
       write: (operationSignal) => write(AbortSignal.any([signal, operationSignal])),

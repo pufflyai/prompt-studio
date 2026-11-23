@@ -10,10 +10,16 @@ const fixture = () => {
   let listener: ((state: DesktopLifecycleState) => void) | undefined;
   const confirm = Promise.withResolvers<void>();
   const startup = Promise.withResolvers<DesktopLifecycleState>();
+  let nextRead: Promise<DesktopLifecycleState> | undefined;
   let reads = 0;
   const choices: string[] = [];
   const bridge: DesktopLifecycleBridge = {
-    getStartupState: () => (++reads === 1 ? startup.promise : Promise.resolve(state)),
+    getStartupState: () => {
+      if (++reads === 1) return startup.promise;
+      const read = nextRead;
+      nextRead = undefined;
+      return read ?? Promise.resolve(state);
+    },
     onStartupState: (receive) => {
       listener = receive;
       return () => {
@@ -34,6 +40,11 @@ const fixture = () => {
     startup,
     confirm,
     choices,
+    holdRead() {
+      const read = Promise.withResolvers<DesktopLifecycleState>();
+      nextRead = read.promise;
+      return read;
+    },
     broadcast(next: DesktopLifecycleState) {
       state = next;
       listener?.(next);
@@ -75,4 +86,27 @@ test("a failed IPC checks native state without repeating the destructive request
   expect(dialog.read().pending).toBeUndefined();
   expect(f.choices).toEqual(["quit"]);
   stop();
+});
+
+test("remounting a dialog while a native status check is in flight preserves its outcome", async () => {
+  const f = fixture();
+  const decision = getDesktopQuitDecision(f.bridge);
+  const stop = decision.subscribe(() => {});
+  f.broadcast(confirmation);
+  f.startup.resolve(confirmation);
+  const read = f.holdRead();
+  const quit = decision.choose("quit");
+  f.confirm.reject(new Error("Connection lost"));
+  await Promise.resolve();
+  stop();
+  const stopNext = decision.subscribe(() => {});
+  await Promise.resolve();
+  read.resolve(confirmation);
+  await quit;
+
+  expect(decision.read()).toMatchObject({ activity, error: "Connection lost" });
+  expect(decision.read().pending).toBeUndefined();
+  await decision.choose("keep-open");
+  expect(f.choices).toEqual(["quit", "keep-open"]);
+  stopNext();
 });

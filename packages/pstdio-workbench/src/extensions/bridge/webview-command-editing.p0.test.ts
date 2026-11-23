@@ -12,6 +12,7 @@ import { createWorkbench } from "../../core";
 import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import { createWebviewKeyboardShortcuts } from "../../react/keybindings/webview-keyboard-shortcuts";
 import { inspectCommandEditingSessions } from "./command-editing-sessions";
+import { prepareWorkbenchEditingCommand } from "./webview-editing-adapter";
 import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
 
 const editor = (provided?: ScopedQueryClient, typedEvents = false) => {
@@ -730,7 +731,7 @@ test("a full source result cannot silently cover another source's newer invalida
   }
 });
 
-test("retains a submitted semantic edit across account retirement without retrying it", async () => {
+test("retains active and queued semantic edits across account retirement without retrying them", async () => {
   const fixture = editor();
   const view = fixture.frame("private");
   const operations = getWorkbenchOperations(fixture.queries);
@@ -740,21 +741,27 @@ test("retains a submitted semantic edit across account retirement without retryi
     const changes = [{ path: ["title"], value: "Private draft" }];
     const submitted = view.call({ operation: "execute", sequence: 1, params: { title: "Private draft" }, changes });
     const settled = submitted.catch((error: unknown) => error);
+    const queuedChanges = [{ path: ["tool"], value: "hand" }];
+    const queued = view
+      .call({ operation: "execute", sequence: 2, params: { tool: "hand" }, changes: queuedChanges })
+      .catch((error: unknown) => error);
     await Bun.sleep(0);
     expect(fixture.actions).toHaveLength(1);
     fixture.queries.setAuthority({ accountId: "another" });
     expect(operations.getSnapshot().recovery).toEqual([]);
     expect(await settled).toBeInstanceOf(Error);
+    expect(await queued).toBeInstanceOf(Error);
+    await expect(prepareWorkbenchEditingCommand(fixture.core, "example.editor.command.edit")).resolves.toBeUndefined();
     fixture.queries.setAuthority({ accountId: undefined });
     expect(operations.getSnapshot().recovery[0]).toMatchObject({
       domain: "command.editing",
       status: "unknown",
-      draft: { changes },
+      draft: { changes: [...changes, ...queuedChanges] },
     });
     fixture.release();
     await Bun.sleep(0);
     expect(fixture.actions).toHaveLength(1);
-    expect(operations.getSnapshot().recovery[0]?.draft).toMatchObject({ changes });
+    expect(operations.getSnapshot().recovery[0]?.draft).toMatchObject({ changes: [...changes, ...queuedChanges] });
   } finally {
     await fixture.dispose().catch(() => {});
   }
