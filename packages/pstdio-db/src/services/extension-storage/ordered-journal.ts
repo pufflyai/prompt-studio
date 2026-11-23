@@ -10,7 +10,7 @@ import {
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_ordered_operations as operations } from "../../db/schemas.pg";
 import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
-import { admitOrderedOperation } from "./ordered-admission";
+import { admitOrderedOperation, identifyOrderedAdmission } from "./ordered-admission";
 import {
   createOrderedAuthorship,
   orderedLocalOperation as local,
@@ -248,6 +248,46 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
               inArray(operations.local_sequence, sequences.slice(offset, offset + 1_000)),
             ),
           );
+    },
+    /** A fresh local envelope has no prior admission. Publish the exact admission
+     * identity and its accepted receipt in one update under the owner lock. */
+    async settleFreshLocalAdmission(input: OrderedAdmission, decision: OrderedDecision) {
+      const { admission, identity } = await identifyOrderedAdmission(input);
+      const { operation, epoch } = admission;
+      if (
+        decision.epoch !== epoch ||
+        decision.operationId !== operation.operationId ||
+        decision.fingerprint !== operation.fingerprint ||
+        decision.state !== "accepted"
+      )
+        throw new Error("The decision does not match the admitted identity");
+      const [saved] = await tx
+        .update(operations)
+        .set({
+          ...recordOperationReceipt({}, decision, identity),
+          admission_epoch: epoch,
+          admission_fingerprint: identity,
+          settled_epoch: epoch,
+          delivered: false,
+          touches: [],
+          envelope: null,
+          admission: null,
+        })
+        .where(
+          and(
+            operationWhere(operation.operationId),
+            eq(operations.fingerprint, operation.fingerprint),
+            isNotNull(operations.envelope),
+            isNull(operations.settled_epoch),
+            isNull(operations.admission_epoch),
+            sql`${operations.receipt} = '{}'::jsonb`,
+          ),
+        )
+        .returning({ id: operations.operation_id });
+      if (!saved) return false;
+      await dependencies.remember(decision);
+      await forgetOrderedTextGeneration(tx, owner, decision.operationId);
+      return true;
     },
     async recordDecision(decision: OrderedDecision, admissionFingerprint: string, options: { indexed?: boolean } = {}) {
       const row = await bind(decision.operationId, decision.fingerprint);

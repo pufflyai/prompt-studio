@@ -5,10 +5,14 @@ import { fingerprint, type Json } from "pstdio-sync-contracts";
 import { operations } from "../../db/schemas.pg";
 import { encodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 
+export const identifyOrderedAdmission = async (input: OrderedAdmission) => {
+  const admission = await verifyOrderedAdmission(input);
+  return { admission, identity: await fingerprint(admission as unknown as Json) };
+};
+
 /** Validate and publish under the owner lock without reading the immutable payload back. */
 export const admitOrderedOperation = async (tx: OrderedTransaction, owner: StorageOwner, input: OrderedAdmission) => {
-  const admission = await verifyOrderedAdmission(input);
-  const identity = await fingerprint(admission as unknown as Json);
+  const { admission, identity } = await identifyOrderedAdmission(input);
   const where = and(orderedOwnerWhere(operations, owner), eq(operations.operation_id, admission.operation.operationId));
   const sameEpoch = sql`${operations.admission_epoch} = ${admission.epoch}`;
   const [saved] = await tx

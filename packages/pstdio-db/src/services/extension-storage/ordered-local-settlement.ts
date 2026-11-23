@@ -1,6 +1,7 @@
 import type { StorageOwner } from "pstdio-sync";
 import {
   applyOrderedNativeOperation,
+  type OrderedAdmission,
   type OrderedDecision,
   type OrderedOperation,
   operationDependencies,
@@ -45,6 +46,17 @@ const localDependencies = async (journal: OrderedJournal, operation: OrderedOper
   return { decisions, dependencies };
 };
 
+const recordLocalDecision = async (
+  journal: OrderedJournal,
+  admission: OrderedAdmission,
+  decision: OrderedDecision,
+  identity?: string,
+) => {
+  if (!identity && decision.state === "accepted" && (await journal.settleFreshLocalAdmission(admission, decision)))
+    return;
+  await journal.recordDecision(decision, identity ?? (await journal.admit(admission)));
+};
+
 /** Never-joined devices own their order. Joining Cloud permanently ends local settlement. */
 export const settleLocalOrderedSaves = async (
   journal: OrderedJournal,
@@ -79,7 +91,8 @@ export const settleLocalOrderedSaves = async (
       await journal.completeNative(operation, result.state);
     } else {
       const admission = { epoch, operation, dependencies };
-      const identity = await journal.admit(admission);
+      const plainAuthored = authored && !operation.edits.some((edit) => edit.texts?.length);
+      const identity = plainAuthored ? undefined : await journal.admit(admission);
       const result = await applyOrderedNumberPolicy(
         tx,
         owner,
@@ -89,7 +102,7 @@ export const settleLocalOrderedSaves = async (
         false,
       );
       await writes.saveCanonical(result.records);
-      await journal.recordDecision(result.decision, identity);
+      await recordLocalDecision(journal, admission, result.decision, identity);
       for (const record of result.records) changed.add(record.recordId);
     }
     for (const id of ids) changed.add(id);
