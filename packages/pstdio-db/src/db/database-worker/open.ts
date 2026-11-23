@@ -11,6 +11,7 @@ import { type DatabaseWorkerMessage, type DatabaseWorkerOpenOptions, deserialize
 import { createRemotePglite } from "./remote-pglite";
 
 declare const PSTDIO_BUILD_DATABASE_WORKER: string | undefined;
+const CLEANUP_POLL_MS = 100;
 
 // A source run loads the worker beside this module. The compiled binary bundles it as an extra
 // entry point and passes its bundled path (see scripts/build/build-compile.ts).
@@ -89,8 +90,18 @@ export const createDbInWorker = async (
     db,
     path,
     pglite,
-    cleanupRetiredRows: async () => {
-      await remote.call({ type: "cleanup" });
+    // `stopped` is a synchronous check, so this thread polls it and tells the worker once it turns true.
+    cleanupRetiredRows: async (stopped: () => boolean) => {
+      const poll = setInterval(() => {
+        if (!stopped()) return;
+        clearInterval(poll);
+        worker.postMessage({ type: "stop-cleanup" });
+      }, CLEANUP_POLL_MS);
+      try {
+        await remote.call({ type: "cleanup" });
+      } finally {
+        clearInterval(poll);
+      }
     },
   };
 };
