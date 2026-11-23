@@ -92,12 +92,23 @@ Native Chakra menu choices use `Menu.ItemText` and `Menu.ItemIndicator` with the
 
 The floating Side Panel hides its launcher while open and restores it when closed.
 Drag the bubble or unused floating header space to the left, center, or right.
-Both share their saved alignment and move visibly while dragging. During a drag,
-three drop areas appear above the status area; the area under the pointer is
+Both share their saved alignment and move visibly while dragging. During a snap drag,
+three short markers appear above the status area; the pointer's destination is
 highlighted. Releasing saves that alignment. Right-click either surface for
 **Align left**, **Align center**, or **Align right**. While the bubble or floating
 header has focus, Alt+Shift+Left/Right changes alignment. These user preferences
 persist across projects and reloads.
+
+Choose **Snap to alignment** or **Move freely** under **Floating panel movement**
+in Appearance or the floating header context menu. Snap is the default. Free
+movement follows the pointer horizontally and vertically without snap indicators;
+Alt+Shift+arrow keys move a focused floating header. The bubble keeps its alignment.
+Resize the floating panel from any edge or corner. Focus a resize handle and use
+arrow keys to resize; Shift uses larger steps. Size and free position persist
+across close/reopen and reload. A smaller viewport fits the panel temporarily
+without replacing its saved frame. Panel policy can disable resizing.
+The public `floatingSidePanelPreferences` keys store movement (`snap` or `free`)
+and the user frame (`x`, `y`, `width`, `height`); an empty frame uses the default size.
 
 **Settings → Workbench → Appearance** contains **Show Side Panel bubble** and
 **Default Side Panel**. The picker offers the Side Panel's available tabs and a generic
@@ -115,4 +126,4 @@ mounted while closed, so minimizing and reopening preserves drafts. See the
 [menu selection story](../../../packages/ui/src/components/overlays/menu-selection.canvas.tsx)
 and [Side Panel stories](../../../packages/pstdio-workbench/src/examples/side-panel/side-panel.canvas.tsx).
 
-*Updated at: 2026-11-09*
+*Updated at: 2026-11-23*
