@@ -29,8 +29,8 @@ import { WorkingIndicator } from "./working-indicator";
 export interface ChatPanelProps extends ChatLinkProps {
   /** Stable conversation identity used to reset ready state when switching sessions. */
   conversationKey?: string;
-  /** Return to the latest message when a retained conversation is shown again. */
-  followOnShow?: boolean;
+  /** Change to remount the transcript viewport while keeping the composer mounted. */
+  transcriptRevision?: number;
   messages: SessionMessage[];
   /** IDs intersecting the settled conversation viewport, excluding virtual overscan. */
   onVisibleMessageIdsChange?: (ids: string[]) => void;
@@ -130,6 +130,9 @@ const agentQuestionComposerProps = (
   };
 };
 
+const transcriptKey = (key: string | undefined, revision: number | undefined) =>
+  revision ? JSON.stringify([key, revision]) : key;
+
 export const ChatPanel = (props: ChatPanelProps) => {
   const {
     conversationKey,
@@ -192,7 +195,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
   const panelStyles = useRecipe({ recipe: chatPanelRecipe })();
   const merged = useMemo(() => normalizeChatMessagesForDisplay(messages, { streaming }), [messages, streaming]);
   const hasMessages = merged.length > 0;
-  const messageListKey = conversationKey ?? merged[0]?.id;
+  const messageListKey = transcriptKey(conversationKey ?? merged[0]?.id, props.transcriptRevision);
   const messageListIdentity = hasMessages ? (messageListKey ?? "active-conversation") : null;
   const userMessageCount = merged.reduce((count, message) => count + (message.role === "user" ? 1 : 0), 0);
   const { groups, leadingResponses } = groupMessagesByTurn(merged);
@@ -263,10 +266,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
           <Flex className="ps-chat-panel" css={panelStyles}>
             <ChatPrimitives.Root key={messageListKey}>
               <AutoScroll conversationKey={messageListKey ?? null} userMessageCount={userMessageCount} />
-              <ChatPrimitives.Viewport
-                followOnShow={props.followOnShow}
-                visibility={isMessageViewportReady ? "visible" : "hidden"}
-              >
+              <ChatPrimitives.Viewport visibility={isMessageViewportReady ? "visible" : "hidden"}>
                 {hasMessages ? (
                   <>
                     <ChatMessageList

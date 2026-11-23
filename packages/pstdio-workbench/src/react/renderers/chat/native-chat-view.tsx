@@ -41,6 +41,7 @@ interface NativeChatViewProps extends NativeChatHostServices {
   resolve?: () => NativeChatPresentation | undefined;
   /** Hidden retained presentations must not request composer focus. */
   visible?: boolean;
+  placementOpen?: boolean;
   emptyTitle?: string;
   emptyDescription?: string;
   renderParamField?: CommandParamFieldRenderer;
@@ -95,6 +96,12 @@ export const NativeChatView = (props: NativeChatViewProps) => (
 );
 
 const NativeChatContent = (props: NativeChatViewProps) => {
+  const open = props.placementOpen !== false;
+  const [transcript, setTranscript] = useState({ open, revision: 0 });
+  if (transcript.open !== open) {
+    // Closed placements may keep their React state. Reopen with a fresh viewport.
+    setTranscript({ open, revision: transcript.revision + Number(open) });
+  }
   const { key, ...presentation } = useNativeChatPresentation({
     initial: {
       session: props.session,
@@ -106,10 +113,18 @@ const NativeChatContent = (props: NativeChatViewProps) => {
     observe: props.observe,
     visible: props.visible,
   });
-  return <NativeChatConversation key={key} {...props} {...presentation} conversationKey={key} />;
+  return (
+    <NativeChatConversation
+      key={key}
+      {...props}
+      {...presentation}
+      conversationKey={key}
+      transcriptRevision={transcript.revision}
+    />
+  );
 };
 
-const NativeChatConversation = (props: NativeChatViewProps) => {
+const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevision: number }) => {
   const { session, conversationKey, renderParamField } = props;
   const state = useSyncExternalStore(session.subscribeToView, session.getSnapshot, session.getSnapshot);
   const { conversation, draft, messages, queuedFollowUps, pending, loading, initializing, sending } = state;
@@ -192,7 +207,7 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
         return (
           <ChatPanel
             conversationKey={conversationKey}
-            followOnShow
+            transcriptRevision={props.transcriptRevision}
             onVisibleMessageIdsChange={observation.onVisibleMessageIdsChange}
             onVisibleQuestionChange={observation.onVisibleQuestionChange}
             linkHandler={host.linkHandler ?? props.linkHandler}

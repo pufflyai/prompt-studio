@@ -2,7 +2,7 @@ import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import type { SessionMessage } from "@pstdio/sdk/extensions";
 import { AlertMessage, EmptyState } from "@pstdio/ui";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
-import { Activity, useState } from "react";
+import { useState } from "react";
 import { createChatSession } from "../../../extensions/contributions/chat-session";
 import { NativeChatDraftRecovery } from "./native-chat-draft-recovery";
 import type { NativeChatHostProps } from "./native-chat-host";
@@ -228,15 +228,14 @@ export const ReopenSession = () => {
           {panelVisible ? "Hide panel" : "Show panel"}
         </Button>
       </HStack>
-      <Box flex="1" minH="0" display={panelVisible ? "block" : "none"}>
-        <Activity mode={open ? "visible" : "hidden"}>
-          <NativeChatView
-            session={session}
-            conversationKey="reopen-session"
-            action={undefined}
-            visible={open && panelVisible}
-          />
-        </Activity>
+      <Box flex="1" minH="0" display={open && panelVisible ? "block" : "none"}>
+        <NativeChatView
+          session={session}
+          conversationKey="reopen-session"
+          action={undefined}
+          placementOpen={open}
+          visible={open && panelVisible}
+        />
       </Box>
     </Stack>
   );
