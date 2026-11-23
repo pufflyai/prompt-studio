@@ -91,6 +91,7 @@ export const executeTreeActionCommand = async (
   return executeWorkbenchExtensionCommand(input, commandId, {
     params: rendererParams,
     resource,
+    foreground: true,
     slot: slotContext({ modeId, projectId: input.projectId, resource, treeId: record.id }),
     metadata: { treeId: record.id },
   });

@@ -124,3 +124,82 @@ test("a later observer value survives the record read used to finish a setting c
     await server.stop(true);
   }
 });
+
+test("resetting a shared device setting preserves the peer version's declaration", async () => {
+  const stored = { ...initial, source: "stored", value: "Setting override" } as const;
+  const peerDefault = { ...initial, title: "Peer title", default: "Peer default", value: "Peer default" };
+  const viewC = { ...viewB, installedExtensionId: "different-version" };
+  const release = Promise.withResolvers<void>();
+  const server = Bun.serve({
+    port: 0,
+    async fetch(request) {
+      if (request.method === "DELETE") {
+        await release.promise;
+        return new Response(null, { status: 204 });
+      }
+      return Response.json(initial);
+    },
+  });
+  const owner = createRuntimeCollections({ baseUrl: server.url.origin, token: "test-token" });
+  const settings = getExtensionSettingOperations(owner);
+  let peer: ExtensionSettingValueRecord = { ...peerDefault, source: stored.source, value: stored.value };
+  const stop = settings.observe({
+    target: viewC,
+    current: () => peer,
+    accept: (record) => {
+      peer = record;
+    },
+  });
+  try {
+    const reset = settings.update(viewA, stored, undefined, () => {});
+    expect(settings.project(viewC, peer)).toEqual(peerDefault);
+    release.resolve();
+    await reset;
+    expect(peer).toEqual(peerDefault);
+  } finally {
+    stop();
+    release.resolve();
+    await owner.dispose();
+    await server.stop(true);
+  }
+});
+
+test("a live authorized instance can verify a device write after its source project disappears", async () => {
+  const accepted = { ...initial, source: "stored", value: "Stored before disconnect" } as const;
+  const readPaths: string[] = [];
+  const server = Bun.serve({
+    port: 0,
+    fetch(request) {
+      const path = new URL(request.url).pathname;
+      if (!path.endsWith("/settings/mode")) return new Response(null, { status: 404 });
+      if (request.method === "PUT") return Response.json({ error: "Response lost" }, { status: 503 });
+      readPaths.push(path);
+      return path.includes("/projects/b/")
+        ? Response.json(accepted)
+        : Response.json({ error: "Project missing" }, { status: 404 });
+    },
+  });
+  const owner = createRuntimeCollections({ baseUrl: server.url.origin, token: "test-token" });
+  const settings = getExtensionSettingOperations(owner);
+  const operations = getWorkbenchOperations(getDashboardScopedQueries(owner));
+  let peer: ExtensionSettingValueRecord = initial;
+  const stop = settings.observe({
+    target: viewB,
+    current: () => peer,
+    accept: (record) => {
+      peer = record;
+    },
+  });
+  try {
+    await expect(settings.update(viewA, initial, accepted.value, () => {})).rejects.toThrow("Response lost");
+    const recovery = operations.getSnapshot().recovery[0]!;
+    await operations.check(recovery.id);
+    expect(readPaths).toEqual([expect.stringContaining("/projects/a/"), expect.stringContaining("/projects/b/")]);
+    expect(peer).toEqual(accepted);
+    expect(operations.getSnapshot().recovery).toEqual([]);
+  } finally {
+    stop();
+    await owner.dispose();
+    await server.stop(true);
+  }
+});

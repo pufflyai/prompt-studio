@@ -55,7 +55,7 @@ test("a delayed progress response cannot replace the completed update notice", a
   const workbench = createWorkbench();
   let notify = () => {};
   let reads = 0;
-  const progress = Promise.withResolvers<{ level: "info"; title: string }>();
+  const progress = Promise.withResolvers<{ kind: "progress"; title: string }>();
   const ready = { level: "info" as const, title: "Update ready" };
   const stop = connectDesktopUpdateNotices(
     {
@@ -65,7 +65,7 @@ test("a delayed progress response cannot replace the completed update notice", a
       },
       takeUpdateNotice() {
         reads += 1;
-        return reads === 1 ? progress.promise : Promise.resolve(ready);
+        return reads === 1 ? progress.promise : Promise.resolve({ kind: "progress", title: null, outcome: ready });
       },
     },
     () => workbench,
@@ -73,7 +73,7 @@ test("a delayed progress response cannot replace the completed update notice", a
   try {
     notify();
     expect(reads).toBe(1);
-    progress.resolve({ level: "info", title: "Checking for updates" });
+    progress.resolve({ kind: "progress", title: "Checking for updates" });
     await Promise.resolve();
     await Promise.resolve();
     expect(reads).toBe(2);
@@ -87,9 +87,11 @@ test("a delayed progress response cannot replace the completed update notice", a
 test("a native check that hands off to the browser clears its progress", async () => {
   const workbench = createWorkbench();
   let notify = () => {};
-  let notice: { level: "info"; title: string } | { kind: "clear-progress" } = {
-    level: "info",
+  const installed = { level: "info" as const, title: "Update installed" };
+  let notice: { kind: "progress"; title: string | null; outcome?: typeof installed } = {
+    kind: "progress",
     title: "Checking for updates",
+    outcome: installed,
   };
   const stop = connectDesktopUpdateNotices(
     {
@@ -103,11 +105,11 @@ test("a native check that hands off to the browser clears its progress", async (
   );
   try {
     await Promise.resolve();
-    expect(workbench.notifications.listNotifications()).toHaveLength(1);
-    notice = { kind: "clear-progress" };
+    expect(workbench.notifications.listNotifications()).toHaveLength(2);
+    notice = { kind: "progress", title: null };
     notify();
     await Promise.resolve();
-    expect(workbench.notifications.listNotifications()).toEqual([]);
+    expect(workbench.notifications.listNotifications()).toMatchObject([installed]);
   } finally {
     stop?.();
     await workbench.dispose();

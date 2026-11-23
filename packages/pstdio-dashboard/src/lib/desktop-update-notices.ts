@@ -6,7 +6,7 @@ interface UpdateNotice {
   message?: string;
 }
 
-type UpdateNoticeEvent = UpdateNotice | { kind: "clear-progress" };
+type UpdateNoticeEvent = UpdateNotice | { kind: "progress"; title: string | null; outcome?: UpdateNotice };
 
 interface DesktopUpdateNoticeBridge {
   onUpdateNotice: (listener: () => void) => () => void;
@@ -24,6 +24,7 @@ const hasUpdateNotices = (bridge: unknown): bridge is DesktopUpdateNoticeBridge 
   );
 
 const updateNoticeId = "desktop.update";
+const updateProgressId = "desktop.update.progress";
 
 export const connectDesktopUpdateNotices = (
   bridge: unknown,
@@ -32,23 +33,38 @@ export const connectDesktopUpdateNotices = (
 ) => {
   if (!hasUpdateNotices(bridge)) return;
   let connected = true;
-  let pending: UpdateNotice | undefined;
+  const unread = new Map<string, UpdateNotice>();
   let owner: WorkbenchCore | undefined;
   let dismissal: ReturnType<WorkbenchCore["notifications"]["subscribe"]> | undefined;
-  const publish = () => {
-    if (pending) owner?.notifications.show({ ...pending, id: updateNoticeId });
+  const publish = (id: string, notice: UpdateNotice) => {
+    unread.set(id, notice);
+    owner?.notifications.show({ ...notice, id });
+  };
+  const clearProgress = () => {
+    unread.delete(updateProgressId);
+    owner?.notifications.dismiss(updateProgressId);
   };
   const followActiveWorkbench = () => {
     const next = getWorkbench();
     if (next === owner) return;
     dismissal?.dispose();
-    owner?.notifications.dismiss(updateNoticeId);
+    for (const id of unread.keys()) owner?.notifications.dismiss(id);
     owner = next;
     dismissal = owner?.notifications.subscribe((event) => {
-      if (event.type === "dismiss" && event.id === updateNoticeId) pending = undefined;
+      if (event.type === "dismiss") unread.delete(event.id);
     });
-    publish();
+    for (const [id, notice] of unread) owner?.notifications.show({ ...notice, id });
   };
+  const applyNotice = (notice: UpdateNoticeEvent) => {
+    if (!("kind" in notice)) {
+      publish(updateNoticeId, notice);
+      return;
+    }
+    if (notice.title) publish(updateProgressId, { title: notice.title, level: "info" });
+    else clearProgress();
+    if (notice.outcome) publish(updateNoticeId, notice.outcome);
+  };
+
   let receiving = false;
   let requested = false;
   const takeNotices = async () => {
@@ -62,13 +78,7 @@ export const connectDesktopUpdateNotices = (
         continue;
       }
       if (!notice || !connected) continue;
-      if ("kind" in notice) {
-        pending = undefined;
-        owner?.notifications.dismiss(updateNoticeId);
-      } else {
-        pending = notice;
-        publish();
-      }
+      applyNotice(notice);
     }
     receiving = false;
   };

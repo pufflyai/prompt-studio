@@ -30,14 +30,38 @@ test("completed native results replace progress and survive its cleanup", () => 
     logError: () => {},
   });
   notifications.progress("checking");
-  expect(notifications.take()).toMatchObject({ level: "info" });
+  expect(notifications.take()).toMatchObject({ kind: "progress", title: expect.any(String) });
   notifications.progress("downloading");
   notifications.downloaded("2.0.0");
   notifications.progress(undefined);
-  expect(notifications.take()).toMatchObject({ message: expect.stringContaining("2.0.0") });
+  expect(notifications.take()).toMatchObject({
+    kind: "progress",
+    title: null,
+    outcome: { message: expect.stringContaining("2.0.0") },
+  });
 
   notifications.progress("checking");
   expect(notifications.take()).toBeDefined();
   notifications.progress(undefined);
-  expect(notifications.take()).toEqual({ kind: "clear-progress" });
+  expect(notifications.take()).toEqual({ kind: "progress", title: null });
+});
+
+test("an interactive check keeps an unread installed update notice", () => {
+  const notifications = createDesktopUpdateNotifications({
+    currentVersion: "2.0.0",
+    receipt: { recordDownload: () => {}, consumeInstalled: () => true },
+    onNotice: () => {},
+    logError: () => {},
+  });
+  notifications.installed();
+  notifications.progress("checking");
+  const checking = notifications.take();
+  expect(checking).toMatchObject({
+    kind: "progress",
+    title: expect.any(String),
+    outcome: { level: "info", message: expect.stringContaining("2.0.0") },
+  });
+
+  notifications.progress(undefined);
+  expect(notifications.take()).toEqual({ kind: "progress", title: null });
 });

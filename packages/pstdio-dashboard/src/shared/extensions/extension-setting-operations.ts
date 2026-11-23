@@ -1,4 +1,5 @@
 import type { ExtensionSettingDefinitionRecord, ExtensionSettingValueRecord } from "@pstdio/sdk/api";
+import { PstdioApiError } from "@pstdio/sdk/client";
 import { classifyApiWrite, getWorkbenchOperations, operationSubject } from "@pstdio/workbench";
 import { hashKey } from "@tanstack/react-query";
 import { getRuntimeApiClient } from "@/lib/api";
@@ -109,7 +110,22 @@ export const getExtensionSettingOperations = createRuntimeState((owner) => {
             .filter((reader) => subjectFor(reader.target, setting) === subject)
             .map((reader) => [reader, reader.current(setting.key)] as const),
         );
-        const result = await endpoint.get(setting.key);
+        const result = await endpoint.get(setting.key).catch((error: unknown) => {
+          if (!(error instanceof PstdioApiError) || error.status !== 404 || setting.scope === "project") throw error;
+          signal.throwIfAborted();
+          // A device or installed-global setting can outlive the project that wrote it.
+          const peer = [...observed].find(
+            ([reader, current]) =>
+              readers.has(reader) &&
+              current &&
+              subjectFor(reader.target, current) === subject &&
+              (reader.target.projectId !== target.projectId ||
+                reader.target.instanceId !== target.instanceId ||
+                reader.target.installName !== target.installName),
+          );
+          if (!peer) throw error;
+          return transport(peer[0].target).get(setting.key);
+        });
         if (result.key !== setting.key || result.scope !== setting.scope || result.extensionId !== setting.extensionId)
           throw new SyntaxError("The extension returned a different setting.");
         return { record: result, observed };
@@ -134,9 +150,20 @@ export const getExtensionSettingOperations = createRuntimeState((owner) => {
           const { record, observed } = receipt.verified ?? (await read(signal));
           signal.throwIfAborted();
           for (const [reader, before] of observed) {
-            if (!readers.has(reader)) continue;
-            const current = reader.current(record.key);
-            if (current?.source === before?.source && sameValue(current?.value, before?.value)) reader.accept(record);
+            const current = readers.has(reader) ? reader.current(record.key) : undefined;
+            if (
+              !current ||
+              !before ||
+              subjectFor(reader.target, current) !== subject ||
+              current.source !== before.source ||
+              !sameValue(current.value, before.value)
+            )
+              continue;
+            reader.accept({
+              ...current,
+              source: record.source,
+              value: record.source === "default" ? current.default : record.value,
+            });
           }
         },
         async check(signal) {

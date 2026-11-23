@@ -30,9 +30,11 @@ export interface DesktopProjectTabsState {
 
 export type DesktopUpdatePhase = "checking" | "downloading";
 
+export type DesktopUpdateOutcome = { level: "info" | "error"; title: string; message?: string };
+
 export type DesktopUpdateNotice =
-  | { level: "info" | "error"; title: string; message?: string }
-  | { kind: "clear-progress" };
+  | DesktopUpdateOutcome
+  | { kind: "progress"; title: string | null; outcome?: DesktopUpdateOutcome };
 
 export interface PromptStudioDesktopApi {
   cancelQuit: () => Promise<void>;

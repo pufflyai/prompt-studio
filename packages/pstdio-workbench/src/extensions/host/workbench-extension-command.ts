@@ -9,7 +9,7 @@ import type {
 import { resolveCommandResourceParams } from "../../core/registries/commands/command-resource-params";
 import type { WorkbenchOperations } from "../../core/registries/mutations/operations";
 import { isPageContent } from "../../core/registries/pages/page-main";
-import { copyCommandResult } from "./command-clipboard";
+import { applyCommandClipboard } from "./command-clipboard";
 import { unwrapCommandValue } from "./command-response";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 import { remoteWorkspaceLaunchCommand, runRemoteWorkspaceLaunch } from "./remote-workspace-launch";
@@ -103,10 +103,15 @@ export const executeWorkbenchExtensionCommandResponse = async (
     context.metadata?.commands.find((candidate) => candidate.id === commandId) ??
     context.workbench.commands?.getCommand(commandId)?.command;
   // Start writing before awaiting the remote command, while the selecting gesture is active.
-  const copying = command?.copyResultToClipboard
-    ? copyCommandResult(pendingResponse, input.signal, invocation.isViewerCurrent)
-    : undefined;
-  const [response] = await Promise.all([pendingResponse, copying]);
+  const response = await (command?.copyResultToClipboard
+    ? applyCommandClipboard({
+        response: pendingResponse,
+        mutating: command.mutating,
+        signal: input.signal,
+        isViewerCurrent: invocation.isViewerCurrent,
+        reportError: context.workbench.notifications.captureActionError("Copy command result"),
+      })
+    : pendingResponse);
   const outcome = (response as Partial<CommandExecutionResult> | undefined)?.outcome;
   if (outcome?.status === "success" && !input.signal?.aborted) {
     for (const target of outcome.navigationRequests ?? []) {
