@@ -10,9 +10,11 @@ import {
 } from "react";
 import type { WorkbenchCore } from "../../core";
 import { floatingSidePanelPreferences } from "../../core/controllers/side-panel/floating-side-panel-preferences";
+import { sidePanelBubblePreferences } from "../../core/controllers/side-panel/side-panel-bubble";
 import { runUserAction } from "../../core/shared/run-user-action";
 import {
   type FloatingPanelFrame,
+  type FloatingPanelResizeAnchor,
   fitFloatingPanel,
   readFloatingPanelFrame,
   resizeFloatingPanel,
@@ -32,6 +34,7 @@ interface Gesture {
   x: number;
   y: number;
   resizing: boolean;
+  anchor: FloatingPanelResizeAnchor;
   target: HTMLElement;
   pointerId: number;
   moved: boolean;
@@ -57,6 +60,10 @@ export const useFloatingPanelGesture = (options: FloatingPanelGestureOptions) =>
   const { workbench, panelRef, movement, resizable, visible } = options;
   const gesture = useRef<Gesture | null>(null);
   const [frame, setFrame] = useState<FloatingPanelFrame>();
+  const resizeAnchor = () => {
+    if (movement === "free") return "right";
+    return workbench.preferences.getValue(sidePanelBubblePreferences.alignment) as FloatingPanelResizeAnchor;
+  };
   const cancel = () => {
     const current = gesture.current;
     gesture.current = null;
@@ -95,6 +102,7 @@ export const useFloatingPanelGesture = (options: FloatingPanelGestureOptions) =>
         x: event.clientX,
         y: event.clientY,
         resizing,
+        anchor: resizeAnchor(),
         target: event.currentTarget,
         pointerId: event.pointerId,
         moved: false,
@@ -109,7 +117,7 @@ export const useFloatingPanelGesture = (options: FloatingPanelGestureOptions) =>
       current.moved = true;
       const viewport = viewportFor(event.currentTarget);
       current.frame = current.resizing
-        ? resizeFloatingPanel(current.origin, delta, viewport)
+        ? resizeFloatingPanel(current.origin, delta, viewport, current.anchor)
         : fitFloatingPanel(
             { ...current.origin, x: current.origin.x + delta.x, y: current.origin.y + delta.y },
             viewport,
@@ -167,7 +175,14 @@ export const useFloatingPanelGesture = (options: FloatingPanelGestureOptions) =>
         if (!delta || !resizable || !panelRef.current) return;
         event.preventDefault();
         event.stopPropagation();
-        commit(resizeFloatingPanel(readFloatingPanelFrame(panelRef.current), delta, viewportFor(event.currentTarget)));
+        commit(
+          resizeFloatingPanel(
+            readFloatingPanelFrame(panelRef.current),
+            delta,
+            viewportFor(event.currentTarget),
+            resizeAnchor(),
+          ),
+        );
       },
     },
   };

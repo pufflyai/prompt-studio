@@ -1,6 +1,46 @@
-import type { Page, TestInfo } from "@playwright/test";
+import type { Locator, Page, TestInfo } from "@playwright/test";
 import { homeFrame } from "../../helpers/home-loading";
 import { expect } from "../../scripts/session-test";
+
+const verifySnappedResize = async (page: Page, panel: Locator, openHeaderMenu: () => Promise<void>) => {
+  const handle = panel.getByRole("button", { name: "Resize Side Panel from top left", exact: true });
+  const viewport = page.viewportSize()!;
+  for (const alignment of ["left", "center"] as const) {
+    await openHeaderMenu();
+    await page.getByRole("menuitem", { name: `Align ${alignment}`, exact: true }).click();
+    await expect
+      .poll(async () => {
+        const box = (await panel.boundingBox())!;
+        return alignment === "left" ? box.x : box.x + box.width / 2;
+      })
+      .toBeCloseTo(alignment === "left" ? 12 : viewport.width / 2, 0);
+    const before = (await panel.boundingBox())!;
+    const grip = (await handle.boundingBox())!;
+    const delta = alignment === "left" ? 8 : 16;
+    await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(grip.x + grip.width / 2 - delta, grip.y + grip.height / 2, { steps: 4 });
+    await expect
+      .poll(async () => (await panel.boundingBox())!.width)
+      .toBeCloseTo(before.width + delta * (alignment === "center" ? 2 : 1), 0);
+    const during = (await panel.boundingBox())!;
+    if (alignment === "left") expect(during.x).toBeCloseTo(before.x, 0);
+    else expect(during.x + during.width / 2).toBeCloseTo(before.x + before.width / 2, 0);
+    await page.mouse.up();
+    await openHeaderMenu();
+    await page.keyboard.press("Escape");
+    await expect.poll(() => panel.boundingBox()).toEqual(during);
+    await expect(panel).toHaveAttribute("data-floating-panel-movement", "snap");
+  }
+  await openHeaderMenu();
+  await page.getByRole("menuitem", { name: "Align right", exact: true }).click();
+  await expect
+    .poll(async () => {
+      const box = (await panel.boundingBox())!;
+      return box.x + box.width;
+    })
+    .toBeCloseTo(viewport.width - 12, 0);
+};
 
 // Critical risk: moving and resizing a live Side iframe must keep its draft and controls reachable.
 export const verifyFreeFloatingSidePanel = async (page: Page, info: TestInfo) => {
@@ -25,6 +65,7 @@ export const verifyFreeFloatingSidePanel = async (page: Page, info: TestInfo) =>
   await page.mouse.up();
   await expect.poll(async () => (await panel.boundingBox())!.width).toBeCloseTo(initial.width - 96, 0);
   await expect.poll(async () => (await panel.boundingBox())!.height).toBeCloseTo(initial.height - 160, 0);
+  await verifySnappedResize(page, panel, openHeaderMenu);
   await openHeaderMenu();
   await page.getByRole("menuitem", { name: "Move freely", exact: true }).click();
   await expect(panel).toHaveAttribute("data-floating-panel-movement", "free");

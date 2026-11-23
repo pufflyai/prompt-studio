@@ -106,8 +106,9 @@ Choose **Snap to alignment** or **Move freely** under **Floating panel movement*
 in Appearance or the floating header context menu. Snap is the default. Free
 movement follows the pointer horizontally and vertically without snap indicators;
 Alt+Shift+arrow keys move a focused floating header. The bubble keeps its alignment.
-Resize the floating panel only from its top-left corner. Its left and right gaps
-match its bottom gap. Focus the top-left resize handle and use arrow keys to resize; Shift uses larger steps. Size and free position persist
+Resize the floating panel only from its top-left corner. In snap mode, its left and right gaps
+match its bottom gap. Resizing retains the selected horizontal anchor throughout
+the gesture and after release; free resizing keeps the opposite corner fixed. Focus the top-left resize handle and use arrow keys to resize; Shift uses larger steps. Size and free position persist
 across close/reopen and reload. Escape cancels an active move or resize.
 A smaller viewport fits the panel temporarily
 without replacing its saved frame. Panel policy can disable resizing.

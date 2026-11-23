@@ -56,3 +56,21 @@ test("a smaller viewport fits the panel without overwriting its saved frame", ()
   });
   expect(fitFloatingPanel(saved, viewport)).toEqual(saved);
 });
+
+test("left snap resizing can grow while retaining its left anchor", () => {
+  expect(resizeFloatingPanel({ ...frame, x: 12 }, { x: -80, y: -40 }, viewport, "left")).toEqual({
+    x: 12,
+    y: 160,
+    width: 560,
+    height: 440,
+  });
+});
+
+test("center snap resizing grows symmetrically around its anchor", () => {
+  expect(resizeFloatingPanel(frame, { x: -80, y: -40 }, viewport, "center")).toEqual({
+    x: 320,
+    y: 160,
+    width: 640,
+    height: 440,
+  });
+});
