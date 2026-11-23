@@ -44,7 +44,11 @@ test("one global connection serves new projects and shares updates and revocatio
     await expect(service.remove({ ...input, credentialScope: "project" })).rejects.toThrow(
       "A global connection requires a shared credential",
     );
-    expect((await service.list("second"))[0]).toMatchObject({ scope: "global", configured: true });
+    expect((await service.list("second"))[0]).toMatchObject({
+      scope: "global",
+      configured: true,
+      lastCheck: { ok: true, status: 200 },
+    });
     await expect(
       api("project-only").request(contribution.id, { method: "GET", path: "/v1/workspaces" }),
     ).rejects.toThrow("not configured");
@@ -56,12 +60,13 @@ test("one global connection serves new projects and shares updates and revocatio
       secret: "project-configuration-credential",
       credentialScope: "all-projects",
     });
-    await service.configure({
+    const rotated = await service.configure({
       ...input,
       projectId: "second",
       baseUrl: server.url.origin,
       secret: "rotated-credential",
     });
+    expect(rotated.lastCheck).toBeNull();
     const removeSecrets = await service.prepareProjectRemoval("first");
     await projects.remove("first");
     await removeSecrets();

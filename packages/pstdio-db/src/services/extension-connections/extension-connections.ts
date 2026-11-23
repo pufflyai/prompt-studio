@@ -110,6 +110,7 @@ export const createExtensionConnectionsDBService = (db: DbClient) => {
           ...credentialKey,
           secretRef: input.secretRef,
           provider: credentialProvider(input.baseUrl),
+          resetCheck: input.projectId === null,
         });
         if (input.projectId !== null && credentialKey.projectId === null) await store.remove(input);
       }

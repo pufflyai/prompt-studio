@@ -30,6 +30,7 @@ export const createExtensionCredentialsDBService = (db: Client) => {
         authType: "bearer" | "header";
         authHeaderName?: string | null;
         secretRef: string;
+        resetCheck?: boolean;
       },
     ) {
       const stamp = new Date().toISOString();
@@ -40,6 +41,7 @@ export const createExtensionCredentialsDBService = (db: Client) => {
         secret_ref: input.secretRef,
         updated_at: stamp,
         expires_at: null,
+        ...(input.resetCheck ? { last_check: null } : {}),
       };
       const [row] = await db
         .insert(credentials)
