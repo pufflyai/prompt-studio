@@ -10,6 +10,7 @@ import { createExtensionProcessEnvironment } from "../process-environment";
 import { createProcessHandleProxy, createProcessOwner, failedProcessHandle, processError } from "../process-owner";
 import { markHostContext } from "../runner/host-context";
 import { expectRejection } from "./expect-rejection.test-utils";
+import { HOST_CALL_LIMITS } from "./host-calls";
 import { backendWorkerCommand, createBackendWorkerPool } from "./pool";
 import { HANDLER_MARKER } from "./protocol";
 import { snapshotSink } from "./remote-values";
@@ -228,6 +229,16 @@ export default {
         const child = Bun.spawn([process.execPath, "-e", "setInterval(() => {}, 1000)"], { stdio: ["ignore", "ignore", "ignore"] });
         if (exit) setTimeout(() => process.exit(3), 50);
         return child.pid;
+      },
+    },
+    {
+      id: "flood",
+      title: "Flood",
+      async run(ctx, count) {
+        const results = await Promise.allSettled(
+          Array.from({ length: count }, () => ctx.storage.collection("items").get("never")),
+        );
+        return results.filter((result) => result.status === "rejected").map((result) => result.reason.code);
       },
     },
     { id: "mark", title: "Mark", run: (ctx, path) => Bun.write(path, "ran") },
@@ -1612,6 +1623,29 @@ test("materialized workspace provider handles retain cleanup after the direct ch
       expect(output).toEqual([{ type: "stdout", data: new Uint8Array([confirmed ? 0 : 1]) }]);
     }
   } finally {
+    await worker.stop();
+  }
+});
+
+test("a worker that floods the host is refused past its in-flight limit and keeps working afterwards", async () => {
+  const worker = await start();
+  const previous = HOST_CALL_LIMITS.inFlight;
+  HOST_CALL_LIMITS.inFlight = 5;
+  try {
+    const gate = Promise.withResolvers<void>();
+    const context = {
+      storage: { collection: () => ({ get: () => gate.promise.then(() => null), put: async () => {} }) },
+    };
+    const flooding = worker.invoke({ handlerId: handlerOf(worker.definition, "flood"), context, surface, args: [8] });
+    await Bun.sleep(100);
+    gate.resolve();
+    const refused = (await flooding) as string[];
+    expect(refused).toEqual(["extension_overloaded", "extension_overloaded", "extension_overloaded"]);
+    expect(
+      await worker.invoke({ handlerId: handlerOf(worker.definition, "flood"), context, surface, args: [3] }),
+    ).toEqual([]);
+  } finally {
+    HOST_CALL_LIMITS.inFlight = previous;
     await worker.stop();
   }
 });
