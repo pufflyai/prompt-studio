@@ -5,6 +5,30 @@ import { createWorkbench, floatingSidePanelPreferences } from "../../core";
 import { createLocalStoragePreferencePersistence } from "../../storage/local-storage-preference-persistence";
 import { useFloatingSidePanel } from "./use-floating-side-panel";
 
+test("free mode keeps the bottom offset in its height limit until a positioned frame exists", async () => {
+  const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const previous = environment.IS_REACT_ACT_ENVIRONMENT;
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  const workbench = createWorkbench();
+  let renderer: ReactTestRenderer | undefined;
+  const Capture = () => {
+    const panelRef = useRef<HTMLDivElement>(null);
+    const panel = useFloatingSidePanel({ workbench, panelRef, visible: false, resizable: true, bottom: "40px" });
+    return <span>{panel.frameProps.maxH}</span>;
+  };
+  try {
+    await workbench.preferences.setValue(floatingSidePanelPreferences.movement, "free", { scope: "user" });
+    await act(async () => {
+      renderer = createRenderer(<Capture />);
+    });
+    expect(renderer!.toJSON()).toMatchObject({ children: ["calc(100dvh - 40px - 12px)"] });
+  } finally {
+    await act(async () => renderer?.unmount());
+    await workbench.dispose();
+    environment.IS_REACT_ACT_ENVIRONMENT = previous;
+  }
+});
+
 test("a saved floating frame remains usable through local storage and preference updates", async () => {
   const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
   const previous = environment.IS_REACT_ACT_ENVIRONMENT;

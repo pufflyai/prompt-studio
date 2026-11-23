@@ -155,6 +155,7 @@ export const useFloatingPanelGesture = (options: FloatingPanelGestureOptions) =>
         if (!delta) return;
         event.preventDefault();
         event.stopPropagation();
+        if (gesture.current) return;
         const current = readFloatingPanelFrame(panelRef.current);
         commit(
           fitFloatingPanel(
@@ -177,6 +178,7 @@ export const useFloatingPanelGesture = (options: FloatingPanelGestureOptions) =>
         if (!delta || !resizable || !panelRef.current) return;
         event.preventDefault();
         event.stopPropagation();
+        if (gesture.current) return;
         commit(
           resizeFloatingPanel(
             readFloatingPanelFrame(panelRef.current),

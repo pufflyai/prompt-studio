@@ -98,8 +98,9 @@ destination highlighted. Bubble indicators are circles matching the bubble's exa
 size and resting positions. Floating-panel indicators are short markers at the
 bottom-left, center and bottom-right anchors, using the same gap as the panel's
 bottom edge. Releasing saves that alignment. Right-click either surface for
-**Align left**, **Align center**, or **Align right**. While the bubble or floating
-header has focus, Alt+Shift+Left/Right changes alignment. These user preferences
+**Align left**, **Align center**, or **Align right**. While the bubble has focus,
+Alt+Shift+Left/Right changes alignment. The floating header uses that shortcut in
+snap mode. These user preferences
 persist across projects and reloads.
 
 Choose **Snap to alignment** or **Move freely** under **Floating panel movement**

@@ -106,6 +106,7 @@ export const useSidePanelPosition = (workbench: WorkbenchCore, inset = `${floati
         if (!event.altKey || !event.shiftKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
         event.preventDefault();
         event.stopPropagation();
+        if (drag.current) return;
         const next = sidePanelAlignments[sidePanelAlignments.indexOf(alignment) + (event.key === "ArrowLeft" ? -1 : 1)];
         if (next) void save(next);
       },

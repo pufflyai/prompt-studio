@@ -64,7 +64,7 @@ export const useFloatingSidePanel = (options: FloatingSidePanelOptions) => {
       ...snap.frameProps,
       "data-floating-panel-movement": movement,
       maxW: `calc(100dvw - ${2 * inset}px)`,
-      maxH: movement === "free" ? `calc(100dvh - ${2 * inset}px)` : `calc(100dvh - ${bottom} - ${inset}px)`,
+      maxH: positioned ? `calc(100dvh - ${2 * inset}px)` : `calc(100dvh - ${bottom} - ${inset}px)`,
       ...(shown ? { w: `${shown.width}px`, h: `${shown.height}px` } : {}),
       ...(positioned
         ? {
