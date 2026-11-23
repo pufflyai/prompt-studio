@@ -7,7 +7,7 @@ metadata:
 
 # analyze-agent-sessions
 
-Prompt Studio keeps every agent session. This skill reads them, decides what went wrong, and proposes guidance so future agents avoid it. You judge the sessions; the Session Insights extension stores your verdicts and groups them.
+Prompt Studio keeps every agent session. This skill reads them, decides what went wrong, and proposes guidance so future agents avoid it. You judge the sessions; Session insights in the Prompt Studio Dev extension (`pstdio.dev`) stores your verdicts and groups them.
 
 The vocabulary lives in the extension. Read it before you classify anything:
 
@@ -86,7 +86,7 @@ For each failure mode with **three or more sessions**, or any single severe fail
 
 Save the proposals next to the report, in the extension's folder:
 
-`.pstdio/extension-storage/pstdio.pstdio-session-insights/proposals/<date>-<target>.md`
+`.pstdio/extension-storage/pstdio.dev/proposals/<date>-<target>.md`
 
 Each proposal states the target file, the failure mode, the evidence (session IDs and one quote each), and the full proposed text.
 

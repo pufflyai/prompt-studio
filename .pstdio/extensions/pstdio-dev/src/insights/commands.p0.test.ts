@@ -47,7 +47,7 @@ const setup = (sessions: ExtensionSession[], conversations: Record<string, Sessi
         storage,
         params,
         overrides: {
-          extensionId: "pstdio.pstdio-session-insights",
+          extensionId: "pstdio.dev",
           sessions: sessionsApi,
           extensionFiles: { writeText: async (path: string, value: string) => void written.set(path, value) },
         },
@@ -148,6 +148,6 @@ test("the report groups failures by mode with lessons and fix targets", async ()
   expect(report.markdown).toContain("## Unwanted action — 1 session(s)");
   expect(report.markdown).toContain("- `AGENTS.md` (1)");
   expect(report.markdown).toContain("Do not switch mirrors");
-  expect(report.path).toStartWith(".pstdio/extension-storage/pstdio.pstdio-session-insights/reports/");
+  expect(report.path).toStartWith(".pstdio/extension-storage/pstdio.dev/reports/");
   expect([...written.values()][0]).toBe(report.markdown);
 });

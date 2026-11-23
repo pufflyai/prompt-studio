@@ -5,13 +5,6 @@ import { CalendarDays, Github, Layers } from "lucide-react";
 import { useState } from "react";
 import { PageFrame } from "../webview/page-frame";
 import { type Aggregation, aggregationOptions, type DateRange, rangeOptions } from "../webview/period";
-
-// Release health can be grouped by hour; other pages keep day, week and month.
-const healthAggregationOptions: { value: Aggregation; label: string }[] = [
-  { value: "hour", label: "Hour" },
-  ...aggregationOptions,
-];
-
 import { SelectMenu } from "../webview/select-menu";
 import { BugOriginsPlot } from "./bug-origins-plot";
 import { CategoryBreakdown, formatDuration, ReleaseRunPlots } from "./health-charts";
@@ -19,6 +12,11 @@ import { buildHealthTimeline } from "./health-timeline";
 import { PullRequestMergesPlot } from "./pull-request-merges-plot";
 import { ReleaseEtaPlot } from "./release-eta-plot";
 import type { HealthHistory, ReleaseHealth } from "./types";
+
+// Release health can be grouped by hour over the last 7 days; longer ranges would draw thousands of bars.
+const HOURLY_RANGE: DateRange = "7";
+const healthAggregationOptions = (range: DateRange): { value: Aggregation; label: string }[] =>
+  range === HOURLY_RANGE ? [{ value: "hour", label: "Hour" }, ...aggregationOptions] : aggregationOptions;
 
 export interface HealthViewProps extends HealthHistory {
   today: string;
@@ -142,7 +140,8 @@ export const HealthView = (props: HealthViewProps) => {
   const [tab, setTab] = useState("overview");
   const [chosen, setChosen] = useState<number>();
   const [range, setRange] = useState<DateRange>("30");
-  const [aggregation, setAggregation] = useState<Aggregation>("day");
+  const [chosenAggregation, setAggregation] = useState<Aggregation>("day");
+  const aggregation = chosenAggregation === "hour" && range !== HOURLY_RANGE ? "day" : chosenAggregation;
   const { buckets, selectedRuns } = buildHealthTimeline({
     today,
     range,
@@ -186,7 +185,7 @@ export const HealthView = (props: HealthViewProps) => {
                 label="Aggregation"
                 icon={<Layers />}
                 value={aggregation}
-                options={healthAggregationOptions}
+                options={healthAggregationOptions(range)}
                 onValueChange={(value) => setAggregation(value as Aggregation)}
               />
             ) : null}
