@@ -2,23 +2,27 @@ import { Button, Dialog, Stack } from "@chakra-ui/react";
 import { ParamEditor } from "@pstdio/ui/param-editor";
 import { useSettingsChanges } from "@pstdio/workbench/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { getApiClient } from "@/lib/api";
 import { FolderPicker } from "@/shared/filesystem/folder-picker";
 import { useProjectFolderAssignment } from "@/shared/projects/project-folder-operations";
+import { useProjectNameOperations } from "@/shared/projects/project-name-operations";
 import { ProjectSetupStatus } from "@/shared/projects/project-setup-status";
 import { useProject } from "@/shared/projects/use-project";
 
 export const ProjectFolderPanel = (props: { projectId?: string }) => {
   const { projectId } = props;
   const { data: project } = useProject(projectId);
-  const [name, setName] = useState("");
+  const names = useProjectNameOperations();
+  const authority = names.authority();
+  const pendingName = names.pending(projectId);
+  const [draft, setDraft] = useState<{ authority: string; name: string }>();
+  const currentDraft = draft?.authority === authority ? draft.name : undefined;
+  const name = currentDraft ?? names.name(projectId, project?.name ?? "");
+  const renaming = Boolean(pendingName && pendingName.status !== "unknown" && pendingName.status !== "unconfirmed");
   const [attaching, setAttaching] = useState(false);
   const client = useQueryClient();
   const folderAssignment = useProjectFolderAssignment(projectId);
-  const rename = useMutation({
-    mutationFn: (name: string) => getApiClient().projects.update(projectId!, { name }),
-  });
   const queryKey = ["project-workspaces", projectId];
   const query = useQuery({
     queryKey,
@@ -26,9 +30,6 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
     enabled: Boolean(projectId),
   });
   const home = query.data?.find((workspace) => workspace.is_default);
-  useEffect(() => {
-    setName(project?.name ?? "");
-  }, [project?.name]);
   const attach = useMutation({
     mutationFn: (path: string) => folderAssignment.assign({ mode: "attach", path }),
     onSuccess: () => setAttaching(false),
@@ -40,16 +41,14 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
     },
   });
   useSettingsChanges({
-    dirty: Boolean(project) && name !== project?.name,
-    saving: rename.isPending,
-    disabled: !name.trim(),
+    dirty: Boolean(project) && currentDraft !== undefined && currentDraft.trim() !== project?.name,
+    saving: renaming,
+    disabled: !name.trim() || Boolean(pendingName),
     onSave: async () => {
-      await rename.mutateAsync(name.trim());
+      await names.rename(projectId, name, authority);
+      setDraft((previous) => (previous === draft ? undefined : previous));
     },
-    onReset: () => {
-      setName(project?.name ?? "");
-      rename.reset();
-    },
+    onReset: () => setDraft(undefined),
   });
   const settingUp = home?.initializing || home?.provider_state === "provisioning";
   const providerError = !settingUp ? home?.provider_error_json?.message : undefined;
@@ -59,7 +58,7 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
       <ParamEditor
         changeDelay={0}
         fullWidth
-        readOnly={rename.isPending}
+        readOnly={renaming}
         params={[
           { id: "name", name: "Project name", type: "text", singleLine: true, defaultValue: name },
           {
@@ -72,7 +71,7 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
           },
         ]}
         onChange={(id, value) => {
-          if (id === "name") setName(String(value));
+          if (id === "name") setDraft({ authority, name: String(value) });
         }}
       />
       {setupError && (

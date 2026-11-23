@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { useCollectionSelection } from "@/lib/sync/use-collection-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
+import { useProjectNameOperations } from "@/shared/projects/project-name-operations";
 import { type ProjectCloudState, useCloudProjectStates } from "../data/cloud-project-states";
 import { useLocalProjectDeletion } from "../data/local-project-deletion";
 import { useCloudProjectCatalog } from "../data/project-catalog";
@@ -84,6 +85,7 @@ export const ProjectPickerWidget = (props: { input: WorkbenchPanelRenderInput })
     input.workbench.context.store,
     (state) => state.values[dashboardSelectedProjectIdContextKey],
   );
+  useProjectNameOperations();
   const dashboardDataVersion = useCollectionSelection({ tables: ["projects", "workspaces"] });
 
   const selectedProjectId = typeof selectedProjectIdValue === "string" ? selectedProjectIdValue : undefined;

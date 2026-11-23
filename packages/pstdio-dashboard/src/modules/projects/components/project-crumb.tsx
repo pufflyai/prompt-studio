@@ -7,6 +7,7 @@ import {
   dashboardSelectedProjectIdContextKey,
   dashboardSelectedProjectNameContextKey,
 } from "@/shared/app/project-context";
+import { useProjectNameOperations } from "@/shared/projects/project-name-operations";
 import { findDashboardProject } from "../data/project-data";
 
 export const projectButtonInteraction = {
@@ -28,6 +29,7 @@ export const useDashboardProjectName = (workbench: WorkbenchCore) => {
     workbench.context.store,
     (state) => state.values[dashboardSelectedProjectNameContextKey],
   );
+  useProjectNameOperations();
   const dashboardDataVersion = useCollectionSelection({
     tables: ["projects"],
     rowIds: typeof selectedProjectId === "string" ? [selectedProjectId] : [],
