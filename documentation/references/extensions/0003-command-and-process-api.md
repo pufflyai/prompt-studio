@@ -182,8 +182,9 @@ await ctx.diagnostics.capture({
 - One capture runs per host at a time. Another rejects with `diagnostics_busy`. Invalid input or a
   duration above the limit rejects with `diagnostics_invalid_input`.
 - Only first-party extensions may capture: an id with the `pstdio.` publisher that is listed in
-  the packaged extension catalog, including a local checkout of one. Others reject with
-  `diagnostics_forbidden`. Profiles contain host source paths, call stacks and runtime
+  the packaged extension catalog, installed from that entry's Git origin, from the host's release
+  registry, or from the host's own source checkout of it. A folder, Git repository or registry
+  that only claims a catalog id is not first-party. Others reject with `diagnostics_forbidden`. Profiles contain host source paths, call stacks and runtime
   identifiers, so keep them in extension-owned local storage.
 
 ## Host environment values
