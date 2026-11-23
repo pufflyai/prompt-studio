@@ -223,25 +223,38 @@ test("keeps recovery visible when the quit confirmation replacement fails during
     (globalThis as unknown as Window).promptStudioDesktop.reportWorkbenchError({ message: "Fixture root failed" }),
   );
   await expect(lifecycle.getByRole("alert")).toBeVisible();
+  // Record an unexpected native fallback without leaving a modal open during teardown.
+  const nativePrompts = await electronApp.evaluateHandle(({ dialog }) => {
+    const messages: string[] = [];
+    dialog.showMessageBox = (async (...args: unknown[]) => {
+      messages.push((args.at(-1) as { message: string }).message);
+      return { response: 0, checkboxChecked: false };
+    }) as typeof dialog.showMessageBox;
+    return messages;
+  });
   runtime.holdDashboard();
-  const replaced = window.waitForEvent("close");
-  await electronApp.evaluate(({ app }) => app.quit());
-  await replaced;
-  const findReplacement = () =>
-    electronApp
-      .context()
-      .pages()
-      .find((page) => page.url().startsWith(runtime.descriptor.origin));
-  await expect.poll(findReplacement).toBeDefined();
-  const replacement = findReplacement()!;
-  await expect.poll(() => startupState(lifecycle)).toMatchObject({ kind: "confirming_active_work" });
-  await replacement.evaluate(() =>
-    (globalThis as unknown as Window).promptStudioDesktop.reportWorkbenchError({
-      message: "Fixture replacement failed",
-    }),
-  );
-  await expect(lifecycle.getByRole("alert")).toBeVisible();
-  runtime.releaseDashboard();
+  try {
+    const replaced = window.waitForEvent("close");
+    await electronApp.evaluate(({ app }) => app.quit());
+    await replaced;
+    const findReplacement = () =>
+      electronApp
+        .context()
+        .pages()
+        .find((page) => page.url().startsWith(runtime.descriptor.origin));
+    await expect.poll(findReplacement).toBeDefined();
+    const replacement = findReplacement()!;
+    await expect.poll(() => startupState(lifecycle)).toMatchObject({ kind: "confirming_active_work" });
+    await replacement.evaluate(() =>
+      (globalThis as unknown as Window).promptStudioDesktop.reportWorkbenchError({
+        message: "Fixture replacement failed",
+      }),
+    );
+    expect(await nativePrompts.jsonValue()).toEqual([]);
+    await expect(lifecycle.getByRole("alert")).toBeVisible();
+  } finally {
+    runtime.releaseDashboard();
+  }
   await expect
     .poll(() =>
       electronApp.evaluate(
@@ -263,6 +276,7 @@ test("keeps recovery visible when the quit confirmation replacement fails during
   await lifecycle.getByRole("button", { name: "Retry", exact: true }).press("Enter");
   const reopened = await waitForWorkbenchPage(lifecycle, runtime.descriptor.origin);
   await expect.poll(() => startupState(reopened)).toMatchObject({ kind: "workbench" });
+  expect(runtime.shutdownForces).toEqual([false]);
 });
 
 // Critical risk: the entry script can fail before the dashboard installs React error handling.
