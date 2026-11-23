@@ -4,6 +4,7 @@ import { createExtensionSlot, executeWorkbenchExtensionCommandResponse } from ".
 import type { CreateBridgeWebviewHostAdapters } from "./bridge-webview-renderer";
 import type { ExtensionWebviewFilesAdapter } from "./extension-webview-host-adapters";
 import { createWorkbenchWebviewHostAdapters } from "./webview-host-capabilities";
+import { runWorkspaceWebviewMutation } from "./workspace-webview-mutations";
 
 type ExtensionWebviewSlotKind = NonNullable<CommandExecuteRequest["slot"]>["kind"];
 export type ExtensionWebviewFileCapabilities = ExtensionWebviewFilesAdapter;
@@ -46,8 +47,25 @@ export const createWorkbenchExtensionWebviewAdapters =
         }),
       });
     };
+    const base = createWorkbenchWebviewHostAdapters({
+      ...context,
+      extensionId,
+      projectId: input.projectId,
+      executeCommand,
+    });
     return {
-      ...createWorkbenchWebviewHostAdapters({ ...context, extensionId, projectId: input.projectId, executeCommand }),
+      ...base,
+      executeCommand: (request: Parameters<typeof base.executeCommand>[0], signal?: AbortSignal) =>
+        extensionId === "pstdio.workspaces"
+          ? runWorkspaceWebviewMutation({
+              workbench: context.workbench,
+              projectId: input.projectId,
+              resource: context.placement.resource,
+              request,
+              signal,
+              execute: (current) => base.executeCommand(request, current),
+            })
+          : base.executeCommand(request, signal),
       files: input.files,
       artifacts: input.artifacts
         ? { read: (params) => input.artifacts!.read(params, { webviewId: context.webviewId }) }

@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { PstdioConnectionError } from "@pstdio/sdk/client";
+import { createScopedQueryClient } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "../../core";
+import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
 import { createWorkbenchExtensionWebviewAdapters } from "./webview-command-capabilities";
 
@@ -123,4 +126,70 @@ test("webviews receive structured command rejections", async () => {
     slotKind: "panel",
   })({ placement: {}, webviewId: "notes", workbench } as never);
   expect(await capabilities["commands.execute"]?.({ commandId: "notes.command.save" })).toEqual(response);
+});
+
+test("a workspace form preserves an unknown submission without repeating its provider request", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
+  const workbench = createWorkbench({ queries });
+  workbench.pageLocations.setProject("project");
+  let writes = 0;
+  const adapters = createCapabilities({
+    projectId: "project",
+    slotKind: "panel",
+    extensionIdForWebview: () => "pstdio.workspaces",
+    executeCommand: () => {
+      writes++;
+      throw new PstdioConnectionError(new Error("Workspace response lost"));
+    },
+  });
+  const request = {
+    commandId: "pstdio.workspaces.command.create",
+    params: { providerId: "provider", params: { name: "New folder" } },
+  };
+  try {
+    for (const webviewId of ["first", "reopened"]) {
+      const capabilities = adapters({ placement: {}, webviewId, workbench } as never);
+      expect(await capabilities["commands.execute"](request)).toMatchObject({
+        outcome: { status: "error", code: "workspace_create_unconfirmed" },
+      });
+    }
+    expect(writes).toBe(1);
+    expect(getWorkbenchOperations(queries).getSnapshot().recovery[0]).toMatchObject({
+      title: "Create workspace",
+      status: "unknown",
+      draft: { params: request.params },
+    });
+  } finally {
+    await workbench.dispose();
+    queries.dispose();
+  }
+});
+
+test("a webview workspace rename previews its canonical label in another workbench", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
+  const workbench = createWorkbench({ queries });
+  const peer = createWorkbench({ queries });
+  workbench.pageLocations.setProject("project");
+  const response = Promise.withResolvers<unknown>();
+  const capabilities = createCapabilities({
+    executeCommand: () => response.promise,
+    extensionIdForWebview: () => "pstdio.workspaces",
+    projectId: "project",
+    slotKind: "panel",
+  })({ placement: {}, webviewId: "workspace-form", workbench } as never);
+  const resource = { type: "workspace", extensionId: "pstdio", id: "workspace", projectId: "project", label: "Before" };
+  try {
+    const pending = capabilities["commands.execute"]({
+      commandId: "pstdio.workspaces.command.rename",
+      params: { id: resource.id, name: "During" },
+    });
+    expect(peer.resources.preview.resolve(resource)?.label).toBe("During");
+    response.resolve({ outcome: { ok: false, status: "rejected", reason: "Rename was rejected" } });
+    expect(await pending).toMatchObject({ outcome: { status: "rejected" } });
+    expect(peer.resources.preview.resolve(resource)?.label).toBe("Before");
+  } finally {
+    await workbench.dispose();
+    await peer.dispose();
+    queries.dispose();
+  }
 });
