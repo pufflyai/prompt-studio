@@ -1,0 +1,82 @@
+name: Dispatch the gated nightly for e78df2fe
+on:
+  push:
+    branches: [diagnostics/nightly-after-e78df2fe-gate]
+    paths: [.github/workflows/nightly-after-e78df2fe-gate.yml]
+permissions: {}
+jobs:
+  dispatch:
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GATE_RUN: "45261578986"
+      GATE_WORKFLOW_SHA: 6404ec7b181c77754b644e777a6acf7fc4b6ecf1
+      SOURCE_SHA: e78df2fe1265d95a42d15a6f9f8bcc29fa4ee655
+      STABLE_TAG: pstdio@0.48.0
+      NIGHTLY_TAG: pstdio@0.49.0-nightly.20261123154303
+    steps:
+      - name: Wait for the exact gate attempt
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          run_identity=$(gh run view "$GATE_RUN" --repo "$GITHUB_REPOSITORY" \
+            --json databaseId,attempt,event,headBranch,headSha,workflowName)
+          jq -e --arg run "$GATE_RUN" --arg sha "$GATE_WORKFLOW_SHA" \
+            '(.databaseId | tostring) == $run and .attempt == 1 and .event == "push" and
+             .headBranch == "diagnostics/release-gate-recovery" and .headSha == $sha and
+             .workflowName == "Hosted release gate recovery"' <<< "$run_identity"
+          gh run watch "$GATE_RUN" --repo "$GITHUB_REPOSITORY" --interval 20 --exit-status
+          gh run view "$GATE_RUN" --repo "$GITHUB_REPOSITORY" --json attempt,status,conclusion \
+            --jq '.attempt == 1 and .status == "completed" and .conclusion == "success"' |
+            grep -Fx true
+      - name: Verify the merged source and both upgrade pairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          evidence="$RUNNER_TEMP/verified-gate"
+          gh run download "$GATE_RUN" --repo "$GITHUB_REPOSITORY" \
+            --name "release-gates-$SOURCE_SHA-attempt-1" --dir "$evidence"
+          jq -e --arg source "$SOURCE_SHA" --arg stable "$STABLE_TAG" --arg nightly "$NIGHTLY_TAG" \
+            '.source == $source and .stable == $stable and .nightly == $nightly' "$evidence/identity.json"
+          read -r digest binary < "$evidence/candidate.sha256"
+          [[ "$digest" =~ ^[a-f0-9]{64}$ ]]
+          test "$binary" = dist/pstdio
+          for channel in stable nightly; do
+            tag="$STABLE_TAG"
+            if [[ "$channel" == nightly ]]; then tag="$NIGHTLY_TAG"; fi
+            runs=("$evidence/$channel"/run-*)
+            test "${#runs[@]}" = 1
+            for profile in active aged; do
+              jq -e '.status == "passed"' "${runs[0]}/$profile/result.json"
+              jq -e --arg source "$SOURCE_SHA" --arg tag "$tag" --arg profile "$profile" --arg digest "$digest" \
+                '.candidateRef == $source and .from == $tag and .profile == $profile and .candidateDigest == $digest' \
+                "${runs[0]}/$profile/versions.json"
+            done
+          done
+          echo "Verified gate $GATE_RUN, source $SOURCE_SHA, candidate SHA-256 $digest"
+      - name: Dispatch the nightly once from the verified main revision
+        shell: bash
+        env:
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          previous=$(gh run list --workflow release-packages.yml --branch main --event workflow_dispatch \
+            --limit 30 --json headSha,url --jq "map(select(.headSha == \"$SOURCE_SHA\"))")
+          jq -e 'length == 0' <<< "$previous"
+          current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          if [[ "$current" != "$SOURCE_SHA" ]]; then
+            echo "::error::Main moved to $current after the gate for $SOURCE_SHA"
+            exit 1
+          fi
+          run_url=$(gh workflow run release-packages.yml --ref main -f channel=nightly)
+          if [[ -z "$run_url" ]]; then
+            run_url=$(gh run list --workflow release-packages.yml --branch main --event workflow_dispatch \
+              --limit 10 --json headSha,url --jq "map(select(.headSha == \"$SOURCE_SHA\"))[0].url // empty")
+          fi
+          [[ "$run_url" =~ ^https://github\.com/pufflyai/prompt-studio/actions/runs/[0-9]+$ ]]
+          printf 'Nightly dispatched for %s\n%s\n' "$SOURCE_SHA" "$run_url" | tee -a "$GITHUB_STEP_SUMMARY"
