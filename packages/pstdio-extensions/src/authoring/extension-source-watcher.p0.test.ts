@@ -241,7 +241,7 @@ describe("createExtensionSourceWatcher", () => {
     }
   });
 
-  test("rebinds and reloads a source directory replaced in place by a forced install", async () => {
+  test("rebinds and reloads the source named by a forced reinstall", async () => {
     const sourcePath = join(root, "watched");
     mkdirSync(sourcePath, { recursive: true });
     writeFileSync(join(sourcePath, "extension.ts"), "export default { version: 1 };\n");
@@ -261,11 +261,10 @@ describe("createExtensionSourceWatcher", () => {
     });
 
     try {
-      rmSync(sourcePath, { recursive: true, force: true });
-      mkdirSync(sourcePath, { recursive: true });
+      // Kito can report the same directory identity after a replacement at this path.
       writeFileSync(join(sourcePath, "extension.ts"), "export default { version: 2 };\n");
 
-      await watcher.refresh();
+      await watcher.refresh(sourcePath);
 
       expect(watchers).toHaveLength(2);
       expect(watchers[0]?.closed).toBe(true);

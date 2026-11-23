@@ -36,7 +36,7 @@ export const createRootWatcherClient = async (input: CreateExtensionRootWatcherI
     if (typeof event.error === "string") input.onError?.(new Error(event.error));
     else if (typeof event.sourcePath === "string") void sync(event.sourcePath);
   });
-  const refreshOwner = createPreparationWatchRefresh(async (_sourcePath, signal) => {
+  const refreshOwner = createPreparationWatchRefresh(async (_refresh, signal) => {
     if (disposed) return;
     roots = await input.listExtensionRoots();
     if (disposed) return;

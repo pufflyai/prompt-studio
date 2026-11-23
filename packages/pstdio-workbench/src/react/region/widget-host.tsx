@@ -30,6 +30,7 @@ interface WorkbenchWidgetHostProps {
   region?: WorkbenchRegion;
   sizing?: WorkbenchPanelRenderInput["sizing"];
   visible?: WorkbenchPanelRenderInput["visible"];
+  placementOpen?: WorkbenchPanelRenderInput["placementOpen"];
 }
 
 const WorkbenchWidgetFallback = (props: { label: string }) => {
@@ -156,6 +157,7 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
               refresh,
               sizing: props.sizing,
               visible: props.visible,
+              placementOpen: props.placementOpen,
             }}
             // File views start an async read; their heavy editors load separately.
             defer={view?.body.kind !== "file" && ["main", "side", "bottom"].includes(panel.region)}

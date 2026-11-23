@@ -1,0 +1,12 @@
+name: List current run artifact identities
+description: Record readable workflow artifacts and their upload digests through Actions Results
+inputs:
+  names:
+    description: Comma-separated exact artifact names to record
+    required: true
+  path:
+    description: Path for the artifact inventory JSON
+    required: true
+runs:
+  using: node24
+  main: main.mts

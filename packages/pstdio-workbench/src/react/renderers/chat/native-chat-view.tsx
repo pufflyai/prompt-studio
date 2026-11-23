@@ -41,6 +41,7 @@ interface NativeChatViewProps extends NativeChatHostServices {
   resolve?: () => NativeChatPresentation | undefined;
   /** Hidden retained presentations must not request composer focus. */
   visible?: boolean;
+  placementOpen?: boolean;
   emptyTitle?: string;
   emptyDescription?: string;
   renderParamField?: CommandParamFieldRenderer;
@@ -96,6 +97,12 @@ export const NativeChatView = (props: NativeChatViewProps) => (
 );
 
 const NativeChatContent = (props: NativeChatViewProps) => {
+  const open = props.placementOpen !== false;
+  const [transcript, setTranscript] = useState({ open, revision: 0 });
+  if (transcript.open !== open) {
+    // Closed placements may keep their React state. Reopen with a fresh viewport.
+    setTranscript({ open, revision: transcript.revision + Number(open) });
+  }
   const { key, ...presentation } = useNativeChatPresentation({
     initial: {
       session: props.session,
@@ -107,17 +114,26 @@ const NativeChatContent = (props: NativeChatViewProps) => {
     observe: props.observe,
     visible: props.visible,
   });
-  return <NativeChatConversation key={key} {...props} {...presentation} conversationKey={key} />;
+  const unresolved = useUnresolvedSubmission(presentation.session);
+  return (
+    <NativeChatConversation
+      key={key}
+      {...props}
+      {...presentation}
+      conversationKey={key}
+      transcriptRevision={transcript.revision}
+      unresolved={unresolved}
+    />
+  );
 };
 
 const useUnresolvedSubmission = (session: ChatSession) =>
   useSyncExternalStore(session.subscribeCreate, session.hasUnresolvedSubmission, session.hasUnresolvedSubmission);
 
-const NativeChatConversation = (props: NativeChatViewProps) => {
-  const { session, conversationKey, renderParamField } = props;
+const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevision: number; unresolved: boolean }) => {
+  const { session, conversationKey, renderParamField, unresolved } = props;
   const state = useSyncExternalStore(session.subscribeToView, session.getSnapshot, session.getSnapshot);
   const { conversation, draft, messages, queuedFollowUps, pending, loading, initializing, sending } = state;
-  const unresolved = useUnresolvedSubmission(session);
   const observation = useNativeChatObservation(props, state);
   const run: ChatSession["run"] = (action) => runNativeChatAction(session, action, props.action, Boolean(selected));
   const [uploading, setUploading] = useState(0);
@@ -198,6 +214,7 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
         return (
           <ChatPanel
             conversationKey={conversationKey}
+            transcriptRevision={props.transcriptRevision}
             onVisibleMessageIdsChange={observation.onVisibleMessageIdsChange}
             onVisibleQuestionChange={observation.onVisibleQuestionChange}
             linkHandler={host.linkHandler ?? props.linkHandler}
