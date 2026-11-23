@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { chromium, expect, type Page } from "@playwright/test";
+import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { gt, valid } from "semver";
 import { openPackagedProject } from "../src/e2e/packaged-project-helpers";
 import { prepareDesktopReleaseArtifacts } from "../src/release/release-artifacts";
@@ -260,15 +261,22 @@ try {
   // Sessions moved from core into a separately installed tool. Updating the host
   // preserves existing extension choices; install its compatible viewer explicitly.
   await active.page.evaluate(async (projectId) => {
-    const response = await fetch(`/v1/projects/${projectId}/extensions/install`, {
+    const extensions = `/v1/projects/${projectId}/extensions`;
+    const authorization = `Bearer ${localStorage.getItem("pstdio.browserSession")}`;
+    const response = await fetch(`${extensions}/install`, {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${localStorage.getItem("pstdio.browserSession")}`,
-      },
+      headers: { "content-type": "application/json", authorization },
       body: JSON.stringify({ source: { kind: "catalog", name: "pstdio-session-browser" }, force: true }),
     });
     if (!response.ok) throw new Error(`Sessions installation failed: ${response.status} ${await response.text()}`);
+    // The install response confirms the source. Opening the project also needs the
+    // catalog built for the updated project's enabled tools, which can still be loading.
+    const catalog = await fetch(`${extensions}/ui`, { headers: { authorization } });
+    if (!catalog.ok) throw new Error(`Project workbench metadata failed: ${catalog.status} ${await catalog.text()}`);
+    const { pages } = (await catalog.json()) as WorkbenchExtensionMetadata;
+    if (!pages.some((page) => page.extensionId === "pstdio.session-browser")) {
+      throw new Error("The installed Sessions tool did not contribute a project page");
+    }
   }, updatedProject.id);
   await openPackagedProject(active.page, updatedProject);
   await active.page.getByRole("option", { name: "Sessions", exact: true }).click();
