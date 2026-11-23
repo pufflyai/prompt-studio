@@ -67,7 +67,24 @@ export const serviceSurfaces: Members = {
   ),
   notify: object(calls("toast", "action", "setStatus", "setStatusByKey", "resolve", "dismiss")),
   automation: object(calls("enqueue", "get", "list", "cancel")),
-  process: object(calls("run", "runOrThrow", "spawnDetached")),
+  process: object({
+    ...calls("run", "runOrThrow", "spawnDetached"),
+    // The host owns the child; the worker's handle forwards to it and lives while the worker holds it.
+    spawn: {
+      kind: "handle",
+      members: {
+        id: "id",
+        started: "promise",
+        exited: "promise",
+        write: "async",
+        end: "async",
+        kill: "async",
+        events: "iterate",
+      },
+    },
+  }),
+  // Harness contexts only.
+  targetFiles: object(calls("readText")),
   net: object(calls("findFreePort")),
   connections: object({ ...calls("request"), stream: { kind: "iterate", signalArg: 1 } }),
   account: object(

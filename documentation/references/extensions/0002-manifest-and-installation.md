@@ -221,9 +221,14 @@ Handler code in the worker can use every `ctx` member. Functions you pass to the
 host returns, such as a `close()` handle or `log.follow()`, work across the process boundary. They
 stay valid while either side still holds them.
 
-`terminal.openSession` returns its handle at once, as in the host. `write`, `resize` and `kill`
-run in call order once the session opens. The handle's `id` is created in the worker, so it differs
-from the host's own session id. The host still ends a session when the call that opened it ends.
+`terminal.openSession` and `process.spawn` return their handle at once, as in the host. Their
+methods reach the host's handle in call order once it opens, without waiting for each other, so a
+`kill` is never held behind a `write` the child does not read. A spawned handle's `started` and
+`exited` are the host's promises, and its output arrives as `Uint8Array` chunks. The handle's `id`
+is created in the worker, so it differs from the host's own id. The host still ends a terminal
+session when the call that opened it ends, and a spawned child when its
+[lifetime](0003-command-and-process-api.md#streaming-processes) ends. Harness contexts also reach
+`targetFiles.readText`.
 
 `ids.create`, `records.id` (also inside
 `storage.scope(...)`), `positions.between`, `urlFor` and the middleware helpers are computed in the

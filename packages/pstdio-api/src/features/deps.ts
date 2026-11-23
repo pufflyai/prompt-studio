@@ -35,6 +35,7 @@ import type { createWorkspaceSessionService } from "../services/workspace-sessio
 import type { createAutomationService } from "./automation/automation-service";
 import type { ArtifactMountWriteLedger } from "./extensions/artifact-mount-watch/write-ledger";
 import type { createExtensionConnectionService } from "./extensions/extension-connection-service";
+import type { ExtensionProcessOwners } from "./extensions/extension-process-owners";
 import type { createExtensionSettingsService } from "./extensions/extension-settings-service";
 import type { ExtensionWebviewAccess } from "./extensions/extension-webview-access";
 import type { ProcessEnvironmentPermissions } from "./extensions/process-environment/permissions";
@@ -90,6 +91,8 @@ export interface RouteDeps {
   extensionFileService: ReturnType<typeof createExtensionFileService>;
   extensionConnectionService: ReturnType<typeof createExtensionConnectionService>;
   extensionProcessEnvironment: ProcessEnvironmentPermissions;
+  /** Owns children started with extension lifetime; stops them when their source generation ends. */
+  extensionProcessOwners: ExtensionProcessOwners;
   extensionSettingsDBService: ReturnType<typeof createExtensionSettingsDBService>;
   webviewPreferencesDBService: ReturnType<typeof createWebviewPreferencesDBService>;
   extensionService: ReturnType<typeof createExtensionService>;

@@ -2,6 +2,7 @@ import { createMemoryActivity, createMemoryResources, createMemoryStorage } from
 import type { ExtensionRuntime } from "../../types/runtime";
 import type { LoadedExtensionSource } from "../loader";
 import { normalizeExtensionSources } from "../normalize";
+import { failedProcessHandle } from "../process-owner";
 import { type CommandRunnerEnvironment, createCommandRunner } from "./runner";
 
 // Declares the log the process-mode surface coverage opens, so its factory resolves like a real one.
@@ -173,6 +174,7 @@ export const stubEnvironment = (
       run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
       runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
       spawnDetached: async () => ({}),
+      spawn: () => failedProcessHandle(new Error("No test process configured.")),
     },
     net: { findFreePort: async () => 0 },
     settings: {
