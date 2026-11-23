@@ -13,6 +13,8 @@ import {
 
 export interface TestAppOptions {
   databasePath?: string;
+  /** Opens the database in its own thread. TEST_DATABASE_WORKER=1 turns it on for a whole run. */
+  databaseWorker?: boolean;
   storageRoot?: string;
   eventBufferSize?: number;
   automationRunsPerMinute?: number;
@@ -33,7 +35,10 @@ export const createTestApp = async (options: TestAppOptions = {}) => {
     const handle = await createApp(
       {
         config: {
-          database: { path: options.databasePath ?? ":memory:" },
+          database: {
+            path: options.databasePath ?? ":memory:",
+            worker: options.databaseWorker ?? process.env.TEST_DATABASE_WORKER === "1",
+          },
           storage: { root: options.storageRoot ?? join(tempRoot!, "storage") },
           sync: { eventBufferSize: options.eventBufferSize ?? 1000 },
           automation: { runsPerMinute: options.automationRunsPerMinute ?? 60 },
