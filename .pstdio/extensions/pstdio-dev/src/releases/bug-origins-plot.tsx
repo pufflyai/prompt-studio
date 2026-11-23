@@ -21,7 +21,7 @@ interface Props {
 
 export const BugOriginsPlot = (props: Props) => {
   const { buckets, aggregation, coverage } = props;
-  const color = psTheme.token.var("colors.vis.categorical.4");
+  const color = psTheme.token.var("colors.red.500");
   const points = buckets.flatMap(({ date, merges }) => {
     const counts = merges?.bugOrigins;
     return counts?.features ? [{ date, ratio: counts.fixes / counts.features }] : [];
