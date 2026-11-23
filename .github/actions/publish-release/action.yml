@@ -174,6 +174,24 @@ runs:
           (cd "$(dirname "$manifest")/$PUBLISH_DIR" && npm publish --dry-run --tag "$DIST_TAG")
         done
 
+    - name: Inventory the current run's publication artifacts
+      uses: ./.github/actions/list-artifact-inventory
+      with:
+        names: ${{ steps.artifact_names.outputs.names }}
+        path: published-artifacts.json
+
+    - name: Prepare the immutable publication identity
+      shell: bash
+      env:
+        ARTIFACT_RUN_ID: ${{ github.run_id }}
+        ARTIFACT_ATTEMPT: ${{ inputs.artifact-attempt }}
+        CHANNEL: ${{ inputs.channel }}
+      run: |
+        export SOURCE_SHA=$(bun -e 'console.log((await Bun.file("production-build-identity.json").json()).sourceSha)')
+        export VERSION_SHA=$(git rev-parse HEAD)
+        bun scripts/ci/production-artifacts.ts published-artifacts.json
+        bun -e 'await Bun.write("production-published-candidate.json", JSON.stringify({...await Bun.file("production-candidate.json").json(),...await Bun.file("production-build-identity.json").json()}))'
+
     - name: Publish platform packages
       shell: bash
       run: bun run --cwd scripts release:platforms:publish "$DIST_TAG"
@@ -235,24 +253,6 @@ runs:
         else
           gh release edit "$TAG" --draft=false
         fi
-
-    - name: Inventory the current run's published artifacts
-      uses: ./.github/actions/list-artifact-inventory
-      with:
-        names: ${{ steps.artifact_names.outputs.names }}
-        path: published-artifacts.json
-
-    - name: Record the candidate that actually published
-      shell: bash
-      env:
-        ARTIFACT_RUN_ID: ${{ github.run_id }}
-        ARTIFACT_ATTEMPT: ${{ inputs.artifact-attempt }}
-        CHANNEL: ${{ inputs.channel }}
-      run: |
-        export SOURCE_SHA=$(bun -e 'console.log((await Bun.file("production-build-identity.json").json()).sourceSha)')
-        export VERSION_SHA=$(git rev-parse HEAD)
-        bun scripts/ci/production-artifacts.ts published-artifacts.json
-        bun -e 'await Bun.write("production-published-candidate.json", JSON.stringify({...await Bun.file("production-candidate.json").json(),...await Bun.file("production-build-identity.json").json()}))'
 
     - name: Preserve actual publication identity for daily unchanged-candidate validation
       uses: actions/upload-artifact@v4
