@@ -55,7 +55,7 @@ export const StartupTimeline = () => {
   return (
     <Box h="100dvh" display="flex" flexDirection="column" minH="0">
       <HStack p="sm">
-        {["history", "empty", "error"].map((value) => (
+        {["history", "stale", "empty", "error"].map((value) => (
           <Button key={value} size="xs" onClick={() => setState(value)}>
             {value}
           </Button>
@@ -65,6 +65,7 @@ export const StartupTimeline = () => {
         <StartupView
           launches={state === "empty" ? [] : launches}
           projectNames={{ [PROJECT]: "Prompt Studio" }}
+          today={state === "stale" ? "2026-12-31" : "2026-11-19"}
           logPath="~/.pstdio/logs.jsonl"
           loading={false}
           error={state === "error" ? "ENOENT: no such file or directory, open '~/.pstdio/logs.jsonl'" : undefined}

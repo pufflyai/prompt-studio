@@ -25,6 +25,27 @@ const integrations = {
   ],
 };
 
+test("authentication reads the native free provider after its plugin activates", async () => {
+  let inventoryReads = 0;
+  const server = Bun.serve({
+    port: 0,
+    fetch: (request) => {
+      const path = new URL(request.url).pathname;
+      if (path === "/api/plugin")
+        return Response.json({ data: ++inventoryReads === 1 ? [] : [{ id: "native-provider" }] });
+      if (path === "/api/provider") return Response.json(inventoryReads > 1 ? providers : { data: [] });
+      if (path === "/api/integration") return Response.json(inventoryReads > 1 ? integrations : { data: [] });
+      return new Response(null, { status: 404 });
+    },
+  });
+  try {
+    const auth = createOpencodeAuthentication({ fetcher: fetch, withServerUrl: async (fn) => fn(server.url.href) });
+    expect((await auth.getAuthentication({ model: "opencode/big-pickle" })).status).toBe("not_required");
+  } finally {
+    await server.stop(true);
+  }
+});
+
 test("authentication follows the provider integration, preserves free models, and saves keys only in OpenCode", async () => {
   const saved: unknown[] = [];
   const server = Bun.serve({

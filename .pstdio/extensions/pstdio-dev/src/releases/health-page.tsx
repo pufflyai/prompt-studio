@@ -36,7 +36,14 @@ export const HealthPage = () => {
   }, [client, queryClient, requestRefresh]);
   return (
     <HealthView
+      today={new Date().toISOString().slice(0, 10)}
       runs={history.data?.runs ?? []}
+      pullRequestMergesDaily={history.data?.pullRequestMergesDaily ?? history.data?.pullRequestMerges}
+      pullRequestMergesHourly={history.data?.pullRequestMergesHourly}
+      pullRequestMergesError={history.data?.pullRequestMergesError}
+      bugOriginCoverage={history.data?.bugOriginCoverage}
+      publications={history.data?.publications}
+      publicationsError={history.data?.publicationsError}
       syncedAt={history.data?.syncedAt}
       error={refresh.error?.message ?? history.error?.message ?? history.data?.error}
       refreshing={history.isLoading || refresh.isPending || Boolean(history.data?.syncing)}

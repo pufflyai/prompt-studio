@@ -29,11 +29,6 @@ type OpencodeHarnessDeps = {
   pollIntervalMs?: number;
 };
 
-const defaultDeps: OpencodeHarnessDeps = {
-  detect: detectOpencode,
-  getModelsOutput: readOpencodeModels,
-};
-
 const opencodeParams = {
   variant: params.select({
     label: "Thinking",
@@ -51,6 +46,12 @@ const opencodeParams = {
 };
 
 const MODEL_CACHE_TTL_MS = 5 * 60 * 1_000;
+
+type ModelCatalog = ReturnType<typeof parseOpencodeModels>;
+interface ModelCache {
+  settled?: { expiresAt: number; value: ModelCatalog };
+  pending: WeakMap<HarnessContext, Promise<ModelCatalog>>;
+}
 
 // One diagnostic per running turn, even when the provider streams many snapshots.
 const historyRecoveryLogger = (ctx: HarnessContext, sessionId: string) => {
@@ -70,25 +71,46 @@ export const createOpencodeHarness = (
   overrides: Partial<OpencodeHarnessDeps> = {},
   serviceOverrides: Parameters<typeof createOpencodeService>[0] = {},
 ): Omit<HarnessProvider, "ref"> => {
-  const deps = { ...defaultDeps, ...overrides };
+  const deps = { detect: detectOpencode, ...overrides };
   const services = createOpencodeHarnessService(serviceOverrides);
   const serviceFor = services.get;
-  let modelCache: { expiresAt: number; value: Promise<ReturnType<typeof parseOpencodeModels>> } | undefined;
+  let modelCache: ModelCache = { pending: new WeakMap() };
+
+  const getModelsOutput =
+    deps.getModelsOutput ??
+    ((ctx: HarnessContext, version?: string) => {
+      const number = version?.match(/\d+\.\d+\.\d+/)?.[0] ?? "";
+      if (!Bun.semver.satisfies(number, ">=2.4.0")) return readOpencodeModels(ctx);
+      return services.run(ctx, async (signal) => {
+        const catalog = await (await serviceFor(ctx)).getModelCatalog(signal);
+        signal.throwIfAborted();
+        return catalog;
+      });
+    });
 
   const listModels = async (ctx: HarnessContext) => {
     const detection = await deps.detect(ctx);
     if (!detection.available) return [];
-    if (modelCache && modelCache.expiresAt > Date.now()) return modelCache.value;
+    const cache = modelCache;
+    if (cache.settled && cache.settled.expiresAt > Date.now()) return cache.settled.value;
+    const pending = cache.pending.get(ctx);
+    if (pending) return pending;
 
-    const value = deps
-      .getModelsOutput(ctx, detection.version)
+    // Pending reads belong to the project that can cancel them. Only completed results are shared.
+    const expiresAt = Date.now() + MODEL_CACHE_TTL_MS;
+    const value = Promise.resolve()
+      .then(() => getModelsOutput(ctx, detection.version))
       .then(parseOpencodeModels)
+      .then((catalog) => {
+        if (!cache.settled || cache.settled.expiresAt <= Date.now()) cache.settled = { expiresAt, value: catalog };
+        return catalog;
+      })
       .catch(() => {
-        modelCache = undefined;
         ctx.logger.warn("OpenCode model discovery failed. Check the OpenCode installation and provider configuration.");
         return [];
-      });
-    modelCache = { expiresAt: Date.now() + MODEL_CACHE_TTL_MS, value };
+      })
+      .finally(() => cache.pending.delete(ctx));
+    cache.pending.set(ctx, value);
     return value;
   };
 
@@ -114,7 +136,7 @@ export const createOpencodeHarness = (
     authenticate: async (ctx, input, channel) => {
       await authenticateOpencode(ctx, input, channel, serviceOverrides);
       await services.invalidateAuthentication();
-      modelCache = undefined;
+      modelCache = { pending: new WeakMap() };
     },
 
     listModels,
@@ -127,7 +149,8 @@ export const createOpencodeHarness = (
           input.messageId,
         ),
       })),
-    getCommandState: (ctx, input) => services.run(ctx, async () => opencodeCommandState(input, await serviceFor(ctx))),
+    getCommandState: (ctx, input) =>
+      services.run(ctx, async (signal) => opencodeCommandState(input, await serviceFor(ctx), signal)),
     prepareOperation: async (ctx, input, operation) => {
       const prepared = prepareOpencodeOperation(input, operation, await serviceFor(ctx));
       return {

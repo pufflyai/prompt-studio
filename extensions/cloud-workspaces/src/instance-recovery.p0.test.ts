@@ -4,6 +4,7 @@ import * as fs from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
+import { writeControllerFixture } from "./controller.test-fixture";
 import { fileTurnFixture } from "./file-turns.test-fixture";
 import { createInstanceCommands } from "./instance-commands";
 import { createInstances } from "./instances";
@@ -12,13 +13,12 @@ test("a fresh instance starts and stops with the released CLI's no-state status 
   const root = await fs.mkdtemp(join(tmpdir(), "pc-cli-state-"));
   const id = randomUUID();
   const directory = join(root, id);
-  const binary = join(root, "controller.ts");
-  await fs.mkdir(directory);
-  await fs.writeFile(join(directory, "empty.env"), "");
-  await fs.writeFile(
-    binary,
-    `#!${process.execPath}
-import { mkdir, rm, writeFile } from "node:fs/promises";
+  try {
+    await fs.mkdir(directory);
+    await fs.writeFile(join(directory, "empty.env"), "");
+    const binary = await writeControllerFixture(
+      root,
+      `import { mkdir, rm, writeFile } from "node:fs/promises";
 const args = process.argv.slice(2);
 if (args.includes("status")) {
   if (!(await Bun.file("state/server.json").exists())) { console.error("server is not running (no managed server state)"); process.exit(1); }
@@ -31,20 +31,18 @@ if (args.includes("start")) {
 if (args.includes("stop")) await rm("state/server.json");
 if (args.includes("superuser")) console.log(JSON.stringify({ token: "fixture", key: { expires_at: "2099-01-01T00:00:00Z" } }));
 `,
-    { mode: 0o700 },
-  );
-  await fs.writeFile(
-    join(directory, "instance.json"),
-    JSON.stringify({
-      id,
-      name: "Fresh fixture",
-      binary,
-      state: "stopped",
-      url: "http://127.0.0.1:4000",
-      agentPort: 4001,
-    }),
-  );
-  try {
+    );
+    await fs.writeFile(
+      join(directory, "instance.json"),
+      JSON.stringify({
+        id,
+        name: "Fresh fixture",
+        binary,
+        state: "stopped",
+        url: "http://127.0.0.1:4000",
+        agentPort: 4001,
+      }),
+    );
     const instances = createInstances(root);
     expect(await instances.start(id)).toMatchObject({ state: "running" });
     expect(await instances.stop(id)).toMatchObject({ state: "stopped" });
@@ -127,7 +125,6 @@ test.each([
   "unhealthy",
 ])("failed launch preserves recovery state when stop is not confirmed (%s)", async (mode) => {
   const root = await fs.mkdtemp(join(tmpdir(), "pc-rollback-"));
-  const binary = join(root, "controller.ts");
   const instancesRoot = join(root, "instances");
   let directory = "";
   const server = Bun.serve({
@@ -140,10 +137,10 @@ test.each([
       );
     },
   });
-  await fs.writeFile(
-    binary,
-    `#!${process.execPath}
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+  try {
+    const binary = await writeControllerFixture(
+      root,
+      `import { mkdir, readFile, writeFile } from "node:fs/promises";
 const args = process.argv.slice(2);
 if (args.includes("status")) {
   const mode = await readFile("mode", "utf8").catch(() => "");
@@ -160,9 +157,7 @@ if (args.includes("start")) {
 if (args.includes("stop")) await writeFile("stop-attempted", "yes");
 if (args.includes("superuser")) console.log(JSON.stringify({ token: "fixture", key: { expires_at: "2099-01-01T00:00:00Z" } }));
 `,
-    { mode: 0o700 },
-  );
-  try {
+    );
     const instances = createInstances(instancesRoot);
     const allocate = async () => {
       directory = join(instancesRoot, (await fs.readdir(instancesRoot))[0]!);

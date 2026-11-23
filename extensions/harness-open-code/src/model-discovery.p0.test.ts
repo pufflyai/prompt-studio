@@ -13,6 +13,38 @@ const catalog = JSON.stringify({
 });
 
 describe("OpenCode model discovery", () => {
+  test("lists models when OpenCode 2.4 activates its native providers", async () => {
+    let inventoryReads = 0;
+    const server = Bun.serve({
+      port: 0,
+      fetch: (request) => {
+        const path = new URL(request.url).pathname;
+        if (path === "/api/plugin")
+          return Response.json({ data: ++inventoryReads === 1 ? [] : [{ id: "native-provider" }] });
+        if (path === "/api/model")
+          return inventoryReads > 1
+            ? new Response(catalog, { headers: { "content-type": "application/json" } })
+            : Response.json({ data: [] });
+        return new Response(null, { status: 404 });
+      },
+    });
+    const harness = createOpencodeHarness(
+      { detect: async () => ({ available: true, version: "opencode v2.4.0" }) },
+      {
+        ...serviceOverrides(),
+        serverStore: { read: async () => server.url.origin, write: async () => {}, clear: async () => {} },
+      },
+    );
+    const context = { ...ctx };
+    try {
+      const models = await harness.listModels!(context);
+      expect(models.map(({ id }) => id)).toEqual(["local/custom", "local/plain"]);
+    } finally {
+      await harness.dispose!(context);
+      await server.stop(true);
+    }
+  });
+
   test("lists enabled OpenCode 2 models with their native thinking choices", async () => {
     const harness = createOpencodeHarness({}, serviceOverrides());
     const context: HarnessContext = {
