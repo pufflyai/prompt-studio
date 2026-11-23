@@ -1,13 +1,24 @@
+import { and, eq } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
-import { type operations, owners } from "../../db/schemas.pg";
+import { documents, type operations, owners } from "../../db/schemas.pg";
 import { operationIndexedAt, operationReceipt } from "./ordered-receipt-values";
 import type { OrderedTransaction } from "./ordered-sql";
+import { orderedOwnerWhere } from "./ordered-sql";
+import { retainedPageKey } from "./retained-page-format";
 import { createRetainedPages } from "./retained-pages";
 import { storageOwnerWhere } from "./storage-owner-key";
 
 /** Device-private authorship/epoch selectors are distinct from foreign relay receipts. */
 export type RetainedOperation = typeof operations.$inferSelect & { envelope: null; admission: null };
 export type RetainedOperationValue = Omit<RetainedOperation, "owner_id">;
+
+export const hasRetainedOperations = async (tx: OrderedTransaction, owner: StorageOwner) => {
+  const [root] = await tx
+    .select({ id: documents.id })
+    .from(documents)
+    .where(and(orderedOwnerWhere(documents, owner), eq(documents.key, retainedPageKey("authorship", ""))));
+  return root !== undefined;
+};
 
 export const readRetainedOperation = async (tx: OrderedTransaction, owner: StorageOwner, id: string) => {
   const row = await createRetainedPages<RetainedOperationValue>(tx, owner, "authorship").get(id);

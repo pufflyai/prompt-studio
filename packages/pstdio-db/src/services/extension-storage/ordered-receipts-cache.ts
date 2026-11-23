@@ -5,10 +5,14 @@ import type { OperationReceipt } from "../../db/schemas/storage-ordered-records"
 import { storage_ordered_operations as operations } from "../../db/schemas.pg";
 import { operationReceipt } from "./ordered-receipt-values";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
-import { readRetainedOperation } from "./retained-operations";
+import type { RetainedOperation } from "./retained-operations";
 import { storageOwnerKey } from "./storage-owner-key";
 
-export const createOrderedReceiptCache = (tx: OrderedTransaction, owner: StorageOwner) => ({
+export const createOrderedReceiptCache = (
+  tx: OrderedTransaction,
+  owner: StorageOwner,
+  retained: (id: string) => Promise<RetainedOperation | undefined>,
+) => ({
   async cachedReceipt(operationId: string, epoch: string): Promise<OrderedReceipt | undefined> {
     const [row] = await tx
       .select({
@@ -17,7 +21,7 @@ export const createOrderedReceiptCache = (tx: OrderedTransaction, owner: Storage
       })
       .from(operations)
       .where(and(orderedOwnerWhere(operations, owner), eq(operations.operation_id, operationId)));
-    const saved = row?.receipt ? undefined : await readRetainedOperation(tx, owner, operationId);
+    const saved = row?.receipt ? undefined : await retained(operationId);
     if (saved && row && saved.fingerprint !== row.fingerprint) throw new Error("Retained operation identity changed");
     const receipt = row?.receipt ?? (saved ? operationReceipt(saved.receipt, epoch) : undefined);
     if (!receipt) return;

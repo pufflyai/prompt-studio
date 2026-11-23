@@ -32,7 +32,7 @@ import {
   type OrderedTransaction as Transaction,
 } from "./ordered-sql";
 import { lockRecordOwner } from "./record-changes";
-import { type RetainedOperation, readRetainedOperation } from "./retained-operations";
+import { hasRetainedOperations, type RetainedOperation, readRetainedOperation } from "./retained-operations";
 import { storageOwnerKey } from "./storage-owner-key";
 
 const identityError = () => new Error("Operation identity reused with changed payload");
@@ -131,10 +131,18 @@ const queueOrderedOperation = async (
 export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
   const operationWhere = (id: string) => and(ownerWhere(operations, owner), eq(operations.operation_id, id));
   const cold = new Map<string, Promise<RetainedOperation | undefined>>();
+  // Journal methods never write private authorship pages. Maintenance and backup
+  // restoration use a fresh journal, so absence stays valid only in this lifetime.
+  let retainedRoot: Promise<boolean> | undefined;
+  const readCold = async (id: string) => {
+    retainedRoot ??= hasRetainedOperations(tx, owner);
+    if (await retainedRoot) return readRetainedOperation(tx, owner, id);
+  };
   const retained = (id: string) => {
-    if (!cold.has(id)) cold.set(id, readRetainedOperation(tx, owner, id));
+    if (!cold.has(id)) cold.set(id, readCold(id));
     return cold.get(id)!;
   };
+  const receipts = createOrderedReceiptCache(tx, owner, retained);
   const operation = async (id: string) => {
     const [row] = await tx.select().from(operations).where(operationWhere(id));
     return row ?? retained(id);
@@ -149,8 +157,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
     if (row) held.set(key, row);
     return row;
   };
-  const readDecision = async (id: string, epoch: string) =>
-    (await createOrderedReceiptCache(tx, owner).cachedReceipt(id, epoch))?.decision;
+  const readDecision = async (id: string, epoch: string) => (await receipts.cachedReceipt(id, epoch))?.decision;
   const pendingWhere = () =>
     and(ownerWhere(operations, owner), isNotNull(operations.envelope), isNull(operations.settled_epoch));
   const dependencies = createOrderedDependencyCache(tx, owner, cachedDecision, operation);
@@ -289,7 +296,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
       await forgetOrderedTextGeneration(tx, owner, decision.operationId);
     },
     ...createOrderedCanonical(tx, owner),
-    ...createOrderedReceiptCache(tx, owner),
+    ...receipts,
   };
 };
 
