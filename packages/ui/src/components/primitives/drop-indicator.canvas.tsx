@@ -34,8 +34,8 @@ const SurfaceFeedback = () => {
   return (
     <Stack gap="md">
       <Text>
-        Existing panels show an outline only when targeted. Alignment, insertion and widget markers stay compact and
-        borderless, using the same floating-panel drop colors.
+        Existing panels show an outline only when targeted. Panel alignment and insertion marks stay compact and
+        borderless. Widget drop indicators retain their original height, using the same floating-panel drop colors.
       </Text>
       <Button onClick={() => setActive((value) => !value)}>{active ? "Show idle" : "Show active"}</Button>
       <HStack gap="lg" align="start">

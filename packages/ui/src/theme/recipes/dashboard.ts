@@ -164,7 +164,7 @@ export const dashboardRecipe = defineSlotRecipe({
       left: "md",
       right: "md",
       top: "calc({spacing.md} + var(--dashboard-drop-top))",
-      h: "1",
+      h: "2",
       transform: "translateY(-50%)",
       borderRadius: "xs",
       pointerEvents: "none",

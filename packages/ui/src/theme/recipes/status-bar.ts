@@ -35,10 +35,9 @@ export const statusBarSlotRecipe = defineSlotRecipe({
     },
     placeholder: {
       position: "absolute",
-      top: "50%",
-      h: "1.5",
-      transform: "translateY(-50%)",
-      borderRadius: "pill",
+      insetBlock: "0",
+      marginBlock: "status-widget-inset",
+      borderRadius: "xs",
       bg: "bg.drop",
       pointerEvents: "none",
     },
