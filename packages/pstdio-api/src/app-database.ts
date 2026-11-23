@@ -5,6 +5,7 @@ import {
   createAutomationDBService,
   createBoardViewsDBService,
   createDb,
+  createDbInWorker,
   createEnvironmentDBService,
   createExtensionAutomationPreferencesDBService,
   createExtensionConnectionsDBService,
@@ -44,9 +45,9 @@ const pgliteRecoveryHint = (error: unknown, dbPath: string) => {
   return `PGlite failed to open ${dbPath}. ${pgliteRecoverySteps(dbPath)}.`;
 };
 
-export const openAppDatabase = async (path: string, lifecycle: AppLifecycle = {}) => {
+export const openAppDatabase = async (path: string, lifecycle: AppLifecycle = {}, inWorker = false) => {
   try {
-    return await createDb({
+    return await (inWorker ? createDbInWorker : createDb)({
       path,
       deferCleanup: true,
       onPhase: (phase) => {

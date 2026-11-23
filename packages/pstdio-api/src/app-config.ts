@@ -11,7 +11,8 @@ export type ExtensionRelease =
 export interface AppConfig {
   /** Private file with this device's cloud login. Defaults to `native-account.json` beside the database. */
   accountFile?: string;
-  database: { path: string };
+  /** `worker` opens the database in its own thread, so long statements never block requests (PS-525). */
+  database: { path: string; worker?: boolean };
   storage: { root: string };
   sync: { eventBufferSize: number };
   automation: { runsPerMinute: number };
@@ -63,6 +64,7 @@ export const resolveAppConfig = (input: ResolveAppConfigInput): AppConfig => {
     ...(input.env.PSTDIO_ACCOUNT_FILE ? { accountFile: input.env.PSTDIO_ACCOUNT_FILE } : {}),
     database: {
       path: resolvePath(input.env.PSTDIO_DB_PATH, resolvePstdioDbPath({ env: input.env }), home),
+      ...(input.env.PSTDIO_DATABASE_WORKER === "1" ? { worker: true } : {}),
     },
     storage: {
       root: resolvePath(input.env.PSTDIO_STORAGE_PATH, resolvePstdioStoragePath({ env: input.env }), home),

@@ -10,16 +10,22 @@ process.chdir(join(import.meta.dirname, "..", ".."));
 
 const CLI_ENTRY = "./packages/pstdio/src/index.ts";
 const RECOVERY_WORKER = join(process.cwd(), "packages/pstdio-api/src/services/project-recovery/recovery-worker.ts");
+const DATABASE_WORKER = join(process.cwd(), "packages/pstdio-db/src/db/database-worker/worker.ts");
 const PREPARATION_ENTRIES = [
   join(process.cwd(), "packages/pstdio-api/src/features/extensions/extension-preparation-worker.ts"),
   join(process.cwd(), "packages/pstdio-extensions/src/runtime/preparation-worker.ts"),
   RECOVERY_WORKER,
+  DATABASE_WORKER,
 ];
 // --root . retains repository-relative worker paths in the compiled virtual filesystem.
 const recoveryWorkerDefine = (target: string) => [
   "--define",
   `PSTDIO_BUILD_RECOVERY_WORKER=${JSON.stringify(
     `${target.includes("windows") ? "B:/~BUN/root/" : "/$bunfs/root/"}packages/pstdio-api/src/services/project-recovery/recovery-worker.js`,
+  )}`,
+  "--define",
+  `PSTDIO_BUILD_DATABASE_WORKER=${JSON.stringify(
+    `${target.includes("windows") ? "B:/~BUN/root/" : "/$bunfs/root/"}packages/pstdio-db/src/db/database-worker/worker.js`,
   )}`,
 ];
 const EMBED_MANIFEST = "./packages/pstdio/src/_embed-manifest.generated.ts";
