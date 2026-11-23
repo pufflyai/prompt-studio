@@ -9,6 +9,7 @@ import {
   type WebviewEditingSnapshot,
 } from "pstdio-api-contracts/extension-kernel";
 import { classifyApiWrite } from "../../core/registries/mutations/operation-failures";
+import type { OperationFailure } from "../../core/registries/mutations/operation-types";
 import { type CommandEditingMember, type CommandEditingOpen, editingFailure } from "./command-editing-types";
 import { type CommandEditingJob, createCommandEditingWriter } from "./command-editing-writer";
 import { editingSequence } from "./editing-sequence";
@@ -23,12 +24,20 @@ class EditingAcknowledgementError extends Error {
 const mayRetryEditingCommand = (error: unknown) =>
   !(error instanceof EditingAcknowledgementError) && classifyApiWrite(error) === "rejected";
 
+export type TrackEditingCommand = (
+  job: CommandEditingJob,
+  write: (signal?: AbortSignal) => Promise<WebviewEditingCommandResult>,
+  accept: (result: WebviewEditingCommandResult) => void,
+  classify: (error: unknown) => OperationFailure,
+) => Promise<void>;
+
 /** This is the ordered domain protocol. Query caches only contain accepted finite results. */
 export const createCommandEditingJournal = (input: {
   command: CommandEditingOpen["command"];
   serialize: <T>(run: () => Promise<T>, signal?: AbortSignal) => Promise<T>;
   accepted(result: WebviewEditingCommandResult): void;
   changed(accepted?: { member: CommandEditingMember; sequence: number }): void;
+  track?: TrackEditingCommand;
 }) => {
   let baseline: JsonObject = {};
   let version = 0;
@@ -43,15 +52,20 @@ export const createCommandEditingJournal = (input: {
   const writer = createCommandEditingWriter({
     run: (job, accepted) =>
       input.serialize(async () => {
-        const response = await job.execute({ commandId: input.command.commandId, params: job.params });
-        let result: WebviewEditingCommandResult;
-        try {
-          result = validate(webviewEditingResultSchema.parse(response));
-        } catch (error) {
-          // The command may have committed before sending an unusable acknowledgement.
-          throw new EditingAcknowledgementError(error);
+        const write = async (signal?: AbortSignal) => {
+          const response = await job.execute({ commandId: input.command.commandId, params: job.params }, signal);
+          signal?.throwIfAborted();
+          try {
+            return validate(webviewEditingResultSchema.parse(response));
+          } catch (error) {
+            // The command may have committed before sending an unusable acknowledgement.
+            throw new EditingAcknowledgementError(error);
+          }
+        };
+        if (input.track) {
+          return input.track(job, write, accepted, (error) => (mayRetryEditingCommand(error) ? "rejected" : "unknown"));
         }
-        accepted(result);
+        accepted(await write());
       }),
     accepted: (job, result) => {
       savedRevision = job.revision;

@@ -1,6 +1,7 @@
 import type { ScopedQueryClient } from "@pstdio/sdk/extensions";
 import type { WebviewEditingSessionParams, WebviewEditingSnapshot } from "pstdio-api-contracts/extension-kernel";
 import { createCommandEditingJournal } from "./command-editing-journal";
+import { createCommandEditingRecovery } from "./command-editing-recovery";
 import { createCommandEditingSources } from "./command-editing-sources";
 import {
   type CommandEditingMember,
@@ -20,6 +21,7 @@ export const createCommandEditingDocument = (input: {
 }) => {
   const members = new Set<CommandEditingMember>();
   const serialize = createEditingCommandQueue();
+  const recovery = createCommandEditingRecovery(input.queries, input.owner, input.open);
   let closed = false;
   let ready: Promise<void> | undefined;
   let readExecutor: EditingExecutor | undefined;
@@ -48,6 +50,7 @@ export const createCommandEditingDocument = (input: {
   const journal = createCommandEditingJournal({
     command: input.open.command,
     serialize,
+    track: recovery.track,
     changed: publish,
     accepted: (result) => sources.accept(result),
   });
@@ -177,6 +180,7 @@ export const createCommandEditingDocument = (input: {
         })
         .then(() => {
           journal.clear();
+          recovery.stop();
           if (errors.length) settled.reject(new AggregateError(errors, "Command editing could not finish"));
           else settled.resolve();
         });

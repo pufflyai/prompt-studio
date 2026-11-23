@@ -9,6 +9,7 @@ import type { WebviewEditingSource } from "pstdio-api-contracts/extension-kernel
 import { createHostCapabilityGate } from "pstdio-extensions/bridge/contract";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { createWorkbench } from "../../core";
+import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import { createWebviewKeyboardShortcuts } from "../../react/keybindings/webview-keyboard-shortcuts";
 import { inspectCommandEditingSessions } from "./command-editing-sessions";
 import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
@@ -726,5 +727,35 @@ test("a full source result cannot silently cover another source's newer invalida
   } finally {
     held.release.resolve();
     await fixture.dispose();
+  }
+});
+
+test("retains a submitted semantic edit across account retirement without retrying it", async () => {
+  const fixture = editor();
+  const view = fixture.frame("private");
+  const operations = getWorkbenchOperations(fixture.queries);
+  try {
+    await view.open();
+    fixture.hold();
+    const changes = [{ path: ["title"], value: "Private draft" }];
+    const submitted = view.call({ operation: "execute", sequence: 1, params: { title: "Private draft" }, changes });
+    const settled = submitted.catch((error: unknown) => error);
+    await Bun.sleep(0);
+    expect(fixture.actions).toHaveLength(1);
+    fixture.queries.setAuthority({ accountId: "another" });
+    expect(operations.getSnapshot().recovery).toEqual([]);
+    expect(await settled).toBeInstanceOf(Error);
+    fixture.queries.setAuthority({ accountId: undefined });
+    expect(operations.getSnapshot().recovery[0]).toMatchObject({
+      domain: "command.editing",
+      status: "unknown",
+      draft: { changes },
+    });
+    fixture.release();
+    await Bun.sleep(0);
+    expect(fixture.actions).toHaveLength(1);
+    expect(operations.getSnapshot().recovery[0]?.draft).toMatchObject({ changes });
+  } finally {
+    await fixture.dispose().catch(() => {});
   }
 });

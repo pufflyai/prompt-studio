@@ -1,5 +1,5 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { matchesResourceWhen } from "@pstdio/sdk/extensions";
+import { commandRefId, matchesResourceWhen } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type { Disposable, WorkbenchCommandExecutionContext } from "../../core";
 import { workbenchCommandPaletteMenuPath } from "../../core";
@@ -219,9 +219,16 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
   const context: WorkbenchExtensionCommandContext = {
     ...input,
     operations: input.queries ? getWorkbenchOperations(input.queries) : undefined,
-    createCommandIds: new Set(
-      input.metadata.kanbanRenderers?.flatMap((renderer) => (renderer.createRow ? [renderer.createRow.commandId] : [])),
-    ),
+    createCommandIds: new Set([
+      ...(input.metadata.kanbanRenderers ?? []).flatMap((renderer) =>
+        renderer.createRow ? [renderer.createRow.commandId] : [],
+      ),
+      ...(input.metadata.keybindings ?? []).flatMap((binding) => {
+        if (binding.layer !== "create" || binding.action.kind !== "command") return [];
+        const command = binding.action.target.command;
+        return [commandRefId({ extensionId: command.extensionId ?? binding.extensionId, id: command.id })];
+      }),
+    ]),
   };
   try {
     disposables.push(installResourceChanges(sourceInput));
