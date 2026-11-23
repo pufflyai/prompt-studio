@@ -392,7 +392,7 @@ describe("session stream active session replay", () => {
       path: "/messages/2",
     });
 
-    await expect(waitForSessionStatus(replayEventBus, session.id, "completed")).resolves.toBeDefined();
+    expect(await waitForSessionStatus(replayEventBus, session.id, "completed")).toBeDefined();
 
     await closeReplayApp();
     rmSync(replayRoot, { recursive: true, force: true });

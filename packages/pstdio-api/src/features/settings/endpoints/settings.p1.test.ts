@@ -56,7 +56,7 @@ describe("/v1/settings", () => {
     const response = await context.app.request("/v1/settings");
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({
+    expect(await response.json()).toEqual({
       max_concurrent_sessions: null,
       notifications_enabled: false,
       machine_tokens_enabled: false,
@@ -71,7 +71,7 @@ describe("/v1/settings", () => {
     });
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({
+    expect(await response.json()).toEqual({
       max_concurrent_sessions: 1,
       notifications_enabled: false,
       machine_tokens_enabled: false,
@@ -92,7 +92,7 @@ describe("/v1/settings", () => {
     });
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({
+    expect(await response.json()).toEqual({
       max_concurrent_sessions: null,
       notifications_enabled: false,
       machine_tokens_enabled: false,

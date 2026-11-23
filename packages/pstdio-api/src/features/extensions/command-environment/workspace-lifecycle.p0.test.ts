@@ -200,7 +200,7 @@ test("removes a worktree without deleting its workspace", async () => {
     },
   );
 
-  await expect(env.workspaces.removeWorktree("ws-1")).resolves.toEqual({ removed: true });
+  expect(await env.workspaces.removeWorktree("ws-1")).toEqual({ removed: true });
   expect(cleanup).toHaveBeenCalledTimes(1);
   expect(clearWorktree).toHaveBeenCalledWith("ws-1");
   expect(softDelete).not.toHaveBeenCalled();
@@ -251,7 +251,7 @@ test("does not expose or mutate a workspace owned by another project", async () 
     },
   );
 
-  await expect(env.workspaces.get("other-workspace")).resolves.toBeNull();
+  expect(await env.workspaces.get("other-workspace")).toBeNull();
   await expectRejection(env.workspaces.removeWorktree("other-workspace")).toThrow(
     "Workspace not found: other-workspace",
   );

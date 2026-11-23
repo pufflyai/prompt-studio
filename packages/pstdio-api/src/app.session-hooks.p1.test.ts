@@ -165,9 +165,11 @@ describe("session lifecycle extension hooks", () => {
       );
       await handle.deps.sessionService.transitionStatus(session.id, status, { drainCapacity: false });
 
-      await expect(
-        waitForStoredEvent(enabled.instance.id, project.id, `session.completed:${session.id}`),
-      ).resolves.toEqual({ eventId: "session.completed", sessionId: session.id, sessionStatus: status });
+      expect(await waitForStoredEvent(enabled.instance.id, project.id, `session.completed:${session.id}`)).toEqual({
+        eventId: "session.completed",
+        sessionId: session.id,
+        sessionStatus: status,
+      });
     }
   });
 
@@ -180,7 +182,7 @@ describe("session lifecycle extension hooks", () => {
       agent: "test-agent",
     });
 
-    await expect(waitForStoredEvent(enabled.instance.id, project.id, "session.started")).resolves.toEqual({
+    expect(await waitForStoredEvent(enabled.instance.id, project.id, "session.started")).toEqual({
       eventId: "session.started",
       projectId: project.id,
       sessionId: session.id,
@@ -189,7 +191,7 @@ describe("session lifecycle extension hooks", () => {
 
     await handle.deps.sessionService.transitionStatus(session.id, "awaiting_input", { drainCapacity: false });
 
-    await expect(waitForStoredEvent(enabled.instance.id, project.id, "session.awaitingInput")).resolves.toEqual({
+    expect(await waitForStoredEvent(enabled.instance.id, project.id, "session.awaitingInput")).toEqual({
       eventId: "session.awaitingInput",
       projectId: project.id,
       sessionId: session.id,
@@ -198,7 +200,7 @@ describe("session lifecycle extension hooks", () => {
 
     await handle.deps.sessionService.resume(session.id);
 
-    await expect(waitForStoredEvent(enabled.instance.id, project.id, "session.resumed")).resolves.toEqual({
+    expect(await waitForStoredEvent(enabled.instance.id, project.id, "session.resumed")).toEqual({
       eventId: "session.resumed",
       projectId: project.id,
       sessionId: session.id,
@@ -207,7 +209,7 @@ describe("session lifecycle extension hooks", () => {
 
     await handle.deps.sessionService.transitionStatus(session.id, "failed", { drainCapacity: false });
 
-    await expect(waitForStoredEvent(enabled.instance.id, project.id, "session.failed")).resolves.toEqual({
+    expect(await waitForStoredEvent(enabled.instance.id, project.id, "session.failed")).toEqual({
       eventId: "session.failed",
       projectId: project.id,
       sessionId: session.id,
@@ -221,7 +223,7 @@ describe("session lifecycle extension hooks", () => {
 
     await handle.deps.sessionService.transitionStatus(completedSession.id, "completed", { drainCapacity: false });
 
-    await expect(waitForStoredEvent(enabled.instance.id, project.id, "session.succeeded")).resolves.toEqual({
+    expect(await waitForStoredEvent(enabled.instance.id, project.id, "session.succeeded")).toEqual({
       eventId: "session.succeeded",
       projectId: project.id,
       sessionId: completedSession.id,
