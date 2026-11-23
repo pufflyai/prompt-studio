@@ -6,7 +6,7 @@ import { createOrderedManifestCache } from "./ordered-receipts-blobs";
 
 /** Each log owner keeps at most this many bytes of relay index nodes on the device. */
 export const LOG_INDEX_CACHE_BYTES = 128 * 1024 * 1024;
-// A node is written, then its edges are remembered; recent nodes stay so that pair never splits.
+// Downloaded nodes can be read before their edges are remembered; keep recent nodes through validation.
 const RECENT_MS = 10 * 60 * 1000;
 const WRITES_PER_CHECK = 64;
 
@@ -49,8 +49,8 @@ export const createLogIndexCache = (
       if (!cached) written();
       return bytes;
     },
-    async put(id, bytes, children) {
-      await blobs.put(id, bytes, children);
+    async put(id, bytes, children, edges) {
+      await blobs.put(id, bytes, children, edges);
       written();
     },
   };
