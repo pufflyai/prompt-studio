@@ -37,7 +37,10 @@ test("retains extension search and keyboard focus through details and enabled re
   await page.goto(`/projects/${project.id}`);
   await page.getByRole("option", { name: "Extensions", exact: true }).click();
   const panel = page.getByTestId("extensions-panel");
-  await panel.getByTestId("extensions-search").fill("Personal");
+  const search = page
+    .locator('[data-workbench-panel-header="main"]')
+    .getByRole("textbox", { name: /Search extensions/ });
+  await search.fill("Personal");
   const row = panel.getByTestId("extension-entry");
   await expect(row).toHaveCount(1);
   await expect(row.locator('[data-extension-author="me"]')).toContainText("Me");
@@ -52,7 +55,7 @@ test("retains extension search and keyboard focus through details and enabled re
     .getByRole("navigation", { name: "breadcrumb" })
     .getByRole("button", { name: "Extensions", exact: true })
     .click();
-  await expect(panel.getByTestId("extensions-search")).toHaveValue("Personal");
+  await expect(search).toHaveValue("Personal");
   await expect(row).toBeFocused();
   const toggle = row.getByRole("checkbox");
   await toggle.focus();
