@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { projectEvents } from "pstdio-api-contracts/extension-kernel";
+import { waitForDatabaseWorkersIdle } from "pstdio-db";
 import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
 import { closeBackendWorkers, withBackgroundPreparation } from "pstdio-extensions";
 import type { RouteDeps } from "./features/deps";
@@ -21,6 +22,8 @@ import { runStartupTasks } from "./startup";
 
 const EXTENSION_SCHEDULE_WATERMARK_FILE = "extension-schedule-watermarks.json";
 const FATAL_CLOSE_TIMEOUT_MS = 5_000;
+// A statement already running in the database thread may finish first; exit would stop it mid-write.
+const FATAL_STATEMENT_WAIT_MS = 60_000;
 
 // Exiting while PGlite is open can corrupt its WAL (lessons 0002 and 0014), so a fatal exit waits
 // for close. The deadline keeps a close that hangs from keeping a broken process alive.
@@ -34,6 +37,7 @@ export const closeBeforeFatalExit = async (close: () => Promise<void>, timeoutMs
   );
   await Promise.race([closing, deadline]);
   clearTimeout(timer);
+  await waitForDatabaseWorkersIdle(FATAL_STATEMENT_WAIT_MS);
 };
 
 export const createAppTerminalSupervisor = () =>
