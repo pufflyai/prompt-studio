@@ -54,6 +54,7 @@ const checkSource = async (deps: Deps, argv: Arguments<ExtensionsCheckArgs>, sou
     extensionPackages: [{ path, sourceKind: "local_path" }],
     extensionRoots: [],
     apiProvider: "pst",
+    reportDeprecations: true,
   });
   const manifestRange = readPackageManifestMetadata(path).manifest?.enginesPstdio ?? null;
   const target = { kind: "source", path };
