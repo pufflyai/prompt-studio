@@ -19,7 +19,7 @@ import { resolveLocalWorkspaceTarget, type WorkspaceTargetInput } from "./comman
 
 export type ProcessTarget =
   | { kind: "local"; root: string }
-  | { kind: "remote"; spawn(process: ProcessSpawnInput): Promise<ProcessHandle> };
+  | { kind: "remote"; spawn(process: ProcessSpawnInput, signal?: AbortSignal): Promise<ProcessHandle> };
 
 type TargetDeps = WorkspacesRouteDeps;
 type Kind = "process" | "file";
@@ -59,25 +59,42 @@ const providerInput = (workspace: Workspace) => ({
   providerRef: workspace.provider_ref_json as unknown as WorkspaceProviderRef,
 });
 
+// Rejects when the caller stops waiting, without waiting for the provider.
+const unlessAborted = <T>(work: Promise<T>, signal?: AbortSignal) => {
+  if (!signal) return work;
+  if (signal.aborted) return Promise.reject(signal.reason);
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    work.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort));
+  });
+};
+
 // The provider's own context stays open until its child exits, so children the provider starts
-// for it, such as a local ssh client, live exactly as long as the handle the caller holds.
-const spawnThroughProvider = async (
+// for it, such as a local ssh client, live exactly as long as the handle the caller holds. A caller
+// that stops first does not wait for the provider: its context closes, and a handle that still
+// arrives is stopped.
+const spawnThroughProvider = (
   handle: WorkspaceProviderHandle & { provider: Required<WorkspaceTypeProvider> },
   workspace: Workspace,
   process: ProcessSpawnInput,
+  signal?: AbortSignal,
 ) => {
-  const scope = createInvocationScope({ logger: providerLogger });
-  try {
+  const scope = createInvocationScope({ logger: providerLogger, parent: signal });
+  const pending = (async () => {
     const context = handle.contextForScope ? await handle.contextForScope(scope) : handle.context;
-    const opened = await handle.provider.spawn(context, { ...providerInput(workspace), process });
-    void Promise.resolve(opened.exited)
-      .catch(() => {})
-      .finally(() => scope.close());
-    return opened;
-  } catch (error) {
-    await scope.close();
-    throw error;
-  }
+    return handle.provider.spawn(context, { ...providerInput(workspace), process });
+  })();
+  void pending.then(
+    (opened) => {
+      if (signal?.aborted) void Promise.resolve(opened.kill("SIGKILL")).catch(() => {});
+      void Promise.resolve(opened.exited)
+        .catch(() => {})
+        .finally(() => scope.close());
+    },
+    () => scope.close(),
+  );
+  return unlessAborted(pending, signal);
 };
 
 const localTarget = async (deps: TargetDeps, input: WorkspaceTargetInput, kind: Kind) => {
@@ -90,7 +107,7 @@ const localTarget = async (deps: TargetDeps, input: WorkspaceTargetInput, kind: 
 };
 
 /** Resolves where a child runs: a ready local workspace root, or a remote provider that can spawn. */
-export const resolveProcessTarget = async (deps: TargetDeps, input: WorkspaceTargetInput): Promise<ProcessTarget> => {
+export const resolveProcessTarget = async (deps: TargetDeps, input: WorkspaceTargetInput, signal?: AbortSignal) => {
   const workspace = await selectWorkspace(deps, input, "process");
   if (workspace.execution_kind === "remote") {
     const provider = await findRemoteProvider(deps, workspace, "spawn", "process");
@@ -99,9 +116,14 @@ export const resolveProcessTarget = async (deps: TargetDeps, input: WorkspaceTar
         "process_target_unsupported",
         "This workspace runs on a remote target whose provider cannot start processes.",
       );
-    return { kind: "remote", spawn: (process) => spawnThroughProvider(provider, workspace, process) };
+    return {
+      kind: "remote",
+      spawn: (process: ProcessSpawnInput, spawnSignal?: AbortSignal) =>
+        spawnThroughProvider(provider, workspace, process, spawnSignal ?? signal),
+    } satisfies ProcessTarget;
   }
-  return { kind: "local", root: await localTarget(deps, { ...input, workspaceId: workspace.id }, "process") };
+  const root = await localTarget(deps, { ...input, workspaceId: workspace.id }, "process");
+  return { kind: "local", root } satisfies ProcessTarget;
 };
 
 // `~` belongs to the target. For a local workspace that is this device's home.
@@ -132,12 +154,12 @@ export const readTargetText = async (
 };
 
 export type ExtensionTargets = {
-  process(input: WorkspaceTargetInput): Promise<ProcessTarget>;
+  process(input: WorkspaceTargetInput, signal?: AbortSignal): Promise<ProcessTarget>;
   readText(input: { projectId: string; workspaceId: string; path: string }): Promise<string>;
 };
 
 /** Target routing for contexts built before the app's dependencies exist, such as harness contexts. */
 export const createExtensionTargets = (deps: () => TargetDeps): ExtensionTargets => ({
-  process: (input) => resolveProcessTarget(deps(), input),
+  process: (input, signal) => resolveProcessTarget(deps(), input, signal),
   readText: (input) => readTargetText(deps(), input),
 });
