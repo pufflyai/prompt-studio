@@ -4,39 +4,53 @@ import { withQueuedWriteGuard } from "../../data/write-guard";
 import { nextPlacementBatch } from "./placement-batch";
 import { readPlanMetadata } from "./placement-store";
 
-/** Order the remaining metadata in the database, then create one bounded placement batch. */
+const activePlacements = (storage: ExtensionStorageApi) =>
+  storage.records.aggregate({
+    index: "timeline-placement-order",
+    where: {
+      exists: {
+        index: "ticket-view",
+        on: [{ sourceField: "ticketId", relatedField: "id" }],
+        where: { field: "archived", op: "ne", value: true },
+      },
+    },
+  });
+
+/** Append canonical batches until the requested active execution prefix is durable. */
 const initializePlacements = async (
   storage: ExtensionStorageApi,
   completedStatusIds: string[],
   requiredActiveCount?: number,
 ) => {
   await readPlanMetadata(storage);
-  let initialized = 0;
-  if (requiredActiveCount !== undefined) {
-    initialized = (
-      await storage.records.aggregate({
-        index: "timeline-placement-order",
-        where: {
-          exists: {
-            index: "ticket-view",
-            on: [{ sourceField: "ticketId", relatedField: "id" }],
-            where: { field: "archived", op: "ne", value: true },
-          },
-        },
-      })
-    ).count;
-    if (initialized >= requiredActiveCount) return;
-  }
-  const tail = await storage.records.query({
-    index: "timeline-placements",
-    fields: ["position"],
-    orderBy: [{ field: "position", direction: "desc" }],
-    limit: 1,
-  });
-  let previous = tail.records[0]?.fields.position;
+  let previous: unknown;
+  let hasTail = false;
   for (;;) {
+    // Recount actual active rows: an archive can race the preceding batch commit.
+    const prefix = requiredActiveCount === undefined ? undefined : await activePlacements(storage);
+    if (prefix && prefix.count >= requiredActiveCount!) return prefix.revision;
+    if (!hasTail) {
+      const tail = await storage.records.query({
+        index: "timeline-placements",
+        fields: ["position"],
+        orderBy: [{ field: "position", direction: "desc" }],
+        limit: 1,
+      });
+      previous = tail.records[0]?.fields.position;
+      hasTail = true;
+    }
     const page = await nextPlacementBatch(storage, completedStatusIds);
-    if (!page.length) return;
+    if (!page.length) {
+      if (prefix)
+        await storage.records.query({
+          index: "ticket-view",
+          fields: [],
+          orderBy: [],
+          limit: 0,
+          revision: prefix.revision,
+        });
+      return prefix?.revision;
+    }
     const placements = page.map((row) => {
       const ticketId = String(row.fields.id);
       const position = storage.positions.between(typeof previous === "string" ? previous : undefined);
@@ -44,8 +58,6 @@ const initializePlacements = async (
       return { id: ticketId, value: { ticketId, deadlineId: null, position } };
     });
     await createCollectionRecordsIfAbsent(storage, "timeline.placements", placements);
-    initialized += placements.length;
-    if (requiredActiveCount !== undefined && initialized >= requiredActiveCount) return;
   }
 };
 

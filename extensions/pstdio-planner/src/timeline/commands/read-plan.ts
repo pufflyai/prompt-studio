@@ -83,9 +83,24 @@ export const readPlanCommand = defineCommand({
           .filter(({ date }) => date < new Intl.DateTimeFormat("en-CA").format(new Date()))
           .map(({ id }) => id),
       });
+    await seedDefaultTags(ctx.storage);
     const { executionOffset, initializationCount } = planReadWindow(input, visible.length > 0);
-    await initializePlanPlacements(ctx, workflow.completedStatusIds, initializationCount);
-    const view = await readTicketViewPage(ctx, input, {
+    const initializedRevision = await initializePlanPlacements(ctx, workflow.completedStatusIds, initializationCount);
+    // Keep the active-prefix proof and the displayed page on the same snapshot.
+    const readInput = initializedRevision
+      ? {
+          ...input,
+          page: {
+            limit: 100,
+            offset: 0,
+            fields: [],
+            search: "",
+            ...input.page,
+            revision: input.page?.revision ?? initializedRevision,
+          },
+        }
+      : input;
+    const view = await readTicketViewPage(ctx, readInput, {
       where: input.ticketId ? { all: [activeTicket, { field: "id", op: "eq", value: input.ticketId }] } : activeTicket,
       visible: visible.length ? { all: visible } : undefined,
       groups: [],
@@ -114,6 +129,8 @@ export const readPlanCommand = defineCommand({
         "gate",
       ],
     });
+    if (view.tickets.some(({ id }) => typeof view.projections.get(id)?.planPosition !== "string"))
+      throw new Error("Timeline execution order is stale; restart the query with a numeric offset");
     const page = await planPageRows(ctx, view, executionOffset);
     // Selection outside the visible window needs only its row and section.
     const summary = input.ticketId
