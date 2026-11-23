@@ -16,9 +16,17 @@ test.each(
     configurable: true,
     value: { nodeType: 9, defaultView: new EventTarget(), getElementById: () => null },
   });
+  const frames = new Set<ReturnType<typeof setTimeout>>();
   Object.defineProperty(globalThis, "requestAnimationFrame", {
     configurable: true,
-    value: (fn: () => void) => setTimeout(fn, 0),
+    value: (fn: () => void) => {
+      const frame = setTimeout(() => {
+        frames.delete(frame);
+        fn();
+      }, 0);
+      frames.add(frame);
+      return frame;
+    },
   });
   Object.defineProperty(globalThis, "cancelAnimationFrame", { configurable: true, value: clearTimeout });
   Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", { configurable: true, value: true });
@@ -107,6 +115,7 @@ test.each(
   } finally {
     pending.resolve();
     await act(async () => tree?.unmount());
+    for (const frame of frames) clearTimeout(frame);
     for (const key of keys) {
       const descriptor = previous.get(key);
       if (descriptor) Object.defineProperty(globalThis, key, descriptor);
