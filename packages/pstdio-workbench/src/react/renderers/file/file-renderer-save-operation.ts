@@ -11,6 +11,7 @@ import { getWorkbenchOperations, operationSubject } from "../../../core/registri
 import { matchesFileScope, saveLoadedFile } from "./file-renderer-load-state";
 
 const domain = "document.save";
+const fileSubject = (loadKey: string) => operationSubject("file", loadKey);
 type FileSaveReceipt = { content?: FileRendererContent; result?: FileRendererSaveResult };
 
 export class UnconfirmedFileSaveError extends Error {
@@ -31,9 +32,10 @@ export const saveWithDocumentRecovery = async (input: {
   write(signal: AbortSignal): Promise<FileSaveReceipt>;
   read(signal: AbortSignal): Promise<FileSaveReceipt>;
   accept(receipt: FileSaveReceipt, signal: AbortSignal): void;
+  retainDraft?(updateDraft: (draft: unknown) => void): void;
 }) => {
   const operations = getWorkbenchOperations(input.queries);
-  const subject = operationSubject("file", input.loadKey);
+  const subject = fileSubject(input.loadKey);
   if (
     operations
       .getSnapshot()
@@ -66,6 +68,7 @@ export const saveWithDocumentRecovery = async (input: {
       }
     },
   });
+  input.retainDraft?.(attempt.updateDraft);
   try {
     return await attempt.result;
   } catch (error) {
@@ -73,6 +76,24 @@ export const saveWithDocumentRecovery = async (input: {
     if (failed?.status === "unknown" || failed?.status === "unconfirmed") throw new UnconfirmedFileSaveError();
     throw error;
   }
+};
+
+export const afterFileSaveSettles = (queries: ScopedQueryClient, loadKey: string, settled: () => void) => {
+  const operations = getWorkbenchOperations(queries);
+  const subject = fileSubject(loadKey);
+  let active = true;
+  const stop = () => {
+    active = false;
+    unsubscribe();
+  };
+  const check = () => {
+    if (!active || operations.getSnapshot().pending.some((entry) => entry.subjects.includes(subject))) return;
+    stop();
+    settled();
+  };
+  const unsubscribe = operations.subscribe(check);
+  queueMicrotask(check);
+  return stop;
 };
 
 export const prepareFileRendererSave =
@@ -85,7 +106,8 @@ export const prepareFileRendererSave =
     loadKey: string;
     readBaseline(): FileRendererContent | undefined;
     available(): boolean;
-    accept(receipt: FileSaveReceipt, value: string): void;
+    accept(receipt: FileSaveReceipt): void;
+    retainDraft?(submitted: string, updateDraft: (draft: unknown) => void): void;
   }) =>
   (value: string, origin: FileRendererRefreshOrigin) => {
     const { queries, scope, contribution, resource } = input;
@@ -113,6 +135,7 @@ export const prepareFileRendererSave =
           source: resource,
           title: `Save ${resource?.label ?? baseline?.fileName ?? contribution.title}`,
           value,
+          retainDraft: (update) => input.retainDraft?.(value, update),
           filePath: baseline?.filePath,
           write: (signal) =>
             saveLoadedFile(contribution, resource, value, origin, baseline, AbortSignal.any([signal, lease.signal])),
@@ -121,7 +144,7 @@ export const prepareFileRendererSave =
             return { content, result: content.revision ? { revision: content.revision } : undefined };
           },
           accept(receipt) {
-            if (!lease.signal.aborted && input.available()) input.accept(receipt, value);
+            if (!lease.signal.aborted && input.available()) input.accept(receipt);
           },
         });
         return saved.result;

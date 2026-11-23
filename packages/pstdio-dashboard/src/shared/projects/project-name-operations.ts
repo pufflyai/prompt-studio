@@ -65,7 +65,13 @@ export const getProjectNameOperations = createRuntimeState((owner) => {
           const confirmed = verified ?? (await readName(signal));
           signal.throwIfAborted();
           const row = readRow(id);
-          if (row && row === confirmed.before) owner.getWriter("projects")?.upsert({ ...row, name: confirmed.name });
+          if (
+            row &&
+            confirmed.before &&
+            row.name === confirmed.before.name &&
+            row.created_at === confirmed.before.created_at
+          )
+            owner.getWriter("projects")?.upsert({ ...row, name: confirmed.name });
         },
         async check(signal) {
           const confirmed = await readName(signal);

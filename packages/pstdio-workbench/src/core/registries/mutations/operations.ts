@@ -1,16 +1,17 @@
 import { type QueryScope, type ResourceRef, resourceKey, type ScopedQueryClient } from "@pstdio/sdk/extensions";
-import type {
-  OperationFailure,
-  OperationInput,
-  OperationPreview,
-  OperationRead,
-  OperationRecovery,
-  OperationSnapshot,
-  OperationSourceCommand,
-} from "./operation-types";
+import {
+  changeStatus,
+  type Entry,
+  emptySnapshot,
+  initialPreview,
+  recoveryStatus,
+  retiredError,
+  retireEntry,
+  snapshotForOperations,
+} from "./operation-state";
+import type { OperationFailure, OperationInput, OperationPreview, OperationRead } from "./operation-types";
 
 const operationLimit = 128;
-const retiredError = () => new Error("The original authority is no longer active.");
 
 export class OperationCapacityError extends Error {
   constructor() {
@@ -28,60 +29,6 @@ export const resourceOperationSubject = (resource: ResourceRef) =>
 
 const authorityKey = (scope: Readonly<QueryScope>) =>
   JSON.stringify([scope.runtimeId, scope.accountOrigin ?? null, scope.accountId ?? null]);
-
-interface Entry {
-  owner: string;
-  scope: Readonly<QueryScope>;
-  preview: OperationPreview;
-  controller: AbortController;
-  execute?: () => Promise<void>;
-  check?: () => Promise<void>;
-  reject: (error: unknown) => void;
-  source?: ResourceRef;
-  sourceCommand?: OperationSourceCommand;
-  draft?: unknown;
-  describeRecovery?: () => string;
-  releaseOnDiscard?: boolean;
-  onDiscard?: () => void;
-  acknowledged?: boolean;
-  error?: unknown;
-  dismissed: boolean;
-}
-
-const emptySnapshot: OperationSnapshot = { pending: [], recovery: [] };
-
-const recoveryStatus = (status: OperationPreview["status"]) =>
-  status === "unknown" || status === "rejected" || status === "unconfirmed" ? status : undefined;
-
-const changeStatus = (entry: Entry, status: OperationPreview["status"]) => {
-  entry.preview = { ...entry.preview, status, intent: status === "rejected" ? undefined : entry.preview.intent };
-};
-
-const retireEntry = (entry: Entry) => {
-  const error = retiredError();
-  entry.controller.abort(error);
-  entry.preview = { ...entry.preview, intent: undefined };
-  entry.execute = undefined;
-  entry.check = undefined;
-  const { status } = entry.preview;
-  if (recoveryStatus(status)) return;
-
-  const interrupted = entry.acknowledged ? "unconfirmed" : "unknown";
-  changeStatus(entry, status === "queued" ? "rejected" : interrupted);
-  entry.error = error;
-  entry.reject(error);
-};
-
-const initialPreview = <T>(input: OperationInput<T>, id: symbol, defaultProjectId?: string): OperationPreview => ({
-  id,
-  projectId: input.projectId ?? defaultProjectId,
-  subjects: [...new Set(input.subjects)],
-  title: input.title,
-  domain: input.domain,
-  intent: input.intent,
-  status: "queued",
-  startedAt: Date.now(),
-});
 
 const refreshOperationReads = (
   reads: ReadonlySet<OperationRead>,
@@ -122,13 +69,9 @@ const createRejectionReconciler = (
 };
 
 const discardEntry = (entry: Entry, clearDraft: (entry: Entry) => void) => {
-  const discard = entry.onDiscard;
+  entry.onDiscard?.();
   entry.onDiscard = undefined;
-  try {
-    discard?.();
-  } finally {
-    clearDraft(entry);
-  }
+  clearDraft(entry);
 };
 
 const createWorkbenchOperations = (queries: ScopedQueryClient) => {
@@ -141,33 +84,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
   let nextId = 0;
 
   const publish = () => {
-    const pending: OperationPreview[] = [];
-    const recovery: OperationRecovery[] = [];
-    for (const entry of entries.values()) {
-      if (entry.owner !== owner || queries.isDisposed()) continue;
-      const { preview } = entry;
-      const status = recoveryStatus(preview.status);
-      if (!entry.controller.signal.aborted && preview.status !== "rejected") pending.push(preview);
-      if (status) {
-        const { id, projectId, title, domain } = preview;
-        recovery.push({
-          id,
-          subjects: preview.subjects,
-          projectId,
-          title,
-          domain,
-          source: entry.source,
-          sourceCommand: entry.sourceCommand,
-          draft: entry.draft,
-          description: entry.describeRecovery?.(),
-          status,
-          error: entry.error,
-          dismissed: entry.dismissed,
-          canCheck: Boolean(entry.check) && !entry.controller.signal.aborted,
-        });
-      }
-    }
-    snapshot = { pending, recovery };
+    snapshot = queries.isDisposed() ? emptySnapshot : snapshotForOperations(entries.values(), owner);
     for (const listener of listeners) listener();
   };
 
@@ -331,7 +248,21 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
       entries.set(id, entry);
       publish();
       schedule();
-      return { id, result: result.promise };
+      return {
+        id,
+        result: result.promise,
+        updateDraft(draft: unknown) {
+          if (
+            entries.get(id) !== entry ||
+            entry.draft === undefined ||
+            entry.controller.signal.aborted ||
+            entry.owner !== owner
+          )
+            return;
+          entry.draft = draft;
+          if (recoveryStatus(entry.preview.status)) publish();
+        },
+      };
     },
     check(id: symbol) {
       const entry = findRecovery(id);

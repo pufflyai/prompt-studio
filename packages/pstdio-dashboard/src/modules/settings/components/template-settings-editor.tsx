@@ -27,7 +27,7 @@ export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
 
 const TemplateEditorForm = (props: TemplateSettingsEditorProps & { query: ReturnType<typeof useTemplateEditor> }) => {
   const { template, onDeleted, query } = props;
-  const { data, isLoading, pending, deleting } = query;
+  const { data, isLoading, pending, deleting, deleted } = query;
   const [draft, setDraft] = useState<string>();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
@@ -38,8 +38,8 @@ const TemplateEditorForm = (props: TemplateSettingsEditorProps & { query: Return
   const [deleteError, setDeleteError] = useState<string>();
 
   useEffect(() => {
-    if (data === null && !pending) onDeleted();
-  }, [data, pending, onDeleted]);
+    if (deleted && !pending) onDeleted();
+  }, [deleted, pending, onDeleted]);
   const save = async () => {
     await query.save(content);
     setDraft((previous) => (previous === content ? undefined : previous));

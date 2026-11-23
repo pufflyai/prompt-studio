@@ -21,6 +21,13 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
   const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
   const target = `system-errors.operation.${id.description ?? "recovery"}`;
   const report = (title: string) => workbench.notifications.captureActionError(title, target);
+  const discard = () => {
+    try {
+      operations.discard(id);
+    } catch (error) {
+      report("Discard draft")(error);
+    }
+  };
   const failure = entry.error instanceof Error ? entry.error.message : "The change could not be confirmed.";
   const message = status === "unknown" ? (entry.description ?? "The result could not be confirmed.") : failure;
   const canInspect = status === "unknown" && (entry.domain === "resource.create" || (!sourceCommand && entry.source));
@@ -76,13 +83,13 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
             >
               Copy draft
             </Button>
-            <Button size="2xs" variant="destructive" onClick={() => operations.discard(id)}>
+            <Button size="2xs" variant="destructive" onClick={discard}>
               Discard draft
             </Button>
           </>
         ) : null}
         {draft === undefined && status === "rejected" ? (
-          <Button size="2xs" onClick={() => operations.discard(id)}>
+          <Button size="2xs" onClick={discard}>
             Clear
           </Button>
         ) : null}

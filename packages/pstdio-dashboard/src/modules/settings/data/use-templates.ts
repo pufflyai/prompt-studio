@@ -18,6 +18,8 @@ import {
 
 const saveDomain = "settings.template-save";
 const deleteDomain = "settings.template-delete";
+const deletedTemplate = { deleted: true } as const;
+type CachedTemplate = TemplateContent | typeof deletedTemplate | null;
 const templateQueryKey = (template: ProjectTemplateAsset, scopeKey: string) =>
   ["project-template", scopeKey, template.projectId, template.id] as const;
 const templateSubject = (template: ProjectTemplateAsset) =>
@@ -48,12 +50,7 @@ export const getTemplateOperations = createRuntimeState((owner) => {
     id: WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
     args: { panelId: "templates", itemId: template.id },
   });
-  const accept = async (
-    template: ProjectTemplateAsset,
-    scope: string,
-    value: TemplateContent | null,
-    signal: AbortSignal,
-  ) => {
+  const accept = async (template: ProjectTemplateAsset, scope: string, value: CachedTemplate, signal: AbortSignal) => {
     const queryKey = templateQueryKey(template, scope);
     await client.cancelQueries({ queryKey, exact: true });
     signal.throwIfAborted();
@@ -102,7 +99,8 @@ export const getTemplateOperations = createRuntimeState((owner) => {
         subjects: [templateSubject(template)],
         title: `Delete ${template.title}`,
         sourceCommand: sourceCommand(template),
-        draft,
+        draft: draft ?? { name: template.name, type: template.localType },
+        describeRecovery: () => "The delete response was lost. Inspect the template before discarding this attempt.",
         releaseOnDiscard: true,
         classify: classifyApiWrite,
         async write(signal) {
@@ -111,7 +109,7 @@ export const getTemplateOperations = createRuntimeState((owner) => {
         },
         async reconcile(_result, signal) {
           if ((await read(template, signal)) !== null) throw new Error("The template is still available.");
-          await accept(template, expectedScope, null, signal);
+          await accept(template, expectedScope, deletedTemplate, signal);
           void client.invalidateQueries({ queryKey: projectTemplateAssetsQueryKey(template.projectId), exact: true });
         },
       }).result;
@@ -124,12 +122,15 @@ export const useTemplateEditor = (template: ProjectTemplateAsset) => {
   useSyncExternalStore(templates.subscribe, templates.snapshot, templates.snapshot);
   const scope = templates.scopeKey();
   const pending = templates.active(template);
-  const result = useQuery({
+  const result = useQuery<CachedTemplate>({
     queryKey: templateQueryKey(template, scope),
     queryFn: ({ signal }) => templates.read(template, signal),
   });
+  const deleted = result.data && "deleted" in result.data;
   return {
     ...result,
+    data: deleted ? null : (result.data as TemplateContent | null | undefined),
+    deleted,
     pending,
     deleting: pending?.domain === deleteDomain,
     scope,

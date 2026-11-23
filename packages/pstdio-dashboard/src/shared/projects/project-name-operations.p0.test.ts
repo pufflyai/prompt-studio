@@ -57,3 +57,39 @@ test("project headers share a pending rename and read its exact name after a los
     await server.stop(true);
   }
 });
+
+test("a project name read-back preserves an unrelated live row update", async () => {
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const server = Bun.serve({
+    port: 0,
+    async fetch(request) {
+      if (new URL(request.url).pathname !== "/v1/projects/project") return new Response(null, { status: 404 });
+      if (request.method === "GET") {
+        entered.resolve();
+        await release.promise;
+      }
+      return Response.json({ id: "project", name: "Renamed" });
+    },
+  });
+  const owner = createRuntimeCollections({ baseUrl: server.url.origin, token: "test-token" });
+  const names = getProjectNameOperations(owner);
+  const row = { id: "project", name: "Original", description: "Original description" };
+  try {
+    const writer = owner.getWriter("projects")!;
+    writer.upsert(row);
+    const renaming = names.rename(row.id, "Renamed", names.authority());
+    await entered.promise;
+    writer.upsert({ ...row, description: "Changed elsewhere" });
+    release.resolve();
+    await renaming;
+    expect(owner.getCollection("projects").get(row.id)).toMatchObject({
+      name: "Renamed",
+      description: "Changed elsewhere",
+    });
+  } finally {
+    release.resolve();
+    await owner.dispose();
+    await server.stop(true);
+  }
+});

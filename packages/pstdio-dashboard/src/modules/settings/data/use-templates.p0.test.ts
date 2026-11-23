@@ -117,7 +117,8 @@ test.each([
   const queryKey = ["project-template", scope, template.projectId, template.id];
   try {
     client.setQueryData(queryKey, stored);
-    const removing = templates.remove(template, "Unsaved edit", scope);
+    const draft = status === 200 ? "Unsaved edit" : undefined;
+    const removing = templates.remove(template, draft, scope);
     await entered.promise;
     expect(getTemplateOperations(owner).active(template)?.title).toBe("Delete Review");
     await expect(templates.save(template, "New text", scope)).rejects.toThrow("unfinished change");
@@ -127,18 +128,20 @@ test.each([
     expect(recovery).toMatchObject({
       status: status === 200 ? "unconfirmed" : "unknown",
       canCheck: status === 200,
-      draft: "Unsaved edit",
+      draft: draft ?? { name: "review", type: "prompt" },
     });
     expect(client.getQueryData(queryKey)).toEqual(stored);
     current = null;
     if (status === 200) {
       await operations.check(recovery.id);
-      expect(client.getQueryData(queryKey)).toBeNull();
+      expect(client.getQueryData(queryKey)).toEqual({ deleted: true });
       expect(templates.active(template)).toBeUndefined();
       expect(reads).toBe(2);
     } else {
       expect(templates.active(template)?.status).toBe("unknown");
       expect(reads).toBe(0);
+      operations.discard(recovery.id);
+      expect(templates.active(template)).toBeUndefined();
     }
     expect(deletes).toBe(1);
   } finally {
