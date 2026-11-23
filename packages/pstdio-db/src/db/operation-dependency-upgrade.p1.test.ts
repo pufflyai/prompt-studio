@@ -30,7 +30,10 @@ test("a released foreign receipt keeps its selected epoch until a new exact deci
     const expected = { epoch: "aaa", operationId: "foreign-save", fingerprint: "identity", state: "accepted" as const };
     await withOrderedOwner(current.db, owner, async (journal) => {
       expect(await journal.knownDependency("foreign-save")).toEqual(expected);
-      expect((await journal.unindexed()).map((entry) => entry.decision.epoch)).toEqual(["zzz"]);
+      // Released indexed flags have no publication clock, so both facts need coverage backfill.
+      expect((await journal.unindexed()).map((entry) => entry.decision.epoch)).toEqual(["aaa", "zzz"]);
+      expect(await journal.publishedReceipt("foreign-save", "aaa")).toBeUndefined();
+      expect(await journal.knownDependency("foreign-save")).toEqual(expected);
       await journal.recordDecision({ ...expected, epoch: "zzz", state: "refused" }, "second");
       expect((await journal.knownDependency("foreign-save"))?.epoch).toBe("zzz");
     });

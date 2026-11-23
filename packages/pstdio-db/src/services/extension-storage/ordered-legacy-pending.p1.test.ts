@@ -176,6 +176,11 @@ test("upgraded pending paths keep whole arrays and multiline text without replac
   });
   await a.sync.synchronize();
   const b = await second.upgrade();
+  const [migrated] = (await second.db.select().from(storage_ordered_operations)).filter((row) =>
+    row.operation_id.startsWith("legacy-pending:"),
+  );
+  expect(migrated?.envelope).not.toBeNull();
+  expect(JSON.parse(new TextDecoder().decode(migrated!.envelope!)).edits).toHaveLength(2);
   await b.sync.synchronize();
   await a.sync.synchronize();
   const expected = {
@@ -192,11 +197,12 @@ test("upgraded pending paths keep whole arrays and multiline text without replac
     expect((await peer.records.read("card")).value).toEqual(expected);
     expect((await peer.records.read("audit")).value).toEqual({ saved: true });
   }
-  const [migrated] = (await second.db.select().from(storage_ordered_operations)).filter((row) =>
-    row.operation_id.startsWith("legacy-pending:"),
+  const [settled] = (await second.db.select().from(storage_ordered_operations)).filter(
+    (row) => row.operation_id === migrated!.operation_id,
   );
-  expect(migrated?.envelope).not.toBeNull();
-  expect(JSON.parse(new TextDecoder().decode(migrated!.envelope!)).edits).toHaveLength(2);
+  expect(settled?.envelope).toBeNull();
+  expect(settled?.settled_epoch).toBeTruthy();
+  expect(await b.records.outcome(migrated!.operation_id)).toMatchObject({ state: "synced" });
 });
 
 for (const restoring of [false, true])
