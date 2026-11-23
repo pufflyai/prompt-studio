@@ -11,7 +11,7 @@ import { daysBetween } from "../model/days";
 import type { MilestoneDisplay } from "../model/milestone-visibility";
 import { summarizeSection } from "../model/section-summary";
 import { initializePlanPlacements } from "./initialize-placements";
-import { readPlanMetadata } from "./placement-store";
+import { planPlacements, readPlanMetadata } from "./placement-store";
 import { planPageRows } from "./plan-page-rows";
 import { planQuerySummary } from "./plan-query-summary";
 import { planReadWindow } from "./plan-read-window";
@@ -85,7 +85,12 @@ export const readPlanCommand = defineCommand({
       });
     await seedDefaultTags(ctx.storage);
     const { executionOffset, initializationCount } = planReadWindow(input, visible.length > 0);
-    const initializedRevision = await initializePlanPlacements(ctx, workflow.completedStatusIds, initializationCount);
+    const selected = input.ticketId ? await planPlacements(ctx.storage).get(input.ticketId) : undefined;
+    const initializedRevision = await initializePlanPlacements(
+      ctx,
+      workflow.completedStatusIds,
+      selected ? 0 : initializationCount,
+    );
     // Keep the active-prefix proof and the displayed page on the same snapshot.
     const readInput = initializedRevision
       ? {
