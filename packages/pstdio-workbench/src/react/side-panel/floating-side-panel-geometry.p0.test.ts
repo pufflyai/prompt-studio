@@ -57,12 +57,45 @@ test("a smaller viewport fits the panel without overwriting its saved frame", ()
   expect(fitFloatingPanel(saved, viewport)).toEqual(saved);
 });
 
-test("left snap resizing can grow while retaining its left anchor", () => {
-  expect(resizeFloatingPanel({ ...frame, x: 12 }, { x: -80, y: -40 }, viewport, "left")).toEqual({
+test("left snap resizing grows from the top right while retaining its left anchor", () => {
+  expect(resizeFloatingPanel({ ...frame, x: 12 }, { x: 80, y: -40 }, viewport, "left", "ne")).toEqual({
     x: 12,
     y: 160,
     width: 560,
     height: 440,
+  });
+});
+
+test("center snap resizing also grows from the top right around its anchor", () => {
+  expect(resizeFloatingPanel(frame, { x: 80, y: -40 }, viewport, "center", "ne")).toEqual({
+    x: 320,
+    y: 160,
+    width: 640,
+    height: 440,
+  });
+});
+
+test("free top right resizing keeps the opposite corner fixed", () => {
+  expect(resizeFloatingPanel(frame, { x: 80, y: -40 }, viewport, "left", "ne")).toEqual({
+    x: 400,
+    y: 160,
+    width: 560,
+    height: 440,
+  });
+});
+
+test("top right resizing stops at the viewport and minimum size", () => {
+  expect(resizeFloatingPanel(frame, { x: 2000, y: -2000 }, viewport, "left", "ne")).toEqual({
+    x: 400,
+    y: 12,
+    width: 868,
+    height: 588,
+  });
+  expect(resizeFloatingPanel(frame, { x: -2000, y: 2000 }, viewport, "left", "ne")).toEqual({
+    x: 400,
+    y: 408,
+    width: 320,
+    height: 192,
   });
 });
 

@@ -246,7 +246,9 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
         overlay={
           <>
             <WorkbenchTabDropTarget region="side" visible={visible} />
-            {visible && policy.resizable ? <FloatingSidePanelResizeHandle resizeProps={position.resizeProps} /> : null}
+            {visible && policy.resizable ? (
+              <FloatingSidePanelResizeHandle alignment={position.resizeAlignment} resizeProps={position.resizeProps} />
+            ) : null}
           </>
         }
       >

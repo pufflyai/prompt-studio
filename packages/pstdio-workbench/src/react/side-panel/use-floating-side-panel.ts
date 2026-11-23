@@ -28,7 +28,14 @@ export const useFloatingSidePanel = (options: FloatingSidePanelOptions) => {
     workbench.preferences.store,
     useShallow(() => workbench.preferences.getValue(floatingSidePanelPreferences.frame)),
   );
-  const gesture = useFloatingPanelGesture({ workbench, panelRef, movement, visible, resizable });
+  const gesture = useFloatingPanelGesture({
+    workbench,
+    panelRef,
+    movement,
+    alignment: snap.alignment,
+    visible,
+    resizable,
+  });
   const cancelSnap = useEffectEvent(snap.cancelDrag);
   useEffect(() => {
     if (movement === "free" || !visible) cancelSnap();
@@ -73,6 +80,7 @@ export const useFloatingSidePanel = (options: FloatingSidePanelOptions) => {
     dropAlignment: movement === "snap" ? snap.dropAlignment : undefined,
     dragProps: movement === "free" ? gesture.dragProps : snap.dragProps,
     resizeProps: gesture.resizeProps,
+    resizeAlignment: snap.alignment,
     actions: [
       ...snap.actions.map((action) => ({
         ...action,

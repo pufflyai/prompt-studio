@@ -2,8 +2,43 @@ import type { Locator, Page, TestInfo } from "@playwright/test";
 import { homeFrame } from "../../helpers/home-loading";
 import { expect } from "../../scripts/session-test";
 
+const verifySnapCorner = async (
+  page: Page,
+  panel: Locator,
+  openHeaderMenu: () => Promise<void>,
+  alignment: "left" | "center",
+  corner: "left" | "right",
+) => {
+  const handle = panel.getByRole("button", { name: `Resize Side Panel from top ${corner}`, exact: true });
+  await expect(handle).toBeVisible();
+  const before = (await panel.boundingBox())!;
+  const grip = (await handle.boundingBox())!;
+  const delta = alignment === "left" ? 8 : 16;
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(grip.x + grip.width / 2 + (corner === "left" ? -delta : delta), grip.y + grip.height / 2, {
+    steps: 4,
+  });
+  await expect
+    .poll(async () => (await panel.boundingBox())!.width)
+    .toBeCloseTo(before.width + delta * (alignment === "center" ? 2 : 1), 0);
+  const during = (await panel.boundingBox())!;
+  if (alignment === "left") expect(during.x).toBeCloseTo(before.x, 0);
+  else expect(during.x + during.width / 2).toBeCloseTo(before.x + before.width / 2, 0);
+  await page.mouse.up();
+  await openHeaderMenu();
+  await page.keyboard.press("Escape");
+  await expect.poll(() => panel.boundingBox()).toEqual(during);
+  await expect(panel).toHaveAttribute("data-floating-panel-movement", "snap");
+  const beforeKey = (await panel.boundingBox())!;
+  await handle.focus();
+  await page.keyboard.press(corner === "left" ? "ArrowLeft" : "ArrowRight");
+  await expect
+    .poll(async () => (await panel.boundingBox())!.width)
+    .toBeCloseTo(beforeKey.width + 8 * (alignment === "center" ? 2 : 1), 0);
+};
+
 const verifySnappedResize = async (page: Page, panel: Locator, openHeaderMenu: () => Promise<void>) => {
-  const handle = panel.getByRole("button", { name: "Resize Side Panel from top left", exact: true });
   const viewport = page.viewportSize()!;
   for (const alignment of ["left", "center"] as const) {
     await openHeaderMenu();
@@ -14,23 +49,11 @@ const verifySnappedResize = async (page: Page, panel: Locator, openHeaderMenu: (
         return alignment === "left" ? box.x : box.x + box.width / 2;
       })
       .toBeCloseTo(alignment === "left" ? 12 : viewport.width / 2, 0);
-    const before = (await panel.boundingBox())!;
-    const grip = (await handle.boundingBox())!;
-    const delta = alignment === "left" ? 8 : 16;
-    await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(grip.x + grip.width / 2 - delta, grip.y + grip.height / 2, { steps: 4 });
-    await expect
-      .poll(async () => (await panel.boundingBox())!.width)
-      .toBeCloseTo(before.width + delta * (alignment === "center" ? 2 : 1), 0);
-    const during = (await panel.boundingBox())!;
-    if (alignment === "left") expect(during.x).toBeCloseTo(before.x, 0);
-    else expect(during.x + during.width / 2).toBeCloseTo(before.x + before.width / 2, 0);
-    await page.mouse.up();
-    await openHeaderMenu();
-    await page.keyboard.press("Escape");
-    await expect.poll(() => panel.boundingBox()).toEqual(during);
-    await expect(panel).toHaveAttribute("data-floating-panel-movement", "snap");
+    await expect(panel.locator("[data-resize-direction]")).toHaveCount(alignment === "center" ? 2 : 1);
+    if (alignment === "left") await expect(panel.locator('[data-resize-direction="nw"]')).toHaveCount(0);
+    for (const corner of alignment === "center" ? (["left", "right"] as const) : (["right"] as const)) {
+      await verifySnapCorner(page, panel, openHeaderMenu, alignment, corner);
+    }
   }
   await openHeaderMenu();
   await page.getByRole("menuitem", { name: "Align right", exact: true }).click();
@@ -40,6 +63,8 @@ const verifySnappedResize = async (page: Page, panel: Locator, openHeaderMenu: (
       return box.x + box.width;
     })
     .toBeCloseTo(viewport.width - 12, 0);
+  await expect(panel.locator('[data-resize-direction="nw"]')).toHaveCount(1);
+  await expect(panel.locator('[data-resize-direction="ne"]')).toHaveCount(0);
 };
 
 // Critical risk: moving and resizing a live Side iframe must keep its draft and controls reachable.

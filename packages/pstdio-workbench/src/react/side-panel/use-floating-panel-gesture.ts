@@ -10,11 +10,11 @@ import {
 } from "react";
 import type { WorkbenchCore } from "../../core";
 import { floatingSidePanelPreferences } from "../../core/controllers/side-panel/floating-side-panel-preferences";
-import { sidePanelBubblePreferences } from "../../core/controllers/side-panel/side-panel-bubble";
 import { runUserAction } from "../../core/shared/run-user-action";
 import {
   type FloatingPanelFrame,
   type FloatingPanelResizeAnchor,
+  type FloatingPanelResizeCorner,
   fitFloatingPanel,
   readFloatingPanelFrame,
   resizeFloatingPanel,
@@ -24,6 +24,7 @@ interface FloatingPanelGestureOptions {
   workbench: WorkbenchCore;
   panelRef: RefObject<HTMLDivElement | null>;
   movement: "snap" | "free";
+  alignment: FloatingPanelResizeAnchor;
   resizable: boolean;
   visible: boolean;
 }
@@ -33,7 +34,7 @@ interface Gesture {
   frame: FloatingPanelFrame;
   x: number;
   y: number;
-  resizing: boolean;
+  corner?: FloatingPanelResizeCorner;
   anchor: FloatingPanelResizeAnchor;
   target: HTMLElement;
   pointerId: number;
@@ -57,12 +58,12 @@ const releaseGesture = (gesture: Gesture | null) => {
 };
 
 export const useFloatingPanelGesture = (options: FloatingPanelGestureOptions) => {
-  const { workbench, panelRef, movement, resizable, visible } = options;
+  const { workbench, panelRef, movement, alignment, resizable, visible } = options;
   const gesture = useRef<Gesture | null>(null);
   const [frame, setFrame] = useState<FloatingPanelFrame>();
-  const resizeAnchor = () => {
-    if (movement === "free") return "right";
-    return workbench.preferences.getValue(sidePanelBubblePreferences.alignment) as FloatingPanelResizeAnchor;
+  const resizeAnchor = (corner: FloatingPanelResizeCorner) => {
+    if (movement === "free") return corner === "ne" ? "left" : "right";
+    return alignment;
   };
   const cancel = () => {
     const current = gesture.current;
@@ -75,10 +76,11 @@ export const useFloatingPanelGesture = (options: FloatingPanelGestureOptions) =>
     if (
       !visible ||
       (gesture.current && gesture.current.movement !== movement) ||
-      (!resizable && gesture.current?.resizing)
+      (!resizable && gesture.current?.corner) ||
+      (gesture.current?.corner && movement === "snap" && gesture.current.anchor !== alignment)
     )
       cancelChangedGesture();
-  }, [movement, resizable, visible]);
+  }, [alignment, movement, resizable, visible]);
   useEffect(() => () => releaseGesture(gesture.current), []);
   const commit = (accepted: FloatingPanelFrame) => {
     setFrame(accepted);
@@ -86,11 +88,11 @@ export const useFloatingPanelGesture = (options: FloatingPanelGestureOptions) =>
       workbench.preferences.setValue(floatingSidePanelPreferences.frame, { ...accepted }, { scope: "user" }),
     ).finally(() => setFrame((value) => (value === accepted ? undefined : value)));
   };
-  const pointerProps = (resizing = false) => ({
+  const pointerProps = (corner?: FloatingPanelResizeCorner) => ({
     touchAction: "none",
     onPointerDown: (event: PointerEvent<HTMLElement>) => {
       if (event.button !== 0 || gesture.current || !panelRef.current || !visible) return;
-      if (resizing ? !resizable : movement !== "free") return;
+      if (corner ? !resizable : movement !== "free") return;
       event.preventDefault();
       event.stopPropagation();
       event.currentTarget.focus({ preventScroll: true });
@@ -101,8 +103,8 @@ export const useFloatingPanelGesture = (options: FloatingPanelGestureOptions) =>
         frame: origin,
         x: event.clientX,
         y: event.clientY,
-        resizing,
-        anchor: resizeAnchor(),
+        corner,
+        anchor: corner ? resizeAnchor(corner) : alignment,
         target: event.currentTarget,
         pointerId: event.pointerId,
         moved: false,
@@ -116,8 +118,8 @@ export const useFloatingPanelGesture = (options: FloatingPanelGestureOptions) =>
       if (!current.moved && Math.max(Math.abs(delta.x), Math.abs(delta.y)) < 6) return;
       current.moved = true;
       const viewport = viewportFor(event.currentTarget);
-      current.frame = current.resizing
-        ? resizeFloatingPanel(current.origin, delta, viewport, current.anchor)
+      current.frame = current.corner
+        ? resizeFloatingPanel(current.origin, delta, viewport, current.anchor, current.corner)
         : fitFloatingPanel(
             { ...current.origin, x: current.origin.x + delta.x, y: current.origin.y + delta.y },
             viewport,
@@ -162,8 +164,8 @@ export const useFloatingPanelGesture = (options: FloatingPanelGestureOptions) =>
         );
       },
     },
-    resizeProps: {
-      ...pointerProps(true),
+    resizeProps: (corner: FloatingPanelResizeCorner) => ({
+      ...pointerProps(corner),
       onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
         if (event.key === "Escape" && gesture.current) {
           event.preventDefault();
@@ -180,10 +182,11 @@ export const useFloatingPanelGesture = (options: FloatingPanelGestureOptions) =>
             readFloatingPanelFrame(panelRef.current),
             delta,
             viewportFor(event.currentTarget),
-            resizeAnchor(),
+            resizeAnchor(corner),
+            corner,
           ),
         );
       },
-    },
+    }),
   };
 };
