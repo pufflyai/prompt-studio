@@ -50,6 +50,10 @@ const SYNC_FILE = "benchmarks/sync.json";
 const RELEASE_ASSET = /^benchmarks-(.+)\.json$/;
 const RUN_ARTIFACT = /^benchmark-results-/;
 const STABLE_TAG = /^pstdio@(\d+\.\d+\.\d+)$/;
+// PS-233 replaced every benchmark suite on 2026-11-14. Earlier runs measured retired suites that compare with
+// nothing current, so the cache neither lists them nor keeps their results.
+const SUITES_SINCE = "2026-11-14T00:00:00Z";
+const current = (at: string) => at >= SUITES_SINCE;
 
 // Every result the dashboard shows comes from this cache, so pages work offline and outlive
 // GitHub's artifact retention.
@@ -65,10 +69,12 @@ export const readRuns = async (ctx: Pick<ExtensionContextBase, "extensionFiles">
   const files = filesOf(ctx);
   if (!(await files.exists(RUNS_FILE))) return [];
   // Runs cached before commits and platforms were recorded read them from their title.
-  return (JSON.parse(await files.readText(RUNS_FILE)) as RunRecord[]).map((run) => ({
-    ...parseRunTitle(run.title),
-    ...run,
-  }));
+  return (JSON.parse(await files.readText(RUNS_FILE)) as RunRecord[])
+    .filter((run) => current(run.createdAt))
+    .map((run) => ({
+      ...parseRunTitle(run.title),
+      ...run,
+    }));
 };
 
 export const writeRuns = (ctx: Pick<ExtensionContextBase, "extensionFiles">, runs: RunRecord[]) =>
@@ -146,14 +152,26 @@ export const readResults = async (ctx: Pick<ExtensionContextBase, "extensionFile
   // Result files sit at benchmarks/<releases|runs>/<id>/<file>.json, beside the runs index.
   const entries = (await files.list("benchmarks/**/*.json")).filter((entry) => entry.path.split("/").length === 4);
   const results = await Promise.all(
-    entries.map(async (entry): Promise<CachedResult> => {
+    entries.map(async (entry): Promise<CachedResult[]> => {
       const [, kind, id] = entry.path.split("/");
       const file = parseResultFile(await files.readText(entry.path));
-      if (kind === "releases") return { source: { kind: "release", version: id }, file };
-      return { source: { kind: "run", runId: id }, file };
+      if (!current(file.startedAt)) return [];
+      if (kind === "releases") return [{ source: { kind: "release", version: id }, file }];
+      return [{ source: { kind: "run", runId: id }, file }];
     }),
   );
-  return mergeResults(results);
+  return mergeResults(results.flat());
+};
+
+// Deletes the cached folders of runs that measured the retired suites.
+const pruneRetired = async (ctx: StoreContext) => {
+  const files = filesOf(ctx);
+  const retired = new Set<string>();
+  for (const entry of await files.list("benchmarks/runs/*/*.json")) {
+    const { startedAt } = parseResultFile(await files.readText(entry.path));
+    if (!current(startedAt)) retired.add(entry.path.split("/").slice(0, 3).join("/"));
+  }
+  for (const dir of retired) await files.delete(dir);
 };
 
 const syncReleases = async (ctx: StoreContext) => {
@@ -264,7 +282,8 @@ const syncRun = async (ctx: StoreContext, run: RunRecord) => {
 export const syncRuns = async (ctx: StoreContext) => {
   const previous = new Map((await readRuns(ctx)).map((run) => [run.id, run]));
   const listed = await listRuns(ctx);
-  for (const run of listed) previous.set(run.id, mergeRun(previous.get(run.id), run));
+  for (const run of listed.filter((run) => current(run.createdAt)))
+    previous.set(run.id, mergeRun(previous.get(run.id), run));
   const runs = [...previous.values()];
   for (const run of runs) {
     await syncRun(ctx, run).catch((error: unknown) => {
@@ -272,6 +291,7 @@ export const syncRuns = async (ctx: StoreContext) => {
     });
   }
   await patchRuns(ctx, runs);
+  await pruneRetired(ctx);
 };
 
 // Releases and runs sync independently, so one failing does not hide the other's new results.
