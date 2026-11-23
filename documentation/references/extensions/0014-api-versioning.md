@@ -43,7 +43,7 @@ field paths and the SDK `readCollectionRecords` helper. Extensions using these
 must require `^0.4.2` and pin a supporting published SDK. Index declarations are
 installed before commands become available. See [storage](../sdk/0004-storage.md).
 
-The unreleased API 0.5.0 step makes views using the new SDK collection-query
+API 0.5.0, released with 0.48.0, makes views using the new SDK collection-query
 helpers paged by default. Existing custom `defineView` callbacks retain their
 full-result contract, including when rebuilt with the new SDK. Custom bounded
 providers explicitly declare `queryMode: "paged"`; fixed collections explicitly
@@ -87,6 +87,14 @@ Hosts on `main`, after 0.46.0, read the optional manifest `icon` field and show 
 The [native chat view body](0028-native-chat.md) also shares the coordinated API 0.4.0
 step. Released extensions must use a published SDK containing that declaration
 and a host that supports it before adopting it.
+
+The additive native-chat `browserDraft` option and `view.chat.browser-draft.v1`
+capability use API 0.5.1 on `main`, after the released API 0.5.0 in 0.48.0.
+Existing `loadDraft` and `saveDraft` providers keep their behavior. Browser-draft
+consumers must require `^0.5.1`. Publish the supporting SDK and host before separately
+releasing a browser-draft consumer; a local SDK link or tarball only qualifies the
+candidate. The consumer must pin the published SDK and pass `published_extensions`
+before leaving `waiting-for-release`.
 
 Scoped query ownership and invalidation metadata, host-supplied webview query scope,
 command-backed shared editing, storage/session metadata observation and optional

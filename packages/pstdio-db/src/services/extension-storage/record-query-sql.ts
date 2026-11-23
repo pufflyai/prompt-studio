@@ -201,7 +201,12 @@ export const recordIndexKeys = (index: StorageRecordIndex) => {
   return keys;
 };
 
-type RelatedSql = (index: StorageRecordIndex, selection: StorageRelatedSelection, alias?: string) => SQL;
+type RelatedSql = (
+  index: StorageRecordIndex,
+  selection: StorageRelatedSelection,
+  alias?: string,
+  negated?: boolean,
+) => SQL;
 export const predicateSql = (
   index: StorageRecordIndex,
   predicate?: StoragePredicate,
@@ -210,6 +215,7 @@ export const predicateSql = (
   expression?: (expression: StorageExpression) => SQL,
   resolve?: (name: string) => StorageRecordIndex,
   owner?: QuerySqlOwner,
+  negated = false,
 ) => {
   if (!predicate) return sql`true`;
   if ("test" in predicate) {
@@ -218,23 +224,23 @@ export const predicateSql = (
   }
   if ("exists" in predicate) {
     if (!related) throw new Error("Related query needs installed indexes");
-    return related(index, predicate.exists, alias);
+    return related(index, predicate.exists, alias, negated);
   }
   // Missing typed values fail comparisons; negation must complement that false result.
   if ("not" in predicate) {
-    const child: SQL = predicateSql(index, predicate.not, related, alias, expression, resolve, owner);
+    const child: SQL = predicateSql(index, predicate.not, related, alias, expression, resolve, owner, !negated);
     return sql`NOT coalesce(${child}, false)`;
   }
   if ("all" in predicate) {
     const parts: SQL[] = [];
     for (const child of predicate.all)
-      parts.push(predicateSql(index, child, related, alias, expression, resolve, owner));
+      parts.push(predicateSql(index, child, related, alias, expression, resolve, owner, negated));
     return parts.length ? sql`(${sql.join(parts, sql` AND `)})` : sql`true`;
   }
   if ("any" in predicate) {
     const parts: SQL[] = [];
     for (const child of predicate.any)
-      parts.push(predicateSql(index, child, related, alias, expression, resolve, owner));
+      parts.push(predicateSql(index, child, related, alias, expression, resolve, owner, negated));
     return parts.length ? sql`(${sql.join(parts, sql` OR `)})` : sql`false`;
   }
   return fieldPredicateSql(index, predicate, alias, resolve, owner);
