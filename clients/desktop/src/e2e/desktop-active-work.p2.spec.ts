@@ -291,7 +291,15 @@ test("uses existing recovery when the dashboard bundle fails and retries the das
   await expect.poll(() => startupState(lifecycle)).toMatchObject({ kind: "recovery" });
   await expect(lifecycle.getByRole("alert")).toBeVisible();
   runtime.restoreDashboardBundle();
-  await lifecycle.getByRole("button", { name: "Retry", exact: true }).press("Enter");
+  // The failed page still has the right origin while Retry replaces it.
+  const failedPages = electronApp
+    .context()
+    .pages()
+    .filter((page) => URL.parse(page.url())?.origin === runtime.descriptor.origin);
+  await Promise.all([
+    ...failedPages.map((page) => page.waitForEvent("close")),
+    lifecycle.getByRole("button", { name: "Retry", exact: true }).press("Enter"),
+  ]);
   const window = await waitForWorkbenchPage(lifecycle, runtime.descriptor.origin);
   await expect(window.getByText("Owned Prompt Studio dashboard")).toBeVisible();
   await expect.poll(() => startupState(window)).toMatchObject({ kind: "workbench" });
