@@ -100,7 +100,7 @@ test.each(
       } else {
         const outcome = navigation!.catch((error: Error) => error);
         pending.reject(new Error("Navigation refused"));
-        expect((await outcome)?.message).toBe("Navigation refused");
+        expect(await outcome).toMatchObject({ message: "Navigation refused" });
       }
     });
     expect(navigations).toEqual(succeeds ? [kind, "closed"] : [kind]);
