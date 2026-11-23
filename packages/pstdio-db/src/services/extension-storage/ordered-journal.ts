@@ -18,7 +18,7 @@ import {
 } from "./ordered-authorship";
 import { createOrderedCanonical } from "./ordered-canonical";
 import { createOrderedDependencyCache } from "./ordered-dependency-cache";
-import { isOrderedNativeRequest } from "./ordered-native-identity";
+import { isOrderedNativeRequest, orderedNativeRequestPrefix } from "./ordered-native-identity";
 import { fenceOrderedNativeText, forgetOrderedTextGeneration } from "./ordered-native-recovery";
 import { recordOperationReceipt } from "./ordered-receipt-values";
 import { createOrderedReceiptCache } from "./ordered-receipts-cache";
@@ -280,6 +280,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
             isNotNull(operations.envelope),
             isNull(operations.settled_epoch),
             isNull(operations.admission_epoch),
+            sql`coalesce(${operations.request_fingerprint} NOT LIKE ${`${orderedNativeRequestPrefix}%`}, true)`,
             sql`${operations.receipt} = '{}'::jsonb`,
           ),
         )
