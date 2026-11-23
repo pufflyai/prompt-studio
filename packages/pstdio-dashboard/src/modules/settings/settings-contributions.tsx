@@ -86,9 +86,9 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
     title: "Project folder",
     body: {
       kind: "react",
-      render: () => {
+      render: ({ workbench }) => {
         const projectId = getDashboardSelectedProjectId(ctx);
-        return <ProjectFolderPanel key={projectId} projectId={projectId} />;
+        return <ProjectFolderPanel key={projectId} projectId={projectId} workbench={workbench} />;
       },
     },
   });

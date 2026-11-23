@@ -8,6 +8,7 @@ import { dashboardCommandIds, type SelectProjectInput } from "@/shared/app/comma
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { getProjectSetupRequests } from "@/shared/projects/project-setup-requests";
 import { CreateProjectWidget } from "./components/create-project-widget";
 import { ProjectFolderWidget } from "./components/project-folder-widget";
 import { ProjectPickerWidget } from "./components/project-picker-widget";
@@ -26,7 +27,6 @@ import {
   selectProjectTab,
 } from "./project-selection-sync";
 import { registerProjectSetupCommand } from "./project-setup-command";
-import { createProjectSetupRequests } from "./project-setup-requests";
 import { registerCloudProjectChoice } from "./register-cloud-project-choice";
 
 interface CreateProjectsModuleInput {
@@ -245,7 +245,7 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
       );
 
       registerProjectWidgets(ctx, input);
-      const setupRequests = createProjectSetupRequests();
+      const setupRequests = getProjectSetupRequests();
       registerProjectSetupCommand(ctx, setupRequests);
       registerProjectFolder(ctx);
       registerProjectSelectionMode(ctx);

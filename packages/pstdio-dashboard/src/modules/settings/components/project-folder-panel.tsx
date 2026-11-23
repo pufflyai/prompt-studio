@@ -1,5 +1,7 @@
 import { Button, Dialog, Stack } from "@chakra-ui/react";
+import { workbenchCommands } from "@pstdio/sdk/extensions";
 import { ParamEditor } from "@pstdio/ui/param-editor";
+import type { WorkbenchCore } from "@pstdio/workbench";
 import { useSettingsChanges } from "@pstdio/workbench/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -7,11 +9,13 @@ import { getApiClient } from "@/lib/api";
 import { FolderPicker } from "@/shared/filesystem/folder-picker";
 import { useProjectFolderAssignment } from "@/shared/projects/project-folder-operations";
 import { useProjectNameOperations } from "@/shared/projects/project-name-operations";
+import { useProjectSetupPending } from "@/shared/projects/project-setup-requests";
 import { ProjectSetupStatus } from "@/shared/projects/project-setup-status";
 import { useProject } from "@/shared/projects/use-project";
 
-export const ProjectFolderPanel = (props: { projectId?: string }) => {
-  const { projectId } = props;
+export const ProjectFolderPanel = (props: { projectId?: string; workbench: WorkbenchCore }) => {
+  const { projectId, workbench } = props;
+  const setupPending = useProjectSetupPending(projectId);
   const { data: project } = useProject(projectId);
   const names = useProjectNameOperations();
   const authority = names.authority();
@@ -35,7 +39,8 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
     onSuccess: () => setAttaching(false),
   });
   const retry = useMutation({
-    mutationFn: () => getApiClient().projects.retrySetup(projectId!),
+    mutationFn: () =>
+      workbench.commands.executeCommand(workbenchCommands.retryProjectSetup.id, undefined, { projectId }),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey });
     },
@@ -50,7 +55,7 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
     },
     onReset: () => setDraft(undefined),
   });
-  const settingUp = home?.initializing || home?.provider_state === "provisioning";
+  const settingUp = setupPending || home?.initializing || home?.provider_state === "provisioning";
   const providerError = !settingUp ? home?.provider_error_json?.message : undefined;
   const setupError = retry.error?.message ?? home?.setup_error ?? providerError;
   return (
@@ -75,7 +80,11 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
         }}
       />
       {setupError && (
-        <ProjectSetupStatus error={setupError} retrying={retry.isPending} onRetry={() => retry.mutate()} />
+        <ProjectSetupStatus
+          error={setupError}
+          retrying={retry.isPending || setupPending}
+          onRetry={() => retry.mutate()}
+        />
       )}
       {!home?.root_path &&
         !home?.provider_ref_json &&

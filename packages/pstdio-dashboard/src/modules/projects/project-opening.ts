@@ -6,20 +6,20 @@ import {
   subscribeToExtensionEventFeed,
   subscribeToExtensionEventReset,
 } from "@/shared/extensions/extension-webview-broadcast";
+import type { ProjectSetupRequests } from "@/shared/projects/project-setup-requests";
 import { isProjectWorkspaceReady } from "@/shared/workspaces/workspace-state";
 import { createProjectPreparation } from "./project-preparation";
-import type { createProjectSetupRequests } from "./project-setup-requests";
 
 /** Cloud owns download progress. Preparing the local folder must not block navigation. */
-export const registerProjectOpening = (
-  ctx: WorkbenchModuleContext,
-  requests: ReturnType<typeof createProjectSetupRequests>,
-) => {
+export const registerProjectOpening = (ctx: WorkbenchModuleContext, requests: ProjectSetupRequests) => {
   const preparation = createProjectPreparation({
     selected: () => getDashboardSelectedProjectId(ctx),
     ready: isProjectWorkspaceReady,
     status: (id) => getApiClient().account.projectSyncStatus(id),
-    open: (id) => requests.run(id, () => getApiClient().projects.open(id)),
+    open: (id) => {
+      const projects = getApiClient().projects;
+      return requests.run(id, () => projects.open(id));
+    },
     failed: ctx.notifications.captureActionError("Open project"),
   });
   const refresh = () => {
