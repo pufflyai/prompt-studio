@@ -89,6 +89,38 @@ test("a rejection withdraws only its own intent and preserves the attempted draf
   await next.result;
 });
 
+test("a failed read after a handler failure fences later writes until the read succeeds", async () => {
+  const { operations, subject } = setup();
+  let reads = 0;
+  let writes = 0;
+  const attempted = operations.submit({
+    subjects: [subject],
+    domain: "controls",
+    title: "Reset settings",
+    write() {
+      writes++;
+      throw new Error("Handler failed after changing settings");
+    },
+    classify: () => "rejected",
+    reconcileRejection() {
+      if (++reads === 1) throw new Error("Read unavailable");
+    },
+  });
+  const next = operations.submit({
+    subjects: [subject],
+    domain: "controls",
+    title: "Apply settings",
+    write: () => ++writes,
+  });
+  await expect(attempted.result).rejects.toThrow("Read unavailable");
+  expect(operations.getSnapshot().recovery[0]).toMatchObject({ status: "unconfirmed", canCheck: true });
+  expect(writes).toBe(1);
+  await operations.check(attempted.id);
+  expect(await next.result).toBe(2);
+  expect(reads).toBe(2);
+  expect(operations.getSnapshot().recovery[0]).toMatchObject({ status: "rejected", canCheck: false });
+});
+
 test("an unresolved create keeps the draft and blocks dependent writes after dismissal", async () => {
   const { operations, subject } = setup();
   let writes = 0;

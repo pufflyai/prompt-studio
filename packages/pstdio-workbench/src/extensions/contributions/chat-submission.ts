@@ -1,6 +1,7 @@
 import type { ChatDraft, ChatRendererAction, ChatRendererSnapshot } from "@pstdio/sdk/extensions";
 import { UnresolvedSubmissionError } from "@pstdio/ui";
 import { chatDraftContentKey, hydrateChatDraft, recoverChatDraft } from "./chat-draft-recovery";
+import { discardPendingChatSubmission } from "./chat-draft-restoration";
 import { type ChatPendingSubmission, createChatPendingSubmission } from "./chat-pending-submission";
 
 type Submit = Extract<ChatRendererAction, { type: "submit" }>;
@@ -8,12 +9,18 @@ type Handler = (action: ChatRendererAction) => Promise<unknown>;
 
 /** The resource owner keeps a single in-flight handoff even while its presentation is closed. */
 export const createChatSubmissionRunner = (input: {
-  read(): { draft: ChatDraft; conversation: ChatRendererSnapshot; edits: number; pending?: ChatPendingSubmission[] };
+  read(): {
+    draft: ChatDraft;
+    conversation: ChatRendererSnapshot;
+    edits: number;
+    active?: boolean;
+    pending?: ChatPendingSubmission[];
+  };
   execute(action: ChatRendererAction, handler: Handler): Promise<{ snapshot?: ChatRendererSnapshot }>;
   publish(update: { sending: boolean; pending?: ChatPendingSubmission[]; error?: string }): void;
   changeDraft(draft: Partial<ChatDraft>): void;
   fail(error: unknown): void;
-  trackSubmission?: <T>(action: Submit, execute: () => Promise<T>) => Promise<T>;
+  trackSubmission?: <T>(action: Submit, execute: () => Promise<T>, discard: () => void) => Promise<T>;
   markRecoverable(): void;
 }) => {
   let submission: Promise<void> | undefined;
@@ -36,8 +43,11 @@ export const createChatSubmissionRunner = (input: {
       : undefined;
     source.publish({ sending: true, pending: [...(before.pending ?? []), ...(pending ? [pending] : [])] });
     const execute = () => source.execute(action, handler);
+    const discard = () => {
+      if (source.read().active !== false && pending) discardPendingChatSubmission(source, pending.message.id);
+    };
     submission = (
-      source.trackSubmission && !action.questionResponse ? source.trackSubmission(action, execute) : execute()
+      source.trackSubmission && !action.questionResponse ? source.trackSubmission(action, execute, discard) : execute()
     )
       .then((result) => {
         const current = source.read();

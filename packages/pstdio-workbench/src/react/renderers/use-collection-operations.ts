@@ -23,8 +23,13 @@ interface CollectionRead {
 const reportedHandlerFailure = (error: unknown) =>
   error instanceof CommandOutcomeError && error.outcome.status === "error" && error.code === "handler_threw";
 
+export const collectionReadIdentity = (read: CollectionRead) => ({
+  ...read,
+  queryKey: JSON.stringify([read.queryKey, read.refreshKey]),
+});
+
 const observedRead = (workbench: WorkbenchCore, read: CollectionRead) => {
-  const identity = { ...read, queryKey: JSON.stringify([read.queryKey, read.refreshKey]) };
+  const identity = collectionReadIdentity(read);
   return {
     key: JSON.stringify([identity.queryScope, identity.sourceId, identity.queryKey]),
     refresh: (signal: AbortSignal) => {
@@ -67,16 +72,17 @@ export const useCollectionOperations = (
           move,
         }),
         classify: (error) => (failedHandler(error) ? "rejected" : classifyApiWrite(error)),
-        async write(signal) {
-          try {
-            await write();
-          } catch (error) {
-            // An explicit handler failure can follow a partial settings change. Read its canonical fields before
-            // releasing the subject. A lost transport keeps its recovery barrier.
-            if (failedHandler(error) && !signal.aborted) await origin.refresh(signal).catch(() => undefined);
-            throw error;
-          }
-        },
+        write,
+        reconcileRejection: options?.refreshAfterHandlerFailure
+          ? (error, signal) => {
+              // Read the saved fields even if the source panel has closed. The handler may have changed them.
+              if (reportedHandlerFailure(error))
+                return getRendererReadCache(workbench.views.reads).refreshRequired(
+                  collectionReadIdentity(read),
+                  signal,
+                );
+            }
+          : undefined,
         originatingRead: origin,
       }).result;
     },

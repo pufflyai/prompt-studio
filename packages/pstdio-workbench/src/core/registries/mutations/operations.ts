@@ -42,6 +42,7 @@ interface Entry {
   draft?: unknown;
   describeRecovery?: () => string;
   releaseOnDiscard?: boolean;
+  onDiscard?: () => void;
   acknowledged?: boolean;
   error?: unknown;
   dismissed: boolean;
@@ -93,6 +94,41 @@ const refreshOperationReads = (
   if (originatingRead && !affected.has(originatingRead.key)) affected.set(originatingRead.key, originatingRead);
   if (affected.size) return Promise.all([...affected.values()].map((read) => read.refresh(signal)));
   return undefined;
+};
+
+const createRejectionReconciler = (
+  entry: Entry,
+  read: OperationInput<unknown>["reconcileRejection"],
+  callbacks: { publish(): void; fail(entry: Entry, error: unknown, status: "rejected" | "unconfirmed"): void },
+) => {
+  const { signal } = entry.controller;
+  const reconcile = async (error: unknown) => {
+    if (signal.aborted) return;
+    entry.acknowledged = true;
+    entry.check = undefined;
+    changeStatus(entry, "reconciling");
+    callbacks.publish();
+    try {
+      signal.throwIfAborted();
+      await read?.(error, signal);
+    } catch (readError) {
+      if (signal.aborted) return;
+      entry.check = () => reconcile(error);
+      return callbacks.fail(entry, readError, "unconfirmed");
+    }
+    if (!signal.aborted) callbacks.fail(entry, error, "rejected");
+  };
+  return reconcile;
+};
+
+const discardEntry = (entry: Entry, clearDraft: (entry: Entry) => void) => {
+  const discard = entry.onDiscard;
+  entry.onDiscard = undefined;
+  try {
+    discard?.();
+  } finally {
+    clearDraft(entry);
+  }
 };
 
 const createWorkbenchOperations = (queries: ScopedQueryClient) => {
@@ -226,6 +262,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
         draft: input.draft,
         describeRecovery: input.describeRecovery,
         releaseOnDiscard: input.releaseOnDiscard,
+        onDiscard: input.onDiscard,
         dismissed: false,
       };
       const signal = entry.controller.signal;
@@ -249,6 +286,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
         finish(entry);
         result.resolve(value);
       };
+      const reconcileRejection = createRejectionReconciler(entry, input.reconcileRejection, { publish, fail });
       if (input.check) {
         const verify = input.check;
         const check = async () => {
@@ -281,7 +319,10 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
         } catch (error) {
           if (signal.aborted) return;
           const outcome = input.classify?.(error) ?? "unknown";
-          if (outcome === "rejected") entry.check = undefined;
+          if (outcome === "rejected") {
+            if (input.reconcileRejection) return reconcileRejection(error);
+            entry.check = undefined;
+          }
           return fail(entry, error, outcome);
         }
         await reconcile(value);
@@ -303,7 +344,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
     },
     discard(id: symbol) {
       const entry = findRecovery(id);
-      if (entry) clearDraft(entry);
+      if (entry) discardEntry(entry, clearDraft);
     },
     async transfer(id: symbol, receive: (draft: unknown) => boolean | Promise<boolean>) {
       const entry = findRecovery(id);

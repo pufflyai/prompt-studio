@@ -22,7 +22,7 @@ import type { CommandParamFieldRenderer } from "../../command-palette/command-pa
 import { SettingsPageContext, useSettingsChanges } from "../../settings/settings-page-context";
 import { projectControlValues } from "../collection-operation-projection";
 import { RendererReadNotice } from "../renderer-read-notice";
-import { useCollectionOperations } from "../use-collection-operations";
+import { collectionReadIdentity, useCollectionOperations } from "../use-collection-operations";
 import { usePageParams } from "../use-page-params";
 import { useRendererRead } from "../use-renderer-read";
 import { mergeControlDraft } from "./control-draft";
@@ -171,12 +171,15 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
         },
         writeOptions,
       );
+      const settled = reset
+        ? workbench.views.reads.peek<ControlsQueryResult>(collectionReadIdentity(query))?.data
+        : undefined;
       setState((previous) => {
         const changed = Object.fromEntries(
           Object.entries(previous.changed).filter(([id, revision]) => state.changed[id] !== revision),
         );
         const values = reset
-          ? mergeControlDraft(previous.values, controlsValues(contribution.defaultValues, read.acceptedValue), changed)
+          ? mergeControlDraft(previous.values, controlsValues(contribution.defaultValues, settled ?? accepted), changed)
           : previous.values;
         return { ...previous, changed, values };
       });

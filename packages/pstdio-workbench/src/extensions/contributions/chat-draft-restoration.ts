@@ -7,6 +7,24 @@ import type { createChatSnapshot } from "./chat-snapshot";
 export const hasUnresolvedChatSubmission = (pending?: ChatPendingSubmission[]) =>
   pending?.some((item) => item.unresolved?.recovery.isRetained()) ?? false;
 
+export const discardPendingChatSubmission = (
+  input: {
+    read: () => { draft: ChatDraft; pending?: ChatPendingSubmission[] };
+    changeDraft: (draft: Partial<ChatDraft>) => void;
+    publish: (update: { pending?: ChatPendingSubmission[] }) => void;
+  },
+  id: string,
+) => {
+  const { draft, pending } = input.read();
+  const attempt = pending?.find((item) => item.message.id === id && item.unresolved);
+  if (!attempt) return;
+  if (attempt.recoveryAdded) {
+    const key = chatDraftContentKey(attempt);
+    input.changeDraft({ recovered: draft.recovered?.filter((saved) => chatDraftContentKey(saved) !== key) });
+  }
+  input.publish({ pending: pending?.filter((item) => item !== attempt) });
+};
+
 export const createChatDraftRestoration = (input: {
   active: () => boolean;
   hasRetainedSubmission?: () => boolean;
@@ -32,14 +50,7 @@ export const createChatDraftRestoration = (input: {
     subscribeSubmissions: input.subscribeSubmissions ?? (() => () => {}),
     inspectResources: input.inspectResources,
     discardUnresolvedSubmission(id: string) {
-      if (!input.active()) return;
-      const { draft, pending } = input.read();
-      const attempt = pending?.find((item) => item.message.id === id && item.unresolved);
-      if (attempt?.recoveryAdded) {
-        const key = chatDraftContentKey(attempt);
-        input.changeDraft({ recovered: draft.recovered?.filter((saved) => chatDraftContentKey(saved) !== key) });
-      }
-      input.publish({ pending: pending?.filter((item) => item !== attempt) });
+      if (input.active()) discardPendingChatSubmission(input, id);
     },
     dismissSubmission(id: string) {
       if (!input.active()) return;

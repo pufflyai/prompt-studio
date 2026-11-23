@@ -278,7 +278,7 @@ export const createChatSession = (input: ChatSessionInput) => {
   };
   const submit = createChatSubmissionRunner({
     trackSubmission: input.trackSubmission,
-    read: () => ({ ...state, edits: drafts.edits() }),
+    read: () => ({ ...state, edits: drafts.edits(), active: !retired }),
     execute,
     publish: (update) => publish({ ...update, ...(update.sending ? { error: drafts.error() } : {}) }),
     changeDraft: drafts.change,

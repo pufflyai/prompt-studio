@@ -7,7 +7,7 @@ import { operationSubject, type WorkbenchOperations } from "../../core/registrie
 
 type CreateOperation<T> = Pick<
   OperationInput<T>,
-  "projectId" | "subjects" | "title" | "source" | "draft" | "write" | "classify"
+  "projectId" | "subjects" | "title" | "source" | "draft" | "write" | "classify" | "onDiscard"
 >;
 type RecoveryMessage = string | ((draft: unknown) => string);
 

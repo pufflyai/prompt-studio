@@ -55,7 +55,7 @@ export const createChatSessionProvider = (source: {
     hasRetainedSubmission: operations && (() => Boolean(findUnresolved(operations.getSnapshot().recovery))),
     trackSubmission:
       operations && submissionSource && subject
-        ? (action, execute) =>
+        ? (action, execute, discard) =>
             runTrackedCreate(
               operations,
               {
@@ -65,6 +65,7 @@ export const createChatSessionProvider = (source: {
                 title: creating ? "Start session" : "Send message",
                 draft: { text: action.text, attachments: action.attachments },
                 write: execute,
+                onDiscard: discard,
               },
               findUnresolved,
               creating ? "Session creation could not be confirmed." : "Message delivery could not be confirmed.",

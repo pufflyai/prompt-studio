@@ -3,6 +3,8 @@ import { PstdioConnectionError } from "@pstdio/sdk/client";
 import type { ResourceRef } from "@pstdio/sdk/extensions";
 import type { ReactElement } from "react";
 import { createWorkbench, getWorkbenchRenderers } from "../../core";
+import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
+import { getWorkbenchQueries } from "../../core/workbench-queries";
 import { registerWorkbenchExtensionChatRenderers } from "./chat-renderer-contributions";
 import type { ChatSession } from "./chat-session";
 import { emptyWorkbenchExtensionMetadata } from "./extension-contributions";
@@ -147,6 +149,12 @@ test("an unconfirmed native follow-up stays attached to its conversation across 
     await expect(reopened.run(action)).rejects.toThrow("Message delivery could not be confirmed");
     await render("other-thread", "other").run(action);
     expect(writes).toEqual(["thread", "other-thread"]);
+    const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
+    expect(reopened.getSnapshot().draft.recovered?.map(({ text }) => text)).toEqual([action.text]);
+    operations.discard(operations.getSnapshot().recovery[0]!.id);
+    expect(reopened.hasUnresolvedSubmission()).toBe(false);
+    expect(reopened.getSnapshot().pending).toBeUndefined();
+    expect(reopened.getSnapshot().draft.recovered).toEqual([]);
   } finally {
     lost.resolve();
     registration.dispose();

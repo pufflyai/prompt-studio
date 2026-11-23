@@ -24,8 +24,10 @@ export interface OperationInput<T> {
   draft?: unknown;
   describeRecovery?(): string;
   releaseOnDiscard?: boolean;
+  onDiscard?(): void;
   write(signal: AbortSignal): T | Promise<T>;
   reconcile?(result: T, signal: AbortSignal): void | Promise<void>;
+  reconcileRejection?(error: unknown, signal: AbortSignal): void | Promise<void>;
   originatingRead?: Pick<OperationRead, "key" | "refresh">;
   classify?(error: unknown): OperationFailure;
   /** Only provide this when the read can prove the outcome of this particular write. */
