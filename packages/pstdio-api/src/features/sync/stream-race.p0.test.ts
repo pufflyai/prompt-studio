@@ -187,4 +187,33 @@ describe("stream bootstrap race condition", () => {
 
     expect(firstReconnectEvent.event).toBe("init");
   });
+
+  test("a client that falls behind gets a fresh snapshot instead of an unbounded queue", async () => {
+    const eventBus = new EventBus();
+    const rows = new Map<string, unknown>();
+    const syncService = {
+      getFullState: async () => ({ sessions: [...rows.values()] }),
+    } as Parameters<typeof streamHandler>[0]["syncService"];
+    const app = new Hono();
+    app.get("/stream", streamHandler({ eventBus, syncService }, { events: 3, bytes: 1024 * 1024 }));
+    const sse = createSSEReader(await app.request("/stream"));
+    try {
+      expect((await sse.readEvents(1)).map((event) => event.event)).toEqual(["init"]);
+      // Emitted in one turn, so the unread queue passes its limit before the stream writes any of them.
+      for (let index = 0; index < 10; index++) {
+        rows.set("s1", { id: "s1", status: `step-${index}` });
+        eventBus.emit("sessions", "set", { id: "s1", status: `step-${index}` });
+      }
+      // Depending on whether the stream was still bootstrapping, the first update may precede the resync.
+      let resync: SSEEvent | undefined;
+      for (let read = 0; !resync && read < 3; read++)
+        resync = (await sse.readEvents(1)).find((event) => event.event === "init");
+      expect(resync?.data).toEqual({ tables: { sessions: [{ id: "s1", status: "step-9" }] }, seq: 10 });
+      eventBus.emit("sessions", "set", { id: "s1", status: "after" });
+      const [after] = await sse.readEvents(1);
+      expect(after?.data).toEqual({ table: "sessions", data: { id: "s1", status: "after" }, seq: 11 });
+    } finally {
+      await sse.close();
+    }
+  });
 });
