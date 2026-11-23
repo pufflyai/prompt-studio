@@ -10,6 +10,8 @@ export type DigestHeader = {
   createdAt: string;
 };
 
+const SEPARATOR = "\n\n";
+
 const clip = (text: string, max: number) => {
   const flat = text.replace(/\n{3,}/g, "\n\n").trim();
   // Cutting a few characters saves nothing and hides words.
@@ -50,24 +52,33 @@ export const renderDigest = (header: DigestHeader, signals: Signals, turns: Turn
     "",
   ].join("\n");
   const rendered = turns.map(renderTurn);
-  let budget = maxChars - head.length;
-  const total = rendered.reduce((sum, turn) => sum + turn.length + 2, 0);
-  if (total <= budget) return head + rendered.join("\n\n");
+  const full = head + rendered.join("\n\n");
+  // The limit covers the header, separators and omission marker too.
+  if (full.length <= maxChars || !rendered.length) return full.slice(0, maxChars);
 
-  const first: string[] = [];
-  const last: string[] = [];
-  let left = 0;
-  let right = rendered.length - 1;
-  // Alternate from both ends so the request and the outcome both survive.
+  const gapLine = (omitted: number) => `[… ${omitted} turn(s) omitted …]`;
+  let budget = maxChars - head.length - gapLine(rendered.length).length - SEPARATOR.length;
+  const take = (text: string, room: number) => {
+    const kept = text.length <= room ? text : `${text.slice(0, Math.max(0, room - 1))}…`;
+    budget -= kept.length + SEPARATOR.length;
+    return kept;
+  };
+  // The opening request and the end state always keep a share, truncated when a turn is too long.
+  const single = rendered.length === 1;
+  const first = [take(rendered[0]!, (single ? budget : Math.floor(budget / 2)) - SEPARATOR.length)];
+  const last = single ? [] : [take(rendered.at(-1)!, budget - SEPARATOR.length)];
+  let left = 1;
+  let right = rendered.length - 2;
+  // Fill from both ends so the context around the request and the outcome both survive.
   while (left <= right) {
     const takeLeft = first.length <= last.length;
     const next = rendered[takeLeft ? left : right]!;
-    if (next.length + 2 > budget) break;
-    budget -= next.length + 2;
+    if (next.length + SEPARATOR.length > budget) break;
+    budget -= next.length + SEPARATOR.length;
     if (takeLeft) first.push(rendered[left++]!);
     else last.unshift(rendered[right--]!);
   }
   const omitted = right - left + 1;
-  const gap = omitted > 0 ? [`[… ${omitted} turn(s) omitted …]`] : [];
-  return head + [...first, ...gap, ...last].join("\n\n");
+  const gap = omitted > 0 ? [gapLine(omitted)] : [];
+  return (head + [...first, ...gap, ...last].join(SEPARATOR)).slice(0, maxChars);
 };

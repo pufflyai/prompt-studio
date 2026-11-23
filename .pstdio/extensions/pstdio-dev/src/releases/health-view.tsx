@@ -15,8 +15,9 @@ import type { HealthHistory, ReleaseHealth } from "./types";
 
 // Release health can be grouped by hour over the last 7 days; longer ranges would draw thousands of bars.
 const HOURLY_RANGE: DateRange = "7";
-const healthAggregationOptions = (range: DateRange): { value: Aggregation; label: string }[] =>
-  range === HOURLY_RANGE ? [{ value: "hour", label: "Hour" }, ...aggregationOptions] : aggregationOptions;
+const hourOption = { value: "hour", label: "Hour" } satisfies (typeof aggregationOptions)[number];
+const healthAggregationOptions = (range: DateRange) =>
+  range === HOURLY_RANGE ? [hourOption, ...aggregationOptions] : aggregationOptions;
 
 export interface HealthViewProps extends HealthHistory {
   today: string;

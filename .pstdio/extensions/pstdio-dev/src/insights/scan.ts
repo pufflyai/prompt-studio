@@ -1,6 +1,13 @@
 import { type CommandContext, defineCommand, type ExtensionSession, l10n, params } from "@pstdio/sdk/extensions";
 import { buildAnalysis, isSyntheticAgent } from "./analyze";
-import { type Analysis, listAnalysisRows, readAnalyses, reviewerSessionIds, saveAnalyses } from "./store";
+import {
+  type Analysis,
+  listAnalysisRows,
+  readAnalyses,
+  readAnalysisRecords,
+  reviewerSessionIds,
+  saveScannedAnalyses,
+} from "./store";
 import { outcomeIds } from "./taxonomy";
 
 const active = new Set(["in_progress", "awaiting_input", "queued"]);
@@ -79,7 +86,7 @@ export const scanSessions = defineCommand({
     }
     await flush();
 
-    const previous = await readAnalyses(
+    const previous = await readAnalysisRecords(
       ctx,
       candidates.map((s) => s.id),
     );
@@ -90,20 +97,18 @@ export const scanSessions = defineCommand({
       ctx.signal.throwIfAborted();
       try {
         const conversation = await ctx.sessions.getConversation(session.id);
-        batch.push(buildAnalysis(session, conversation, previous.get(session.id)));
+        batch.push(buildAnalysis(session, conversation, previous.get(session.id)?.analysis));
       } catch (error) {
         failures.push({ sessionId: session.id, error: error instanceof Error ? error.message : String(error) });
       }
       if (batch.length >= 25) {
         const ready = batch;
         batch = [];
-        await saveAnalyses(ctx, ready);
-        saved += ready.length;
+        saved += await saveScannedAnalyses(ctx, ready, previous);
         ctx.logger.info(`Scanned ${saved} of ${candidates.length} sessions`);
       }
     });
-    await saveAnalyses(ctx, batch);
-    saved += batch.length;
+    saved += await saveScannedAnalyses(ctx, batch, previous);
 
     const rows = await listAnalysisRows(ctx, ctx.signal);
     const byOutcome = Object.fromEntries(outcomeIds.map((id) => [id, rows.filter((row) => row.outcome === id).length]));

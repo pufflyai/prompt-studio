@@ -33,6 +33,8 @@ export type Analysis = {
   needsReview: boolean;
   evidence: string;
   lesson: string;
+  /** Lesson of an agent review that newer turns invalidated; kept until an agent classifies the session again. */
+  earlierLesson?: string;
   remediation: Remediation | "";
   remediationTarget: string;
 };
@@ -80,7 +82,7 @@ const asObject = (value: unknown) =>
   value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
 
 /** Reads every analysis summary through the index, one bounded page at a time. */
-export const listAnalysisRows = async (ctx: ExtensionContextBase, signal?: AbortSignal): Promise<AnalysisRow[]> => {
+export const listAnalysisRows = async (ctx: ExtensionContextBase, signal?: AbortSignal) => {
   const records = storageOf(ctx).records;
   const rows: AnalysisRow[] = [];
   let cursor: string | undefined;
@@ -99,19 +101,24 @@ export const listAnalysisRows = async (ctx: ExtensionContextBase, signal?: Abort
   return rows;
 };
 
-export const readAnalyses = async (ctx: ExtensionContextBase, sessionIds: string[]) => {
+/** Reads stored analyses with the revision each was read at, so a later save can detect newer reviews. */
+export const readAnalysisRecords = async (ctx: ExtensionContextBase, sessionIds: string[]) => {
   const storage = storageOf(ctx);
-  const found = new Map<string, Analysis>();
+  const found = new Map<string, { analysis: Analysis; revision: string }>();
   for (let start = 0; start < sessionIds.length; start += 100) {
     const batch = sessionIds.slice(start, start + 100);
     const records = await storage.records.readMany(batch.map((id) => storage.records.id(recordKey(id))));
     records.forEach((record, index) => {
       const value = asObject(record.value);
-      if (record.exists && !record.deleted && value?.kind === "analysis") found.set(batch[index]!, value as Analysis);
+      if (record.exists && !record.deleted && value?.kind === "analysis")
+        found.set(batch[index]!, { analysis: value as Analysis, revision: record.revision });
     });
   }
   return found;
 };
+
+export const readAnalyses = async (ctx: ExtensionContextBase, sessionIds: string[]) =>
+  new Map([...(await readAnalysisRecords(ctx, sessionIds))].map(([id, { analysis }]) => [id, analysis]));
 
 export const readAnalysis = async (ctx: ExtensionContextBase, sessionId: string) =>
   (await readAnalyses(ctx, [sessionId])).get(sessionId);
@@ -129,6 +136,44 @@ export const saveAnalyses = async (ctx: ExtensionContextBase, analyses: Analysis
     });
   }
   if (analyses.length) await ctx.events.emit(analysesChanged, { sessionIds: analyses.map((a) => a.sessionId) });
+};
+
+/**
+ * Saves scan results without overwriting a verdict that `insights.classify` saved after the scan read the record.
+ * A record read earlier saves only if unchanged; a record that did not exist saves only if it still does not.
+ * Skipped sessions keep their newer value and are read again by the next scan.
+ */
+export const saveScannedAnalyses = async (
+  ctx: ExtensionContextBase,
+  analyses: Analysis[],
+  observed: ReadonlyMap<string, { revision: string }>,
+) => {
+  const storage = storageOf(ctx);
+  const saved: Analysis[] = [];
+  const created = analyses.filter((analysis) => !observed.has(analysis.sessionId));
+  const stillMissing = created.length
+    ? await readAnalysisRecords(
+        ctx,
+        created.map((a) => a.sessionId),
+      )
+    : new Map();
+  for (const analysis of analyses) {
+    const recordId = storage.records.id(recordKey(analysis.sessionId));
+    const revision = observed.get(analysis.sessionId)?.revision;
+    if (revision === undefined) {
+      if (stillMissing.has(analysis.sessionId)) continue;
+      await storage.records.commit({ operationId: storage.ids.create(), edits: [{ recordId, replace: analysis }] });
+    } else {
+      const outcome = await storage.records.commitIfCurrent({
+        operationId: storage.ids.create(),
+        edits: [{ recordId, replace: analysis, expectedRevision: revision }],
+      });
+      if (!outcome) continue;
+    }
+    saved.push(analysis);
+  }
+  if (saved.length) await ctx.events.emit(analysesChanged, { sessionIds: saved.map((a) => a.sessionId) });
+  return saved.length;
 };
 
 /** Review sessions this extension started. Scans skip them so the reviewer does not grade itself. */

@@ -36,7 +36,7 @@ export interface ReleaseEta {
   estimated: boolean;
 }
 
-export const releaseEta = (run: ReleaseHealth): ReleaseEta => {
+export const releaseEta = (run: ReleaseHealth) => {
   if (!run.failedCategories) {
     // Older runs only recorded a total, which can include quarantined and performance failures.
     const blocking = run.counts.failed;
@@ -77,9 +77,16 @@ export interface EtaPoint {
   runs: number;
 }
 
-/** Group finished runs and keep the latest one of each bucket, oldest bucket first. */
-export const etaSeries = (runs: ReleaseHealth[], grouping: EtaGrouping): EtaPoint[] => {
-  const finished = runs.filter((run) => run.status === "completed" && run.counts.reports > 0);
+/**
+ * An ETA is known only when every test log was read and a failed run recorded the failures behind it.
+ * Otherwise a missing report would show as a confident 0h.
+ */
+const hasCompleteEvidence = (run: ReleaseHealth) =>
+  run.counts.reports > 0 && !run.errors.length && !(run.failedJobs.length && !run.counts.failed);
+
+/** Group finished runs with complete evidence and keep the latest one of each bucket, oldest bucket first. */
+export const etaSeries = (runs: ReleaseHealth[], grouping: EtaGrouping) => {
+  const finished = runs.filter((run) => run.status === "completed" && hasCompleteEvidence(run));
   const buckets = new Map<string, EtaPoint>();
   for (const run of [...finished].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
     const key = etaBucket(run.createdAt, grouping, run.id);

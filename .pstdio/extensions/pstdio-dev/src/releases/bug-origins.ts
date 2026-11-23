@@ -28,17 +28,13 @@ export const addBugOriginCounts = (target: BugOriginCounts, counts: BugOriginCou
 };
 
 /** Where a reviewed bug fix's origin leads: a feature merged before it, or why it does not count. */
-const linkFix = (
-  fix: MergedPull,
-  assessment: BugOriginAssessment,
-  byNumber: ReadonlyMap<number, MergedPull>,
-): { kind: "feature"; origin: MergedPull } | { kind: "unlinked" | "preMergeFixes" | "linkedToOther" } => {
+const linkFix = (fix: MergedPull, assessment: BugOriginAssessment, byNumber: ReadonlyMap<number, MergedPull>) => {
   const origin = assessment.origin === null ? undefined : byNumber.get(assessment.origin);
-  if (!origin) return { kind: "unlinked" };
+  if (!origin) return { kind: "unlinked" } as const;
   if (Date.parse(origin.mergedAt) >= Date.parse(fix.mergedAt))
-    return { kind: assessment.confidence === "explicit" ? "preMergeFixes" : "unlinked" };
-  if (origin.type !== "feature") return { kind: "linkedToOther" };
-  return { kind: "feature", origin };
+    return { kind: assessment.confidence === "explicit" ? "preMergeFixes" : "unlinked" } as const;
+  if (origin.type !== "feature") return { kind: "linkedToOther" } as const;
+  return { kind: "feature", origin } as const;
 };
 
 export const summarizeBugOrigins = (pulls: MergedPull[], audit: BugOriginAudit) => {

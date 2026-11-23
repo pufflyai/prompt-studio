@@ -19,7 +19,7 @@ export const buildAnalysis = (
   conversation: Conversation,
   previous: Analysis | undefined,
   now = new Date().toISOString(),
-): Analysis => {
+) => {
   const turns = segmentTurns(conversation.messages);
   const signals = extractSignals(turns);
   const exitCause = conversation.session.lastExit?.cause ?? "";
@@ -46,7 +46,9 @@ export const buildAnalysis = (
   };
   // An agent verdict on the same conversation outranks a fresh heuristic guess.
   if (previous?.source === "agent" && previous.sessionUpdatedAt === session.updatedAt)
-    return { ...previous, ...base, analyzedAt: previous.analyzedAt };
+    return { ...previous, ...base, analyzedAt: previous.analyzedAt } satisfies Analysis;
+  // A review invalidated by new turns stays pending, with its lesson, until an agent classifies the session again.
+  const earlierLesson = previous?.source === "agent" ? previous.lesson : previous?.earlierLesson;
   return {
     ...base,
     outcome: verdict.outcome,
@@ -55,12 +57,13 @@ export const buildAnalysis = (
     confidence: verdict.confidence,
     source: "heuristic",
     // A reviewed session that gained new turns needs another look.
-    needsReview: verdict.needsReview || previous?.source === "agent",
+    needsReview: verdict.needsReview || earlierLesson !== undefined,
     evidence: verdict.evidence,
-    lesson: previous?.source === "agent" ? `Earlier review: ${previous.lesson}` : "",
+    lesson: earlierLesson === undefined ? "" : `Earlier review: ${earlierLesson}`,
+    ...(earlierLesson === undefined ? {} : { earlierLesson }),
     remediation: "",
     remediationTarget: "",
-  };
+  } satisfies Analysis;
 };
 
 export const buildDigest = (session: ExtensionSession, conversation: Conversation, maxChars?: number) => {

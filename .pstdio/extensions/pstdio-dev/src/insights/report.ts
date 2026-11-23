@@ -57,7 +57,9 @@ export const renderReport = (rows: AnalysisRow[], detailed: Map<string, Analysis
   const byMode = new Map<string, AnalysisRow[]>();
   for (const row of failures) {
     const mode = row.failureMode || "unclassified";
-    byMode.set(mode, [...(byMode.get(mode) ?? []), row]);
+    const group = byMode.get(mode) ?? [];
+    group.push(row);
+    byMode.set(mode, group);
   }
   const ranked = [...byMode.entries()].sort((a, b) => b[1].length - a[1].length);
 

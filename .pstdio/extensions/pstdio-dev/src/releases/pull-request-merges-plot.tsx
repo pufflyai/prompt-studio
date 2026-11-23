@@ -49,10 +49,16 @@ interface TimelinePlotProps {
 }
 
 const VelocityPlot = ({ buckets, aggregation }: TimelinePlotProps) => {
-  const points = buckets.flatMap(({ date, merges }) => {
-    if (!merges?.velocity) return [];
-    return [{ date, features: merges.categories?.feature ?? 0, ...merges.velocity }];
-  });
+  // Once velocity history starts, a period without merges is a real zero. Earlier periods have no velocity data.
+  const start = buckets.findIndex(({ merges }) => merges?.velocity);
+  const points =
+    start < 0
+      ? []
+      : buckets.slice(start).flatMap(({ date, merges }) => {
+          if (!merges) return [{ date, features: 0, points: 0, estimatedFeatures: 0 }];
+          if (!merges.velocity) return [];
+          return [{ date, features: merges.categories?.feature ?? 0, ...merges.velocity }];
+        });
   if (!points.length) return null;
 
   const stroke = color("feature");

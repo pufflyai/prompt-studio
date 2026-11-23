@@ -103,7 +103,7 @@ const errorTextOf = (part: ToolPart) => {
   return output === undefined ? "" : JSON.stringify(output);
 };
 
-const emptyTurn = (user: string, automated: boolean): Turn => ({
+const emptyTurn = (user: string, automated: boolean) => ({
   user,
   automated,
   assistantTexts: [],
@@ -129,7 +129,7 @@ const recordMessage = (turn: Turn, message: SessionMessage, text: string) => {
   if (message.role === "assistant" && text) turn.assistantTexts.push(text);
 };
 
-export const segmentTurns = (messages: SessionMessage[]): Turn[] => {
+export const segmentTurns = (messages: SessionMessage[]) => {
   const turns: Turn[] = [];
   for (const message of messages) {
     const text = textOf(message.parts);
@@ -144,7 +144,7 @@ export const segmentTurns = (messages: SessionMessage[]): Turn[] => {
   return turns;
 };
 
-const emptySignals = (): Signals => ({
+const emptySignals = () => ({
   userTurns: 0,
   corrections: 0,
   correctionQuotes: [],
@@ -177,19 +177,23 @@ const scoreError = (signals: Signals, error: string) => {
   else if (HARNESS.test(error)) signals.harnessError = true;
 };
 
-export const extractSignals = (turns: Turn[]): Signals => {
+export const extractSignals = (turns: Turn[]) => {
   const signals = emptySignals();
-  turns.forEach((turn, index) => {
+  let requested = false;
+  for (const turn of turns) {
     if (turn.user && !turn.automated) signals.userTurns += 1;
     if (RESUME.test(turn.user)) signals.resumeNudges += 1;
-    // The first request cannot correct earlier work.
-    if (index > 0 && !turn.automated) scoreFollowUp(signals, turn.user);
+    // The first human request cannot correct earlier work, even after a system or automated prompt.
+    if (!turn.automated && turn.user) {
+      if (requested) scoreFollowUp(signals, turn.user);
+      requested = true;
+    }
     signals.toolCalls += turn.toolCalls;
     signals.toolFailures += turn.toolFailures.length;
     signals.toolDenied += turn.toolDenied;
     signals.interruptions += turn.notices.filter((notice) => notice === "[response interrupted]").length;
     for (const error of turn.errors) scoreError(signals, error);
-  });
+  }
   return signals;
 };
 
@@ -201,12 +205,12 @@ const verdict = (
   confidence: HeuristicVerdict["confidence"],
   needsReview: boolean,
   evidence: string,
-): HeuristicVerdict => ({ outcome, failureMode, confidence, needsReview, evidence });
+) => ({ outcome, failureMode, confidence, needsReview, evidence }) satisfies HeuristicVerdict;
 
 const endedBadly = (meta: SessionMeta) => meta.status === "failed" || meta.status === "disconnected";
 
 /** Infrastructure causes are only the verdict when the user had no complaint about the work itself. */
-const infraVerdict = (meta: SessionMeta, signals: Signals): HeuristicVerdict | undefined => {
+const infraVerdict = (meta: SessionMeta, signals: Signals) => {
   if (signals.corrections > 0) return undefined;
   const bad = endedBadly(meta);
   if (signals.usageLimit && bad)
@@ -221,7 +225,7 @@ const infraVerdict = (meta: SessionMeta, signals: Signals): HeuristicVerdict | u
 };
 
 /** Behavior guesses. Every one of them asks for an agent review. */
-const frictionVerdict = (meta: SessionMeta, signals: Signals): HeuristicVerdict | undefined => {
+const frictionVerdict = (meta: SessionMeta, signals: Signals) => {
   if (signals.corrections > 0) {
     const quote = signals.correctionQuotes[0] ? `User: "${signals.correctionQuotes[0]}"` : "";
     const outcome: Outcome = signals.corrections >= 2 || endedBadly(meta) ? "failed" : "partial";
@@ -245,7 +249,7 @@ const frictionVerdict = (meta: SessionMeta, signals: Signals): HeuristicVerdict 
  * Triage only. Infrastructure failures are reliable from errors and exits; anything
  * about agent behavior is a guess that `needsReview` hands to an agent review.
  */
-export const heuristicVerdict = (meta: SessionMeta, signals: Signals): HeuristicVerdict => {
+export const heuristicVerdict = (meta: SessionMeta, signals: Signals) => {
   if (active.has(meta.status)) return verdict("in_progress", null, "high", false, `Session is ${meta.status}.`);
   const judged = infraVerdict(meta, signals) ?? frictionVerdict(meta, signals);
   if (judged) return judged;

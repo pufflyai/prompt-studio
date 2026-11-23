@@ -127,8 +127,8 @@ export const failureModes = {
 export type FailureMode = keyof typeof failureModes;
 export const failureModeIds = Object.keys(failureModes) as FailureMode[];
 
-export const isOutcome = (value: string): value is Outcome => value in outcomes;
-export const isFailureMode = (value: string): value is FailureMode => value in failureModes;
+export const isOutcome = (value: string): value is Outcome => Object.hasOwn(outcomes, value);
+export const isFailureMode = (value: string): value is FailureMode => Object.hasOwn(failureModes, value);
 
 export const failureModeLabel = (mode: string | null | undefined) =>
   mode && isFailureMode(mode) ? failureModes[mode].label : "";

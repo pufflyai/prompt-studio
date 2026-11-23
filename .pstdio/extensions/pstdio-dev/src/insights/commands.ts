@@ -150,8 +150,9 @@ export const classifySession = defineCommand({
       const conversation = await ctx.sessions.getConversation(input.sessionId);
       analysis = buildAnalysis(session, conversation, undefined);
     }
+    const { earlierLesson: _earlierLesson, ...current } = analysis;
     const updated: Analysis = {
-      ...analysis,
+      ...current,
       outcome,
       failureMode,
       secondaryModes,

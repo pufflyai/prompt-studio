@@ -38,6 +38,7 @@ const average = (values: number[]) => values.reduce((sum, value) => sum + value,
 export const startupBucketMetrics = (bucket: StartupBucket) => {
   const ready = bucket.launches.flatMap(({ readyMs }) => (readyMs === null ? [] : [readyMs]));
   const setups = bucket.launches.flatMap((launch) => {
+    if (launch.setups.some(({ durationMs }) => durationMs === null)) return [];
     const slowest = slowestSetup(launch);
     return slowest === null ? [] : [slowest];
   });

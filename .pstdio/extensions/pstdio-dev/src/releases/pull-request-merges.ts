@@ -18,6 +18,7 @@ const CLASSIFICATIONS = "releases/pull-request-classifications.json";
 const LEGACY_AREAS = "releases/pull-request-areas.json";
 const DAY_MS = 86_400_000;
 const WEEK_MS = 7 * DAY_MS;
+const RATING_REFRESH_MS = 30 * DAY_MS;
 
 interface MergedPull {
   number: number;
@@ -97,7 +98,7 @@ const collectMergedPulls = async (ctx: Context, previous: Timeline) => {
   return { repository, refreshedAt, pulls: [...pulls.values()], featureComplexity: saved.featureComplexity };
 };
 
-const titleCategory = (title: string): PullRequestType => {
+const titleCategory = (title: string) => {
   const convention = title
     .match(
       /^(fix|bug|bugfix|hotfix|feat|feature|chore|refactor|docs|test|build|ci|style|perf|deps|revert)(?:\([^)]*\))?!?:\s/i,
@@ -112,6 +113,8 @@ const titleCategory = (title: string): PullRequestType => {
   if (/^(?:add|introduce|support|enable|implement|launch)\b/i.test(title)) return "feature";
   return "chore";
 };
+
+const ticketOf = (title: string) => title.match(/\bPS-\d+\b/i)?.[0].toUpperCase();
 
 const utcDate = (timestamp: number) => new Date(timestamp).toISOString().slice(0, 10);
 const weekStart = (midnight: number) => midnight - ((new Date(midnight).getUTCDay() + 6) % 7) * DAY_MS;
@@ -175,8 +178,9 @@ export const summarizeMerges = (
     const date = pull.mergedAt.slice(0, 10);
     if (date > throughDate) continue;
     const category = classified[pull.number] ?? titleCategory(pull.title);
-    const ticket = category === "feature" ? pull.title.match(/\bPS-\d+\b/i)?.[0].toUpperCase() : undefined;
-    const weight = ticket ? complexity.byTicket[ticket] : undefined;
+    const ticket = category === "feature" ? ticketOf(pull.title) : undefined;
+    // 0 marks a ticket without a rating, which uses the default weight.
+    const weight = ticket ? complexity.byTicket[ticket] || undefined : undefined;
     addMerge(daily.get(date), category, weight, complexity.defaultPoints);
     addMerge(weekly.get(utcDate(weekStart(Date.parse(date)))), category, weight, complexity.defaultPoints);
     addMerge(hourBucket(hourOf(pull.mergedAt)), category, weight, complexity.defaultPoints);
@@ -247,11 +251,23 @@ export const syncMergeTimeline = async (
   ctx: Context & Pick<ExtensionContextBase, "commands">,
   files: ExtensionFiles,
 ) => {
-  const saved = (await readJson<Timeline>(files, TIMELINE)) ?? {};
-  const [result, complexity] = await Promise.all([
-    collectMergedPulls(ctx, saved).catch((error: unknown): Timeline => ({ ...saved, error: String(error) })),
-    readFeatureComplexity(ctx).catch(() => undefined),
+  const [saved = {}, classifications] = await Promise.all([
+    readJson<Timeline>(files, TIMELINE),
+    readJson<Classifications>(files, CLASSIFICATIONS),
   ]);
+  const result = await collectMergedPulls(ctx, saved).catch(
+    (error: unknown): Timeline => ({ ...saved, error: String(error) }),
+  );
+  const classified = (classifications?.repository === result.repository && classifications?.categories) || {};
+  const known = saved.featureComplexity?.byTicket ?? {};
+  const recentFrom = Date.now() - RATING_REFRESH_MS;
+  // Re-read ratings for recent features and tickets never read; older ratings come from the saved timeline.
+  const tickets = (result.pulls ?? []).flatMap((pull) => {
+    const ticket =
+      (classified[pull.number] ?? titleCategory(pull.title)) === "feature" ? ticketOf(pull.title) : undefined;
+    return ticket && (Date.parse(pull.mergedAt) >= recentFrom || !(ticket in known)) ? [ticket] : [];
+  });
+  const complexity = await readFeatureComplexity(ctx, tickets, saved.featureComplexity).catch(() => undefined);
   await files.writeText(
     TIMELINE,
     JSON.stringify({ ...result, featureComplexity: complexity ?? result.featureComplexity }),

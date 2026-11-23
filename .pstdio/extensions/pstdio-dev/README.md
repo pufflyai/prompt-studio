@@ -29,7 +29,7 @@ The pages use your GitHub CLI login. Run `gh auth login` in this repository firs
 
 ## Release pipeline health
 
-Open **Release health** from the project navigation. The **Range** and **Aggregation** controls apply to every chart in **Overview**. Choose the last 7, 30, or 90 days or all available history, grouped by day, week, or month in UTC. Weeks start on Monday. The range applies to the **Runs** table, where each run has its duration, GitHub link, and verification evidence.
+Open **Release health** from the project navigation. The **Range** and **Aggregation** controls apply to every chart in **Overview**. Choose the last 7, 30, or 90 days or all available history, grouped by day, week, or month in UTC; the last 7 days can also be grouped by hour. Weeks start on Monday. The range applies to the **Runs** table, where each run has its duration, GitHub link, and verification evidence.
 
 Dashed vertical lines mark GitHub publication dates for `pstdio@` releases. When several releases fall in the same bucket, the tooltip lists each tag and timestamp. The test charts sum recorded executions and average completed run durations. Dates outside the available workflow history have gaps in the test charts.
 
@@ -39,7 +39,7 @@ Select a legend item in **PR merges** or **Total tests** to show that category. 
 
 Each PR has one category. The extension uses the project's saved GPT-6 Luna classifications for the historical backfill and uses title conventions for later PRs. The CLI exposes daily `pullRequestMerges` and weekly `pullRequestMergesWeekly` with counts under `categories`.
 
-**Velocity** multiplies the number of merged feature PRs by their average complexity in each day or week. It reads the current Complexity rating of the Planner ticket in the PR title. The default scale gives Simple, Moderate, and Complex 1, 2, and 3 points. Features without a rating use the middle weight. The tooltip and CLI report how many feature PRs used that default.
+**Velocity** multiplies the number of merged feature PRs by their average complexity in each day or week. It reads the Complexity rating of the Planner ticket in the PR title, one ticket at a time. Each refresh rereads tickets of features merged in the last 30 days and tickets it has not read yet; older ratings come from the saved timeline. The default scale gives Simple, Moderate, and Complex 1, 2, and 3 points. Features without a rating use the middle weight. The tooltip and CLI report how many feature PRs used that default.
 
 **Estimated bugs per feature** divides follow-up bug-fix PRs attributed to a feature by all feature PRs merged in the selected period. A fix counts toward the period when its originating feature merged. The saved Luna audit records the PR numbers, evidence, and confidence for explicit and inferred links, and identifies fixes with no reliable origin. The chart uses one merged fix PR as a proxy for one bug and includes fixes merged after their origin and through the review date. Recent features have had less time to receive fixes. The CLI exposes period counts under `bugOrigins` and review totals under `bugOriginCoverage`.
 
