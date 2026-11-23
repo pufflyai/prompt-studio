@@ -1,10 +1,13 @@
 import { Box, Button, Flex, Text } from "@chakra-ui/react";
 import type { ChatRendererSnapshot } from "@pstdio/sdk/extensions";
 import { ActionErrorSlot, AlertMessage, UnresolvedSubmission } from "@pstdio/ui";
+import type { OperationStatus } from "../../../core/registries/mutations/operation-types";
+import type { TrackedChatAction } from "../../../extensions/contributions/chat-action-operations";
 import { chatDraftContentKey } from "../../../extensions/contributions/chat-draft-recovery";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
 import { NativeChatDraftRecovery } from "./native-chat-draft-recovery";
 import type { NativeChatHostServices } from "./native-chat-host";
+import type { useNativeChatActions } from "./use-native-chat-actions";
 
 interface NativeChatNoticesProps {
   host: NativeChatHostServices;
@@ -85,6 +88,33 @@ export const NativeChatErrors = ({ state, session }: Omit<NativeChatNoticesProps
     </Box>
   );
 };
+const pendingAction = {
+  queue: ["Updating the queue…", "Queue change could not be confirmed. See System activity."],
+  approve: ["Sending approval response…", "Approval response could not be confirmed. See System activity."],
+  stop: ["Stopping the session…", "Stop request could not be confirmed. See System activity."],
+} as const;
+
+export const NativeChatPendingAction = (props: { action: TrackedChatAction["type"]; status: OperationStatus }) => (
+  <Text role="status" textStyle="label/XS" color="fg.muted">
+    {pendingAction[props.action][props.status === "unknown" || props.status === "unconfirmed" ? 1 : 0]}
+  </Text>
+);
+
+export const NativeChatComposerHeader = (
+  props: Omit<NativeChatNoticesProps, "host"> & {
+    pending: ReturnType<typeof useNativeChatActions>;
+  },
+) => (
+  <>
+    {Object.values(props.pending).map((entry) =>
+      entry ? (
+        <NativeChatPendingAction key={entry.id.description} action={entry.intent.action.type} status={entry.status} />
+      ) : null,
+    )}
+    <NativeChatErrors state={props.state} session={props.session} />
+  </>
+);
+
 interface NativeChatResourcesProps {
   resources: ChatRendererSnapshot["resources"];
   run: ChatSession["run"];

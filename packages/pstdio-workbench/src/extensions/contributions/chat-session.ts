@@ -1,10 +1,7 @@
 import type { ChatDraft, ChatRendererAction, ChatRendererSnapshot, ControlValueMap } from "@pstdio/sdk/extensions";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
-import {
-  chatRendererActionResultSchema,
-  chatRendererActionSchema,
-  chatRendererSnapshotSchema,
-} from "pstdio-api-contracts";
+import { chatRendererSnapshotSchema } from "pstdio-api-contracts";
+import { type ChatActionOperations, executeChatAction, trackChatActionExecution } from "./chat-action-operations";
 import {
   canReplaceRecoveredChatDraft,
   chatDraftContentKey,
@@ -26,6 +23,7 @@ import { createChatSubmissionHandoff } from "./chat-submission-handoff";
 
 export interface ChatSessionInput {
   initial?: ChatRendererSnapshot;
+  actionOperations?: ChatActionOperations;
   trackSubmission?: TrackChatSubmission;
   hasRetainedSubmission?: () => boolean;
   subscribeSubmissions?: (listener: () => void) => () => void;
@@ -43,15 +41,6 @@ export interface ChatSessionInput {
   stageDraft?(draft: ChatDraft): void;
   acknowledgeRecovery?(draft: ChatDraft): Promise<unknown>;
 }
-
-const executeChatAction = async (
-  action: ChatRendererAction,
-  handler: ChatSessionInput["action"],
-  conversation: ChatRendererSnapshot,
-) => {
-  assertChatActionAvailable(conversation, action);
-  return chatRendererActionResultSchema.parse((await handler(chatRendererActionSchema.parse(action))) ?? {});
-};
 
 const applyChatActionDraft = (
   drafts: ReturnType<typeof createChatSessionDraft>,
@@ -80,13 +69,6 @@ const initialChatState = (initial?: ChatRendererSnapshot) => ({
   error: undefined as string | undefined,
   canRefreshError: false,
 });
-
-const assertChatActionAvailable = (conversation: ChatRendererSnapshot, action: ChatRendererAction) => {
-  if (conversation.readOnly && action.type !== "openResource" && action.type !== "openLink")
-    throw new Error("This conversation is read-only.");
-  if (conversation.queueReadOnly && action.type === "queue")
-    throw new Error("This queue is read-only. Refresh it before editing.");
-};
 
 const projectChatState = (
   state: ReturnType<typeof initialChatState>,
@@ -165,11 +147,8 @@ export const createChatSession = (input: ChatSessionInput) => {
     if (!retired) projection.publish(state, transcriptOnly);
   };
   const fail = (error: unknown) => publish({ error: chatErrorMessage(error) });
-  const failWatch = captureChatWatchError(
-    () => state,
-    () => errorRevision,
-    publish,
-  );
+  const readState = () => state;
+  const failWatch = captureChatWatchError(readState, () => errorRevision, publish);
   let holds = 0;
   let observing = false;
   let controller: AbortController | undefined;
@@ -199,9 +178,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     const recovery = clearDeliveredChatRecoveries(state.draft, pending ?? [], state.pending);
     if (recovery.pending !== state.pending) publish({ pending: recovery.pending });
     if (recovery.recovery) drafts.change(recovery.recovery);
-    if (expectedValues && merged.valuesChanged) {
-      drafts.changed(capturedSave);
-    }
+    if (expectedValues && merged.valuesChanged) drafts.changed(capturedSave);
   };
   const reader = createChatEventReader({
     reserve: () => ++clock,
@@ -295,7 +272,9 @@ export const createChatSession = (input: ChatSessionInput) => {
     const running = work<Awaited<ReturnType<typeof execute>> | undefined>(() =>
       action.type === "submit"
         ? submit(action, handler, { execute: admittedExecute, changeDraft: admittedChange }).then(() => undefined)
-        : admittedExecute(action, handler).catch(failChatAction(fail, action)),
+        : trackChatActionExecution(input.actionOperations, action, state.conversation, () =>
+            admittedExecute(action, handler),
+          ).catch(failChatAction(fail, action)),
     );
     return trackChatAction(actions, running, release, input.onIdle);
   };
@@ -309,6 +288,7 @@ export const createChatSession = (input: ChatSessionInput) => {
   return {
     getSnapshot: () => (retired ? retiredState : state),
     query: finite.query,
+    actionOperations: input.actionOperations,
     suspend: stop,
     rebind: () => {
       if (holds && observing) start();
@@ -326,7 +306,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     ...createChatDraftRestoration({
       ...input,
       active: () => !retired,
-      read: () => state,
+      read: readState,
       values: snapshots.values,
       changeDraft: drafts.change,
       publish,

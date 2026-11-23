@@ -5,6 +5,7 @@ import { getWorkbenchOperations, resourceOperationSubject } from "../../core/reg
 import { getWorkbenchQueries } from "../../core/workbench-queries";
 import { runTrackedCreate } from "../host/workbench-create-operation";
 import type { RegisterWorkbenchExtensionContributionsInput } from "../host/workbench-extension-host-types";
+import { createChatActionOperations } from "./chat-action-operations";
 import type { createChatCommandBinding } from "./chat-command-binding";
 import { createChatDraftPersistence } from "./chat-draft-persistence";
 import { transferLegacyChatDraft } from "./chat-legacy-draft";
@@ -69,6 +70,7 @@ export const createChatSessionProvider = (source: {
     { view, render, key, draftKey, binding } = source,
     body = view.body;
   const resource = render.instance.resource;
+  const sourceResource = source.normalized ?? resource;
   let drafts: ReturnType<typeof createChatDraftPersistence> | undefined;
   let watchSource: RegisterWorkbenchExtensionContributionsInput | undefined;
   const readLegacy = () =>
@@ -86,7 +88,11 @@ export const createChatSessionProvider = (source: {
   const acknowledgeRecovery = body.browserDraft?.acknowledgeRecoveryHandlerId;
   const providerSave = !local && body.saveDraftHandlerId;
   const session = createChatSession({
-    ...trackChatSubmissions(queries, source.normalized ?? resource, view.extensionId, input.projectId, (key) =>
+    actionOperations:
+      sourceResource?.type === "session" && view.extensionId === "pstdio.session-browser"
+        ? createChatActionOperations(queries, sourceResource, input.projectId)
+        : undefined,
+    ...trackChatSubmissions(queries, sourceResource, view.extensionId, input.projectId, (key) =>
       localDrafts?.discardRecovery(key),
     ),
     inspectResources: () => render.workbench.commandPalette.open(),

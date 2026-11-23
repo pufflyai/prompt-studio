@@ -1,11 +1,12 @@
-import { Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { Button, HStack, Stack } from "@chakra-ui/react";
 import { ChatPanel, type QueuedFollowUp } from "@pstdio/ui/chat-ui";
 import { useState } from "react";
+import { NativeChatPendingAction } from "./native-chat-status";
 
 const first = { id: "first", prompt: "Run the focused tests." };
 const second = { id: "second", prompt: "Check the dashboard, too." };
 
-export default { title: "Proposals/PS-289 Queue changes" };
+export default { title: "Workbench/Chat/Queue changes" };
 
 export const QueueChangeFeedback = () => {
   const [confirmed, setConfirmed] = useState<QueuedFollowUp[]>([first, second]);
@@ -49,9 +50,7 @@ export const QueueChangeFeedback = () => {
         readOnlyQueue={Boolean(pending || unconfirmed)}
         composerHeader={
           pending || unconfirmed ? (
-            <Text role="status" textStyle="label/XS" color="fg.muted">
-              {unconfirmed ? "Queue change could not be confirmed. See System activity." : "Updating the queue…"}
-            </Text>
+            <NativeChatPendingAction action="queue" status={unconfirmed ? "unknown" : "writing"} />
           ) : undefined
         }
         onQueuedFollowUpRemove={(id) => setPending(confirmed.filter((item) => item.id !== id))}
