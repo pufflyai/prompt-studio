@@ -5,6 +5,18 @@ import { join } from "node:path";
 
 const digest = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 
+// PGlite caches code after instantiation. Concurrent cold opens otherwise compile it separately.
+// Share only immutable code; each database still creates its own engine, memory and filesystem.
+let sourceEngineModule: Promise<WebAssembly.Module> | undefined;
+export const resolveSourceEngineModule = (wasmPath: string) =>
+  (sourceEngineModule ??= Bun.file(wasmPath)
+    .arrayBuffer()
+    .then((bytes) => WebAssembly.compile(bytes))
+    .catch((error) => {
+      sourceEngineModule = undefined;
+      throw error;
+    }));
+
 /** Source startup can reuse build output only for these exact generated migrations and engine. */
 export const startupImageInputs = async (migrationsFolder: string) => {
   const require = createRequire(import.meta.url);

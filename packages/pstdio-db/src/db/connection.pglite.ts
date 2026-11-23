@@ -36,7 +36,7 @@ import { prepareHistoryOwnerUpgrade } from "./history-owner-upgrade";
 import { retireLegacyRecordTables } from "./legacy-record-retirement";
 import { type LegacyConversionFailure, upgradeLegacyRecords } from "./legacy-record-upgrade";
 import { prepareLogOwnerUpgrade } from "./log-owner-upgrade";
-import { hasCurrentPgliteSchema, migratePglite } from "./migrate-pglite";
+import { migratePglite, resumeCurrentPgliteSchema } from "./migrate-pglite";
 import { prepareNativeOwnerUpgrade } from "./native-owner-upgrade";
 import { openPglite } from "./open-pglite";
 import { prepareOrderedOwnerUpgrade } from "./ordered-owner-upgrade";
@@ -55,9 +55,8 @@ import { prepareResourcePrefixUpgrade } from "./resource-prefix-upgrade";
 import { createStorageCleanup } from "./retired-storage-cleanup";
 import * as schema from "./schemas.pg";
 import { prepareSessionWorkspaceUpgrade } from "./session-workspace-upgrade";
-import { sourceStartupOptions } from "./source-startup-image";
+import { resolveSourceEngineModule, sourceStartupOptions } from "./source-startup-image";
 import { type DatabaseMaintenancePhase, invalidateMaintenance, maintainDatabase } from "./startup-maintenance";
-import { hasUpgradeSnapshots } from "./upgrade-snapshot";
 
 type EmbeddedFile = Blob & { name: string };
 // Bun's embedded file objects are runtime-specific; narrowing the contract keeps extraction testable
@@ -136,18 +135,6 @@ const withMigrationsFolder = async (run: (folder: string) => Promise<void>) => {
     migrations.dispose();
   }
 };
-
-// PGlite caches code after instantiation. Concurrent cold opens otherwise compile it separately.
-// Share only immutable code; each database still creates its own engine, memory and filesystem.
-let sourceEngineModule: Promise<WebAssembly.Module> | undefined;
-const resolveSourceEngineModule = (wasmPath: string) =>
-  (sourceEngineModule ??= Bun.file(wasmPath)
-    .arrayBuffer()
-    .then((bytes) => WebAssembly.compile(bytes))
-    .catch((error) => {
-      sourceEngineModule = undefined;
-      throw error;
-    }));
 
 export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[] = getEmbeddedFiles()) => {
   const wasmFile = embeddedFiles.find((file) => normalizeEmbeddedFileName(file.name).endsWith(PGLITE_WASM_SUFFIX));
@@ -256,12 +243,21 @@ export const createDb = async (options?: {
     let finishArtifactProjectionUpgrade: (() => Promise<void>) | undefined;
     await withMigrationsFolder(async (migrationsFolder) => {
       if (!fs.existsSync(migrationsFolder)) return;
-      // Empty engines and completed schemas need no released-table probes.
-      // Durable conversion inputs always resume, including beside a fresh image.
-      const hasInputs = await hasUpgradeSnapshots(dbPath);
-      if (!hasInputs && (fresh || (await hasCurrentPgliteSchema(openedPglite, migrationsFolder)))) {
-        await migratePglite(openedPglite, migrationsFolder);
-        await retireLegacyRecordTables(openedPglite, migrationsFolder);
+      const finishLegacyAdmission = async () => {
+        if (
+          await upgradeLegacyRecords(db, dbPath, { signal: options?.signal, failed: options?.onLegacyConversionError })
+        )
+          await retireLegacyRecordTables(openedPglite, migrationsFolder);
+      };
+      if (
+        await resumeCurrentPgliteSchema({
+          engine: openedPglite,
+          migrationsFolder,
+          path: dbPath,
+          fresh,
+          finishLegacyAdmission,
+        })
+      ) {
         migrated = true;
         return;
       }
@@ -310,8 +306,7 @@ export const createDb = async (options?: {
       await finishResourcePrefixUpgrade?.();
       await finishSessionWorkspaceUpgrade?.();
       await finishFileOwnersUpgrade();
-      if (await upgradeLegacyRecords(db, dbPath, { signal: options?.signal, failed: options?.onLegacyConversionError }))
-        await retireLegacyRecordTables(openedPglite, migrationsFolder);
+      await finishLegacyAdmission();
       await finishRecordRows?.();
       migrated = true;
     });

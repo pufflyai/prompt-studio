@@ -1,9 +1,11 @@
 import type { PGlite } from "@electric-sql/pglite";
 import { readMigrationFiles } from "drizzle-orm/migrator";
+import { retireLegacyRecordTables } from "./legacy-record-retirement";
+import { hasUpgradeSnapshots } from "./upgrade-snapshot";
 
-/** Completed homes need no released-schema probes. History alone is insufficient:
- * failed legacy conversion can retain its source tables after the DDL commits. */
-export const hasCurrentPgliteSchema = async (db: PGlite, migrationsFolder: string) => {
+/** Generated DDL and owner admission finish separately. A held conversion
+ * may need to resume even after the complete migration history is present. */
+const currentPgliteSchemaState = async (db: PGlite, migrationsFolder: string) => {
   const {
     rows: [state],
   } = await db.query<{ history: string | null; legacy: boolean }>(`
@@ -11,7 +13,7 @@ export const hasCurrentPgliteSchema = async (db: PGlite, migrationsFolder: strin
       to_regclass('public.storage_record_sync') IS NOT NULL
       OR to_regclass('public.storage_record_outbox') IS NOT NULL
       OR to_regclass('public.storage_ordered_owners') IS NOT NULL AS legacy`);
-  if (!state?.history || state.legacy) return false;
+  if (!state?.history) return "upgrade";
   const migrations = readMigrationFiles({ migrationsFolder });
   const { rows } = await db.query<{ hash: string; created_at: string | number }>(
     'SELECT hash,created_at FROM "drizzle"."__drizzle_migrations" ORDER BY created_at',
@@ -23,7 +25,8 @@ export const hasCurrentPgliteSchema = async (db: PGlite, migrationsFolder: strin
         row.hash === migrations[index]!.hash && Number(row.created_at) === migrations[index]!.folderMillis,
     )
   )
-    return false;
+    return "upgrade";
+  if (state.legacy) return "admission";
   // Number-only owners can still need admission after stream-table retirement.
   const {
     rows: [pending],
@@ -31,7 +34,27 @@ export const hasCurrentPgliteSchema = async (db: PGlite, migrationsFolder: strin
     SELECT EXISTS (SELECT 1 FROM owners o WHERE o.extension_id='pstdio'
       AND EXISTS (SELECT 1 FROM documents d WHERE d.owner_id=o.id
         AND d.key='resource-identities')) AS present`);
-  return !pending!.present;
+  return pending!.present ? "admission" : "current";
+};
+
+export const resumeCurrentPgliteSchema = async (input: {
+  engine: PGlite;
+  migrationsFolder: string;
+  path: string;
+  fresh: boolean;
+  finishLegacyAdmission: () => Promise<void>;
+}) => {
+  const { engine, migrationsFolder, path, fresh, finishLegacyAdmission } = input;
+  // Durable conversion inputs always resume, including beside a fresh image.
+  if (await hasUpgradeSnapshots(path)) return false;
+  if (fresh) {
+    await migratePglite(engine, migrationsFolder);
+    await retireLegacyRecordTables(engine, migrationsFolder);
+    return true;
+  }
+  const state = await currentPgliteSchemaState(engine, migrationsFolder);
+  if (state === "admission") await finishLegacyAdmission();
+  return state !== "upgrade";
 };
 
 /** Keep Drizzle's generated SQL, hashes, ordering and all-pending transaction.
