@@ -17,6 +17,8 @@ beforeEach(async () => {
   previous = { home: process.env.PSTDIO_HOME, defaults: process.env.PSTDIO_DEFAULT_EXTENSIONS };
   process.env.PSTDIO_HOME = join(root, "home");
   handle = await createTestApp();
+  // Startup reads PSTDIO_DEFAULT_EXTENSIONS when it gets there; the tests change it afterwards.
+  await handle.startupSettled;
 });
 afterEach(async () => {
   await handle.close();

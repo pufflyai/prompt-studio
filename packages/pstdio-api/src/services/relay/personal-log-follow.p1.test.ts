@@ -7,8 +7,13 @@ import { startRelayPersonalHistory } from "./personal";
 
 const until = async (condition: () => boolean | Promise<boolean>) => {
   const end = Date.now() + 5000;
-  while (!(await condition()) && Date.now() < end) await Bun.sleep(5);
-  expect(await condition()).toBe(true);
+  // Assert the observation that ended the wait: busy, for one, can turn true again right after.
+  let met = await condition();
+  while (!met && Date.now() < end) {
+    await Bun.sleep(5);
+    met = await condition();
+  }
+  expect(met).toBe(true);
 };
 
 test("an active reader follows completed generic log entries before the next batched index head", async () => {
