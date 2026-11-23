@@ -46,7 +46,9 @@
     "storage-scale-fixture",
     "canvas-tests",
     "pstdio-theme",
-    "design-studies"
+    "design-studies",
+    "remote-testing",
+    "pocketcoder"
   ],
   "snapshot": {
     "useCalculatedVersion": true,

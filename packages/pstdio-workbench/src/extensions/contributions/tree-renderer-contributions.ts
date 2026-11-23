@@ -239,6 +239,7 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
   );
   const treeDisposable = input.workbench.views.registerView({
     id: record.id,
+    header: record.headerViewId ? { viewId: record.headerViewId } : undefined,
     title: text(record.title, record.id),
     icon: record.icon,
     body: {

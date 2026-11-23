@@ -83,7 +83,13 @@ export interface ParamOptionSource {
   params?: Record<string, unknown | ParamValueRef>;
 }
 
-export type ParamOption = { label: string; value: string; icon?: string };
+export type ParamOption = {
+  label: string;
+  /** Translated display label; label remains the string fallback for existing consumers. */
+  localizedLabel?: Localizable<string>;
+  value: string;
+  icon?: string;
+};
 
 export type SelectParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string, TRequired> & {
   type: "select";

@@ -11,7 +11,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { Portal, ScrollArea } from "@pstdio/ui";
+import { Portal, ScrollArea, UiScopeActivity } from "@pstdio/ui";
 import { useRef, useState } from "react";
 import type { WorkbenchCore, WorkbenchStatusBarPosition, WorkbenchStatusBarSlot } from "../../core";
 import { systemActivityItemId } from "../notifications/system-errors";
@@ -153,12 +153,17 @@ export const WorkbenchStatusBarItems = (props: {
             />
           ) : null}
           {placements.map((placement) => (
-            <StatusBarItem
+            <UiScopeActivity
               key={placement.widgetId}
-              {...{ workbench, placement, items, visible, activeId }}
-              left={layout.offsets[placement.widgetId] ?? 0}
-              previewLeft={layout.preview?.offsets[placement.widgetId]}
-            />
+              active={visible && items.some((item) => item.id === placement.widgetId)}
+            >
+              <StatusBarItem
+                key={placement.widgetId}
+                {...{ workbench, placement, items, visible, activeId }}
+                left={layout.offsets[placement.widgetId] ?? 0}
+                previewLeft={layout.preview?.offsets[placement.widgetId]}
+              />
+            </UiScopeActivity>
           ))}
         </Box>
       </ScrollArea>

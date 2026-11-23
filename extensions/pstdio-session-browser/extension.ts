@@ -200,7 +200,6 @@ export default defineExtension({
     }),
   ],
   navigationTrees: [
-    defineNavigationTree({ id: "session-list", owner: session.ref, view: list.ref, resourceScope: "project" }),
     defineNavigationTree({ id: "sessions", owner: sessions.ref, view: list.ref, resourceScope: "project" }),
     defineNavigationTree({
       id: "legacy-sessions",

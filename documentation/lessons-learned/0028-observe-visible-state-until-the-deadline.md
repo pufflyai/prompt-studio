@@ -25,4 +25,4 @@ When diagnosing a similar failure, compare timestamped frames, API replies and
 the exact assertion predicate before changing an allowance. A later screenshot
 alone does not show that the condition held before its deadline. Follow the
 [testing rules](../guidance/0005-testing.md) and the
-[exact-value approval rule](../guidance/0004-ci.md#3-ci-timeouts-and-performance-budgets).
+[timeout policy](../guidance/0004-ci.md#3-ci-timeouts-and-performance-budgets): ordinary functional allowances may be adjusted without separate approval; benchmark-related limits still require it.

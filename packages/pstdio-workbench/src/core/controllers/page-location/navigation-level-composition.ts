@@ -10,6 +10,7 @@ import type { WorkbenchPageContribution } from "../../registries/pages/page-regi
 import type { TreeViewSection } from "../../registries/renderers/tree-renderer-types";
 import { settleReadBatch } from "../../registries/views/settle-read-batch";
 import { resolveNavigationLevels } from "./navigation-level";
+import { resourceNavigationStateScope } from "./navigation-tree-state-scope";
 
 interface LevelNavigationHost {
   modes: { getActiveModeId(): string | undefined };
@@ -101,6 +102,14 @@ export const createLevelNavigation = (host: LevelNavigationHost) => {
     );
 
   return {
+    getStateScope: () => {
+      const state = host.pages.store.getState();
+      return resourceNavigationStateScope({
+        ...state,
+        pages: Object.values(state.pages),
+        navigationTrees: host.navigationTrees,
+      });
+    },
     getReadKey: () =>
       JSON.stringify(queries().map(({ owner, resource }) => host.navigationTrees.getReadKey(owner, { resource }))),
 

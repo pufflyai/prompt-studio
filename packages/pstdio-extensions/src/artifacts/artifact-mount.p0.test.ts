@@ -216,6 +216,18 @@ describe("createFileMount", () => {
     expect(await mount.list(".pstdio/extension-storage/pstdio-planner/tickets/T-9/files/**")).toEqual([]);
   });
 
+  test("lists what remains while another caller deletes folders", async () => {
+    const root = createTempDir();
+    const mount = createFileMount(root);
+    const folders = Array.from({ length: 200 }, (_, index) => `runs/${index}`);
+    for (const folder of folders) await mount.writeText(`${folder}/result.json`, "{}");
+    await mount.writeText("kept.json", "{}");
+
+    const [listed] = await Promise.all([mount.list("**/*.json"), ...folders.map((folder) => mount.delete(folder))]);
+
+    expect(listed.map((file) => file.path)).toContain("kept.json");
+  });
+
   test("list rejects a pattern whose literal prefix escapes the mount root", async () => {
     const mount = createFileMount(createTempDir());
 

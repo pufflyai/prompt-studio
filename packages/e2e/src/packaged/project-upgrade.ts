@@ -22,6 +22,7 @@ import {
   upgradeCoreProjectTools,
 } from "./project-upgrade-fixture";
 import { assertHomeConflict, assertHomeOpens, checkHomeHistory } from "./project-upgrade-home";
+import { captureUpgradeLayouts } from "./project-upgrade-layout";
 import { preparePublishedHost, versionFromTag } from "./published-host-binary";
 
 type Seed = Awaited<ReturnType<typeof seedUpgradeProject>>;
@@ -95,11 +96,14 @@ const openSavedWork = async (
   fixture: Seed,
   evidence: string,
   routes: Awaited<ReturnType<typeof workbenchRoutes>>,
+  layouts: Awaited<ReturnType<typeof captureUpgradeLayouts>>,
 ) => {
   const browser = await chromium.launch(PROVISIONED_CHROMIUM);
   let page: Page | undefined;
   try {
-    page = await browser.newPage();
+    page = await browser.newPage({
+      storageState: { cookies: [], origins: [{ origin: descriptor.origin, localStorage: layouts }] },
+    });
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     // User-approved 2026-11-20 (#2241): first opens after an upgrade wait for the runtime to install
     // the Workspaces tool that adopts Git Workspaces, which exceeded the 5 s default.
@@ -122,6 +126,10 @@ const openSavedWork = async (
     await page.goto(new URL(routes.conversation, descriptor.origin).href);
     await expect(page.getByText("Keep the change small.", { exact: false }).first()).toBeVisible(firstOpen);
     await page.screenshot({ path: join(evidence, "saved-conversation.png") });
+    await page.getByRole("option", { name: "Extensions", exact: true }).click();
+    const search = page.getByTestId("extensions-search");
+    await search.fill("Planner");
+    await expect(page.getByTestId("extensions-panel").getByTestId("extension-entry").first()).toContainText(/planner/i);
   } catch (error) {
     if (page) {
       await page.screenshot({ path: join(evidence, "workbench-failure.png") }).catch(() => {});
@@ -235,6 +243,7 @@ const run = async (
       return;
     }
     const state = await seed(runtime.descriptor, input);
+    const layouts = await captureUpgradeLayouts(runtime.descriptor, state.fixture.id);
     await stopProcess(runtime.child);
     runtime = undefined;
     const home = await checkHomeHistory(input, state.fixture.id);
@@ -244,7 +253,7 @@ const run = async (
     const routes = await workbenchRoutes(runtime.descriptor, state.fixture);
     await stopProcess(runtime.child);
     runtime = await launch(candidate, "restart");
-    await openSavedWork(runtime.descriptor, state.fixture, input.evidence, routes);
+    await openSavedWork(runtime.descriptor, state.fixture, input.evidence, routes, layouts);
     await assertProjectToolsRetained(
       upgradeApi(runtime.descriptor),
       state.fixture.id,

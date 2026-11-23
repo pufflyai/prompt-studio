@@ -1,4 +1,5 @@
 import type { ExtensionActionState } from "./extension-action-feedback";
+import { defaultExtensionFilters, type ExtensionFilters } from "./extension-filters";
 
 export interface ExtensionUpgradeBatch {
   ids: string[];
@@ -11,6 +12,7 @@ const marketplaceActionPrefix = "marketplace:";
 export const marketplaceActionKey = (name: string) => `${marketplaceActionPrefix}${name}`;
 
 interface ActionSnapshot {
+  filters: ExtensionFilters;
   installedIds: Record<string, string>;
   replacement: { name: string; retry: () => Promise<void> } | null;
   actions: Record<string, ExtensionActionState>;
@@ -18,7 +20,7 @@ interface ActionSnapshot {
 }
 
 export const createExtensionActions = () => {
-  let snapshot: ActionSnapshot = { actions: {}, installedIds: {}, replacement: null };
+  let snapshot: ActionSnapshot = { actions: {}, installedIds: {}, replacement: null, filters: defaultExtensionFilters };
   const listeners = new Set<() => void>();
   const active = new Set<string>();
   const retries = new Map<string, () => Promise<boolean>>();
@@ -124,6 +126,7 @@ export const createExtensionActions = () => {
         listeners.delete(listener);
       };
     },
+    setFilters: (filters: ExtensionFilters) => publish({ ...snapshot, filters }),
     dismiss,
     setReplacement: (replacement: ActionSnapshot["replacement"]) => publish({ ...snapshot, replacement }),
     dismissBatch: (expected = snapshot.batch) => {

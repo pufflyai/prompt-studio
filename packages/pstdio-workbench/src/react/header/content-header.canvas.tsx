@@ -1,0 +1,175 @@
+import { Box, Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
+import type { CanvasMeta } from "@pstdio/canvas";
+import { Header } from "@pstdio/ui";
+import { useState } from "react";
+import { createWorkbench } from "../../core";
+import { openOwnedViewMenu } from "../../core/controllers/panel-menus/open-view-menu";
+import { Workbench, WorkbenchPanelToggles, WorkbenchThemeProvider } from "..";
+
+const tool = { kind: "page", extensionId: "preview", id: "tool" } as const;
+const collection = { kind: "page", extensionId: "preview", id: "collection" } as const;
+const Controls = () => {
+  const [search, setSearch] = useState("");
+  return (
+    <HStack w="full" justify="end" gap="sm">
+      <Button size="xs" variant="primary">
+        Upgrade all
+      </Button>
+      <Input
+        size="xs"
+        w="48"
+        aria-label="Search extensions"
+        placeholder="Search extensions…"
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+      />
+    </HStack>
+  );
+};
+const createHeaderWorkbench = () => {
+  const workbench = createWorkbench({ defaultPage: tool });
+  workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+  workbench.views.registerView({
+    id: "toolbar",
+    title: "Controls",
+    body: { kind: "react", render: () => <Controls /> },
+  });
+  workbench.views.registerView({
+    id: "extensions",
+    title: "Extensions",
+    header: { viewId: "toolbar" },
+    body: {
+      kind: "react",
+      render: () => <Text p="md">Extensions content. Search and Filters follow this live view.</Text>,
+    },
+  });
+  workbench.views.registerView({
+    id: "filters",
+    title: "Properties",
+    icon: "SlidersHorizontal",
+    body: { kind: "react", render: () => <Text p="md">Extension filters</Text> },
+  });
+  workbench.views.registerView({
+    id: "notes",
+    title: "Notes",
+    body: { kind: "react", render: () => <Text p="md">Notes has no header controls or view menus.</Text> },
+  });
+  workbench.viewMenus.registerViewMenu({
+    id: "filters",
+    ownerViewId: "extensions",
+    viewId: "filters",
+    side: "right",
+    hiddenByDefault: false,
+  });
+  for (const menu of [
+    { id: "files", title: "Resources", icon: "Files", side: "right" },
+    { id: "activity", title: "Activity", icon: "TextPen", side: "right" },
+  ] as const) {
+    workbench.views.registerView({
+      id: menu.id,
+      title: menu.title,
+      icon: menu.icon,
+      body: {
+        kind: "react",
+        render: () => (
+          <Stack p="sm">
+            <Text>{menu.title} content</Text>
+            <Input size="xs" aria-label={`${menu.title} draft`} placeholder="This draft stays with the view" />
+          </Stack>
+        ),
+      },
+    });
+    workbench.viewMenus.registerViewMenu({
+      id: menu.id,
+      ownerViewId: "extensions",
+      viewId: menu.id,
+      side: menu.side,
+      hiddenByDefault: false,
+    });
+  }
+  workbench.pages.registerPage({
+    id: "tool",
+    ref: tool,
+    title: "Extensions",
+    path: "tool",
+    modeId: "project",
+    main: { kind: "view", presentation: "page", cardinality: "one", view: { kind: "view", id: "extensions" } },
+    slots: [],
+  });
+  workbench.pages.registerPage({
+    id: "collection",
+    ref: collection,
+    title: "Tools",
+    path: "tools",
+    modeId: "project",
+    main: { kind: "panels", empty: { kind: "view", id: "notes" } },
+    slots: [
+      { id: "notes", region: "main", item: { kind: "view", presence: "fixed", view: { kind: "view", id: "notes" } } },
+    ],
+  });
+  workbench.pageLocations.setProject("header-preview");
+  workbench.pageLocations.navigate({ kind: "page", page: tool });
+  return workbench;
+};
+export default {
+  title: "Product/Workbench/Header/Menu header",
+  description:
+    "Pages put view controls and menus in their page header. Tabs alone have a movable menu header, hidden when empty. Built-in menus start on the right; different edges may stay open together. Narrow menus float at the parent content edge, hugging their content up to the parent height. Drag a tab menu header to dock it and its buttons to reorder.",
+  fullscreen: true,
+} satisfies CanvasMeta;
+
+export const MovableMenuHeader = () => {
+  const [workbench] = useState(createHeaderWorkbench);
+  const move = (region: "side" | "secondary") => {
+    const content = workbench.pages.getContent();
+    if (content) workbench.movePanel(content.widgetId, region);
+  };
+  return (
+    <Stack h="full" gap="sm">
+      <HStack gap="sm" flexWrap="wrap">
+        <Button size="xs" onClick={() => workbench.navigation.openTarget({ kind: "page", page: tool })}>
+          Show Extensions page
+        </Button>
+        <Button
+          size="xs"
+          onClick={async () => {
+            await workbench.commands.executeCommand("workbench.configureMenuHeader", {
+              viewId: "extensions",
+              menuSides: { files: "left", filters: "right" },
+            });
+            const owner = workbench.pages.getContent();
+            if (owner) {
+              openOwnedViewMenu(workbench, owner.widgetId, "files");
+              openOwnedViewMenu(workbench, owner.widgetId, "filters");
+            }
+          }}
+        >
+          Open Resources left and Properties right
+        </Button>
+        <Button size="xs" onClick={() => move("side")}>
+          Move page to Side
+        </Button>
+        <Button size="xs" onClick={() => move("secondary")}>
+          Move page to Bottom
+        </Button>
+        <Button size="xs" onClick={() => workbench.navigation.openTarget({ kind: "page", page: collection })}>
+          Show tabbed Main
+        </Button>
+      </HStack>
+      <Box flex="1" minH="0" overflow="hidden">
+        <WorkbenchThemeProvider>
+          <Workbench
+            workbench={workbench}
+            panelControlsPlacement="host"
+            titleBar={
+              <Header>
+                <Text flex="1">Header preview</Text>
+                <WorkbenchPanelToggles workbench={workbench} />
+              </Header>
+            }
+          />
+        </WorkbenchThemeProvider>
+      </Box>
+    </Stack>
+  );
+};

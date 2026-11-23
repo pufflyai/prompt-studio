@@ -10,6 +10,21 @@ A page's `resource: { kinds }` is independent of `main`. Main either presents a 
 
 There are three panel regions: Main, Side, and Secondary. Presence, mounting, and tab presentation keep the same meanings across owners. Shared mode panels retain their identity across pages and dispose when their owner is removed.
 
+A view can declare a companion header view. The selected live instance owns both
+surfaces and supplies their resource and page context. Pages place controls and
+view-menu openers in their existing page header. Tabs alone allocate a separate
+movable menu header below the tab strip by default. Menu icons start rightmost.
+Narrow panels keep their header while only open menu content floats. Independent
+menu edges may stay open together; saved user choices override extension presets.
+Menus contain no additional header or icon tray. Empty menu headers are hidden,
+while the tab strip retains its bottom separator. Header and body guests have separate host-event
+channels and stable DOM hosts, so moving or switching a view preserves their state.
+
+The web and desktop dashboard shells put project selection and global panel controls
+in the host header above every workbench region. Page history and breadcrumbs stay
+in Main navigation. View controls use the shared short Header in every presentation, and
+contributed controls are vertically centered by the host.
+
 Default host navigation is composed for every active mode that keeps its chrome. A declared replacement view or `false` overrides that default. A mode is selected by navigating to one of its pages.
 
 ## Data flow

@@ -28,6 +28,27 @@ for (const interrupted of [false, true])
       VALUES ($1, $2, 'example.connection', 'service', 'https://api.example.test/v1', 'bearer', null, $3, $4::jsonb, $5::jsonb, $6, $6)`,
           [`connection-${id}`, id, `private-ref-${id}`, JSON.stringify({ region: "EU" }), JSON.stringify(check), stamp],
         );
+      await store.pglite.query(
+        `INSERT INTO extension_settings (owner_type,owner_id,extension_id,key,value_json,created_at,updated_at)
+        VALUES ('device_connection','example.connection','example.connection','service',$1::jsonb,$2,$2)`,
+        [
+          JSON.stringify({
+            id: "global-connection",
+            project_id: null,
+            extension_id: "example.connection",
+            contribution_id: "service",
+            base_url: "https://api.example.test/v2",
+            auth_type: "bearer",
+            auth_header_name: null,
+            config_json: { region: "global" },
+            secret_ref: "private-ref-global",
+            last_check_json: check,
+            created_at: stamp,
+            updated_at: stamp,
+          }),
+          stamp,
+        ],
+      );
       if (interrupted) {
         await prepareConnectionCredentialsUpgrade(store.db, path);
         await prepareProjectExtensionsUpgrade(store.db, store.path);
@@ -52,6 +73,23 @@ for (const interrupted of [false, true])
       const configs = JSON.stringify(await store.db.select().from(preferences));
       expect(configs).not.toContain("private-ref-");
       expect(configs).not.toContain("secret_ref");
+      expect(await connections.listGlobal()).toEqual([
+        {
+          id: "global-connection",
+          project_id: null,
+          extension_id: "example.connection",
+          contribution_id: "service",
+          base_url: "https://api.example.test/v2",
+          auth_type: "bearer",
+          auth_header_name: null,
+          config_json: { region: "global" },
+          credential_project_id: null,
+          secret_ref: "private-ref-global",
+          last_check_json: check,
+          created_at: stamp,
+          updated_at: stamp,
+        },
+      ]);
       await connections.remove({ projectId: "first", extensionId: "example.connection", contributionId: "service" });
       expect(await connections.credentials.isReferenced("private-ref-first")).toBe(false);
       expect(await connections.credentials.isReferenced("private-ref-second")).toBe(true);

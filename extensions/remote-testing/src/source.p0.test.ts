@@ -1,0 +1,93 @@
+import { afterEach, expect, test } from "bun:test";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { localProcess } from "./process-fixture";
+import { withSourceArchive } from "./source";
+
+const directories: string[] = [];
+afterEach(async () => {
+  for (const directory of directories.splice(0)) await rm(directory, { recursive: true, force: true });
+});
+
+// Raw entry names; macOS tar hides "._" entries when it lists an archive.
+function entries(archive: Uint8Array<ArrayBuffer>) {
+  const tar = Bun.gunzipSync(archive);
+  const names: string[] = [];
+  for (let offset = 0; offset + 512 <= tar.length; ) {
+    const name = new TextDecoder().decode(tar.subarray(offset, offset + 100)).replace(/\0.*$/s, "");
+    if (!name) break;
+    const size = Number.parseInt(new TextDecoder().decode(tar.subarray(offset + 124, offset + 136)).trim(), 8) || 0;
+    const type = String.fromCharCode(tar[offset + 156] ?? 0);
+    if (type !== "x" && type !== "g") names.push(name.replace(/^\.\//, ""));
+    offset += 512 + Math.ceil(size / 512) * 512;
+  }
+  return names;
+}
+
+async function git(root: string, ...args: string[]) {
+  await localProcess.runOrThrow({ command: ["git", "-C", root, ...args] });
+}
+
+test("packs uncommitted edits and new files but not ignored or deleted files", async () => {
+  const root = await mkdtemp(join(tmpdir(), "remote-testing-source-"));
+  directories.push(root);
+  await git(root, "init", "-q");
+  await writeFile(join(root, ".gitignore"), "node_modules\n");
+  await writeFile(join(root, "kept.txt"), "committed");
+  await writeFile(join(root, "removed.txt"), "committed");
+  await git(root, "add", ".");
+  await git(root, "-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-qm", "init");
+  await writeFile(join(root, "kept.txt"), "edited");
+  // macOS tar turns extended attributes into "._" files that test runners pick up.
+  if (process.platform === "darwin")
+    await localProcess.runOrThrow({ command: ["xattr", "-w", "com.example.note", "1", join(root, "kept.txt")] });
+  await rm(join(root, "removed.txt"));
+  await writeFile(join(root, "new.txt"), "untracked");
+  await mkdir(join(root, "node_modules/pkg"), { recursive: true });
+  await writeFile(join(root, "node_modules/pkg/index.js"), "ignored");
+
+  const packed = await withSourceArchive(localProcess, root, undefined, async ({ archive, files, sha256 }) => ({
+    bytes: await archive.bytes(),
+    files,
+    sha256,
+  }));
+
+  const out = await mkdtemp(join(tmpdir(), "remote-testing-unpacked-"));
+  directories.push(out);
+  await writeFile(join(out, "source.tar.gz"), packed.bytes);
+  expect(entries(packed.bytes).sort()).toEqual([".gitignore", "kept.txt", "new.txt"]);
+  await localProcess.runOrThrow({ command: ["tar", "-xzf", join(out, "source.tar.gz"), "-C", out] });
+  expect(await Bun.file(join(out, "kept.txt")).text()).toBe("edited");
+  expect(packed.files).toBe(3);
+  expect(packed.sha256).toMatch(/^[0-9a-f]{64}$/);
+});
+
+test("keeps the committed branch archive available while it is in use", async () => {
+  const root = await mkdtemp(join(tmpdir(), "remote-testing-ref-"));
+  directories.push(root);
+  await git(root, "init", "-q");
+  await writeFile(join(root, "branch.txt"), "committed");
+  await git(root, "add", ".");
+  await git(root, "-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-qm", "init");
+  await git(root, "branch", "agent/preview");
+  await writeFile(join(root, "branch.txt"), "dirty");
+  await writeFile(join(root, "untracked.txt"), "local only");
+  const out = await mkdtemp(join(tmpdir(), "remote-testing-unpacked-"));
+  directories.push(out);
+
+  const { path, sha256 } = await withSourceArchive(localProcess, root, "agent/preview", async (source) => {
+    const bytes = await source.archive.bytes();
+    expect(entries(bytes)).toEqual(["branch.txt"]);
+    expect(source.sha256).toBe(new Bun.CryptoHasher("sha256").update(bytes).digest("hex"));
+    const path = source.archive.name;
+    if (!path) throw new Error("Expected a file-backed archive.");
+    await localProcess.runOrThrow({ command: ["tar", "-xzf", path, "-C", out] });
+    expect(await Bun.file(join(out, "branch.txt")).text()).toBe("committed");
+    expect(source.revision).toMatch(/^[0-9a-f]{40}$/);
+    return { path, sha256: source.sha256 };
+  });
+
+  expect(await Bun.file(path).exists()).toBe(false);
+  expect(sha256).toMatch(/^[0-9a-f]{64}$/);
+});

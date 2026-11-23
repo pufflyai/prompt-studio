@@ -9,7 +9,7 @@ import { secureSession, secureWebContents } from "../security/apply-window-secur
 import { createRuntimeLoginUrl } from "../security/runtime-session";
 import { createSecureWindowOptions } from "../security/window-security";
 import { LIFECYCLE_SCHEME, LIFECYCLE_URL, readLifecycleAsset } from "./lifecycle-protocol";
-import { createStartupDocument } from "./startup-paint";
+import { createStartupDocument, waitForStartupReadiness } from "./startup-document";
 import type { TitleBarAppearance } from "./title-bar-appearance";
 import { prepareWorkbenchDocument } from "./workbench-loading";
 
@@ -234,13 +234,13 @@ export class DesktopWindowController {
     // Recovery must not wait for a new renderer, JavaScript bundle, or theme initialization.
     this.#workbench?.setVisible(false);
     this.syncLifecycleThrottling();
-    if (
+    const loading =
       this.window.webContents.getURL() !== this.lifecycleUrl ||
       this.window.webContents.isCrashed() ||
       this.#lifecycle.failed
-    ) {
-      await this.loadLifecycle();
-    } else await this.#lifecycle.load;
+        ? this.loadLifecycle()
+        : this.#lifecycle.load;
+    await Promise.all([loading, this.#lifecycle.ready]);
     const contents = this.#workbench?.getVisible() ? this.#workbench.webContents : this.window.webContents;
     contents.focus();
   }
@@ -301,8 +301,7 @@ export class DesktopWindowController {
     this.#runtimeOrigin = descriptor.origin;
     const [loginUrl] = await Promise.all([
       createRuntimeLoginUrl((input, init) => fetch(input, { ...init, signal }), descriptor),
-      this.#shown,
-      this.#lifecycle.painted,
+      waitForStartupReadiness(this.#shown, this.#lifecycle.ready, signal),
     ]);
     signal.throwIfAborted();
     const view = this.#workbench && !this.#workbenchFailed ? this.#workbench : this.createWorkbench();
@@ -311,8 +310,8 @@ export class DesktopWindowController {
 
   async #prepareWorkbenchAssets(descriptor: RuntimeDescriptor, signal: AbortSignal) {
     this.#runtimeOrigin = descriptor.origin;
-    // Show the startup window before a second renderer competes with its first paint.
-    await Promise.all([this.#shown, this.#lifecycle.painted]);
+    // A visible startup document can lack Chromium paint timing on Linux.
+    await waitForStartupReadiness(this.#shown, this.#lifecycle.ready, signal);
     signal.throwIfAborted();
     const view = this.#workbench && !this.#workbenchFailed ? this.#workbench : this.createWorkbench();
     // The dashboard waits for this fragment during native bootstrap; it redeems it without reloading.

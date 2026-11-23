@@ -1,7 +1,9 @@
 import type { WorkbenchPanelPosition, WorkbenchPositionedRegion } from "../../registries/layout/panel-positions";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { registerMenuHeaderCommands } from "../panel-menus/menu-header-settings";
 
 export const registerPositionCommands = (core: WorkbenchCore) => {
+  registerMenuHeaderCommands(core);
   const position = {
     type: "string" as const,
     label: "Position",

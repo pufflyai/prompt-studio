@@ -555,4 +555,10 @@ matching published SDK and host. Validate consumer PRs against that SDK and decl
 their published dependency ranges before release. See
 [project composition](0004-contribution-api.md#configure-project-composition).
 
-*Updated at: 2026-11-18*
+## View-owned header controls (API 0.5.1)
+
+The optional `ViewContribution.header.view` adds a companion view for menu header controls in API 0.5.1. Existing declarations remain supported. Extensions using this field require `engines.pstdio: "^0.5.1"`; publish supporting host and SDK versions before releasing consumers. See [view-owned page and tab headers](0004-contribution-api.md#view-owned-menu-headers).
+
+API 0.5.1 also permits `viewMenus.side: "bottom"`. Menu sides define an initial layout preset; they do not restrict simultaneous menus on different edges. First-party tools group menus on the right, while extensions can choose other starting arrangements. User placement and open-state preferences override those defaults.
+
+*Updated at: 2026-11-22*

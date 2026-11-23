@@ -5,6 +5,7 @@ import { expect } from "@playwright/test";
 import { test } from "../testing/packaged-fixture";
 import { resumeProcess, suspendProcess } from "../testing/suspend-process";
 import { waitForWorkbenchPage } from "./desktop-pages";
+import { allowPageClose } from "./lifecycle-actions";
 import {
   createPackagedHome,
   disposePackagedApp,
@@ -106,7 +107,9 @@ test("quits from recovery after the runtime crashes", async () => {
     ).toBeVisible();
     await expect(app.lifecyclePage.getByRole("button", { name: "Copy diagnostics", exact: true })).toBeVisible();
 
-    await app.lifecyclePage.getByRole("button", { name: "Quit", exact: true }).click();
+    await allowPageClose(launched.lifecyclePage, () =>
+      launched.lifecyclePage.getByRole("button", { name: "Quit", exact: true }).click(),
+    );
 
     await waitForExit(app.child);
   } finally {

@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import { defaultWorkspaceProviderRuntime } from "./workspace-provider-runtime";
+import { defaultWorkspaceProviderRuntime, runWorkspaceProviderOperation } from "./workspace-provider-runtime";
 
 const emptyRuntime = {
   activityItems: [],
@@ -38,6 +38,62 @@ const emptyRuntime = {
 };
 
 describe("defaultWorkspaceProviderRuntime", () => {
+  test.each([
+    ["example.granted", "provider-grant"],
+    ["example.other", null],
+  ])("limits process environment grants to the owning provider extension %s", async (extensionId, expected) => {
+    const variable = "PSTDIO_TEST_PROVIDER_PROCESS_GRANT";
+    const previous = {
+      [variable]: process.env[variable],
+      PSTDIO_EXTENSION_PROCESS_ENV: process.env.PSTDIO_EXTENSION_PROCESS_ENV,
+    };
+    process.env[variable] = "provider-grant";
+    process.env.PSTDIO_EXTENSION_PROCESS_ENV = `example.granted:${variable}`;
+    const provider = {
+      id: "remote",
+      ref: { kind: "workspace-type", id: "remote" },
+      label: "Remote",
+      create: async () => ({}),
+      resolve: async () => ({}),
+    };
+    const deps = {
+      extensionRuntimeCatalog: {
+        get: async () => ({
+          enabledSources: [
+            {
+              instance: { id: "instance-1" },
+              installedSource: { id: "source-1", extension_id: extensionId, source_path: "/fake/example" },
+            },
+          ],
+          project: { id: "project-1", name: "Example", shorthand: "EX" },
+          runtime: {
+            ...emptyRuntime,
+            workspaceTypes: [{ id: "example.remote", extensionId, name: "remote", provider }],
+          },
+        }),
+      },
+    } as never;
+    try {
+      const handle = await defaultWorkspaceProviderRuntime.find(deps, {
+        projectId: "project-1",
+        providerId: "example.remote",
+      });
+      expect(handle).toBeDefined();
+      const result = await runWorkspaceProviderOperation(handle!, (context) =>
+        context.process.runOrThrow({
+          cwd: process.cwd(),
+          command: [process.execPath, "-e", `process.stdout.write(JSON.stringify(process.env.${variable} ?? null))`],
+        }),
+      );
+      expect(JSON.parse(result.stdout)).toBe(expected);
+    } finally {
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
+
   test("builds the normal extension context for provider calls", async () => {
     const provider = {
       id: "remote",

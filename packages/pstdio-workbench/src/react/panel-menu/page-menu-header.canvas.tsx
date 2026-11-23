@@ -68,12 +68,12 @@ const meta = {
 } satisfies CanvasMeta<typeof PageMenuHeaderStory>;
 export default meta;
 type Story = CanvasFrame<typeof meta>;
-/** One Main header holds the breadcrumb, resource actions and view-menu controls. */
+/** One menu header below Main chrome holds the selected view’s controls. */
 export const WithClosedViewMenu: Story = {
   id: "pstdio-workbench-reference-core-api-page-menu-header--with-closed-view-menu",
   args: { withMenu: true },
 };
-/** A page without view menus keeps its breadcrumb and navigation in the same Main header. */
+/** A page without view controls omits the menu header and keeps Main navigation. */
 export const WithoutViewMenus: Story = {
   id: "pstdio-workbench-reference-core-api-page-menu-header--without-view-menus",
   args: { withMenu: false },

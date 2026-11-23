@@ -57,7 +57,7 @@ pst sessions follow-up --id <session-id> --prompt "Now add a README"
 pst sessions stop --id <session-id>
 ```
 
-When too many sessions run at once, new ones wait with the status `queued` and start in order. Set the limit in **Settings → Runtime → Max concurrent sessions**. Leave it blank for no limit.
+When too many sessions run at once, new ones wait with the status `queued` and start in order. In **Settings → Workbench → Runtime**, turn on **Limit concurrent sessions** and set **Max concurrent sessions**. Turn the switch off for no limit.
 
 ![Runtime settings showing Max concurrent sessions and the Default model and reasoning effort selectors.](../../images/runtime-settings.png)
 
@@ -105,4 +105,4 @@ To learn what the host and the harness each do, read [Agents and harnesses](../c
 
 If an agent does not start, see [Troubleshooting](0005-troubleshooting.md).
 
-*Updated at: 2026-11-05*
+*Updated at: 2026-11-22*

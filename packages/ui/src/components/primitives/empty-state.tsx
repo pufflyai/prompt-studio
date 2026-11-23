@@ -3,8 +3,8 @@ import * as React from "react";
 
 /** Centered empty-state message with optional icon, description, and follow-up actions. */
 export interface EmptyStateProps extends ChakraEmptyState.RootProps {
-  /** Primary empty-state message. */
-  title: string;
+  /** Primary empty-state message. Omit it when the icon alone says enough, such as while loading. */
+  title?: string;
   /** Supporting explanation shown below the title. */
   description?: string;
   /** Decorative or semantic icon shown above the message. */
@@ -17,14 +17,14 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(func
     <ChakraEmptyState.Root ref={ref} {...rest}>
       <ChakraEmptyState.Content>
         {icon && <ChakraEmptyState.Indicator>{icon}</ChakraEmptyState.Indicator>}
-        {description ? (
+        {title && description && (
           <VStack textAlign="center">
             <ChakraEmptyState.Title fontWeight="normal">{title}</ChakraEmptyState.Title>
             <ChakraEmptyState.Description>{description}</ChakraEmptyState.Description>
           </VStack>
-        ) : (
-          <ChakraEmptyState.Title fontWeight="normal">{title}</ChakraEmptyState.Title>
         )}
+        {title && !description && <ChakraEmptyState.Title fontWeight="normal">{title}</ChakraEmptyState.Title>}
+        {!title && description && <ChakraEmptyState.Description>{description}</ChakraEmptyState.Description>}
         {children}
       </ChakraEmptyState.Content>
     </ChakraEmptyState.Root>

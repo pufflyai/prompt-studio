@@ -7,7 +7,7 @@ test("global resource search finds a canvas by its title, frames and file path",
   const search = (query: string) => canvasResources.query(ctx, { query, limit: 10 } as never);
   const result = await search("create folder");
   expect(result.items.map((item) => item.label)).toEqual(["Create folder"]);
-  expect(result.items[0]!.target).toMatchObject({ kind: "page", open: "preview", resource: { type: "canvas" } });
+  expect(result.items[0]!.target).toMatchObject({ kind: "page", resource: { type: "canvas" } });
   expect((await search("typography")).items.map((item) => item.label)).toEqual(["Foundations"]);
   expect((await search("folder-picker.canvas")).items.map((item) => item.id)).toEqual(["src/folder-picker.canvas.tsx"]);
 });

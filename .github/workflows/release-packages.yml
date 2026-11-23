@@ -514,8 +514,11 @@ jobs:
         if: ${{ !cancelled() && needs.plan.outputs.channel != 'nightly' && inputs.channel != 'verify' && needs.publish.result == 'success' }}
         run: |
           set -euo pipefail
+          # Releases publish more targets than there are benchmark hosts. Keep this list in step with RUNNERS in
+          # benchmarks.yml, which stops the whole run on any other platform.
+          platforms=$(jq -r 'map(select(IN("linux-x64", "darwin-arm64", "win32-x64"))) | join(",")' <<< "$TARGETS")
           gh workflow run benchmarks.yml --ref "$TAG" \
-            -f commits="$COMMIT" -f platforms="$(jq -r 'join(",")' <<< "$TARGETS")" -f release_tag="$TAG"
+            -f commits="$COMMIT" -f platforms="$platforms" -f release_tag="$TAG"
 
       - name: Start artifact performance observations
         if: ${{ !cancelled() && env.CANDIDATE_ARTIFACT_ID != '' }}

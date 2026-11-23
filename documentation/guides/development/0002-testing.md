@@ -385,7 +385,9 @@ The database package's `test` and `test:coverage` tasks declare Nx `parallelism:
 
 The retired subnav benchmark measured trusted clicks and request completion in the browser's monotonic clock. Match every observed request to its [Resource Timing](https://www.w3.org/TR/resource-timing/) entry, including repeated URLs. Missing or ambiguous timing fails the measurement. Do not subtract browser `performance.timeOrigin` from protocol wall-clock timestamps: those clocks can disagree and report minutes for a request the browser completed in milliseconds. Network observation still verifies quiescence, response status, content and all linked sessions.
 
-To review a timeout:
+Ordinary functional test, fixture, hook, readiness and functional-only job timeouts may be adjusted without separate approval. Use available failure logs and phase timings to choose a finite allowance, preserve the scenario and assertions, and verify affected behavior and cleanup. A shared setting that also affects benchmarks still needs approval under the [timeout policy](../../guidance/0004-ci.md#3-ci-timeouts-and-performance-budgets). Classify the limit by what it controls, rather than its filename.
+
+Before changing a benchmark execution allowance:
 
 1. Find the slow phase: dependency setup, app readiness, the operation, cleanup, reporting, or the whole job. Playwright steps and benchmark attachments show phase timings.
 2. Check for hangs, leaked processes, blocked event loops, and expensive setup first.

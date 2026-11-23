@@ -167,6 +167,13 @@ export default defineExtension({
 
 Connection requests must use a relative path. The host rejects undeclared methods, paths outside the declared prefixes, cross-origin redirects, oversized bodies, and non-HTTPS URLs outside loopback development. It replaces caller authentication with the stored credential. A declared `check` gives the settings UI, SDK, and `pst connections check` a fixed safe health probe.
 
+Connections use project scope by default. Set `scope: "global"` in `defineConnection`
+to share one connection and credential across local projects on the same device.
+Configure, check, or revoke it through any project that enables the extension.
+New projects can use the existing global connection. Global connection metadata
+and credentials stay on the host and are not included in project sync or shared
+extension packages. Removing a project does not remove a global connection.
+
 Harnesses that can use a remote execution target set `cwdRequirement: "optional"`. Their start, resume, reattach, and message inputs receive `workspace.executionTarget`. A remote target contains the provider id and its opaque provider reference. It does not contain a local path.
 
 Command outcomes are a validated union. `ok: true` requires `status: "success"`; rejection and
@@ -468,6 +475,7 @@ Workspace providers must validate instance and template ownership in `create`.
 Choice lists help discovery; they do not authorize a resource. The host still
 checks required fields, value types, fixed choices, and provider availability.
 Harness params and Kanban create-row forms require fixed options.
+Fixed choices keep their string `label` fallback and can add `localizedLabel: l10n("stable.key", "Default copy")`. The dashboard translates the display label while option values stay unchanged across locales.
 
 ## Local workspace providers on main
 

@@ -1,4 +1,4 @@
-import { Button, Dialog, Stack, Text, useRecipe } from "@chakra-ui/react";
+import { Box, Button, Flex, Stack, Text, useRecipe } from "@chakra-ui/react";
 import type { ExtensionHarnessInput, GuestHost, ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { Checkbox, ScrollArea } from "@pstdio/ui";
 import { CollectionFilter } from "@pstdio/ui/collection-view";
@@ -54,7 +54,7 @@ export function AutoBuildForm(props: AutoBuildFormProps) {
   };
   return (
     <>
-      <Dialog.Body flex="1" minH="0" p="0">
+      <Box flex="1" minH="0" p="0">
         <ScrollArea h="full" contentProps={{ py: "md" }}>
           <Stack gap="md">
             <Stack px="lg">
@@ -102,8 +102,8 @@ export function AutoBuildForm(props: AutoBuildFormProps) {
             </Stack>
           </Stack>
         </ScrollArea>
-      </Dialog.Body>
-      <Dialog.Footer>
+      </Box>
+      <Flex justify="end" gap="sm" p="md" flexShrink="0">
         <Button size="sm" variant="outline" onClick={onClose} disabled={saving}>
           {t("timeline.autoBuild.cancel", "Cancel")}
         </Button>
@@ -116,7 +116,7 @@ export function AutoBuildForm(props: AutoBuildFormProps) {
         >
           {t("timeline.autoBuild.start", "Auto Build")}
         </Button>
-      </Dialog.Footer>
+      </Flex>
     </>
   );
 }

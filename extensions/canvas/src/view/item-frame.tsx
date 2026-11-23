@@ -10,7 +10,9 @@ import { FrameThemePicker } from "./frame-theme-picker";
 const Grip = resolveIconComponent("grip-vertical")!;
 
 interface ItemProps {
+  visible: boolean;
   item: CanvasItem;
+  instructions: string;
   runtime: CanvasRuntime;
 }
 export const ItemFrame = (props: ItemProps) => {
@@ -58,35 +60,43 @@ export const ItemFrame = (props: ItemProps) => {
       outlineColor="border.accent"
       outlineOffset="2px"
     >
-      <Flex align="center" gap="xs" wrap="wrap" pb="xs" cursor="default">
-        <Tooltip content="Move with the arrow keys. Hold Shift for larger steps." openDelay={300}>
-          <Button
-            variant="ghost-static"
-            size="sm"
-            cursor="default"
-            data-canvas-handle={item.id}
-            aria-label={`Move ${item.name}`}
-            touchAction="none"
-            aria-describedby="canvas-instructions"
-          >
-            <Icon as={Grip} boxSize="icon-md" />
-          </Button>
-        </Tooltip>
-        <Tooltip content="Copy this name to reference the design" openDelay={300}>
-          <Button variant="display-link" size="xs" cursor="default" onClick={() => void copy()} aria-label={item.name}>
-            {item.name}
-          </Button>
-        </Tooltip>
-        <FrameThemePicker item={item} runtime={runtime} />
-        <Text role="status" aria-live="polite" textStyle="label/XS" color="fg.muted">
-          {feedback}
-        </Text>
-        {feedback === "Select and copy the name" && (
-          <Text tabIndex={0} userSelect="text" textStyle="label/S/medium">
-            {item.name}
+      {props.visible && (
+        <Flex align="center" gap="xs" wrap="wrap" pb="xs" cursor="default">
+          <Tooltip content="Move with the arrow keys. Hold Shift for larger steps." openDelay={300}>
+            <Button
+              variant="ghost-static"
+              size="sm"
+              cursor="default"
+              data-canvas-handle={item.id}
+              aria-label={`Move ${item.name}`}
+              touchAction="none"
+              aria-describedby={props.instructions}
+            >
+              <Icon as={Grip} boxSize="icon-md" />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Copy this name to reference the design" openDelay={300}>
+            <Button
+              variant="display-link"
+              size="xs"
+              cursor="default"
+              onClick={() => void copy()}
+              aria-label={item.name}
+            >
+              {item.name}
+            </Button>
+          </Tooltip>
+          <FrameThemePicker item={item} runtime={runtime} />
+          <Text role="status" aria-live="polite" textStyle="label/XS" color="fg.muted">
+            {feedback}
           </Text>
-        )}
-      </Flex>
+          {feedback === "Select and copy the name" && (
+            <Text tabIndex={0} userSelect="text" textStyle="label/S/medium">
+              {item.name}
+            </Text>
+          )}
+        </Flex>
+      )}
       <Box
         minH={`${item.height}px`}
         position="relative"
@@ -117,7 +127,7 @@ export const ItemFrame = (props: ItemProps) => {
             variant="ghost-static"
             cursor="default"
             aria-label={`Select ${item.name}`}
-            aria-describedby="canvas-instructions"
+            aria-describedby={props.instructions}
             data-canvas-select
             onClick={() => runtime.select(item.id)}
           >

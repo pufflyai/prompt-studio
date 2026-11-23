@@ -58,7 +58,7 @@ const entrySource = (root: string, canvases: CanvasEntry[]) => {
 };
 
 // Frames load modules from blob URLs, so a relative asset URL has nothing to resolve against.
-// Bun emits images, fonts and media as files; the archive inlines them as data URLs.
+// Bun emits images, fonts and media as files; the archive packages them for use inside the sandbox.
 export const ASSET_TYPES: Record<string, string> = {
   png: "image/png",
   jpg: "image/jpeg",
