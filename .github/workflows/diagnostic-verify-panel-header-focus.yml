@@ -1,0 +1,71 @@
+name: Panel header focus red and green
+on:
+  push:
+    branches: [diagnostics/verify-panel-header-focus]
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: main
+            revision: aaf35b1403edccc9a4909f3f87f08890d03a2c02
+          - label: fixed
+            revision: 86aa342ea74bda5b3d5de820812da62390b54c2e
+    env:
+      PRODUCT_REVISION: ${{ matrix.revision }}
+      PANEL_MENU_DIAGNOSTIC: early-restored-focus
+      TEST_FIXTURES: 86aa342ea74bda5b3d5de820812da62390b54c2e
+      PACKAGED_DIAGNOSTIC: 569409e93c045024f2defdb6df1c9d6f1cfd1d7d
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ matrix.revision }}
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - name: Apply identical test instrumentation to the exact product revision
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$PRODUCT_REVISION"
+          git archive "$PACKAGED_DIAGNOSTIC" \
+            packages/e2e/src/packaged/packaged-empty-panels.p2.spec.ts \
+            packages/e2e/src/packaged/packaged-panel-insertion.ts \
+            packages/e2e/src/packaged/packaged-panel-menu-diagnostic.ts | tar -x
+          git archive "$TEST_FIXTURES" \
+            packages/canvas-tests/src/ui/ui/terminal-menu-focus.p1.spec.ts \
+            packages/ui/src/components/terminal/terminal.canvas.tsx | tar -x
+          git status --short
+      - name: Prepare Ubuntu Chromium and the packaged runtime
+        run: |
+          bunx playwright@1.60.0 install --with-deps chromium firefox
+          bun install --frozen-lockfile
+          bun run build -- --scope pstdio --include-dependencies
+      - name: Check restored panel menu with the native terminal engine held until focus
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
+          PSTDIO_EXTENSION_RELEASE_REF: ${{ matrix.revision }}
+        run: |
+          xvfb-run --auto-servernum bun run --cwd packages/e2e test:packaged:browser src/packaged/packaged-empty-panels.p2.spec.ts --trace off
+      - name: Build the focused terminal Canvas
+        if: success() || failure()
+        run: bun x --no-install lerna run build:previews --scope canvas-tests
+      - name: Verify the keyboard menu and existing explicit terminal focus handoffs
+        if: success() || failure()
+        run: bun run --cwd packages/canvas-tests test:browser src/ui/ui/terminal-menu-focus.p1.spec.ts
+      - name: Preserve browser context, focus events and Canvas results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: panel-header-focus-${{ matrix.label }}
+          path: |
+            packages/e2e/test-results/packaged-browser/
+            packages/e2e/test-results/packaged-runtime/
+            packages/canvas-tests/test-results/
