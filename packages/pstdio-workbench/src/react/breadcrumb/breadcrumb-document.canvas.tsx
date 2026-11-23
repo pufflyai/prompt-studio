@@ -1,3 +1,4 @@
+import { Box, Button, Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createWorkbench } from "../../core";
@@ -5,10 +6,11 @@ import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchBreadcrumbView } from "./breadcrumb-view";
 
 const DocumentBreadcrumb = () => {
+  const [width, setWidth] = useState<"full" | "60" | "20">("full");
   const [workbench] = useState(() => {
     const w = createWorkbench();
     const ref = (id: string) => ({ kind: "page" as const, extensionId: "story", id });
-    const ticket = { type: "ticket", id: "one", label: "PS-1" };
+    const ticket = { type: "ticket", id: "one", label: "PS-1 Annual planning" };
     const document = { ...ticket, metadata: { document: "brief" } };
     w.modes.registerMode({ id: "project", activate() {} });
     w.resources.registerKind({ kind: "ticket", label: "Ticket" });
@@ -27,7 +29,7 @@ const DocumentBreadcrumb = () => {
       w.pages.registerPage({
         id,
         ref: ref(id),
-        title: id === "document" ? "Brief" : "Ticket",
+        title: id === "document" ? "Quarterly planning brief" : "Ticket",
         path: id,
         modeId: "project",
         parentId: id === "document" ? "ticket" : "tickets",
@@ -68,7 +70,22 @@ const DocumentBreadcrumb = () => {
   });
   return (
     <WorkbenchThemeProvider>
-      <WorkbenchBreadcrumbView workbench={workbench} />
+      <Stack align="start">
+        <Stack direction="row" flexWrap="wrap">
+          <Button size="xs" variant="outline" onClick={() => setWidth("60")}>
+            Narrow breadcrumb
+          </Button>
+          <Button size="xs" variant="outline" onClick={() => setWidth("20")}>
+            Narrow to parent
+          </Button>
+          <Button size="xs" variant="outline" onClick={() => setWidth("full")}>
+            Restore breadcrumb width
+          </Button>
+        </Stack>
+        <Box width={width} maxW="full">
+          <WorkbenchBreadcrumbView workbench={workbench} />
+        </Box>
+      </Stack>
     </WorkbenchThemeProvider>
   );
 };
@@ -80,4 +97,5 @@ export default meta;
 type Story = CanvasFrame<typeof meta>;
 export const ParentResourceAndDocument: Story = {
   id: "pstdio-workbench-guides-document-breadcrumb--parent-resource-and-document",
+  description: "Narrow the breadcrumb and hover over the clipped document or parent label to see its full text.",
 };
