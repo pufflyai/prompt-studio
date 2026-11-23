@@ -8,7 +8,8 @@ export interface OrderedIndexReference {
 export interface OrderedIndexBlobs {
   /** Commit a bounded transfer page's local cache writes together. */
   batch?<T>(run: () => Promise<T>): Promise<T>;
-  put(blobId: string, bytes: Uint8Array, children: string[]): Promise<void>;
+  /** Newly sealed nodes supply their validated child extents for the first local publication. */
+  put(blobId: string, bytes: Uint8Array, children: string[], edges?: readonly OrderedIndexReference[]): Promise<void>;
   /** The extent comes from the authenticated parent or checkpoint. */
   get(blobId: string, byteLength: number): Promise<Uint8Array>;
   /** Persist validated encrypted graph edges for a full local writer's loss recovery. */
@@ -51,7 +52,7 @@ export const createEncryptedManifestNodes = (space: SyncSpace, blobs: OrderedInd
     if (ids.length > blobReferenceFanout || new Set(ids).size !== ids.length)
       throw new Error("Manifest node children must be bounded and unique");
     const sealed = await sealBlob(space, bytes);
-    await blobs.put(sealed.blobId, sealed.bytes, ids);
+    await blobs.put(sealed.blobId, sealed.bytes, ids, references);
     const reference = { blobId: sealed.blobId, byteLength: sealed.bytes.length };
     await blobs.remember?.(reference, references);
     return reference;
