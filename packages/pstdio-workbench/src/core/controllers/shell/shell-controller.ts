@@ -1,5 +1,5 @@
 import type { LayoutModel } from "../../registries/layout/layout-model";
-import type { WorkbenchRegion } from "../../registries/layout/layout-types";
+import type { WorkbenchPanelRegion, WorkbenchRegion } from "../../registries/layout/layout-types";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import type { WorkbenchSidePanelController, WorkbenchSidePanelMode } from "../side-panel/side-panel-controller";
 import type { WorkbenchPanelPolicy } from "./panel-policy";
@@ -30,6 +30,8 @@ export const createWorkbenchShellController = (input: {
   layout: LayoutModel;
   sidePanel: WorkbenchSidePanelController;
   getPolicy(region: WorkbenchRegion): WorkbenchPanelPolicy;
+  getPanelDestinations(instanceId: string): WorkbenchPanelRegion[];
+  onMoveSecondaryToSide(): void;
 }): WorkbenchShellController => {
   const requireAction = (region: WorkbenchRegion, action: "open" | "close" | "resize") => {
     const policy = input.getPolicy(region);

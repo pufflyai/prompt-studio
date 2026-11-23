@@ -59,7 +59,7 @@ The tooltip appears below the tab after 300 ms.
 
 Views in tab panels have closable tabs. Main has one header row with history and either tabs or page breadcrumbs with a resource-action dropdown, followed by view menus. A page with `main.presentation: "page"` owns Main directly and has no tab or close action. Its `main.tab` presentation supplies the breadcrumb label, icon and resource actions. Tabbed pages keep their single scrolling tab row even when one tab remains.
 
-Drag empty page-header space to transfer that individual live view to an auxiliary panel or its tab strip. It becomes a tab there. The same Move actions are available in its resource dropdown and header context menu. Moving out of a dedicated Main page returns Main to its configured default. Whole tabbed panels retain their existing layout-position gestures and never become tabs or merge groups.
+Drag empty page-header space to transfer that individual live view to an auxiliary panel or its tab strip. It becomes a tab there. The same Move actions are available in its resource dropdown and header context menu. Moving out of a dedicated Main page returns Main to its configured default. Whole tabbed panels retain their existing layout-position gestures and never become tabs or merge groups. When Side is closed, move the Bottom panel to the left or right to open its complete tray in Side. The two trays swap, preserving the former Side tabs in the closed Bottom panel. Header Move actions offer the same destinations, subject to the mode's movement and panel policies.
 
 Opening a resource explicitly uses its requested destination. An existing view in that panel is selected; a compatible view elsewhere moves there. A requested different renderer is opened as that semantic view while the conflicting independent representation is retired. Main page navigation brings a resource out of Side when necessary. Panel opens with no explicit host region retain that declared placement's existing location. Passive restoration and background completion preserve placement.
 
@@ -110,6 +110,7 @@ Resize from the top-left corner when aligned right, the top-right corner when al
 or either top corner when centered. Muted corner strokes appear on close hover,
 keyboard focus or while resizing. Docking targets use short borderless marks with
 the floating-panel highlight color, and reserve narrow strips at panel edges.
+Dropping onto an existing panel outlines that panel while it is the active target.
 In snap mode, its left and right gaps
 match its bottom gap. Resizing retains the selected horizontal anchor throughout
 the gesture and after release; free resizing keeps the opposite corner fixed. Focus a resize handle and use arrow keys to resize; Shift uses larger steps. Size and free position persist

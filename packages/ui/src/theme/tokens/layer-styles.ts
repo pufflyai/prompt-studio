@@ -84,7 +84,19 @@ export const layerStyles = defineLayerStyles({
       pointerEvents: "none",
     },
   },
-  tabDropZone: { value: compactDropZone },
+  tabDropZone: {
+    value: {
+      _after: {
+        content: '""',
+        position: "absolute",
+        inset: "3xs",
+        borderWidth: "1px",
+        borderColor: "bg.drop",
+        borderRadius: "compact",
+        pointerEvents: "none",
+      },
+    },
+  },
   panelDropZone: { value: compactDropZone },
   bubbleButton: { value: { aspectRatio: "square" } },
   dropTarget: {

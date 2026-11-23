@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useShallow } from "zustand/react/shallow";
 import type { WorkbenchCore } from "../../core";
 import {
+  panelPositions,
   resolveArrangement,
   resolvePanelPosition,
   type WorkbenchPanelPosition,
@@ -90,7 +91,10 @@ export const WorkbenchPanelDropFrame = (props: WorkbenchPanelDropFrameProps) => 
         const open = workbench.shell.getPanelPolicy(region).open;
         const widgets = state.layout.regions[region].widgets;
         const lastTab = widgets.length === 1 && widgets[0]?.widgetId === activeId;
-        const positions = workbench.shell.getPanelPositions(region);
+        // Cross-region swaps belong to whole-panel drags; a tab keeps its destination region.
+        const positions = workbench.shell
+          .getPanelPositions(region)
+          .filter((edge) => panelPositions[region].some((position) => position === edge));
         if (!open) return positions.length ? positions : [arrangement[region]];
         if (lastTab) return positions.filter((edge) => edge !== current);
       }

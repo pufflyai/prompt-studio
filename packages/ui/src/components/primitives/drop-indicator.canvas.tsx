@@ -33,11 +33,16 @@ const SurfaceFeedback = () => {
   const status = useSlotRecipe({ key: "statusBar" })();
   return (
     <Stack gap="md">
-      <Text>Short borderless targets share the floating-panel drop colors. Status widgets use a thin landing bar.</Text>
+      <Text>
+        Existing panels show an outline only when targeted. Alignment, insertion and widget markers stay compact and
+        borderless, using the same floating-panel drop colors.
+      </Text>
       <Button onClick={() => setActive((value) => !value)}>{active ? "Show idle" : "Show active"}</Button>
       <HStack gap="lg" align="start">
         <Stack>
-          <Text>Panel or widget landing</Text>
+          <Text>Drop onto an existing panel</Text>
+          <Box position="relative" boxSize="24" layerStyle={active ? "tabDropZone" : undefined} />
+          <Text>Widget landing</Text>
           <Box position="relative" boxSize="24" layerStyle="panelDropZone" data-drop-active={active || undefined} />
           <Text>Panel edge</Text>
           <Box

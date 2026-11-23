@@ -90,6 +90,75 @@ test("moving a panel preserves its draft", async ({ page }) => {
   ).toHaveValue("Keep this draft");
 });
 
+// Critical: moving an entire Bottom tray into closed Side must retain every live draft.
+test("moving Bottom into closed Side swaps the complete tray without losing drafts", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/pstdio-workbench/src/react/region/whole-panel-placement.canvas.tsx#Interactive",
+  );
+  const original = preview.locator('[data-workbench-panel="side"]:visible');
+  const tabs = original.getByRole("tab");
+  await expect(tabs).toHaveCount(2);
+  await tabs.first().click();
+  await original.getByRole("textbox", { name: "Retained draft" }).fill("First unsaved draft");
+  await tabs.first().click({ button: "right" });
+  await preview.getByRole("menuitem", { name: "Move to Secondary", exact: true }).click();
+  await expect(tabs).toHaveCount(1);
+  await tabs.first().click();
+  await original.getByRole("textbox", { name: "Retained draft" }).fill("Second unsaved draft");
+  await tabs.first().click({ button: "right" });
+  await preview.getByRole("menuitem", { name: "Move to Secondary", exact: true }).click();
+  const source = preview.locator('[data-workbench-panel="secondary"]:visible');
+  await expect(source.getByRole("tab")).toHaveCount(2);
+  const header = preview.locator('[data-workbench-panel-drag="secondary"]');
+  const box = (await header.boundingBox())!;
+  await page.mouse.move(box.x + box.width - 80, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width - 92, box.y + box.height / 2, { steps: 3 });
+  const target = (await preview.locator('[data-workbench-edge-drop="panel-right"]').boundingBox())!;
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 6 });
+  await page.mouse.up();
+  const side = preview.locator('[data-workbench-panel="side"]:visible');
+  await expect(side.getByRole("tab")).toHaveCount(2);
+  await expect(source).toHaveCount(0);
+  await expect(side.getByRole("textbox", { name: "Retained draft" })).toHaveValue("Second unsaved draft");
+  await side.getByRole("tab").first().click();
+  await expect(side.getByRole("textbox", { name: "Retained draft" })).toHaveValue("First unsaved draft");
+});
+
+// Critical: a single-tab drag must not swap its entire tray or reveal the hidden Side tray in Bottom.
+test("single Bottom tabs use tab destinations while Side is closed", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/pstdio-workbench/src/react/region/whole-panel-placement.canvas.tsx#Interactive",
+  );
+  const original = preview.locator('[data-workbench-panel="side"]:visible');
+  await original.getByRole("tab").first().click({ button: "right" });
+  await preview.getByRole("menuitem", { name: "Move to Secondary", exact: true }).click();
+  await expect(original.getByRole("tab")).toHaveCount(1);
+  await preview.getByRole("button", { name: "Hide Side Panel", exact: true }).click();
+  const source = preview.locator('[data-workbench-panel="secondary"]:visible');
+  const tab = source.getByRole("tab");
+  await expect(tab).toHaveCount(1);
+  await source.getByRole("textbox", { name: "Retained draft" }).fill("Single tab draft");
+  const box = (await tab.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 12, box.y + box.height / 2, { steps: 3 });
+  await expect(
+    preview.locator('[data-workbench-edge-hit="secondary"][data-workbench-edge-position="left"]'),
+  ).toHaveCount(0);
+  await expect(
+    preview.locator('[data-workbench-edge-hit="secondary"][data-workbench-edge-position="right"]'),
+  ).toHaveCount(0);
+  await preview.locator('[data-workbench-edge-hit="side"][data-workbench-edge-position="right"]').hover();
+  await page.mouse.up();
+  const side = preview.locator('[data-workbench-panel="side"]:visible');
+  await expect(side.getByRole("tab")).toHaveCount(2);
+  await expect(side.getByRole("textbox", { name: "Retained draft" })).toHaveValue("Single tab draft");
+  await expect(source).toHaveCount(0);
+});
+
 // Critical: tab navigation must restore keyboard focus without losing the preceding draft.
 test("keyboard tab navigation restores focus and draft state", async ({ page }) => {
   const preview = await openCanvasPreview(
