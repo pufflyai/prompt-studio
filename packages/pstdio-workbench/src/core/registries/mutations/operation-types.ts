@@ -22,6 +22,7 @@ export interface OperationInput<T> {
   source?: ResourceRef;
   sourceCommand?: OperationSourceCommand;
   draft?: unknown;
+  releaseOnDiscard?: boolean;
   write(signal: AbortSignal): T | Promise<T>;
   reconcile?(result: T, signal: AbortSignal): void | Promise<void>;
   originatingRead?: Pick<OperationRead, "key" | "refresh">;

@@ -12,6 +12,7 @@ import {
 } from "@/shared/workbench/dashboard-navigation-contribution";
 import { NotificationCenterWidget } from "./components/notification-center-widget";
 import { countPendingNotifications } from "./data/dashboard-notifications";
+import { getNotificationStatusOperations } from "./data/notification-status-operations";
 
 export const DASHBOARD_NOTIFICATIONS_KEYBINDING = "Alt+Shift+N";
 
@@ -113,6 +114,15 @@ export const createNotificationsModule = () =>
         previousEnabled = enabled;
         refresh();
       });
+      const statuses = getNotificationStatusOperations();
+      const statusPatches = () => statuses.readPatches(getDashboardSelectedProjectId(ctx));
+      let lastPatches = statusPatches();
+      const stopStatusPreviews = statuses.subscribe(() => {
+        const patches = statusPatches();
+        if (patches === lastPatches) return;
+        lastPatches = patches;
+        if (registrations.length) refreshSidenavs(ctx);
+      });
       let stopNotifications = () => {};
       const observeNotifications = () => {
         stopNotifications();
@@ -132,6 +142,7 @@ export const createNotificationsModule = () =>
       return [
         { dispose: unsubscribe },
         { dispose: unsubscribeProject },
+        { dispose: stopStatusPreviews },
         { dispose: () => stopNotifications() },
         { dispose: disable },
       ];

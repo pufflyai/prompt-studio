@@ -1,6 +1,8 @@
 import { commandRefId, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import type { WorkbenchPanelRenderInput } from "../../core";
+import { getWorkbenchOperations, resourceOperationSubject } from "../../core/registries/mutations/operations";
 import { getWorkbenchQueries } from "../../core/workbench-queries";
+import { runTrackedCreate } from "../host/workbench-create-operation";
 import type { RegisterWorkbenchExtensionContributionsInput } from "../host/workbench-extension-host-types";
 import type { createChatCommandBinding } from "./chat-command-binding";
 import { createChatDraftPersistence } from "./chat-draft-persistence";
@@ -35,7 +37,31 @@ export const createChatSessionProvider = (source: {
         )
     : undefined;
   const queries = input.queries ?? getWorkbenchQueries(render.workbench);
+  const draftSource = source.normalized?.type === "session-draft" ? source.normalized : resource;
+  const operations = draftSource?.type === "session-draft" ? getWorkbenchOperations(queries) : undefined;
   const session = createChatSession({
+    trackCreate:
+      operations && draftSource
+        ? (action, execute) =>
+            runTrackedCreate(
+              operations,
+              {
+                projectId: input.projectId,
+                subjects: [resourceOperationSubject(draftSource)],
+                source: draftSource,
+                title: "Start session",
+                draft: { text: action.text, attachments: action.attachments },
+                write: execute,
+              },
+              (recovery) =>
+                recovery.find(
+                  (entry) => entry.status === "unknown" && resourceKey(entry.source) === resourceKey(draftSource),
+                ),
+              "Session creation could not be confirmed.",
+            )
+        : undefined,
+    subscribeCreate: operations?.subscribe,
+    inspectResources: () => render.workbench.commandPalette.open(),
     queryContext: {
       queries,
       scope: { projectId: input.projectId, extensionId: view.extensionId },

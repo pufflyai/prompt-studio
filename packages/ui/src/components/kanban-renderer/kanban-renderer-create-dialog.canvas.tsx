@@ -2,6 +2,7 @@ import { Button } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { HostStorageProvider } from "../../utils/host-storage";
+import { UnresolvedSubmissionError } from "../primitives/unresolved-submission";
 import { KanbanRendererCreateDialog } from "./kanban-renderer-create-dialog";
 import type { AttributeDescriptor, KanbanRendererCreateRowConfig, KanbanRendererCreateSubmission } from "./types";
 
@@ -176,4 +177,22 @@ export const RememberedCreateAction: Story = {
   id: "patterns-kanban-renderer-create-dialog--remembered-create-action",
   args: {} as never,
   render: () => <Harness config={config} />,
+};
+
+export const InspectOrRecover: Story = {
+  id: "patterns-kanban-renderer-create-dialog--inspect-or-recover",
+  args: {} as never,
+  render: () => (
+    <Harness
+      config={{ ...config, fields: [{ ...config.fields[0], defaultValue: "Review project setup" }, config.fields[1]] }}
+      onSubmit={(submission) => {
+        throw new UnresolvedSubmissionError({
+          copyDraft: () => navigator.clipboard.writeText(String(submission.values.content ?? "")),
+          dismiss: () => undefined,
+          discard: () => undefined,
+          isRetained: () => true,
+        });
+      }}
+    />
+  ),
 };

@@ -38,6 +38,7 @@ interface Entry {
   source?: ResourceRef;
   sourceCommand?: OperationSourceCommand;
   draft?: unknown;
+  releaseOnDiscard?: boolean;
   error?: unknown;
   dismissed: boolean;
 }
@@ -174,7 +175,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
   };
 
   const clearDraft = (entry: Entry) => {
-    if (entry.preview.status === "rejected") {
+    if (entry.preview.status === "rejected" || entry.releaseOnDiscard) {
       finish(entry);
     } else {
       entry.draft = undefined;
@@ -213,6 +214,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
         source: input.source,
         sourceCommand: input.sourceCommand,
         draft: input.draft,
+        releaseOnDiscard: input.releaseOnDiscard,
         dismissed: false,
       };
       const signal = entry.controller.signal;

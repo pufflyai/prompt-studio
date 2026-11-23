@@ -2,9 +2,12 @@ import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
 import { createHostStoreRegistry, useHostStorage } from "../../utils/host-storage";
 
+import type { UnresolvedSubmissionError } from "../primitives/unresolved-submission";
+
 interface CreateDraft {
   values: Record<string, unknown>;
   attributeValues: Record<string, unknown>;
+  unresolved?: UnresolvedSubmissionError;
 }
 
 interface CreateDraftState {

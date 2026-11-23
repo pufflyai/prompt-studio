@@ -1,11 +1,11 @@
-import { Stack, Text } from "@chakra-ui/react";
+import { Box, Text } from "@chakra-ui/react";
 import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import { NotificationCenter, type NotificationCenterAction, type NotificationCenterItem } from "@pstdio/ui";
 import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
 import type { Notification, NotificationAction } from "pstdio-api-contracts";
-import { getApiClient } from "@/lib/api";
+import { useSyncExternalStore } from "react";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import { useCollectionSelection } from "@/lib/sync/use-collection-selection";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
@@ -15,6 +15,7 @@ import { executeExtensionCommand } from "@/shared/extensions/api";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
 import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
 import { createDashboardNotifications, toWorkbenchResource } from "../data/dashboard-notifications";
+import { getNotificationStatusOperations } from "../data/notification-status-operations";
 
 interface NotificationCenterWidgetProps {
   input: WorkbenchPanelRenderInput;
@@ -68,11 +69,6 @@ const actionByItem = (notification: Notification, itemAction: NotificationCenter
 const primaryAction = (notification: Notification) =>
   notification.actions.find((action) => action.primary) ?? notification.actions[0];
 
-const markRead = async (notification: Notification) => {
-  if (notification.status !== "open") return;
-  await getApiClient().notifications.markRead(notification.projectId, notification.id);
-};
-
 export const surfaceNotificationCommandResponse = (
   input: Pick<WorkbenchPanelRenderInput, "workbench">,
   response: CommandExecutionResult,
@@ -98,12 +94,15 @@ export const surfaceNotificationCommandResponse = (
 export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) => {
   const owner = getRuntimeCollections();
   const { input } = props;
-  const { showError, errorNotice, clearError } = useActionError("above");
+  const { showError, errorNotice, clearError } = useActionError("below");
   const projectId = useWorkbenchStore(input.workbench.context.store, (state) => {
     const value = state.values[dashboardSelectedProjectIdContextKey];
     return typeof value === "string" ? value : undefined;
   });
   useCollectionSelection({ tables: projectId ? ["notifications"] : [], projectId });
+  const statuses = getNotificationStatusOperations(owner);
+  const patches = () => statuses.readPatches(projectId);
+  useSyncExternalStore(statuses.subscribe, patches, patches);
   const notifications = createDashboardNotifications(projectId);
   const items = notifications.map(toCenterItem);
 
@@ -112,7 +111,7 @@ export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) =
   const runAction = async (notification: Notification, action: NotificationAction | undefined) => {
     clearError();
     try {
-      await markRead(notification);
+      if (notification.status === "open") await statuses.update(notification, "read");
       if (!action) {
         close();
         return;
@@ -162,7 +161,7 @@ export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) =
     const notification = notificationByItem(notifications, item);
     if (!notification) return;
     try {
-      await getApiClient().notifications.dismiss(notification.projectId, notification.id);
+      await statuses.update(notification, "dismissed");
     } catch (error) {
       showError({
         title: "Notification update failed",
@@ -179,13 +178,11 @@ export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) =
       onDismiss={(item) => void dismissNotification(item)}
       onEscape={close}
       onRunAction={handleRunAction}
+      bodyBefore={<Box position="relative">{errorNotice}</Box>}
       footerStart={
-        <Stack gap="xs" position="relative">
-          {errorNotice}
-          <Text textStyle="label/XS" color="fg.muted">
-            {items.length === 1 ? "1 pending notification" : `${items.length} pending notifications`}
-          </Text>
-        </Stack>
+        <Text textStyle="label/XS" color="fg.muted">
+          {items.length === 1 ? "1 pending notification" : `${items.length} pending notifications`}
+        </Text>
       }
       emptyLabel="No pending notifications."
       key={dashboardWidgetIds.notificationsModal}

@@ -7,13 +7,17 @@ import type {
   WorkbenchPanelRegion,
 } from "../../core";
 import { resolveCommandResourceParams } from "../../core/registries/commands/command-resource-params";
+import type { WorkbenchOperations } from "../../core/registries/mutations/operations";
 import { isPageContent } from "../../core/registries/pages/page-main";
 import { copyCommandResult } from "./command-clipboard";
 import { unwrapCommandValue } from "./command-response";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
+import { runCreateOperation } from "./workbench-create-operation";
 import { runResourceMutation } from "./workbench-resource-mutation";
 export interface WorkbenchExtensionCommandContext {
   metadata?: Pick<WorkbenchExtensionMetadata, "commands">;
+  createCommandIds?: ReadonlySet<string>;
+  operations?: WorkbenchOperations;
   executeCommand(commandId: string, body: CommandExecuteRequest, signal?: AbortSignal): Promise<unknown> | unknown;
   prepareCommandArgs?(
     commandId: string,
@@ -130,7 +134,7 @@ export const executeWorkbenchExtensionCommand = async (
     ? { ...resolveCommandResourceParams(command.params, input.params, { resource: input.resource }), ...input.params }
     : input.params;
   const params = command?.confirmation ? { ...resolved, [command.confirmation.confirmedParam]: true } : resolved;
-  const persist = async (signal?: AbortSignal) =>
+  const send = async (signal?: AbortSignal) =>
     unwrapCommandValue(
       await executeWorkbenchExtensionCommandResponse(context, commandId, {
         ...input,
@@ -138,6 +142,12 @@ export const executeWorkbenchExtensionCommand = async (
         signal: signal && input.signal ? AbortSignal.any([signal, input.signal]) : (signal ?? input.signal),
       }),
     );
+  const operations = context.operations;
+  const create = context.createCommandIds?.has(commandId);
+  const persist =
+    operations && command && create
+      ? () => runCreateOperation(operations, context.projectId, command, resolved, send)
+      : send;
   return command
     ? runResourceMutation(context, command, params, { resource: input.resource, signal: input.signal }, persist)
     : persist();

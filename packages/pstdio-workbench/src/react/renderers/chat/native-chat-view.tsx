@@ -53,11 +53,12 @@ interface NativeChatComposerAvailability {
   sending: boolean;
   uploading: boolean;
   editingQueue: boolean;
+  unresolved: boolean;
 }
 
 const nativeChatComposerAvailability = (props: NativeChatComposerAvailability) => {
-  const { conversation, account, text, sending, uploading, editingQueue } = props;
-  const composerRequestsDisabled = Boolean(conversation.readOnly || account?.progress);
+  const { conversation, account, text, sending, uploading, editingQueue, unresolved } = props;
+  const composerRequestsDisabled = Boolean(conversation.readOnly || account?.progress || unresolved);
   const inputDisabled = sending || uploading;
   return {
     inputDisabled,
@@ -109,10 +110,14 @@ const NativeChatContent = (props: NativeChatViewProps) => {
   return <NativeChatConversation key={key} {...props} {...presentation} conversationKey={key} />;
 };
 
+const useUnresolvedSubmission = (session: ChatSession) =>
+  useSyncExternalStore(session.subscribeCreate, session.hasUnresolvedSubmission, session.hasUnresolvedSubmission);
+
 const NativeChatConversation = (props: NativeChatViewProps) => {
   const { session, conversationKey, renderParamField } = props;
   const state = useSyncExternalStore(session.subscribeToView, session.getSnapshot, session.getSnapshot);
   const { conversation, draft, messages, queuedFollowUps, pending, loading, initializing, sending } = state;
+  const unresolved = useUnresolvedSubmission(session);
   const observation = useNativeChatObservation(props, state);
   const run: ChatSession["run"] = (action) => runNativeChatAction(session, action, props.action, Boolean(selected));
   const [uploading, setUploading] = useState(0);
@@ -175,6 +180,7 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
           account: host.account,
           text: draft.text,
           sending,
+          unresolved,
           uploading: uploading > 0,
           editingQueue: Boolean(selected),
         });

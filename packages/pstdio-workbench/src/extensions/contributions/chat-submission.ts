@@ -1,4 +1,5 @@
 import type { ChatDraft, ChatRendererAction, ChatRendererSnapshot } from "@pstdio/sdk/extensions";
+import { UnresolvedSubmissionError } from "@pstdio/ui";
 import { chatDraftContentKey, hydrateChatDraft, recoverChatDraft } from "./chat-draft-recovery";
 import { type ChatPendingSubmission, createChatPendingSubmission } from "./chat-pending-submission";
 
@@ -12,6 +13,7 @@ export const createChatSubmissionRunner = (input: {
   publish(update: { sending: boolean; pending?: ChatPendingSubmission[]; error?: string }): void;
   changeDraft(draft: Partial<ChatDraft>): void;
   fail(error: unknown): void;
+  trackCreate?: <T>(action: Submit, execute: () => Promise<T>) => Promise<T>;
   markRecoverable(): void;
 }) => {
   let submission: Promise<void> | undefined;
@@ -20,6 +22,8 @@ export const createChatSubmissionRunner = (input: {
     if (submission) return submission;
     const source = { ...input, ...invocation };
     const before = source.read();
+    const retained = before.pending?.find((item) => item.unresolved?.recovery.isRetained());
+    if (retained) return Promise.reject(retained.unresolved);
     sequence = Math.max(sequence, ...(before.pending ?? []).map((item) => item.sequence));
     const pending = !action.questionResponse
       ? createChatPendingSubmission(
@@ -31,8 +35,8 @@ export const createChatSubmissionRunner = (input: {
         )
       : undefined;
     source.publish({ sending: true, pending: [...(before.pending ?? []), ...(pending ? [pending] : [])] });
-    submission = source
-      .execute(action, handler)
+    const execute = () => source.execute(action, handler);
+    submission = (source.trackCreate && !action.questionResponse ? source.trackCreate(action, execute) : execute())
       .then((result) => {
         const current = source.read();
         // Submitted-input tags are an explicit alternative to a canonical user echo
@@ -55,6 +59,24 @@ export const createChatSubmissionRunner = (input: {
       })
       .catch((error) => {
         const current = source.read();
+        if (error instanceof UnresolvedSubmissionError && pending) {
+          const attempted = { text: action.text, attachments: action.attachments, values: action.values };
+          const recoveryAdded = !current.draft.recovered?.some(
+            (saved) => chatDraftContentKey(saved) === chatDraftContentKey(attempted),
+          );
+          const retained =
+            current.edits === before.edits ? { ...current.draft, text: "", attachments: [] } : current.draft;
+          source.changeDraft(hydrateChatDraft(retained, attempted));
+          source.publish({
+            sending: false,
+            pending: current.pending?.map((item) =>
+              item.message.id === pending.message.id
+                ? { ...item, failure: error.message, unresolved: error, recoveryAdded }
+                : item,
+            ),
+          });
+          throw error;
+        }
         const queued = current.pending?.find((item) => item.message.id === pending?.message.id && item.queue);
         if (queued && !queued.echoed) {
           const failed = { text: action.text, attachments: action.attachments, values: action.values };

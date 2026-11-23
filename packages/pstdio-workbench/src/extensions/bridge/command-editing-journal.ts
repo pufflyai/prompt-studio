@@ -8,10 +8,20 @@ import {
   type WebviewEditingSessionParams,
   type WebviewEditingSnapshot,
 } from "pstdio-api-contracts/extension-kernel";
+import { classifyApiWrite } from "../../core/registries/mutations/operation-failures";
 import { type CommandEditingMember, type CommandEditingOpen, editingFailure } from "./command-editing-types";
 import { type CommandEditingJob, createCommandEditingWriter } from "./command-editing-writer";
 import { editingSequence } from "./editing-sequence";
 import { webviewEditingResultSchema } from "./webview-editing-params";
+
+class EditingAcknowledgementError extends Error {
+  constructor(cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause), { cause });
+  }
+}
+
+const mayRetryEditingCommand = (error: unknown) =>
+  !(error instanceof EditingAcknowledgementError) && classifyApiWrite(error) === "rejected";
 
 /** This is the ordered domain protocol. Query caches only contain accepted finite results. */
 export const createCommandEditingJournal = (input: {
@@ -33,11 +43,14 @@ export const createCommandEditingJournal = (input: {
   const writer = createCommandEditingWriter({
     run: (job, accepted) =>
       input.serialize(async () => {
-        const result = webviewEditingResultSchema.parse(
-          await job.execute({ commandId: input.command.commandId, params: job.params }),
-        );
-        // A JSON-valid patch can still be inapplicable. Keep its required job until acceptance is valid.
-        validate(result);
+        const response = await job.execute({ commandId: input.command.commandId, params: job.params });
+        let result: WebviewEditingCommandResult;
+        try {
+          result = validate(webviewEditingResultSchema.parse(response));
+        } catch (error) {
+          // The command may have committed before sending an unusable acknowledgement.
+          throw new EditingAcknowledgementError(error);
+        }
         accepted(result);
       }),
     accepted: (job, result) => {
@@ -46,8 +59,13 @@ export const createCommandEditingJournal = (input: {
       input.accepted(result);
       accept(result);
     },
+    canRetry: mayRetryEditingCommand,
     failed: (cause, job) => {
-      error = { message: cause instanceof Error ? cause.message : String(cause), channel: job.channel };
+      const message = cause instanceof Error ? cause.message : String(cause);
+      error = {
+        message: writer.blocked() ? `The command result could not be confirmed. ${message}` : message,
+        channel: job.channel,
+      };
     },
     changed: () => publish(),
   });
@@ -114,7 +132,7 @@ export const createCommandEditingJournal = (input: {
         channel: request.channel,
       };
       jobs.push(job);
-      error = undefined;
+      if (!writer.blocked()) error = undefined;
       previews = rebaseEditingChanges(committed(), previews).drafts;
       publish({ member, sequence: request.sequence });
       return writer.wait([job]);

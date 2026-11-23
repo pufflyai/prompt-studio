@@ -686,18 +686,13 @@ test("an inapplicable authoritative acknowledgement retains its required command
         revision: 1,
         savedRevision: 0,
         pendingCommands: 1,
-        error: { message: "The editing state root must be an object" },
+        error: { message: expect.stringContaining("could not be confirmed") },
       },
     });
-    expect(await frame.call({ operation: "save" })).toMatchObject({
-      value: { tool: "hand" },
-      savedRevision: 1,
-      pendingCommands: 0,
-    });
-    expect(fixture.actions).toHaveLength(2);
-    expect(fixture.actions[0]).toEqual(fixture.actions[1]);
+    await expect(frame.call({ operation: "save" })).rejects.toThrow("root must be an object");
+    expect(fixture.actions).toHaveLength(1);
   } finally {
-    await fixture.dispose();
+    await expect(fixture.dispose()).rejects.toThrow();
   }
 });
 

@@ -12,7 +12,7 @@ import {
   rebaseChatRecoveryKey,
   recoverChatDraft,
 } from "./chat-draft-recovery";
-import { createChatDraftRestoration } from "./chat-draft-restoration";
+import { createChatDraftRestoration, hasUnresolvedChatSubmission } from "./chat-draft-restoration";
 import { createChatEventReader } from "./chat-event-reader";
 import { clearDeliveredChatRecoveries } from "./chat-failed-submission";
 import { type ChatQueryContext, createChatFiniteRead } from "./chat-finite-read";
@@ -26,6 +26,9 @@ import { createChatSubmissionHandoff } from "./chat-submission-handoff";
 
 export interface ChatSessionInput {
   initial?: ChatRendererSnapshot;
+  trackCreate?: <T>(action: Extract<ChatRendererAction, { type: "submit" }>, execute: () => Promise<T>) => Promise<T>;
+  subscribeCreate?: (listener: () => void) => () => void;
+  inspectResources?: () => void;
   queryContext?: ChatQueryContext;
   onIdle?(): void;
   captureSaveDraft?(): (draft: ChatDraft) => Promise<unknown>;
@@ -270,6 +273,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     return result;
   };
   const submit = createChatSubmissionRunner({
+    trackCreate: input.trackCreate,
     read: () => ({ ...state, edits: drafts.edits() }),
     execute,
     publish: (update) => publish({ ...update, ...(update.sending ? { error: drafts.error() } : {}) }),
@@ -308,7 +312,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     rebind: () => {
       if (holds && observing) start();
     },
-    active: () => holds > 0 || actions.size > 0 || drafts.saving(),
+    active: () => holds > 0 || actions.size > 0 || drafts.saving() || hasUnresolvedChatSubmission(state.pending),
     ...projection.subscriptions,
     accept: (event: unknown) => {
       if (!retired) reader.accept(event);
@@ -318,6 +322,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     },
     ...createChatSubmissionHandoff(() => state.pending, publish),
     ...createChatDraftRestoration({
+      ...input,
       active: () => !retired,
       read: () => state,
       values: snapshots.values,

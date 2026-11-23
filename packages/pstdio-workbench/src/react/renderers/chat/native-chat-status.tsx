@@ -1,6 +1,6 @@
 import { Box, Button, Flex, Text } from "@chakra-ui/react";
 import type { ChatRendererSnapshot } from "@pstdio/sdk/extensions";
-import { ActionErrorSlot, AlertMessage } from "@pstdio/ui";
+import { ActionErrorSlot, AlertMessage, UnresolvedSubmission } from "@pstdio/ui";
 import { chatDraftContentKey } from "../../../extensions/contributions/chat-draft-recovery";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
 import { NativeChatDraftRecovery } from "./native-chat-draft-recovery";
@@ -28,7 +28,8 @@ export const NativeChatNotices = ({ host, state, session }: NativeChatNoticesPro
           Boolean(
             pending?.some(
               (item) =>
-                item.failure && !item.failureDismissed && chatDraftContentKey(item) === chatDraftContentKey(saved),
+                (item.unresolved?.recovery.isRetained() || (item.failure && !item.failureDismissed)) &&
+                chatDraftContentKey(item) === chatDraftContentKey(saved),
             ),
           )
         }
@@ -40,23 +41,35 @@ export const NativeChatNotices = ({ host, state, session }: NativeChatNoticesPro
 };
 
 export const NativeChatErrors = ({ state, session }: Omit<NativeChatNoticesProps, "host">) => {
-  const failures = state.pending?.filter((item) => item.failure && !item.failureDismissed);
+  const failures = state.pending?.filter(
+    (item) => item.failure && !item.failureDismissed && (!item.unresolved || item.unresolved.recovery.isRetained()),
+  );
   if (!state.error && !failures?.length) return null;
   return (
     <Box position="relative" h="0">
       <ActionErrorSlot edge="above">
-        {failures?.map((item) => (
-          <AlertMessage
-            key={item.message.id}
-            compact
-            status="error"
-            title="Message not sent"
-            onClose={() => session.dismissSubmission(item.message.id)}
-            endElement={<Button onClick={() => session.restoreSubmission(item.message.id)}>Restore draft</Button>}
-          >
-            {item.failure}
-          </AlertMessage>
-        ))}
+        {failures?.map((item) =>
+          item.unresolved ? (
+            <UnresolvedSubmission
+              key={item.message.id}
+              submission={item.unresolved}
+              onInspect={session.inspectResources}
+              onClose={() => session.dismissSubmission(item.message.id)}
+              onDiscard={() => session.discardUnresolvedSubmission(item.message.id)}
+            />
+          ) : (
+            <AlertMessage
+              key={item.message.id}
+              compact
+              status="error"
+              title="Message not sent"
+              onClose={() => session.dismissSubmission(item.message.id)}
+              endElement={<Button onClick={() => session.restoreSubmission(item.message.id)}>Restore draft</Button>}
+            >
+              {item.failure}
+            </AlertMessage>
+          ),
+        )}
         {state.error ? (
           <AlertMessage
             role="alert"

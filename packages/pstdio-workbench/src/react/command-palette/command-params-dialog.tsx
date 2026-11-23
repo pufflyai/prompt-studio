@@ -5,6 +5,8 @@ import {
   ScopedDialog as Dialog,
   handleDialogAcceptShortcut,
   ScrollArea,
+  UnresolvedSubmission,
+  UnresolvedSubmissionError,
 } from "@pstdio/ui";
 import { Fragment, useRef, useState } from "react";
 import type { Command, RegisteredMenuItem, WorkbenchCommandExecutionContext } from "../../core";
@@ -85,6 +87,7 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
     resolveCommandResourceParams(request.record.command.params, request.args, request.context),
   );
   const [error, setError] = useState<string | undefined>();
+  const [unresolved, setUnresolved] = useState<UnresolvedSubmissionError>();
   const [submitting, setSubmitting] = useState(false);
   const [customFieldErrors, setCustomFieldErrors] = useState<Record<string, string | undefined>>({});
   const entries = listCommandParamEntries(request?.record.command.params);
@@ -110,8 +113,13 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
   );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  const failSubmission = (caught: unknown) => {
+    if (caught instanceof UnresolvedSubmissionError) setUnresolved(caught);
+    else setError(caught instanceof Error ? caught.message : "Command failed.");
+  };
+
   const run = async () => {
-    if (!request || submitting) return;
+    if (submitting || unresolved) return;
     const invalid = options.validate(values);
     for (const [key, error] of Object.entries(customFieldErrors)) {
       if (error) invalid[key] = error;
@@ -148,13 +156,14 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
       await onRun(submission);
       onClose();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Command failed.");
+      failSubmission(caught);
     } finally {
       setSubmitting(false);
     }
   };
 
   const isValid =
+    !unresolved &&
     Object.keys(options.validate(values)).length === 0 &&
     !Object.values(customFieldErrors).some(Boolean) &&
     entries.every((entry) => !entry.required || isFilled(entry, values[entry.key]));
@@ -232,6 +241,7 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
             </ScrollArea>
           </Dialog.Body>
           <Dialog.Footer position="relative">
+            {unresolved ? <UnresolvedSubmission submission={unresolved} onClose={close} onDiscard={close} /> : null}
             {error ? (
               <ActionErrorSlot edge="above">
                 <AlertMessage compact status="error" title={error} onClose={() => setError(undefined)} />

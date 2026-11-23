@@ -3,6 +3,8 @@ import type { ResourceRef as ExtensionResourceRef, Notification, NotificationAct
 import { getIndexedRows, type SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource, createDashboardSessionResource } from "@/shared/app/resources";
 
+import { getNotificationStatusOperations } from "./notification-status-operations";
+
 const pendingStatuses = new Set(["open", "read"]);
 const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 } as const;
 
@@ -45,11 +47,17 @@ const byPriorityThenUpdated = (left: Notification, right: Notification) => {
   return right.updatedAt.localeCompare(left.updatedAt);
 };
 
-export const createDashboardNotifications = (projectId: string | undefined) =>
-  readRows(projectId)
+export const createDashboardNotifications = (projectId: string | undefined) => {
+  const patches = getNotificationStatusOperations().readPatches(projectId);
+  return readRows(projectId)
     .map(toNotification)
+    .map((notification) => {
+      const status = patches.get(notification.id);
+      return status ? { ...notification, status } : notification;
+    })
     .filter((notification) => notification.projectId === projectId && pendingStatuses.has(notification.status))
     .sort(byPriorityThenUpdated);
+};
 
 export const countPendingNotifications = (projectId: string | undefined) =>
   createDashboardNotifications(projectId).length;

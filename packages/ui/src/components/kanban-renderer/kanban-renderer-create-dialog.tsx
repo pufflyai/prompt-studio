@@ -6,6 +6,7 @@ import type { Param, ParamValueMap } from "@/components/param-editor/param-edito
 import { ParamEditorHorizontal } from "@/components/param-editor/param-editor-horizontal";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
+import { UnresolvedSubmission, UnresolvedSubmissionError } from "../primitives/unresolved-submission";
 import { useKanbanCreatePreference } from "./kanban-create-preference.store";
 import { KanbanCreateSubmit } from "./kanban-create-submit";
 import { CreateFieldControl } from "./kanban-renderer-create-field";
@@ -90,6 +91,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
   const localKey = useId();
   const { draft, setDraft, clearDraft } = useKanbanCreateDraft(draftKey ?? localKey);
   const { openCreatedRow, setOpenCreatedRow } = useKanbanCreatePreference();
+  const unresolved = draft?.unresolved;
   const values = draft?.values ?? {};
   const attributeValues = draft?.attributeValues ?? {};
   const [submitting, setSubmitting] = useState(false);
@@ -168,7 +170,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
   const valid = config.fields.every((field) => isFilled(field, values[field.id]));
 
   const submit = async () => {
-    if (!valid || submitting) return;
+    if (!valid || submitting || unresolved) return;
     setSubmitting(true);
     setError("");
     try {
@@ -187,7 +189,11 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
       clearDraft();
       onClose();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : config.labels.submitError);
+      if (caught instanceof UnresolvedSubmissionError) {
+        setDraft((current) => current && { ...current, unresolved: caught });
+      } else {
+        setError(caught instanceof Error ? caught.message : config.labels.submitError);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -207,12 +213,14 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
       <Dialog.Backdrop />
       <Dialog.Positioner>
         <Dialog.Content
-          onKeyDownCapture={(event) => handleDialogAcceptShortcut(event, () => void submit(), valid && !submitting)}
+          onKeyDownCapture={(event) =>
+            handleDialogAcceptShortcut(event, () => void submit(), valid && !submitting && !unresolved)
+          }
         >
           <Dialog.Header>
             <Dialog.Title>{config.title}</Dialog.Title>
             <Dialog.CloseTrigger asChild>
-              <CloseButton size="sm" disabled={submitting} onClick={discard} />
+              <CloseButton size="sm" disabled={submitting} onClick={unresolved ? close : discard} />
             </Dialog.CloseTrigger>
           </Dialog.Header>
           <ScrollArea flex="1" minH="0" height="auto">
@@ -224,7 +232,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
                     field={field}
                     removeLabel={config.labels.removeFile}
                     value={values[field.id]}
-                    disabled={submitting}
+                    disabled={submitting || Boolean(unresolved)}
                     onChange={(value) =>
                       setDraft((current) => current && { ...current, values: { ...current.values, [field.id]: value } })
                     }
@@ -239,7 +247,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
                         attributeToParam(attribute, attribute.id === columnAttributeId),
                       )}
                       defaultValues={attributeValues as ParamValueMap}
-                      readOnly={submitting}
+                      readOnly={submitting || Boolean(unresolved)}
                       onChange={(attributeId, value) =>
                         setDraft(
                           (current) =>
@@ -251,6 +259,9 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
                       }
                     />
                   </Stack>
+                ) : null}
+                {unresolved ? (
+                  <UnresolvedSubmission submission={unresolved} onClose={close} onDiscard={discard} />
                 ) : null}
                 {error ? (
                   <Text textStyle="paragraph/S/regular" color="fg.error">
@@ -271,7 +282,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
                 openCreatedRow={openCreatedRow}
                 onChoose={setOpenCreatedRow}
                 onSubmit={() => void submit()}
-                disabled={!valid}
+                disabled={!valid || Boolean(unresolved)}
                 submitting={submitting}
               />
             </HStack>

@@ -1,7 +1,8 @@
 ---
 "pstdio": minor
 "@pstdio/sdk": minor
+"@pstdio/ui": minor
 "@pstdio/workbench": minor
 ---
 
-Show installation settings, resource changes, and collection edits immediately across views and keep failed changes available through System activity.
+Show settings, notification changes, resource changes, and collection edits immediately across views. Keep failed and uncertain drafts available through System activity.

@@ -6,7 +6,7 @@ interface ActionError {
   description?: string;
 }
 
-export const useActionError = (edge: "top" | "bottom" | "above" = "bottom") => {
+export const useActionError = (edge: "top" | "bottom" | "above" | "below" = "bottom") => {
   const [error, setError] = useState<ActionError>();
   const clearError = () => setError(undefined);
   return {
