@@ -220,7 +220,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
   const context: WorkbenchExtensionCommandContext = {
     ...input,
     operations: input.queries ? getWorkbenchOperations(input.queries) : undefined,
-    createCommandIds: declaredCreateCommandIds(input.metadata),
+    createCommandIds: declaredCreateCommandIds(sourceInput.metadata),
   };
   try {
     disposables.push(installResourceChanges(sourceInput));
@@ -248,7 +248,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     );
     disposables.push(registerWorkbenchExtensionFileRenderers(input));
     disposables.push(registerWorkbenchExtensionControlsRenderers(context, input.metadata.controlsRenderers ?? []));
-    disposables.push(...registerWebviewPanels(input));
+    disposables.push(...registerWebviewPanels(input, sourceInput.metadata));
     disposables.push(...registerSettings(input));
     // Status-backed renderers query their provider while they register. Providers
     // must exist first so the renderer's live option source can load immediately.

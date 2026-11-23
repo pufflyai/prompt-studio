@@ -1,4 +1,4 @@
-import type { CommandExecuteRequest } from "@pstdio/sdk/api";
+import type { CommandExecuteRequest, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
 import type { Disposable, PreferencePropertySchema, PreferenceScope, PreferenceValue } from "../../core";
 import {
@@ -22,20 +22,24 @@ const preferenceScope = (scope: "global" | "project" | "device"): PreferenceScop
 const createExtensionHostAdapters = (
   input: InternalRegisterWorkbenchExtensionContributionsInput,
   slotKind: NonNullable<CommandExecuteRequest["slot"]>["kind"],
+  metadata: WorkbenchExtensionMetadata,
 ): CreateBridgeWebviewHostAdapters => {
   const createBase = createWorkbenchExtensionWebviewAdapters({
     artifacts: input.webviewArtifacts,
     executeCommand: input.executeCommand,
     extensionIdForWebview: (webviewId) => input.metadata.panels.find((panel) => panel.id === webviewId)?.extensionId,
     files: input.webviewFiles,
-    metadata: input.metadata,
+    metadata,
     projectId: input.projectId,
     slotKind,
   });
   return (context) => ({ ...createBase(context), ...input.createWebviewHostAdapters?.(context) });
 };
 
-export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionContributionsInput) => {
+export const registerWebviewPanels = (
+  input: InternalRegisterWorkbenchExtensionContributionsInput,
+  metadata: WorkbenchExtensionMetadata,
+) => {
   return input.metadata.panels.flatMap((panel) => {
     if (!panel.webview) return [];
     const webview = toBridgeWebviewConfig(panel.webview);
@@ -77,7 +81,7 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
                     panel.id,
                   ),
                 },
-                createHostAdapters: createExtensionHostAdapters(input, slotKind),
+                createHostAdapters: createExtensionHostAdapters(input, slotKind, metadata),
                 createProps:
                   input.createWebviewProps ?? (({ placement }) => ({ placement, resource: placement.resource })),
                 createTheme: input.createWebviewTheme,

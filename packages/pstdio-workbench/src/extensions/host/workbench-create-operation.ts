@@ -58,11 +58,13 @@ export const runTrackedCreate = async <T>(
 };
 
 export const declaredCreateCommandIds = (
-  metadata: Partial<Pick<WorkbenchExtensionMetadata, "kanbanRenderers" | "keybindings">>,
+  metadata: Partial<Pick<WorkbenchExtensionMetadata, "views" | "keybindings">>,
 ) =>
   new Set([
-    ...(metadata.kanbanRenderers ?? []).flatMap((renderer) =>
-      renderer.createRow ? [renderer.createRow.commandId] : [],
+    ...(metadata.views ?? []).flatMap(({ body }) =>
+      (body.kind === "kanban" || body.kind === "resourceList") && body.createRow
+        ? [commandRefId(body.createRow.command)]
+        : [],
     ),
     ...(metadata.keybindings ?? []).flatMap((binding) => {
       if (binding.layer !== "create" || binding.action.kind !== "command") return [];

@@ -32,7 +32,7 @@ type MovementInput = {
   onError?: (error: unknown) => void;
 };
 
-const treeMoveSubject = (input: MovementInput, node?: TreeNode) =>
+const treeMoveSubject = (input: MovementInput, node?: TreeNode | null) =>
   node?.resource
     ? resourceOperationSubject({ ...node.resource, projectId: node.resource.projectId ?? input.projectId })
     : operationSubject("tree-node", input.projectId, input.scope, node?.id);

@@ -8,15 +8,15 @@ import { unwrapCommandValue } from "../host/command-response";
 import { declaredCreateCommandIds, runCreateOperation } from "../host/workbench-create-operation";
 import { runWorkspaceWebviewMutation, type WebviewOperationRequest } from "./workspace-webview-mutations";
 
-type CommandMetadata = Pick<WorkbenchExtensionMetadata, "commands"> &
-  Partial<Pick<WorkbenchExtensionMetadata, "kanbanRenderers" | "keybindings">>;
+export type WebviewCommandMetadata = Pick<WorkbenchExtensionMetadata, "commands"> &
+  Partial<Pick<WorkbenchExtensionMetadata, "views" | "keybindings">>;
 
 export const runWorkbenchWebviewCommandOperation = async (input: {
   workbench: WorkbenchCore;
   projectId: string;
   resource?: ResourceRef;
   request: WebviewOperationRequest;
-  metadata?: CommandMetadata;
+  metadata?: WebviewCommandMetadata;
   signal?: AbortSignal;
   execute(signal?: AbortSignal): Promise<unknown>;
 }) => {

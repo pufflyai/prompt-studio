@@ -6,6 +6,7 @@ import { type ChatPendingSubmission, createChatPendingSubmission } from "./chat-
 
 type Submit = Extract<ChatRendererAction, { type: "submit" }>;
 type Handler = (action: ChatRendererAction) => Promise<unknown>;
+export type TrackChatSubmission = <T>(action: Submit, execute: () => Promise<T>, discard: () => void) => Promise<T>;
 
 /** The resource owner keeps a single in-flight handoff even while its presentation is closed. */
 export const createChatSubmissionRunner = (input: {
@@ -17,10 +18,10 @@ export const createChatSubmissionRunner = (input: {
     pending?: ChatPendingSubmission[];
   };
   execute(action: ChatRendererAction, handler: Handler): Promise<{ snapshot?: ChatRendererSnapshot }>;
-  publish(update: { sending: boolean; pending?: ChatPendingSubmission[]; error?: string }): void;
+  publish(update: { sending?: boolean; pending?: ChatPendingSubmission[]; error?: string }): void;
   changeDraft(draft: Partial<ChatDraft>): void;
   fail(error: unknown): void;
-  trackSubmission?: <T>(action: Submit, execute: () => Promise<T>, discard: () => void) => Promise<T>;
+  trackSubmission?: TrackChatSubmission;
   markRecoverable(): void;
 }) => {
   let submission: Promise<void> | undefined;

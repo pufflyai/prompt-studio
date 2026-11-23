@@ -21,15 +21,12 @@ import { createChatSessionDraft } from "./chat-session-draft";
 import { watchChatSession } from "./chat-session-watch";
 import { createChatSnapshot } from "./chat-snapshot";
 import { createChatProjection } from "./chat-stream-paint";
-import { createChatSubmissionRunner } from "./chat-submission";
+import { createChatSubmissionRunner, type TrackChatSubmission } from "./chat-submission";
 import { createChatSubmissionHandoff } from "./chat-submission-handoff";
 
 export interface ChatSessionInput {
   initial?: ChatRendererSnapshot;
-  trackSubmission?: <T>(
-    action: Extract<ChatRendererAction, { type: "submit" }>,
-    execute: () => Promise<T>,
-  ) => Promise<T>;
+  trackSubmission?: TrackChatSubmission;
   hasRetainedSubmission?: () => boolean;
   subscribeSubmissions?: (listener: () => void) => () => void;
   inspectResources?: () => void;
