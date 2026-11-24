@@ -4,19 +4,53 @@ import { withQueuedWriteGuard } from "../../data/write-guard";
 import { nextPlacementBatch } from "./placement-batch";
 import { readPlanMetadata } from "./placement-store";
 
-/** Order the remaining metadata in the database, then create one bounded placement batch. */
-const initializePlacements = async (storage: ExtensionStorageApi, completedStatusIds: string[]) => {
-  await readPlanMetadata(storage);
-  const tail = await storage.records.query({
-    index: "timeline-placements",
-    fields: ["position"],
-    orderBy: [{ field: "position", direction: "desc" }],
-    limit: 1,
+const activePlacements = (storage: ExtensionStorageApi) =>
+  storage.records.aggregate({
+    index: "timeline-placement-order",
+    where: {
+      exists: {
+        index: "ticket-view",
+        on: [{ sourceField: "ticketId", relatedField: "id" }],
+        where: { field: "archived", op: "ne", value: true },
+      },
+    },
   });
-  let previous = tail.records[0]?.fields.position;
+
+/** Append canonical batches until the requested active execution prefix is durable. */
+const initializePlacements = async (
+  storage: ExtensionStorageApi,
+  completedStatusIds: string[],
+  requiredActiveCount?: number,
+) => {
+  await readPlanMetadata(storage);
+  let previous: unknown;
+  let hasTail = false;
   for (;;) {
+    // Recount actual active rows: an archive can race the preceding batch commit.
+    const prefix = requiredActiveCount === undefined ? undefined : await activePlacements(storage);
+    if (prefix && prefix.count >= requiredActiveCount!) return prefix.revision;
+    if (!hasTail) {
+      const tail = await storage.records.query({
+        index: "timeline-placements",
+        fields: ["position"],
+        orderBy: [{ field: "position", direction: "desc" }],
+        limit: 1,
+      });
+      previous = tail.records[0]?.fields.position;
+      hasTail = true;
+    }
     const page = await nextPlacementBatch(storage, completedStatusIds);
-    if (!page.length) return;
+    if (!page.length) {
+      if (prefix)
+        await storage.records.query({
+          index: "ticket-view",
+          fields: [],
+          orderBy: [],
+          limit: 0,
+          revision: prefix.revision,
+        });
+      return prefix?.revision;
+    }
     const placements = page.map((row) => {
       const ticketId = String(row.fields.id);
       const position = storage.positions.between(typeof previous === "string" ? previous : undefined);
@@ -30,6 +64,9 @@ const initializePlacements = async (storage: ExtensionStorageApi, completedStatu
 export const initializePlanPlacements = (
   ctx: Pick<ExtensionContextBase, "storage" | "projectId" | "extensionId">,
   completedStatusIds: string[],
+  requiredActiveCount?: number,
 ) =>
   // Serialize each owner's tail read and all pending batches, including read-triggered initialization.
-  withQueuedWriteGuard(ctx, "plan-initialization", () => initializePlacements(ctx.storage, completedStatusIds));
+  withQueuedWriteGuard(ctx, "plan-initialization", () =>
+    initializePlacements(ctx.storage, completedStatusIds, requiredActiveCount),
+  );

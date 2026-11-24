@@ -14,6 +14,12 @@ export const removePageResource = <Value>(
 ) => {
   const key = (value: ResourceRef) => resources.toUri(resources.normalize(value));
   const removedKey = key(resource);
+  let referenced = false;
+  const matches = (candidate: ResourceRef) => {
+    const match = key(candidate) === removedKey;
+    if (match) referenced = true;
+    return match;
+  };
   const keep = new Set(retained.map(placementIdentityKey));
   const pageStates = Object.fromEntries(
     Object.entries(state.pageStates).map(([stateKey, current]) => {
@@ -25,7 +31,7 @@ export const removePageResource = <Value>(
           instances
             .filter(
               (instance) =>
-                key(instance.resource) !== removedKey ||
+                !matches(instance.resource) ||
                 keep.has(
                   placementIdentityKey({
                     kind: "page",
@@ -35,9 +41,7 @@ export const removePageResource = <Value>(
                   }),
                 ),
             )
-            .map((instance) =>
-              removeViewContextResources(instance, Object.values(state.pages), (value) => key(value) === removedKey),
-            ),
+            .map((instance) => removeViewContextResources(instance, Object.values(state.pages), matches)),
         ]),
       );
       const primary = primarySlot(state.pages[pageId]!);
@@ -54,7 +58,7 @@ export const removePageResource = <Value>(
   );
   let location = state.location;
   const page = state.activePageId ? state.pages[state.activePageId] : undefined;
-  if (page && location?.resource && key(location.resource) === removedKey) {
+  if (page && location?.resource && matches(location.resource)) {
     const current = pageStates[pageStateKey(page, location, resources)];
     const primary = primarySlot(page);
     const remaining = primary ? (current?.resourceInstances[primary.id] ?? []) : [];
@@ -64,21 +68,13 @@ export const removePageResource = <Value>(
       const { resource: _resource, section: _section, position: _position, ...landing } = location;
       location = landing;
     } else if (location.parent)
-      location = removeLocationResources(
-        location.parent,
-        Object.values(state.pages),
-        (value) => key(value) === removedKey,
-      );
+      location = removeLocationResources(location.parent, Object.values(state.pages), matches);
     else if (page.parentId) location = { page: state.pages[page.parentId]!.ref };
   }
   if (location?.parent)
     location = {
       ...location,
-      parent: removeLocationResources(
-        location.parent,
-        Object.values(state.pages),
-        (value) => key(value) === removedKey,
-      ),
+      parent: removeLocationResources(location.parent, Object.values(state.pages), matches),
     };
-  return { pageStates, location };
+  return { pageStates, location, referenced };
 };

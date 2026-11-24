@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { type NavigationTarget, workbenchCommands } from "@pstdio/sdk/extensions";
 import { createWorkbench, type PreferenceValue } from "@pstdio/workbench";
 import { createRecentResourcesModule } from "./module";
@@ -299,6 +299,38 @@ test("Recent projects held resource changes and restores its items after rejecti
     await pendingRemoval;
     expect(await read()).toMatchObject([{ resource: { label: "before" }, target }]);
   } finally {
+    await w.dispose();
+  }
+});
+
+test("syncing unrelated archived sessions leaves recent resources alone", async () => {
+  const { w, values } = harness();
+  await w.navigation.openTarget(open("ticket", "keep"));
+  // A fresh workbench restores preferences before the initial session table arrives.
+  const restored = harness(values);
+  const reads = spyOn(values, "get");
+  const writes = spyOn(values, "set");
+  try {
+    for (let i = 0; i < 50; i++) restored.w.resources.removed(resource("session", String(i)));
+    expect(writes.mock.calls.filter(([name]) => name === "workbench.recentResources:one")).toHaveLength(0);
+    expect(reads.mock.calls.filter(([name]) => name === "workbench.recentResources:one").length).toBeLessThanOrEqual(1);
+    expect((await restored.read()).map((item) => item.resource.id)).toEqual(["keep"]);
+
+    const added = { resource: resource("ticket", "added"), target: open("ticket", "added") };
+    await restored.w.preferences.setValue(
+      "workbench.recentResources",
+      { items: [added] },
+      {
+        scope: "project",
+        scopeId: "one",
+      },
+    );
+    restored.w.resources.removed(added.resource);
+    expect(await restored.read()).toEqual([]);
+  } finally {
+    reads.mockRestore();
+    writes.mockRestore();
+    await restored.w.dispose();
     await w.dispose();
   }
 });

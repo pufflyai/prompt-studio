@@ -280,7 +280,8 @@ export const createWorkbenchLayoutCache = (
         restored = true;
         for (const { scope, layout } of adapter.listLayouts?.() ?? []) remember(scope, layout);
       }
-      for (const scope of inventory.getScopes(resource)) {
+      const scopes = inventory.getScopes(resource);
+      for (const scope of scopes) {
         const layout = read(scope);
         if (layout) {
           const remaining = selectPlacements(
@@ -294,6 +295,7 @@ export const createWorkbenchLayoutCache = (
           write(remaining, scope);
         } else inventory.removeResource(scope, resource);
       }
+      return scopes.length > 0;
     },
     layout: {
       ...adapter,

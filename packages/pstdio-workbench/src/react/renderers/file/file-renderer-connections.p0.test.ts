@@ -44,6 +44,58 @@ test("a legacy Markdown declaration selects the public presentation without losi
     expect(connect).toBeFunction();
     await connect!().close();
     expect(captured).toEqual([{ input, pageParams }]);
+    const fallback = createNativeDocumentSession({
+      projectId: "project",
+      target: { fileRendererId: contribution.id, resource: placement.resource },
+      client: createClient({ baseUrl: "http://localhost" }).nativeDocuments,
+    });
+    for (const fileName of ["README", "notes.unknown"]) {
+      const sourceOnly = { ...loaded, fileName, content: undefined };
+      expect(getPublicMarkdownConnection(contribution, sourceOnly, input, pageParams)).toBeFunction();
+      expect(
+        getNativeMarkdownConnection(
+          { ...contribution, connectDocument: () => fallback },
+          sourceOnly,
+          placement.resource,
+          pageParams,
+        ),
+      ).toBeFunction();
+      const publicSourceOnly = {
+        ...sourceOnly,
+        documentSource: undefined,
+        textDocument: { sourceId: "document", params: {} },
+      };
+      expect(
+        getPublicMarkdownConnection({ ...contribution, save: undefined }, publicSourceOnly, input, pageParams),
+      ).toBeFunction();
+      expect(
+        getPublicMarkdownConnection(
+          { ...contribution, save: undefined },
+          { ...publicSourceOnly, content: "initial" },
+          input,
+          pageParams,
+        ),
+      ).toBeFunction();
+      for (const inlineContent of ["", "raw log"]) {
+        expect(
+          getPublicMarkdownConnection(
+            contribution,
+            { ...publicSourceOnly, fileName: "test.log", content: inlineContent },
+            input,
+            pageParams,
+          ),
+        ).toBeUndefined();
+      }
+      expect(
+        getPublicMarkdownConnection(contribution, { ...publicSourceOnly, fileName: "note.ts" }, input, pageParams),
+      ).toBeUndefined();
+      expect(
+        getPublicMarkdownConnection(contribution, { ...publicSourceOnly, textRenderer: "monaco" }, input, pageParams),
+      ).toBeUndefined();
+      expect(
+        getPublicMarkdownConnection(contribution, { ...publicSourceOnly, fileName: "image.png" }, input, pageParams),
+      ).toBeUndefined();
+    }
     expect(
       getPublicMarkdownConnection(contribution, { ...loaded, editable: false }, input, pageParams),
     ).toBeUndefined();
@@ -53,11 +105,6 @@ test("a legacy Markdown declaration selects the public presentation without losi
     expect(
       getPublicMarkdownConnection(contribution, { ...loaded, fileName: "note.ts" }, input, pageParams),
     ).toBeUndefined();
-    const fallback = createNativeDocumentSession({
-      projectId: "project",
-      target: { fileRendererId: contribution.id, resource: placement.resource },
-      client: createClient({ baseUrl: "http://localhost" }).nativeDocuments,
-    });
     expect(
       getNativeMarkdownConnection(
         { ...contribution, connectText: undefined, connectDocument: () => fallback },
