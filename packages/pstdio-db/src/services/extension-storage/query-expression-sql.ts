@@ -16,6 +16,9 @@ import {
 } from "./query-expression-values";
 import { encodeProjectionValue } from "./record-projection-codec";
 
+export const queryExpressionBudget = (expression: StorageExpression) =>
+  Math.floor(100000 / Math.max(1, storageExpressionInfo(expression).quantifiers));
+
 /** Compile only the validated declarative language; caller supplies owner-scoped field references. */
 export const queryExpressionSql = (
   expression: StorageExpression,
@@ -23,7 +26,7 @@ export const queryExpressionSql = (
   variables = new Map<string, SQL>(),
 ) => {
   let sequence = 0;
-  const budget = Math.floor(100000 / Math.max(1, storageExpressionInfo(expression).quantifiers));
+  const budget = queryExpressionBudget(expression);
   const bind = (values: SQL[], build: (values: SQL[]) => SQL) => {
     if (!values.length) return build([]);
     const alias = sql.identifier(`expression_input_${sequence++}`);

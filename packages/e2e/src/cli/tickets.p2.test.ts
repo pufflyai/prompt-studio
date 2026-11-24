@@ -78,12 +78,25 @@ describe("pstdio pstdio.planner list-tickets", () => {
       run('pstdio.planner create-ticket --content "Ticket A"', repo);
       run('pstdio.planner create-ticket --content "Ticket B"', repo);
 
-      const tickets = JSON.parse(run("pstdio.planner list-tickets", repo));
+      const tickets = JSON.parse(run("pstdio.planner list-tickets", repo)).tickets;
 
       const titles = tickets.map((ticket: { title: string }) => ticket.title);
       expect(titles).toContain("Ticket A");
       expect(titles).toContain("Ticket B");
       expect(tickets.map((ticket: { shorthand: string }) => ticket.shorthand)).toContain("TL-1");
+
+      const first = JSON.parse(run("pstdio.planner list-tickets --limit 1", repo));
+      expect(first.total).toBe(2);
+      expect(first.tickets).toHaveLength(1);
+      expect(first.cursor).toBeString();
+      const second = JSON.parse(run(`pstdio.planner list-tickets --limit 1 --cursor ${first.cursor}`, repo));
+      expect(second.total).toBe(2);
+      expect(second.tickets).toHaveLength(1);
+      expect(second.cursor).toBeNull();
+      expect([...first.tickets, ...second.tickets].map((ticket: { title: string }) => ticket.title).sort()).toEqual([
+        "Ticket A",
+        "Ticket B",
+      ]);
     },
     TEST_TIMEOUT,
   );
@@ -96,12 +109,12 @@ describe("pstdio pstdio.planner list-tickets", () => {
       run('pstdio.planner create-ticket --content "Saved ticket"', repo);
       run('pstdio.planner write-ticket --title "Draft only"', repo);
 
-      const byDefault = JSON.parse(run("pstdio.planner list-tickets", repo));
+      const byDefault = JSON.parse(run("pstdio.planner list-tickets", repo)).tickets;
       const defaultTitles = byDefault.map((ticket: { title: string }) => ticket.title);
       expect(defaultTitles).toContain("Saved ticket");
       expect(defaultTitles).not.toContain("Draft only");
 
-      const draftTickets = JSON.parse(run("pstdio.planner list-tickets --draft", repo));
+      const draftTickets = JSON.parse(run("pstdio.planner list-tickets --draft", repo)).tickets;
       expect(draftTickets.map((ticket: { title: string }) => ticket.title)).toEqual(["Draft only"]);
     },
     TEST_TIMEOUT,
@@ -164,7 +177,7 @@ describe("pstdio pstdio.planner save-ticket", () => {
       const saveResult = JSON.parse(run(`pstdio.planner save-ticket --id ${childShorthand}`, repo));
       expect(saveResult.shorthand).toBe(childShorthand);
 
-      const children = JSON.parse(run(`pstdio.planner list-tickets --parent ${parentShorthand}`, repo));
+      const children = JSON.parse(run(`pstdio.planner list-tickets --parent ${parentShorthand}`, repo)).tickets;
       expect(children.map((ticket: { shorthand: string }) => ticket.shorthand)).toContain(childShorthand);
       expect(children.map((ticket: { title: string }) => ticket.title)).toContain("Child ticket");
     },
@@ -290,11 +303,11 @@ describe("pstdio pstdio.planner full flow", () => {
         run('pstdio.planner write-ticket --title "Lifecycle ticket"', repo, FLOW_TIMEOUT),
       );
 
-      expect(JSON.parse(run("pstdio.planner list-tickets", repo, FLOW_TIMEOUT))).toEqual([]);
+      expect(JSON.parse(run("pstdio.planner list-tickets", repo, FLOW_TIMEOUT)).tickets).toEqual([]);
 
       run(`pstdio.planner save-ticket --id ${shorthand}`, repo, FLOW_TIMEOUT);
 
-      const tickets = JSON.parse(run("pstdio.planner list-tickets", repo, FLOW_TIMEOUT));
+      const tickets = JSON.parse(run("pstdio.planner list-tickets", repo, FLOW_TIMEOUT)).tickets;
       expect(tickets).toContainEqual(expect.objectContaining({ shorthand, title: "Lifecycle ticket" }));
 
       const updated = JSON.parse(
@@ -304,7 +317,7 @@ describe("pstdio pstdio.planner full flow", () => {
 
       const inProgressTickets = JSON.parse(
         run('pstdio.planner list-tickets --status "In Progress"', repo, FLOW_TIMEOUT),
-      );
+      ).tickets;
       expect(inProgressTickets).toContainEqual(expect.objectContaining({ shorthand, status: "In Progress" }));
     },
     FLOW_TIMEOUT,

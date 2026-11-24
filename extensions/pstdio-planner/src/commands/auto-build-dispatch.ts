@@ -23,7 +23,8 @@ async function dispatchWorkspaceId(ctx: CommandContext, candidate: NextTicket, d
   if (candidate.action === "recover-workspace") return undefined;
   if (candidate.action === "start")
     return draftWorkspaceId ?? (candidate.baseHeadSha ? undefined : (await ctx.workspaces.getDefault())?.id);
-  if (candidate.action === "resume") return (await readAutoBuildResumptions(ctx)).get(candidate.id)?.workspaceId;
+  if (candidate.action === "resume")
+    return (await readAutoBuildResumptions(ctx, [candidate.id])).get(candidate.id)?.workspaceId;
   return candidate.workspaceId;
 }
 
@@ -123,7 +124,11 @@ export const autoBuildDispatchCommand = defineCommand({
       const mode = await readAutoBuildMode(ctx);
       if (!mode.enabled || mode.revision !== revision)
         return { decision: "wait" as const, reason: "auto-build-stopped" };
-      const { tickets: candidates, capacity, snapshot } = await readNextTickets(ctx, mode, { base: input.base });
+      const {
+        tickets: candidates,
+        capacity,
+        snapshot,
+      } = await readNextTickets(ctx, mode, { base: input.base, ticket, limit: 1 });
       const candidate = candidates.find((row) => row.id === ticket || row.ticket === ticket);
       if (!candidate)
         return {
@@ -139,7 +144,7 @@ export const autoBuildDispatchCommand = defineCommand({
         if (!current.enabled || current.revision !== revision) {
           throw new Error("Auto Build stopped or the ticket is no longer ready.");
         }
-        const next = await readNextTickets(ctx, current, { base: input.base });
+        const next = await readNextTickets(ctx, current, { base: input.base, ticket, limit: 1 });
         await requireDeviceWorkspaceCapacity(ctx, targetWorkspaceId);
         const latest = next.tickets.find(({ id }) => id === candidate.id);
         if (!latest || latest.action !== candidate.action || latest.workspaceId !== candidate.workspaceId)
@@ -167,12 +172,20 @@ export const autoBuildDispatchCommand = defineCommand({
           async () => {
             const supervisor = await readAutoBuildSupervisor(ctx);
             const current = await readAutoBuildMode(ctx);
-            if (!supervisor.sessionId || current.revision !== revision) return;
-            const { snapshot } = await readNextTickets(ctx, current);
+            if (!supervisor.sessionId || !current.enabled || current.revision !== revision) return;
+            const { snapshot } = await readNextTickets(ctx, current, { limit: 1, scan: true });
+            const latest = await readAutoBuildMode(ctx);
+            if (!latest.enabled || latest.revision !== revision) return;
             await saveAutoBuildSupervisor(ctx, { ...supervisor, lastWake: snapshot });
           },
           () => undefined,
-        );
+        ).catch((error: unknown) => {
+          // The attempt and its receipt are already committed. A stale readback
+          // must not report that successful dispatch as a failed start.
+          ctx.logger.warn("Could not refresh Auto Build wake state after dispatch", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
       }
       return result;
     });

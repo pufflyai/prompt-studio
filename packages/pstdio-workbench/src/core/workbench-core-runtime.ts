@@ -6,6 +6,7 @@ import { registerKeyboardCommands } from "./controllers/keyboard/keyboard-regist
 import { connectWorkbenchPageBreadcrumbs } from "./controllers/page-location/page-breadcrumbs";
 import type { createCoreLayoutCache } from "./controllers/page-runtime/workbench-layout-cache-input";
 import { connectModeLayoutCache } from "./controllers/page-runtime/workbench-layout-context";
+import { registerSidePanelBubblePreferences } from "./controllers/side-panel/side-panel-bubble";
 import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-menu-paths";
 import { runWorkbenchEffect } from "./shared/workbench-effect";
 import { connectWorkbenchCoreState } from "./workbench-core-connections";
@@ -21,6 +22,7 @@ export const connectWorkbenchRuntime = (
   setWorkbenchRenderers(core, renderers);
   const disposeFullscreen = connectMainFullscreen(core);
   registerArrangementCommands(core);
+  const bubblePreferences = registerSidePanelBubblePreferences(core.preferences);
   const disposeKeyboard = registerKeyboardCommands(core);
   core.commands.registerCommand(
     { id: "workbench.page.openDefault", label: "Open default page", category: "Navigation" },
@@ -52,6 +54,7 @@ export const connectWorkbenchRuntime = (
       () => breadcrumbs.dispose(),
       () => layout.dispose(),
       disposeKeyboard,
+      () => bubblePreferences.dispose(),
       disposeFullscreen,
     ])
       runWorkbenchEffect("runtime connection disposal", release);

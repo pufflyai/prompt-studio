@@ -62,8 +62,9 @@ export const BoardEntry = (props: BoardEntryProps) => {
         gap="2xs"
         cursor="pointer"
         borderRadius="sm"
-        bg={dropTarget ? "bg.subtle" : "transparent"}
-        _hover={{ bg: "bg.hover" }}
+        bg={dropTarget ? undefined : "transparent"}
+        layerStyle={dropTarget ? "dropTarget" : undefined}
+        _hover={dropTarget ? undefined : { bg: "bg.hover" }}
         onFocus={onFocus}
         onClick={onToggle}
         onKeyDown={(event) => {

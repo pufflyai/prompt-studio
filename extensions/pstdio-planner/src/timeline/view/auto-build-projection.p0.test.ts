@@ -21,6 +21,7 @@ const value = (config: AutoBuildMode = mode(), ids = ["old"]) =>
     supervisorModel: config.supervisorModel,
     reviewRequests: [],
     requestErrors: [],
+    requestPage: { offset: 0, total: 0, hasNext: false },
     observations: [],
     waitingTickets: [],
     configurationError: null,
