@@ -102,6 +102,7 @@ test("chat measures against a live follow lock after stopping and returning near
     page,
     "packages/ui/src/components/chat-ui/components/chat-panel-resize.canvas.tsx#StreamingResize",
   );
+  const viewport = preview.getByRole("log").locator(':scope > [data-scope="scroll-area"] > [data-part="viewport"]');
   const latest = preview.getByRole("button", { name: "Scroll to latest message" });
   const batch = preview.getByRole("button", { name: "Append response batch", exact: true });
   const resize = preview.getByRole("button", { name: "Resize panel", exact: true });
@@ -114,7 +115,19 @@ test("chat measures against a live follow lock after stopping and returning near
   await expect(preview.getByText(/^Step 30\./)).toBeInViewport();
   await expect(latest).toBeHidden();
 
-  await stop.click();
+  // Queue the browser's downward scroll before Stop, then let its event arrive after Stop.
+  await viewport.evaluate(
+    async (element, button) => {
+      await new Promise<void>((resolve) => {
+        element.addEventListener("scroll", () => resolve(), { once: true });
+        element.scrollTop -= 16;
+      });
+      element.scrollTop = element.scrollHeight;
+      (button as HTMLButtonElement).click();
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    },
+    await stop.elementHandle(),
+  );
   await resize.click();
   await batch.click();
   await expect(preview.getByRole("status")).toHaveText("Responses: 58");

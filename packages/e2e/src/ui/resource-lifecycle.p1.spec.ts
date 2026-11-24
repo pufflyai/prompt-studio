@@ -148,7 +148,18 @@ test("a removed note's pending draft stays recoverable until its page is explici
   await page.goto(`${apiBase}/projects/${project.id}/extensions/pstdio.planner/tickets`);
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   await sidenav.getByRole("option", { name: "Notes", exact: true }).click();
-  await sidenav.getByRole("option", { name: note.title, exact: true }).click();
+  const [opened] = await Promise.all([
+    page.waitForResponse((response) => {
+      const request = response.request();
+      return (
+        response.url() === `${apiBase}/v1/projects/${project.id}/text-editing/open` &&
+        request.method() === "POST" &&
+        request.postDataJSON()?.scope?.target?.resource?.id === note.id
+      );
+    }),
+    sidenav.getByRole("option", { name: note.title, exact: true }).click(),
+  ]);
+  expect(opened.ok()).toBe(true);
   // Notes open as single-resource pages; the breadcrumb names the open note.
   const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
   await expect(breadcrumb.getByText(note.title, { exact: true })).toBeVisible();

@@ -1,18 +1,15 @@
-import { HStack, IconButton, Text } from "@chakra-ui/react";
+import { HStack, IconButton } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
-import { useWorkbenchStore, WorkbenchBreadcrumbView, type WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
+import type { WorkbenchCore } from "@pstdio/workbench";
 import { ChevronsUpDown } from "lucide-react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { ProjectCrumb, projectButtonInteraction } from "./project-crumb";
 
-export const ProjectHeader = (props: { input: WorkbenchPanelRenderInput; showBreadcrumbs: boolean }) => {
-  const { input, showBreadcrumbs } = props;
-  const breadcrumbItems = useWorkbenchStore(input.workbench.breadcrumbs.store, (state) => state.items) ?? [];
-
+export const ProjectHeader = ({ workbench }: { workbench: WorkbenchCore }) => {
   return (
     <HStack gap="xs" h="full" minW="0" w="full">
       <HStack gap="2xs" flexShrink={0} minW="0">
-        <ProjectCrumb workbench={input.workbench} />
+        <ProjectCrumb workbench={workbench} />
         <Tooltip content="Switch project">
           <IconButton
             variant="ghost"
@@ -20,7 +17,7 @@ export const ProjectHeader = (props: { input: WorkbenchPanelRenderInput; showBre
             flexShrink={0}
             aria-label="Switch project"
             onClick={() => {
-              void input.workbench.commands.executeCommand(dashboardCommandIds.openProjects);
+              void workbench.commands.executeCommand(dashboardCommandIds.openProjects);
             }}
             {...projectButtonInteraction}
           >
@@ -28,12 +25,6 @@ export const ProjectHeader = (props: { input: WorkbenchPanelRenderInput; showBre
           </IconButton>
         </Tooltip>
       </HStack>
-      {showBreadcrumbs && breadcrumbItems.length > 0 ? (
-        <Text aria-hidden="true" color="fg.subtle" flexShrink={0}>
-          /
-        </Text>
-      ) : null}
-      {showBreadcrumbs ? <WorkbenchBreadcrumbView workbench={input.workbench} /> : null}
     </HStack>
   );
 };

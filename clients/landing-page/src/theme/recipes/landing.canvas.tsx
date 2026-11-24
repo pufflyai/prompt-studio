@@ -14,7 +14,7 @@ type Story = CanvasFrame<typeof meta>;
 export const Desktop: Story = {
   id: "theme-landing-pages--desktop",
   description:
-    "The download copy and editor stay vertically centered on wide desktops. Agent badges show Claude Code, Codex, OpenCode, Pi and GitHub Copilot with their own symbols.",
+    "The download copy and the Home scene stay vertically centered on wide desktops, and a pointer at the bottom of the first screen leads to What is. Agent badges show Claude Code, Codex, OpenCode, Pi and GitHub Copilot with their own symbols.",
 };
 export const CompactDesktop: Story = {
   id: "theme-landing-pages--compact-desktop",
@@ -46,6 +46,8 @@ export const Mobile: Story = {
 export const WhatIsPromptStudio: Story = {
   id: "theme-landing-pages--what-is-prompt-studio",
   args: { initialPath: "/what-is-prompt-studio/" },
+  description:
+    "Home, What is, Examples and Features are one scroll. Opening a section's URL lands on it; scrolling moves the sidebar selection and the URL with the section in view.",
 };
 export const Examples: Story = {
   id: "theme-landing-pages--examples",
@@ -54,4 +56,5 @@ export const Examples: Story = {
 export const Features: Story = {
   id: "theme-landing-pages--features",
   args: { initialPath: "/features/" },
+  description: "Features is the last section; the download call to action closes the scroll.",
 };

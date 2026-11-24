@@ -21,10 +21,10 @@ test("a link to another project opens that project", async ({ page, request }) =
 
   await page.goto(`/projects/${linkedProject.id}/sessions`);
 
-  const projectCrumb = page
-    .locator('[data-workbench-region="nav"]')
+  const projectButton = page
+    .getByRole("banner", { name: "App header", exact: true })
     .getByRole("button", { name: new RegExp(`${linkedProject.name}$`) });
-  await expect(projectCrumb).toBeVisible({ timeout: 30_000 });
+  await expect(projectButton).toBeVisible({ timeout: 30_000 });
   await expect(page).toHaveURL(new RegExp(`/projects/${linkedProject.id}/sessions`));
   await expect
     .poll(() => page.evaluate(() => window.localStorage.getItem("dashboard-wb2:selected-project:global")))

@@ -71,13 +71,33 @@ const DEFAULT_REDACT_PATHS = [
   "*.token",
 ];
 
-export const redactSensitiveText = (value: string, secrets: string[] = []) => {
-  let redacted = value;
-  for (const secret of secrets.filter(Boolean).sort((left, right) => right.length - left.length)) {
-    redacted = redacted.replaceAll(secret, REDACTED);
-  }
+export const redactSensitiveText = (value: string, secrets: string[] = [], limit = Infinity) => {
+  const prefix = value.slice(0, limit);
+  const ends = new Uint32Array(prefix.length);
+  // Match against the original input so overlapping matches cannot hide each other.
   for (const pattern of SENSITIVE_TEXT_PATTERNS) {
-    redacted = redacted.replace(pattern, `$1${REDACTED}`);
+    for (const match of prefix.matchAll(pattern)) {
+      const start = match.index + match[1].length;
+      if (start < prefix.length) ends[start] = Math.max(ends[start], match.index + match[0].length);
+    }
+  }
+  for (const secret of new Set(secrets)) {
+    if (!secret || secret.length > value.length) continue;
+    // A literal can begin inside the diagnostic and finish beyond its cutoff.
+    const window = value.slice(0, prefix.length + secret.length - 1);
+    for (let start = window.indexOf(secret); start >= 0; start = window.indexOf(secret, start + 1)) {
+      ends[start] = Math.max(ends[start], Math.min(prefix.length, start + secret.length));
+    }
+  }
+  let redacted = "";
+  for (let index = 0; index < prefix.length && redacted.length < limit; ) {
+    let end = ends[index];
+    if (end <= index) {
+      redacted += prefix[index++];
+      continue;
+    }
+    while (++index < end) end = Math.max(end, ends[index]);
+    redacted += REDACTED.slice(0, limit - redacted.length);
   }
   return redacted;
 };

@@ -32,16 +32,22 @@ export async function readAutoBuildAssignments(ctx: CommandContext, ticketIds?: 
         }),
       );
   } else {
-    const page = await ctx.sessions.query({
-      status: ["queued", "in_progress", "awaiting_input"],
-      includeArchived: true,
-      limit: 100,
-    });
-    for (const session of page.items) {
-      const workspace = session.workspaceId ? await ctx.workspaces.get(session.workspaceId) : undefined;
-      const ids = (workspace?.anchors_json ?? []).filter(({ type }) => type === "ticket").map(({ id }) => id);
-      record([session], ids);
-    }
+    let cursor: string | undefined;
+    do {
+      ctx.signal.throwIfAborted();
+      const page = await ctx.sessions.query({
+        status: ["queued", "in_progress", "awaiting_input"],
+        includeArchived: true,
+        limit: 100,
+        cursor,
+      });
+      for (const session of page.items) {
+        const workspace = session.workspaceId ? await ctx.workspaces.get(session.workspaceId) : undefined;
+        const ids = (workspace?.anchors_json ?? []).filter(({ type }) => type === "ticket").map(({ id }) => id);
+        record([session], ids);
+      }
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
   }
   return { assigned, sessions: [...ticketSessions.values()] };
 }

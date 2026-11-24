@@ -9,11 +9,12 @@ interface PageFrameProps {
   headerPadding?: "xs" | "sm" | "md" | "lg";
   /** Padding around the scrolled page content. */
   contentPadding?: "none" | "sm" | "md" | "lg";
+  fullWidth?: boolean;
 }
 
 // The toolbar sits outside the scroll area, so filters and actions stay in view while results scroll.
 export const PageFrame = (props: PageFrameProps) => {
-  const { toolbar, children, headerPadding, contentPadding = "lg" } = props;
+  const { toolbar, children, headerPadding, contentPadding = "lg", fullWidth } = props;
   return (
     <Flex direction="column" h="full" minH="0">
       {toolbar ? (
@@ -30,7 +31,15 @@ export const PageFrame = (props: PageFrameProps) => {
         </HStack>
       ) : null}
       <ScrollArea flex="1" minH="0">
-        <Flex direction="column" gap="lg" p={contentPadding} maxW="7xl" mx="auto" w="full">
+        <Flex
+          direction="column"
+          gap="lg"
+          p={contentPadding}
+          maxW={fullWidth ? "full" : "7xl"}
+          mx="auto"
+          w="full"
+          minW="0"
+        >
           {children}
         </Flex>
       </ScrollArea>

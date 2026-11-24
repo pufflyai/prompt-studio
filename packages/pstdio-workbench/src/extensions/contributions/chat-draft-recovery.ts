@@ -5,7 +5,7 @@ const chatDraftContent = (draft: ChatDraft) => ({
   attachments: draft.attachments,
   values: draft.values,
 });
-const hasContent = (draft: ChatDraft) =>
+export const hasChatDraftContent = (draft: ChatDraft) =>
   Boolean(draft.text || draft.attachments.length || Object.keys(draft.values).length);
 
 export const chatDraftContentKey = (draft: ChatDraft) => JSON.stringify(chatDraftContent(draft));
@@ -24,7 +24,7 @@ export const hydrateChatDraft = (current: ChatDraft, saved: ChatDraft) => {
   const seen = new Set([key(current)]);
   const recovered = [...(current.recovered ?? []), chatDraftContent(saved), ...(saved.recovered ?? [])].filter(
     (draft) => {
-      if (!hasContent(draft) || seen.has(key(draft))) return false;
+      if (!hasChatDraftContent(draft) || seen.has(key(draft))) return false;
       seen.add(key(draft));
       return true;
     },

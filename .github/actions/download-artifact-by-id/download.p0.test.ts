@@ -8,6 +8,10 @@ import { type DownloadOptions, downloadArtifacts } from "./download.mts";
 
 const api = "https://api.example.test";
 const storage = "https://storage.example.test";
+const resultsUrl = "https://results.example.test";
+const service = `${resultsUrl}/twirp/github.actions.results.api.v1.ArtifactService`;
+const resultsToken = `header.${Buffer.from(JSON.stringify({ scp: "Other:scope Actions.Results:run-backend:current-job" })).toString("base64url")}.signature`;
+const results = { url: resultsUrl, token: resultsToken, runId: "7", repository: "owner/repo" };
 let directory = "";
 
 beforeEach(async () => {
@@ -143,6 +147,103 @@ test("merge-multiple extracts every artifact directly into the path", async () =
     "nested/a.txt": "a",
     "production-candidate.json": "{}",
   });
+});
+
+test("a same-run artifact downloads by its exact ID through Actions Results and checks its digest", async () => {
+  const id = "9007199254740993";
+  const archive = zip({ "plan.json": '{"jobs":[]}' });
+  const signedUrl = `${storage}/${id}?sig=1`;
+  const log: string[] = [];
+  const calls: string[] = [];
+  const fetcher = async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    calls.push(url);
+    const headers = new Headers(init?.headers);
+    if (url === signedUrl) {
+      expect(headers.has("authorization")).toBe(false);
+      return new Response(archive);
+    }
+    expect(headers.get("authorization")).toBe(`Bearer ${resultsToken}`);
+    expect(init?.method).toBe("POST");
+    const body = JSON.parse(String(init?.body));
+    if (url === `${service}/ListArtifacts`) {
+      expect(body).toEqual({
+        workflow_run_backend_id: "run-backend",
+        workflow_job_run_backend_id: "current-job",
+        id_filter: id,
+      });
+      return Response.json({
+        artifacts: [
+          {
+            database_id: id,
+            workflow_run_backend_id: "run-backend",
+            workflow_job_run_backend_id: "upload-job",
+            name: "plan",
+            digest: `sha256:${"0".repeat(64)}`,
+          },
+        ],
+      });
+    }
+    expect(url).toBe(`${service}/GetSignedArtifactURL`);
+    expect(body).toEqual({
+      workflow_run_backend_id: "run-backend",
+      workflow_job_run_backend_id: "upload-job",
+      name: "plan",
+    });
+    return Response.json({ signed_url: signedUrl });
+  };
+
+  await downloadArtifacts(
+    options(fetcher as typeof fetch, {
+      artifactIds: id,
+      runId: "7",
+      results,
+      log: (line) => void log.push(line),
+    }),
+  );
+
+  expect(calls).toEqual([`${service}/ListArtifacts`, `${service}/GetSignedArtifactURL`, signedUrl]);
+  expect(log).toContain(
+    "::warning::Artifact 'plan' digest validation failed. Please verify the integrity of the artifact.",
+  );
+  expect(await tree(directory)).toEqual({ "plan/plan.json": '{"jobs":[]}' });
+});
+
+test.each([
+  ["artifact ID", { database_id: "300", workflow_run_backend_id: "run-backend" }],
+  ["workflow run", { database_id: "200", workflow_run_backend_id: "other-run" }],
+] as const)("refuses an Actions Results artifact with the wrong %s", async (_field, identity) => {
+  const fetcher = (async (input: string | URL | Request) => {
+    expect(String(input)).toBe(`${service}/ListArtifacts`);
+    return Response.json({
+      artifacts: [{ ...identity, name: "plan", workflow_job_run_backend_id: "upload-job" }],
+    });
+  }) as typeof fetch;
+
+  await expect(downloadArtifacts(options(fetcher, { artifactIds: "200", runId: "7", results }))).rejects.toThrow(
+    "Actions Results returned an unexpected identity for artifact 200",
+  );
+});
+
+test("cross-run and cross-repository downloads still use REST when Actions Results is available", async () => {
+  const { fetcher, requests } = github(artifacts);
+  await downloadArtifacts(
+    options(fetcher, {
+      artifactIds: "200",
+      runId: "7",
+      results: { ...results, runId: "8" },
+    }),
+  );
+  await downloadArtifacts(
+    options(fetcher, {
+      artifactIds: "300",
+      runId: "7",
+      results: { ...results, repository: "owner/other" },
+    }),
+  );
+
+  expect(requests.filter((url) => url.startsWith(api))).toHaveLength(4);
+  expect(requests.some((url) => url.startsWith(resultsUrl))).toBe(false);
 });
 
 test("a missing, expired or other-run artifact fails clearly", async () => {

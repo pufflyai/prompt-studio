@@ -5,8 +5,9 @@ import {
   type HarnessParamValues,
   ParamEditorRow,
 } from "@pstdio/ui/param-editor";
-import { findAgentModel, resolveAgentModelParams } from "pstdio-api-contracts/agent-model-params";
+import { findAgentModel } from "pstdio-api-contracts/agent-model-params";
 import { useTranslation } from "react-i18next";
+import { useHarnessParamPresentation } from "@/shared/agents/harness-param-presentation";
 import { useAgentModels } from "@/shared/agents/use-agent-models";
 import { useAgents } from "@/shared/agents/use-agents";
 import { useHarnessParamDefaults, useUpdateHarnessParamDefaults } from "@/shared/agents/use-harness-param-defaults";
@@ -56,11 +57,12 @@ export const ProjectDefaultsCard = (props: ProjectDefaultsCardProps) => {
 
   const paramDefaults = useHarnessParamDefaults(projectId, selectedHarnessId || undefined);
   const updateParamDefaults = useUpdateHarnessParamDefaults(projectId, selectedHarnessId || undefined);
-  const paramSchema =
-    resolveAgentModelParams(
-      paramDefaults.data?.schema ?? selectedHarness?.params,
-      findAgentModel(models, selectedModelId),
-    ) ?? undefined;
+  const paramSchema = useHarnessParamPresentation(
+    paramDefaults.data?.schema ?? selectedHarness?.params,
+    findAgentModel(models, selectedModelId),
+    selectedHarness?.extensionId,
+    projectId,
+  );
   const storedParamDefaults = paramDefaults.data?.defaults ?? {};
   const paramValues = filterHarnessParamValues(paramSchema, storedParamDefaults);
 

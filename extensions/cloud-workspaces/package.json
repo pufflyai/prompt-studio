@@ -1,0 +1,28 @@
+{
+  "name": "pocketcoder",
+  "version": "0.1.0",
+  "displayName": "Cloud Workspaces",
+  "description": "Manage cloud workspaces, local PocketCoder instances, app previews, and workspace activity.",
+  "publisher": "pocketcoder",
+  "main": "./extension.ts",
+  "engines": {
+    "pstdio": "^0.5.1"
+  },
+  "pstdio": {
+    "scope": "user"
+  },
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pstdio/pocketcoder-sdk": "0.11.1",
+    "@pstdio/sdk": "0.48.0-nightly.20261117030256"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "typescript": "5.9.3"
+  },
+  "icon": "cloud"
+}

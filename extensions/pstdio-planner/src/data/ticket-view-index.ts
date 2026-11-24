@@ -34,6 +34,7 @@ export const ticketViewIndex: StorageRecordIndex = {
   },
   fields: {
     id: projected("id", "string"),
+    linkScope: { path: [], type: "string", derive: { kind: "expression", expression: { literal: "tickets" } } },
     shorthand: projected("shorthand", "string"),
     aliases: projected("aliases", "array"),
     breadcrumb: { path: ["breadcrumb"], type: "string" },
@@ -97,7 +98,7 @@ export const ticketViewIndex: StorageRecordIndex = {
       lookup: { index: "timeline-gates", on: [{ sourceField: "id", relatedField: "ticketId" }], field: "ticketId" },
     },
   },
-  equality: ["id", "archived", "parentId", "statusId", "createdCalendarOnly", "updatedCalendarOnly"],
+  equality: ["id", "linkScope", "archived", "parentId", "statusId", "createdCalendarOnly", "updatedCalendarOnly"],
   orderBy: [{ field: "position", direction: "asc" }],
   countBy: ["archived", "statusId"],
   alternateOrders: [

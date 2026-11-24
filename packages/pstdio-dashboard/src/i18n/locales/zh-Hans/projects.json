@@ -95,6 +95,7 @@
       "connections": {
         "title": "连接",
         "description": "将此扩展连接到远程服务。凭据保留在 Prompt Studio 主机中。",
+        "globalScope": "在此设备上的所有本地项目之间共享。",
         "endpoint": "端点",
         "credential": "凭据",
         "credentialUnchanged": "留空以保留当前凭据",

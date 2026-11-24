@@ -110,6 +110,18 @@ const start = async () => {
       handlers.delete(handler);
     };
   };
+  let stopSizing: (() => void) | undefined;
+  const updateSizing = (sizing: InitMessage["sizing"]) => {
+    stopSizing?.();
+    stopSizing = undefined;
+    const mount = ensureMount();
+    mount.style.height = "100%";
+    mount.style.width = "100%";
+    if (sizing === "content-width")
+      stopSizing = observeContentWidth(mount, (width) => connection.remote.contentWidthChanged(width));
+    if (sizesToContentHeight(sizing))
+      stopSizing = observeContentHeight(mount, (height) => connection.remote.contentHeightChanged?.(height), sizing);
+  };
   const viewLifecycle = createViewLifecycle(async (message: InitMessage) => {
     injectStyles(message.styles);
     const module = (await import(/* @vite-ignore */ message.moduleUrl)) as {
@@ -125,15 +137,7 @@ const start = async () => {
       propsStore,
     );
     const mount = ensureMount();
-    let stopSizing: (() => void) | undefined;
-    if (message.sizing === "content-width")
-      stopSizing = observeContentWidth(mount, (width) => connection.remote.contentWidthChanged(width));
-    if (sizesToContentHeight(message.sizing))
-      stopSizing = observeContentHeight(
-        mount,
-        (height) => connection.remote.contentHeightChanged?.(height),
-        message.sizing,
-      );
+    updateSizing(message.sizing);
     const dispose = await view.mount(mount, host, propsStore);
     return () => {
       stopSizing?.();
@@ -152,6 +156,7 @@ const start = async () => {
   });
 
   const connection = await guest.connect({
+    sizingUpdate: ({ sizing }: Pick<InitMessage, "sizing">) => updateSizing(sizing),
     visibilityUpdate: (visible: boolean) => visibility.setVisible(visible),
     keyboardUpdate: (shortcuts: readonly WebviewKeyboardShortcut[]) => {
       keyboardShortcuts = shortcuts;

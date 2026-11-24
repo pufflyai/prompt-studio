@@ -34,6 +34,8 @@ test("removes watched source bytes on the preparation worker without inspecting 
         id: "removal",
         kind: "sources",
         rows: [sourcePath, otherPath].map((source_path) => ({ source_path, install_name: source_path })),
+        sourcePaths: [],
+        reconcileAll: true,
       },
       options,
     );

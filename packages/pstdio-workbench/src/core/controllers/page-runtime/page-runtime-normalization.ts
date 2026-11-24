@@ -44,6 +44,6 @@ export const normalizePageRuntimeState = (
     sharedLayout:
       state.projectId === previous.projectId && state.activeModeId === previous.activeModeId ? layout : modeLayout,
     isResourceViewer: input.isResourceViewer,
-    resourceKey: input.registry.resourceReferenceKey,
+    resourceKey: input.resourceViewerKey ?? ((resource) => input.registry.resourceReferenceKey(resource)),
   });
 };

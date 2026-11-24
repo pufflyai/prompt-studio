@@ -33,6 +33,12 @@
 6. Use the smallest representative browser scenario. Add screenshot comparisons only when appearance is the critical contract and behavioral assertions cannot establish it.
 7. Routine copy, spacing, cosmetic, and documentation changes do not require browser runs or screenshots. Explicit user-requested visual verification still applies.
 
+### Cloud execution
+
+`test:review` needs its Git base history and a working Docker daemon. A source-only cloud upload without Docker cannot satisfy that gate. Focused cloud test results do not count as a clean review run.
+
+Prefer configured cloud test workspaces and cloud app previews when they support the required workload. Follow the available cloud test and preview skills. Preserve the required suite selection, save full logs and source revision, and verify cleanup after test completion. Use the supported local workflow when cloud execution is unavailable or lacks a required dependency; record the reason and keep blocked checks visible.
+
 ## 5. Packaged files
 
 1. When bundled runtime behavior, assets, or file inclusion change, update the relevant packaged smoke test. This includes built-in templates, prompts, skills, and other packaged defaults. Documentation-reference-only edits do not require packaged tests.

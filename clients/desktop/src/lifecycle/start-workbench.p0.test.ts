@@ -144,3 +144,30 @@ test("preserves the runtime startup failure when early browser login fails", asy
   ready.reject(runtimeFailure);
   expect(await startup).toBe(runtimeFailure);
 });
+
+test("preserves a diagnosed runtime failure when its asset request fails first", async () => {
+  const ready = Promise.withResolvers<ManagedRuntime>();
+  const runtimeFailure = new Error("pglite_recovery_failure: Fixture database failed to open");
+  const startup = startWorkbench(
+    {
+      showLifecycle: async () => {},
+      prepareWorkbench: async () => {
+        throw new Error("workbench_unavailable: The workbench app files could not load");
+      },
+      showWorkbench: async () => {
+        throw new Error("Failed runtime must not reveal a workbench");
+      },
+    },
+    {
+      start: (onStarting?: (descriptor: ManagedRuntime["descriptor"]) => void) => {
+        onStarting?.(runtime.descriptor);
+        return ready.promise;
+      },
+      cancelStart: async () => {
+        ready.reject(runtimeFailure);
+        await ready.promise.catch(() => {});
+      },
+    },
+  ).catch((error: unknown) => error);
+  expect(await startup).toBe(runtimeFailure);
+});

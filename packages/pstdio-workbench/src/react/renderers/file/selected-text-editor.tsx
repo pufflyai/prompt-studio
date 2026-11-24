@@ -15,6 +15,7 @@ export const selectedTextEditorInput = (
   const viewId = `${editor.extensionId ?? ownerId}.view.${editor.id}`;
   return {
     ...input,
+    viewId,
     instance: { ...input.instance, viewId },
     textTarget: { fileRendererId, resource: input.instance.resource, pageParams },
   };

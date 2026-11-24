@@ -13,6 +13,10 @@ export const StoragePage = () => {
     command: () => client.commands["diagnostics.storage-report"](),
   });
   const measure = useMutation({ mutationFn: () => client.commands["diagnostics.storage-refresh"]() });
+  const schema = useCommandQuery({
+    queryKey: ["database-schema"],
+    command: () => client.commands["diagnostics.database-schema"](),
+  });
   useEffect(() => {
     const refresh = () => void queryClient.invalidateQueries({ queryKey: ["storage-report"] });
     const unsubscribeReport = client.events.subscribe(storageReportChanged, refresh);
@@ -28,6 +32,10 @@ export const StoragePage = () => {
       measuring={measure.isPending || Boolean(report.data?.measuring)}
       error={measure.error?.message ?? report.error?.message ?? report.data?.error}
       onMeasure={() => measure.mutate()}
+      schema={schema.data ?? null}
+      schemaLoading={schema.isFetching}
+      schemaError={schema.error?.message}
+      onReloadSchema={() => void schema.refetch()}
     />
   );
 };

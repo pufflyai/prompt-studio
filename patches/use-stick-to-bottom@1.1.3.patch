@@ -1,8 +1,8 @@
 diff --git a/dist/useStickToBottom.js b/dist/useStickToBottom.js
-index 1a7671496f181e92462cad65a7a90966a409e3b3..31b41ded090f08a9c0f9f13eac7092eacd2b4b92 100644
+index 1a7671496f181e92462cad65a7a90966a409e3b3..bb03cd5f4c099e11aae48cf10e7d39eb53ca8f67 100644
 --- a/dist/useStickToBottom.js
 +++ b/dist/useStickToBottom.js
-@@ -71,6 +71,7 @@
+@@ -71,6 +71,7 @@ export const useStickToBottom = (options = {}) => {
              escapedFromLock,
              isAtBottom,
              resizeDifference: 0,
@@ -10,7 +10,7 @@ index 1a7671496f181e92462cad65a7a90966a409e3b3..31b41ded090f08a9c0f9f13eac7092ea
              accumulated: 0,
              velocity: 0,
              listeners: new Set(),
-@@ -123,6 +124,8 @@
+@@ -123,6 +124,8 @@ export const useStickToBottom = (options = {}) => {
              scrollOptions = { animation: scrollOptions };
          }
          if (!scrollOptions.preserveScrollPosition) {
@@ -19,7 +19,7 @@ index 1a7671496f181e92462cad65a7a90966a409e3b3..31b41ded090f08a9c0f9f13eac7092ea
              setIsAtBottom(true);
          }
          const waitElapsed = Date.now() + (Number(scrollOptions.wait) || 0);
-@@ -211,8 +214,9 @@
+@@ -211,18 +214,28 @@ export const useStickToBottom = (options = {}) => {
              return state.animation.promise;
          }
          return next();
@@ -27,10 +27,14 @@ index 1a7671496f181e92462cad65a7a90966a409e3b3..31b41ded090f08a9c0f9f13eac7092ea
 +    }, [setIsAtBottom, setEscapedFromLock, isSelecting, state]);
      const stopScroll = useCallback(() => {
 +        state.scrollGeneration += 1;
++        // A browser scroll event may still be queued at the position where following stopped.
++        state.lastScrollTop = state.scrollTop;
++        state.lastTargetScrollTop = state.targetScrollTop;
          setEscapedFromLock(true);
          setIsAtBottom(false);
-     }, [setEscapedFromLock, setIsAtBottom]);
-@@ -220,6 +224,10 @@
+-    }, [setEscapedFromLock, setIsAtBottom]);
++    }, [setEscapedFromLock, setIsAtBottom, state]);
+     const handleScroll = useCallback(({ target }) => {
          if (target !== scrollRef.current) {
              return;
          }
@@ -40,8 +44,13 @@ index 1a7671496f181e92462cad65a7a90966a409e3b3..31b41ded090f08a9c0f9f13eac7092ea
 +        const scrollGeneration = state.scrollGeneration;
          const { scrollTop, ignoreScrollToTop } = state;
          let { lastScrollTop = scrollTop } = state;
++        const { lastTargetScrollTop = targetScrollTop } = state;
          state.lastScrollTop = scrollTop;
-@@ -244,7 +252,7 @@
++        state.lastTargetScrollTop = targetScrollTop;
+         state.ignoreScrollToTop = undefined;
+         if (ignoreScrollToTop && ignoreScrollToTop > scrollTop) {
+             /**
+@@ -244,7 +257,7 @@ export const useStickToBottom = (options = {}) => {
              /**
               * When theres a resize difference ignore the resize event.
               */
@@ -50,7 +59,7 @@ index 1a7671496f181e92462cad65a7a90966a409e3b3..31b41ded090f08a9c0f9f13eac7092ea
                  return;
              }
              if (isSelecting()) {
-@@ -258,7 +266,7 @@
+@@ -258,11 +271,12 @@ export const useStickToBottom = (options = {}) => {
                  state.scrollTop = lastScrollTop;
                  return;
              }
@@ -59,15 +68,22 @@ index 1a7671496f181e92462cad65a7a90966a409e3b3..31b41ded090f08a9c0f9f13eac7092ea
                  setEscapedFromLock(true);
                  setIsAtBottom(false);
              }
-@@ -287,15 +295,29 @@
+-            if (isScrollingDown) {
++            // Resizing may move the anchor down even though the reader did not scroll.
++            if (isScrollingDown && lastTargetScrollTop === targetScrollTop) {
+                 setEscapedFromLock(false);
+             }
+             if (!state.escapedFromLock && state.isNearBottom) {
+@@ -287,15 +301,27 @@ export const useStickToBottom = (options = {}) => {
              deltaY < 0 &&
              scrollRef.current.scrollHeight > scrollRef.current.clientHeight &&
              !state.animation?.ignoreEscapes) {
-+            state.scrollGeneration += 1;
-             setEscapedFromLock(true);
-             setIsAtBottom(false);
+-            setEscapedFromLock(true);
+-            setIsAtBottom(false);
++            stopScroll();
          }
-     }, [setEscapedFromLock, setIsAtBottom, state]);
+-    }, [setEscapedFromLock, setIsAtBottom, state]);
++    }, [stopScroll, state]);
 +    // Native history keys express intent before their scroll can overlap a resize observation.
 +    // Text editors and nested controls retain their own keyboard behavior.
 +    const handleKeyDown = useCallback((event) => {
@@ -89,7 +105,7 @@ index 1a7671496f181e92462cad65a7a90966a409e3b3..31b41ded090f08a9c0f9f13eac7092ea
      }, []);
      const contentRef = useRefCallback((content) => {
          state.resizeObserver?.disconnect();
-@@ -305,6 +327,12 @@
+@@ -305,6 +331,12 @@ export const useStickToBottom = (options = {}) => {
          let previousHeight;
          state.resizeObserver = new ResizeObserver(([entry]) => {
              const { height } = entry.contentRect;
@@ -102,7 +118,7 @@ index 1a7671496f181e92462cad65a7a90966a409e3b3..31b41ded090f08a9c0f9f13eac7092ea
              const difference = height - (previousHeight ?? height);
              state.resizeDifference = difference;
              /**
-@@ -336,7 +364,7 @@
+@@ -336,7 +368,7 @@ export const useStickToBottom = (options = {}) => {
                   * if we are want to un-escape from the lock, because the resize
                   * could have caused the container to be at the bottom.
                   */

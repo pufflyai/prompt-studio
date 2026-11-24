@@ -66,15 +66,41 @@ test("ticket work opens a shared non-Git folder and loads files without Git requ
     // The ticket's linked folder previews in Side, where its files are in the Side menu.
     const filesOpener = page
       .locator('[data-workbench-region="side"]')
-      .getByRole("button", { name: "Open Side left menu", exact: true });
+      .getByRole("button", { name: /^(Open|Close) Side left menu$/ });
     if ((await filesOpener.getAttribute("aria-expanded")) !== "true") await filesOpener.click();
     await expect(filesOpener).toHaveAttribute("aria-expanded", "true");
-    const sideFiles = page.getByRole("menu", { name: "Open Side left menu", exact: true });
+    const sideFiles = page.getByRole("dialog", { name: "Files", exact: true });
     await expect(sideFiles.getByRole("option", { name: "notes.md", exact: true })).toBeVisible();
+    // Pointer events from portaled menu content must not dock its owner's header.
+    const owner = page.locator('[data-workbench-menu-bounds="side"]');
+    await expect
+      .poll(async () => {
+        const menu = (await sideFiles.boundingBox())!,
+          bounds = (await owner.boundingBox())!;
+        return Math.abs(menu.x - bounds.x);
+      })
+      .toBeLessThan(2);
+    const bubble = (await sideFiles.boundingBox())!;
+    expect(bubble.height).toBeLessThan(200);
+    expect(bubble.height).toBeLessThanOrEqual((await owner.boundingBox())!.height);
+    await page.mouse.move(bubble.x + 20, bubble.y + bubble.height - 32);
+    await page.mouse.down();
+    await page.mouse.move(bubble.x + 40, bubble.y + bubble.height - 16, { steps: 5 });
+    await expect(page.locator("[data-menu-header-drop]")).toHaveCount(0);
+    await page.mouse.up();
+    await expect(page.locator('[data-workbench-content-header="side"]')).toHaveAttribute(
+      "data-menu-header-position",
+      "top",
+    );
     // A non-Git folder adds no Changes view.
     await expect(page.getByRole("tab", { name: "Changes" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Changes", exact: true })).toHaveCount(0);
+    const filesTabs = page.locator('[data-workbench-panel-header="side"]').getByRole("tab");
+    await expect(filesTabs).toHaveCount(1);
+    await filesTabs.first().click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
     await sideFiles.getByRole("option", { name: "notes.md", exact: true }).click();
+    await expect(filesTabs).toHaveCount(1);
     await expect(page.locator(".monaco-editor .view-lines")).toContainText("Shared notes");
     expect(gitRequests).toEqual([]);
     expect(await (await request.get(workspaceUrl)).json()).toEqual([

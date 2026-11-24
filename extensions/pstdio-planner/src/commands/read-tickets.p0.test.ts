@@ -50,25 +50,27 @@ describe("readTicketsCommand", () => {
   });
 });
 
-test("restarts a first-page ticket read when sync changes the selected revision", async () => {
+test("restarts a first-page ticket read across successive sync revisions", async () => {
   const storage = createMemoryStorage();
   await putTicket(storage, makeTicket({ shorthand: "T-local", sortOrder: 0 }));
   const remote = makeTicket({ shorthand: "T-synced", sortOrder: 1 });
+  const later = makeTicket({ shorthand: "T-synced-later", sortOrder: 2 });
   const query = storage.records.query.bind(storage.records);
   let revisionChecks = 0;
   storage.records.query = async (input) => {
     if (input.index === "ticket-view" && input.revision && input.fields?.length === 0) {
       revisionChecks++;
       if (revisionChecks === 1) await putTicket(storage, remote);
+      if (revisionChecks === 2) await putTicket(storage, later);
     }
     return query(input);
   };
 
   const result = await readTicketsCommand.run(...makeCommandArgs({ storage, params: {} }));
 
-  expect(revisionChecks).toBe(2);
-  expect(result.total).toBe(2);
-  expect(result.tickets.map(({ shorthand }) => shorthand)).toEqual(["T-local", "T-synced"]);
+  expect(revisionChecks).toBe(3);
+  expect(result.total).toBe(3);
+  expect(result.tickets.map(({ shorthand }) => shorthand)).toEqual(["T-local", "T-synced", "T-synced-later"]);
 });
 
 test("a stale continuation cannot silently mix rows from two revisions", async () => {
@@ -91,4 +93,25 @@ test("a stale continuation cannot silently mix rows from two revisions", async (
     readTicketsCommand.run(...makeCommandArgs({ storage, params: { limit: 1, cursor: first.cursor! } })),
   ).rejects.toThrow("stale");
   expect(continuations).toBe(1);
+});
+
+test("cancels a first-page read while synchronization keeps advancing its revision", async () => {
+  const storage = createMemoryStorage();
+  await putTicket(storage, makeTicket({ shorthand: "T-local" }));
+  const controller = new AbortController();
+  const query = storage.records.query.bind(storage.records);
+  let revisionChecks = 0;
+  storage.records.query = async (input) => {
+    if (input.index === "ticket-view" && input.revision && input.fields?.length === 0) {
+      revisionChecks++;
+      await putTicket(storage, makeTicket({ shorthand: `T-synced-${revisionChecks}` }));
+      if (revisionChecks === 2) controller.abort();
+    }
+    return query(input);
+  };
+
+  await expect(
+    readTicketsCommand.run(...makeCommandArgs({ storage, params: {}, overrides: { signal: controller.signal } })),
+  ).rejects.toThrow("aborted");
+  expect(revisionChecks).toBe(2);
 });

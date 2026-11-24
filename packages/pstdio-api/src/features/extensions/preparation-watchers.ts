@@ -9,10 +9,10 @@ interface WatchState {
   watcher: { refresh(path?: string): Promise<void>; dispose(): void };
 }
 const watchers = new Map<string, WatchState>();
-type WatchUpdate = {
-  id: string;
-  sourcePath?: string;
-} & ({ kind: "sources"; rows: WatchState["sources"] } | { kind: "roots"; rows: WatchState["roots"] });
+type WatchUpdate = { id: string } & (
+  | { kind: "sources"; rows: WatchState["sources"]; sourcePaths: string[]; reconcileAll: boolean }
+  | { kind: "roots"; rows: WatchState["roots"] }
+);
 export const updatePreparationWatcher = async (input: WatchUpdate) => {
   const existing = watchers.get(input.id);
   const previousSources = new Set(existing?.sources.map((row) => row.source_path));
@@ -47,7 +47,10 @@ export const updatePreparationWatcher = async (input: WatchUpdate) => {
     if (input.kind === "sources") existing.sources = input.rows;
     else existing.roots = input.rows;
     try {
-      await existing.watcher.refresh(addedSources.length ? undefined : input.sourcePath);
+      if (input.kind === "sources") {
+        for (const sourcePath of input.sourcePaths) await existing.watcher.refresh(sourcePath);
+        if (input.reconcileAll || addedSources.length) await existing.watcher.refresh();
+      } else await existing.watcher.refresh();
     } catch (error) {
       Object.assign(existing, previous);
       throw error;

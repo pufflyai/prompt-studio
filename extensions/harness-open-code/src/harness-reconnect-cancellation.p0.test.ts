@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createOpencodeHarness } from "./harness";
 import { ctx } from "./harness.test-helpers";
+import { readyPluginInventory } from "./native-api.test-helpers";
 
 test("final project retirement prevents reconnection after old-worker cleanup", async () => {
   const retiring = Promise.withResolvers<void>();
@@ -28,6 +29,7 @@ test("final project retirement prevents reconnection after old-worker cleanup", 
         return { running: true, url: "http://127.0.0.1:4097", dispose: async () => {} };
       },
       fetcher: async (url, init) => {
+        if (new URL(String(url)).pathname === "/api/plugin") return readyPluginInventory();
         if (new URL(String(url)).pathname === "/api/session" && !failed) {
           failed = true;
           throw Object.assign(new Error("connection failed"), { code: "ECONNREFUSED" });

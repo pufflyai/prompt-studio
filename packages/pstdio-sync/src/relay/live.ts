@@ -57,6 +57,12 @@ const updatePresence = (
   for (const callback of callbacks) callback(event.active);
 };
 
+const liveStatus = (
+  transport: ReturnType<typeof createRelaySocket>,
+  controls: ReturnType<typeof createLiveControls>,
+  state: { protocolUnsupported: boolean; controlRefused: boolean; renewing: boolean },
+) => ({ ...transport.status(), ...state, routingPending: controls.pending() });
+
 interface LiveConnectionInput {
   origin: string;
   projectId: string;
@@ -201,7 +207,8 @@ export const createLiveConnection = (input: LiveConnectionInput) => {
   const retain = controls.retain;
   return {
     done: transport.done,
-    status: () => ({ ...transport.status(), protocolUnsupported, controlRefused, renewing }),
+    // Routing admission is sampled separately from a document owner's synchronization work.
+    status: () => liveStatus(transport, controls, { protocolUnsupported, controlRefused, renewing }),
     retry: transport.retry,
     reconnect: transport.reconnect,
     close: () => controller.abort(),

@@ -8,7 +8,7 @@ test("native commands use the session command endpoint and compaction uses the c
     port: 0,
     fetch: async (request) => {
       const url = new URL(request.url);
-      if (url.pathname === "/api/provider") return Response.json({ data: [] });
+      if (url.pathname === "/api/plugin") return Response.json({ data: [{ id: "native-commands" }] });
       if (url.pathname === "/api/command")
         return Response.json({ data: [{ name: "review", description: "Review the changes" }] });
       if (url.pathname.endsWith("/wait")) return new Response(null, { status: 204 });
@@ -69,15 +69,17 @@ test("native commands apply a newly selected model before admission", async () =
 
 test("unchanged command definitions are reused, expire, and refresh after a native action", async () => {
   let reads = 0;
+  let inventoryReads = 0;
   let now = 0;
   let name = "review";
   const server = Bun.serve({
     port: 0,
     fetch: (request) => {
-      if (new URL(request.url).pathname === "/api/provider") return Response.json({ data: [] });
+      if (new URL(request.url).pathname === "/api/plugin")
+        return Response.json({ data: ++inventoryReads === 1 ? [] : [{ id: "native-commands" }] });
       if (new URL(request.url).pathname === "/api/command") {
         reads += 1;
-        return Response.json({ data: [{ name }] });
+        return Response.json({ data: inventoryReads > 1 ? [{ name }] : [] });
       }
       return Response.json(true);
     },
@@ -88,7 +90,7 @@ test("unchanged command definitions are reused, expire, and refresh after a nati
     now: () => now,
   });
   try {
-    await api.getCommands("/project");
+    expect(await api.getCommands("/project")).toEqual([{ name: "/review", description: "Native OpenCode command" }]);
     await api.getCommands("/project");
     expect(reads).toBe(1);
     name = "updated";

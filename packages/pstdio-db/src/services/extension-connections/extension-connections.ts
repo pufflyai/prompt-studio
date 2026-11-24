@@ -1,25 +1,30 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import type { ExtensionConnectionCheck } from "../../db/schemas/extension-connections";
 import { extension_connections } from "../../db/schemas.pg";
+import { createGlobalConnectionsStore } from "./global-connections";
 
 const nowTimestamp = () => new Date().toISOString();
 
 type ConnectionKey = {
-  projectId: string;
+  projectId: string | null;
   extensionId: string;
   contributionId: string;
 };
 
 export const createExtensionConnectionsDBService = (db: DbClient) => {
+  const global = createGlobalConnectionsStore(db);
   const whereKey = (input: ConnectionKey) =>
     and(
-      eq(extension_connections.project_id, input.projectId),
+      input.projectId === null
+        ? isNull(extension_connections.project_id)
+        : eq(extension_connections.project_id, input.projectId),
       eq(extension_connections.extension_id, input.extensionId),
       eq(extension_connections.contribution_id, input.contributionId),
     );
 
   const get = async (input: ConnectionKey) => {
+    if (input.projectId === null) return global.get(input.extensionId, input.contributionId);
     const [row] = await db.select().from(extension_connections).where(whereKey(input));
     return row ?? null;
   };
@@ -27,7 +32,8 @@ export const createExtensionConnectionsDBService = (db: DbClient) => {
   const listByProject = (projectId: string) =>
     db.select().from(extension_connections).where(eq(extension_connections.project_id, projectId));
 
-  const listAll = () => db.select().from(extension_connections);
+  const listAll = async () => [...(await db.select().from(extension_connections)), ...(await global.list())];
+  const listGlobal = () => global.list();
 
   const listByExtension = (projectId: string, extensionId: string) =>
     db
@@ -58,9 +64,18 @@ export const createExtensionConnectionsDBService = (db: DbClient) => {
       created_at: timestamp,
       updated_at: timestamp,
     };
+    if (input.projectId === null) {
+      const existing = await global.get(input.extensionId, input.contributionId);
+      return global.set({
+        ...row,
+        project_id: null,
+        id: existing?.id ?? row.id,
+        created_at: existing?.created_at ?? timestamp,
+      });
+    }
     const [stored] = await db
       .insert(extension_connections)
-      .values(row)
+      .values({ ...row, project_id: input.projectId })
       .onConflictDoUpdate({
         target: [
           extension_connections.project_id,
@@ -80,12 +95,18 @@ export const createExtensionConnectionsDBService = (db: DbClient) => {
   };
 
   const remove = async (input: ConnectionKey) => {
+    if (input.projectId === null) return global.remove(input.extensionId, input.contributionId);
     const [deleted] = await db.delete(extension_connections).where(whereKey(input)).returning();
     return deleted ?? null;
   };
 
-  const recordCheck = (input: ConnectionKey, check: ExtensionConnectionCheck) =>
-    db.update(extension_connections).set({ last_check_json: check }).where(whereKey(input));
+  const recordCheck = async (input: ConnectionKey, check: ExtensionConnectionCheck) => {
+    if (input.projectId === null) {
+      await global.recordCheck(input.extensionId, input.contributionId, check);
+      return;
+    }
+    await db.update(extension_connections).set({ last_check_json: check }).where(whereKey(input));
+  };
 
-  return { get, listAll, listByExtension, listByProject, recordCheck, remove, upsert };
+  return { get, listGlobal, listAll, listByExtension, listByProject, recordCheck, remove, upsert };
 };

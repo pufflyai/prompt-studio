@@ -5,11 +5,25 @@ import type { StoragePredicate } from "@pstdio/sdk/extensions";
 export const dependencyOnlyBlocker: StoragePredicate = {
   exists: {
     index: "ticket-view",
-    on: [{ sourceField: "dependsOn", relatedField: "id", op: "contains" }],
+    on: [{ sourceField: "linkScope", relatedField: "linkScope" }],
     every: { field: "dependencyReasonRefs", as: "blockerRef", matches: "one" },
     where: {
       all: [
         { field: "archived", op: "ne", value: true },
+        {
+          test: {
+            each: { field: "dependsOn", up: 1 },
+            as: "linkedRef",
+            mode: "some",
+            where: {
+              op: "or",
+              args: [
+                { op: "equalsIgnoreCase", args: [{ variable: "linkedRef" }, { field: "id" }] },
+                { op: "equalsIgnoreCase", args: [{ variable: "linkedRef" }, { field: "shorthand" }] },
+              ],
+            },
+          },
+        },
         {
           test: {
             op: "or",

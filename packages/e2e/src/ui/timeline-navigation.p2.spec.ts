@@ -27,7 +27,11 @@ test("returning to the timeline after creating a ticket refreshes without a clos
     const timelinePath = `/projects/${id}/extensions/pstdio.planner/ticket-timeline`;
     await page.goto(timelinePath);
     const timeline = page.frameLocator('iframe[title="Project Timeline"]');
-    await expect(timeline.getByRole("button", { name: "Auto Build", exact: true })).toBeVisible();
+    await expect(
+      page
+        .frameLocator('iframe[title="Timeline actions"]:visible')
+        .getByRole("button", { name: "Auto Build", exact: true }),
+    ).toBeVisible();
     await page.getByRole("option", { name: "Tickets", exact: true }).click();
     await page.getByRole("button", { name: "Create row", exact: true }).first().click();
     const form = page.getByRole("dialog").last();
@@ -39,6 +43,54 @@ test("returning to the timeline after creating a ticket refreshes without a clos
     await expect(timeline.getByText("Created before returning to the timeline", { exact: true })).toBeVisible();
     await expect(page.getByText("The calling viewer is no longer open", { exact: true })).toHaveCount(0);
     expect(await page.evaluate(() => Reflect.get(window, "timelineViewerErrors"))).toEqual([]);
+  } finally {
+    await request.delete(`${uiOrigin}/v1/projects/${id}`);
+  }
+});
+
+test("Auto Build stays in the timeline header and opens a host dialog after a panel move", async ({
+  page,
+  request,
+}) => {
+  // Critical risk: header webviews must not clip the configuration dialog or lose their owner when moved.
+  const created = await request.post(`${uiOrigin}/v1/projects`, {
+    data: folderProjectInput({ name: "Timeline header" }),
+  });
+  expect(created.ok()).toBe(true);
+  const { id } = await created.json();
+  try {
+    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+    await page.setViewportSize({ width: 1440, height: 700 });
+    const path = `/projects/${id}/extensions/pstdio.planner/ticket-timeline`;
+    await page.goto(path);
+    const main = page.locator('[data-workbench-panel="main"]');
+    const actions = main
+      .locator('[data-workbench-panel-header="main"]')
+      .frameLocator('iframe[title="Timeline actions"]');
+    await actions.getByRole("button", { name: "Auto Build", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Auto Build", exact: true });
+    await expect(dialog).toBeVisible();
+    const form = dialog.frameLocator('iframe[title="Auto Build"]');
+    await expect(form.getByText("Eligible tickets", { exact: true })).toBeVisible();
+    await expect(form.getByRole("button", { name: "About Auto Build", exact: true })).toBeVisible();
+    await form.locator('[contenteditable="true"]').first().fill("Evaluate header contributions");
+    await expect(form.getByRole("button", { name: "Cancel", exact: true })).toBeVisible();
+    await form.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(path);
+    await main.locator('[data-workbench-panel-header="main"]').click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Move to Side", exact: true }).click();
+    const side = page.locator('[data-workbench-panel="side"]');
+    await page
+      .locator('[data-workbench-header-panel="side"]')
+      .frameLocator('iframe[title="Timeline actions"]:visible')
+      .getByRole("button", { name: "Auto Build", exact: true })
+      .click();
+    await expect(dialog).toBeVisible();
+    await expect(form.getByText("Eligible tickets", { exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(side.getByRole("tab", { name: "Project Timeline", exact: true })).toBeVisible();
   } finally {
     await request.delete(`${uiOrigin}/v1/projects/${id}`);
   }

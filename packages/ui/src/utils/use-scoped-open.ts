@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { useUiScope } from "./ui-scope";
+import { useEffectEvent, useLayoutEffect, useState } from "react";
+import { useUiScope, useUiScopeViewActivity } from "./ui-scope";
 
-/** Closing the machine releases focus traps and document listeners without forgetting an open overlay. */
+/** Suspend overlays with their surface, but dismiss them when their owning view is left. */
 export const useScopedOpen = <
   Props extends {
     open?: boolean;
@@ -13,14 +13,25 @@ export const useScopedOpen = <
   props: Props,
 ) => {
   const scope = useUiScope();
+  const activity = useUiScopeViewActivity();
   const [open, setOpen] = useState(props.defaultOpen ?? false);
+  const [revision, setRevision] = useState(activity.revision);
+  const expired = revision !== activity.revision;
+  const dismiss = useEffectEvent(() => {
+    setOpen(false);
+    props.onOpenChange?.({ open: false });
+  });
+  useLayoutEffect(() => {
+    if (revision !== activity.revision && !(props.open ?? open)) setRevision(activity.revision);
+    if ((!activity.active || revision !== activity.revision) && (props.open ?? open)) dismiss();
+  }, [activity.active, activity.revision, revision, props.open, open]);
   if (!scope) return props;
   return {
     ...props,
-    open: scope.active && (props.open ?? open),
+    open: scope.active && !expired && (props.open ?? open),
     unmountOnExit: scope.active ? props.unmountOnExit : false,
     onOpenChange: (details: { open: boolean }) => {
-      if (!scope.active) return;
+      if (!scope.active || expired) return;
       setOpen(details.open);
       props.onOpenChange?.(details);
     },

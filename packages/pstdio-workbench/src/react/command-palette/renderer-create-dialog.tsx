@@ -1,5 +1,5 @@
-import { CloseButton, Spinner } from "@chakra-ui/react";
-import { ScopedDialog as Dialog } from "@pstdio/ui";
+import { CloseButton } from "@chakra-ui/react";
+import { ScopedDialog as Dialog, LoadingState } from "@pstdio/ui";
 import { KanbanRendererCreateDialog } from "@pstdio/ui/kanban-renderer";
 import { useEffect, useState } from "react";
 import type { RegisteredKanbanRendererContribution, ResourceRef } from "../../core";
@@ -87,7 +87,7 @@ export const RendererCreateDialog = (props: RendererCreateDialogProps) => {
                 }}
               />
             ) : (
-              <Spinner />
+              <LoadingState />
             )}
           </Dialog.Body>
         </Dialog.Content>

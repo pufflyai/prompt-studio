@@ -12,6 +12,7 @@ export const StartupPage = () => {
     <StartupView
       launches={timeline.data?.launches ?? []}
       projectNames={timeline.data?.projectNames ?? {}}
+      today={new Date().toISOString().slice(0, 10)}
       logPath={timeline.data?.logPath}
       error={timeline.error?.message}
       loading={timeline.isFetching}

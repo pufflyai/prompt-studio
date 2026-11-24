@@ -6,8 +6,10 @@ import { test } from "./helpers/notification-settings";
 
 test.use({ notificationsEnabled: true });
 
-const navSwitchProjectButton = (page: import("@playwright/test").Page) =>
-  page.getByRole("region", { name: "Nav Chrome" }).getByRole("button", { name: "Switch project", exact: true });
+const appSwitchProjectButton = (page: import("@playwright/test").Page) =>
+  page
+    .getByRole("banner", { name: "App header", exact: true })
+    .getByRole("button", { name: "Switch project", exact: true });
 
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
   const res = await request.get(`${apiBase}/v1/projects`);
@@ -117,7 +119,7 @@ test("switching projects never reopens the picker while restoring the landing vi
 
   await page.goto("/");
   await expect(homePage(page)).toBeVisible();
-  await navSwitchProjectButton(page).click();
+  await appSwitchProjectButton(page).click();
 
   const picker = page.getByRole("dialog", { name: "Projects", exact: true });
   await expect(picker).toBeVisible();

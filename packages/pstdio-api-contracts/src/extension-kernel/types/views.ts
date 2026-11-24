@@ -61,6 +61,8 @@ export type ViewBody =
 export interface ViewContribution extends ContributionDefinition<"view"> {
   readonly title: Localizable<string>;
   readonly icon?: string;
+  /** Controls that follow this live view into its movable menu header. */
+  readonly header?: { readonly view: ViewRef };
   readonly body: ViewBody;
 }
 
@@ -159,7 +161,7 @@ export interface PlacementContribution extends ContributionDefinition<"placement
 export interface ViewMenuContribution extends ContributionDefinition<"view-menu"> {
   readonly owner: ViewRef;
   readonly view: ViewRef;
-  readonly side: "left" | "right";
+  readonly side: "left" | "right" | "bottom";
   readonly group?: string;
   readonly placement?: "first" | "default" | "last";
   readonly hostTreeHeader?: "default" | "none";

@@ -1,6 +1,8 @@
 import { Button, Input, Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useEffect, useRef, useState } from "react";
+import { Header } from "../layout/header";
+import { ResourceContextMenu } from "../overlays/resource-context-menu";
 import { createScriptedTerminalBridge, type ScriptedTerminalStep } from "./scripted-bridge";
 import { Terminal } from "./terminal";
 import type { TerminalBridge } from "./types";
@@ -67,9 +69,11 @@ const PopupRestoreFocusFixture = () => {
   }, [open]);
   return (
     <Stack>
-      <Button ref={trigger} aria-haspopup="menu" aria-controls="terminal-actions">
-        Row actions
-      </Button>
+      <Header tabIndex={0}>
+        <Button ref={trigger} aria-haspopup="menu" aria-controls="terminal-actions">
+          Row actions
+        </Button>
+      </Header>
       {menuClosed ? null : (
         <div id="terminal-actions" role="menu" aria-label="Row actions">
           <Button role="menuitem" autoFocus onClick={() => setOpen(true)}>
@@ -113,6 +117,28 @@ const LateMountFocusFixture = () => {
 export const LateMountPreservesMenuFocus: Story = {
   id: "components-terminal--late-mount-preserves-menu-focus",
   render: () => <LateMountFocusFixture />,
+};
+const RestoredPanelFocusFixture = () => {
+  const [bridge] = useState(() => createScriptedTerminalBridge({ initial: [{ data: "Restored terminal ready\r\n" }] }));
+  const [restored, setRestored] = useState(false);
+  return (
+    <Stack>
+      <ResourceContextMenu actions={[{ key: "move-right", label: "Move panel to right" }]}>
+        <Header aria-label="Side panel header" tabIndex={0} onFocus={() => setRestored(true)}>
+          Side panel
+        </Header>
+      </ResourceContextMenu>
+      {restored ? (
+        <TerminalFrame>
+          <Terminal bridge={bridge} />
+        </TerminalFrame>
+      ) : null}
+    </Stack>
+  );
+};
+export const LateMountPreservesPanelHeaderFocus: Story = {
+  id: "components-terminal--late-mount-preserves-panel-header-focus",
+  render: () => <RestoredPanelFocusFixture />,
 };
 export const Default: Story = {
   id: "components-terminal--default",
