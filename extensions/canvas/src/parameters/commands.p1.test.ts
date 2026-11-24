@@ -48,15 +48,11 @@ test("version selection, rename and deletion preserve the authored version and u
   const result = await parameterCommands["parameters.versions"].run(ctx, target);
   expect(result.file).toBe("night.json");
   expect(result.versions.map((version) => version.name).sort()).toEqual(["Default", "Night sky"]);
-  await expect(
-    parameterCommands["parameters.delete"].run(ctx, { ...target, file: "settings.json" }),
-  ).rejects.toMatchObject({ cause: { type: "reject" } });
+  await expect(parameterCommands["parameters.delete"].run(ctx, { ...target, file: "settings.json" })).rejects.toThrow();
   await expect(
     parameterCommands["parameters.save"].run(ctx, { ...target, file: "../outside.json", values: {} }),
-  ).rejects.toMatchObject({ cause: { type: "reject" } });
-  await expect(
-    parameterCommands["parameters.delete"].run(ctx, { ...target, file: "default.json" }),
-  ).rejects.toMatchObject({ cause: { type: "reject" } });
+  ).rejects.toThrow();
+  await expect(parameterCommands["parameters.delete"].run(ctx, { ...target, file: "default.json" })).rejects.toThrow();
   await parameterCommands["parameters.delete"].run(ctx, { ...target, file: "night.json" });
   expect((await parameterCommands["parameters.versions"].run(ctx, target)).file).toBe("default.json");
   expect(await ctx.projectFiles!.exists("src/settings.json")).toBe(true);

@@ -114,7 +114,17 @@ for (const [harness, modes] of [
     await expect(editor).toHaveText("/fail");
     await expect(main.getByText(/Native command \/fail failed/).filter({ visible: true })).toBeVisible();
     if (modes) {
-      await editor.fill("/goal Saved before failure");
+      const text = "/goal Saved before failure";
+      const endpoint = "**/extensions/commands/pstdio.session-browser.view.conversation.chat.onAction/execute";
+      await page.route(endpoint, async (route) => {
+        if (route.request().postDataJSON()?.params?.action?.text !== text) return route.continue();
+        const response = await route.fetch();
+        const body = await response.json();
+        expect(body.outcome.ok).toBe(true);
+        const outcome = { ok: false, status: "error", reason: "Changed before rejection" };
+        await route.fulfill({ response, json: { ...body, outcome } });
+      });
+      await editor.fill(text);
       await send.click();
       await expect(main.getByText("Message delivery could not be confirmed.", { exact: true })).toBeVisible();
       await expect
