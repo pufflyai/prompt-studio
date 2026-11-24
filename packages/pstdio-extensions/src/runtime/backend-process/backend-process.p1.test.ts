@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { runtimeOperationChannel } from "pstdio-diagnostics";
 import { createExtensionProcessEnvironment } from "../process-environment";
 import { markHostContext } from "../runner/host-context";
+import { expectRejection } from "./expect-rejection.test-utils";
 import { backendWorkerCommand, createBackendWorkerPool } from "./pool";
 import { HANDLER_MARKER } from "./protocol";
 import { snapshotSink } from "./remote-values";
@@ -310,13 +311,13 @@ test("a definition keeps class methods and rejects values the host cannot receiv
   }
   const mapEntry = join(root, "map-extension.ts");
   await writeFile(mapEntry, `export default { commands: [{ id: "m", run: () => 1, options: new Map() }] };`);
-  await expect(
+  await expectRejection(
     startBackendWorker({
       command: backendWorkerCommand(),
       env: createExtensionProcessEnvironment(),
       entryPath: mapEntry,
     }),
-  ).rejects.toThrow("default.commands[0].options cannot be sent");
+  ).toThrow("default.commands[0].options cannot be sent");
 });
 
 afterAll(async () => {
@@ -435,7 +436,7 @@ test("cancelling settles the caller and aborts the worker's signal", async () =>
       worker.invoke({ handlerId: handlerOf(worker.definition, "waiting"), context: {}, surface, args: [] });
     while (!(await invokeWaiting())) await Bun.sleep(5);
     controller.abort(new Error("stop"));
-    await expect(waiting).rejects.toThrow("stop");
+    await expectRejection(waiting).toThrow("stop");
     expect(
       await worker.invoke({
         handlerId: handlerOf(worker.definition, "observed-abort"),
@@ -511,11 +512,11 @@ test("a crashed worker rejects its callers once and the next request starts a fr
     const first = await pool.acquire("source@1");
     const { context } = hostContext();
     const crash = first.invoke({ handlerId: handlerOf(first.definition, "crash"), context, surface, args: [] });
-    await expect(crash).rejects.toBeInstanceOf(BackendUnavailableError);
+    await expectRejection(crash).toBeInstanceOf(BackendUnavailableError);
     await first.exited;
-    await expect(
+    await expectRejection(
       first.invoke({ handlerId: handlerOf(first.definition, "save"), context, surface, args: [{ id: "b" }] }),
-    ).rejects.toBeInstanceOf(BackendUnavailableError);
+    ).toBeInstanceOf(BackendUnavailableError);
 
     const second = await pool.acquire("source@1");
     expect(second).not.toBe(first);
@@ -538,16 +539,16 @@ test("hostile or broken workers settle their callers without host errors", async
       surface,
       args: [],
     });
-    await expect(failed).rejects.toThrow("boom");
-    await expect(failed).rejects.not.toMatchObject({ code: "backend_unavailable" });
-    await expect(
+    await expectRejection(failed).toThrow("boom");
+    expect(await failed.catch((error: unknown) => error)).not.toMatchObject({ code: "backend_unavailable" });
+    await expectRejection(
       worker.invoke({
         handlerId: handlerOf(worker.definition, "save"),
         context,
         surface,
         args: [{ id: "a", tag: Symbol("not sendable") }],
       }),
-    ).rejects.toThrow();
+    ).toThrow();
     expect(
       await worker.invoke({ handlerId: handlerOf(worker.definition, "save"), context, surface, args: [{ id: "a" }] }),
     ).toMatchObject({ project: "p1" });
@@ -557,7 +558,7 @@ test("hostile or broken workers settle their callers without host errors", async
       surface,
       args: [],
     });
-    await expect(dropped).rejects.toBeInstanceOf(BackendUnavailableError);
+    await expectRejection(dropped).toBeInstanceOf(BackendUnavailableError);
     await worker.exited;
   } finally {
     await worker.stop();
@@ -580,13 +581,13 @@ test("retiring a generation stops its worker before a new one starts", async () 
 test("a worker that cannot start leaves no working folder behind", async () => {
   const leftovers = async () => (await readdir(tmpdir())).filter((name) => name.startsWith("pstdio-backend-")).length;
   const before = await leftovers();
-  await expect(
+  await expectRejection(
     startBackendWorker({
       command: [join(root, "missing-executable")],
       env: createExtensionProcessEnvironment(),
       entryPath,
     }),
-  ).rejects.toThrow();
+  ).toThrow();
   expect(await leftovers()).toBe(before);
 });
 
@@ -594,7 +595,7 @@ test("closing the pool refuses new workers and stops every running one", async (
   const pool = createBackendWorkerPool(() => ({ env: createExtensionProcessEnvironment(), entryPath }));
   const running = await pool.acquire("source@1");
   const closing = pool.close();
-  await expect(pool.acquire("source@2")).rejects.toBeInstanceOf(BackendUnavailableError);
+  await expectRejection(pool.acquire("source@2")).toBeInstanceOf(BackendUnavailableError);
   await closing;
   expect(await running.exited).not.toBeUndefined();
   const reopened = await pool.acquire("source@1");
@@ -629,7 +630,7 @@ test("closing waits for a retirement the pool did not start", async () => {
     const retiring = pool.retire("source@1");
     const closing = pool.close();
     try {
-      await expect(pool.acquire("source@2")).rejects.toBeInstanceOf(BackendUnavailableError);
+      await expectRejection(pool.acquire("source@2")).toBeInstanceOf(BackendUnavailableError);
     } finally {
       await Promise.all([retiring, closing]);
     }
@@ -989,7 +990,7 @@ test("a call cancelled while its arguments are prepared never reaches the worker
       signal: controller.signal,
     });
     controller.abort(new Error("cancelled"));
-    await expect(running).rejects.toThrow("cancelled");
+    await expectRejection(running).toThrow("cancelled");
     await Bun.sleep(200);
     expect(await Bun.file(marker).exists()).toBe(false);
     expect(worker.busy).toBe(false);
@@ -1007,9 +1008,9 @@ test("an endless loop or a memory hog is stopped from outside the worker", async
       watchdog,
     });
   const looping = await watched({ heartbeatMs: 50, unresponsiveMs: 500 });
-  await expect(
+  await expectRejection(
     looping.invoke({ handlerId: handlerOf(looping.definition, "endless"), context: {}, surface, args: [] }),
-  ).rejects.toThrow("did not respond");
+  ).toThrow("did not respond");
   await looping.exited;
 
   const hogging = await watched({
@@ -1017,9 +1018,9 @@ test("an endless loop or a memory hog is stopped from outside the worker", async
     // Well above an idle worker on every runner (about 55 MiB on Linux), well below the 256 MiB hog.
     memoryLimitBytes: 160 * 1024 * 1024,
   });
-  await expect(
+  await expectRejection(
     hogging.invoke({ handlerId: handlerOf(hogging.definition, "hog"), context: {}, surface, args: [] }),
-  ).rejects.toThrow("memory limit");
+  ).toThrow("memory limit");
   await hogging.exited;
 });
 
@@ -1035,7 +1036,7 @@ test("a worker that keeps failing waits out a cooldown instead of restarting in 
         .catch(() => {});
       await worker.exited;
     }
-    await expect(pool.acquire("crashy@1")).rejects.toThrow("can start again");
+    await expectRejection(pool.acquire("crashy@1")).toThrow("can start again");
   } finally {
     await pool.close();
   }
