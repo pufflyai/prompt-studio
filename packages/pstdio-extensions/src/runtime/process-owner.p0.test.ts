@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
-import type { ProcessEvent, ProcessHandle } from "pstdio-api-contracts/extension-kernel";
-import { createProcessHandleProxy } from "./process-owner";
+import type { ProcessEvent, ProcessExit, ProcessHandle } from "pstdio-api-contracts/extension-kernel";
+import { createProcessHandleProxy, createProcessOwner } from "./process-owner";
+import { createInvocationScope } from "./runner/scope";
 
 test("end() closes input after writes made before it, even ones nobody awaited", async () => {
   const received: string[] = [];
@@ -134,4 +135,58 @@ test("return releases a pending output read without waiting for the process", as
     read.resolve({ done: true, value: undefined });
     await returned;
   }
+});
+
+test("an invocation diagnoses a failed child stop and a closed owner can retry it without touching stopped siblings", async () => {
+  const failure = new Error("fixture process tree did not stop");
+  let tries = 0;
+  const exited = Promise.withResolvers<ProcessExit>();
+  const failed = createProcessHandleProxy(
+    Promise.resolve({
+      id: "retry",
+      started: Promise.resolve(),
+      exited: exited.promise,
+      write: async () => {},
+      end: async () => {},
+      kill: async () => {
+        if (++tries === 1) throw failure;
+        exited.resolve({ code: null, signal: "SIGTERM" });
+      },
+      events: async function* () {},
+    }),
+  );
+  const owner = createProcessOwner();
+  owner.adopt(failed);
+  await failed.started;
+  const sibling = {
+    exited: new Promise<never>(() => {}),
+    kill: async () => {
+      siblingStops++;
+    },
+  };
+  let siblingStops = 0;
+  owner.adopt(sibling);
+
+  const warnings: string[] = [];
+  const scope = createInvocationScope({
+    logger: {
+      info() {},
+      error() {},
+      warn(message) {
+        warnings.push(message);
+      },
+    },
+  });
+  scope.register(owner.close);
+  await scope.close();
+  expect(warnings).toEqual(["Invocation cleanup failed: Owned process cleanup failed."]);
+  expect(owner.closed).toBe(true);
+  expect(tries).toBe(1);
+  expect(siblingStops).toBe(1);
+
+  await expect(failed.write("late")).rejects.toThrow("closed");
+  await owner.close();
+  expect(tries).toBe(2);
+  expect(siblingStops).toBe(1);
+  expect(owner.closed).toBe(true);
 });

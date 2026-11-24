@@ -177,7 +177,7 @@ export const spawnProcessHandle = (
     cleanup = Promise.allSettled([outputClosed, groupClosed]);
   }
 
-  const { write, end } = stdinFor(child, started.promise, () => killing !== undefined);
+  const { write, end } = stdinFor(child, started.promise, () => discarding);
 
   const stopGroup = async (signal: "SIGTERM" | "SIGINT" | "SIGKILL") => {
     if (!child || groupFinished) return;
@@ -190,19 +190,25 @@ export const spawnProcessHandle = (
       throw new Error("The process tree did not stop.");
   };
 
+  const discardOutput = () => {
+    discarding = true;
+    // Forced cleanup drops unread output so the exit event does not wait for a consumer.
+    for (let index = queue.length - 1; index >= 0; index--) if (queue[index]!.type !== "exit") queue.splice(index, 1);
+    buffered = 0;
+    releaseCredit();
+  };
+
   const kill = (signal: "SIGTERM" | "SIGINT" | "SIGKILL" = "SIGTERM") => {
-    killing ??= (async () => {
-      discarding = true;
-      // Forced cleanup drops unread output so the exit event does not wait for a consumer.
-      for (let index = queue.length - 1; index >= 0; index--) if (queue[index]!.type !== "exit") queue.splice(index, 1);
-      buffered = 0;
-      releaseCredit();
+    if (!killing) {
+      discardOutput();
+      // Start signaling before cancelling pipes so the child sees the requested stop first.
       const stopped = stopGroup(signal);
       const cancelledReads = Promise.allSettled([...readers].map((reader) => reader.cancel()));
-      await stopped;
-      await cancelledReads;
-      await outputClosed;
-    })();
+      killing = Promise.all([stopped, cancelledReads]).then(() => outputClosed);
+      void killing.catch(() => {
+        killing = undefined;
+      });
+    }
     return killing;
   };
 
