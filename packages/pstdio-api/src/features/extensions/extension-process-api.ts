@@ -9,7 +9,7 @@ import { redactSensitiveText } from "pstdio-logging";
 import { apiLogger } from "../../lib/logger";
 import { resolveProcessEnvironmentCommand } from "./process-command";
 import { type ProcessEnvironmentLease, ProcessEnvironmentPermissionError } from "./process-environment/permissions";
-import { signalProcessTree } from "./process-group";
+import { processGroupExited, signalProcessTree } from "./process-group";
 
 type ProcessSpawner = typeof Bun.spawn;
 
@@ -284,7 +284,9 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
           await signalProcessTree(proc, "SIGKILL");
           await proc.exited;
         });
-        void proc.exited.then(lease.release, lease.release);
+        // Programs the child left running in its group keep the granted values, so a revocation
+        // must still reach them after the child exits.
+        void processGroupExited(proc).then(lease.release, lease.release);
       }
       return { pid: proc.pid };
     },
