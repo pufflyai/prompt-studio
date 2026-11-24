@@ -8,24 +8,22 @@ interface ExtensionHostAccessProps {
   projectId: string | undefined;
   extensionId: string;
   connections: ConnectionDefinition[];
-  /** Names from the source's `pstdio.processEnvironment`. */
-  requestedEnvironment: string[] | undefined;
+  /** The current source requests names, or an older grant is still revocable. */
+  showEnvironment: boolean;
 }
 
 /** Host-held credentials and environment values a project grants an extension. Both are per project. */
 export const hasExtensionHostAccess = (props: ExtensionHostAccessProps) =>
-  Boolean(props.projectId) && (props.connections.length > 0 || (props.requestedEnvironment?.length ?? 0) > 0);
+  Boolean(props.projectId) && (props.connections.length > 0 || props.showEnvironment);
 
 export const ExtensionHostAccess = (props: ExtensionHostAccessProps) => {
-  const { projectId, extensionId, connections, requestedEnvironment = [] } = props;
+  const { projectId, extensionId, connections, showEnvironment } = props;
   if (!projectId) return null;
 
   return (
     <>
       {connections.length > 0 ? <ExtensionConnectionsCard projectId={projectId} definitions={connections} /> : null}
-      {requestedEnvironment.length > 0 ? (
-        <ExtensionEnvironmentAccessSection projectId={projectId} extensionId={extensionId} />
-      ) : null}
+      {showEnvironment ? <ExtensionEnvironmentAccessSection projectId={projectId} extensionId={extensionId} /> : null}
     </>
   );
 };
