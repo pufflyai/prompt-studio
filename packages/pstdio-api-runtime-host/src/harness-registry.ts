@@ -151,9 +151,9 @@ const toHandle = (
   };
   const provider = record.provider;
   const authentication = createHarnessAuthenticationLifetime();
-  const commandWatches = createHarnessCommandObservations(provider, ctx, () => disposed);
-  const retained = createRetainedHarnessCalls(provider, ctx, resources);
   const calls = createHarnessCallOwnership(ctx);
+  const commandWatches = createHarnessCommandObservations(provider, calls.open, () => disposed);
+  const retained = createRetainedHarnessCalls(provider, ctx, resources);
   if (provider.getMessages && !provider.recoverMessages) {
     throw new Error(`Harness with native history must provide recoverMessages: ${record.id}`);
   }
@@ -200,7 +200,7 @@ const toHandle = (
             options?: HarnessCallOptions,
           ) => {
             ensureActive();
-            const call = await calls.open(options);
+            const call = await calls.open(options, channel);
             try {
               await authentication.run(
                 channel,
@@ -227,6 +227,7 @@ const toHandle = (
             options,
             async (context) => adaptSession(await provider.start(context, input)),
             (run) => run.done,
+            input,
           ),
         (run) => run.done,
       );
@@ -241,6 +242,7 @@ const toHandle = (
             options,
             async (context) => adaptSession(await provider.resume(context, input)),
             (run) => run.done,
+            input,
           ),
         (run) => run.done,
       );
@@ -255,26 +257,29 @@ const toHandle = (
             options,
             async (context) => adaptSession(await provider.reattach!(context, input)),
             (run) => run.done,
+            input,
           ),
         (run) => run.done,
       );
     },
     fork: async (input, options) => {
       if (!provider.fork) throw new Error("This harness does not support forking conversations.");
-      return retained.invoke(input, options, () => calls.once(options, (context) => provider.fork!(context, input)));
+      return retained.invoke(input, options, () =>
+        calls.once(options, (context) => provider.fork!(context, input), input),
+      );
     },
     getMessages: async (input, options) =>
-      provider.getMessages ? calls.once(options, (context) => provider.getMessages!(context, input)) : [],
+      provider.getMessages ? calls.once(options, (context) => provider.getMessages!(context, input), input) : [],
     recoverMessages: async (input, options) =>
       provider.recoverMessages
-        ? calls.once(options, (context) => provider.recoverMessages!(context, input))
+        ? calls.once(options, (context) => provider.recoverMessages!(context, input), input)
         : { kind: "recovered", messages: [...input.knownMessages] },
     supportsCommandState: Boolean(provider.getCommandState),
     watchCommandState: commandWatches.watch,
     getCommandState: async (input, options) =>
       retained.invoke(input, options, async () =>
         provider.getCommandState
-          ? calls.once(options, (context) => provider.getCommandState!(context, input))
+          ? calls.once(options, (context) => provider.getCommandState!(context, input), input)
           : { commands: [], modes: [], slashCommands: false },
       ),
     prepareOperation: createHarnessOperationPreparation({

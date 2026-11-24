@@ -79,7 +79,9 @@ export {
   createProcessOwner,
   failedProcessHandle,
   type ProcessOwner,
+  processCleanup,
   processError,
+  trackProcessCleanup,
 } from "./process-owner";
 export {
   type BuildEnvironmentInput,
