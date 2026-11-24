@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -63,6 +64,7 @@ export interface BackendWorkerOptions {
 type Running = {
   context: unknown;
   surface: BackendSurface;
+  resume: ReturnType<typeof AsyncLocalStorage.snapshot>;
   settle: ReturnType<typeof Promise.withResolvers<unknown>>;
 };
 
@@ -100,8 +102,8 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     const running = invocations.get(message.invocationId);
     try {
       if (!running) throw new BackendUnavailableError("The invocation is no longer running.");
-      const { context, surface } = running;
-      const value = await resolveSurfaceCall(context, surface, message.path, message.args, "async");
+      const { context, surface, resume } = running;
+      const value = await resume(resolveSurfaceCall, context, surface, message.path, message.args, "async");
       if (!send({ v: BACKEND_PROTOCOL_VERSION, type: "reply", requestId: message.requestId, ok: true, value }))
         throw new Error("The host result could not be sent to the worker.");
     } catch (error) {
@@ -122,8 +124,10 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     if (!running) return;
     // A one-way call has nobody to answer, so a rejected or failing call is simply not acted on.
     try {
-      const { context, surface } = running;
-      Promise.resolve(resolveSurfaceCall(context, surface, message.path, message.args, "notify")).catch(() => {});
+      const { context, surface, resume } = running;
+      Promise.resolve(resume(resolveSurfaceCall, context, surface, message.path, message.args, "notify")).catch(
+        () => {},
+      );
     } catch {}
   };
 
@@ -191,7 +195,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     // A getter may abort while collecting context values.
     if (signal?.aborted) return Promise.reject(signal.reason);
     const settle = Promise.withResolvers<unknown>();
-    invocations.set(invocationId, { context, surface, settle });
+    invocations.set(invocationId, { context, surface, resume: AsyncLocalStorage.snapshot(), settle });
     const sent = send({
       v: BACKEND_PROTOCOL_VERSION,
       type: "invoke",

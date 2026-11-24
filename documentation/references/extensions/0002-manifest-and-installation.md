@@ -229,9 +229,14 @@ Harnesses, workspace types, text sources and resource hierarchy providers are no
 extension reports an `extension_process_runtime_unsupported` diagnostic. Arguments and results must
 be plain data: objects, arrays, strings, numbers, booleans, `Date` and bytes.
 
-A worker that crashes rejects its running calls with `backend_unavailable`. The host does not
-retry them. The next call starts a new worker. When a changed source loads, the old worker stops
-before the new one starts, unless another folder with identical content still uses it.
+The host inspects contributions in a short-lived worker. A runtime worker starts on the first
+handler call. A source check finishes after inspection. A candidate that fails validation leaves
+the active worker running. When a changed source first runs a handler, the old worker stops before
+the replacement starts, unless another folder with identical content still uses it.
+
+A worker that crashes rejects its running calls with `backend_unavailable`. The next call can
+start a fresh worker and proceeds only if its reported definition matches the one the host loaded.
+Calls that failed during the crash stay failed.
 
 Repo extensions are discovered and enabled when a project opens, and their entry code runs at that
 point. User extensions stay disabled until someone enables them. The planned trust step, which reads

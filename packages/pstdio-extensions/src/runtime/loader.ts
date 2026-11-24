@@ -51,6 +51,7 @@ export type LoadExtensionSourcesOptions = {
   apiProvider?: ExtensionApiProvider;
   preparedRevision?: PreparedExtensionRevision;
   immutableAssets?: boolean;
+  definitionOnly?: boolean;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -81,9 +82,10 @@ const loadInWorker = async (
   packagePath: string,
   revision: PreparedExtensionRevision,
   diagnostics: ExtensionDiagnostic[],
+  definitionOnly?: boolean,
 ) => {
   const started = startRuntimeOperation("extension.backend.start");
-  const { definition: reported, acquire } = await acquireBackendWorker(packagePath, revision);
+  const { definition: reported, acquire } = await acquireBackendWorker(packagePath, revision, definitionOnly);
   finishRuntimeOperation(started, { extensionId: revision.manifest.id });
   const definition = hydrateBackendDefinition(reported, acquire) as Record<string, unknown>;
   for (const key of PROCESS_UNSUPPORTED) {
@@ -119,6 +121,7 @@ export const loadExtensionPackage = async (
     apiProvider?: ExtensionApiProvider;
     preparedRevision?: PreparedExtensionRevision;
     immutableAssets?: boolean;
+    definitionOnly?: boolean;
   } = {},
 ): Promise<LoadedExtensionSource | null> => {
   const {
@@ -164,7 +167,7 @@ export const loadExtensionPackage = async (
     retainPreparedRevision(preparedRevision);
     const imported =
       manifest.pstdio?.backendRuntime === "process"
-        ? await loadInWorker(pkg.path, preparedRevision, diagnostics)
+        ? await loadInWorker(pkg.path, preparedRevision, diagnostics, options.definitionOnly)
         : await importWithCacheKey(preparedRevision.entryPath);
     const mod = (
       options.immutableAssets ? imported : remapPackageAssets(imported, preparedRevision.packagePath, pkg.path)
@@ -221,6 +224,7 @@ export const loadExtensionSources = async (options: LoadExtensionSourcesOptions 
       apiProvider: options.apiProvider,
       preparedRevision: options.preparedRevision,
       immutableAssets: options.immutableAssets,
+      definitionOnly: options.definitionOnly,
     });
     if (loaded) sources.push(loaded);
   }
