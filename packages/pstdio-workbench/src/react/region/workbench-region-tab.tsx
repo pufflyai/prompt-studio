@@ -1,6 +1,6 @@
 import { Box, CloseButton, Tabs, Text, useTabsContext } from "@chakra-ui/react";
 import { DropIndicator, PaletteShortcut, Tooltip } from "@pstdio/ui";
-import { useRef } from "react";
+import { type ReactElement, type RefObject, useRef } from "react";
 import { ActivityDot } from "../resource-changes/activity-dot";
 import { WorkbenchIcon } from "../shared/icon";
 import { RegionTabMenu } from "./region-tab-menu";
@@ -22,6 +22,33 @@ const TabIcon = (props: { indicator?: import("../../core").WorkbenchTabSnapshot[
       />
     );
   return icon ? <WorkbenchIcon name={icon} size={12} flexShrink={0} color="fg.muted" /> : null;
+};
+
+const RegionTabTooltip = (props: {
+  label: string;
+  detail?: string;
+  labelRef: RefObject<HTMLSpanElement | null>;
+  children: ReactElement;
+}) => {
+  const { label, detail, labelRef, children } = props;
+  const content = detail ? (
+    <>
+      <Text>{label}</Text>
+      <Text>{detail}</Text>
+    </>
+  ) : (
+    label
+  );
+  return (
+    <Tooltip
+      content={content}
+      overflowRef={detail ? undefined : labelRef}
+      closeDelay={150}
+      positioning={{ placement: "bottom" }}
+    >
+      {children}
+    </Tooltip>
+  );
 };
 
 export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
@@ -59,7 +86,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
         maxW="fit-content"
         className="group"
       >
-        <Tooltip content={label} overflowRef={labelRef} closeDelay={150} positioning={{ placement: "bottom" }}>
+        <RegionTabTooltip label={label} detail={snapshot.tooltip} labelRef={labelRef}>
           <Tabs.Trigger
             id={triggerId}
             value={placement.widgetId}
@@ -139,7 +166,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
               />
             ) : null}
           </Tabs.Trigger>
-        </Tooltip>
+        </RegionTabTooltip>
         <TabDropIndicator drop={drop} />
       </Box>
       <RegionTabMenu

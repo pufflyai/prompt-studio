@@ -1,5 +1,6 @@
 import { Box, Button } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { useState } from "react";
 import { ChatPanel } from "./chat-panel";
 import { ChatSkeleton } from "./chat-skeleton";
 import type { SessionMessage } from "./message-types";
@@ -71,4 +72,27 @@ export const EmptyWidePane: Story = {
 export const LoadingWidePane: Story = {
   ...WidePane,
   args: { messages: [], queuedFollowUps: [], loading: true, loaderComponent: <ChatSkeleton /> },
+};
+
+const outlineMessages: SessionMessage[] = Array.from({ length: 24 }, (_, index) => [
+  { id: `q-${index}`, role: "user" as const, parts: [{ type: "text" as const, text: `Check build ${index + 1}` }] },
+  {
+    id: `a-${index}`,
+    role: "assistant" as const,
+    parts: [{ type: "text" as const, text: `Build ${index + 1} passed.` }],
+  },
+]).flat();
+
+export const ConversationOutline: Story = {
+  render: (args) => {
+    const [wide, setWide] = useState(true);
+    return (
+      <Box w={wide ? "60rem" : "30rem"} h="30rem">
+        <Button size="xs" onClick={() => setWide(!wide)}>
+          Resize conversation
+        </Button>
+        <ChatPanel {...args} messages={outlineMessages} hideComposer />
+      </Box>
+    );
+  },
 };

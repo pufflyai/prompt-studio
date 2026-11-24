@@ -70,6 +70,7 @@ export const toWorkbenchPresentationSnapshot = (
     : undefined;
   return {
     label: optionalText(value.label),
+    tooltip: optionalText(value.tooltip),
     icon: typeof value.icon === "string" ? value.icon : undefined,
     indicator: indicator?.icon ? indicator : undefined,
     menu,

@@ -123,6 +123,7 @@ export interface PlacementTabMenuGroup {
 }
 
 export interface PlacementTabSnapshot extends Struct {
+  readonly tooltip?: Localizable<string>;
   readonly label?: Localizable<string>;
   readonly icon?: string;
   readonly indicator?: {

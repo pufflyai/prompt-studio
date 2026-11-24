@@ -42,6 +42,7 @@ test("drafts omit management actions and workspace session rows explain guarded 
   await page.goto(`/projects/${project.id}/sessions`);
   await breadcrumbMenu(page);
   await expect(menuItem(page, "Copy session ID")).toHaveCount(0);
+  await expect(menuItem(page, "Copy session nickname")).toHaveCount(0);
   await expect(menuItem(page, "Rename session")).toHaveCount(0);
   await expect(menuItem(page, "Delete session")).toHaveCount(0);
   await page.keyboard.press("Escape");
@@ -104,6 +105,16 @@ test("copying a failed session reference uses the invoking row and preserves the
   await breadcrumbMenu(page);
   await menuItem(page, "Copy session ID").click();
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(open.id);
+  await breadcrumbMenu(page);
+  await menuItem(page, "Copy session nickname").click();
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toMatch(/^[a-z]+-[a-z]+$/);
+  const nickname = await page.evaluate(() => navigator.clipboard.readText());
+  await openSessionSidePanel(page, open.title);
+  await page
+    .locator('[data-workbench-panel-header="side"]')
+    .getByRole("tab", { name: open.title, exact: true })
+    .hover();
+  await expect(page.getByRole("tooltip")).toContainText(nickname);
 });
 
 test("shared session actions rename another row without changing the selected session", async ({ page, request }) => {
