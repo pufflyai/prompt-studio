@@ -75,7 +75,13 @@ export const LoadingWidePane: Story = {
 };
 
 const outlineMessages: SessionMessage[] = Array.from({ length: 24 }, (_, index) => [
-  { id: `q-${index}`, role: "user" as const, parts: [{ type: "text" as const, text: `Check build ${index + 1}` }] },
+  {
+    id: `q-${index}`,
+    role: "user" as const,
+    ...(index === 0 ? { sender: { type: "session" as const, id: "release-checks", name: "Release checks" } } : {}),
+    ...(index === 23 ? { sender: { type: "user" as const, id: "alex", name: "Alex" } } : {}),
+    parts: [{ type: "text" as const, text: `Check build ${index + 1}` }],
+  },
   {
     id: `a-${index}`,
     role: "assistant" as const,
@@ -84,6 +90,8 @@ const outlineMessages: SessionMessage[] = Array.from({ length: 24 }, (_, index) 
 ]).flat();
 
 export const ConversationOutline: Story = {
+  description:
+    "A wide transcript exposes each turn in its outline. Attributed prompts show a sender avatar and name; older prompts without recorded attribution keep their appearance. Keyboard selection reaches virtualized turns, and narrowing the panel hides the gutter.",
   render: (args) => {
     const [wide, setWide] = useState(true);
     return (

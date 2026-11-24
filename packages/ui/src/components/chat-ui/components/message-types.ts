@@ -1,6 +1,7 @@
 // Keep the non-alert session parts aligned with pstdio-api-contracts/src/session-messages.ts.
 // @pstdio/ui cannot import that private package, so the public UI contract owns this copy.
 export type SessionMessageRole = "user" | "assistant" | "tool" | "system" | "developer";
+export type SessionMessageSender = { type: "session" | "user"; id: string; name: string; requestId?: string };
 
 export type TextPart = { type: "text"; text: string };
 
@@ -85,6 +86,7 @@ export type ChatMessagePart = SessionMessagePart | AlertPart;
 
 export type SessionMessage = {
   id: string;
+  sender?: SessionMessageSender;
   /** Shared by optimistic and confirmed copies so delivery does not replay the entrance animation. */
   animationKey?: string;
   role: SessionMessageRole;

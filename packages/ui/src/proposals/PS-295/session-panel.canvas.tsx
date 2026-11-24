@@ -16,14 +16,45 @@ export const Conversation = () => {
   return (
     <Stack h="full" bg="bg" gap="0">
       <Flex borderBottomWidth="1px" p="xs" gap="xs" align="center">
-        <Tooltip content="calm-ada"><Button variant="ghost" size="xs">Release checks</Button></Tooltip>
-        <Button size="xs" variant="ghost" aria-label="Session actions" onClick={() => setMenu(!menu)}>…</Button>
-        {menu && <Button size="xs" onClick={() => { void navigator.clipboard.writeText("calm-ada"); setMenu(false); }}>Copy session nickname</Button>}
+        <Tooltip content="calm-ada">
+          <Button variant="ghost" size="xs">
+            Release checks
+          </Button>
+        </Tooltip>
+        <Button size="xs" variant="ghost" aria-label="Session actions" onClick={() => setMenu(!menu)}>
+          …
+        </Button>
+        {menu && (
+          <Button
+            size="xs"
+            onClick={() => {
+              void navigator.clipboard.writeText("calm-ada");
+              setMenu(false);
+            }}
+          >
+            Copy session nickname
+          </Button>
+        )}
       </Flex>
       <Flex flex="1" minH="0" align="center" containerType="inline-size">
-        <Stack as="nav" aria-label="Conversation outline" gap="0" p="xs" css={{ display: "none", "@container (min-width: 52rem)": { display: "flex" } }}>
+        <Stack
+          as="nav"
+          aria-label="Conversation outline"
+          gap="0"
+          p="xs"
+          css={{ display: "none", "@container (min-width: 52rem)": { display: "flex" } }}
+        >
           {turns.map(([prompt, reply], index) => (
-            <Tooltip key={prompt} positioning={{ placement: "right" }} content={<Stack><Text>{prompt}</Text><Text color="fg.muted">{reply}</Text></Stack>}>
+            <Tooltip
+              key={prompt}
+              positioning={{ placement: "right" }}
+              content={
+                <Stack>
+                  <Text>{prompt}</Text>
+                  <Text color="fg.muted">{reply}</Text>
+                </Stack>
+              }
+            >
               <Button aria-label={prompt} size="xs" variant="ghost" onClick={() => setCurrent(index)}>
                 <Box w={index === current ? "5" : "2"} h="0.5" bg={index === current ? "fg" : "fg.muted"} />
               </Button>
@@ -31,11 +62,21 @@ export const Conversation = () => {
           ))}
         </Stack>
         <Stack layerStyle="chatContent" p="sm">
-          <ChatMessage.Root from="user"><ChatMessage.Content from="user">
-            {current === 1 && <Tooltip content="brisk-iris"><Avatar.Root size="xs"><Avatar.Fallback name="Brisk Iris" /></Avatar.Root></Tooltip>}
-            {turns[current][0]}
-          </ChatMessage.Content></ChatMessage.Root>
-          <ChatMessage.Root from="assistant"><ChatMessage.Content from="assistant">{turns[current][1]}</ChatMessage.Content></ChatMessage.Root>
+          <ChatMessage.Root from="user">
+            <ChatMessage.Content from="user">
+              {current === 1 && (
+                <Tooltip content="brisk-iris">
+                  <Avatar.Root size="xs">
+                    <Avatar.Fallback name="Brisk Iris" />
+                  </Avatar.Root>
+                </Tooltip>
+              )}
+              {turns[current][0]}
+            </ChatMessage.Content>
+          </ChatMessage.Root>
+          <ChatMessage.Root from="assistant">
+            <ChatMessage.Content from="assistant">{turns[current][1]}</ChatMessage.Content>
+          </ChatMessage.Root>
         </Stack>
       </Flex>
     </Stack>

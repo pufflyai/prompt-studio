@@ -10,6 +10,7 @@ import { resolveHarnessRunParams } from "../../sessions/harness-params";
 import { resolveSessionCwd } from "../../sessions/resolve-session-cwd";
 import { withResolvedSubmittingSessionAttachments } from "../../sessions/session-attachments";
 import { createSessionHarnessOperation } from "../../sessions/session-harness-commands";
+import { resolveMessageSender } from "../../sessions/session-message-sender";
 import { createSessionScheduler } from "../../sessions/session-scheduler";
 import type { ExtensionsRouteDeps } from "../deps";
 import { resolveExtensionPrompt, resolveHarnessInput } from "./prompt";
@@ -101,6 +102,7 @@ export const createScopedSession = async (
             title: sessionInput.title,
             agentId,
             prompt,
+            sender: await read(() => resolveMessageSender(deps, input.projectId, sessionInput.source)),
             attachments,
             attachmentRefs: sessionInput.attachments,
             model,

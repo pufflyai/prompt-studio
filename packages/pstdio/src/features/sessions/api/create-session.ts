@@ -11,4 +11,10 @@ export const createSession = async (input: {
   workspace_id?: string;
   model?: string;
   original_session_id?: string;
-}) => apiClient().sessions.create(input);
+}) =>
+  apiClient().sessions.create({
+    ...input,
+    ...(process.env.PSTDIO_SESSION_ID
+      ? { source: { type: "session" as const, id: process.env.PSTDIO_SESSION_ID } }
+      : {}),
+  });

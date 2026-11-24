@@ -3,11 +3,12 @@ import type { SessionConversationSources, SessionMessage } from "pstdio-api-cont
 import { normalizeMessageResults, projectToolResultRecovery, sessionMessageSchema } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
 import { getSessionHarness } from "./get-session-harness";
+import { recoverMessageSenders } from "./recover-message-senders";
 import { latestReply } from "./session-messages";
 import { resolveSessionWorkspaceContext } from "./session-workspace-context";
 
 type HistoryDeps = Pick<SessionsRouteDeps, "sessionService" | "fileService" | "harnessRegistry"> &
-  Partial<Pick<SessionsRouteDeps, "workspaceSessionService" | "personalHistoryService">>;
+  Partial<Pick<SessionsRouteDeps, "workspaceSessionService" | "personalHistoryService" | "sessionQueueEntriesService">>;
 
 export class SessionNotFoundError extends Error {
   constructor() {
@@ -92,13 +93,20 @@ export const loadSessionHistory = async (
   const { sources, session, harness, workspace } = await readSessionHistorySources(sessionId, deps);
   if (committedReply) committedReply(committedReplyForRecovery(sources, session));
   const known = retained ? retained.map(normalizeMessageResults) : sources.checkpoint;
-  if (!known) return sources.native ?? [];
-  if (!sources.native) return known;
-  const result = await harness!.recoverMessages(
-    { ...projectToolResultRecovery(known, sources.native), cwd: session.cwd ?? undefined, workspace },
-    { projectId: session.project_id ?? undefined },
-  );
-  return result.kind === "recovered" ? result.messages.map(normalizeMessageResults) : known;
+  let messages = known ?? sources.native ?? [];
+  if (known && sources.native) {
+    const result = await harness!.recoverMessages(
+      { ...projectToolResultRecovery(known, sources.native), cwd: session.cwd ?? undefined, workspace },
+      { projectId: session.project_id ?? undefined },
+    );
+    if (result.kind === "recovered") messages = result.messages.map(normalizeMessageResults);
+  }
+  if (!deps.sessionQueueEntriesService) return messages;
+  const entries = await Promise.all([
+    deps.sessionQueueEntriesService.listDispatchStartedBySession(sessionId),
+    deps.sessionQueueEntriesService.listSteeringDeliveries(sessionId),
+  ]);
+  return recoverMessageSenders(messages, entries.flat());
 };
 
 export const getSessionHistory = async (sessionId: string, deps: HistoryDeps) => {

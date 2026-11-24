@@ -1,8 +1,8 @@
 ---
 "pstdio": minor
 "@pstdio/ui": minor
+"@pstdio/sdk": minor
 "@pstdio/workbench": minor
-"session-browser": minor
 ---
 
-Navigate long conversations from an outline in wide panels and copy a saved session’s nickname from its menu.
+Navigate conversation turns, identify attributed messages by sender, and copy a saved session’s nickname from its menu.

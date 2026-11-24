@@ -4,6 +4,7 @@ import { ChatMessage } from "./ai-message";
 import { useMessageFadeIn } from "./chat-message-animation";
 import { MessageActionPanel } from "./message-action-panel";
 import { MessagePartsRenderer } from "./message-parts-renderer";
+import { MessageSender } from "./message-sender";
 import { getMessageOrigin, type SessionMessage } from "./message-types";
 
 interface ChatMessageListResponseProps {
@@ -33,6 +34,7 @@ export const ChatMessageListResponse = (props: ChatMessageListResponseProps) => 
   return (
     <ChatMessage.Root from={from} {...fadeInProps}>
       <ChatMessage.Content from={from}>
+        <MessageSender sender={message.sender} />
         <MessagePartsRenderer
           message={message}
           streaming={streaming && from === "assistant"}

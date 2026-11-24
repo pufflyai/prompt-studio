@@ -2,6 +2,20 @@ import { z } from "zod";
 
 export type SessionMessageRole = "user" | "assistant" | "tool" | "system" | "developer";
 
+export const sessionMessageSenderSchema = z.object({
+  type: z.enum(["session", "user"]),
+  id: z.string().min(1),
+  name: z.string().min(1),
+  /** Host identity of the delivered request, retained when native message IDs change. */
+  requestId: z.string().optional(),
+});
+export type SessionMessageSender = z.infer<typeof sessionMessageSenderSchema>;
+export const sessionMessageSourceSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("user") }),
+  z.object({ type: z.literal("session"), id: z.string().min(1) }),
+]);
+export type SessionMessageSource = z.infer<typeof sessionMessageSourceSchema>;
+
 export type TextPart = { type: "text"; text: string };
 
 export type ReasoningPart = { type: "reasoning"; text: string };
@@ -89,6 +103,7 @@ export type SessionMessagePart =
 
 export type SessionMessage = {
   id: string;
+  sender?: SessionMessageSender;
   role: SessionMessageRole;
   parts: SessionMessagePart[];
   index?: number;
@@ -210,6 +225,7 @@ export const sessionMessageRoleSchema = z.enum(["user", "assistant", "tool", "sy
 
 export const sessionMessageSchema = z.object({
   id: z.string(),
+  sender: sessionMessageSenderSchema.optional(),
   role: sessionMessageRoleSchema,
   parts: z.array(sessionMessagePartSchema),
   index: z.number().optional(),

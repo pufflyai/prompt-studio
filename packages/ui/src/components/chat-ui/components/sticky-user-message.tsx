@@ -7,6 +7,7 @@ import { StickyMessageToggle } from "./chat-message-list-items";
 import { shouldStopStickyUserMessageWheel } from "./chat-panel-sticky-user-message";
 import { MessageActionPanel } from "./message-action-panel";
 import { MessagePartsRenderer } from "./message-parts-renderer";
+import { MessageSender } from "./message-sender";
 import type { SessionMessage } from "./message-types";
 
 interface StickyUserMessageProps {
@@ -60,6 +61,7 @@ export function StickyUserMessage(props: StickyUserMessageProps) {
         <Box ref={previewRef} css={styles.preview} aria-hidden="true" />
         <ScrollArea viewportRef={viewportRef} showVerticalScrollbar={isExpanded} viewportProps={viewportProps}>
           <Box ref={bodyRef} css={styles.body}>
+            <MessageSender sender={message.sender} />
             <MessagePartsRenderer message={message} />
           </Box>
         </ScrollArea>

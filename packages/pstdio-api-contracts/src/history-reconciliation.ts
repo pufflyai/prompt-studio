@@ -54,7 +54,7 @@ export const mergeHistoryMetadata = (known: SessionMessage, native: SessionMessa
     native.role === "user"
       ? [...known.parts.filter((part) => part.type === "text"), ...native.parts.filter((part) => part.type !== "text")]
       : native.parts;
-  return { ...known, ...native, parts: [...parts, ...missing] };
+  return { ...known, ...native, parts: [...parts, ...missing], ...(known.sender ? { sender: known.sender } : {}) };
 };
 
 const isUsage = (message: SessionMessage) =>

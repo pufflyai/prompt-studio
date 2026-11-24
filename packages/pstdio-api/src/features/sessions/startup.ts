@@ -86,6 +86,8 @@ const reattachOrphanedSession = async (deps: Deps, session: OrphanedSession, sig
           cwd: session.cwd ?? undefined,
           submittedAttachmentFileIds: dispatchEntry?.attachments_json?.map((attachment) => attachment.file_id),
           submittedQueuePosition: dispatchEntry?.queue_position,
+          sender: dispatchEntry?.sender_json ?? undefined,
+          prompt: dispatchEntry?.sender_json ? dispatchEntry.prompt : undefined,
           signal,
         },
         deps,

@@ -1,4 +1,5 @@
 import type { SessionsRouteDeps } from "./deps";
+import { recoverDispatchSender } from "./recover-dispatch-sender";
 import { createSessionQueueDrain } from "./session-queue-drain";
 
 export const prepareQueuedSessionRecovery = async (deps: SessionsRouteDeps) => {
@@ -11,6 +12,7 @@ export const prepareQueuedSessionRecovery = async (deps: SessionsRouteDeps) => {
     for (const entry of claimedEntries) {
       const session = await deps.sessionService.get(entry.session_id);
       if (session?.status === "in_progress" && !deps.sessionService.store.get(session.id)) {
+        if (await recoverDispatchSender(deps, session, entry)) continue;
         await deps.sessionService.recoverQueuedDispatchClaim(
           session.id,
           entry.queue_position,

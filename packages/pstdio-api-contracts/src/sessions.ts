@@ -4,7 +4,7 @@ import type { SessionExit } from "./extension-kernel/types/sessions";
 import { extensionResourceRefSchema } from "./extensions/resource-ref";
 import { harnessOperationResponseSchema, harnessOperationSchema } from "./harness-commands";
 import { pendingQueuedFollowUpsResponseSchema } from "./queued-follow-ups";
-import { sessionMessageSchema } from "./session-messages";
+import { sessionMessageSchema, sessionMessageSourceSchema } from "./session-messages";
 
 export const sessionStatusSchema = z.enum([
   "in_progress",
@@ -134,6 +134,7 @@ export const sessionAttachmentSchema = z.object({
 });
 
 export const createSessionInputSchema = z.object({
+  source: sessionMessageSourceSchema.optional(),
   project_id: z.string().min(1),
   device_id: z.string().min(1).optional(),
   title: z.string().min(1),
@@ -154,6 +155,8 @@ export const questionResponseSchema = z.object({
 });
 
 export const followUpInputSchema = z.object({
+  source: sessionMessageSourceSchema.optional(),
+  sourceSessionId: z.string().min(1).optional(),
   prompt: z.string().min(1).optional(),
   agent: z.string().optional(),
   model: z.string().optional(),

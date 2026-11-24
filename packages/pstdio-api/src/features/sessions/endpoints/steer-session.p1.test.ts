@@ -72,6 +72,37 @@ test("steers a new prompt into the captured active run without making it dispatc
   }
 });
 
+test("reconciled uncertain delivery checkpoints the original sender before removing its intent", async () => {
+  const fixture = await setup(async () => ({ status: "uncertain", reason: "connection lost" }));
+  try {
+    const source = await fixture.handle.deps.sessionService.create({
+      project_id: fixture.project.id,
+      title: "Source",
+      agent: "fake",
+      status: "completed",
+    });
+    const response = await fixture.send({ source: { type: "session", id: source.id } });
+    const delivery = await response.json();
+    expect(delivery.status).toBe("uncertain");
+    fixture.handle.deps.sessionService.store.remove(fixture.session.id, fixture.owner);
+    await persistSessionMessages(
+      fixture.session.id,
+      [{ id: delivery.deliveryId, role: "user", parts: [{ type: "text", text: "Focus on tests" }] }],
+      fixture.handle.deps,
+    );
+    await reconcileQueuedSteering(fixture.handle.deps, fixture.session.id);
+    const { getSessionHistory } = await import("../session-history");
+    expect((await getSessionHistory(fixture.session.id, fixture.handle.deps))[0].sender).toMatchObject({
+      type: "session",
+      id: source.id,
+      name: source.title,
+    });
+    expect(await fixture.handle.deps.sessionQueueEntriesService.listSteeringDeliveries()).toEqual([]);
+  } finally {
+    await fixture.handle.close();
+  }
+});
+
 test.each([
   "inactive",
   "unsupported",

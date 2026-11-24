@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import extension from "../extension";
-import { copySessionNickname } from "./copy-session-nickname";
 import { newInViewer } from "./navigation";
 import { conversationTab } from "./tab";
 
@@ -26,7 +25,6 @@ test("New session in an existing viewer starts a draft immediately with its work
     },
   });
   const snapshot = await conversationTab.query(ctx, { renderer: { rendererId: "conversation", resource } });
-  expect(snapshot.tooltip).toBe(await copySessionNickname.run(ctx, { sessionId: resource.id }));
   const action = snapshot.menu?.flatMap((group) => group.rows).find((row) => row.id === "new-session")?.action;
   if (action?.kind !== "command") throw new Error("New session must use the public command contract.");
   const command = extension.commands?.find((command) => command.id === action.target.command.id);

@@ -1,4 +1,4 @@
-import type { HarnessSession, SessionMessage } from "pstdio-api-contracts";
+import { type HarnessSession, type SessionMessage, submittedPrompt } from "pstdio-api-contracts";
 import { resolveHarnessExit } from "pstdio-api-runtime-host";
 import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
@@ -26,7 +26,12 @@ const messagesReferenceFile = (messages: SessionMessage[], fileId: string) =>
 const messagesReferenceSubmittedAttachments = (messages: SessionMessage[], fileIds: string[]) =>
   fileIds.every((fileId) => messagesReferenceFile(messages, fileId));
 
-type SubmittedMessages = { submittedAttachmentFileIds: string[]; submittedQueuePosition?: number };
+type SubmittedMessages = {
+  submittedAttachmentFileIds: string[];
+  submittedQueuePosition?: number;
+  sender?: SessionMessage["sender"];
+  prompt?: string;
+};
 const saveCompletedConversation = async (
   sessionId: string,
   entry: ActiveSession | null,
@@ -50,7 +55,14 @@ const saveCompletedConversation = async (
     // Keep the attachment guard until the complete checkpoint is durable.
     if (submitted?.submittedQueuePosition !== undefined && deps.sessionQueueEntriesService) {
       const persistedReference =
-        messages !== null && messagesReferenceSubmittedAttachments(messages, submitted.submittedAttachmentFileIds);
+        messages !== null &&
+        messagesReferenceSubmittedAttachments(messages, submitted.submittedAttachmentFileIds) &&
+        (!submitted.sender ||
+          messages.some(
+            (message) =>
+              message.sender?.requestId === submitted.sender?.requestId &&
+              submittedPrompt(message) === submitted.prompt?.trim(),
+          ));
 
       if (persistedReference) {
         await deps.sessionQueueEntriesService.remove(submitted.submittedQueuePosition);

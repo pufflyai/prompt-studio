@@ -49,6 +49,7 @@ export const createRemoteSession = async (
           projectId: input.projectId,
           title: sessionInput.title,
           prompt: sessionInput.prompt,
+          source: sessionInput.source,
           operation: sessionInput.operation,
           agent: sessionInput.harness?.harnessId,
           model: sessionInput.harness?.model,

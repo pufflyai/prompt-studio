@@ -89,6 +89,13 @@ releasing a browser-draft consumer; a local SDK link or tarball only qualifies t
 candidate. The consumer must pin the published SDK and pass `published_extensions`
 before leaving `waiting-for-release`.
 
+The same API 0.5.1 step adds optional session-message `source` attribution and tab
+`tooltip` metadata. Session callers can name a source session, or explicitly mark
+a human submission; the host resolves the display identity. Saved messages expose
+optional `sender` metadata. Older messages and unspecified programmatic sources
+remain unattributed. SDK/UI consumers must pin a published preview containing these
+additions before using them. Publishing the packages does not upgrade the host.
+
 Scoped query ownership and invalidation metadata, host-supplied webview query scope,
 command-backed shared editing, storage/session metadata observation and optional
 `HarnessProvider.watchCommandState` also share this API 0.4.0 step. These additions
