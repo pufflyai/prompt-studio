@@ -38,7 +38,15 @@ export type HostToWorkerMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
   | { type: "discard"; invocationId: string }
   | ({ type: "reply"; invocationId: string; requestId: string } & Settled)
   /** Calls a function the worker passed to the host during this invocation. */
-  | { type: "fn-call"; invocationId: string; requestId: string; fnId: string; args: unknown[] }
+  | {
+      type: "fn-call";
+      invocationId: string;
+      requestId: string;
+      fnId: string;
+      args: unknown[];
+      /** Work started by this callback uses the invocation context and can outlive the callback reply. */
+      invocationOwned?: true;
+    }
   | { type: "ping"; seq: number }
   | { type: "release"; invocationId: string; fnIds: string[] }
 );

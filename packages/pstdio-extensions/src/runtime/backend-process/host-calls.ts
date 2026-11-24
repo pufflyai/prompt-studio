@@ -33,7 +33,7 @@ export const createHostCalls = (
   workerError: (error: SerializedBackendError) => Error,
   checkLifetime: (id: string) => void,
 ) => {
-  const pending = createPendingCalls<Enter>();
+  const pending = createPendingCalls<Enter | undefined>();
   const hostCallOwner = new AsyncLocalStorage<string>();
   const inFlight = new Map<string, number>();
   let nextRequest = 0;
@@ -61,10 +61,20 @@ export const createHostCalls = (
       if (invocation(invocationId) !== running || running.cancelled)
         throw new BackendUnavailableError("The invocation is no longer running.");
       const requestId = `h${nextRequest++}`;
-      // Only a host operation owned by this invocation can give its callback narrower async context.
-      const enter = hostCallOwner.getStore() === invocationId ? AsyncLocalStorage.snapshot() : running.enter;
+      // Only reentry from this invocation's host call borrows its narrower context.
+      const enter = hostCallOwner.getStore() === invocationId ? AsyncLocalStorage.snapshot() : undefined;
       const reply = pending.start(invocationId, requestId, enter);
-      if (!send({ v: BACKEND_PROTOCOL_VERSION, type: "fn-call", invocationId, requestId, fnId, args: exported })) {
+      if (
+        !send({
+          v: BACKEND_PROTOCOL_VERSION,
+          type: "fn-call",
+          invocationId,
+          requestId,
+          fnId,
+          args: exported,
+          ...(!enter && { invocationOwned: true }),
+        })
+      ) {
         pending.take(invocationId, requestId);
         throw new BackendUnavailableError("The extension backend is not available.");
       }
