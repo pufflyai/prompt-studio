@@ -24,7 +24,6 @@ export const createExtensionProcessOwners = (input: {
   const stop = async (generation: Generation) => {
     try {
       await generation.owner.close();
-      retiring.delete(generation);
     } catch (error) {
       apiLogger.warn(
         {
@@ -40,7 +39,10 @@ export const createExtensionProcessOwners = (input: {
 
   const retire = (key: string, generation: Generation) => {
     if (generations.get(key) === generation) generations.delete(key);
-    retiring.add(generation);
+    if (!retiring.has(generation)) {
+      retiring.add(generation);
+      void generation.owner.drained.then(() => retiring.delete(generation));
+    }
     return stop(generation);
   };
 
