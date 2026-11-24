@@ -276,3 +276,31 @@ describe("artifact mount deletions and expiry", () => {
     expect(ledger.dropEchoes([join(root, "drafts", "x.md")])).toEqual([join(root, "drafts", "x.md")]);
   });
 });
+
+describe("artifact mount restored folder batches", () => {
+  test.each([
+    [true, true],
+    [true, false],
+    [false, true],
+    [false, false],
+  ])("reports child deletions after a folder returns (folder first: %s, separate burst: %s)", async (folderFirst, separateBurst) => {
+    const ledger = createArtifactMountWriteLedger();
+    const { mount, root } = createMount(ledger);
+    const folder = join(root, "sales");
+    const child = join(folder, "q3.json");
+    const outside = join(dirname(root), "restored-sales");
+    const options = { keepMatchedWrites: true };
+    await mount.writeText("sales/q3.json", "{}");
+    ledger.dropEchoes([folder, child], options);
+    await mount.delete("sales");
+    expect(ledger.dropEchoes([folder, child], options)).toEqual([]);
+
+    mkdirSync(outside);
+    writeFileSync(join(outside, "q3.json"), "[]");
+    renameSync(outside, folder);
+    if (separateBurst) expect(ledger.dropEchoes([folder], options)).toEqual([folder]);
+    rmSync(child);
+    const paths = folderFirst ? [folder, child] : [child, folder];
+    expect(ledger.dropEchoes(paths, options)).toEqual(paths);
+  });
+});
