@@ -136,11 +136,12 @@ export const draftCommands = {
       const current = await readRecord<Draft>(ctx.storage, "draft", draftId(workspace.id, chapter));
       const draft = current.value;
       if (!draft || draft.submissionId !== submissionId) return { confirmed: false };
+      if (submitting.has(submissionKey(ctx, draft))) return { confirmed: false };
       if (draft.submissionStatus === "confirmed") return { confirmed: true };
       const proof = draft.submissionProof;
       const saved = proof && (await readRecord<{ workspaceId: string }>(ctx.storage, proof.kind, proof.id));
       const confirmed = saved?.value?.workspaceId === workspace.id;
-      const interrupted = draft.submissionStatus === "writing" && !submitting.has(submissionKey(ctx, draft));
+      const interrupted = draft.submissionStatus === "writing";
       if (confirmed || interrupted) {
         await saveRecord(
           ctx.storage,
@@ -173,7 +174,8 @@ export const draftCommands = {
         (input.expectedRevision && input.expectedRevision !== record.revision)
       )
         throw new Error("The authoring draft changed. Reopen it before discarding.");
-      if (value?.submissionStatus === "writing") throw new Error("This submission is still being written.");
+      if (value && (value.submissionStatus === "writing" || submitting.has(submissionKey(ctx, value))))
+        throw new Error("This submission is still being written.");
       await deleteRecord(ctx.storage, "draft", id, record.revision);
       await announce(ctx, workspace.id);
       return { discarded: true };

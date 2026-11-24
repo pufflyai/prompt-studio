@@ -62,12 +62,14 @@ test("a lost creation response keeps the submitted draft reserved across reopene
   const draftId = `${workspaceId}-${chapter}`;
   const scope = { workspaceId, chapter };
   const values = { title: "Keep this chapter" };
+  const proof = { kind: "finding" as const, id: "held-result" };
   const args = () => draftContext(storage, workspaceId);
   const entered = Promise.withResolvers<void>();
   const respond = Promise.withResolvers<void>();
   let writes = 0;
-  const first = submitDraft(args(), { ...scope, values }, async () => {
+  const first = submitDraft(args(), { ...scope, values, proof }, async () => {
     writes++;
+    await saveRecord(storage, proof.kind, { workspaceId, id: proof.id });
     entered.resolve();
     return respond.promise;
   });
