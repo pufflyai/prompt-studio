@@ -15,6 +15,7 @@ const readState = (path: string) => {
       identity: filesystemIdentity(stats),
       size: stats.size,
       mtime: stats.mtimeNs,
+      ctime: stats.ctimeNs,
       directory: stats.isDirectory(),
     };
   } catch {
@@ -32,7 +33,10 @@ type LedgerEntry = {
 const sameState = (recorded: FileState, current: FileState) =>
   recorded === null || current === null
     ? recorded === current
-    : recorded.identity === current.identity && recorded.size === current.size && recorded.mtime === current.mtime;
+    : recorded.identity === current.identity &&
+      recorded.size === current.size &&
+      recorded.mtime === current.mtime &&
+      recorded.ctime === current.ctime;
 
 const isInside = (path: string, folder: string) => path.startsWith(folder + sep);
 
@@ -45,7 +49,7 @@ export type ArtifactMountWriteLedger = ReturnType<typeof createArtifactMountWrit
  */
 export const createArtifactMountWriteLedger = (now: () => number = Date.now) => {
   const entries = new Map<string, LedgerEntry>();
-  const directories = new Map<string, { identity: string; recordedAt: number }>();
+  const directories = new Map<string, { identity: string; recordedAt: number; observed?: FileState }>();
 
   const forgetExpired = () => {
     for (const [path, entry] of entries) {
@@ -72,12 +76,16 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     return false;
   };
 
-  const matchesCreatedDirectory = (path: string, current: FileState) => {
+  const matchesCreatedDirectory = (path: string, current: FileState, keepMatchedWrites: boolean) => {
     const recorded = directories.get(path);
     if (!recorded) return false;
-    if (current?.directory && current.identity === recorded.identity) return true;
-    directories.delete(path);
-    return false;
+    const matches =
+      current?.directory &&
+      current.identity === recorded.identity &&
+      (!recorded.observed || sameState(recorded.observed, current));
+    if (matches && keepMatchedWrites) recorded.observed = current;
+    else directories.delete(path);
+    return matches === true;
   };
 
   const isEcho = (path: string, consumed: Set<string>, keepMatchedWrites: boolean) => {
@@ -89,7 +97,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
       return true;
     }
     if (entry?.state && keepMatchedWrites) consumed.add(path);
-    return matchesCreatedDirectory(path, current) || (!current && matchesAncestorDeletion(path));
+    return matchesCreatedDirectory(path, current, keepMatchedWrites) || (!current && matchesAncestorDeletion(path));
   };
 
   return {

@@ -83,6 +83,26 @@ describe("artifact mount write ledger", () => {
     expect(ledger.dropEchoes(paths, { keepMatchedWrites: true })).toEqual(paths);
   });
 
+  test.each([
+    true,
+    false,
+  ])("reports direct edits after a previously observed folder is moved back (%s)", async (keep) => {
+    const ledger = createArtifactMountWriteLedger();
+    const { mount, root } = createMount(ledger);
+    const folder = join(root, "sales");
+    const file = join(folder, "q3.json");
+    const outside = join(dirname(root), "external-sales");
+    const options = { keepMatchedWrites: keep };
+    await mount.writeText("sales/q3.json", "{}");
+    expect(ledger.dropEchoes([folder, file], options)).toEqual([]);
+
+    renameSync(folder, outside);
+    writeFileSync(join(outside, "q4.json"), "{}");
+    utimesSync(outside, new Date(), new Date(Date.now() + 5_000));
+    renameSync(outside, folder);
+    expect(ledger.dropEchoes([folder], options)).toEqual([folder]);
+  });
+
   test("drops everything a mount delete removed", async () => {
     const ledger = createArtifactMountWriteLedger();
     const { mount, root } = createMount(ledger);
