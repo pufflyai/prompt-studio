@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { PstdioConnectionError } from "@pstdio/sdk/client";
 import { createScopedQueryClient } from "@pstdio/sdk/extensions";
+import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { createWorkbench } from "../../core";
 import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
@@ -190,6 +191,68 @@ test("a webview workspace rename previews its canonical label in another workben
   } finally {
     await workbench.dispose();
     await peer.dispose();
+    queries.dispose();
+  }
+});
+
+const plannerReviewDraft = { requestId: "review-a", response: { answers: { direction: ["first", "because"] } } };
+const autoBuildDraft = {
+  enabled: true,
+  prompt: "Use the checked-in tests",
+  eligible: { conjunction: "and", rules: [] },
+  supervisorModel: { harnessId: "codex", model: "model" },
+  requireMergedDependencies: true,
+};
+
+test.each([
+  { id: "review", draft: plannerReviewDraft },
+  { id: "auto-build.configure", draft: autoBuildDraft },
+])("retains the original Planner $id input after its frame disconnects", async ({ id, draft }) => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
+  const workbench = createWorkbench({ queries });
+  workbench.pageLocations.setProject("project");
+  const operations = getWorkbenchOperations(queries);
+  const events = createHostEventPublisher();
+  events.bind(() => {});
+  const entered = Promise.withResolvers<void>();
+  const response = Promise.withResolvers<unknown>();
+  const extensionId = "pstdio.planner";
+  const commandId = `${extensionId}.command.${id}`;
+  const capabilities = createCapabilities({
+    executeCommand: (_, input) => {
+      if (input.params?.requestId === "review-b") return { outcome: { ok: true, status: "success" } };
+      entered.resolve();
+      return response.promise;
+    },
+    extensionIdForWebview: () => extensionId,
+    projectId: "project",
+    slotKind: "panel",
+    metadata: { commands: [{ id: commandId, extensionId, title: "Planner action", mutating: true }] },
+  })({ placement: {}, webviewId: "planner", workbench, hostEvents: events } as never);
+  try {
+    const pending = Promise.resolve(
+      capabilities["commands.execute"]({ commandId, params: { ...draft, token: "private" } }),
+    );
+    const settled = pending.catch((error: unknown) => error);
+    await entered.promise;
+    expect(operations.getSnapshot().pending[0]).toMatchObject({ showPending: true, status: "writing" });
+    events.unbind();
+    response.reject(new PstdioConnectionError(new Error("Reply lost")));
+    await settled;
+    expect(operations.getSnapshot().recovery[0]).toMatchObject({ status: "unknown", canCheck: false });
+    expect(operations.getSnapshot().recovery[0]?.draft).toEqual({ commandId, ...draft });
+    if (id === "review") {
+      events.bind(() => {});
+      await expect(
+        Promise.resolve(
+          capabilities["commands.execute"]({ commandId, params: { ...plannerReviewDraft, requestId: "review-b" } }),
+        ),
+      ).resolves.toMatchObject({ outcome: { status: "success" } });
+    }
+  } finally {
+    response.resolve(undefined);
+    events.unbind();
+    await workbench.dispose();
     queries.dispose();
   }
 });

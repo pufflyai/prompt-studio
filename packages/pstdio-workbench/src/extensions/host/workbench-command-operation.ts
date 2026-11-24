@@ -1,13 +1,36 @@
 import type { ExtensionCommandRecord } from "@pstdio/sdk/api";
 import { CommandOutcomeError, type ResourceRef } from "@pstdio/sdk/extensions";
+import { viewFilterGroupSchema } from "pstdio-api-contracts";
 import { defaultPageResourceCodec } from "pstdio-api-contracts/extension-kernel";
 import { text } from "pstdio-extensions/workbench";
+import { z } from "zod";
 import { classifyApiWrite } from "../../core/registries/mutations/operation-failures";
 import { operationSubject, type WorkbenchOperations } from "../../core/registries/mutations/operations";
 
 export const extensionCommandOperation = "extension.command";
 const artifactPublication = "pstdio.artifacts.command.publish";
 const plannerAttempt = "pstdio.planner.command.run-attempt";
+const plannerReview = "pstdio.planner.command.review";
+const plannerAutoBuildConfigure = "pstdio.planner.command.auto-build.configure";
+const reviewDraftSchema = z.object({
+  requestId: z.string(),
+  response: z.union([
+    z.object({ confirmed: z.literal(true) }),
+    z.object({ answers: z.record(z.string(), z.union([z.string(), z.array(z.string())])) }),
+  ]),
+});
+const autoBuildDraftSchema = z.object({
+  enabled: z.boolean(),
+  prompt: z.string().optional(),
+  supervisorModel: z.object({ harnessId: z.string(), model: z.string().optional() }).optional(),
+  eligible: viewFilterGroupSchema.optional(),
+  requireMergedDependencies: z.boolean().optional(),
+  blockOnReview: z.boolean().optional(),
+});
+const plannerDraftSchemas = new Map<string, z.ZodType<Record<string, unknown>>>([
+  [plannerReview, reviewDraftSchema],
+  [plannerAutoBuildConfigure, autoBuildDraftSchema],
+]);
 const isPlannerAttempt = (command: ExtensionCommandRecord) =>
   command.id === plannerAttempt && command.extensionId === "pstdio.planner";
 
@@ -28,6 +51,10 @@ const retainAttemptInput = (draft: Record<string, unknown>, params?: Record<stri
 const retainedCommandDraft = (command: ExtensionCommandRecord, projectId: string, params?: Record<string, unknown>) => {
   const draft: Record<string, unknown> = { commandId: command.id };
   if (isPlannerAttempt(command)) return retainAttemptInput(draft, params);
+  if (command.extensionId === "pstdio.planner") {
+    const result = plannerDraftSchemas.get(command.id)?.safeParse(params);
+    if (result?.success) return { ...draft, ...result.data };
+  }
   if (command.id !== artifactPublication || command.extensionId !== "pstdio.artifacts") return draft;
   for (const key of ["file_path", "favicon", "label"]) {
     const value = params?.[key];
@@ -64,7 +91,14 @@ export const runWorkbenchCommandOperation = <T>(input: {
 }) => {
   const { operations, projectId, command, source } = input;
   // The declaration does not promise a record identity. Match every invocation of the command in this project.
-  const subject = operationSubject(extensionCommandOperation, projectId, command.id);
+  const requestId =
+    command.extensionId === "pstdio.planner" &&
+    command.id === plannerReview &&
+    typeof input.params?.requestId === "string"
+      ? input.params.requestId
+      : undefined;
+  const subjects = requestId ? [command.id, requestId] : [command.id];
+  const subject = operationSubject(extensionCommandOperation, projectId, ...subjects);
   const { pending, recovery } = operations.getSnapshot();
   const matches = (entry: { subjects: readonly string[] }) => entry.subjects.includes(subject);
   if (pending.some(matches) || recovery.some((entry) => entry.status !== "rejected" && matches(entry)))
