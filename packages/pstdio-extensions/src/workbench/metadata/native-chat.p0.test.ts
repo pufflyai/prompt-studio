@@ -4,6 +4,7 @@ import { workbenchExtensionMetadataSchema } from "pstdio-api-contracts";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { checkExtensionHostCompatibility, dashboardExtensionHostCapabilities } from "../../runtime/host-capabilities";
 import { normalizeExtensionSources } from "../../runtime/normalize";
+import { viewDeclarationSchema } from "../../runtime/normalize/view-declaration";
 import { createWorkbenchExtensionMetadata } from "./workbench-extension-metadata";
 
 test("an independent extension declares native chat with normal private callbacks and a scoped stream command", () => {
@@ -81,4 +82,80 @@ test("an independent extension declares native chat with normal private callback
     stream: { ...watch.ref, extensionId: "acme.chat" },
   });
   expect(runtime.privateHandlers.filter((handler) => handler.rendererKind === "chat")).toHaveLength(6);
+});
+
+test("independent browser drafts publish their recovery callback and require host support", () => {
+  const acknowledgeRecovery = async () => undefined;
+  const view = defineView({
+    id: "conversation",
+    title: "Conversation",
+    body: {
+      kind: "chat",
+      draftKey: "compose",
+      browserDraft: { acknowledgeRecovery },
+      query: async () => ({}),
+      onAction: async () => undefined,
+    },
+  });
+  const runtime = normalizeExtensionSources([
+    {
+      packagePath: "/fake/chat",
+      sourcePath: "/fake/chat/extension.ts",
+      sourceKind: "local_path",
+      manifest: {
+        id: "acme.chat",
+        name: "chat",
+        publisher: "acme",
+        version: "1.0.0",
+        main: "./extension.ts",
+        enginesPstdio: `^${EXTENSION_API_VERSION}`,
+      },
+      definition: defineExtension({ views: [view] }),
+    },
+  ]);
+  expect(runtime.diagnostics).toEqual([]);
+  const metadata = workbenchExtensionMetadataSchema.parse(
+    JSON.parse(JSON.stringify(createWorkbenchExtensionMetadata({ runtime }))),
+  );
+  expect(metadata.views[0]?.body).toMatchObject({
+    browserDraft: { acknowledgeRecoveryHandlerId: "acme.chat.view.conversation.chat.acknowledgeRecovery" },
+  });
+  expect(runtime.privateHandlers).toContainEqual(
+    expect.objectContaining({
+      id: "acme.chat.view.conversation.chat.acknowledgeRecovery",
+      rendererKind: "chat",
+      handler: acknowledgeRecovery,
+    }),
+  );
+  expect(checkExtensionHostCompatibility(runtime, dashboardExtensionHostCapabilities).diagnostics).toEqual([]);
+  const { "view.chat.browser-draft.v1": _browserDraft, ...capabilities } =
+    dashboardExtensionHostCapabilities.capabilities;
+  expect(
+    checkExtensionHostCompatibility(runtime, { ...dashboardExtensionHostCapabilities, capabilities }).diagnostics,
+  ).toContainEqual(
+    expect.objectContaining({
+      code: "extension_host_capability_missing",
+      metadata: expect.objectContaining({ missingCapability: "view.chat.browser-draft.v1" }),
+    }),
+  );
+});
+
+test.each(["loadDraft", "saveDraft"])("browser persistence rejects a competing provider %s callback", (callback) => {
+  const view = defineView({
+    id: "conversation",
+    title: "Conversation",
+    body: {
+      kind: "chat",
+      draftKey: "compose",
+      browserDraft: {},
+      query: async () => ({}),
+      onAction: async () => undefined,
+      ...(callback === "loadDraft"
+        ? { loadDraft: async () => ({ text: "", attachments: [], values: {} }) }
+        : { saveDraft: async () => undefined }),
+    },
+  });
+  const result = viewDeclarationSchema.safeParse(view);
+  expect(result.success).toBe(false);
+  if (!result.success) expect(result.error.message).toContain("Browser draft persistence cannot include provider");
 });

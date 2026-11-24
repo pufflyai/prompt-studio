@@ -36,7 +36,11 @@ test("exports the displayed saved version as an interactive offline HTML file an
   try {
     writeFileSync(
       join(repo, "page.html"),
-      `<html style="--artifact-bg:red!important;margin:0"><head><title>Audit report</title><style>#scheme{font-weight:400}@media(prefers-color-scheme:dark){#scheme{font-weight:700}}</style></head><body><h1>Earlier audit</h1><button onclick="this.textContent='Complete'">Complete task</button><p id="scheme"></p><p id="isolation"></p><script>const m=matchMedia('(prefers-color-scheme:dark)');const update=()=>document.getElementById('scheme').textContent=m.matches?'dark':'light';m.addEventListener('change',update);update();try{parent.document.body;document.getElementById('isolation').textContent='exposed'}catch{document.getElementById('isolation').textContent='isolated'}</script></body></html>`,
+      `<html style="--artifact-bg:red!important;margin:0"><head><title>Audit report</title><style>#scheme{font-weight:400}@media(prefers-color-scheme:dark){#scheme{font-weight:700}}</style></head><body><h1>Earlier audit</h1><button onclick="this.textContent='Complete'">Complete task</button><p id="scheme"></p><p id="isolation"></p>
+      <a href="#audit-details" id="cancelled-jump">Cancelled jump</a>
+      <a href="#audit-details" onclick="event.stopPropagation()"><span>Jump to audit details</span></a>
+      <div style="height:200vh"></div><h2 id="audit-details" tabindex="-1">Audit details</h2>
+      <script>window.addEventListener('click',event=>{if(event.target.id==='cancelled-jump')event.preventDefault()});const m=matchMedia('(prefers-color-scheme:dark)');const update=()=>document.getElementById('scheme').textContent=m.matches?'dark':'light';m.addEventListener('change',update);update();try{parent.document.body;document.getElementById('isolation').textContent='exposed'}catch{document.getElementById('isolation').textContent='isolated'}</script></body></html>`,
     );
     const first = await execute("publish", { file_path: "page.html", label: "First" });
     writeFileSync(join(repo, "page.html"), "<title>Updated audit</title><h1>Latest audit</h1>");
@@ -51,6 +55,11 @@ test("exports the displayed saved version as an interactive offline HTML file an
     await frame.getByRole("menuitemradio", { name: /^First/ }).click();
     const preview = frame.frameLocator('iframe[title^="Preview: "]').frameLocator("iframe");
     await expect(preview.getByRole("heading", { name: "Earlier audit" })).toBeVisible();
+    await preview.getByRole("link", { name: "Cancelled jump" }).click();
+    await expect(preview.locator(":target")).toHaveCount(0);
+    await preview.getByRole("link", { name: "Jump to audit details" }).click();
+    await expect(preview.locator("#audit-details:target")).toBeInViewport();
+    await expect(preview.getByRole("heading", { name: "Audit details" })).toBeFocused();
     const mode = await page.evaluate(() => (matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "dark"));
     const background = mode === "dark" ? "rgb(16, 24, 32)" : "rgb(255, 255, 255)";
     await page.evaluate(
@@ -126,6 +135,9 @@ test("exports the displayed saved version as an interactive offline HTML file an
       await expect(content.locator("body")).toHaveCSS("background-color", background);
       await content.getByRole("button", { name: "Complete task", exact: true }).click();
       await expect(content.getByRole("button", { name: "Complete", exact: true })).toBeVisible();
+      await content.getByRole("link", { name: "Jump to audit details" }).press("Enter");
+      await expect(content.locator("#audit-details:target")).toBeInViewport();
+      await expect(content.getByRole("heading", { name: "Audit details" })).toBeFocused();
     } finally {
       await offline.close();
     }

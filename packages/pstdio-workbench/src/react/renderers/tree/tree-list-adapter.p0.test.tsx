@@ -298,6 +298,16 @@ describe("toTreeListSection", () => {
     expect(contextLabels).toEqual(overflowLabels);
     expect(section.nodes[0]?.menuItems?.[0]?.group).toBeDefined();
   });
+  test("keeps a loading section in place with placeholder rows until its entries arrive", () => {
+    const workbench = createWorkbench();
+    const section = toTreeListSection(
+      { id: "sessions", label: "Sessions", loading: true, emptyState: { title: "No sessions yet" }, nodes: [] },
+      {},
+      { workbench },
+    );
+    expect(section.nodes).toEqual([]);
+    expect(section.emptyState).toBeDefined();
+  });
   test("maps section empty states to disabled empty-state rows", () => {
     const workbench = createWorkbench();
     const section = toTreeListSection(

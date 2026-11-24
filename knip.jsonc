@@ -156,7 +156,7 @@
         "src/fixtures/**/extension.ts",
         // Extension manifests load this webview entry by packageAsset path.
         "src/fixtures/{editing-session,document,mode,settings,file-download,render-highlights}/view.ts",
-        "src/fixtures/panel-views/letter-{browser,reader}.tsx",
+        "src/fixtures/panel-views/letter-{browser,reader,toolbar}.tsx",
         "src/fixtures/public-text-editor/view.tsx"
       ],
       "project": ["playwright*.config.ts", "src/**/*.{ts,tsx}"],
@@ -381,6 +381,17 @@
       "ignoreDependencies": ["@openai/codex", "@anthropic-ai/claude-code", "@opencode/cli"]
     },
     // Webview entries are referenced by path through packageAsset(), so each extension lists its own.
+    "extensions/cloud-workspaces": {
+      "entry": [
+        "package.json",
+        "extension.ts",
+        "src/**/*.test.{ts,tsx}",
+        "src/workspace-history-webview.ts",
+        // The operator runs prepare.ts, and the image starts start.ts by path.
+        "src/codex-template/{prepare,start}.ts"
+      ],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
     "extensions/pstdio-onboarding": {
       "entry": ["package.json", "extension.ts", "src/**/*.test.{ts,tsx}", "src/**/*.canvas.tsx", "src/setup-entry.tsx"],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
@@ -470,6 +481,8 @@
         "src/views/ticket-review-requests.tsx",
         "src/commands/reorder-ticket.diagnostic.ts",
         "src/timeline/view/entry.tsx",
+        "src/timeline/view/header-entry.tsx",
+        "src/timeline/view/auto-build-entry.tsx",
         "src/**/*.canvas.tsx"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]

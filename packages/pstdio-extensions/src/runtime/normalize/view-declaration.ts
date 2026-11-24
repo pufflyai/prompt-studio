@@ -31,6 +31,7 @@ const body = z.discriminatedUnion("kind", [
       ...native,
       draftKey: z.string().min(1),
       legacySessionDraft: z.boolean().optional(),
+      browserDraft: z.object({ acknowledgeRecovery: callbackSchema.optional() }).strict().optional(),
       initial: chatRendererSnapshotSchema.optional(),
       query: callbackSchema,
       onAction: callbackSchema,
@@ -40,7 +41,10 @@ const body = z.discriminatedUnion("kind", [
       resolveLink: callbackSchema.optional(),
       resolveImage: callbackSchema.optional(),
     })
-    .strict(),
+    .strict()
+    .refine((chat) => !chat.browserDraft || (!chat.loadDraft && !chat.saveDraft), {
+      message: "Browser draft persistence cannot include provider loadDraft or saveDraft callbacks.",
+    }),
   z
     .object({
       kind: z.literal("controls"),
@@ -128,6 +132,10 @@ export const viewDeclarationSchema = z
     ref: localRefSchema("view"),
     title: localizableStringSchema,
     icon: z.string().optional(),
+    header: z
+      .object({ view: localRefSchema("view") })
+      .strict()
+      .optional(),
     body,
   })
   .strict();

@@ -13,6 +13,32 @@ afterEach(async () => {
   for (const folder of folders.splice(0)) await rm(folder, { recursive: true, force: true });
 });
 
+test("new log pages have their validated edges on disk when they reach the relay", async () => {
+  const root = await mkdtemp(join(tmpdir(), "log-index-publication-"));
+  folders.push(root);
+  const files = createIndexNodeFiles(root);
+  const owner = { workbenchId: crypto.randomUUID(), extensionId: "example.history" };
+  const space = await createSyncSpace({
+    projectId: owner.workbenchId,
+    spaceOwner: null,
+    keys: [{ generation: 1, secret: "A".repeat(43) }],
+  });
+  const remote = await createRelay().relay.manifestBlobs();
+  const uploaded: Awaited<ReturnType<typeof files.edges>>[] = [];
+  const cache = createLogIndexCache(files, owner, space, {
+    ...remote,
+    async put(id, bytes, children) {
+      uploaded.push(await files.edges(owner, "logs", id));
+      await remote.put(id, bytes, children);
+    },
+  });
+  const nodes = createEncryptedManifestNodes(space, cache);
+  const leaf = await nodes.write({ page: "leaf" }, []);
+  const parent = await nodes.write({ children: [leaf] }, [leaf]);
+  expect(uploaded).toEqual([[], [leaf]]);
+  expect(await nodes.read(parent)).toEqual({ children: [leaf] });
+});
+
 test("log index nodes are a bounded cache that keeps fresh writes and downloads evicted nodes again", async () => {
   const root = await mkdtemp(join(tmpdir(), "log-index-cache-"));
   folders.push(root);

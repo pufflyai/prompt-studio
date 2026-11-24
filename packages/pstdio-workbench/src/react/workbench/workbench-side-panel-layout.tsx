@@ -1,4 +1,4 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Stack } from "@chakra-ui/react";
 import { ResizableSplitLayout } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -26,9 +26,11 @@ export const WorkbenchSidePanelRegionPortal = (props: WorkbenchSidePanelRegionPo
   if (!sidePanelHost) return null;
 
   return createPortal(
-    <WorkbenchPanelMenuLayout workbench={workbench} panel="side">
-      <WorkbenchRegion workbench={workbench} region="side" title="Side Panel" transparent />
-    </WorkbenchPanelMenuLayout>,
+    <Stack gap="0" flex="1" minH="0" h="full">
+      <WorkbenchPanelMenuLayout workbench={workbench} panel="side">
+        <WorkbenchRegion workbench={workbench} region="side" title="Side Panel" transparent />
+      </WorkbenchPanelMenuLayout>
+    </Stack>,
     sidePanelHost,
   );
 };

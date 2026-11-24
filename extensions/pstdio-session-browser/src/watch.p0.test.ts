@@ -165,8 +165,10 @@ test("a native watch hands off failed input through recovery events without cons
     { draft, operation: { kind: "command", text: "/goal Native objective" } },
     "before",
     true,
+    undefined,
+    "browser",
   );
-  await watchConversation(ctx, { type: "session", id: "s" });
+  await watchConversation(ctx, { type: "session", id: "s" }, "browser");
   expect(events).toContainEqual({ revision: 1, recoverDraft: draft });
   expect(await readNativeSubmissions(ctx, "s", true)).toHaveLength(1);
   expect(closed).toBe(1);

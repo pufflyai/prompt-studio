@@ -1,7 +1,7 @@
 import type { StorageOwner } from "pstdio-sync";
 import { openBlob, type SyncSpace } from "pstdio-sync/encryption";
 import { type OrderedIndexBlobs, type OrderedIndexReference, readOrderedIndexReference } from "pstdio-sync/relay";
-import { type IndexNodeFiles, type IndexNodeKind, sortIndexChildren } from "./index-node-files";
+import { type IndexNode, type IndexNodeFiles, type IndexNodeKind, sortIndexChildren } from "./index-node-files";
 
 /** Rows the database kept before index nodes moved to files; only the upgrade reads them. */
 export const orderedIndexBlobDocumentId = (id: string) => JSON.stringify(["ordered-index-blob", id]);
@@ -25,10 +25,10 @@ export const createOrderedManifestCache = (
     await files.remove(owner, kind, [id]);
     return undefined;
   };
-  const storeBytes = async (id: string, bytes: Uint8Array) => {
+  const storeBytes = async (id: string, bytes: Uint8Array, children: IndexNode["children"] = null) => {
     const previous = await saved(id);
     if (previous && !Buffer.from(previous.bytes).equals(bytes)) throw new Error("Cached encrypted node is immutable");
-    if (!previous) await files.create(owner, kind, id, { bytes: bytes.slice(), children: null });
+    if (!previous) await files.create(owner, kind, id, { bytes: bytes.slice(), children });
   };
   const blobs: OrderedIndexBlobs = {
     // Files need no write batching; callers keep their batch boundaries.
@@ -40,8 +40,10 @@ export const createOrderedManifestCache = (
       if (!cached) await storeBytes(id, bytes);
       return bytes.slice();
     },
-    async put(id, bytes, children) {
-      await storeBytes(id, bytes);
+    async put(id, bytes, children, edges) {
+      // A new page already has validated edges. Save them with the bytes so a cache scan
+      // cannot contend with a second publication of that file on Windows.
+      await storeBytes(id, bytes, edges ? sortIndexChildren(edges) : null);
       await remote.put(id, bytes, [...children].sort());
     },
     async remember(reference, children) {

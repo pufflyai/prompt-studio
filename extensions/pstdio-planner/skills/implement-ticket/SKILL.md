@@ -90,6 +90,18 @@ For a decision in a managed workspace, pass `--workspace-id <workspace-id>` and 
 
 Keep the returned request ID. Stop work that depends on the answer. After the person answers, read `pst pstdio.planner review-requests read --request-id <request-id>`, verify the saved decision against the actual files and Git history, then resume. "Completion confirmed" records an answer; it does not integrate code. If the same blocker remains, inspect and repair the dependency base before asking for the same decision again. Describe unchanged evidence clearly instead of treating repeated resumes as progress. Never answer your own request for the person. `run-review` is for reviewing code, not requesting decisions.
 
+## Cloud tests and previews
+
+Prefer configured cloud test workspaces and cloud app previews when they can run the required workload. Check the available cloud skills and provider before choosing local execution. Use `run-cloud-tests` and `launch-cloud-demo` when installed.
+
+Before choosing a cloud runner for `test:review`, confirm it provides the required Git base history and Docker daemon. A source-only upload and an image without Docker cannot run that review gate; focused cloud checks do not replace it.
+
+Run tests against the intended branch or working tree. Keep the required suites and prerequisites. Record the source revision, cloud workspace and run IDs, result, and full log path. Collect the result and verify test workspaces stop when finished, including failed runs.
+
+Use a cloud preview for app checks when available. Verify the dashboard and affected view, keep its link and expiry in private task evidence, and stop previews when they are no longer needed. Keep deployment addresses, login links, and credentials out of commits and public PR text.
+
+If a cloud provider is unavailable or cannot support a required dependency, such as Docker, use the repository's supported local workflow and record why. Missing cloud support never removes a required check or makes an unrun test pass.
+
 ## Adversarial review
 
 Read `pst pstdio.planner implementation-policy` again after implementation and validation. When `adversarialReview` is enabled, run an adversarial review automatically before the final commit and handoff. The setting controls this step; do not ask for confirmation. When disabled, skip the review unless the user explicitly requested it.

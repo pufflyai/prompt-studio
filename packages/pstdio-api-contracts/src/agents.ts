@@ -20,7 +20,12 @@ const harnessParamBaseSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
-const harnessParamOptionSchema = z.object({ label: z.string(), value: z.string(), icon: z.string().optional() });
+const harnessParamOptionSchema = z.object({
+  label: z.string(),
+  localizedLabel: localizableSchema.optional(),
+  value: z.string(),
+  icon: z.string().optional(),
+});
 
 export const harnessSelectParamSchema = harnessParamBaseSchema.extend({
   type: z.literal("select"),

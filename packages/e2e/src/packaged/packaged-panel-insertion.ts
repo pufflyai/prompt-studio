@@ -12,6 +12,7 @@ export const verifyPanelInsertionTargets = async (page: Page) => {
     ["secondary", "top"],
   ] as const) {
     const header = page.getByLabel(region === "side" ? "Side panel header" : "Bottom panel header", { exact: true });
+    await expect(header).toHaveAttribute("data-panel-draggable", "true");
     await header.focus();
     await header.press("Shift+F10");
     await expect(page.getByRole("menuitem", { name: /^Move panel to / })).toHaveCount(1);
@@ -59,6 +60,7 @@ export const verifyPanelInsertionTargets = async (page: Page) => {
     const panel = page.locator(`[data-workbench-panel="${region}"]:visible`);
     await expect(panel).toBeVisible();
     const header = page.getByLabel(region === "side" ? "Side panel header" : "Bottom panel header", { exact: true });
+    await expect(header).toHaveAttribute("data-panel-draggable", "true");
     await header.focus();
     await header.press("Shift+F10");
     await expect(page.getByRole("menuitem", { name: /^Move panel to / })).toHaveCount(1);

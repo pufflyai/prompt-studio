@@ -1,6 +1,5 @@
-import { Badge, Box, Button, HStack, Icon, Stack, Text } from "@chakra-ui/react";
+import { Badge, Box, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { OpenAiLogo } from "@phosphor-icons/react";
-import { ArrowRight } from "lucide-react";
 import { SITE_LINKS } from "../../content/landing-content";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
 import { CopilotLogo, OpenCodeLogo, PiLogo } from "../icons/agent-logos";
@@ -62,12 +61,6 @@ export const DownloadPanel = (props: { headingLevel: "h1" | "h2" }) => {
           />
         </HStack>
       </Stack>
-      <Button asChild variant="ghost" size="sm" alignSelf="start">
-        <a href="/what-is-prompt-studio/">
-          What is an agentic workbench?
-          <ArrowRight />
-        </a>
-      </Button>
     </Box>
   );
 };

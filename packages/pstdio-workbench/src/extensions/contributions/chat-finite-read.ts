@@ -15,7 +15,7 @@ export interface ChatQueryContext {
 
 export const createChatFiniteRead = (input: {
   context?: ChatQueryContext;
-  read: ChatSessionInput["query"];
+  read: (signal: AbortSignal) => ReturnType<ChatSessionInput["query"]>;
   issue: () => number;
   merge: (value: ReturnType<typeof chatRendererSnapshotSchema.parse>, issued: number) => void;
   publish: (update: { loading: boolean; error?: string }) => void;

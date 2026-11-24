@@ -146,6 +146,44 @@ describe("harness registry host-scope caching", () => {
 });
 
 describe("harness registry project scope", () => {
+  test.each([
+    ["granted", "harness-grant"],
+    ["other", null],
+  ])("limits process environment grants to the owning harness extension %s", async (name, expected) => {
+    const variable = "PSTDIO_TEST_HARNESS_PROCESS_GRANT";
+    const previous = {
+      [variable]: process.env[variable],
+      PSTDIO_EXTENSION_PROCESS_ENV: process.env.PSTDIO_EXTENSION_PROCESS_ENV,
+    };
+    process.env[variable] = "harness-grant";
+    process.env.PSTDIO_EXTENSION_PROCESS_ENV = `pstdio.pstdio-granted:${variable}`;
+    let observed: string | null | undefined;
+    const record = createTestHarnessRecord(name!, {
+      provider: {
+        detect: async (context) => {
+          const result = await context.process.runOrThrow({
+            command: [process.execPath, "-e", `process.stdout.write(JSON.stringify(process.env.${variable} ?? null))`],
+          });
+          observed = JSON.parse(result.stdout);
+          return { available: true };
+        },
+      },
+    });
+    const service = makeService({ snapshot: () => fakeSnapshot(1, [record]) });
+    try {
+      const handle = await service.get(record.id, SCOPE);
+      expect(handle).toBeDefined();
+      await handle!.detect();
+      expect(observed).toBe(expected);
+    } finally {
+      await service.dispose();
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
+
   test("logs duplicate harness ids once per catalog generation", async () => {
     const logPath = join(tempHome, "diagnostics.jsonl");
     const logOptions = { PSTDIO_LOG_LEVEL: "warn", PSTDIO_LOG_PATH: logPath, PSTDIO_LOG_TARGETS: "file" };

@@ -1,7 +1,13 @@
 import { createLevelNavigation, type WorkbenchModuleContext } from "@pstdio/workbench";
 import { subscribeSessionListData } from "@/modules/sessions/data/session-data-subscription";
-import { subscribeDashboardSelectedProject } from "@/shared/app/project-context";
+import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import {
+  getDashboardExtensionsRegisteredProjectId,
+  subscribeDashboardExtensionsRegisteredProject,
+} from "@/shared/extensions/extension-readiness";
+
+const sectionDefaults = new WeakMap<WorkbenchModuleContext, Set<string>>();
 
 // Mode and page contributions share one host navigation view.
 export const updateDashboardSidenav = (
@@ -11,11 +17,21 @@ export const updateDashboardSidenav = (
   } = {},
 ) => {
   if (!ctx.views.getView(dashboardWidgetIds.dashboardSidenav)) return;
+  const navigation = createLevelNavigation(ctx);
+  const stateScope = navigation.getStateScope();
   if ("selectedNode" in options) {
-    ctx.treeViews.setSelectedNode(dashboardWidgetIds.dashboardSidenav, options.selectedNode ?? undefined);
+    ctx.treeViews.setSelectedNode(dashboardWidgetIds.dashboardSidenav, options.selectedNode ?? undefined, stateScope);
   }
-  for (const sectionId of createLevelNavigation(ctx).getDefaultExpandedSectionIds()) {
-    ctx.treeViews.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
+  let defaults = sectionDefaults.get(ctx);
+  if (!defaults) {
+    defaults = new Set();
+    sectionDefaults.set(ctx, defaults);
+  }
+  for (const sectionId of navigation.getDefaultExpandedSectionIds()) {
+    const key = JSON.stringify([stateScope, sectionId]);
+    if (stateScope && defaults.has(key)) continue;
+    defaults.add(key);
+    ctx.treeViews.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true, stateScope);
   }
   ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
 };
@@ -23,7 +39,11 @@ export const updateDashboardSidenav = (
 // exist (e.g. in unit tests that register a single module), so it no-ops when it is absent.
 export const setDashboardSidenavSelection = (ctx: WorkbenchModuleContext, nodeId: string | undefined) => {
   if (!ctx.views.getView(dashboardWidgetIds.dashboardSidenav)) return;
-  ctx.treeViews.setSelectedNode(dashboardWidgetIds.dashboardSidenav, nodeId);
+  ctx.treeViews.setSelectedNode(
+    dashboardWidgetIds.dashboardSidenav,
+    nodeId,
+    createLevelNavigation(ctx).getStateScope(),
+  );
 };
 export const DASHBOARD_SIDENAV_REGION_SIZE = { defaultPx: 250, minPx: 200, maxPx: 360 };
 const registerSidenavWidget = (ctx: WorkbenchModuleContext) => {
@@ -65,16 +85,29 @@ export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
   const appliedNodeDefaults = new Set<string>();
   const syncSidenavForActiveMode = () => {
     if (!ctx.modes.getActiveModeId()) return;
-    for (const nodeId of createLevelNavigation(ctx).getDefaultExpandedNodeIds()) {
-      if (appliedNodeDefaults.has(nodeId)) continue;
-      appliedNodeDefaults.add(nodeId);
-      ctx.treeViews.setNodeExpanded(dashboardWidgetIds.dashboardSidenav, nodeId, true);
+    const navigation = createLevelNavigation(ctx);
+    const stateScope = navigation.getStateScope();
+    for (const nodeId of navigation.getDefaultExpandedNodeIds()) {
+      const key = JSON.stringify([stateScope, nodeId]);
+      if (appliedNodeDefaults.has(key)) continue;
+      appliedNodeDefaults.add(key);
+      ctx.treeViews.setNodeExpanded(dashboardWidgetIds.dashboardSidenav, nodeId, true, stateScope);
     }
     updateDashboardSidenav(ctx);
   };
   const refresh = () => {
     if (ctx.views.getView(dashboardWidgetIds.dashboardSidenav))
       ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
+  };
+  // Extensions contribute most navigation entries. Until the selected project's contributions
+  // are registered, show the tree skeleton instead of a partial list that fills in later.
+  const syncLoading = () => {
+    if (!ctx.views.getView(dashboardWidgetIds.dashboardSidenav)) return;
+    const projectId = getDashboardSelectedProjectId(ctx);
+    ctx.treeViews.setLoading(
+      dashboardWidgetIds.dashboardSidenav,
+      Boolean(projectId) && getDashboardExtensionsRegisteredProjectId(ctx) !== projectId,
+    );
   };
   const navigation = createLevelNavigation(ctx);
   const readScope = () =>
@@ -92,12 +125,17 @@ export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
   const primaryResourceSubscription = ctx.onDidChangePrimaryResource(syncNavigation);
   const pageSubscription = ctx.pages.store.subscribeSelector((state) => state.location, syncNavigation);
   const unsubscribeDashboardData = subscribeSessionListData(refresh);
-  const unsubscribeProject = subscribeDashboardSelectedProject(ctx, refresh);
+  const unsubscribeProject = subscribeDashboardSelectedProject(ctx, () => {
+    syncLoading();
+    refresh();
+  });
+  const unsubscribeRegistration = subscribeDashboardExtensionsRegisteredProject(ctx, syncLoading);
   const navigationContributionSubscription = ctx.navigationTrees.onDidChange(() => {
     scope = readScope();
     syncSidenavForActiveMode();
   });
   syncSidenavForActiveMode();
+  syncLoading();
   return {
     dispose: () => {
       modeSubscription.dispose();
@@ -105,6 +143,7 @@ export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
       pageSubscription();
       unsubscribeDashboardData();
       unsubscribeProject();
+      unsubscribeRegistration();
       navigationContributionSubscription.dispose();
     },
   };

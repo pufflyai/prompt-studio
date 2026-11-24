@@ -1,8 +1,10 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { createWorkbench, type WorkbenchCore } from "@pstdio/workbench";
+import { createLevelNavigation, createWorkbench, type WorkbenchCore } from "@pstdio/workbench";
+import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { registerDashboardSidenav } from "./dashboard-sidenav";
+import { setDashboardExtensionsRegisteredProject } from "@/shared/extensions/extension-readiness";
+import { registerDashboardSidenav, updateDashboardSidenav } from "./dashboard-sidenav";
 import { treeViewBody, treeViewSections } from "./workbench-view-test-helpers";
 
 const registerModePage = (workbench: WorkbenchCore, modeId: string, pageId: string, resourceKind?: string) => {
@@ -30,6 +32,19 @@ const registerModePage = (workbench: WorkbenchCore, modeId: string, pageId: stri
   return page;
 };
 describe("registerDashboardSidenav", () => {
+  test("keeps the navigation loading until the selected project's extension entries are registered", () => {
+    const workbench = createWorkbench();
+    registerDashboardSidenav(workbench);
+    const loading = () => workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).loading;
+
+    selectDashboardProject(workbench, { id: "project-1", name: "One" });
+    expect(loading()).toBe(true);
+    setDashboardExtensionsRegisteredProject(workbench, "project-1");
+    expect(loading()).toBe(false);
+
+    selectDashboardProject(workbench, { id: "project-2", name: "Two" });
+    expect(loading()).toBe(true);
+  });
   test("supplies the same host navigation in every mode that retains host chrome", () => {
     const workbench = createWorkbench();
     const modes = ["project", "acme.notes.mode.review"];
@@ -78,12 +93,25 @@ describe("registerDashboardSidenav", () => {
       declarationIndex: 0,
       viewId: "provider.sessions",
     });
-    expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).expandedNodeIds).toEqual([
+    expect(
+      workbench.treeViews.getTreeState(
+        dashboardWidgetIds.dashboardSidenav,
+        createLevelNavigation(workbench).getStateScope(),
+      ).expandedNodeIds,
+    ).toEqual(["provider.tree:sessions"]);
+    workbench.treeViews.setNodeExpanded(
+      dashboardWidgetIds.dashboardSidenav,
       "provider.tree:sessions",
-    ]);
-    workbench.treeViews.setNodeExpanded(dashboardWidgetIds.dashboardSidenav, "provider.tree:sessions", false);
+      false,
+      createLevelNavigation(workbench).getStateScope(),
+    );
     workbench.views.refreshView("provider.sessions");
-    expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).expandedNodeIds).toEqual([]);
+    expect(
+      workbench.treeViews.getTreeState(
+        dashboardWidgetIds.dashboardSidenav,
+        createLevelNavigation(workbench).getStateScope(),
+      ).expandedNodeIds,
+    ).toEqual([]);
   });
   test("applies section defaults from contributions registered after the sidenav", () => {
     const workbench = createWorkbench();
@@ -100,10 +128,12 @@ describe("registerDashboardSidenav", () => {
       defaultExpandedSectionIds: ["files", "sessions"],
       getSections: () => [],
     });
-    expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).expandedSectionIds).toEqual([
-      "files",
-      "sessions",
-    ]);
+    expect(
+      workbench.treeViews.getTreeState(
+        dashboardWidgetIds.dashboardSidenav,
+        createLevelNavigation(workbench).getStateScope(),
+      ).expandedSectionIds,
+    ).toEqual(["files", "sessions"]);
   });
   test("applies page navigation defaults when the page becomes active", async () => {
     const workbench = createWorkbench();
@@ -141,7 +171,25 @@ describe("registerDashboardSidenav", () => {
     registerDashboardSidenav(workbench);
     workbench.pageLocations.setProject("project-1");
     await workbench.navigation.openTarget({ kind: "page", page: pageRef });
-    expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).expandedSectionIds).toContain("files");
+    expect(
+      workbench.treeViews.getTreeState(
+        dashboardWidgetIds.dashboardSidenav,
+        createLevelNavigation(workbench).getStateScope(),
+      ).expandedSectionIds,
+    ).toContain("files");
+    workbench.treeViews.setSectionExpanded(
+      dashboardWidgetIds.dashboardSidenav,
+      "files",
+      false,
+      createLevelNavigation(workbench).getStateScope(),
+    );
+    updateDashboardSidenav(workbench);
+    expect(
+      workbench.treeViews.getTreeState(
+        dashboardWidgetIds.dashboardSidenav,
+        createLevelNavigation(workbench).getStateScope(),
+      ).expandedSectionIds,
+    ).not.toContain("files");
   });
   test("reads mode sections without a concrete resource and passes one when selected", async () => {
     const workbench = createWorkbench();
@@ -247,7 +295,10 @@ test("the project header preserves contribution order and retains unrelated entr
   const header = () =>
     body.getHeader!({
       viewId: dashboardWidgetIds.dashboardSidenav,
-      state: core.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav),
+      state: core.treeViews.getTreeState(
+        dashboardWidgetIds.dashboardSidenav,
+        createLevelNavigation(core).getStateScope(),
+      ),
       refresh() {},
       setSelectedNode() {},
     });

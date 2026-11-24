@@ -1,8 +1,8 @@
 name: Download artifacts by ID
 description: >-
   Download workflow artifacts directly by their immutable IDs, keeping actions/download-artifact@v4's
-  path and merge-multiple layout. download-artifact lists the run's artifacts first and can stop after
-  100 of them (https://github.com/actions/download-artifact/issues/441), so it misses IDs in larger runs.
+  path and merge-multiple layout. Use the runner's Results service for the current run and the
+  GitHub REST API for other runs or repositories.
 inputs:
   artifact-ids:
     description: Comma- or newline-separated artifact IDs

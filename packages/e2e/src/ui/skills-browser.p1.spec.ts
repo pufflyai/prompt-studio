@@ -38,7 +38,7 @@ test("opens an installed skill browser with native menus and preserves files acr
   const previousUrl = page.url();
   await page.getByRole("option", { name: "Skills", exact: true }).click();
   await expect(page).toHaveURL(/extensions\/pstdio.pstdio-skill-browser\/skill\?/);
-  const menu = page.locator('[data-workbench-panel-menu="main-right"]');
+  const menu = page.getByRole("region", { name: "Main right menu", exact: true });
   const menuContent = menu.frameLocator("iframe");
   await expect(menuContent.getByText(first.name, { exact: true })).toBeVisible();
   // Critical: Back must leave Skills rather than trigger automatic selection again.
@@ -70,7 +70,7 @@ test("opens an installed skill browser with native menus and preserves files acr
   await expect(menu).toBeHidden();
   await fileHeader.getByRole("button", { name: "Open Main right menu", exact: true }).click();
   await expect(menu).toBeVisible();
-  const divider = page.getByRole("separator", { name: "Resize Main right menu" });
+  const divider = page.getByRole("separator", { name: "Resize Skill details", exact: true });
   const original = Number(await divider.getAttribute("aria-valuenow"));
   await divider.focus();
   await divider.press("ArrowLeft");

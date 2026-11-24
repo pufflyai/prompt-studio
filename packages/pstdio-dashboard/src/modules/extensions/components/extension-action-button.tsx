@@ -12,6 +12,7 @@ interface ExtensionActionButtonProps extends Omit<ProgressButtonProps, "onClick"
   onRetry?: () => void;
   retryLabel?: string;
   icon?: ReactNode;
+  compact?: boolean;
 }
 
 export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
@@ -22,6 +23,7 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
     onRetry,
     retryLabel,
     icon = <ArrowUpCircle />,
+    compact,
     children,
     disabled,
     progress,
@@ -41,12 +43,14 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
       size={rest.size}
       variant={rest.variant}
       alignItems="stretch"
+      minW={compact ? "14" : undefined}
       data-testid="extension-action-group"
     >
       <ProgressButton
         {...rest}
         status={action?.status}
         disabled={disabled || running || queued || (failed && !onRetry)}
+        flexShrink={compact ? 1 : undefined}
         aria-busy={running || undefined}
         aria-label={failed && onRetry ? `${name} · ${retry}` : name}
         aria-live="polite"
@@ -55,7 +59,7 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
         onClick={failed ? onRetry : onAction}
       >
         <ActionIcon status={action?.status} icon={icon} />
-        <Text as="span">
+        <Text as="span" truncate={compact} title={compact ? name : undefined}>
           {label ?? children}
           {error && (
             <Text as="span" role="alert">
@@ -69,6 +73,7 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
       {failed && onDismiss && (
         <IconButton
           height="auto"
+          flexShrink={compact ? 0 : undefined}
           aria-label={`${t("projectSettings.extensionsPanel.feedback.dismiss", "Dismiss")} ${action.label}`}
           onClick={() => onDismiss(action)}
           data-testid="extension-action-dismiss"

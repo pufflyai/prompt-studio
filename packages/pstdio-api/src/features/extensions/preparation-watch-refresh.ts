@@ -2,14 +2,17 @@ import { createPreparationScope } from "pstdio-extensions";
 import { type CheckOwner, joinPreparationDependencies } from "./pending-webview-checks";
 
 type Refresh = CheckOwner & {
-  sourcePath?: string;
+  sourcePaths: Set<string>;
+  reconcileAll: boolean;
   completion: ReturnType<typeof Promise.withResolvers<void>>;
 };
+
+type WatchRefresh = { sourcePaths: string[]; reconcileAll: boolean };
 
 // A watcher owns one active snapshot and one latest pending intent. Callers lend
 // their continuation to both generations while awaiting their own registration.
 export const createPreparationWatchRefresh = (
-  update: (sourcePath: string | undefined, signal: AbortSignal) => Promise<void>,
+  update: (refresh: WatchRefresh, signal: AbortSignal) => Promise<void>,
 ) => {
   const controller = new AbortController();
   let active: Refresh | undefined;
@@ -28,7 +31,7 @@ export const createPreparationWatchRefresh = (
     void current.scope
       .run(async () => {
         controller.signal.throwIfAborted();
-        await update(current.sourcePath, controller.signal);
+        await update({ sourcePaths: [...current.sourcePaths], reconcileAll: current.reconcileAll }, controller.signal);
       })
       .then(
         () => finish(current),
@@ -43,17 +46,16 @@ export const createPreparationWatchRefresh = (
     refresh: (sourcePath?: string) => {
       if (controller.signal.aborted) return Promise.resolve();
       const caller = createPreparationScope();
-      if (pending) {
-        if (pending.sourcePath !== sourcePath) pending.sourcePath = undefined;
-      } else {
-        pending = {
-          sourcePath,
-          scope: createPreparationScope(),
-          settled: false,
-          completion: Promise.withResolvers<void>(),
-        };
-      }
+      pending ??= {
+        sourcePaths: new Set<string>(),
+        reconcileAll: false,
+        scope: createPreparationScope(),
+        settled: false,
+        completion: Promise.withResolvers<void>(),
+      };
       const generation = pending;
+      if (sourcePath === undefined) generation.reconcileAll = true;
+      else generation.sourcePaths.add(sourcePath);
       const owners = active ? [active, generation] : [generation];
       const joined = joinPreparationDependencies(caller, owners, generation.completion.promise);
       queueMicrotask(pump);

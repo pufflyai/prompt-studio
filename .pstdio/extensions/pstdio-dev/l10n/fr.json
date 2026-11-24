@@ -1,5 +1,6 @@
 {
   "navigation.performance": "Performances",
   "views.newRun": "Nouvelle exécution",
-  "navigation.diagnostics": "Diagnostics"
+  "navigation.diagnostics": "Diagnostics",
+  "insights.navigation.label": "Analyse des sessions"
 }

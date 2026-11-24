@@ -21,29 +21,16 @@ export const documentPeer = (
   const offsets: number[] = [];
   let missing = false;
   type BlobState = NonNullable<ReturnType<typeof blobs.get>>;
-  type AfterPrefix = (blob: Pick<BlobState, "sha256" | "byteLength">) => Promise<void>;
-  let interrupt: AfterPrefix | undefined;
+  let truncateNextRead = false;
   const readBlob = async (request: Request, blob: BlobState) => {
     if (missing) return new Response(null, { status: 404 });
     const { offset } = (await request.json()) as { offset: number };
     offsets.push(offset);
     const bytes = Buffer.concat([...blob.parts].sort(([a], [b]) => a - b).map(([, bytes]) => Buffer.from(bytes)));
-    if (interrupt) {
-      const afterPrefix = interrupt;
-      interrupt = undefined;
-      return new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.enqueue(bytes.subarray(offset, Math.max(offset + 1, Math.floor(bytes.length / 2))));
-            // Disconnect only after the receiver has stored a prefix; a timer can
-            // discard every queued byte before a busy client begins reading.
-            void afterPrefix(blob).then(
-              () => controller.error(new Error("Interrupted blob")),
-              (error: unknown) => controller.error(error),
-            );
-          },
-        }),
-      );
+    if (truncateNextRead) {
+      truncateNextRead = false;
+      // The receiver checks the expected length and retains the prefix for the next read.
+      return new Response(bytes.subarray(offset, Math.max(offset + 1, Math.floor(bytes.length / 2))));
     }
     return new Response(bytes.subarray(offset));
   };
@@ -214,8 +201,8 @@ export const documentPeer = (
     states,
     blobs,
     offsets,
-    interrupt: (afterPrefix: AfterPrefix) => {
-      interrupt = afterPrefix;
+    truncateNextRead: () => {
+      truncateNextRead = true;
     },
     missing: (value: boolean) => {
       missing = value;

@@ -19,7 +19,7 @@ const menuRegions = Object.values(workbenchPanelMenuRegions).flatMap(
 );
 
 const menuSide = (region: WorkbenchPanelMenuRegion): WorkbenchPanelMenuSide =>
-  region.endsWith("-left-menu") ? "left" : "right";
+  region.split("-")[1] as WorkbenchPanelMenuSide;
 
 const ownerContributionId = (getWidget: GetWidget, contributionId: string) =>
   getWidget(contributionId)?.panelMenuOwner?.contributionId;
@@ -35,11 +35,14 @@ const ownerPlacement = (
   for (const region of workbenchPanelRegions) {
     const current = layout.regions[region];
     const candidates = current.widgets.filter((candidate) => candidate.contributionId === contributionId);
-    const placement = candidates.find((candidate) => candidate.widgetId === current.activeWidgetId) ?? candidates[0];
-    if (placement) owners.push({ region, placement });
+    const ordered = [...candidates].sort(
+      (a, b) => Number(b.widgetId === current.activeWidgetId) - Number(a.widgetId === current.activeWidgetId),
+    );
+    owners.push(...ordered.map((placement) => ({ region, placement })));
   }
   const placement = detached().find((candidate) => candidate.contributionId === contributionId);
   if (placement) owners.push({ region: "main", placement });
+  if (menu.menuOwnerWidgetId) return owners.find((owner) => owner.placement.widgetId === menu.menuOwnerWidgetId);
   // Resource identity follows a moved owner; a changed owner in the same panel rebinds its menu.
   const resourceKey = menu.resourceKey ?? menu.ownerResourceKey;
   return (
@@ -54,10 +57,7 @@ interface MenuResolution {
   changed: boolean;
 }
 
-// One placement per owned menu contribution in each destination panel. A panel opened without a resource and
-// then reopened with one would otherwise leave its first menu behind, because menu
-// reuse keys on the owner's resource. Keeping the first placement and rebinding it
-// preserves the menu's identity and active state.
+// One companion instance per live owner. Rebinding that owner preserves its menu identity and state.
 const resolveMenuPlacements = (
   layout: WorkbenchLayout,
   getWidget: GetWidget,
@@ -84,6 +84,7 @@ const resolveMenuPlacements = (
 
     const pageContext = found.placement.pageContext ?? found.placement.pageOwnerLocation;
     const bound =
+      placement.menuOwnerWidgetId === found.placement.widgetId &&
       placement.ownerResourceKey === found.placement.resourceKey &&
       placement.resource === found.placement.resource &&
       placement.pageContext === pageContext
@@ -91,6 +92,7 @@ const resolveMenuPlacements = (
         : {
             ...placement,
             ownerResourceKey: found.placement.resourceKey,
+            menuOwnerWidgetId: found.placement.widgetId,
             resource: found.placement.resource,
             resourceKey: found.placement.resourceKey,
             pageContext,
@@ -151,8 +153,9 @@ export const reconcilePanelMenuOwnership = (
     const seen = new Set<string>();
     const widgets = region.widgets.filter((placement) => {
       if (!ownerContributionId(getWidget, placement.contributionId)) return true;
-      if (seen.has(placement.contributionId)) return false;
-      seen.add(placement.contributionId);
+      const key = JSON.stringify([placement.contributionId, placement.menuOwnerWidgetId]);
+      if (seen.has(key)) return false;
+      seen.add(key);
       return true;
     });
     if (widgets.length === region.widgets.length) continue;

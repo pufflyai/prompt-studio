@@ -207,6 +207,7 @@ export const createExtensionSourceWatcher = async (
     sourcePath: string,
     registration: WatchedRegistration,
     rows: InstalledSourceRegistration[],
+    rebind = false,
   ) => {
     const next = rows.find((row) => row.source_path === sourcePath);
     if (!next) {
@@ -214,7 +215,7 @@ export const createExtensionSourceWatcher = async (
       registrations.delete(sourcePath);
       return;
     }
-    if (sourceIdentity(sourcePath) === registration.identity) return;
+    if (!rebind && sourceIdentity(sourcePath) === registration.identity) return;
 
     disposeRegistration(registration);
     registrations.delete(sourcePath);
@@ -228,7 +229,8 @@ export const createExtensionSourceWatcher = async (
 
   const refreshSource = async (sourcePath: string, rows: InstalledSourceRegistration[]) => {
     const registration = registrations.get(sourcePath);
-    if (registration) await refreshRegistration(sourcePath, registration, rows);
+    // A named refresh signals a source change even when the filesystem reuses its identity.
+    if (registration) await refreshRegistration(sourcePath, registration, rows, true);
     if (disposed) return;
 
     const row = rows.find((candidate) => candidate.source_path === sourcePath);

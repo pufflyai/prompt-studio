@@ -6,8 +6,9 @@ export interface WorkbenchViewMenuContribution {
   id: string;
   ownerViewId: string;
   viewId: string;
-  side: "left" | "right";
+  side: "left" | "right" | "bottom";
   priority?: number;
+  purpose?: "resources" | "activity";
   mountStrategy?: "active" | "keep-mounted";
   hiddenByDefault?: boolean;
   regionSize?: WorkbenchRegionSize;
@@ -27,7 +28,7 @@ export const viewMenuPanelId = (placementId: string, menuId: string) =>
   `workbench.view-menu.${encodeURIComponent(placementId)}.${encodeURIComponent(menuId)}`;
 
 const viewMenuConfig = (menu: WorkbenchViewMenuContribution) => {
-  if (menu.config === undefined) return { viewContextId: menu.id };
+  if (menu.config === undefined) return { viewContextId: menu.id, menuPurpose: menu.purpose };
   if (!menu.config || typeof menu.config !== "object" || Array.isArray(menu.config)) {
     return { viewContextId: menu.id, value: menu.config };
   }

@@ -206,7 +206,8 @@ const registrationNotification = (
   existing: Awaited<ReturnType<typeof findInstalledSourceForRegistration>>,
   values: ReturnType<typeof registrationValues>,
 ) => ({
-  changed: !existing || !hasUnchangedInstalledSourceRegistration(existing, values),
+  // A prepared install can replace the watched directory while keeping the row unchanged.
+  changed: Boolean(input.installation) || !existing || !hasUnchangedInstalledSourceRegistration(existing, values),
   path: existing ? refreshPathForRegistration(existing.source_path, input) : input.sourcePath,
 });
 export const createInstalledSourceRegistrar =

@@ -104,13 +104,14 @@ test("a remote-device draft keeps its public host binding across reload without 
   ctx.sessions.getDraftHarnessCommands = async () => {
     throw new Error("Remote draft must not discover local harness commands");
   };
-  const { saveDraft } = await import("./drafts");
-  await saveDraft(ctx, "draft", {
-    text: "Unsent on Laptop",
-    attachments: [],
-    values: { device: "laptop", harness: { harnessId: "remote-agent", model: "B" } },
+  await ctx.storage.records.commit({
+    operationId: ctx.storage.ids.create(),
+    edits: [{ recordId: ctx.storage.records.id("draft:draft"), replace: { fileId: "old-shared-draft" } }],
   });
-  const snapshot = await readSnapshot(ctx);
+  const snapshot = await readSnapshot(ctx, undefined, {
+    device: "laptop",
+    harness: { harnessId: "remote-agent", model: "B" },
+  });
   expect(snapshot).toMatchObject({
     nativeHarnessAccount: { controlId: "harness", remote: true },
     values: { device: "laptop", harness: { harnessId: "remote-agent", model: "B" } },

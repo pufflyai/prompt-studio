@@ -8,11 +8,12 @@ interface ExtensionUpgradeProgressProps {
   onUpgrade: () => void;
   onDismiss?: (batch: ExtensionUpgradeBatch) => void;
   canUpgrade: boolean;
+  compact?: boolean;
 }
 
 /** The batch owns its counts: dismissing a row result cannot rewrite the batch outcome. */
 export const ExtensionUpgradeProgress = (props: ExtensionUpgradeProgressProps) => {
-  const { batch, onUpgrade, onDismiss, canUpgrade } = props;
+  const { batch, onUpgrade, onDismiss, canUpgrade, compact } = props;
   const { t } = useTranslation("projects");
   const failure = batch?.failed
     ? t("projectSettings.extensionsPanel.feedback.batchFailed", { count: batch.failed, total: batch.ids.length })
@@ -29,7 +30,8 @@ export const ExtensionUpgradeProgress = (props: ExtensionUpgradeProgressProps) =
   return (
     <ExtensionActionButton
       variant="primary"
-      size="sm"
+      size={compact ? "xs" : "sm"}
+      compact={compact}
       data-testid="extensions-upgrade-all"
       action={action}
       progress={batch ? { value: batch.completed, max: batch.ids.length, label: action!.label } : undefined}

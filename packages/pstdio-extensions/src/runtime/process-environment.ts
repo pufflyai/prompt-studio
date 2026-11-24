@@ -1,4 +1,5 @@
 const SAFE_HOST_VARIABLES = [
+  "APPDATA",
   "BUN_INSTALL",
   "BUN_INSTALL_CACHE_DIR",
   "COLORTERM",
@@ -6,6 +7,7 @@ const SAFE_HOST_VARIABLES = [
   "FORCE_COLOR",
   "HOME",
   "LANG",
+  "LOCALAPPDATA",
   "LOGNAME",
   "NO_COLOR",
   "PATH",
@@ -85,7 +87,23 @@ export const createExtensionProcessEnvironment = (
   hostEnv: NodeJS.ProcessEnv = process.env,
   explicitEnv: NodeJS.ProcessEnv = {},
   platform: NodeJS.Platform = process.platform,
-) => createEnvironment(hostEnv, explicitEnv, isSafeHostVariable, platform);
+  extensionId?: string,
+) => {
+  const grants = hostEnv.PSTDIO_EXTENSION_PROCESS_ENV;
+  if (!extensionId || !grants) return createEnvironment(hostEnv, explicitEnv, isSafeHostVariable, platform);
+
+  const names = new Set<string>();
+  for (const entry of grants.split(",")) {
+    const [id, name, extra] = entry.trim().split(":");
+    if (id === extensionId && name && extra === undefined) names.add(platform === "win32" ? name.toUpperCase() : name);
+  }
+  return createEnvironment(
+    hostEnv,
+    explicitEnv,
+    (name) => isSafeHostVariable(name) || names.has(platform === "win32" ? name.toUpperCase() : name),
+    platform,
+  );
+};
 
 export const createExtensionInstallEnvironment = (
   hostEnv: NodeJS.ProcessEnv = process.env,
