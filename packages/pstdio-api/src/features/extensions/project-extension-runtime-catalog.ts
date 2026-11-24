@@ -7,6 +7,7 @@ import type { createWorkspaceService } from "../../services/workspace-service";
 import { type ExtensionStorageIndexService, installExtensionStorageIndexes } from "./extension-storage-indexes";
 import { migrateRuntimeExtensionFiles } from "./migrate-runtime-extension-files";
 import {
+  bindAdoptedSourceRevisions,
   ExtensionRuntimeGenerationStaleError,
   ExtensionRuntimeLoadFailedError,
   ExtensionRuntimeProjectMissingError,
@@ -117,7 +118,8 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
 
     await installExtensionStorageIndexes(deps.extensionStorageService, projectId, runtime, validate);
 
-    return { enabledSources, project, runtime };
+    const sourcesWithAdoption = bindAdoptedSourceRevisions(enabledSources, runtime, cachedSources);
+    return { enabledSources: sourcesWithAdoption, project, runtime };
   };
 
   const discardStaleLoad = (context: LoadContext) => {

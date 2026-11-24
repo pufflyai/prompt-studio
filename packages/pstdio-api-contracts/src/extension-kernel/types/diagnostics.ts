@@ -143,7 +143,8 @@ export type BackendDiagnosticCaptureInput =
       /**
        * Receives the evidence after each completed profile window and at the end, so it survives a
        * host that stops mid-capture. Writes run one at a time; a newer checkpoint replaces one that
-       * is still waiting. A rejected checkpoint fails the capture.
+       * is still waiting. A rejected checkpoint fails the capture. The host allows 30 seconds for
+       * final checkpoint writes after recording ends.
        */
       checkpoint?: (data: BackendArmedCaptureData) => Promise<void> | void;
       signal?: AbortSignal;
@@ -161,7 +162,7 @@ export type BackendDiagnosticCaptureResult<
  * runtime operations. Extension backends run in their own workers and are not profiled.
  *
  * Only first-party Prompt Studio extensions may capture; other extensions get `diagnostics_forbidden`.
- * One capture runs per host at a time; another gets `diagnostics_busy`. Aborting `signal`, or
+ * One recording uses the profiler at a time. An overlapping recording gets `diagnostics_busy`. Aborting `signal`, or
  * cancelling the invocation, stops the profiler and rejects.
  */
 export interface ExtensionDiagnosticsApi {

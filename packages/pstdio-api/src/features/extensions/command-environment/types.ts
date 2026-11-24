@@ -1,11 +1,9 @@
 import type { runWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
 import type { deleteProviderBackedWorkspace } from "../../workspaces/workspace-provider-lifecycle";
-import type { ExtensionsRouteDeps } from "../deps";
 import type { fireExtensionEventAsync } from "../extension-event-runtime";
+import type { EnabledExtensionSource } from "../project-extension-runtime-snapshot";
 
-export type EnabledSource = Awaited<
-  ReturnType<ExtensionsRouteDeps["extensionService"]["listEnabledSourcesForProject"]>
->[number];
+export type EnabledSource = EnabledExtensionSource;
 
 export type CommandEnvironmentRuntimeDeps = {
   runWorkspaceProvisioning: typeof runWorkspaceProvisioning;
