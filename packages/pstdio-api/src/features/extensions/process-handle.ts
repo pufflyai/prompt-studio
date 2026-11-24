@@ -1,5 +1,5 @@
 import type { ProcessEvent, ProcessExit, ProcessHandle } from "pstdio-api-contracts/extension-kernel";
-import { processError, trackProcessCleanup } from "pstdio-extensions";
+import { processError } from "pstdio-extensions";
 import { startProcessChild } from "./extension-process-lifetime";
 import { signalProcessTree, treeExitedWithin } from "./process-group";
 
@@ -250,8 +250,16 @@ export const spawnProcessHandle = (
     return iterator;
   };
 
-  return trackProcessCleanup(
-    { id: crypto.randomUUID(), started: started.promise, exited: exited.promise, write, end, kill, events },
-    cleanup,
-  );
+  const treeExited = cleanup.then(() => {});
+  void treeExited.catch(() => {});
+  return {
+    id: crypto.randomUUID(),
+    started: started.promise,
+    exited: exited.promise,
+    treeExited,
+    write,
+    end,
+    kill,
+    events,
+  };
 };

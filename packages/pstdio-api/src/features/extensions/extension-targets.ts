@@ -59,21 +59,8 @@ const providerInput = (workspace: Workspace) => ({
   providerRef: workspace.provider_ref_json as unknown as WorkspaceProviderRef,
 });
 
-// Rejects when the caller stops waiting, without waiting for the provider.
-const unlessAborted = <T>(work: Promise<T>, signal?: AbortSignal) => {
-  if (!signal) return work;
-  if (signal.aborted) return Promise.reject(signal.reason);
-  return new Promise<T>((resolve, reject) => {
-    const onAbort = () => reject(signal.reason);
-    signal.addEventListener("abort", onAbort, { once: true });
-    work.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort));
-  });
-};
-
-// The provider's own context stays open until its child exits, so children the provider starts
-// for it, such as a local ssh client, live exactly as long as the handle the caller holds. A caller
-// that stops first does not wait for the provider: its context closes, and a handle that still
-// arrives is stopped.
+// The process proxy can stop waiting without discarding a handle a provider returns later.
+// The provider's scope closes on cancellation or confirmed process cleanup.
 const spawnThroughProvider = (
   handle: WorkspaceProviderHandle & { provider: Required<WorkspaceTypeProvider> },
   workspace: Workspace,
@@ -86,16 +73,35 @@ const spawnThroughProvider = (
     scope.signal.throwIfAborted();
     return handle.provider.spawn(context, { ...providerInput(workspace), process });
   })();
-  void pending.then(
+  return pending.then(
     (opened) => {
-      if (signal?.aborted) void Promise.resolve(opened.kill("SIGKILL")).catch(() => {});
-      void Promise.resolve(opened.exited)
-        .catch(() => {})
-        .finally(() => scope.close());
+      // Some providers report the direct child's exit while their descendants can still be stopped.
+      // Keep their scope available until an explicit stop or the provider confirms the entire tree.
+      const done = Promise.withResolvers<void>();
+      const completed = () => {
+        done.resolve();
+        void scope.close();
+      };
+      void opened.treeExited?.then(completed, () => {});
+      return {
+        id: opened.id,
+        started: opened.started,
+        exited: opened.exited,
+        treeExited: done.promise,
+        write: opened.write.bind(opened),
+        end: opened.end.bind(opened),
+        events: opened.events.bind(opened),
+        async kill(signal) {
+          await opened.kill(signal);
+          completed();
+        },
+      } satisfies ProcessHandle;
     },
-    () => scope.close(),
+    (error: unknown) => {
+      void scope.close();
+      throw error;
+    },
   );
-  return unlessAborted(pending, signal);
 };
 
 const localTarget = async (deps: TargetDeps, input: WorkspaceTargetInput, kind: Kind) => {
