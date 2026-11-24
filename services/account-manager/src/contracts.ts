@@ -1,8 +1,10 @@
 import { identitySchema } from "pstdio-sync-contracts";
 import { z } from "zod";
+import { microsoftIssuerSchema } from "./microsoft-provider";
+import { googleIssuer } from "./provider-identity";
 
 export const ownerSchema = z.strictObject({
-  issuer: z.literal("https://accounts.google.com"),
+  issuer: z.union([z.literal(googleIssuer), microsoftIssuerSchema]),
   subject: identitySchema,
 });
 export const provisionSchema = z.strictObject({

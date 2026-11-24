@@ -1,3 +1,4 @@
+import type { AccountSignInProvider } from "pstdio-api-contracts";
 import { startNativeLogin } from "./native-login";
 
 /** One device account owner serializes sign-in changes across all of its clients and extensions. */
@@ -5,6 +6,7 @@ type SaveLogin = Parameters<typeof startNativeLogin>[1];
 export const createNativeLoginRequests = (
   save: (origin: string, ...args: Parameters<SaveLogin>) => ReturnType<SaveLogin>,
   changed: () => void,
+  validate?: (origin: string, provider?: AccountSignInProvider) => Promise<void>,
 ) => {
   let current: { id: string; request: ReturnType<typeof startNativeLogin> } | undefined;
   let mutations = Promise.resolve();
@@ -24,18 +26,28 @@ export const createNativeLoginRequests = (
     changed();
   };
   return {
-    start: (origin: string) =>
+    start: (origin: string, provider?: AccountSignInProvider) =>
       serialize(async () => {
+        if (closed) throw new Error("Account is closed");
+        await validate?.(origin, provider);
         if (closed) throw new Error("Account is closed");
         await clear();
         const id = crypto.randomUUID();
-        const request = startNativeLogin(origin, (...args) => save(origin, ...args), changed);
+        const request = startNativeLogin(origin, (...args) => save(origin, ...args), changed, provider);
         current = { id, request };
         changed();
         return { id, url: request.url };
       }),
     status: (id: string) => (current?.id === id ? current.request.status() : ("failed" as const)),
-    attempt: () => (current ? { id: current.id, status: current.request.status() } : undefined),
+    failure: (id: string) => {
+      const error = current?.id === id ? current.request.error() : undefined;
+      return error ? { error } : {};
+    },
+    attempt: () => {
+      if (!current) return undefined;
+      const error = current.request.error();
+      return { id: current.id, status: current.request.status(), ...(error && { error }) };
+    },
     cancel: (id: string) =>
       serialize(async () => {
         if (current?.id !== id) return { ok: true, status: "failed" as const };

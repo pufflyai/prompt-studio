@@ -66,12 +66,14 @@ export const createManagerHandler = (
     try {
       const path = new URL(request.url).pathname;
       if (path.startsWith("/api/auth/")) return await betterAuth(auth, basePath, request, report);
-      if (["/v1/native-login", "/v1/native-callback"].includes(path))
+      if (["/v1/native-login", "/v1/native-callback", "/v1/native-error"].includes(path))
         return await nativeLogin(auth, `${canonicalOrigin}${basePath}`, request);
       const projectDeletionResponse = await projectDeletionServiceHttp(auth, request, path);
       if (projectDeletionResponse) return projectDeletionResponse;
       const deviceResponse = await deviceHttp(auth, canonicalOrigin, request);
       if (deviceResponse) return deviceResponse;
+      if (path === "/v1/sign-in-providers" && request.method === "GET")
+        return json({ microsoft: auth.supportsSignIn("microsoft") });
       if (path === "/health") return json({ ok: true });
       if (path === "/v1/environment-access") return await renewAccess(auth, request, log, report);
       return json({ error: "Not found" }, 404);

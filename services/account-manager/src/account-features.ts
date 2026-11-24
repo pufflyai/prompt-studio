@@ -3,6 +3,7 @@ import { z } from "zod";
 import { account, user } from "./auth-schema";
 import { accountFeatureSchema } from "./contracts";
 import type { ManagerDatabase, ManagerTransaction } from "./database";
+import { googleIssuer } from "./provider-identity";
 import { accountFeatures, accounts } from "./schema";
 import { withAccountTransaction } from "./transactions";
 
@@ -56,7 +57,7 @@ export const findAccountIdByEmail = async (db: Pick<ManagerDatabase, "selectDist
     .innerJoin(user, eq(user.id, account.userId))
     .where(
       and(
-        eq(accounts.ownerIssuer, "https://accounts.google.com"),
+        eq(accounts.ownerIssuer, googleIssuer),
         sql`lower(${user.email}) = ${email.toLowerCase()}`,
         eq(user.emailVerified, true),
       ),

@@ -21,7 +21,7 @@ export const createAccountApi = (
   const read = createReadBoundary(signal);
   return {
     status: () => read(() => safe(() => account.status())),
-    login: (managerOrigin) => safe(() => account.login(managerOrigin)),
+    login: (managerOrigin, provider) => safe(() => account.login(managerOrigin, provider)),
     loginStatus: async (id) => account.loginStatus(id).status,
     cancelLogin: async (id) => (await safe(() => account.cancelLogin(id))).status,
     logout: async () => ({ removed: (await safe(() => account.logout())).removed }),

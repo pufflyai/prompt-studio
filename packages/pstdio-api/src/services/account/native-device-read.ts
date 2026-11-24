@@ -1,4 +1,5 @@
 import { hostname } from "node:os";
+import type { AccountSignInProvider } from "pstdio-api-contracts";
 import { identitySchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import type { RouteDeps } from "../../features/deps";
@@ -78,12 +79,12 @@ export const finalizeDeviceLogin = async (
   origin: string,
   session: string,
   signal: AbortSignal,
-  user: { email: string },
+  user: { email?: string; provider?: AccountSignInProvider },
 ) => {
   const { environmentId } = await input.environment.get();
-  const device = { deviceId: environmentId, name: hostname(), platform: process.platform };
+  const device = { deviceId: environmentId, name: hostname(), platform: process.platform, provider: user.provider };
   const login = loginSchema.parse(await managerRequest(origin, "/v1/device-login", session, device, signal));
-  // The Google session is only needed to log in; the device credential replaces it.
+  // The provider session is only needed to log in; the device credential replaces it.
   await managerRequest(origin, "/api/auth/sign-out", session, {}, signal).catch(() => {});
   signal.throwIfAborted();
   await input.store.save({ managerOrigin: origin, ...login, email: user.email });

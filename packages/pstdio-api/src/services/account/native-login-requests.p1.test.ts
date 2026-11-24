@@ -77,3 +77,31 @@ test("cancellation after a fulfilled credential save reports complete instead of
     await manager.stop(true);
   }
 });
+
+test("a slow provider capability check cannot replace a later sign-in", async () => {
+  const started = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const requests = createNativeLoginRequests(
+    async () => {},
+    () => {},
+    async (_origin, provider) => {
+      if (provider === "microsoft") {
+        started.resolve();
+        await release.promise;
+      }
+    },
+  );
+  const origin = "https://manager.example";
+  try {
+    const microsoft = requests.start(origin, "microsoft");
+    await started.promise;
+    const google = requests.start(origin, "google");
+    release.resolve();
+    const [oldAttempt, newAttempt] = await Promise.all([microsoft, google]);
+    expect(requests.status(oldAttempt.id)).toBe("failed");
+    expect(requests.status(newAttempt.id)).toBe("pending");
+  } finally {
+    release.resolve();
+    await requests.close();
+  }
+});

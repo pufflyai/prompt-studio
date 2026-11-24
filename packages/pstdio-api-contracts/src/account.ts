@@ -1,17 +1,25 @@
+import type { AccountSignInError } from "pstdio-sync-contracts";
+
+export {
+  type AccountSignInError,
+  type AccountSignInProvider,
+  accountSignInProviderSchema,
+} from "pstdio-sync-contracts";
+
 /** This device's cloud login. The device credential stays in the native host. */
 export interface DeviceLogin {
   managerOrigin: string;
   relayOrigin: string;
   accountId: string;
   deviceId: string;
-  /** Verified by the Google sign-in exchange. Older logins may not include it. */
+  /** Verified email when provided by the account service. */
   email?: string;
 }
 
 export interface AccountStatus {
   login: DeviceLogin | null;
   /** Latest device-native sign-in. Starting another closes the previous pending callback. No credential or URL is exposed. */
-  loginAttempt?: { id: string; status: AccountLoginStatus };
+  loginAttempt?: { id: string } & AccountLoginProgress;
   /** True after the manager rejects this device credential. Cleared by a new sign-in or explicit sign-out. */
   signInRequired?: boolean;
   /** Last loaded account grants, or null before discovery or when signed out. Relay enables Cloud early access. */
@@ -41,3 +49,4 @@ export interface AccountLogin {
 }
 
 export type AccountLoginStatus = "pending" | "complete" | "failed";
+export type AccountLoginProgress = { status: AccountLoginStatus; error?: AccountSignInError };

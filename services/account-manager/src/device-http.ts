@@ -82,7 +82,7 @@ const signingKeyRoute = async (devices: Authentication["devices"], request: Requ
 const route = async (auth: Authentication, origin: string, request: Request, path: string) => {
   const { method } = request;
   if (path === "/v1/device-login" && method === "POST") {
-    // The Google session may be a browser cookie, so only the manager's own origin can log a device in.
+    // The provider session may be a browser cookie, so only the manager's own origin can log a device in.
     if (request.headers.get("origin") !== origin) return json({ error: "Origin denied" }, 403);
     return json(await auth.loginDevice(request.headers, await request.json()), 201);
   }

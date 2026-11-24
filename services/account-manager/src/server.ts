@@ -12,6 +12,10 @@ const auth = createManagerAuthentication({
   projectDeletionRelayToken: process.env.PROJECT_DELETION_RELAY_TOKEN || undefined,
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+  microsoft:
+    process.env.MICROSOFT_CLIENT_ID || process.env.MICROSOFT_CLIENT_SECRET
+      ? { clientId: process.env.MICROSOFT_CLIENT_ID ?? "", clientSecret: process.env.MICROSOFT_CLIENT_SECRET ?? "" }
+      : undefined,
   sessionLifetimeSeconds: number("SESSION_LIFETIME_SECONDS"),
   sessionUpdateAgeSeconds: number("SESSION_UPDATE_AGE_SECONDS"),
   accessLifetimeSeconds: number("ACCESS_LIFETIME_SECONDS"),

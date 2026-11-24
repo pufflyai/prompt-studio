@@ -5,14 +5,16 @@ import { bearer } from "better-auth/plugins/bearer";
 import { jwt } from "better-auth/plugins/jwt";
 import { oneTimeToken } from "better-auth/plugins/one-time-token";
 import { and, eq, sql } from "drizzle-orm";
-import { identitySchema } from "pstdio-sync-contracts";
+import { type AccountSignInProvider, identitySchema } from "pstdio-sync-contracts";
 import { type ManagerAuthConfig, parseManagerAuthConfig } from "./auth-config";
 import * as authSchema from "./auth-schema";
 import { digestCredential } from "./credential";
 import { connectManager } from "./database";
 import { createDeviceAccess, createDeviceLogin } from "./device-access";
 import { findDeviceAccess } from "./devices";
+import { microsoftSignIn } from "./microsoft-provider";
 import { acknowledgeProjectDeletion, listProjectDeletionJobs } from "./project-deletion";
+import { readProviderIdentity } from "./provider-identity";
 import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
 import { devices } from "./schema";
 import { withAccountTransaction } from "./transactions";
@@ -25,12 +27,24 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
     baseURL: `${config.origin}/api/auth`,
     secret: config.secret,
     database: drizzleAdapter(connection.db, { provider: "pg", schema: authSchema }),
-    socialProviders: { google: { clientId: config.googleClientId, clientSecret: config.googleClientSecret } },
+    socialProviders: {
+      google: { clientId: config.googleClientId, clientSecret: config.googleClientSecret },
+      microsoft: config.microsoft
+        ? {
+            ...config.microsoft,
+            tenantId: "common",
+            disableDefaultScope: true,
+            scope: ["openid", "profile"],
+            disableProfilePhoto: true,
+          }
+        : undefined,
+    },
     session: { expiresIn: config.sessionLifetimeSeconds, updateAge: config.sessionUpdateAgeSeconds },
     account: { accountLinking: { enabled: false }, encryptOAuthTokens: true },
     logger: { disabled: true },
     disabledPaths: ["/token"],
     plugins: [
+      ...(config.microsoft ? [microsoftSignIn(config.microsoft.clientId)] : []),
       bearer(),
       oneTimeToken({ storeToken: "hashed", disableClientRequest: true }),
       jwt({
@@ -61,9 +75,15 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
       relayOrigin: config.audience,
     }),
     devices: createDeviceAccess(connection.db),
-    nativeLogin: (callbackURL: string) =>
-      auth.api.signInSocial({ body: { provider: "google", callbackURL }, asResponse: true }),
-    nativeCode: (headers: Headers) => auth.api.generateOneTimeToken({ headers }),
+    supportsSignIn: (provider: AccountSignInProvider) => provider === "google" || !!config.microsoft,
+    nativeLogin: (provider: AccountSignInProvider, callbackURL: string, errorCallbackURL: string) =>
+      auth.api.signInSocial({ body: { provider, callbackURL, errorCallbackURL }, asResponse: true }),
+    async nativeCode(headers: Headers, provider: AccountSignInProvider) {
+      const session = await readSession(headers);
+      const identity = session && (await readProviderIdentity(connection.db, session.user.id));
+      if (!identity || identity.provider !== provider) throw new Error("Sign-in provider did not match");
+      return auth.api.generateOneTimeToken({ headers });
+    },
     jwks: () => auth.api.getJwks(),
     async renew(token: string, workbenchId: string) {
       identitySchema.parse(workbenchId);
