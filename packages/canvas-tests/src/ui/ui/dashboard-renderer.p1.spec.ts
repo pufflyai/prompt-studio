@@ -1,6 +1,25 @@
 import { expect, test } from "@playwright/test";
 import { openCanvasPreview } from "../preview";
 
+// Critical: cluster membership and share must be visible inside the dashboard widgets.
+test("shows grouped scatter points and ring shares on the dashboard", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/dashboard-renderer/dashboard.canvas.tsx#Dashboard",
+  );
+  const scatter = preview.getByRole("article", { name: "Conversation clusters", exact: true });
+  const scatterPlot = scatter.getByRole("img", { name: "Conversation clusters", exact: true });
+  await expect(scatterPlot).toBeVisible();
+  await expect(scatter.getByText("Duration (min)", { exact: true })).toBeVisible();
+  await expect(scatter.getByText("Long conversations", { exact: true })).toBeVisible();
+  const ring = preview.getByRole("article", { name: "Cluster share", exact: true });
+  const ringPlot = ring.getByRole("img", { name: "Cluster share", exact: true });
+  await expect(ringPlot).toBeVisible();
+  await expect(ring.getByText("Short conversations", { exact: true })).toBeVisible();
+  await ringPlot.press("ArrowRight");
+  await expect(preview.getByText(/^(40|60)%$/)).toBeVisible();
+});
+
 // Critical: a page-owned toolbar must still control the dashboard, including widgets with interactive content.
 test("edits custom widgets from the page toolbar", async ({ page }) => {
   const preview = await openCanvasPreview(
