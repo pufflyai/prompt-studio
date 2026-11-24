@@ -19,7 +19,8 @@ export const backendWorkerCommand = () =>
  */
 export const createBackendWorkerPool = (start: (key: string) => Omit<BackendWorkerOptions, "command">) => {
   const workers = new Map<string, Promise<BackendWorker>>();
-  let closing = false;
+  const stopping = new Set<Promise<void>>();
+  let closing: Promise<void> | undefined;
 
   const acquire = (key: string) => {
     if (closing) return Promise.reject(new BackendUnavailableError("Extension backends are shutting down."));
@@ -35,23 +36,32 @@ export const createBackendWorkerPool = (start: (key: string) => Omit<BackendWork
   };
 
   /** Resolves once the worker has stopped. Await it before acquiring a changed generation's key. */
-  const retire = async (key: string) => {
+  const retire = (key: string) => {
     const worker = workers.get(key);
+    if (!worker) return Promise.resolve();
     workers.delete(key);
-    await worker?.then(
+    const stopped = worker.then(
       (running) => running.stop(),
       () => {},
     );
+    const completion = stopped.finally(() => stopping.delete(completion));
+    stopping.add(completion);
+    return completion;
   };
 
   /** Refuses new workers while it stops the running ones; the pool can be used again afterwards. */
-  const close = async () => {
-    closing = true;
-    try {
-      while (workers.size > 0) await Promise.all([...workers.keys()].map(retire));
-    } finally {
-      closing = false;
-    }
+  const close = () => {
+    closing ??= Promise.resolve()
+      .then(async () => {
+        for (const key of workers.keys()) void retire(key);
+        const results = await Promise.allSettled(stopping);
+        const failure = results.find((result) => result.status === "rejected");
+        if (failure) throw failure.reason;
+      })
+      .finally(() => {
+        closing = undefined;
+      });
+    return closing;
   };
 
   return { acquire, retire, close };

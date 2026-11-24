@@ -58,7 +58,11 @@ export interface BackendWorkerOptions {
   entryPath: string;
 }
 
-type Running = { input: BackendInvocation; settle: ReturnType<typeof Promise.withResolvers<unknown>> };
+type Running = {
+  context: unknown;
+  surface: BackendSurface;
+  settle: ReturnType<typeof Promise.withResolvers<unknown>>;
+};
 
 export const startBackendWorker = async (options: BackendWorkerOptions): Promise<BackendWorker> => {
   const invocations = new Map<string, Running>();
@@ -92,7 +96,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     const running = invocations.get(message.invocationId);
     try {
       if (!running) throw new BackendUnavailableError("The invocation is no longer running.");
-      const { context, surface } = running.input;
+      const { context, surface } = running;
       const value = await resolveSurfaceCall(context, surface, message.path, message.args, "async");
       if (!send({ v: BACKEND_PROTOCOL_VERSION, type: "reply", requestId: message.requestId, ok: true, value }))
         throw new Error("The host result could not be sent to the worker.");
@@ -114,7 +118,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     if (!running) return;
     // A one-way call has nobody to answer, so a rejected or failing call is simply not acted on.
     try {
-      const { context, surface } = running.input;
+      const { context, surface } = running;
       Promise.resolve(resolveSurfaceCall(context, surface, message.path, message.args, "notify")).catch(() => {});
     } catch {}
   };
@@ -171,24 +175,27 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
 
   const invoke = (input: BackendInvocation) => {
     if (stopped) return Promise.reject(stopped);
-    if (input.signal?.aborted) return Promise.reject(input.signal.reason);
+    const { context, surface, handlerId, args, signal } = input;
+    if (signal?.aborted) return Promise.reject(signal.reason);
     const invocationId = crypto.randomUUID();
     let values: Record<string, unknown>;
     try {
-      values = collectSurfaceValues(input.context, input.surface);
+      values = collectSurfaceValues(context, surface);
     } catch (error) {
       return Promise.reject(error);
     }
+    // A getter may abort while collecting context values.
+    if (signal?.aborted) return Promise.reject(signal.reason);
     const settle = Promise.withResolvers<unknown>();
-    invocations.set(invocationId, { input, settle });
+    invocations.set(invocationId, { context, surface, settle });
     const sent = send({
       v: BACKEND_PROTOCOL_VERSION,
       type: "invoke",
       invocationId,
-      handlerId: input.handlerId,
-      surface: input.surface,
+      handlerId,
+      surface,
       values,
-      args: input.args,
+      args,
     });
     if (!sent) {
       invocations.delete(invocationId);
@@ -198,12 +205,14 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     }
     const cancel = () => {
       if (!invocations.delete(invocationId)) return;
-      settle.reject(input.signal?.reason);
-      const reason = serializeBackendError(input.signal?.reason);
+      settle.reject(signal?.reason);
+      const reason = serializeBackendError(signal?.reason);
       send({ v: BACKEND_PROTOCOL_VERSION, type: "cancel", invocationId, reason });
     };
-    input.signal?.addEventListener("abort", cancel, { once: true });
-    return settle.promise.finally(() => input.signal?.removeEventListener("abort", cancel));
+    signal?.addEventListener("abort", cancel, { once: true });
+    // IPC serialization can also run getters. Send cancellation after the invocation message.
+    if (signal?.aborted) cancel();
+    return settle.promise.finally(() => signal?.removeEventListener("abort", cancel));
   };
 
   const deadline = setTimeout(
