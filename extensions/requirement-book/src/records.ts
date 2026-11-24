@@ -30,6 +30,8 @@ export interface ReadRecord {
   id: string;
   digest: string;
 }
+export type SubmissionProof = { kind: "book"; digest: string } | { kind: "finding" | "suggestion"; id: string };
+
 export interface Draft {
   id: string;
   workspaceId: string;
@@ -37,6 +39,7 @@ export interface Draft {
   values: Record<string, unknown>;
   submissionId?: string;
   submissionStatus?: "writing" | "confirmed" | "unconfirmed";
+  submissionProof?: SubmissionProof;
   revision?: string;
 }
 export const digest = (value: unknown) => new Bun.CryptoHasher("sha256").update(contentJson(value)).digest("hex");

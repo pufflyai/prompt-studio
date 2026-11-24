@@ -1,7 +1,7 @@
 import { defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
 import { z } from "zod";
-import { announce, type Draft, deleteRecord, digest, readRecord, saveRecord } from "./records";
-import { resolveWorkspace } from "./repository";
+import { announce, type Draft, deleteRecord, digest, readRecord, type SubmissionProof, saveRecord } from "./records";
+import { readRepository, resolveWorkspace } from "./repository";
 
 const draftTitle = l10n("book.draft.save", "Save an authoring draft");
 const draftId = (workspaceId: string, chapter: number) => `${workspaceId}-${chapter}`;
@@ -91,6 +91,30 @@ export const draftCommands = {
       return { value: editingValue(value, record.revision) };
     },
   }),
+  "drafts.check-submission": defineCommand({
+    id: "drafts.check-submission",
+    title: l10n("book.draft.check", "Check submitted draft"),
+    mutating: true,
+    params: { ...editScope, submissionId: params.text({ required: true }) },
+    async run(ctx, { workspaceId, chapter, submissionId }) {
+      const { workspace } = await resolveWorkspace(ctx, workspaceId);
+      const current = await readRecord<Draft>(ctx.storage, "draft", draftId(workspace.id, chapter));
+      const draft = current.value;
+      if (!draft || draft.submissionId !== submissionId) return { confirmed: false };
+      if (draft.submissionStatus === "confirmed") return { confirmed: true };
+      const proof = draft.submissionProof;
+      if (!proof) return { confirmed: false };
+      const confirmed =
+        proof.kind === "book"
+          ? (await readRepository(ctx, workspace.id)).digest === proof.digest
+          : (await readRecord<{ workspaceId: string }>(ctx.storage, proof.kind, proof.id)).value?.workspaceId ===
+            workspace.id;
+      if (!confirmed) return { confirmed: false };
+      await saveRecord(ctx.storage, "draft", { ...draft, submissionStatus: "confirmed" }, current.record.revision);
+      await announce(ctx, workspace.id);
+      return { confirmed: true };
+    },
+  }),
   "drafts.discard": defineCommand({
     id: "drafts.discard",
     title: l10n("book.draft.discard", "Discard an authoring draft"),
@@ -121,19 +145,36 @@ export const draftCommands = {
 
 export const submitDraft = async (
   ctx: ExtensionContextBase,
-  input: { workspaceId: string; chapter: number; values: Record<string, unknown> },
+  input: {
+    workspaceId: string;
+    chapter: number;
+    values: Record<string, unknown>;
+    expectedRevision?: string;
+    proof?: SubmissionProof;
+  },
   write: () => Promise<unknown>,
 ) => {
   const id = draftId(input.workspaceId, input.chapter);
   const previous = await readRecord<Draft>(ctx.storage, "draft", id);
   if (previous.value?.submissionId) throw new Error("A submission from this draft still needs to be checked.");
+  if (input.expectedRevision !== undefined && input.expectedRevision !== previous.record.revision)
+    throw new Error("The authoring draft changed. Reload before submitting.");
   const submissionId = ctx.storage.ids.create();
-  const draft: Draft = { ...input, id, submissionId, submissionStatus: "writing" };
+  const draft: Draft = {
+    id,
+    workspaceId: input.workspaceId,
+    chapter: input.chapter,
+    values: input.values,
+    submissionId,
+    submissionStatus: "writing",
+    ...(input.proof ? { submissionProof: input.proof } : {}),
+  };
   await saveRecord(ctx.storage, "draft", draft, previous.record.revision);
 
   const finish = async (outcome: "confirmed" | "unconfirmed") => {
     const current = await readRecord<Draft>(ctx.storage, "draft", id);
-    if (current.value?.submissionId !== draft.submissionId) throw new Error("The submitted draft changed.");
+    if (current.value?.submissionId !== submissionId) throw new Error("The submitted draft changed.");
+    if (current.value.submissionStatus === "confirmed") return;
     await saveRecord(ctx.storage, "draft", { ...draft, submissionStatus: outcome }, current.record.revision);
     await announce(ctx, input.workspaceId);
   };

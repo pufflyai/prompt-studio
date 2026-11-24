@@ -3,12 +3,12 @@ import { z } from "zod";
 import { draftCommands, submitDraft } from "./draft-commands";
 import { acceptanceConditions, draftChapterFor, splitRefs } from "./forms";
 import { bookCommands } from "./import";
-import { chapterSchema, createRuleReference, emptyBook, findRule, ruleSchema } from "./model";
+import { chapterSchema, createRuleReference, emptyBook, findRule, ruleSchema, serializeBook } from "./model";
 import { readBook, requireBook } from "./read";
-import { announce } from "./records";
+import { announce, digest } from "./records";
 import { git, readRepository, resolveWorkspace, writeRepository } from "./repository";
-import { reviewCommands } from "./review-commands";
-import { suggestionCommands } from "./suggestions";
+import { reviewCommands, saveFinding } from "./review-commands";
+import { saveSuggestion, suggestionCommands } from "./suggestions";
 
 const createChapter = defineCommand({
   id: "chapters.create",
@@ -88,6 +88,7 @@ export const commands = {
       workspaceId: params.text({ required: true }),
       chapter: params.number({ required: true }),
       mode: params.text({ required: true }),
+      expectedRevision: params.text({ required: true }),
       values: params.json<Record<string, unknown>, { required: true }>({ required: true }),
     },
     async run(ctx, input) {
@@ -96,10 +97,19 @@ export const commands = {
       const book = requireBook(snapshot.book);
       const workspaceId = snapshot.workspaceId;
       const { values, chapter } = input;
-      const draft = { workspaceId, chapter: draftChapterFor(mode, chapter), values };
+      const draft = {
+        workspaceId,
+        chapter: draftChapterFor(mode, chapter),
+        values,
+        expectedRevision: input.expectedRevision,
+      };
       if (mode === "chapter") {
-        const { group, title } = chapterSchema.omit({ id: true }).parse(values);
-        return submitDraft(ctx, draft, async () => createChapter.run(ctx, { workspaceId, title, group }));
+        const id = Math.max(0, ...book.chapters.map((item) => item.id)) + 1;
+        const entry = chapterSchema.parse({ id, title: values.title, group: values.group });
+        const next = { ...book, chapters: [...book.chapters, entry] };
+        return submitDraft(ctx, { ...draft, proof: { kind: "book", digest: digest(serializeBook(next)) } }, async () =>
+          writeRepository(ctx, workspaceId, snapshot.content, next),
+        );
       }
       if (mode === "finding") {
         const finding = z
@@ -111,8 +121,9 @@ export const commands = {
           .parse(values);
         const requirements = splitRefs(values.requirements);
         for (const ref of requirements) if (!findRule(book.rules, ref)) throw new Error(`Unknown requirement ${ref}`);
-        return submitDraft(ctx, draft, async () =>
-          reviewCommands["findings.save"].run(ctx, { ...finding, workspaceId, requirements }),
+        const id = ctx.storage.ids.create();
+        return submitDraft(ctx, { ...draft, proof: { kind: "finding", id } }, async () =>
+          saveFinding(ctx, { ...finding, workspaceId, requirements }, id),
         );
       }
       const target = book.chapters.find((item) => item.id === chapter);
@@ -131,13 +142,18 @@ export const commands = {
         governing: [],
       });
       const reason = z.string().trim().min(1).parse(values.reason);
-      return submitDraft(ctx, draft, async () =>
-        suggestionCommands.suggest.run(ctx, {
-          workspaceId,
-          title: `Add ${rule.title}`,
-          reason,
-          operations: [{ type: "ADD", before: null, after: rule }],
-        }),
+      const id = ctx.storage.ids.create();
+      return submitDraft(ctx, { ...draft, proof: { kind: "suggestion", id } }, async () =>
+        saveSuggestion(
+          ctx,
+          {
+            workspaceId,
+            title: `Add ${rule.title}`,
+            reason,
+            operations: [{ type: "ADD", before: null, after: rule }],
+          },
+          id,
+        ),
       );
     },
   }),

@@ -2,7 +2,24 @@ import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandArgs } from "@pstdio/sdk/testing";
 import { submitBookForm } from "./book-form-submission";
 import { draftCommands, submitDraft } from "./draft-commands";
-import { type Draft, readRecord } from "./records";
+import { type Draft, readRecord, saveRecord } from "./records";
+
+const draftContext = (storage: ReturnType<typeof createMemoryStorage>, workspaceId: string) =>
+  makeCommandArgs({
+    storage,
+    params: {},
+    overrides: {
+      workspaces: {
+        get: async () => ({
+          id: workspaceId,
+          rootPath: "/workspace",
+          providerState: "ready",
+          executionKind: "local",
+          capabilities: { files: "write" },
+        }),
+      } as never,
+    },
+  })[0];
 
 test("confirmed creation closes the form", async () => {
   const stages: string[] = [];
@@ -45,22 +62,7 @@ test("a lost creation response keeps the submitted draft reserved across reopene
   const draftId = `${workspaceId}-${chapter}`;
   const scope = { workspaceId, chapter };
   const values = { title: "Keep this chapter" };
-  const args = () =>
-    makeCommandArgs({
-      storage,
-      params: {},
-      overrides: {
-        workspaces: {
-          get: async () => ({
-            id: workspaceId,
-            rootPath: "/workspace",
-            providerState: "ready",
-            executionKind: "local",
-            capabilities: { files: "write" },
-          }),
-        } as never,
-      },
-    })[0];
+  const args = () => draftContext(storage, workspaceId);
   const entered = Promise.withResolvers<void>();
   const respond = Promise.withResolvers<void>();
   let writes = 0;
@@ -100,4 +102,50 @@ test("a lost creation response keeps the submitted draft reserved across reopene
     draftCommands["drafts.discard"].run(args(), { ...scope, submissionId: retained.submissionId }),
   ).rejects.toThrow("Reopen");
   expect((await readRecord<Draft>(storage, "draft", draftId)).value?.values).toEqual(newValues);
+});
+
+test("a reopened form can confirm its exact stored result after disconnect without creating again", async () => {
+  const storage = createMemoryStorage();
+  const workspaceId = "book-workspace";
+  const context = draftContext(storage, workspaceId);
+  const scope = { workspaceId, chapter: -2 };
+  const proof = { kind: "finding" as const, id: "planned-finding" };
+  let disconnected = false;
+  let writes = 0;
+  const transport = {
+    ...context,
+    storage: {
+      ...storage,
+      records: {
+        ...storage.records,
+        read: async (id: Parameters<typeof storage.records.read>[0]) => {
+          if (disconnected) throw new Error("The command request was cancelled");
+          return storage.records.read(id);
+        },
+      },
+    },
+  };
+  await expect(
+    submitDraft(transport, { ...scope, values: { title: "Keep original" }, proof }, async () => {
+      writes++;
+      await saveRecord(storage, "finding", { id: proof.id, workspaceId });
+      disconnected = true;
+    }),
+  ).rejects.toThrow("cancelled");
+  const pending = (await readRecord<Draft>(storage, "draft", `${workspaceId}--2`)).value!;
+  expect(pending.submissionStatus).toBe("writing");
+  await expect(
+    draftCommands["drafts.check-submission"].run(context, {
+      ...scope,
+      submissionId: "unrelated",
+    }),
+  ).resolves.toEqual({ confirmed: false });
+  await expect(
+    draftCommands["drafts.check-submission"].run(context, {
+      ...scope,
+      submissionId: pending.submissionId!,
+    }),
+  ).resolves.toEqual({ confirmed: true });
+  expect((await readRecord<Draft>(storage, "draft", `${workspaceId}--2`)).value?.submissionStatus).toBe("confirmed");
+  expect(writes).toBe(1);
 });

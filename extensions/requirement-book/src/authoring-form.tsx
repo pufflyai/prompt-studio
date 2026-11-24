@@ -62,7 +62,7 @@ export function AuthoringForm(props: Props) {
       void previous?.then((session) => session.close()).catch(() => {});
     };
   }, [client, workspaceId, draftChapter]);
-  const saveDraft = async (values: Record<string, unknown>) => {
+  const saveDraft = async (values: Record<string, unknown>, expectedRevision: string) => {
     editing.current ??= openDraftEditing(client, workspaceId, draftChapter);
     const opening = editing.current;
     const session = await opening.catch((error) => {
@@ -71,18 +71,25 @@ export function AuthoringForm(props: Props) {
     });
     const text = JSON.stringify(values);
     await session.execute(
-      { draft: text, expectedRevision: session.getSnapshot().value.revision },
+      { draft: text, expectedRevision },
       { channel: "document", changes: [{ path: ["draft"], value: text }] },
     );
     const snapshot = session.getSnapshot().value;
+    const saved = JSON.parse(snapshot.draft);
+    if (
+      Object.keys(values).length !== Object.keys(saved).length ||
+      Object.entries(values).some(([key, value]) => JSON.stringify(value) !== JSON.stringify(saved[key]))
+    )
+      throw new Error("The draft changed in another view.");
     setRevision(snapshot.revision);
     onDraftSaved({
       id: `${workspaceId}-${draftChapter}`,
       workspaceId,
       chapter: draftChapter,
-      values: JSON.parse(snapshot.draft),
+      values: saved,
       revision: snapshot.revision,
     });
+    return snapshot.revision;
   };
   const fields = {
     rule: ruleFields(),
@@ -94,8 +101,8 @@ export function AuthoringForm(props: Props) {
     finding: "New finding",
     chapter: "New chapter",
   }[mode];
-  const submit = async (values: Record<string, unknown>) => {
-    const result = await client.commands["drafts.submit"]({ workspaceId, chapter, mode, values });
+  const submit = async (values: Record<string, unknown>, expectedRevision: string) => {
+    const result = await client.commands["drafts.submit"]({ workspaceId, chapter, mode, values, expectedRevision });
     onSaved();
     void client.commands["drafts.discard"]({
       workspaceId,
@@ -110,16 +117,29 @@ export function AuthoringForm(props: Props) {
       submitLabel={mode === "rule" ? "Create suggestion" : "Create"}
       draft={draft?.submissionId ? draft : (restored ?? draft)}
       submissionStatus={draft?.submissionStatus}
+      draftRevision={(draft?.submissionId ? draft : (restored ?? draft))?.revision ?? revision}
       canDiscardSubmission={draft?.submissionStatus !== "writing" && Boolean(draft?.revision ?? revision)}
       onSubmit={submit}
       onClose={onClose}
       onSaveDraft={saveDraft}
-      onDiscard={async () => {
+      onCheckSubmission={
+        draft?.submissionId && draft.submissionProof
+          ? async () => {
+              const result = await client.commands["drafts.check-submission"]({
+                workspaceId,
+                chapter: draftChapter,
+                submissionId: draft.submissionId!,
+              });
+              return result.confirmed;
+            }
+          : undefined
+      }
+      onDiscard={async (expectedRevision) => {
         await client.commands["drafts.discard"]({
           workspaceId,
           chapter: draftChapter,
           submissionId: draft?.submissionId,
-          expectedRevision: draft?.revision ?? revision,
+          expectedRevision,
         });
       }}
     />

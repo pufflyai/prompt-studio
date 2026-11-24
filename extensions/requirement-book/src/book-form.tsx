@@ -12,11 +12,13 @@ interface FormProps {
   submitLabel: string;
   draft?: Draft;
   submissionStatus?: Draft["submissionStatus"];
+  draftRevision?: string;
   canDiscardSubmission: boolean;
-  onSubmit: (values: Record<string, unknown>) => Promise<void>;
+  onSubmit: (values: Record<string, unknown>, expectedRevision: string) => Promise<void>;
   onClose: () => void;
-  onSaveDraft: (values: Record<string, unknown>) => Promise<void>;
-  onDiscard: () => Promise<void>;
+  onSaveDraft: (values: Record<string, unknown>, expectedRevision: string) => Promise<string>;
+  onDiscard: (expectedRevision: string) => Promise<void>;
+  onCheckSubmission?: () => Promise<boolean>;
 }
 const submissionMessage = {
   confirmed: "This submission was saved.",
@@ -31,13 +33,25 @@ export function BookForm(props: FormProps) {
     draft,
     submissionStatus,
     canDiscardSubmission,
+    draftRevision,
     onSubmit,
     onClose,
     onSaveDraft,
     onDiscard,
+    onCheckSubmission,
   } = props;
   const submissionUnconfirmed = submissionStatus !== undefined;
   const [input, setValues] = useState<Record<string, unknown>>();
+  const editedRevision = useRef<string | undefined>(undefined);
+  const changeValues = (next: Record<string, unknown>) => {
+    editedRevision.current ??= draftRevision;
+    setValues(next);
+  };
+  const expectedRevision = () => {
+    const observed = editedRevision.current ?? draftRevision;
+    if (observed === undefined) throw new Error("The draft is still opening.");
+    return observed;
+  };
   const values = (!submissionUnconfirmed && input) || {
     ...Object.fromEntries(fields.map((field) => [field.id, field.defaultValue ?? ""])),
     ...draft?.values,
@@ -46,12 +60,16 @@ export function BookForm(props: FormProps) {
   const [saving, setSaving] = useState(false);
   const queue = useRef(Promise.resolve());
   const persist = (next: Record<string, unknown>) => {
-    queue.current = queue.current.catch(() => {}).then(() => onSaveDraft(next));
+    queue.current = queue.current
+      .catch(() => {})
+      .then(async () => {
+        editedRevision.current = await onSaveDraft(next, expectedRevision());
+      });
     return queue.current;
   };
   const close = async () => {
     if (saving) return;
-    if (submissionUnconfirmed) return onClose();
+    if (submissionUnconfirmed || input === undefined) return onClose();
     setSaving(true);
     try {
       await persist(values);
@@ -74,7 +92,7 @@ export function BookForm(props: FormProps) {
     try {
       await submitBookForm({
         persist: () => persist(values),
-        submit: () => onSubmit(values),
+        submit: () => onSubmit(values, expectedRevision()),
         close: onClose,
       });
     } catch (failure) {
@@ -88,10 +106,21 @@ export function BookForm(props: FormProps) {
     setSaving(true);
     try {
       await queue.current.catch(() => {});
-      await onDiscard();
+      await onDiscard(submissionStatus && draftRevision !== undefined ? draftRevision : expectedRevision());
       onClose();
     } catch (failure) {
       setError(String(failure));
+    } finally {
+      setSaving(false);
+    }
+  };
+  const check = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      if (!(await onCheckSubmission?.())) setError("The submission is still unconfirmed.");
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : String(failure));
     } finally {
       setSaving(false);
     }
@@ -142,8 +171,8 @@ export function BookForm(props: FormProps) {
                           value={values[field.id]}
                           onChange={(value) => {
                             const next = { ...values, [field.id]: value };
-                            if (saving || submissionUnconfirmed) return;
-                            setValues(next);
+                            if (saving || submissionUnconfirmed || draftRevision === undefined) return;
+                            changeValues(next);
                             void persist(next).catch((failure) => setError(String(failure)));
                           }}
                         />
@@ -151,10 +180,10 @@ export function BookForm(props: FormProps) {
                       {field.type === "longtext" && (
                         <Textarea
                           value={String(values[field.id] ?? "")}
-                          disabled={saving || submissionUnconfirmed}
-                          onChange={(event) => setValues({ ...values, [field.id]: event.target.value })}
+                          disabled={saving || submissionUnconfirmed || draftRevision === undefined}
+                          onChange={(event) => changeValues({ ...values, [field.id]: event.target.value })}
                           onBlur={() => {
-                            if (saving || submissionUnconfirmed) return;
+                            if (saving || submissionUnconfirmed || draftRevision === undefined) return;
                             void persist(values).catch((failure) => setError(String(failure)));
                           }}
                         />
@@ -164,10 +193,10 @@ export function BookForm(props: FormProps) {
                           autoFocus={field === fields[0]}
                           value={String(values[field.id] ?? "")}
                           placeholder={field.placeholder}
-                          disabled={saving || submissionUnconfirmed}
-                          onChange={(event) => setValues({ ...values, [field.id]: event.target.value })}
+                          disabled={saving || submissionUnconfirmed || draftRevision === undefined}
+                          onChange={(event) => changeValues({ ...values, [field.id]: event.target.value })}
                           onBlur={() => {
-                            if (saving || submissionUnconfirmed) return;
+                            if (saving || submissionUnconfirmed || draftRevision === undefined) return;
                             void persist(values).catch((failure) => setError(String(failure)));
                           }}
                         />
@@ -192,9 +221,14 @@ export function BookForm(props: FormProps) {
                 <Button variant="ghost" disabled={saving} onClick={() => void close()}>
                   Cancel
                 </Button>
+                {onCheckSubmission && submissionStatus !== "confirmed" ? (
+                  <Button disabled={saving} onClick={() => void check()}>
+                    Check again
+                  </Button>
+                ) : null}
                 <Button
                   variant="solid"
-                  disabled={!valid || saving || submissionUnconfirmed}
+                  disabled={!valid || saving || submissionUnconfirmed || draftRevision === undefined}
                   onClick={() => void submit()}
                 >
                   {saving ? "Saving…" : submitLabel}

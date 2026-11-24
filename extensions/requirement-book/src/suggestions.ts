@@ -1,4 +1,4 @@
-import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
+import { defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
 import { z } from "zod";
 import {
   applyOperations,
@@ -11,6 +11,54 @@ import {
 import { requireBook } from "./read";
 import { announce, deleteRecord, digest, readRecord, type Suggestion, saveRecord, suggestionDigest } from "./records";
 import { readRepository, writeRepository } from "./repository";
+
+export const saveSuggestion = async (
+  ctx: ExtensionContextBase,
+  input: {
+    workspaceId?: string;
+    id?: string;
+    title: string;
+    reason: string;
+    operations: Operation[];
+    expectedRevision?: string;
+  },
+  plannedId?: string,
+) => {
+  const snapshot = await readRepository(ctx, input.workspaceId);
+  const book = requireBook(snapshot.book);
+  const previous = input.id ? await readRecord<Suggestion>(ctx.storage, "suggestion", input.id) : null;
+  if (input.id && !previous?.value) throw new Error("Suggestion no longer exists.");
+  if (previous?.value && previous.value.workspaceId !== snapshot.workspaceId)
+    throw new Error("Suggestion belongs to another workspace.");
+  if (previous?.value?.application && !previous.value.appliedRevision)
+    throw new Error("Application is pending. Retry Apply or cancel the application first.");
+  if (previous?.value?.appliedRevision)
+    throw new Error("Applied suggestions cannot be edited. Create another suggestion.");
+  const operations = z.array(operationSchema).min(1).parse(input.operations);
+  const issues = operationIssues(book, operations);
+  if (issues.length) throw new Error(issues.join("\n"));
+  const now = new Date().toISOString();
+  const suggestion: Suggestion = {
+    id: input.id ?? plannedId ?? ctx.storage.ids.create(),
+    workspaceId: snapshot.workspaceId,
+    title: input.title.trim(),
+    reason: input.reason.trim(),
+    baseRevision: snapshot.digest,
+    operations,
+    reviewedDigest: null,
+    appliedRevision: null,
+    createdAt: previous?.value?.createdAt ?? now,
+    updatedAt: now,
+  };
+  await saveRecord(
+    ctx.storage,
+    "suggestion",
+    { ...previous?.value, ...suggestion },
+    input.expectedRevision ?? previous?.record.revision,
+  );
+  await announce(ctx, snapshot.workspaceId);
+  return suggestion;
+};
 
 export const suggestionCommands = {
   suggest: defineCommand({
@@ -26,42 +74,7 @@ export const suggestionCommands = {
       operations: params.json<Operation[], { required: true }>({ required: true }),
       expectedRevision: params.text(),
     },
-    async run(ctx, input) {
-      const snapshot = await readRepository(ctx, input.workspaceId);
-      const book = requireBook(snapshot.book);
-      const previous = input.id ? await readRecord<Suggestion>(ctx.storage, "suggestion", input.id) : null;
-      if (input.id && !previous?.value) throw new Error("Suggestion no longer exists.");
-      if (previous?.value && previous.value.workspaceId !== snapshot.workspaceId)
-        throw new Error("Suggestion belongs to another workspace.");
-      if (previous?.value?.application && !previous.value.appliedRevision)
-        throw new Error("Application is pending. Retry Apply or cancel the application first.");
-      if (previous?.value?.appliedRevision)
-        throw new Error("Applied suggestions cannot be edited. Create another suggestion.");
-      const operations = z.array(operationSchema).min(1).parse(input.operations);
-      const issues = operationIssues(book, operations);
-      if (issues.length) throw new Error(issues.join("\n"));
-      const now = new Date().toISOString();
-      const suggestion: Suggestion = {
-        id: input.id ?? ctx.storage.ids.create(),
-        workspaceId: snapshot.workspaceId,
-        title: input.title.trim(),
-        reason: input.reason.trim(),
-        baseRevision: snapshot.digest,
-        operations,
-        reviewedDigest: null,
-        appliedRevision: null,
-        createdAt: previous?.value?.createdAt ?? now,
-        updatedAt: now,
-      };
-      await saveRecord(
-        ctx.storage,
-        "suggestion",
-        { ...previous?.value, ...suggestion },
-        input.expectedRevision ?? previous?.record.revision,
-      );
-      await announce(ctx, snapshot.workspaceId);
-      return suggestion;
-    },
+    run: (ctx, input) => saveSuggestion(ctx, input),
   }),
   "suggestions.review": defineCommand({
     id: "suggestions.review",
