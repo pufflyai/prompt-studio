@@ -11,6 +11,7 @@ import { buildChanged, buildFiles, buildMount, readBuild } from "./src/build-mou
 import { commands } from "./src/commands";
 import { canvasMain, canvasPage, canvasPanel, canvasResource, canvasView, homePage } from "./src/navigation";
 import { canvasTree } from "./src/navigation-tree";
+import { parameterMiddlewares } from "./src/parameters/commands";
 import { canvasResources } from "./src/resources";
 
 const tree = defineView({
@@ -36,6 +37,7 @@ const tree = defineView({
 });
 export default defineExtension({
   commands: Object.values(commands),
+  middlewares: parameterMiddlewares,
   artifactMounts: [buildMount],
   resourceKinds: [canvasResource],
   commandPaletteResources: [canvasResources],
