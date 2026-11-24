@@ -1,25 +1,35 @@
 import { Button, HStack, Spinner, Text } from "@chakra-ui/react";
-import { LocalRemovalConflictError, type LocalRemovalPreflight, type ProjectCopyAccount } from "@pstdio/sdk/client";
+import {
+  type DeviceLogin,
+  LocalRemovalConflictError,
+  type LocalRemovalPreflight,
+  type ProjectCopyAccount,
+} from "@pstdio/sdk/client";
 import { AlertMessage, Checkbox, DeleteConfirmationModal } from "@pstdio/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useCloudLocalRemoval } from "../data/cloud-local-removal";
 import { cloudProjectCatalogKey } from "../data/project-catalog";
+import { sameProjectCopyDevice } from "../data/project-copy-scope";
 
 interface LocalRemovalProps {
   id: string;
   name: string;
   account?: ProjectCopyAccount;
+  login?: DeviceLogin;
   disabled?: boolean;
   pending?: boolean;
   onRemoved?: () => void;
 }
 
-export const LocalProjectRemoval = ({ id, name, account, disabled, pending, onRemoved }: LocalRemovalProps) => {
-  const [confirmedAccount, setConfirmedAccount] = useState<ProjectCopyAccount>();
+export const LocalProjectRemoval = ({ id, name, account, login, disabled, pending, onRemoved }: LocalRemovalProps) => {
+  const [confirmed, setConfirmed] = useState<{ account: ProjectCopyAccount; login: DeviceLogin }>();
+  const confirmedAccount = confirmed?.account;
   const request = useRef<AbortController | null>(null);
   const accountMatches =
-    confirmedAccount?.managerOrigin === account?.managerOrigin && confirmedAccount?.accountId === account?.accountId;
+    confirmedAccount?.managerOrigin === account?.managerOrigin &&
+    confirmedAccount?.accountId === account?.accountId &&
+    sameProjectCopyDevice(login, confirmed?.login);
   const [preflight, setPreflight] = useState<LocalRemovalPreflight>();
   const [reading, setReading] = useState(false);
   const [discard, setDiscard] = useState(false);
@@ -29,14 +39,14 @@ export const LocalProjectRemoval = ({ id, name, account, disabled, pending, onRe
   const busy = removal.active(id);
   useEffect(() => () => request.current?.abort(), []);
 
-  const inspect = async (expected: ProjectCopyAccount) => {
+  const inspect = async (expected: ProjectCopyAccount, expectedDevice: DeviceLogin) => {
     request.current?.abort();
     const controller = new AbortController();
     request.current = controller;
     setError(undefined);
     setReading(true);
     try {
-      const result = await removal.preflight(id, controller.signal);
+      const result = await removal.preflight(id, expectedDevice, controller.signal);
       if (
         result.projectId !== id ||
         result.account?.managerOrigin !== expected.managerOrigin ||
@@ -52,21 +62,21 @@ export const LocalProjectRemoval = ({ id, name, account, disabled, pending, onRe
     }
   };
   const begin = () => {
-    if (!account || removal.active(id)) return;
-    setConfirmedAccount(account);
+    if (!account || !login || removal.active(id)) return;
+    setConfirmed({ account, login });
     setDiscard(false);
     setPreflight(undefined);
-    void inspect(account);
+    void inspect(account, login);
   };
   const close = () => {
     request.current?.abort();
-    setConfirmedAccount(undefined);
+    setConfirmed(undefined);
   };
   const submit = async () => {
     setError(undefined);
     try {
-      if (!confirmedAccount || !accountMatches) throw new Error("Reopen this action to confirm the active account.");
-      await removal.remove(id, name, confirmedAccount, discard);
+      if (!confirmed || !accountMatches) throw new Error("Reopen this action to confirm the active account.");
+      await removal.remove(id, name, confirmed.account, confirmed.login, discard);
       onRemoved?.();
     } catch (failure) {
       if (failure instanceof LocalRemovalConflictError) {
@@ -82,7 +92,7 @@ export const LocalProjectRemoval = ({ id, name, account, disabled, pending, onRe
 
   return (
     <>
-      <Button size="sm" variant="destructive" disabled={disabled || busy || !account} onClick={begin}>
+      <Button size="sm" variant="destructive" disabled={disabled || busy || !account || !login} onClick={begin}>
         {pending ? "Retry local removal" : "Delete local version"}
       </Button>
       <DeleteConfirmationModal
@@ -135,8 +145,8 @@ export const LocalProjectRemoval = ({ id, name, account, disabled, pending, onRe
             {error}
           </AlertMessage>
         )}
-        {error && !preflight && confirmedAccount && accountMatches && (
-          <Button size="sm" onClick={() => void inspect(confirmedAccount)}>
+        {error && !preflight && confirmed && accountMatches && (
+          <Button size="sm" onClick={() => void inspect(confirmed.account, confirmed.login)}>
             Retry
           </Button>
         )}

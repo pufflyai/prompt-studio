@@ -20,9 +20,10 @@ import {
 } from "./devices";
 import { listOutstandingProjectDeletions, readProjectDeletion, startProjectDeletion } from "./project-deletion";
 import { DeviceAccessDenied } from "./renewal-errors";
-import { accounts } from "./schema";
+import { accounts, projectMembers } from "./schema";
 import { spaceKeysInTransaction } from "./space-keys";
-import { withAccountTransaction } from "./transactions";
+import { createTeam, listTeams, requireTeamMember } from "./teams";
+import { lockAccount, withAccountTransaction } from "./transactions";
 
 const googleIssuer = "https://accounts.google.com";
 type SessionReader = (headers: Headers) => Promise<{ user: { id: string } } | null>;
@@ -69,16 +70,33 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
       return action(transaction, device);
     });
   };
+  const scoped = <T>(
+    token: string,
+    selected: string | undefined,
+    action: (transaction: ManagerTransaction, accountId: string, userId: string, owner: boolean) => Promise<T>,
+  ) =>
+    apply(token, async (transaction, device) => {
+      const userId = device.accountId;
+      const accountId = selected === undefined ? userId : identitySchema.parse(selected);
+      if (accountId === userId) return action(transaction, accountId, userId, true);
+      await lockAccount(transaction, accountId);
+      const member = await requireTeamMember(transaction, accountId, userId);
+      return action(transaction, accountId, userId, member.role === "owner");
+    });
+
   return {
+    teams: (token: string) => apply(token, (transaction, { accountId }) => listTeams(transaction, accountId)),
+    createTeam: (token: string, name: unknown) =>
+      apply(token, (transaction, { accountId }) => createTeam(transaction, accountId, name)),
     registerSigningKey: (token: string, publicKey: unknown) =>
       apply(token, (transaction, device) => registerDeviceSigningKey(transaction, device, publicKey)),
     signingKey: (token: string, deviceId: string) =>
       apply(token, (transaction, device) =>
         readDeviceSigningKey(transaction, device.accountId, identitySchema.parse(deviceId)),
       ),
-    account: (token: string) =>
-      apply(token, async (transaction, device) => ({
-        features: await readAccountFeatures(transaction, device.accountId),
+    account: (token: string, selected?: string) =>
+      scoped(token, selected, async (transaction, accountId) => ({
+        features: await readAccountFeatures(transaction, accountId),
       })),
     heartbeat: (token: string) =>
       apply(token, (transaction, device) => heartbeatDeviceInTransaction(transaction, device)),
@@ -99,46 +117,54 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
           deviceId: identitySchema.parse(deviceId),
         });
       }),
-    workbenches: (token: string) =>
-      apply(token, (transaction, device) => listWorkbenches(transaction, device.accountId)),
-    outstandingProjectDeletions: (token: string) =>
-      apply(token, (transaction, device) => listOutstandingProjectDeletions(transaction, device.accountId)),
-    projectDeletion: (token: string, workbenchId: string) =>
-      apply(token, (transaction, device) =>
-        readProjectDeletion(transaction, {
-          accountId: device.accountId,
-          workbenchId: identitySchema.parse(workbenchId),
-        }),
-      ),
-    startProjectDeletion: (token: string, workbenchId: string) =>
-      apply(token, (transaction, device) =>
-        startProjectDeletion(transaction, {
-          accountId: device.accountId,
-          workbenchId: identitySchema.parse(workbenchId),
-        }),
-      ),
-    /** The keys of a cloud project, or null when the account has no such project. */
-    keys: (token: string, workbenchId: string) =>
-      apply(token, (transaction, device) =>
-        spaceKeysInTransaction(transaction, {
-          accountId: device.accountId,
-          workbenchId: identitySchema.parse(workbenchId),
-        }),
-      ),
-    addWorkbench: (token: string, workbenchId: string) =>
-      apply(token, async (transaction, device) => {
-        await requireRelay(transaction, device.accountId);
-        await addWorkbenchInTransaction(transaction, {
-          accountId: device.accountId,
-          workbenchId: identitySchema.parse(workbenchId),
-        });
+    workbenches: (token: string, selected?: string) =>
+      scoped(token, selected, (transaction, accountId, userId) => listWorkbenches(transaction, accountId, userId)),
+    outstandingProjectDeletions: (token: string, selected?: string) =>
+      scoped(token, selected, async (transaction, accountId, _userId, owner) => {
+        if (!owner) return [];
+        return listOutstandingProjectDeletions(transaction, accountId);
       }),
-    removeWorkbench: (token: string, workbenchId: string) =>
-      apply(token, async (transaction, device) => {
-        await removeWorkbenchInTransaction(transaction, {
-          accountId: device.accountId,
-          workbenchId: identitySchema.parse(workbenchId),
-        });
+    projectDeletion: (token: string, workbenchId: string, selected?: string) =>
+      scoped(token, selected, async (transaction, accountId, _userId, owner) => {
+        if (!owner) throw new DeviceAccessDenied();
+        return readProjectDeletion(transaction, { accountId, workbenchId: identitySchema.parse(workbenchId) });
+      }),
+    startProjectDeletion: (token: string, workbenchId: string, selected?: string) =>
+      scoped(token, selected, async (transaction, accountId, _userId, owner) => {
+        if (!owner) throw new DeviceAccessDenied();
+        return startProjectDeletion(transaction, { accountId, workbenchId: identitySchema.parse(workbenchId) });
+      }),
+    keys: (token: string, value: string, selected?: string) =>
+      scoped(token, selected, async (transaction, accountId, userId) => {
+        const workbenchId = identitySchema.parse(value);
+        if (accountId !== userId) {
+          const [grant] = await transaction
+            .select({ userId: projectMembers.userId })
+            .from(projectMembers)
+            .where(
+              and(
+                eq(projectMembers.accountId, accountId),
+                eq(projectMembers.workbenchId, workbenchId),
+                eq(projectMembers.userId, userId),
+              ),
+            );
+          if (!grant) return null;
+        }
+        return spaceKeysInTransaction(transaction, { accountId, workbenchId }, userId);
+      }),
+    addWorkbench: (token: string, value: string, selected?: string) =>
+      scoped(token, selected, async (transaction, accountId, userId, owner) => {
+        if (!owner) throw new DeviceAccessDenied();
+        const workbenchId = identitySchema.parse(value);
+        await requireRelay(transaction, accountId);
+        await addWorkbenchInTransaction(transaction, { accountId, workbenchId });
+        if (accountId !== userId)
+          await transaction.insert(projectMembers).values({ accountId, workbenchId, userId }).onConflictDoNothing();
+      }),
+    removeWorkbench: (token: string, workbenchId: string, selected?: string) =>
+      scoped(token, selected, async (transaction, accountId, _userId, owner) => {
+        if (!owner) throw new DeviceAccessDenied();
+        await removeWorkbenchInTransaction(transaction, { accountId, workbenchId: identitySchema.parse(workbenchId) });
       }),
   };
 };

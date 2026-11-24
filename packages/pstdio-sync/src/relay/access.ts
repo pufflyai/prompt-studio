@@ -5,6 +5,8 @@ export const createRelayAccess = (input: {
   managerOrigin: string;
   renewalGrant: string;
   workbenchId: string;
+  accountId?: string;
+  userId?: string;
   signal: AbortSignal;
   /** Called when the manager rejects the renewal credential. */
   denied?: () => void;
@@ -21,7 +23,10 @@ export const createRelayAccess = (input: {
             method: "POST",
             signal: input.signal,
             headers: { authorization: `Bearer ${input.renewalGrant}`, "content-type": "application/json" },
-            body: JSON.stringify({ workbenchId: input.workbenchId }),
+            body: JSON.stringify({
+              workbenchId: input.workbenchId,
+              ...(input.userId && input.userId !== input.accountId && { accountId: input.accountId }),
+            }),
           },
           { signal: input.signal, inactivityMs: 30_000 },
         ),

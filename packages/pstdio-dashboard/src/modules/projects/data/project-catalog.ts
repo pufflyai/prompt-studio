@@ -7,18 +7,30 @@ import { getRuntimeApiClient } from "@/lib/api";
 import { getDashboardAccountStatusQuery } from "@/lib/scoped-queries";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import { subscribeToExtensionEventFeed } from "@/shared/extensions/extension-webview-broadcast";
+import { projectTeamAccountId } from "./project-copy-scope";
 
 export const cloudProjectCatalogKey = ["cloud-project-catalog"] as const;
 
-export const cloudCatalogKeyFor = (managerOrigin?: string, accountId?: string, deviceId?: string) =>
-  [...cloudProjectCatalogKey, managerOrigin, accountId, deviceId] as const;
+export const cloudCatalogKeyFor = (
+  managerOrigin?: string,
+  accountId?: string,
+  deviceId?: string,
+  projectAccountId = accountId,
+) => [...cloudProjectCatalogKey, managerOrigin, accountId, deviceId, projectAccountId] as const;
 
-export const useCloudProjectCatalog = () => {
+export const useCloudProjectCatalog = (selectedAccountId?: string, forProjectId?: string) => {
   const runtime = getRuntimeCollections();
   const status = useScopedQuery(getDashboardAccountStatusQuery(runtime)).data;
   const login = status?.login;
   const queryClient = useQueryClient();
-  const signedIn = Boolean(login);
+  const signedIn = Boolean(login && !status?.signInRequired);
+  const projectAccountId = forProjectId ? projectTeamAccountId(status, forProjectId) : undefined;
+  const accountId = selectedAccountId ?? projectAccountId;
+  const scopeAccountId = accountId ?? login?.accountId;
+  const available =
+    signedIn &&
+    (!forProjectId || !selectedAccountId || selectedAccountId === projectAccountId) &&
+    (!accountId || Boolean(status?.teamAccounts?.some((team) => team.accountId === accountId)));
 
   useEffect(() => {
     if (!signedIn) return;
@@ -30,15 +42,16 @@ export const useCloudProjectCatalog = () => {
   }, [signedIn, queryClient]);
 
   const catalog = useQuery({
-    queryKey: cloudCatalogKeyFor(login?.managerOrigin, login?.accountId, login?.deviceId),
-    enabled: signedIn,
+    queryKey: cloudCatalogKeyFor(login?.managerOrigin, login?.accountId, login?.deviceId, scopeAccountId),
+    enabled: available,
     queryFn: async ({ signal }) => {
-      const catalog = await getRuntimeApiClient(runtime).account.projectsCatalog({ signal });
-      if (
-        !login ||
-        catalog.account?.accountId !== login.accountId ||
-        catalog.account?.managerOrigin !== login.managerOrigin
-      )
+      if (!available || !login) throw new Error("The active Cloud account changed");
+      const catalog = await getRuntimeApiClient(runtime).account.projectsCatalog({
+        signal,
+        accountId,
+        expectedDevice: login,
+      });
+      if (catalog.account?.accountId !== scopeAccountId || catalog.account?.managerOrigin !== login.managerOrigin)
         throw new Error("The active Cloud account changed");
       return catalog;
     },
@@ -51,10 +64,23 @@ export const useCloudProjectCatalog = () => {
   });
   return {
     ...catalog,
+    data: available ? catalog.data : undefined,
     signedIn,
+    login,
+    teamAccounts: status?.teamAccounts ?? [],
+    teamProjects: status?.teamProjects ?? {},
+    teamProjectOwners: status?.teamProjectOwners ?? {},
+    accountId,
     signInRequired: Boolean(status?.signInRequired),
-    scope: JSON.stringify([String(runtime.id), login?.managerOrigin, login?.accountId, login?.deviceId]),
+    scope: JSON.stringify([
+      String(runtime.id),
+      login?.managerOrigin,
+      login?.accountId,
+      login?.deviceId,
+      scopeAccountId,
+      available,
+    ]),
     accountKnown: Boolean(status),
-    membershipKnown: catalog.data?.membershipKnown ?? status?.cloudProjectsLoaded,
+    membershipKnown: (available ? catalog.data?.membershipKnown : undefined) ?? status?.cloudProjectsLoaded,
   };
 };

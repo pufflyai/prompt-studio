@@ -1,6 +1,7 @@
 import { parseArgs } from "node:util";
+import { identitySchema } from "pstdio-sync-contracts";
 import { z } from "zod";
-import { setAccountFeatureByEmail } from "../src/account-features";
+import { setAccountFeature } from "../src/account-features";
 import { connectManager } from "../src/database";
 
 export const runAccountFeature = async (args: string[], databaseUrl: string) => {
@@ -9,15 +10,19 @@ export const runAccountFeature = async (args: string[], databaseUrl: string) => 
     allowPositionals: true,
     options: {
       email: { type: "string" },
+      "account-id": { type: "string" },
       feature: { type: "string" },
     },
   });
   const action = z.enum(["grant", "revoke"]).parse(positionals.length === 1 ? positionals[0] : undefined);
-  const email = z.email().parse(values.email);
+  const target = z.union([z.strictObject({ email: z.email() }), z.strictObject({ accountId: identitySchema })]).parse({
+    ...(values.email !== undefined && { email: values.email }),
+    ...(values["account-id"] !== undefined && { accountId: values["account-id"] }),
+  });
   const feature = z.enum(["relay"]).parse(values.feature);
   const connection = connectManager(databaseUrl);
   try {
-    return await setAccountFeatureByEmail(connection.db, { email, feature, enabled: action === "grant" });
+    return await setAccountFeature(connection.db, { ...target, feature, enabled: action === "grant" });
   } finally {
     await connection.close();
   }
@@ -28,7 +33,8 @@ if (import.meta.main) {
     console.log(JSON.stringify(await runAccountFeature(process.argv.slice(2), process.env.DATABASE_URL ?? "")));
   } catch (error) {
     let message = error instanceof Error ? error.message : "Feature update failed";
-    if (error instanceof z.ZodError) message = "Usage: account-feature <grant|revoke> --email <email> --feature relay";
+    if (error instanceof z.ZodError)
+      message = "Usage: account-feature <grant|revoke> (--email <email> | --account-id <id>) --feature relay";
     console.error(message);
     process.exitCode = 1;
   }

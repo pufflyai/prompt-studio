@@ -11,7 +11,14 @@ export const createNativeManagerCall =
     changed(): Error;
     removed(): Error;
   }) =>
-  async (path: string, body?: unknown, credential?: string, signal?: AbortSignal, expected?: DeviceReadIdentity) => {
+  async (
+    path: string,
+    body?: unknown,
+    credential?: string,
+    signal?: AbortSignal,
+    expected?: DeviceReadIdentity,
+    scoped = false,
+  ) => {
     const login = await input.current();
     if (expected && !matchesDeviceAccount(login, expected)) throw input.changed();
     if (credential && login.token !== credential) throw new Error("Device login changed");
@@ -20,6 +27,10 @@ export const createNativeManagerCall =
       return await managerRequest(login.managerOrigin, path, login.token, body, cancellation);
     } catch (error) {
       if (!(error instanceof ManagerRequestDenied && error.status === 401)) throw error;
+      if (scoped) {
+        void input.refresh();
+        throw input.changed();
+      }
       // Removing this owner drains its calls. Finish rejection before refresh waits for it.
       await input.reject(login.token, login);
       void input.refresh();

@@ -5,10 +5,11 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createResourceActivityApi } from "../../features/activity/resource-activity-api";
 import { activityStorageOwner } from "../../features/activity/resource-activity-store";
-import { seenOwnerId, seenStoreFor } from "../../features/activity/resource-seen";
+import { openSeenStore, seenOwnerId, seenStoreFor } from "../../features/activity/resource-seen";
 import { documentPeer } from "../../features/extensions/publication/document-peer.fixture";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createExtensionDocumentSync } from "./documents";
+import { startRelayRuntime } from "./runtime";
 
 const root = mkdtempSync(join(tmpdir(), "activity-sync-"));
 const peer = documentPeer();
@@ -138,4 +139,73 @@ test("offline first views merge by maximum revision in the reader's personal spa
   }
   const other = await seenStoreFor(apps[0]!.deps, projectId, seenOwnerId({ ...login, accountId: "bob" }));
   expect((await other.query([head("3")]))[0]?.changedSinceSeen).toBe(false);
+});
+
+test("native team relay synchronizes seen baselines only between the same user's devices", async () => {
+  const projectId = crypto.randomUUID();
+  const teamPeer = documentPeer();
+  const hosts: Awaited<ReturnType<typeof createTestApp>>[] = [];
+  const runtimes: Awaited<ReturnType<typeof startRelayRuntime>>[] = [];
+  const resource = { extensionId: "example.publisher", type: "edition", projectId, id: "team-note" };
+  const head = (revision: string) => ({ resource, stamp: { lineage: "original", revision }, provider: "publisher" });
+  const stores: Awaited<ReturnType<typeof openSeenStore>>[] = [];
+  try {
+    for (const [index, accountId] of ["alice", "alice", "bob"].entries()) {
+      const host = await createTestApp();
+      hosts.push(host);
+      await host.deps.projectService.create({ id: projectId, name: "Team baselines" });
+      const { environmentId } = await host.deps.environmentService.get();
+      const login = {
+        accountId,
+        deviceId: environmentId,
+        managerOrigin: teamPeer.origin,
+        relayOrigin: teamPeer.origin,
+      };
+      const status = await host.deps.accountService.status();
+      host.deps.accountService.status = async () => ({
+        ...status,
+        login,
+        teamProjects: { [projectId]: "team" },
+      });
+      const runtime = await startRelayRuntime({ deps: host.deps });
+      runtimes.push(runtime);
+      const store = await openSeenStore(host.deps, projectId);
+      stores.push(store);
+      if (index === 0) await store.acknowledge(head("2"), "publisher");
+      if (index === 2) await store.acknowledge(head("9"), "publisher");
+      await runtime.update([
+        {
+          accountId: "team",
+          userId: login.accountId,
+          workbenchId: projectId,
+          environmentId,
+          managerOrigin: teamPeer.origin,
+          relayOrigin: teamPeer.origin,
+          renewalGrant: "fixture",
+        },
+      ]);
+      const deadline = Date.now() + 2000;
+      const seen = async () => (await runtime.status(projectId)).sources?.find(({ id }) => id === "seen");
+      while (!(await seen())?.downloaded && Date.now() < deadline) await Bun.sleep(10);
+      expect(await seen()).toMatchObject({ downloaded: true });
+    }
+    const [, aliceSecond, bobFirst] = stores;
+    const end = Date.now() + 3000;
+    const changed = async (store: typeof aliceSecond, revision: string) =>
+      (await store!.query([head(revision)]))[0]?.changedSinceSeen;
+    while (!(await changed(aliceSecond, "3")) && Date.now() < end) await Bun.sleep(10);
+    if (!(await changed(aliceSecond, "3"))) {
+      const seen = await Promise.all(
+        runtimes.map(async (runtime) => (await runtime.status(projectId)).sources?.find(({ id }) => id === "seen")),
+      );
+      throw new Error(`Seen resource baseline did not converge: ${JSON.stringify(seen)}`);
+    }
+    expect(await changed(aliceSecond, "2")).toBe(false);
+    expect(await changed(bobFirst, "3")).toBe(false);
+    expect(await changed(bobFirst, "10")).toBe(true);
+  } finally {
+    await Promise.all(runtimes.map((runtime) => runtime.close()));
+    await Promise.all(hosts.map((host) => host.close()));
+    await teamPeer.close();
+  }
 });

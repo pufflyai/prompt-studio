@@ -1,5 +1,6 @@
 import { z } from "@hono/zod-openapi";
 import { serviceAddress } from "pstdio-sync/relay";
+import { identitySchema } from "pstdio-sync-contracts";
 
 // An expectation selects no remote target. It must match the native owner's existing identity.
 const origin = z
@@ -9,6 +10,7 @@ const origin = z
     return ["https:", "http:"].includes(url.protocol) && !url.username && !url.password && !url.search && !url.hash;
   })
   .transform(serviceAddress);
+export const expectedAccountIdentity = z.strictObject({ accountId: z.string().min(1), managerOrigin: origin });
 export const expectedAccountQuery = z
   .object({ accountId: z.string().min(1).optional(), managerOrigin: origin.optional() })
   .strict()
@@ -25,4 +27,21 @@ export const expectedProjectAccountQuery = expectedAccountQuery
 export const readExpectedAccount = (query: z.infer<typeof expectedAccountQuery>) =>
   query.accountId && query.managerOrigin
     ? { accountId: query.accountId, managerOrigin: query.managerOrigin }
+    : undefined;
+
+export const expectedCopyDeviceQuery = z
+  .strictObject({
+    deviceAccountId: identitySchema.optional(),
+    deviceManagerOrigin: origin.optional(),
+    deviceId: identitySchema.optional(),
+  })
+  .refine(
+    ({ deviceAccountId, deviceManagerOrigin, deviceId }) =>
+      Boolean(deviceAccountId) === Boolean(deviceManagerOrigin) && Boolean(deviceAccountId) === Boolean(deviceId),
+    "An expected device needs its account and manager origin",
+  );
+
+export const readExpectedCopyDevice = (query: z.infer<typeof expectedCopyDeviceQuery>) =>
+  query.deviceAccountId && query.deviceManagerOrigin && query.deviceId
+    ? { accountId: query.deviceAccountId, managerOrigin: query.deviceManagerOrigin, deviceId: query.deviceId }
     : undefined;

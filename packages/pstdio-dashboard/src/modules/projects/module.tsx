@@ -158,6 +158,11 @@ const registerProjects = (ctx: WorkbenchModuleContext) => {
   });
 };
 
+const projectPickerPageContext = (id: string, teamAccountId?: string) => ({
+  page: { kind: "page" as const, extensionId: "pstdio", id },
+  params: typeof teamAccountId === "string" ? { teamAccountId } : undefined,
+});
+
 const registerProjectCommands = (
   ctx: WorkbenchModuleContext,
   selectedProjectContext: DashboardProjectSelectionContext,
@@ -165,7 +170,7 @@ const registerProjectCommands = (
   projectTabs: DesktopProjectTabs | undefined,
   openCloudChoice: ReturnType<typeof registerCloudProjectChoice>,
 ) => {
-  ctx.commands.registerCommand<SelectProjectInput, void>(
+  ctx.commands.registerCommand<SelectProjectInput, undefined | false>(
     {
       id: dashboardCommandIds.selectProject,
       label: "Select project",
@@ -174,14 +179,18 @@ const registerProjectCommands = (
     },
     {
       async execute(selection) {
-        if (selection.project?.id && getLocalProjectDeletion().hidden(selection.project.id)) return;
+        if (selection.project?.id && getLocalProjectDeletion().hidden(selection.project.id)) return false;
         if (
           selection.project?.id &&
           (await openCloudChoice(selection.project.id, selection.cloudCopyChoice, selection.project.name))
         )
           return;
-        if (projectTabs) selectProjectTab(ctx, projectTabs, selection);
-        else selectProject(ctx, selectedProjectContext, persistence, selection);
+        if (projectTabs) {
+          if (!ctx.activation.isActive()) return false;
+          selectProjectTab(ctx, projectTabs, selection);
+        } else {
+          selectProject(ctx, selectedProjectContext, persistence, selection);
+        }
       },
     },
   );
@@ -208,21 +217,35 @@ const registerProjectCommands = (
       icon: standardResourceIcons.project,
     },
     {
-      execute: () => {
+      execute: (args?: { teamAccountId?: string }) => {
+        const pageContext = projectPickerPageContext(dashboardWidgetIds.projectPicker, args?.teamAccountId);
         if (!getDashboardSelectedProjectId(ctx)) {
           ctx.pageLocations.clearProject();
           ctx.modes.setActiveMode("project-selection");
+          const picker = ctx.layout
+            .listPanelInstances("overlay")
+            .find((panel) => panel.viewId === dashboardWidgetIds.projectPicker && !panel.closable);
+          if (picker) ctx.layout.updatePanel(picker.instanceId, { pageContext });
           return undefined;
         }
 
-        return ctx.overlays.openOverlay(dashboardWidgetIds.projectPicker, { title: "Projects" });
+        return ctx.overlays.openOverlay(dashboardWidgetIds.projectPicker, { title: "Projects", pageContext });
       },
     },
   );
   ctx.commands.registerCommand(
     { id: dashboardCommandIds.createProject, label: "Create project", category: "Projects", icon: "Plus" },
     {
-      execute: () => ctx.overlays.openOverlay(dashboardWidgetIds.createProject, { title: "Create project" }),
+      execute: (args?: { teamAccountId?: string }) =>
+        ctx.overlays.openOverlay(dashboardWidgetIds.createProject, {
+          title: "Create project",
+          ...(typeof args?.teamAccountId === "string" && {
+            pageContext: {
+              page: { kind: "page", extensionId: "pstdio", id: dashboardWidgetIds.createProject },
+              params: { teamAccountId: args.teamAccountId },
+            },
+          }),
+        }),
     },
   );
   ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {

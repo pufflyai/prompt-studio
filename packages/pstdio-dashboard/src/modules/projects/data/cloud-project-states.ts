@@ -20,7 +20,10 @@ export interface ProjectCloudState {
 export const useCloudProjectStates = (projectIds: string[], catalog?: CloudProjectCatalog) => {
   const owner = getRuntimeCollections();
   const account = useScopedQuery(getDashboardAccountStatusQuery(owner));
-  const cloudProjects = new Set(account.data?.cloudProjects ?? []);
+  const cloudProjects = new Set([
+    ...(account.data?.cloudProjects ?? []),
+    ...Object.keys(account.data?.teamProjects ?? {}),
+  ]);
   const cloudIds = projectIds.filter((id) => cloudProjects.has(id));
   const statuses = useScopedQueries(
     cloudIds.map((projectId) => getAccountQuerySources(owner).source({ service: "projectSyncStatus", projectId })),

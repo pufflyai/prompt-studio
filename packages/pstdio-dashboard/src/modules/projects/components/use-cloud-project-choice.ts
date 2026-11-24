@@ -1,7 +1,7 @@
-import type { CloudProjectCatalogEntry, ProjectCopyAccount } from "@pstdio/sdk/client";
-import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
+import type { CloudProjectCatalogEntry, DeviceLogin, ProjectCopyAccount } from "@pstdio/sdk/client";
+import { useWorkbenchStore, type WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { getRuntimeApiClient } from "@/lib/api";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import { useCollectionSelection } from "@/lib/sync/use-collection-selection";
@@ -14,22 +14,99 @@ import { findDashboardProject } from "../data/project-data";
 
 type DownloadOwner = { scope: string; requested: boolean };
 
+const useRecoveredProjectOpening = (
+  input: WorkbenchPanelRenderInput,
+  scope: string,
+  options: {
+    id: string;
+    name?: string;
+    ready: boolean;
+    account?: ProjectCopyAccount;
+    login?: DeviceLogin;
+  },
+) => {
+  const { id, name, ready, account, login } = options;
+  const { workbench, instance } = input;
+  const active = useWorkbenchStore(workbench.activation.store, (state) => state.active);
+  const operations = getCloudCopyDownloads();
+  const observing = useRef<ReturnType<typeof operations.observeOpening>>(undefined);
+  const handled = useRef<string>(undefined);
+  const eligible = useRef<{
+    key: string;
+    name: string;
+    account: ProjectCopyAccount;
+    device: DeviceLogin;
+  }>(undefined);
+  const openingKey = JSON.stringify([scope, instance.instanceId]);
+  const canOpen = ready && Boolean(name && account && login);
+
+  useLayoutEffect(() => {
+    eligible.current =
+      ready && name && account && login ? { key: openingKey, name, account, device: login } : undefined;
+    return () => {
+      eligible.current = undefined;
+    };
+  }, [account, login, name, openingKey, ready]);
+
+  useEffect(() => {
+    const opening = operations.observeOpening(scope);
+    observing.current = opening;
+    return () => {
+      opening.release();
+      observing.current = undefined;
+    };
+  }, [operations, scope]);
+
+  useEffect(() => {
+    if (!active || !canOpen || handled.current === openingKey) return;
+    void observing.current?.open({
+      id,
+      read() {
+        const current = eligible.current;
+        if (current?.key !== openingKey || !workbench.activation.isActive() || handled.current === openingKey)
+          return undefined;
+        return current;
+      },
+      close() {
+        handled.current = openingKey;
+        workbench.overlays.closeOverlay(instance.instanceId);
+      },
+      select: (name) => workbench.commands.executeCommand(dashboardCommandIds.selectProject, { project: { id, name } }),
+    });
+  }, [active, canOpen, id, instance.instanceId, openingKey, workbench]);
+};
+
 const useCloudCopyDownload = (
   input: WorkbenchPanelRenderInput,
   options: {
     id: string;
     downloading: boolean;
-    requested: boolean;
+    invalidated: boolean;
+    copyBusy: boolean;
     deleting: boolean;
     entry?: CloudProjectCatalogEntry;
     account?: ProjectCopyAccount;
+    login?: DeviceLogin;
     owner: DownloadOwner;
     rememberIntent: (owner: DownloadOwner) => void;
     clearIntent: () => void;
     scope: string;
   },
 ) => {
-  const { id, downloading, requested, deleting, entry, account, owner, rememberIntent, clearIntent, scope } = options;
+  const {
+    id,
+    downloading,
+    invalidated,
+    copyBusy,
+    deleting,
+    entry,
+    account,
+    login,
+    owner,
+    rememberIntent,
+    clearIntent,
+    scope,
+  } = options;
   const runtime = getRuntimeCollections();
   const client = getRuntimeApiClient(runtime);
   const operations = getCloudCopyDownloads(runtime);
@@ -40,18 +117,25 @@ const useCloudCopyDownload = (
   const localName = findDashboardProject(id)?.name;
   const sync = useQuery({
     queryKey: ["cloud-project-opening", scope],
-    queryFn: ({ signal }) => client.account.projectSyncStatus(id, { signal, expected: account }),
+    queryFn: ({ signal }) => client.account.projectSyncStatus(id, { signal, expected: login }),
     enabled: downloading && Boolean(localName && account),
     retry: false,
     refetchInterval: 1500,
   });
   const refresh = () => queryClient.invalidateQueries({ queryKey: cloudProjectCatalogKey });
   const download = useMutation({
-    mutationFn: (admission: { id: string; account?: ProjectCopyAccount; owner: DownloadOwner; name: string }) => {
-      if (!admission.account) throw new Error("The active Cloud account changed. Choose the project again.");
+    mutationFn: (admission: {
+      id: string;
+      account?: ProjectCopyAccount;
+      login?: DeviceLogin;
+      owner: DownloadOwner;
+      name: string;
+    }) => {
+      if (!admission.account || !admission.login)
+        throw new Error("The active Cloud account changed. Choose the project again.");
       // The host may finish the download even if its response never reaches us.
       rememberIntent(admission.owner);
-      return operations.start(admission.id, admission.name, admission.account);
+      return operations.start(admission.id, admission.name, admission.account, admission.login);
     },
     onSettled() {
       void refresh();
@@ -64,13 +148,14 @@ const useCloudCopyDownload = (
     if (downloadScope && downloadScope !== scope) resetDownload();
   }, [downloadScope, scope, resetDownload]);
 
-  useEffect(() => {
-    if (!requested || entry?.presence !== "downloaded" || !localName || deleting) return;
-    input.workbench.overlays.closeOverlay(input.instance.instanceId);
-    void input.workbench.commands.executeCommand(dashboardCommandIds.selectProject, {
-      project: { id, name: localName },
-    });
-  }, [entry?.presence, id, input.instance.instanceId, input.workbench, requested, localName, deleting]);
+  // Native recovery can finish without a Download request from this modal.
+  useRecoveredProjectOpening(input, scope, {
+    id,
+    name: localName,
+    ready: !invalidated && !deleting && (!copyBusy || Boolean(active)) && entry?.presence === "downloaded",
+    account,
+    login,
+  });
 
   const checkedDownload = useRef<symbol>(undefined);
   const statusObserved =
@@ -83,7 +168,7 @@ const useCloudCopyDownload = (
 
   const requestDownload = () => {
     const current = operations.state(id);
-    if (!current.active && !current.failure) download.mutate({ id, account, owner, name: entry?.name ?? id });
+    if (!current.active && !current.failure) download.mutate({ id, account, login, owner, name: entry?.name ?? id });
   };
   const checkDownload = async () => {
     if (unresolved?.canCheck && operations.state(id).failure?.id === unresolved.id)
@@ -113,19 +198,26 @@ const downloadMessage = (error: Error | null, entry?: CloudProjectCatalogEntry, 
   if (syncState === "needs-attention") return "Cloud download needs attention. Retry to continue.";
 };
 
-export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
-  const id = input.instance.resource?.id ?? "";
-  const cloud = useCloudProjectCatalog();
-  const entry = cloud.data?.projects.find((entry) => entry.id === id);
-  const receipt = cloud.data?.deletions.find((entry) => entry.projectId === id);
-  const account = cloud.data?.account;
-  const name = entry?.name ?? receipt?.name ?? input.instance.title ?? id;
+const useCloudChoiceInvalidation = (input: WorkbenchPanelRenderInput, scope: string, known: boolean) => {
   const [admittedScope, setAdmittedScope] = useState<string>();
-  if (cloud.accountKnown && admittedScope === undefined) setAdmittedScope(cloud.scope);
-  const invalidated = cloud.accountKnown && admittedScope !== undefined && admittedScope !== cloud.scope;
+  if (known && admittedScope === undefined) setAdmittedScope(scope);
+  const invalidated = known && admittedScope !== undefined && admittedScope !== scope;
   useEffect(() => {
     if (invalidated) input.workbench.overlays.closeOverlay(input.instance.instanceId);
   }, [invalidated, input.workbench, input.instance.instanceId]);
+  return invalidated;
+};
+
+export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
+  const id = input.instance.resource?.id ?? "";
+  const selectedAccount = input.instance.pageContext?.params?.accountId;
+  const cloud = useCloudProjectCatalog(typeof selectedAccount === "string" ? selectedAccount : undefined, id);
+  const entry = cloud.data?.projects.find((entry) => entry.id === id);
+  const receipt = cloud.data?.deletions.find((entry) => entry.projectId === id);
+  const account = cloud.data?.account;
+  const login = cloud.login ?? undefined;
+  const name = entry?.name ?? receipt?.name ?? input.instance.title ?? id;
+  const invalidated = useCloudChoiceInvalidation(input, cloud.scope, cloud.accountKnown);
   const scope = JSON.stringify([id, cloud.scope]);
   const [owner, setOwner] = useState<DownloadOwner>({ scope, requested: false });
   if (owner.scope !== scope) setOwner({ scope, requested: false });
@@ -146,10 +238,12 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
     useCloudCopyDownload(input, {
       id,
       downloading,
-      requested,
+      invalidated,
+      copyBusy,
       deleting,
       entry,
       account,
+      login,
       owner,
       rememberIntent: (admitted) =>
         setOwner((current) => (current === admitted ? { ...current, requested: true } : current)),
@@ -173,7 +267,8 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
   const requestError = entry?.presence === "downloading" ? null : (download.error ?? sharedError ?? null);
   const failure = downloadMessage(requestError ?? cloud.error ?? sync.error, entry, sync.data?.state);
   const pending = Boolean(active && !unresolved);
-  const showProgress = (downloading || pending) && !deleting && !failure && entry?.presence !== "downloaded";
+  const downloadInProgress = downloading || pending;
+  const showProgress = downloadInProgress && !deleting && !failure && entry?.presence !== "downloaded";
   const canDownload = Boolean(
     entry?.actions.download && !unresolved && !copyBusy && !deleting && (!downloading || failure),
   );
@@ -185,9 +280,10 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
     entry,
     receipt,
     account,
+    login,
     scope,
     deleting,
-    downloading: downloading || pending,
+    downloading: downloadInProgress,
     canDownload,
     downloadBlocking: Boolean(active),
     downloadPending: pending,

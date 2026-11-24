@@ -97,7 +97,7 @@ export const createWorkbenchUpdates = (input: WorkbenchUpdateInput) => {
           signal: signal,
           onStatusChange: () => statusChanged(id),
         });
-        channel.discover(connection.accountId);
+        channel.discover(connection.userId ?? connection.accountId);
         live.set(id, channel);
       }
     for (const id of changed) statusChanged(id);

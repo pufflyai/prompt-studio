@@ -90,3 +90,13 @@ export const createNativeStore = (path: string) => {
       }),
   };
 };
+
+/** A project scope keeps its owning account separate from the device's signed-in user. */
+export type ScopedDeviceLogin = DeviceLogin & { userId?: string };
+export const scopeDeviceLogin = (login: DeviceLogin, accountId = login.accountId): ScopedDeviceLogin =>
+  accountId === login.accountId ? login : { ...login, userId: login.accountId, accountId };
+export const scopedAccountId = (login: ScopedDeviceLogin) => (login.userId ? login.accountId : undefined);
+export const signedInIdentity = (login: Pick<ScopedDeviceLogin, "userId" | "accountId" | "managerOrigin">) => ({
+  accountId: login.userId ?? login.accountId,
+  managerOrigin: login.managerOrigin,
+});

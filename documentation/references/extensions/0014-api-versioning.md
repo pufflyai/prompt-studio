@@ -512,7 +512,6 @@ Existing workspace methods and observers remain supported. Publish the matching
 SDK and host before separately released clients adopt this method.
 
 
-
 ### Host delete confirmation on main
 
 Optional command `confirmation` declarations share the coordinated API 0.4.2 step.
@@ -523,7 +522,6 @@ After confirmation, the dashboard sets the declared `confirmedParam` to `true`.
 CLI and API invocations remain unchanged: commands must keep their explicit consent
 validation or existing presentation path when that parameter is absent. Older hosts
 omit this optional declaration and never synthesize consent.
-
 
 ## Resource Activity in API 0.4.2
 
@@ -562,4 +560,10 @@ The optional `ViewContribution.header.view` adds a companion view for menu heade
 
 API 0.5.1 also permits `viewMenus.side: "bottom"`. Menu sides define an initial layout preset; they do not restrict simultaneous menus on different edges. First-party tools group menus on the right, while extensions can choose other starting arrangements. User placement and open-state preferences override those defaults.
 
-*Updated at: 2026-11-22*
+## Team account creation (API 0.5.1)
+
+`ctx.account.createTeam(name)` creates a team for the signed-in person. Webviews use the same method through `account.manage`. Account status includes `teamAccounts` and a mapping from visible team project IDs to their owning account IDs. Account selection changes the management view and project catalog. Pass the displayed sign-in identity as the second argument to reject a request if the sign-in changed.
+
+Extensions adopting these fields or commands require `^0.5.1` and a supporting published SDK.
+
+*Updated at: 2026-11-24*

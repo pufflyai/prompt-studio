@@ -9,7 +9,12 @@ import {
 import type { AppBindings } from "../../types";
 import { enforceDeviceCommandBodyLimit } from "./device-command-body";
 import { registerCloudProjectRoutes } from "./project-cloud-routes";
-import { expectedAccountQuery, expectedProjectAccountQuery, readExpectedAccount } from "./read-identity";
+import {
+  expectedAccountIdentity,
+  expectedAccountQuery,
+  expectedProjectAccountQuery,
+  readExpectedAccount,
+} from "./read-identity";
 
 const json = <T extends z.ZodType>(schema: T) => ({ content: { "application/json": { schema } } });
 const responses = {
@@ -100,6 +105,27 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
   routes.openapi(
     createRoute({ method: "post", path: "/account/projects/{id}/retry", tags, request: { params }, responses }),
     async (c) => c.json(await service.retryProjectSync(c.req.valid("param").id), 200),
+  );
+  routes.openapi(createRoute({ method: "get", path: "/account/teams", tags, responses }), async (c) =>
+    c.json(await service.listTeams(c.req.raw.signal), 200),
+  );
+  routes.openapi(
+    createRoute({
+      method: "post",
+      path: "/account/teams",
+      tags,
+      request: {
+        body: {
+          required: true,
+          ...json(z.object({ name: z.string().trim().min(1).max(100), expected: expectedAccountIdentity.optional() })),
+        },
+      },
+      responses,
+    }),
+    async (c) => {
+      const { name, expected } = c.req.valid("json");
+      return c.json(await service.createTeam(name, expected), 200);
+    },
   );
   routes.openapi(
     createRoute({

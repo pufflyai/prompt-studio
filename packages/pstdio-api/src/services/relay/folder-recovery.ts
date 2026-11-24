@@ -37,12 +37,13 @@ export const startFolderRecovery = (input: {
   schedule?: { quietMs?: number; gapMs?: number };
 }) => {
   const { config, deps } = input;
+  const userId = config.userId ?? config.accountId;
   const root = projectRecoveryRoot(deps.projectRecovery.root, config.workbenchId);
   const controller = new AbortController();
   const signal = AbortSignal.any([controller.signal, input.signal]);
   const catalog = createRecoveryCatalog({
     projectId: config.workbenchId,
-    accountId: config.accountId,
+    accountId: userId,
     managerOrigin: config.managerOrigin,
     deviceId: config.environmentId,
     documents: deps.extensionStorageService.documents,
@@ -66,7 +67,7 @@ export const startFolderRecovery = (input: {
   ).catch(() => {});
   const local = createLocalRecoverySource({
     workbenchId: config.workbenchId,
-    accountId: config.accountId,
+    accountId: userId,
     deviceId: config.environmentId,
     root,
     previousRoot: deps.projectRecovery.root,
@@ -104,7 +105,7 @@ export const startFolderRecovery = (input: {
     projectId: config.workbenchId,
     access: input.access,
     signal,
-    acceptsChange: (change) => change.spaceOwner === config.accountId && change.documentId === catalogId,
+    acceptsChange: (change) => change.spaceOwner === userId && change.documentId === catalogId,
     onDisconnect: (reason) => {
       if (reason === "offline") offline = true;
     },

@@ -25,7 +25,7 @@ export const startDeviceCommands = (input: {
   let channel: ReturnType<typeof createDeviceCommandChannel> | undefined;
   const identity = async (signal: AbortSignal) => {
     const identity = await deps.accountService.commandIdentity(signal);
-    if (identity.accountId !== config.accountId || identity.deviceId !== config.environmentId)
+    if (identity.accountId !== (config.userId ?? config.accountId) || identity.deviceId !== config.environmentId)
       throw new Error("Device command identity changed");
     return identity;
   };

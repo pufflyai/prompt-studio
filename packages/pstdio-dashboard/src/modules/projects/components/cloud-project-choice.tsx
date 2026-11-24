@@ -12,6 +12,7 @@ export const CloudProjectChoice = ({ input }: { input: WorkbenchPanelRenderInput
     entry,
     receipt,
     account,
+    login,
     scope,
     deleting,
     downloading,
@@ -56,13 +57,21 @@ export const CloudProjectChoice = ({ input }: { input: WorkbenchPanelRenderInput
       <HStack gap="sm" justify="space-between" align="start" flexWrap="wrap">
         <Stack gap="sm">
           {entry?.presence === "removing" && (
-            <LocalProjectRemoval id={id} name={name} account={account} pending onRemoved={() => void refresh()} />
+            <LocalProjectRemoval
+              id={id}
+              name={name}
+              account={account}
+              login={login}
+              pending
+              onRemoved={() => void refresh()}
+            />
           )}
           {(deleting || receipt || entry?.presence === "cloud-only") && (
             <CloudProjectDeletionAction
               id={id}
               name={name}
               account={account}
+              login={login}
               receipt={receipt}
               canDelete={Boolean(entry?.actions.deleteCloud && !downloadBlocking)}
               cloudOnly

@@ -1,5 +1,4 @@
 import { Button, HStack, Stack, Text } from "@chakra-ui/react";
-import type { ProjectCopyAccount } from "@pstdio/sdk/client";
 import { AlertMessage, DeleteConfirmationModal, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { WorkbenchIcon } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
@@ -89,27 +88,23 @@ const LocalProjectDangerZone = (props: ProjectDangerZoneProps) => {
 };
 
 export const ProjectDangerZone = (props: ProjectDangerZoneProps) => {
-  const cloud = useCloudProjectCatalog();
+  const cloud = useCloudProjectCatalog(undefined, props.projectId);
   const entry = cloud.data?.projects.find((project) => project.id === props.projectId);
   const deletion = cloud.data?.deletions.find((receipt) => receipt.projectId === props.projectId);
   const account = cloud.data?.account;
   const id = props.projectId;
-  const [observed, setObserved] = useState<{ id: string; name: string; account: ProjectCopyAccount }>();
+  const [observed, setObserved] = useState<{ scope: string; name: string }>();
   const [completedScope, setCompletedScope] = useState<string>();
-  const scope = JSON.stringify([id, account?.managerOrigin, account?.accountId]);
+  const scope = JSON.stringify([id, cloud.scope]);
   useEffect(() => {
-    if (id && account && deletion) setObserved({ id, name: deletion.name, account });
-  }, [id, account, deletion]);
-  const retained =
-    observed?.id === id &&
-    observed?.account.accountId === account?.accountId &&
-    observed?.account.managerOrigin === account?.managerOrigin
-      ? observed
-      : undefined;
+    if (id && account && deletion) setObserved({ scope, name: deletion.name });
+  }, [id, account, deletion, scope]);
+  const retained = account && observed?.scope === scope ? observed : undefined;
   const project = entry ?? deletion ?? retained;
   if (
     !cloud.accountKnown ||
     cloud.signInRequired ||
+    (cloud.accountId && !cloud.signedIn) ||
     (cloud.signedIn && !project && (!cloud.data || !cloud.membershipKnown))
   )
     return (
@@ -143,7 +138,8 @@ export const ProjectDangerZone = (props: ProjectDangerZoneProps) => {
                 key={scope}
                 id={id}
                 name={project.name}
-                account={cloud.data?.account}
+                account={account}
+                login={cloud.login ?? undefined}
                 onRemoved={props.onDeleted}
               />
             </HStack>
@@ -162,10 +158,11 @@ export const ProjectDangerZone = (props: ProjectDangerZoneProps) => {
               key={scope}
               id={id}
               name={project.name}
-              account={cloud.data?.account}
+              account={account}
+              login={cloud.login ?? undefined}
               canDelete={Boolean(entry?.actions.deleteCloud)}
               receipt={deletion}
-              onSubmitted={() => account && setObserved({ id, name: project.name, account })}
+              onSubmitted={() => account && setObserved({ scope, name: project.name })}
               onCompleted={() => setCompletedScope(scope)}
             />
           </HStack>
