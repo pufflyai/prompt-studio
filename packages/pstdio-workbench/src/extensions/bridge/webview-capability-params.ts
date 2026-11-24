@@ -1,4 +1,5 @@
 import {
+  accountSignInProviderSchema,
   extensionResourceRefSchema,
   jsonObjectSchema,
   pageParamValueSchema,
@@ -250,7 +251,11 @@ const schemas = {
   ]),
   "account.manage": z.discriminatedUnion("op", [
     z.object({ op: z.literal("retryProjectSyncSource"), sourceId: identifier, ...projectId }),
-    z.object({ op: z.literal("login"), managerOrigin: identifier.optional() }),
+    z.object({
+      op: z.literal("login"),
+      managerOrigin: identifier.optional(),
+      provider: accountSignInProviderSchema.optional(),
+    }),
     z.object({ op: z.literal("cancelLogin"), id: identifier }),
     z.object({ op: z.literal("logout") }),
     z.object({ op: z.literal("renameDevice"), id: identifier, name: z.string() }),

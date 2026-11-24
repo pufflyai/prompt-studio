@@ -1,3 +1,4 @@
+export * from "./account-sign-in";
 export type * from "./authoring";
 export { devicePresenceIntervalMs, devicePresenceLeaseMs } from "./device-presence";
 export * from "./fingerprint";

@@ -36,3 +36,19 @@ export const managerRequest = async (
   if (!response.ok) throw new ManagerRequestDenied(response.status);
   return response.json() as Promise<unknown>;
 };
+
+export const supportsMicrosoftSignIn = async (origin: string) => {
+  try {
+    const providers = await managerRequest(
+      origin,
+      "/v1/sign-in-providers",
+      undefined,
+      undefined,
+      AbortSignal.timeout(5000),
+    );
+    return z.object({ microsoft: z.literal(true) }).safeParse(providers).success;
+  } catch (error) {
+    if (error instanceof ManagerRequestDenied && error.status === 404) return false;
+    throw error;
+  }
+};

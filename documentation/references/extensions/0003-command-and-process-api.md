@@ -358,7 +358,7 @@ On `main`, `ctx.account` reads this device's Cloud account, the account's device
 | Method | What it does |
 | --- | --- |
 | `ctx.account.status()` | Returns `{ login, cloudProjects, cloudProjectsLoaded, features, signInRequired? }`. `login` is `null` when this device is signed out; otherwise it has the account and device IDs, the service addresses, and the signed-in `email`. `cloudProjectsLoaded` stays `false` until the account service answered for this login. `signInRequired` is true after this device credential was rejected. |
-| `ctx.account.login(managerOrigin)` | Starts a native browser sign-in with the given account service and returns `{ id, url }`. Open `url` in a browser on the computer that runs Prompt Studio. |
+| `ctx.account.login(managerOrigin?, provider?)` | Starts a native browser sign-in with Google by default. Pass `"microsoft"` to choose Microsoft. Uses the configured account service unless given an explicit address and returns `{ id, url }`. Open `url` in a browser on the computer that runs Prompt Studio. |
 | `ctx.account.loginStatus(id)` | Returns `pending`, `complete`, or `failed`. |
 | `ctx.account.cancelLogin(id)` | Cancels a pending sign-in and returns `failed`. A sign-in that already finished returns `complete`. |
 | `ctx.account.logout()` | Signs this device out and keeps local data. Returns `{ removed }`; `removed` is `false` when the account service could not be reached. |
