@@ -208,7 +208,15 @@ describe("envFromHost", () => {
   ] as const)("%s descendants are stopped before their grant is revoked, even after the launcher exits", async (method) => {
     const { api, permissions } = await setup(["EXTENSION_AGENT_TOKEN"]);
     const marker = join(root, `${method}-background`);
+    const launcherMarker = join(root, `${method}-launcher`);
     const background = `require("node:fs").writeFileSync(${JSON.stringify(marker)}, String(process.pid)); setInterval(() => {}, 1000)`;
+    const waitFor = async (ready: () => boolean, phase: string) => {
+      const deadline = Date.now() + 5_000;
+      while (!ready()) {
+        if (Date.now() >= deadline) throw new Error(`${method}: timed out waiting for ${phase}`);
+        await Bun.sleep(10);
+      }
+    };
     const alive = (pid: number) => {
       if (process.platform !== "win32") {
         // Signal 0 can report a defunct process as present until its parent reaps the PID.
@@ -225,25 +233,47 @@ describe("envFromHost", () => {
       }
     };
 
-    const result = await api[method]({
-      command: [
-        process.execPath,
-        "-e",
-        `require("node:child_process").spawn(process.execPath, ["-e", ${JSON.stringify(background)}], { stdio: "ignore" }).unref()`,
-      ],
-      envFromHost: ["EXTENSION_AGENT_TOKEN"],
-    });
-    while (!existsSync(marker) || !readFileSync(marker, "utf8")) await Bun.sleep(10);
-    const backgroundPid = Number(readFileSync(marker, "utf8"));
+    let backgroundPid: number | undefined;
+    let revoked = false;
     try {
-      if ("pid" in result) while (alive(result.pid!)) await Bun.sleep(10);
+      const result = await api[method]({
+        command: [
+          process.execPath,
+          "-e",
+          `
+          const fs = require("node:fs");
+          fs.writeFileSync(${JSON.stringify(launcherMarker)}, String(process.pid));
+          // Windows' ordinary child-process launcher owns a kill-on-close job. Detach the fixture
+          // from that launcher while retaining the host's outer Job, so it can outlive its parent.
+          require("node:child_process").spawn(process.execPath, ["-e", ${JSON.stringify(background)}], {
+            stdio: "ignore", detached: process.platform === "win32",
+          }).unref();
+          const deadline = Date.now() + 5_000;
+          while (!fs.existsSync(${JSON.stringify(marker)}) || !fs.readFileSync(${JSON.stringify(marker)}, "utf8")) {
+            if (Date.now() >= deadline) throw new Error("Background fixture did not become ready before launcher exit.");
+            await Bun.sleep(10);
+          }
+        `,
+        ],
+        envFromHost: ["EXTENSION_AGENT_TOKEN"],
+      });
+      await waitFor(() => existsSync(marker) && readFileSync(marker, "utf8") !== "", "the background PID marker");
+      backgroundPid = Number(readFileSync(marker, "utf8"));
+      const launcherPid = Number(readFileSync(launcherMarker, "utf8"));
+      expect(Number.isSafeInteger(launcherPid) && launcherPid > 0).toBe(true);
+      expect(Number.isSafeInteger(backgroundPid) && backgroundPid > 0).toBe(true);
+      if ("pid" in result) expect(result.pid).toBe(launcherPid);
+      else expect(result.exitCode).toBe(0);
+      await waitFor(() => !alive(launcherPid), "the launcher to exit");
       expect(alive(backgroundPid)).toBe(true);
 
       await permissions.revoke("project-1", "acme.agent");
+      revoked = true;
 
       expect(alive(backgroundPid)).toBe(false);
     } finally {
-      if (alive(backgroundPid)) process.kill(backgroundPid, "SIGKILL");
+      if (!revoked) await permissions.revoke("project-1", "acme.agent").catch(() => {});
+      if (backgroundPid && alive(backgroundPid)) process.kill(backgroundPid, "SIGKILL");
     }
   });
 });
