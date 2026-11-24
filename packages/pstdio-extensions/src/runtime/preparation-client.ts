@@ -12,13 +12,14 @@ import {
   activePreparationPriority,
   cancelQueuedPreparation,
   createJob,
+  createYieldClock,
   type Job,
   orderPreparationQueue,
-  PREPARATION_YIELD_HOLD_MS,
   type PreparationOptions,
   preparationJobMessage,
   preparationQueuePriority,
   preparationResourcesOverlap,
+  refreshYieldHolds,
   settlePreparationJob,
   waitForPreparation,
   yieldPreparation,
@@ -74,6 +75,26 @@ const createIdleRetirements = () => {
   };
 };
 
+// A slot waiting for build admission retires a less urgent slot that holds build commands.
+const preemptPreparationBuildBlockers = (
+  pool: ReturnType<typeof createPreparationWorkerSlots>,
+  queuedPriority: (job: Job) => number,
+) => {
+  for (const waiting of pool.slots) {
+    if (!waiting.dispatched || !waiting.active || !waiting.waitingBuilds) continue;
+    for (const holder of pool.slots)
+      if (
+        holder !== waiting &&
+        holder.dispatched &&
+        holder.active &&
+        holder.activeBuilds &&
+        activePreparationPriority(waiting.active, queuedPriority) <
+          activePreparationPriority(holder.active, queuedPriority)
+      )
+        pool.replace(holder, holder.active);
+  }
+};
+
 export const createPreparationClient = (
   createWorker: () => Worker,
   cleanup?: (homes: PreparationHome[]) => Promise<void>,
@@ -121,19 +142,24 @@ export const createPreparationClient = (
         !job.resources!.some((key) => other.resources!.some((otherKey) => preparationResourcesOverlap(key, otherKey))),
     );
   };
+  // A held job's preemptor is busy while any of its jobs is queued or running on a worker.
+  const clock = createYieldClock(
+    () => [...queued, ...pool.slots.map((slot) => slot.active)],
+    () => schedule(),
+  );
   const candidates = () => [
     ...queued,
     ...pool.slots.flatMap((slot) => (!slot.dispatched && slot.active ? [slot.active] : [])),
   ];
   const nextFor = (slot: PreparationWorkerSlot) => {
     const pending = candidates();
-    if (!orderPreparationQueue(pending, queuedPriority, continuations)) return;
+    if (!orderPreparationQueue(pending, queuedPriority, continuations, clock)) return;
     // An exclusive job is a barrier: later installs cannot starve a watcher,
     // global scan or adoption by continually filling the other slot.
     const barrier = pending.findIndex((job) => !job.resources);
     const available = barrier < 0 ? pending : pending.slice(0, barrier + 1);
     return available.find((job) => {
-      if (!orderPreparationQueue([job], queuedPriority, continuations)) return false;
+      if (!orderPreparationQueue([job], queuedPriority, continuations, clock)) return false;
       const owner = pool.slots.find((other) => other.active === job);
       return (!owner || owner === slot) && compatible(job, slot);
     });
@@ -181,27 +207,14 @@ export const createPreparationClient = (
   const pump = (backgroundReady = false) => {
     if (!stopping) for (const slot of pool.slots) pumpSlot(slot, backgroundReady);
   };
-  const preemptBuildBlockers = () => {
-    for (const waiting of pool.slots) {
-      if (!waiting.dispatched || !waiting.active || !waiting.waitingBuilds) continue;
-      for (const holder of pool.slots)
-        if (
-          holder !== waiting &&
-          holder.dispatched &&
-          holder.active &&
-          holder.activeBuilds &&
-          activePreparationPriority(waiting.active, queuedPriority) <
-            activePreparationPriority(holder.active, queuedPriority)
-        )
-          pool.replace(holder, holder.active);
-    }
-  };
+  const preemptBuildBlockers = () => preemptPreparationBuildBlockers(pool, queuedPriority);
   const schedule = (backgroundReady = false) => {
+    refreshYieldHolds(candidates(), clock);
     if (!stopping) preemptBuildBlockers();
     pump(backgroundReady);
     if (stopping) return;
     const pending = candidates();
-    if (!orderPreparationQueue(pending, queuedPriority, continuations) || !pending[0]) return;
+    if (!orderPreparationQueue(pending, queuedPriority, continuations, clock) || !pending[0]) return;
     const next = pending[0];
     // Use an eligible idle slot before retiring background work. Exclusive
     // requests must wait for both owners, so retire each lower-priority blocker.
@@ -225,11 +238,8 @@ export const createPreparationClient = (
           )
           .slice(0, 1);
     for (const slot of targets)
-      if (queuedPriority(next) < activePreparationPriority(slot.active!, queuedPriority)) {
+      if (queuedPriority(next) < activePreparationPriority(slot.active!, queuedPriority))
         pool.replace(slot, yieldPreparation(slot.active!, next));
-        // Reconsider the held job when its hold lapses, even if nothing else changes by then.
-        setTimeout(() => schedule(), PREPARATION_YIELD_HOLD_MS + 1).unref?.();
-      }
   };
   return {
     withContinuation: continuePreparation(continuations),

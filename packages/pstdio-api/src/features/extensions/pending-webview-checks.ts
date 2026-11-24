@@ -32,6 +32,26 @@ export const joinPreparationDependencies = <T>(
   });
 };
 
+/** Runs preparation work under its own scope, so another caller that waits for it can lend it urgency. */
+export const ownedPreparation = <T>(work: () => Promise<T>) => {
+  const owner: CheckOwner = { scope: createPreparationScope(), settled: false };
+  const settled = owner.scope.run(work).finally(() => {
+    owner.settled = true;
+    owner.scope.dispose();
+  });
+  return { owner, work: settled };
+};
+
+/** Waits for another caller's preparation work while lending it this caller's urgency. */
+export const awaitOwnedPreparation = async <T>(owner: CheckOwner, work: T | Promise<T>) => {
+  const caller = createPreparationScope();
+  try {
+    return await joinPreparationDependencies(caller, [owner], Promise.resolve(work));
+  } finally {
+    caller.dispose();
+  }
+};
+
 // Refresh callers await their own work. Requests depend on every overlapping check,
 // and lend urgency to all of those checks without repeating their inspection work.
 export const createPendingWebviewChecks = (onChecked: (id: string, webviews: string[]) => void) => {
