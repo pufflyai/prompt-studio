@@ -59,12 +59,14 @@ export const createProjectAccess = (connection: ReturnType<typeof connectRelay>)
   };
   return {
     write: <T>(key: string, handle: () => Promise<T>, signal?: AbortSignal) =>
-      connection.run((db) =>
-        db.transaction(async (tx) => {
-          await admit(tx, key);
-          signal?.throwIfAborted();
-          return handle();
-        }),
+      connection.run(
+        (db) =>
+          db.transaction(async (tx) => {
+            await admit(tx, key);
+            signal?.throwIfAborted();
+            return handle();
+          }),
+        signal,
       ),
     async response(key: string, signal: AbortSignal, handle: () => Promise<Response | undefined>) {
       const result = Promise.withResolvers<Response | undefined>();
@@ -84,7 +86,7 @@ export const createProjectAccess = (connection: ReturnType<typeof connectRelay>)
         result.resolve(releaseWithBody(response, released.resolve, signal));
         await released.promise;
       };
-      void connection.run((db) => db.transaction(serve)).catch(result.reject);
+      void connection.run((db) => db.transaction(serve), signal).catch(result.reject);
       return result.promise;
     },
   };

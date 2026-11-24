@@ -64,14 +64,21 @@ export const createPersonalDocuments = (input: {
     records?.close();
     shared?.close();
   };
+  const currentSpace = () =>
+    preparedRevision === keyRevision && !(config.userId && keysFor?.aborted) ? spaces?.personal : undefined;
   return {
     relayFor,
     close,
+    bindLiveSend<Message>(send: (message: Message) => void) {
+      return (space: SyncSpace | undefined) => (message: Message) => {
+        if (!config.userId || (space && currentSpace() === space)) send(message);
+      };
+    },
     invalidateKeys() {
       keyRevision++;
     },
     get space() {
-      return preparedRevision === keyRevision && !(config.userId && keysFor?.aborted) ? spaces?.personal : undefined;
+      return currentSpace();
     },
     owns: (id: string) => ids.includes(id),
     changed(id: string) {

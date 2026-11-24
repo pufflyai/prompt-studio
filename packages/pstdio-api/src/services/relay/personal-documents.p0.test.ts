@@ -47,8 +47,14 @@ test("a delayed private team log cannot use the renewed attempt's access", async
   try {
     const first = await documents.prepare(old.signal);
     const delayed = documents.relayFor(first.personal);
+    const previews: string[] = [];
+    const send = documents.bindLiveSend((message: string) => previews.push(message));
+    const delayedPreview = send(first.personal);
     old.abort(new Error("Old team sync attempt ended"));
     const current = await documents.prepare(next.signal);
+    delayedPreview("old generation");
+    send(current.personal)("current generation");
+    expect(previews).toEqual(["current generation"]);
     await expect(delayed(await first.personal.documentId("log")).read(0)).rejects.toThrow(
       "Old team sync attempt ended",
     );

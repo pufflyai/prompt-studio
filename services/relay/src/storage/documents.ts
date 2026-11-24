@@ -122,7 +122,7 @@ export const createSyncDocuments = ({ connection, payloads, access, limits, chan
             }),
           signal,
         );
-        await payloads.put(objectKey, uploadId, bytes);
+        await payloads.put(objectKey, uploadId, bytes, signal);
         return connection.run(
           (db) =>
             db.transaction(async (tx) => {

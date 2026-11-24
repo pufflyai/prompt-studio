@@ -9,7 +9,7 @@ import {
   syncRoute,
 } from "pstdio-sync-contracts";
 import { projectKey, type SyncCaller, SyncRejection } from "../storage/accounts";
-import { verifyBearer } from "./authorization";
+import { relayDeviceKey, verifyBearer } from "./authorization";
 import type { RelayOwners } from "./owners";
 import { relayResponse } from "./responses";
 import type { RelaySocket } from "./sockets";
@@ -121,7 +121,8 @@ export const handleSyncRequest = async (
       (!identity.publication.canWrite && identity.publication.documents.includes(route.documentId)))
   )
     return syncFailure(403, "forbidden");
-  if (!owners.allow(identity.environmentId)) return syncFailure(429, "rate-limited", { "retry-after": "1" });
+  if (!owners.allow(relayDeviceKey(identity.accountId, identity.userId, identity.environmentId)))
+    return syncFailure(429, "rate-limited", { "retry-after": "1" });
   const key = projectKey(identity.accountId, route.projectId);
   const caller: SyncCaller = { accountId: identity.accountId, deviceId: identity.environmentId };
   const remaining = Date.parse(identity.expiresAt) - Date.now();

@@ -24,6 +24,7 @@ import { deviceProfile } from "../../../account-manager/src/authority.fixture";
 import { createAuthenticationFixture } from "../../../account-manager/src/manager-authentication.fixture";
 import { defaultRelayLimits } from "../limits";
 import { startRelay } from "../service";
+import { projectKey } from "../storage/accounts";
 import { encode, randomId, sha256 } from "../storage/sync-fixture";
 import { createTransportFixture } from "./integration-fixture";
 
@@ -642,7 +643,7 @@ test("different team users share encrypted records and revocation cuts off the o
 
     const email = `${crypto.randomUUID()}@fixture.test`;
     const signedIn = await identity.login(crypto.randomUUID(), email);
-    const member = await identity.auth.loginDevice(signedIn.headers, deviceProfile());
+    const member = await identity.auth.loginDevice(signedIn.headers, { ...deviceProfile(), deviceId: device.deviceId });
     const invite = await request(device.token, `${team}/invitations`, { email });
     const { url } = createdTeamInvitationSchema.parse(await invite.json());
     const redeemed = await request(member.token, "/v1/team-invitations/accept", { secret: new URL(url).hash.slice(1) });
@@ -689,8 +690,18 @@ test("different team users share encrypted records and revocation cuts off the o
     expect(await memberSpaces.personal.documentId("fixture.private")).not.toBe(
       await ownerSpaces.personal.documentId("fixture.private"),
     );
+    const ownerLive = relay.connect(ownerLease.token);
+    expect((await ownerLive.next()).type).toBe("ready");
     const live = relay.connect(memberLease.token);
     expect((await live.next()).type).toBe("ready");
+    live.socket.send(
+      JSON.stringify({ type: "subscribe", spaceOwner: null, topic: documentId, requestId: "subscribed" }),
+    );
+    expect((await live.next()).type).toBe("control-result");
+    ownerLive.socket.send(JSON.stringify({ type: "follow", spaceOwner: null, topic: documentId }));
+    expect(await ownerLive.next()).toMatchObject({ type: "subscribers", active: true });
+    ownerLive.socket.send(JSON.stringify({ type: "publish", spaceOwner: null, topic: documentId, payload: "AA==" }));
+    expect(await live.next()).toMatchObject({ type: "event", payload: "AA==" });
     live.socket.send(JSON.stringify({ type: "discover", spaceOwner: device.accountId }));
     expect((await live.closed).code).toBe(1008);
     const send = async (space: typeof ownerSpaces.project, text: string, token: string) => {
@@ -716,7 +727,21 @@ test("different team users share encrypted records and revocation cuts off the o
     expect((await grant(false)).status).toBe(200);
     expect((await renew(member.token)).status).toBe(401);
     await expect(spaces(member)).rejects.toThrow("Sync keys unavailable");
-    await Bun.sleep(Math.max(0, Date.parse(memberLease.expiresAt) - Date.now()) + 10);
+    const lock = new Client({ connectionString: fixture.relayDatabaseUrl });
+    await lock.connect();
+    try {
+      await lock.query("BEGIN");
+      await lock.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+        `relay-project:${projectKey(accountId, projectId)}`,
+      ]);
+      const pending = relay.post({ ...route, operation: "read" }, { after: 0 }, memberLease.token);
+      await fixture.waitForBlockedData(1, AbortSignal.timeout(500));
+      const wait = Math.max(0, Date.parse(memberLease.expiresAt) - Date.now());
+      const expired = await Promise.race([pending, Bun.sleep(wait + 500).then(() => undefined)]);
+      expect(expired?.status).toBe(401);
+    } finally {
+      await lock.end();
+    }
     expect((await relay.post({ ...route, operation: "read" }, { after: 0 }, memberLease.token)).status).toBe(401);
     const rotated = await spaces(device);
     const current = await send(rotated.project, "after cutoff", (await access(device.token)).token);
