@@ -1,6 +1,6 @@
 import type { ExtensionContextBase, ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { connectionApi } from "./connection";
-import { rememberEnvironmentCleanup } from "./environment-cleanup";
+import { hasEnvironmentCleanup, rememberEnvironmentCleanup } from "./environment-cleanup";
 import { type Claim, durableClaim, listEnvironments } from "./environments";
 import type { RunRecord } from "./runs";
 
@@ -23,20 +23,50 @@ async function rememberOrphan(store: ExtensionStorageApi, environmentId: string,
   await rememberEnvironmentCleanup(store, { environmentId, runId, stop: true, orphan: true });
 }
 
+function expiredLease(claim: Claim) {
+  return (
+    !claim.setup &&
+    !claim.legacy &&
+    typeof claim.until === "number" &&
+    Number.isFinite(claim.until) &&
+    claim.until <= Date.now()
+  );
+}
+
+async function reconcileTerminalClaim(store: ExtensionStorageApi, claim: Claim, run: RunRecord) {
+  const summary = run.summary;
+  // A historical final receipt proves completion; an admission failure or a
+  // synthetic deadline result does not prove that accepted work has stopped.
+  if (
+    run.runId !== claim.runId ||
+    run.pendingResult ||
+    run.submissionPending ||
+    !summary ||
+    summary.runId !== run.runId ||
+    summary.environmentId !== run.environmentId ||
+    !["passed", "failed", "canceled", "timed_out"].includes(summary.status) ||
+    (summary.status === "timed_out" && summary.error)
+  )
+    return;
+  const claims = store.collection<Claim>("environment-claims");
+  const current = await claims.read(run.environmentId);
+  if (!current || current.value.runId !== claim.runId || !expiredLease(current.value)) return;
+  const cleanup = { environmentId: run.environmentId, runId: run.runId, stop: true };
+  if (await hasEnvironmentCleanup(store, cleanup)) return;
+  if (run.stopAfterRun) await rememberEnvironmentCleanup(store, cleanup);
+  else await claims.deleteIfValue(run.environmentId, current.value);
+}
+
 export async function recoverLegacyClaims(ctx: LegacyContext) {
   const claims = ctx.storage.collection<Claim>("environment-claims");
   const orphans = new Set<string>();
   for (const claim of await claims.list()) {
     if (claim.legacy) {
       await rememberOrphan(ctx.storage, claim.legacy.environmentId, claim.runId);
-    } else if (
-      !claim.setup &&
-      typeof claim.until === "number" &&
-      Number.isFinite(claim.until) &&
-      claim.until <= Date.now() &&
-      !(await ctx.storage.get(`run:${claim.runId}`))
-    ) {
-      orphans.add(claim.runId);
+    } else if (expiredLease(claim)) {
+      const run = await ctx.storage.get<RunRecord>(`run:${claim.runId}`);
+      if (run) await reconcileTerminalClaim(ctx.storage, claim, run);
+      else orphans.add(claim.runId);
     }
   }
   if (!orphans.size || !ctx.connections || !ctx.projectId) return;

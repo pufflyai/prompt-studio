@@ -35,6 +35,10 @@ export async function rememberEnvironmentCleanup(
   });
 }
 
+export async function hasEnvironmentCleanup(store: ExtensionStorageApi, input: EnvironmentCleanupInput) {
+  return Boolean(await cleanupIntents(store).get(cleanupId(input)));
+}
+
 async function cleanupResultState(store: ExtensionStorageApi, input: EnvironmentCleanupInput) {
   const intent = await cleanupIntents(store).get(cleanupId(input));
   if (!intent?.afterTimeout) return "ready";

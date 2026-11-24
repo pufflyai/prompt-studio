@@ -7,15 +7,36 @@ import { cleanupRunEnvironment, type EnvironmentCleanupInput } from "./environme
 import { activeRun } from "./environments";
 import { localProcess } from "./process-fixture";
 import { createRunStorage } from "./run-storage-fixture";
-import { checkRun, listRuns, type RunDeps, startRun } from "./runs";
+import { checkRun, listRuns, type RunDeps, type RunSummary, startRun } from "./runs";
 
-test("a definitive pre-admission template rejection preserves an explicitly kept workspace", async () => {
+test.each([
+  "none",
+  "transient",
+  "aborted",
+] as const)("a definitive pre-admission rejection preserves a kept workspace (save fault: %s)", async (saveFault) => {
   const root = await mkdtemp(join(tmpdir(), "pr2409-rejected-"));
   try {
     await localProcess.runOrThrow({ command: ["git", "-C", root, "init", "-q"] });
     await Bun.write(join(root, "source.txt"), "source");
     const store = createRunStorage();
     const calls: string[] = [];
+    let failures = 0;
+    let attemptedSummary: RunSummary | undefined;
+    const controller = new AbortController();
+    const commit = store.records.commitIfCurrent;
+    store.records.commitIfCurrent = async (group) => {
+      if (saveFault !== "none" && !failures && group.edits.some((edit) => edit.set?.["/summary"])) {
+        failures++;
+        attemptedSummary = group.edits.find((edit) => edit.set?.["/summary"])?.set?.[
+          "/summary"
+        ] as unknown as RunSummary;
+        if (saveFault === "aborted") controller.abort(new Error("Stopped local rejection preparation"));
+        expect(await activeRun(store, "kept")).toBeString();
+        expect(intents).toHaveLength(0);
+        throw new Error("One transient summary write failure");
+      }
+      return commit(group);
+    };
     const api: Api = async ({ method, path }) => {
       calls.push(`${method} ${path}`);
       if (method === "POST" && path.endsWith("/requests")) {
@@ -45,12 +66,25 @@ test("a definitive pre-admission template rejection preserves an explicitly kept
       storage: { upload: async () => {}, signedUrl: async () => "http://localhost/source", download: async () => null },
       saveLog: async () => "run.log",
       cleanupEnvironment: async (input) => {
+        const saved = await store.get<{ summary?: { status: string; error?: string } }>(`run:${input.runId}`);
+        expect(saved?.summary).toMatchObject({ status: "error", error: expect.stringContaining("HTTP 409") });
+        expect(await activeRun(store, "kept")).toBe(input.runId);
         intents.push(input);
         await cleanupRunEnvironment({ api, store }, input);
       },
     };
-    await expect(startRun(deps, { root, environmentId: "kept", keepEnvironment: true })).rejects.toThrow("HTTP 409");
+    await expect(
+      startRun(deps, { root, environmentId: "kept", keepEnvironment: true }, controller.signal),
+    ).rejects.toThrow(saveFault === "aborted" ? "Stopped local rejection preparation" : "HTTP 409");
     const [record] = await listRuns(store);
+    if (saveFault === "aborted") {
+      expect(record.summary).toBeUndefined();
+      expect(await activeRun(store, "kept")).toBe(record.runId);
+      expect(intents).toEqual([]);
+      expect(calls.filter((call) => call.endsWith("/requests"))).toHaveLength(1);
+      return;
+    }
+    if (attemptedSummary) expect(record.summary).toEqual(attemptedSummary);
     const afterLaunch = { summary: record.summary?.status, claim: await activeRun(store, "kept") };
     const clock = Date.now;
     Date.now = () => clock() + 3600_000;
@@ -60,6 +94,8 @@ test("a definitive pre-admission template rejection preserves an explicitly kept
     } finally {
       Date.now = clock;
     }
+    expect(failures).toBe(Number(saveFault === "transient"));
+    expect(intents).toEqual([{ environmentId: "kept", runId: record.runId, stop: false }]);
     expect(afterLaunch).toEqual({ summary: "error", claim: null });
     expect(outcome).toMatchObject({ status: "error", error: expect.stringContaining("HTTP 409") });
     expect(calls).not.toContain("POST /v1/workspaces/kept/cancel");

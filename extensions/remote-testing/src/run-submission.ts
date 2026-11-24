@@ -1,4 +1,5 @@
 import { PocketCoderError } from "./connection";
+import { prepareResultStorage } from "./result-persistence";
 import type { RunDeps, RunRecord, RunSummary } from "./runs";
 
 // The controller validates this registration before executions.accept. Other
@@ -7,7 +8,12 @@ export function isDefinitiveSubmissionRejection(error: unknown) {
   return error instanceof PocketCoderError && error.status === 409 && error.code === "attachment.unsupported";
 }
 
-export async function saveSubmissionFailure(deps: RunDeps, record: RunRecord | undefined, error: unknown) {
+export async function saveSubmissionFailure(
+  deps: RunDeps,
+  record: RunRecord | undefined,
+  error: unknown,
+  preparation?: { signal?: AbortSignal },
+) {
   if (!record) return;
   const summary: RunSummary = {
     runId: record.runId,
@@ -19,6 +25,12 @@ export async function saveSubmissionFailure(deps: RunDeps, record: RunRecord | u
     tail: "",
     error: error instanceof Error ? error.message : String(error),
   };
+  const save = () => saveFailureSummary(deps, record, summary);
+  if (preparation) await prepareResultStorage(save, preparation.signal);
+  else await save();
+}
+
+async function saveFailureSummary(deps: RunDeps, record: RunRecord, summary: RunSummary) {
   const recordId = deps.store.records.id(`run:${record.runId}`);
   while (true) {
     const current = await deps.store.records.read(recordId);

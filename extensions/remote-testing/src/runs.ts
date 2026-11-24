@@ -178,7 +178,8 @@ export async function startRun(
     await notifyRunChange(deps);
     return { record, files, bytes };
   } catch (error) {
-    if (submissionAttempted && record && !isDefinitiveSubmissionRejection(error)) {
+    const definitive = isDefinitiveSubmissionRejection(error);
+    if (submissionAttempted && record && !definitive) {
       // An unacknowledged POST may already be executing. Its saved identity and
       // claim must survive transport failure and caller cancellation.
       await Promise.resolve()
@@ -187,8 +188,11 @@ export async function startRun(
       await notifyRunChange(deps);
       throw error;
     }
+    // A proven rejection has no remote receipt to recover. Make its original
+    // outcome durable before cleanup can relinquish the only recovery fence.
+    if (definitive) await saveSubmissionFailure(deps, record, error, { signal });
     await Promise.allSettled([
-      saveSubmissionFailure(deps, record, error),
+      definitive ? Promise.resolve() : saveSubmissionFailure(deps, record, error),
       Promise.resolve().then(() =>
         deps.cleanupEnvironment({
           environmentId: environment.id,
