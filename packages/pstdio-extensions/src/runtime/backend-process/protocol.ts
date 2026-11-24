@@ -1,3 +1,5 @@
+import { validatedCommandOutcomeSchema } from "pstdio-api-contracts";
+import type { CommandFailureDetails } from "pstdio-api-contracts/extension-kernel";
 import type { BackendSurface, SurfaceStep } from "./surface";
 
 /** Both sides reject messages of another version instead of guessing their meaning. */
@@ -11,6 +13,7 @@ export interface SerializedBackendError {
 }
 
 type Settled = { ok: true; value: unknown } | { ok: false; error: SerializedBackendError };
+type InvocationResult = Settled & { rejection?: CommandFailureDetails };
 
 export type HostToWorkerMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
   | { type: "load"; entryPath: string }
@@ -29,7 +32,7 @@ export type HostToWorkerMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
 export type WorkerToHostMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
   | { type: "ready" }
   | ({ type: "loaded" } & Settled)
-  | ({ type: "result"; invocationId: string } & Settled)
+  | ({ type: "result"; invocationId: string } & InvocationResult)
   | { type: "call"; invocationId: string; requestId: string; path: SurfaceStep[]; args: unknown[] }
   | { type: "notify"; invocationId: string; path: SurfaceStep[]; args: unknown[] }
 );
@@ -76,6 +79,19 @@ export const deserializeBackendError = (serialized: SerializedBackendError) => {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+// Use the public outcome schema for transferable details and discard unrelated fields.
+export const transferableCommandRejection = (value: unknown) => {
+  if (!isRecord(value)) return;
+  try {
+    const outcome = validatedCommandOutcomeSchema.safeParse({ ...value, ok: false, status: "rejected" });
+    if (!outcome.success || outcome.data.status !== "rejected") return;
+    const { ok: _ok, status: _status, ...details } = outcome.data;
+    return details;
+  } catch {
+    // Malformed details must still settle the invocation as an ordinary error.
+  }
+};
+
 const optionalString = (value: unknown) => value === undefined || typeof value === "string";
 
 const isError = (value: unknown) =>
@@ -103,9 +119,11 @@ export const parseWorkerMessage = (message: unknown): WorkerToHostMessage | unde
     case "loaded":
       return isSettled(message) ? (message as WorkerToHostMessage) : undefined;
     case "result":
-      return typeof message.invocationId === "string" && isSettled(message)
-        ? (message as WorkerToHostMessage)
-        : undefined;
+      if (typeof message.invocationId !== "string" || !isSettled(message)) return;
+      return {
+        ...message,
+        rejection: message.ok === false ? transferableCommandRejection(message.rejection) : undefined,
+      } as WorkerToHostMessage;
     case "call":
       return typeof message.invocationId === "string" &&
         typeof message.requestId === "string" &&
