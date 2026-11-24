@@ -65,7 +65,10 @@ const storageMembers = ({ projectId, namespace, deviceId, filePrefix }: StorageD
     observe: { kind: "subscribe" },
     text: { kind: "factory", returns: object(calls("edit")) },
     log: { kind: "factory", returns: log, snapshotArguments: true },
-    assets: object(calls("stage", "getTransfer", "cancel", "read", "verifyComplete")),
+    assets: object({
+      ...calls("getTransfer", "cancel", "read", "verifyComplete"),
+      stage: { kind: "asset-stage" },
+    }),
     ids: object({ create: { kind: "local", name: "storageId" } }),
     ...(deviceId ? { positions: object({ between: { kind: "local", name: "position", deviceId } }) } : {}),
     records: records(namespace),
