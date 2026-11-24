@@ -4,10 +4,84 @@ import { createScopedQueryClient } from "@pstdio/sdk/extensions";
 import { defaultPageResourceCodec } from "pstdio-api-contracts/extension-kernel";
 import { createWorkbench } from "../../core";
 import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
+import { runWorkbenchWebviewCommandOperation } from "../bridge/webview-command-operations";
+import { plannerGateLaunch, plannerGateLaunchCheck } from "./workbench-command-operation";
 import { type BoardCreationIntent, runCreateOperation } from "./workbench-create-operation";
 import { executeWorkbenchExtensionCommand } from "./workbench-extension-command";
 
 const command = { id: "planner.create-ticket", extensionId: "planner", title: "Create ticket" };
+
+test("a Planner gate read reconciles the exact bridge operation, allowing an intentional later launch", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "desktop", extensionId: "pstdio" });
+  const operations = getWorkbenchOperations(queries);
+  const workbench = createWorkbench({ queries });
+  const projectId = "project";
+  const metadata = {
+    commands: [
+      { id: plannerGateLaunch, extensionId: "pstdio.planner", title: "Review gate", mutating: true },
+      { id: plannerGateLaunchCheck, extensionId: "pstdio.planner", title: "Check gate review launch" },
+    ],
+  };
+  const success = (value: unknown) => ({ outcome: { ok: true, status: "success", value } });
+  const ticket = "ticket-1";
+  let writes = 0;
+  let visible = false;
+  const confirmed = (launchId: string) => ({ status: "confirmed", launchId, session: { id: "review-1" } });
+  const readGateLaunch = async ({ ticket: checkedTicket, attemptId }: { ticket: string; attemptId: string }) => {
+    expect(checkedTicket).toBe(ticket);
+    return success(visible ? confirmed(attemptId) : { status: "unconfirmed" });
+  };
+  const launch = (attemptId: string, after?: string) =>
+    runWorkbenchWebviewCommandOperation({
+      workbench,
+      projectId,
+      metadata,
+      request: { commandId: plannerGateLaunch, params: { ticket, attemptId, after } },
+      readGateLaunch,
+      execute: async () => {
+        if (++writes === 1) throw new PstdioConnectionError(new Error("Response lost"));
+        if (writes === 2)
+          return {
+            outcome: {
+              ok: false,
+              status: "error",
+              reason: "No harness",
+              error: { name: "GateLaunchRefused", message: "No harness" },
+            },
+          };
+        return success({ id: "review-2" });
+      },
+    });
+  const check = (launchId: string) =>
+    runWorkbenchWebviewCommandOperation({
+      workbench,
+      projectId,
+      metadata,
+      request: { commandId: plannerGateLaunchCheck, params: { ticket } },
+      execute: async () => success(confirmed(launchId)),
+    });
+  try {
+    await expect(launch("lost")).rejects.toBeInstanceOf(PstdioConnectionError);
+    const [entry] = operations.getSnapshot().recovery;
+    expect(entry).toMatchObject({ status: "unknown", canCheck: true, draft: { ticket, attemptId: "lost" } });
+    await operations.check(entry!.id);
+    expect(operations.getSnapshot().recovery).toHaveLength(1);
+    await expect(launch("blind-repeat")).rejects.toThrow("still pending");
+    visible = true;
+    await check("unrelated");
+    expect(operations.getSnapshot().recovery).toHaveLength(1);
+    await check("lost");
+    expect(operations.getSnapshot().recovery).toEqual([]);
+
+    await expect(launch("refused", "review-1")).resolves.toMatchObject({ outcome: { ok: false } });
+    expect(operations.getSnapshot().recovery[0]).toMatchObject({ status: "rejected", canCheck: false });
+    await expect(launch("intentional", "review-1")).resolves.toEqual(success({ id: "review-2" }));
+    expect(writes).toBe(3);
+  } finally {
+    await workbench.dispose();
+    queries.dispose();
+  }
+});
 
 test("an uncorrelated create keeps the submitted content and no read can guess its result", async () => {
   const queries = createScopedQueryClient({ runtimeId: "desktop", extensionId: "pstdio" });

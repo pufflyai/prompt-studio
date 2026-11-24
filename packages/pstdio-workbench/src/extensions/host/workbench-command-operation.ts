@@ -5,6 +5,7 @@ import { defaultPageResourceCodec } from "pstdio-api-contracts/extension-kernel"
 import { text } from "pstdio-extensions/workbench";
 import { z } from "zod";
 import { classifyApiWrite } from "../../core/registries/mutations/operation-failures";
+import type { OperationCheck } from "../../core/registries/mutations/operation-types";
 import { operationSubject, type WorkbenchOperations } from "../../core/registries/mutations/operations";
 
 export const extensionCommandOperation = "extension.command";
@@ -12,6 +13,8 @@ const artifactPublication = "pstdio.artifacts.command.publish";
 const plannerAttempt = "pstdio.planner.command.run-attempt";
 const plannerReview = "pstdio.planner.command.review";
 const plannerAutoBuildConfigure = "pstdio.planner.command.auto-build.configure";
+export const plannerGateLaunch = "pstdio.planner.command.timeline.gate.launch";
+export const plannerGateLaunchCheck = "pstdio.planner.command.timeline.gate.check-launch";
 const reviewDraftSchema = z.object({
   requestId: z.string(),
   response: z.union([
@@ -33,6 +36,8 @@ const plannerDraftSchemas = new Map<string, z.ZodType<Record<string, unknown>>>(
 ]);
 const isPlannerAttempt = (command: ExtensionCommandRecord) =>
   command.id === plannerAttempt && command.extensionId === "pstdio.planner";
+const isPlannerGateLaunch = (command: ExtensionCommandRecord) =>
+  command.id === plannerGateLaunch && command.extensionId === "pstdio.planner";
 
 const retainAttemptInput = (draft: Record<string, unknown>, params?: Record<string, unknown>) => {
   for (const key of ["ticket", "rowId"]) {
@@ -48,9 +53,15 @@ const retainAttemptInput = (draft: Record<string, unknown>, params?: Record<stri
   return draft;
 };
 
+const retainGateInput = (draft: Record<string, unknown>, params?: Record<string, unknown>) => {
+  for (const key of ["ticket", "after", "attemptId"]) if (typeof params?.[key] === "string") draft[key] = params[key];
+  return draft;
+};
+
 const retainedCommandDraft = (command: ExtensionCommandRecord, projectId: string, params?: Record<string, unknown>) => {
   const draft: Record<string, unknown> = { commandId: command.id };
   if (isPlannerAttempt(command)) return retainAttemptInput(draft, params);
+  if (isPlannerGateLaunch(command)) return retainGateInput(draft, params);
   if (command.extensionId === "pstdio.planner") {
     const result = plannerDraftSchemas.get(command.id)?.safeParse(params);
     if (result?.success) return { ...draft, ...result.data };
@@ -87,9 +98,12 @@ export const runWorkbenchCommandOperation = <T>(input: {
   source?: ResourceRef;
   params?: Record<string, unknown>;
   onAdmitted?(): void;
+  check?(signal: AbortSignal): Promise<OperationCheck<T>>;
   write(signal: AbortSignal): Promise<T>;
 }) => {
   const { operations, projectId, command, source } = input;
+  const gateTicket =
+    isPlannerGateLaunch(command) && typeof input.params?.ticket === "string" ? input.params.ticket : undefined;
   // The declaration does not promise a record identity. Match every invocation of the command in this project.
   const requestId =
     command.extensionId === "pstdio.planner" &&
@@ -97,7 +111,8 @@ export const runWorkbenchCommandOperation = <T>(input: {
     typeof input.params?.requestId === "string"
       ? input.params.requestId
       : undefined;
-  const subjects = requestId ? [command.id, requestId] : [command.id];
+  const identity = requestId ?? gateTicket;
+  const subjects = identity ? [command.id, identity] : [command.id];
   const subject = operationSubject(extensionCommandOperation, projectId, ...subjects);
   const { pending, recovery } = operations.getSnapshot();
   const matches = (entry: { subjects: readonly string[] }) => entry.subjects.includes(subject);
@@ -113,13 +128,18 @@ export const runWorkbenchCommandOperation = <T>(input: {
     describeRecovery: () => "The action could not be confirmed. Inspect its result before discarding the attempt.",
     releaseOnDiscard: true,
     showPending: true,
-    classify: (error) =>
-      isPlannerAttempt(command) &&
-      error instanceof CommandOutcomeError &&
-      error.outcome.status === "error" &&
-      error.outcome.error?.name === "AttemptLaunchRefused"
-        ? "rejected"
-        : classifyApiWrite(error),
+    classify: (error) => {
+      const refusal = isPlannerAttempt(command) ? "AttemptLaunchRefused" : "GateLaunchRefused";
+      if (
+        (isPlannerAttempt(command) || isPlannerGateLaunch(command)) &&
+        error instanceof CommandOutcomeError &&
+        error.outcome.status === "error" &&
+        error.outcome.error?.name === refusal
+      )
+        return "rejected";
+      return classifyApiWrite(error);
+    },
+    check: input.check,
     write: input.write,
   }).result;
   if (

@@ -12,8 +12,9 @@ import { isPageContent } from "../../core/registries/pages/page-main";
 import { applyCommandClipboard } from "./command-clipboard";
 import { unwrapCommandValue } from "./command-response";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
+import { checkExactGateLaunch, settleCheckedGateLaunch } from "./planner-gate-launch-check";
 import { remoteWorkspaceLaunchCommand, runRemoteWorkspaceLaunch } from "./remote-workspace-launch";
-import { runWorkbenchCommandOperation } from "./workbench-command-operation";
+import { plannerGateLaunch, plannerGateLaunchCheck, runWorkbenchCommandOperation } from "./workbench-command-operation";
 import { type CreateOperationFeedback, runCreateOperation } from "./workbench-create-operation";
 import { runResourceMutation } from "./workbench-resource-mutation";
 export interface WorkbenchExtensionCommandContext {
@@ -142,7 +143,15 @@ export const executeWorkbenchExtensionCommand = async (
   const resolved = command
     ? { ...resolveCommandResourceParams(command.params, input.params, { resource: input.resource }), ...input.params }
     : input.params;
-  const params = command?.confirmation ? { ...resolved, [command.confirmation.confirmedParam]: true } : resolved;
+  const provided = command?.confirmation ? { ...resolved, [command.confirmation.confirmedParam]: true } : resolved;
+  const hasGateCheck = context.metadata?.commands.some(
+    (record) => record.id === plannerGateLaunchCheck && record.extensionId === "pstdio.planner",
+  );
+  const trackGate = hasGateCheck && command?.id === plannerGateLaunch && command.extensionId === "pstdio.planner";
+  const params =
+    trackGate && typeof provided?.ticket === "string"
+      ? { ...provided, attemptId: provided.attemptId ?? crypto.randomUUID() }
+      : provided;
   const send = async (signal?: AbortSignal, id = commandId, bodyParams = params) =>
     unwrapCommandValue(
       await executeWorkbenchExtensionCommandResponse(context, id, {
@@ -152,6 +161,11 @@ export const executeWorkbenchExtensionCommand = async (
       }),
     );
   const operations = context.operations;
+  if (operations && hasGateCheck && commandId === plannerGateLaunchCheck) {
+    const result = await send();
+    await settleCheckedGateLaunch(operations, context.projectId, params?.ticket, result);
+    return result;
+  }
   if (operations && commandId === remoteWorkspaceLaunchCommand) {
     return runRemoteWorkspaceLaunch({
       commands: context.metadata?.commands ?? [],
@@ -171,6 +185,20 @@ export const executeWorkbenchExtensionCommand = async (
       source: input.resource,
       params,
       onAdmitted: input.onAdmitted,
+      check: trackGate
+        ? checkExactGateLaunch(
+            params,
+            (args, signal) =>
+              Promise.resolve(
+                context.executeCommand(
+                  plannerGateLaunchCheck,
+                  { projectId: context.projectId, params: args, source: "dashboard" },
+                  signal,
+                ),
+              ),
+            unwrapCommandValue,
+          )
+        : undefined,
       write: send,
     });
   const persist =

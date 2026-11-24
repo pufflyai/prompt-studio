@@ -25,7 +25,11 @@ export function GatePanel(props: { row: PlanRow; client: PlanClient }) {
         if (current.status === "ready") setRecovery(undefined);
         if (current.status === "unconfirmed") setError("No review session has been confirmed yet.");
       } else {
-        const session = await client.commands["timeline.gate.launch"]({ ticket: row.id, after: previous });
+        const session = await client.commands["timeline.gate.launch"]({
+          ticket: row.id,
+          after: previous,
+          attemptId: crypto.randomUUID(),
+        });
         setRecovery({ ticketId: row.id, session });
       }
     } catch (reason) {

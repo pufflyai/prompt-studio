@@ -94,7 +94,7 @@ export function TicketForm(props: TicketFormProps) {
     if (pending === "placement") await client.commands["timeline.plan.move"]({ ticket: id, deadline });
     if (kind === "gate") {
       setCreated({ id, pending: "check-launch" });
-      await client.commands["timeline.gate.launch"]({ ticket: id });
+      await client.commands["timeline.gate.launch"]({ ticket: id, attemptId: crypto.randomUUID() });
     }
     onDone(id);
   };

@@ -5,7 +5,12 @@ import type { WorkbenchCore } from "../../core";
 import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import { getWorkbenchQueries } from "../../core/workbench-queries";
 import { unwrapCommandValue } from "../host/command-response";
-import { runWorkbenchCommandOperation } from "../host/workbench-command-operation";
+import { checkExactGateLaunch, settleCheckedGateLaunch } from "../host/planner-gate-launch-check";
+import {
+  plannerGateLaunch,
+  plannerGateLaunchCheck,
+  runWorkbenchCommandOperation,
+} from "../host/workbench-command-operation";
 import { declaredCreateCommandIds, runCreateOperation } from "../host/workbench-create-operation";
 import { runWorkspaceWebviewMutation, type WebviewOperationRequest } from "./workspace-webview-mutations";
 
@@ -20,6 +25,7 @@ export const runWorkbenchWebviewCommandOperation = async (input: {
   metadata?: WebviewCommandMetadata;
   signal?: AbortSignal;
   execute(signal?: AbortSignal): Promise<unknown>;
+  readGateLaunch?(params: { ticket: string; attemptId: string }, signal: AbortSignal): Promise<unknown>;
 }) => {
   const { request, metadata, projectId, workbench } = input;
   let response: unknown;
@@ -33,14 +39,25 @@ export const runWorkbenchWebviewCommandOperation = async (input: {
     const command = metadata?.commands.find((record) => record.id === request.commandId);
     if (!command || !metadata) return await execute(input.signal);
     if (!declaredCreateCommandIds(metadata).has(command.id)) {
+      const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
+      if (command.id === plannerGateLaunchCheck && command.extensionId === "pstdio.planner") {
+        const result = await execute(input.signal);
+        await settleCheckedGateLaunch(operations, projectId, request.params?.ticket, unwrapCommandValue(result));
+        return result;
+      }
       if (!command.mutating) return await execute(input.signal);
       input.signal?.throwIfAborted();
+      const check =
+        command.id === plannerGateLaunch && command.extensionId === "pstdio.planner" && input.readGateLaunch
+          ? checkExactGateLaunch(request.params, input.readGateLaunch, unwrapCommandValue)
+          : undefined;
       return await runWorkbenchCommandOperation({
-        operations: getWorkbenchOperations(getWorkbenchQueries(workbench)),
+        operations,
         projectId,
         command,
         source: input.resource,
         params: request.params,
+        check,
         async write(signal) {
           const result = await execute(signal);
           unwrapCommandValue(result);
