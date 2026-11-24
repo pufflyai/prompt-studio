@@ -5,6 +5,8 @@ import { ScrollArea } from "@/components/primitives/scroll-area";
 import { SimpleCard } from "@/components/primitives/simple-card";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
 import { DashboardChart } from "./dashboard-chart";
+import { DashboardRingChart } from "./dashboard-ring-chart";
+import { DashboardScatterChart } from "./dashboard-scatter-chart";
 import { type DashboardDataSource, type DashboardWidget, widgetLabel } from "./dashboard-types";
 
 interface WidgetCardProps {
@@ -67,6 +69,16 @@ export function WidgetCard(props: WidgetCardProps) {
               No chart data
             </Text>
           )}
+        </Box>
+      )}
+      {widget.kind === "scatter" && (
+        <Box css={styles.plot}>
+          <DashboardScatterChart label={widgetLabel(widget)} scatter={source?.scatter} />
+        </Box>
+      )}
+      {widget.kind === "ring" && (
+        <Box css={styles.plot}>
+          <DashboardRingChart label={widgetLabel(widget)} series={source?.series} />
         </Box>
       )}
       {widget.kind === "table" && (
