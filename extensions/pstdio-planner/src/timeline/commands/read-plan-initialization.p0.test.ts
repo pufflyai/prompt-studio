@@ -46,9 +46,10 @@ test("the first Timeline page initializes its execution prefix and continues wit
 
   // The existing continuation contract rejects a revision changed by initialization.
   // The renderer restarts the same offset once without its old cursor/revision.
+  const refreshed = await readPlanCommand.run(ctx, { page: page(0) });
   await expect(
     readPlanCommand.run(ctx, {
-      page: { ...page(100), revision: first.page.revision },
+      page: { ...page(100), revision: refreshed.page.revision },
     }),
   ).rejects.toThrow("stale");
   const later = await readPlanCommand.run(ctx, { page: page(100) });
