@@ -60,17 +60,20 @@ const workbenchRoute = async (
   const { method } = request;
   const keys = /^\/v1\/workbenches\/([^/]+)\/keys$/.exec(path);
   if (keys && method === "GET") {
-    const found = await devices.keys(bearer(request), decodeURIComponent(keys[1]), accountId);
+    const grantId = new URL(request.url).searchParams.get("grantId") ?? undefined;
+    const found = await devices.keys(bearer(request), decodeURIComponent(keys[1]), accountId, grantId);
     return found ? json(found) : json({ error: "Unknown workbench" }, 404);
   }
   const workbench = /^\/v1\/workbenches\/([^/]+?)(\/remove)?$/.exec(path);
   if (workbench && method === "POST") {
     const id = decodeURIComponent(workbench[1]);
-    return ok(
-      workbench[2]
-        ? devices.removeWorkbench(bearer(request), id, accountId)
-        : devices.addWorkbench(bearer(request), id, accountId),
-    );
+    const token = bearer(request);
+    if (workbench[2]) return ok(devices.removeWorkbench(token, id, accountId));
+    const grantSelf =
+      accountId && request.body
+        ? z.strictObject({ grantSelf: z.boolean().optional() }).parse(await request.json()).grantSelf
+        : undefined;
+    return ok(devices.addWorkbench(token, id, accountId, grantSelf));
   }
   return null;
 };

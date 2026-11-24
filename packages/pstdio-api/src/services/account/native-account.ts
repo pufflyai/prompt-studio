@@ -37,6 +37,7 @@ import { createProjectCloudCatalog } from "./project-cloud-catalog";
 import { createProjectCopyStore } from "./project-copy-store";
 import { canPublishProjectExtensions } from "./project-publication-access";
 import { initialProjectSyncStatus, recoveringProjectSyncStatus } from "./project-sync-readiness";
+import { createTeamSyncAdmission } from "./team-sync-admission";
 
 type FolderRecoveryOwners = (projectId: string) => ReturnType<typeof startFolderRecovery> | undefined;
 
@@ -159,6 +160,7 @@ export const createNativeAccount = (input: {
   let retryProject: ProjectSyncRetry = async () => {};
   let folders: FolderRecoveryOwners = () => undefined;
   const away = createNativeCloudReturn();
+  const admitTeams = createTeamSyncAdmission(copies, away);
   const commands = createDeviceCommandSender();
   const missing = createMissingProjectRecovery({
     exists: async (id) => Boolean(await input.projects.get(id)),
@@ -228,7 +230,7 @@ export const createNativeAccount = (input: {
       exists: input.projects.get,
       recovering: missing.recovering,
     });
-    await update(local);
+    await admitTeams(login, local, projectsFor(login), update);
     if (recoverMissing) missing.recover(absent);
     await away.settle(login, projectsFor);
   };

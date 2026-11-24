@@ -26,7 +26,7 @@ import { listOutstandingProjectDeletions, readProjectDeletion, startProjectDelet
 import { readProviderIdentity } from "./provider-identity";
 import { DeviceAccessDenied } from "./renewal-errors";
 import { accounts, projectMembers, teams } from "./schema";
-import { spaceKeysInTransaction } from "./space-keys";
+import { hasProjectKeyHistory, spaceKeysInTransaction } from "./space-keys";
 import {
   acceptTeamInvitation,
   cancelTeamInvitation,
@@ -36,7 +36,7 @@ import {
   listTeamMembers,
   removeTeamMember,
 } from "./team-invitations";
-import { hasTeamProjectGrant, listTeamProjectAccess, updateTeamProjectGrant } from "./team-project-access";
+import { listTeamProjectAccess, teamProjectGrant, updateTeamProjectGrant } from "./team-project-access";
 import { createTeam, listTeams, requireTeamMember, TeamMembershipDenied } from "./teams";
 import { lockAccount, withAccountTransaction } from "./transactions";
 
@@ -221,25 +221,27 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
         if (!owner) throw new DeviceAccessDenied();
         return startProjectDeletion(transaction, { accountId, workbenchId: identitySchema.parse(workbenchId) });
       }),
-    keys: (token: string, value: string, selected?: string) =>
+    keys: (token: string, value: string, selected?: string, expectedGrant?: string) =>
       scoped(token, selected, async (transaction, accountId, userId) => {
         const workbenchId = identitySchema.parse(value);
-        if (accountId !== userId && !(await hasTeamProjectGrant(transaction, accountId, workbenchId, userId)))
-          return null;
+        if (accountId !== userId) {
+          const grant = await teamProjectGrant(transaction, accountId, workbenchId, userId);
+          if (!grant || expectedGrant !== grant) return null;
+        }
         return spaceKeysInTransaction(transaction, { accountId, workbenchId }, userId);
       }),
-    addWorkbench: (token: string, value: string, selected?: string) =>
+    addWorkbench: (token: string, value: string, selected?: string, grantSelf = false) =>
       scoped(token, selected, async (transaction, accountId, userId, owner) => {
         if (!owner) throw new DeviceAccessDenied();
         const workbenchId = identitySchema.parse(value);
         await requireRelay(transaction, accountId);
         const [created] = await addWorkbenchInTransaction(transaction, { accountId, workbenchId });
         if (accountId === userId) return;
-        if (created) {
-          await transaction.insert(projectMembers).values({ accountId, workbenchId, userId });
-        } else if (!(await hasTeamProjectGrant(transaction, accountId, workbenchId, userId))) {
+        if (!created && (await teamProjectGrant(transaction, accountId, workbenchId, userId))) return;
+        const newProject = created && !(await hasProjectKeyHistory(transaction, accountId, workbenchId));
+        if (!newProject && !grantSelf)
           throw new TeamMembershipDenied("Grant yourself access before opening this team project");
-        }
+        await transaction.insert(projectMembers).values({ accountId, workbenchId, userId });
       }),
     removeWorkbench: (token: string, workbenchId: string, selected?: string) =>
       scoped(token, selected, async (transaction, accountId, _userId, owner) => {

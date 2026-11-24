@@ -29,11 +29,18 @@ const teamProjectSchema = z.strictObject({
   managerOrigin: copySchema.shape.managerOrigin,
 });
 type TeamProject = z.infer<typeof teamProjectSchema>;
+const teamAdmissionSchema = teamProjectSchema.extend({
+  userId: identitySchema,
+  deviceId: identitySchema,
+  grantId: identitySchema,
+});
+export type TeamAdmission = z.infer<typeof teamAdmissionSchema>;
 
 const copyFileSchema = z.strictObject({
   copies: z.array(copySchema),
   rosters: z.array(rosterSchema).default([]),
   teamProjects: z.array(teamProjectSchema).default([]),
+  teamAdmissions: z.array(teamAdmissionSchema).default([]),
 });
 type ProjectRoster = z.infer<typeof rosterSchema>;
 
@@ -49,13 +56,34 @@ const matches = (row: AccountDevice, identity: AccountDevice) =>
   row.userId === identity.userId &&
   row.deviceId === identity.deviceId;
 const isCopy = (row: ProjectCopy, key: CopyIdentity) => row.projectId === key.projectId && matches(row, key);
+const sameAdmission = (left: TeamAdmission, right: TeamAdmission) =>
+  left.projectId === right.projectId && matches(left, right);
 
 // The catalog survives logout without putting the choice or device credential into synced content.
 export const createProjectCopyStore = (accountFile: string) => {
   const path = `${accountFile}.project-copies.json`;
-  const read = () => readPrivateFile(path, copyFileSchema, { copies: [], rosters: [], teamProjects: [] });
+  const read = () =>
+    readPrivateFile(path, copyFileSchema, { copies: [], rosters: [], teamProjects: [], teamAdmissions: [] });
   return {
     teamProjects: () => serializeNativeWrite(path, async () => (await read()).teamProjects),
+    teamAdmissions: (login: Pick<ScopedDeviceLogin, "managerOrigin" | "accountId" | "deviceId">) =>
+      serializeNativeWrite(path, async () =>
+        (await read()).teamAdmissions.filter(
+          (row) =>
+            row.managerOrigin === login.managerOrigin &&
+            row.userId === login.accountId &&
+            row.deviceId === login.deviceId,
+        ),
+      ),
+    rememberTeamAdmissions: (admitted: TeamAdmission[]) =>
+      serializeNativeWrite(path, async () => {
+        const current = await read();
+        const previous = current.teamAdmissions.filter((row) => !admitted.some((next) => sameAdmission(row, next)));
+        await writePrivateFile(path, {
+          ...current,
+          teamAdmissions: [...previous, ...admitted.map((row) => teamAdmissionSchema.parse(row))],
+        });
+      }),
     bindTeamProject: (binding: TeamProject, canClaim: () => Promise<boolean>) =>
       serializeNativeWrite(path, async () => {
         const current = await read();

@@ -15,17 +15,17 @@ export const teamUserProjectIds = async (transaction: ManagerTransaction, accoun
       .where(and(eq(projectMembers.accountId, accountId), eq(projectMembers.userId, userId)))
   ).map(({ id }) => id);
 
-export const hasTeamProjectGrant = async (
+export const teamProjectGrant = async (
   transaction: ManagerTransaction,
   accountId: string,
   workbenchId: string,
   userId: string,
 ) => {
   const [grant] = await transaction
-    .select({ userId: projectMembers.userId })
+    .select({ grantId: projectMembers.grantId })
     .from(projectMembers)
     .where(and(teamProject(accountId, workbenchId), eq(projectMembers.userId, userId)));
-  return Boolean(grant);
+  return grant?.grantId;
 };
 
 // Owners can manage grant metadata even after removing their own content access.

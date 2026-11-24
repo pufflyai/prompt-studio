@@ -8,7 +8,7 @@ import type { createPersonalContext } from "./personal-context";
 import { createSyncQuarantine } from "./quarantine";
 import type { RelayWorkbench } from "./runtime";
 
-/** Only the small index and shared pointers use CRDTs. Their sync objects survive access renewal. */
+/** The small index and shared pointers use CRDTs. Team sync binds their keys to one attempt. */
 export const createPersonalDocuments = (input: {
   config: RelayWorkbench;
   context: ReturnType<typeof createPersonalContext>;
@@ -20,6 +20,7 @@ export const createPersonalDocuments = (input: {
   const { config, context } = input;
   let requestSignal = input.signal;
   let keysFor: AbortSignal | undefined;
+  const teamAttempts = new WeakMap<SyncSpace, AbortSignal>();
   let keyRevision = 0;
   let preparedRevision = -1;
   let spaces: Awaited<ReturnType<typeof fetchSyncSpaces>> | undefined;
@@ -30,18 +31,25 @@ export const createPersonalDocuments = (input: {
   let allIndexes = true;
   let downloaded = false;
   const knownIndexes = new Set<string>();
-  const relayFor = (space: SyncSpace, subscribe?: SubscribeDocument) => (documentId: string) => {
-    return createDocumentRelay({
-      subscribe,
-      origin: config.relayOrigin,
-      space,
-      documentId,
-      get signal() {
-        return requestSignal;
-      },
-      token: async () => (await input.access()).token,
-      progress: input.progress,
-    });
+  const relayFor = (space: SyncSpace, subscribe?: SubscribeDocument) => {
+    const attempt = teamAttempts.get(space);
+    return (documentId: string) =>
+      createDocumentRelay({
+        subscribe,
+        origin: config.relayOrigin,
+        space,
+        documentId,
+        get signal() {
+          return attempt ?? requestSignal;
+        },
+        token: async () => {
+          attempt?.throwIfAborted();
+          const access = await input.access();
+          attempt?.throwIfAborted();
+          return access.token;
+        },
+        progress: input.progress,
+      });
   };
   const syncFor = (owner: StorageOwner, store: DocumentStore, space: SyncSpace, documentId: string) =>
     createDocumentSync({
@@ -63,7 +71,7 @@ export const createPersonalDocuments = (input: {
       keyRevision++;
     },
     get space() {
-      return preparedRevision === keyRevision ? spaces?.personal : undefined;
+      return preparedRevision === keyRevision && !(config.userId && keysFor?.aborted) ? spaces?.personal : undefined;
     },
     owns: (id: string) => ids.includes(id),
     changed(id: string) {
@@ -79,8 +87,14 @@ export const createPersonalDocuments = (input: {
       if (!renewed && preparedRevision === revision)
         return { personal: spaces!.personal, renewed: false, recreated: false };
       const keys = await fetchSyncSpaces({ ...config, credential: config.renewalGrant, signal });
+      signal.throwIfAborted();
+      if (config.userId) {
+        teamAttempts.set(keys.project, signal);
+        teamAttempts.set(keys.personal, signal);
+      }
       keysFor = signal;
       const recreated =
+        (Boolean(config.userId) && renewed) ||
         spaces?.personal.generation !== keys.personal.generation ||
         spaces?.project.generation !== keys.project.generation;
       if (recreated) {

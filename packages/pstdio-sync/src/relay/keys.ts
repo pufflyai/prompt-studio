@@ -13,6 +13,7 @@ export const fetchSyncSpaces = async (input: {
   credential: string;
   accountId: string;
   userId?: string;
+  grantId?: string;
   workbenchId: string;
   signal?: AbortSignal;
 }) => {
@@ -21,7 +22,10 @@ export const fetchSyncSpaces = async (input: {
   const response = await fetchWithBackoff(
     () =>
       fetchWithInactivity(
-        serviceUrl(input.managerOrigin, accountScopedPath(spaceKeysPath(input.workbenchId), teamAccountId)),
+        serviceUrl(
+          input.managerOrigin,
+          accountScopedPath(spaceKeysPath(input.workbenchId), teamAccountId, input.grantId),
+        ),
         {
           signal,
           headers: { authorization: `Bearer ${input.credential}` },

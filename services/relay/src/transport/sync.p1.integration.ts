@@ -467,13 +467,20 @@ test("devices of the same team user share encrypted data under the team's projec
     });
 
     const connectDevice = async (credential: string) => {
-      const issued = await managerRequest(credential, "/v1/environment-access", { accountId, workbenchId: projectId });
+      const roster = await managerRequest(credential, `/v1/workbenches?accountId=${accountId}`);
+      const [{ grantId }] = z.array(z.object({ grantId: z.string() })).parse(await roster.json());
+      const issued = await managerRequest(credential, "/v1/environment-access", {
+        accountId,
+        workbenchId: projectId,
+        grantId,
+      });
       expect(issued.status).toBe(200);
       const { token } = z.object({ token: z.string() }).parse(await issued.json());
       const spaces = await fetchSyncSpaces({
         managerOrigin,
         credential,
         accountId,
+        grantId,
         userId: device.accountId,
         workbenchId: projectId,
       });
@@ -644,18 +651,28 @@ test("different team users share encrypted records and revocation cuts off the o
       request(device.token, `${team}/projects/${projectId}/access`, { userId: member.accountId, granted });
     expect((await grant(true)).status).toBe(200);
 
-    const renew = (credential: string) =>
-      request(credential, "/v1/environment-access", { accountId, workbenchId: projectId });
+    const grantIdFor = async (credential: string) => {
+      const roster = await request(credential, `/v1/workbenches?accountId=${accountId}`);
+      const candidates = z.array(z.object({ grantId: z.string() })).parse(await roster.json());
+      return candidates[0]?.grantId;
+    };
+    const renew = async (credential: string) =>
+      request(credential, "/v1/environment-access", {
+        accountId,
+        workbenchId: projectId,
+        grantId: await grantIdFor(credential),
+      });
     const access = async (credential: string) => {
       const issued = await renew(credential);
       expect(issued.status).toBe(200);
       return z.object({ token: z.string(), expiresAt: z.iso.datetime() }).parse(await issued.json());
     };
-    const spaces = (user: { token: string; accountId: string }) =>
+    const spaces = async (user: { token: string; accountId: string }) =>
       fetchSyncSpaces({
         managerOrigin,
         credential: user.token,
         accountId,
+        grantId: await grantIdFor(user.token),
         userId: user.accountId,
         workbenchId: projectId,
       });

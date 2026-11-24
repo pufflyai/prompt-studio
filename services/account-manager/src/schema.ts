@@ -10,6 +10,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  uuid,
 } from "drizzle-orm/pg-core";
 import type { Json } from "pstdio-sync-contracts";
 
@@ -137,6 +138,7 @@ export const projectMembers = pgTable(
     accountId: text().notNull(),
     workbenchId: text().notNull(),
     userId: text().notNull(),
+    grantId: uuid().notNull().defaultRandom(),
   },
   (table) => [
     primaryKey({ columns: [table.accountId, table.workbenchId, table.userId] }),

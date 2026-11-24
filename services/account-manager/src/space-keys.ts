@@ -103,6 +103,17 @@ export const rotateProjectSharedKeys = (transaction: ManagerTransaction, account
     and(eq(spaceKeys.space, "project"), inArray(spaceKeys.workbenchId, workbenchIds)),
   );
 
+export const hasProjectKeyHistory = async (transaction: ManagerTransaction, accountId: string, workbenchId: string) => {
+  const [key] = await transaction
+    .select({ generation: spaceKeys.generation })
+    .from(spaceKeys)
+    .where(
+      and(eq(spaceKeys.accountId, accountId), eq(spaceKeys.workbenchId, workbenchId), eq(spaceKeys.space, "project")),
+    )
+    .limit(1);
+  return Boolean(key);
+};
+
 /**
  * The keys of a cloud project, or null when the account has no such project. The first request
  * creates generation 1, so every cloud project gets keys in one place, whenever it became one.

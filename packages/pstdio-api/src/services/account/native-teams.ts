@@ -102,7 +102,7 @@ export const createNativeTeams = (input: {
       const path = `/v1/workbenches/${encodeURIComponent(identitySchema.parse(projectId))}`;
       await input.call(
         accountScopedPath(path + (remove ? "/remove" : ""), scopedAccountId(login)),
-        {},
+        login.userId && !remove ? { grantSelf: true } : {},
         login.token,
         undefined,
         signedInIdentity(login),

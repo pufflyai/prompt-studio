@@ -47,9 +47,18 @@ test("team project access is explicit and revocation rotates only the affected s
     await manager.setFeature({ accountId, feature: "relay", enabled: true });
     const add = (id: string) => request(alex.token, `/v1/workbenches/${id}${query}`, {});
     const catalog = async (token: string) => (await request(token, `/v1/workbenches${query}`)).json();
-    const keys = (token: string, id: string) => request(token, `/v1/workbenches/${id}/keys${query}`);
-    const renew = (token: string, workbenchId: string) =>
-      request(token, "/v1/environment-access", { accountId, workbenchId });
+    const grantIdFor = async (token: string, id: string) => {
+      const rows = await catalog(token);
+      return Array.isArray(rows) ? rows.find(({ workbenchId }) => workbenchId === id)?.grantId : undefined;
+    };
+    const keys = async (token: string, id: string) =>
+      request(token, `/v1/workbenches/${id}/keys${query}&grantId=${(await grantIdFor(token, id)) ?? ""}`);
+    const renew = async (token: string, workbenchId: string, grantId?: string) =>
+      request(token, "/v1/environment-access", {
+        accountId,
+        workbenchId,
+        grantId: grantId ?? (await grantIdFor(token, workbenchId)),
+      });
     const grant = (project: string, userId: string, granted: boolean, token = alex.token) =>
       request(token, `${team}/projects/${project}/access`, { userId, granted });
 
@@ -64,7 +73,7 @@ test("team project access is explicit and revocation rotates only the affected s
       { workbenchId: "project-a", userIds: [alex.accountId, morgan.accountId].sort() },
       { workbenchId: "project-b", userIds: [alex.accountId] },
     ]);
-    expect(await catalog(morgan.token)).toEqual([{ workbenchId: "project-a" }]);
+    expect(await catalog(morgan.token)).toEqual([{ workbenchId: "project-a", grantId: expect.any(String) }]);
     expect(await catalog(casey.token)).toEqual([]);
     expect((await keys(morgan.token, "project-b")).status).toBe(404);
     expect((await renew(casey.token, "project-a")).status).toBe(401);
@@ -76,6 +85,7 @@ test("team project access is explicit and revocation rotates only the affected s
     expect(morganBefore.personal).not.toEqual(alexBefore.personal);
 
     const beforeRevocation = await manager.snapshot();
+    const currentGrant = (await grantIdFor(morgan.token, "project-a")) as string;
     const locked = Promise.withResolvers<void>();
     const fence = authentication.connection.db.transaction(async (transaction) => {
       await lockAccount(transaction, morgan.accountId);
@@ -96,7 +106,7 @@ test("team project access is explicit and revocation rotates only the affected s
       }
       expect((await grant("project-a", morgan.accountId, false)).status).toBe(200);
     });
-    const pendingRenewal = locked.promise.then(() => renew(morgan.token, "project-a"));
+    const pendingRenewal = locked.promise.then(() => renew(morgan.token, "project-a", currentGrant));
     await fence;
     expect((await pendingRenewal).status).toBe(401);
     expect(await catalog(morgan.token)).toEqual([]);
@@ -110,7 +120,7 @@ test("team project access is explicit and revocation rotates only the affected s
     expect(await (await keys(alex.token, "project-a")).json()).toEqual(rotated);
 
     expect((await grant("project-a", alex.accountId, false)).status).toBe(200);
-    expect(await catalog(alex.token)).toEqual([{ workbenchId: "project-b" }]);
+    expect(await catalog(alex.token)).toEqual([{ workbenchId: "project-b", grantId: expect.any(String) }]);
     expect((await add("project-a")).status).toBe(403);
     expect((await keys(alex.token, "project-a")).status).toBe(404);
     expect((await request(alex.token, `${team}/projects`)).status).toBe(200);
@@ -131,6 +141,30 @@ test("team project access is explicit and revocation rotates only the affected s
     expect((await (await keys(alex.token, "project-b")).json()).project).toHaveLength(3);
     expect((await (await keys(alex.token, "project-a")).json()).project).toHaveLength(3);
 
+    await join(morganEmail, morgan.token);
+    expect((await grant("project-b", morgan.accountId, true)).status).toBe(200);
+    const [{ grantId: beforePause }] = await catalog(morgan.token);
+    const sharedBeforePause = (await (await keys(morgan.token, "project-b")).json()).project;
+    expect((await request(alex.token, `/v1/workbenches/project-b/remove${query}`, {})).status).toBe(200);
+    expect((await add("project-b")).status).toBe(403);
+    expect((await request(alex.token, `/v1/workbenches/project-b${query}`, { grantSelf: true })).status).toBe(200);
+    expect((await keys(morgan.token, "project-b")).status).toBe(404);
+    expect((await (await keys(alex.token, "project-b")).json()).project).toEqual([
+      ...sharedBeforePause,
+      { generation: 4, secret: expect.any(String) },
+    ]);
+    expect((await grant("project-b", morgan.accountId, true)).status).toBe(200);
+    const [{ grantId: afterPause }] = await catalog(morgan.token);
+    expect(afterPause).not.toBe(beforePause);
+    expect((await renew(morgan.token, "project-b", beforePause)).status).toBe(401);
+    expect((await renew(morgan.token, "project-b", afterPause)).status).toBe(200);
+    expect(
+      (await request(morgan.token, "/v1/environment-access", { accountId, workbenchId: "project-b" })).status,
+    ).toBe(401);
+    const staleKeys = `/v1/workbenches/project-b/keys${query}&grantId=${beforePause}`;
+    expect((await request(morgan.token, staleKeys)).status).toBe(404);
+    expect((await grant("project-b", morgan.accountId, false)).status).toBe(200);
+
     await manager.restore("restore-before-revocation", beforeRevocation);
     const reopen = async (id: string, subject?: string) =>
       manager.reconcile({
@@ -146,7 +180,7 @@ test("team project access is explicit and revocation rotates only the affected s
     expect((await renew(morganAfterRestore.token, "project-a")).status).toBe(401);
     expect((await renew(morganAfterRestore.token, "project-b")).status).toBe(401);
     const alexAfterRestore = await manager.registerDevice({ accountId: alex.accountId, ...deviceProfile() });
-    expect((await (await keys(alexAfterRestore.token, "project-b")).json()).project).toHaveLength(3);
+    expect((await (await keys(alexAfterRestore.token, "project-b")).json()).project).toHaveLength(5);
   } finally {
     await Promise.all([manager.close(), authentication.close()]);
   }

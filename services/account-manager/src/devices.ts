@@ -6,8 +6,8 @@ import { createCredential, digestCredential } from "./credential";
 import type { ManagerDatabase, ManagerTransaction } from "./database";
 import { assertProjectCanSync } from "./project-deletion";
 import { DeviceAccessDenied } from "./renewal-errors";
-import { accounts, devices, projectMembers, spaceKeys, workbenches } from "./schema";
-import { rotatePersonalAccountKeys, rotateTeamKeysForRemovedDevice } from "./space-keys";
+import { accounts, devices, projectMembers, spaceKeys, teams, workbenches } from "./schema";
+import { rotatePersonalAccountKeys, rotateProjectSharedKeys, rotateTeamKeysForRemovedDevice } from "./space-keys";
 import { canUseTeamProject } from "./teams";
 import { lockAccount } from "./transactions";
 
@@ -95,10 +95,18 @@ export const rotateRemovedDeviceKeys = async (transaction: ManagerTransaction, u
   }
 };
 
-export const listWorkbenches = (db: Reader, accountId: string, userId = accountId) =>
-  db
-    .select({ workbenchId: workbenches.id })
+const teamGrantFor = (userId: string | typeof devices.accountId) =>
+  and(
+    eq(projectMembers.accountId, workbenches.accountId),
+    eq(projectMembers.workbenchId, workbenches.id),
+    eq(projectMembers.userId, userId),
+  );
+
+export const listWorkbenches = async (db: Reader, accountId: string, userId = accountId) => {
+  const rows = await db
+    .select({ workbenchId: workbenches.id, grantId: projectMembers.grantId })
     .from(workbenches)
+    .leftJoin(projectMembers, teamGrantFor(userId))
     .where(
       and(
         eq(workbenches.accountId, accountId),
@@ -107,6 +115,8 @@ export const listWorkbenches = (db: Reader, accountId: string, userId = accountI
       ),
     )
     .orderBy(asc(workbenches.id));
+  return rows.map(({ workbenchId, grantId }) => ({ workbenchId, ...(grantId && { grantId }) }));
+};
 
 export const addWorkbenchInTransaction = async (transaction: ManagerTransaction, input: WorkbenchInput) => {
   await assertProjectCanSync(transaction, input);
@@ -117,10 +127,18 @@ export const addWorkbenchInTransaction = async (transaction: ManagerTransaction,
     .returning({ id: workbenches.id });
 };
 
-export const removeWorkbenchInTransaction = (transaction: ManagerTransaction, input: WorkbenchInput) =>
-  transaction
+export const removeWorkbenchInTransaction = async (transaction: ManagerTransaction, input: WorkbenchInput) => {
+  const [removed] = await transaction
     .delete(workbenches)
-    .where(and(eq(workbenches.accountId, input.accountId), eq(workbenches.id, input.workbenchId)));
+    .where(and(eq(workbenches.accountId, input.accountId), eq(workbenches.id, input.workbenchId)))
+    .returning({ id: workbenches.id });
+  if (!removed) return;
+  const [team] = await transaction
+    .select({ id: teams.accountId })
+    .from(teams)
+    .where(eq(teams.accountId, input.accountId));
+  if (team) await rotateProjectSharedKeys(transaction, input.accountId, [input.workbenchId]);
+};
 
 export const findDeviceAccess = async (db: Reader, token: string, workbenchId: string, accountId?: string) => {
   const projectAccount = accountId ?? devices.accountId;
@@ -130,10 +148,12 @@ export const findDeviceAccess = async (db: Reader, token: string, workbenchId: s
       userId: devices.accountId,
       workbenchId: workbenches.id,
       deviceId: devices.id,
+      grantId: projectMembers.grantId,
     })
     .from(devices)
     .innerJoin(accounts, eq(accounts.id, devices.accountId))
     .innerJoin(workbenches, and(eq(workbenches.accountId, projectAccount), eq(workbenches.id, workbenchId)))
+    .leftJoin(projectMembers, teamGrantFor(devices.accountId))
     .where(
       and(
         eq(devices.digest, digestCredential(token)),
@@ -146,7 +166,9 @@ export const findDeviceAccess = async (db: Reader, token: string, workbenchId: s
         ),
       ),
     );
-  return access ?? null;
+  if (!access) return null;
+  const { grantId, ...identity } = access;
+  return { ...identity, ...(grantId && { grantId }) };
 };
 
 export const findDevice = async (db: Reader, token: string) => {

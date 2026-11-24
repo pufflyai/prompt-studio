@@ -27,7 +27,9 @@ const releaseWithBody = (response: Response, release: () => void, signal: AbortS
     new ReadableStream<Uint8Array>({
       async pull(controller) {
         try {
+          signal.throwIfAborted();
           const result = await reader.read();
+          signal.throwIfAborted();
           if (!result.done) return controller.enqueue(result.value);
           controller.close();
           done();
@@ -71,6 +73,10 @@ export const createProjectAccess = (connection: ReturnType<typeof connectRelay>)
         await admit(tx, key);
         signal.throwIfAborted();
         const response = await handle();
+        if (signal.aborted) {
+          await response?.body?.cancel(signal.reason);
+          signal.throwIfAborted();
+        }
         if (!response?.body || response.headers.get("content-type") !== "application/octet-stream") {
           result.resolve(response);
           return;

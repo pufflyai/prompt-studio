@@ -207,7 +207,11 @@ export const captureManager = (db: ManagerDatabase) =>
         .from(teamMembers)
         .orderBy(asc(teamMembers.accountId), asc(teamMembers.userId));
       const projectGrants = await transaction
-        .select()
+        .select({
+          accountId: projectMembers.accountId,
+          workbenchId: projectMembers.workbenchId,
+          userId: projectMembers.userId,
+        })
         .from(projectMembers)
         .orderBy(asc(projectMembers.accountId), asc(projectMembers.workbenchId), asc(projectMembers.userId));
       return snapshotSchema.parse({

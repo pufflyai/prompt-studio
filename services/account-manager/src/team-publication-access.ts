@@ -29,7 +29,8 @@ export const sameDeviceAccess = (expected: DeviceAccess, current: DeviceAccess |
   current.accountId === expected.accountId &&
   current.userId === expected.userId &&
   current.deviceId === expected.deviceId &&
-  current.workbenchId === expected.workbenchId;
+  current.workbenchId === expected.workbenchId &&
+  current.grantId === expected.grantId;
 
 export const prepareTeamPublicationGrant = async (db: Database, access: DeviceAccess, token: string) => {
   const { accountId, workbenchId, userId } = access;

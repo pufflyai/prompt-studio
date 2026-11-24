@@ -141,12 +141,12 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
       return auth.api.generateOneTimeToken({ headers });
     },
     jwks: () => auth.api.getJwks(),
-    async renew(token: string, workbenchId: string, accountId?: string) {
+    async renew(token: string, workbenchId: string, accountId?: string, grantId?: string) {
       identitySchema.parse(workbenchId);
       let category: "database" | "signing" = "database";
       try {
         const access = await findDeviceAccess(connection.db, token, workbenchId, accountId);
-        if (!access) throw new EnvironmentAccessDenied();
+        if (!access || access.grantId !== grantId) throw new EnvironmentAccessDenied();
         const publication = await prepareTeamPublicationGrant(connection.db, access, token);
         const iat = Math.floor(Date.now() / 1000);
         const exp = iat + config.accessLifetimeSeconds;

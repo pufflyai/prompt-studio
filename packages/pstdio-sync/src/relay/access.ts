@@ -9,6 +9,7 @@ export const createRelayAccess = (input: {
   workbenchId: string;
   accountId?: string;
   userId?: string;
+  grantId?: string;
   signal: AbortSignal;
   /** Called when the manager rejects the renewal credential. */
   denied?: () => void;
@@ -28,6 +29,7 @@ export const createRelayAccess = (input: {
             body: JSON.stringify({
               workbenchId: input.workbenchId,
               ...(input.userId && input.userId !== input.accountId && { accountId: input.accountId }),
+              ...(input.grantId && { grantId: input.grantId }),
             }),
           },
           { signal: input.signal, inactivityMs: 30_000 },

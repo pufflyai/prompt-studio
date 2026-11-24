@@ -23,10 +23,25 @@ export const syncFailure = (
   headers?: Record<string, string>,
 ) => relayResponse({ error }, status, headers);
 
+const denied = () => syncFailure(401, "unauthorized", { "www-authenticate": 'Bearer realm="relay"' });
+
 const methodFor = (route: SyncRoute) => {
   if (route.kind === "part") return "PUT";
   if (route.kind === "state" || route.kind === "live" || route.kind === "capabilities") return "GET";
   return "POST";
+};
+
+const transportFailure = (
+  route: SyncRoute,
+  report: ReportFailure,
+  signal: AbortSignal,
+  expiry: AbortSignal | undefined,
+  error: unknown,
+) => {
+  if (error instanceof SyncRejection) return relayResponse(error.body, error.status);
+  if (expiry?.aborted) return denied();
+  if (!signal.aborted) report(failures[route.kind]);
+  return syncFailure(503, "unavailable");
 };
 
 const isWrite = (route: SyncRoute) =>
@@ -87,7 +102,7 @@ export const handleSyncRequest = async (
   const method = methodFor(route);
   if (request.method !== method) return syncFailure(405, "method-not-allowed", { allow: method });
   const identity = await verifyBearer(owners, request, route.projectId);
-  if (!identity) return syncFailure(401, "unauthorized", { "www-authenticate": 'Bearer realm="relay"' });
+  if (!identity) return denied();
   // Previously issued personal-account tokens use the account ID as their private-space owner.
   const userId = identity.userId ?? identity.accountId;
   if (
@@ -109,6 +124,10 @@ export const handleSyncRequest = async (
   if (!owners.allow(identity.environmentId)) return syncFailure(429, "rate-limited", { "retry-after": "1" });
   const key = projectKey(identity.accountId, route.projectId);
   const caller: SyncCaller = { accountId: identity.accountId, deviceId: identity.environmentId };
+  const remaining = Date.parse(identity.expiresAt) - Date.now();
+  if (!(remaining > 0)) return denied();
+  const expiry = route.kind !== "live" && userId !== identity.accountId ? AbortSignal.timeout(remaining) : undefined;
+  const signal = expiry ? AbortSignal.any([request.signal, expiry]) : request.signal;
   try {
     if (route.kind === "live") {
       await owners.sync.projectNotices.ready();
@@ -116,12 +135,10 @@ export const handleSyncRequest = async (
         upgradeLive(owners, upgrade, request, { ...caller, userId, projectKey: key, expiresAt: identity.expiresAt }),
       );
     }
-    const handle = () => handleSyncOperation(owners, route, caller, request);
+    const handle = () => handleSyncOperation(owners, route, caller, request, signal);
     if (isWrite(route)) return await handle();
-    return await owners.sync.projectAccess.response(key, request.signal, handle);
+    return await owners.sync.projectAccess.response(key, signal, handle);
   } catch (error) {
-    if (error instanceof SyncRejection) return relayResponse(error.body, error.status);
-    if (!request.signal.aborted) report(failures[route.kind], error);
-    return syncFailure(503, "unavailable");
+    return transportFailure(route, report, signal, expiry, error);
   }
 };

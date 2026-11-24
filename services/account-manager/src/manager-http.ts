@@ -9,7 +9,11 @@ import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-err
 import { teamInvitationWeb } from "./team-invitation-web";
 
 type Authentication = ReturnType<typeof createManagerAuthentication>;
-const renewal = z.strictObject({ workbenchId: identitySchema, accountId: identitySchema.optional() });
+const renewal = z.strictObject({
+  workbenchId: identitySchema,
+  accountId: identitySchema.optional(),
+  grantId: identitySchema.optional(),
+});
 const json = (body: unknown, status = 200, headers?: ConstructorParameters<typeof Headers>[0]) =>
   Response.json(body, {
     status,
@@ -30,7 +34,7 @@ const renewAccess = async (auth: Authentication, request: Request, log: RenewalL
     return unauthorized();
   }
   try {
-    return json(await auth.renew(token, input.workbenchId, input.accountId));
+    return json(await auth.renew(token, input.workbenchId, input.accountId, input.grantId));
   } catch (error) {
     if (error instanceof EnvironmentAccessDenied) return unauthorized();
     const category = error instanceof EnvironmentAccessFailure ? error.category : "service";
