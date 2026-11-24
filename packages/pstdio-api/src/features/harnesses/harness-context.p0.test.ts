@@ -49,3 +49,18 @@ test("a host-level harness call cannot target a workspace", async () => {
   });
   expect(calls).toEqual([]);
 });
+
+test("a harness's run commands stop when its instance closes, so retirement never waits on one", async () => {
+  const { factory } = setup();
+  const owner = createProcessOwner();
+  const ctx = await factory(record, { projectId: "p1" }, owner);
+  // A sign-in waiting on a command that never exits by itself, such as an interactive login.
+  const login = ctx.process.run({ command: [process.execPath, "-e", "setInterval(() => {}, 1000)"] });
+  const finished = login.then(
+    () => "finished",
+    () => "stopped",
+  );
+  await Bun.sleep(200);
+  await owner.close();
+  expect(await Promise.race([finished, Bun.sleep(5_000).then(() => "still running")])).toBe("stopped");
+});
