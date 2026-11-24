@@ -1,12 +1,4 @@
-import {
-  defineCommand,
-  defineExtension,
-  defineKeybinding,
-  l10n,
-  packageAsset,
-  params,
-  projectSlots,
-} from "@pstdio/sdk/extensions";
+import { defineCommand, defineExtension, defineKeybinding, l10n, packageAsset, params } from "@pstdio/sdk/extensions";
 import { remoteHarness } from "./harness";
 import { pocketCoder } from "./pocketcoder";
 import { remoteWorkspace, workspaceParams } from "./workspace";
@@ -18,9 +10,6 @@ const launch = defineCommand({
   cli: true,
   mutating: true,
   palette: [{ group: "PocketCoder", icon: "cloud", label: l10n("commands.launch", "Launch PocketCoder session") }],
-  menus: [
-    { slot: projectSlots.headerOverflow, label: l10n("commands.launch", "Launch PocketCoder session"), icon: "cloud" },
-  ],
   params: {
     ...workspaceParams,
     prompt: params.longText({ label: l10n("params.prompt", "Prompt"), required: true }),
