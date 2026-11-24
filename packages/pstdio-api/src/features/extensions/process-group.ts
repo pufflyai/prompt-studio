@@ -53,7 +53,7 @@ export const treeExitedWithin = async (child: SignalableChild, timeoutMs: number
 export const processGroupExited = async (child: Pick<SignalableChild, "pid" | "exited">, intervalMs = 250) => {
   await child.exited;
   if (process.platform === "win32") return;
-  while (groupAlive(child.pid)) await new Promise((resolve) => setTimeout(resolve, intervalMs).unref());
+  while (isProcessGroupAlive(child.pid)) await new Promise((resolve) => setTimeout(resolve, intervalMs).unref());
 };
 
 /** Resolves true when the process exited inside the budget, false when the budget ran out. */
@@ -62,7 +62,9 @@ export const exitedWithin = async (exited: Promise<unknown>, timeoutMs: number) 
   const deadline = new Promise<boolean>((resolve) => {
     timer = setTimeout(() => resolve(false), timeoutMs);
   });
-  const stopped = await Promise.race([exited.then(() => true), deadline]);
-  clearTimeout(timer);
-  return stopped;
+  try {
+    return await Promise.race([exited.then(() => true), deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
 };
