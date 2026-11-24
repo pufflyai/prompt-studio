@@ -74,27 +74,16 @@ export function AuthoringForm(props: Props) {
       throw error;
     });
     activeEditing.current = session;
-    const text = JSON.stringify(values);
-    await session.execute(
-      { draft: text, expectedRevision },
-      { channel: "document", changes: [{ path: ["draft"], value: text }] },
-    );
-    const snapshot = session.getSnapshot().value;
-    const saved = JSON.parse(snapshot.draft);
-    if (
-      Object.keys(values).length !== Object.keys(saved).length ||
-      Object.entries(values).some(([key, value]) => JSON.stringify(value) !== JSON.stringify(saved[key]))
-    )
-      throw new Error("The draft changed in another view.");
-    setRevision(snapshot.revision);
+    const savedRevision = await client.saveDraft(session.id, JSON.stringify(values), expectedRevision);
+    setRevision(savedRevision);
     onDraftSaved({
       id: `${workspaceId}-${draftChapter}`,
       workspaceId,
       chapter: draftChapter,
-      values: saved,
-      revision: snapshot.revision,
+      values,
+      revision: savedRevision,
     });
-    return snapshot.revision;
+    return savedRevision;
   };
   const fields = {
     rule: ruleFields(),

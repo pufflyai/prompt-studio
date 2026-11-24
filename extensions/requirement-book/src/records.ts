@@ -40,6 +40,7 @@ export interface Draft {
   workspaceId: string;
   chapter: number;
   values: Record<string, unknown>;
+  editId?: string;
   submissionId?: string;
   submissionInvocationId?: string;
   submissionStatus?: "writing" | "confirmed" | "unconfirmed";
@@ -77,16 +78,12 @@ export const saveRecord = async <T extends { id: string }>(
   const current = await storage.records.read(recordId);
   if (expectedRevision !== undefined && expectedRevision !== current.revision)
     throw new Error("The record changed. Reload before saving.");
+  const payload = JSON.parse(JSON.stringify({ kind, value }));
+  // A draft reservation owns its full text. A replace would compare only changed fields.
+  const edit = kind === "draft" && expectedRevision !== undefined ? { set: { "": payload } } : { replace: payload };
   const outcome = await storage.records.commit({
     operationId,
-    edits: [
-      {
-        recordId,
-        expectedRevision: expectedRevision ?? current.revision,
-        deleted: false,
-        replace: JSON.parse(JSON.stringify({ kind, value })),
-      },
-    ],
+    edits: [{ recordId, expectedRevision: expectedRevision ?? current.revision, deleted: false, ...edit }],
   });
   if (outcome.state === "needs-attention" || outcome.state === "refused")
     throw new Error("The record changed. Reload before saving.");

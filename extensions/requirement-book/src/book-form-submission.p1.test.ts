@@ -187,3 +187,42 @@ test("only the failed invocation can release an interrupted submission for inspe
   await draftCommands["drafts.discard"].run(context, { ...scope, submissionId: pending.submissionId });
   expect((await readRecord<Draft>(storage, "draft", draftId)).value).toBeUndefined();
 });
+
+test("a peer edit between the final read and submission reservation refuses the older form", async () => {
+  const storage = createMemoryStorage();
+  const workspaceId = "book-workspace";
+  const context = draftContext(storage, workspaceId);
+  const scope = { workspaceId, chapter: -2 };
+  const draftId = `${workspaceId}--2`;
+  const values = { title: "Original value" };
+  const peer = { title: "Peer's newer draft" };
+  await draftCommands["drafts.save"].run(context, { ...scope, values });
+  const { record } = await readRecord<Draft>(storage, "draft", draftId);
+  let writes = 0;
+  let interleaved = false;
+  const submission = {
+    ...context,
+    storage: {
+      ...storage,
+      records: {
+        ...storage.records,
+        commit: async (group: Parameters<typeof storage.records.commit>[0]) => {
+          if (!interleaved) {
+            interleaved = true;
+            await draftCommands["drafts.save"].run(context, { ...scope, values: peer });
+          }
+          return storage.records.commit(group);
+        },
+      },
+    },
+  };
+  await expect(
+    submitDraft(submission, { ...scope, values, expectedRevision: record.revision }, async () => {
+      writes++;
+    }),
+  ).rejects.toThrow("record changed");
+  expect(writes).toBe(0);
+  const current = (await readRecord<Draft>(storage, "draft", draftId)).value;
+  expect(current?.values).toEqual(peer);
+  expect(current?.submissionStatus).toBeUndefined();
+});

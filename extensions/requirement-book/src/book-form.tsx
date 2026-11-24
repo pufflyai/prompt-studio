@@ -70,18 +70,8 @@ export function BookForm(props: FormProps) {
       });
     return queue.current;
   };
-  const close = async () => {
-    if (saving) return;
-    if (submissionUnconfirmed || input === undefined) return onClose();
-    setSaving(true);
-    try {
-      await persist(values);
-      onClose();
-    } catch (failure) {
-      setError(String(failure));
-    } finally {
-      setSaving(false);
-    }
+  const close = () => {
+    if (!saving) onClose();
   };
   const submit = async () => {
     if (
@@ -133,7 +123,7 @@ export function BookForm(props: FormProps) {
     <Dialog.Root
       open
       onOpenChange={(details) => {
-        if (!details.open) void close();
+        if (!details.open) close();
       }}
     >
       <Portal>
@@ -221,7 +211,7 @@ export function BookForm(props: FormProps) {
             </ScrollArea>
             <Dialog.Footer>
               <HStack gap="sm">
-                <Button variant="ghost" disabled={saving} onClick={() => void close()}>
+                <Button variant="ghost" disabled={saving} onClick={close}>
                   Cancel
                 </Button>
                 {onCheckSubmission && submissionStatus !== "confirmed" ? (

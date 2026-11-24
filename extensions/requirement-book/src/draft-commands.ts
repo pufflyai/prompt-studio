@@ -45,6 +45,7 @@ const saveDraft = async (
     workspaceId: workspace.id,
     chapter: input.chapter,
     values: input.values,
+    ...(operationId ? { editId: operationId } : {}),
   };
   await saveRecord(ctx.storage, "draft", draft, current.record.revision, operationId);
   await announce(ctx, workspace.id);
@@ -109,7 +110,12 @@ export const draftCommands = {
       }
       // An explicit recovery acknowledges the earlier edit without replacing a newer draft.
       const { value, record } = await readRecord<Draft>(ctx.storage, "draft", draftId(workspace.id, chapter));
-      return { value: editingValue(value, record.revision) };
+      return {
+        value: {
+          ...editingValue(value, record.revision),
+          ...(value?.editId === id ? { savedDraftRevision: record.revision } : {}),
+        },
+      };
     },
   }),
   "drafts.check-submission": defineCommand({
@@ -207,7 +213,7 @@ export const submitDraft = async (
     const current = await readRecord<Draft>(ctx.storage, "draft", id);
     if (current.value?.submissionId !== submissionId) throw new Error("The submitted draft changed.");
     if (current.value.submissionStatus === "confirmed") return;
-    await saveRecord(ctx.storage, "draft", { ...draft, submissionStatus: outcome }, current.record.revision);
+    await saveRecord(ctx.storage, "draft", { ...current.value, submissionStatus: outcome }, current.record.revision);
     await announce(ctx, input.workspaceId);
   };
 
