@@ -97,8 +97,7 @@ beforeAll(async () => {
     if (owner.workbenchId === projectId && owner.extensionId === extensionId) audit.getStore()?.push(record.recordId);
     originalRead(owner, record);
   };
-  // Seeding 100,000 records crosses the database thread with large statements; about 20 s locally, more on CI.
-}, 120_000);
+});
 
 afterAll(async () => {
   storageObserver.read = originalRead;
