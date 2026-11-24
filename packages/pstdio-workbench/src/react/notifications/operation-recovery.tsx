@@ -9,16 +9,22 @@ import { extensionCommandOperation } from "../../extensions/host/workbench-comma
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchActionErrors } from "./action-errors";
 
+const inProject = (entry: { projectId?: string }, projectId?: string) =>
+  entry.projectId === undefined || entry.projectId === projectId;
+
 export const useOperationActivity = (workbench: WorkbenchCore) => {
   const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
   const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
   const snapshot = useSyncExternalStore(operations.subscribe, operations.getSnapshot, operations.getSnapshot);
-  const visible = (entry: { projectId?: string }) => entry.projectId === undefined || entry.projectId === projectId;
   return {
     pending: snapshot.pending.filter(
-      (entry) => entry.showPending && visible(entry) && entry.status !== "unknown" && entry.status !== "unconfirmed",
+      (entry) =>
+        entry.showPending &&
+        inProject(entry, projectId) &&
+        entry.status !== "unknown" &&
+        entry.status !== "unconfirmed",
     ),
-    recovery: snapshot.recovery,
+    recovery: snapshot.recovery.filter((entry) => entry.projectRetired || inProject(entry, projectId)),
   };
 };
 
@@ -34,16 +40,22 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
   const { id, sourceCommand, draft, status } = entry;
   const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
   const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
-  const sourceIsCurrent = entry.projectId === undefined || entry.projectId === projectId;
-  const currentRecovery = () => operations.getSnapshot().recovery.find((item) => item.id === id);
-  const sourceIsStillCurrent = () =>
-    Boolean(
-      currentRecovery() &&
-        (entry.projectId === undefined || entry.projectId === workbench.pages.store.getState().projectId),
-    );
+  const sourceIsCurrent = !entry.projectRetired && inProject(entry, projectId);
+  const currentRecovery = () =>
+    operations
+      .getSnapshot()
+      .recovery.find(
+        (item) =>
+          item.id === id && (item.projectRetired || inProject(item, workbench.pages.store.getState().projectId)),
+      );
+  const sourceIsStillCurrent = () => {
+    const current = currentRecovery();
+    return Boolean(current && !current.projectRetired);
+  };
   const target = `system-errors.operation.${id.description ?? "recovery"}`;
   const report = (title: string) => workbench.notifications.captureActionError(title, target);
   const discard = () => {
+    if (!currentRecovery()) return;
     try {
       operations.discard(id);
     } catch (error) {
@@ -73,7 +85,7 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
       status="error"
       title={entry.title}
       compact
-      onClose={entry.dismissed ? undefined : () => operations.dismiss(id)}
+      onClose={entry.dismissed ? undefined : () => currentRecovery() && operations.dismiss(id)}
       closeLabel={`Dismiss alert for ${entry.title}`}
     >
       <Text>{message}</Text>
@@ -141,7 +153,7 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
             Download {file.name}
           </Button>
         ))}
-        {draft === undefined && status === "rejected" ? (
+        {draft === undefined && (entry.retired || status === "rejected") ? (
           <Button size="2xs" onClick={discard}>
             Clear
           </Button>

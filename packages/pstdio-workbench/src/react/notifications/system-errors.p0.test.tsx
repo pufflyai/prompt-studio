@@ -1,8 +1,11 @@
 import { expect, test } from "bun:test";
+import { EnvironmentProvider } from "@chakra-ui/react";
 import { createScopedQueryClient } from "@pstdio/sdk/extensions";
 import { act, create } from "react-test-renderer";
 import { createWorkbench } from "../../core";
 import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
+import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
+import { OperationRecoveryItem } from "./operation-recovery";
 import { systemActivityItemId, useSystemActivityStatusItem } from "./system-errors";
 
 test("system notices appear only while needed and keep the person's widget alignment", async () => {
@@ -87,6 +90,76 @@ test("scoped recovery keeps the widget reachable after an alert is dismissed", a
     await act(async () => {
       tree!.unmount();
     });
+    await workbench.dispose();
+    queries.dispose();
+    environment.IS_REACT_ACT_ENVIRONMENT = previous;
+  }
+});
+
+test("live recovery follows the selected project and explicitly retired project recovery stays reachable", async () => {
+  const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const previous = environment.IS_REACT_ACT_ENVIRONMENT;
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  const queries = createScopedQueryClient({ runtimeId: "desktop", accountId: "person", extensionId: "pstdio" });
+  const workbench = createWorkbench({ queries });
+  workbench.pageLocations.setProject("original");
+  const operations = getWorkbenchOperations(queries);
+  const Status = () => <span>{useSystemActivityStatusItem(workbench, true)}</span>;
+  let tree: ReturnType<typeof create> | undefined;
+  let item: ReturnType<typeof create> | undefined;
+  try {
+    await act(async () => {
+      tree = create(<Status />);
+      const attempt = operations.submit({
+        projectId: "original",
+        domain: "links",
+        subjects: ["original-resource"],
+        title: "Link resources",
+        draft: "Original relationship",
+        write: async () => {
+          throw new Error("Reply lost");
+        },
+      });
+      await expect(attempt.result).rejects.toThrow("Reply lost");
+    });
+    expect(tree!.root.findByType("span").children).toEqual(["System errors: Link resources"]);
+    await act(async () => workbench.pageLocations.setProject("different"));
+    expect(tree!.root.findByType("span").children).toEqual([]);
+    await act(async () => workbench.pageLocations.setProject("original"));
+    await act(async () => operations.discard(operations.getSnapshot().recovery[0]!.id));
+    expect(operations.getSnapshot().pending).toHaveLength(1);
+    await act(async () => workbench.pageLocations.setProject("different"));
+    await act(async () => queries.setAuthority({ accountId: "other" }));
+    await act(async () => queries.setAuthority({ accountId: "person" }));
+    expect(tree!.root.findByType("span").children).toEqual([]);
+    await act(async () => queries.clearScope({ projectId: "original" }));
+    expect(tree!.root.findByType("span").children).toEqual(["System errors: Link resources"]);
+    await act(async () => queries.setAuthority({ accountId: "other" }));
+    expect(tree!.root.findByType("span").children).toEqual([]);
+    await act(async () => queries.setAuthority({ accountId: "person" }));
+    const entry = operations.getSnapshot().recovery[0]!;
+    const root = Object.assign(new EventTarget(), {
+      nodeType: 9,
+      getElementById: () => null,
+      defaultView: {},
+    }) as unknown as Document;
+    await act(async () => {
+      item = create(
+        <EnvironmentProvider value={root}>
+          <WorkbenchThemeProvider>
+            <OperationRecoveryItem entry={entry} workbench={workbench} />
+          </WorkbenchThemeProvider>
+        </EnvironmentProvider>,
+      );
+    });
+    const clear = item!.root.findAllByType("button").find((button) => button.children.includes("Clear"));
+    expect(clear).toBeDefined();
+    await act(async () => clear!.props.onClick());
+    expect(operations.getSnapshot().recovery).toEqual([]);
+    expect(tree!.root.findByType("span").children).toEqual([]);
+  } finally {
+    await act(async () => item?.unmount());
+    await act(async () => tree?.unmount());
     await workbench.dispose();
     queries.dispose();
     environment.IS_REACT_ACT_ENVIRONMENT = previous;

@@ -27,6 +27,7 @@ export interface Entry {
   acknowledged?: boolean;
   error?: unknown;
   dismissed: boolean;
+  projectRetired?: true;
 }
 
 export const emptySnapshot: OperationSnapshot = { pending: [], recovery: [] };
@@ -76,7 +77,8 @@ export const snapshotForOperations = (entries: Iterable<Entry>, owner: string): 
     if (entry.owner !== owner) continue;
     const { preview } = entry;
     const status = recoveryStatus(preview.status);
-    if (!entry.controller.signal.aborted && preview.status !== "rejected") pending.push(preview);
+    const retired = entry.controller.signal.aborted;
+    if (!retired && preview.status !== "rejected") pending.push(preview);
     if (status) {
       const { id, projectId, title, domain } = preview;
       recovery.push({
@@ -93,7 +95,9 @@ export const snapshotForOperations = (entries: Iterable<Entry>, owner: string): 
         status,
         error: entry.error,
         dismissed: entry.dismissed,
-        canCheck: Boolean(entry.check) && !entry.controller.signal.aborted,
+        canCheck: Boolean(entry.check) && !retired,
+        ...(retired ? { retired: true } : {}),
+        ...(entry.projectRetired ? { projectRetired: true } : {}),
         ...(entry.acknowledged ? { acknowledged: true } : {}),
       });
     }

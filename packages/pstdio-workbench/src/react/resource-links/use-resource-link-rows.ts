@@ -38,7 +38,7 @@ const indexPendingLinks = (changes: readonly ResourceLinkChangePreview[]) => {
 export const projectResourceLinkRows = (
   rows: RelatedResourceRow[],
   changes: readonly ResourceLinkChangePreview[],
-  resource?: ResourceRef,
+  resource: ResourceRef,
 ) => {
   if (!changes.length) return rows;
   const pending = indexPendingLinks(changes);
@@ -51,7 +51,6 @@ export const projectResourceLinkRows = (
     const target = { ...row.edge.target, role: operation.edge.target.role };
     return [{ ...row, edge: { ...row.edge, target } }];
   });
-  if (!resource) return projected;
   const resourceId = resourceKey(resource);
   let additions = 0;
   for (const operation of pending.values()) {
@@ -143,7 +142,7 @@ export const useResourceLinkRows = (service: ResourceLinksService, resource: Res
   }, [resource, service, cursor, revision]);
 
   return {
-    rows: projectResourceLinkRows(rows, changes, cursor === undefined ? resource : undefined),
+    rows: projectResourceLinkRows(rows, changes, resource),
     changes,
     nextCursor,
     loading,

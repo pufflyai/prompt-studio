@@ -431,6 +431,10 @@ test("returning to the owning account can discard a retired project draft and fr
     for (let index = 0; index < 128; index++) {
       const attempt = operations.submit(input);
       await expect(attempt.result).rejects.toThrow("Reply lost");
+      if (index === 0) {
+        operations.discard(attempt.id);
+        expect(operations.getSnapshot().pending[0]?.id).toBe(attempt.id);
+      }
       queries.clearScope({ projectId: input.projectId });
     }
     const [original] = operations.getSnapshot().recovery;
@@ -442,6 +446,13 @@ test("returning to the owning account can discard a retired project draft and fr
 
     queries.setAuthority({ accountId: "personal" });
     expect(operations.getSnapshot().recovery).toHaveLength(128);
+    expect(operations.getSnapshot().recovery[0]).toMatchObject({
+      retired: true,
+      projectRetired: true,
+      dismissed: true,
+    });
+    expect(operations.getSnapshot().recovery[0]?.draft).toBeUndefined();
+    expect(operations.getSnapshot().recovery[1]?.draft).toBe(input.draft);
     operations.discard(original!.id);
     expect(operations.getSnapshot().recovery).toHaveLength(127);
     queries.setAuthority({ accountId: "different" });

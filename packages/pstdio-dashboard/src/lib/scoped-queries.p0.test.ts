@@ -59,6 +59,10 @@ test("one runtime account reader revokes active and retained data before publish
   try {
     const account = getDashboardAccountStatusQuery(owner);
     const root = getDashboardScopedQueries(owner);
+    const projectRetirements: string[] = [];
+    const stopRetirements = root.subscribeScopeRetirement(({ projectId }) => {
+      if (projectId) projectRetirements.push(projectId);
+    });
     const first = account.subscribe(() => {});
     const second = account.subscribe(() => {});
     await account.read();
@@ -67,7 +71,7 @@ test("one runtime account reader revokes active and retained data before publish
     const warm = root.forScope({ projectId: "b" }).query({ id: "notes", read: async () => "private warm" });
     const stop = query.subscribe(() => {});
     await Promise.all([query.read(), warm.read()]);
-    current = status("second");
+    current = { ...status("second"), cloudProjects: ["a"] };
     publishExtensionEvent({ id: "account.changed" }, owner);
     await account.read();
     expect(reads).toBe(2);
@@ -75,22 +79,29 @@ test("one runtime account reader revokes active and retained data before publish
     expect(warm.isDisposed()).toBe(true);
     expect(query.getSnapshot().data).toBeUndefined();
     expect(account.getSnapshot().data?.login?.accountId).toBe("second");
+    expect(projectRetirements).toEqual([]);
     const replacement = root.forScope({ projectId: "a" }).query({ id: "notes", read: async () => "second" });
     expect(replacement.key).toContain("second");
     current = status("second", "https://different.example");
     publishExtensionEventReset({}, owner);
     await account.read();
     expect(replacement.isDisposed()).toBe(true);
-    const signedIn = root.forScope({ projectId: "a" }).query({ id: "notes", read: async () => "second" });
-    current = { ...current, signInRequired: true };
+    current = { ...current, cloudProjects: ["b"] };
+    publishExtensionEvent({ id: "account.changed" }, owner);
+    await account.read();
+    expect(projectRetirements).toEqual(["a"]);
+    const signedIn = root.forScope({ projectId: "b" }).query({ id: "notes", read: async () => "second" });
+    current = { ...current, signInRequired: true, cloudProjects: [] };
     publishExtensionEvent({ id: "account.changed" }, owner);
     await account.read();
     expect(signedIn.isDisposed()).toBe(true);
+    expect(projectRetirements).toEqual(["a"]);
+    stopRetirements();
     stop();
     first();
     second();
     await turn();
-    expect(reads).toBe(4);
+    expect(reads).toBe(5);
   } finally {
     await owner.dispose();
     await server.stop(true);

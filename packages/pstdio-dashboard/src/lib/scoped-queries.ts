@@ -56,9 +56,13 @@ const runtimeQueries = createRuntimeState(
     const applyAuthority = () => {
       const status = account.getSnapshot().data;
       if (!status || status === applied) return;
-      queries.setAuthority(dashboardQueryAuthority(status));
-      for (const projectId of applied?.cloudProjects ?? [])
-        if (!status.cloudProjects.includes(projectId)) queries.clearScope({ projectId });
+      const previous = queries.getScope();
+      const next = dashboardQueryAuthority(status);
+      queries.setAuthority(next);
+      if (previous.accountId === next.accountId && previous.accountOrigin === next.accountOrigin) {
+        for (const projectId of applied?.cloudProjects ?? [])
+          if (!status.cloudProjects.includes(projectId)) queries.clearScope({ projectId });
+      }
       applied = status;
     };
     const stopAccount = account.subscribe(applyAuthority);

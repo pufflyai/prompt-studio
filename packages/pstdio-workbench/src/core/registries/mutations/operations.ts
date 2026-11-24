@@ -18,7 +18,7 @@ export class OperationCapacityError extends Error {
     super(
       otherAuthority
         ? "The workbench is holding its limit of pending changes and drafts. Free space in System activity, or switch to the account that owns the other drafts."
-        : "The workbench is holding its limit of pending changes and drafts. Finish a change or recover a draft to free space.",
+        : "The workbench is holding its limit of pending changes and drafts. Finish a change or recover a draft from System activity in its project.",
     );
     this.name = "OperationCapacityError";
   }
@@ -152,9 +152,9 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
     scope = queries.getScope();
     owner = operationAuthorityKey(scope);
     for (const entry of entries.values()) {
-      if (entry.controller.signal.aborted) continue;
       if (!Object.entries(retired).every(([key, value]) => entry.scope[key as keyof QueryScope] === value)) continue;
-      retireEntry(entry);
+      if (retired.projectId !== undefined) entry.projectRetired = true;
+      if (!entry.controller.signal.aborted) retireEntry(entry);
     }
     publish();
     schedule();

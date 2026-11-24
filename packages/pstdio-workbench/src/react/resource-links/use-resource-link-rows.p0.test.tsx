@@ -1,15 +1,17 @@
 import { expect, test } from "bun:test";
 import type { ResourceAnchorPage } from "@pstdio/sdk/extensions";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
-import type { ResourceLinksService } from "./resource-links-types";
+import type { ResourceLinkChangePreview, ResourceLinksService } from "./resource-links-types";
 import { useResourceLinkRows } from "./use-resource-link-rows";
 
 test("moving to a new link page detaches a held obsolete reconciliation read", async () => {
   const source = { type: "session", projectId: "project", extensionId: "pstdio", id: "source" };
   const target = { ...source, id: "target" };
+  const incoming = { ...source, id: "incoming", label: "Incoming session" };
   const stale = Promise.withResolvers<ResourceAnchorPage>();
   const held = Promise.withResolvers<void>();
-  const empty = [] as const;
+  let changes: readonly ResourceLinkChangePreview[] = [];
+  let notifyChange: (() => void) | undefined;
   let observation: ((signal: AbortSignal) => Promise<void>) | undefined;
   let listCount = 0;
   const service: ResourceLinksService = {
@@ -26,8 +28,13 @@ test("moving to a new link page detaches a held obsolete reconciliation read", a
     search: async () => [],
     subscribe: () => () => {},
     changes: {
-      getSnapshot: () => empty,
-      subscribe: () => () => {},
+      getSnapshot: () => changes,
+      subscribe(listener) {
+        notifyChange = listener;
+        return () => {
+          notifyChange = undefined;
+        };
+      },
       observe(refresh) {
         observation = refresh;
         return () => {
@@ -66,6 +73,18 @@ test("moving to a new link page detaches a held obsolete reconciliation read", a
       await stale.promise;
     });
     expect(current!.rows.map(({ edge }) => edge.target)).toEqual([target]);
+    await act(async () => {
+      changes = [
+        { id: Symbol("incoming"), status: "writing", change: { kind: "add", source: incoming, targets: [source] } },
+      ];
+      notifyChange!();
+    });
+    expect(current!.rows.map(({ candidate, pending }) => [candidate.resource.id, pending])).toEqual([
+      [target.id, undefined],
+      [incoming.id, "pending"],
+    ]);
+    expect(current!.rows[1]?.incoming).toBe(true);
+    expect(listCount).toBe(3);
   } finally {
     stale.resolve({ items: [] });
     await act(async () => tree?.unmount());

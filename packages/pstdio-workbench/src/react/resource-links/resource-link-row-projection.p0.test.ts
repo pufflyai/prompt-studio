@@ -22,14 +22,13 @@ test("a pending new link appears on both endpoints without duplicating a read-ba
   expect(projectResourceLinkRows([], [change], { ...source, projectId: "other" })).toEqual([]);
 });
 
-test("only the newest directed intent is projected and the first page has a bounded pending strip", () => {
+test("only the newest directed intent is projected and the pending strip is bounded", () => {
   const removal: ResourceLinkChangePreview = {
     id: Symbol("remove"),
     status: "queued",
     change: { kind: "remove", source, targets: [target] },
   };
   expect(projectResourceLinkRows([], [change, removal], source)).toEqual([]);
-  expect(projectResourceLinkRows([], [change])).toEqual([]);
   const bulk: ResourceLinkChangePreview = {
     ...change,
     status: "unknown",
