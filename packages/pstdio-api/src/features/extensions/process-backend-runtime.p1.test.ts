@@ -2,6 +2,7 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createStorageMigration } from "pstdio-api-contracts";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { closeBackendWorkers, prepareExtensionRevision, uncoveredContextFunctions } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
@@ -75,6 +76,25 @@ export default {
           await ctx.storage.set("migrated-from", previous);
         });
         return ctx.storage.get("migrated-from");
+      },
+    },
+    {
+      id: "migrate-records",
+      ref: { kind: "command", id: "migrate-records" },
+      title: "Migrate records",
+      async run(ctx) {
+        const selector = { type: "resource", resource: { type: "fixture", id: "original" } };
+        const storage = ctx.storage.scope(selector);
+        selector.resource.id = "another";
+        await storage.collection("legacy").put("entry", { imported: true });
+        let id;
+        await storage.migrate(2, async (previous, migration) => {
+          const { moved } = await migration.moveCollection("legacy", { keyPrefix: "import-" });
+          id = migration.id("source", "nt");
+          const position = migration.position(0, "entry");
+          await storage.records.commit({ operationId: id, edits: [{ recordId: id, replace: { moved, previous, position } }] });
+        });
+        return { id, value: (await storage.records.read(id)).value };
       },
     },
     {
@@ -379,4 +399,15 @@ test("process-mode handlers can pass callbacks to host storage", async () => {
   const observed = (await execute("observe")).outcome;
   expect(observed.ok).toBe(true);
   expect(observed.value).toBeGreaterThan(0);
+});
+
+test("process-mode migration helpers preserve scoped identity and allow record moves and commits", async () => {
+  const migration = createStorageMigration(["example.isolated", projectId, "resource", "original", 2]);
+  expect((await execute("migrate-records")).outcome).toMatchObject({
+    ok: true,
+    value: {
+      id: migration.id("source", "nt"),
+      value: { moved: 1, previous: 0, position: migration.position(0, "entry") },
+    },
+  });
 });

@@ -32,7 +32,7 @@ export type HostToWorkerMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
       args: unknown[];
     }
   | { type: "cancel"; invocationId: string; reason: SerializedBackendError }
-  | ({ type: "reply"; requestId: string } & Settled)
+  | ({ type: "reply"; invocationId: string; requestId: string } & Settled)
   /** Calls a function the worker passed to the host during this invocation. */
   | { type: "fn-call"; invocationId: string; requestId: string; fnId: string; args: unknown[] }
 );
@@ -41,11 +41,11 @@ export type WorkerToHostMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
   | { type: "ready" }
   | ({ type: "loaded" } & Settled)
   | ({ type: "result"; invocationId: string } & Settled)
-  | { type: "call"; invocationId: string; requestId: string; path: SurfaceStep[]; args: unknown[] }
-  | { type: "notify"; invocationId: string; path: SurfaceStep[]; args: unknown[] }
+  | { type: "call"; invocationId: string; requestId: string; path: SurfaceStep[]; args: unknown[]; within?: string }
+  | { type: "notify"; invocationId: string; path: SurfaceStep[]; args: unknown[]; within?: string }
   /** Calls a function the host passed to the worker during this invocation. */
-  | { type: "fn-call"; invocationId: string; requestId: string; fnId: string; args: unknown[] }
-  | ({ type: "reply"; requestId: string } & Settled)
+  | { type: "fn-call"; invocationId: string; requestId: string; fnId: string; args: unknown[]; within?: string }
+  | ({ type: "reply"; invocationId: string; requestId: string } & Settled)
 );
 
 /** Marks a function in the definition the worker reports. Only the worker can run it. */
@@ -124,20 +124,27 @@ export const parseWorkerMessage = (message: unknown): WorkerToHostMessage | unde
       return typeof message.invocationId === "string" &&
         typeof message.requestId === "string" &&
         isPath(message.path) &&
-        Array.isArray(message.args)
+        Array.isArray(message.args) &&
+        optionalString(message.within)
         ? (message as WorkerToHostMessage)
         : undefined;
     case "fn-call":
       return typeof message.invocationId === "string" &&
         typeof message.requestId === "string" &&
         typeof message.fnId === "string" &&
-        Array.isArray(message.args)
+        Array.isArray(message.args) &&
+        optionalString(message.within)
         ? (message as WorkerToHostMessage)
         : undefined;
     case "reply":
-      return typeof message.requestId === "string" && isSettled(message) ? (message as WorkerToHostMessage) : undefined;
+      return typeof message.invocationId === "string" && typeof message.requestId === "string" && isSettled(message)
+        ? (message as WorkerToHostMessage)
+        : undefined;
     case "notify":
-      return typeof message.invocationId === "string" && isPath(message.path) && Array.isArray(message.args)
+      return typeof message.invocationId === "string" &&
+        isPath(message.path) &&
+        Array.isArray(message.args) &&
+        optionalString(message.within)
         ? (message as WorkerToHostMessage)
         : undefined;
   }
