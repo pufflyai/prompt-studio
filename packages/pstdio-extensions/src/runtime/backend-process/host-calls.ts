@@ -1,95 +1,125 @@
-import type { AsyncLocalStorage } from "node:async_hooks";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { createPendingCalls } from "./pending-calls";
 import {
   BACKEND_PROTOCOL_VERSION,
   BackendUnavailableError,
-  deserializeBackendError,
   type HostToWorkerMessage,
+  type SerializedBackendError,
   serializeBackendError,
   type WorkerToHostMessage,
 } from "./protocol";
-import { type createFunctionTable, importValue } from "./remote-values";
+import { type createFunctionTable, discardValue, importValue } from "./remote-values";
 import { type BackendSurface, resolveSurfaceCall } from "./surface";
+
+type Enter = ReturnType<typeof AsyncLocalStorage.snapshot>;
 
 export interface HostInvocation {
   context: unknown;
   surface: BackendSurface;
   /** Re-enters the host's async context from when the invocation started, such as its project work. */
-  enter: ReturnType<typeof AsyncLocalStorage.snapshot>;
+  enter: Enter;
+  cancelled?: boolean;
   /** Host functions this invocation handed to the worker, such as a migration helper or a close(). */
   table: ReturnType<typeof createFunctionTable>;
 }
 
-type Resolvers = ReturnType<typeof Promise.withResolvers<unknown>>;
+type Call = Extract<WorkerToHostMessage, { type: "call" | "fn-call" }>;
 
-/**
- * Answers the worker's calls for running invocations. Each call is checked against the invocation's
- * surface; functions in arguments and results cross as references owned by the side that sent them.
- */
 export const createHostCalls = (
   send: (message: HostToWorkerMessage) => boolean,
   invocation: (invocationId: string) => HostInvocation | undefined,
+  workerError: (error: SerializedBackendError) => Error,
 ) => {
-  const pending = new Map<string, Resolvers>();
+  const pending = createPendingCalls<Enter>();
+  const hostCallOwner = new AsyncLocalStorage<string>();
   let nextRequest = 0;
 
   const importFrom = (invocationId: string, value: unknown) =>
     importValue(value, (fnId, args) => callWorker(invocationId, fnId, args));
 
-  /** Calls a function the worker passed to the host. It works only while its invocation runs. */
-  const callWorker = (invocationId: string, fnId: string, args: unknown[]): Promise<unknown> => {
+  const callWorker = async (invocationId: string, fnId: string, args: unknown[]): Promise<unknown> => {
     const running = invocation(invocationId);
-    if (!running) return Promise.reject(new Error("The extension handler has finished."));
-    const requestId = `h${nextRequest++}`;
-    const reply = Promise.withResolvers<unknown>();
-    pending.set(requestId, reply);
+    if (!running || running.cancelled) throw new BackendUnavailableError("The invocation is no longer running.");
     const exported = running.table.exportValue(args) as unknown[];
+    const requestId = `h${nextRequest++}`;
+    // A listener can be called by a different invocation's event. Only a host operation owned
+    // by this invocation can give its callback narrower async context.
+    const enter = hostCallOwner.getStore() === invocationId ? AsyncLocalStorage.snapshot() : running.enter;
+    const reply = pending.start(invocationId, requestId, enter);
     if (!send({ v: BACKEND_PROTOCOL_VERSION, type: "fn-call", invocationId, requestId, fnId, args: exported })) {
-      pending.delete(requestId);
-      return Promise.reject(new Error("The extension backend is not available."));
+      pending.take(invocationId, requestId);
+      throw new BackendUnavailableError("The extension backend is not available.");
     }
-    return reply.promise.then((value) => importFrom(invocationId, value));
+    return importFrom(invocationId, await reply.promise);
   };
 
-  const answer = async (requestId: string, invocationId: string, run: (running: HostInvocation) => unknown) => {
+  // A callback may have entered a narrower host scope (for example a database migration).
+  // Its context applies only to that invocation, and only while that callback is pending.
+  const enterFor = (running: HostInvocation, invocationId: string, within: string | undefined) => {
+    const enter = within === undefined ? running.enter : pending.context(invocationId, within);
+    if (!enter) throw new BackendUnavailableError("The invocation's callback has finished.");
+    return enter;
+  };
+
+  const runCall = (running: HostInvocation, message: Call) => {
+    const args = () => importFrom(message.invocationId, message.args) as unknown[];
+    if (message.type === "fn-call") return running.table.call(message.fnId, args, running.cancelled);
+    if (running.cancelled) throw new BackendUnavailableError("The invocation was cancelled.");
+    return resolveSurfaceCall(running.context, running.surface, message.path, args, "async");
+  };
+
+  const answer = async (message: Call) => {
+    const { invocationId, requestId } = message;
     try {
       const running = invocation(invocationId);
-      // The id is unguessable and scoped to this worker; an unknown or finished id gets no host action.
       if (!running) throw new BackendUnavailableError("The invocation is no longer running.");
-      const value = running.table.exportValue(await running.enter(run, running));
-      if (!send({ v: BACKEND_PROTOCOL_VERSION, type: "reply", requestId, ok: true, value }))
-        throw new Error("The host result could not be sent to the worker.");
+      await enterFor(
+        running,
+        invocationId,
+        message.within,
+      )(async () => {
+        const result = await hostCallOwner.run(invocationId, () => runCall(running, message));
+        if (invocation(invocationId) !== running || (running.cancelled && message.type === "call")) {
+          discardValue(result);
+          return;
+        }
+        const value = running.table.exportValue(result);
+        if (!send({ v: BACKEND_PROTOCOL_VERSION, type: "reply", invocationId, requestId, ok: true, value }))
+          throw new Error("The host result could not be sent to the worker.");
+      });
     } catch (error) {
-      send({ v: BACKEND_PROTOCOL_VERSION, type: "reply", requestId, ok: false, error: serializeBackendError(error) });
+      send({
+        v: BACKEND_PROTOCOL_VERSION,
+        type: "reply",
+        invocationId,
+        requestId,
+        ok: false,
+        error: serializeBackendError(error),
+      });
     }
+  };
+
+  const notify = (message: Extract<WorkerToHostMessage, { type: "notify" }>) => {
+    const running = invocation(message.invocationId);
+    if (!running || running.cancelled) return;
+    try {
+      const { context, surface } = running;
+      const enter = enterFor(running, message.invocationId, message.within);
+      Promise.resolve(enter(() => resolveSurfaceCall(context, surface, message.path, message.args, "notify"))).catch(
+        () => {},
+      );
+    } catch {}
   };
 
   const handle = (message: WorkerToHostMessage) => {
-    if (message.type === "call")
-      void answer(message.requestId, message.invocationId, ({ context, surface }) =>
-        resolveSurfaceCall(
-          context,
-          surface,
-          message.path,
-          importFrom(message.invocationId, message.args) as unknown[],
-          "async",
-        ),
-      );
-    else if (message.type === "fn-call")
-      void answer(message.requestId, message.invocationId, ({ table }) =>
-        table.call(message.fnId, importFrom(message.invocationId, message.args) as unknown[]),
-      );
+    if (message.type === "call" || message.type === "fn-call") void answer(message);
+    else if (message.type === "notify") notify(message);
     else if (message.type === "reply") {
-      const reply = pending.get(message.requestId);
-      pending.delete(message.requestId);
+      const reply = pending.take(message.invocationId, message.requestId);
       if (message.ok) reply?.resolve(message.value);
-      else reply?.reject(deserializeBackendError(message.error));
+      else reply?.reject(workerError(message.error));
     }
   };
 
-  const rejectAll = (error: Error) => {
-    for (const reply of pending.values()) reply.reject(error);
-    pending.clear();
-  };
-
-  return { handle, rejectAll };
+  return { handle, reject: pending.reject };
 };

@@ -1,4 +1,6 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { readCommandRejection } from "../runner/command-rejection";
+import { createPendingCalls } from "./pending-calls";
 import {
   BACKEND_PROTOCOL_VERSION,
   type BackendHandlerRef,
@@ -9,7 +11,7 @@ import {
   transferableCommandRejection,
   type WorkerToHostMessage,
 } from "./protocol";
-import { createFunctionTable, importValue } from "./remote-values";
+import { createFunctionTable, discardValue, importValue } from "./remote-values";
 import { createSurfaceFacade, type SurfaceStep } from "./surface";
 
 type Handler = (...args: unknown[]) => unknown;
@@ -82,22 +84,33 @@ const send = (message: WorkerToHostMessage) => process.send?.(message);
 export const runBackendWorker = () => {
   let handlers = new Map<string, Handler>();
   const invocations = new Map<string, { controller: AbortController; table: ReturnType<typeof createFunctionTable> }>();
-  const pending = new Map<string, ReturnType<typeof Promise.withResolvers<unknown>>>();
+  const pending = createPendingCalls();
+  const callback = new AsyncLocalStorage<{ invocationId: string; requestId: string }>();
   let nextRequest = 0;
+
+  const within = (invocationId: string) => {
+    const active = callback.getStore();
+    return active?.invocationId === invocationId ? { within: active.requestId } : {};
+  };
 
   /** Sends a request to the host and resolves with its reply, importing any host functions in it. */
   // Recursive with callHost, so TypeScript needs the return types spelled out.
-  const request = (invocationId: string, message: (requestId: string) => WorkerToHostMessage): Promise<unknown> => {
+  const request = async (invocationId: string, message: (requestId: string) => WorkerToHostMessage) => {
+    if (!invocations.has(invocationId)) throw new Error("This invocation has finished.");
     const requestId = `r${nextRequest++}`;
-    const reply = Promise.withResolvers<unknown>();
-    pending.set(requestId, reply);
-    send(message(requestId));
-    return reply.promise.then((value) => importValue(value, (fnId, args) => callHost(invocationId, fnId, args)));
+    const reply = pending.start(invocationId, requestId, undefined);
+    try {
+      send(message(requestId));
+    } catch (error) {
+      pending.take(invocationId, requestId);
+      throw error;
+    }
+    return importValue(await reply.promise, (fnId, args) => callHost(invocationId, fnId, args));
   };
 
-  const callHost = (invocationId: string, fnId: string, args: unknown[]): Promise<unknown> => {
+  const callHost = async (invocationId: string, fnId: string, args: unknown[]): Promise<unknown> => {
     const table = invocations.get(invocationId)?.table;
-    if (!table) return Promise.reject(new Error("This invocation has finished."));
+    if (!table) throw new Error("This invocation has finished.");
     const exported = table.exportValue(args) as unknown[];
     return request(invocationId, (requestId) => ({
       v: BACKEND_PROTOCOL_VERSION,
@@ -106,19 +119,43 @@ export const runBackendWorker = () => {
       requestId,
       fnId,
       args: exported,
+      ...within(invocationId),
     }));
   };
 
   const answerHost = async (message: Extract<HostToWorkerMessage, { type: "fn-call" }>) => {
-    const table = invocations.get(message.invocationId)?.table;
+    const { invocationId, requestId } = message;
+    const running = invocations.get(invocationId);
     try {
-      if (!table) throw new Error("This invocation has finished.");
-      const args = importValue(message.args, (fnId, inner) => callHost(message.invocationId, fnId, inner)) as unknown[];
-      const value = table.exportValue(await table.call(message.fnId, args));
-      send({ v: BACKEND_PROTOCOL_VERSION, type: "reply", requestId: message.requestId, ok: true, value });
+      if (!running || running.controller.signal.aborted) throw new Error("This invocation has finished.");
+      const { table } = running;
+      const result = await callback.run({ invocationId, requestId }, () =>
+        table.call(
+          message.fnId,
+          () => importValue(message.args, (fnId, inner) => callHost(invocationId, fnId, inner)) as unknown[],
+        ),
+      );
+      if (invocations.get(invocationId) !== running || running.controller.signal.aborted) {
+        discardValue(result);
+        return;
+      }
+      send({
+        v: BACKEND_PROTOCOL_VERSION,
+        type: "reply",
+        invocationId,
+        requestId,
+        ok: true,
+        value: table.exportValue(result),
+      });
     } catch (error) {
-      const serialized = serializeBackendError(error);
-      send({ v: BACKEND_PROTOCOL_VERSION, type: "reply", requestId: message.requestId, ok: false, error: serialized });
+      send({
+        v: BACKEND_PROTOCOL_VERSION,
+        type: "reply",
+        invocationId,
+        requestId,
+        ok: false,
+        error: serializeBackendError(error),
+      });
     }
   };
 
@@ -129,7 +166,8 @@ export const runBackendWorker = () => {
     invocations.set(invocationId, { controller, table });
     const channel = {
       signal: controller.signal,
-      call: (path: SurfaceStep[], args: unknown[]) => {
+      call: async (path: SurfaceStep[], args: unknown[]) => {
+        if (!invocations.has(invocationId)) throw new Error("This invocation has finished.");
         const exported = table.exportValue(args) as unknown[];
         return request(invocationId, (requestId) => ({
           v: BACKEND_PROTOCOL_VERSION,
@@ -138,10 +176,11 @@ export const runBackendWorker = () => {
           requestId,
           path,
           args: exported,
+          ...within(invocationId),
         }));
       },
       notify: (path: SurfaceStep[], args: unknown[]) =>
-        send({ v: BACKEND_PROTOCOL_VERSION, type: "notify", invocationId, path, args }),
+        send({ v: BACKEND_PROTOCOL_VERSION, type: "notify", invocationId, path, args, ...within(invocationId) }),
     };
     try {
       const handler = handlers.get(message.handlerId);
@@ -161,6 +200,7 @@ export const runBackendWorker = () => {
       });
     } finally {
       invocations.delete(invocationId);
+      pending.reject(invocationId, new Error("This invocation has finished."));
       table.clear();
     }
   };
@@ -179,8 +219,7 @@ export const runBackendWorker = () => {
   };
 
   const settle = (message: Extract<HostToWorkerMessage, { type: "reply" }>) => {
-    const reply = pending.get(message.requestId);
-    pending.delete(message.requestId);
+    const reply = pending.take(message.invocationId, message.requestId);
     if (message.ok) reply?.resolve(message.value);
     else reply?.reject(deserializeBackendError(message.error));
   };
@@ -189,9 +228,11 @@ export const runBackendWorker = () => {
     if (raw?.v !== BACKEND_PROTOCOL_VERSION) return;
     if (raw.type === "load") void load(raw.entryPath);
     else if (raw.type === "invoke") void invoke(raw);
-    else if (raw.type === "cancel")
-      invocations.get(raw.invocationId)?.controller.abort(deserializeBackendError(raw.reason));
-    else if (raw.type === "reply") settle(raw);
+    else if (raw.type === "cancel") {
+      const reason = deserializeBackendError(raw.reason);
+      pending.reject(raw.invocationId, reason);
+      invocations.get(raw.invocationId)?.controller.abort(reason);
+    } else if (raw.type === "reply") settle(raw);
     else if (raw.type === "fn-call") void answerHost(raw);
   });
   // The host disconnects on retirement; nothing in this process outlives it.
