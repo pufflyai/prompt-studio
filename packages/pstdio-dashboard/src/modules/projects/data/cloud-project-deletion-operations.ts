@@ -7,7 +7,7 @@ import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { createRuntimeState } from "@/lib/sync/runtime-state";
 import { dashboardCommandIds } from "@/shared/app/commands";
 
-import { cloudProjectCopySubject } from "./cloud-copy-download";
+import { cloudCopyBusy, cloudProjectCopySubject } from "./cloud-copy-download";
 import { cloudProjectDeletionKey } from "./project-catalog";
 
 const confirmedReceipt = (id: string, receipt: CloudProjectDeletion) => {
@@ -37,8 +37,7 @@ const getCloudProjectDeletions = createRuntimeState((owner) => {
       if (accountId !== expectedAccount.accountId || accountOrigin !== expectedAccount.managerOrigin)
         throw new Error("The active Cloud account changed. Reopen this action to confirm again.");
       const subject = cloudProjectCopySubject(id);
-      if (operations.getSnapshot().pending.some((entry) => entry.subjects.includes(subject)))
-        throw new Error("This project already has a pending Cloud change.");
+      if (cloudCopyBusy(operations, id)) throw new Error("This project already has a pending Cloud change.");
       return operations.submit({
         domain,
         subjects: [subject],

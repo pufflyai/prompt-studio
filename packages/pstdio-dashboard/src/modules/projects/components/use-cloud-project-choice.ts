@@ -27,6 +27,7 @@ const useCloudCopyDownload = (
     downloading: boolean;
     requested: boolean;
     deleting: boolean;
+    checkingAccount: boolean;
     localRemoval: ReturnType<typeof useCloudLocalRemoval>;
     entry?: CloudProjectCatalogEntry;
     account?: ProjectCopyAccount;
@@ -41,6 +42,7 @@ const useCloudCopyDownload = (
     downloading,
     requested,
     deleting,
+    checkingAccount,
     localRemoval,
     entry,
     account,
@@ -53,7 +55,7 @@ const useCloudCopyDownload = (
   const client = getRuntimeApiClient(runtime);
   const operations = getCloudCopyDownloads(runtime);
   useSyncExternalStore(operations.subscribe, operations.snapshot, operations.snapshot);
-  const { active, failure: unresolved } = operations.state(id);
+  const { active, failure: unresolved } = operations.state(id, scope);
   const queryClient = useQueryClient();
   useCollectionSelection({ tables: ["projects", "workspaces"] });
   const localName = findDashboardProject(id)?.name;
@@ -93,9 +95,11 @@ const useCloudCopyDownload = (
       entry?.presence !== "downloaded" ||
       !localName ||
       deleting ||
+      checkingAccount ||
       removing ||
       localRemoval.isRemoving(id) ||
-      !operations.isCurrent(id, scope)
+      !operations.isCurrent(id, scope) ||
+      operations.isCheckingAccount()
     )
       return;
     input.workbench.overlays.closeOverlay(input.instance.instanceId);
@@ -110,6 +114,7 @@ const useCloudCopyDownload = (
     requested,
     localName,
     deleting,
+    checkingAccount,
     removing,
     localRemoval,
     operations,
@@ -127,24 +132,32 @@ const useCloudCopyDownload = (
 
   const action = cloudCopyDownloadAction(entry, sync.data);
   const requestDownload = () => {
-    const current = operations.state(id);
+    const current = operations.state(id, scope);
     if (action && !current.active && !current.failure) {
       download.mutate({ owner, admission: { id, account, scope, action } });
     }
   };
   const checkDownload = async () => {
-    if (unresolved?.canCheck && operations.isCurrent(id, scope) && operations.state(id).failure?.id === unresolved.id)
+    if (
+      unresolved?.canCheck &&
+      operations.isCurrent(id, scope) &&
+      operations.state(id, scope).failure?.id === unresolved.id
+    )
       await operations.check(unresolved.id);
   };
+  const canDiscard = Boolean(
+    unresolved &&
+      (entry?.presence === "cloud-only" || (entry?.presence === "downloading" && unresolved.status === "unknown")),
+  );
   const discardDownload = () => {
     if (
       !unresolved ||
-      entry?.presence !== "cloud-only" ||
+      !canDiscard ||
       !operations.isCurrent(id, scope) ||
-      operations.state(id).failure?.id !== unresolved.id
+      operations.state(id, scope).failure?.id !== unresolved.id
     )
       return;
-    operations.discard(id, unresolved.id);
+    operations.discard(id, scope, unresolved.id);
     download.reset();
     clearIntent();
   };
@@ -154,7 +167,7 @@ const useCloudCopyDownload = (
     refresh,
     requestDownload,
     checkDownload: unresolved?.canCheck ? checkDownload : undefined,
-    discardDownload: unresolved && entry?.presence === "cloud-only" ? discardDownload : undefined,
+    discardDownload: canDiscard ? discardDownload : undefined,
     action,
     active,
     unresolved,
@@ -220,6 +233,7 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
       downloading,
       requested,
       deleting,
+      checkingAccount: cloud.checkingAccount,
       localRemoval,
       entry,
       account,
@@ -241,7 +255,13 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
   const pending = Boolean(active && !unresolved);
   const showProgress = (downloading || pending) && !deleting && !failure && entry?.presence !== "downloaded";
   const canDownload = Boolean(
-    action && !invalidated && !unresolved && !copyBusy && !deleting && (!downloading || failure),
+    action &&
+      !cloud.checkingAccount &&
+      !invalidated &&
+      !unresolved &&
+      !copyBusy &&
+      !deleting &&
+      (!downloading || failure),
   );
   const showDownload = !receipt && !deleting && entry?.presence !== "removing";
 

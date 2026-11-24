@@ -7,6 +7,8 @@ import { getDashboardAccountStatusQuery, getDashboardScopedQueries } from "@/lib
 import { createRuntimeState } from "@/lib/sync/runtime-state";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import {
+  cloudCopyBusy,
+  cloudCopyRemovalDomain,
   cloudCopyScopeFor,
   cloudCopySyncKey,
   cloudProjectCopySubject,
@@ -19,15 +21,18 @@ const getCloudLocalRemoval = createRuntimeState((owner) => {
   const operations = getWorkbenchOperations(queries);
   const api = getRuntimeApiClient(owner).account;
   const client = getDashboardQueryClient(owner);
-  const domain = "project.remove-device-copy";
-  const active = (id: string) =>
-    operations.getSnapshot().pending.some((entry) => entry.subjects.includes(cloudProjectCopySubject(id)));
+  const accountStatus = getDashboardAccountStatusQuery(owner);
+  const copyScope = (id: string) =>
+    cloudCopyScopeFor(id, cloudCatalogScopeFor(String(owner.id), accountStatus.getSnapshot().data?.login));
+  const active = (id: string) => cloudCopyBusy(operations, id, copyScope(id));
   return {
     active,
-    isRemoving: (id: string) =>
-      operations
+    isRemoving: (id: string) => {
+      const subject = cloudProjectCopySubject(id, copyScope(id));
+      return operations
         .getSnapshot()
-        .pending.some((entry) => entry.domain === domain && entry.subjects.includes(cloudProjectCopySubject(id))),
+        .pending.some((entry) => entry.domain === cloudCopyRemovalDomain && entry.subjects.includes(subject));
+    },
     snapshot: operations.getSnapshot,
     subscribe: operations.subscribe,
     preflight: (id: string, signal: AbortSignal) => api.projectLocalRemoval(id, { signal }),
@@ -36,13 +41,14 @@ const getCloudLocalRemoval = createRuntimeState((owner) => {
       if (accountId !== expectedAccount.accountId || accountOrigin !== expectedAccount.managerOrigin)
         throw new Error("The active Cloud account changed. Reopen this action to confirm again.");
       if (active(id)) throw new Error("This project already has a pending Cloud change.");
-      const login = getDashboardAccountStatusQuery(owner).getSnapshot().data?.login;
+      const login = accountStatus.getSnapshot().data?.login;
       const scope = cloudCopyScopeFor(id, cloudCatalogScopeFor(String(owner.id), login));
       const catalogKey = cloudCatalogKeyFor(accountOrigin, accountId, login?.deviceId);
       const syncKey = cloudCopySyncKey(scope);
       return operations.submit<RemoveLocalProjectResult>({
-        domain,
-        subjects: [cloudProjectCopySubject(id)],
+        projectId: id,
+        domain: cloudCopyRemovalDomain,
+        subjects: [cloudProjectCopySubject(id, scope)],
         title: `Delete local version of “${name}”`,
         sourceCommand: { id: dashboardCommandIds.openProjects },
         draft: { projectId: id, name, discardUnsynced },

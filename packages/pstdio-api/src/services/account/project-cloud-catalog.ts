@@ -74,6 +74,11 @@ const createCatalogEntry =
     };
   };
 
+const requireOnlineProject = (input: Pick<CatalogInput, "online" | "cloud">, login: DeviceLogin, id: string) => {
+  if (!input.online() || !input.cloud(login)?.ids.includes(id))
+    throw new AccountRequestError("Connect to Cloud before downloading this project");
+};
+
 const createCopyRetries = (
   input: Pick<CatalogInput, "refresh" | "projects" | "online" | "cloud" | "retry" | "changed">,
   requireCurrent: (login: DeviceLogin) => Promise<void>,
@@ -86,8 +91,7 @@ const createCopyRetries = (
       const key = keyFor(login, id);
       const requireRetryScope = async () => {
         await requireCurrent(login);
-        if (!input.online() || !input.cloud(login)?.ids.includes(id))
-          throw new AccountRequestError("Connect to Cloud before downloading this project");
+        requireOnlineProject(input, login, id);
       };
       pending.add(key);
       void input
@@ -117,6 +121,12 @@ const requestDiscoveredCopy = async (
   if (status?.state === "needs-attention") await retry();
   else void input.refresh();
   return { projectId: id, presence: "downloading" as const };
+};
+
+const storedCopyNeedsRetry = async (input: Pick<CatalogInput, "projects" | "syncStatus">, copy: ProjectCopy) => {
+  if (copy.phase !== "downloading" || !(await input.projects.get(copy.projectId))) return false;
+  const status = await input.syncStatus(copy.projectId).catch(() => undefined);
+  return status?.state === "needs-attention";
 };
 
 const createCopySyncStatus =
@@ -228,9 +238,7 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
       removal.serialize(id, async () => {
         const login = await requireDevice();
         requireProjectCopyAccount(login, expected);
-        const cloud = input.cloud(login);
-        if (!input.online() || !cloud?.ids.includes(id))
-          throw new AccountRequestError("Connect to Cloud before downloading this project");
+        requireOnlineProject(input, login, id);
         const choice = (await copies.forAccount(login)).find((row) => row.projectId === id);
         if (choice?.phase === "removing") throw new AccountRequestError("Finish removing the local copy first");
         const downloading = { projectId: id, presence: "downloading" } as const;
@@ -238,12 +246,18 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
         if (!choice)
           return requestDiscoveredCopy(input, id, async () => {
             await requireCurrent(login);
+            requireOnlineProject(input, login, id);
             retries.start(login, id);
           });
+        const needsRetry = await storedCopyNeedsRetry(input, choice);
         await requireCurrent(login);
+        requireOnlineProject(input, login, id);
         folderErrors.delete(copyKey(choice));
-        await copies.write({ ...choice, phase: "downloading", automatic: undefined });
-        retries.start(login, id);
+        // Explicit Download still prepares a folder when an automatic discovery finishes.
+        if (choice.automatic || choice.phase === "cloud-only")
+          await copies.write({ ...choice, phase: "downloading", automatic: undefined });
+        if (needsRetry) retries.start(login, id);
+        else void input.refresh();
         return downloading;
       }),
     async prepareDownloadedProject(id: string) {
