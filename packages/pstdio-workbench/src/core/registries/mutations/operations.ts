@@ -10,7 +10,13 @@ import {
   retireOperations,
   snapshotForOperations,
 } from "./operation-state";
-import type { OperationFailure, OperationInput, OperationPreview, OperationRead } from "./operation-types";
+import type {
+  OperationFailure,
+  OperationInput,
+  OperationPreview,
+  OperationRead,
+  ProjectRecoveryAvailability,
+} from "./operation-types";
 
 const operationLimit = 128;
 
@@ -180,17 +186,13 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
     getSnapshot: () => snapshot,
     observeRead(read: OperationRead) {
       reads.add(read);
-      return () => {
-        reads.delete(read);
-      };
+      return () => void reads.delete(read);
     },
     subscribe(listener: () => void) {
       listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
+      return () => void listeners.delete(listener);
     },
-    updateRetiredProjectAvailability(isAvailable: (projectId: string) => boolean | undefined) {
+    updateRetiredProjectAvailability(isAvailable: ProjectRecoveryAvailability) {
       if (!queries.isDisposed() && reconcileProjectAvailability(entries.values(), owner, isAvailable)) publish();
     },
     submit<T>(input: OperationInput<T>) {
@@ -208,6 +210,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
         reject: result.reject,
         source: input.source,
         sourceCommand: input.sourceCommand,
+        recoverySource: input.recoverySource,
         draft: input.draft,
         describeRecovery: input.describeRecovery,
         recoveryFiles: input.recoveryFiles,

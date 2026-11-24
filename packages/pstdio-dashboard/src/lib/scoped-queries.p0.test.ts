@@ -137,12 +137,13 @@ test("another runtime's account signals do not reread identity and disposal stop
 });
 
 test("retired recovery follows the owning account's confirmed Cloud roster and surviving local copies", async () => {
-  let current = { ...status("first"), cloudProjects: ["shared", "downloaded", "detached"] };
+  let current = { ...status("first"), cloudProjects: ["shared", "downloaded", "detached", "removed-copy"] };
   const server = Bun.serve({ port: 0, fetch: () => Response.json(current) });
   const owner = createRuntimeCollections({ baseUrl: server.url.origin, token: "" });
   try {
     const rows = owner.getWriter("projects")!;
     rows.upsert({ id: "downloaded" });
+    rows.upsert({ id: "removed-copy" });
     owner.markInitialCollectionsSyncComplete();
     const account = getDashboardAccountStatusQuery(owner);
     const operations = getWorkbenchOperations(getDashboardScopedQueries(owner));
@@ -152,13 +153,14 @@ test("retired recovery follows the owning account's confirmed Cloud roster and s
       await account.read();
     };
     let writes = 0;
-    const loseResponse = (projectId: string) =>
+    const loseResponse = (projectId: string, fromCloudPicker = false) =>
       operations.submit({
         projectId,
         subjects: [projectId],
         domain: "recovery",
         title: "Change project",
         draft: projectId,
+        ...(fromCloudPicker ? { recoverySource: "cloud-project-picker" } : {}),
         write() {
           writes++;
           throw new Error("Reply lost");
@@ -170,25 +172,33 @@ test("retired recovery follows the owning account's confirmed Cloud roster and s
         .recovery.filter((item) => item.projectUnavailable)
         .map((item) => item.projectId);
     await account.read();
-    for (const id of current.cloudProjects) await expect(loseResponse(id)).rejects.toThrow("Reply lost");
+    for (const id of current.cloudProjects)
+      await expect(loseResponse(id, id === "shared" || id === "detached")).rejects.toThrow("Reply lost");
     await apply({ ...status("second"), cloudProjects: ["shared"] });
     expect(operations.getSnapshot().recovery).toEqual([]);
-    await expect(loseResponse("shared")).rejects.toThrow("Reply lost");
+    await expect(loseResponse("shared", true)).rejects.toThrow("Reply lost");
     await apply({ ...current, cloudProjects: [], cloudProjectsLoaded: false });
     expect(operations.getSnapshot().pending).toHaveLength(1);
     expect(unavailableProjects()).toEqual([]);
     await apply({ ...current, cloudProjectsLoaded: true });
     expect(operations.getSnapshot().pending).toEqual([]);
     expect(unavailableProjects()).toEqual(["shared"]);
-    await apply({ ...status("first"), cloudProjects: ["shared"] });
+    await apply({ ...status("first"), cloudProjects: ["shared", "removed-copy"] });
     expect(unavailableProjects()).toEqual(["detached"]);
-    expect(operations.getSnapshot().recovery.map((item) => item.draft)).toEqual(["shared", "downloaded", "detached"]);
+    expect(operations.getSnapshot().recovery.map((item) => item.draft)).toEqual([
+      "shared",
+      "downloaded",
+      "detached",
+      "removed-copy",
+    ]);
     operations.discard(operations.getSnapshot().recovery[2]!.id);
     rows.remove("downloaded");
     expect(unavailableProjects()).toEqual(["downloaded"]);
     rows.upsert({ id: "downloaded" });
     expect(unavailableProjects()).toEqual([]);
-    expect(writes).toBe(4);
+    rows.remove("removed-copy");
+    expect(unavailableProjects()).toEqual(["removed-copy"]);
+    expect(writes).toBe(5);
   } finally {
     await owner.dispose();
     await server.stop(true);

@@ -13,6 +13,9 @@ export interface OperationSourceCommand {
   args?: unknown;
 }
 
+export type OperationRecoverySource = "cloud-project-picker";
+export type ProjectRecoveryAvailability = (projectId: string, source?: OperationRecoverySource) => boolean | undefined;
+
 export interface OperationInput<T> {
   projectId?: string;
   subjects: readonly string[];
@@ -21,6 +24,7 @@ export interface OperationInput<T> {
   title: string;
   source?: ResourceRef;
   sourceCommand?: OperationSourceCommand;
+  recoverySource?: OperationRecoverySource;
   draft?: unknown;
   describeRecovery?(): string;
   recoveryFiles?(): readonly File[];

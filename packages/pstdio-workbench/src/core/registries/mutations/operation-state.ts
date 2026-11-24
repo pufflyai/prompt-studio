@@ -3,8 +3,10 @@ import type {
   OperationInput,
   OperationPreview,
   OperationRecovery,
+  OperationRecoverySource,
   OperationSnapshot,
   OperationSourceCommand,
+  ProjectRecoveryAvailability,
 } from "./operation-types";
 
 export const retiredError = () => new Error("The original authority is no longer active.");
@@ -19,6 +21,7 @@ export interface Entry {
   reject: (error: unknown) => void;
   source?: ResourceRef;
   sourceCommand?: OperationSourceCommand;
+  recoverySource?: OperationRecoverySource;
   draft?: unknown;
   describeRecovery?: () => string;
   recoveryFiles?: () => readonly File[];
@@ -66,13 +69,13 @@ export const retireOperations = (entries: Iterable<Entry>, retired: Partial<Quer
 export const reconcileProjectAvailability = (
   entries: Iterable<Entry>,
   owner: string,
-  isAvailable: (projectId: string) => boolean | undefined,
+  isAvailable: ProjectRecoveryAvailability,
 ) => {
   let updated = false;
   for (const entry of entries) {
     const { projectId } = entry.preview;
     if (!projectId || !entry.controller.signal.aborted || entry.owner !== owner) continue;
-    const available = isAvailable(projectId);
+    const available = isAvailable(projectId, entry.recoverySource);
     if (available === undefined) continue;
     const unavailable = available ? undefined : true;
     if (entry.projectUnavailable === unavailable) continue;

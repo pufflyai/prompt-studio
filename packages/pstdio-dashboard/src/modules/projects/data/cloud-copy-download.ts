@@ -55,6 +55,7 @@ export const getCloudCopyDownloads = createRuntimeState((owner) => {
         domain,
         subjects: [subject],
         sourceCommand: { id: dashboardCommandIds.openProjects },
+        recoverySource: "cloud-project-picker",
         title: `Download ${name}`,
         draft: { projectId: id, name },
         releaseOnDiscard: true,

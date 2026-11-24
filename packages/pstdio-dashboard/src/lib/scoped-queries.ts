@@ -57,11 +57,15 @@ const runtimeQueries = createRuntimeState(
     let knownCloudProjects = new Set<string>();
     const updateProjectRecovery = () => {
       const projects = owner.getCollection("projects");
-      const availabilityKnown = Boolean(applied?.cloudProjectsLoaded && owner.isInitialCollectionsSyncComplete());
-      getWorkbenchOperations(queries).updateRetiredProjectAvailability((projectId) => {
+      const localProjectsLoaded = owner.isInitialCollectionsSyncComplete();
+      getWorkbenchOperations(queries).updateRetiredProjectAvailability((projectId, source) => {
         const row = projects.get(projectId);
-        if ((row && !row.deleted_at) || knownCloudProjects.has(projectId)) return true;
-        return availabilityKnown ? false : undefined;
+        if (row && !row.deleted_at) return true;
+        if (source === "cloud-project-picker") {
+          if (knownCloudProjects.has(projectId)) return true;
+          if (!applied?.cloudProjectsLoaded) return undefined;
+        }
+        return localProjectsLoaded ? false : undefined;
       });
     };
     const applyAuthority = () => {
