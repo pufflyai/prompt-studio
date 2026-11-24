@@ -15,6 +15,7 @@ export const dashboardRecipe = defineSlotRecipe({
     "widgetToolbar",
     "selectionOutline",
     "plot",
+    "customContent",
     "settingsPopover",
     "highlight",
     "rowDropIndicator",
@@ -171,6 +172,7 @@ export const dashboardRecipe = defineSlotRecipe({
     },
     sizeLabel: { position: "absolute", top: "xs", right: "xs", textStyle: "label/XS/medium", pointerEvents: "none" },
     plot: { flex: "1", minH: "0", minW: "0", px: "sm", pb: "sm" },
+    customContent: { flex: "1", minH: "0", minW: "0" },
     settingsPopover: {
       w: "xs",
       maxW: "calc(100vw - {spacing.md} * 2)",
