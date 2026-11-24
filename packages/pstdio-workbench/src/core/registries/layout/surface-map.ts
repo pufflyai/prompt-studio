@@ -68,16 +68,19 @@ export const surfaceMap: Record<WorkbenchRegion, SurfaceDescriptor> = {
   "main-left-menu": projection(["primary"]),
   main: anchor("primary", "primary", "global"),
   "main-right-menu": projection(["primary"]),
+  "main-bottom-menu": projection(["primary"]),
   "secondary-header": projection(["primary"]),
   "secondary-left-menu": projection(["secondary"]),
   secondary: anchor("secondary", "derived", "scoped"),
   "secondary-right-menu": projection(["secondary"]),
+  "secondary-bottom-menu": projection(["secondary"]),
   status: projection(["primary", "attached"]),
   overlay: transient,
   "side-header": projection(["attached"]),
   "side-left-menu": projection(["attached"]),
   side: anchor("attached", "detached", "scoped"),
   "side-right-menu": projection(["attached"]),
+  "side-bottom-menu": projection(["attached"]),
 };
 
 export const getSurface = (region: WorkbenchRegion) => surfaceMap[region];

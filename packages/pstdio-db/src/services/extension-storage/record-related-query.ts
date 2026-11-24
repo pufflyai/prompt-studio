@@ -4,6 +4,7 @@ import type { StoragePredicate, StorageRecordIndex } from "pstdio-sync-contracts
 import { queryExpressionSql } from "./query-expression-sql";
 import { expressionArray, expressionComparable } from "./query-expression-values";
 import { predicateSql, recordEqualitySql, recordFieldSql, recordScopeSql } from "./record-query-sql";
+import { relatedScalarMembershipSql } from "./record-related-membership";
 import { relatedReferenceCandidatesSql } from "./record-related-reference-candidates";
 
 export const loadRelatedQueryIndexes = async (
@@ -36,9 +37,21 @@ export const relatedRecordPredicateSql = (
     const result: SQL = predicateSql(
       source,
       predicate,
-      (outer, selection) => {
+      (outer, selection, _alias, negated) => {
         const target = indexFor(selection.index);
         const targetAlias = `related_${statement}_${depth}`;
+        const membership = relatedScalarMembershipSql(
+          owner,
+          outer,
+          target,
+          selection,
+          indexFor,
+          alias,
+          targetAlias,
+          negated,
+          predicate,
+        );
+        if (membership) return membership;
         const joins = selection.on.map((join) => {
           const left = recordFieldSql(outer, join.sourceField, alias, indexFor, owner);
           const right = recordFieldSql(target, join.relatedField, targetAlias, indexFor, owner);

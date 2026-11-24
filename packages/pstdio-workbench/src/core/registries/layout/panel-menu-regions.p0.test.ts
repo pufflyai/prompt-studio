@@ -5,9 +5,9 @@ import { getSurface } from "./surface-map";
 describe("Panel menu regions", () => {
   test("gives every Panel an independent left and right menu", () => {
     expect(workbenchPanelMenuRegions).toEqual({
-      main: { left: "main-left-menu", right: "main-right-menu" },
-      secondary: { left: "secondary-left-menu", right: "secondary-right-menu" },
-      side: { left: "side-left-menu", right: "side-right-menu" },
+      main: { left: "main-left-menu", right: "main-right-menu", bottom: "main-bottom-menu" },
+      secondary: { left: "secondary-left-menu", right: "secondary-right-menu", bottom: "secondary-bottom-menu" },
+      side: { left: "side-left-menu", right: "side-right-menu", bottom: "side-bottom-menu" },
     });
 
     const layout = createDefaultWorkbenchLayout();

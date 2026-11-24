@@ -1,4 +1,5 @@
 import { downloadArtifacts } from "./download.mts";
+import { getResultsContext } from "./results.mts";
 
 const input = (name: string) => process.env[`INPUT_${name.toUpperCase()}`]?.trim() ?? "";
 
@@ -11,6 +12,7 @@ try {
     token: input("github-token"),
     repository: input("repository"),
     apiUrl: process.env.GITHUB_API_URL ?? "https://api.github.com",
+    results: getResultsContext(),
   });
 } catch (error) {
   console.log(`::error::${error instanceof Error ? error.message : String(error)}`);

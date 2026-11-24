@@ -26,6 +26,8 @@ type PlanCommands = typeof commands & {
   "review-requests.open": typeof openReviewRequestCommand;
 };
 
+export const createPlanClient = (host: GuestHost) => createWebviewClient<PlanCommands>(host);
+
 export type PlanClient = ReturnType<typeof createWebviewClient<PlanCommands>>;
 
 // Planner reports tag changes as ticket changes, so track names stay current too.
@@ -38,7 +40,7 @@ export const planEvents = [
 ];
 
 export function usePlan(host: GuestHost) {
-  const [client] = useState(() => createWebviewClient<PlanCommands>(host));
+  const [client] = useState(() => createPlanClient(host));
   const {
     value: plan,
     error,

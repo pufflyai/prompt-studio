@@ -9,7 +9,7 @@ import {
   getAttributeStringValues,
   type KanbanRendererSettings,
 } from "@pstdio/ui/kanban-renderer";
-import { type ReactNode, useEffect } from "react";
+import { useEffect } from "react";
 import { TimelineDisplayMenu } from "./timeline-display-menu";
 import { timelineInitialState, type timelineQueryData } from "./timeline-query";
 
@@ -20,11 +20,10 @@ interface PlanHeaderProps {
   search: string;
   onSearchChange: (value: string) => void;
   resultLabel: string;
-  actions?: ReactNode;
 }
 
 export function PlanHeader(props: PlanHeaderProps) {
-  const { data, viewsSource, search, onSearchChange, resultLabel, actions } = props;
+  const { data, viewsSource, search, onSearchChange, resultLabel } = props;
   const { settings, setSettings } = useCollectionViewStore(data.storageKey, timelineInitialState, (state) => state);
   // Reconcile the restored draft before the shared controls activate a fallback or refreshed view.
   useEffect(() => {
@@ -56,7 +55,6 @@ export function PlanHeader(props: PlanHeaderProps) {
       onSearchChange={onSearchChange}
       searchResultLabel={resultLabel}
       displayControl={<TimelineDisplayMenu storageKey={data.storageKey} attributes={data.attributes} />}
-      actions={actions}
     />
   );
 }

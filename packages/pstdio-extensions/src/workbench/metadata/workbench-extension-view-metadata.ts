@@ -79,6 +79,9 @@ const toNativeViewBody = (
       ...common,
       draftKey: body.draftKey,
       legacySessionDraft: body.legacySessionDraft,
+      browserDraft: body.browserDraft
+        ? { acknowledgeRecoveryHandlerId: handlers.acknowledgeRecoveryHandlerId as string | undefined }
+        : undefined,
       initial: body.initial,
       queryHandlerId: String(handlers.queryHandlerId),
       actionHandlerId: String(handlers.actionHandlerId),
@@ -218,6 +221,9 @@ export const toViewRecord = (
     extensionId: view.extensionId,
     title: view.contribution.title,
     icon: view.contribution.icon,
+    header: view.contribution.header
+      ? { view: normalizedRef(view.contribution.header.view, view.extensionId) }
+      : undefined,
     body: webview ? { kind: "webview", webview } : toNativeViewBody(view),
   };
 };

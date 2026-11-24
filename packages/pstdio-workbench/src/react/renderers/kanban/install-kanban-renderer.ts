@@ -1,4 +1,4 @@
-import { Spinner } from "@chakra-ui/react";
+import { LoadingState } from "@pstdio/ui";
 import { createElement, lazy, Suspense } from "react";
 import { getWorkbenchRenderers, type WorkbenchCore } from "../../../core";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
@@ -33,7 +33,7 @@ export const installWorkbenchKanbanRenderer = (
       };
       return createElement(
         Suspense,
-        { fallback: createElement(Spinner) },
+        { fallback: createElement(LoadingState) },
         createElement(
           contribution.presentation === "resourceList" ? WorkbenchResourceListView : WorkbenchKanbanView,
           props,

@@ -21,22 +21,55 @@ const draft = {
 };
 const operation = { kind: "command" as const, text: "/goal Keep native objective" };
 
-test("failed accepted native input recovers its full draft once after a new run, even when its submitted tag was hidden", async () => {
+test("accepted native input from before browser ownership remains recoverable after upgrade", async () => {
   const ctx = fixture();
-  const recordId = await saveNativeSubmission(ctx, "s", { draft, operation }, "previous", true);
+  await saveNativeSubmission(ctx, "s", { draft, operation }, "previous", true);
+  const recovered: unknown[] = [];
+  await recoverNativeInputs(
+    ctx,
+    "s",
+    { status: "failed", lastRequestStarted: "replacement" },
+    async (value) => {
+      recovered.push(value);
+    },
+    new Set(),
+    "new-browser-owner",
+  );
+  expect(recovered).toEqual([draft]);
+  expect(await readNativeSubmissions(ctx, "s", true)).toHaveLength(1);
+  await acknowledgeNativeInputs(ctx, "s", draft, "new-browser-owner");
+  expect(await readNativeSubmissions(ctx, "s", true)).toEqual([]);
+});
+
+test("failed accepted native input recovers only in its sending browser", async () => {
+  const ctx = fixture();
+  const client = "sending-browser";
+  const recordId = await saveNativeSubmission(ctx, "s", { draft, operation }, "previous", true, undefined, client);
   await updateNativeSubmission(ctx, recordId, { hidden: true });
   const recovered: unknown[] = [];
   const emitted = new Set<string>();
   const emit = async (value: unknown) => {
     recovered.push(value);
   };
-  await recoverNativeInputs(ctx, "s", { status: "failed", lastRequestStarted: "previous" }, emit, emitted);
+  await recoverNativeInputs(ctx, "s", { status: "failed", lastRequestStarted: "previous" }, emit, emitted, client);
   expect(recovered).toEqual([]);
-  await recoverNativeInputs(ctx, "s", { status: "failed", lastRequestStarted: "new-run" }, emit, emitted);
-  await recoverNativeInputs(ctx, "s", { status: "failed", lastRequestStarted: "new-run" }, emit, emitted);
+  await recoverNativeInputs(
+    ctx,
+    "s",
+    { status: "failed", lastRequestStarted: "new-run" },
+    emit,
+    emitted,
+    "other-browser",
+  );
+  expect(recovered).toEqual([]);
+  await recoverNativeInputs(ctx, "s", { status: "failed", lastRequestStarted: "new-run" }, emit, emitted, client);
+  await recoverNativeInputs(ctx, "s", { status: "failed", lastRequestStarted: "new-run" }, emit, emitted, client);
   expect(recovered).toEqual([draft]);
   expect(await readNativeSubmissions(ctx, "s", true)).toHaveLength(1);
-  await acknowledgeNativeInputs(ctx, "s", { text: "Newer body", attachments: [], values: {}, recovered: [draft] });
+  const restored = { text: "Newer body", attachments: [], values: {}, recovered: [draft] };
+  await acknowledgeNativeInputs(ctx, "s", restored, "other-browser");
+  expect(await readNativeSubmissions(ctx, "s", true)).toHaveLength(1);
+  await acknowledgeNativeInputs(ctx, "s", restored, client);
   expect(await readNativeSubmissions(ctx, "s", true)).toEqual([]);
 });
 

@@ -1,4 +1,5 @@
 import type { HarnessParams } from "@pstdio/sdk/extensions";
+import { afterOpencodePlugins } from "./opencode-catalog-readiness";
 import { buildHeaders, buildRequestUrl, type OpencodeFetcher, requestJson, requireResponseOk } from "./opencode-http";
 import { toOpencodeModel } from "./opencode-model";
 import type { WithServerUrl } from "./opencode-server";
@@ -9,39 +10,56 @@ export const createCommandApi = (deps: {
   now?: () => number;
 }) => {
   const now = deps.now ?? Date.now;
-  const loadCommands = (directory: string) =>
+  const loadCommands = (directory: string, signal?: AbortSignal) =>
     deps.withServerUrl(
-      async (baseUrl) => {
-        // OpenCode's command catalog does not await location plugins. See ADR 0135.
-        const ready = await requestJson(deps.fetcher, buildRequestUrl(baseUrl, "/api/provider", directory), {
-          method: "GET",
-          headers: buildHeaders(directory),
-        });
-        requireResponseOk(ready.response, "", "OpenCode command initialization failed");
-        const { response, text, parsed } = await requestJson<{ data: Array<{ name: string; description?: string }> }>(
-          deps.fetcher,
-          buildRequestUrl(baseUrl, "/api/command", directory),
-          { method: "GET", headers: buildHeaders(directory) },
-        );
-        requireResponseOk(response, text, "OpenCode command discovery failed");
-        return (parsed?.data ?? []).map((command) => ({
-          name: `/${command.name}`,
-          description: command.description ?? "Native OpenCode command",
-        }));
-      },
+      (baseUrl) =>
+        afterOpencodePlugins({ fetcher: deps.fetcher, baseUrl, directory, signal }, async (readySignal) => {
+          const { response, text, parsed } = await requestJson<{ data: Array<{ name: string; description?: string }> }>(
+            deps.fetcher,
+            buildRequestUrl(baseUrl, "/api/command", directory),
+            { method: "GET", headers: buildHeaders(directory), signal: readySignal },
+          );
+          requireResponseOk(response, text, "OpenCode command discovery failed");
+          return (parsed?.data ?? []).map((command) => ({
+            name: `/${command.name}`,
+            description: command.description ?? "Native OpenCode command",
+          }));
+        }),
       { retry: true },
     );
-  const commands = new Map<string, { expiresAt: number; value: ReturnType<typeof loadCommands> }>();
+  type CommandCatalog = Awaited<ReturnType<typeof loadCommands>>;
+  type CommandCache = {
+    settled?: { expiresAt: number; value: CommandCatalog };
+    pending: Map<AbortSignal | undefined, Promise<CommandCatalog>>;
+  };
+  const commands = new Map<string, CommandCache>();
   return {
-    getCommands: (cwd?: string) => {
+    getCommands: async (cwd?: string, signal?: AbortSignal) => {
+      signal?.throwIfAborted();
       const directory = cwd ?? process.cwd();
-      const cached = commands.get(directory);
-      if (cached && cached.expiresAt > now()) return cached.value;
-      const value = loadCommands(directory).catch((error: unknown) => {
-        if (commands.get(directory)?.value === value) commands.delete(directory);
-        throw error;
-      });
-      commands.set(directory, { expiresAt: now() + 30_000, value });
+      const cache: CommandCache = commands.get(directory) ?? { pending: new Map() };
+      if (cache.settled && cache.settled.expiresAt > now()) return cache.settled.value;
+      const pending = cache.pending.get(signal);
+      if (pending) return pending;
+
+      const expiresAt = now() + 30_000;
+      const value = loadCommands(directory, signal)
+        .then((catalog) => {
+          signal?.throwIfAborted();
+          if (!cache.settled || cache.settled.expiresAt <= now()) cache.settled = { expiresAt, value: catalog };
+          return catalog;
+        })
+        .finally(() => {
+          cache.pending.delete(signal);
+          if (
+            !cache.pending.size &&
+            (!cache.settled || cache.settled.expiresAt <= now()) &&
+            commands.get(directory) === cache
+          )
+            commands.delete(directory);
+        });
+      cache.pending.set(signal, value);
+      commands.set(directory, cache);
       return value;
     },
     runCommand: async (input: CommandInput) => {

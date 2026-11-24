@@ -1,11 +1,7 @@
 import { useUiScope } from "@pstdio/ui";
 import { useLayoutEffect, useState } from "react";
 import {
-  getActiveWorkbenchSubPanel,
   isWorkbenchModePanelAvailable,
-  isWorkbenchPanelPlacementVisible,
-  matchesWorkbenchModeEligibility,
-  matchesWorkbenchPanelMenuOwner,
   type WorkbenchCore,
   type WorkbenchPanelMenuRegion,
   type WorkbenchPanelMenuSide,
@@ -13,10 +9,10 @@ import {
   type WorkbenchRegionSize,
   workbenchPanelMenuRegions,
 } from "../../core";
-import { useWorkbenchLocationPanel } from "../shared/use-workbench-location-panel";
-import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
+import { useWorkbenchActiveModeId } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { resolvePanelCollapsible } from "../workbench/workbench-panel-state";
+import { resolvePanelMenuRegionState } from "./panel-menu-placements";
 import { getWorkbenchPanelMenuAttachment } from "./panel-menu-sizing";
 import { usePanelMenuContent } from "./use-panel-menu-content";
 
@@ -39,6 +35,8 @@ export const getWorkbenchPanelMenuLabel = (panel: WorkbenchPanelRegion, side: Wo
 
 export interface WorkbenchPanelMenuView {
   region: WorkbenchPanelMenuRegion;
+  placementId?: string;
+  canAttach?: boolean;
   side: WorkbenchPanelMenuSide;
   label: string;
   title: string;
@@ -56,44 +54,28 @@ const useWorkbenchPanelMenu = (
   panel: WorkbenchPanelRegion,
   side: WorkbenchPanelMenuSide,
 ): WorkbenchPanelMenuView => {
+  "use no memo";
   const region = workbenchPanelMenuRegions[panel][side];
-  const locationResource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
   const panelAvailable = isWorkbenchModePanelAvailable(modeId ? workbench.modes.getMode(modeId) : undefined, panel);
-  const registeredWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
-  const currentRegionState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions[region]);
-  const activeSubPanel = useWorkbenchStore(workbench.layout.store, (state) =>
-    getActiveWorkbenchSubPanel(state.layout, panel, locationResource, { ignoreOwnerResourceKey: panel === "side" }),
-  );
-  const activeLocationPanel = useWorkbenchLocationPanel(workbench, panel);
-  const regionState = {
-    ...currentRegionState,
-    widgets: currentRegionState.widgets.filter((placement) => {
-      const contribution = registeredWidgets[placement.contributionId];
-      return contribution
-        ? (panel === "side"
-            ? matchesWorkbenchModeEligibility(contribution, modeId)
-            : isWorkbenchPanelPlacementVisible(contribution, locationResource, modeId, placement, {
-                location: activeLocationPanel,
-              })) &&
-            matchesWorkbenchPanelMenuOwner(contribution, {
-              locationPanel: activeLocationPanel,
-              subPanel: activeSubPanel,
-            })
-        : false;
-    }),
-  };
+  useWorkbenchStore(workbench.layout.store, (state) => state);
+  useWorkbenchStore(workbench.pages.store, (state) => state);
+  const regionState = resolvePanelMenuRegionState(workbench, region);
   const activePlacement =
     regionState.widgets.find((placement) => placement.widgetId === regionState.activeWidgetId) ??
     regionState.widgets[0];
-  const widget = activePlacement ? registeredWidgets[activePlacement.contributionId] : undefined;
+  const widget = activePlacement ? workbench.layout.getWidget(activePlacement.contributionId) : undefined;
   const hasContent = usePanelMenuContent(workbench, activePlacement);
   const collapsible = useWorkbenchStore(workbench.layout.store, () => resolvePanelCollapsible(workbench, region));
   const panelStateKey = activePlacement ? `panel-menu:${activePlacement.widgetId}` : region;
-  const open = useWorkbenchStore(workbench.panelMenuState.store, (state) => state.openByMenuId[panelStateKey] ?? true);
+  const open = useWorkbenchStore(
+    workbench.panelMenuState.store,
+    (state) => state.openByMenuId[panelStateKey] ?? !activePlacement?.hiddenByDefault,
+  );
 
   return {
     region,
+    placementId: activePlacement?.widgetId,
     side,
     label: getWorkbenchPanelMenuLabel(panel, side),
     title: widget?.title ?? getWorkbenchPanelMenuLabel(panel, side),
@@ -113,19 +95,21 @@ const useWorkbenchPanelMenu = (
 };
 
 export const useWorkbenchPanelMenus = (workbench: WorkbenchCore, panel: WorkbenchPanelRegion) => {
-  const views = [useWorkbenchPanelMenu(workbench, panel, "left"), useWorkbenchPanelMenu(workbench, panel, "right")];
-  const attachment = useWorkbenchPanelMenuAttachment(workbench, panel, views[0]!, views[1]!);
-  return views.map((view, index) => ({
-    ...view,
-    canAttach: attachment[index],
-    collapsed: view.collapsed || !attachment[index],
-  }));
+  "use no memo";
+  const views = [
+    useWorkbenchPanelMenu(workbench, panel, "left"),
+    useWorkbenchPanelMenu(workbench, panel, "right"),
+    useWorkbenchPanelMenu(workbench, panel, "bottom"),
+  ];
+  const attachment = useWorkbenchPanelMenuAttachment(workbench, panel, views[0]!, views[1]!, views[2]!);
+  return views.map((view, index) => ({ ...view, canAttach: Boolean(attachment[index]) }));
 };
 
 export const useWorkbenchPanelMenusPresent = (workbench: WorkbenchCore, panel: WorkbenchPanelRegion) => {
   const left = useWorkbenchPanelMenu(workbench, panel, "left");
   const right = useWorkbenchPanelMenu(workbench, panel, "right");
-  return left.has || right.has;
+  const bottom = useWorkbenchPanelMenu(workbench, panel, "bottom");
+  return left.has || right.has || bottom.has;
 };
 
 const useWorkbenchPanelMenuAttachment = (
@@ -133,18 +117,21 @@ const useWorkbenchPanelMenuAttachment = (
   panel: WorkbenchPanelRegion,
   left: WorkbenchPanelMenuView,
   right: WorkbenchPanelMenuView,
+  bottom: WorkbenchPanelMenuView,
 ) => {
   const root = useUiScope()?.root;
   const { has: leftHas, collapsed: leftCollapsed, collapsible: leftCollapsible } = left;
   const { has: rightHas, collapsed: rightCollapsed, collapsible: rightCollapsible } = right;
   const leftMin = left.size.minPx;
   const rightMin = right.size.minPx;
-  const [attachment, setAttachment] = useState(() =>
-    getWorkbenchPanelMenuAttachment(0, [
+  const bottomMin = bottom.size.minPx;
+  const [attachment, setAttachment] = useState(() => [
+    ...getWorkbenchPanelMenuAttachment(0, [
       { has: leftHas, open: !leftCollapsed, collapsible: leftCollapsible, minSize: leftMin },
       { has: rightHas, open: !rightCollapsed, collapsible: rightCollapsible, minSize: rightMin },
     ]),
-  );
+    true,
+  ]);
 
   const sideMode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
   const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state);
@@ -160,9 +147,11 @@ const useWorkbenchPanelMenuAttachment = (
       { has: rightHas, open: !rightCollapsed, collapsible: rightCollapsible, minSize: rightMin },
     ];
     const measure = () => {
-      const width = elements.find((element) => !element.closest("[inert]") && element.clientWidth > 0)?.clientWidth;
-      if (!width) return;
-      const next = getWorkbenchPanelMenuAttachment(width, menus);
+      const element = elements.find((element) => !element.closest("[inert]") && element.clientWidth > 0);
+      if (!element) return;
+      const { clientWidth: width, clientHeight: height } = element;
+      const sides = getWorkbenchPanelMenuAttachment(width, menus);
+      const next = [...sides, width > 580 && height >= bottomMin + 184];
       // Split motion reports a width every frame; menus only change at attachment thresholds.
       setAttachment((previous) => (previous.every((value, index) => value === next[index]) ? previous : next));
     };
@@ -183,6 +172,7 @@ const useWorkbenchPanelMenuAttachment = (
     rightCollapsed,
     rightCollapsible,
     rightMin,
+    bottomMin,
   ]);
 
   return attachment;

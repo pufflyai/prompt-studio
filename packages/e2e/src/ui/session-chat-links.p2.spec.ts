@@ -80,7 +80,7 @@ test("opens chat workspace files and restores selected documents through history
     const sideTree = page.getByRole("region", { name: "Side left menu", exact: true });
     // The preview's Files menu reveals and selects the previewed document.
     const expectSideTreeSelection = async (name: string) => {
-      const toggle = side.getByRole("button", { name: "Open Side left menu", exact: true });
+      const toggle = side.getByRole("button", { name: /^(Open|Close) Side left menu$/, exact: true });
       if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
       await expect(sideTree.getByRole("option", { name, exact: true })).toHaveAttribute("aria-selected", "true");
     };

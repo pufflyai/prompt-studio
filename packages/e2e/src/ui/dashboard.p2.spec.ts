@@ -7,8 +7,10 @@ import { test as notificationTest } from "./helpers/notification-settings";
 const test = mergeTests(notificationTest, sessionTest);
 test.use({ notificationsEnabled: true });
 
-const navSwitchProjectButton = (page: import("@playwright/test").Page) =>
-  page.getByRole("region", { name: "Nav Chrome" }).getByRole("button", { name: "Switch project", exact: true });
+const appSwitchProjectButton = (page: import("@playwright/test").Page) =>
+  page
+    .getByRole("banner", { name: "App header", exact: true })
+    .getByRole("button", { name: "Switch project", exact: true });
 
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
   const res = await request.get(`${apiBase}/v1/projects`);
@@ -54,7 +56,7 @@ test("dashboard keeps the project mode and blocks controls behind the project sw
   }, project.id);
   await page.goto("/");
 
-  const switchProject = navSwitchProjectButton(page);
+  const switchProject = appSwitchProjectButton(page);
   const search = page.getByRole("option", { name: "Search", exact: true });
   const notifications = page.getByRole("option", { name: "Notifications", exact: true });
   await expect(switchProject).toBeVisible();

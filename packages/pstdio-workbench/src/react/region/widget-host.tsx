@@ -24,10 +24,13 @@ import { WorkbenchWidgetContents } from "./widget-contents";
 interface WorkbenchWidgetHostProps {
   workbench: WorkbenchCore;
   placement: WorkbenchWidgetPlacement;
+  /** Render an instance-owned companion view without replacing the owning viewer identity. */
+  viewId?: string;
   widget?: RegisteredWidgetContribution | RegisteredPlaceholderContribution;
   region?: WorkbenchRegion;
   sizing?: WorkbenchPanelRenderInput["sizing"];
   visible?: WorkbenchPanelRenderInput["visible"];
+  placementOpen?: WorkbenchPanelRenderInput["placementOpen"];
 }
 
 const WorkbenchWidgetFallback = (props: { label: string }) => {
@@ -40,7 +43,7 @@ const WorkbenchWidgetFallback = (props: { label: string }) => {
   );
 };
 
-const WorkbenchRenderedWidgetFrame = (props: { children: ReactNode; status: boolean; contentHeight: boolean }) => {
+const WorkbenchRenderedWidgetFrame = (props: { children: ReactNode; centered: boolean; contentHeight: boolean }) => {
   const { children } = props;
 
   return (
@@ -51,8 +54,8 @@ const WorkbenchRenderedWidgetFrame = (props: { children: ReactNode; status: bool
       w="full"
       h={props.contentHeight ? "auto" : "full"}
       overflow="hidden"
-      display={props.status ? "flex" : undefined}
-      alignItems={props.status ? "center" : undefined}
+      display={props.centered ? "flex" : undefined}
+      alignItems={props.centered ? "center" : undefined}
     >
       {children}
     </Box>
@@ -86,7 +89,8 @@ const toHostedPanel = (input: {
 export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
   const { workbench, placement } = props;
   const widget = props.widget ?? workbench.layout.getWidget(placement.contributionId);
-  const view = placement.viewId ? workbench.views.getView(placement.viewId) : undefined;
+  const viewId = props.viewId ?? placement.viewId;
+  const view = viewId ? workbench.views.getView(viewId) : undefined;
   const rendererId = view?.id ?? widget?.rendererId ?? "";
   const refresh = noopRefresh;
   const rendererFromStore = useWorkbenchStore(
@@ -139,13 +143,22 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
       <WorkbenchActionErrors workbench={workbench} target={placement.widgetId} />
       {renderer ? (
         <WorkbenchRenderedWidgetFrame
-          status={props.region === "status"}
+          centered={props.region === "status" || Boolean(props.viewId)}
           contentHeight={sizesToContentHeight(props.sizing)}
         >
           <WorkbenchWidgetContents
             renderer={renderer}
             webview={view?.body.kind === "webview" || renderer.id === "webview:bridge"}
-            input={{ workbench, panel, instance, refresh, sizing: props.sizing, visible: props.visible }}
+            input={{
+              workbench,
+              panel,
+              instance,
+              viewId: view?.id,
+              refresh,
+              sizing: props.sizing,
+              visible: props.visible,
+              placementOpen: props.placementOpen,
+            }}
             // File views start an async read; their heavy editors load separately.
             defer={view?.body.kind !== "file" && ["main", "side", "bottom"].includes(panel.region)}
           />
@@ -153,15 +166,22 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
       ) : (
         <WorkbenchWidgetFallback label={`No renderer registered for ${rendererId}.`} />
       )}
-      {resource && activity && showsActivity && props.region === "main" && (
-        <WorkbenchResourceActivity
-          key={resourceKey(resource)}
-          workbench={workbench}
-          binding={activity}
-          resource={resource}
-          visible={props.visible ?? true}
-        />
-      )}
+      {!props.viewId &&
+        !workbench.viewMenus
+          .listViewMenus()
+          .some((menu) => menu.ownerViewId === view?.id && menu.purpose === "activity") &&
+        resource &&
+        activity &&
+        showsActivity &&
+        props.region === "main" && (
+          <WorkbenchResourceActivity
+            key={resourceKey(resource)}
+            workbench={workbench}
+            binding={activity}
+            resource={resource}
+            visible={props.visible ?? true}
+          />
+        )}
     </Box>
   );
 };

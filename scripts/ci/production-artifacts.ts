@@ -10,16 +10,17 @@ interface Artifact {
   digest: string;
   expired: boolean;
 }
+export const productionArtifactNames = (attempt: number, channel: string) => [
+  `release-build-attempt-${attempt}`,
+  ...publishedDesktopTargets(channel).flatMap((target) => [`desktop-${target}`, `validation-app-${target}`]),
+  "service-container-relay",
+  "service-container-account-manager",
+];
+
 export const selectProductionArtifacts = (listed: Artifact[], attempt: number, channel: string) => {
   // The listing is paged newest first while other jobs still upload, so an artifact can repeat across pages.
   const artifacts = [...new Map(listed.map((artifact) => [artifact.id, artifact])).values()];
-  const targets = publishedDesktopTargets(channel);
-  const required = [
-    `release-build-attempt-${attempt}`,
-    ...targets.flatMap((target) => [`desktop-${target}`, `validation-app-${target}`]),
-    "service-container-relay",
-    "service-container-account-manager",
-  ];
+  const required = productionArtifactNames(attempt, channel);
   const missing = required.filter((name) => !artifacts.some((artifact) => artifact.name === name));
   if (missing.length) throw new Error(`Missing production artifacts: ${missing.join(", ")}`);
   return required.map((name) => {
@@ -64,6 +65,11 @@ export const productionPolicyFiles = () =>
     ".github/workflows/verify-project-upgrade.yml",
     ".github/actions/build-release/action.yml",
     ".github/actions/publish-release/action.yml",
+    ".github/actions/list-artifact-inventory/action.yml",
+    ".github/actions/list-artifact-inventory/main.mts",
+    ".github/actions/list-artifact-inventory/inventory.mts",
+    ".github/actions/download-artifact-by-id/results.mts",
+    ".github/actions/download-artifact-by-id/transfer.mts",
     "bun.lock",
     "package.json",
   ]

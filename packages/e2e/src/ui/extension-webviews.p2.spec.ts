@@ -67,17 +67,11 @@ terminalTest("opens host terminal tabs from the Secondary Panel", async ({ page,
   expect(created.ok()).toBe(true);
   const project = (await created.json()) as { id: string };
   try {
-    const visibleTerminalText = async () => {
-      const rows = page.locator(".xterm-rows");
-      const text: string[] = [];
-      for (let index = 0; index < (await rows.count()); index += 1) {
-        const row = rows.nth(index);
-        if (await row.isVisible()) text.push((await row.textContent()) ?? "");
-      }
-      return text.join("\n");
-    };
+    const terminalRows = page.locator('[data-workbench-panel="secondary"] .xterm-rows:visible');
+    const visibleTerminalText = async () => (await terminalRows.allTextContents()).join("\n");
     const expectVisibleTerminalOutput = async () => {
-      await expect.poll(visibleTerminalText, { timeout: 2000 }).toMatch(/\S/);
+      // Playwright's last default interval can end a short poll before a late renderer appears.
+      await expect.poll(visibleTerminalText, { timeout: 2000, intervals: [100] }).toMatch(/\S/);
       const text = await visibleTerminalText();
       expect(text).not.toContain("cannot set terminal process group");
       expect(text).not.toContain("no job control in this shell");

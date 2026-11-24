@@ -6,6 +6,7 @@ export const extensionRendererRecordBaseSchema = z.object({
   extensionId: z.string(),
   title: localizableStringSchema,
   icon: z.string().optional(),
+  headerViewId: z.string().optional(),
   resourceKind: z.string().optional(),
   refreshEventIds: z.array(z.string().min(1)).optional(),
   emptyTitle: localizableStringSchema.optional(),
