@@ -466,3 +466,29 @@ it("retirement stops a sign-in's own child before waiting for the sign-in to fin
   await signingIn;
   await registry.dispose();
 });
+
+it("retirement does not wait for a sign-in until the instance's own children are stopped", async () => {
+  const exited = Promise.withResolvers<{ code: number | null; signal: string | null }>();
+  const entered = Promise.withResolvers<void>();
+  const source = record({
+    // The sign-in waits on a child that only the harness instance's owner stops.
+    authenticate: async () => {
+      entered.resolve();
+      await exited.promise;
+    },
+  });
+  const registry = createHarnessRegistry([source], (record, options, owner) => {
+    owner.adopt({ exited: exited.promise, kill: async () => exited.resolve({ code: null, signal: "SIGTERM" }) });
+    return buildContext(record, options);
+  });
+  const handle = registry.get(source.id)!;
+  const signingIn = handle.authenticate!(
+    { action: "login" },
+    { signal: new AbortController().signal, emit: async () => {}, request: async () => "" },
+  ).catch(() => {});
+  await entered.promise;
+  const retired = await Promise.race([handle.dispose().then(() => "retired"), Bun.sleep(2_000).then(() => "stuck")]);
+  expect(retired).toBe("retired");
+  await signingIn;
+  await registry.dispose();
+});
