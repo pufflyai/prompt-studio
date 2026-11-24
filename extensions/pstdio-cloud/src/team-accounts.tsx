@@ -8,6 +8,7 @@ import { CloudError } from "./cloud-error";
 import { CloudIcon } from "./cloud-label";
 import { TeamJoin } from "./team-join";
 import { TeamMembers } from "./team-members";
+import { TeamProjectSharing } from "./team-project-sharing";
 
 const createProject = commandRef<{ teamAccountId: string }, void>({
   extensionId: "pstdio",
@@ -21,6 +22,7 @@ const ActiveTeam = (props: { team: Team; account: AccountStatus; login: Login; r
   const { team, account, login, refresh } = props;
   const { client, t } = useCloudContext();
   const [members, showMembers] = useState(false);
+  const [sharing, showSharing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const openProject = async () => {
@@ -39,12 +41,8 @@ const ActiveTeam = (props: { team: Team; account: AccountStatus; login: Login; r
   };
   return (
     <Stack gap="xs">
-      {!Object.values(account.teamProjects ?? {}).includes(team.accountId) && (
-        <Text color="fg.muted">
-          {team.role === "member"
-            ? t("teams.noneShared", "No projects shared with you")
-            : t("teams.noProjects", "No cloud projects yet")}
-        </Text>
+      {team.role === "member" && !Object.values(account.teamProjects ?? {}).includes(team.accountId) && (
+        <Text color="fg.muted">{t("teams.noneShared", "No projects shared with you")}</Text>
       )}
       <Button
         size="sm"
@@ -57,6 +55,20 @@ const ActiveTeam = (props: { team: Team; account: AccountStatus; login: Login; r
       </Button>
       {members && (
         <TeamMembers key={JSON.stringify([team.accountId, team.role])} team={team} login={login} refresh={refresh} />
+      )}
+      {team.role === "owner" && (
+        <Button
+          size="sm"
+          variant="outline"
+          alignSelf="flex-start"
+          aria-expanded={sharing}
+          onClick={() => showSharing(!sharing)}
+        >
+          {t("sharing.title", "Project access")}
+        </Button>
+      )}
+      {team.role === "owner" && sharing && (
+        <TeamProjectSharing accountId={team.accountId} login={login} refresh={refresh} />
       )}
       {team.role === "owner" && team.features.relay && (
         <Button size="sm" variant="outline" alignSelf="flex-start" disabled={busy} onClick={() => void openProject()}>

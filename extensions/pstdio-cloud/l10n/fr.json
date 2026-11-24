@@ -148,5 +148,14 @@
   "join.link": "Lien d’invitation à l’équipe",
   "join.inspect": "Vérifier le lien",
   "join.identity": "Connecté avec l’adresse {{email}}",
-  "join.accept": "Rejoindre l’équipe"
+  "join.accept": "Rejoindre l’équipe",
+  "sharing.title": "Accès aux projets",
+  "sharing.loading": "Chargement des accès aux projets…",
+  "sharing.project": "Projet d’équipe",
+  "sharing.select": "Choisir un projet",
+  "sharing.grant": "Accorder l’accès",
+  "sharing.grantNamed": "Accorder l’accès à {{name}}",
+  "sharing.revoke": "Retirer l’accès",
+  "sharing.revokeNamed": "Retirer l’accès à {{name}}",
+  "sharing.revokeEffect": "Les nouvelles modifications ne seront plus synchronisées pour cette personne après l’expiration de son accès. Elle conserve ses copies téléchargées."
 }
