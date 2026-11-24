@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { createReadBoundary } from "./read-boundary";
 
 test("a stream of immediately resolved extension reads lets the host cancel it", async () => {
@@ -15,14 +16,14 @@ test("a stream of immediately resolved extension reads lets the host cancel it",
     }
   };
   try {
-    await expect(readPages()).rejects.toThrow();
+    await expectRejection(readPages()).toThrow();
     expect(calls).toBeGreaterThan(0);
     const stopped = calls;
-    await expect(
+    await expectRejection(
       read(async () => {
         calls++;
       }),
-    ).rejects.toThrow();
+    ).toThrow();
     expect(calls).toBe(stopped);
   } finally {
     clearImmediate(cancel);

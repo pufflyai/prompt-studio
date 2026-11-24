@@ -1,7 +1,8 @@
 export { runBundleChild } from "../bundle-entry-child";
 export { markHostContext } from "../runner/host-context";
-export { closeBackendWorkers } from "./backend-workers";
+export { closeBackendWorkers, readBackendDefinitionReadCount, restartBackendWorker } from "./backend-workers";
 export { uncoveredContextFunctions } from "./context-surface-coverage";
+export { prepareBackendHandler } from "./hydrate";
 export { backendWorkerCommand, createBackendWorkerPool } from "./pool";
 export { BACKEND_PROTOCOL_VERSION, type BackendHandlerRef, HANDLER_MARKER, isBackendHandlerRef } from "./protocol";
 export { type BackendInvocation, BackendUnavailableError, type BackendWorker, startBackendWorker } from "./supervisor";

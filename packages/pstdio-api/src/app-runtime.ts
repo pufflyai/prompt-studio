@@ -77,7 +77,14 @@ export const createRuntimeRouteDeps = (input: {
     }),
     cancelActivity: async () => {
       const sessions = await activeSessions();
-      await Promise.all(sessions.map((session) => input.sessionService.cancel(session.id)));
+      // A harness that fails to stop must not keep the runtime up; shutdown closes its worker anyway.
+      const cancelled = await Promise.allSettled(sessions.map((session) => input.sessionService.cancel(session.id)));
+      for (const [index, result] of cancelled.entries())
+        if (result.status === "rejected")
+          shutdownLogger.warn(
+            { err: result.reason, event: "runtime.shutdown.session_cancel_failed", session_id: sessions[index]!.id },
+            "A session did not stop before shutdown",
+          );
       await Promise.all([input.terminalSupervisor.dispose(), input.extensionScheduler.dispose()]);
     },
   };

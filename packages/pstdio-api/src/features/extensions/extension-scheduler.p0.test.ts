@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -6,11 +6,21 @@ import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestCronDriver } from "pstdio-scheduler/testing";
 import { createTestDocumentStorage } from "../../test-utils/create-test-document-storage";
 import { createTestExtensionProcessOwners } from "../../test-utils/create-test-extension-process-owners";
+import { createExtensionProbe } from "../../test-utils/extension-probe";
 import { createExtensionScheduler } from "./extension-scheduler";
 import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
 const tempRoots: string[] = [];
 const processOwners: ReturnType<typeof createTestExtensionProcessOwners>[] = [];
+// The scheduled command runs in a worker; it reports each call to the test's current state.
+const probe = createExtensionProbe();
+type ScheduleState = { calls: unknown[]; blocker?: Promise<void> };
+const observe = (state: ScheduleState) =>
+  probe.answer(async (call) => {
+    state.calls.push(call);
+    await state.blocker;
+  });
+afterAll(() => probe.stop());
 const schedulers: Array<{ dispose: () => Promise<void> }> = [];
 
 const createTempRoot = () => {
@@ -47,8 +57,6 @@ const writeScheduledExtension = (options: { scheduleDisabled?: boolean; workspac
   writeFileSync(
     join(root, "extension.ts"),
     `
-      const state = globalThis.__extensionScheduleState;
-
       export default {
         commands: [
           {
@@ -56,12 +64,7 @@ const writeScheduledExtension = (options: { scheduleDisabled?: boolean; workspac
             ref: { kind: "command", id: "heartbeat" },
             title: "Heartbeat",
             async run(ctx, commandParams) {
-              state.calls.push({
-                source: ctx.source,
-                metadata: ctx.invocation.metadata,
-                params: commandParams,
-              });
-              await state.blocker;
+              ${probe.call("{ source: ctx.source, metadata: ctx.invocation.metadata, params: commandParams }")};
             },
           },
         ],
@@ -145,7 +148,6 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
 afterEach(async () => {
   await Promise.all(schedulers.splice(0).map((scheduler) => scheduler.dispose()));
   await Promise.all(processOwners.splice(0).map((owner) => owner.dispose()));
-  delete (globalThis as Record<string, unknown>).__extensionScheduleState;
 
   for (const root of tempRoots.splice(0)) {
     rmSync(root, { recursive: true, force: true });
@@ -160,7 +162,7 @@ describe("createExtensionScheduler", () => {
       calls: [] as Array<{ source?: string; metadata?: Record<string, unknown>; params?: unknown }>,
       blocker: run.promise,
     };
-    (globalThis as Record<string, unknown>).__extensionScheduleState = state;
+    observe(state);
 
     const now = new Date("2026-05-18T07:56:15.000Z");
     const cron = createTestCronDriver();
@@ -204,7 +206,7 @@ describe("createExtensionScheduler", () => {
   test("skips schedules the user disabled via automation preferences", async () => {
     const sourcePath = writeScheduledExtension();
     const state = { calls: [] as unknown[] };
-    (globalThis as Record<string, unknown>).__extensionScheduleState = state;
+    observe(state);
 
     const cron = createTestCronDriver();
     const scheduler = createExtensionScheduler({
@@ -225,7 +227,7 @@ describe("createExtensionScheduler", () => {
   test("runs author-disabled schedules the user explicitly enabled", async () => {
     const sourcePath = writeScheduledExtension({ scheduleDisabled: true });
     const state = { calls: [] as unknown[] };
-    (globalThis as Record<string, unknown>).__extensionScheduleState = state;
+    observe(state);
 
     const cron = createTestCronDriver();
     const scheduler = createExtensionScheduler({
@@ -249,7 +251,7 @@ describe("createExtensionScheduler", () => {
 test("a schedule never runs in the project folder when its explicit workspace is missing", async () => {
   const sourcePath = writeScheduledExtension({ workspaceId: "removed-workspace" });
   const state = { calls: [] as unknown[] };
-  (globalThis as Record<string, unknown>).__extensionScheduleState = state;
+  observe(state);
   const cron = createTestCronDriver();
   const scheduler = createExtensionScheduler({
     deps: createDeps(sourcePath),

@@ -281,7 +281,8 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
 
     if (input.sourcePath) {
       const sourcePath = canonicalSourcePath(input.sourcePath);
-      sources.recheck(sourcePath);
+      if (input.reason === "source_reloaded") sources.reload(sourcePath);
+      else sources.recheck(sourcePath);
       for (const [projectId, state] of states) {
         if (projectId !== input.projectId && !state.knownSourcePaths.has(sourcePath)) continue;
         markDirty(state, input.reason);

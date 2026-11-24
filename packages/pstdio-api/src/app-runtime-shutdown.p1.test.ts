@@ -2,8 +2,9 @@ import { expect, test } from "bun:test";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createAppCloser } from "./app-runtime";
+import { createAppCloser, createRuntimeRouteDeps } from "./app-runtime";
 import { createTestHarnessRecord, createTestHarnessRegistry } from "./features/harnesses/test-harness-registry";
+import type { RuntimeHost } from "./features/runtime/routes";
 import { createTestApp } from "./test-utils/create-test-app";
 
 test("a blocked shutdown records its entered phase when ordinary request logs are disabled", async () => {
@@ -89,4 +90,28 @@ test("an early shutdown failure still closes extension workers before the databa
   const failure = await close().catch((error) => error);
   expect(String(failure)).toContain("extension runtime did not stop");
   expect(order).toEqual(["workers", "database"]);
+});
+
+test("a forced shutdown still stops terminals and jobs when a session's harness fails to stop", async () => {
+  const cancelled: string[] = [];
+  let disposed = 0;
+  const deps = createRuntimeRouteDeps({
+    host: {} as RuntimeHost,
+    sessionService: {
+      listByStatus: async (status: string) => (status === "in_progress" ? [{ id: "a" }, { id: "b" }] : []),
+      cancel: async (id: string) => {
+        cancelled.push(id);
+        if (id === "a") throw new Error("Reply stopped the run");
+      },
+    } as unknown as Parameters<typeof createRuntimeRouteDeps>[0]["sessionService"],
+    terminalSupervisor: { dispose: async () => void disposed++ } as unknown as Parameters<
+      typeof createRuntimeRouteDeps
+    >[0]["terminalSupervisor"],
+    extensionScheduler: { dispose: async () => void disposed++ } as unknown as Parameters<
+      typeof createRuntimeRouteDeps
+    >[0]["extensionScheduler"],
+  });
+  await deps!.cancelActivity();
+  expect(cancelled).toEqual(["a", "b"]);
+  expect(disposed).toBe(2);
 });

@@ -76,8 +76,8 @@ for await (const event of child.events()) {
   for a later lifecycle cleanup attempt.
 - `events()` yields `stdout` and `stderr` chunks as `Uint8Array` and always ends with one `exit`
   event. It has one consumer. Order is kept within each stream, but not between the two streams.
-- `id` identifies the handle to your code. It is not an OS pid, and no host API accepts it. In the
-  [process runtime](0002-manifest-and-installation.md#process-runtime) the worker creates its own id.
+- `id` identifies the handle to your code. It is not an OS pid, and no host API accepts it. The
+  backend's [worker](0002-manifest-and-installation.md#process-runtime) creates its own id.
 
 The host keeps at most 8 MiB of unread output per child, shared by both streams. At that point it
 stops reading, so the child blocks on its next write until you read more. Stopping the iteration
@@ -173,7 +173,10 @@ availability check or a model list, get the names the user allowed for that exte
 that project without asking. A name the host environment does not have is left out. Outside a
 project, for example at startup, they get none.
 
-The value goes into the child's environment only, and no `ctx` API returns it. The host replaces it
+The value goes into the child's environment, and no `ctx` API returns it. The backend's own
+`process.env` is a separate matter: the worker receives the host environment without reserved names,
+so a provider key that starts Prompt Studio is visible there too. See
+[Process runtime](0002-manifest-and-installation.md#process-runtime). The host replaces it
 with `[Redacted]` in the child's `stdout` and `stderr` before returning them. That only prevents
 accidental output: the extension chooses the command, so it can still pass the value on. Allowing a
 name lets the extension use its value. When the user revokes the grant or narrows it, the host first stops the running children that

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestCronDriver } from "pstdio-scheduler/testing";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { createExtensionProbe } from "../../test-utils/extension-probe";
 import { provisionProjectWorkspaces } from "../workspaces/provision-coordinator";
 import { assignDeviceAutomation, openDeviceAutomations, setDeviceAutomationEnabled } from "./device-automations";
 import { replicateRecords } from "./device-automations.fixture";
@@ -17,7 +18,8 @@ const root = await mkdtemp(join(tmpdir(), "assigned-device-integration-"));
 const apps: Awaited<ReturnType<typeof createTestApp>>[] = [];
 const schedulers: ReturnType<typeof createExtensionScheduler>[] = [];
 const calls: unknown[] = [];
-(globalThis as Record<string, unknown>).__assignedDeviceCalls = calls;
+const probe = createExtensionProbe();
+probe.answer((metadata) => calls.push(metadata));
 const projectId = crypto.randomUUID();
 const scheduleId = "test.clock.schedule.tick";
 const startApp = async (name: string) => {
@@ -30,8 +32,8 @@ try {
   await writeFile(
     join(source, "extension.ts"),
     `export default {
-    commands: [{ id: "tick", ref: { kind: "command", id: "tick" }, title: "Tick", run(ctx) {
-      globalThis.__assignedDeviceCalls.push(ctx.invocation.metadata);
+    commands: [{ id: "tick", ref: { kind: "command", id: "tick" }, title: "Tick", async run(ctx) {
+      ${probe.call("ctx.invocation.metadata")};
     }}],
     schedules: [{ id: "tick", disabled: true, ref: { kind: "schedule", id: "tick" }, title: "Tick",
       schedule: "* * * * *", command: { kind: "command", id: "tick" } }],
@@ -118,6 +120,6 @@ try {
 } finally {
   await Promise.all(schedulers.map((s) => s.dispose()));
   await Promise.all(apps.map((app) => app.close()));
-  delete (globalThis as Record<string, unknown>).__assignedDeviceCalls;
+  await probe.stop();
   await rm(root, { recursive: true, force: true });
 }

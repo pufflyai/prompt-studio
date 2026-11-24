@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { bundleEntry, bundleLimits } from "./bundle-entry";
 
 test("reports the unresolved dependency when an extension cannot be bundled", async () => {
@@ -9,7 +10,7 @@ test("reports the unresolved dependency when an extension cannot be bundled", as
   const entry = join(root, "extension.ts");
   writeFileSync(entry, 'export { default } from "missing-desktop-dependency";');
   try {
-    await expect(bundleEntry(entry, root, join(root, "out"))).rejects.toThrow("missing-desktop-dependency");
+    await expectRejection(bundleEntry(entry, root, join(root, "out"))).toThrow("missing-desktop-dependency");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -107,7 +108,7 @@ test("a macro that never finishes fails the build at the deadline, and a later b
   const previous = bundleLimits.deadlineMs;
   bundleLimits.deadlineMs = 1_000;
   try {
-    await expect(bundleEntry(entry, root, join(root, "out"))).rejects.toThrow("did not finish within 1 s");
+    await expectRejection(bundleEntry(entry, root, join(root, "out"))).toThrow("did not finish within 1 s");
     writeFileSync(
       join(root, "macro.ts"),
       'export const noisy = () => { process.stdout.write("macro noise"); return 1; };',

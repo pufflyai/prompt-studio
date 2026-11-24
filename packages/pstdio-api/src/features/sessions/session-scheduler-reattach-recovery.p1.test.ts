@@ -73,8 +73,12 @@ describe("session scheduler reattach recovery", () => {
         expect(reattached).toEqual(["previous-provider-session"]);
         expect(resumed).toEqual([]);
       }
-      expect(await recovered.deps.sessionQueueEntriesService.listPendingBySession(sessionId)).toEqual([]);
-      expect(await recovered.deps.sessionQueueEntriesService.listDispatchStarted()).toEqual([]);
+      // The started entry is removed once the resumed run's conversation is saved, after the resume.
+      const queue = recovered.deps.sessionQueueEntriesService;
+      for (let attempt = 0; attempt < 80 && (await queue.listDispatchStarted()).length > 0; attempt += 1)
+        await Bun.sleep(25);
+      expect(await queue.listPendingBySession(sessionId)).toEqual([]);
+      expect(await queue.listDispatchStarted()).toEqual([]);
       expect(recovered.deps.sessionService.store.get(sessionId)).not.toBeNull();
     } finally {
       await recovered.close();

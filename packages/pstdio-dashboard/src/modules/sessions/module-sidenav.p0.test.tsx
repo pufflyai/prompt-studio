@@ -63,6 +63,11 @@ test("switching conversations in Main keeps the loaded Sessions list and selects
         .find(({ sections }) => sections.some((section) => section.nodes.some((node) => node.label === "First")));
     expect(sessionList()).toBeUndefined();
     await act(async () => setDashboardExtensionsRegisteredProject(workbench, "project-1"));
+    // The provider's handlers run in its extension worker, so the list arrives a little later.
+    for (let attempt = 0; !sessionList() && attempt < 100; attempt++)
+      await act(async () => {
+        await Bun.sleep(20);
+      });
     expect(sessionList()).toBeDefined();
     expect(reads).toBe(1);
 

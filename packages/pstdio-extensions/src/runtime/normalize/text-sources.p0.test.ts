@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { defineTextSource, params } from "@pstdio/sdk/extensions";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import type { LoadedExtensionSource } from "../loader";
 import { normalizeExtensionSources } from "./index";
 
@@ -36,7 +37,7 @@ test("source callbacks are registered without a view and validate their declared
     (handler) => handler.id === "acme.notes.text-source.body.textSource.resolve",
   )!;
   expect(resolve).toBeDefined();
-  await expect(resolve.handler({} as never, { params: {} } as never)).rejects.toThrow("Missing required param");
+  await expectRejection(resolve.handler({} as never, { params: {} } as never)).toThrow("Missing required param");
   expect(await resolve.handler({} as never, { params: { id: "note" } } as never)).toMatchObject({
     source: { recordId: "note" },
   });

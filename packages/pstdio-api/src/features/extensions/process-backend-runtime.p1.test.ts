@@ -160,6 +160,33 @@ export default {
       },
     },
     {
+      id: "navigate-unsafe",
+      ref: { kind: "command", id: "navigate-unsafe" },
+      title: "Navigate unsafe",
+      run(ctx) {
+        ctx.navigation.open({ kind: "href", href: "javascript:alert(1)" });
+        return "opened";
+      },
+    },
+    {
+      id: "migration-helpers",
+      ref: { kind: "command", id: "migration-helpers" },
+      title: "Migration helpers",
+      async run(ctx) {
+        const helpers = async (storage) => {
+          let seen;
+          await storage.migrate(7, async (_previous, migration) => {
+            seen = { id: migration.id("k", "nt"), position: migration.position(0, "k") };
+          });
+          return seen;
+        };
+        return {
+          project: await helpers(ctx.storage),
+          scoped: await helpers(ctx.storage.scope({ type: "resource", resource: { type: "ticket", id: "r1" } })),
+        };
+      },
+    },
+    {
       id: "asset",
       ref: { kind: "command", id: "asset" },
       title: "Asset",
@@ -243,27 +270,10 @@ beforeAll(async () => {
       publisher: "example",
       main: "./extension.ts",
       engines: { pstdio: `^${EXTENSION_API_VERSION}` },
-      pstdio: { backendRuntime: "process" },
     }),
   );
   await writeFile(join(source, "extension.ts"), entry);
   await writeFile(join(source, "asset.bin"), assetBody);
-  const inProcess = join(root, "in-process");
-  await mkdir(inProcess);
-  await writeFile(
-    join(inProcess, "package.json"),
-    JSON.stringify({
-      name: "in-process",
-      version: "1.0.0",
-      publisher: "example",
-      main: "./extension.ts",
-      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
-    }),
-  );
-  await writeFile(
-    join(inProcess, "extension.ts"),
-    `export default { commands: [{ id: "capture", ref: { kind: "command", id: "capture" }, title: "Capture", run(ctx) { globalThis.__processRuntimeHostContext = ctx; } }] };`,
-  );
   handle = await createTestApp({ databasePath: ":memory:", storageRoot: join(root, "storage") });
   const project = await handle.deps.projectService.create({ name: "Isolated" });
   projectId = project.id;
@@ -288,16 +298,6 @@ beforeAll(async () => {
       manifest: {},
     });
   }
-  await handle.deps.extensionService.enableInstalledSourceForProject({
-    projectId,
-    installName: "in-process",
-    extensionId: "example.in-process",
-    name: "in-process",
-    displayName: "In process",
-    sourcePath: inProcess,
-    sourceKind: "local_path",
-    manifest: {},
-  });
 });
 
 afterAll(async () => {
@@ -319,6 +319,24 @@ const execute = async (
     { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ params, source }) },
   );
   return (await response.json()) as { outcome: { ok: boolean; value: unknown } };
+};
+
+// The host's real ctx for a command, taken on its way into the worker.
+const captureHostContext = async () => {
+  const { runtime } = await handle.deps.extensionRuntimeCatalog.get(projectId);
+  const record = runtime.commands.find((command) => command.id === "example.isolated.command.port")!;
+  const original = record.run;
+  let captured: (ExtensionContextBase & { projectId: string }) | undefined;
+  record.run = (ctx, params) => {
+    captured = ctx as typeof captured;
+    return original(ctx, params);
+  };
+  try {
+    await execute("port");
+  } finally {
+    record.run = original;
+  }
+  return captured!;
 };
 
 test("a process-mode command runs in its worker and uses host storage through ctx", async () => {
@@ -376,14 +394,9 @@ test("a crashed worker fails only its running call; the next call starts a new w
 });
 
 test("the process-mode surface accounts for every function of the host's real ctx", async () => {
-  await handle.app.request(`/v1/projects/${projectId}/extensions/commands/example.in-process.command.capture/execute`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ params: {} }),
-  });
-  const captured = (globalThis as { __processRuntimeHostContext?: { projectId: string } }).__processRuntimeHostContext;
-  expect(captured?.projectId).toBe(projectId);
-  expect(uncoveredContextFunctions(captured!)).toEqual([]);
+  const captured = await captureHostContext();
+  expect(captured.projectId).toBe(projectId);
+  expect(uncoveredContextFunctions(captured)).toEqual([]);
 });
 
 test("host services answer a process-mode command", async () => {
@@ -538,12 +551,7 @@ test("process-mode migration helpers preserve scoped identity and allow record m
 });
 
 test("process-mode local helpers match the host's own results", async () => {
-  await handle.app.request(`/v1/projects/${projectId}/extensions/commands/example.in-process.command.capture/execute`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ params: {} }),
-  });
-  const host = (globalThis as { __processRuntimeHostContext?: ExtensionContextBase }).__processRuntimeHostContext!;
+  const host = await captureHostContext();
   const { outcome } = await execute("locals");
   expect(outcome.ok).toBe(true);
   const value = outcome.value as { scoped: string; url: string; ordered: boolean };
@@ -556,7 +564,7 @@ test("process-mode local helpers match the host's own results", async () => {
     customId: host.storage.scope({ type: "custom", id: "one" }).records.id("k"),
     projectId: host.storage.records.id("k"),
   });
-  expect(value.url).toBe(host.storage.files.urlFor("f1").replace("example.in-process", "example.isolated"));
+  expect(value.url).toBe(host.storage.files.urlFor("f1"));
   expect(value.ordered).toBe(true);
 });
 
@@ -599,7 +607,7 @@ test("a process-mode handler spawns a host-owned child, writes its stdin and str
     undefined,
     terminalProjectId,
   );
-  expect(outcome.ok).toBe(true);
+  expect(outcome).toMatchObject({ ok: true });
   const value = outcome.value as {
     seen: { type: string; text?: string; exit?: unknown }[];
     exited: unknown;

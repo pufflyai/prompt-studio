@@ -4,10 +4,8 @@ import { join } from "node:path";
 import type { ExtensionHostCapabilities, ExtensionHostCompatibility } from "pstdio-api-contracts";
 import type { ExtensionRuntime, NormalizedExtension } from "../types/runtime";
 import { collectConventionDiagnostics } from "./conventions";
-import { createDiagnostic } from "./diagnostics";
 import { pstdioExtensionsRoot, pstdioHomeRoot } from "./discovery";
 import { checkExtensionHostCompatibility, dashboardExtensionHostCapabilities } from "./host-capabilities";
-import { readPackageManifestMetadata } from "./package-manifest";
 import { type LoadExtensionRuntimeInput, loadExtensionRuntime } from "./runtime";
 
 export type CheckExtensionsInput = LoadExtensionRuntimeInput & {
@@ -17,8 +15,6 @@ export type CheckExtensionsInput = LoadExtensionRuntimeInput & {
   extensionsRoot?: string;
   /** Dashboard capabilities to verify against; omit when no host descriptor is available. */
   hostCapabilities?: ExtensionHostCapabilities | null;
-  /** Authoring checks report deprecated choices; installs and host checks leave them out. */
-  reportDeprecations?: boolean;
 };
 
 export type CheckExtensionsResult = {
@@ -31,32 +27,6 @@ export type CheckExtensionsResult = {
   errorCount: number;
   warningCount: number;
 };
-
-// Any function in the definition is backend code: a handler, hook, provider or harness.
-const hasBackendCode = (value: unknown, depth = 0): boolean => {
-  if (typeof value === "function") return true;
-  if (depth > 6 || value === null || typeof value !== "object") return false;
-  return Object.values(value).some((entry) => hasBackendCode(entry, depth + 1));
-};
-
-/** Authors see this in `pst extensions check`; installed extensions keep working unchanged. */
-const collectRuntimeDeprecations = (runtime: ExtensionRuntime) =>
-  runtime.extensions
-    .filter((extension) => hasBackendCode(extension.definition))
-    .filter(
-      (extension) =>
-        readPackageManifestMetadata(extension.originalPackagePath ?? extension.packagePath).manifest?.pstdio
-          ?.backendRuntime !== "process",
-    )
-    .map((extension) =>
-      createDiagnostic({
-        code: "extension_in_process_runtime_deprecated",
-        severity: "warning",
-        message: `${extension.id} runs its backend code inside the Prompt Studio API process. That runtime is deprecated and will be removed in a later release. Add "backendRuntime": "process" under "pstdio" in package.json to run it in its own worker.`,
-        extensionId: extension.id,
-        sourcePath: extension.sourcePath,
-      }),
-    );
 
 const listInstalledDirs = (root: string) => {
   if (!existsSync(root)) return [];
@@ -89,10 +59,7 @@ export const checkExtensions = async (input: CheckExtensionsInput = {}): Promise
     runtime,
     input.hostCapabilities === undefined ? dashboardExtensionHostCapabilities : input.hostCapabilities,
   );
-  runtime.diagnostics.push(
-    ...collectConventionDiagnostics(runtime),
-    ...(input.reportDeprecations ? collectRuntimeDeprecations(runtime) : []),
-  );
+  runtime.diagnostics.push(...collectConventionDiagnostics(runtime));
   const diagnostics = [...runtime.diagnostics, ...hostCompatibility.diagnostics];
   const errorCount = diagnostics.filter((d) => d.severity === "error").length;
   const warningCount = diagnostics.filter((d) => d.severity === "warning").length;

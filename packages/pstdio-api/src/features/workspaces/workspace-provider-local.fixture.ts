@@ -13,7 +13,7 @@ type LocalProviderState = ReturnType<typeof setupLocalProvider>;
 
 const providerId = "fixture.local-provider.workspace-type.local";
 
-const setupLocalProvider = (options: { backendRuntime?: "process" }) => {
+const setupLocalProvider = () => {
   const s = {
     root: "",
     projectId: "",
@@ -53,7 +53,6 @@ const setupLocalProvider = (options: { backendRuntime?: "process" }) => {
     version: "0.0.1",
     main: "extension.ts",
     engines: { pstdio: "^0.4.0 || ^0.5.0" },
-    ...(options.backendRuntime ? { pstdio: { backendRuntime: options.backendRuntime } } : {}),
   };
   const fixtureSource = `
   const capabilities = { files: "write", diff: false, merge: false, rebase: false, delete: true };
@@ -488,9 +487,9 @@ const choiceAndRecoveryTests = (s: LocalProviderState) => {
   });
 };
 
-/** The installed local provider suite, run once in the API process and once in a backend worker. */
-export const localProviderSuite = (options: { backendRuntime?: "process" } = {}) => {
-  const s = setupLocalProvider(options);
+/** The installed local provider suite. Its backend runs in a worker process. */
+export const localProviderSuite = () => {
+  const s = setupLocalProvider();
   discoveryAndDirectoryTests(s);
   validationAndOwnershipTests(s);
   choiceAndRecoveryTests(s);
