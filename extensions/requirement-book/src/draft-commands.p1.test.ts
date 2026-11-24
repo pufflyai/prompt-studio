@@ -66,6 +66,7 @@ test("invalid references leave a rule draft editable and corrected input can cre
   const storage = createMemoryStorage();
   const workspaceId = "workspace";
   const chapter = 1;
+  let readsBeforeRemoval: number | undefined;
   const [ctx] = makeCommandArgs({
     storage,
     params: {},
@@ -80,20 +81,18 @@ test("invalid references leave a rule draft editable and corrected input can cre
         }),
       } as never,
       process: {
-        run: async ({ command }) =>
-          command[1] === "diff"
-            ? {
-                exitCode: 1,
-                stderr: "",
-                stdout:
-                  "@@\n" +
-                  serializeBook(bookFixture())
-                    .trimEnd()
-                    .split("\n")
-                    .map((line) => `+${line}`)
-                    .join("\n"),
-              }
-            : { exitCode: 0, stderr: "", stdout: "working\n" },
+        run: async ({ command }) => {
+          if (command[1] !== "diff") return { exitCode: 0, stderr: "", stdout: "working\n" };
+          const book = bookFixture();
+          if (readsBeforeRemoval !== undefined && --readsBeforeRemoval <= 0)
+            book.rules = book.rules.filter((rule) => rule.ref !== "RB 1.A.1");
+          const addition = serializeBook(book)
+            .trimEnd()
+            .split("\n")
+            .map((line) => `+${line}`)
+            .join("\n");
+          return { exitCode: 1, stderr: "", stdout: `@@\n${addition}` };
+        },
       },
     },
   });
@@ -108,13 +107,29 @@ test("invalid references leave a rule draft editable and corrected input can cre
   const recordId = `${workspaceId}-${chapter}`;
   const { record } = await readRecord<Draft>(storage, "draft", recordId);
   const draft = { workspaceId, chapter, mode: "rule", expectedRevision: record.revision };
-  await expect(commands["drafts.submit"].run(ctx, { ...draft, values: input })).rejects.toThrow("RB 999.A.1");
+  await expect(commands["drafts.submit"].run(ctx, { ...draft, values: input })).resolves.toMatchObject({
+    refused: { reason: expect.stringContaining("RB 999.A.1"), revision: record.revision },
+  });
   expect((await readRecord<Draft>(storage, "draft", recordId)).value).toMatchObject({ values: input });
   expect((await readRecord<Draft>(storage, "draft", recordId)).value?.submissionStatus).toBeUndefined();
   expect(await listRecords<Suggestion>(storage, "suggestion")).toHaveLength(0);
   const corrected = { ...input, related: "RB 1.A.1" };
-  await commands["drafts.submit"].run(ctx, { ...draft, values: corrected });
+  readsBeforeRemoval = 2;
+  const result = await commands["drafts.submit"].run(ctx, { ...draft, values: corrected });
+  const restored = await readRecord<Draft>(storage, "draft", recordId);
+  expect(restored.record.revision).not.toBe(record.revision);
+  expect(result).toMatchObject({
+    refused: { reason: expect.stringContaining("RB 1.A.1"), revision: restored.record.revision },
+  });
+  expect(restored.value).toMatchObject({ values: corrected });
+  expect(restored.value?.submissionStatus).toBeUndefined();
+  expect(await listRecords<Suggestion>(storage, "suggestion")).toHaveLength(0);
+  await commands["drafts.submit"].run(ctx, {
+    ...draft,
+    expectedRevision: restored.record.revision,
+    values: { ...corrected, related: "RB 1.A.2" },
+  });
   expect((await listRecords<Suggestion>(storage, "suggestion"))[0]?.operations[0]?.after?.related).toEqual([
-    "RB 1.A.1",
+    "RB 1.A.2",
   ]);
 });

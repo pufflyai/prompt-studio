@@ -16,7 +16,10 @@ interface FormProps {
   draftError?: string;
   onRetryDraft?: () => void;
   canDiscardSubmission: boolean;
-  onSubmit: (values: Record<string, unknown>, expectedRevision: string) => Promise<void>;
+  onSubmit: (
+    values: Record<string, unknown>,
+    expectedRevision: string,
+  ) => Promise<{ reason: string; revision: string } | undefined>;
   onClose: () => void;
   onPreviewDraft: (values: Record<string, unknown>, expectedRevision: string) => void;
   onSaveDraft: (values: Record<string, unknown>, expectedRevision: string) => Promise<string>;
@@ -89,7 +92,12 @@ export function BookForm(props: FormProps) {
     try {
       await submitBookForm({
         persist: () => persist(values),
-        submit: () => onSubmit(values, expectedRevision()),
+        submit: async () => {
+          const refusal = await onSubmit(values, expectedRevision());
+          if (!refusal) return;
+          editedRevision.current = refusal.revision;
+          throw new Error(refusal.reason);
+        },
         close: onClose,
       });
     } catch (failure) {

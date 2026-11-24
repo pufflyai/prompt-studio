@@ -91,7 +91,7 @@ test("a lost creation response keeps the submitted draft reserved across reopene
   await expect(tryAgain()).rejects.toThrow("still needs to be checked");
 
   respond.resolve();
-  expect((await first).submissionId).toBe(writing.submissionId!);
+  expect(await first).toEqual({ submissionId: writing.submissionId! });
   const retained = (await readRecord<Draft>(storage, "draft", draftId)).value!;
   expect(retained.submissionStatus).toBe("confirmed");
   await expect(tryAgain()).rejects.toThrow("still needs to be checked");

@@ -149,7 +149,7 @@ export const commands = {
       const reason = z.string().trim().min(1).parse(values.reason);
       const operations: Operation[] = [{ type: "ADD", before: null, after: rule }];
       const issues = operationIssues(book, operations);
-      if (issues.length) throw new Error(issues.join("\n"));
+      if (issues.length) return { refused: { reason: issues.join("\n"), revision: input.expectedRevision } };
       const id = ctx.storage.ids.create();
       return submitDraft(ctx, { ...draft, proof: { kind: "suggestion", id } }, async () =>
         saveSuggestion(

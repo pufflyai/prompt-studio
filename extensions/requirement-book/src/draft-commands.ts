@@ -11,6 +11,7 @@ import {
   saveRecord,
 } from "./records";
 import { resolveWorkspace } from "./repository";
+import { SuggestionValidationRefused } from "./suggestions";
 
 const draftTitle = l10n("book.draft.save", "Save an authoring draft");
 const draftId = (workspaceId: string, chapter: number) => `${workspaceId}-${chapter}`;
@@ -223,6 +224,22 @@ export const submitDraft = async (
     ...(input.invocationId ? { submissionInvocationId: input.invocationId } : {}),
     ...(input.proof ? { submissionProof: input.proof } : {}),
   };
+  const restoreEditableDraft = async (reason: string) => {
+    const current = await readRecord<Draft>(ctx.storage, "draft", id);
+    if (current.value?.submissionId !== submissionId || current.value.submissionStatus !== "writing")
+      throw new Error("The submitted draft changed.");
+    const editId = ctx.storage.ids.create();
+    await saveRecord(
+      ctx.storage,
+      "draft",
+      { id, workspaceId: input.workspaceId, chapter: input.chapter, values: input.values, editId },
+      current.record.revision,
+    );
+    const restored = await readRecord<Draft>(ctx.storage, "draft", id);
+    if (restored.value?.editId !== editId) throw new Error("The authoring draft changed. Reload before saving.");
+    await announce(ctx, input.workspaceId);
+    return { refused: { reason, revision: restored.record.revision } };
+  };
   const finish = async (outcome: "confirmed" | "unconfirmed") => {
     const current = await readRecord<Draft>(ctx.storage, "draft", id);
     if (current.value?.submissionId !== submissionId) throw new Error("The submitted draft changed.");
@@ -238,6 +255,7 @@ export const submitDraft = async (
     try {
       await write();
     } catch (error) {
+      if (error instanceof SuggestionValidationRefused) return await restoreEditableDraft(error.message);
       await finish("unconfirmed");
       throw error;
     }

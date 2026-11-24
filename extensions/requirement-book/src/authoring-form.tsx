@@ -87,6 +87,19 @@ export function AuthoringForm(props: Props) {
       void previous?.then((session) => session.close()).catch(() => {});
     };
   }, [client, workspaceId, draftChapter, openAttempt]);
+  const rememberDraft = (values: Record<string, unknown>, savedRevision: string) => {
+    const saved = {
+      id: `${workspaceId}-${draftChapter}`,
+      workspaceId,
+      chapter: draftChapter,
+      values,
+      revision: savedRevision,
+    };
+    setRestored(saved);
+    setRevision(savedRevision);
+    setDraftError(undefined);
+    onDraftSaved(saved);
+  };
   const saveDraft = async (values: Record<string, unknown>, expectedRevision: string) => {
     editing.current ??= openDraftEditing(client, workspaceId, draftChapter);
     const opening = editing.current;
@@ -96,15 +109,7 @@ export function AuthoringForm(props: Props) {
     });
     activeEditing.current = session;
     const savedRevision = await client.saveDraft(session.id, JSON.stringify(values), expectedRevision);
-    setRevision(savedRevision);
-    setDraftError(undefined);
-    onDraftSaved({
-      id: `${workspaceId}-${draftChapter}`,
-      workspaceId,
-      chapter: draftChapter,
-      values,
-      revision: savedRevision,
-    });
+    rememberDraft(values, savedRevision);
     return savedRevision;
   };
   const fields = {
@@ -119,12 +124,17 @@ export function AuthoringForm(props: Props) {
   }[mode];
   const submit = async (values: Record<string, unknown>, expectedRevision: string) => {
     const result = await client.commands["drafts.submit"]({ workspaceId, chapter, mode, values, expectedRevision });
+    if ("refused" in result) {
+      rememberDraft(values, result.refused.revision);
+      return result.refused;
+    }
     onSaved();
     void client.commands["drafts.discard"]({
       workspaceId,
       chapter: draftChapter,
       submissionId: result.submissionId,
     }).catch(() => {});
+    return undefined;
   };
   return (
     <BookForm
