@@ -290,10 +290,10 @@ const toHandle = (
       retained.closeAdmission();
       // Publish the shared settlement before any external cleanup can reenter.
       closing ??= Promise.resolve().then(async () => {
-        const ownership = await Promise.allSettled([
-          Promise.resolve().then(() => commandWatches.dispose()),
-          Promise.resolve().then(() => authentication.dispose()),
-        ]);
+        // A sign-in is aborted and its call's children stopped at once, but awaited only after
+        // every child of the instance is stopped below: it may be waiting on one of them.
+        const signingIn = Promise.resolve().then(() => authentication.dispose());
+        const ownership = await Promise.allSettled([Promise.resolve().then(() => commandWatches.dispose())]);
         const admitted = await Promise.allSettled([Promise.resolve().then(() => retained.retire())]);
         const results = await Promise.allSettled(
           [...contexts.values()].map((context) =>
@@ -305,6 +305,7 @@ const toHandle = (
         );
         // Extension-lifetime children end with the instance, after the provider's own cleanup.
         await Promise.all([...owners.values()].map((owner) => owner.close()));
+        ownership.push(...(await Promise.allSettled([signingIn])));
         const errors = [...ownership, ...admitted, ...results].flatMap((result) =>
           result.status === "rejected" ? [result.reason] : [],
         );

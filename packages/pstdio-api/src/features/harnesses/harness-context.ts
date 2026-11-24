@@ -1,6 +1,6 @@
 import type { ExtensionConnectionsApi } from "pstdio-api-contracts/extension-kernel";
 import type { HarnessContextFactory } from "pstdio-api-runtime-host";
-import { markHostContext, processError } from "pstdio-extensions";
+import { createInvocationScope, markHostContext, processError } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { createProcessApi, findFreePort, hostStartedGrants } from "../extensions/extension-process-api";
 import type { ExtensionTargets } from "../extensions/extension-targets";
@@ -36,14 +36,19 @@ export const createHarnessContextFactory = (input: {
     return { projectId, targets: input.targets };
   };
   // Marked so a process-mode harness reaches this context through its worker's allowlist.
-  return (record, options, owner) =>
-    markHostContext({
+  return (record, options, owner) => {
+    // run and runOrThrow children end with the harness instance, like its spawned ones, so a
+    // retirement never waits on one, such as a sign-in's login command.
+    const runs = createInvocationScope({ logger: harnessLogger(record.extensionId) });
+    owner.adopt({ exited: new Promise(() => {}), kill: () => runs.close() });
+    return markHostContext({
       projectId: options?.projectId,
       extensionId: record.extensionId,
       name: record.name,
       process: createProcessApi({
         extensionId: record.extensionId,
         ...hostStartedGrants(input.processEnvironment, options?.projectId, input.sourceForRecord?.(record)),
+        scope: runs,
         callOwner: owner,
         extensionOwner: () => owner,
         // Detection and model calls pass no workspace and run on this device.
@@ -64,4 +69,5 @@ export const createHarnessContextFactory = (input: {
       logger: harnessLogger(record.extensionId),
       state: createHarnessStateApi(record.extensionId),
     });
+  };
 };
