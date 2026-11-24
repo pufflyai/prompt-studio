@@ -218,3 +218,74 @@ test("retains only the artifact publication fields on a lost acknowledgment", as
     queries.dispose();
   }
 });
+
+test("acknowledged creation settles while its attachment remains independently in flight", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "desktop", extensionId: "pstdio", accountId: "original" });
+  const operations = getWorkbenchOperations(queries);
+  const attachmentStarted = Promise.withResolvers<void>();
+  const attachmentResponse = Promise.withResolvers<void>();
+  let attachment: Promise<void> | undefined;
+  try {
+    const created = runCreateOperation(operations, "project", command, {}, async () => ({ id: "confirmed" }), {
+      onCreated: () => {
+        attachment = operations
+          .submit({
+            projectId: "project",
+            title: "Attach file to confirmed ticket",
+            domain: "resource.attachments",
+            subjects: ["confirmed attachment"],
+            write: () => {
+              attachmentStarted.resolve();
+              return attachmentResponse.promise;
+            },
+          })
+          .result.catch(() => {});
+      },
+    });
+    await expect(created).resolves.toEqual({ id: "confirmed" });
+    await attachmentStarted.promise;
+    queries.setAuthority({ accountId: "other" });
+    queries.setAuthority({ accountId: "original" });
+    expect(operations.getSnapshot().recovery.map(({ domain, status }) => ({ domain, status }))).toEqual([
+      { domain: "resource.attachments", status: "unknown" },
+    ]);
+    await expect(
+      runCreateOperation(operations, "project", command, {}, async () => ({ id: "second" })),
+    ).resolves.toEqual({ id: "second" });
+    await attachment;
+  } finally {
+    attachmentResponse.resolve();
+    queries.dispose();
+  }
+});
+
+test("a successful Check again releases the original create draft without replaying the write", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "desktop", extensionId: "pstdio" });
+  const operations = getWorkbenchOperations(queries);
+  let writes = 0;
+  let reads = 0;
+  let reconciled = 0;
+  try {
+    const created = runCreateOperation(operations, "project", command, {}, async () => ({ id: String(++writes) }), {
+      originatingRead: {
+        key: "board",
+        refresh() {
+          if (++reads === 1) throw new Error("Board temporarily unavailable");
+        },
+      },
+      onReconciled: () => {
+        reconciled++;
+      },
+    });
+    await expect(created).rejects.toMatchObject({ name: "UnresolvedSubmissionError" });
+    expect(reconciled).toBe(0);
+    const [interrupted] = operations.getSnapshot().recovery;
+    expect(interrupted).toMatchObject({ status: "unconfirmed", canCheck: true });
+    await operations.check(interrupted.id);
+    expect(reconciled).toBe(1);
+    expect(writes).toBe(1);
+    expect(operations.getSnapshot().recovery).toEqual([]);
+  } finally {
+    queries.dispose();
+  }
+});

@@ -188,6 +188,8 @@ export interface KanbanRendererCreateSubmission {
   onAdmitted?(): void;
   onDiscard?(): void;
   onAttachmentSaved?(file: File): void;
+  /** Also runs when a separate confirmation read eventually succeeds. */
+  onSettled?(attachmentError?: unknown): void;
   columnId: string;
   columnAttributeId?: string;
   /** Declared field values, excluding `files` fields — those arrive as `files`. */

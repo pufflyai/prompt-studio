@@ -19,6 +19,8 @@ type CreateOperation<T> = Pick<
   | "intent"
   | "showPending"
   | "originatingRead"
+  | "reconcile"
+  | "onReconciled"
 > & { onAdmitted?(): void };
 
 export interface BoardCreationIntent {
@@ -32,7 +34,8 @@ export interface CreateOperationFeedback {
   board?: BoardCreationIntent;
   onAdmitted?(): void;
   onDiscard?(): void;
-  onCreated?(created: unknown, signal: AbortSignal): void | Promise<void>;
+  onCreated?(created: unknown, signal: AbortSignal): void;
+  onReconciled?(): void;
   originatingRead?: OperationInput<unknown>["originatingRead"];
 }
 type RecoveryMessage = string | ((draft: unknown) => string);
@@ -136,16 +139,15 @@ export const runCreateOperation = async <T>(
       onDiscard: feedback?.onDiscard,
       originatingRead: feedback?.originatingRead,
       showPending: feedback?.onAdmitted ? true : undefined,
-      write: feedback
-        ? async (signal) => {
-            const result = await write(signal);
+      write,
+      reconcile: feedback
+        ? (result, signal) => {
             const row = result as { id?: unknown } | undefined;
             if (board && typeof row?.id === "string") board.confirmedId = row.id;
-            signal.throwIfAborted();
-            await feedback.onCreated?.(result, signal);
-            return result;
+            feedback.onCreated?.(result, signal);
           }
-        : write,
+        : undefined,
+      onReconciled: feedback?.onReconciled,
     },
     findPrevious,
   );

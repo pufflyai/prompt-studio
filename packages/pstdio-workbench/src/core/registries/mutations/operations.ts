@@ -203,6 +203,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
         if (signal.aborted) return;
         finish(entry);
         result.resolve(value);
+        input.onReconciled?.();
       };
       const reconcileRejection = createRejectionReconciler(entry, input.reconcileRejection, { publish, fail });
       if (input.check) {

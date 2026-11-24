@@ -28,6 +28,7 @@ export interface OperationInput<T> {
   onDiscard?(): void;
   write(signal: AbortSignal): T | Promise<T>;
   reconcile?(result: T, signal: AbortSignal): void | Promise<void>;
+  onReconciled?(): void;
   reconcileRejection?(error: unknown, signal: AbortSignal): void | Promise<void>;
   originatingRead?: Pick<OperationRead, "key" | "refresh">;
   classify?(error: unknown): OperationFailure;

@@ -37,12 +37,17 @@ export const toCreateRowHandler = (
         });
       return attaching;
     };
+    const settleAttachment = () => {
+      void attaching?.then(() => submission.onSettled?.(attachmentFailure));
+    };
     const feedback = prepareKanbanCreationFeedback(submission);
     const created = await runMutation(record, contribution.commandId, params, {
       ...feedback,
       onCreated,
+      onReconciled: settleAttachment,
       onDiscard: () => {
-        if (attachmentFailure === undefined) feedback.onDiscard?.();
+        if (attaching) settleAttachment();
+        else feedback.onDiscard?.();
       },
     }).catch((error: unknown) => {
       throw attachmentFailure ?? error;

@@ -57,6 +57,15 @@ const splitCreateFields = (fields: KanbanRendererCreateRowConfig["fields"], valu
   };
 };
 
+const downloadDraftFile = (file: File) => {
+  const url = URL.createObjectURL(file);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = file.name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
 const isFilled = (field: KanbanRendererCreateField, value: unknown) => {
   if (!field.required) return true;
   if (Array.isArray(value)) return value.length > 0;
@@ -212,6 +221,12 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
           onClose();
         },
         onDiscard: () => updateSubmittedDraft(() => null),
+        onSettled: (attachmentError?: unknown) =>
+          updateSubmittedDraft((current) =>
+            attachmentError instanceof UnresolvedSubmissionError
+              ? { ...current, pending: false, unresolved: attachmentError }
+              : null,
+          ),
         onAttachmentSaved: (file: File) =>
           updateSubmittedDraft((current) => ({
             ...current,
@@ -288,7 +303,19 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
                   </Stack>
                 ) : null}
                 {unresolved ? (
-                  <UnresolvedSubmission submission={unresolved} onClose={close} onDiscard={discard} />
+                  <>
+                    <UnresolvedSubmission submission={unresolved} onClose={close} onDiscard={discard} />
+                    {splitCreateFields(config.fields, values).files.map((file, index) => (
+                      <Button
+                        key={`${file.name}.${index}`}
+                        size="xs"
+                        variant="outline"
+                        onClick={() => downloadDraftFile(file)}
+                      >
+                        Download {file.name}
+                      </Button>
+                    ))}
+                  </>
                 ) : null}
                 {error ? (
                   <Text textStyle="paragraph/S/regular" color="fg.error">

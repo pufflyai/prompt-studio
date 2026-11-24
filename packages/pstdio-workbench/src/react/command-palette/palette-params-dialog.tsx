@@ -41,6 +41,7 @@ export const PaletteParamsDialog = (props: PaletteParamsDialogProps) => {
           contribution={creation}
           workbench={workbench}
           resource={request?.context?.resource}
+          placement={request?.context?.placement}
           onClose={closeParams}
         />
       ) : null}
