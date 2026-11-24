@@ -1,3 +1,4 @@
+import { isNavigationScoped } from "../runner/host-context";
 import { serviceSurfaces } from "./service-surfaces";
 import type { BackendSurface } from "./surface";
 
@@ -59,12 +60,34 @@ const storageMembers = (namespace?: string[]): Members => ({
 const scopedStorage = { kind: "object", members: storageMembers() } satisfies BackendSurface;
 scopedStorage.members.scope = { kind: "factory", returns: scopedStorage };
 
-/**
- * What process-mode handler code can reach through ctx in this release. Members outside it are
- * absent from the worker's ctx; the host rejects any call that names them.
- */
-export const extensionContextSurface = (projectId: string): BackendSurface =>
-  object({
+type ContextData = { projectId: string; navigation?: unknown };
+
+/** Describes only supported services that are present on this invocation's host context. */
+export const extensionContextSurface = (context: ContextData): BackendSurface => {
+  const services: Members = {
+    ...serviceSurfaces,
+    logger: object({ info: notify, warn: notify, error: notify }),
+    navigation: object({
+      open: isNavigationScoped(context.navigation) ? { kind: "notify", check: "navigationTarget" } : notify,
+    }),
+    stream: object(calls("write")),
+    commands: object({
+      ...calls("execute"),
+      ...Object.fromEntries(
+        (["continue", "patchParams", "replaceParams", "replaceInvocation", "reject"] as const).map((type) => [
+          type,
+          { kind: "local", name: "middlewareResult", type },
+        ]),
+      ),
+    }),
+    events: object(calls("emit")),
+    settings: object(calls("all", "get", "set", "delete")),
+    storage: object({
+      ...storageMembers(["project", context.projectId, "kv"]),
+      scope: { kind: "factory", returns: scopedStorage },
+    }),
+  };
+  return object({
     ...values(
       "projectId",
       "workspaceId",
@@ -81,26 +104,11 @@ export const extensionContextSurface = (projectId: string): BackendSurface =>
       "eventId",
       "deliveryId",
     ),
-    ...serviceSurfaces,
     signal: { kind: "signal" },
-    logger: object({ info: notify, warn: notify, error: notify }),
-    navigation: object({ open: notify }),
-    stream: object(calls("write")),
-    commands: object({
-      ...calls("execute"),
-      ...Object.fromEntries(
-        (["continue", "patchParams", "replaceParams", "replaceInvocation", "reject"] as const).map((type) => [
-          type,
-          { kind: "local", name: "middlewareResult", type },
-        ]),
-      ),
-    }),
-    events: object(calls("emit")),
-    settings: object(calls("all", "get", "set", "delete")),
-    storage: object({
-      ...storageMembers(["project", projectId, "kv"]),
-      scope: { kind: "factory", returns: scopedStorage },
-    }),
+    ...Object.fromEntries(
+      Object.entries(services).filter(([name]) => (context as Record<string, unknown>)[name] != null),
+    ),
   });
+};
 
 export const emptySurface: BackendSurface = { kind: "object", members: {} };

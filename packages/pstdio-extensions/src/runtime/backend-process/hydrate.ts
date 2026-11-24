@@ -14,12 +14,14 @@ export const hydrateBackendDefinition = (definition: unknown, acquire: () => Pro
     if (isBackendHandlerRef(value)) {
       const handlerId = value[HANDLER_MARKER];
       return async (first: unknown, ...rest: unknown[]) => {
+        const hasContext = isHostContext(first);
+        if (hasContext) first.signal?.throwIfAborted();
         const worker = await acquire();
-        return isHostContext(first)
+        return hasContext
           ? worker.invoke({
               handlerId,
               context: first,
-              surface: extensionContextSurface(first.projectId),
+              surface: extensionContextSurface(first),
               args: rest,
               signal: first.signal,
             })

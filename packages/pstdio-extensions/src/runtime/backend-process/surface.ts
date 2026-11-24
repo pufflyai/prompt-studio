@@ -1,4 +1,6 @@
 import { createStorageId } from "pstdio-api-contracts";
+import { isNavigationTarget } from "pstdio-api-contracts/extension-kernel";
+
 /**
  * The explicit allowlist of host capabilities a backend worker may reach. The host resolves every
  * worker call against it and the worker builds its context facade from the same description, so
@@ -12,7 +14,7 @@ export type BackendSurface =
   /** An asynchronous host method. The worker awaits the host's reply. */
   | { kind: "async" }
   /** A one-way host method, such as logging. The worker does not wait for it. */
-  | { kind: "notify" }
+  | { kind: "notify"; check?: "navigationTarget" }
   | { kind: "object"; members: Record<string, BackendSurface> }
   /** A synchronous scope selection, such as `storage.collection(name)`, evaluated for each host call. */
   | { kind: "factory"; returns: BackendSurface }
@@ -128,7 +130,12 @@ export const createSurfaceFacade = (
       case "async":
         return (...args: unknown[]) => channel.call(path, args);
       case "notify":
-        return (...args: unknown[]) => channel.notify(path, args);
+        return (...args: unknown[]) => {
+          // A one-way notification cannot return the host's synchronous validation error.
+          if (current.check === "navigationTarget" && !isNavigationTarget(args[0]))
+            throw new Error("Invalid navigation target.");
+          channel.notify(path, args);
+        };
       case "local":
         return localMember(current);
       case "factory":
