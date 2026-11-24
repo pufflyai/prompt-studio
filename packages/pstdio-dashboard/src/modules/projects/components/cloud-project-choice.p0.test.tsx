@@ -18,19 +18,27 @@ const until = async (ready: () => boolean) => {
   }
 };
 
-test("an old account's pending download cannot open the new account's same-ID copy", async () => {
+test.each([
+  "accountId",
+  "managerOrigin",
+] as const)("a pending download cannot open a same-ID copy after the %s changes", async (changed) => {
   const id = "shared-project";
-  let active = "account-a";
+  const original = { managerOrigin: "https://accounts.example.test", accountId: "account-a" };
+  const replacement =
+    changed === "accountId"
+      ? { ...original, accountId: "account-b" }
+      : { ...original, managerOrigin: "https://new-accounts.example.test" };
+  let active = original;
   const started = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
-  let requestedAccount: string | null = null;
+  const requestedAccounts: unknown[] = [];
   let opened = 0;
   let closed = 0;
   const server = Bun.serve({
     port: 0,
     async fetch(request) {
       const url = new URL(request.url);
-      const account = { managerOrigin: "https://accounts.example.test", accountId: active };
+      const account = active;
       if (url.pathname === "/v1/account")
         return Response.json({
           login: { ...account, deviceId: "device" },
@@ -40,7 +48,10 @@ test("an old account's pending download cannot open the new account's same-ID co
           signInRequired: false,
         });
       if (url.pathname.endsWith("/download")) {
-        requestedAccount = url.searchParams.get("accountId");
+        requestedAccounts.push({
+          accountId: url.searchParams.get("accountId"),
+          managerOrigin: url.searchParams.get("managerOrigin"),
+        });
         started.resolve();
         await release.promise;
         return Response.json({ projectId: id, presence: "downloading" });
@@ -55,8 +66,8 @@ test("an old account's pending download cannot open the new account's same-ID co
               id,
               name: "Shared notes",
               online: true,
-              presence: active === "account-a" ? "cloud-only" : "downloaded",
-              actions: { download: active === "account-a", removeLocal: false, deleteCloud: false },
+              presence: active === original ? "cloud-only" : "downloaded",
+              actions: { download: active === original, removeLocal: false, deleteCloud: false },
             },
           ],
         });
@@ -92,7 +103,7 @@ test("an old account's pending download cannot open the new account's same-ID co
   const Probe = () => {
     const choice = useCloudProjectChoice(input);
     return (
-      <button disabled={!choice.entry?.actions.download} onClick={choice.requestDownload}>
+      <button disabled={!choice.canDownload} onClick={choice.requestDownload}>
         Download
       </button>
     );
@@ -114,26 +125,26 @@ test("an old account's pending download cannot open the new account's same-ID co
           .some((node) => node.props.children === "Download" && !node.props.disabled),
       ),
     );
+    const staleAction = renderer!.root.findByType("button").props.onClick;
     await act(async () => {
-      renderer!.root
-        .findAllByType("button")
-        .find((node) => node.props.children === "Download")!
-        .props.onClick();
+      staleAction();
       await started.promise;
     });
     await act(async () => {
-      active = "account-b";
+      active = replacement;
       owner
         .getWriter("projects")!
         .upsert({ id, name: "B's local copy", shorthand: "B", created_at: "2026-01-01", updated_at: "2026-01-01" });
       publishExtensionEvent({ id: accountEvents.changed.id }, owner);
-      await until(() => status.getSnapshot().data?.login?.accountId === "account-b");
+      await until(() => status.getSnapshot().data?.login?.[changed] === replacement[changed]);
     });
     await act(async () =>
       until(() =>
         client
           .getQueriesData({ queryKey: ["cloud-project-catalog"] })
-          .some(([, value]) => (value as { account?: { accountId: string } })?.account?.accountId === "account-b"),
+          .some(
+            ([, value]) => (value as { account?: typeof replacement })?.account?.[changed] === replacement[changed],
+          ),
       ),
     );
     await act(async () => {
@@ -146,8 +157,17 @@ test("an old account's pending download cannot open the new account's same-ID co
             .some((mutation) => mutation.state.status === "pending"),
       );
     });
-    expect({ requestedAccount: String(requestedAccount), opened, closed }).toEqual({
-      requestedAccount: "account-a",
+    await act(async () => {
+      staleAction();
+      await until(() =>
+        client
+          .getMutationCache()
+          .getAll()
+          .every((mutation) => mutation.state.status !== "pending"),
+      );
+    });
+    expect({ requestedAccounts, opened, closed }).toEqual({
+      requestedAccounts: [original],
       opened: 0,
       closed: 1,
     });
@@ -163,9 +183,11 @@ test("an old account's pending download cannot open the new account's same-ID co
 });
 
 test.each([
-  false,
-  true,
-])("two views recover the same copy after a lost download response (folder error %p)", async (folderError) => {
+  "downloading",
+  "downloaded",
+  "folder error",
+  "cloud-only",
+] as const)("two views recover one copy after a lost response when the device reports %s", async (outcome) => {
   const id = "recovered-project";
   const account = { managerOrigin: "https://accounts.example.test", accountId: "account-a" };
   let presence = "cloud-only";
@@ -191,12 +213,13 @@ test.each([
         downloads++;
         started.resolve();
         await release.promise;
-        presence = "downloading";
         if (downloads > 1) {
+          presence = "downloading";
           downloadError = undefined;
           return Response.json({ projectId: id, presence });
         }
-        if (folderError) downloadError = "Could not prepare the project folder";
+        presence = outcome === "folder error" ? "downloading" : outcome;
+        if (outcome === "folder error") downloadError = "Could not prepare the project folder";
         return Response.json({ error: "Download response lost" }, { status: 503 });
       }
       if (url.pathname === "/v1/account/projects")
@@ -261,37 +284,53 @@ test.each([
           <Probe />
         </QueryClientProvider>,
       );
-    });
-    await act(async () => until(() => Boolean(choice.entry?.actions.download)));
-    expect(opened).toEqual([]);
-    await act(async () => {
-      choice.requestDownload();
-      await started.promise;
-    });
-    await act(async () => {
       peerRenderer = create(
         <QueryClientProvider client={client}>
           <Probe other />
         </QueryClientProvider>,
       );
     });
+    await act(async () => until(() => choice?.canDownload && peer?.canDownload));
+    const stalePeerAction = peer!.requestDownload;
+    expect(opened).toEqual([]);
+    await act(async () => {
+      choice.requestDownload();
+      await started.promise;
+    });
     expect(peer!.showProgress).toBe(true);
     expect(peer!.canDownload).toBe(false);
     await act(async () => {
       peer!.requestDownload();
       release.resolve();
-      await until(() => Boolean(choice.failure) && Boolean(peer!.failure));
     });
-    if (folderError) {
-      await act(async () => until(() => choice.canDownload && peer!.canDownload));
-      expect(downloads).toBe(1);
+    const shouldRetry = outcome === "folder error" || outcome === "cloud-only";
+    if (outcome === "cloud-only") {
+      await act(async () => until(() => Boolean(choice.discardDownload)));
+      await act(async () => choice.discardDownload?.());
+    }
+    // A retired recovery claim must not make an already-admitted copy eligible again.
+    await act(async () =>
+      until(() => peer!.entry?.presence === presence && !choice.downloadBlocking && !peer!.downloadBlocking),
+    );
+    expect(downloads).toBe(1);
+    if (shouldRetry) {
+      expect(peer!.canDownload).toBe(true);
       await act(async () => {
         choice.requestDownload();
         await until(() => downloads === 2);
       });
     } else {
       expect(peer!.canDownload).toBe(false);
-      await act(async () => peer!.requestDownload());
+      await act(async () => {
+        stalePeerAction();
+        await until(() =>
+          client
+            .getMutationCache()
+            .getAll()
+            .every((mutation) => mutation.state.status !== "pending"),
+        );
+      });
+      expect(downloads).toBe(1);
     }
     await act(async () => peerRenderer?.unmount());
     await act(async () => {
@@ -313,7 +352,7 @@ test.each([
       },
     ]);
     expect(closed).toBe(1);
-    expect(downloads).toBe(folderError ? 2 : 1);
+    expect(downloads).toBe(shouldRetry ? 2 : 1);
   } finally {
     release.resolve();
     await act(async () => {
