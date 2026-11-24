@@ -1,4 +1,5 @@
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { DashboardEmbeddedExample } from "./dashboard-embedded-example";
 import { DashboardExample } from "./dashboard-example";
 
 export default {
@@ -13,3 +14,11 @@ export const Dashboard: CanvasFrame<typeof DashboardExample> = {
   id: "proposals-ps-1177--dashboard",
   name: "Editable dashboard",
 };
+
+export const EmbeddedDashboard = {
+  name: "Dashboard in a page",
+  render: DashboardEmbeddedExample,
+  description:
+    "The page owns the header and places dashboard editing beside its controls. A widget renders its own chart.",
+  fullscreen: true,
+} satisfies CanvasFrame<typeof DashboardEmbeddedExample>;

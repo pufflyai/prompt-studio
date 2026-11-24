@@ -162,6 +162,16 @@ Grouped bars stack points by `label` and `group`. Source IDs are application-own
 strings. Updating sources refreshes content without discarding layout edits. Pass
 filters or refresh controls in `actions`; fetching and errors belong to the caller.
 
+For charts with their own marks, legends, or interactions, set the widget's kind
+to `"custom"` and pass its component as `content` on the matching source. Only
+the source ID is saved in the dashboard definition. A blank widget title lets
+the content supply its heading and uses the source name for the card's
+accessible label. The card scrolls when the component is taller than the widget.
+
+Pass `renderToolbar={(controls) => <PageToolbar>{controls}</PageToolbar>}` to put
+the same Edit, Apply, and Cancel controls in an existing page toolbar. The callback
+replaces the renderer's default header.
+
 Omit `onChange` for read-only use. With it, Edit dashboard opens a draft; Apply emits
 the complete definition and Cancel emits nothing. The caller owns the saved value,
 persistence, permissions, and undo. An async `onChange` can reject to retain the

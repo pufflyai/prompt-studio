@@ -1,6 +1,26 @@
 import { expect, test } from "@playwright/test";
 import { openCanvasPreview } from "../preview";
 
+// Critical: a page-owned toolbar must still control the dashboard, including widgets with interactive content.
+test("edits custom widgets from the page toolbar", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/dashboard-renderer/dashboard.canvas.tsx#EmbeddedDashboard",
+  );
+  const widget = preview.getByRole("article", { name: "Build history", exact: true });
+  await expect(widget.getByLabel("Build count with a release marker")).toBeVisible();
+  const toolbar = preview.getByRole("toolbar", { name: "Build history controls" });
+  await toolbar.getByRole("button", { name: "Edit dashboard", exact: true }).click();
+  await toolbar.getByRole("button", { name: "Add widget", exact: true }).click();
+  await preview.getByRole("menuitemradio", { name: "Custom", exact: true }).click();
+  const settings = preview.getByRole("dialog", { name: "Widget settings" });
+  await settings.getByRole("textbox", { name: "Title" }).fill("Additional build history");
+  await page.keyboard.press("Escape");
+  await toolbar.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(toolbar.getByRole("button", { name: "Edit dashboard", exact: true })).toBeFocused();
+  await expect(preview.getByRole("article", { name: "Additional build history", exact: true })).toBeVisible();
+});
+
 // Critical: controlled layout edits must survive live data refresh and failed saves, and Cancel must not publish them.
 test("apply and cancel dashboard edits through the caller-owned definition", async ({ page }) => {
   const errors: string[] = [];

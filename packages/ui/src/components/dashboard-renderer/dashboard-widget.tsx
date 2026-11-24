@@ -1,6 +1,7 @@
 import { Box, HStack, Text, useSlotRecipe } from "@chakra-ui/react";
 import { type ReactNode, useId } from "react";
 import { DataTable } from "@/components/data-table/data-table";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 import { SimpleCard } from "@/components/primitives/simple-card";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
 import { DashboardChart } from "./dashboard-chart";
@@ -21,7 +22,7 @@ export function WidgetCard(props: WidgetCardProps) {
   return (
     <SimpleCard
       as="article"
-      aria-label={widgetLabel(widget)}
+      aria-label={widgetLabel(widget, source?.name)}
       h="full"
       minH="0"
       display="flex"
@@ -84,6 +85,15 @@ export function WidgetCard(props: WidgetCardProps) {
             </Text>
           )}
         </Box>
+      )}
+      {widget.kind === "custom" && (
+        <ScrollArea css={styles.customContent} contentProps={{ p: "sm" }}>
+          {source?.content ?? (
+            <Text color="fg.muted" textStyle="label/S/regular">
+              No widget content
+            </Text>
+          )}
+        </ScrollArea>
       )}
     </SimpleCard>
   );
