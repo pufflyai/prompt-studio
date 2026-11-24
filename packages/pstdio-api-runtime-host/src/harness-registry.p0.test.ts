@@ -492,3 +492,41 @@ it("retirement does not wait for a sign-in until the instance's own children are
   await signingIn;
   await registry.dispose();
 });
+
+it("reports a failed instance stop without waiting for a sign-in that still needs the child", async () => {
+  const exited = Promise.withResolvers<{ code: number | null; signal: string | null }>();
+  const entered = Promise.withResolvers<void>();
+  const failure = new Error("The fixture child did not stop.");
+  const source = record({
+    authenticate: async () => {
+      entered.resolve();
+      await exited.promise;
+    },
+  });
+  const registry = createHarnessRegistry([source], (record, options, owner) => {
+    owner.adopt({
+      exited: exited.promise,
+      async kill() {
+        throw failure;
+      },
+    });
+    return buildContext(record, options);
+  });
+  const handle = registry.get(source.id)!;
+  const signingIn = handle.authenticate!(
+    { action: "login" },
+    { signal: new AbortController().signal, emit: async () => {}, request: async () => "" },
+  );
+  await entered.promise;
+  const disposal = handle.dispose().catch((error: unknown) => error);
+  try {
+    expect(await Promise.race([disposal, Bun.sleep(100).then(() => "pending")])).toMatchObject({
+      message: `Harness cleanup failed: ${source.id}`,
+      errors: [{ message: "Owned process cleanup failed.", errors: [failure] }],
+    });
+  } finally {
+    exited.resolve({ code: null, signal: null });
+    await signingIn;
+    await disposal;
+  }
+});

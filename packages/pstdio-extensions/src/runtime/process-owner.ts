@@ -35,13 +35,14 @@ export interface ProcessOwner {
 
 export const createProcessOwner = () => {
   const running = new Set<Stoppable>();
+  let closed = false;
   let closing: Promise<void> | undefined;
   const owner: ProcessOwner = {
     get closed() {
-      return closing !== undefined;
+      return closed;
     },
     adopt(handle) {
-      if (closing) {
+      if (closed) {
         void Promise.resolve()
           .then(() => handle.kill())
           .catch(() => {});
@@ -53,10 +54,23 @@ export const createProcessOwner = () => {
         .catch(() => {});
     },
     close() {
-      closing ??= Promise.resolve().then(async () => {
-        await Promise.allSettled([...running].map(async (handle) => handle.kill()));
-        running.clear();
-      });
+      closed = true;
+      if (!closing) {
+        closing = Promise.resolve().then(async () => {
+          const results = await Promise.allSettled(
+            [...running].map(async (handle) => {
+              await handle.kill();
+              running.delete(handle);
+            }),
+          );
+          const failures = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+          if (failures.length) throw new AggregateError(failures, "Owned process cleanup failed.");
+        });
+        // A later close can retry only failed children. Admission stays closed.
+        void closing.catch(() => {
+          closing = undefined;
+        });
+      }
       return closing;
     },
   };
@@ -155,6 +169,7 @@ export const createProcessHandleProxy = (open: Promise<OpenedHandle>, cancel = n
     settled = true;
   });
   let queued = 0;
+  let stopping = false;
   let killing: Promise<void> | undefined;
   let claimed = false;
 
@@ -163,7 +178,7 @@ export const createProcessHandleProxy = (open: Promise<OpenedHandle>, cancel = n
   let ending: Promise<void> | undefined;
   const write = (data: string | Uint8Array) => {
     // Input closes when end() is called, though the child's input closes only after earlier writes.
-    if (ending || killing) return Promise.reject(new Error("The process input is closed."));
+    if (ending || stopping) return Promise.reject(new Error("The process input is closed."));
     const next = queueWrite(data);
     writes = Promise.allSettled([writes, next]).then(() => {});
     return next;
@@ -211,14 +226,20 @@ export const createProcessHandleProxy = (open: Promise<OpenedHandle>, cancel = n
       return ending;
     },
     kill: (signal) => {
-      killing ??= opened
-        ? open.then(
-            (handle) => {
-              if (!settled || cleanupByHandle.has(handle)) return handle.kill(signal);
-            },
-            () => {},
-          )
-        : stopWhileOpening();
+      stopping = true;
+      if (!killing) {
+        killing = opened
+          ? open.then(
+              (handle) => {
+                if (!settled || cleanupByHandle.has(handle)) return handle.kill(signal);
+              },
+              () => {},
+            )
+          : stopWhileOpening();
+        void killing.catch(() => {
+          killing = undefined;
+        });
+      }
       return killing;
     },
     events,
