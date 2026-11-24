@@ -220,7 +220,7 @@ test("Run attempt starts from the chosen base branch", async ({ page, fixture })
   ).toBe(baseSha);
 });
 
-test("Run attempt keeps the dialog open and shows why the ticket cannot start", async ({ page, request, fixture }) => {
+test("Run attempt shows why the ticket cannot start after its dialog closes", async ({ page, request, fixture }) => {
   const blocker = await createPlannerTicket(request, apiBase, fixture.project.id, {
     content: "# Blocker\n\nFinish this first.",
   });
@@ -237,6 +237,9 @@ test("Run attempt keeps the dialog open and shows why the ticket cannot start", 
   const dialog = page.getByRole("dialog").filter({ has: page.getByText("Run attempt", { exact: true }) });
   await dialog.getByRole("button", { name: "Run", exact: true }).click();
 
-  await expect(dialog.getByRole("alert")).toContainText(blocker.shorthand);
-  await expect(dialog.getByRole("button", { name: "Run", exact: true })).toBeEnabled();
+  await expect(dialog).toBeHidden();
+  await page.locator('[data-status-bar-item="workbench.system-activity"]').click();
+  await expect(page.getByRole("alert").filter({ hasText: "Run attempt" })).toContainText(blocker.shorthand);
+  await expect(page.getByRole("button", { name: "Copy action details", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Inspect resources", exact: true })).toHaveCount(0);
 });

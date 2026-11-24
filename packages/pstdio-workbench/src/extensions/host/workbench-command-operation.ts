@@ -147,6 +147,12 @@ export const runWorkbenchCommandOperation = <T>(input: {
       if (error instanceof CommandOutcomeError && error.outcome.status === "error") {
         const name = error.outcome.error?.name;
         if (isPlannerAttempt(command) && name === "AttemptLaunchRefused") return "rejected";
+        if (
+          command.extensionId === "pstdio.canvas" &&
+          command.id.startsWith("pstdio.canvas.command.parameters.") &&
+          name === "CanvasParameterWriteRefused"
+        )
+          return "rejected";
         // Older Planner releases forward the session owner's definitive preflight refusal.
         if (isPlannerGateLaunch(command) && (name === "GateLaunchRefused" || name === "SessionCreateRefused"))
           return "rejected";

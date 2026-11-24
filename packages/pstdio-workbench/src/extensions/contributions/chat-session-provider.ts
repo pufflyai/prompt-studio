@@ -1,5 +1,6 @@
-import { commandRefId, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
+import { CommandOutcomeError, commandRefId, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import type { WorkbenchPanelRenderInput } from "../../core";
+import { classifyApiWrite } from "../../core/registries/mutations/operation-failures";
 import type { OperationRecovery } from "../../core/registries/mutations/operation-types";
 import { getWorkbenchOperations, resourceOperationSubject } from "../../core/registries/mutations/operations";
 import { getWorkbenchQueries } from "../../core/workbench-queries";
@@ -43,6 +44,10 @@ const trackChatSubmissions = (
           source: resource,
           title: creating ? "Start session" : "Send message",
           draft: { text: action.text, attachments: action.attachments },
+          classify: (error) =>
+            !creating && error instanceof CommandOutcomeError && error.outcome.error?.name === "HarnessOperationRefused"
+              ? "rejected"
+              : classifyApiWrite(error),
           write: execute,
           onDiscardAfterRetirement: discardRecovered ? true : undefined,
           onDiscard: () => {
