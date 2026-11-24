@@ -22,6 +22,7 @@ beforeAll(async () => {
     entryPath,
     `
 const cleanup = Promise.withResolvers();
+let lateOpen;
 export default {
   commands: [
     { id: "migration", run(ctx) {
@@ -80,8 +81,17 @@ export default {
       return ctx.live.runCallback(() => ctx.live.wait());
     } },
     { id: "late", async run(ctx) {
-      void ctx.live.open().catch(() => {});
+      lateOpen = ctx.live.open().then(() => undefined);
+      void lateOpen.catch(() => {});
       await ctx.live.opening();
+    } },
+    { id: "collect-late", async run() {
+      // The open reply has arrived and the worker no longer holds its handle.
+      await lateOpen;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        Bun.gc(true);
+        await Bun.sleep(20);
+      }
     } },
     { id: "unsubscribe", async run(ctx) {
       let seen = 0;
@@ -259,7 +269,7 @@ test("settlement rejects an outstanding callback and closes a late host handle",
       }),
     );
     available.resolve({ close: () => closed.resolve() });
-    await deadline(closed.promise);
+    await deadline(Promise.all([invoke("collect-late", fixture({})), closed.promise]));
   });
 });
 
