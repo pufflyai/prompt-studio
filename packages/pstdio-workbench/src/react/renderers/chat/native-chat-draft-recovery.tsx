@@ -10,7 +10,6 @@ export const NativeChatDraftRecovery = (props: {
     {props.recovered?.map((draft, index) =>
       props.hidden?.(draft) ? null : (
         <Flex key={index} direction="column" gap="xs">
-          <Text>A saved draft arrived while you were typing. Both drafts are kept.</Text>
           <Text>{draft.text}</Text>
           {draft.attachments.map((file) => (
             <Text key={file.id}>{file.name}</Text>

@@ -26,12 +26,12 @@ setupPackagedSmokeTests(async () => {
   extensionSource = await preparePackagedExtensionSource(
     join(fixturesRoot, "source"),
     join(import.meta.dirname, "../../../../extensions/pstdio-workspaces"),
-    { install: true },
+    { install: true, dependencies: "declared" },
   );
   sessionsSource = await preparePackagedExtensionSource(
     join(fixturesRoot, "sessions-source"),
     join(import.meta.dirname, "../../../../extensions/pstdio-session-browser"),
-    { install: true },
+    { install: true, dependencies: "declared" },
   );
   harness = join(fixturesRoot, "harness");
   await mkdir(harness);

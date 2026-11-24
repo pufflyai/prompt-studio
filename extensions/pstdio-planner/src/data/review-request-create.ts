@@ -6,9 +6,10 @@ import { readAttempt } from "./attempt-storage";
 import type { AttemptState } from "./attempt-types";
 import { findTicket } from "./resolve";
 import { keepOwnedRequest, publishRequestChange } from "./review-request-service";
-import { listTicketReviewRequests, readReviewRequest, reviewRequestsCollection } from "./review-request-storage";
+import { readReviewRequest, reviewRequestsCollection } from "./review-request-storage";
 import type { ReviewRequest, ReviewRequestReason } from "./review-request-types";
 import { parseRequestBody } from "./review-request-validation";
+import { preparePlannerIndexes } from "./storage-indexes";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "./workflow-statuses";
 
 export interface CreateReviewRequestInput {
@@ -50,13 +51,6 @@ const readHandoffAttempt = async (ctx: CommandContext, input: CreateReviewReques
   return attempt;
 };
 
-const sameHandoff = (request: ReviewRequest, input: CreateReviewRequestInput) =>
-  request.context.reason === input.reason &&
-  (request.context.attemptId ?? request.context.workspaceId) === (input.attemptId ?? input.workspaceId ?? null) &&
-  request.context.workspaceId === (input.workspaceId ?? null) &&
-  request.context.attemptRevision === (input.revision ?? null) &&
-  request.context.relatedSessionId === (input.sessionId ?? null);
-
 const assertIncompleteTicket = async (ctx: CommandContext, statusId: string | null | undefined) => {
   if (usableWorkflowStatuses(await readWorkflowStatuses(ctx)).completedStatusIds.includes(statusId ?? ""))
     throw new Error("The ticket is complete.");
@@ -75,12 +69,47 @@ export const createReviewRequest = async (ctx: CommandContext, input: CreateRevi
 
   // Workflow producers retry; an open request with the same handoff key is the same request.
   if (input.reason) {
-    const existing = (await listTicketReviewRequests(ctx.storage, ticket.id)).requests.find(
-      (request) =>
-        request.state === "open" &&
-        sameHandoff(request, { ...input, workspaceId: attempt?.workspaceId ?? input.workspaceId }),
-    );
-    if (existing) return existing;
+    await preparePlannerIndexes(ctx.storage);
+    const selected = await ctx.storage.records.query({
+      index: "review-request-state",
+      fields: ["id"],
+      limit: 1,
+      orderBy: [
+        { field: "requestedAt", direction: "asc" },
+        { field: "id", direction: "asc" },
+      ],
+      where: {
+        all: [
+          { field: "ticketId", op: "eq", value: ticket.id },
+          { field: "valid", op: "eq", value: true },
+          { field: "reason", op: "eq", value: input.reason },
+          { field: "workspaceId", op: "eq", value: attempt?.workspaceId ?? input.workspaceId ?? null },
+          {
+            any: [
+              { field: "attemptId", op: "eq", value: input.attemptId ?? input.workspaceId ?? null },
+              {
+                all: [
+                  {
+                    any: [
+                      { field: "attemptId", op: "missing" },
+                      { field: "attemptId", op: "eq", value: null },
+                    ],
+                  },
+                  { field: "workspaceId", op: "eq", value: input.attemptId ?? input.workspaceId ?? null },
+                ],
+              },
+            ],
+          },
+          { field: "attemptRevision", op: "eq", value: input.revision ?? null },
+          { field: "relatedSessionId", op: "eq", value: input.sessionId ?? null },
+          {
+            not: { exists: { index: "review-outcome-state", on: [{ sourceField: "id", relatedField: "requestKey" }] } },
+          },
+        ],
+      },
+    });
+    const id = selected.records[0]?.fields.id;
+    if (typeof id === "string") return (await readReviewRequest(ctx.storage, id))!;
   }
 
   const requestId = ctx.storage.ids.create();

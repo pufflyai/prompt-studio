@@ -1,12 +1,12 @@
 // Launch a gate review that checks project dependencies and updates the saved plan.
 import { defineCommand, params, sessionBrowser } from "@pstdio/sdk/extensions";
-import { resolveTicketId } from "../../data/resolve";
+import { findTicket } from "../../data/resolve";
+import { readWorkflowStatuses, usableWorkflowStatuses } from "../../data/workflow-statuses";
 import type { PlanRow } from "../contracts";
 import { plannerExtensionId } from "../planner";
 import { registerGate } from "./gate-store";
-import { readPlanCommand } from "./read-plan";
 
-function reviewPrompt(row: PlanRow) {
+function reviewPrompt(row: Pick<PlanRow, "id" | "shorthand" | "title" | "instructions">) {
   return [
     `Review the agent gate ${row.shorthand}: ${row.title}, then update the plan in accordance with its instructions.`,
     `Gate instructions:\n${row.instructions}`,
@@ -26,19 +26,18 @@ export const launchGateCommand = defineCommand({
   mutating: true,
   params: { ticket: params.text({ required: true }) },
   async run(ctx, { ticket }) {
-    const ticketId = await resolveTicketId(ctx, ticket);
-    const plan = await readPlanCommand.run(ctx, {});
-    const row = plan.sections.flatMap(({ rows }) => rows).find(({ id }) => id === ticketId);
-    if (!row) {
+    const row = await findTicket(ctx, ticket);
+    if (!row || row.archived) {
       throw new Error("Unknown ticket.");
     }
-    if (row.done) {
+    const workflow = usableWorkflowStatuses(await readWorkflowStatuses(ctx));
+    if (workflow.completedStatusIds.includes(row.statusId ?? "")) {
       throw new Error("This gate is complete.");
     }
     await registerGate(ctx, row.id);
     const session = await ctx.sessions.create({
       title: `Review gate: ${row.shorthand}`,
-      prompt: reviewPrompt(row),
+      prompt: reviewPrompt({ ...row, instructions: row.content }),
       anchors: [
         {
           type: "ticket",

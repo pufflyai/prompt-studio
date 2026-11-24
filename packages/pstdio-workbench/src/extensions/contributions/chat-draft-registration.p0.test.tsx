@@ -263,3 +263,110 @@ test("a replaced legacy migration cannot overwrite newer work or acknowledge its
     else Reflect.deleteProperty(globalThis, "localStorage");
   }
 });
+
+test("an independent native chat opts into browser drafts without changing provider-managed views", async () => {
+  const previousStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const profile = () => {
+    const records = new Map<string, string>();
+    return {
+      getItem: (key: string) => records.get(key) ?? null,
+      setItem: (key: string, value: string) => records.set(key, value),
+      removeItem: (key: string) => records.delete(key),
+    };
+  };
+  const firstProfile = profile();
+  const secondProfile = profile();
+  const commands: { id: string; params: unknown }[] = [];
+  const open = (storage: ReturnType<typeof profile>) => {
+    Object.defineProperty(globalThis, "localStorage", { configurable: true, value: storage });
+    const workbench = createWorkbench();
+    const viewId = "acme.chat.view.conversation";
+    const registration = registerWorkbenchExtensionChatRenderers({
+      workbench,
+      projectId: "project",
+      metadata: {
+        ...emptyWorkbenchExtensionMetadata,
+        views: [
+          {
+            id: viewId,
+            localId: "conversation",
+            extensionId: "acme.chat",
+            title: "Session",
+            body: {
+              kind: "chat",
+              draftKey: "draft",
+              browserDraft: { acknowledgeRecoveryHandlerId: "chat.acknowledge" },
+              queryHandlerId: "chat.query",
+              actionHandlerId: "chat.action",
+            },
+          },
+        ],
+      },
+      executeCommand: async (id, body) => {
+        commands.push({ id, params: body.params });
+        return {};
+      },
+    });
+    const element = getWorkbenchRenderers(workbench)
+      .getRenderer(viewId)!
+      .render({
+        workbench,
+        instance: {
+          instanceId: "main",
+          panelId: viewId,
+          closable: true,
+          resource: { type: "session", id: "laptop-session" },
+        },
+        panel: { id: viewId, title: "Session", region: "main", rendererId: viewId },
+        refresh: () => undefined,
+      }) as ReactElement<{ session: ChatSession }>;
+    const session = element.props.session;
+    const release = session.retain();
+    return {
+      session,
+      close: async () => {
+        release();
+        registration.dispose();
+        await workbench.dispose();
+      },
+    };
+  };
+  const documents: ReturnType<typeof open>[] = [];
+  try {
+    const first = open(firstProfile);
+    documents.push(first);
+    const draft = {
+      text: "First browser's draft",
+      attachments: [{ id: "uploaded", name: "notes.txt" }],
+      values: { device: "laptop" },
+    };
+    first.session.changeDraft(draft);
+    await first.session.flushDraft();
+    const second = open(secondProfile);
+    documents.push(second);
+    expect(second.session.getSnapshot().draft.text).toBe("");
+    const reply = { text: "Send to Laptop", attachments: [], values: {} };
+    second.session.changeDraft(reply);
+    await second.session.run({ type: "submit", ...reply });
+    expect(second.session.getSnapshot().draft.text).toBe("");
+    expect(first.session.getSnapshot().draft).toEqual(draft);
+    const reopened = open(firstProfile);
+    documents.push(reopened);
+    expect(reopened.session.getSnapshot().draft).toEqual(draft);
+    expect(commands.filter(({ id }) => id === "chat.acknowledge")).toEqual([]);
+    expect(commands.filter(({ id }) => id === "chat.action")).toEqual([
+      {
+        id: "chat.action",
+        params: expect.objectContaining({
+          draftClientId: expect.any(String),
+          action: { type: "submit", ...reply },
+          renderer: expect.objectContaining({ resource: { type: "session", id: "laptop-session" } }),
+        }),
+      },
+    ]);
+  } finally {
+    for (const doc of documents.reverse()) await doc.close();
+    if (previousStorage) Object.defineProperty(globalThis, "localStorage", previousStorage);
+    else Reflect.deleteProperty(globalThis, "localStorage");
+  }
+});

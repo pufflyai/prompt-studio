@@ -6,7 +6,6 @@ import {
   l10n,
   packageAsset,
   params,
-  projectSlots,
 } from "@pstdio/sdk/extensions";
 import { remoteHarness } from "./harness";
 import { pocketCoder } from "./pocketcoder";
@@ -78,9 +77,6 @@ const launch = defineCommand({
   cli: true,
   mutating: true,
   palette: [{ group: "PocketCoder", icon: "cloud", label: l10n("commands.launch", "Launch PocketCoder session") }],
-  menus: [
-    { slot: projectSlots.headerOverflow, label: l10n("commands.launch", "Launch PocketCoder session"), icon: "cloud" },
-  ],
   params: {
     ...workspaceParams,
     prompt: promptParam,

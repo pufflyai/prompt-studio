@@ -1,10 +1,9 @@
 import { expect, test } from "bun:test";
-import { saveDraft } from "./drafts";
 import { nativeSubmissionIndex, saveNativeSubmission, updateNativeSubmission } from "./native-submission";
 import { watchConversation } from "./watch";
 import { createWatchObservationFixture } from "./watch-observation.test-fixture";
 
-test("drafts and another session's native inputs do not refresh this conversation's metadata", async () => {
+test("another session's native inputs do not refresh this conversation's metadata", async () => {
   const f = createWatchObservationFixture();
   const watching = watchConversation(f.ctx, { type: "session", id: "s" });
   const turn = () => new Promise<void>((resolve) => setImmediate(resolve));
@@ -12,9 +11,6 @@ test("drafts and another session's native inputs do not refresh this conversatio
     await f.connected;
     const baseline = { ...f.counts };
     const draft = { text: "Other conversation", attachments: [], values: {} };
-    await saveDraft(f.ctx, "other", draft);
-    await turn();
-    expect(f.counts).toEqual(baseline);
     await saveNativeSubmission(f.ctx, "other", { draft, operation: { kind: "command", text: "/other" } }, null, true);
     await turn();
     expect(f.counts).toEqual(baseline);
@@ -129,7 +125,7 @@ test("a native input committed after the final session event still restores its 
   f.state.wrote = (frame) => {
     if ("recoverDraft" in frame) recovered.resolve(frame.recoverDraft);
   };
-  const watching = watchConversation(f.ctx, { type: "session", id: "s" });
+  const watching = watchConversation(f.ctx, { type: "session", id: "s" }, "browser");
   try {
     await f.connected;
     const draft = { text: "Accepted objective", attachments: [], values: {} };
@@ -139,6 +135,8 @@ test("a native input committed after the final session event still restores its 
       { draft, operation: { kind: "command", text: "/goal objective" } },
       "previous",
       true,
+      undefined,
+      "browser",
     );
     expect(await recovered.promise).toEqual(draft);
     expect(f.counts).toMatchObject({ execution: 1, session: 1, queue: 1, harness: 1, stream: 1 });

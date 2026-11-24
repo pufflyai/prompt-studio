@@ -2,7 +2,7 @@ import { isAbsolute } from "node:path";
 import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { nativeScrollbarDefaults } from "@pstdio/ui/scrollbars";
 import { serviceFor } from "./artifact-context";
-import { artifactPreviewPolicy } from "./components/html-preview-document";
+import { artifactPreviewPolicy, previewFragmentDocument } from "./components/html-preview-document";
 import { previewThemeDocument } from "./components/html-preview-theme";
 
 export interface ArtifactExportTheme {
@@ -51,7 +51,7 @@ export const buildArtifactExport = async (html: string, theme?: ArtifactExportTh
     })
     .transform(new Response(html))
     .text();
-  const content = `<!doctype html><meta charset="utf-8">${previewThemeDocument}${source}`;
+  const content = `<!doctype html><meta charset="utf-8">${previewThemeDocument}${previewFragmentDocument}${source}`;
   const message = JSON.stringify({ type: "pstdio.preview-theme", mode: theme ? mode : undefined, variables, title });
   const load = `const theme=${message};theme.mode??=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';this.style.colorScheme=theme.mode;this.contentWindow.postMessage(theme,'*');`;
   // Keep the preview's opaque frame and embedding color scheme. Root CSS alone cannot

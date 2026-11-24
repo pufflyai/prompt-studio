@@ -120,7 +120,7 @@ test("only an observed read-only online remote queue recovers and becomes quiet 
   const f = createWatchObservationFixture();
   f.state.readExecution = async () => ({ kind: "remote", available: true, device: { id: "owner", name: "Laptop" } });
   f.state.readQueue = async () => ({ messages: [], queue: { ...queue, readOnly: f.counts.queue === 1 } });
-  const watching = watchConversation(f.ctx, { type: "session", id: "s" });
+  const watching = watchConversation(f.ctx, { type: "session", id: "s" }, "browser");
   try {
     await f.connected;
     await Bun.sleep(2100);
