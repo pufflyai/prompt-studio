@@ -9,7 +9,7 @@ import { useState } from "react";
 import type { Aggregation } from "../webview/period";
 import { BugOriginsPlot } from "./bug-origins-plot";
 import { bucketMetrics, RunMetricPlot, TotalTestsPlot } from "./health-charts";
-import { HealthRuns } from "./health-runs";
+import { HealthRuns, runVerification } from "./health-runs";
 import type { HealthBucket } from "./health-timeline";
 import { PullRequestMergesPlot, VelocityPlot } from "./pull-request-merges-plot";
 import { ReleaseEtaPlot } from "./release-eta-plot";
@@ -56,6 +56,18 @@ export function HealthDashboard(props: HealthDashboardProps) {
   } = props;
   const [value, setValue] = useState(initialDashboard);
   const runPlotProps = { buckets: buckets.map(bucketMetrics), aggregation, onChoose };
+  const observations = runs.flatMap((run) =>
+    run.runDurationSeconds === undefined || !run.counts.reports
+      ? []
+      : [
+          {
+            x: run.runDurationSeconds / 60,
+            y: run.counts.failed,
+            label: `Run ${run.id} · ${run.sha.slice(0, 7)}`,
+            group: runVerification(run),
+          },
+        ],
+  );
   const sources: DashboardDataSource[] = [
     {
       id: "eta",
@@ -97,6 +109,12 @@ export function HealthDashboard(props: HealthDashboardProps) {
       id: "runs",
       name: "Release runs",
       content: <HealthRuns runs={runs} chosen={chosen} onChoose={onChoose} onOpen={onOpen} />,
+    },
+    {
+      id: "run-analysis",
+      name: "Release run analysis",
+      scatter: { xLabel: "Duration (min)", yLabel: "Failed tests", points: observations },
+      series: observations.map(({ group }) => ({ label: group, value: 1 })),
     },
   ];
   return <DashboardRenderer value={value} sources={sources} onChange={setValue} renderToolbar={renderToolbar} />;

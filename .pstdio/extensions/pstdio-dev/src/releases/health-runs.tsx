@@ -5,6 +5,9 @@ import { Github } from "lucide-react";
 import { CategoryBreakdown, formatDuration } from "./health-charts";
 import type { ReleaseHealth } from "./types";
 
+export const runVerification = (run: ReleaseHealth) =>
+  run.status === "completed" ? (run.conclusion ?? "—") : run.status.replaceAll("_", " ");
+
 const RunsTable = (props: {
   runs: ReleaseHealth[];
   selected?: ReleaseHealth;
@@ -15,7 +18,7 @@ const RunsTable = (props: {
   const rows: RowData[] = [...runs].reverse().map((run) => ({
     id: run.id,
     run: `${new Date(run.createdAt).toLocaleString()} · ${run.sha.slice(0, 7)}`,
-    verification: run.status === "completed" ? (run.conclusion ?? "—") : run.status.replaceAll("_", " "),
+    verification: runVerification(run),
     passed: run.counts.reports ? run.counts.passed.toLocaleString() : "—",
     failed: run.counts.reports ? run.counts.failed.toLocaleString() : "—",
     duration: run.runDurationSeconds === undefined ? "—" : formatDuration(run.runDurationSeconds),

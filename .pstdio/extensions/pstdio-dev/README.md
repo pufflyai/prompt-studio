@@ -33,6 +33,8 @@ Open **Release health** from the project navigation. **Overview** puts the relea
 
 **Range** and **Aggregation** apply to the dashboard charts. Choose the last 7, 30, or 90 days or all available history, grouped by day, week, or month in UTC. The last 7 days can also be grouped by hour. Weeks start on Monday. The range also applies to the **Release runs** widget, where each run has its duration, GitHub link, and verification evidence.
 
+Under **Edit dashboard**, add a **Scatterplot** or **Ring chart** with the **Release run analysis** source. The scatterplot places one point for each timed run with test evidence, using duration and failed test count. Its colors identify verification outcomes. The ring shows the share of those runs in each outcome.
+
 Dashed vertical lines mark GitHub publication dates for `pstdio@` releases. When several releases fall in the same bucket, the tooltip lists each tag and timestamp. The test charts sum recorded executions and average completed run durations. Dates outside the available workflow history have gaps in the test charts.
 
 Select a legend item in **PR merges** or **Total tests** to show that category. Select the same item again to restore the full stack.
