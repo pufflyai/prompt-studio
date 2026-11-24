@@ -2,11 +2,19 @@ import { describe, expect, test } from "bun:test";
 import { codeLanguageFor, pickFileKind } from "./file-kind";
 
 describe("pickFileKind", () => {
-  test("defaults to markdown for md / txt / extension-less files", () => {
+  test("uses markdown for prose files and unnamed documents", () => {
     expect(pickFileKind("notes.md", undefined)).toBe("markdown");
+    expect(pickFileKind("notes.markdown", undefined)).toBe("markdown");
+    expect(pickFileKind("NOTES.MD", undefined)).toBe("markdown");
     expect(pickFileKind("readme.txt", undefined)).toBe("markdown");
-    expect(pickFileKind("LICENSE", undefined)).toBe("markdown");
     expect(pickFileKind(undefined, undefined)).toBe("markdown");
+  });
+
+  test("opens logs, unknown extensions and extensionless files as code", () => {
+    for (const fileName of ["test.log", "data.unknown", "LICENSE"]) {
+      expect(pickFileKind(fileName, "text/plain")).toBe("code");
+      expect(codeLanguageFor(fileName)).toBe("plaintext");
+    }
   });
 
   test("picks code for recognised code extensions", () => {
