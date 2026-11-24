@@ -462,7 +462,7 @@ test("account capabilities route reads and changes to the host account and valid
   await expect(Promise.resolve().then(() => capabilities["account.manage"]({ op: "devices" }))).rejects.toMatchObject({
     code: "invalid_params",
   });
-  expect(calls).toHaveLength(7);
+  expect(calls).toHaveLength(9);
 });
 
 test("text editing validates scoped operations before passing them to the host adapter", async () => {
