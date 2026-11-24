@@ -127,7 +127,7 @@ export const readPlanCommand = defineCommand({
       );
     };
     const executionOffset =
-      !input.ticketId && !hasRules(input.filter) && !input.page?.search.trim() && !visible.length
+      !input.ticketId && !hasRules(input.filter) && !input.page?.search.trim() && !visible.length && !input.page?.cursor
         ? (input.page?.offset ?? 0)
         : undefined;
     const page = await planPageRows(ctx, view, executionOffset);
