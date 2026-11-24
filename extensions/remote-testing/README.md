@@ -21,7 +21,7 @@ command there, stops the environment when the run finishes, and saves the full l
   queues independent workspace cleanup and log collection, with the existing once-per-minute
   recovery schedule as a fallback. Confirmed runner timeouts also save their actual result
   before shutdown or log-service retries. Cleanup admission and workers both require the
-  durable timeout summary, including after a restart between intent and result writes. Uploaded logs are backfilled without changing the
+  durable timeout summary, including after a restart between intent and result writes. Uploaded timeout logs are backfilled without changing the
   saved outcome or duration. A durable result checkpoint survives summary-write or ownership-release
   failures; recovery completes it even when the host labels the failed worker non-retryable.
   Incomplete cleanup and log intents also recover from those failures, preserving the original

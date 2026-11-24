@@ -25,6 +25,10 @@ export async function rememberRunLog(store: ExtensionStorageApi, runId: string, 
 export async function collectSavedRunLog(deps: RunCollectionDeps, runId: string, signal?: AbortSignal) {
   const initial = await readRun(deps.store, runId);
   if (!initial.summary) throw new Error("Save the test result before collecting its log.");
+  // Only timeout recovery owns independent backfill. A legacy launch error can
+  // belong to a still-running accepted request; attaching a log would fabricate
+  // the old collector's finalized-result evidence used by claim reconciliation.
+  if (initial.summary.status !== "timed_out") throw new Error("Log backfill requires a saved timed-out result.");
   let log = initial.summary.logPath ? { logPath: null, tail: "" } : await collectLog(deps, runId, signal, true);
   const deadline = (await intents(deps.store).get(runId))?.missingUntil ?? 0;
   while (!initial.summary.logPath && !log.logPath && Date.now() < deadline) {
@@ -36,7 +40,7 @@ export async function collectSavedRunLog(deps: RunCollectionDeps, runId: string,
   while (log.logPath) {
     const current = await deps.store.records.read(recordId);
     const record = current.value as unknown as RunRecord;
-    if (current.deleted || !record?.summary || record.summary.logPath) break;
+    if (current.deleted || record?.summary?.status !== "timed_out" || record.summary.logPath) break;
     const saved = await deps.store.records.commitIfCurrent({
       operationId: crypto.randomUUID(),
       edits: [
@@ -49,8 +53,13 @@ export async function collectSavedRunLog(deps: RunCollectionDeps, runId: string,
     });
     if (saved) break;
   }
-  const intent = await intents(deps.store).get(runId);
-  if (intent) await intents(deps.store).deleteIfValue(runId, intent);
+  await forgetRunLog(deps.store, runId);
+}
+
+async function forgetRunLog(store: ExtensionStorageApi, runId: string) {
+  const pending = intents(store);
+  const intent = await pending.get(runId);
+  if (intent) await pending.deleteIfValue(runId, intent);
 }
 
 export const collectRunLog = defineCommand({
@@ -73,11 +82,24 @@ type Job = NonNullable<Awaited<ReturnType<LogContext["automation"]["get"]>>>;
 const incomplete = (job: Job) => !["queued", "running"].includes(job.status);
 
 export async function enqueueRunLog(ctx: LogContext, runId: string) {
+  const summary = (await readRun(ctx.storage, runId)).summary;
+  if (summary?.status !== "timed_out") {
+    // A prepared timeout intent may have lost to a finalized result. Keep an
+    // intent whose result is not saved yet, but retire superseded log work.
+    if (summary) await forgetRunLog(ctx.storage, runId);
+    return;
+  }
   await rememberRunLog(ctx.storage, runId);
   const pending = intents(ctx.storage);
   while (true) {
     const current = await pending.read(runId);
-    if (!current || !(await readRun(ctx.storage, runId)).summary) return;
+    if (!current) return;
+    const latest = (await readRun(ctx.storage, runId)).summary;
+    if (!latest) return;
+    if (latest.status !== "timed_out") {
+      await pending.deleteIfValue(runId, current.value);
+      return;
+    }
     const priorId = current.value.jobId;
     const prior = priorId ? await ctx.automation.get(priorId) : undefined;
     if (prior && !incomplete(prior)) return;
