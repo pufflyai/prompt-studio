@@ -100,4 +100,10 @@ Revoking project access stops new keys and access renewals. The previously issue
 
 Leaving a team or removing a member revokes that person's grants for every team project and keeps the projects available to the other members.
 
+## Transfer team ownership
+
+The owner can select an active member under **Team members** in Cloud settings and offer them ownership. Roles stay the same until that person accepts. The owner can cancel the offer and the recipient can decline it. One offer can be pending at a time.
+
+After acceptance, the former owner becomes a member. Both people keep the project grants they already had. The new owner can change the team's grants and membership. The former owner can choose **Leave team**. Leaving ends their remaining grants under the same revocation rules as other team members.
+
 *Updated at: 2026-11-24*

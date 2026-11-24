@@ -44,8 +44,17 @@ export const teamProjectAccessSchema = z.strictObject({
   userIds: z.array(identitySchema),
 });
 export const teamProjectGrantSchema = z.strictObject({ userId: identitySchema, granted: z.boolean() });
+export const teamOwnershipOfferSchema = z.strictObject({
+  id: identitySchema,
+  ownerUserId: identitySchema,
+  recipientUserId: identitySchema,
+});
+export const teamOwnershipOfferInputSchema = teamOwnershipOfferSchema.pick({ recipientUserId: true });
+export const teamOwnershipAnswerSchema = z.strictObject({ decision: z.enum(["accept", "decline", "cancel"]) });
 
 export type TeamProjectAccess = z.infer<typeof teamProjectAccessSchema>;
+export type TeamOwnershipOffer = z.infer<typeof teamOwnershipOfferSchema>;
+export type TeamOwnershipDecision = z.infer<typeof teamOwnershipAnswerSchema>["decision"];
 export type TeamInvitation = z.infer<typeof teamInvitationSchema>;
 export type CreatedTeamInvitation = z.infer<typeof createdTeamInvitationSchema>;
 export type TeamMember = z.infer<typeof teamMemberSchema>;
@@ -58,6 +67,7 @@ export const teamMembershipReadSchema = z.discriminatedUnion("op", [
   teamTarget.extend({ op: z.literal("members") }),
   teamTarget.extend({ op: z.literal("invitations") }),
   teamTarget.extend({ op: z.literal("projectAccess") }),
+  teamTarget.extend({ op: z.literal("ownershipOffer") }),
   invitationLink.extend({ op: z.literal("inspectInvitation") }),
 ]);
 export const teamMembershipWriteSchema = z.discriminatedUnion("op", [
@@ -70,6 +80,8 @@ export const teamMembershipWriteSchema = z.discriminatedUnion("op", [
     workbenchId: identitySchema,
     ...teamProjectGrantSchema.shape,
   }),
+  teamTarget.extend({ op: z.literal("offerOwnership"), ...teamOwnershipOfferInputSchema.shape }),
+  teamTarget.extend({ op: z.literal("answerOwnership"), offerId: identitySchema, ...teamOwnershipAnswerSchema.shape }),
   invitationLink.extend({ op: z.literal("acceptInvitation") }),
 ]);
 
@@ -79,6 +91,7 @@ export type TeamMembershipReadResult<Request extends TeamMembershipRead> = {
   members: TeamMember[];
   invitations: TeamInvitation[];
   projectAccess: TeamProjectAccess[];
+  ownershipOffer: TeamOwnershipOffer | null;
   inspectInvitation: TeamInvitationView;
 }[Request["op"]];
 export type TeamMembershipWriteResult<Request extends TeamMembershipWrite> = {
@@ -87,5 +100,7 @@ export type TeamMembershipWriteResult<Request extends TeamMembershipWrite> = {
   removeMember: { ok: true };
   leave: { ok: true };
   setProjectAccess: { ok: true };
+  offerOwnership: TeamOwnershipOffer;
+  answerOwnership: { ok: true };
   acceptInvitation: JoinedTeam;
 }[Request["op"]];

@@ -18,6 +18,7 @@ import {
   teams,
 } from "./schema";
 import { rotateProjectSharedKeys } from "./space-keys";
+import { cancelOwnershipOnRemoval } from "./team-ownership";
 import { teamUserProjectIds } from "./team-project-access";
 import { TeamMembershipDenied } from "./teams";
 import { lockAccount } from "./transactions";
@@ -178,6 +179,7 @@ export const removeTeamMember = async (transaction: ManagerTransaction, accountI
     .where(and(eq(teamMembers.accountId, accountId), eq(teamMembers.userId, userId), eq(teamMembers.role, "member")))
     .returning({ userId: teamMembers.userId });
   if (!removed) return;
+  await cancelOwnershipOnRemoval(transaction, accountId, userId);
   if (projects.length) await rotateProjectSharedKeys(transaction, accountId, projects);
 
   const revokedAt = sql`clock_timestamp()`;

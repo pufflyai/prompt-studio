@@ -94,4 +94,10 @@ As the team owner, use `pst teams project-access <team-account-id>` to list the 
 
 Use `pst teams grant-project <team-account-id> <project-id> <user-id>` to grant read and write access for one project. Use `pst teams revoke-project <team-account-id> <project-id> <user-id>` to remove it. The personal account, other grants and downloaded copies stay available.
 
+## Transfer team ownership
+
+Use `pst teams members <team-account-id>` to get the stable recipient ID, then `pst teams offer-ownership <team-account-id> <user-id>`. The owner or recipient can get the offer ID with `pst teams ownership-offer <team-account-id>`.
+
+Use `pst teams answer-ownership <team-account-id> <offer-id> accept` as the recipient, or substitute `decline`. The owner uses `cancel` to close the pending offer before starting another. After acceptance, the former owner can run `pst teams leave <team-account-id>`.
+
 *Updated at: 2026-11-24*

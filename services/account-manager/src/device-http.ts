@@ -1,4 +1,11 @@
-import { startProjectDeletionSchema, teamInviteRecipientSchema, teamInviteSecretSchema, teamProjectGrantSchema } from "pstdio-sync-contracts";
+import {
+  startProjectDeletionSchema,
+  teamInviteRecipientSchema,
+  teamInviteSecretSchema,
+  teamOwnershipAnswerSchema,
+  teamOwnershipOfferInputSchema,
+  teamProjectGrantSchema,
+} from "pstdio-sync-contracts";
 import { z } from "zod";
 import { AccountFeatureDenied } from "./account-features";
 import type { createManagerAuthentication } from "./manager-authentication";
@@ -141,6 +148,21 @@ const teamProjectAccessRoute = async (devices: Authentication["devices"], reques
   return updated ? json({ ok: true }) : json({ error: "Unknown workbench" }, 404);
 };
 
+const teamOwnershipRoute = async (devices: Authentication["devices"], request: Request, path: string) => {
+  const operation = /^\/v1\/teams\/([^/]+)\/ownership(?:\/([^/]+))?$/.exec(path);
+  if (!operation) return null;
+  const token = bearer(request);
+  const teamId = decodeURIComponent(operation[1]);
+  if (request.method === "GET" && !operation[2]) return json(await devices.ownershipOffer(token, teamId));
+  if (request.method !== "POST") return null;
+  if (operation[2]) {
+    const { decision } = teamOwnershipAnswerSchema.parse(await request.json());
+    return ok(devices.finishOwnership(token, teamId, decodeURIComponent(operation[2]), decision));
+  }
+  const { recipientUserId } = teamOwnershipOfferInputSchema.parse(await request.json());
+  return json(await devices.offerOwnership(token, teamId, recipientUserId), 201);
+};
+
 const teamInvitationRoute = async (devices: Authentication["devices"], request: Request, path: string) => {
   const operation = /^\/v1\/team-invitations\/(inspect|accept)$/.exec(path);
   if (!operation || request.method !== "POST") return null;
@@ -192,6 +214,7 @@ export const deviceHttp = async (auth: Authentication, address: string, request:
       (await teamMembershipRoute(auth, address, request, path)) ??
       (await teamInvitationRoute(auth.devices, request, path)) ??
       (await teamProjectAccessRoute(auth.devices, request, path)) ??
+      (await teamOwnershipRoute(auth.devices, request, path)) ??
       (await deletionRoute(auth, request, path, accountId)) ??
       (await route(auth, new URL(address).origin, request, path, accountId)) ??
       json({ error: "Method not allowed" }, 405)

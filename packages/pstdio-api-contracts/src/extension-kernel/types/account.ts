@@ -30,6 +30,8 @@ export type {
   TeamMembershipReadResult,
   TeamMembershipWrite,
   TeamMembershipWriteResult,
+  TeamOwnershipDecision,
+  TeamOwnershipOffer,
   TeamProjectAccess,
 } from "../../account";
 export type {

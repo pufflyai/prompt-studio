@@ -591,4 +591,6 @@ Extensions adopting these fields or commands require `^0.5.1` and a supporting p
 
 Team owners use `readTeamMembership({ op: "projectAccess", accountId }, expected)` to list projects and grants that they manage. `writeTeamMembership({ op: "setProjectAccess", accountId, workbenchId, userId, granted }, expected)` changes one member's grant. The workbench name is available only when the native device has a matching local team copy. This API returns grant metadata and carries no encryption key or project content.
 
+`readTeamMembership({ op: "ownershipOffer", accountId }, expected)` returns the pending offer for its sender or recipient. `writeTeamMembership` supports `offerOwnership` with `recipientUserId` and `answerOwnership` with `offerId` and a decision of `accept`, `decline`, or `cancel`. The role change adds no project grants.
+
 *Updated at: 2026-11-24*

@@ -4,6 +4,7 @@ import {
   accountSignInProviderSchema,
   identitySchema,
   type TeamInviteRecipient,
+  type TeamOwnershipDecision,
 } from "pstdio-sync-contracts";
 import { readAccountFeatures, requireRelay } from "./account-features";
 import { deviceNameSchema, deviceProfileSchema } from "./contracts";
@@ -36,6 +37,7 @@ import {
   listTeamMembers,
   removeTeamMember,
 } from "./team-invitations";
+import { createOwnershipOffer, finishOwnershipOffer, readOwnershipOffer } from "./team-ownership";
 import { listTeamProjectAccess, teamProjectGrant, updateTeamProjectGrant } from "./team-project-access";
 import { createTeam, listTeams, requireTeamMember, TeamMembershipDenied } from "./teams";
 import { lockAccount, withAccountTransaction } from "./transactions";
@@ -139,12 +141,21 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
     action: (transaction: ManagerTransaction, accountId: string, userId: string) => Promise<T>,
   ) =>
     team(token, intent, (transaction, accountId, userId, role) => {
-      if (role !== "owner") throw new TeamMembershipDenied("Only the team owner can manage members");
+      if (role !== "owner") throw new TeamMembershipDenied("Only the team owner can perform this action");
       return action(transaction, accountId, userId);
     });
 
   return {
     members: (token: string, id: string) => team(token, id, listTeamMembers),
+    ownershipOffer: (token: string, id: string) => team(token, id, readOwnershipOffer),
+    offerOwnership: (token: string, id: string, recipientUserId: string) =>
+      owner(token, id, (transaction, accountId, userId) =>
+        createOwnershipOffer(transaction, accountId, userId, recipientUserId),
+      ),
+    finishOwnership: (token: string, id: string, offerId: string, decision: TeamOwnershipDecision) =>
+      team(token, id, (transaction, accountId, userId) =>
+        finishOwnershipOffer(transaction, accountId, userId, identitySchema.parse(offerId), decision),
+      ),
     projectAccess: (token: string, id: string) => owner(token, id, listTeamProjectAccess),
     updateProjectAccess: (token: string, id: string, project: string, userId: string, granted: boolean) =>
       owner(token, id, (transaction, accountId) =>

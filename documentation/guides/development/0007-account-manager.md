@@ -162,3 +162,9 @@ An already issued relay token stays valid until its configured expiry. Team sync
 Each active team project grant has its own identity. Team devices include that identity when asking for renewed access or keys. The manager rechecks it under the team lock. If a device misses a revocation and later sees a new grant for the same project, it folds the older queued edits and runs the returning-device flow before reconnecting. Team members use a native build that supports grant identities. Personal access continues to use the device and project identity.
 
 Pausing a team project ends its active grants and rotates the shared key. An owner explicitly resumes their own access when restarting sync, then grants access to the other members again. Project discovery uses a single lease and only downloads the encrypted project record. While team HTTP requests are queued or streaming, their original lease expiry also cancels request admission or transfer.
+
+## Ownership consent and recovery
+
+Ownership offers target an active member's stable user ID. Only the current owner issues or cancels an offer, and only its recipient can accept or decline. The manager updates both roles under the team lock and commits them together. Acceptance never rewrites project grants, devices, or keys.
+
+Removing a recipient closes their pending offer. Restore closes outstanding offers and keeps the roles of existing teams. Snapshot recovery never reapplies an older offer or overwrites a surviving team with historical roles.

@@ -115,6 +115,33 @@ export const teamsCommand = {
           );
         },
       )
+      .command(
+        "ownership-offer <accountId>",
+        "Read the current ownership offer for you",
+        team,
+        async ({ accountId }) => {
+          print(await apiClient().account.readTeamMembership({ op: "ownershipOffer", accountId }));
+        },
+      )
+      .command(
+        "offer-ownership <accountId> <recipientUserId>",
+        "Offer team ownership to an active member",
+        (command) => team(command).positional("recipientUserId", { type: "string", demandOption: true }),
+        async ({ accountId, recipientUserId }) => {
+          print(await apiClient().account.writeTeamMembership({ op: "offerOwnership", accountId, recipientUserId }));
+        },
+      )
+      .command(
+        "answer-ownership <accountId> <offerId> <decision>",
+        "Accept, decline or cancel an ownership offer",
+        (command) =>
+          team(command)
+            .positional("offerId", { type: "string", demandOption: true })
+            .positional("decision", { choices: ["accept", "decline", "cancel"] as const, demandOption: true }),
+        async ({ accountId, offerId, decision }) => {
+          print(await apiClient().account.writeTeamMembership({ op: "answerOwnership", accountId, offerId, decision }));
+        },
+      )
       .command("leave <accountId>", "Leave a team", team, async ({ accountId }) => {
         print(await apiClient().account.writeTeamMembership({ op: "leave", accountId }));
       })

@@ -14,6 +14,8 @@ export {
   type TeamMembershipReadResult,
   type TeamMembershipWrite,
   type TeamMembershipWriteResult,
+  type TeamOwnershipDecision,
+  type TeamOwnershipOffer,
   type TeamProjectAccess,
   teamMembershipReadSchema,
   teamMembershipWriteSchema,

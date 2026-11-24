@@ -21,6 +21,7 @@ import {
   spaceKeys,
   teamInvitations,
   teamMembers,
+  teamOwnershipOffers,
   teams,
   workbenches,
 } from "./schema";
@@ -291,6 +292,11 @@ export const restoreManager = async (db: ManagerDatabase, requestId: string, inp
     await transaction.delete(devices);
     // Pending invitation secrets are deliberately excluded from snapshots. Restore also invalidates outstanding links.
     await transaction.update(teamInvitations).set({ state: "canceled" }).where(eq(teamInvitations.state, "pending"));
+    // Offers depend on current membership and explicit consent. Snapshots do not carry them.
+    await transaction
+      .update(teamOwnershipOffers)
+      .set({ state: "canceled" })
+      .where(eq(teamOwnershipOffers.state, "pending"));
     await transaction.update(accounts).set({ state: "disabled" });
     // Existing teams retain their current authority. Historical snapshots can restore missing teams only.
     const existingAccounts = new Set(

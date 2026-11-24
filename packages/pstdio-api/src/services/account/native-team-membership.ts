@@ -10,6 +10,7 @@ import {
   teamInvitationViewSchema,
   teamInviteSecretSchema,
   teamMemberSchema,
+  teamOwnershipOfferSchema,
   teamProjectAccessSchema,
 } from "pstdio-sync-contracts";
 import { z } from "zod";
@@ -89,6 +90,8 @@ export const createNativeTeamMembership = (input: {
               const names = await input.localProjectNames(login.managerOrigin, request.accountId);
               return access.map(({ workbenchId, userIds }) => ({ workbenchId, name: names.get(workbenchId), userIds }));
             }
+            case "ownershipOffer":
+              return teamOwnershipOfferSchema.nullable().parse(await call(`${teamPath(request.accountId)}/ownership`));
             case "inspectInvitation":
               return teamInvitationViewSchema.parse(
                 await call("/v1/team-invitations/inspect", {
@@ -134,6 +137,16 @@ export const createNativeTeamMembership = (input: {
               );
             case "leave":
               return ok.parse(await call(`${teamPath(request.accountId)}/leave`, {}));
+            case "offerOwnership":
+              return teamOwnershipOfferSchema.parse(
+                await call(`${teamPath(request.accountId)}/ownership`, { recipientUserId: request.recipientUserId }),
+              );
+            case "answerOwnership":
+              return ok.parse(
+                await call(`${teamPath(request.accountId)}/ownership/${encodeURIComponent(request.offerId)}`, {
+                  decision: request.decision,
+                }),
+              );
             case "acceptInvitation":
               return joinedTeamSchema.parse(
                 await call("/v1/team-invitations/accept", {

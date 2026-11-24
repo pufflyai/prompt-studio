@@ -107,6 +107,19 @@ export const teamInvitations = pgTable(
     ),
   ],
 );
+export const teamOwnershipOffers = pgTable("manager_team_ownership_offers", {
+  accountId: text()
+    .primaryKey()
+    .references(() => teams.accountId),
+  id: text().notNull(),
+  ownerUserId: text()
+    .notNull()
+    .references(() => accounts.id),
+  recipientUserId: text()
+    .notNull()
+    .references(() => accounts.id),
+  state: text({ enum: ["pending", "accepted", "declined", "canceled"] }).notNull(),
+});
 export const accountFeatures = pgTable(
   "manager_account_features",
   {
