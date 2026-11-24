@@ -365,7 +365,7 @@ test.each([
     const firstClose = await Promise.race([owner.close().then(() => "closed"), Bun.sleep(300).then(() => "hung")]);
     expect(firstClose).toBe("closed");
     expect(drained).toBe(false);
-    await expect(child.started).rejects.toMatchObject({ code: "process_owner_closed" });
+    await expectRejection(child.started).toMatchObject({ code: "process_owner_closed" });
     expect(await child.exited).toEqual({ code: null, signal: null });
     expect(stops).toBe(0);
 
@@ -381,7 +381,7 @@ test.each([
       retryThrough === "handle" ? failure : expect.objectContaining({ errors: [failure] }),
     );
     await stopAgain();
-    await expect(remote.exited).resolves.toEqual({ code: null, signal: "SIGKILL" });
+    expect(await remote.exited).toEqual({ code: null, signal: "SIGKILL" });
     expect(fixture.spawns).toBe(1);
     expect(stops).toBe(2);
     await owner.drained;
@@ -437,7 +437,7 @@ test("disposing a retired generation bounds a stuck provider stop and can retry 
   try {
     await entered.promise;
     await owners.retireInstance("stalled-instance");
-    await expect(child.started).rejects.toMatchObject({ code: "process_owner_closed" });
+    await expectRejection(child.started).toMatchObject({ code: "process_owner_closed" });
     reply.resolve(remote);
     await stopStarted.promise;
 

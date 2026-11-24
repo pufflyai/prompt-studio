@@ -234,10 +234,10 @@ test("remote admission retains credit until tree cleanup or a failed open is con
   try {
     await Promise.all([verified.started, ...plain.map((child) => child.started)]);
     await cancelled.kill();
-    await expect(cancelled.started).rejects.toMatchObject({ code: "process_owner_closed" });
+    await expectRejection(cancelled.started).toMatchObject({ code: "process_owner_closed" });
     expect(await plain[0]!.exited).toEqual({ code: 0, signal: null });
     const blocked = api.spawn({ command: ["blocked"] });
-    await expect(blocked.started).rejects.toMatchObject({
+    await expectRejection(blocked.started).toMatchObject({
       code: "process_target_unavailable",
       message: expect.stringContaining("Stop an earlier process"),
     });
