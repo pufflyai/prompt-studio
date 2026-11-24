@@ -189,16 +189,20 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
   };
 
   const memory = { last: 0, peak: 0 };
+  const recordRss = (rss: number) => {
+    memory.last = rss;
+    memory.peak = Math.max(memory.peak, rss);
+  };
   const receive = (raw: unknown) => {
     const message = parseWorkerMessage(raw);
     if (message?.type === "ready") ready.resolve();
     else if (message?.type === "loaded") {
+      recordRss(message.rss);
       if (message.ok) loaded.resolve(message.value);
       else loaded.reject(workerError(message.error));
     } else if (message?.type === "result") settle(message);
     else if (message?.type === "pong") {
-      memory.last = message.rss;
-      memory.peak = Math.max(memory.peak, message.rss);
+      recordRss(message.rss);
       watchdog.answered(message.rss);
     } else if (message?.type === "group-anchor") groupAnchorReply?.(message.pid);
     else if (message?.type === "release") {
@@ -243,6 +247,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
   let stopping: Promise<void> | undefined;
   const stopTree = (graceful = false) => {
     if (stopping) return stopping;
+    watchdog.stop();
     const anchor = graceful ? requestGroupAnchor : undefined;
     const cleanup = stopBackendWorkerTree(child, BACKEND_STOP_GRACE_MS, anchor, observation?.stop());
     stopping = cleanup.finally(() => {
