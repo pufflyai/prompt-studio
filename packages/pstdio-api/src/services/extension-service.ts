@@ -126,8 +126,12 @@ const attachUnlessRemoved = async <Source extends { id: string }, Attached exten
     return null;
   });
   if (attached && (await deps.projectService.get(projectId))) return attached;
-  if (attached && (await deps.extensionInstancesService.remove(attached.instance.id)))
-    deps.eventBus?.emit("extension_instances", "delete", attached.instance);
+  // A failed attach may already have added the instance, so it is found by project and source.
+  const instance =
+    attached?.instance ??
+    (await deps.extensionInstancesService.findByScopeInstalledSource("project", projectId, installedSourceId));
+  if (instance && (await deps.extensionInstancesService.remove(instance.id)))
+    deps.eventBus?.emit("extension_instances", "delete", instance);
   const users = await deps.extensionInstancesService.list({ installed_extension_id: installedSourceId });
   if (users.length === 0 && (await deps.installedExtensionSourcesService.remove(installedSourceId)))
     deps.eventBus?.emit("installed_extension_sources", "delete", { id: installedSourceId });
