@@ -819,3 +819,58 @@ test("an edit's host gaps do not readmit the attachment check it interrupted", a
     await Promise.allSettled([edit, ...work]);
   }
 });
+
+test.each([
+  "same-job",
+  "lent-to-restoration",
+] as const)("a continuation that waits on the job it interrupted lets it run (%s)", async (mode) => {
+  const client = fixture();
+  const blocked = gate();
+  let lost = 0;
+  const unsubscribe = client.subscribe((event) => {
+    if (event.kind === "worker-lost") lost++;
+  });
+  const input = { name: "predecessor", url: blocked.url };
+  let predecessor: ReturnType<typeof createPreparationScope> | undefined;
+  // A restoration continuation owns the predecessor, so it ranks before the edit that interrupts it.
+  const original = client.withContinuation(
+    () =>
+      withBackgroundPreparation(() => {
+        const scope = createPreparationScope();
+        predecessor = scope;
+        return scope.run(() => client.run("wait", input, { priority: "background" })).finally(scope.dispose);
+      }),
+    { priority: "restoration" },
+  );
+  await blocked.entered.promise;
+  const edit = client.withContinuation(async () => {
+    await client.run("value", { name: "urgent-step" });
+    expect(lost).toBe(1);
+    blocked.release.resolve();
+    if (mode === "same-job") {
+      await client.run("wait", input, { priority: "background" });
+      return;
+    }
+    // The edit lends itself to the predecessor it now waits for, through the supported request API.
+    await withBackgroundPreparation(async () => {
+      const caller = createPreparationScope();
+      const release = predecessor!.request(caller);
+      try {
+        await original;
+      } finally {
+        release();
+        caller.dispose();
+      }
+    });
+  });
+  try {
+    expect(await Promise.race([edit.then(() => "completed"), Bun.sleep(2_000).then(() => "stalled")])).toBe(
+      "completed",
+    );
+    expect(lost).toBe(1);
+  } finally {
+    unsubscribe();
+    blocked.release.resolve();
+    await Promise.allSettled([edit, original]);
+  }
+});

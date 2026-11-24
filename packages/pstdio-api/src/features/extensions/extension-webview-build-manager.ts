@@ -1,5 +1,6 @@
 import {
   acceptPreparedRevision,
+  createPreparationScope,
   preparedRevisionState,
   readAcceptedRevision,
   withBackgroundPreparation,
@@ -41,11 +42,13 @@ import {
   collectExtensionWebviews,
   resolveManagedWebviewPaths,
 } from "./extension-webviews";
-import { createPendingWebviewChecks } from "./pending-webview-checks";
+import { type CheckOwner, createPendingWebviewChecks, joinPreparationDependencies } from "./pending-webview-checks";
 
 interface BuildAttempt extends ManagedWebviewBuildIdentity {
   users: number;
   work: Promise<ManagedWebviewBuildResult> | ManagedWebviewBuildResult;
+  /** The build's preparation scope. Another caller that waits for this build lends it its urgency. */
+  owner: CheckOwner;
 }
 type SourceRefresh = {
   current: NonNullable<Awaited<ReturnType<typeof loadCurrentWebviewSource>>>;
@@ -207,36 +210,49 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
       if (attempt) attempts.delete(key);
       if (readWebviewBuildSignature(paths.distDir) === signature || backoff.isBlocked(key, signature)) return;
       backoff.forget(key);
+      const owner: CheckOwner = { scope: createPreparationScope(), settled: false };
       const created: BuildAttempt = {
         row,
         webview,
         snapshot,
         signature,
         users: 0,
-        work: Promise.resolve()
-          .then(async () => {
-            const result = await build({
+        owner,
+        work: owner.scope
+          .run(() =>
+            build({
               ...inspected,
               row,
               snapshot,
               webview,
               isCurrent: () => !disposed && attempts.get(key) === created,
-            });
+            }),
+          )
+          .then((result) => {
             created.work = result;
             return result;
           })
           .catch((error) => {
             if (attempts.get(key) === created) attempts.delete(key);
             throw error;
+          })
+          .finally(() => {
+            owner.settled = true;
+            owner.scope.dispose();
           }),
       };
       attempts.set(key, created);
       attempt = created;
     }
     attempt.users++;
+    // A caller that waits for another caller's build lends it urgency. Otherwise a continuation that
+    // interrupted the build would hold it while waiting for it.
+    const caller = createPreparationScope();
     try {
-      await reconcileResult(key, attempt, await attempt.work);
+      const result = await joinPreparationDependencies(caller, [attempt.owner], Promise.resolve(attempt.work));
+      await reconcileResult(key, attempt, result);
     } finally {
+      caller.dispose();
       attempt.users--;
     }
     if (attempt.users === 0 && attempts.get(key) === attempt) attempts.delete(key);

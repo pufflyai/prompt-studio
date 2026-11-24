@@ -5,7 +5,13 @@ interface PreparationPriority {
   jobs: Set<() => void>;
   continuing?: boolean;
   continuation?: PreparationPriority;
+  /** Whether this scope's work belongs to `owner`, inherited or lent. `continuation` only names the most urgent one. */
+  includes?: (owner: PreparationPriority) => boolean;
 }
+
+/** Exact membership, independent of which continuation ranks first. */
+export const preparationIncludes = (scope: PreparationPriority | undefined, owner: PreparationPriority) =>
+  scope?.includes ? scope.includes(owner) : scope?.continuation === owner;
 export const preparationPriority = new AsyncLocalStorage<PreparationPriority>();
 export const withBackgroundPreparation = <T>(work: () => T) =>
   preparationPriority.run(
@@ -51,6 +57,7 @@ export const createPreparationScope = () => {
     get priority() {
       return (parent?.priority ?? "requested") === "requested" || owners ? "requested" : "background";
     },
+    includes: (owner) => (borrowed.has(owner) && owner.continuing === true) || preparationIncludes(parent, owner),
     jobs: new Set(),
   };
   const changed = () => {
