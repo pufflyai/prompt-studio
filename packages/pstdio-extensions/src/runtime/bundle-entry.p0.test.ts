@@ -1,8 +1,8 @@
-import { expect, spyOn, test } from "bun:test";
+import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { bundleEntry } from "./bundle-entry";
+import { bundleEntry, bundleLimits } from "./bundle-entry";
 
 test("reports the unresolved dependency when an extension cannot be bundled", async () => {
   const root = mkdtempSync(join(tmpdir(), "extension-bundle-error-"));
@@ -62,40 +62,81 @@ test("retries an unchanged source when its bundle output becomes writable", asyn
   }
 });
 
-test("a load waits for a pending build even when its output is already visible", async () => {
+test("a load during a pending build joins it instead of reading partial output", async () => {
   const root = mkdtempSync(join(tmpdir(), "extension-bundle-visible-"));
   const entry = join(root, "extension.ts");
-  const outDir = join(root, "out");
   writeFileSync(entry, 'export default { marker: "finished-bundle" };');
-  const originalBuild = Bun.build;
-  const outputReady = Promise.withResolvers<void>();
-  const finishBuild = Promise.withResolvers<void>();
-  const build = spyOn(Bun, "build").mockImplementation(async (options) => {
-    const result = await originalBuild(options);
-    outputReady.resolve();
-    await finishBuild.promise;
-    return result;
-  });
-  let first: Promise<string> | undefined;
-  let second: Promise<string> | undefined;
   try {
-    first = bundleEntry(entry, root, outDir);
-    await outputReady.promise;
-    let loaded = false;
-    second = bundleEntry(entry, root, outDir).then((path) => {
-      loaded = true;
-      return path;
-    });
-    await new Promise((resolve) => setImmediate(resolve));
-    expect(loaded).toBe(false);
-    finishBuild.resolve();
-    const paths = await Promise.all([first, second]);
-    expect(paths[0]).toBe(paths[1]);
-    expect(readFileSync(paths[0], "utf8")).toContain("finished-bundle");
+    const first = bundleEntry(entry, root, join(root, "out"));
+    const second = bundleEntry(entry, root, join(root, "out"));
+    expect(second).toBe(first);
+    expect(readFileSync(await second, "utf8")).toContain("finished-bundle");
   } finally {
-    finishBuild.resolve();
-    await Promise.allSettled([first, second]);
-    build.mockRestore();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("macros run while bundling without the host's environment secrets", async () => {
+  const root = mkdtempSync(join(tmpdir(), "extension-bundle-macro-"));
+  const entry = join(root, "extension.ts");
+  const report = join(root, "macro-saw.txt");
+  writeFileSync(
+    join(root, "macro.ts"),
+    `import { writeFileSync } from "node:fs";
+export const probe = () => { writeFileSync(${JSON.stringify(report)}, String(process.env.PSTDIO_API_TOKEN)); return "probed"; };`,
+  );
+  writeFileSync(
+    entry,
+    'import { probe } from "./macro.ts" with { type: "macro" };\nexport default { value: probe() };',
+  );
+  process.env.PSTDIO_API_TOKEN = "host-runtime-token";
+  try {
+    await bundleEntry(entry, root, join(root, "out"));
+    expect(readFileSync(report, "utf8")).toBe("undefined");
+  } finally {
+    delete process.env.PSTDIO_API_TOKEN;
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a macro that never finishes fails the build at the deadline, and a later build can run", async () => {
+  const root = mkdtempSync(join(tmpdir(), "extension-bundle-hang-"));
+  const entry = join(root, "extension.ts");
+  writeFileSync(join(root, "macro.ts"), "export const hang = () => { while (true); };");
+  writeFileSync(entry, 'import { hang } from "./macro.ts" with { type: "macro" };\nexport default { value: hang() };');
+  const previous = bundleLimits.deadlineMs;
+  bundleLimits.deadlineMs = 1_000;
+  try {
+    await expect(bundleEntry(entry, root, join(root, "out"))).rejects.toThrow("did not finish within 1 s");
+    writeFileSync(
+      join(root, "macro.ts"),
+      'export const noisy = () => { process.stdout.write("macro noise"); return 1; };',
+    );
+    writeFileSync(
+      entry,
+      'import { noisy } from "./macro.ts" with { type: "macro" };\nexport default { value: noisy() };',
+    );
+    expect(await bundleEntry(entry, root, join(root, "out"))).toContain(".pstdio-runtime-bundle.mjs");
+  } finally {
+    bundleLimits.deadlineMs = previous;
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a macro that floods its output still reports the build's outcome", async () => {
+  const root = mkdtempSync(join(tmpdir(), "extension-bundle-flood-"));
+  const entry = join(root, "extension.ts");
+  writeFileSync(
+    join(root, "macro.ts"),
+    'export const flood = () => { const block = "x".repeat(1 << 20); for (let i = 0; i < 32; i++) process.stdout.write(block); return 1; };',
+  );
+  writeFileSync(
+    entry,
+    'import { flood } from "./macro.ts" with { type: "macro" };\nexport default { value: flood() };',
+  );
+  try {
+    expect(await bundleEntry(entry, root, join(root, "out"))).toContain(".pstdio-runtime-bundle.mjs");
+  } finally {
     rmSync(root, { recursive: true, force: true });
   }
 });
@@ -146,5 +187,23 @@ test("a prepared copy imports dependencies that find their own file through __fi
     expect(loaded.default).toEqual({ dependencyFile: ["function", join(dependency, "index.js")], ownFile: entry });
   } finally {
     rmSync(snapshotRoot, { recursive: true, force: true });
+  }
+});
+
+test("a build whose error is longer than the kept output still fails", async () => {
+  const root = mkdtempSync(join(tmpdir(), "extension-bundle-long-error-"));
+  const entry = join(root, "extension.ts");
+  const imports = Array.from({ length: 1_500 }, (_, index) => `import "./missing-module-${index}.ts";`).join("\n");
+  writeFileSync(entry, `${imports}\nexport default {};`);
+  try {
+    let failure: unknown;
+    try {
+      await bundleEntry(entry, root, join(root, "out"));
+    } catch (error) {
+      failure = error;
+    }
+    expect(String(failure)).toContain("missing-module");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 });

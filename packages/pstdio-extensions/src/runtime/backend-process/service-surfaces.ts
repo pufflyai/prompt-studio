@@ -158,20 +158,14 @@ export const serviceSurfaces: Members = {
   ),
 };
 
-/**
- * Context functions that need callbacks, streams, live handles or synchronous host data, which a
- * later stage adds. Storage entries apply at every `storage.scope(...)` depth.
- */
+/** Context functions process mode does not offer. Storage entries apply at every `storage.scope(...)` depth. */
 export const UNSUPPORTED_CONTEXT_MEMBERS = [
   // Offered by the SDK's in-memory test storage only; the host ctx has no records.transaction.
   "storage.records.transaction",
-  "stream.close",
-  "terminal",
-  "localDirectory",
 ] as const;
 
 /** Host helpers present on ctx objects but not part of the public extension API. Never exposed. */
-const HOST_ONLY_CONTEXT_MEMBERS = ["resources.removedLinks"] as const;
+const HOST_ONLY_CONTEXT_MEMBERS = ["resources.removedLinks", "stream.close"] as const;
 
 export const isUnsupportedContextMember = (path: string) => {
   if (HOST_ONLY_CONTEXT_MEMBERS.some((member) => path === member)) return true;
