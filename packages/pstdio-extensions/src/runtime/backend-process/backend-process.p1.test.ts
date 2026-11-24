@@ -4,6 +4,7 @@ import { subscribe, unsubscribe } from "node:diagnostics_channel";
 import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { ProcessHandle } from "pstdio-api-contracts/extension-kernel";
 import { runtimeOperationChannel } from "pstdio-diagnostics";
 import { createExtensionProcessEnvironment } from "../process-environment";
 import { failedProcessHandle, processError } from "../process-owner";
@@ -27,7 +28,28 @@ beforeAll(async () => {
     `
 let observedAbort = false;
 let waiting = false;
+class ProviderChild {
+  id = "provider-child";
+  started = Promise.resolve();
+  outcome = Promise.withResolvers();
+  exited = this.outcome.promise;
+  input = [];
+  async write(data) { this.input.push(data); }
+  async end() { this.outcome.resolve({ code: 0, signal: null }); }
+  async kill(signal) { this.outcome.resolve({ code: null, signal }); }
+  async *events() {
+    for (const data of this.input) yield { type: "stdout", data };
+    yield { type: "exit", exit: await this.exited };
+  }
+}
 export default {
+  workspaceTypes: [
+    { spawn: () => new ProviderChild() },
+    { spawn: () => {
+      const child = new ProviderChild();
+      return { ...child, write: child.write, end: child.end, kill: child.kill, events: child.events };
+    } },
+  ],
   commands: [
     {
       id: "save",
@@ -1580,6 +1602,38 @@ test("a spawned process handle opens at once, forwards its members and settles i
     expect(unhandled).toEqual([]);
   } finally {
     process.off("unhandledRejection", onUnhandled);
+    await worker.stop();
+  }
+});
+
+test("worker workspace providers can return class and object process handles with bound methods", async () => {
+  const worker = await start();
+  try {
+    const workspaceTypes = (worker.definition as { workspaceTypes: { spawn: Record<string, string> }[] })
+      .workspaceTypes;
+    for (const [index, { spawn }] of workspaceTypes.entries()) {
+      const child = (await worker.invoke({
+        handlerId: spawn[HANDLER_MARKER]!,
+        context: {},
+        surface: { kind: "object", members: {} },
+        args: [],
+      })) as ProcessHandle;
+      await child.started;
+      await child.write(new Uint8Array([1, 2]));
+      await child.write(new Uint8Array([3, 4]));
+      if (index === 0) await child.end();
+      else await child.kill("SIGTERM");
+      const output = [];
+      for await (const event of await child.events()) output.push(event);
+      const exit = index === 0 ? { code: 0, signal: null } : { code: null, signal: "SIGTERM" };
+      expect(await child.exited).toEqual(exit);
+      expect(output).toEqual([
+        { type: "stdout", data: new Uint8Array([1, 2]) },
+        { type: "stdout", data: new Uint8Array([3, 4]) },
+        { type: "exit", exit },
+      ]);
+    }
+  } finally {
     await worker.stop();
   }
 });

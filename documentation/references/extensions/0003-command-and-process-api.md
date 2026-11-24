@@ -80,9 +80,9 @@ does not wait for you to read it.
 `lifetime` decides who owns the child:
 
 - `call` (default) ends with the command, hook or schedule run that started it. In a harness, a
-  child started by `start`, `resume`, `reattach` or a native command lives until that turn's `done`
-  settles. Children of other harness calls, such as `detect` or `listModels`, end when the call
-  settles.
+  child started by `start`, `resume`, `reattach` or a native command lives until cancellation or
+  the turn's `done` settles. Other harness calls end their children when the call settles or is
+  cancelled. A command-state watch ends its children when its release function runs.
 - `extension` does not depend on the call after `spawn` returns, so a handler may return before the
   child starts. It ends when the extension is disabled or removed, its source content changes, the
   project is removed, or Prompt Studio shuts down. A rebuild that leaves the source unchanged keeps
@@ -93,8 +93,8 @@ does not wait for you to read it.
 A spawn whose owner has already ended fails with `process_owner_closed` and starts nothing.
 
 The child runs on a workspace target. Commands and hooks use their invocation's workspace; pass
-`workspaceId` to choose another workspace of the same project. A harness session passes
-`input.workspace.workspaceId`; detection and model calls pass none and run on this device. A
+`workspaceId` to choose another workspace of the same project. A harness session uses the workspace
+supplied by the host. Detection and model calls without a workspace run on this device. A
 workspace of another project fails with `process_target_unavailable`. `cwd` is a path on that target:
 a relative `cwd` resolves against the workspace root, and a `cwd` never moves the child to another
 target.

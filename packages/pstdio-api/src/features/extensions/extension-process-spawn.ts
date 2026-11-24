@@ -1,6 +1,12 @@
 import { resolve } from "node:path";
 import type { ProcessHandle, ProcessRunInput, ProcessSpawnInput } from "pstdio-api-contracts/extension-kernel";
-import { createProcessHandleProxy, type ProcessOwner, processError } from "pstdio-extensions";
+import {
+  createProcessHandleProxy,
+  type ProcessOwner,
+  processCleanup,
+  processError,
+  trackProcessCleanup,
+} from "pstdio-extensions";
 import type { ProcessTarget } from "./extension-targets";
 import { resolveProcessEnvironmentCommand } from "./process-command";
 import type { ProcessEnvironmentLease } from "./process-environment/permissions";
@@ -37,6 +43,7 @@ const spawnLocal = async (
   options: ProcessSpawnOptions,
   input: ProcessSpawnInput,
   root: string | undefined,
+  owner: ProcessOwner,
   active: () => void,
 ) => {
   // The selected target's root anchors a relative cwd; a cwd never selects another target.
@@ -45,6 +52,7 @@ const spawnLocal = async (
   let handle: ProcessHandle;
   let spawned: { pid: number; exited: Promise<unknown> } | undefined;
   try {
+    if (owner.ready) await owner.ready;
     active();
     const resolved = resolveProcessEnvironmentCommand(input.command, env, cwd);
     handle = spawnProcessHandle(
@@ -69,7 +77,7 @@ const spawnLocal = async (
     else void handle.exited.finally(lease.release);
   }
   await handle.started;
-  return redactProcessOutput(handle, granted);
+  return trackProcessCleanup(redactProcessOutput(handle, granted), processCleanup(handle));
 };
 
 const ownerFor = (options: ProcessSpawnOptions, lifetime: "call" | "extension") => {
@@ -96,12 +104,16 @@ const activeCheck =
 const openOnTarget = async (
   options: ProcessSpawnOptions,
   input: ProcessSpawnInput,
+  owner: ProcessOwner,
   active: () => void,
   signal: AbortSignal,
 ) => {
-  const target = options.resolveTarget ? await options.resolveTarget(input.workspaceId, signal) : undefined;
+  if (owner.ready) await owner.ready;
   active();
-  if (target?.kind !== "remote") return spawnLocal(options, input, target?.root, active);
+  const target = options.resolveTarget ? await options.resolveTarget(input.workspaceId, signal) : undefined;
+  if (owner.ready) await owner.ready;
+  active();
+  if (target?.kind !== "remote") return spawnLocal(options, input, target?.root, owner, active);
   if (input.envFromHost?.length)
     throw processError("process_target_unsupported", "envFromHost passes host values to local children only.");
   return target.spawn({ ...input, lifetime: input.lifetime ?? "call" }, signal);
@@ -119,7 +131,7 @@ export const createProcessSpawn = (options: ProcessSpawnOptions) => (input: Proc
     const lifetime = checkInput(input);
     owner = ownerFor(options, lifetime);
     options.ensureActive();
-    open = openOnTarget(options, input, activeCheck(options, lifetime, owner, cancel.signal), cancel.signal);
+    open = openOnTarget(options, input, owner, activeCheck(options, lifetime, owner, cancel.signal), cancel.signal);
   } catch (error) {
     open = Promise.reject(error);
   }

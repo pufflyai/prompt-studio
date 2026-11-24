@@ -11,12 +11,23 @@ export const processError = (code: ProcessSpawnErrorCode | TargetFileErrorCode, 
 
 type Stoppable = Pick<ProcessHandle, "exited" | "kill">;
 
+const cleanupByHandle = new WeakMap<Pick<Stoppable, "exited">, Promise<unknown>>();
+
+export const trackProcessCleanup = <T extends Pick<Stoppable, "exited">>(handle: T, cleanup: Promise<unknown>) => {
+  cleanupByHandle.set(handle, cleanup);
+  return handle;
+};
+
+export const processCleanup = (handle: Pick<Stoppable, "exited">) => cleanupByHandle.get(handle) ?? handle.exited;
+
 /**
  * Owns the children one lifetime started, such as a command invocation, a native agent operation or
  * an extension's enabled source generation. Closing it stops every child that is still running.
  */
 export interface ProcessOwner {
   readonly closed: boolean;
+  /** Eligibility check for an enabled source generation, when applicable. */
+  ready?: Promise<void>;
   /** Stops the handle when the owner closes, or at once when it already has. */
   adopt(handle: Stoppable): void;
   close(): Promise<void>;
@@ -31,14 +42,21 @@ export const createProcessOwner = () => {
     },
     adopt(handle) {
       if (closing) {
-        void handle.kill().catch(() => {});
+        void Promise.resolve()
+          .then(() => handle.kill())
+          .catch(() => {});
         return;
       }
       running.add(handle);
-      void handle.exited.finally(() => running.delete(handle)).catch(() => {});
+      void processCleanup(handle)
+        .finally(() => running.delete(handle))
+        .catch(() => {});
     },
     close() {
-      closing ??= Promise.allSettled([...running].map((handle) => handle.kill())).then(() => running.clear());
+      closing ??= Promise.resolve().then(async () => {
+        await Promise.allSettled([...running].map(async (handle) => handle.kill()));
+        running.clear();
+      });
       return closing;
     },
   };
@@ -78,12 +96,18 @@ export const createProcessHandleProxy = (open: Promise<OpenedHandle>, cancel = n
   stopped.promise.catch(() => {});
   const gate = Promise.race([open, stopped.promise]);
   gate.catch(() => {});
-  const started = gate.then((handle) => handle.started);
+  const ready = gate.then(async (handle) => {
+    await handle.started;
+    return handle;
+  });
+  const started = ready.then(() => {});
   started.catch(() => {});
   const exited = gate.then(
     (handle) => handle.exited.catch(() => NO_EXIT),
     () => NO_EXIT,
   );
+  const cleanup = gate.then(processCleanup, () => {});
+  void cleanup.catch(() => {});
   let settled = false;
   void exited.then(() => {
     settled = true;
@@ -94,12 +118,12 @@ export const createProcessHandleProxy = (open: Promise<OpenedHandle>, cancel = n
 
   // end() closes input after every write made before it, even ones nobody awaited.
   let writes: Promise<unknown> = Promise.resolve();
-  let ended = false;
+  let ending: Promise<void> | undefined;
   const write = (data: string | Uint8Array) => {
     // Input closes when end() is called, though the child's input closes only after earlier writes.
-    if (ended) return Promise.reject(new Error("The process input is closed."));
+    if (ending || killing) return Promise.reject(new Error("The process input is closed."));
     const next = queueWrite(data);
-    writes = next.catch(() => {});
+    writes = Promise.allSettled([writes, next]).then(() => {});
     return next;
   };
   const queueWrite = async (data: string | Uint8Array) => {
@@ -109,7 +133,7 @@ export const createProcessHandleProxy = (open: Promise<OpenedHandle>, cancel = n
     queued += size;
     let handle: OpenedHandle;
     try {
-      handle = await gate;
+      handle = await ready;
     } finally {
       queued -= size;
     }
@@ -137,10 +161,7 @@ export const createProcessHandleProxy = (open: Promise<OpenedHandle>, cancel = n
     const reason = processError("process_owner_closed", "The process was stopped before it started.");
     cancel.abort(reason);
     stopped.reject(reason);
-    void open.then(
-      (handle) => handle.kill("SIGKILL"),
-      () => {},
-    );
+    void open.then((handle) => handle.kill("SIGKILL")).catch(() => {});
     return Promise.resolve();
   };
 
@@ -150,20 +171,20 @@ export const createProcessHandleProxy = (open: Promise<OpenedHandle>, cancel = n
     exited,
     write,
     end: () => {
-      ended = true;
-      return writes
-        .then(() => gate)
+      ending ??= writes
+        .then(() => ready)
         .then(
           (handle) => handle.end(),
           () => {},
         );
+      return ending;
     },
     kill: (signal) => {
-      // An exited child's process group may already belong to another process.
-      if (settled) return Promise.resolve();
       killing ??= opened
         ? open.then(
-            (handle) => handle.kill(signal),
+            (handle) => {
+              if (!settled || cleanupByHandle.has(handle)) return handle.kill(signal);
+            },
             () => {},
           )
         : stopWhileOpening();
@@ -171,7 +192,7 @@ export const createProcessHandleProxy = (open: Promise<OpenedHandle>, cancel = n
     },
     events,
   };
-  return handle;
+  return trackProcessCleanup(handle, cleanup);
 };
 
 /** A handle for a child that never started. */

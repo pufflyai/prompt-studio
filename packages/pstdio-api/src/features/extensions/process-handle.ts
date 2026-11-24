@@ -1,5 +1,6 @@
 import type { ProcessEvent, ProcessExit, ProcessHandle } from "pstdio-api-contracts/extension-kernel";
-import { signalProcessTree, treeExitedWithin } from "./process-group";
+import { trackProcessCleanup } from "pstdio-extensions";
+import { processGroupExited, signalProcessTree, treeExitedWithin } from "./process-group";
 
 /** Unread output a handle may hold, shared by stdout and stderr. Same allowance as `run`. */
 export const PROCESS_OUTPUT_CREDIT_BYTES = 8 * 1024 * 1024;
@@ -22,15 +23,30 @@ const spawnError = (error: unknown) =>
     cause: error,
   });
 
-const stopChildTree = async (child: Child, signal: NodeJS.Signals) => {
-  // Windows needs taskkill while the root is still present to find its descendants.
-  const firstSignal = process.platform === "win32" ? "SIGKILL" : signal;
-  await signalProcessTree(child, firstSignal);
-  if (firstSignal !== "SIGKILL") {
-    if (await treeExitedWithin(child, KILL_GRACE_MS)) return;
-    await signalProcessTree(child, "SIGKILL");
-  }
-  if (!(await treeExitedWithin(child, KILL_GRACE_MS))) throw new Error("The process tree did not stop.");
+const stdinFor = (child: Child | undefined, started: Promise<void>, stopping: () => boolean) => {
+  let ended = false;
+  let writes = Promise.resolve();
+  const write = (data: string | Uint8Array) => {
+    // Closed input is checked when the write is queued: end() lets writes queued before it finish.
+    if (ended || stopping()) return Promise.reject(new Error("The process input is closed."));
+    const next = writes.then(async () => {
+      await started;
+      if (stopping()) throw new Error("The process input is closed.");
+      child!.stdin.write(data);
+      await child!.stdin.flush();
+    });
+    writes = next.catch(() => {});
+    return next;
+  };
+
+  const end = async () => {
+    if (ended) return writes;
+    ended = true;
+    await writes;
+    if (child && !stopping()) await Promise.resolve(child.stdin.end()).catch(() => {});
+  };
+
+  return { write, end };
 };
 
 /**
@@ -53,12 +69,13 @@ export const spawnProcessHandle = (
   let buffered = 0;
   let discarding = false;
   let claimed = false;
-  const readers = new Set<() => void>();
+  const eventWaiters = new Set<() => void>();
   const creditWaiters: (() => void)[] = [];
+  const readers = new Set<ReadableStreamDefaultReader<Uint8Array>>();
 
   const wake = () => {
-    for (const resume of readers) resume();
-    readers.clear();
+    for (const resume of eventWaiters) resume();
+    eventWaiters.clear();
   };
   const releaseCredit = () => {
     for (const resume of creditWaiters.splice(0)) resume();
@@ -108,6 +125,7 @@ export const spawnProcessHandle = (
 
   const pump = async (stream: ReadableStream<Uint8Array>, type: "stdout" | "stderr") => {
     const reader = stream.getReader();
+    readers.add(reader);
     const state = { reads: 0, reading: false, done: false };
     void stopWhenIdle(reader, state);
     try {
@@ -133,44 +151,42 @@ export const spawnProcessHandle = (
     } finally {
       state.done = true;
       await reader.cancel().catch(() => {});
+      readers.delete(reader);
     }
   };
 
   let killing: Promise<void> | undefined;
+  let groupFinished = false;
+  let outputClosed = Promise.resolve();
+  let cleanup: Promise<unknown> = exited.promise;
   if (child) {
     const running = child;
-    const pumps = Promise.all([pump(running.stdout, "stdout"), pump(running.stderr, "stderr")]);
-    void running.exited.then(async (code) => {
+    const pumps = Promise.allSettled([pump(running.stdout, "stdout"), pump(running.stderr, "stderr")]);
+    outputClosed = running.exited.then(async (code) => {
       const signal = running.signalCode == null ? null : String(running.signalCode);
       const exit = { code: signal ? null : code, signal };
       exited.resolve(exit);
       childExited.resolve();
       // A forced cleanup does not wait for readers; a natural exit delivers what was written.
-      if (!discarding) await pumps;
+      await pumps;
       finish(exit);
     });
+    const groupClosed = processGroupExited(running).then(() => {
+      groupFinished = true;
+    });
+    cleanup = Promise.allSettled([outputClosed, groupClosed]);
   }
 
-  let ended = false;
-  let writes = Promise.resolve();
-  const write = (data: string | Uint8Array) => {
-    // Closed input is checked when the write is queued: end() lets writes queued before it finish.
-    if (ended || killing) return Promise.reject(new Error("The process input is closed."));
-    const next = writes.then(async () => {
-      await started.promise;
-      if (killing) throw new Error("The process input is closed.");
-      child!.stdin.write(data);
-      await child!.stdin.flush();
-    });
-    writes = next.catch(() => {});
-    return next;
-  };
+  const { write, end } = stdinFor(child, started.promise, () => killing !== undefined);
 
-  const end = async () => {
-    if (ended) return writes;
-    ended = true;
-    await writes;
-    if (child && !killing) await Promise.resolve(child.stdin.end()).catch(() => {});
+  const stopGroup = async (signal: "SIGTERM" | "SIGINT" | "SIGKILL") => {
+    if (!child || groupFinished) return;
+    await signalProcessTree(child, signal);
+    const stopped = await treeExitedWithin(child, KILL_GRACE_MS);
+    if (!stopped && !groupFinished && signal !== "SIGKILL") {
+      await signalProcessTree(child, "SIGKILL");
+      await treeExitedWithin(child, KILL_GRACE_MS);
+    }
   };
 
   const kill = (signal: "SIGTERM" | "SIGINT" | "SIGKILL" = "SIGTERM") => {
@@ -180,8 +196,11 @@ export const spawnProcessHandle = (
       for (let index = queue.length - 1; index >= 0; index--) if (queue[index]!.type !== "exit") queue.splice(index, 1);
       buffered = 0;
       releaseCredit();
-      if (!child) return;
-      await stopChildTree(child, signal);
+      const stopped = stopGroup(signal);
+      const cancelledReads = Promise.allSettled([...readers].map((reader) => reader.cancel()));
+      await stopped;
+      await cancelledReads;
+      await outputClosed;
     })();
     return killing;
   };
@@ -193,7 +212,7 @@ export const spawnProcessHandle = (
     const iterator: AsyncIterableIterator<ProcessEvent> = {
       [Symbol.asyncIterator]: () => iterator,
       async next() {
-        while (!done && queue.length === 0) await new Promise<void>((resume) => readers.add(resume));
+        while (!done && queue.length === 0) await new Promise<void>((resume) => eventWaiters.add(resume));
         if (done) return { done: true, value: undefined };
         const event = queue.shift()!;
         if (event.type === "exit") done = true;
@@ -213,5 +232,8 @@ export const spawnProcessHandle = (
     return iterator;
   };
 
-  return { id: crypto.randomUUID(), started: started.promise, exited: exited.promise, write, end, kill, events };
+  return trackProcessCleanup(
+    { id: crypto.randomUUID(), started: started.promise, exited: exited.promise, write, end, kill, events },
+    cleanup,
+  );
 };
