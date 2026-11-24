@@ -1,6 +1,7 @@
 import { isHostContext } from "../runner/host-context";
 import { emptySurface, extensionContextSurface } from "./context-surface";
 import { HANDLER_MARKER, isBackendHandlerRef } from "./protocol";
+import { withSnapshotSinks } from "./remote-markers";
 import type { BackendWorker } from "./supervisor";
 
 /**
@@ -22,7 +23,7 @@ export const hydrateBackendDefinition = (definition: unknown, acquire: () => Pro
               handlerId,
               context: first,
               surface: extensionContextSurface(first),
-              args: rest,
+              args: rest.map(withSnapshotSinks),
               signal: first.signal,
             })
           : worker.invoke({ handlerId, context: {}, surface: emptySurface, args: [first, ...rest] });

@@ -4,8 +4,10 @@ import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createExtensionProcessEnvironment } from "../process-environment";
+import { markHostContext } from "../runner/host-context";
 import { backendWorkerCommand, createBackendWorkerPool } from "./pool";
 import { HANDLER_MARKER } from "./protocol";
+import { snapshotSink } from "./remote-values";
 import { type BackendInvocation, BackendUnavailableError, startBackendWorker } from "./supervisor";
 import type { BackendSurface } from "./surface";
 
@@ -19,6 +21,7 @@ beforeAll(async () => {
     entryPath,
     `
 let observedAbort = false;
+let waiting = false;
 export default {
   commands: [
     {
@@ -56,11 +59,15 @@ export default {
     {
       id: "wait",
       title: "Wait",
-      run: (ctx) => new Promise((resolve) => ctx.signal.addEventListener("abort", () => {
-        observedAbort = true;
-        resolve("aborted");
-      })),
+      run: (ctx) => new Promise((resolve) => {
+        waiting = true;
+        ctx.signal.addEventListener("abort", () => {
+          observedAbort = true;
+          resolve("aborted");
+        });
+      }),
     },
+    { id: "waiting", title: "Waiting", run: () => waiting },
     { id: "observed-abort", title: "Observed abort", run: () => observedAbort },
     { id: "crash", title: "Crash", run: () => process.exit(7) },
     {
@@ -73,6 +80,96 @@ export default {
       },
     },
     { id: "finish", title: "Finish", run: (ctx) => ctx.finish() },
+    {
+      id: "endless",
+      title: "Endless",
+      run: () => {
+        while (true);
+      },
+    },
+    {
+      id: "hog",
+      title: "Hog",
+      run: async () => {
+        globalThis.hog = Array.from({ length: 256 }, () => new Uint8Array(1024 * 1024).fill(1));
+        await new Promise(() => {});
+      },
+    },
+    {
+      id: "harness-start",
+      title: "Harness start",
+      async start(ctx, input) {
+        input.events.push({ op: "add", path: "/messages/1", value: { id: "m1", role: "user", parts: [] } });
+        input.events.push({ op: "add", path: "/messages/2", value: { id: "m2", role: "assistant", parts: [] } });
+        const seen = input.events.getMessages().map((message) => message.id);
+        const approval = await input.approvals.requestApproval({ id: "a1", tool: "shell" });
+        let finish;
+        const done = new Promise((resolve) => (finish = resolve));
+        return { done, seen, approval, stop: () => finish({ status: "stopped" }) };
+      },
+    },
+    {
+      id: "harness-late",
+      title: "Harness late",
+      async start(ctx, input) {
+        let finish;
+        const done = new Promise((resolve) => (finish = resolve));
+        setTimeout(async () => {
+          input.events.push({ op: "add", path: "/messages/0", value: { id: "late", role: "assistant", parts: [] } });
+          finish(await input.approvals.requestApproval({ id: "a2", tool: "shell" }));
+        }, 100);
+        return { done };
+      },
+    },
+    {
+      id: "prepared-operation",
+      run: () => ({ invoke(input) { return input.events.getMessages().map((message) => message.id); } }),
+    },
+    {
+      id: "drain-cancel",
+      async run(ctx, marker) {
+        const handle = await ctx.live.open();
+        const stopped = new Promise((resolve) => ctx.signal.addEventListener("abort", resolve, { once: true }));
+        ctx.live.ready();
+        try {
+          await stopped;
+        } finally {
+          await handle.close();
+        }
+        return {
+          [Symbol.asyncIterator]() {
+            return {
+              next: async () => ({ done: false, value: 42 }),
+              return: async () => {
+                await Bun.write(marker, "closed");
+                return { done: true };
+              },
+            };
+          },
+        };
+      },
+    },
+    {
+      id: "ignore-cancel",
+      async run(ctx) {
+        ctx.live.ready();
+        await new Promise(() => {});
+      },
+    },
+    { id: "mark", title: "Mark", run: (ctx, path) => Bun.write(path, "ran") },
+    {
+      id: "session",
+      title: "Session",
+      run(ctx) {
+        let finish;
+        const done = new Promise((resolve) => (finish = resolve));
+        return {
+          done,
+          read: () => ctx.storage.collection("items").get("a"),
+          stop: () => finish("stopped"),
+        };
+      },
+    },
     {
       id: "edges",
       title: "Edges",
@@ -107,6 +204,72 @@ export default {
         process.removeAllListeners("disconnect");
         process.disconnect();
         return new Promise(() => {});
+      },
+    },
+    {
+      id: "pty-open",
+      title: "Open terminal",
+      run(ctx) {
+        const session = ctx.terminal.openSession({ cols: 80, rows: 24 });
+        session.write("a");
+        session.resize(100, 30);
+        session.write("b");
+        globalThis.pty = session;
+        return typeof session.id;
+      },
+    },
+    {
+      id: "pty-read",
+      title: "Read terminal",
+      async run() {
+        const session = globalThis.pty;
+        const iterator = session.events()[Symbol.asyncIterator]();
+        let second;
+        try {
+          session.events();
+        } catch (error) {
+          second = error.message;
+        }
+        const first = (await iterator.next()).value;
+        await session.kill();
+        const last = (await iterator.next()).value;
+        return { first, last, second };
+      },
+    },
+    {
+      id: "pty-peek",
+      title: "Peek terminal",
+      async run() {
+        await globalThis.pty.events()[Symbol.asyncIterator]().next();
+        // The handle stays; only its events iterator becomes unreachable.
+        for (let attempt = 0; attempt < 3; attempt++) {
+          Bun.gc(true);
+          await new Promise((resolve) => setTimeout(resolve, 20));
+        }
+      },
+    },
+    {
+      id: "pty-drop",
+      title: "Drop terminal",
+      async run() {
+        globalThis.pty = undefined;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          Bun.gc(true);
+          await new Promise((resolve) => setTimeout(resolve, 20));
+        }
+      },
+    },
+    {
+      id: "pty-fail",
+      title: "Failed terminal",
+      async run(ctx) {
+        const session = ctx.terminal.openSession({ cols: 1, rows: 1, fail: true });
+        session.write("x");
+        try {
+          for await (const event of session.events());
+        } catch (error) {
+          return error.message;
+        }
       },
     },
     { id: "log-and-fail", title: "Log", run: (ctx) => { ctx.logger.info("x"); throw Object.assign(new Error("boom"), { code: "backend_unavailable" }); } },
@@ -256,6 +419,10 @@ test("cancelling settles the caller and aborts the worker's signal", async () =>
       args: [],
       signal: controller.signal,
     });
+    // A call cancelled before it reaches the worker is never sent, so cancel once the handler runs.
+    const invokeWaiting = () =>
+      worker.invoke({ handlerId: handlerOf(worker.definition, "waiting"), context: {}, surface, args: [] });
+    while (!(await invokeWaiting())) await Bun.sleep(5);
     controller.abort(new Error("stop"));
     await expect(waiting).rejects.toThrow("stop");
     expect(
@@ -362,7 +529,7 @@ test("hostile or broken workers settle their callers without host errors", async
         handlerId: handlerOf(worker.definition, "save"),
         context,
         surface,
-        args: [{ id: "a", run: () => {} }],
+        args: [{ id: "a", tag: Symbol("not sendable") }],
       }),
     ).rejects.toThrow();
     expect(
@@ -700,5 +867,401 @@ test("an idle worker retires, and a running call keeps its worker alive", async 
     expect(await pool.acquire("source@1")).not.toBe(busy);
   } finally {
     await pool.close();
+  }
+});
+
+test("a returned session handle keeps working after its handler returns, until the host drops it", async () => {
+  const worker = await start();
+  try {
+    const { context } = hostContext();
+    await context.storage.collection("items").put("a", { text: "kept" });
+    type Session = { done: Promise<unknown>; read(): Promise<unknown>; stop(): Promise<unknown> };
+    // A separate frame, so no stack slot of this test keeps the session reachable afterwards.
+    const runSession = async () => {
+      const session = (await worker.invoke({
+        handlerId: handlerOf(worker.definition, "session"),
+        context,
+        surface,
+        args: [],
+      })) as Session;
+      expect(worker.busy).toBe(true);
+      expect(await session.read()).toEqual({ text: "kept" });
+      await session.stop();
+      expect(await session.done).toBe("stopped");
+    };
+    await runSession();
+    for (let attempt = 0; worker.busy && attempt < 50; attempt++) {
+      Bun.gc(true);
+      await Bun.sleep(20);
+    }
+    expect(worker.busy).toBe(false);
+  } finally {
+    await worker.stop();
+  }
+});
+
+test("a harness start keeps getMessages synchronous and forwards event patches in order", async () => {
+  const worker = await start();
+  try {
+    const pushed: unknown[] = [];
+    const messages: { id: string }[] = [{ id: "m0" }];
+    const input = {
+      prompt: "hi",
+      events: {
+        push: (patch: { value: { id: string } }) => {
+          pushed.push(patch.value.id);
+          messages.push(patch.value);
+        },
+        getMessages: () => [...messages],
+      },
+      approvals: { requestApproval: async () => ({ decision: "approved" }) },
+    };
+    const handlerId = (
+      worker.definition as { commands: Array<{ id: string; start?: Record<string, string> }> }
+    ).commands.find((entry) => entry.id === "harness-start")!.start![HANDLER_MARKER]!;
+    const context = markHostContext({ projectId: "p1", extensionId: "example.harness" });
+    const session = (await worker.invoke({
+      handlerId,
+      context,
+      surface,
+      args: [{ ...input, events: snapshotSink(input.events as never) }],
+    })) as { seen: string[]; approval: unknown; done: Promise<unknown>; stop(): Promise<void> };
+    expect(session.seen).toEqual(["m0", "m1", "m2"]);
+    expect(session.approval).toEqual({ decision: "approved" });
+    for (let attempt = 0; pushed.length < 2 && attempt < 50; attempt++) await Bun.sleep(10);
+    expect(pushed).toEqual(["m1", "m2"]);
+    await session.stop();
+    expect(await session.done).toEqual({ status: "stopped" });
+  } finally {
+    await worker.stop();
+  }
+});
+
+test("a harness keeps its event sink and approvals after start returns", async () => {
+  const worker = await start();
+  try {
+    const pushed: string[] = [];
+    const input = {
+      events: snapshotSink({
+        push: (patch: { value: { id: string } }) => void pushed.push(patch.value.id),
+        getMessages: () => [],
+      } as never),
+      approvals: { requestApproval: async () => ({ decision: "approved" }) },
+    };
+    const handlerId = (
+      worker.definition as { commands: Array<{ id: string; start?: Record<string, string> }> }
+    ).commands.find((entry) => entry.id === "harness-late")!.start![HANDLER_MARKER]!;
+    const context = markHostContext({ projectId: "p1", extensionId: "example.harness" });
+    const session = (await worker.invoke({ handlerId, context, surface, args: [input] })) as { done: Promise<unknown> };
+    expect(await session.done).toEqual({ decision: "approved" });
+    expect(pushed).toEqual(["late"]);
+  } finally {
+    await worker.stop();
+  }
+});
+
+test("a call cancelled while its arguments are prepared never reaches the worker", async () => {
+  const worker = await start();
+  try {
+    const marker = join(root, "cancelled-mark");
+    const controller = new AbortController();
+    const running = worker.invoke({
+      handlerId: handlerOf(worker.definition, "mark"),
+      context: {},
+      surface,
+      args: [marker],
+      signal: controller.signal,
+    });
+    controller.abort(new Error("cancelled"));
+    await expect(running).rejects.toThrow("cancelled");
+    await Bun.sleep(200);
+    expect(await Bun.file(marker).exists()).toBe(false);
+    expect(worker.busy).toBe(false);
+  } finally {
+    await worker.stop();
+  }
+});
+
+test("an endless loop or a memory hog is stopped from outside the worker", async () => {
+  const watched = (watchdog: Parameters<typeof startBackendWorker>[0]["watchdog"]) =>
+    startBackendWorker({
+      command: backendWorkerCommand(),
+      env: createExtensionProcessEnvironment(),
+      entryPath,
+      watchdog,
+    });
+  const looping = await watched({ heartbeatMs: 50, unresponsiveMs: 500 });
+  await expect(
+    looping.invoke({ handlerId: handlerOf(looping.definition, "endless"), context: {}, surface, args: [] }),
+  ).rejects.toThrow("did not respond");
+  await looping.exited;
+
+  const hogging = await watched({
+    heartbeatMs: 50,
+    // Well above an idle worker on every runner (about 55 MiB on Linux), well below the 256 MiB hog.
+    memoryLimitBytes: 160 * 1024 * 1024,
+  });
+  await expect(
+    hogging.invoke({ handlerId: handlerOf(hogging.definition, "hog"), context: {}, surface, args: [] }),
+  ).rejects.toThrow("memory limit");
+  await hogging.exited;
+});
+
+test("a worker that keeps failing waits out a cooldown instead of restarting in a loop", async () => {
+  const pool = createBackendWorkerPool(() => ({ env: createExtensionProcessEnvironment(), entryPath }), {
+    restartBudget: { failures: 2, windowMs: 60_000, cooldownMs: 60_000 },
+  });
+  try {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const worker = await pool.acquire("crashy@1");
+      await worker
+        .invoke({ handlerId: handlerOf(worker.definition, "crash"), context: {}, surface, args: [] })
+        .catch(() => {});
+      await worker.exited;
+    }
+    await expect(pool.acquire("crashy@1")).rejects.toThrow("can start again");
+  } finally {
+    await pool.close();
+  }
+});
+
+test("a synchronously opened terminal session runs its calls in order and outlives the call that opened it", async () => {
+  const worker = await start();
+  const unhandled: unknown[] = [];
+  const onUnhandled = (reason: unknown) => unhandled.push(reason);
+  process.on("unhandledRejection", onUnhandled);
+  try {
+    const calls: string[] = [];
+    const exited = Promise.withResolvers<void>();
+    const context = {
+      terminal: {
+        openSession: (request: { fail?: boolean }) => {
+          if (request.fail) throw new Error("no shell");
+          return {
+            id: "host-id",
+            write: (data: string) => void calls.push(data),
+            resize: (cols: number, rows: number) => void calls.push(`${cols}x${rows}`),
+            kill: async () => exited.resolve(),
+            events: async function* () {
+              yield { kind: "data", text: calls.join(",") };
+              await exited.promise;
+              yield { kind: "exit", code: 0 };
+            },
+          };
+        },
+      },
+    };
+    const terminalSurface: BackendSurface = {
+      kind: "object",
+      members: {
+        terminal: {
+          kind: "object",
+          members: {
+            openSession: {
+              kind: "handle",
+              members: { id: "id", write: "notify", resize: "notify", kill: "async", events: "iterate" },
+            },
+          },
+        },
+      },
+    };
+    const run = (id: string) =>
+      worker.invoke({ handlerId: handlerOf(worker.definition, id), context, surface: terminalSurface, args: [] });
+    expect(await run("pty-open")).toBe("string");
+    expect(await run("pty-read")).toEqual({
+      first: { kind: "data", text: "a,100x30,b" },
+      last: { kind: "exit", code: 0 },
+      second: "events() has one consumer per handle.",
+    });
+    expect(await run("pty-fail")).toBe("no shell");
+    expect(worker.busy).toBe(true);
+    await run("pty-drop");
+    for (let attempt = 0; worker.busy && attempt < 50; attempt++) {
+      Bun.gc(true);
+      await Bun.sleep(20);
+    }
+    expect(worker.busy).toBe(false);
+    expect(unhandled).toEqual([]);
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
+    await worker.stop();
+  }
+});
+
+test("an events iterator the worker drops without return() closes the host's stream", async () => {
+  const worker = await start();
+  try {
+    let closed = false;
+    const context = {
+      terminal: {
+        openSession: () => ({
+          id: "host-id",
+          write: () => {},
+          resize: () => {},
+          kill: async () => {},
+          events: async function* () {
+            try {
+              yield { kind: "data", text: "first" };
+              await new Promise(() => {});
+            } finally {
+              closed = true;
+            }
+          },
+        }),
+      },
+    };
+    const terminalSurface: BackendSurface = {
+      kind: "object",
+      members: {
+        terminal: {
+          kind: "object",
+          members: {
+            openSession: {
+              kind: "handle",
+              members: { id: "id", write: "notify", resize: "notify", kill: "async", events: "iterate" },
+            },
+          },
+        },
+      },
+    };
+    const run = (id: string) =>
+      worker.invoke({ handlerId: handlerOf(worker.definition, id), context, surface: terminalSurface, args: [] });
+    await run("pty-open");
+    await run("pty-peek");
+    for (let attempt = 0; !closed && attempt < 50; attempt++) {
+      Bun.gc(true);
+      await Bun.sleep(20);
+    }
+    expect(closed).toBe(true);
+    expect(worker.busy).toBe(true);
+    await run("pty-drop");
+  } finally {
+    await worker.stop();
+  }
+});
+
+test("a prepared harness operation receives a synchronous event sink", async () => {
+  const worker = await start();
+  try {
+    const operation = (await worker.invoke({
+      handlerId: handlerOf(worker.definition, "prepared-operation"),
+      context: {},
+      surface,
+      args: [],
+    })) as { invoke(input: { events: { getMessages(): { id: string }[]; push(): void } }): Promise<unknown> };
+    expect(await operation.invoke({ events: { getMessages: () => [{ id: "m1" }], push: () => {} } })).toEqual(["m1"]);
+  } finally {
+    await worker.stop();
+  }
+});
+
+test("abort settles while an asynchronous Blob export is still pending", async () => {
+  const worker = await start();
+  const read = Promise.withResolvers<ArrayBuffer>();
+  const started = Promise.withResolvers<void>();
+  class PendingBlob extends Blob {
+    override arrayBuffer() {
+      started.resolve();
+      return read.promise;
+    }
+  }
+  const unhandled: unknown[] = [];
+  const onUnhandled = (reason: unknown) => unhandled.push(reason);
+  process.on("unhandledRejection", onUnhandled);
+  try {
+    const controller = new AbortController();
+    const reason = new Error("Blob export cancelled");
+    const marker = join(root, "aborted-blob-export");
+    const invocation = worker
+      .invoke({
+        handlerId: handlerOf(worker.definition, "mark"),
+        context: {},
+        surface,
+        args: [marker, new PendingBlob()],
+        signal: controller.signal,
+      })
+      .catch((error) => error);
+    await started.promise;
+    controller.abort(reason);
+    expect(await Promise.race([invocation, Bun.sleep(100).then(() => "still exporting")])).toBe(reason);
+    read.reject(new Error("Blob read failed"));
+    await Bun.sleep(30);
+    expect(unhandled).toEqual([]);
+    expect(await Bun.file(marker).exists()).toBe(false);
+    expect(worker.busy).toBe(false);
+  } finally {
+    read.resolve(new ArrayBuffer(0));
+    process.off("unhandledRejection", onUnhandled);
+    await worker.stop();
+  }
+});
+
+const drainSurface: BackendSurface = {
+  kind: "object",
+  members: {
+    signal: { kind: "signal" },
+    live: { kind: "object", members: { ready: { kind: "notify" }, open: { kind: "async" } } },
+  },
+};
+
+test("cancelled handlers can close host handles and release the result they raced to return", async () => {
+  const worker = await start();
+  const marker = join(root, "drained-iterator");
+  try {
+    const ready = Promise.withResolvers<void>();
+    const closed = Promise.withResolvers<void>();
+    const controller = new AbortController();
+    const reason = new Error("Cancel and drain");
+    const handlerId = (id: string) => handlerOf(worker.definition, id);
+    const invocation = worker
+      .invoke({
+        handlerId: handlerId("drain-cancel"),
+        context: { live: { ready: () => ready.resolve(), open: () => ({ close: () => closed.resolve() }) } },
+        surface: drainSurface,
+        signal: controller.signal,
+        args: [marker],
+      })
+      .catch((error) => error);
+    await ready.promise;
+    controller.abort(reason);
+    expect(await invocation).toBe(reason);
+    expect(await Promise.race([closed.promise.then(() => true), Bun.sleep(500).then(() => false)])).toBe(true);
+    for (let attempt = 0; attempt < 50 && !(await Bun.file(marker).exists()); attempt++) await Bun.sleep(10);
+    expect(await Bun.file(marker).text()).toBe("closed");
+    expect(worker.busy).toBe(false);
+  } finally {
+    await worker.stop();
+  }
+});
+
+test("a worker that ignores cancellation keeps its invocation only until the cleanup deadline", async () => {
+  const worker = await startBackendWorker({
+    command: backendWorkerCommand(),
+    env: createExtensionProcessEnvironment(),
+    entryPath,
+    drainDeadlineMs: 300,
+  });
+  try {
+    const ready = Promise.withResolvers<void>();
+    const controller = new AbortController();
+    const reason = new Error("Bounded drain");
+    const invocation = worker
+      .invoke({
+        handlerId: handlerOf(worker.definition, "ignore-cancel"),
+        context: { live: { ready: () => ready.resolve() } },
+        surface: drainSurface,
+        signal: controller.signal,
+        args: [],
+      })
+      .catch((error) => error);
+    await ready.promise;
+    controller.abort(reason);
+    expect(await invocation).toBe(reason);
+    await Bun.sleep(30);
+    expect(worker.busy).toBe(true);
+    for (let attempt = 0; attempt < 50 && worker.busy; attempt++) await Bun.sleep(10);
+    expect(worker.busy).toBe(false);
+  } finally {
+    await worker.stop();
   }
 });
