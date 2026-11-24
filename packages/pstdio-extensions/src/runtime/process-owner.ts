@@ -141,7 +141,11 @@ const byteLength = (data: string | Uint8Array) =>
  * A kill while the target is still opening never waits for it: it aborts `cancel`, settles the
  * handle as stopped, and stops a child that still arrives in the background.
  */
-export const createProcessHandleProxy = (open: Promise<OpenedHandle>, cancel = new AbortController()) => {
+export const createProcessHandleProxy = (
+  open: Promise<OpenedHandle>,
+  cancel = new AbortController(),
+  admittedLocal?: () => OpenedHandle | undefined,
+) => {
   open.catch(() => {});
   let opened = false;
   void open.then(
@@ -230,8 +234,12 @@ export const createProcessHandleProxy = (open: Promise<OpenedHandle>, cancel = n
     kill: (signal) => {
       stopping = true;
       if (!killing) {
-        killing = opened
-          ? open.then(
+        // Local admission can start a child before the async target result reaches this proxy.
+        // Keep its cleanup gate live if stopping fails instead of taking the unopened-target path.
+        const local = admittedLocal?.();
+        const target = local ?? (opened ? open : undefined);
+        killing = target
+          ? Promise.resolve(target).then(
               (handle) => {
                 if (!settled || cleanupByHandle.has(handle)) return handle.kill(signal);
               },
