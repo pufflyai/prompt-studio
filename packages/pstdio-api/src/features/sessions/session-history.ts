@@ -15,6 +15,19 @@ export class SessionNotFoundError extends Error {
   }
 }
 
+export const readSessionCheckpoint = async (
+  session: { session_file_id: string | null },
+  deps: Pick<HistoryDeps, "fileService">,
+) => {
+  if (!session.session_file_id) return null;
+  const file = await deps.fileService.get(session.session_file_id);
+  if (!file) throw new Error("Checkpoint missing");
+  return sessionMessageSchema
+    .array()
+    .parse(JSON.parse(await readFile(file.storage_path, "utf8")))
+    .map(normalizeMessageResults);
+};
+
 export const readSessionHistorySources = async (sessionId: string, deps: HistoryDeps) => {
   const session = await deps.sessionService.get(sessionId);
   if (!session) throw new SessionNotFoundError();
@@ -30,12 +43,7 @@ export const readSessionHistorySources = async (sessionId: string, deps: History
     (async () => {
       if (!session.session_file_id) return;
       try {
-        const file = await deps.fileService.get(session.session_file_id);
-        if (!file) throw new Error("Checkpoint missing");
-        sources.checkpoint = sessionMessageSchema
-          .array()
-          .parse(JSON.parse(await readFile(file.storage_path, "utf8")))
-          .map(normalizeMessageResults);
+        sources.checkpoint = await readSessionCheckpoint(session, deps);
       } catch {
         sources.checkpoint = null;
         sources.checkpointError = "checkpoint_unreadable";
