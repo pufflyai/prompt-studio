@@ -262,8 +262,8 @@ describe("envFromHost", () => {
       const launcherPid = Number(readFileSync(launcherMarker, "utf8"));
       expect(Number.isSafeInteger(launcherPid) && launcherPid > 0).toBe(true);
       expect(Number.isSafeInteger(backgroundPid) && backgroundPid > 0).toBe(true);
-      if ("pid" in result) expect(result.pid).toBe(launcherPid);
-      else expect(result.exitCode).toBe(0);
+      if ("exitCode" in result) expect(result.exitCode).toBe(0);
+      else expect(result.pid).toBe(launcherPid);
       await waitFor(() => !alive(launcherPid), "the launcher to exit");
       expect(alive(backgroundPid)).toBe(true);
 
