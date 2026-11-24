@@ -360,7 +360,7 @@ test("a process from a retired source cannot open its target before eligibility 
   let targetOpened = false;
   const api = createProcessApi({
     scope,
-    extensionOwner: () => owners.owner("retired-project", source),
+    extensionOwner: owners.capture("retired-project", "fixture-instance", source),
     resolveTarget: async () => {
       targetOpened = true;
       return { kind: "local", root };
