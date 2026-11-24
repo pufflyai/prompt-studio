@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createExtensionSourceWatcher } from "./extension-source-watcher";
@@ -138,3 +138,35 @@ test("a queued dependency notification cannot reopen closed watches", async () =
     rmSync(source, { recursive: true, force: true });
   }
 });
+
+test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+  "reports inaccessible dependency directories and still observes source changes",
+  async () => {
+    const source = mkdtempSync(join(tmpdir(), "extension-dependency-access-"));
+    const dependencyRoot = join(source, "node_modules");
+    mkdirSync(dependencyRoot, { mode: 0o000 });
+    const changed = Promise.withResolvers<string>();
+    const errors: unknown[] = [];
+    const listeners = new Map<string, (type: string, filename: string | Buffer | null) => void>();
+    let watcher: Awaited<ReturnType<typeof createExtensionSourceWatcher>> | undefined;
+    try {
+      watcher = await createExtensionSourceWatcher({
+        debounceMs: 0,
+        listInstalledSources: async () => [{ install_name: "source", source_path: source }],
+        onError: (error) => errors.push(error),
+        onSourceChanged: async (path) => changed.resolve(path),
+        watch: (path, listener) => {
+          listeners.set(path, listener);
+          return { close() {} };
+        },
+      });
+      expect(errors).toMatchObject([{ code: "EACCES" }]);
+      listeners.get(source)?.("change", "index.ts");
+      expect(await changed.promise).toBe(source);
+    } finally {
+      watcher?.dispose();
+      chmodSync(dependencyRoot, 0o700);
+      rmSync(source, { recursive: true, force: true });
+    }
+  },
+);

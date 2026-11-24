@@ -78,7 +78,7 @@ const dependencyEventIdentity = (path: string) => {
   }
 };
 
-const dependencyWatchDirectories = (dependencyRoot: string) => {
+const dependencyWatchDirectories = (dependencyRoot: string, onError: (error: unknown) => void) => {
   const directories = new Set<string>();
   try {
     if (!lstatSync(dependencyRoot, { throwIfNoEntry: false })?.isDirectory()) return directories;
@@ -88,10 +88,22 @@ const dependencyWatchDirectories = (dependencyRoot: string) => {
       if (entry.name.startsWith("@") && entry.isDirectory()) directories.add(join(dependencyRoot, entry.name));
     }
   } catch (error) {
-    // A package manager can remove node_modules between the stat and directory read.
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    // A package manager can remove or replace node_modules between the stat and read.
+    const { code } = error as NodeJS.ErrnoException;
+    if (code !== "ENOENT" && code !== "ENOTDIR") {
+      onError(error);
+      return;
+    }
   }
   return directories;
+};
+
+const closeStaleDependencyWatches = (handles: WatchedRegistration["dependencyHandles"], current: Set<string>) => {
+  for (const [path, handle] of handles) {
+    if (current.has(path)) continue;
+    handle.close();
+    handles.delete(path);
+  }
 };
 
 export const createExtensionSourceWatcher = async (
@@ -150,12 +162,9 @@ export const createExtensionSourceWatcher = async (
   const watchDependencyRoot = (registration: WatchedRegistration) => {
     if (registration.tree.recursive && !watchDirectDependencies) return;
     const dependencyRoot = join(registration.sourcePath, "node_modules");
-    const directories = dependencyWatchDirectories(dependencyRoot);
-    for (const [path, handle] of registration.dependencyHandles) {
-      if (directories.has(path)) continue;
-      handle.close();
-      registration.dependencyHandles.delete(path);
-    }
+    const directories = dependencyWatchDirectories(dependencyRoot, reportError);
+    if (!directories) return;
+    closeStaleDependencyWatches(registration.dependencyHandles, directories);
     for (const path of directories) {
       if (registration.dependencyHandles.has(path)) continue;
       try {
