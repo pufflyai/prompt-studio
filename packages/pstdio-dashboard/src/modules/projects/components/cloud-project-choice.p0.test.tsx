@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { accountEvents } from "@pstdio/sdk/extensions";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { StrictMode } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { getDashboardAccountStatusQuery } from "@/lib/scoped-queries";
@@ -191,14 +192,22 @@ const copyStates = [
   "deletion receipt",
   "removal receipt",
   "removal after retry",
+  "rejected removal after retry",
 ] as const;
 
 const copyDevice = (outcome: (typeof copyStates)[number]) => {
   const id = "recovered-project";
   const account = { managerOrigin: "https://accounts.example.test", accountId: "account-a" };
   const folderError = "Could not prepare the project folder";
-  const removingCopy = outcome === "removal receipt" || outcome === "removal after retry";
-  const device: { presence: string; downloadError?: string; syncFailed: boolean; downloads: number } = {
+  const rejectedRemoval = outcome === "rejected removal after retry";
+  const removingCopy = outcome === "removal receipt" || outcome.endsWith("after retry");
+  const device: {
+    presence: string;
+    downloadError?: string;
+    syncFailed: boolean;
+    downloads: number;
+    holdCatalog?: boolean;
+  } = {
     presence: removingCopy ? "downloading" : "cloud-only",
     syncFailed: removingCopy,
     downloads: 0,
@@ -207,11 +216,13 @@ const copyDevice = (outcome: (typeof copyStates)[number]) => {
   const release = Promise.withResolvers<void>();
   const removalStarted = Promise.withResolvers<void>();
   const releaseRemoval = Promise.withResolvers<void>();
+  const catalogCaptured = Promise.withResolvers<void>();
+  const releaseCatalog = Promise.withResolvers<void>();
   const download = async () => {
     device.downloads++;
     started.resolve();
     await release.promise;
-    if (device.downloads > 1 || outcome === "removal after retry") {
+    if (device.downloads > 1 || outcome.endsWith("after retry")) {
       device.presence = "downloading";
       device.downloadError = undefined;
       device.syncFailed = false;
@@ -236,6 +247,7 @@ const copyDevice = (outcome: (typeof copyStates)[number]) => {
   const removeLocal = async () => {
     removalStarted.resolve();
     await releaseRemoval.promise;
+    if (rejectedRemoval) return Response.json({ error: "Removal rejected before touching the copy" }, { status: 400 });
     return Response.json({ projectId: id, presence: "cloud-only" });
   };
   const server = Bun.serve({
@@ -253,8 +265,8 @@ const copyDevice = (outcome: (typeof copyStates)[number]) => {
       if (url.pathname.endsWith("/download")) return download();
       if (url.pathname.endsWith("/delete-cloud")) return deleteCloud();
       if (url.pathname.endsWith("/remove-local")) return removeLocal();
-      if (url.pathname === "/v1/account/projects")
-        return Response.json({
+      if (url.pathname === "/v1/account/projects") {
+        const observation = Response.json({
           account,
           membershipKnown: true,
           deletions: [],
@@ -273,18 +285,37 @@ const copyDevice = (outcome: (typeof copyStates)[number]) => {
             },
           ],
         });
+        if (device.holdCatalog) {
+          device.holdCatalog = false;
+          catalogCaptured.resolve();
+          return releaseCatalog.promise.then(() => observation);
+        }
+        return observation;
+      }
       return Response.json({
         state: device.syncFailed ? "needs-attention" : "first-download-incomplete",
         offlineReady: false,
       });
     },
   });
-  return { id, account, device, folderError, server, started, release, removalStarted, releaseRemoval };
+  return {
+    id,
+    account,
+    device,
+    folderError,
+    server,
+    started,
+    release,
+    removalStarted,
+    releaseRemoval,
+    catalogCaptured,
+    releaseCatalog,
+  };
 };
 
-test.each(copyStates)("two views check the current device state before downloading (%s)", async (outcome) => {
-  const { id, account, device, folderError, server, started, release, removalStarted, releaseRemoval } =
-    copyDevice(outcome);
+const mountCopyChoices = async (outcome: (typeof copyStates)[number]) => {
+  const fixture = copyDevice(outcome);
+  const { id, server, release, releaseRemoval, releaseCatalog } = fixture;
   const opened: unknown[] = [];
   let closed = 0;
   const runtime = globalThis as typeof globalThis & {
@@ -344,56 +375,158 @@ test.each(copyStates)("two views check the current device state before downloadi
   };
   let renderer: ReactTestRenderer | undefined;
   let peerRenderer: ReactTestRenderer | undefined;
+  const cleanup = async () => {
+    release.resolve();
+    releaseRemoval.resolve();
+    releaseCatalog.resolve();
+    await act(async () => {
+      renderer?.unmount();
+      peerRenderer?.unmount();
+    });
+    client.clear();
+    await owner.dispose();
+    runtime.__PSTDIO_CONFIG__ = previous;
+    runtime.IS_REACT_ACT_ENVIRONMENT = previousAct;
+    await server.stop(true);
+  };
   try {
-    if (outcome === "removal receipt" || outcome === "removal after retry") addLocalProject();
+    if (outcome === "removal receipt" || outcome.endsWith("after retry")) addLocalProject();
     await getDashboardAccountStatusQuery(owner).read();
     await act(async () => {
       renderer = create(
         <QueryClientProvider client={client}>
-          <Probe />
+          <StrictMode>
+            <Probe />
+          </StrictMode>
         </QueryClientProvider>,
       );
       peerRenderer = create(
         <QueryClientProvider client={client}>
-          <Probe other />
+          <StrictMode>
+            <Probe other />
+          </StrictMode>
         </QueryClientProvider>,
       );
     });
     await act(async () => until(() => choice?.canDownload && peer?.canDownload));
-    const stalePeerAction = peer!.requestDownload;
+    return {
+      ...fixture,
+      owner,
+      client,
+      opened,
+      addLocalProject,
+      mutationsSettled,
+      clickAndSettle,
+      cleanup,
+      unmountPeer: () => act(async () => peerRenderer?.unmount()),
+      get closed() {
+        return closed;
+      },
+      get choice() {
+        return choice!;
+      },
+      get peer() {
+        return peer!;
+      },
+      get deletions() {
+        return deletions!;
+      },
+      get removal() {
+        return removal!;
+      },
+    };
+  } catch (error) {
+    await cleanup();
+    throw error;
+  }
+};
+
+test.each(copyStates)("two views check the current device state before downloading (%s)", async (outcome) => {
+  const fixture = await mountCopyChoices(outcome);
+  const {
+    id,
+    account,
+    device,
+    folderError,
+    started,
+    release,
+    removalStarted,
+    releaseRemoval,
+    catalogCaptured,
+    releaseCatalog,
+    opened,
+    owner,
+    client,
+    addLocalProject,
+    mutationsSettled,
+    clickAndSettle,
+  } = fixture;
+  try {
+    const stalePeerAction = fixture.peer.requestDownload;
     expect(opened).toEqual([]);
-    if (outcome === "removal after retry") {
+    if (outcome.endsWith("after retry")) {
       await act(async () => {
         release.resolve();
-        choice.requestDownload();
+        fixture.choice.requestDownload();
         await until(() => device.downloads === 1 && mutationsSettled());
       });
-      expect(choice!.entry?.presence).toBe("downloading");
-      expect(choice!.failure).toBeUndefined();
+      expect(fixture.choice.entry?.presence).toBe("downloading");
+      expect(fixture.choice.failure).toBeUndefined();
+      let inFlightCatalog: Promise<void>;
+      await act(async () => {
+        device.presence = "downloaded";
+        device.holdCatalog = true;
+        inFlightCatalog = client.refetchQueries({ queryKey: ["cloud-project-catalog"] });
+        await catalogCaptured.promise;
+      });
       let result: Promise<unknown>;
       await act(async () => {
-        result = removal.remove(id, "Recovered notes", account, false);
+        result = fixture.removal.remove(id, "Recovered notes", account, false);
         await removalStarted.promise;
       });
+      await act(async () => {
+        releaseCatalog.resolve();
+        await inFlightCatalog!;
+        await until(() => fixture.choice.entry?.presence === "downloaded");
+      });
+      const beforeReceipt = { claimed: fixture.removal.active(id), opened: opened.length, closed: fixture.closed };
+      if (outcome === "rejected removal after retry") {
+        await act(async () => {
+          releaseRemoval.resolve();
+          await expect(result!).rejects.toThrow("Removal rejected before touching the copy");
+        });
+        expect(fixture.removal.active(id)).toBe(false);
+        expect({ beforeReceipt, downloads: device.downloads, opened: opened.length, closed: fixture.closed }).toEqual({
+          beforeReceipt: { claimed: true, opened: 0, closed: 0 },
+          downloads: 1,
+          opened: 1,
+          closed: 1,
+        });
+        return;
+      }
       await act(async () => {
         device.presence = "cloud-only";
         releaseRemoval.resolve();
         await result!;
         owner.getWriter("projects")!.remove(id);
-        await until(() => choice.entry?.presence === "cloud-only" && peer.canDownload);
+        publishExtensionEvent({ id: accountEvents.changed.id }, owner);
+        await until(() => fixture.choice.entry?.presence === "cloud-only" && fixture.peer.canDownload);
       });
-      const afterRemoval = { canDownload: choice!.canDownload, showProgress: choice!.showProgress };
+      const afterRemoval = { canDownload: fixture.choice.canDownload, showProgress: fixture.choice.showProgress };
       await act(async () => {
-        peer.requestDownload();
+        fixture.peer.requestDownload();
         await until(() => device.downloads === 2 && mutationsSettled());
       });
       await act(async () => {
         device.presence = "downloaded";
         addLocalProject();
         publishExtensionEvent({ id: accountEvents.changed.id }, owner);
-        await until(() => choice.entry?.presence === "downloaded" && peer.entry?.presence === "downloaded");
+        await until(
+          () => fixture.choice.entry?.presence === "downloaded" && fixture.peer.entry?.presence === "downloaded",
+        );
       });
-      expect({ afterRemoval, opened: opened.length, closed }).toEqual({
+      expect({ beforeReceipt, afterRemoval, opened: opened.length, closed: fixture.closed }).toEqual({
+        beforeReceipt: { claimed: true, opened: 0, closed: 0 },
         afterRemoval: { canDownload: true, showProgress: false },
         opened: 1,
         closed: 1,
@@ -406,8 +539,8 @@ test.each(copyStates)("two views check the current device state before downloadi
       await act(async () => {
         result =
           outcome === "deletion receipt"
-            ? deletions.start(id, "Recovered notes", account)
-            : removal.remove(id, "Recovered notes", account, false);
+            ? fixture.deletions.start(id, "Recovered notes", account)
+            : fixture.removal.remove(id, "Recovered notes", account, false);
         await removalStarted.promise;
       });
       await clickAndSettle(stalePeerAction);
@@ -416,20 +549,20 @@ test.each(copyStates)("two views check the current device state before downloadi
         releaseRemoval.resolve();
         await result!;
       });
-      expect(removal!.active(id)).toBe(false);
+      expect(fixture.removal.active(id)).toBe(false);
       await clickAndSettle(stalePeerAction);
       expect(device.downloads).toBe(0);
-      expect(peer!.entry?.presence).toBe("cloud-only");
+      expect(fixture.peer.entry?.presence).toBe("cloud-only");
       return;
     }
     await act(async () => {
-      choice.requestDownload();
+      fixture.choice.requestDownload();
       await started.promise;
     });
-    expect(peer!.showProgress).toBe(true);
-    expect(peer!.canDownload).toBe(false);
+    expect(fixture.peer.showProgress).toBe(true);
+    expect(fixture.peer.canDownload).toBe(false);
     await act(async () => {
-      peer!.requestDownload();
+      fixture.peer.requestDownload();
       release.resolve();
     });
     const hasRetryableFailure = outcome === "folder error" || outcome === "sync error";
@@ -438,20 +571,25 @@ test.each(copyStates)("two views check the current device state before downloadi
       await act(async () => addLocalProject());
     }
     if (outcome === "cloud-only") {
-      await act(async () => until(() => Boolean(choice.discardDownload)));
-      await act(async () => choice.discardDownload?.());
+      await act(async () => until(() => Boolean(fixture.choice.discardDownload)));
+      await act(async () => fixture.choice.discardDownload?.());
     }
     // A retired recovery claim must not make an already-admitted copy eligible again.
     await act(async () =>
-      until(() => peer!.entry?.presence === device.presence && !choice.downloadBlocking && !peer!.downloadBlocking),
+      until(
+        () =>
+          fixture.peer.entry?.presence === device.presence &&
+          !fixture.choice.downloadBlocking &&
+          !fixture.peer.downloadBlocking,
+      ),
     );
     expect(device.downloads).toBe(1);
     if (shouldRetry) {
-      await act(async () => until(() => choice.canDownload && peer!.canDownload));
-      const staleRetry = peer!.requestDownload;
-      expect(peer!.canDownload).toBe(true);
+      await act(async () => until(() => fixture.choice.canDownload && fixture.peer.canDownload));
+      const staleRetry = fixture.peer.requestDownload;
+      expect(fixture.peer.canDownload).toBe(true);
       await act(async () => {
-        choice.requestDownload();
+        fixture.choice.requestDownload();
         await until(() => device.downloads === 2 && mutationsSettled());
       });
       if (hasRetryableFailure) {
@@ -463,26 +601,26 @@ test.each(copyStates)("two views check the current device state before downloadi
           await client.refetchQueries({
             queryKey: [outcome === "folder error" ? "cloud-project-catalog" : "cloud-project-opening"],
           });
-          await until(() => choice.canDownload && peer!.canDownload);
+          await until(() => fixture.choice.canDownload && fixture.peer.canDownload);
         });
         await clickAndSettle(staleRetry);
         expect(device.downloads).toBe(2);
         await act(async () => {
-          choice.requestDownload();
+          fixture.choice.requestDownload();
           await until(() => device.downloads === 3 && mutationsSettled());
         });
       }
     } else {
-      expect(peer!.canDownload).toBe(false);
+      expect(fixture.peer.canDownload).toBe(false);
       await clickAndSettle(stalePeerAction);
       expect(device.downloads).toBe(1);
     }
-    await act(async () => peerRenderer?.unmount());
+    await fixture.unmountPeer();
     await act(async () => {
       device.presence = "downloaded";
       addLocalProject();
       publishExtensionEvent({ id: accountEvents.changed.id }, owner);
-      await until(() => choice.entry?.presence === "downloaded");
+      await until(() => fixture.choice.entry?.presence === "downloaded");
     });
     expect(opened).toEqual([
       {
@@ -490,20 +628,10 @@ test.each(copyStates)("two views check the current device state before downloadi
         args: { project: { id, name: "Recovered notes" } },
       },
     ]);
-    expect(closed).toBe(1);
+    expect(fixture.closed).toBe(1);
     expect(device.downloads).toBe(1 + Number(shouldRetry) + Number(hasRetryableFailure));
   } finally {
-    release.resolve();
-    releaseRemoval.resolve();
-    await act(async () => {
-      renderer?.unmount();
-      peerRenderer?.unmount();
-    });
-    client.clear();
-    await owner.dispose();
-    runtime.__PSTDIO_CONFIG__ = previous;
-    runtime.IS_REACT_ACT_ENVIRONMENT = previousAct;
-    await server.stop(true);
+    await fixture.cleanup();
   }
 });
 

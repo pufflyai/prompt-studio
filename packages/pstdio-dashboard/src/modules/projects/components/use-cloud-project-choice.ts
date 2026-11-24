@@ -27,6 +27,7 @@ const useCloudCopyDownload = (
     downloading: boolean;
     requested: boolean;
     deleting: boolean;
+    localRemoval: ReturnType<typeof useCloudLocalRemoval>;
     entry?: CloudProjectCatalogEntry;
     account?: ProjectCopyAccount;
     owner: DownloadOwner;
@@ -35,7 +36,19 @@ const useCloudCopyDownload = (
     scope: string;
   },
 ) => {
-  const { id, downloading, requested, deleting, entry, account, owner, rememberIntent, clearIntent, scope } = options;
+  const {
+    id,
+    downloading,
+    requested,
+    deleting,
+    localRemoval,
+    entry,
+    account,
+    owner,
+    rememberIntent,
+    clearIntent,
+    scope,
+  } = options;
   const runtime = getRuntimeCollections();
   const client = getRuntimeApiClient(runtime);
   const operations = getCloudCopyDownloads(runtime);
@@ -73,8 +86,17 @@ const useCloudCopyDownload = (
   });
   useEffect(() => operations.subscribeToLocalRemoval((removedScope) => retireRemovedCopy(removedScope)), [operations]);
 
+  const removing = localRemoval.isRemoving(id);
   useEffect(() => {
-    if (!requested || entry?.presence !== "downloaded" || !localName || deleting || !operations.isCurrent(id, scope))
+    if (
+      !requested ||
+      entry?.presence !== "downloaded" ||
+      !localName ||
+      deleting ||
+      removing ||
+      localRemoval.isRemoving(id) ||
+      !operations.isCurrent(id, scope)
+    )
       return;
     input.workbench.overlays.closeOverlay(input.instance.instanceId);
     void input.workbench.commands.executeCommand(dashboardCommandIds.selectProject, {
@@ -88,6 +110,8 @@ const useCloudCopyDownload = (
     requested,
     localName,
     deleting,
+    removing,
+    localRemoval,
     operations,
     scope,
   ]);
@@ -162,7 +186,8 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
   const requested = owner.scope === scope && owner.requested;
   const [deletionScope, setDeletionScope] = useState<string>();
   const deletion = useCloudProjectDeletions();
-  const copyBusy = useCloudLocalRemoval().active(id);
+  const localRemoval = useCloudLocalRemoval();
+  const copyBusy = localRemoval.active(id);
   const deleting = Boolean(receipt || deletionScope === scope || deletion.active(id));
   useEffect(() => {
     if (receipt) setDeletionScope(scope);
@@ -178,6 +203,7 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
       downloading,
       requested,
       deleting,
+      localRemoval,
       entry,
       account,
       owner,
