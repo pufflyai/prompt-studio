@@ -1,6 +1,7 @@
+import type { SessionMessage } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
 import { recoverMessageSenders } from "./recover-message-senders";
-import { getSessionHistory, readSessionCheckpoint } from "./session-history";
+import { getSessionHistory, readSessionCheckpointSnapshot } from "./session-history";
 import { persistSessionMessages } from "./session-messages";
 import { type ExistingSession, type PendingQueueEntry, withSchedulingLock } from "./session-scheduler-internals";
 import { hasSubmittedMessageCheckpoint } from "./submitted-message-checkpoint";
@@ -23,7 +24,7 @@ export const recoverDispatchSender = async (
   const readCurrentCheckpoint = async () => {
     const before = await deps.sessionService.get(session.id);
     if (!before) return null;
-    const messages = await readSessionCheckpoint(before, deps);
+    const checkpoint = await readSessionCheckpointSnapshot(before, deps);
     const current = await deps.sessionService.get(session.id);
     const saved = await deps.sessionQueueEntriesService.get(entry.queue_position);
     if (
@@ -36,9 +37,9 @@ export const recoverDispatchSender = async (
       saved.revision !== entry.revision
     )
       return null;
-    return { messages };
+    return { messages: checkpoint.messages, fingerprint: checkpoint.fingerprint };
   };
-  const saveCheckpoint = async (messages: NonNullable<Awaited<ReturnType<typeof readSessionCheckpoint>>>) => {
+  const saveCheckpoint = async (messages: SessionMessage[]) => {
     if (await persistSessionMessages(session.id, messages, deps))
       await deps.sessionQueueEntriesService.remove(entry.queue_position);
   };
@@ -51,7 +52,7 @@ export const recoverDispatchSender = async (
       await saveCheckpoint(checkpoint.messages!);
       return null;
     }
-    return { fingerprint: JSON.stringify(checkpoint.messages) };
+    return { fingerprint: checkpoint.fingerprint };
   });
   if (!initial) return true;
 
@@ -67,7 +68,7 @@ export const recoverDispatchSender = async (
     }
     // Another writer can retire its steering guard while history is loading.
     // Retain this guard rather than overwrite a changed checkpoint with a stale snapshot.
-    if (JSON.stringify(checkpoint.messages) !== initial.fingerprint) return true;
+    if (checkpoint.fingerprint !== initial.fingerprint) return true;
     if (hasSubmittedMessageCheckpoint(messages, checkpointInput)) await saveCheckpoint(messages);
     return true;
   });

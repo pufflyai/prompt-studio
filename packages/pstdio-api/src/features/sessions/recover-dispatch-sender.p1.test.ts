@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { unlink } from "node:fs/promises";
 import type { SessionMessage } from "pstdio-api-contracts";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
@@ -99,6 +100,9 @@ test.each([
   "native",
   "concurrent",
   "unconfirmed-change",
+  "corrupt",
+  "missing",
+  "replaced-corrupt",
 ])("%s recovery keeps provider waits outside queue coordination", async (kind) => {
   const arrived = Promise.withResolvers<void>();
   const release = Promise.withResolvers<SessionMessage[]>();
@@ -150,9 +154,13 @@ test.each([
       app.deps,
     );
     const current = (await app.deps.sessionService.get(session.id))!;
+    const checkpointFile = (await app.deps.fileService.get(current.session_file_id!))!;
+    if (kind === "corrupt" || kind === "replaced-corrupt")
+      await Bun.write(checkpointFile.storage_path, "incomplete checkpoint");
+    if (kind === "missing") await unlink(checkpointFile.storage_path);
     const dispatch = (await app.deps.sessionQueueEntriesService.get(entry.queue_position))!;
     recovery = recoverDispatchSender(app.deps, current, dispatch);
-    if (kind !== "saved") await arrived.promise;
+    if (kind !== "saved") await Promise.race([arrived.promise, recovery]);
     const steered: SessionMessage = {
       id: "steered",
       role: "user",
@@ -163,6 +171,7 @@ test.each([
       if (kind === "concurrent") await persistSessionMessages(session.id, [message, steered], app.deps);
       if (kind === "unconfirmed-change")
         await persistSessionMessages(session.id, [{ ...message, sender: undefined }, steered], app.deps);
+      if (kind === "replaced-corrupt") await Bun.write(checkpointFile.storage_path, "new incomplete checkpoint");
     });
     const progressed = await Promise.race([
       coordination.then(() => true),
@@ -177,6 +186,11 @@ test.each([
     expect(providerReads).toBe(kind === "saved" ? 0 : 1);
     const saved = (await app.deps.sessionService.get(session.id))!;
     const file = (await app.deps.fileService.get(saved.session_file_id!))!;
+    if (kind === "replaced-corrupt") {
+      expect(await Bun.file(file.storage_path).text()).toBe("new incomplete checkpoint");
+      expect(await app.deps.sessionQueueEntriesService.get(entry.queue_position)).toEqual(dispatch);
+      return;
+    }
     const savedMessages = await Bun.file(file.storage_path).json();
     if (kind === "unconfirmed-change") {
       expect(savedMessages).toEqual([{ id: message.id, role: message.role, parts: message.parts }, steered]);
