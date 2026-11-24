@@ -18,6 +18,11 @@ interface AssetTransferServiceDeps {
 const sameReference = (first: AssetReference, second: AssetReference) =>
   first.sha256 === second.sha256 && first.byteLength === second.byteLength && first.mediaType === second.mediaType;
 
+// Process-mode commands supply the same stream operations through bounded reads across IPC.
+type AssetStagingSource = Pick<Blob, "size" | "type" | "stream"> & {
+  slice(offset: number): Pick<Blob, "stream">;
+};
+
 export const createAssetTransferService = (deps: AssetTransferServiceDeps) => {
   const operations = createAssetTransferOperations();
   const get = async (owner: AssetOwner, operationId: string, signal?: AbortSignal) => {
@@ -144,7 +149,7 @@ export const createAssetTransferService = (deps: AssetTransferServiceDeps) => {
       },
       requestSignal,
     );
-  const stage = async (owner: AssetOwner, operationId: string, source: Blob, signal?: AbortSignal) => {
+  const stage = async (owner: AssetOwner, operationId: string, source: AssetStagingSource, signal?: AbortSignal) => {
     const hash = createHash("sha256");
     const reader = source.stream().getReader();
     const abort = () => {
