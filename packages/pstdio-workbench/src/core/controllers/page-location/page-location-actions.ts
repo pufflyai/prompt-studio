@@ -44,7 +44,7 @@ interface PageLocationControllerActionsInput<Value> {
   ): WorkbenchPageNavigationResult;
   fail(source: WorkbenchPageLocationDiagnostic["source"], error: unknown): WorkbenchPageNavigationResult;
   closePlacement(identity: PlacementIdentity): WorkbenchPageNavigationResult;
-  removeResource(resource: ResourceRef, retained: readonly PlacementIdentity[]): void;
+  removeResource(resource: ResourceRef, retained: readonly PlacementIdentity[], placementsChanged?: boolean): void;
   canGoBack(): boolean;
   canGoForward(): boolean;
   dispose(): void;

@@ -73,3 +73,64 @@ test("deletion removes remembered resource and ancestor references without reser
   memory.load("another-project");
   expect(memory.find(workspace("b"))).toBeUndefined();
 });
+
+test("an archive snapshot resolves saved navigation references once across unrelated removals", () => {
+  let historyReads = 0;
+  const resources = {
+    ...defaultPageResourceCodec,
+    toUri(resource: Parameters<typeof defaultPageResourceCodec.toUri>[0]) {
+      if (resource.type === "record") historyReads++;
+      return defaultPageResourceCodec.toUri(resource);
+    },
+  };
+  const memory = createPageNavigationMemory({ pages: () => pages, resources });
+  const parent = workspace("work");
+  const location = document("remembered", parent);
+  memory.load("project", [{ ...parent, location, modeId: "project" }]);
+  for (let i = 0; i < 50; i++) memory.forgetResource({ type: "session", id: String(i) });
+  expect(historyReads).toBeLessThanOrEqual(1);
+  expect(memory.find(parent)).toBe(location);
+  memory.forgetResource(location.resource!);
+  expect(memory.find(parent)).toBeUndefined();
+  memory.remember(location);
+  memory.forgetResource(parent.resource!);
+  expect(memory.find(parent)).toBeUndefined();
+});
+
+test("consecutive matching removals retire shared ancestors without reindexing surviving locations", () => {
+  const visits: string[] = [];
+  const resources = {
+    ...defaultPageResourceCodec,
+    toUri(resource: Parameters<typeof defaultPageResourceCodec.toUri>[0]) {
+      visits.push(resource.id);
+      return defaultPageResourceCodec.toUri(resource);
+    },
+  };
+  const memory = createPageNavigationMemory({ pages: () => pages, resources });
+  const shared = workspace("shared");
+  const first = document("first", shared);
+  const second = document("second", shared);
+  const third = document("third", workspace("third-parent"));
+  const keep = document("keep", workspace("keep-parent"));
+  const saved = [first, keep, second, third].map((location) => ({ ...location.parent!, modeId: "project", location }));
+  memory.load("project", saved);
+  expect(memory.forgetResource(shared.resource!)).toBe(true);
+  expect(visits).toContain("keep-parent");
+  visits.length = 0;
+  expect(memory.forgetResource(third.resource!)).toBe(true);
+  expect(visits).not.toContain("keep-parent");
+  expect(memory.forgetResource(first.resource!)).toBe(false);
+  expect(memory.find(shared)).toBeUndefined();
+  expect(memory.find(third.parent!)).toBeUndefined();
+
+  const next = document("new", workspace("new-parent"));
+  const remembered = memory.remember(next);
+  expect(remembered.map((entry) => entry.location)).toEqual([keep, next, next]);
+  memory.consume(next);
+  expect(memory.forgetResource(next.resource!)).toBe(false);
+  expect(memory.forgetResource(keep.resource!)).toBe(true);
+  memory.load("other", saved);
+  expect(memory.forgetResource(second.resource!)).toBe(true);
+  expect(memory.find(keep.parent!)).toBe(keep);
+  expect(remembered.map((entry) => entry.location)).toEqual([keep, next, next]);
+});

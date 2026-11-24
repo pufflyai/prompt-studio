@@ -106,7 +106,7 @@ export interface WorkbenchPageLocationController {
   navigateToRootLevel(): WorkbenchPageNavigationResult;
   navigateToDefaultPage(): WorkbenchPageNavigationResult;
   closePlacement(identity: PlacementIdentity): WorkbenchPageNavigationResult;
-  removeResource(resource: ResourceRef, retained: readonly PlacementIdentity[]): void;
+  removeResource(resource: ResourceRef, retained: readonly PlacementIdentity[], placementsChanged?: boolean): void;
   goBack(): void;
   goForward(): void;
   dispose(): void;
