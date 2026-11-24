@@ -28,7 +28,7 @@ test("a call that outlived its source's retirement cannot revive that generation
   // The source was disabled while the call ran; no later invalidation arrives.
   const owners = createExtensionProcessOwners({ findEnabledSource: async () => undefined });
   const late = child();
-  owners.owner("project-1", source).adopt(late.handle);
+  owners.capture("project-1", "fixture-instance", source)().adopt(late.handle);
   await Bun.sleep(10);
   expect(late.state.killed).toBe(true);
 });
@@ -36,7 +36,7 @@ test("a call that outlived its source's retirement cannot revive that generation
 test("a generation of the enabled source keeps its children", async () => {
   const owners = createExtensionProcessOwners({ findEnabledSource: async () => source });
   const kept = child();
-  owners.owner("project-1", source).adopt(kept.handle);
+  owners.capture("project-1", "fixture-instance", source)().adopt(kept.handle);
   await Bun.sleep(10);
   expect(kept.state.killed).toBe(false);
   await owners.dispose();

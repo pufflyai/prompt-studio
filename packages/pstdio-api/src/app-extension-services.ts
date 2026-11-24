@@ -180,10 +180,12 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
   const unsubscribeProcessOwners = extensionRuntimeCatalog.subscribeInvalidation((invalidation) => {
     void extensionProcessOwners.reconcile(invalidation.sourcePath ? undefined : invalidation.projectId);
   });
-  const unsubscribeProjectRemoval = input.eventBus.subscribe((event) => {
-    if (event.table !== "projects") return;
-    const projectId = (event.data as { id?: unknown } | null)?.id;
-    if (typeof projectId === "string") void extensionProcessOwners.reconcile(projectId);
+  const unsubscribeProcessOwnerEvents = input.eventBus.subscribe((event) => {
+    const row = event.data as { id?: unknown; enabled?: unknown } | null;
+    if (typeof row?.id !== "string") return;
+    if (event.table === "projects") void extensionProcessOwners.reconcile(row.id);
+    if (event.table === "extension_instances" && (event.op === "delete" || row.enabled === false))
+      void extensionProcessOwners.retireInstance(row.id);
   });
   if (process.env.PSTDIO_EXTENSION_PROCESS_ENV)
     apiLogger.warn(
@@ -250,7 +252,7 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
       unsubscribeProjectWorkspaceRefresh();
       unsubscribeEnablementInvalidation();
       unsubscribeProcessOwners();
-      unsubscribeProjectRemoval();
+      unsubscribeProcessOwnerEvents();
     },
   };
 };
