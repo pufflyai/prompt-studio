@@ -36,6 +36,7 @@ const request: JsonObject = {
     ],
   },
 };
+const context = request.context as JsonObject;
 const accepted = (run: () => unknown) => {
   try {
     run();
@@ -50,6 +51,7 @@ test("indexed request validity preserves the actual stored parser's accepted sha
     request,
     null,
     {},
+    ...[null, "", 7, "attempt"].map((attemptId) => ({ ...request, context: { ...context, attemptId } })),
     { ...request, title: "\u2003\ufeff" },
     { ...request, context: { ...(request.context as JsonObject), attemptRevision: 1.5 } },
     { ...request, request: { kind: "task" } },

@@ -1,6 +1,7 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import type { readTicketViewPage } from "../../data/query-ticket-page";
 import { normalizeTicketDependencies } from "../../data/ticket-dependencies";
+import { ticketRecords } from "../../data/ticket-records";
 import type { readTicketParentLookup } from "../../data/ticket-resource-hierarchy";
 import { ticketTagIds } from "../../data/ticket-tags";
 import type { PlanRow } from "../contracts";
@@ -125,9 +126,7 @@ const pageRow = async (
     parent = parent.parentId ? parents.get(parent.parentId) : undefined;
   }
   const gate = typeof fields.gate === "string";
-  const instructions = gate
-    ? ((await ctx.storage.collection<{ content?: string }>("tickets").get(ticket.id))?.content ?? "")
-    : "";
+  const instructions = gate ? ((await ticketRecords(ctx.storage).get(ticket.id))?.content ?? "") : "";
   const status = statuses.get(ticket.statusId ?? "");
   const target = view.result.rows.find(({ id }) => id === ticket.id)!.target!;
   return {
