@@ -65,7 +65,9 @@ export const runWorkbenchCommandOperation = <T>(input: {
   const { operations, projectId, command, source } = input;
   // The declaration does not promise a record identity. Match every invocation of the command in this project.
   const subject = operationSubject(extensionCommandOperation, projectId, command.id);
-  if (operations.getSnapshot().pending.some((entry) => entry.subjects.includes(subject)))
+  const { pending, recovery } = operations.getSnapshot();
+  const matches = (entry: { subjects: readonly string[] }) => entry.subjects.includes(subject);
+  if (pending.some(matches) || recovery.some((entry) => entry.status !== "rejected" && matches(entry)))
     throw new Error("This action is still pending. See System activity for recovery.");
   const result = operations.submit({
     domain: extensionCommandOperation,

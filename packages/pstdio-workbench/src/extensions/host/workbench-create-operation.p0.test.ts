@@ -383,3 +383,57 @@ test.each(["AttemptLaunchRefused", "Error"])("classifies a Planner attempt repor
     queries.dispose();
   }
 });
+
+test("returning to a Planner authority cannot replay an unconfirmed attempt", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "desktop", extensionId: "pstdio", accountId: "original" });
+  const operations = getWorkbenchOperations(queries);
+  const workbench = createWorkbench({ queries });
+  const command = {
+    id: "pstdio.planner.command.run-attempt",
+    extensionId: "pstdio.planner",
+    title: "Run attempt",
+    mutating: true,
+  };
+  const transmitted = Promise.withResolvers<void>();
+  const firstReply = Promise.withResolvers<unknown>();
+  let writes = 0;
+  const run = () =>
+    executeWorkbenchExtensionCommand(
+      {
+        workbench,
+        projectId: "project",
+        operations,
+        metadata: { commands: [command] },
+        executeCommand: async () => {
+          if (++writes === 1) {
+            transmitted.resolve();
+            return firstReply.promise;
+          }
+          return { outcome: { ok: true, status: "success", value: { id: "second" } } };
+        },
+      },
+      command.id,
+      { foreground: true, params: { ticket: "PS-289", newVariant: true } },
+    );
+  try {
+    const first = run();
+    const settled = first.catch((error: unknown) => error);
+    await transmitted.promise;
+    queries.setAuthority({ accountId: "other" });
+    queries.setAuthority({ accountId: "original" });
+    firstReply.resolve({ outcome: { ok: true, status: "success", value: { id: "first" } } });
+    expect(await settled).toBeInstanceOf(Error);
+    expect(operations.getSnapshot().pending).toHaveLength(0);
+    const [recovery] = operations.getSnapshot().recovery;
+    expect(recovery).toMatchObject({ status: "unknown", canCheck: false });
+    await expect(run()).rejects.toThrow("System activity");
+    expect(writes).toBe(1);
+    operations.discard(recovery.id);
+    await expect(run()).resolves.toBeDefined();
+    expect(writes).toBe(2);
+  } finally {
+    firstReply.resolve();
+    await workbench.dispose();
+    queries.dispose();
+  }
+});
