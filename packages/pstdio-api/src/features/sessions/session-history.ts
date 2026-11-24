@@ -16,13 +16,28 @@ export class SessionNotFoundError extends Error {
   }
 }
 
+const getSessionCheckpointFile = async (
+  session: { session_file_id: string | null },
+  deps: Pick<HistoryDeps, "fileService">,
+) => {
+  if (!session.session_file_id) return null;
+  const file = await deps.fileService.get(session.session_file_id);
+  if (!file) throw new Error("Checkpoint missing");
+  return file;
+};
+
+const parseSessionCheckpoint = (data: Buffer) =>
+  sessionMessageSchema
+    .array()
+    .parse(JSON.parse(data.toString("utf8")))
+    .map(normalizeMessageResults);
+
 export const readSessionCheckpointSnapshot = async (
   session: { session_file_id: string | null },
   deps: Pick<HistoryDeps, "fileService">,
 ) => {
-  if (!session.session_file_id) return { messages: null, fingerprint: "none", error: null };
-  const file = await deps.fileService.get(session.session_file_id);
-  if (!file) throw new Error("Checkpoint missing");
+  const file = await getSessionCheckpointFile(session, deps);
+  if (!file) return { messages: null, fingerprint: "none" };
   const identity = JSON.stringify([file.id, file.storage_path, file.hash, file.updated_at]);
   let data: Buffer;
   try {
@@ -31,20 +46,16 @@ export const readSessionCheckpointSnapshot = async (
     return {
       messages: null,
       fingerprint: `${identity}:unreadable:${(error as NodeJS.ErrnoException).code ?? "unknown"}`,
-      error,
     };
   }
   // Invalid JSON still has a byte identity. Two unreadable checkpoints must
   // not compare equal if another writer replaced the file during provider I/O.
   const fingerprint = `${identity}:${createHash("sha256").update(data).digest("hex")}`;
   try {
-    const messages = sessionMessageSchema
-      .array()
-      .parse(JSON.parse(data.toString("utf8")))
-      .map(normalizeMessageResults);
-    return { messages, fingerprint, error: null };
-  } catch (error) {
-    return { messages: null, fingerprint, error };
+    const messages = parseSessionCheckpoint(data);
+    return { messages, fingerprint };
+  } catch {
+    return { messages: null, fingerprint };
   }
 };
 
@@ -52,9 +63,9 @@ export const readSessionCheckpoint = async (
   session: { session_file_id: string | null },
   deps: Pick<HistoryDeps, "fileService">,
 ) => {
-  const checkpoint = await readSessionCheckpointSnapshot(session, deps);
-  if (checkpoint.error) throw checkpoint.error;
-  return checkpoint.messages;
+  const file = await getSessionCheckpointFile(session, deps);
+  if (!file) return null;
+  return parseSessionCheckpoint(await readFile(file.storage_path));
 };
 
 export const readSessionHistorySources = async (sessionId: string, deps: HistoryDeps) => {
