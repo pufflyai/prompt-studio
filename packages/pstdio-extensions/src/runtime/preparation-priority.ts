@@ -13,11 +13,20 @@ interface PreparationPriority {
 export const preparationIncludes = (scope: PreparationPriority | undefined, owner: PreparationPriority) =>
   scope?.includes ? scope.includes(owner) : scope?.continuation === owner;
 export const preparationPriority = new AsyncLocalStorage<PreparationPriority>();
-export const withBackgroundPreparation = <T>(work: () => T) =>
-  preparationPriority.run(
-    { priority: "background", jobs: new Set(), continuation: preparationPriority.getStore()?.continuation },
-    work,
-  );
+// Background work inside a scope still belongs to everything that scope belongs to, including
+// continuations lent to it later, and is refreshed when those loans change.
+export const withBackgroundPreparation = <T>(work: () => T) => {
+  const parent = preparationPriority.getStore();
+  const scope: PreparationPriority = {
+    priority: "background",
+    jobs: parent?.jobs ?? new Set(),
+    get continuation() {
+      return parent?.continuation;
+    },
+    includes: (owner) => preparationIncludes(parent, owner),
+  };
+  return preparationPriority.run(scope, work);
+};
 export const withContinuingPreparation = <T>(
   work: () => T,
   priority: "requested" | "background" | "restoration" = "requested",
