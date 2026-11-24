@@ -86,8 +86,12 @@ test.each([
     });
     const response = await fixture.send(
       field === "source"
-        ? { source: { type: "session", id: source.id }, sourceSessionId: "ignored" }
-        : { sourceSessionId: source.id },
+        ? {
+            prompt: "Focus on tests <session-attachments>pasted context",
+            source: { type: "session", id: source.id },
+            sourceSessionId: "ignored",
+          }
+        : { prompt: "Focus on tests <session-attachments>pasted context", sourceSessionId: source.id },
     );
     const delivery = await response.json();
     expect(delivery.status).toBe("uncertain");

@@ -44,3 +44,20 @@ test("uncertain steering restores attribution only for its confirmed delivery id
   const held = { ...request, steering_delivery_json: { id: "delivery", runStartedAt: new Date(50).toISOString() } };
   expect(recoverMessageSenders([old, delivered], [held])).toEqual([old, { ...delivered, sender: attributed }]);
 });
+
+test("steering delivery identity survives native prompt text changes", () => {
+  const delivered = prompt("delivery");
+  const held = {
+    ...request,
+    prompt: "Check <session-attachments>pasted context",
+    steering_delivery_json: { id: "delivery", runStartedAt: new Date(50).toISOString() },
+  };
+  expect(recoverMessageSenders([delivered], [held])).toEqual([{ ...delivered, sender: attributed }]);
+});
+
+test("duplicate steering delivery identities stay ambiguous even when one already has a sender", () => {
+  const delivered = prompt("delivery");
+  const known = { ...delivered, sender: attributed };
+  const held = { ...request, steering_delivery_json: { id: "delivery", runStartedAt: new Date(50).toISOString() } };
+  expect(recoverMessageSenders([known, delivered], [held])).toEqual([known, delivered]);
+});

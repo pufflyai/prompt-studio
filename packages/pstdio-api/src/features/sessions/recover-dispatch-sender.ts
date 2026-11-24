@@ -14,7 +14,8 @@ export const recoverDispatchSender = async (
   entry: PendingQueueEntry,
 ) => {
   if (!entry.sender_json || entry.sender_json.afterTurn === undefined) return false;
-  if (entry.sender_json.runStartedAt !== session.last_request_started) return true;
+  // Question answers can advance the session timestamp without replacing this request.
+  // Its exact checkpoint, rather than the current run timestamp, proves delivery.
   const messages = recoverMessageSenders(await getSessionHistory(session.id, deps), [entry]);
   const requestId = submittedRequestId(session.id, entry.queue_position);
   if (

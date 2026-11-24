@@ -297,7 +297,10 @@ test("reattachment does not give a later native prompt an unconfirmed request's 
   }
 });
 
-test("restart checkpoints the recorded request identity without dispatching the prompt twice", async () => {
+test.each([
+  false,
+  true,
+])("restart checkpoints the recorded request without replay (later request timestamp: %s)", async (laterRequest) => {
   let launches = 0;
   let nativeTime = Math.floor(Date.now() / 1000) * 1000;
   const app = await createTestApp({
@@ -356,6 +359,12 @@ test("restart checkpoints the recorded request identity without dispatching the 
       ],
       app.deps,
     );
+    if (laterRequest) {
+      const current = (await app.deps.sessionService.get(session.id))!;
+      await app.deps.sessionService.update(session.id, {
+        last_request_started: new Date(Date.parse(current.last_request_started!) + 1).toISOString(),
+      });
+    }
     await (await prepareQueuedSessionRecovery(app.deps))();
     expect(launches).toBe(0);
     expect(await app.deps.sessionQueueEntriesService.listDispatchStarted()).toEqual([]);
