@@ -35,6 +35,9 @@ export interface Draft {
   workspaceId: string;
   chapter: number;
   values: Record<string, unknown>;
+  submissionId?: string;
+  submissionStatus?: "writing" | "confirmed" | "unconfirmed";
+  revision?: string;
 }
 export const digest = (value: unknown) => new Bun.CryptoHasher("sha256").update(contentJson(value)).digest("hex");
 export const suggestionDigest = (suggestion: Suggestion) =>
@@ -87,11 +90,18 @@ export const listRecords = async <T>(storage: ExtensionStorageApi, kind: string)
     .filter((record) => !record.deleted && (record.value as unknown as { kind?: string })?.kind === kind)
     .map((record) => (record.value as unknown as { kind: string; value: T }).value);
 };
-export const deleteRecord = async (storage: ExtensionStorageApi, kind: string, id: string) => {
-  const { record } = await readRecord(storage, kind, id);
+export const deleteRecord = async (
+  storage: ExtensionStorageApi,
+  kind: string,
+  id: string,
+  expectedRevision?: string,
+) => {
+  const recordId = storage.records.id(`${kind}/${id}`);
+  const revision = expectedRevision ?? (await storage.records.read(recordId)).revision;
   const outcome = await storage.records.commit({
     operationId: storage.ids.create(),
-    edits: [{ recordId: record.recordId, expectedRevision: record.revision, deleted: true }],
+    edits: [{ recordId, expectedRevision: revision, deleted: true }],
   });
-  if (outcome.state === "needs-attention") throw new Error("The record changed. Reload before removing it.");
+  if (outcome.state === "needs-attention" || outcome.state === "refused")
+    throw new Error("The record changed. Reload before removing it.");
 };

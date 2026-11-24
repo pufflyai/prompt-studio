@@ -16,7 +16,10 @@ export const readRecordGroups = async (ctx: ExtensionContextBase) => {
       .filter((item) => !item.managedBy)
       .map(({ evidence: _evidence, observations: _observations, ...item }) => item),
     reads: values<ReadRecord>("read"),
-    drafts: values<Draft>("draft"),
+    drafts: records.flatMap<Draft>((record) => {
+      const value = record.value as unknown as { kind: string; value: Draft };
+      return value.kind === "draft" ? [{ ...value.value, revision: record.revision }] : [];
+    }),
   };
 };
 

@@ -55,6 +55,7 @@ test("authoring writes persist the exact submitted draft in its own workspace an
     operationId: "authoring-edit-one",
     draft: JSON.stringify(submitted),
   });
-  expect((await readRecord<Draft>(storage, "draft", "first--2")).value?.values).toEqual(newer);
-  expect(recovered).toEqual({ value: { draft: JSON.stringify(newer) } });
+  const current = await readRecord<Draft>(storage, "draft", "first--2");
+  expect(current.value?.values).toEqual(newer);
+  expect(recovered).toEqual({ value: { draft: JSON.stringify(newer), revision: current.record.revision } });
 });

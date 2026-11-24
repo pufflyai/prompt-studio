@@ -1,12 +1,38 @@
 import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
-import { draftCommands } from "./draft-commands";
+import { z } from "zod";
+import { draftCommands, submitDraft } from "./draft-commands";
+import { acceptanceConditions, draftChapterFor, splitRefs } from "./forms";
 import { bookCommands } from "./import";
-import { chapterSchema, emptyBook, findRule, ruleSchema } from "./model";
+import { chapterSchema, createRuleReference, emptyBook, findRule, ruleSchema } from "./model";
 import { readBook, requireBook } from "./read";
 import { announce } from "./records";
 import { git, readRepository, resolveWorkspace, writeRepository } from "./repository";
 import { reviewCommands } from "./review-commands";
 import { suggestionCommands } from "./suggestions";
+
+const createChapter = defineCommand({
+  id: "chapters.create",
+  title: l10n("book.chapter.add", "Add a book chapter"),
+  cli: true,
+  mutating: true,
+  params: {
+    workspaceId: params.text(),
+    title: params.text({ required: true }),
+    group: params.text({ required: true }),
+  },
+  async run(ctx, input) {
+    const snapshot = await readRepository(ctx, input.workspaceId);
+    const book = requireBook(snapshot.book);
+    const nextId = Math.max(0, ...book.chapters.map((item) => item.id)) + 1;
+    const chapter = chapterSchema.parse({ id: nextId, title: input.title, group: input.group });
+    await writeRepository(ctx, snapshot.workspaceId, snapshot.content, {
+      ...book,
+      chapters: [...book.chapters, chapter],
+    });
+    await announce(ctx, snapshot.workspaceId);
+    return chapter;
+  },
+});
 
 export const commands = {
   ...suggestionCommands,
@@ -53,27 +79,66 @@ export const commands = {
       return readBook(ctx, { workspaceId: snapshot.workspaceId });
     },
   }),
-  "chapters.create": defineCommand({
-    id: "chapters.create",
-    title: l10n("book.chapter.add", "Add a book chapter"),
-    cli: true,
+  "chapters.create": createChapter,
+  "drafts.submit": defineCommand({
+    id: "drafts.submit",
+    title: l10n("book.draft.submit", "Submit an authoring draft"),
     mutating: true,
     params: {
-      workspaceId: params.text(),
-      title: params.text({ required: true }),
-      group: params.text({ required: true }),
+      workspaceId: params.text({ required: true }),
+      chapter: params.number({ required: true }),
+      mode: params.text({ required: true }),
+      values: params.json<Record<string, unknown>, { required: true }>({ required: true }),
     },
     async run(ctx, input) {
+      const mode = z.enum(["rule", "finding", "chapter"]).parse(input.mode);
       const snapshot = await readRepository(ctx, input.workspaceId);
       const book = requireBook(snapshot.book);
-      const nextId = Math.max(0, ...book.chapters.map((item) => item.id)) + 1;
-      const chapter = chapterSchema.parse({ id: nextId, title: input.title, group: input.group });
-      await writeRepository(ctx, snapshot.workspaceId, snapshot.content, {
-        ...book,
-        chapters: [...book.chapters, chapter],
+      const workspaceId = snapshot.workspaceId;
+      const { values, chapter } = input;
+      const draft = { workspaceId, chapter: draftChapterFor(mode, chapter), values };
+      if (mode === "chapter") {
+        const { group, title } = chapterSchema.omit({ id: true }).parse(values);
+        return submitDraft(ctx, draft, async () => createChapter.run(ctx, { workspaceId, title, group }));
+      }
+      if (mode === "finding") {
+        const finding = z
+          .object({
+            kind: z.enum(["violation", "potential-conflict", "missing-evidence", "stale-evidence"]),
+            title: z.string().trim().min(1),
+            explanation: z.string().trim().min(1),
+          })
+          .parse(values);
+        const requirements = splitRefs(values.requirements);
+        for (const ref of requirements) if (!findRule(book.rules, ref)) throw new Error(`Unknown requirement ${ref}`);
+        return submitDraft(ctx, draft, async () =>
+          reviewCommands["findings.save"].run(ctx, { ...finding, workspaceId, requirements }),
+        );
+      }
+      const target = book.chapters.find((item) => item.id === chapter);
+      if (!target) throw new Error("Choose an existing chapter.");
+      const rule = ruleSchema.parse({
+        ref: createRuleReference(target),
+        chapter,
+        level: 2,
+        title: String(values.title),
+        statement: String(values.statement),
+        rationale: "",
+        status: "proposed",
+        section: "Behavior",
+        acceptance: acceptanceConditions(values.acceptance),
+        related: splitRefs(values.related),
+        governing: [],
       });
-      await announce(ctx, snapshot.workspaceId);
-      return chapter;
+      const reason = z.string().trim().min(1).parse(values.reason);
+      return submitDraft(ctx, draft, async () =>
+        suggestionCommands.suggest.run(ctx, {
+          workspaceId,
+          title: `Add ${rule.title}`,
+          reason,
+          operations: [{ type: "ADD", before: null, after: rule }],
+        }),
+      );
     },
   }),
   get: defineCommand({

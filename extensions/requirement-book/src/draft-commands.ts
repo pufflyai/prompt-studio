@@ -7,7 +7,10 @@ const draftTitle = l10n("book.draft.save", "Save an authoring draft");
 const draftId = (workspaceId: string, chapter: number) => `${workspaceId}-${chapter}`;
 const draftValues = z.record(z.string(), z.unknown());
 const editScope = { workspaceId: params.text({ required: true }), chapter: params.number({ required: true }) };
-const editingValue = (values: Record<string, unknown> | undefined) => ({ draft: JSON.stringify(values ?? {}) });
+const editingValue = (value: Draft | undefined, revision: string) => ({
+  draft: JSON.stringify(value?.values ?? {}),
+  revision,
+});
 
 const storedEdit = async (ctx: ExtensionContextBase, operationId: string) => {
   const saved = await ctx.storage.records.outcome(operationId);
@@ -19,17 +22,22 @@ const storedEdit = async (ctx: ExtensionContextBase, operationId: string) => {
 
 const saveDraft = async (
   ctx: ExtensionContextBase,
-  input: { workspaceId?: string; chapter: number; values: Record<string, unknown> },
+  input: { workspaceId?: string; chapter: number; values: Record<string, unknown>; expectedRevision?: string },
   operationId?: string,
 ) => {
   const { workspace } = await resolveWorkspace(ctx, input.workspaceId);
+  const id = draftId(workspace.id, input.chapter);
+  const current = await readRecord<Draft>(ctx.storage, "draft", id);
+  if (current.value?.submissionId) throw new Error("A submission from this draft still needs to be checked.");
+  if (input.expectedRevision !== undefined && input.expectedRevision !== current.record.revision)
+    throw new Error("The authoring draft changed. Reload before saving.");
   const draft: Draft = {
-    id: draftId(workspace.id, input.chapter),
+    id,
     workspaceId: workspace.id,
     chapter: input.chapter,
     values: input.values,
   };
-  await saveRecord(ctx.storage, "draft", draft, undefined, operationId);
+  await saveRecord(ctx.storage, "draft", draft, current.record.revision, operationId);
   await announce(ctx, workspace.id);
   return draft;
 };
@@ -53,8 +61,8 @@ export const draftCommands = {
     params: editScope,
     async run(ctx, { workspaceId, chapter }) {
       const { workspace } = await resolveWorkspace(ctx, workspaceId);
-      const { value } = await readRecord<Draft>(ctx.storage, "draft", draftId(workspace.id, chapter));
-      return { value: editingValue(value?.values), sources: [] };
+      const { value, record } = await readRecord<Draft>(ctx.storage, "draft", draftId(workspace.id, chapter));
+      return { value: editingValue(value, record.revision), sources: [] };
     },
   }),
   "drafts.save-editing": defineCommand({
@@ -65,21 +73,22 @@ export const draftCommands = {
       ...editScope,
       operationId: params.text({ required: true }),
       draft: params.text({ required: true }),
+      expectedRevision: params.text(),
     },
-    async run(ctx, { workspaceId, chapter, operationId, draft }) {
+    async run(ctx, { workspaceId, chapter, operationId, draft, expectedRevision }) {
       const { workspace } = await resolveWorkspace(ctx, workspaceId);
       const id = digest(["authoring-draft", workspace.id, chapter, operationId]);
       const values = draftValues.parse(JSON.parse(draft));
       if (!(await storedEdit(ctx, id))) {
         try {
-          await saveDraft(ctx, { workspaceId: workspace.id, chapter, values }, id);
+          await saveDraft(ctx, { workspaceId: workspace.id, chapter, values, expectedRevision }, id);
         } catch (error) {
           if (!(await storedEdit(ctx, id))) throw error;
         }
       }
       // An explicit recovery acknowledges the earlier edit without replacing a newer draft.
-      const { value } = await readRecord<Draft>(ctx.storage, "draft", draftId(workspace.id, chapter));
-      return { value: editingValue(value?.values) };
+      const { value, record } = await readRecord<Draft>(ctx.storage, "draft", draftId(workspace.id, chapter));
+      return { value: editingValue(value, record.revision) };
     },
   }),
   "drafts.discard": defineCommand({
@@ -87,12 +96,54 @@ export const draftCommands = {
     title: l10n("book.draft.discard", "Discard an authoring draft"),
     cli: true,
     mutating: true,
-    params: { workspaceId: params.text(), chapter: params.number({ required: true }) },
+    params: {
+      workspaceId: params.text(),
+      chapter: params.number({ required: true }),
+      submissionId: params.text(),
+      expectedRevision: params.text(),
+    },
     async run(ctx, input) {
       const { workspace } = await resolveWorkspace(ctx, input.workspaceId);
-      await deleteRecord(ctx.storage, "draft", draftId(workspace.id, input.chapter));
+      const id = draftId(workspace.id, input.chapter);
+      const { record, value } = await readRecord<Draft>(ctx.storage, "draft", id);
+      if (
+        value?.submissionId !== input.submissionId ||
+        (input.expectedRevision && input.expectedRevision !== record.revision)
+      )
+        throw new Error("The authoring draft changed. Reopen it before discarding.");
+      if (value?.submissionStatus === "writing") throw new Error("This submission is still being written.");
+      await deleteRecord(ctx.storage, "draft", id, record.revision);
       await announce(ctx, workspace.id);
       return { discarded: true };
     },
   }),
+};
+
+export const submitDraft = async (
+  ctx: ExtensionContextBase,
+  input: { workspaceId: string; chapter: number; values: Record<string, unknown> },
+  write: () => Promise<unknown>,
+) => {
+  const id = draftId(input.workspaceId, input.chapter);
+  const previous = await readRecord<Draft>(ctx.storage, "draft", id);
+  if (previous.value?.submissionId) throw new Error("A submission from this draft still needs to be checked.");
+  const submissionId = ctx.storage.ids.create();
+  const draft: Draft = { ...input, id, submissionId, submissionStatus: "writing" };
+  await saveRecord(ctx.storage, "draft", draft, previous.record.revision);
+
+  const finish = async (outcome: "confirmed" | "unconfirmed") => {
+    const current = await readRecord<Draft>(ctx.storage, "draft", id);
+    if (current.value?.submissionId !== draft.submissionId) throw new Error("The submitted draft changed.");
+    await saveRecord(ctx.storage, "draft", { ...draft, submissionStatus: outcome }, current.record.revision);
+    await announce(ctx, input.workspaceId);
+  };
+
+  try {
+    await write();
+  } catch (error) {
+    await finish("unconfirmed");
+    throw error;
+  }
+  await finish("confirmed");
+  return { submissionId };
 };

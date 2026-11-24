@@ -11,15 +11,34 @@ interface FormProps {
   fields: NonNullable<KanbanRendererCreateRowConfig["fields"]>;
   submitLabel: string;
   draft?: Draft;
+  submissionStatus?: Draft["submissionStatus"];
+  canDiscardSubmission: boolean;
   onSubmit: (values: Record<string, unknown>) => Promise<void>;
   onClose: () => void;
   onSaveDraft: (values: Record<string, unknown>) => Promise<void>;
   onDiscard: () => Promise<void>;
 }
+const submissionMessage = {
+  confirmed: "This submission was saved.",
+  writing: "Saving this submission…",
+  unconfirmed: "Check the book for this submission before discarding its draft.",
+};
 export function BookForm(props: FormProps) {
-  const { title, fields, submitLabel, draft, onSubmit, onClose, onSaveDraft, onDiscard } = props;
+  const {
+    title,
+    fields,
+    submitLabel,
+    draft,
+    submissionStatus,
+    canDiscardSubmission,
+    onSubmit,
+    onClose,
+    onSaveDraft,
+    onDiscard,
+  } = props;
+  const submissionUnconfirmed = submissionStatus !== undefined;
   const [input, setValues] = useState<Record<string, unknown>>();
-  const values = input ?? {
+  const values = (!submissionUnconfirmed && input) || {
     ...Object.fromEntries(fields.map((field) => [field.id, field.defaultValue ?? ""])),
     ...draft?.values,
   };
@@ -32,6 +51,7 @@ export function BookForm(props: FormProps) {
   };
   const close = async () => {
     if (saving) return;
+    if (submissionUnconfirmed) return onClose();
     setSaving(true);
     try {
       await persist(values);
@@ -43,14 +63,18 @@ export function BookForm(props: FormProps) {
     }
   };
   const submit = async () => {
-    if (saving || fields.some((field) => field.required && !String(values[field.id] ?? "").trim())) return;
+    if (
+      saving ||
+      submissionUnconfirmed ||
+      fields.some((field) => field.required && !String(values[field.id] ?? "").trim())
+    )
+      return;
     setSaving(true);
     setError("");
     try {
       await submitBookForm({
         persist: () => persist(values),
         submit: () => onSubmit(values),
-        discard: onDiscard,
         close: onClose,
       });
     } catch (failure) {
@@ -97,7 +121,7 @@ export function BookForm(props: FormProps) {
             <Dialog.CloseTrigger asChild>
               <CloseButton
                 size="sm"
-                disabled={saving}
+                disabled={saving || !canDiscardSubmission}
                 aria-label="Discard draft"
                 onClick={(event) => {
                   event.preventDefault();
@@ -118,6 +142,7 @@ export function BookForm(props: FormProps) {
                           value={values[field.id]}
                           onChange={(value) => {
                             const next = { ...values, [field.id]: value };
+                            if (saving || submissionUnconfirmed) return;
                             setValues(next);
                             void persist(next).catch((failure) => setError(String(failure)));
                           }}
@@ -126,8 +151,10 @@ export function BookForm(props: FormProps) {
                       {field.type === "longtext" && (
                         <Textarea
                           value={String(values[field.id] ?? "")}
+                          disabled={saving || submissionUnconfirmed}
                           onChange={(event) => setValues({ ...values, [field.id]: event.target.value })}
                           onBlur={() => {
+                            if (saving || submissionUnconfirmed) return;
                             void persist(values).catch((failure) => setError(String(failure)));
                           }}
                         />
@@ -137,14 +164,21 @@ export function BookForm(props: FormProps) {
                           autoFocus={field === fields[0]}
                           value={String(values[field.id] ?? "")}
                           placeholder={field.placeholder}
+                          disabled={saving || submissionUnconfirmed}
                           onChange={(event) => setValues({ ...values, [field.id]: event.target.value })}
                           onBlur={() => {
+                            if (saving || submissionUnconfirmed) return;
                             void persist(values).catch((failure) => setError(String(failure)));
                           }}
                         />
                       )}
                     </Field.Root>
                   ))}
+                  {submissionUnconfirmed && !saving ? (
+                    <Text role="status" color="fg.muted" textStyle="paragraph/S/regular">
+                      {submissionMessage[submissionStatus]}
+                    </Text>
+                  ) : null}
                   {error && (
                     <Text role="alert" color="fg.error" textStyle="paragraph/S/regular">
                       {error}
@@ -158,7 +192,11 @@ export function BookForm(props: FormProps) {
                 <Button variant="ghost" disabled={saving} onClick={() => void close()}>
                   Cancel
                 </Button>
-                <Button variant="solid" disabled={!valid || saving} onClick={() => void submit()}>
+                <Button
+                  variant="solid"
+                  disabled={!valid || saving || submissionUnconfirmed}
+                  onClick={() => void submit()}
+                >
                   {saving ? "Saving…" : submitLabel}
                 </Button>
               </HStack>
