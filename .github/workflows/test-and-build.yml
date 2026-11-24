@@ -2,10 +2,17 @@ name: Test and Build
 on: workflow_dispatch
 permissions:
   contents: read
+  actions: read
 jobs:
-  session_review:
+  failed_desktop_groups:
     runs-on: ubuntu-24.04
-    timeout-minutes: 100
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+      NX_DAEMON: "false"
+      PLAN_DISPLAY: "true"
+      CI_PROFILE: production
+      CI_PLAN_OUTPUT_DIR: test-results/ci/planned/ps1324-desktop
     steps:
       - uses: actions/checkout@v5
         with:
@@ -18,43 +25,51 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - name: Prepare browser and Docker prerequisites
-        run: |
-          if test -f /etc/apt/apt-mirrors.txt; then
-            sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
-          fi
-          bunx playwright@1.60.0 install --with-deps chromium firefox webkit
-          docker info --format '{{.ServerVersion}}'
-          docker compose version
-          git config --global user.name "Prompt Studio Review"
-          git config --global user.email "review@localhost"
-      - name: Run the repository review and new-session composer check
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          bun install --frozen-lockfile --concurrent-scripts 1
-          xvfb-run -a bun run test:review --base origin/main --test packages/e2e/src/ui/session-draft-focus.p1.spec.ts
-      - name: Collect the review evidence
-        if: always()
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+      - name: Download the original failed review plan
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 14924436167
+          run-id: 45396063676
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/original-review
+      - name: Verify the original plan and the two failed group identities
         shell: python
         run: |
-          import json, pathlib, shutil
-          root = pathlib.Path("test-results/local-review")
-          for report in root.glob("pstdio-local-review-*.json"):
-              data = json.loads(report.read_text())
-              scratch = pathlib.Path(data["directory"])
-              evidence = root / (report.stem + "-evidence")
-              evidence.mkdir(exist_ok=True)
-              for path in [scratch / "checks.json", scratch / "logs", scratch / "source/test-results/local-review", scratch / "source/test-results/test-plan"]:
-                  if path.is_file():
-                      shutil.copy(path, evidence / path.name)
-                  elif path.is_dir():
-                      shutil.copytree(path, evidence / path.name)
-              print(report.name, data["head"], data["outcome"])
-      - uses: actions/upload-artifact@v4
+          import json, os, pathlib, subprocess
+          path = pathlib.Path(os.environ["RUNNER_TEMP"]) / "original-review"
+          report = json.loads(next(path.rglob("pstdio-local-review-lEsK62.json")).read_text())
+          plan = report["plan"]["testPlan"]
+          head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          assert report["outcome"] == "failed" and head == plan["source"]["sha"] == report["head"] == "8224b0031f6e6e18fd052bab7b16fa3a79675e81"
+          assert report["mergeBase"] == "00c4ba5865a820519fcfac497d9fba85acc2b53c"
+          selected = [r["id"] for r in plan["runs"] if r["job"] == "desktop-linux-x64-1/1"]
+          assert selected == ["efab1885100feb29dbd697ae", "f46ca03b80f367e0e2125b48"]
+          out = pathlib.Path("test-results/ci/original-plan.json")
+          out.parent.mkdir(parents=True, exist_ok=True)
+          out.write_text(json.dumps(plan))
+          print("Original plan", plan["digest"], "selected desktop groups", selected)
+      - name: Build desktop and prepare both Chromium sandbox helpers
+        run: |
+          bun run build -- --scope @pstdio/desktop --include-dependencies
+          bun scripts/ci/prepare-test-desktop.ts
+          for helper in clients/desktop/out/prompt-studio-linux-x64/chrome-sandbox clients/desktop/node_modules/electron/dist/chrome-sandbox; do
+            stat -Lc '%U %a %n' "$helper" | tee -a test-results/ci/sandbox-mode.txt
+            test "$(stat -Lc '%u %a' "$helper")" = "0 4755"
+          done
+      - name: Run both complete owning desktop groups from the original plan
+        run: bun scripts/test.ts --plan test-results/ci/original-plan.json --job desktop-linux-x64-1/1 --prebuilt
+      - name: Preserve the repaired group evidence and native case results
         if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: ps-1324-review
-          path: test-results/local-review
-          if-no-files-found: warn
+          name: ps-1324-affected-desktop
+          path: |
+            test-results/ci/original-plan.json
+            test-results/ci/sandbox-mode.txt
+            test-results/ci/planned
+            clients/desktop/test-results
           retention-days: 7
+          if-no-files-found: error
