@@ -12,20 +12,27 @@ export const watchClosedTerminalPlacements = (
   viewId: string,
   ownerId?: string,
   projectId?: string,
-  callbacks?: { closePlacement?: (instanceId: string) => void; stopSettled?: () => void },
+  callbacks?: {
+    instanceId?: string;
+    captureStop?: () => ReturnType<typeof captureTerminalBindingStop>;
+    closePlacement?: (instanceId: string) => void;
+    stopSettled?: () => void;
+  },
 ) => {
   const placements = (layout: WorkbenchLayout) =>
     Object.values(layout.regions)
       .flatMap((region) => region.widgets)
-      .filter((placement) => (placement.viewId ?? placement.contributionId) === viewId);
+      .filter(
+        (placement) =>
+          (placement.viewId ?? placement.contributionId) === viewId &&
+          (!callbacks?.instanceId || placement.widgetId === callbacks.instanceId),
+      );
   type TerminalPlacement = ReturnType<typeof placements>[number];
   const admissions = new WeakMap<object, Promise<void>>();
   const close = ({ widgetId, resource, title }: TerminalPlacement, capturedProjectId?: string) => {
-    if (callbacks?.closePlacement) {
-      callbacks.closePlacement(widgetId);
-      return Promise.resolve();
-    }
-    const stop = captureTerminalBindingStop(ctx.terminal, widgetId, ownerId);
+    const stop = callbacks?.captureStop
+      ? callbacks.captureStop()
+      : captureTerminalBindingStop(ctx.terminal, widgetId, ownerId);
     if (!stop) return Promise.resolve();
     const previous = admissions.get(stop);
     if (previous) return previous;
@@ -63,7 +70,6 @@ export const watchClosedTerminalPlacements = (
   };
   const guards = new Map<string, () => void>();
   const syncGuards = (layout: WorkbenchLayout, activeProject?: string) => {
-    if (callbacks?.closePlacement) return;
     const candidates = !projectId || projectId === activeProject ? placements(layout) : [];
     for (const [id, dispose] of guards) {
       if (candidates.some((placement) => placement.widgetId === id)) continue;
@@ -113,7 +119,10 @@ export const watchClosedTerminalPlacements = (
       const { widgetId } = placement;
       if (hiddenMain.has(widgetId) || (scopeChanged && !closedPreviews.has(widgetId)) || currentIds.has(widgetId))
         continue;
-      void runUserAction(ctx, "Close terminal", () => close(placement, closedProjectId));
+      void runUserAction(ctx, "Close terminal", async () => {
+        await close(placement, closedProjectId);
+        callbacks?.closePlacement?.(widgetId);
+      });
     }
   });
   return {

@@ -4,7 +4,7 @@ import type {
   WorkbenchTerminalState,
 } from "./terminal-controller-types";
 
-interface BindingStop {
+export interface BindingStop {
   id: string;
   stop(): Promise<void>;
 }

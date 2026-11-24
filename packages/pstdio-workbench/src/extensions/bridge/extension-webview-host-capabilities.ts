@@ -25,9 +25,13 @@ const terminalHandlers = new WeakMap<
     capability: ReturnType<typeof createTerminalSessionCapability>;
   }
 >();
+export const captureWebviewTerminalOwnerStop = (events: HostEventPublisher) =>
+  terminalHandlers.get(events)?.capability.captureStop();
+
 export const disposeWebviewTerminalOwner = (hostEvents: HostEventPublisher) => {
-  terminalHandlers.get(hostEvents)?.capability.dispose();
+  const entry = terminalHandlers.get(hostEvents);
   terminalHandlers.delete(hostEvents);
+  return entry?.capability.dispose();
 };
 const terminalHandler = (
   terminal: ExtensionWebviewHostAdapters["terminal"],
@@ -36,12 +40,12 @@ const terminalHandler = (
 ) => {
   let entry = terminalHandlers.get(hostEvents);
   if (!terminal) {
-    entry?.capability.dispose();
+    void entry?.capability.dispose()?.catch((error) => console.error("Terminal owner cleanup failed", error));
     terminalHandlers.delete(hostEvents);
     return;
   }
   if (entry?.terminal !== terminal || entry.ownerId !== ownerId) {
-    entry?.capability.dispose();
+    void entry?.capability.dispose()?.catch((error) => console.error("Terminal owner cleanup failed", error));
     entry = { terminal, ownerId, capability: createTerminalSessionCapability({ terminal, hostEvents }) };
     terminalHandlers.set(hostEvents, entry);
   }

@@ -8,10 +8,12 @@ import type {
   WorkbenchPanelRenderInput,
   WorkbenchRendererRegistration,
 } from "../../core";
+import { runUserAction } from "../../core/shared/run-user-action";
 import { watchClosedTerminalPlacements } from "../../react/terminal/watch-terminal-placements";
 import { BridgeWebviewFrame } from "./bridge-webview-frame";
 import type { ExtensionWebviewHostAdapters } from "./extension-webview-host-adapters";
 import {
+  captureWebviewTerminalOwnerStop,
   createExtensionWebviewHostCapabilities,
   disposeWebviewTerminalOwner,
 } from "./extension-webview-host-capabilities";
@@ -104,12 +106,14 @@ export const getBridgeWebviewHostEventPublisher = (
   const dispose = () => {
     if (disposed) return;
     disposed = true;
-    disposeWebviewTerminalOwner(hostEvents);
+    void runUserAction(workbench, "Close terminal", () => disposeWebviewTerminalOwner(hostEvents));
     hostEvents.unbind();
     owners.delete(key);
     watch.dispose();
   };
   const watch = watchClosedTerminalPlacements(workbench, viewId, undefined, projectId, {
+    instanceId: instance.instanceId,
+    captureStop: () => captureWebviewTerminalOwnerStop(hostEvents),
     closePlacement(closedId) {
       if (closedId === instance.instanceId) dispose();
     },
