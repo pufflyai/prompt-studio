@@ -21,6 +21,7 @@ export interface Entry {
   sourceCommand?: OperationSourceCommand;
   draft?: unknown;
   describeRecovery?: () => string;
+  recoveryFiles?: () => readonly File[];
   releaseOnDiscard?: boolean;
   onDiscard?: () => void;
   acknowledged?: boolean;
@@ -88,10 +89,12 @@ export const snapshotForOperations = (entries: Iterable<Entry>, owner: string): 
         sourceCommand: entry.sourceCommand,
         draft: entry.draft,
         description: entry.describeRecovery?.(),
+        files: entry.recoveryFiles?.(),
         status,
         error: entry.error,
         dismissed: entry.dismissed,
         canCheck: Boolean(entry.check) && !entry.controller.signal.aborted,
+        ...(entry.acknowledged ? { acknowledged: true } : {}),
       });
     }
   }

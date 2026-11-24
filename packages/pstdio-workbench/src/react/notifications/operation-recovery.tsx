@@ -42,6 +42,16 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
       report("Discard draft")(error);
     }
   };
+  const download = (file: File) => {
+    const current = operations.getSnapshot().recovery.find((entry) => entry.id === id);
+    if (!current?.files?.includes(file) || current.projectId !== workbench.pages.store.getState().projectId) return;
+    const url = URL.createObjectURL(file);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = file.name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
   const failure = entry.error instanceof Error ? entry.error.message : "The change could not be confirmed.";
   const message = status === "unknown" ? (entry.description ?? "The result could not be confirmed.") : failure;
   const canInspect =
@@ -106,6 +116,11 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
             </Button>
           </>
         ) : null}
+        {entry.files?.map((file, index) => (
+          <Button key={`${file.name}.${index}`} size="2xs" onClick={() => download(file)}>
+            Download {file.name}
+          </Button>
+        ))}
         {draft === undefined && status === "rejected" ? (
           <Button size="2xs" onClick={discard}>
             Clear

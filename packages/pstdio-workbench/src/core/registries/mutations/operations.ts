@@ -143,6 +143,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
       finish(entry);
     } else {
       entry.draft = undefined;
+      entry.recoveryFiles = undefined;
       entry.preview = { ...entry.preview, intent: undefined };
       entry.dismissed = true;
       publish();
@@ -179,6 +180,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
         sourceCommand: input.sourceCommand,
         draft: input.draft,
         describeRecovery: input.describeRecovery,
+        recoveryFiles: input.recoveryFiles,
         releaseOnDiscard: input.releaseOnDiscard,
         onDiscard: input.onDiscard,
         dismissed: false,

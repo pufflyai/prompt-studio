@@ -23,6 +23,7 @@ export interface OperationInput<T> {
   sourceCommand?: OperationSourceCommand;
   draft?: unknown;
   describeRecovery?(): string;
+  recoveryFiles?(): readonly File[];
   releaseOnDiscard?: boolean;
   showPending?: true;
   onDiscard?(): void;
@@ -58,10 +59,12 @@ export interface OperationRecovery {
   sourceCommand?: OperationSourceCommand;
   draft?: unknown;
   description?: string;
+  files?: readonly File[];
   status: OperationFailure | "unconfirmed";
   error: unknown;
   dismissed: boolean;
   canCheck: boolean;
+  acknowledged?: true;
 }
 
 export interface OperationSnapshot {

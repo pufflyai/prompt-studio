@@ -289,3 +289,39 @@ test("a successful Check again releases the original create draft without replay
     queries.dispose();
   }
 });
+
+test("retiring a board read after a create acknowledgement does not fence new creations", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "desktop", extensionId: "pstdio", accountId: "original" });
+  const operations = getWorkbenchOperations(queries);
+  const reading = Promise.withResolvers<void>();
+  const releaseRead = Promise.withResolvers<void>();
+  let settled = 0;
+  try {
+    const result = runCreateOperation(operations, "project", command, {}, async () => ({ id: "confirmed" }), {
+      originatingRead: {
+        key: "board",
+        refresh() {
+          reading.resolve();
+          return releaseRead.promise;
+        },
+      },
+      onReconciled() {
+        settled++;
+      },
+    });
+    await reading.promise;
+    queries.setAuthority({ accountId: "other" });
+    await expect(result).rejects.toThrow("authority");
+    expect(settled).toBe(1);
+    queries.setAuthority({ accountId: "original" });
+    expect(operations.getSnapshot().recovery).toMatchObject([
+      { status: "unconfirmed", acknowledged: true, canCheck: false },
+    ]);
+    await expect(
+      runCreateOperation(operations, "project", command, {}, async () => ({ id: "second" })),
+    ).resolves.toEqual({ id: "second" });
+  } finally {
+    releaseRead.resolve();
+    queries.dispose();
+  }
+});

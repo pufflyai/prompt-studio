@@ -70,18 +70,28 @@ export const runTrackedCreate = async <T>(
   const previous = findUnresolved?.(operations.getSnapshot().recovery);
   if (previous) throw unresolved(operations, previous.id, previous.error);
   const classify = input.classify ?? classifyApiWrite;
+  let acknowledged = false;
   const attempted = operations.submit({
     ...input,
     domain: "resource.create",
     describeRecovery: message ? () => (typeof message === "function" ? message(input.draft) : message) : undefined,
     classify,
     releaseOnDiscard: true,
+    reconcile(value, signal) {
+      acknowledged = true;
+      return input.reconcile?.(value, signal);
+    },
   });
   input.onAdmitted?.();
   try {
     return await attempted.result;
   } catch (error) {
     const recovery = operations.getSnapshot().recovery.find((entry) => entry.id === attempted.id);
+    if (acknowledged && !recovery?.canCheck) {
+      // Retirement cancelled a presentation read after the write was acknowledged.
+      input.onReconciled?.();
+      throw error;
+    }
     if (recovery?.status === "unknown" || recovery?.status === "unconfirmed")
       throw unresolved(operations, attempted.id, error);
     throw error;
@@ -124,7 +134,12 @@ export const runCreateOperation = async <T>(
   )
     throw new Error("This creation is already in progress.");
   const findPrevious = (entries: readonly OperationRecovery[]) =>
-    entries.find((entry) => entry.status !== "rejected" && entry.subjects.includes(subject));
+    entries.find(
+      (entry) =>
+        entry.status !== "rejected" &&
+        entry.subjects.includes(subject) &&
+        !(entry.status === "unconfirmed" && entry.acknowledged && !entry.canCheck),
+    );
   if (feedback?.onAdmitted && findPrevious(operations.getSnapshot().recovery))
     throw new Error("A previous creation needs attention in System activity.");
   return runTrackedCreate(

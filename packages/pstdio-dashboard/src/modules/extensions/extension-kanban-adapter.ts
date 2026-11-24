@@ -214,6 +214,7 @@ export const createDashboardKanbanAdapter = (input: {
             : undefined,
           title: "Attach files to the created item",
           draft: details,
+          recoveryFiles: () => [...remaining],
           onDiscard,
           classify: classifyAttachmentWrite,
           releaseOnDiscard: true,

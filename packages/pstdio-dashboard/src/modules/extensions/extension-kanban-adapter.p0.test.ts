@@ -90,6 +90,8 @@ describe("dashboard Kanban adapter", () => {
           canCheck: false,
           draft: { resourceId: "ticket-1", filenames: ["pending.txt"] },
         });
+        expect(recovery.files?.map(({ name }) => name)).toEqual(["pending.txt"]);
+        expect(await recovery.files?.[0]?.text()).toBe("Keep this file");
         expect(commands).toHaveLength(2);
         expect(saved).toEqual(["draft.txt"]);
         operations.discard(recovery.id);
