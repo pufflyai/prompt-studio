@@ -1,5 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import { isMainThread } from "node:worker_threads";
+import { readAcceptedRevision } from "../prepared-revision";
 import { createExtensionProcessEnvironment } from "../process-environment";
 import { backendWorkerCommand, createBackendWorkerPool } from "./pool";
 import { BackendUnavailableError, type BackendWorker, startBackendWorker } from "./supervisor";
@@ -41,13 +42,18 @@ const readSharedDefinition = (key: string, revision: Revision) => {
 const shutDown = () => new BackendUnavailableError("Extension backends were shut down.");
 const retired = () => new BackendUnavailableError("This extension backend generation was retired.");
 
-const adopt = (source: Source, generation: Generation, loadedIn: number) => {
+const adopt = (source: Source, generation: Generation, loadedIn: number, isRestored: () => Promise<boolean>) => {
   const update = updates.then(async () => {
     if (loadedIn !== epoch || closing) throw shutDown();
     const previous = source.active;
     if (previous === generation) return;
     // Inspecting a candidate does not supersede a published definition, even before its first call.
-    if (previous && previous.order > generation.order) throw retired();
+    if (previous && previous.order > generation.order) {
+      // The catalog can reuse a cached definition when a reload restores the same content.
+      if (!(await isRestored())) throw retired();
+      if (loadedIn !== epoch || closing) throw shutDown();
+      generation.order = ++generationOrder;
+    }
     source.active = generation;
     if (previous && ![...sources.values()].some((current) => current.active?.key === previous.key)) {
       await pool.retire(previous.key);
@@ -88,7 +94,9 @@ export const acquireBackendWorker = async (packagePath: string, revision: Revisi
 
   // The host only invokes handlers from accepted contributions. Until then the previous backend keeps running.
   const acquire = async () => {
-    await adopt(source, generation, loadedIn);
+    await adopt(source, generation, loadedIn, async () => {
+      return (await readAcceptedRevision(packagePath))?.id === revision.id;
+    });
     const assertActive = () => {
       if (loadedIn !== epoch || closing) throw shutDown();
       if (source.active !== generation) throw retired();
