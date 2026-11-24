@@ -14,6 +14,7 @@ import {
   createJob,
   type Job,
   orderPreparationQueue,
+  PREPARATION_YIELD_HOLD_MS,
   type PreparationOptions,
   preparationJobMessage,
   preparationQueuePriority,
@@ -224,8 +225,11 @@ export const createPreparationClient = (
           )
           .slice(0, 1);
     for (const slot of targets)
-      if (queuedPriority(next) < activePreparationPriority(slot.active!, queuedPriority))
+      if (queuedPriority(next) < activePreparationPriority(slot.active!, queuedPriority)) {
         pool.replace(slot, yieldPreparation(slot.active!, next));
+        // Reconsider the held job when its hold lapses, even if nothing else changes by then.
+        setTimeout(() => schedule(), PREPARATION_YIELD_HOLD_MS + 1).unref?.();
+      }
   };
   return {
     withContinuation: continuePreparation(continuations),

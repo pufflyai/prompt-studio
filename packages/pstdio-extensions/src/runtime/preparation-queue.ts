@@ -41,8 +41,8 @@ export interface Job {
   home: string;
   env: NodeJS.ProcessEnv;
   waiters: Set<Waiter>;
-  /** Live continuations this job's worker was retired for. */
-  yielded?: Set<Continuation>;
+  /** Live continuations this job's worker was retired for, each until its hold lapses. */
+  yielded?: Map<Continuation, number>;
 }
 export const createJob = (
   id: number,
@@ -92,23 +92,31 @@ export const preparationQueuePriority =
 
 // Retiring a worker for a continuation's job resumes the interrupted job after that
 // continuation, not in its next database gap, where its next job would retire it again.
-export const yieldPreparation = (job: Job, next: Job) => {
+/**
+ * How long an interrupted job stays out of its preemptor's gaps. It covers a continuation's
+ * consecutive steps, and bounds the delay of a waiter that reaches the job without a loan.
+ */
+export const PREPARATION_YIELD_HOLD_MS = 1_000;
+
+export const yieldPreparation = (job: Job, next: Job, now = performance.now()) => {
   for (const waiter of next.waiters) {
     const owner = waiter.scope?.continuation;
     if (!owner?.continuing) continue;
-    job.yielded ??= new Set();
-    job.yielded.add(owner);
+    job.yielded ??= new Map();
+    job.yielded.set(owner, now + PREPARATION_YIELD_HOLD_MS);
   }
   return job;
 };
-const awaitsYield = (job: Job) => {
+const awaitsYield = (job: Job, now = performance.now()) => {
   if (!job.yielded) return false;
-  for (const owner of job.yielded) if (!owner.continuing) job.yielded.delete(owner);
+  for (const [owner, until] of job.yielded) if (!owner.continuing || until <= now) job.yielded.delete(owner);
   // A continuation that now waits on the interrupted job itself, directly or through a loan, needs it to run.
   // Membership is exact: a lent continuation still counts when a more urgent one ranks first.
   return (
     job.yielded.size > 0 &&
-    ![...job.waiters].some((waiter) => [...job.yielded!].some((owner) => preparationIncludes(waiter.scope, owner)))
+    ![...job.waiters].some((waiter) =>
+      [...job.yielded!.keys()].some((owner) => preparationIncludes(waiter.scope, owner)),
+    )
   );
 };
 
