@@ -58,15 +58,16 @@ for await (const event of child.events()) {
 `spawn` returns its handle at once:
 
 - `started` settles when the child runs. It rejects with a coded error when the child cannot start.
-- `exited` settles with `{ code, signal }` after the child and its cleanup finish. It never rejects.
-  A child that never started reports `{ code: null, signal: null }`.
+- `exited` reports the direct child's `{ code, signal }` and never rejects. A child that never
+  started reports `{ code: null, signal: null }`. `kill` and lifetime teardown own descendants
+  after the direct child exits.
 - `write(data)` writes to stdin in call order and waits for the pipe to accept the data. `end()`
   closes stdin after earlier writes; later writes reject.
 - `kill(signal?)` stops the child and everything it started. On Unix the default is `SIGTERM`
   followed by forced cleanup after 500 ms. On Windows the host terminates the retained Job and
-  reports the native exit code with a null signal. `kill` resolves after confirmed cleanup. A kill while the target is still opening, such as a
-  remote provider that has not answered, resolves at once: `started` rejects with
-  `process_owner_closed`, and a child that still arrives is stopped.
+  reports the native exit code with a null signal. For an admitted child, `kill` resolves after
+  confirmed cleanup. A kill while a target is still opening resolves at once: `started` rejects
+  with `process_owner_closed`, and a child that still arrives is stopped.
 - `events()` yields `stdout` and `stderr` chunks as `Uint8Array` and always ends with one `exit`
   event. It has one consumer. Order is kept within each stream, but not between the two streams.
 - `id` identifies the handle to your code. It is not an OS pid, and no host API accepts it. In the
