@@ -91,7 +91,7 @@ export const runBackendWorker = () => {
   };
   const invocations = new Map<string, Invocation>();
   const pending = createPendingCalls();
-  const callback = new AsyncLocalStorage<{ invocationId: string; requestId: string }>();
+  const callback = new AsyncLocalStorage<{ invocationId: string; requestId: string } | undefined>();
   let nextRequest = 0;
 
   const discard = (id: string) => {
@@ -154,7 +154,7 @@ export const runBackendWorker = () => {
     try {
       if (!running || running.controller.signal.aborted) throw new Error("This invocation has finished.");
       const { table } = running;
-      const result = await callback.run({ invocationId, requestId }, () =>
+      const result = await callback.run(message.invocationOwned ? undefined : { invocationId, requestId }, () =>
         table.call(message.fnId, () => importFrom(invocationId, message.args) as unknown[]),
       );
       const revoked = () => invocations.get(invocationId) !== running || running.controller.signal.aborted;
