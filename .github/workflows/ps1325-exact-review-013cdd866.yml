@@ -1,0 +1,129 @@
+name: PS-1325 exact candidate review
+
+on:
+  push:
+    branches:
+      - chore/ps1325-review-013cdd866-noble
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      CANDIDATE_SHA: 013cdd866e8a36ddaedca5833c7cbc81b91e8a98
+      CANDIDATE_TREE: b8562721ce561e52108ea70fee530b6127c78084
+      CANDIDATE_MERGE_BASE: e75e68afea06d1ec1540895c7acde79c37f65046
+      LIVE_RELOAD_SPEC: packages/e2e/src/ui/extension-webview-live-reload.p2.spec.ts
+      PLAN_DISPLAY: "true"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Verify candidate and full selected plan
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$CANDIDATE_TREE"
+          test "$(git merge-base HEAD origin/main)" = "$CANDIDATE_MERGE_BASE"
+          test "$(git rev-parse "$GITHUB_WORKFLOW_SHA^")" = "$CANDIDATE_SHA"
+          test "$(git diff-tree --no-commit-id --name-only -r "$GITHUB_WORKFLOW_SHA")" = \
+            ".github/workflows/ps1325-exact-review-013cdd866.yml"
+          test -z "$(git status --porcelain)"
+          mkdir -p test-results/ps1325-review
+          jq -n \
+            --arg head "$(git rev-parse HEAD)" \
+            --arg tree "$(git rev-parse 'HEAD^{tree}')" \
+            --arg base "$(git rev-parse origin/main)" \
+            --arg mergeBase "$(git merge-base HEAD origin/main)" \
+            --arg workflow "$GITHUB_WORKFLOW_REF" \
+            --arg workflowSha "$GITHUB_WORKFLOW_SHA" \
+            '{head:$head,tree:$tree,base:$base,mergeBase:$mergeBase,workflow:$workflow,workflowSha:$workflowSha}' \
+            > test-results/ps1325-review/identity.json
+          bun run test:review --base origin/main --test "$LIVE_RELOAD_SPEC" --list \
+            > test-results/ps1325-review/selected-plan.json
+          jq -e --arg file "$LIVE_RELOAD_SPEC" \
+            'any(.testPlan.runs[].files[]; . == $file)' test-results/ps1325-review/selected-plan.json
+          jq '{head,mergeBase,groups:(.testPlan.runs|length),selected:(.selected|length),queueFiles:(.queueFiles|length)}' \
+            test-results/ps1325-review/selected-plan.json
+
+      - name: Prepare isolated Linux review prerequisites
+        shell: bash
+        run: |
+          docker version
+          docker compose version
+          sudo -n true
+          bunx playwright@1.60.0 install --with-deps chromium
+          command -v xvfb-run
+          mkdir -p "$RUNNER_TEMP/ps1325-review-scratch" "$RUNNER_TEMP/ps1325-review-bin"
+          echo "TMPDIR=$RUNNER_TEMP/ps1325-review-scratch" >> "$GITHUB_ENV"
+          echo "PS1325_REAL_BUN=$(command -v bun)" >> "$GITHUB_ENV"
+          echo "$RUNNER_TEMP/ps1325-review-bin" >> "$GITHUB_PATH"
+          cat > "$RUNNER_TEMP/ps1325-review-bin/bun" <<'WRAPPER'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          if [[ $# -eq 4 && $1 == run && $2 == --cwd && $3 == clients/desktop && $4 == package ]]; then
+            "$PS1325_REAL_BUN" "$@"
+            printf '%s\n' 'Configure Chromium sandbox in the disposable Linux checkout'
+            exec "$PS1325_REAL_BUN" scripts/ci/configure-linux-desktop-sandboxes.ts
+          fi
+          exec "$PS1325_REAL_BUN" "$@"
+          WRAPPER
+          chmod +x "$RUNNER_TEMP/ps1325-review-bin/bun"
+
+      - name: Run all selected tests and unchanged live reload
+        shell: bash
+        run: |
+          test "$(command -v bun)" = "$RUNNER_TEMP/ps1325-review-bin/bun"
+          bun run test:review --base origin/main --test "$LIVE_RELOAD_SPEC" 2>&1 \
+            | tee test-results/ps1325-review/console.log
+
+      - name: Collect selected test and cleanup evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p test-results/ps1325-review
+          docker ps -a --format '{{.Names}} {{.Status}} {{.Label "com.docker.compose.project"}}' \
+            > test-results/ps1325-review/docker-after.txt
+          shopt -s nullglob
+          for report in test-results/local-review/*.json; do
+            scratch="$(jq -r .directory "$report")"
+            case "$scratch" in
+              "$RUNNER_TEMP"/ps1325-review-scratch/pstdio-local-review-*) ;;
+              *) echo "Unexpected review scratch directory: $scratch"; exit 1 ;;
+            esac
+            target="$GITHUB_WORKSPACE/test-results/ps1325-review/$(basename "$scratch")"
+            mkdir -p "$target"
+            for relative in checks.json logs compose-projects.jsonl; do
+              if [[ -e "$scratch/$relative" ]]; then cp -R "$scratch/$relative" "$target/"; fi
+            done
+            for relative in test-results packages/e2e/test-results clients/desktop/test-results; do
+              if [[ -d "$scratch/source/$relative" ]]; then
+                mkdir -p "$target/$(dirname "$relative")"
+                cp -R "$scratch/source/$relative" "$target/$relative"
+              fi
+            done
+          done
+
+      - name: Upload exact candidate and selected-run reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps1325-review-013cdd866-attempt-${{ github.run_attempt }}
+          path: |
+            test-results/ps1325-review
+            test-results/local-review
+          if-no-files-found: error
