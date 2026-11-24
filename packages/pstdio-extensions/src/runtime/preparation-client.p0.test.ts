@@ -920,3 +920,58 @@ test("a long step of the preemptor does not spend the interrupted job's hold", a
     await Promise.allSettled([edit, check]);
   }
 });
+
+test.each([
+  // The loan reaches the job through a background scope nested inside the lent scope.
+  "nested-loan-with-peer",
+  // No loan: only the bounded fallback can release the job while a barred peer waits.
+  "unlent-with-peer",
+] as const)("a preemptor waiting on its interrupted restoration and a queued peer completes (%s)", async (mode) => {
+  const client = fixture();
+  const blocked = gate();
+  let lost = 0;
+  const unsubscribe = client.subscribe((event) => {
+    if (event.kind === "worker-lost") lost++;
+  });
+  const input = { name: "predecessor", url: blocked.url };
+  let predecessor: ReturnType<typeof createPreparationScope> | undefined;
+  const original = client.withContinuation(
+    () =>
+      withBackgroundPreparation(() => {
+        const scope = createPreparationScope();
+        predecessor = scope;
+        return scope
+          .run(() => withBackgroundPreparation(() => client.run("wait", input, { priority: "background" })))
+          .finally(scope.dispose);
+      }),
+    { priority: "restoration" },
+  );
+  await blocked.entered.promise;
+  const edit = client.withContinuation(async () => {
+    await client.run("value", { name: "urgent-step" });
+    expect(lost).toBe(1);
+    blocked.release.resolve();
+    await withBackgroundPreparation(async () => {
+      const caller = createPreparationScope();
+      const release = mode === "nested-loan-with-peer" ? predecessor!.request(caller) : () => {};
+      try {
+        // Live restoration bars this background peer, so it must not count as the preemptor's work.
+        const peer = client.run("value", { name: "edit-background-peer" }, { priority: "background" });
+        await Promise.all([original, peer]);
+      } finally {
+        release();
+        caller.dispose();
+      }
+    });
+  });
+  try {
+    expect(await Promise.race([edit.then(() => "completed"), Bun.sleep(3_000).then(() => "stalled")])).toBe(
+      "completed",
+    );
+    expect(lost).toBe(1);
+  } finally {
+    unsubscribe();
+    blocked.release.resolve();
+    await Promise.allSettled([edit, original]);
+  }
+});
