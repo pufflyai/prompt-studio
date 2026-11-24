@@ -46,6 +46,7 @@ export const createCommandEditingJournal = (input: {
   let savedRevision = 0;
   let previews = new Map<CommandEditingMember, WebviewEditingChange[]>();
   let retainedFormDraft: CommandEditingMember | undefined;
+  const draftSequences = new WeakMap<CommandEditingMember, number>();
   let error: WebviewEditingSnapshot["error"];
   const validate = (result: WebviewEditingCommandResult) => {
     if (result.value === undefined) applyEditingChanges(baseline, result.changes);
@@ -116,7 +117,13 @@ export const createCommandEditingJournal = (input: {
     request: Extract<WebviewEditingSessionParams, { operation: "execute" }>,
   ) => {
     if (jobs.length >= 128) throw editingFailure("editing_command_queue_full");
-    const ownPreview = editingSequence(member).complete(request.sequence);
+    const retainedDraft = draftSequences.has(member)
+      ? previews.get(member)?.find(({ path }) => path.length === 1 && path[0] === "draft")?.value
+      : undefined;
+    const ownPreview =
+      retainedDraft === undefined || request.params.draft === retainedDraft
+        ? editingSequence(member).complete(request.sequence)
+        : false;
     const changes = structuredClone([...(ownPreview ? (previews.get(member) ?? []) : []), ...request.changes]);
     applyEditingChanges(committed(), changes);
     const params = structuredClone({ ...input.command.params, ...request.params, operationId: crypto.randomUUID() });
@@ -159,6 +166,20 @@ export const createCommandEditingJournal = (input: {
       publish({ member, sequence: request.sequence });
     },
     execute,
+    setFormDraft(
+      member: CommandEditingMember,
+      request: Extract<WebviewEditingSessionParams, { operation: "commit" | "preview" }>,
+    ) {
+      if (request.sequence <= (draftSequences.get(member) ?? 0)) return;
+      draftSequences.set(member, request.sequence);
+      previews.delete(member);
+      const ownerFields = request.changes.filter(
+        ({ path, value }) =>
+          path.length === 1 && (path[0] === "draft" || path[0] === "draftBase") && typeof value === "string",
+      );
+      if (ownerFields.length) previews.set(member, structuredClone(ownerFields));
+      publish();
+    },
     reopenFormDraft(member: CommandEditingMember) {
       if (!retainedFormDraft) return;
       const retained = previews.get(retainedFormDraft);

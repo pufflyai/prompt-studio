@@ -135,7 +135,8 @@ export const createCommandEditingDocument = (input: {
       assertOpen();
       switch (request.operation) {
         case "preview":
-          journal.preview(member, request);
+          if (retainsFormDraft && request.retainFormDraft) journal.setFormDraft(member, request);
+          else journal.preview(member, request);
           break;
         case "cancel":
           journal.cancel(member, request.sequence);

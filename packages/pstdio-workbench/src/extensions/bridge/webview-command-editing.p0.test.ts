@@ -814,9 +814,19 @@ test("disconnecting a Requirement Book form commits its latest unblurred text th
   try {
     await first({ operation: "open-command", ...options });
     const latest = '{"title":"Typed immediately before closing"}';
-    await first({ operation: "preview", sequence: 1, changes: [{ path: ["draft"], value: '{"title":"Older"}' }] });
+    const acknowledge = Promise.withResolvers<void>();
+    const firstPreview = first({
+      operation: "preview",
+      retainFormDraft: true,
+      sequence: 1,
+      changes: [
+        { path: ["draft"], value: '{"title":"Older"}' },
+        { path: ["draftBase"], value: "original" },
+      ],
+    }).then(() => acknowledge.promise);
     await first({
       operation: "preview",
+      retainFormDraft: true,
       sequence: 2,
       changes: [
         { path: ["draft"], value: latest },
@@ -824,6 +834,8 @@ test("disconnecting a Requirement Book form commits its latest unblurred text th
       ],
     });
     firstFrame.unbind();
+    acknowledge.resolve();
+    await firstPreview;
     expect(await received.promise).toMatchObject({
       draft: latest,
       expectedRevision: "original",
