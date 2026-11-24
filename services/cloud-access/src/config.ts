@@ -61,14 +61,18 @@ export const setupSchema = z.object({
   }),
   manifests: z.strictObject({ tests: manifest("remote-tests"), preview: manifest("prompt-studio-preview") }),
 });
+export const microsoftSchema = z.strictObject({ tenantId: z.uuid(), clientId: z.uuid() });
+
 export const configSchema = setupSchema
   .extend({
     controllerUrl: serviceUrl,
     audience: serviceUrl,
     humanAudience: z.string().min(1),
+    microsoft: microsoftSchema.optional(),
     humans: z
       .array(
         z.strictObject({
+          provider: z.enum(["google", "microsoft"]).default("google"),
           subject: z.string().min(1),
           principalId: z.uuid(),
           roles: z
@@ -90,10 +94,19 @@ export const configSchema = setupSchema
     if (config.audience === config.humanAudience)
       ctx.addIssue({ code: "custom", message: "Human and workload audiences must differ." });
     if (
-      new Set(config.humans.map((h) => h.subject)).size !== config.humans.length ||
+      new Set(config.humans.map((h) => `${h.provider}:${h.subject}`)).size !== config.humans.length ||
       new Set(config.humans.map((h) => h.principalId)).size !== config.humans.length
     )
       ctx.addIssue({ code: "custom", message: "People need unique subjects and principals." });
+    for (const human of config.humans) {
+      if (
+        human.provider === "microsoft" &&
+        (!config.microsoft ||
+          !z.uuid().safeParse(human.subject.split(":")[1]).success ||
+          human.subject !== `${config.microsoft.tenantId}:${human.subject.split(":")[1]}`)
+      )
+        ctx.addIssue({ code: "custom", message: "Microsoft subjects must be configured tenantId:objectId pairs." });
+    }
     for (const list of [config.workloadRoles, ...config.humans.map((h) => h.roles)])
       if (new Set(list).size !== list.length) ctx.addIssue({ code: "custom", message: "Roles must be unique." });
   });

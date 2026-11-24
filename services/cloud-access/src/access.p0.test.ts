@@ -7,7 +7,7 @@ import { createAccessService } from "./access";
 import { parseConfig } from "./config";
 import { createController } from "./controller";
 import { createGrantStore } from "./grants";
-import { createGoogleVerifier } from "./identity";
+import { createGoogleVerifier, createIdentityVerifier } from "./identity";
 import { createStorageAccess } from "./storage-access";
 
 const disposers: (() => unknown | Promise<unknown>)[] = [];
@@ -15,10 +15,20 @@ afterEach(async () => {
   for (const dispose of disposers.splice(0).reverse()) await dispose();
 });
 
-async function fixture(preview?: (id: string, deadline: string) => Promise<{ url: string; expiresAt: string }>) {
+async function fixture(
+  preview?: (id: string, deadline: string) => Promise<{ url: string; expiresAt: string }>,
+  microsoft = false,
+) {
   const root = await mkdtemp(join(tmpdir(), "cloud-access-"));
   disposers.push(() => rm(root, { recursive: true, force: true }));
   const keys = await generateKeyPair("RS256");
+  const microsoftKeys = await generateKeyPair("RS256");
+  const microsoftJwk = {
+    ...(await exportJWK(microsoftKeys.publicKey)),
+    kid: "microsoft-fixture",
+    alg: "RS256",
+    use: "sig",
+  };
   const jwk = { ...(await exportJWK(keys.publicKey)), kid: "google-fixture", alg: "RS256", use: "sig" };
   const requests: { method: string; path: string; body: Record<string, unknown> }[] = [];
   const issuedScopes = new Map<string, string[]>();
@@ -28,7 +38,8 @@ async function fixture(preview?: (id: string, deadline: string) => Promise<{ url
     port: 0,
     async fetch(req) {
       const path = new URL(req.url).pathname;
-      if (path === "/jwks") return Response.json({ keys: [jwk] });
+      const publicKeys = ({ "/microsoft-jwks": [microsoftJwk], "/jwks": [jwk] } as Record<string, unknown[]>)[path];
+      if (publicKeys) return Response.json({ keys: publicKeys });
       const workspace = path.match(/^\/v1\/workspaces\/([0-9a-f-]{36})$/);
       if (workspace && req.method === "GET")
         return Response.json({ id: workspace[1] }, { status: allowedWorkspaces.has(workspace[1]!) ? 200 : 403 });
@@ -51,11 +62,20 @@ async function fixture(preview?: (id: string, deadline: string) => Promise<{ url
     },
   });
   disposers.push(() => upstream.stop(true));
+  const tenantId = "11111111-1111-4111-8111-111111111111";
+  const objectId = "22222222-2222-4222-8222-222222222222";
+  const clientId = "33333333-3333-4333-8333-333333333333";
   const config = parseConfig({
+    ...(microsoft && { microsoft: { tenantId, clientId } }),
     controllerUrl: upstream.url.origin,
     audience: "https://access.example.test",
     humanAudience: "desktop-client",
-    humans: [{ subject: "alice", principalId: crypto.randomUUID() }],
+    humans: [
+      { subject: "alice", principalId: crypto.randomUUID() },
+      ...(microsoft
+        ? [{ provider: "microsoft", subject: `${tenantId}:${objectId}`, principalId: crypto.randomUUID() }]
+        : []),
+    ],
     launchers: ["launcher"],
     templates: ["remote-tests", "remote-tests-branch", "prompt-studio-preview", "prompt-studio-preview-branch"],
     settings: {
@@ -71,7 +91,13 @@ async function fixture(preview?: (id: string, deadline: string) => Promise<{ url
       preview: { metadata: { name: "prompt-studio-preview" }, spec: { version: "1.0.0" } },
     },
   });
-  const verify = createGoogleVerifier(config, createRemoteJWKSet(new URL("/jwks", upstream.url)));
+  const googleKey = createRemoteJWKSet(new URL("/jwks", upstream.url));
+  const verify = microsoft
+    ? createIdentityVerifier(config, {
+        google: googleKey,
+        microsoft: createRemoteJWKSet(new URL("/microsoft-jwks", upstream.url)),
+      })
+    : createGoogleVerifier(config, googleKey);
   const controller = createController(config.controllerUrl, async () => "issuer-private");
   const store = await createGrantStore(root);
   const signedObjects: string[] = [];
@@ -103,7 +129,25 @@ async function fixture(preview?: (id: string, deadline: string) => Promise<{ url
       ...(body !== undefined && { body: JSON.stringify(body) }),
     });
   }
+  const microsoftToken = (claims: Record<string, unknown> = {}) =>
+    new SignJWT({
+      tid: tenantId,
+      oid: objectId,
+      ver: "2.0",
+      sub: "pairwise-subject",
+      iss: `https://login.microsoftonline.com/${tenantId}/v2.0`,
+      aud: clientId,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 300,
+      ...claims,
+    })
+      .setProtectedHeader({ alg: "RS256", kid: microsoftJwk.kid })
+      .sign(microsoftKeys.privateKey);
   return {
+    microsoftToken,
+    tenantId,
+    objectId,
+    clientId,
     root,
     config,
     controller,
@@ -334,4 +378,52 @@ test("broker storage checks the current run and isolates objects even when VMs s
   expect(
     (await f.call("/v1/storage/url", credential.secret, { method: "GET", object, expiresSeconds: 1800 })).status,
   ).toBe(403);
+});
+
+test("Microsoft sign-in discovers public configuration, issues the person's keys and isolates provider subjects", async () => {
+  const f = await fixture(undefined, true);
+  const discovery = await f.call("/v1/login/microsoft", "", undefined, "GET");
+  expect(discovery.status).toBe(200);
+  expect(await discovery.json()).toEqual({ tenantId: f.tenantId, clientId: f.clientId });
+  const response = await f.call("/v1/session", await f.microsoftToken({ email: "changed@example.test" }), {});
+  expect(response.status).toBe(200);
+  const session = await response.json();
+  expect(session.credentials.length).toBeGreaterThan(0);
+  expect(
+    f.requests.filter((r) => r.path.includes("/keys")).every((r) => r.path.includes(f.config.humans[1]!.principalId)),
+  ).toBe(true);
+  const spoof = await f.token(`${f.tenantId}:${f.objectId}`, { aud: "desktop-client" });
+  expect((await f.call("/v1/session", spoof, {})).status).toBe(403);
+  expect(
+    (
+      await f.call("/v1/runs", await f.microsoftToken(), {
+        runId: crypto.randomUUID(),
+        subject: "vm",
+        deadline: new Date(Date.now() + 60000).toISOString(),
+      })
+    ).status,
+  ).toBe(403);
+});
+
+test("Microsoft enrollment rejects other tenants, applications, invalid lifetimes and missing stable identities", async () => {
+  const f = await fixture(undefined, true);
+  for (const claims of [
+    { tid: crypto.randomUUID() },
+    { aud: "another-app" },
+    { aud: [f.clientId, "another-app"] },
+    { iss: `https://sts.windows.net/${f.tenantId}/` },
+    { ver: "1.0" },
+    { oid: undefined },
+    { exp: 1 },
+    { nbf: Math.floor(Date.now() / 1000) + 600 },
+    { iat: Math.floor(Date.now() / 1000) + 600 },
+  ])
+    expect((await f.call("/v1/session", await f.microsoftToken(claims), {})).status).toBe(401);
+  expect((await f.call("/v1/session", await f.microsoftToken({ oid: crypto.randomUUID() }), {})).status).toBe(403);
+  const signed = await f.microsoftToken();
+  const [header, payload, signature] = signed.split(".");
+  const forged = `${header}.${Buffer.from(JSON.stringify({ ...JSON.parse(Buffer.from(payload!, "base64url").toString()), oid: crypto.randomUUID() })).toString("base64url")}.${signature}`;
+  expect((await f.call("/v1/session", forged, {})).status).toBe(401);
+  const unconfigured = await fixture();
+  expect((await unconfigured.call("/v1/session", await f.microsoftToken(), {})).status).toBe(401);
 });

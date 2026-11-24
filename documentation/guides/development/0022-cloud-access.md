@@ -7,7 +7,7 @@ connections. It uses the public runtime API; extension code never reads controll
 keys. Governing intent: RB 1.A.3, RB 1.A.5 and RBE 22.A.1.
 
 This is a separately deployed service, not Prompt Studio Cloud project sync.
-Installing the repository does not create a deployment or Google permissions.
+Installing the repository does not create a deployment or Google permissions or a Microsoft app registration.
 
 ## Operator setup
 
@@ -65,8 +65,17 @@ real runtime image pins, not these abbreviated examples):
   "controllerUrl": "https://controller.example.com",
   "audience": "https://access.example.com",
   "humanAudience": "YOUR_GCLOUD_OAUTH_CLIENT_AUDIENCE",
+  "microsoft": {
+    "tenantId": "11111111-1111-4111-8111-111111111111",
+    "clientId": "33333333-3333-4333-8333-333333333333"
+  },
   "humans": [
-    { "subject": "GOOGLE_ACCOUNT_SUBJECT", "principalId": "00000000-0000-4000-8000-000000000001" }
+    { "subject": "GOOGLE_ACCOUNT_SUBJECT", "principalId": "00000000-0000-4000-8000-000000000001" },
+    {
+      "provider": "microsoft",
+      "subject": "11111111-1111-4111-8111-111111111111:22222222-2222-4222-8222-222222222222",
+      "principalId": "00000000-0000-4000-8000-000000000002"
+    }
   ],
   "launchers": ["LAUNCHER_SERVICE_ACCOUNT_SUBJECT"],
   "templates": ["remote-tests", "remote-tests-branch", "prompt-studio-preview", "prompt-studio-preview-branch"],
@@ -94,6 +103,25 @@ verified email. Authorization uses the stable Google `sub`, not an email supplie
 by the client. Pin `humanAudience` to the OAuth client actually used by the team's
 gcloud installation. Human and workload audiences must differ. Do not accept
 arbitrary audiences or obtain these values from an unverified enrollment request.
+
+The optional `microsoft` block enables Microsoft sign-in. Register a public-client
+application in the intended Microsoft tenant and enable public client flows for
+device-code sign-in. The `clientId` is its public application ID; no application
+secret is needed. Pin an explicit tenant GUID, rather than `common` or
+`organizations`. For personal Microsoft accounts, use the consumer tenant GUID
+`9188040d-6c67-4c5b-b112-36a304b66dad` and an application registration that supports
+personal accounts. A deployment enables one Microsoft tenant at a time. Restart
+the broker after changing provider audiences, tenant or application IDs.
+
+Microsoft tokens use that tenant's signing keys and exact v2 issuer, audience,
+expiry and stable `tid`/`oid` claims. Microsoft people use
+`provider: "microsoft"` and `subject: "TENANT_GUID:OBJECT_GUID"`; obtain these IDs
+from the tenant directory, never from an unverified enrollment request. Existing
+Google people default to `provider: "google"`. Email and display names never
+supply authorization or link accounts across providers. Each configured login
+identity owns a distinct principal. Microsoft identities cannot act as VM launchers.
+See Microsoft's [ID token claims reference](https://learn.microsoft.com/en-us/entra/identity-platform/id-token-claims-reference)
+and [device-code setup](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-device-code).
 
 Each person needs a distinct existing PocketCoder principal with the approved
 template grants. `roles` on a human entry can restrict the default dashboard,
@@ -232,3 +260,39 @@ Before rollout, verify a real approved person, a registered VM, rejection from a
 different instance sharing its service account, renewal, revocation and a bounded
 preview. Confirm credentials never enter source archives or logs. The deployment prerequisites and live checks remain distinct from fixture-based
 source validation.
+
+## Microsoft sign-in on a colleague's machine
+
+After the operator configures Microsoft and adds the colleague's tenant/object ID,
+run the same client with Microsoft's identity mode:
+
+```sh
+bun services/cloud-access/src/cli.ts connect \
+  --broker https://access.example.com --identity microsoft --login --root /path/to/project
+```
+
+Follow the displayed Microsoft verification URL and enter the one-time user code.
+The client obtains the public tenant/application IDs from the broker, so the
+colleague does not configure application IDs or secrets. It requests only OIDC
+`openid`, `profile` and `offline_access` scopes. The existing supervisor installs
+shared setup and renews the named connections. Later restarts and preview helpers
+reuse the private cache without `--login`; if tenant policy requires interaction,
+run the command with `--login` again. This is the
+[MSAL device-code and silent-refresh flow](https://learn.microsoft.com/en-us/entra/msal/javascript/node/acquire-token-requests).
+
+MSAL's refresh cache is stored outside the project at
+`$PSTDIO_HOME/cloud-access/microsoft/TENANT_GUID-CLIENT_GUID.json` (the default home
+is `~/.pstdio`). Writes are atomic and locked; the directory uses mode 0700 and
+files use mode 0600. The cache is protected by the local account's filesystem
+permissions, not OS-keychain encryption. Treat it as a private login credential:
+keep it out of source uploads and shared backups. Tokens and raw provider errors
+are never printed; only the interactive verification instructions are displayed.
+To forget this login, stop the supervisor and remove that tenant/application's
+cache file. On renewal failure, connections are removed when their existing
+bounded credentials expire.
+
+Live Microsoft sign-in requires the operator's tenant and app registration. Local
+protocol/JWKS fixtures qualify code paths, not tenant consent, Conditional Access,
+personal-account compatibility or real browser sign-in. Record those checks on
+the deployed service before rollout. VM Google workload identity, central Google
+storage signing and run grants continue to use their existing operator setup.

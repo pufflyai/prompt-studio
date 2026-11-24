@@ -15,7 +15,7 @@ The Remote Testing companion provides source upload, cloud execution, result col
 
 ## Connect a deployment
 
-For automatic setup using Google sign-in or ephemeral VM identity, use the
+For automatic setup using Google or Microsoft sign-in, or ephemeral VM identity, use the
 [Cloud access client](../../documentation/guides/development/0022-cloud-access.md).
 An operator must first deploy its enrollment service. The client installs these
 private extensions and renews the device's named connections automatically.

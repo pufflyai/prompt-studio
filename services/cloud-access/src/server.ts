@@ -6,7 +6,7 @@ import { parseConfig } from "./config";
 import { createController } from "./controller";
 import { createGoogleStorageSigner } from "./google-storage";
 import { createGrantStore } from "./grants";
-import { createGoogleVerifier } from "./identity";
+import { createIdentityVerifier } from "./identity";
 import { createSocketIssuer } from "./issuer";
 import { createStorageAccess, loadStorageSigningKey } from "./storage-access";
 
@@ -40,7 +40,7 @@ const service = createAccessService({
   controller,
   store,
   storage,
-  verify: createGoogleVerifier(initial),
+  verify: createIdentityVerifier(initial),
   async preview(id, deadline) {
     const helper = config().previewHelper;
     if (!helper) throw new Error("Preview access is unavailable.");

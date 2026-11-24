@@ -7,6 +7,7 @@ import { accessRequest, type IdentityMode } from "./client-identity";
 import { serviceUrl, sessionSchema } from "./config";
 import { applySession, clearConnections, type LocalRuntime } from "./host-setup";
 import { installExtensions } from "./install";
+import { microsoftIdentity } from "./microsoft-client";
 import { supervise } from "./supervisor";
 
 type ClientOptions = { broker: string; audience: string; mode: IdentityMode; runId?: string };
@@ -15,6 +16,14 @@ export async function openPreview(options: ClientOptions, workspaceId: string) {
   if (new URL(result.url).protocol !== "https:" || !Number.isFinite(Date.parse(result.expiresAt)))
     throw new Error("Invalid preview link.");
   return { url: result.url as string, expiresAt: result.expiresAt as string };
+}
+
+async function login(options: ClientOptions) {
+  if (options.mode === "microsoft") await microsoftIdentity({ broker: options.broker, login: true });
+  else if (options.mode === "gcloud") {
+    const child = Bun.spawn(["gcloud", "auth", "login"], { stdin: "inherit", stdout: "inherit", stderr: "inherit" });
+    if (await child.exited) throw new Error("Google sign-in failed.");
+  } else throw new Error("Workload identity never uses interactive login.");
 }
 
 async function main() {
@@ -33,9 +42,9 @@ async function main() {
       "grant-file": { type: "string" },
     },
   });
-  if (!values.broker || !["gcloud", "metadata"].includes(values.identity!))
+  if (!values.broker || !["gcloud", "metadata", "microsoft"].includes(values.identity!))
     throw new Error(
-      "Usage: cloud-access <connect|register|revoke|preview> --broker https://access.example.com --identity gcloud|metadata [--run-id UUID] [--root PROJECT] [--checkout SOURCE] [--login]",
+      "Usage: cloud-access <connect|register|revoke|preview> --broker https://access.example.com --identity gcloud|metadata|microsoft [--run-id UUID] [--root PROJECT] [--checkout SOURCE] [--login]",
     );
   const options: ClientOptions = {
     broker: serviceUrl.parse(values.broker),
@@ -44,11 +53,12 @@ async function main() {
     runId: values["run-id"],
   };
   const action = positionals[0] ?? "connect";
-  if (values.login) {
-    if (options.mode !== "gcloud") throw new Error("Workload identity never uses interactive login.");
-    const login = Bun.spawn(["gcloud", "auth", "login"], { stdin: "inherit", stdout: "inherit", stderr: "inherit" });
-    if (await login.exited) throw new Error("Google sign-in failed.");
+  if (action === "connect") {
+    await connect(options, resolve(values.root!), values.checkout, values.login);
+    return;
   }
+  if (values.login && options.mode === "microsoft") throw new Error("Use connect --identity microsoft --login first.");
+  if (values.login) await login(options);
   if (action === "register") {
     if (!values["grant-file"]) throw new Error("Pass --grant-file with the launcher's trusted run record.");
     const body = JSON.parse(await readFile(values["grant-file"], "utf8"));
@@ -67,15 +77,14 @@ async function main() {
     console.log(JSON.stringify(await openPreview(options, positionals[1])));
     return;
   }
-  if (action !== "connect") throw new Error("Unknown cloud access command.");
-
-  await connect(options, resolve(values.root!), values.checkout);
+  throw new Error("Unknown cloud access command.");
 }
 
-async function connect(options: ClientOptions, root: string, sourceCheckout?: string) {
+async function connect(options: ClientOptions, root: string, sourceCheckout?: string, interactive = false) {
   const home = resolve(process.env.PSTDIO_HOME ?? join(homedir(), ".pstdio"));
   const release = acquireFileMutationLock(join(home, "cloud-access", "supervisor"), "cloud access supervisor");
   try {
+    if (interactive) await login(options);
     await connectOwned(options, root, home, sourceCheckout);
   } finally {
     release();
@@ -132,7 +141,7 @@ async function connectOwned(options: ClientOptions, root: string, home: string, 
 if (import.meta.main)
   main().catch(() => {
     console.error(
-      "Cloud access failed. Check the command arguments, Google sign-in, service policy and Prompt Studio runtime.",
+      "Cloud access failed. Check the command arguments, Google or Microsoft sign-in, service policy and Prompt Studio runtime.",
     );
     process.exitCode = 1;
   });

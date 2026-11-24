@@ -55,7 +55,7 @@ pst pocketcoder.remote-testing templates branch --kind tests --path /path/to/wor
 
 An operator can deploy [Cloud access](../../documentation/guides/development/0022-cloud-access.md)
 to install this setup and renew per-person or per-run controller credentials
-automatically. The client uses the current gcloud login for people or metadata identity for
+automatically. The client uses the current gcloud login or Microsoft device-code sign-in for people, or metadata identity for
 Google-hosted VMs. It configures a separate Cloud run storage connection, which
 keeps bucket and signing authority on the central service. Manual setup below keeps Application Default
 Credentials as its default.

@@ -129,3 +129,46 @@ test("supervisor renews automatically and removes connections after credentials 
   expect(applied.at(-1)).toBe("cleared");
   expect(warnings.join(" ")).not.toContain("private-token");
 });
+
+test("a second Microsoft connect cannot replace the signed-in account before owning the supervisor", async () => {
+  const { acquireFileMutationLock } = await import("pstdio-paths");
+  const home = await mkdtemp(join(tmpdir(), "cloud-login-owner-"));
+  cleanup.push(() => rm(home, { recursive: true, force: true }));
+  const release = acquireFileMutationLock(join(home, "cloud-access", "supervisor"), "test supervisor");
+  cleanup.push(release);
+  let discoveries = 0;
+  const broker = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch() {
+      discoveries++;
+      return Response.json({ error: "No interactive login should have started" }, { status: 404 });
+    },
+  });
+  cleanup.push(() => broker.stop(true));
+  const child = Bun.spawn(
+    [
+      "bun",
+      join(import.meta.dir, "cli.ts"),
+      "connect",
+      "--broker",
+      broker.url.origin,
+      "--identity",
+      "microsoft",
+      "--login",
+      "--root",
+      home,
+    ],
+    {
+      env: { ...process.env, PSTDIO_HOME: home },
+      stdout: "pipe",
+      stderr: "pipe",
+    },
+  );
+  const stdout = await new Response(child.stdout).text();
+  const stderr = await new Response(child.stderr).text();
+  expect(await child.exited).toBe(1);
+  expect(discoveries).toBe(0);
+  expect(stdout).toBe("");
+  expect(stderr).not.toContain("private");
+}, 10000);

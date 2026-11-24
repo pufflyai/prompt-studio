@@ -10,12 +10,12 @@ import {
 } from "./config";
 import type { Controller } from "./controller";
 import type { GrantStore } from "./grants";
-import type { createGoogleVerifier, VerifiedIdentity } from "./identity";
+import type { VerifiedIdentity } from "./identity";
 import type { StorageAccess } from "./storage-access";
 
 type Deps = {
   config: () => AccessConfig;
-  verify: ReturnType<typeof createGoogleVerifier>;
+  verify: (request: Request) => Promise<VerifiedIdentity>;
   controller: Controller;
   store: GrantStore;
   storage?: StorageAccess;
@@ -28,7 +28,7 @@ export function createAccessService(deps: Deps) {
   async function authorize(identity: VerifiedIdentity, runId?: string) {
     const config = deps.config();
     if (identity.human) {
-      const person = config.humans.find((h) => h.subject === identity.subject);
+      const person = config.humans.find((h) => h.provider === identity.provider && h.subject === identity.subject);
       if (!person || runId) throw new AccessError(403, "Cloud access is not granted.");
       return {
         principalId: person.principalId,
@@ -168,12 +168,25 @@ export function createAccessService(deps: Deps) {
     }
   }
 
+  const response = (value: unknown, status = 200) =>
+    Response.json(value, {
+      status,
+      headers: { "Cache-Control": "no-store", "Content-Type": "application/json" },
+    });
+  const publicResponse = (request: Request) => {
+    if (request.method !== "GET") return;
+    const path = new URL(request.url).pathname;
+    if (path === "/healthz") return response({ ok: true });
+    if (path === "/v1/login/microsoft") {
+      const microsoft = deps.config().microsoft;
+      return microsoft ? response(microsoft) : response({ error: "Microsoft sign-in is not configured." }, 404);
+    }
+  };
   const fetch = async (request: Request) => {
-    const headers = { "Cache-Control": "no-store", "Content-Type": "application/json" };
-    const response = (value: unknown, status = 200) => Response.json(value, { status, headers });
     const url = new URL(request.url);
-    if (url.pathname === "/healthz" && request.method === "GET") return response({ ok: true });
     try {
+      const discovery = publicResponse(request);
+      if (discovery) return discovery;
       if (request.method === "POST" && ["/v1/storage/url", "/v1/storage/check"].includes(url.pathname)) {
         if (!deps.storage) throw new AccessError(403, "Cloud storage is not configured.");
         return response(await deps.storage.handle(request, authorize));

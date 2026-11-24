@@ -18,7 +18,7 @@ test("storage credentials can sign only objects under their authorized principal
     return { principalId: "principal-a", roles: ["runner"] as const, storageDeadline: deadline };
   };
   const token = await storage.issue(
-    { subject: "vm-a", human: false, expiresAt: deadline, instance: undefined },
+    { provider: "google", subject: "vm-a", human: false, expiresAt: deadline, instance: undefined },
     "run-a",
     new Date(deadline).toISOString(),
   );
@@ -67,7 +67,7 @@ test("revoking a run while signing is in flight prevents delivery of a new URL",
     },
   });
   const token = await storage.issue(
-    { subject: "vm", human: false, expiresAt: deadline, instance: undefined },
+    { provider: "google", subject: "vm", human: false, expiresAt: deadline, instance: undefined },
     "run",
     new Date(deadline).toISOString(),
   );

@@ -1,7 +1,8 @@
 import { serviceUrl } from "./config";
+import { microsoftIdentity } from "./microsoft-client";
 
-export type IdentityMode = "gcloud" | "metadata";
-export async function googleIdentity(mode: IdentityMode, audience: string) {
+export type IdentityMode = "gcloud" | "metadata" | "microsoft";
+export async function googleIdentity(mode: Exclude<IdentityMode, "microsoft">, audience: string) {
   if (mode === "metadata") {
     const url = new URL(
       "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity",
@@ -44,7 +45,7 @@ export async function accessRequest(input: {
   const response = await fetch(new URL(input.path, broker), {
     method: input.method ?? "POST",
     headers: {
-      Authorization: `Bearer ${await googleIdentity(input.mode, input.audience)}`,
+      Authorization: `Bearer ${await (input.mode === "microsoft" ? microsoftIdentity({ broker }) : googleIdentity(input.mode, input.audience))}`,
       "Content-Type": "application/json",
     },
     ...(input.body !== undefined && { body: JSON.stringify(input.body) }),
