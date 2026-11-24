@@ -190,4 +190,44 @@ describe("envFromHost", () => {
       }
     },
   );
+
+  test.skipIf(process.platform === "win32")(
+    "a program a run command leaves running is stopped when the grant is revoked",
+    async () => {
+      const { api, permissions } = await setup(["EXTENSION_AGENT_TOKEN"]);
+      const marker = join(root, "run-background");
+      const background = `require("node:fs").writeFileSync(${JSON.stringify(marker)}, String(process.pid)); setInterval(() => {}, 1000)`;
+      const alive = (pid: number) => {
+        try {
+          process.kill(pid, 0);
+          return true;
+        } catch {
+          return false;
+        }
+      };
+
+      // run returns once its own child exits; the program it started keeps the granted value.
+      await api.run({
+        command: [
+          process.execPath,
+          "-e",
+          `require("node:child_process").spawn(process.execPath, ["-e", ${JSON.stringify(background)}], { stdio: "ignore" }).unref()`,
+        ],
+        envFromHost: ["EXTENSION_AGENT_TOKEN"],
+      });
+      while (!existsSync(marker) || !readFileSync(marker, "utf8")) await Bun.sleep(10);
+      const backgroundPid = Number(readFileSync(marker, "utf8"));
+      try {
+        expect(alive(backgroundPid)).toBe(true);
+
+        await permissions.revoke("project-1", "acme.agent");
+
+        const deadline = Date.now() + 2_000;
+        while (alive(backgroundPid) && Date.now() < deadline) await Bun.sleep(10);
+        expect(alive(backgroundPid)).toBe(false);
+      } finally {
+        if (alive(backgroundPid)) process.kill(backgroundPid, "SIGKILL");
+      }
+    },
+  );
 });
