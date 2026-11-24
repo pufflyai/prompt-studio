@@ -12,9 +12,14 @@ const abortable = <T>(work: Promise<T>, signal: AbortSignal) => {
 /** Provider retirement owns account flows just as it owns native sessions. */
 export const createHarnessAuthenticationLifetime = () => {
   const lifetime = new AbortController();
-  const pending = new Set<Promise<void>>();
+  // Each running flow with the function that stops the children it started.
+  const pending = new Map<Promise<void>, () => void>();
   return {
-    run: (channel: HarnessAuthenticationChannel, invoke: (channel: HarnessAuthenticationChannel) => Promise<void>) => {
+    run: (
+      channel: HarnessAuthenticationChannel,
+      invoke: (channel: HarnessAuthenticationChannel) => Promise<void>,
+      stopChildren: () => void = () => {},
+    ) => {
       if (lifetime.signal.aborted) return Promise.reject(lifetime.signal.reason);
       const signal = AbortSignal.any([lifetime.signal, channel.signal]);
       const operation = Promise.resolve().then(() => {
@@ -32,14 +37,16 @@ export const createHarnessAuthenticationLifetime = () => {
           },
         });
       });
-      pending.add(operation);
+      pending.set(operation, stopChildren);
       const done = () => pending.delete(operation);
       void operation.then(done, done);
       return operation;
     },
     dispose: async () => {
       lifetime.abort();
-      await Promise.allSettled(pending);
+      // A flow that awaits its own child would otherwise wait for a child nobody stops yet.
+      for (const stop of pending.values()) stop();
+      await Promise.allSettled(pending.keys());
     },
   };
 };
