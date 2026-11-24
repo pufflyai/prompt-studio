@@ -1,7 +1,7 @@
 import type { CloudProjectCatalogEntry, ProjectCopyAccount } from "@pstdio/sdk/client";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from "react";
 import { getRuntimeApiClient } from "@/lib/api";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import { useCollectionSelection } from "@/lib/sync/use-collection-selection";
@@ -65,6 +65,13 @@ const useCloudCopyDownload = (
   useEffect(() => {
     if (downloadScope && downloadScope !== scope) resetDownload();
   }, [downloadScope, scope, resetDownload]);
+
+  const retireRemovedCopy = useEffectEvent((removedScope: string) => {
+    if (removedScope !== scope) return;
+    clearIntent();
+    resetDownload();
+  });
+  useEffect(() => operations.subscribeToLocalRemoval((removedScope) => retireRemovedCopy(removedScope)), [operations]);
 
   useEffect(() => {
     if (!requested || entry?.presence !== "downloaded" || !localName || deleting || !operations.isCurrent(id, scope))
