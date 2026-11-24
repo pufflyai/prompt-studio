@@ -282,6 +282,7 @@ test("keeps recovery visible when the quit confirmation replacement fails during
     .context()
     .pages()
     .filter((page) => URL.parse(page.url())?.origin === runtime.descriptor.origin);
+  expect(failedPages).toHaveLength(1);
   await Promise.all([
     ...failedPages.map((page) => page.waitForEvent("close")),
     lifecycle.getByRole("button", { name: "Retry", exact: true }).press("Enter"),
