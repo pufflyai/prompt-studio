@@ -1,14 +1,66 @@
 import { describe, expect, test } from "bun:test";
+import { PstdioConnectionError } from "@pstdio/sdk/client";
+import { createScopedQueryClient } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "../../core";
 import {
   createResourceViewerFixture,
   viewerPage,
   viewerResource,
 } from "../../core/controllers/resource-viewers/resource-viewer-test-fixture";
+import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
+import { runWorkbenchCommandOperation } from "./workbench-command-operation";
 import {
   executeWorkbenchExtensionCommand,
   executeWorkbenchExtensionCommandResponse,
 } from "./workbench-extension-command";
+
+test.each([
+  "ticket",
+  "gate",
+])("a lost Timeline %s create preserves its authored input and blocks a duplicate write", async (kind) => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", accountId: "original", extensionId: "pstdio" });
+  const operations = getWorkbenchOperations(queries);
+  const id = `pstdio.planner.command.timeline.${kind}.create`;
+  let writes = 0;
+  const submit = () =>
+    runWorkbenchCommandOperation({
+      operations,
+      projectId: "project",
+      command: { id, extensionId: "pstdio.planner", title: "Create Timeline item", mutating: true },
+      params: {
+        content: "# Keep this authored draft",
+        deadline: "next",
+        attributes: { status: "backlog", tags: ["review"] },
+        attachments: [
+          { id: "file", name: "evidence.txt", hash: "head", mimeType: null, url: "https://example.invalid/private" },
+        ],
+      },
+      write: async () => {
+        writes++;
+        throw new PstdioConnectionError(new Error("Reply lost"));
+      },
+    });
+  try {
+    await expect(submit()).rejects.toThrow("Could not connect");
+    const [entry] = operations.getSnapshot().recovery;
+    expect(entry?.draft).toEqual({
+      commandId: id,
+      content: "# Keep this authored draft",
+      deadline: "next",
+      attributes: { status: "backlog", tags: ["review"] },
+      attachments: [{ id: "file", name: "evidence.txt", hash: "head", mimeType: null }],
+    });
+    expect(entry?.canCheck).toBe(false);
+    expect(submit).toThrow("This action is still pending");
+    queries.setAuthority({ accountId: "other" });
+    expect(operations.getSnapshot().recovery).toEqual([]);
+    queries.setAuthority({ accountId: "original" });
+    expect(operations.getSnapshot().recovery[0]?.id).toBe(entry!.id);
+    expect(writes).toBe(1);
+  } finally {
+    queries.dispose();
+  }
+});
 
 for (const type of ["record", "draft"])
   test(`creating a ${type} in a tabbed Main after its page moved keeps the resource in a tab`, async () => {
