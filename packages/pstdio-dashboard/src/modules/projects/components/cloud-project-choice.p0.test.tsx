@@ -207,6 +207,8 @@ const copyDevice = (outcome: (typeof copyStates)[number]) => {
     syncFailed: boolean;
     downloads: number;
     holdCatalog?: boolean;
+    catalogUnavailable?: boolean;
+    downloadUnavailable?: boolean;
   } = {
     presence: removingCopy ? "downloading" : "cloud-only",
     syncFailed: removingCopy,
@@ -248,6 +250,7 @@ const copyDevice = (outcome: (typeof copyStates)[number]) => {
     removalStarted.resolve();
     await releaseRemoval.promise;
     if (rejectedRemoval) return Response.json({ error: "Removal rejected before touching the copy" }, { status: 400 });
+    device.presence = "cloud-only";
     return Response.json({ projectId: id, presence: "cloud-only" });
   };
   const server = Bun.serve({
@@ -266,6 +269,8 @@ const copyDevice = (outcome: (typeof copyStates)[number]) => {
       if (url.pathname.endsWith("/delete-cloud")) return deleteCloud();
       if (url.pathname.endsWith("/remove-local")) return removeLocal();
       if (url.pathname === "/v1/account/projects") {
+        if (device.catalogUnavailable)
+          return Response.json({ error: "Cloud project catalog is unavailable" }, { status: 503 });
         const observation = Response.json({
           account,
           membershipKnown: true,
@@ -274,11 +279,11 @@ const copyDevice = (outcome: (typeof copyStates)[number]) => {
             {
               id,
               name: "Recovered notes",
-              online: true,
+              online: !device.downloadUnavailable,
               presence: device.presence,
               downloadError: device.downloadError,
               actions: {
-                download: device.presence !== "downloaded",
+                download: device.presence !== "downloaded" && !device.downloadUnavailable,
                 removeLocal: removingCopy,
                 deleteCloud: false,
               },
@@ -506,11 +511,27 @@ test.each(copyStates)("two views check the current device state before downloadi
       }
       await act(async () => {
         device.presence = "cloud-only";
+        device.catalogUnavailable = true;
         releaseRemoval.resolve();
         await result!;
         owner.getWriter("projects")!.remove(id);
+        await until(
+          () =>
+            fixture.choice.entry?.presence === "cloud-only" &&
+            fixture.choice.failure === "Cloud project catalog is unavailable",
+        );
+      });
+      expect(fixture.peer.canDownload).toBe(false);
+      await act(async () => {
+        device.catalogUnavailable = false;
+        device.downloadUnavailable = true;
+        await until(() => fixture.peer.entry?.online === false);
+      });
+      expect(fixture.peer.canDownload).toBe(false);
+      await act(async () => {
+        device.downloadUnavailable = false;
         publishExtensionEvent({ id: accountEvents.changed.id }, owner);
-        await until(() => fixture.choice.entry?.presence === "cloud-only" && fixture.peer.canDownload);
+        await until(() => fixture.peer.canDownload);
       });
       const afterRemoval = { canDownload: fixture.choice.canDownload, showProgress: fixture.choice.showProgress };
       await act(async () => {

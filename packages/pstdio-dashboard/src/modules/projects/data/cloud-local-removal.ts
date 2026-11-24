@@ -76,12 +76,13 @@ const getCloudLocalRemoval = createRuntimeState((owner) => {
                         ...entry,
                         presence: receipt.presence,
                         downloadError: undefined,
-                        actions: { ...entry.actions, removeLocal: false },
+                        actions: { ...entry.actions, download: false, removeLocal: false },
                       }
                     : entry,
                 ),
               },
           );
+          void client.invalidateQueries({ queryKey: catalogKey, exact: true }, { cancelRefetch: false });
         },
         async check(signal) {
           const catalog = await api.projectsCatalog({ signal });
