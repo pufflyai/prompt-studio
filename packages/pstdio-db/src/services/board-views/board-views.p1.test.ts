@@ -10,7 +10,8 @@ import { createBoardViewsDBService } from "./board-views";
 
 let connection: Awaited<ReturnType<typeof createDb>>;
 let service: ReturnType<typeof createBoardViewsDBService>;
-let scope: { project_id: string; extension_instance_id: string; board_id: string };
+let instanceId: string;
+let scope: { project_id: string; extension_id: string; board_id: string };
 const settings = {
   viewMode: "board" as const,
   columnGrouping: "status",
@@ -42,7 +43,8 @@ beforeEach(async () => {
     scope_type: "project",
     scope_id: project.id,
   });
-  scope = { project_id: project.id, extension_instance_id: instance.id, board_id: "tasks" };
+  instanceId = instance.id;
+  scope = { project_id: project.id, extension_id: "test.boards", board_id: "tasks" };
 });
 afterEach(async () => {
   try {
@@ -109,11 +111,11 @@ test("keeps the last view when competing deletions target the same board", async
 test("treats views and built-in defaults as extension user data and cascades project deletion", async () => {
   const userData = createExtensionUserDataDBService(connection.db);
   await service.setDefault(scope, "builtin");
-  expect(await userData.hasUserData(scope.extension_instance_id)).toBe(true);
-  await userData.deleteForInstance(scope.extension_instance_id);
+  expect(await userData.hasUserData(instanceId)).toBe(true);
+  await userData.deleteForInstance(instanceId);
   expect(await service.getDefault(scope)).toBeNull();
   await service.create({ ...scope, title: "Shared", settings, ...unfiltered });
-  expect(await userData.hasUserData(scope.extension_instance_id)).toBe(true);
+  expect(await userData.hasUserData(instanceId)).toBe(true);
   await connection.db.delete(projects).where(eq(projects.id, scope.project_id));
   expect(await service.list(scope)).toEqual([]);
 });
@@ -126,7 +128,7 @@ test("a cleanup from an older read cannot replace a newer user edit", async () =
 });
 
 test("native views keep one default and survive extension data deletion", async () => {
-  const native = { ...scope, extension_instance_id: null, board_id: "dashboard-workbench.workspaces" };
+  const native = { ...scope, extension_id: null, board_id: "dashboard-workbench.workspaces" };
   const first = await service.create({ ...native, title: "Workspaces", settings, ...unfiltered });
   const second = await service.create({ ...native, title: "Release", settings, ...unfiltered });
   await service.setDefault(native, first.id);
@@ -134,11 +136,57 @@ test("native views keep one default and survive extension data deletion", async 
   expect((await service.getDefault(native))?.default_view_id).toBe(second.id);
   await service.create({ ...scope, title: "Extension tasks", settings, ...unfiltered });
   await service.setDefault(scope, "builtin");
-  await createExtensionUserDataDBService(connection.db).deleteForInstance(scope.extension_instance_id);
+  await createExtensionUserDataDBService(connection.db).deleteForInstance(instanceId);
   expect(await service.list(scope)).toEqual([]);
   expect((await service.list(native)).map((view) => view.id)).toEqual([first.id, second.id]);
   expect((await service.getDefault(native))?.default_view_id).toBe(second.id);
   await connection.db.delete(projects).where(eq(projects.id, native.project_id));
   expect(await service.list(native)).toEqual([]);
   expect(await service.getDefault(native)).toBeNull();
+});
+
+test("saved defaults remain unique and built-in defaults stay scoped", async () => {
+  const { board_views } = await import("../../db/schemas.pg");
+  const first = await service.create({ ...scope, title: "First", settings, ...unfiltered });
+  const second = await service.create({ ...scope, title: "Second", settings, ...unfiltered });
+  await service.setDefault(scope, first.id);
+  expect(await connection.db.select().from(board_views).where(eq(board_views.id, first.id))).toMatchObject([
+    { is_default: true },
+  ]);
+  await expect(
+    connection.db.update(board_views).set({ is_default: true }).where(eq(board_views.id, second.id)).execute(),
+  ).rejects.toThrow();
+  await service.setDefault(scope, second.id);
+  expect(await connection.db.select().from(board_views).where(eq(board_views.id, first.id))).toMatchObject([
+    { is_default: false },
+  ]);
+  expect(await service.getDefault(scope)).toMatchObject({ default_view_id: second.id });
+  await service.setDefault(scope, "builtin");
+  expect(await connection.db.select().from(board_views).where(eq(board_views.id, second.id))).toMatchObject([
+    { is_default: false },
+  ]);
+  expect(await service.getDefault(scope)).toMatchObject({ default_view_id: "builtin" });
+  expect(await service.getDefault({ ...scope, board_id: "other" })).toBeNull();
+});
+
+test("removing one provider preserves shared board views and defaults for the remaining provider", async () => {
+  const source = await createInstalledExtensionSourcesDBService(connection.db).register({
+    install_name: "alternate-boards",
+    extension_id: "test.boards",
+    display_name: "Alternate boards",
+    source_kind: "local_path",
+    source_path: "/alternate-boards",
+  });
+  await createExtensionInstancesDBService(connection.db).create({
+    installed_extension_id: source.id,
+    scope_type: "project",
+    scope_id: scope.project_id,
+    enabled: false,
+  });
+  const view = await service.create({ ...scope, title: "Shared custom view", settings, ...unfiltered });
+  await service.setDefault(scope, view.id);
+  await createExtensionUserDataDBService(connection.db).deleteForInstance(instanceId);
+  await createExtensionInstancesDBService(connection.db).remove(instanceId);
+  expect(await service.get(scope.project_id, view.id)).not.toBeNull();
+  expect((await service.getDefault(scope))?.default_view_id).toBe(view.id);
 });

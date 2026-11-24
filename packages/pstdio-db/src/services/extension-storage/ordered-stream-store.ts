@@ -1,3 +1,4 @@
+import { and } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { SyncSpace } from "pstdio-sync/encryption";
 import { coreOwnerId, type OrderedAdmission } from "pstdio-sync/records";
@@ -6,6 +7,7 @@ import { createOrderedReceiptIndex, type OrderedIndexReference } from "pstdio-sy
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_ordered_records as canonical } from "../../db/schemas.pg";
+import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
 import { indexNodeFilesFor } from "./index-node-files";
 import { createOrderedCanonicalBatch } from "./ordered-canonical-batch";
 import { indexOrderedCheckpoint, stageOrderedCheckpoint } from "./ordered-checkpoint";
@@ -21,17 +23,24 @@ import { coverOrderedReceiptRoot, coversOrderedReceipts } from "./ordered-receip
 import { createOrderedReceiptResolver } from "./ordered-receipts-resolver";
 import { receiptRoots, sameReceiptRoot, saveReceiptRoots } from "./ordered-receipts-state";
 import { nextOrderedUpload } from "./ordered-receipts-upload";
+import { canonicalRecordPredicate } from "./ordered-record-row";
 import { recordOrderedReplaced } from "./ordered-return-review";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
-import { admissibleOrderedFrame, applyOrderedStreamFrame } from "./ordered-stream-frames";
+import { applyOrderedStreamFrame, decodeOrderedStreamFrame } from "./ordered-stream-frames";
 import { readOrderedPending } from "./ordered-stream-pending";
 import { orderedCursor, readOrderedOwner, saveOrderedCursor } from "./ordered-stream-state";
-import { createRecordStreamStore } from "./record-stream-store";
+import { createRecordStreamReferences, type RecordStreamDependencies } from "./record-stream-references";
 import type { NumberChange } from "./resource-number-repair";
+import { hasRetainedRecords } from "./retained-records";
 
 const hasCanonicalRecords = async (tx: OrderedTransaction, owner: StorageOwner) =>
-  (await tx.select({ id: canonical.record_id }).from(canonical).where(orderedOwnerWhere(canonical, owner)).limit(1))
-    .length > 0;
+  (
+    await tx
+      .select({ id: canonical.record_id })
+      .from(canonical)
+      .where(and(orderedOwnerWhere(canonical, owner), canonicalRecordPredicate(canonical)))
+      .limit(1)
+  ).length > 0 || (await hasRetainedRecords(tx, owner));
 
 // Once per runtime and owner: later connections reuse the files this pass left in order.
 const collectedOwners = new WeakMap<DbClient, Set<string>>();
@@ -53,21 +62,13 @@ const collectSavedReceiptNodes = async (db: DbClient, owner: StorageOwner) => {
   });
 };
 
-const notifyChanges = (
-  deps: Parameters<typeof createRecordStreamStore>[2],
-  events: NumberChange[] = [],
-  recordIds?: readonly string[],
-) => {
+const notifyChanges = (deps: RecordStreamDependencies, events: NumberChange[] = [], recordIds?: readonly string[]) => {
   if (!recordIds || recordIds.length) deps.changed(recordIds);
   deps.numbersChanged?.(combineNumberEvents(events));
 };
 
-export const createOrderedStreamStore = (
-  db: DbClient,
-  owner: StorageOwner,
-  deps: Parameters<typeof createRecordStreamStore>[2],
-) => {
-  const references = createRecordStreamStore(db, owner, deps).references;
+export const createOrderedStreamStore = (db: DbClient, owner: StorageOwner, deps: RecordStreamDependencies) => {
+  const references = createRecordStreamReferences(owner, deps);
   let index: ReturnType<typeof createOrderedReceiptIndex> | undefined;
   let cache: ReturnType<typeof createOrderedManifestCache> | undefined;
   let connected: DocumentRelay | undefined;
@@ -126,6 +127,7 @@ export const createOrderedStreamStore = (
     recordFormat: "ordered" as const,
     references,
     async connect(space: SyncSpace, relay: DocumentRelay) {
+      assertStorageOwnerAdmitted(db, owner);
       if (connected === relay) return;
       if (!relay.manifestBlobs) throw new Error("Ordered receipts require relay manifest graph support");
       // Before the receipt index exists nothing writes receipt nodes, so the saved roots are the only roots.
@@ -164,11 +166,11 @@ export const createOrderedStreamStore = (
           return applyNative(journal, tx, admission, epoch, root);
         };
         for (const [position, frame] of frames.entries()) {
-          if (!frame || !(await admissibleOrderedFrame(frame))) {
-            rejected.push(position);
-            continue;
+          const entries = await decodeOrderedStreamFrame(frame);
+          if (!entries) rejected.push(position);
+          else {
+            for (const id of await applyOrderedStreamFrame(journal, tx, entries, epoch, group, native)) changed.add(id);
           }
-          for (const id of await applyOrderedStreamFrame(journal, tx, frame, epoch, group, native)) changed.add(id);
         }
         await batch?.flush();
         await displaced.reauthor(journal, tx, changed);
@@ -194,7 +196,7 @@ export const createOrderedStreamStore = (
       const incoming = new Map(remote);
       const rejectedFrames: number[] = [];
       for (const [position, frame] of tail.entries()) {
-        if (!frame || !(await admissibleOrderedFrame(frame))) {
+        if (!frame || !(await decodeOrderedStreamFrame(frame))) {
           rejectedFrames.push(position);
           continue;
         }
@@ -217,9 +219,9 @@ export const createOrderedStreamStore = (
     async snapshot(options?: { found: boolean; relayEmpty?: boolean }) {
       const draft = await run(async (journal, tx) => {
         const row = await readOrderedOwner(tx, owner);
-        const found = options?.found ?? !row.joined;
-        const root = receiptRoots(row.receipt_root).root;
-        const resolver = createOrderedReceiptResolver(journal, root, receiptIndex());
+        const found = options?.found ?? !orderedCursor(row).joined;
+        const { root, published } = receiptRoots(row.receipt_root);
+        const resolver = createOrderedReceiptResolver(journal, root, receiptIndex(), published);
         const epoch = found ? crypto.randomUUID() : row.epoch!;
         if (found) await rebaseOrderedProjection(journal, tx, owner, await resolver.reconcilePending(epoch));
         return {
@@ -272,7 +274,7 @@ export const createOrderedStreamStore = (
     async pending() {
       const pending = await readOrderedPending(db, owner);
       if (pending !== undefined) return pending;
-      // Only a genuinely new owner needs the normal atomic legacy conversion.
+      // Initialize an owner that has not stored any records yet.
       return run(async (_journal, tx) => (await readOrderedPending(tx, owner)) ?? false);
     },
   } satisfies RecordStreamStore;

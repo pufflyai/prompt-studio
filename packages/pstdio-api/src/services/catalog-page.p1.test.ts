@@ -59,13 +59,9 @@ export default {
       expect(new Set([...first.items, ...last.items].map((item: { id: string }) => item.id)).size).toBe(minimum);
       expect(await (await app.request(base + legacy)).json()).toHaveLength(minimum);
     }
-    const snapshot = await deps.extensionRuntimeCatalog.get(project.id);
-    const instance = snapshot.enabledSources.find(
-      (source) => source.installedSource.extension_id === "test.catalog-pages",
-    )!.instance.id;
     const baseRow = {
       project_id: project.id,
-      extension_instance_id: instance,
+      extension_id: "test.catalog-pages",
       settings: {
         grouping: "none",
         rowNumbers: false,

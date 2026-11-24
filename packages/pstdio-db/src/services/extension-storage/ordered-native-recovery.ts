@@ -1,19 +1,19 @@
-import { and, eq, gt, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { jsonPointer, type OrderedOperation, type OrderedRecord, orderedBody } from "pstdio-sync/records";
 import { readTextDocumentSeed } from "pstdio-sync/text";
 import { fingerprint } from "pstdio-sync-contracts";
 import * as Y from "yjs";
+import { documents } from "../../db/schemas/documents";
 import {
   storage_ordered_records as canonical,
-  storage_current_records as current,
-  storage_documents as documents,
+  records as current,
   storage_ordered_operations as operations,
-  native_document_rooms as rooms,
-  native_document_room_updates as roomUpdates,
-  native_document_sources as sources,
-  storage_ordered_touches as touches,
 } from "../../db/schemas.pg";
+import { loadFileDocument } from "./document-file-persistence";
+import { documentFilesFor } from "./document-files";
+import { nativeDocumentId } from "./document-kind";
+import { externalRoomId, insertNativeRoom } from "./native-document-files";
 import {
   type OrderedFieldMarker,
   orderedFieldMarkerId,
@@ -23,6 +23,10 @@ import {
   saveOrderedMarker,
 } from "./ordered-native-metadata";
 import { decodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import { decodeProjectionValue } from "./record-projection-codec";
+import { readCanonicalRecord, readRetainedRecord } from "./retained-records";
+
+import { storageOwnerKey } from "./storage-owner-key";
 
 const authoredId = (id: string) => JSON.stringify(["ordered-native-authored", id]);
 type Captured = Record<string, { generation?: string; recordId: string; field: string; state?: string }>;
@@ -38,8 +42,12 @@ const fieldsFor = async (tx: OrderedTransaction, owner: StorageOwner, operation:
     const [row] = await tx
       .select({ sources: current.native_sources })
       .from(current)
-      .where(and(orderedOwnerWhere(current, owner), eq(current.record_id, edit.recordId)));
-    const bindings = { ...row?.sources };
+      .where(and(orderedOwnerWhere(current, owner), isNotNull(current.revision), eq(current.record_id, edit.recordId)));
+    const bindings = {
+      ...(decodeProjectionValue(
+        (row?.sources ?? {}) as never,
+      ) as unknown as import("pstdio-sync/records").NativeRecordSources),
+    };
     for (const change of edit.changes)
       if (
         change.path[0] === "nativeSources" &&
@@ -108,7 +116,7 @@ export const rememberOrderedAdoptionText = async (
 };
 
 export const forgetOrderedTextGeneration = (tx: OrderedTransaction, owner: StorageOwner, id: string) =>
-  tx.delete(documents).where(and(orderedOwnerWhere(documents, owner), eq(documents.document_id, authoredId(id))));
+  tx.delete(documents).where(and(orderedOwnerWhere(documents, owner), eq(documents.key, authoredId(id))));
 
 async function* pendingText(tx: OrderedTransaction, owner: StorageOwner, recordId: string) {
   let after = 0;
@@ -116,18 +124,10 @@ async function* pendingText(tx: OrderedTransaction, owner: StorageOwner, recordI
     const rows = await tx
       .select({ envelope: operations.envelope, sequence: operations.local_sequence })
       .from(operations)
-      .innerJoin(
-        touches,
-        and(
-          eq(touches.workbench_id, operations.workbench_id),
-          eq(touches.extension_id, operations.extension_id),
-          eq(touches.operation_id, operations.operation_id),
-        ),
-      )
       .where(
         and(
           orderedOwnerWhere(operations, owner),
-          eq(touches.record_id, recordId),
+          sql`${operations.touches} @> ARRAY[${recordId}]::text[]`,
           isNotNull(operations.envelope),
           isNull(operations.settled_epoch),
           gt(operations.local_sequence, after),
@@ -152,25 +152,18 @@ const mergePrivateRooms = async (
   // Existing admitted rooms already preserve editor work that had not reached its source yet.
   const admitted = await tx
     .select()
-    .from(rooms)
+    .from(documents)
     .where(
       and(
-        eq(rooms.workbench_id, owner.workbenchId),
-        eq(rooms.extension_id, owner.extensionId),
-        eq(rooms.document_key, field.key),
+        eq(documents.owner_id, storageOwnerKey(owner)),
+        eq(documents.kind, "room"),
+        sql`${documents.room_of} = (SELECT id FROM documents WHERE owner_id=${storageOwnerKey(owner)} AND key=${nativeDocumentId(field.key)})`,
       ),
     );
   for (const room of admitted) {
-    if ((await roomGeneration(tx, owner, room.id)) !== generation) continue;
-    const copy = new Y.Doc();
+    if ((await roomGeneration(tx, owner, externalRoomId(room.key))) !== generation) continue;
+    const { document: copy } = await loadFileDocument(documentFilesFor(tx), owner.workbenchId, room);
     try {
-      Y.applyUpdate(copy, room.state);
-      const tail = await tx
-        .select({ update: roomUpdates.update })
-        .from(roomUpdates)
-        .where(eq(roomUpdates.room_id, room.id))
-        .orderBy(roomUpdates.revision);
-      for (const entry of tail) Y.applyUpdate(copy, entry.update);
       const seed = await readTextDocumentSeed(copy);
       if (!seedId || seed.id === seedId) Y.applyUpdate(document, Y.encodeStateAsUpdate(copy));
     } finally {
@@ -209,10 +202,12 @@ const privateFieldState = async (
   capturedState?: string,
 ) => {
   const [row] = await tx
-    .select({ state: canonical.state })
+    .select()
     .from(canonical)
     .where(and(orderedOwnerWhere(canonical, owner), eq(canonical.record_id, field.recordId)));
-  const record = before ?? (row ? decodeOrderedJson<OrderedRecord>(row.state) : undefined);
+  const record =
+    before ??
+    (row ? await readCanonicalRecord(tx, owner, row) : (await readRetainedRecord(tx, owner, field.recordId))?.record);
   const document = new Y.Doc();
   try {
     const saved = record?.texts?.[field.pointer];
@@ -268,19 +263,8 @@ export const fenceOrderedNativeText = async (
     const current = marker.value.generation === generation;
     if (!current && !capturedState) continue;
     const state = await privateFieldState(tx, owner, field, generation, before, capturedState);
-    await tx
-      .insert(sources)
-      .values({
-        workbench_id: owner.workbenchId,
-        extension_id: owner.extensionId,
-        document_key: field.key,
-        target: null,
-      })
-      .onConflictDoNothing();
     const id = crypto.randomUUID();
-    await tx
-      .insert(rooms)
-      .values({ id, workbench_id: owner.workbenchId, extension_id: owner.extensionId, document_key: field.key, state });
+    await insertNativeRoom(tx, { owner, documentKey: field.key, id, state });
     if (generation !== undefined) await saveOrderedMarker(tx, owner, orderedRoomMarkerId(id), { generation });
     if (!current) continue; // Preserve the old private lineage without fencing a fresh replica.
     const next = await fingerprint({

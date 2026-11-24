@@ -16,7 +16,7 @@ test("content changes skip saved-view reads while schema events and reset still 
   );
   const source = createSharedCollectionViews({
     projectId: "project",
-    extensionInstanceId: null,
+    extensionId: null,
     localId: "table",
     record: { id: "table", refreshEventIds: ["tickets.changed"], schemaRefreshEventIds: ["schema.changed"] },
   });

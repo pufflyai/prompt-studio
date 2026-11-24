@@ -1,9 +1,11 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_record_indexes as indexes } from "../../db/schemas.pg";
+import { owners } from "../../db/schemas.pg";
 import { jsonBatches } from "./json-batches";
+import { recordIndexRows as indexes, saveRecordIndexRow } from "./record-index-rows";
 import { encodeProjectionValue } from "./record-projection-codec";
+import { storageOwnerKey } from "./storage-owner-key";
 
 export const identityQueryKey = "@pstdio/identity-query-v1";
 // Revisit missing metadata left by ordered identities allocated after the v1 backfill.
@@ -22,9 +24,9 @@ export const writeResourceQueryValues = async (
       fields: encodeProjectionValue({ [identityQueryKey]: { shorthand, aliases: [...new Set(aliases)].sort() } }),
     })),
   ))
-    await tx.execute(sql`UPDATE storage_current_records AS target SET query_values = target.query_values || input.fields
+    await tx.execute(sql`UPDATE records AS target SET query_values = target.query_values || input.fields
       FROM jsonb_to_recordset(${input}::jsonb) AS input(id text, fields jsonb)
-      WHERE target.workbench_id = ${projectId} AND target.extension_id = 'pstdio' AND target.record_id = input.id`);
+      WHERE target.revision IS NOT NULL AND NOT target.deleted AND target.owner_id = ${storageOwnerKey({ workbenchId: projectId, extensionId: "pstdio" })} AND target.record_id = input.id`);
 };
 
 /** Ordered number arbitration runs before the current record is published. Refresh only its touched identities afterward. */
@@ -34,10 +36,10 @@ export const refreshResourceQueryValues = async (tx: Transaction, owner: Storage
     const selected = ids.slice(offset, offset + 100);
     const result = await tx.execute<{ id: string; shorthand: string; aliases: string[] }>(sql`
       SELECT identity.resource_id AS id, identity.shorthand,
-        coalesce((SELECT jsonb_agg(alias.shorthand ORDER BY alias.shorthand COLLATE "C") FROM storage_resource_aliases alias
-          WHERE alias.workbench_id = identity.workbench_id AND alias.resource_id = identity.resource_id), '[]'::jsonb) AS aliases
-      FROM storage_resource_identities identity
-      WHERE identity.workbench_id = ${owner.workbenchId} AND identity.resource_id IN (${sql.join(
+        coalesce((SELECT jsonb_agg(alias.shorthand ORDER BY alias.shorthand COLLATE "C") FROM resource_numbers alias
+          WHERE alias.alias AND alias.project_id = identity.project_id AND alias.resource_id = identity.resource_id), '[]'::jsonb) AS aliases
+      FROM resource_numbers identity
+      WHERE identity.current AND identity.project_id = ${owner.workbenchId} AND identity.resource_id IN (${sql.join(
         selected.map((id) => sql`${id}`),
         sql`, `,
       )})`);
@@ -47,27 +49,30 @@ export const refreshResourceQueryValues = async (tx: Transaction, owner: Storage
 
 /** Upgrade local query metadata in bounded identity/alias pages, without loading core documents. */
 export const prepareResourceQueryValues = async (tx: Transaction, owner: StorageOwner) => {
+  const [core] = await tx
+    .select({ id: owners.id })
+    .from(owners)
+    .where(eq(owners.id, storageOwnerKey({ ...owner, extensionId: "pstdio" })));
+  if (!core) return;
   const where = and(
-    eq(indexes.workbench_id, owner.workbenchId),
-    eq(indexes.extension_id, "pstdio"),
+    eq(indexes.owner_id, storageOwnerKey({ ...owner, extensionId: "pstdio" })),
     eq(indexes.name, marker),
   );
   if ((await tx.select({ name: indexes.name }).from(indexes).where(where)).length) return;
   for (;;) {
     const result = await tx.execute<{ id: string; shorthand: string; aliases: string[] }>(sql`
       SELECT identity.resource_id AS id, identity.shorthand,
-        coalesce((SELECT jsonb_agg(alias.shorthand ORDER BY alias.shorthand COLLATE "C") FROM storage_resource_aliases alias
-          WHERE alias.workbench_id = identity.workbench_id AND alias.resource_id = identity.resource_id), '[]'::jsonb) AS aliases
-      FROM storage_resource_identities identity INNER JOIN storage_current_records source
-        ON source.workbench_id = identity.workbench_id AND source.extension_id = 'pstdio' AND source.record_id = identity.resource_id
-      WHERE identity.workbench_id = ${owner.workbenchId} AND NOT source.query_values ? ${identityQueryKey}
+        coalesce((SELECT jsonb_agg(alias.shorthand ORDER BY alias.shorthand COLLATE "C") FROM resource_numbers alias
+          WHERE alias.alias AND alias.project_id = identity.project_id AND alias.resource_id = identity.resource_id), '[]'::jsonb) AS aliases
+      FROM resource_numbers identity INNER JOIN records source
+        ON source.owner_id = ${storageOwnerKey({ ...owner, extensionId: "pstdio" })} AND source.record_id = identity.resource_id
+      WHERE source.revision IS NOT NULL AND NOT source.deleted AND identity.current AND identity.project_id = ${owner.workbenchId} AND NOT source.query_values ? ${identityQueryKey}
       ORDER BY identity.resource_id COLLATE "C" LIMIT 100`);
     if (!result.rows.length) break;
     await writeResourceQueryValues(tx, owner.workbenchId, result.rows);
   }
-  await tx.insert(indexes).values({
-    workbench_id: owner.workbenchId,
-    extension_id: "pstdio",
+  await saveRecordIndexRow(tx, {
+    owner_id: storageOwnerKey({ ...owner, extensionId: "pstdio" }),
     name: marker,
     database_name: "storage_format_identity_v1",
     definition: { name: marker, fields: { shorthand: { path: ["prefix"], type: "string" } } },

@@ -4,8 +4,18 @@ import { open, rm } from "node:fs/promises";
 import path from "node:path";
 import { ensureProjectStorageRoot, projectStorageRoot, resolveFileStoragePath } from "../storage/paths";
 import { readableFileDirectory } from "../storage/readable-file";
+import { createFileRemovals } from "./file-removals";
 
 export const createFilesStorageService = (storageRoot: string) => {
+  const removals = new Map<string, ReturnType<typeof createFileRemovals>>();
+  const fileRemovals = (authority: string) => {
+    let value = removals.get(authority);
+    if (!value) {
+      value = createFileRemovals(storageRoot, authority);
+      removals.set(authority, value);
+    }
+    return value;
+  };
   const writeFileAtPath = (storagePath: string, data: Buffer) => {
     fs.mkdirSync(path.dirname(storagePath), { recursive: true });
     fs.writeFileSync(storagePath, data);
@@ -68,6 +78,7 @@ export const createFilesStorageService = (storageRoot: string) => {
   const discardUpload = (projectId: string, fileId: string) =>
     deleteFile(resolveFileStoragePath(storageRoot, projectId, fileId));
   return {
+    fileRemovals,
     writeFile,
     writeFileAtPath,
     writeStream,

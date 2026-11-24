@@ -29,6 +29,7 @@ import { logStartupPhase } from "./lib/startup-phase";
 import { createExtensionInstallations } from "./services/extension-installations";
 import { createExtensionService } from "./services/extension-service";
 import { createExtensionUpgradeService } from "./services/extension-upgrade-service";
+import type { createFileService } from "./services/file-service";
 import type { createProjectService } from "./services/project-service";
 import type { createWorkspaceService } from "./services/workspace-service";
 
@@ -42,6 +43,7 @@ interface WireExtensionServicesInput {
   extensionConnectionsDBService: ReturnType<typeof createExtensionConnectionsDBService>;
   installedExtensionSourcesDBService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   projectService: ReturnType<typeof createProjectService>;
+  fileService: Pick<ReturnType<typeof createFileService>, "remove" | "recoverRemovals">;
   provisionWorkspacesUsingSource: (sourcePath: string) => Promise<void>;
   getProjectExtensionDeps: () => Parameters<typeof completeProjectExtensionInstallation>[0];
   workspaceService: ReturnType<typeof createWorkspaceService>;
@@ -74,6 +76,7 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
     installedExtensionSourcesService: input.installedExtensionSourcesDBService,
     extensionUserDataService: createExtensionUserDataDBService(input.db),
     recovery: input.extensionStorageDBService.recovery,
+    fileService: input.fileService,
     eventBus: input.eventBus,
     onInstalledSourcesChanged: refreshInstalledSources,
     projectService: input.projectService,

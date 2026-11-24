@@ -4,7 +4,7 @@ import type { DbClient } from "../../db/connection.pglite";
 import { board_views } from "../../db/schemas.pg";
 import { pageLimit } from "../query-page";
 
-type Scope = Pick<typeof board_views.$inferSelect, "project_id" | "extension_instance_id" | "board_id">;
+type Scope = Pick<typeof board_views.$inferSelect, "project_id" | "extension_id" | "board_id">;
 const decodeCursor = (cursor: string | undefined, scope: string) => {
   try {
     const value = JSON.parse(Buffer.from(cursor ?? "", "base64url").toString());
@@ -27,7 +27,7 @@ const decodeCursor = (cursor: string | undefined, scope: string) => {
 };
 
 export const queryBoardViews = async (db: DbClient, scope: Scope, input: PageQuery = {}) => {
-  const scopeKey = JSON.stringify([scope.project_id, scope.extension_instance_id, scope.board_id]);
+  const scopeKey = JSON.stringify([scope.project_id, scope.extension_id, scope.board_id]);
   const boundary = decodeCursor(input.cursor, scopeKey);
   const limit = pageLimit(input);
   const result = await db
@@ -37,9 +37,9 @@ export const queryBoardViews = async (db: DbClient, scope: Scope, input: PageQue
       and(
         eq(board_views.project_id, scope.project_id),
         eq(board_views.board_id, scope.board_id),
-        scope.extension_instance_id === null
-          ? isNull(board_views.extension_instance_id)
-          : eq(board_views.extension_instance_id, scope.extension_instance_id),
+        scope.extension_id === null
+          ? isNull(board_views.extension_id)
+          : eq(board_views.extension_id, scope.extension_id),
         boundary
           ? or(
               gt(board_views.sort_order, boundary.sortOrder),

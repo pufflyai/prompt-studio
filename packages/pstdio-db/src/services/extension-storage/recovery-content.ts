@@ -1,19 +1,23 @@
 import { promisify } from "node:util";
 import { gunzip, gzip } from "node:zlib";
-import { and, asc, eq, like } from "drizzle-orm";
+import { and, eq, like } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
+import { documents as storage_documents } from "../../db/schemas/documents";
+import { owners as storageOwners } from "../../db/schemas/owners";
 import {
-  extension_instances,
   installed_extension_sources,
+  project_extensions,
+  owners as recordOwners,
   recovery_point_owners,
-  storage_document_updates,
-  storage_documents,
-  storage_record_projections,
 } from "../../db/schemas.pg";
+import { fileDocumentWhere, loadFileDocument } from "./document-file-persistence";
+import { documentFilesFor } from "./document-files";
 import { listProjectedRecords } from "./record-queries";
 import type { RecoveryRecord } from "./recovery-edits";
+import { type PreparedRecoveryBytes, prepareRecoveryBytes, type recoveryFilesFor } from "./recovery-files";
+import { storageOwnerKey } from "./storage-owner-key";
 
 type Reader = Pick<DbClient, "select" | "selectDistinct">;
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
@@ -25,8 +29,7 @@ export interface RecoveryMetadata {
 export interface RecoveryOwnerContent {
   extensionId: string;
   revision: number;
-  records: Uint8Array;
-  metadata: Uint8Array;
+  file: PreparedRecoveryBytes;
   /** The owner has live records or text. A project without any gets no recovery point. */
   hasData: boolean;
 }
@@ -44,15 +47,9 @@ const textPrefix = JSON.stringify(["text-file", ""]).slice(0, -3);
 export const textFileIds = async (db: Reader, owner: StorageOwner) =>
   (
     await db
-      .select({ id: storage_documents.document_id })
+      .select({ id: storage_documents.key })
       .from(storage_documents)
-      .where(
-        and(
-          eq(storage_documents.workbench_id, owner.workbenchId),
-          eq(storage_documents.extension_id, owner.extensionId),
-          like(storage_documents.document_id, `${textPrefix}%`),
-        ),
-      )
+      .where(and(eq(storage_documents.owner_id, storageOwnerKey(owner)), like(storage_documents.key, `${textPrefix}%`)))
   )
     .map((row) => (JSON.parse(row.id) as [string, string])[1])
     .sort();
@@ -62,44 +59,25 @@ export const dataOwners = async (db: Reader, projectId: string) =>
   (
     await db
       .selectDistinct({ id: installed_extension_sources.extension_id })
-      .from(extension_instances)
+      .from(project_extensions)
+      .innerJoin(installed_extension_sources, eq(project_extensions.extension_ref, installed_extension_sources.id))
       .innerJoin(
-        installed_extension_sources,
-        eq(extension_instances.installed_extension_id, installed_extension_sources.id),
-      )
-      .innerJoin(
-        storage_documents,
+        storageOwners,
         and(
-          eq(storage_documents.workbench_id, projectId),
-          eq(storage_documents.extension_id, installed_extension_sources.extension_id),
+          eq(storageOwners.project_id, projectId),
+          eq(storageOwners.extension_id, installed_extension_sources.extension_id),
         ),
       )
-      .where(and(eq(extension_instances.scope_type, "project"), eq(extension_instances.scope_id, projectId)))
+      .innerJoin(storage_documents, eq(storage_documents.owner_id, storageOwners.id))
+      .where(eq(project_extensions.project_id, projectId))
   )
     .map((row) => row.id)
     .sort();
 
 // A read-only load of one saved document, so it can join the capture transaction.
 const readDocument = async (tx: Transaction, owner: StorageOwner, documentId: string) => {
-  const document = new Y.Doc();
-  const where = <T extends typeof storage_documents | typeof storage_document_updates>(table: T) =>
-    and(
-      eq(table.workbench_id, owner.workbenchId),
-      eq(table.extension_id, owner.extensionId),
-      eq(table.document_id, documentId),
-    );
-  const [saved] = await tx
-    .select({ state: storage_documents.state })
-    .from(storage_documents)
-    .where(where(storage_documents));
-  if (saved) Y.applyUpdate(document, saved.state);
-  const updates = await tx
-    .select({ update: storage_document_updates.update })
-    .from(storage_document_updates)
-    .where(where(storage_document_updates))
-    .orderBy(asc(storage_document_updates.revision));
-  for (const { update } of updates) Y.applyUpdate(document, update);
-  return document;
+  const [saved] = await tx.select().from(storage_documents).where(fileDocumentWhere(owner, documentId));
+  return saved ? (await loadFileDocument(documentFilesFor(tx), owner.workbenchId, saved)).document : new Y.Doc();
 };
 
 const readMetadata = async (tx: Transaction, owner: StorageOwner) => {
@@ -120,17 +98,21 @@ const readMetadata = async (tx: Transaction, owner: StorageOwner) => {
  * its text documents and its migration markers. Locking the revision rows keeps commits out until
  * the transaction ends. An owner whose revision did not change reuses its saved records.
  */
-export const readProjectContent = async (tx: Transaction, projectId: string) => {
+export const readProjectContent = async (
+  tx: Transaction,
+  projectId: string,
+  files: ReturnType<typeof recoveryFilesFor>,
+) => {
   const revisions = new Map(
     (
       await tx
         .select({
-          id: storage_record_projections.extension_id,
-          revision: storage_record_projections.revision,
-          live: storage_record_projections.live_count,
+          id: storageOwners.extension_id,
+          revision: recordOwners.revision,
+          live: recordOwners.live_count,
         })
-        .from(storage_record_projections)
-        .where(eq(storage_record_projections.workbench_id, projectId))
+        .from(recordOwners)
+        .where(eq(storageOwners.project_id, projectId))
         .for("share")
     ).map((row) => [row.id, row]),
   );
@@ -139,18 +121,21 @@ export const readProjectContent = async (tx: Transaction, projectId: string) => 
     const owner = { workbenchId: projectId, extensionId };
     const revision = revisions.get(extensionId)?.revision ?? 0;
     const [previous] = await tx
-      .select({ records: recovery_point_owners.records })
+      .select({
+        hours: recovery_point_owners.hours,
+        sha256: recovery_point_owners.sha256,
+        bytes: recovery_point_owners.bytes,
+      })
       .from(recovery_point_owners)
       .where(
-        and(
-          eq(recovery_point_owners.workbench_id, projectId),
-          eq(recovery_point_owners.extension_id, extensionId),
-          eq(recovery_point_owners.revision, revision),
-        ),
+        and(eq(recovery_point_owners.owner_id, storageOwnerKey(owner)), eq(recovery_point_owners.revision, revision)),
       )
       .limit(1);
+    // A prior copy only saves encoding work. Its loss must not prevent saving
+    // the authoritative live records, including an unselected owner during restore.
+    const reusable = previous && (await files.read(projectId, previous.hours, previous).catch(() => undefined));
     const records =
-      previous?.records ??
+      reusable?.records ??
       (await encodeRecovery(
         (
           await listProjectedRecords(tx, owner)
@@ -166,8 +151,7 @@ export const readProjectContent = async (tx: Transaction, projectId: string) => 
     content.push({
       extensionId,
       revision,
-      records,
-      metadata: await encodeRecovery(metadata),
+      file: await prepareRecoveryBytes({ records, metadata: await encodeRecovery(metadata) }),
       hasData: hasText || (revisions.get(extensionId)?.live ?? 0) > 0,
     });
   }

@@ -30,7 +30,7 @@ const queueRuns = async (databasePath: string, projectId: string) => {
   const database = await createDb({ path: databasePath });
   try {
     const db = createAutomationDBService(database.db);
-    const principal = await db.getOrCreateExtensionPrincipal({ projectId, extensionId: EXTENSION_ID });
+    const principal = await db.getExtensionPrincipal({ projectId, extensionId: EXTENSION_ID });
     const queue = async (commandId: string, input: object) => {
       const { run } = await db.createRun({
         projectId,

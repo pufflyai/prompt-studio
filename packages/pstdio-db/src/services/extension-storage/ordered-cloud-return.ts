@@ -1,13 +1,15 @@
 import { and, eq, inArray, like, or, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
+import { documents } from "../../db/schemas/documents";
+import { resource_numbers as numbers, owners, owners as storageOwners } from "../../db/schemas.pg";
 import {
-  storage_documents as documents,
-  storage_ordered_resource_numbers as numbers,
-  storage_ordered_owners as owners,
-} from "../../db/schemas.pg";
-import { ensureOrderedOwner } from "./ordered-conversion";
-import { readConversion } from "./ordered-conversion-state";
+  assertStorageOwnerAdmitted,
+  assertStorageProjectAdmitted,
+  storageProjectAdmissionPending,
+} from "../../db/storage-admission";
+import { readFileDocumentState } from "./document-file-persistence";
+import { documentFilesFor } from "./document-files";
 import { createOrderedJournal, withOrderedOwner } from "./ordered-journal";
 import { pendingOrderedOperations } from "./ordered-pending";
 import { rebaseOrderedProjection } from "./ordered-rebase";
@@ -49,16 +51,14 @@ export interface CloudReturnStatus {
 
 const joinedOwners = (db: Pick<DbClient, "select">, projectIds?: string[]) =>
   db
-    .select({ workbenchId: owners.workbench_id, extensionId: owners.extension_id })
+    .select({ workbenchId: owners.project_id, extensionId: owners.extension_id })
     .from(owners)
     .where(
       and(
-        projectIds ? inArray(owners.workbench_id, projectIds) : undefined,
+        projectIds ? inArray(owners.project_id, projectIds) : undefined,
         or(
           owners.joined,
           sql`${owners.epoch} IS NOT NULL AND ${owners.epoch} <> '' AND ${owners.epoch} NOT LIKE 'local:%'`,
-          sql`EXISTS (SELECT 1 FROM storage_record_sync l WHERE l.workbench_id = ${owners.workbench_id}
-            AND l.extension_id = ${owners.extension_id} AND l.joined)`,
         ),
       ),
     );
@@ -77,7 +77,11 @@ const labels = async (db: Pick<DbClient, "select">, projectId: string, recordIds
     .select({ id: numbers.resource_id, prefix: numbers.prefix, value: numbers.value })
     .from(numbers)
     .where(
-      and(eq(numbers.workbench_id, projectId), eq(numbers.current, true), inArray(numbers.resource_id, recordIds)),
+      and(
+        eq(numbers.project_id, projectId),
+        eq(numbers.canonical_current, true),
+        inArray(numbers.resource_id, recordIds),
+      ),
     );
   return new Map(rows.flatMap((row) => (row.value === null ? [] : [[row.id, `${row.prefix}-${row.value}`] as const])));
 };
@@ -118,6 +122,7 @@ export const createOrderedCloudReturn = (
    * finished owner costs one read per refresh.
    */
   const leave = async (owner: StorageOwner) => {
+    assertStorageOwnerAdmitted(db, owner);
     const marker = await readOrderedReturnMarker(db, owner);
     if (marker?.state === "held" || (marker?.state === "signed-out" && !marker.folding)) return false;
     const ids = await run(owner, async (_journal, tx) => {
@@ -161,30 +166,25 @@ export const createOrderedCloudReturn = (
       );
     },
     async removalState(projectId: string): Promise<"verified" | "pending" | "unknown"> {
+      if (storageProjectAdmissionPending(db, projectId)) return "unknown";
       return db.transaction(async (tx) => {
         const rows = await withStates(tx, await joinedOwners(tx, [projectId]));
-        let state: "verified" | "unknown" = "verified";
         for (const row of rows) {
-          if (await readConversion(tx, row)) {
-            state = "unknown";
-            continue;
-          }
           if (!row.state) continue;
           for await (const entry of pendingOrderedOperations(createOrderedJournal(tx, row))) {
             if (entry.operation.edits.length) return "pending";
           }
         }
-        return state;
+        return "verified";
       });
     },
     async status(projectId: string): Promise<CloudReturnStatus> {
+      assertStorageProjectAdmitted(db, projectId);
       const rows = (await withStates(db, await joinedOwners(db, [projectId]))).filter((row) => row.state);
       const changed: CloudReturnStatus["changed"] = { total: 0, deletions: 0, records: [] };
       for (const row of rows) {
         const owner = { workbenchId: row.workbenchId, extensionId: row.extensionId };
-        // Status reads never take the owner's write lock that synchronization holds, but wait for conversion.
-        const convert = () => ensureOrderedOwner(db, owner);
-        await (deps.withProjectWork?.(projectId, convert) ?? convert());
+        // Admission finishes conversion before this read-only status is available.
         const summary = await db.transaction((tx) => orderedReturnSummary(createOrderedJournal(tx, owner)));
         changed.total += summary.records.length;
         changed.deletions += summary.deletions;
@@ -197,18 +197,23 @@ export const createOrderedCloudReturn = (
             created: record.created,
           });
       }
-      const notices = (
-        await db
-          .select({ extensionId: documents.extension_id, id: documents.document_id, state: documents.state })
+      const notices = await db.transaction(async (tx) => {
+        const saved = await tx
+          .select({ extensionId: storageOwners.extension_id, document: documents })
           .from(documents)
-          .where(and(eq(documents.workbench_id, projectId), like(documents.document_id, `${orderedReplacedPrefix}%`)))
-      )
-        .map((row) => ({
-          extensionId: row.extensionId,
-          recordId: (JSON.parse(row.id) as string[])[1]!,
-          ...decodeOrderedJson<OrderedReplacedNotice>(row.state),
-        }))
-        .sort((first, second) => second.replacedAt - first.replacedAt);
+          .innerJoin(storageOwners, eq(storageOwners.id, documents.owner_id))
+          .where(and(eq(storageOwners.project_id, projectId), like(documents.key, `${orderedReplacedPrefix}%`)));
+        const values = [];
+        for (const row of saved)
+          values.push({
+            extensionId: row.extensionId,
+            recordId: (JSON.parse(row.document.key) as string[])[1]!,
+            ...decodeOrderedJson<OrderedReplacedNotice>(
+              await readFileDocumentState(documentFilesFor(tx), projectId, row.document),
+            ),
+          });
+        return values.sort((first, second) => second.replacedAt - first.replacedAt);
+      });
       const names = await labels(db, projectId, [
         ...changed.records.map((record) => record.recordId),
         ...notices.map((notice) => notice.recordId),
@@ -236,6 +241,7 @@ export const createOrderedCloudReturn = (
     },
     /** Upload held changes. The base rule still keeps whatever the in-sync devices changed. */
     async apply(projectId: string) {
+      assertStorageProjectAdmitted(db, projectId);
       const held = (await withStates(db, await joinedOwners(db, [projectId]))).filter((row) => row.state === "held");
       await each(held, (owner) =>
         run(owner, async (_journal, tx) => {
@@ -247,6 +253,7 @@ export const createOrderedCloudReturn = (
     },
     /** Take Cloud's copy: unsent saves of held owners are removed from this device. */
     async discard(projectId: string) {
+      assertStorageProjectAdmitted(db, projectId);
       const held = (await withStates(db, await joinedOwners(db, [projectId]))).filter((row) => row.state === "held");
       await each(held, (owner) =>
         run(owner, async (journal, tx) => {
@@ -258,9 +265,15 @@ export const createOrderedCloudReturn = (
       return held.length > 0;
     },
     async dismissReplaced(projectId: string) {
+      assertStorageProjectAdmitted(db, projectId);
       await db
         .delete(documents)
-        .where(and(eq(documents.workbench_id, projectId), like(documents.document_id, `${orderedReplacedPrefix}%`)));
+        .where(
+          and(
+            sql`${documents.owner_id} IN (SELECT id FROM owners WHERE project_id=${projectId})`,
+            like(documents.key, `${orderedReplacedPrefix}%`),
+          ),
+        );
     },
   };
 };

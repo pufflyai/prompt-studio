@@ -1,8 +1,8 @@
 import { sql } from "drizzle-orm";
-import { boolean, index, jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { files } from "./files";
+import { isoTimestamp } from "./iso-timestamp";
 import { projects } from "./projects";
-import { sessions } from "./sessions";
 
 type JsonObject = Record<string, unknown>;
 
@@ -85,9 +85,9 @@ export const workspaces = pgTable(
     initializing: boolean("initializing").notNull().default(false),
     setup_error: text("setup_error"),
     startup_log_file_id: text("startup_log_file_id").references(() => files.id, { onDelete: "set null" }),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
-    deleted_at: text("deleted_at"),
+    created_at: isoTimestamp("created_at").notNull(),
+    updated_at: isoTimestamp("updated_at").notNull(),
+    deleted_at: isoTimestamp("deleted_at"),
   },
   (table) => [
     uniqueIndex("workspaces_project_workspace_shorthand_idx").on(table.project_id, table.workspace_shorthand),
@@ -97,23 +97,5 @@ export const workspaces = pgTable(
       .where(sql`${table.deleted_at} is null`),
     // A folder holds one .pstdio/config.json, so it can belong to only one workspace.
     uniqueIndex("workspaces_active_root_path_idx").on(table.root_path).where(sql`${table.deleted_at} is null`),
-  ],
-);
-
-export const workspace_sessions = pgTable(
-  "workspace_sessions",
-  {
-    id: text("id").primaryKey(),
-    workspace_id: text("workspace_id")
-      .notNull()
-      .references(() => workspaces.id, { onDelete: "cascade" }),
-    session_id: text("session_id")
-      .notNull()
-      .references(() => sessions.id, { onDelete: "cascade" }),
-    created_at: text("created_at").notNull(),
-  },
-  (table) => [
-    uniqueIndex("workspace_sessions_ws_session_idx").on(table.workspace_id, table.session_id),
-    index("workspace_sessions_session_idx").on(table.session_id),
   ],
 );

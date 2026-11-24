@@ -1,11 +1,21 @@
 import { sql } from "drizzle-orm";
-import { bigint, bigserial, boolean, foreignKey, index, integer, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
-import { projects } from "./projects";
+import {
+  bigint,
+  bigserial,
+  boolean,
+  foreignKey,
+  index,
+  integer,
+  pgTable,
+  primaryKey,
+  text,
+  unique,
+} from "drizzle-orm/pg-core";
+import { owners } from "./owners";
 import { bytea } from "./types";
 
 const address = () => ({
-  workbench_id: text("workbench_id").notNull(),
-  extension_id: text("extension_id").notNull(),
+  owner_id: integer("owner_id").notNull(),
   log_name: text("log_name").notNull(),
   scope: text("scope").notNull(),
   stream: text("stream").notNull(),
@@ -13,8 +23,9 @@ const address = () => ({
 
 /** One relay document; a device-writer declaration has one row per independent writer. */
 export const storage_log_streams = pgTable(
-  "storage_log_streams",
+  "log_streams",
   {
+    id: bigint("id", { mode: "bigint" }).primaryKey().generatedAlwaysAsIdentity(),
     ...address(),
     head: bigint("head", { mode: "number" }).notNull().default(0),
     complete_through: bigint("complete_through", { mode: "number" }).notNull().default(0),
@@ -22,23 +33,20 @@ export const storage_log_streams = pgTable(
     through: bigint("through", { mode: "number" }).notNull().default(0),
   },
   (table) => [
-    primaryKey({
-      name: "storage_log_streams_pk",
-      columns: [table.workbench_id, table.extension_id, table.log_name, table.scope, table.stream],
-    }),
+    unique("log_streams_owner_address_unique").on(table.owner_id, table.log_name, table.scope, table.stream),
     foreignKey({
-      name: "storage_log_streams_project_fk",
-      columns: [table.workbench_id],
-      foreignColumns: [projects.id],
+      name: "log_streams_owner_fk",
+      columns: [table.owner_id],
+      foreignColumns: [owners.id],
     }).onDelete("cascade"),
   ],
 );
 
 /** Immutable append payloads. Delivery coordinates may settle; entry content never changes. */
 export const storage_log_entries = pgTable(
-  "storage_log_entries",
+  "log_entries",
   {
-    ...address(),
+    stream_id: bigint("stream_id", { mode: "bigint" }).notNull(),
     entry_id: text("entry_id").notNull(),
     writer_id: text("writer_id").notNull(),
     created_at: bigint("created_at", { mode: "number" }).notNull(),
@@ -52,39 +60,18 @@ export const storage_log_entries = pgTable(
   },
   (table) => [
     primaryKey({
-      name: "storage_log_entries_pk",
-      columns: [table.workbench_id, table.extension_id, table.log_name, table.scope, table.stream, table.entry_id],
+      name: "log_entries_pk",
+      columns: [table.stream_id, table.entry_id],
     }),
-    index("storage_log_entries_relay_idx").on(
-      table.workbench_id,
-      table.extension_id,
-      table.log_name,
-      table.scope,
-      table.stream,
-      table.relay_sequence,
-      table.relay_index,
-    ),
-    index("storage_log_entries_pending_idx")
-      .on(table.workbench_id, table.extension_id, table.log_name, table.scope, table.stream, table.local_sequence)
+    index("log_entries_relay_idx").on(table.stream_id, table.relay_sequence, table.relay_index),
+    index("log_entries_pending_idx")
+      .on(table.stream_id, table.local_sequence)
       .where(sql`${table.local} = true AND ${table.relay_sequence} IS NULL`),
-    index("storage_log_entries_retention_idx").on(
-      table.workbench_id,
-      table.extension_id,
-      table.log_name,
-      table.scope,
-      table.stream,
-      table.created_at,
-    ),
+    index("log_entries_retention_idx").on(table.stream_id, table.created_at),
     foreignKey({
-      name: "storage_log_entries_stream_fk",
-      columns: [table.workbench_id, table.extension_id, table.log_name, table.scope, table.stream],
-      foreignColumns: [
-        storage_log_streams.workbench_id,
-        storage_log_streams.extension_id,
-        storage_log_streams.log_name,
-        storage_log_streams.scope,
-        storage_log_streams.stream,
-      ],
+      name: "log_entries_stream_fk",
+      columns: [table.stream_id],
+      foreignColumns: [storage_log_streams.id],
     }).onDelete("cascade"),
   ],
 );

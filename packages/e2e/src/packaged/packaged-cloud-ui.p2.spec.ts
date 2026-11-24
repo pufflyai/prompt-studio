@@ -150,6 +150,14 @@ test("Cloud settings respect early access and manage devices and project sync th
   await expect(settingsFrame).toBeVisible();
   await expect(settings.getByText("Early access enabled", { exact: true })).toBeVisible();
   await settings.getByRole("button", { name: "Sync with Cloud", exact: true }).click();
+  await test.step("Finish initial project sync before checking the status badge", async () => {
+    await expect
+      .poll(async () => (await first.client.account.projectSyncStatus(project.id)).state, {
+        intervals: [500],
+        timeout: 15_000,
+      })
+      .toBe("synced");
+  });
   await expect(status).toHaveText("Synced");
 
   const second = await test.step("Start the cold second app and register its default tools", async () => {

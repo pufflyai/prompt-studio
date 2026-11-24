@@ -79,7 +79,7 @@ const enqueue = (key = "run", input = {}) =>
   service.enqueueForExtension({ projectId, extensionId, commandId, input, key });
 
 test("reuses extension principals and persists runs without machine tokens", async () => {
-  const owners = await Promise.all([1, 2].map(() => db.getOrCreateExtensionPrincipal({ projectId, extensionId })));
+  const owners = await Promise.all([1, 2].map(() => db.getExtensionPrincipal({ projectId, extensionId })));
   expect(owners[0].id).toBe(owners[1].id);
   const run = await enqueue();
   const stored = await db.getRun(projectId, run.id);
@@ -144,7 +144,7 @@ test("delivers extension status events to view refresh subscribers", async () =>
 });
 
 test("recovers interrupted extension runs as retryable failures and publishes the change", async () => {
-  const principal = await db.getOrCreateExtensionPrincipal({ projectId, extensionId });
+  const principal = await db.getExtensionPrincipal({ projectId, extensionId });
   const stored = await db.createRun({
     projectId,
     principalId: principal.id,

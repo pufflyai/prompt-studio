@@ -95,7 +95,7 @@ Every session has two identifiers:
 - `session.id` — Prompt Studio's database record for lifecycle, metadata, and cached content.
 - `session.agent_session_id` — the external agent's own session/thread ID (for Codex, OpenCode, or Claude Code).
 
-A session is associated with a workspace via the `workspace_sessions` join table. When no workspace is supplied, the server links the default workspace. Sessions resolve their local or remote execution target through that workspace. A workspace can have multiple sessions (e.g. an implementation session followed by a review session).
+A session stores its current workspace in the nullable, indexed `sessions.workspace_id` foreign key. Removing the workspace clears that reference and keeps the session. Reassigning a session retains the previous workspace as a resource context link. When no workspace is supplied, the server links the default workspace. Sessions resolve their local or remote execution target through that workspace. A workspace can have multiple sessions (e.g. an implementation session followed by a review session).
 
 ### Session ↔ workspace ↔ planner ticket relationship
 
@@ -104,7 +104,7 @@ planner ticket ──┐
                  │ extension-owned workspace link metadata
                  ▼
              workspace ──┐
-               │         │ workspace_sessions (join)
+               │         │ sessions.workspace_id
                │         ▼
                │      session(s)
                ├── branch
@@ -114,7 +114,7 @@ planner ticket ──┐
 ```
 
 - Core workspaces are generic host rows. Planner ticket links are extension-owned metadata.
-- A workspace can have many sessions via `workspace_sessions` (one-to-many).
+- A workspace can have many sessions through `sessions.workspace_id` (one-to-many).
 - Multiple concurrent sessions per workspace are allowed.
 - Planner ticket attempts are host workspaces plus planner-owned link/status metadata and linked sessions.
 
@@ -130,7 +130,7 @@ Rename trims the name and uses `PATCH /v1/sessions/{id}/title`. Archive keeps th
 
 `DELETE /v1/sessions/{id}` returns 204 after deleting an inactive session. It returns 404 when the session is missing and 409 when active, queued, dispatching, or retained run work prevents deletion. The SDK exposes the same operation as `client.sessions.delete(id)`. Deletion shares the scheduler lock and locks the database row before checking eligibility.
 
-Deletion removes workspace joins and incoming and outgoing resource anchors in one transaction. It publishes synced removals, refreshed surviving anchor sources, and a resource removal event after commit. A checkpoint is removed through the file service only when its `session_messages` kind and database references prove exclusive ownership. Shared checkpoints, attachments, workspace files, linked resources, and external agent history are kept. Storage read or removal errors roll back database removal; a failed database commit restores removed checkpoint bytes.
+Deletion removes the session and its incoming and outgoing resource anchors in one transaction. It publishes synced removals, refreshed surviving anchor sources, and a resource removal event after commit. A checkpoint is removed through the file service only when its `session_messages` kind and database references prove exclusive ownership. Shared checkpoints, attachments, workspace files, linked resources, and external agent history are kept. Storage read or removal errors roll back database removal; a failed database commit restores removed checkpoint bytes.
 
 Archive and delete close only the affected session's saved views and selection. Its routed page returns to Sessions. The workbench previews direct changes while saving and restores failed previews. Dialog failures appear inline and can be retried.
 
@@ -139,14 +139,14 @@ Archive and delete close only the affected session's saved views and selection. 
 | Data | Owner and purpose |
 | --- | --- |
 | `sessions` | Lifecycle, project ID, harness and provider session IDs, model, parameters, resource anchors, timestamps, and saved conversation file ID |
-| `workspace_sessions` | Unique workspace/session links; a workspace can have multiple sessions |
+| `sessions.workspace_id` | Current workspace; deleting the workspace sets it to null |
 | `session_queue_entries` | Accepted start/follow-up work ordered by identity primary key `queue_position`; multiple entries may belong to one session |
 | `workspaces` | Location/provider state, capabilities, default-workspace identity, and resource anchors |
 | Conversation checkpoint | Complete saved message array referenced by the session file |
 
 A queued prompt is durable accepted work. Queue claims and status transitions must preserve run identity across retries. Queue position distinguishes identical prompts; session ID is not the queue's primary key.
 
-The [session response schema](../../../packages/pstdio-api-contracts/src/sessions.ts) defines returned fields. Workspace information comes from workspace records and `workspace_sessions`, rather than invented response enrichment. Planner ticket data remains extension-owned. See the [queue schema](../../../packages/pstdio-db/src/db/schemas/session-queue-entries.ts).
+The [session response schema](../../../packages/pstdio-api-contracts/src/sessions.ts) defines returned fields. Workspace information comes from workspace records and `sessions.workspace_id`. The public `workspace_sessions` sync rows are projections of that reference, with the session ID as their link ID. Planner ticket data remains extension-owned. See the [queue schema](../../../packages/pstdio-db/src/db/schemas/session-queue-entries.ts).
 
 ## Session lifecycle
 
@@ -359,7 +359,7 @@ Endpoint: `GET /v1/workspaces/:workspace_id/diff?mode=current|fork_point`
 
 Response includes `workspace_id`, `base_ref`, `head_ref`, per-file `files`, and aggregate `totals` (`additions`, `deletions`, `file_count`).
 
-Clients that have a session can resolve the workspace through the `workspace_sessions` association and call the workspace diff endpoint directly.
+Clients that have a session can resolve the workspace through the public `workspace_sessions` projection and call the workspace diff endpoint directly.
 
 ## Client integration
 
@@ -383,7 +383,7 @@ The provider tree and tab presentation map synchronized session status to icons:
 
 ## Rules
 
-1. **Sessions resolve a workspace through `workspace_sessions`.** When creation omits a workspace, the host links the default workspace. A workspace can have multiple sessions, and its provider capabilities determine available files and diffs.
+1. **Sessions resolve their current workspace through `sessions.workspace_id`.** When creation omits a workspace, the host links the default workspace. A workspace can have multiple sessions, and its provider capabilities determine available files and diffs.
 2. **The active owner holds complete history.** Inactive reads reconcile the complete saved checkpoint with native provider history, with the saved conversation winning disagreements. Snapshot providers preserve host metadata without guessing ownership. Reconciliation never blocks a session.
 3. **Event stores are ephemeral.** They live in-memory for the duration of the API process and are not persisted.
 4. **All session mutations emit to EventBus.** Clients receive real-time updates via SSE sync.

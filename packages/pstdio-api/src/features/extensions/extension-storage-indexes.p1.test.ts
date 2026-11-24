@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createDb, createExtensionStorageDBService, createProjectsDBService } from "pstdio-db";
 import { normalizeExtensionSources } from "pstdio-extensions";
 import { installExtensionStorageIndexes } from "./extension-storage-indexes";
@@ -17,7 +18,7 @@ const runtimeFor = (names: [string, string]) =>
         version: "1.0.0",
         publisher: "example",
         main: "./extension.ts",
-        enginesPstdio: "^0.4.0 || ^0.5.0",
+        enginesPstdio: `^${EXTENSION_API_VERSION}`,
       },
       definition: { storageIndexes: [{ name, fields: { title: { path: ["title"], type: "string" as const } } }] },
     })),
@@ -68,13 +69,13 @@ test("failed multi-extension index installation preserves every previous runtime
     await installExtensionStorageIndexes(service, project.id, runtimeFor(["old-a", "old-b"]));
     const storage = await service.open({ owner: { workbenchId: project.id, extensionId: "example.index-0" } });
     await storage.records.commit({ operationId: "seed", edits: [{ recordId: "one", replace: { title: "Saved" } }] });
-    await db.execute(sql`ALTER TABLE storage_record_indexes ADD CONSTRAINT reject_new_b CHECK (name <> 'new-b')`);
+    await db.execute(sql`ALTER TABLE owners ADD CONSTRAINT reject_new_b CHECK (NOT (record_indexes ? 'new-b'))`);
     await expect(installExtensionStorageIndexes(service, project.id, runtimeFor(["new-a", "new-b"]))).rejects.toThrow();
     expect((await storage.records.query({ index: "old-a" })).records.map((record) => record.recordId)).toEqual(["one"]);
     const other = await service.open({ owner: { workbenchId: project.id, extensionId: "example.index-1" } });
     expect((await other.records.query({ index: "old-b" })).records).toEqual([]);
     await expect(storage.records.query({ index: "new-a" })).rejects.toThrow("not installed");
-    await db.execute(sql`ALTER TABLE storage_record_indexes DROP CONSTRAINT reject_new_b`);
+    await db.execute(sql`ALTER TABLE owners DROP CONSTRAINT reject_new_b`);
     await expect(
       installExtensionStorageIndexes(service, project.id, runtimeFor(["new-a", "new-b"]), () => {
         throw new Error("Candidate generation was superseded");
@@ -105,7 +106,7 @@ test("an index candidate accepted before invalidation owns the fallback if the n
         publisher: "example",
         version: "1.0.0",
         main: "extension.ts",
-        engines: { pstdio: "^0.4.0 || ^0.5.0" },
+        engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       }),
     );
     await writeFile(join(root, "extension.ts"), "export default {};");
@@ -150,7 +151,7 @@ test("an index candidate accepted before invalidation owns the fallback if the n
               version: "1.0.0",
               publisher: "example",
               main: "./extension.ts",
-              enginesPstdio: "^0.4.0 || ^0.5.0",
+              enginesPstdio: `^${EXTENSION_API_VERSION}`,
             },
             definition: { storageIndexes: [{ name: index, fields: { title: { path: ["title"], type: "string" } } }] },
           },

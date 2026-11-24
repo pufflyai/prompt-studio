@@ -32,8 +32,8 @@ export interface IndexNodeFiles {
   /** Removes the least recently read cache nodes until the owner's cache fits `budgetBytes`. */
   evict(owner: StorageOwner, kind: IndexNodeKind, budgetBytes: number, keepNewerThanMs: number): Promise<number>;
   removeOwner(owner: StorageOwner): Promise<void>;
-  /** Moves every project's nodes to a renamed extension id; nodes the target already has win. */
-  moveExtension(from: string, to: string): Promise<void>;
+  /** Moves nodes outside retained projects to a renamed extension id; existing target nodes win. */
+  moveExtension(from: string, to: string, retainedProjects?: ReadonlySet<string>): Promise<void>;
   /** Whether any project keeps nodes under this extension id. */
   hasExtension(extensionId: string): Promise<boolean>;
   /** Removes every project folder whose id is not in `projectIds`. */
@@ -219,9 +219,9 @@ export const createIndexNodeFiles = (root: string): IndexNodeFiles => {
       directories.clear();
       await rm(ownerDirectory(owner), { recursive: true, force: true });
     },
-    async moveExtension(from, to) {
+    async moveExtension(from, to, retainedProjects) {
       for (const project of await readdir(root).catch(() => [] as string[])) {
-        if (project.startsWith(".")) continue;
+        if (project.startsWith(".") || retainedProjects?.has(unsegment(project))) continue;
         const source = join(root, project, segment(from));
         const target = join(root, project, segment(to));
         for (const kind of ["receipts", "logs"] as const) {
@@ -303,9 +303,10 @@ export const createMemoryIndexNodeFiles = (): IndexNodeFiles => {
     async removeOwner(owner) {
       for (const entry of of(owner)) nodes.delete(entry);
     },
-    async moveExtension(from, to) {
+    async moveExtension(from, to, retainedProjects) {
       for (const entry of select(([, e]) => e === from)) {
         const [workbenchId, , kind, id] = parse(entry);
+        if (retainedProjects?.has(workbenchId)) continue;
         const target = key({ workbenchId, extensionId: to }, kind, id);
         if (!nodes.has(target)) nodes.set(target, nodes.get(entry)!);
         nodes.delete(entry);

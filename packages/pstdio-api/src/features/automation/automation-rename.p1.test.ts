@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createAutomationDBService, createDb, createProjectsDBService } from "pstdio-db";
 import { normalizeExtensionSources } from "pstdio-extensions";
 import { digestTokenSecret, inputHash } from "./automation-policy";
@@ -21,7 +22,7 @@ test("historical exact grants and completed idempotent runs retain their secrets
         name: "notes",
         version: "1.0.0",
         main: "extension.ts",
-        enginesPstdio: "^0.4.0 || ^0.5.0",
+        enginesPstdio: `^${EXTENSION_API_VERSION}`,
       },
       definition: {
         commands: [

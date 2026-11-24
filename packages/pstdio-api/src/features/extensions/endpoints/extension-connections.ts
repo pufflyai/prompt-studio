@@ -46,7 +46,10 @@ export const deleteExtensionConnectionRoute = createRoute({
   method: "delete",
   path: "/projects/{projectId}/extension-connections/{extensionId}/{connectionId}",
   tags: ["Extensions"],
-  request: { params: connectionParams },
+  request: {
+    params: connectionParams,
+    query: z.object({ credentialScope: z.enum(["all-projects", "project"]).optional() }).strict(),
+  },
   responses: {
     204: { description: "Removed extension connection." },
   },
@@ -88,7 +91,7 @@ export const configureExtensionConnectionHandler =
 export const deleteExtensionConnectionHandler =
   (deps: ExtensionsRouteDeps): AppRouteHandler<typeof deleteExtensionConnectionRoute> =>
   async (c) => {
-    await deps.extensionConnectionService.remove(c.req.valid("param"));
+    await deps.extensionConnectionService.remove({ ...c.req.valid("param"), ...c.req.valid("query") });
     return c.body(null, 204);
   };
 

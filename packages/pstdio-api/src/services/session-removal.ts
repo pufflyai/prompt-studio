@@ -17,9 +17,10 @@ export const removeSession = (
   deps: SessionServiceDeps,
   store: ReturnType<typeof createSessionStore>,
   id: string,
-  files: Pick<ReturnType<typeof createFileService>, "prepareRemoval">,
+  files: Pick<ReturnType<typeof createFileService>, "prepareRemoval" | "recoverRemovals">,
 ) =>
   withSchedulingLock(async () => {
+    await files.recoverRemovals();
     const owner = store.get(id);
     if (await ownerIsBusy(owner)) return { status: "busy" as const };
     let checkpoint: Awaited<ReturnType<typeof files.prepareRemoval>> | undefined;
@@ -29,12 +30,12 @@ export const removeSession = (
         checkpoint = await files.prepareRemoval(file);
       });
     } catch (error) {
-      checkpoint?.rollback();
+      await checkpoint?.rollback();
       throw error;
     }
     if (result.status !== "removed") return result;
     if (owner) store.remove(id, owner);
-    checkpoint?.commit();
+    const cleanup = checkpoint?.commit();
     publishResourceAnchorChanges(deps.eventBus, result.changes, "remove");
     for (const link of result.links) deps.eventBus.emit("workspace_sessions", "delete", { id: link.id });
     for (const row of result.sessionSources) deps.eventBus.emit("sessions", "set", row);
@@ -44,5 +45,6 @@ export const removeSession = (
       id: crypto.randomUUID(),
       resource: { type: "session", id, extensionId: "pstdio", projectId: result.session.project_id },
     });
+    await cleanup;
     return result;
   });

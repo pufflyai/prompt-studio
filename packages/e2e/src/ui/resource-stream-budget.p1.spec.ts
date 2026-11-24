@@ -8,6 +8,9 @@ import { prepareDashboard } from "./helpers/workspace-files";
 let fixture: Awaited<ReturnType<typeof createResourceStreamFixture>>;
 // Provision the given resources once; each case still opens its own browser connections from scratch.
 test.beforeAll(async ({ request, baseURL }) => {
+  // The two cold projects and their extension installs took 87 s on release CI
+  // before tickets, files, and the live session could be provisioned.
+  test.setTimeout(180_000);
   fixture = await createResourceStreamFixture(request, baseURL!);
 });
 test.afterAll(async ({ request }) => {

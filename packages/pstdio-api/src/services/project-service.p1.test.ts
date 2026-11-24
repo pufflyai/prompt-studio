@@ -11,7 +11,6 @@ import {
   createWorkspacesDBService,
   type DbClient,
   eq,
-  extension_instances,
   projects,
 } from "pstdio-db";
 import { EventBus } from "../features/sync/event-bus";
@@ -100,10 +99,10 @@ describe("ProjectService", () => {
       scope_type: "project",
       scope_id: project.id,
     });
-    // Rows that point at the instance with a restricting foreign key must not block the delete.
+    // Stable extension-owned views and instance settings must leave with their project.
     const view = await createBoardViewsDBService(db).create({
       project_id: project.id,
-      extension_instance_id: instance.id,
+      extension_id: source.extension_id,
       board_id: "tasks",
       title: "Tasks",
       settings: { viewMode: "board", columnGrouping: "none", rowGrouping: "none", displayProperties: [] },
@@ -145,7 +144,7 @@ describe("ProjectService", () => {
     expect(events.at(-1)).toEqual({ table: "projects", op: "delete", data: { id: project.id } });
     expect(indexOf("workspace_sessions")).toBeLessThan(indexOf("workspaces"));
     for (const rows of await Promise.all(projectRowsAtEmit)) expect(rows).toEqual([]);
-    expect(await db.select().from(extension_instances).where(eq(extension_instances.id, instance.id))).toEqual([]);
+    expect(await createExtensionInstancesDBService(db).get(instance.id)).toBeNull();
   });
 
   test("delete of a missing project publishes nothing", async () => {

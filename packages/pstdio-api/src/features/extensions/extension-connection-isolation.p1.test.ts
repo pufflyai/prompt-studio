@@ -34,6 +34,7 @@ test("connection credentials stay with their runtime and workbench when extensio
             connectionId: contribution.id,
             baseUrl: server.url.origin,
             secret: `${runtime}-${projectId}-credential`,
+            credentialScope: "project",
           });
         }
         for (const projectId of ["shared", "other", "shared"]) {

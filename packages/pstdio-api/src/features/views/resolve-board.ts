@@ -45,7 +45,7 @@ export const getBoards = async (deps: BoardViewsDeps, projectId: string) => {
       id: view.id,
       title: text(view.title, view.localId),
       extensionId: view.extensionId,
-      scope: { project_id: projectId, extension_instance_id: source.instance.id, board_id: view.localId },
+      scope: { project_id: projectId, extension_id: source.installedSource.extension_id, board_id: view.localId },
     };
     const localized = <TSettings>(declared: { settings: TSettings; views: DeclaredView[] }) => ({
       settings: declared.settings,

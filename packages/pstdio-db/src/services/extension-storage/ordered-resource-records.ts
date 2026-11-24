@@ -1,6 +1,7 @@
 import { type StorageObserver, type StorageOwner, StorageRevisionChangedError } from "pstdio-sync";
 import {
   commitCurrentBatch,
+  coreOwnerId,
   type OrderedMoveInput,
   observeOrderedRecord,
   orderedBody,
@@ -18,41 +19,39 @@ import {
   type StorageTextDeclaration,
 } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
+import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
 import { createCommitQueue } from "./commit-queue";
 import { createOrderedCommitJournal } from "./ordered-canonical-batch";
 import { createOrderedCommitCache } from "./ordered-commit-cache";
 import { publishCommittedOrderedGroup } from "./ordered-commit-projection";
-import { ensureOrderedOwner } from "./ordered-conversion";
 import { type OrderedJournal, withOrderedOwner } from "./ordered-journal";
 import { rememberOrderedTextGeneration } from "./ordered-native-recovery";
 import { bindOrderedNativeSource, type OrderedSourceInput } from "./ordered-native-source";
 import { combineNumberEvents } from "./ordered-number-projection";
+import { ensureOrderedOwner } from "./ordered-owner";
 import { knownDependencies, rebaseOrderedProjection } from "./ordered-rebase";
 import { compileOrderedGroup } from "./ordered-record-compiler";
 import { moveOrderedRecordsIn } from "./ordered-record-move";
+import { readOrderedSaveOutcome } from "./ordered-save-outcome";
 import type { OrderedTransaction } from "./ordered-sql";
-import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
+import { orderedOwnerJoinedCloud, readOrderedAuthoredState } from "./ordered-stream-state";
 import { writeOrderedTextAsset } from "./ordered-text-asset";
+import type { RecordDependencies } from "./record-dependencies";
 import {
   createRecordQueries,
   listProjectedRecords,
   readProjectedRecords,
   readProjectedRevisions,
 } from "./record-queries";
-import type { createResourceRecords as createLegacyResourceRecords } from "./resource-records";
 
-const savedOutcome = async (journal: OrderedJournal, operationId: string) => {
-  const decision = await journal.outcome(operationId);
-  let state: StorageSaveOutcome["state"] = "saved-locally";
-  if (decision?.state === "refused") state = "refused";
-  else if (decision && (!decision.epoch.startsWith("local:") || (await journal.isIndexed(operationId, decision.epoch))))
-    state = "synced";
-  return {
-    operationId,
-    state,
-    status: "saved-locally",
-  } as StorageSaveOutcome;
-};
+const savedOutcome = async (journal: OrderedJournal, operationId: string) =>
+  (await journal.authoredOutcome(operationId))!;
+
+// The authored request's identity is independent of the SQL baseline.
+const prepareCommitRequest = async (group: StorageGroup) => ({
+  group,
+  identity: await fingerprint(group as unknown as Json),
+});
 
 // Settled local records already are the visible baseline. Avoid publishing the same
 // unchanged projection and recomputing every observation before each local save.
@@ -64,17 +63,22 @@ const prepareCommitViews = async (
   cache: ReturnType<typeof createOrderedCommitCache>,
 ) => {
   const cached = await cache.read(tx, ids);
-  if (cached) return { ...cached, recordIds: [] as string[] };
-  const row = await readOrderedOwner(tx, owner);
-  if (!(await orderedOwnerJoinedCloud(tx, owner, row)) && !(await journal.pendingFor(ids, { limit: 1 })).length)
-    return { views: await journal.canonical(ids), events: [], recordIds: [] as string[] };
-  return rebaseOrderedProjection(journal, tx, owner, ids);
+  if (cached) return { ...cached, recordIds: [] as string[], local: undefined };
+  const row = await readOrderedAuthoredState(tx, owner);
+  if (!orderedOwnerJoinedCloud(row) && (!row.pending || !(await journal.pendingFor(ids, { limit: 1 })).length))
+    return {
+      views: await journal.canonical(ids),
+      events: [],
+      recordIds: [] as string[],
+      local: !row.pending && owner.extensionId !== coreOwnerId ? row : undefined,
+    };
+  return { ...(await rebaseOrderedProjection(journal, tx, owner, ids)), local: undefined };
 };
 
 const notifyNativeFileSave = (
   saved: Awaited<ReturnType<typeof writeOrderedTextAsset>>,
   owner: StorageOwner,
-  deps: Parameters<typeof createLegacyResourceRecords>[2],
+  deps: RecordDependencies,
   cache: ReturnType<typeof createOrderedCommitCache>,
 ) => {
   if (saved.changed) deps.nativeChanged?.([saved.key]);
@@ -84,12 +88,7 @@ const notifyNativeFileSave = (
   deps.observer?.committed(owner, saved.records, { status: "saved-locally" });
 };
 
-const bindText = async (
-  db: DbClient,
-  owner: StorageOwner,
-  deps: Parameters<typeof createLegacyResourceRecords>[2],
-  input: OrderedSourceInput,
-) => {
+const bindText = async (db: DbClient, owner: StorageOwner, deps: RecordDependencies, input: OrderedSourceInput) => {
   const result = await withOrderedOwner(db, owner, (journal, tx) =>
     bindOrderedNativeSource(journal, tx, owner, input, deps.observer),
   );
@@ -119,12 +118,11 @@ const readOrderedRecords = async (
 export const createOrderedResourceRecords = (
   db: DbClient,
   owner: StorageOwner,
-  deps: Parameters<typeof createLegacyResourceRecords>[2] & {
+  deps: RecordDependencies & {
     textFields?: StorageTextDeclaration[];
     withProjectWork?: <T>(id: string, task: () => Promise<T>) => Promise<T>;
   },
 ) => {
-  type LegacyRecords = ReturnType<typeof createLegacyResourceRecords>;
   const { queryIn, ...queries } = createRecordQueries(db, owner, deps.diagnostics);
   const write = <T>(task: () => Promise<T>) => deps.withProjectWork?.(owner.workbenchId, task) ?? task();
   const commitCache = createOrderedCommitCache(db, owner);
@@ -134,17 +132,19 @@ export const createOrderedResourceRecords = (
       initialized = undefined;
       throw error;
     }));
+  const afterReady = <T>(task: () => Promise<T>) =>
+    write(async () => {
+      await ready();
+      return task();
+    });
   const commitIn = async (
     journal: OrderedJournal,
     tx: OrderedTransaction,
-    input: StorageGroup,
+    { group, identity }: Awaited<ReturnType<typeof prepareCommitRequest>>,
     ownRevisions?: Map<string, string>,
   ) => {
     // Retain only this group's canonical reads. Text and core-number policy keep their SQL-visible path.
     journal = createOrderedCommitJournal(journal, owner);
-    // Capture before the first asynchronous boundary; retries bind the entire authored request.
-    const group = structuredClone(input);
-    const identity = await fingerprint(group as unknown as Json);
     const previous = await journal.requestIdentity(group.operationId);
     if (previous) {
       if (previous !== identity) throw new Error("Operation identity reused with changed payload");
@@ -182,7 +182,7 @@ export const createOrderedResourceRecords = (
       await deps.assets.verifyComplete(assets);
     }
     await rememberOrderedTextGeneration(tx, owner, operation, projected.length > 0);
-    await journal.queue(operation, identity);
+    const queued = await journal.queueWithStatus(operation, identity);
     const saved = await publishCommittedOrderedGroup({
       journal,
       tx,
@@ -190,6 +190,8 @@ export const createOrderedResourceRecords = (
       operation,
       projected,
       before: views,
+      localOwner: prepared.local,
+      queued,
     });
     return {
       ...saved,
@@ -218,17 +220,17 @@ export const createOrderedResourceRecords = (
     return result.outcome;
   };
   const commit = async (group: StorageGroup) => {
-    const owned = structuredClone(group);
+    const captured = structuredClone(group);
     return write(async () => {
-      const result = await withOrderedOwner(db, owner, (journal, tx) => commitIn(journal, tx, owned));
-      return notify(result);
+      const request = await prepareCommitRequest(captured);
+      return notify(await withOrderedOwner(db, owner, (journal, tx) => commitIn(journal, tx, request)));
     });
   };
   const transaction = <T>(
     run: (
       records: {
-        read: (id: string) => ReturnType<LegacyRecords["read"]>;
-        readMany: (ids: string[]) => ReturnType<LegacyRecords["readMany"]>;
+        read: (id: string) => Promise<Awaited<ReturnType<typeof queries.readMany>>[number]>;
+        readMany: (ids: string[]) => ReturnType<typeof queries.readMany>;
         readCurrentMany: (ids: string[]) => ReturnType<typeof readProjectedRevisions>;
         query: typeof queries.query;
         commit: (group: StorageGroup) => Promise<StorageSaveOutcome>;
@@ -245,14 +247,19 @@ export const createOrderedResourceRecords = (
         try {
           return await run(
             {
-              read: async (id) => (await readOrderedRecords(tx, owner, [id], deps.observer))[0]!,
-              readMany: (ids) => readOrderedRecords(tx, owner, ids, deps.observer),
-              readCurrentMany: (ids) => readProjectedRevisions(tx, owner, ids),
-              query: (query) => queryIn(tx, query),
-              outcome: async (id) => ((await journal.requestIdentity(id)) ? savedOutcome(journal, id) : undefined),
+              read: (id) => queue.run(async () => (await readOrderedRecords(tx, owner, [id], deps.observer))[0]!),
+              readMany: (ids) => queue.run(() => readOrderedRecords(tx, owner, ids, deps.observer)),
+              readCurrentMany: (ids) => queue.run(() => readProjectedRevisions(tx, owner, ids)),
+              query: (query) => queue.run(() => queryIn(tx, query)),
+              outcome: (id) => queue.run(() => journal.authoredOutcome(id)),
               commit: (group) =>
                 queue.run(async () => {
-                  const result = await commitIn(journal, tx, group, ownRevisions);
+                  const result = await commitIn(
+                    journal,
+                    tx,
+                    await prepareCommitRequest(structuredClone(group)),
+                    ownRevisions,
+                  );
                   for (const record of result.records) ownRevisions.set(record.recordId, record.revision);
                   results.push(result);
                   return result.outcome;
@@ -261,7 +268,7 @@ export const createOrderedResourceRecords = (
             tx,
           );
         } finally {
-          // Promise.all can reject before another admitted save finishes. Drain before rollback.
+          // Drain every admitted read and save before releasing the owner transaction.
           await queue.settled();
         }
       });
@@ -272,20 +279,9 @@ export const createOrderedResourceRecords = (
   return {
     ...queries,
     defineIndexes: (...input: Parameters<typeof queries.defineIndexes>) =>
-      write(async () => {
-        await ready();
-        return queries.defineIndexes(...input);
-      }),
-    query: (...input: Parameters<typeof queries.query>) =>
-      write(async () => {
-        await ready();
-        return queries.query(...input);
-      }),
-    aggregate: (...input: Parameters<typeof queries.aggregate>) =>
-      write(async () => {
-        await ready();
-        return queries.aggregate(...input);
-      }),
+      afterReady(() => queries.defineIndexes(...input)),
+    query: (...input: Parameters<typeof queries.query>) => afterReady(() => queries.query(...input)),
+    aggregate: (...input: Parameters<typeof queries.aggregate>) => afterReady(() => queries.aggregate(...input)),
     conflicts: async () => [] as StorageConflict[],
     inspect: (_id: string) =>
       Promise.reject<StorageConflictInspection>(
@@ -299,10 +295,7 @@ export const createOrderedResourceRecords = (
     bindText: (input: OrderedSourceInput) => write(() => bindText(db, owner, deps, input)),
     /** Host-only: move live records to new IDs with their text history and native sources. */
     move: (input: OrderedMoveInput) =>
-      write(async () => {
-        await ready();
-        return moveOrderedRecordsIn(db, owner, deps, input, () => commitCache.committed(undefined));
-      }),
+      afterReady(() => moveOrderedRecordsIn(db, owner, deps, input, () => commitCache.committed(undefined))),
     writeTextAsset: (input: { recordId: string; content: string; replace: StorageGroup["edits"][number]["replace"] }) =>
       write(async () => {
         const group = {
@@ -315,7 +308,7 @@ export const createOrderedResourceRecords = (
             tx,
             owner,
             observer: deps.observer,
-            commit: () => commitIn(journal, tx, group),
+            commit: async () => commitIn(journal, tx, await prepareCommitRequest(structuredClone(group))),
           });
         });
         notifyNativeFileSave(saved, owner, deps, commitCache);
@@ -337,11 +330,11 @@ export const createOrderedResourceRecords = (
       return records;
     },
     outcome: (id: string) =>
-      write(() =>
-        withOrderedOwner(db, owner, async (journal) => {
-          return (await journal.requestIdentity(id)) ? savedOutcome(journal, id) : undefined;
-        }),
-      ),
+      write(async () => {
+        await ready();
+        assertStorageOwnerAdmitted(db, owner);
+        return readOrderedSaveOutcome(db, owner, id);
+      }),
     transaction,
     commitIfCurrent: (group: StorageCurrentGroup) => commitCurrentBatch({ transaction }, group),
   };

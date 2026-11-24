@@ -7,7 +7,7 @@ export type SessionsRouteDeps = Pick<
   | "personalHistoryService"
   | "harnessRegistry"
   | "eventBus"
-  | "extensionSettingsDBService"
+  | "preferencesDBService"
   | "fileService"
   | "projectService"
   | "workspaceService"

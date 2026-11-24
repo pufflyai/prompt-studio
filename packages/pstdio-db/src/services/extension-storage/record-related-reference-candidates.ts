@@ -95,7 +95,7 @@ export const relatedReferenceCandidatesSql = (
   const key = sql`encode(${expressionFoldedBytes(sql`reference_value.value`)}, 'hex')`;
   const lookup = sql`(SELECT jsonb_object_agg(reference_group.key, reference_group.ids) FROM (
     SELECT ${key} AS key, jsonb_agg(DISTINCT ${sql.identifier(mapAlias)}.record_id) AS ids
-    FROM storage_current_records AS ${sql.identifier(mapAlias)}
+    FROM records AS ${sql.identifier(mapAlias)}
     CROSS JOIN LATERAL (VALUES ${sql.join(values, sql`, `)}) AS reference_value(value)
     WHERE ${recordScopeSql(owner, target, mapAlias)} AND ${expressionString(sql`reference_value.value`)}
     GROUP BY ${key}
@@ -107,7 +107,7 @@ export const relatedReferenceCandidatesSql = (
   const ids = sql`ARRAY(SELECT DISTINCT candidate.value FROM (${keys}) AS reference_keys
     CROSS JOIN LATERAL jsonb_array_elements_text(coalesce(${lookup} -> reference_keys.key, '[]'::jsonb)) AS candidate(value))`;
   // Leave over-budget inputs to the original expression so its execution guard still applies.
-  const allIds = sql`ARRAY(SELECT ${sql.identifier(mapAlias)}.record_id FROM storage_current_records AS ${sql.identifier(mapAlias)}
+  const allIds = sql`ARRAY(SELECT ${sql.identifier(mapAlias)}.record_id FROM records AS ${sql.identifier(mapAlias)}
     WHERE ${recordScopeSql(owner, target, mapAlias)})`;
   return sql`${sql.identifier(alias)}.record_id = ANY(CASE
     WHEN jsonb_array_length(${expressionArray(refs)}) > ${match.maxItems} THEN ${allIds} ELSE ${ids} END)`;

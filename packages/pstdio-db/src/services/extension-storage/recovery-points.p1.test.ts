@@ -1,7 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
+import { eq } from "drizzle-orm";
 import type { StorageObserver } from "pstdio-sync";
 import { createDb } from "../../db/connection.pglite";
-import { projects, recovery_point_owners, recovery_points } from "../../db/schemas.pg";
+import { projects, recovery_point_owners, recovery_points, owners as storageOwners } from "../../db/schemas.pg";
 import { createExtensionInstancesDBService } from "../extension-instances/extension-instances";
 import { createExtensionUserDataDBService } from "../extension-user-data/extension-user-data";
 import { createInstalledExtensionSourcesDBService } from "../installed-extension-sources/installed-extension-sources";
@@ -195,7 +196,10 @@ test("removing an extension's data also removes it from recovery points", async 
 
   await createExtensionUserDataDBService(db).deleteForInstance(instances["ext.notes"]!);
 
-  const owners = await db.select({ id: recovery_point_owners.extension_id }).from(recovery_point_owners);
+  const owners = await db
+    .select({ id: storageOwners.extension_id })
+    .from(recovery_point_owners)
+    .innerJoin(storageOwners, eq(storageOwners.id, recovery_point_owners.owner_id));
   expect(new Set(owners.map((owner) => owner.id))).toEqual(new Set(["ext.tickets"]));
   expect(await db.select().from(recovery_points)).toHaveLength(3);
 });
@@ -333,7 +337,9 @@ test("an imported historical recovery owner restores into the canonical owner wi
   await notes.commit({ operationId: "original", edits: [{ recordId: "stable-note", replace: { title: "Before" } }] });
   await svc.recovery.capture(projectId, start);
   const [point] = await svc.recovery.list(projectId);
-  await db.update(recovery_point_owners).set({ extension_id: "pstdio.pstdio-notes" });
+  const { ensureStorageOwner } = await import("./storage-owner-key");
+  const historical = await ensureStorageOwner(db, { workbenchId: projectId, extensionId: "pstdio.pstdio-notes" });
+  await db.update(recovery_point_owners).set({ owner_id: historical });
   await notes.commit({ operationId: "later", edits: [{ recordId: "stable-note", replace: { title: "After" } }] });
   expect(await svc.recovery.restore(projectId, { ...point!, extensionId: "pstdio.pstdio-notes" })).toEqual({
     extensions: ["pstdio.notes"],
@@ -343,4 +349,28 @@ test("an imported historical recovery owner restores into the canonical owner wi
   expect(
     (await svc.recovery.list(projectId)).flatMap((p) => p.extensions).filter((o) => o === "pstdio.pstdio-notes"),
   ).toEqual([]);
+});
+
+test("recovery copies follow the numeric owner's lifetime without affecting another extension", async () => {
+  const { db, svc, projectId, records } = await setup();
+  for (const extensionId of ["ext.notes", "ext.tickets"])
+    await (await records(extensionId)).commit({
+      operationId: "same-save",
+      edits: [{ recordId: "same-record", replace: { extensionId, text: "Saved 🦉\u0000" } }],
+    });
+  await svc.recovery.capture(projectId, start);
+  const { sql } = await import("drizzle-orm");
+  const saved = await db.execute(sql`SELECT r.project_id,r.hours,r.owner_id,o.extension_id
+    FROM recovery_point_owners r JOIN owners o ON r.owner_id=o.id ORDER BY o.extension_id,r.hours`);
+  expect(saved.rows).toHaveLength(6);
+  expect(new Set(saved.rows.map((row) => row.project_id))).toEqual(new Set([projectId]));
+  expect(new Set(saved.rows.map((row) => row.owner_id)).size).toBe(2);
+  await db.execute(sql`DELETE FROM owners WHERE project_id=${projectId} AND extension_id='ext.notes'`);
+  const retained = await db.execute(sql`SELECT o.extension_id FROM recovery_point_owners r
+    JOIN owners o ON r.owner_id=o.id`);
+  expect(retained.rows).toEqual(Array.from({ length: 3 }, () => ({ extension_id: "ext.tickets" })));
+  const tickets = await records("ext.tickets");
+  await tickets.commit({ operationId: "later", edits: [{ recordId: "same-record", replace: "Changed" }] });
+  await svc.recovery.restore(projectId, { ...(await svc.recovery.list(projectId))[0]!, extensionId: "ext.tickets" });
+  expect((await tickets.read("same-record")).value).toEqual({ extensionId: "ext.tickets", text: "Saved 🦉\u0000" });
 });

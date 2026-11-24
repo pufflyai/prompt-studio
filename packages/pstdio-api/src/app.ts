@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { websocket } from "hono/bun";
 import { createStoragePositions } from "pstdio-api-contracts";
-import { startDeadRowCleanup } from "pstdio-db";
 import { ensureStorageRoot } from "pstdio-storage";
 import type { AppDependencies, CreateAppInput } from "./app-contracts";
 import { createAppDatabaseServices, openAppDatabase, upgradeAppStorage } from "./app-database";
@@ -15,6 +14,7 @@ import {
   createAppTerminalSupervisor,
   createRuntimeRouteDeps,
   startAppArtifactMountWatch,
+  startAppDeadRowCleanup,
   startAppExtensionScheduler,
   startAppLifecycle,
   startNotificationWakeTimer,
@@ -31,8 +31,8 @@ import type { RuntimeRouteDeps } from "./features/runtime/routes";
 import { deliverIdleFollowUp } from "./features/sessions/idle-turn";
 import { createSessionImportService } from "./features/sessions/imports/service";
 import { EventBus } from "./features/sync/event-bus";
-import { apiLogger } from "./lib/logger";
 import { logStartupPhase } from "./lib/startup-phase";
+import { createRequestQuietPeriod } from "./request-quiet-period";
 import { createAppAccount } from "./services/account/app-account";
 import { createNativeDocumentService } from "./services/native-documents/documents";
 import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./services/native-documents/file-source";
@@ -73,12 +73,17 @@ const apiSecurity = (host: CreateAppInput["host"], runtime: RuntimeRouteDeps | u
   return host.kind === "standalone" && host.token ? { token: host.token } : undefined;
 };
 
-const sessionQueueChanged =
-  (sessions: ReturnType<typeof createAppDatabaseServices>["sessionsDBService"], eventBus: EventBus) =>
-  async (id: string) => {
-    const session = await sessions.update(id, {});
+const createAppSessionQueue = (
+  dbs: ReturnType<typeof createAppDatabaseServices>,
+  eventBus: EventBus,
+  deliver: (id: string) => Promise<void>,
+) =>
+  createSessionQueueService(dbs.sessionQueueEntriesDBService, async (id) => {
+    const session = await dbs.sessionsDBService.update(id, {});
     if (session) eventBus.emit("sessions", "set", session);
-  };
+    // Not awaited: queue changes can hold the scheduling lock that delivery also takes.
+    void deliver(id);
+  });
 
 const registerAppRuntime = (
   app: OpenAPIHono<AppBindings>,
@@ -150,13 +155,16 @@ const buildApp = async (
   const { db, close: closeDb } = database;
   const runtimeHost = input.host.kind === "runtime" ? input.host.runtime : undefined;
   const app = new OpenAPIHono<AppBindings>();
+  const requestQuietPeriod = createRequestQuietPeriod();
+  app.use("*", requestQuietPeriod.observe);
   app.use("*", runtimeOperationOrigin);
 
   const storageRoot = input.config.storage.root;
   ensureStorageRoot(storageRoot);
 
+  const eventBus = new EventBus({ bufferSize: input.config.sync.eventBufferSize });
   const work = createProjectWork();
-  const dbs = createAppDatabaseServices(db, database.path === ":memory:" ? storageRoot : database.path, work);
+  const dbs = createAppDatabaseServices(db, database.path === ":memory:" ? storageRoot : database.path, work, eventBus);
   const { environmentId } = await dbs.environmentDBService.get();
   const storagePositions = createStoragePositions(environmentId);
   const {
@@ -169,22 +177,15 @@ const buildApp = async (
     extensionStorageDBService,
     installedExtensionSourcesDBService,
     boardViewsDBService,
-    sessionQueueEntriesDBService,
     sessionsDBService,
     settingsDBService,
     skillsDBService,
   } = dbs;
   await upgradeAppStorage(extensionStorageDBService);
 
-  const eventBus = new EventBus({ bufferSize: input.config.sync.eventBufferSize });
   const artifactMountWrites = createArtifactMountWriteLedger();
 
-  const queueChanged = sessionQueueChanged(sessionsDBService, eventBus);
-  const sessionQueueEntriesService = createSessionQueueService(sessionQueueEntriesDBService, async (sessionId) => {
-    await queueChanged(sessionId);
-    // Not awaited: queue changes can run under the scheduling lock that delivery also takes.
-    void sessions.deliverIdleTurn(sessionId);
-  });
+  const sessionQueueEntriesService = createAppSessionQueue(dbs, eventBus, (id) => sessions.deliverIdleTurn(id));
   const core = createCoreDomainServices({
     projectWork: work,
     getCommandDeps: () => deps,
@@ -194,6 +195,7 @@ const buildApp = async (
     storageRoot,
   });
   const { fileService, notificationService, projectService, workspaceSessionService, workspaceService } = core;
+  await fileService.recoverRemovals();
   let deps!: RouteDeps;
   const {
     extensionConnectionService,
@@ -217,6 +219,7 @@ const buildApp = async (
     projectService,
     provisionWorkspacesUsingSource: (sourcePath) => provisionWorkspacesUsingSource(deps, sourcePath),
     getProjectExtensionDeps: () => deps,
+    fileService,
     workspaceService,
     storageRoot,
   });
@@ -305,6 +308,7 @@ const buildApp = async (
     extensionRuntimeCatalog,
     webviewPreferencesDBService: dbs.webviewPreferencesDBService,
     extensionSettingsDBService,
+    preferencesDBService: dbs.preferencesDBService,
     extensionService,
     extensionUpgradeService,
     extensionInstallations,
@@ -349,11 +353,7 @@ const buildApp = async (
       closeDb: () => closeAppDatabase(deps, closeDb),
     });
     const connected = await account.connectAccountRelay({ app, close, deps, eventBus });
-    if (database.path !== ":memory:") {
-      stopDeadRowCleanup = startDeadRowCleanup(database.pglite, database.cleanupRetiredRows, (err, table) =>
-        apiLogger.warn({ err, table, event: "db.dead_row_cleanup.error" }, "Database cleanup failed; it will retry"),
-      );
-    }
+    stopDeadRowCleanup = startAppDeadRowCleanup(database, requestQuietPeriod.isQuiet);
     return { ...connected, extensionsReady: extensionStartup };
   } catch (error) {
     // createApp closes the database on a failed startup; the cleanup must not outlive it.
