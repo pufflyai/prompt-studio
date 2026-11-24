@@ -92,7 +92,14 @@ export const createProcessHandleProxy = (open: Promise<OpenedHandle>, cancel = n
   let killing: Promise<void> | undefined;
   let claimed = false;
 
-  const write = async (data: string | Uint8Array) => {
+  // end() closes input after every write made before it, even ones nobody awaited.
+  let writes: Promise<unknown> = Promise.resolve();
+  const write = (data: string | Uint8Array) => {
+    const next = queueWrite(data);
+    writes = next.catch(() => {});
+    return next;
+  };
+  const queueWrite = async (data: string | Uint8Array) => {
     const size = byteLength(data);
     if (queued + size > QUEUED_INPUT_CREDIT_BYTES)
       throw new Error("Too much input is waiting for the process to start. Await earlier writes first.");
@@ -140,10 +147,12 @@ export const createProcessHandleProxy = (open: Promise<OpenedHandle>, cancel = n
     exited,
     write,
     end: () =>
-      gate.then(
-        (handle) => handle.end(),
-        () => {},
-      ),
+      writes
+        .then(() => gate)
+        .then(
+          (handle) => handle.end(),
+          () => {},
+        ),
     kill: (signal) => {
       // An exited child's process group may already belong to another process.
       if (settled) return Promise.resolve();
