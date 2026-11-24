@@ -9,7 +9,7 @@ import { getRuntimeApiClient } from "@/lib/api";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { getDashboardAccountStatusQuery, getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { getRuntimeCollections } from "@/lib/sync/collections";
-import { createRuntimeState } from "@/lib/sync/runtime-state";
+import { createRuntimeFeed, createRuntimeState } from "@/lib/sync/runtime-state";
 import { dashboardCommandIds } from "@/shared/app/commands";
 
 import { cloudCatalogKeyFor, cloudCatalogScopeFor, cloudProjectDeletionKey } from "./project-catalog";
@@ -33,6 +33,8 @@ export interface CloudCopyDownloadAdmission {
   action: NonNullable<ReturnType<typeof cloudCopyDownloadAction>>;
 }
 
+const localCopyRemovals = createRuntimeFeed<string>();
+
 export const getCloudCopyDownloads = createRuntimeState((owner) => {
   const operations = getWorkbenchOperations(getDashboardScopedQueries(owner));
   const api = getRuntimeApiClient(owner).account;
@@ -55,6 +57,8 @@ export const getCloudCopyDownloads = createRuntimeState((owner) => {
   return {
     isCurrent,
     state,
+    subscribeToLocalRemoval: (listener: (scope: string) => void) => localCopyRemovals.subscribe(listener, owner),
+    localCopyRemoved: (scope: string) => localCopyRemovals.publish(scope, owner),
     snapshot: operations.getSnapshot,
     subscribe: operations.subscribe,
     check: operations.check,

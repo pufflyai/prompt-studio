@@ -190,15 +190,17 @@ const copyStates = [
   "cloud-only",
   "deletion receipt",
   "removal receipt",
+  "removal after retry",
 ] as const;
 
 const copyDevice = (outcome: (typeof copyStates)[number]) => {
   const id = "recovered-project";
   const account = { managerOrigin: "https://accounts.example.test", accountId: "account-a" };
   const folderError = "Could not prepare the project folder";
+  const removingCopy = outcome === "removal receipt" || outcome === "removal after retry";
   const device: { presence: string; downloadError?: string; syncFailed: boolean; downloads: number } = {
-    presence: outcome === "removal receipt" ? "downloading" : "cloud-only",
-    syncFailed: outcome === "removal receipt",
+    presence: removingCopy ? "downloading" : "cloud-only",
+    syncFailed: removingCopy,
     downloads: 0,
   };
   const started = Promise.withResolvers<void>();
@@ -209,7 +211,7 @@ const copyDevice = (outcome: (typeof copyStates)[number]) => {
     device.downloads++;
     started.resolve();
     await release.promise;
-    if (device.downloads > 1) {
+    if (device.downloads > 1 || outcome === "removal after retry") {
       device.presence = "downloading";
       device.downloadError = undefined;
       device.syncFailed = false;
@@ -265,7 +267,7 @@ const copyDevice = (outcome: (typeof copyStates)[number]) => {
               downloadError: device.downloadError,
               actions: {
                 download: device.presence !== "downloaded",
-                removeLocal: outcome === "removal receipt",
+                removeLocal: removingCopy,
                 deleteCloud: false,
               },
             },
@@ -300,6 +302,11 @@ test.each(copyStates)("two views check the current device state before downloadi
       .getMutationCache()
       .getAll()
       .every((mutation) => mutation.state.status !== "pending");
+  const clickAndSettle = (action: () => void) =>
+    act(async () => {
+      action();
+      await until(mutationsSettled);
+    });
   const addLocalProject = () =>
     owner.getWriter("projects")!.upsert({
       id,
@@ -338,7 +345,7 @@ test.each(copyStates)("two views check the current device state before downloadi
   let renderer: ReactTestRenderer | undefined;
   let peerRenderer: ReactTestRenderer | undefined;
   try {
-    if (outcome === "removal receipt") addLocalProject();
+    if (outcome === "removal receipt" || outcome === "removal after retry") addLocalProject();
     await getDashboardAccountStatusQuery(owner).read();
     await act(async () => {
       renderer = create(
@@ -355,6 +362,44 @@ test.each(copyStates)("two views check the current device state before downloadi
     await act(async () => until(() => choice?.canDownload && peer?.canDownload));
     const stalePeerAction = peer!.requestDownload;
     expect(opened).toEqual([]);
+    if (outcome === "removal after retry") {
+      await act(async () => {
+        release.resolve();
+        choice.requestDownload();
+        await until(() => device.downloads === 1 && mutationsSettled());
+      });
+      expect(choice!.entry?.presence).toBe("downloading");
+      expect(choice!.failure).toBeUndefined();
+      let result: Promise<unknown>;
+      await act(async () => {
+        result = removal.remove(id, "Recovered notes", account, false);
+        await removalStarted.promise;
+      });
+      await act(async () => {
+        device.presence = "cloud-only";
+        releaseRemoval.resolve();
+        await result!;
+        owner.getWriter("projects")!.remove(id);
+        await until(() => choice.entry?.presence === "cloud-only" && peer.canDownload);
+      });
+      const afterRemoval = { canDownload: choice!.canDownload, showProgress: choice!.showProgress };
+      await act(async () => {
+        peer.requestDownload();
+        await until(() => device.downloads === 2 && mutationsSettled());
+      });
+      await act(async () => {
+        device.presence = "downloaded";
+        addLocalProject();
+        publishExtensionEvent({ id: accountEvents.changed.id }, owner);
+        await until(() => choice.entry?.presence === "downloaded" && peer.entry?.presence === "downloaded");
+      });
+      expect({ afterRemoval, opened: opened.length, closed }).toEqual({
+        afterRemoval: { canDownload: true, showProgress: false },
+        opened: 1,
+        closed: 1,
+      });
+      return;
+    }
     if (outcome === "deletion receipt" || outcome === "removal receipt") {
       release.resolve();
       let result: Promise<unknown>;
@@ -365,20 +410,14 @@ test.each(copyStates)("two views check the current device state before downloadi
             : removal.remove(id, "Recovered notes", account, false);
         await removalStarted.promise;
       });
-      await act(async () => {
-        stalePeerAction();
-        await until(mutationsSettled);
-      });
+      await clickAndSettle(stalePeerAction);
       expect(device.downloads).toBe(0);
       await act(async () => {
         releaseRemoval.resolve();
         await result!;
       });
       expect(removal!.active(id)).toBe(false);
-      await act(async () => {
-        stalePeerAction();
-        await until(mutationsSettled);
-      });
+      await clickAndSettle(stalePeerAction);
       expect(device.downloads).toBe(0);
       expect(peer!.entry?.presence).toBe("cloud-only");
       return;
@@ -416,10 +455,7 @@ test.each(copyStates)("two views check the current device state before downloadi
         await until(() => device.downloads === 2 && mutationsSettled());
       });
       if (hasRetryableFailure) {
-        await act(async () => {
-          staleRetry();
-          await until(mutationsSettled);
-        });
+        await clickAndSettle(staleRetry);
         expect(device.downloads).toBe(2);
         if (outcome === "folder error") device.downloadError = folderError;
         else device.syncFailed = true;
@@ -429,10 +465,7 @@ test.each(copyStates)("two views check the current device state before downloadi
           });
           await until(() => choice.canDownload && peer!.canDownload);
         });
-        await act(async () => {
-          staleRetry();
-          await until(mutationsSettled);
-        });
+        await clickAndSettle(staleRetry);
         expect(device.downloads).toBe(2);
         await act(async () => {
           choice.requestDownload();
@@ -441,10 +474,7 @@ test.each(copyStates)("two views check the current device state before downloadi
       }
     } else {
       expect(peer!.canDownload).toBe(false);
-      await act(async () => {
-        stalePeerAction();
-        await until(mutationsSettled);
-      });
+      await clickAndSettle(stalePeerAction);
       expect(device.downloads).toBe(1);
     }
     await act(async () => peerRenderer?.unmount());

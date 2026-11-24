@@ -58,6 +58,7 @@ const getCloudLocalRemoval = createRuntimeState((owner) => {
           signal.throwIfAborted();
           if (!downloads.isCurrent(id, scope)) return;
           // The receipt retires the local copy while the shared project action is still occupied.
+          downloads.localCopyRemoved(scope);
           client.getQueryCache().find({ queryKey: syncKey, exact: true })?.reset();
           client.setQueryData<CloudProjectCatalog>(
             catalogKey,
