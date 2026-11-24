@@ -66,8 +66,9 @@ test("the first Timeline page initializes its execution prefix and continues wit
   expect(last.sections[0].globalCounts?.total).toBe(403);
   // The complete 403-ticket case reached 6.925s in Linux package CI and 11.616s
   // in published-extension CI.
+  // Published-dependency queue execution exhausted 15s before completion.
   // Keep every row, page and assertion; this is the whole functional-case allowance.
-}, 15_000);
+}, 30_000);
 
 test("a cursor continuation that initializes the tail rejects its earlier revision", async () => {
   const storage = createMemoryStorage();
