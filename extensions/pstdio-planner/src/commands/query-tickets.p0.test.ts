@@ -4,11 +4,10 @@ import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putStatus, putTag } from "../data/collections";
 import { seedDefaultStatuses } from "../data/seed";
 import { countStorageWrites } from "../data/storage-writes.fixture";
-import { createTicketRecordStorage, putTicket } from "../data/ticket-context.fixture";
-import { ticketRecords } from "../data/ticket-records";
+import { putTicket } from "../data/ticket-context.fixture";
 import type { Ticket } from "../data/types";
 import { commandParamsFor, makeCommandContext } from "./command-context.fixture";
-import { queryTickets, queryTicketsCommand } from "./query-tickets";
+import { queryTicketRenderer, queryTickets, queryTicketsCommand } from "./query-tickets";
 
 const makeTicket = (overrides: Partial<Ticket>): Ticket => ({
   id: "ticket-1",
@@ -58,9 +57,11 @@ describe("queryTicketsCommand", () => {
     const query = spyOn(storage.records, "query");
     const reads = spyOn(storage.records, "readMany");
     const identities = spyOn(ctx.resources, "identityMany");
-    const fields = await queryTickets(ctx, { fieldsOnly: true });
+    const fields = await queryTicketRenderer(ctx, { fieldsOnly: true });
     expect(fields.attributes).toEqual(full.attributes);
     expect(fields.rows).toEqual([]);
+    expect(fields.page).toMatchObject({ total: 0, filteredTotal: 0, cursor: null });
+    expect(fields.page?.revision).toBeString();
     expect(query.mock.calls.filter(([request]) => request.index === "ticket-records")).toHaveLength(0);
     expect(reads).not.toHaveBeenCalled();
     expect(identities).not.toHaveBeenCalled();
@@ -85,6 +86,52 @@ describe("queryTicketsCommand", () => {
     const result = await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
 
     expect(result.rows.map((row) => row.title)).toEqual(["Archived"]);
+  });
+
+  test("keeps a saved GitHub review link visible before the provider imports it", async () => {
+    const { storage, counter } = countStorageWrites(createMemoryStorage());
+    const url = "https://github.com/acme/tools/pull/12";
+    await putTicket(
+      storage,
+      makeTicket({
+        reviewLinks: [
+          {
+            id: "legacy-12",
+            url: "http://github.com/Acme/Tools/pull/0012/files?review=1",
+            provider: "github",
+            kind: "pull_request",
+            externalId: "12",
+            title: null,
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+      }),
+    );
+    const ctx = makeCommandContext({ storage, params: {} });
+    await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
+    counter.writes = 0;
+
+    const result = await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
+
+    expect(result.rows[0]?.attributes.linkedResourceItems).toMatchObject([
+      { label: "#12", action: { kind: "href", href: url } },
+    ]);
+    expect(counter.writes).toBe(0);
+
+    const ticket = result.rows[0]!.resource;
+    const pullRequest = {
+      type: "pull-request",
+      id: url,
+      extensionId: "pstdio.github",
+      projectId: ctx.projectId,
+      label: "acme/tools #12",
+    };
+    await ctx.resources.addAnchors(ticket, [pullRequest]);
+    const linked = await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
+    expect(linked.rows[0]?.attributes.linkedResourceItems).toMatchObject([
+      { id: resourceKey(pullRequest), label: "acme/tools #12" },
+    ]);
   });
 
   test.each([
@@ -126,15 +173,4 @@ describe("queryTicketsCommand", () => {
       itemsAttributeId: "linkedResourceItems",
     });
   });
-});
-
-test("lists a large board using full index pages and bounded record reads", async () => {
-  const tickets = Array.from({ length: 503 }, (_, i) => makeTicket({ id: `ticket-${String(i).padStart(3, "0")}` }));
-  const storage = await createTicketRecordStorage(tickets);
-  const query = spyOn(storage.records, "query");
-  const reads = spyOn(storage.records, "readMany");
-  const listed = await ticketRecords(storage).list();
-  expect(listed.map((ticket) => ticket.id)).toEqual(tickets.map((ticket) => ticket.id));
-  expect(query.mock.calls.filter(([request]) => request.index === "ticket-records")).toHaveLength(2);
-  expect(reads.mock.calls.map(([ids]) => ids.length)).toEqual([100, 100, 100, 100, 100, 3]);
 });

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { listAttempts } from "../data/attempt-storage";
+import { listAttempts } from "../data/attempt-storage.fixture";
+
 import { putTicket } from "../data/ticket-context.fixture";
 
 import { registerGate } from "../timeline/commands/gate-store";
@@ -113,7 +114,7 @@ test("a board change during readiness prevents a launch that is no longer valid"
     if (input.command.includes("--verify") && ++checks === 2) await putTicket(storage, { ...task, statusId: "done" });
     return run(input);
   };
-  await expect(dispatch(ctx, task.id)).rejects.toThrow("no longer ready");
+  await expect(dispatch(ctx, task.id)).rejects.toThrow("Work scope changed");
   expect(await listAttempts(storage)).toHaveLength(0);
 });
 

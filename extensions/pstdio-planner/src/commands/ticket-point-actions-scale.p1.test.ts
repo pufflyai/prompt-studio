@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
-import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { seedTicketIdentity } from "../data/ticket-context.fixture";
+import { createTicketRecordStorage, seedTicketIdentity } from "../data/ticket-context.fixture";
 import { validateTicketDependencies } from "../data/ticket-dependencies";
 import type { Ticket } from "../data/types";
 import { makeCommandArgs, makeCommandContext } from "./command-context.fixture";
@@ -20,9 +19,7 @@ test("create, reorder and cycle checks do not read a complete ticket collection"
     createdAt: "2026-11-14",
     updatedAt: "2026-11-14",
   }));
-  const storage = createMemoryStorage({
-    collections: { tickets: Object.fromEntries(rows.map((row) => [row.id, row])) },
-  });
+  const storage = await createTicketRecordStorage(rows);
   for (const row of rows) seedTicketIdentity(storage, row);
   const collection = storage.collection.bind(storage);
   storage.collection = <T>(name: string) => {

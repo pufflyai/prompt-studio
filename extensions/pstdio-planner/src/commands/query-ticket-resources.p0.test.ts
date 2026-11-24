@@ -5,8 +5,11 @@ import { makeCommandArgs, makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { queryTicketResources } from "./query-ticket-resources";
 
-test("ticket search lists active tickets", async () => {
+test.each(["", "t-1 Active", "1 Act", "Active", "T-1"])("ticket search lists active tickets for %s", async (query) => {
   const storage = createMemoryStorage();
+  if (query === "1 Act")
+    for (let index = 0; index < 10; index++)
+      await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Not Active" } }));
   await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Active" } }));
   const archived = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Archived" } }));
   await archiveTicketCommand.run(
@@ -15,11 +18,11 @@ test("ticket search lists active tickets", async () => {
 
   const ctx = makeCommandContext({ storage, params: {} });
   const result = await queryTicketResources(ctx, {
-    query: "",
+    query,
     providerId: "tickets",
-    limit: 10,
+    limit: 1,
     renderer: { rendererId: "tickets" },
   });
 
-  expect(result.items.map((item) => item.label)).toEqual(["T-1 Active"]);
+  expect(result.items.map((item) => item.label)).toEqual([`${query === "1 Act" ? "T-11" : "T-1"} Active`]);
 });

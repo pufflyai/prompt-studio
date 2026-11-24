@@ -4,7 +4,7 @@ import { migratePlannerStorage } from "../../data/migrate-storage";
 import { readTicketStatuses } from "../../data/status-operations";
 import { readTicketTags } from "../../data/tag-operations";
 import { timelineTicketAttributes } from "../model/ticket-properties";
-import { readStoredPlan } from "./plan-store";
+import { readPlanMetadata } from "./placement-store";
 
 // The hidden board exists only for saved-view fields. See ADR 0125.
 export async function timelineViewSchema(ctx: Pick<ExtensionContextBase, "storage" | "files">) {
@@ -12,7 +12,7 @@ export async function timelineViewSchema(ctx: Pick<ExtensionContextBase, "storag
   const [{ statuses }, { tags }, plan] = await Promise.all([
     readTicketStatuses(ctx.storage),
     readTicketTags(ctx.storage),
-    readStoredPlan(ctx.storage),
+    readPlanMetadata(ctx.storage),
   ]);
   return {
     rows: [],

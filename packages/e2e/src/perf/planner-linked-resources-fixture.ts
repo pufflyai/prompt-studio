@@ -83,8 +83,8 @@ export const installLinkedResourceFixture = async (
 export const seedLinkedResources = async (api: Api, projectId: string) => {
   const planner = <T>(command: string, params: Record<string, unknown> = {}) =>
     api.execute<T>(projectId, "pstdio.planner", command, params);
-  const existing = await planner<LinkedTicket[]>("read-tickets");
-  assert.equal(existing.length, 0, "Seed only a fresh isolated project; never add this workload to a working board");
+  const existing = await planner<{ total: number }>("list-tickets", { limit: 1 });
+  assert.equal(existing.total, 0, "Seed only a fresh isolated project; never add this workload to a working board");
   const statuses = await planner<{ statuses: { id: string }[] }>("ticket-status.read");
   const tickets: LinkedTicket[] = [];
   for (let number = 1; number <= linkedResourceCount; number++) {

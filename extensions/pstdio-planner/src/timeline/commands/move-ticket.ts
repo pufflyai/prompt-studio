@@ -1,32 +1,37 @@
 // Move a ticket in the execution order, into another deadline, or both.
 
 import { defineCommand, type ExtensionContextBase, params } from "@pstdio/sdk/extensions";
-import { resolveTicketId } from "../../data/resolve";
+import { findStoredTicket } from "../../data/resolve";
+import { readWorkflowStatuses, usableWorkflowStatuses } from "../../data/workflow-statuses";
 import { withWriteGuard } from "../../data/write-guard";
-import { moveTicket } from "../model/edit-plan";
-import { deadlineOrNone, loadPlan, savePlan } from "./plan-store";
+import { planChanged } from "../contracts";
+import { initializePlanPlacements } from "./initialize-placements";
+import { movePlanPlacement, planPlacements, readPlanMetadata } from "./placement-store";
+import { deadlineOrNone } from "./plan-store";
 export const moveTicketInPlan = async (
   ctx: Pick<ExtensionContextBase, "storage" | "events" | "projectId" | "extensionId" | "settings" | "resources">,
   input: { ticket: string; deadline?: string; before?: string },
 ) => {
   const { ticket: ticketKey, deadline, before } = input;
   return withWriteGuard(ctx, "plan", async () => {
-    const { tickets, plan } = await loadPlan(ctx);
+    const plan = await readPlanMetadata(ctx.storage);
     // The plan holds only open tickets, so an archived ticket is unknown here.
     const planTicketId = async (key: string) => {
-      const id = await resolveTicketId(ctx, key);
-      if (!tickets.some((ticket) => ticket.id === id)) throw new Error(`Unknown ticket "${key}".`);
-      return id;
+      const ticket = await findStoredTicket(ctx, key);
+      if (!ticket || ticket.archived) throw new Error(`Unknown ticket "${key}".`);
+      return ticket.id;
     };
     const ticketId = await planTicketId(ticketKey);
-    const current = plan.order.find((entry) => entry.ticketId === ticketId)?.deadlineId ?? null;
-    const moved = moveTicket(plan, {
+    const workflow = usableWorkflowStatuses(await readWorkflowStatuses(ctx));
+    await initializePlanPlacements(ctx, workflow.completedStatusIds);
+    const current = (await planPlacements(ctx.storage).get(ticketId))?.deadlineId ?? null;
+    const moved = await movePlanPlacement(ctx.storage, {
       ticketId,
       deadlineId: deadline === undefined ? current : deadlineOrNone(plan, deadline),
       ...(before ? { beforeId: await planTicketId(before) } : {}),
     });
-    await savePlan(ctx, moved, "move");
-    return moved.order.find((entry) => entry.ticketId === ticketId);
+    await ctx.events.emit(planChanged, { reason: "move" });
+    return moved ? { ticketId: moved.ticketId, deadlineId: moved.deadlineId } : undefined;
   });
 };
 

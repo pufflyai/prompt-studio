@@ -4,7 +4,6 @@ export { TICKET_KEY_PREFIX, TICKETS_COLLECTION, ticketRecordId } from "./ticket-
 
 import { migratePlannerStorage } from "./migrate-storage";
 import { liveRecord, ticketRecordId } from "./ticket-record-address";
-import { ticketRecordPages } from "./ticket-selection";
 import { readTicketTags, type StoredTicketRecord, writeTicketTags } from "./ticket-tag-storage";
 import type { StoredTicket } from "./types";
 
@@ -62,12 +61,6 @@ export const ticketRecords = (storage: ExtensionStorageApi) => {
     get: async (id: string) => {
       const { stored } = await observe(id);
       return stored && readTicketTags(stored);
-    },
-    list: async () => {
-      await migratePlannerStorage({ storage });
-      const tickets: StoredTicket[] = [];
-      for await (const page of ticketRecordPages(storage)) tickets.push(...page);
-      return tickets;
     },
     read: async (id: string) => {
       const { record, stored } = await observe(id);

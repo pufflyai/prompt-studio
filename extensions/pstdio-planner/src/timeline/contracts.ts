@@ -50,6 +50,8 @@ export interface PlanRow {
   state: TicketState;
   trackId: string | null;
   requests: ReviewRequestView[];
+  reviewCounts?: { total: number; pending: number; answered: number };
+  relationsPaged?: true;
   requestErrors: string[];
   // Only agent gates display their document inside the timeline.
   instructions: string;
@@ -81,6 +83,7 @@ export interface PlanSection {
   deadline: PlanDeadline | null;
   rows: PlanRow[];
   counts: { total: number; done: number; reviewNeeded: number; blocked: number; atRisk: number };
+  globalCounts?: { total: number; done: number };
 }
 
 export type PlanTag = StoredTag;

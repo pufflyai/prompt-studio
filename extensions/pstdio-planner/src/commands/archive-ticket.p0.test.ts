@@ -49,6 +49,38 @@ const deferred = () => {
   return { promise, resolve };
 };
 
+test("archive all queues cleanup only when the selected tickets have linked workspaces", async () => {
+  const storage = createMemoryStorage();
+  await putTicket(storage, makeTicket({ statusId: "done" }));
+  const [ctx, input] = await archiveArgs({ storage, params: { columnId: "done", actionId: "archive_all" } });
+  let jobs = 0;
+  ctx.automation.enqueue = async () => {
+    jobs++;
+    return queuedRun();
+  };
+  const result = await archiveTicketColumnActionCommand.run(ctx, input);
+  expect(result.archivedCount).toBe(1);
+  expect((await ticketsCollection(storage).get("ticket-1"))?.archived).toBe(true);
+  expect(jobs).toBe(0);
+});
+
+test("archive all preserves durable cleanup when workspace discovery fails", async () => {
+  const storage = createMemoryStorage();
+  await putTicket(storage, makeTicket({ statusId: "done" }));
+  const [ctx, input] = await archiveArgs({ storage, params: { columnId: "done", actionId: "archive_all" } });
+  ctx.workspaces.query = async () => {
+    throw new Error("Private workspace history is temporarily unavailable");
+  };
+  let jobs = 0;
+  ctx.automation.enqueue = async () => {
+    jobs++;
+    return queuedRun();
+  };
+  const result = await archiveTicketColumnActionCommand.run(ctx, input);
+  expect(result.archivedCount).toBe(1);
+  expect(jobs).toBe(1);
+});
+
 describe("archive ticket", () => {
   test("archives the ticket and cascades to its linked workspaces only", async () => {
     const storage = createMemoryStorage();
