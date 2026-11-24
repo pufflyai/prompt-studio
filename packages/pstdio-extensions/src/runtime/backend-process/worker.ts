@@ -279,9 +279,21 @@ export const runBackendWorker = () => {
         throw new Error("Extension entry must export a default contributions object");
       const described = describeBackendDefinition(module.default);
       handlers = described.handlers;
-      send({ v: BACKEND_PROTOCOL_VERSION, type: "loaded", ok: true, value: described.definition });
+      send({
+        v: BACKEND_PROTOCOL_VERSION,
+        type: "loaded",
+        ok: true,
+        value: described.definition,
+        rss: process.memoryUsage.rss(),
+      });
     } catch (error) {
-      send({ v: BACKEND_PROTOCOL_VERSION, type: "loaded", ok: false, error: serializeBackendError(error) });
+      send({
+        v: BACKEND_PROTOCOL_VERSION,
+        type: "loaded",
+        ok: false,
+        error: serializeBackendError(error),
+        rss: process.memoryUsage.rss(),
+      });
     }
   };
 
