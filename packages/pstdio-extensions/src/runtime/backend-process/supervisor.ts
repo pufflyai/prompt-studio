@@ -17,9 +17,8 @@ import {
 import { createFunctionTable, createImportTracker } from "./remote-values";
 import { type BackendSurface, collectSurfaceValues } from "./surface";
 import { createWatchdog, type WatchdogOptions } from "./watchdog";
-import { signalWorkerTree, sweepWorkerGroup } from "./worker-tree";
+import { createWorkerTreeStop, spawnWorker } from "./worker-tree";
 
-const STOP_GRACE_MS = 2_000;
 const DRAIN_DEADLINE_MS = 30_000;
 // Dependencies are prepared before a worker starts, so loading only evaluates the entry.
 const LOAD_DEADLINE_MS = 60_000;
@@ -249,16 +248,21 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     dispose(invocationId);
   };
 
+  const memory = { last: 0, peak: 0 };
+  const recordRss = (rss: number) => {
+    memory.last = rss;
+    memory.peak = Math.max(memory.peak, rss);
+  };
   const receive = (raw: unknown) => {
     const message = parseWorkerMessage(raw);
     if (message?.type === "ready") ready.resolve();
     else if (message?.type === "loaded") {
+      recordRss(message.rss);
       if (message.ok) loaded.resolve(message.value);
       else loaded.reject(workerError(message.error));
     } else if (message?.type === "result") settle(message);
     else if (message?.type === "pong") {
-      memory.last = message.rss;
-      memory.peak = Math.max(memory.peak, message.rss);
+      recordRss(message.rss);
       watchdog.answered(message.rss);
     } else if (message?.type === "release") {
       invocations.get(message.invocationId)?.table.release(message.fnIds);
@@ -266,46 +270,26 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     } else if (message) hostCalls.handle(message);
   };
 
-  const memory = { last: 0, peak: 0 };
   const life = startRuntimeOperation("extension.backend.worker");
-  const spawn = () => {
-    try {
-      return Bun.spawn(options.command, {
-        cwd,
-        env: options.env,
-        stdio: ["ignore", "inherit", "inherit"],
-        serialization: "advanced",
-        ipc: receive,
-        // Its own process group, so processes extension code starts stop with it.
-        detached: process.platform !== "win32",
-        // A worker that drops its channel can never answer again, even if its process keeps running.
-        onDisconnect: () => {
-          fail(new BackendUnavailableError("The extension backend disconnected."));
-          void signalWorkerTree(child, "SIGKILL");
-        },
-      });
-    } catch (error) {
-      // Nothing started, so nothing else will remove the working folder.
-      rmSync(cwd, { recursive: true, force: true });
-      throw error;
-    }
+  const terminate = (reason: string, signal: NodeJS.Signals) => {
+    watchdog.stop();
+    fail(new BackendUnavailableError(reason));
+    return stopTree(signal);
   };
-  const child = spawn();
+  const child = spawnWorker(options, cwd, receive, () => {
+    void terminate("The extension backend disconnected.", "SIGKILL");
+  });
+  const stopTree = createWorkerTreeStop(child);
 
   const watchdog = createWatchdog(
     (seq) => send({ v: BACKEND_PROTOCOL_VERSION, type: "ping", seq }),
-    (reason) => {
-      fail(new BackendUnavailableError(reason));
-      void signalWorkerTree(child, "SIGKILL");
-    },
+    (reason) => void terminate(reason, "SIGKILL"),
     options.watchdog,
   );
 
   const exited = child.exited.then((code) => {
     // One record per worker life, so memory can be compared across workers and workloads.
     finishRuntimeOperation(life, { exitCode: code, lastRssBytes: memory.last, peakRssBytes: memory.peak });
-    // A crash or exit leaves the processes extension code started; they go with the worker.
-    sweepWorkerGroup(child.pid);
     watchdog.stop();
     fail(new BackendUnavailableError(`The extension backend exited (${code}).`));
     rmSync(cwd, { recursive: true, force: true });
@@ -316,11 +300,8 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
   loaded.promise.catch(() => {});
 
   const stop = async () => {
-    fail(new BackendUnavailableError("The extension backend was stopped."));
-    await signalWorkerTree(child, "SIGTERM");
-    const timer = setTimeout(() => void signalWorkerTree(child, "SIGKILL"), STOP_GRACE_MS);
+    await terminate("The extension backend was stopped.", "SIGTERM");
     await exited;
-    clearTimeout(timer);
   };
 
   const invoke = createInvoke({
@@ -354,7 +335,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
       },
     };
   } catch (error) {
-    await stop();
+    await stop().catch(() => {});
     throw error;
   } finally {
     clearTimeout(deadline);

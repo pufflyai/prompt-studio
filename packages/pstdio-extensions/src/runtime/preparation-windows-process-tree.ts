@@ -1,14 +1,20 @@
+const TASKKILL_TIMEOUT_MS = 5_000;
+
 const runTaskkill = async (pid: number) => {
+  const signal = AbortSignal.timeout(TASKKILL_TIMEOUT_MS);
   const taskkill = Bun.spawn(["taskkill.exe", "/PID", String(pid), "/T", "/F"], {
     stdout: "pipe",
     stderr: "pipe",
     windowsHide: true,
+    signal,
+    killSignal: "SIGKILL",
   });
   const [exitCode, stdout, stderr] = await Promise.all([
     taskkill.exited,
     new Response(taskkill.stdout).text(),
     new Response(taskkill.stderr).text(),
   ]);
+  if (signal.aborted) throw new Error(`Stopping the process tree for PID ${pid} timed out.`);
   return { exitCode, output: stdout + stderr };
 };
 
