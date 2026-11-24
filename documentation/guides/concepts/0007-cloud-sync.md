@@ -84,10 +84,6 @@ In a Cloud project's Danger zone, **Delete local version** removes this device's
 
 After signing in, create a team through `pst teams create "Studio Team"`. When Cloud early access is enabled for the team, select it in the project picker and create a project in a new folder. Your second signed-in device can select the team and open the same Cloud project. Personal projects remain available under Personal.
 
-The first team release supports one owner. Invitations, project sharing and ownership transfer follow in later releases.
-
-*Updated at: 2026-11-24*
-
 ## Team invitations
 
 A team owner can create a link for a verified Google email address. Send the link to that person privately. The link expires after seven days and the owner can cancel it while it is pending. Joining lets the recipient see the team roster. The owner shares projects separately.
@@ -95,3 +91,5 @@ A team owner can create a link for a verified Google email address. Send the lin
 Open the link, check the signed-in address and team name, and select **Join team**. When you use another Google account, the invitation lets you switch accounts. If the join response is interrupted, opening the same link again shows whether that signed-in person already joined.
 
 An owner can remove a member, and a member can leave. The sole owner needs to transfer ownership before leaving. A removed member needs a fresh invitation to rejoin.
+
+*Updated at: 2026-11-24*

@@ -80,8 +80,6 @@ The team owns a newly created project. Opening an existing personal project fold
 
 Pass `--team <team-account-id>` for team-scoped `delete-local` and `delete-cloud` confirmation lookups.
 
-*Updated at: 2026-11-24*
-
 ## Team invitations
 
 Use `pst teams members <team-account-id>` for the roster. Owners use `pst teams invite <team-account-id> <verified-email>`, then share the returned link privately. Use `pst teams invitations <team-account-id>` to see outstanding invitations and `pst teams cancel-invitation <team-account-id> <invitation-id>` to cancel one.
@@ -89,3 +87,5 @@ Use `pst teams members <team-account-id>` for the roster. Owners use `pst teams 
 Open the link in a browser or pass it on standard input to `pst teams inspect-invitation`. After checking the team and signed-in address, pass the link on standard input to `pst teams join` to accept. Avoid storing the link in shell history. Membership gives access to the roster and does not grant projects.
 
 Use `pst teams remove-member <team-account-id> <user-id>` as the owner or `pst teams leave <team-account-id>` as a member. The sole owner must transfer ownership before leaving.
+
+*Updated at: 2026-11-24*
