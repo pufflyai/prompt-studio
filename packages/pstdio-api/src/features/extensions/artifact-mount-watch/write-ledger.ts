@@ -7,7 +7,7 @@ const ECHO_WINDOW_MS = 5_000;
 
 type FileState = { size: number; mtimeMs: number } | null;
 
-type LedgerEntry = { recordedAt: number; state: FileState };
+type LedgerEntry = { recordedAt: number; state: FileState; reappeared?: Set<string> };
 
 const readState = (path: string) => {
   // lstat throws ENOTDIR when a parent folder was replaced by a file. Either way the path is gone.
@@ -42,28 +42,30 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     }
   };
 
-  const matchesDeletedEntry = (recordedPath: string, path: string, pathExists: boolean, keepMatchedWrites: boolean) => {
-    if (!isInside(path, recordedPath)) return false;
-    if (keepMatchedWrites && (pathExists || readState(recordedPath))) {
-      entries.delete(recordedPath);
-      return false;
+  const rememberReappearance = (path: string) => {
+    for (const [recordedPath, entry] of entries) {
+      if (entry.state === null && (path === recordedPath || isInside(path, recordedPath))) {
+        entry.reappeared ??= new Set();
+        entry.reappeared.add(path);
+      }
     }
-    return !pathExists;
   };
 
   const isEcho = (path: string, matched: Set<string>, keepMatchedWrites: boolean) => {
     const current = readState(path);
+    if (keepMatchedWrites && current) rememberReappearance(path);
     const entry = entries.get(path);
-    if (entry && sameState(entry.state, current)) {
+    if (entry && sameState(entry.state, current) && !entry.reappeared?.has(path)) {
       matched.add(path);
       return true;
     }
-    if (entry && keepMatchedWrites) entries.delete(path);
+    if (entry?.state && keepMatchedWrites) entries.delete(path);
     for (const [recordedPath, recorded] of entries) {
       // A folder the mount created on the way to a file it wrote.
       if (recorded.state && current?.directory && isInside(recordedPath, path)) return true;
       // An entry that disappeared with a folder the mount deleted.
-      if (!recorded.state && matchesDeletedEntry(recordedPath, path, current !== null, keepMatchedWrites)) return true;
+      const pathDeletedByMount = !recorded.state && isInside(path, recordedPath) && !recorded.reappeared?.has(path);
+      if (!current && pathDeletedByMount) return true;
     }
     return false;
   };

@@ -94,6 +94,23 @@ describe("artifact mount write ledger", () => {
     expect(ledger.dropEchoes([path], options)).toEqual([path]);
   });
 
+  test("keeps a delayed directory deletion echo for a sibling that never returned", async () => {
+    const ledger = createArtifactMountWriteLedger();
+    const { mount, root } = createMount(ledger);
+    const oldPath = join(root, "sales/old.json");
+    const newPath = join(root, "sales/new.json");
+    const options = { keepMatchedWrites: true };
+    await mount.writeText("sales/old.json", "{}");
+    ledger.dropEchoes([oldPath]);
+    await mount.delete("sales");
+    expect(ledger.dropEchoes([oldPath], options)).toEqual([]);
+
+    await mount.writeText("sales/new.json", "[]");
+    expect(ledger.dropEchoes([join(root, "sales"), newPath, oldPath], options)).toEqual([]);
+    rmSync(newPath);
+    expect(ledger.dropEchoes([newPath, oldPath], options)).toEqual([newPath]);
+  });
+
   test("forgets writes after the echo window", async () => {
     let now = 0;
     const ledger = createArtifactMountWriteLedger(() => now);
