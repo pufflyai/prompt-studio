@@ -14,8 +14,10 @@ import {
   syncPath,
   syncProtocolHeader,
   syncProtocolVersion,
+  teamAccountSchema,
   updateResultSchema,
 } from "pstdio-sync-contracts";
+import { z } from "zod";
 import { defaultRelayLimits } from "../limits";
 import { startRelay } from "../service";
 import { encode, randomId, sha256 } from "../storage/sync-fixture";
@@ -430,6 +432,81 @@ test("capability negotiation uploads a manifest graph and retains its children t
     const personalBlobs = await personal.manifestBlobs();
     await expect(personalBlobs.put(randomId("personal"), bytes, [leafId])).rejects.toThrow("409");
   } finally {
+    await relay.close();
+  }
+});
+
+test("devices of the same team user share encrypted data under the team's project and their own private space", async () => {
+  const relay = await open();
+  const { manager, managerHandler, device, scope } = relay.context;
+  const accountService = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: managerHandler });
+  const managerOrigin = accountService.url.origin;
+  const managerRequest = (token: string, path: string, body?: unknown) =>
+    fetch(managerOrigin + path, {
+      method: body === undefined ? "GET" : "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  try {
+    const response = await managerRequest(device.token, "/v1/teams", { name: "Transport team" });
+    expect(response.status).toBe(201);
+    const { accountId } = teamAccountSchema.parse(await response.json());
+    const projectId = scope.workbenchId;
+    await manager.setFeature({ accountId, feature: "relay", enabled: true });
+    const added = await managerRequest(device.token, `/v1/workbenches/${projectId}?accountId=${accountId}`, {});
+    expect(added.status).toBe(200);
+    const second = await manager.registerDevice({
+      accountId: device.accountId,
+      deviceId: crypto.randomUUID(),
+      name: "Team laptop",
+      platform: "linux",
+    });
+
+    const connectDevice = async (credential: string) => {
+      const issued = await managerRequest(credential, "/v1/environment-access", { accountId, workbenchId: projectId });
+      expect(issued.status).toBe(200);
+      const { token } = z.object({ token: z.string() }).parse(await issued.json());
+      const spaces = await fetchSyncSpaces({
+        managerOrigin,
+        credential,
+        accountId,
+        userId: device.accountId,
+        workbenchId: projectId,
+      });
+      return { token, spaces };
+    };
+    const [first, laptop] = await Promise.all([connectDevice(device.token), connectDevice(second.token)]);
+    for (const space of ["project", "personal"] as const) {
+      const documentId = await first.spaces[space].documentId("test.sync");
+      const route = { kind: "document", projectId, spaceOwner: first.spaces[space].spaceOwner, documentId } as const;
+      const bytes = new TextEncoder().encode(`Encrypted ${space} record`);
+      const outgoing = await sealUpdate(first.spaces[space], documentId, bytes, []);
+      expect((await relay.post({ ...route, operation: "updates" }, outgoing, first.token)).status).toBe(200);
+      const read = async (token: string) => {
+        const result = readResultSchema.parse(
+          await (await relay.post({ ...route, operation: "read" }, { after: 0 }, token)).json(),
+        );
+        if (result.status !== "updates") throw new Error("Expected updates");
+        return result.updates;
+      };
+      expect(await read(relay.context.token)).toHaveLength(0);
+      const [update] = await read(laptop.token);
+      expect(await openUpdate(laptop.spaces[space], documentId, update)).toEqual(bytes);
+    }
+    const wrongPrivateOwner = {
+      kind: "document",
+      projectId,
+      spaceOwner: accountId,
+      documentId: randomId("doc"),
+      operation: "read",
+    } as const;
+    expect((await relay.post(wrongPrivateOwner, { after: 0 }, laptop.token)).status).toBe(403);
+    const live = relay.connect(laptop.token);
+    expect((await live.next()).type).toBe("ready");
+    live.socket.send(JSON.stringify({ type: "discover", spaceOwner: accountId }));
+    expect((await live.closed).code).toBe(1008);
+  } finally {
+    await accountService.stop(true);
     await relay.close();
   }
 });

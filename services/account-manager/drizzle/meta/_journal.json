@@ -50,6 +50,13 @@
       "when": 1795006908327,
       "tag": "0006_happy_loa",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795514573551,
+      "tag": "0007_team_accounts",
+      "breakpoints": true
     }
   ]
 }

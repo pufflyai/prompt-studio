@@ -27,3 +27,21 @@ export const createAccountRefresh = (input: {
     done: () => running,
   };
 };
+
+export const createAccountWatch = () => {
+  const listeners = new Set<() => void>();
+  return {
+    watch(listener: () => void) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    notify() {
+      for (const listener of listeners) listener();
+    },
+    close() {
+      listeners.clear();
+    },
+  };
+};

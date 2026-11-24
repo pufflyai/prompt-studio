@@ -43,6 +43,38 @@ describe("createProjectsModule", () => {
     expect(workbench.host.getPersistenceScope()).toBeUndefined();
   });
 
+  test("reports a project tab selection declined after the source loses activation", async () => {
+    const workbench = createWorkbench();
+    const selected: string[] = [];
+    const project = { id: "local-ready-tab", name: "Ready notes" };
+    const writer = getWriter("projects")!;
+    writer.truncateAndWrite([
+      { ...project, created_at: "2026-01-01T00:00:00.000Z", updated_at: "2026-01-01T00:00:00.000Z" },
+    ]);
+    workbench.registerModule(
+      createProjectsModule({
+        projectTabs: {
+          select(id) {
+            if (workbench.activation.isActive()) selected.push(id);
+          },
+          clear() {},
+        },
+      }),
+    );
+    try {
+      const selecting = workbench.commands.executeCommand(dashboardCommandIds.selectProject, { project });
+      workbench.activation.setActive(false);
+      await expect(selecting).resolves.toBe(false);
+      expect(selected).toEqual([]);
+      workbench.activation.setActive(true);
+      await workbench.commands.executeCommand(dashboardCommandIds.selectProject, { project });
+      expect(selected).toEqual([project.id]);
+    } finally {
+      writer.truncateAndWrite([]);
+      await workbench.dispose();
+    }
+  });
+
   test("does not persist the project picker into the project being left", async () => {
     const snapshots = new Map<string | undefined, WorkbenchSnapshot>();
     const workbench = createWorkbench({

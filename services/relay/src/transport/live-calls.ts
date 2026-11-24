@@ -3,6 +3,7 @@ import type { LiveClientMessage, LiveServerMessage } from "pstdio-sync-contracts
 export interface CallConnection {
   deviceId: string;
   accountId: string;
+  userId?: string;
   projectKey: string;
   registrations: Set<string>;
   send(message: LiveServerMessage): void;
@@ -24,7 +25,7 @@ export const createLiveCalls = (maximum: number, connections: (project: string) 
     const callee = [...connections(connection.projectKey)].find(
       (candidate) =>
         candidate.deviceId === message.deviceId &&
-        (message.spaceOwner === null || candidate.accountId === message.spaceOwner) &&
+        (message.spaceOwner === null || (candidate.userId ?? candidate.accountId) === message.spaceOwner) &&
         candidate.registrations.has(liveKey(message.spaceOwner, message.procedure)),
     );
     if (!callee) {

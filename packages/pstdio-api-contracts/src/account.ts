@@ -1,3 +1,7 @@
+import type { TeamAccount } from "pstdio-sync-contracts";
+
+export type { TeamAccount } from "pstdio-sync-contracts";
+
 /** This device's cloud login. The device credential stays in the native host. */
 export interface DeviceLogin {
   managerOrigin: string;
@@ -10,6 +14,11 @@ export interface DeviceLogin {
 
 export interface AccountStatus {
   login: DeviceLogin | null;
+  teamAccounts?: TeamAccount[];
+  /** Owning team account IDs for Cloud projects visible to the current user. */
+  teamProjects?: Record<string, string>;
+  /** Ownership of local team copies persists when sync is paused or the manager is offline. */
+  teamProjectOwners?: Record<string, string>;
   /** Latest device-native sign-in. Starting another closes the previous pending callback. No credential or URL is exposed. */
   loginAttempt?: { id: string; status: AccountLoginStatus };
   /** True after the manager rejects this device credential. Cleared by a new sign-in or explicit sign-out. */

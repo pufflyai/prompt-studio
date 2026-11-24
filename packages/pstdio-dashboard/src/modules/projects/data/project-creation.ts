@@ -10,8 +10,14 @@ interface ProjectReceipt {
   created?: boolean;
 }
 
+interface TeamProjectInput {
+  teamAccountId: string;
+  name: string;
+}
+
 interface FolderDraft {
   path: string;
+  team?: TeamProjectInput;
   project?: ProjectReceipt;
   setupFailed?: boolean;
 }
@@ -27,7 +33,7 @@ export const getProjectCreation = createRuntimeState((owner) => {
     if (!Object.keys(scope).length) authorityGeneration++;
   });
 
-  const open = async (path: string): Promise<ProjectReceipt> => {
+  const open = async (path: string, team?: TeamProjectInput): Promise<ProjectReceipt> => {
     const subject = operationSubject("project", "open-folder", path);
     const snapshot = operations.getSnapshot();
     if (snapshot.pending.some((entry) => entry.subjects.includes(subject) && activeStatuses.has(entry.status))) {
@@ -35,9 +41,15 @@ export const getProjectCreation = createRuntimeState((owner) => {
     }
 
     const previous = snapshot.recovery
-      .filter((entry) => entry.domain === domain && (entry.draft as FolderDraft | undefined)?.path === path)
+      .filter((entry) => {
+        const draft = entry.draft as FolderDraft | undefined;
+        return entry.domain === domain && draft?.path === path;
+      })
       .at(-1);
-    const draft: FolderDraft = previous ? { ...(previous.draft as FolderDraft) } : { path };
+    const retained = previous?.draft as FolderDraft | undefined;
+    if (retained && retained.team?.teamAccountId !== team?.teamAccountId)
+      throw new Error("This folder has a pending change for another account. Check System activity.");
+    const draft: FolderDraft = retained ? { ...retained } : { path, ...(team && { team }) };
     if (previous) {
       const generation = authorityGeneration;
       const moved = await operations.transfer(previous.id, () => true);
@@ -47,7 +59,10 @@ export const getProjectCreation = createRuntimeState((owner) => {
     return operations.submit({
       domain,
       subjects: [subject],
-      sourceCommand: { id: dashboardCommandIds.createProject },
+      sourceCommand: {
+        id: dashboardCommandIds.createProject,
+        ...(draft.team && { args: { teamAccountId: draft.team.teamAccountId } }),
+      },
       title: "Open project folder",
       intent: path,
       draft,
@@ -61,7 +76,7 @@ export const getProjectCreation = createRuntimeState((owner) => {
 
         // The server serializes by canonical folder path and opens the same project for a repeated explicit selection.
         const { id, name, created } = await api.projects.create(
-          { initial_workspace: { provider_id: "pstdio.root", params: { path } } },
+          { ...draft.team, initial_workspace: { provider_id: "pstdio.root", params: { path } } },
           { signal },
         );
         signal.throwIfAborted();
@@ -87,14 +102,23 @@ export const getProjectCreation = createRuntimeState((owner) => {
 
 const activeStatuses: ReadonlySet<string> = new Set(["queued", "writing", "reconciling"]);
 
-export const projectCreationPresentation = (snapshot: ReturnType<ReturnType<typeof getProjectCreation>["read"]>) => {
+export const projectCreationPresentation = (
+  snapshot: ReturnType<ReturnType<typeof getProjectCreation>["read"]>,
+  teamAccountId?: string,
+) => {
   const isOpening = snapshot.pending.some((entry) => entry.domain === domain && activeStatuses.has(entry.status));
-  const failure = snapshot.recovery.filter((entry) => entry.domain === domain && !entry.dismissed).at(-1);
+  const failure = snapshot.recovery
+    .filter((entry) => {
+      const draft = entry.draft as FolderDraft | undefined;
+      return entry.domain === domain && !entry.dismissed && draft?.team?.teamAccountId === teamAccountId;
+    })
+    .at(-1);
   const draft = failure?.draft as FolderDraft | undefined;
   const error = failure?.error;
   return {
     isOpening,
     path: draft?.path,
+    name: draft?.team?.name,
     error: isOpening || !error ? undefined : String(error instanceof Error ? error.message : error),
   };
 };

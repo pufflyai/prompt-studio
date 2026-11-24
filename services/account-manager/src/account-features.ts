@@ -1,4 +1,4 @@
-import { and, eq, exists, sql } from "drizzle-orm";
+import { and, eq, exists, type SQLWrapper, sql } from "drizzle-orm";
 import { z } from "zod";
 import { account, user } from "./auth-schema";
 import { accountFeatureSchema } from "./contracts";
@@ -8,7 +8,7 @@ import { withAccountTransaction } from "./transactions";
 
 type Reader = Pick<ManagerDatabase, "select">;
 
-export const relayEnabled = (db: Reader, accountId: string) =>
+export const relayEnabled = (db: Reader, accountId: string | SQLWrapper) =>
   exists(
     db
       .select()
@@ -66,11 +66,11 @@ export const findAccountIdByEmail = async (db: Pick<ManagerDatabase, "selectDist
   return matches[0].accountId;
 };
 
-export const setAccountFeatureByEmail = async (
+export const setAccountFeature = async (
   db: ManagerDatabase,
-  input: { email: string; feature: "relay"; enabled: boolean },
+  input: ({ email: string } | { accountId: string }) & { feature: "relay"; enabled: boolean },
 ) => {
-  const accountId = await findAccountIdByEmail(db, input.email);
+  const accountId = "email" in input ? await findAccountIdByEmail(db, input.email) : input.accountId;
   await withAccountTransaction(db, accountId, (transaction) =>
     setAccountFeatureInTransaction(transaction, { accountId, feature: input.feature, enabled: input.enabled }),
   );
