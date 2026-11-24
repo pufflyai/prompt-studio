@@ -93,9 +93,12 @@ export const preparationQueuePriority =
 // Retiring a worker for a continuation's job resumes the interrupted job after that
 // continuation, not in its next database gap, where its next job would retire it again.
 /**
- * How long an interrupted job stays out of its preemptor's gaps while that preemptor is idle: it has
- * no queued or running job. A long step of its own never spends the hold, and a waiter that reaches
- * the job without a loan is delayed at most this long once the preemptor stops running work.
+ * How long an interrupted job stays out of its preemptor's gaps while that preemptor is idle. It is busy
+ * only while one of its jobs runs or is reserved on a starting worker, or while the job it retired a slot
+ * for still waits for that slot's capacity. Other queued work leaves the clock running, so a barred job
+ * cannot extend the hold.
+ * A long step of its own never spends the hold, and a waiter that reaches the job without a loan is
+ * delayed at most this long once the preemptor stops running work.
  */
 export const PREPARATION_YIELD_HOLD_MS = 1_000;
 
