@@ -14,19 +14,22 @@ export const recoverDispatchSender = async (
   entry: PendingQueueEntry,
 ) => {
   if (!entry.sender_json || entry.sender_json.afterTurn === undefined) return false;
-  // Question answers can advance the session timestamp without replacing this request.
-  // Its exact checkpoint, rather than the current run timestamp, proves delivery.
-  const messages = recoverMessageSenders(await getSessionHistory(session.id, deps), [entry]);
-  const requestId = submittedRequestId(session.id, entry.queue_position);
-  if (
-    !hasSubmittedMessageCheckpoint(messages, {
-      sender: { ...entry.sender_json, requestId },
-      prompt: entry.prompt,
-      submittedAttachmentFileIds: entry.attachments_json?.map((attachment) => attachment.file_id) ?? [],
-    })
-  )
-    return true;
+  const sender = entry.sender_json;
   return withSchedulingLock(async () => {
+    // Reconciliation can save another sender and retire its guard. Read and
+    // checkpoint under the same lock so recovery cannot overwrite that evidence.
+    const messages = recoverMessageSenders(await getSessionHistory(session.id, deps), [entry]);
+    const requestId = submittedRequestId(session.id, entry.queue_position);
+    // Question answers can advance the session timestamp without replacing this request.
+    // Its exact checkpoint, rather than the current run timestamp, proves delivery.
+    if (
+      !hasSubmittedMessageCheckpoint(messages, {
+        sender: { ...sender, requestId },
+        prompt: entry.prompt,
+        submittedAttachmentFileIds: entry.attachments_json?.map((attachment) => attachment.file_id) ?? [],
+      })
+    )
+      return true;
     const current = await deps.sessionService.get(session.id);
     const saved = await deps.sessionQueueEntriesService.get(entry.queue_position);
     if (
