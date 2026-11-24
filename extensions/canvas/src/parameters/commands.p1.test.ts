@@ -32,7 +32,9 @@ test("save errors leave existing design data intact", async () => {
   const ctx = await fixture();
   const changes: Values[] = [{ opacity: "wrong type" }, { unknown: 3 }];
   for (const values of changes) {
-    await expect(parameterCommands["parameters.save"].run(ctx, { canvas, frame: "Colors", values })).rejects.toThrow();
+    await expect(
+      parameterCommands["parameters.save"].run(ctx, { canvas, frame: "Colors", values }),
+    ).rejects.toMatchObject({ cause: { type: "reject", code: "invalid_parameter_version" } });
   }
   expect(JSON.parse(await ctx.projectFiles!.readText("src/default.json")).values.opacity).toBe(0.5);
 });

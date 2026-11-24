@@ -32,6 +32,14 @@ export class HarnessOperationError extends Error {
     super(message);
   }
 }
+
+class HarnessOperationRefused extends HarnessOperationError {
+  constructor(cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause), 400);
+    this.name = "HarnessOperationRefused";
+  }
+}
+
 const resolve = async (deps: SessionsRouteDeps, id: string, operation = false) => {
   const session = await deps.sessionService.get(id);
   if (!session) throw new HarnessOperationError("Session not found.", 404);
@@ -146,7 +154,7 @@ export const invokeSessionHarnessOperation = async (
     try {
       prepared = await harness.prepareOperation(input, operation, options);
     } catch (error) {
-      throw new HarnessOperationError(error instanceof Error ? error.message : String(error), 400);
+      throw new HarnessOperationRefused(error);
     }
     const active = deps.sessionService.store.get(id);
     if (active?.cancellationRequested) throw new HarnessOperationError("The session is stopping.", 409);
