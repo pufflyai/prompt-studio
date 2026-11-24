@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { createArtifactMount, resolveArtifactMountRoot } from "pstdio-extensions";
 import { createArtifactMountWriteLedger } from "./write-ledger";
 
@@ -74,6 +74,24 @@ describe("artifact mount write ledger", () => {
     await mount.writeText("q3.json", "{}");
     expect(ledger.dropEchoes([path])).toEqual([]);
     expect(ledger.dropEchoes([path])).toEqual([path]);
+  });
+
+  test.each(["q3.json", "sales"])("reports a new direct deletion after %s reappears", async (deletedPath) => {
+    const ledger = createArtifactMountWriteLedger();
+    const { mount, root } = createMount(ledger);
+    const file = deletedPath === "sales" ? "sales/q3.json" : deletedPath;
+    const path = join(root, file);
+    const options = { keepMatchedWrites: true };
+    await mount.writeText(file, "{}");
+    ledger.dropEchoes([path]);
+    await mount.delete(deletedPath);
+    expect(ledger.dropEchoes([path], options)).toEqual([]);
+
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, "[]");
+    expect(ledger.dropEchoes([path], options)).toEqual([path]);
+    rmSync(path);
+    expect(ledger.dropEchoes([path], options)).toEqual([path]);
   });
 
   test("forgets writes after the echo window", async () => {

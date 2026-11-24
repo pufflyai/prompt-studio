@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import * as fs from "node:fs";
 import { existsSync, watch as fsWatch, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -66,6 +67,21 @@ const startWatch = async (
 };
 
 describe("watchArtifactMount", () => {
+  test.skipIf(process.platform !== "darwin")("starts recursive and flat root watches by default on macOS", async () => {
+    const nativeWatch = fs.watch;
+    const watches = spyOn(fs, "watch").mockImplementation(nativeWatch);
+    try {
+      const { root } = await startWatch({ initialFolders: ["nested"] });
+      const registrations: unknown[] = watches.mock.calls.map(([path, options]) => [path, options]);
+      expect(registrations).toEqual([
+        [root, { recursive: true }],
+        [root, { recursive: false }],
+      ]);
+    } finally {
+      watches.mockRestore();
+    }
+  });
+
   test("reports replaced manifests when the tree watch delivers no notification", async () => {
     const { changes, root } = await startWatch({
       initialFiles: { "manifest.json": '{"version":1}' },

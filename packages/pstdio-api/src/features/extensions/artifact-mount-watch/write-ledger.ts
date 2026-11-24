@@ -42,18 +42,28 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     }
   };
 
-  const isEcho = (path: string, matched: Set<string>) => {
+  const matchesDeletedEntry = (recordedPath: string, path: string, pathExists: boolean, keepMatchedWrites: boolean) => {
+    if (!isInside(path, recordedPath)) return false;
+    if (keepMatchedWrites && (pathExists || readState(recordedPath))) {
+      entries.delete(recordedPath);
+      return false;
+    }
+    return !pathExists;
+  };
+
+  const isEcho = (path: string, matched: Set<string>, keepMatchedWrites: boolean) => {
     const current = readState(path);
     const entry = entries.get(path);
     if (entry && sameState(entry.state, current)) {
       matched.add(path);
       return true;
     }
+    if (entry && keepMatchedWrites) entries.delete(path);
     for (const [recordedPath, recorded] of entries) {
       // A folder the mount created on the way to a file it wrote.
       if (recorded.state && current?.directory && isInside(recordedPath, path)) return true;
       // An entry that disappeared with a folder the mount deleted.
-      if (!recorded.state && !current && isInside(path, recordedPath)) return true;
+      if (!recorded.state && matchesDeletedEntry(recordedPath, path, current !== null, keepMatchedWrites)) return true;
     }
     return false;
   };
@@ -69,7 +79,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     dropEchoes: (paths: string[], { keepMatchedWrites = false } = {}) => {
       forgetExpired();
       const matched = new Set<string>();
-      const kept = paths.filter((path) => !isEcho(path, matched));
+      const kept = paths.filter((path) => !isEcho(path, matched, keepMatchedWrites));
       if (!keepMatchedWrites) for (const path of matched) entries.delete(path);
       return kept;
     },

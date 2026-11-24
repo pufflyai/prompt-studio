@@ -50,7 +50,7 @@ This is the intended design, not a temporary workaround.
 - Positive: views stay current under direct edits, and hooks can react to them.
 - Positive: the watch set is not stored. The host derives it from the runtime snapshots and default workspaces, and reconciles when extension instances, installed sources, projects, or workspaces change.
 - Negative: a new optional manifest field and a new event family to keep stable.
-- Negative: the write ledger is new in-memory state. It is created by mount writes, removed on its first match or after 5 seconds, and owned by the host process.
+- Negative: the host process retains write metadata in memory for up to five seconds. Single watches consume an entry on a match. Dual watches keep matching entries for later notifications and discard entries when a new filesystem state is observed.
 - Negative: Linux folder watches count against the OS limit. The 2,000-folder limit per mount bounds that cost.
 - Neutral: worktree and remote workspaces are not watched, because mounts do not resolve there.
 
