@@ -1,4 +1,8 @@
-import type { createPreparationContinuations, preparationPriority } from "./preparation-priority";
+import {
+  type createPreparationContinuations,
+  preparationIncludes,
+  type preparationPriority,
+} from "./preparation-priority";
 
 export interface PreparationOptions {
   /** Explicit disjoint resource paths allow parallel execution. Ancestors conflict; unknown work is exclusive. */
@@ -100,10 +104,11 @@ export const yieldPreparation = (job: Job, next: Job) => {
 const awaitsYield = (job: Job) => {
   if (!job.yielded) return false;
   for (const owner of job.yielded) if (!owner.continuing) job.yielded.delete(owner);
-  // A continuation that now waits on the interrupted job itself needs it to run.
+  // A continuation that now waits on the interrupted job itself, directly or through a loan, needs it to run.
+  // Membership is exact: a lent continuation still counts when a more urgent one ranks first.
   return (
     job.yielded.size > 0 &&
-    ![...job.waiters].some((waiter) => waiter.scope?.continuation && job.yielded!.has(waiter.scope.continuation))
+    ![...job.waiters].some((waiter) => [...job.yielded!].some((owner) => preparationIncludes(waiter.scope, owner)))
   );
 };
 
