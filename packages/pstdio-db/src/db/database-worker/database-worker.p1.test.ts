@@ -178,3 +178,71 @@ test("a fatal exit waits for a database that is still running its startup statem
   expect(opened).toBe(true);
   await (await opening).close();
 });
+
+const startupResult = (opening: ReturnType<typeof createDbInWorker>) =>
+  opening.then(
+    async (db) => {
+      await db.close();
+      return "opened";
+    },
+    (error: unknown) => error,
+  );
+
+test("a failed startup phase callback rejects opening and releases the disk lock", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-db-worker-phase-"));
+  const dbPath = path.join(root, "database");
+  fs.mkdirSync(dbPath);
+  const failure = new Error("Could not publish the runtime descriptor");
+  try {
+    const result = await startupResult(
+      createDbInWorker({
+        path: dbPath,
+        onPhase: (phase) => {
+          if (phase === "database_locked") throw failure;
+        },
+      }),
+    );
+    expect(result).toBe(failure);
+    await (await createDbInWorker({ path: dbPath })).close();
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+}, 30_000);
+
+test("aborting an in-memory open from a startup phase rejects with the caller's reason", async () => {
+  const controller = new AbortController();
+  const reason = new Error("Startup cancelled");
+  const result = await startupResult(
+    createDbInWorker({
+      path: ":memory:",
+      signal: controller.signal,
+      onPhase: (phase) => {
+        if (phase === "database_engine_loaded") controller.abort(reason);
+      },
+    }),
+  );
+  expect(result).toBe(reason);
+});
+
+test("aborting the final startup phase closes the opened database before rejecting", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-db-worker-abort-"));
+  const dbPath = path.join(root, "database");
+  fs.mkdirSync(dbPath);
+  const controller = new AbortController();
+  const reason = new Error("Startup finished after cancellation");
+  try {
+    const result = await startupResult(
+      createDbInWorker({
+        path: dbPath,
+        signal: controller.signal,
+        onPhase: (phase) => {
+          if (phase === "database_migrated") controller.abort(reason);
+        },
+      }),
+    );
+    expect(result).toBe(reason);
+    await (await createDbInWorker({ path: dbPath })).close();
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+}, 30_000);
