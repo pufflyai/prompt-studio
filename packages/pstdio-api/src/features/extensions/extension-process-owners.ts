@@ -1,6 +1,9 @@
 import { createProcessOwner, type ProcessOwner } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
-import { type ProcessEnvironmentSource, processEnvironmentSourceIdentity as sourceIdentity } from "./process-environment/permissions";
+import {
+  type ProcessEnvironmentSource,
+  processEnvironmentSourceIdentity as sourceIdentity,
+} from "./process-environment/permissions";
 
 type Generation = { projectId: string; extensionId: string; instanceId: string; identity: string; owner: ProcessOwner };
 

@@ -1,4 +1,6 @@
+import { apiLogger } from "../../lib/logger";
 import type { ResolvedProcessCommand } from "./process-command";
+import type { ProcessEnvironmentLease } from "./process-environment/permissions";
 import { processGroupExited, signalProcessTree, treeExitedWithin } from "./process-group";
 import { startWindowsGrantedProcess } from "./windows-granted-process";
 
@@ -11,6 +13,7 @@ type ChildInput = {
   env: NodeJS.ProcessEnv;
   detached: boolean;
   trackTree: boolean;
+  stdin?: "pipe";
 };
 
 const launchChild = (input: ChildInput) => {
@@ -23,7 +26,7 @@ const launchChild = (input: ChildInput) => {
     // Windows detachment breaks captured output from commands inside npm shims.
     detached: input.detached || process.platform !== "win32",
     env: input.env,
-    stdin: "ignore",
+    stdin: input.stdin ?? "ignore",
     stderr: output,
     stdout: output,
     windowsHide: true,
@@ -60,4 +63,14 @@ export const startProcessChild = (input: ChildInput) => {
       return stopping;
     },
   };
+};
+
+export const watchLease = (treeExited: Promise<void> | undefined, lease?: ProcessEnvironmentLease) => {
+  if (!treeExited || !lease) return;
+  void treeExited.then(lease.release, (error: unknown) => {
+    apiLogger.warn(
+      { err: error, event: "extension.process.grant_tracking_failed" },
+      "Could not verify granted process exit",
+    );
+  });
 };

@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import type { ProcessEvent, ProcessHandle } from "pstdio-api-contracts/extension-kernel";
-import { redactProcessOutput, redactText } from "./process-output-redaction";
+import { redactText } from "./process-output-redaction";
+import { redactProcessOutput } from "./process-output-stream-redaction";
 
 const streamed = (...chunks: string[]) =>
   ({
@@ -90,4 +91,49 @@ test("overlapping values hold back at most the longest value and redact in linea
   const collected = performance.now();
   expect(redactText(mutual, ["xy", "yzx"])).not.toContain("xy");
   expect(performance.now() - collected).toBeLessThan(2_000);
+});
+
+test("hides overlapping values in collected output", () => {
+  expect(redactText("before abcdefg after", ["abc", "bcdefg"])).toBe("before [Redacted] after");
+  expect(redactText("before abcdefg after", ["bcdefg", "abc"])).toBe("before [Redacted] after");
+  expect(redactText("before abcdefg after", ["ab", "abc", "bcdefg"])).toBe("before [Redacted] after");
+});
+
+test("preserves neighboring text around long overlapping runs", () => {
+  const repeated = "ab".repeat(25_000);
+  expect(redactText(`一${repeated}🙂c`, ["aba", "bab", "b🙂c", "🙂", ""])).toBe("一[Redacted]");
+  expect(redactText("🙂abc🙂abc🙂", ["abc"])).toBe("🙂[Redacted]🙂[Redacted]🙂");
+});
+
+test("closing redacted output releases its underlying pending read", async () => {
+  const pending = Promise.withResolvers<IteratorResult<ProcessEvent>>();
+  const entered = Promise.withResolvers<void>();
+  const done = { done: true, value: undefined } as const;
+  const source = {
+    ...streamed(),
+    events: () => ({
+      [Symbol.asyncIterator]: () => ({
+        next() {
+          entered.resolve();
+          return pending.promise;
+        },
+        async return() {
+          pending.resolve(done);
+          return done;
+        },
+      }),
+    }),
+  };
+  const iterator = redactProcessOutput(source, ["fixture-grant"]).events()[Symbol.asyncIterator]();
+  const read = iterator.next();
+  await entered.promise;
+  try {
+    const returned = iterator.return!();
+    expect(await Promise.race([Promise.all([read, returned]), Bun.sleep(100).then(() => "pending")])).toEqual([
+      done,
+      done,
+    ]);
+  } finally {
+    pending.resolve(done);
+  }
 });

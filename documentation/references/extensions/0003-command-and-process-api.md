@@ -62,8 +62,9 @@ for await (const event of child.events()) {
   A child that never started reports `{ code: null, signal: null }`.
 - `write(data)` writes to stdin in call order and waits for the pipe to accept the data. `end()`
   closes stdin after earlier writes; later writes reject.
-- `kill(signal?)` stops the child and everything it started. It sends `SIGTERM`, waits 500 ms, then
-  forces the stop, and resolves after cleanup. A kill while the target is still opening, such as a
+- `kill(signal?)` stops the child and everything it started. On Unix the default is `SIGTERM`
+  followed by forced cleanup after 500 ms. On Windows the host terminates the retained Job and
+  reports the native exit code with a null signal. `kill` resolves after confirmed cleanup. A kill while the target is still opening, such as a
   remote provider that has not answered, resolves at once: `started` rejects with
   `process_owner_closed`, and a child that still arrives is stopped.
 - `events()` yields `stdout` and `stderr` chunks as `Uint8Array` and always ends with one `exit`
