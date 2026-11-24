@@ -22,7 +22,11 @@ export const steerSession = async (deps: SessionsRouteDeps, sessionId: string, i
     const target = await captureActiveSteering(deps, sessionId, input);
     if (target.outcome !== undefined) return target;
     const { projectId, owner, runtime, steer, settings } = target;
-    const sender = await resolveMessageSender(deps, projectId, input.source);
+    const sender = await resolveMessageSender(
+      deps,
+      projectId,
+      input.source ?? (input.sourceSessionId ? { type: "session", id: input.sourceSessionId } : undefined),
+    );
     return {
       outcome: undefined,
       projectId,

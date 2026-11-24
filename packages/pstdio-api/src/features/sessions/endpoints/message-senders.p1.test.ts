@@ -46,7 +46,12 @@ test.each([false, true])("records a session sender in delivered and saved histor
     const res = await app.app.request(`/v1/sessions/${target.id}/follow-up`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ prompt: "Check the release", source: { type: "session", id: source.id } }),
+      body: JSON.stringify({
+        prompt: "Check the release",
+        ...(queued
+          ? { sourceSessionId: source.id }
+          : { source: { type: "session", id: source.id }, sourceSessionId: "ignored" }),
+      }),
     });
     expect(res.status).toBe(200);
     const result = await res.json();

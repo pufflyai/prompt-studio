@@ -9,6 +9,94 @@ import { createSessionScheduler } from "./session-scheduler";
 import { reattachAgentSession } from "./spawn-agent";
 import { prepareOrphanedSessionRecovery } from "./startup";
 
+test.each([
+  false,
+  true,
+])("reattachment checkpoints only the current run's proven request (current entry: %s)", async (hasCurrent) => {
+  const app = await createTestApp({
+    harnessRegistry: createTestHarnessRegistry([
+      createTestHarnessRecord("newer-run", {
+        provider: {
+          capabilities: () => ["SessionReattach"],
+          getMessages: () => [],
+          reattach: (_ctx, input) => {
+            input.events.push({
+              op: "add",
+              path: "/messages/0",
+              value: {
+                id: "new-request",
+                role: "user",
+                parts: [{ type: "text", text: "Same prompt" }],
+              },
+            });
+            return {
+              agentSessionId: "native",
+              done: Promise.resolve({ status: "completed" as const }),
+              stop: () => {},
+            };
+          },
+        },
+      }),
+    ]),
+  });
+  try {
+    const project = await app.deps.projectService.create({ name: "Run ownership" });
+    const session = await app.deps.sessionService.createQueuedWithEntry({
+      project_id: project.id,
+      title: "Old handoff",
+      agent: testHarnessId("newer-run"),
+      prompt: "Same prompt",
+      request_kind: "start",
+      sender_json: { type: "user", id: "original", name: "Original" },
+    });
+    const [old] = await app.deps.sessionQueueEntriesService.listPendingBySession(session.id);
+    const claimed = await app.deps.sessionService.claimQueuedForDispatch(session.id, old!.queue_position);
+    await app.deps.sessionQueueEntriesService.setDispatchSenderBoundary(
+      old!.queue_position,
+      0,
+      claimed!.last_request_started!,
+    );
+    const nextRun = new Date(Date.parse(claimed!.last_request_started!) + 1).toISOString();
+    await app.deps.sessionService.update(session.id, { agent_session_id: "native", last_request_started: nextRun });
+    const sender = { type: "user" as const, id: "current", name: "Current" };
+    const current = hasCurrent
+      ? await app.deps.sessionQueueEntriesService.createDispatchStarted({
+          session_id: session.id,
+          prompt: "Same prompt",
+          request_kind: "follow_up",
+          sender_json: sender,
+        })
+      : undefined;
+    if (current) {
+      await app.deps.sessionQueueEntriesService.setDispatchSenderBoundary(current.queue_position, 0, nextRun);
+      await persistSessionMessages(
+        session.id,
+        [
+          {
+            id: "new-request",
+            role: "user",
+            parts: [{ type: "text", text: "Same prompt" }],
+            sender: { ...sender, requestId: `${session.id}:${current.queue_position}` },
+          },
+        ],
+        app.deps,
+      );
+    }
+    await (await prepareOrphanedSessionRecovery(app.deps))();
+    for (let i = 0; i < 100 && (await app.deps.sessionService.get(session.id))?.status !== "completed"; i++)
+      await Bun.sleep(10);
+    expect((await app.deps.sessionService.get(session.id))?.status).toBe("completed");
+    const recovered = (await getSessionHistory(session.id, app.deps))[0].sender;
+    if (current) {
+      expect(recovered).toMatchObject(sender);
+      expect(await app.deps.sessionQueueEntriesService.get(current.queue_position)).toBeNull();
+    } else expect(recovered).toBeUndefined();
+    expect(await app.deps.sessionQueueEntriesService.get(old!.queue_position)).not.toBeNull();
+  } finally {
+    await app.close();
+  }
+});
+
 test("permanent reattach failure keeps an unconfirmed sender's attachment protection", async () => {
   const app = await createTestApp({
     harnessRegistry: createTestHarnessRegistry([
@@ -458,6 +546,88 @@ test("a failed recovered checkpoint stays held while later queued work drains", 
     ]);
   } finally {
     app.deps.fileService.update = updateFile;
+    await app.close();
+  }
+});
+
+test.each([
+  "attachment",
+  "checkpoint",
+])("restart retains a %s guard and continues unrelated queued work", async (failure) => {
+  const started: string[] = [];
+  const sender = { type: "user" as const, id: "person", name: "Alex" };
+  const app = await createTestApp({
+    harnessRegistry: createTestHarnessRegistry([
+      createTestHarnessRecord("recovery-guard", {
+        provider: {
+          start: (_ctx, input) => {
+            started.push(input.prompt);
+            return { agentSessionId: "other", done: new Promise<never>(() => {}), stop: () => {} };
+          },
+          getMessages: () => [],
+        },
+      }),
+    ]),
+  });
+  try {
+    await app.deps.settingsService.update({ max_concurrent_sessions: 3 });
+    const project = await app.deps.projectService.create({ name: "Recovery guards" });
+    const held = await app.deps.sessionService.createQueuedWithEntry({
+      project_id: project.id,
+      title: "Held",
+      agent: testHarnessId("recovery-guard"),
+      prompt: "Held",
+      request_kind: "start",
+      sender_json: sender,
+      attachments_json: failure === "attachment" ? [{ file_id: "protected-upload" }] : [],
+    });
+    const [entry] = await app.deps.sessionQueueEntriesService.listPendingBySession(held.id);
+    await app.deps.sessionService.claimQueuedForDispatch(held.id, entry.queue_position);
+    await app.deps.sessionQueueEntriesService.setDispatchSenderBoundary(
+      entry.queue_position,
+      0,
+      (await app.deps.sessionService.get(held.id))!.last_request_started!,
+    );
+    await persistSessionMessages(
+      held.id,
+      [
+        {
+          id: "confirmed",
+          role: "user",
+          parts: [{ type: "text", text: "Held" }],
+          sender: { ...sender, requestId: `${held.id}:${entry.queue_position}` },
+        },
+      ],
+      app.deps,
+    );
+    await app.deps.sessionService.createQueuedWithEntry({
+      project_id: project.id,
+      title: "Other",
+      agent: testHarnessId("recovery-guard"),
+      prompt: "Other",
+      request_kind: "start",
+    });
+    const update = app.deps.fileService.update;
+    if (failure === "checkpoint")
+      app.deps.fileService.update = async () => {
+        throw new Error("checkpoint unavailable");
+      };
+    try {
+      await (await prepareQueuedSessionRecovery(app.deps))();
+      expect(started).toEqual(["Other"]);
+      expect(await app.deps.sessionQueueEntriesService.get(entry.queue_position)).not.toBeNull();
+      expect(await app.deps.sessionQueueEntriesService.listPendingBySession(held.id)).toEqual([]);
+    } finally {
+      app.deps.fileService.update = update;
+    }
+    const messages = await getSessionHistory(held.id, app.deps);
+    if (failure === "attachment")
+      messages[0].parts.push({ type: "file", fileId: "protected-upload", url: "/attachments/protected-upload" });
+    await persistSessionMessages(held.id, messages, app.deps);
+    await (await prepareQueuedSessionRecovery(app.deps))();
+    expect(await app.deps.sessionQueueEntriesService.get(entry.queue_position)).toBeNull();
+    expect(started).toEqual(["Other"]);
+  } finally {
     await app.close();
   }
 });

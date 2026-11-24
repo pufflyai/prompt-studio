@@ -72,7 +72,10 @@ test("steers a new prompt into the captured active run without making it dispatc
   }
 });
 
-test("reconciled uncertain delivery checkpoints the original sender before removing its intent", async () => {
+test.each([
+  "source",
+  "sourceSessionId",
+])("reconciled uncertain delivery checkpoints the %s sender before removing its intent", async (field) => {
   const fixture = await setup(async () => ({ status: "uncertain", reason: "connection lost" }));
   try {
     const source = await fixture.handle.deps.sessionService.create({
@@ -81,7 +84,11 @@ test("reconciled uncertain delivery checkpoints the original sender before remov
       agent: "fake",
       status: "completed",
     });
-    const response = await fixture.send({ source: { type: "session", id: source.id } });
+    const response = await fixture.send(
+      field === "source"
+        ? { source: { type: "session", id: source.id }, sourceSessionId: "ignored" }
+        : { sourceSessionId: source.id },
+    );
     const delivery = await response.json();
     expect(delivery.status).toBe("uncertain");
     fixture.handle.deps.sessionService.store.remove(fixture.session.id, fixture.owner);

@@ -156,6 +156,11 @@ export const questionResponseSchema = z.object({
 
 export const followUpInputSchema = z.object({
   source: sessionMessageSourceSchema.optional(),
+  sourceSessionId: z
+    .string()
+    .min(1)
+    .optional()
+    .describe("Session sender alias; source takes precedence when both are supplied."),
   prompt: z.string().min(1).optional(),
   agent: z.string().optional(),
   model: z.string().optional(),

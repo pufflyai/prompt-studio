@@ -74,13 +74,12 @@ export const LoadingWidePane: Story = {
   args: { messages: [], queuedFollowUps: [], loading: true, loaderComponent: <ChatSkeleton /> },
 };
 
-const outlineTurnCount = 80;
-const outlineMessages: SessionMessage[] = Array.from({ length: outlineTurnCount }, (_, index) => [
+const outlineMessages: SessionMessage[] = Array.from({ length: 240 }, (_, index) => [
   {
     id: `q-${index}`,
     role: "user" as const,
     ...(index === 0 ? { sender: { type: "session" as const, id: "release-checks", name: "Release checks" } } : {}),
-    ...(index === outlineTurnCount - 1 ? { sender: { type: "user" as const, id: "alex", name: "Alex" } } : {}),
+    ...(index === 239 ? { sender: { type: "user" as const, id: "alex", name: "Alex" } } : {}),
     parts: [{ type: "text" as const, text: `Check build ${index + 1}` }],
   },
   {
@@ -92,7 +91,7 @@ const outlineMessages: SessionMessage[] = Array.from({ length: outlineTurnCount 
 
 export const ConversationOutline: Story = {
   description:
-    "A wide transcript exposes each turn in its outline. Attributed prompts show a sender avatar and name; older prompts without recorded attribution keep their appearance. Keyboard selection reaches virtualized turns, and narrowing the panel hides the gutter.",
+    "A wide transcript exposes each turn in its outline. Attributed prompts show a sender avatar and name; older prompts without recorded attribution keep their appearance. Arrow keys, Home, End and Tab move focus across virtualized turns; Enter selects a turn, and narrowing the panel hides the gutter.",
   render: (args) => {
     const [wide, setWide] = useState(true);
     return (
