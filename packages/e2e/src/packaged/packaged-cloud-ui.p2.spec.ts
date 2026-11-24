@@ -12,6 +12,7 @@ import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { createCloudAcceptanceFixture, signInCloudAcceptanceDevice } from "./packaged-cloud-acceptance.fixture";
 import { buildBinary } from "./packaged-helpers";
 import { signInBrowser, stopProcess } from "./packaged-serve-helpers";
+import { packagedAccountCode } from "./packaged-sync-identity.fixture";
 
 interface Resources {
   root: string;
@@ -91,17 +92,20 @@ test("Cloud settings respect early access and manage devices and project sync th
   await context.setOffline(false);
   await expect(status).toHaveText("Sign in");
   await openSettings();
-  const startSignIn = async () => {
+  const microsoftSignIn = settings.getByRole("button", { name: "Sign in with Microsoft", exact: true });
+  await expect(microsoftSignIn).toBeVisible();
+  const startSignIn = async (provider: "Google" | "Microsoft" = "Google") => {
     const viewport = page.viewportSize()!;
     const opened = context.waitForEvent("page");
     const destination = context.waitForEvent(
       "request",
       (request) => new URL(request.url()).pathname === "/v1/native-login",
     );
-    await settings.getByRole("button", { name: "Sign in", exact: true }).click();
+    await settings.getByRole("button", { name: `Sign in with ${provider}`, exact: true }).click();
     const popup = await opened;
     const login = new URL((await destination).url());
     expect(login.origin).toBe(fixture.peer.origin);
+    if (provider === "Microsoft") expect(login.searchParams.get("provider")).toBe("microsoft");
     await expect.poll(() => new URL(popup.url()).pathname).toBe("/v1/native-login");
     await popup.close();
     await restorePackagedBrowserViewport(page, viewport);
@@ -111,21 +115,32 @@ test("Cloud settings respect early access and manage devices and project sync th
     return callback;
   };
   // Actual UI initiation and cancellation share the native request even after the view is reopened.
-  const cancelled = await startSignIn();
+  const cancelled = await startSignIn("Microsoft");
   await expect(settings.getByRole("button", { name: "Cancel sign-in" })).toBeVisible();
   await settings.getByRole("button", { name: "Cancel sign-in" }).click();
-  await expect(settings.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
+  await expect(settings.getByRole("button", { name: "Sign in with Google", exact: true })).toBeVisible();
   await expect(fetch(cancelled)).rejects.toThrow();
   const cancelledNotice = settings.getByRole("alert").filter({ hasText: "Sign-in did not complete." });
   await expect(cancelledNotice).toBeVisible();
-  await cancelledNotice.getByRole("button", { name: "Dismiss", exact: true }).click();
+  const cancelledAttempt = (await first.client.account.status()).loginAttempt;
+  await fixture.peer.setMicrosoftSignIn(false);
+  await microsoftSignIn.click();
+  const unavailableNotice = settings.getByRole("alert").filter({ hasText: "has not enabled Microsoft sign-in" });
+  await expect(unavailableNotice).toBeVisible();
   await expect(cancelledNotice).toBeHidden();
-  const callback = await startSignIn();
+  expect((await first.client.account.status()).loginAttempt).toEqual(cancelledAttempt);
+  await unavailableNotice.getByRole("button", { name: "Dismiss", exact: true }).click();
+  await expect(settings.getByRole("alert")).toHaveCount(0);
+  await fixture.peer.setMicrosoftSignIn(true);
+  const callback = await startSignIn("Microsoft");
+  const microsoftAccount = "microsoft-owner";
+  callback.searchParams.set("code", packagedAccountCode(microsoftAccount));
   await closeSettings();
   await openSettings();
   await expect(settings.getByRole("button", { name: "Cancel sign-in" })).toBeVisible();
   expect((await fetch(callback)).status).toBe(200);
   await expect(status).toHaveText("Signed in");
+  expect((await first.client.account.status()).login?.accountId).toBe(microsoftAccount);
   await context.setOffline(true);
   await expect(status).toHaveText("Connection lost");
   await context.setOffline(false);
@@ -143,7 +158,7 @@ test("Cloud settings respect early access and manage devices and project sync th
   await expect(status).toHaveText("Sign in");
   // Critical: retiring the account popover must keep the independently owned settings surface open.
   await expect(settingsFrame).toBeVisible();
-  await expect(settings.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
+  await expect(settings.getByRole("button", { name: "Sign in with Google", exact: true })).toBeVisible();
   await fixture.peer.setEarlyAccess(true);
   expect((await fetch(await startSignIn())).status).toBe(200);
   await expect(status).toHaveText("Local");

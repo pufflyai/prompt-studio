@@ -24,6 +24,7 @@ try {
     try {
       let value: unknown;
       if (request.operation === "early-access") peer.setEarlyAccess(request.enabled);
+      else if (request.operation === "microsoft-sign-in") peer.setMicrosoftSignIn(request.enabled);
       else if (request.operation === "block-device") peer.blockDevice(request.deviceId, request.blocked);
       else if (request.operation === "trim") peer.trim(request.documentId);
       else if (request.operation === "capture-snapshot") {

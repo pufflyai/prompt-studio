@@ -60,7 +60,6 @@ export const useCloud = (projectId: string | undefined, includeDevices: boolean)
             account: account.data,
             sync: online ? sync.data : { ...sync.data, state: "offline" as const },
             signingIn: account.data.loginAttempt?.status === "pending",
-            loginFailed: account.data.loginAttempt?.status === "failed",
             devices: devices?.data ?? [],
             project: project?.data ?? pendingPreparation,
           }
