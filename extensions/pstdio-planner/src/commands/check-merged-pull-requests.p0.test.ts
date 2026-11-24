@@ -184,3 +184,16 @@ test("a shared head still records delivery for each submitted workspace", async 
     ),
   ).toHaveLength(1);
 });
+
+test("unsubmitted attempts do not scan tickets", async () => {
+  const f = await setup();
+  await putAttempt(f.storage, { ...f.variant, revisions: [] });
+  const query = f.storage.records.query.bind(f.storage.records);
+  let scans = 0;
+  f.storage.records.query = (input) => {
+    if (input.index === "merge-check-tickets") scans++;
+    return query(input);
+  };
+  await checkMergedPullRequestsCommand.run(f.ctx, {});
+  expect(scans).toBe(0);
+});
