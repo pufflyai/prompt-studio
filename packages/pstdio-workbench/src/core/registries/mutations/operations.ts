@@ -78,7 +78,7 @@ const createRejectionReconciler = (
 };
 
 const discardEntry = (entry: Entry, clearDraft: (entry: Entry) => void) => {
-  if (!entry.controller.signal.aborted) entry.onDiscard?.();
+  if (!entry.controller.signal.aborted || entry.onDiscardAfterRetirement) entry.onDiscard?.();
   entry.onDiscard = undefined;
   clearDraft(entry);
 };
@@ -216,6 +216,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
         recoveryFiles: input.recoveryFiles,
         releaseOnDiscard: input.releaseOnDiscard,
         onDiscard: input.onDiscard,
+        onDiscardAfterRetirement: input.onDiscardAfterRetirement,
         dismissed: false,
       };
       const signal = entry.controller.signal;

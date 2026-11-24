@@ -419,6 +419,7 @@ test("capacity preserves all retained drafts and sends no new write", async () =
 
 test("returning to the owning account can discard a retired project draft and free capacity", async () => {
   const { queries, operations, subject } = setup();
+  let retiredDiscards = 0;
   const input = {
     projectId: "retired-project",
     subjects: [subject],
@@ -426,6 +427,9 @@ test("returning to the owning account can discard a retired project draft and fr
     title: "Change project",
     draft: "Preserve this draft",
     write: () => Promise.reject(new Error("Reply lost")),
+    onDiscard() {
+      retiredDiscards++;
+    },
   };
   try {
     for (let index = 0; index < 128; index++) {
@@ -456,6 +460,7 @@ test("returning to the owning account can discard a retired project draft and fr
     expect(operations.getSnapshot().recovery[1]?.draft).toBe(input.draft);
     operations.discard(original!.id);
     expect(operations.getSnapshot().recovery).toHaveLength(127);
+    expect(retiredDiscards).toBe(1);
     queries.setAuthority({ accountId: "different" });
     await operations.submit({ ...input, write: async () => {} }).result;
   } finally {

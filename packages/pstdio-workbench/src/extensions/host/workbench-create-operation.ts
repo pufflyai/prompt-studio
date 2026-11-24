@@ -16,6 +16,7 @@ type CreateOperation<T> = Pick<
   | "write"
   | "classify"
   | "onDiscard"
+  | "onDiscardAfterRetirement"
   | "intent"
   | "showPending"
   | "originatingRead"

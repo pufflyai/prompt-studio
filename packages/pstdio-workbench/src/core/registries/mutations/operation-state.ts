@@ -27,6 +27,7 @@ export interface Entry {
   recoveryFiles?: () => readonly File[];
   releaseOnDiscard?: boolean;
   onDiscard?: () => void;
+  onDiscardAfterRetirement?: true;
   acknowledged?: boolean;
   error?: unknown;
   dismissed: boolean;

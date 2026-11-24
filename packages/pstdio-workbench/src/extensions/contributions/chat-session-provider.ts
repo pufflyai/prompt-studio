@@ -18,7 +18,7 @@ const trackChatSubmissions = (
   resource: ResourceRef | undefined,
   extensionId: string,
   projectId: string,
-  discardRecovered: (key: string) => void,
+  discardRecovered?: (key: string) => void,
 ): Pick<ChatSessionInput, "hasRetainedSubmission" | "trackSubmission" | "subscribeSubmissions"> => {
   if (
     !resource ||
@@ -44,9 +44,10 @@ const trackChatSubmissions = (
           title: creating ? "Start session" : "Send message",
           draft: { text: action.text, attachments: action.attachments },
           write: execute,
+          onDiscardAfterRetirement: discardRecovered ? true : undefined,
           onDiscard: () => {
             const key = discard();
-            if (key) discardRecovered(key);
+            if (key) discardRecovered?.(key);
           },
         },
         findUnresolved,
@@ -92,8 +93,12 @@ export const createChatSessionProvider = (source: {
       sourceResource?.type === "session" && view.extensionId === "pstdio.session-browser"
         ? createChatActionOperations(queries, sourceResource, input.projectId)
         : undefined,
-    ...trackChatSubmissions(queries, sourceResource, view.extensionId, input.projectId, (key) =>
-      localDrafts?.discardRecovery(key),
+    ...trackChatSubmissions(
+      queries,
+      sourceResource,
+      view.extensionId,
+      input.projectId,
+      local ? (key) => localDrafts?.discardRecovery(key) : undefined,
     ),
     inspectResources: () => render.workbench.commandPalette.open(),
     queryContext: {
