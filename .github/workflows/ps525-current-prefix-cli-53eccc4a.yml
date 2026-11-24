@@ -1,0 +1,298 @@
+name: PS-525 exact current prefix source CLI
+
+on:
+  push:
+    branches:
+      - chore/ps525-current-prefix-cli-53eccc4a
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: ps525-current-prefix-cli-53eccc4a
+  cancel-in-progress: false
+
+jobs:
+  uncovered:
+    name: Source gaps PR ${{ matrix.pr }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - pr: 2341
+            head: 417262d074ac337c23fbc18727e3e3465e80f886
+          - pr: 2342
+            head: 4821f8c36674e83f6aec37f1d1fe4dfa90654a91
+          - pr: 2349
+            head: 53eccc4a5a92fce2019bf57d18ed8d88975eb146
+    env:
+      PS525_PR: ${{ matrix.pr }}
+      PS525_OUTPUT: test-results/ps525-gaps-${{ matrix.pr }}
+      PLAN_DISPLAY: "true"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ matrix.head }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+
+      - name: Pin the source, workflow, queue and original receipts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PS525_BUNDLE: |-
+            {"inputScopes":{},"diagnosticParent":"53eccc4a5a92fce2019bf57d18ed8d88975eb146","diagnosticRef":"refs/heads/chore/ps525-current-prefix-cli-53eccc4a","diagnosticFile":".github/workflows/ps525-current-prefix-cli-53eccc4a.yml","matrix":[{"pr":2341,"head":"417262d074ac337c23fbc18727e3e3465e80f886","tree":"202929d5bb7669139fd21995abe1a850cbfd65eb","policy":"0919c441a350ecbfcce669094d433f8f02a2b3f45c4d0571f798af77d9b341da","mergeBase":"68646d4110496ea0919c8182b4fe0379be52036f","requestedBase":"7656811a6989718e2cedd56b7bf9d276268e0f3b","ciRun":"45464179109","ciSource":{"sha":"eba8913eec14a8f5bb76d5134432f57116447b19","tree":"202929d5bb7669139fd21995abe1a850cbfd65eb","policy":"0919c441a350ecbfcce669094d433f8f02a2b3f45c4d0571f798af77d9b341da","dirty":false},"ciPlanDigest":"b769f05dbb44f3030abb7cb19076a0d89bbf79850be3e68fee02eee66aa99723","localLinuxPlanDigest":"d628dc3c8a7248b9fe21786468d5935947e765ae33c0374be6c2ab79c8e296e2","originalCIGroups":79,"mandatoryLocalGroups":80,"coveredOwnCIGroups":79,"carryForward":[],"prechecks":{"packageChecksPassed":64,"applicableStaticChecksPassed":3,"owningSetup":"New group execution uses original executePlan setup for this exact head; CI setup/prechecks remain original Linux evidence."},"branch":"ps525/process-backend-runtime","selectedFiles":2653,"assignedRuns":[{"id":"72480638f874d13d0838a290","priority":"P1","owner":"e2e","cwd":"packages/e2e","runner":"cli","files":["packages/e2e/src/cli/close.p1.test.ts","packages/e2e/src/cli/extension-commands.p1.test.ts","packages/e2e/src/cli/extensions-add-paths.p1.test.ts","packages/e2e/src/cli/planner-folder-attempt.p1.test.ts","packages/e2e/src/cli/project-cloud-lifecycle.p1.test.ts","packages/e2e/src/cli/projects-create.p1.test.ts","packages/e2e/src/cli/realtime-sync.p1.test.ts","packages/e2e/src/cli/serve.p1.test.ts","packages/e2e/src/cli/sessions-create.p1.test.ts","packages/e2e/src/cli/workspaces-create.p1.test.ts"],"target":{"platform":"linux","arch":"x64"},"artifact":"source","quarantineIds":[],"requires":["build-e5b1f54fca1c52cd"],"reasons":["explicit selection"],"lane":"stable","continueIndependentFiles":false,"job":"local-additions","windowsAllowance":false}],"assignedSetup":[{"id":"build-e5b1f54fca1c52cd","kind":"build","owners":["e2e"],"requires":[]}],"packageChecksSHA256":"ef7d5df0bc9c43351b43e533359e9aae8233ce4622a2175442ff38f26948e698","staticChecksSHA256":"f748c28776b28501c540a2f1ed5913bb8d872329ae194cb5900040b0732b1289","artifacts":[{"id":14957645291,"name":"ci-validation-attempt-1","digest":"sha256:3dfe77f2e5055dcd4cf9694d649b30aec6687cb3cecc6537e0d6168f79e1a209","size_in_bytes":124348,"files":["plan.json","plan-verification.json","gate-results.json"]},{"id":14956011574,"name":"package_checks-0-attempt-1","digest":"sha256:3856edbd08ccb321e7fdaf7d018575c1d7d7a743088dfba9c3dfdba959bd90c4","size_in_bytes":502927,"files":["lint-results.json"]},{"id":14956081933,"name":"package_checks-1-attempt-1","digest":"sha256:c576a9634a607a1ce8e8897a9e5bbae14cd9e81d05211d54a2fa8729d458c72a","size_in_bytes":557934,"files":["lint-results.json"]},{"id":14955123075,"name":"package_checks-2-attempt-1","digest":"sha256:5bd626a658136572ad507f57d28cfa5c083ea9fd8d46fb3b0954c33028685799","size_in_bytes":182764,"files":["lint-results.json"]},{"id":14955866401,"name":"package_checks-3-attempt-1","digest":"sha256:dc681ca8235fdf6fb7d40e236c741efb761b5838de707173a6b637d943132fc4","size_in_bytes":206910,"files":["lint-results.json"]},{"id":14954957482,"name":"static-results-attempt-1","digest":"sha256:fbc48277e89d65e2dcfdbacb9fc76f876a1c7a4a70002b8d5ed6130456814d4a","size_in_bytes":34253,"files":["static-results.json"]}]},{"pr":2342,"head":"4821f8c36674e83f6aec37f1d1fe4dfa90654a91","tree":"5ac79b638a80d2aed038df326a1ab657b38d4a66","policy":"0919c441a350ecbfcce669094d433f8f02a2b3f45c4d0571f798af77d9b341da","mergeBase":"68646d4110496ea0919c8182b4fe0379be52036f","requestedBase":"7656811a6989718e2cedd56b7bf9d276268e0f3b","ciRun":"45464248286","ciSource":{"sha":"3cd95a2a3ebfae85bae6acf320468adbfb18300d","tree":"5ac79b638a80d2aed038df326a1ab657b38d4a66","policy":"0919c441a350ecbfcce669094d433f8f02a2b3f45c4d0571f798af77d9b341da","dirty":false},"ciPlanDigest":"82bed2f5b5e54f36658a56fb1d589e341dbb5a004424158fdfba9a83dcda0e6c","localLinuxPlanDigest":"2d1234c41cc5c90dfc3d8d9f4206a423653b61c88d68f1026ce42eb194a69c1d","originalCIGroups":79,"mandatoryLocalGroups":80,"coveredOwnCIGroups":79,"carryForward":[],"prechecks":{"packageChecksPassed":64,"applicableStaticChecksPassed":3,"owningSetup":"New group execution uses original executePlan setup for this exact head; CI setup/prechecks remain original Linux evidence."},"branch":"ps525/process-runtime-callbacks","selectedFiles":2654,"assignedRuns":[{"id":"72480638f874d13d0838a290","priority":"P1","owner":"e2e","cwd":"packages/e2e","runner":"cli","files":["packages/e2e/src/cli/close.p1.test.ts","packages/e2e/src/cli/extension-commands.p1.test.ts","packages/e2e/src/cli/extensions-add-paths.p1.test.ts","packages/e2e/src/cli/planner-folder-attempt.p1.test.ts","packages/e2e/src/cli/project-cloud-lifecycle.p1.test.ts","packages/e2e/src/cli/projects-create.p1.test.ts","packages/e2e/src/cli/realtime-sync.p1.test.ts","packages/e2e/src/cli/serve.p1.test.ts","packages/e2e/src/cli/sessions-create.p1.test.ts","packages/e2e/src/cli/workspaces-create.p1.test.ts"],"target":{"platform":"linux","arch":"x64"},"artifact":"source","quarantineIds":[],"requires":["build-e5b1f54fca1c52cd"],"reasons":["explicit selection"],"lane":"stable","continueIndependentFiles":false,"job":"local-additions","windowsAllowance":false}],"assignedSetup":[{"id":"build-e5b1f54fca1c52cd","kind":"build","owners":["e2e"],"requires":[]}],"packageChecksSHA256":"ef7d5df0bc9c43351b43e533359e9aae8233ce4622a2175442ff38f26948e698","staticChecksSHA256":"c185b38e7853c78baff4883c5053e626df6d2d8edee464e92f5c5fd0c0c37396","artifacts":[{"id":14956955529,"name":"ci-validation-attempt-1","digest":"sha256:51acbfa20c6da60d4286014aeb71c080e3c136856137377de899c0b1a75c04f4","size_in_bytes":124242,"files":["plan.json","plan-verification.json","gate-results.json"]},{"id":14955745811,"name":"package_checks-0-attempt-1","digest":"sha256:1660a0e9bbe83ecb08312a89cd021583aa029188b58ae10b7770f61447fe2653","size_in_bytes":505629,"files":["lint-results.json"]},{"id":14955419527,"name":"package_checks-1-attempt-1","digest":"sha256:d9113ccef57cd24e116ea17893fd8dddf90b50184f5c5b948d5217c46e78f952","size_in_bytes":555261,"files":["lint-results.json"]},{"id":14954324851,"name":"package_checks-2-attempt-1","digest":"sha256:ad3a037aa4ee63af35da311bc5dcdea048a6c8eb40094acc27e89db5718abf92","size_in_bytes":182801,"files":["lint-results.json"]},{"id":14955462963,"name":"package_checks-3-attempt-1","digest":"sha256:44e4cb5a19fecea8ddae66e3f9293ba2a81817b613bd24af643d55b0e566ba14","size_in_bytes":206509,"files":["lint-results.json"]},{"id":14954097141,"name":"static-results-attempt-1","digest":"sha256:abced3251480a290d2ba637caf99ecec47911764df7aab2827c062d4155f563b","size_in_bytes":34282,"files":["static-results.json"]}]},{"pr":2349,"head":"53eccc4a5a92fce2019bf57d18ed8d88975eb146","tree":"8a09b7ed24cac0d88dc01152cbb80a14abd1dbf0","policy":"0919c441a350ecbfcce669094d433f8f02a2b3f45c4d0571f798af77d9b341da","mergeBase":"68646d4110496ea0919c8182b4fe0379be52036f","requestedBase":"7656811a6989718e2cedd56b7bf9d276268e0f3b","ciRun":"45464320017","ciSource":{"sha":"5d0306128909cb09c3629464fc054e10b545978b","tree":"8a09b7ed24cac0d88dc01152cbb80a14abd1dbf0","policy":"0919c441a350ecbfcce669094d433f8f02a2b3f45c4d0571f798af77d9b341da","dirty":false},"ciPlanDigest":"83eef4d0c5c6020feae00a703951ad3a2e8e88537895e8c3e49e0660eec92827","localLinuxPlanDigest":"92d2fc8b1cfd0935cf98da1152980a5a7eaf8eed9ff972c8a98595b65c98ef21","originalCIGroups":90,"mandatoryLocalGroups":91,"coveredOwnCIGroups":90,"carryForward":[],"prechecks":{"packageChecksPassed":64,"applicableStaticChecksPassed":5,"owningSetup":"New group execution uses original executePlan setup for this exact head; CI setup/prechecks remain original Linux evidence."},"branch":"ps525/process-runtime-gaps","selectedFiles":2821,"assignedRuns":[{"id":"72480638f874d13d0838a290","priority":"P1","owner":"e2e","cwd":"packages/e2e","runner":"cli","files":["packages/e2e/src/cli/close.p1.test.ts","packages/e2e/src/cli/extension-commands.p1.test.ts","packages/e2e/src/cli/extensions-add-paths.p1.test.ts","packages/e2e/src/cli/planner-folder-attempt.p1.test.ts","packages/e2e/src/cli/project-cloud-lifecycle.p1.test.ts","packages/e2e/src/cli/projects-create.p1.test.ts","packages/e2e/src/cli/realtime-sync.p1.test.ts","packages/e2e/src/cli/serve.p1.test.ts","packages/e2e/src/cli/sessions-create.p1.test.ts","packages/e2e/src/cli/workspaces-create.p1.test.ts"],"target":{"platform":"linux","arch":"x64"},"artifact":"source","quarantineIds":[],"requires":["build-e5b1f54fca1c52cd"],"reasons":["explicit selection"],"lane":"stable","continueIndependentFiles":false,"job":"local-additions","windowsAllowance":false}],"assignedSetup":[{"id":"build-e5b1f54fca1c52cd","kind":"build","owners":["e2e"],"requires":[]}],"packageChecksSHA256":"ef7d5df0bc9c43351b43e533359e9aae8233ce4622a2175442ff38f26948e698","staticChecksSHA256":"97085c5ad4d3780e430418cfffb2c3ca5337f13723b91c3b2cc8f218ceda3c3a","artifacts":[{"id":14955957181,"name":"ci-validation-attempt-1","digest":"sha256:63e6022510d0de796a5cf0fd40e70f0d71948145179f7e7bd633cbbb6a52efe5","size_in_bytes":132957,"files":["plan.json","plan-verification.json","gate-results.json"]},{"id":14953289601,"name":"package_checks-0-attempt-1","digest":"sha256:cefd9574cee4525663458373aae906547bc7c5090af0e8b73afb50af3c59c9fd","size_in_bytes":507080,"files":["lint-results.json"]},{"id":14955971293,"name":"package_checks-1-attempt-1","digest":"sha256:f912ab19c2b224ed0d326ff9c7c2022c3ab67655d5f5622d4b83afb1d9682dc4","size_in_bytes":559906,"files":["lint-results.json"]},{"id":14954033942,"name":"package_checks-2-attempt-1","digest":"sha256:50cee9acfa02c9c5a4b9f43cda7d74d20491d85c793e79d95812ad6c0e9d7397","size_in_bytes":185144,"files":["lint-results.json"]},{"id":14954768961,"name":"package_checks-3-attempt-1","digest":"sha256:32ccb02f9a76a4c15692e7ead792909dd68c5ee436daeac812679b2e5e3cb85c","size_in_bytes":208963,"files":["lint-results.json"]},{"id":14955530193,"name":"static-results-attempt-1","digest":"sha256:4480211af8e3e152a0032380821119ad89e4bdcf4fd9b38a0c0348a9399899a7","size_in_bytes":36308,"files":["static-results.json"]}]}],"proofs":[]}
+        shell: bash
+        run: |
+          mkdir -p "$PS525_OUTPUT"
+          cat > "$PS525_OUTPUT/diagnostic-guard.py" <<'GUARD_PY'
+          import hashlib, io, json, os, pathlib, subprocess, sys, urllib.request, zipfile
+          out=pathlib.Path(os.environ['PS525_OUTPUT']);out.mkdir(parents=True,exist_ok=True)
+          bundle=json.loads(os.environ['PS525_BUNDLE']) if 'PS525_BUNDLE' in os.environ else json.loads((out/'pinned-inputs.json').read_text()); row=next(x for x in bundle['matrix'] if str(x['pr'])==os.environ['PS525_PR'])
+          (out/'pinned-inputs.json').write_text(json.dumps(bundle,indent=2)+'\n');(out/'assignment.json').write_text(json.dumps(row,indent=2)+'\n')
+          def require(ok,msg):
+           if not ok:raise RuntimeError(msg)
+          def git(*args):return subprocess.check_output(['git',*args]).decode().strip()
+          def api(path):
+           req=urllib.request.Request('https://api.github.com/repos/'+os.environ['GITHUB_REPOSITORY']+'/'+path,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
+           with urllib.request.urlopen(req) as response:return response.read()
+          def record(path):return json.loads(api(path))
+          def artifact(pin,folder):
+           meta=record('actions/artifacts/'+str(pin['id']))
+           require(meta['name']==pin['name'] and not meta['expired'] and meta['digest']==pin['digest'],'Artifact metadata changed')
+           raw=subprocess.check_output(['gh','api','repos/'+os.environ['GITHUB_REPOSITORY']+'/actions/artifacts/'+str(pin['id'])+'/zip'])
+           require('sha256:'+hashlib.sha256(raw).hexdigest()==pin['digest'],'Artifact ZIP digest mismatch')
+           folder.mkdir(parents=True,exist_ok=True)
+           with zipfile.ZipFile(io.BytesIO(raw)) as z:
+            for wanted in pin['files']:
+             candidates=[n for n in z.namelist() if n==wanted or n.endswith('/'+wanted)]
+             require(len(candidates)==1,'Artifact has ambiguous/missing '+wanted)
+             (folder/wanted).write_bytes(z.read(candidates[0]))
+           (folder/'artifact-identity.json').write_text(json.dumps(meta,indent=2)+'\n')
+          def load(path):return json.loads(path.read_text())
+          def same(a,b):return all(a.get(k)==b.get(k) for k in ('priority','owner','runner','artifact','lane','smoke','target'))
+          def retained(source):
+           run=record('actions/runs/'+source['ciRun'])
+           require(run['head_sha']==source['head'] and run['status']=='completed' and run['conclusion']=='success' and run['run_attempt']==1 and run['path']=='.github/workflows/test-and-build.yml','Ordinary CI identity/status changed')
+           dest=out/'ordinary-ci'/str(source['pr']);dest.mkdir(parents=True,exist_ok=True);(dest/'workflow-run.json').write_text(json.dumps(run,indent=2)+'\n')
+           for pin in source['artifacts']:artifact(pin,dest/pin['name'])
+           plan=load(dest/'ci-validation-attempt-1/plan.json');ver=load(dest/'ci-validation-attempt-1/plan-verification.json');gate=load(dest/'ci-validation-attempt-1/gate-results.json')
+           require(plan['source']==source['ciSource'] and plan['digest']==source['ciPlanDigest'],'Original plan seal changed')
+           require(gate['sha']==source['head'] and gate['runId']==source['ciRun'] and gate['outcome']=='success' and gate['failures']==[] and gate['candidate']['sha']==plan['source']['sha'] and gate['candidate']['tree']==source['tree'] and gate['candidate']['platform']=='linux' and gate['candidate']['arch']=='x64','Original CI gate is not exact green Linux source tree')
+           require(ver['complete'] and ver['outcome']=='success' and ver['errors']==[],'Original CI verification failed')
+           results={r['runId']:r for r in ver['results']};require(set(results)=={r['id'] for r in plan['runs']},'Original CI assignment mismatch')
+           require(len(results)==source['originalCIGroups'],'Original group inventory mismatch')
+           require(all(r['source']==plan['source'] and r['planDigest']==plan['digest'] and r['complete'] and r['outcome']=='success' and r['exitCode']==0 and not r.get('nativeFailure') for r in results.values()),'Original receipts incomplete or failed')
+           return plan,results,dest
+          if sys.argv[1]=='before':
+           require(os.environ['GITHUB_REF']==bundle['diagnosticRef'] and os.environ['GITHUB_SHA']==os.environ['GITHUB_WORKFLOW_SHA'],'Wrong diagnostic invocation')
+           require(git('show','-s','--format=%P',os.environ['GITHUB_WORKFLOW_SHA'])==bundle['diagnosticParent'],'Diagnostic must have the one pinned source parent')
+           require(git('diff-tree','--no-commit-id','--name-status','-r',os.environ['GITHUB_WORKFLOW_SHA'])=='A\t'+bundle['diagnosticFile'],'Diagnostic commit must only add its workflow')
+           require(git('rev-parse','HEAD')==row['head'] and git('rev-parse','HEAD^{tree}')==row['tree'],'Wrong source checkout')
+           pr=record('pulls/'+str(row['pr']));require(pr['head']['sha']==row['head'] and pr['head']['ref']==row['branch'] and pr['state']=='open','PR moved or closed')
+           subprocess.check_call(['git','fetch','--no-tags','origin','refs/heads/main:refs/remotes/origin/main','refs/heads/'+row['branch']+':refs/remotes/origin/'+row['branch']])
+           require(git('rev-parse','origin/'+row['branch'])==row['head'],'Source branch moved')
+           require(git('merge-base','HEAD','origin/main')==row['mergeBase'],'Merge base changed')
+           incoming=int(git('rev-list','--count','HEAD..origin/main'));require(incoming<=10,'More than ten incoming main commits')
+           tree=git('merge-tree','--write-tree','--no-messages','HEAD','origin/main');require(git('cat-file','-t',tree)=='tree','Prospective main merge is not clean')
+           require(not git('status','--porcelain'),'Dirty source checkout')
+           identity={'head':row['head'],'tree':row['tree'],'main':git('rev-parse','origin/main'),'mergeBase':row['mergeBase'],'incoming':incoming,'prospectiveMergeTree':tree,'workflowSha':os.environ['GITHUB_WORKFLOW_SHA']}
+           (out/'identity.json').write_text(json.dumps(identity,indent=2)+'\n')
+          elif sys.argv[1]=='receipts':
+           selected=load(out/'selected-plan.json');plan=selected['testPlan']
+           require(selected['head']==row['head'] and selected['mergeBase']==row['mergeBase'] and plan['source']=={'sha':row['head'],'tree':row['tree'],'policy':row['policy'],'dirty':False} and plan['digest']==row['localLinuxPlanDigest'],'Local mandatory plan seal changed')
+           require(len(plan['runs'])==row['mandatoryLocalGroups'] and len(selected['selected'])==row['selectedFiles'],'Mandatory queue inventory changed')
+           require(all(r['target']=={'platform':'linux','arch':'x64'} for r in plan['runs']),'Unexpected target platform')
+           require({x['file'] for x in selected['selected']}=={f for r in plan['runs'] for f in r['files']},'Selected/assigned files mismatch')
+           require(set(selected['queueFiles'])<={x['file'] for x in selected['selected']},'Mandatory queue files omitted')
+           runs={r['id']:r for r in plan['runs']};require([runs[x['id']] for x in row['assignedRuns']]==row['assignedRuns'],'Execution assignment changed')
+           setup={s['id']:s for s in plan['setup']};require([setup[x['id']] for x in row['assignedSetup']]==row['assignedSetup'],'Owning setup changed')
+           require(all(hashlib.sha256(json.dumps(selected[key],sort_keys=True,separators=(',',':')).encode()).hexdigest()==row[key+'SHA256'] for key in ('packageChecks','staticChecks')),'Mandatory precheck inputs changed')
+           needed={row['pr']}|{p['sourcePR'] for p in bundle['proofs'] if p['targetPR']==row['pr']};retainedByPR={}
+           for source in bundle['matrix']:
+            if source['pr'] in needed:retainedByPR[source['pr']]=retained(source)
+           own,results,dest=retainedByPR[row['pr']]
+           lint={}
+           for i in range(4):
+            report=load(dest/('package_checks-'+str(i)+'-attempt-1')/'lint-results.json');require(report['outcome']=='success','Original package checks failed')
+            for r in report['results']:require(r['outcome']=='success' and r['exitCode']==0,'Package check failed');lint[r['id']]=r
+           require({c['id'] for c in selected['packageChecks']}<=set(lint),'Mandatory package precheck missing')
+           stat=load(dest/'static-results-attempt-1/static-results.json');require(stat['outcome']=='success','Original static checks failed')
+           stat={r['id']:r for r in stat['results']};mapping={'format':'format:check','docs-links':'verify:docs-links','boundaries':'verify:boundaries','sdk-reference':'verify:sdk-reference','extension-api-version':'verify:extension-api-version'}
+           require(all(mapping[c['id']] in stat and stat[mapping[c['id']]]['outcome']=='success' and stat[mapping[c['id']]]['exitCode']==0 for c in selected['staticChecks']),'Mandatory static precheck missing')
+           covered={r['id']:set() for r in plan['runs']}
+           for target in plan['runs']:
+            for source in own['runs']:
+             if same(source,target):covered[target['id']].update(set(target['files'])&set(results[source['id']]['reportedFiles']))
+           carried=[]
+           for proof in bundle['proofs']:
+            if proof['targetPR']!=row['pr']:continue
+            require(proof['targetHead']==row['head'],'Carry target mismatch')
+            raw=subprocess.check_output(['git','ls-tree','-rz',proof['sourceHead'],'--',*bundle['inputScopes'][proof['inputManifestSHA256']]]);actual=subprocess.check_output(['git','ls-tree','-rz',row['head'],'--',*bundle['inputScopes'][proof['inputManifestSHA256']]])
+            require(raw==actual and hashlib.sha256(raw).hexdigest()==proof['inputManifestSHA256'] and len(raw.rstrip(b'\0').split(b'\0'))==proof['inputEntryCount'],'Complete declared input manifest differs')
+            prior,priorResults,_=retainedByPR[proof['sourcePR']];require(prior['source']==proof['sourceExecution'],'Carry receipt original source changed')
+            target=runs[proof['targetGroup']];priorRuns={r['id']:r for r in prior['runs']};got=set()
+            for receipt in proof['receipts']:
+             source=priorRuns[receipt['runId']];r=priorResults[receipt['runId']]
+             require(same(source,target) and r['executionId']==receipt['executionId'],'Carry receipt runner/execution mismatch');got.update(set(target['files'])&set(r['reportedFiles']))
+            require(set(target['files'])<=got,'Carry-forward selected files missing');covered[target['id']].update(got);carried.append(proof)
+           uncovered={r['id'] for r in plan['runs'] if set(r['files'])-covered[r['id']]}
+           require(uncovered=={r['id'] for r in row['assignedRuns']},'Uncovered group assignment is not exact')
+           (out/'carry-forward-original-receipts.json').write_text(json.dumps(carried,indent=2)+'\n')
+           (out/'coverage-before.json').write_text(json.dumps({k:sorted(v) for k,v in covered.items()},indent=2)+'\n')
+           print('Sealed source, original prechecks, complete-input carry-forwards and exact uncovered groups verified')
+          elif sys.argv[1]=='after':
+           plan=load(out/'selected-plan.json')['testPlan'];execution=load(out/'native/execution.json');assigned=row['assignedRuns'];expected=[r['id'] for r in assigned]
+           require(execution['executionId']==os.environ['GITHUB_RUN_ID']+'/'+os.environ['GITHUB_RUN_ATTEMPT'] and execution['source']==plan['source'] and execution['planDigest']==plan['digest'] and execution['runIds']==expected and execution['complete'] and execution['outcome']=='success' and execution['errors']==[],'Native execution incomplete/failed or changed assignment')
+           results={r['runId']:r for r in execution['results']};require(set(results)==set(expected),'Native receipt inventory mismatch')
+           for run in assigned:
+            r=results[run['id']];require(r['source']==plan['source'] and r['planDigest']==plan['digest'] and r['complete'] and r['outcome']=='success' and r['exitCode']==0 and not r.get('nativeFailure') and sorted(r['reportedFiles'])==sorted(run['files']),'Native result or exact file coverage failed')
+            evidence=load(out/'native'/run['id']/('browser.json' if run['runner']=='app' else 'cases.json'))
+            require(evidence['complete'] and evidence['planDigest']==plan['digest'] and evidence['runId']==run['id'] and evidence['executionId']==execution['executionId'] and len(evidence['cases'])>0,'Missing native case evidence')
+            require(all(c['outcome'] in ('success','passed','skipped') for c in evidence['cases']),'Native case failed')
+            if run['runner']=='app':require(not evidence['errors'] and len(evidence['cases'])==len(evidence['selected']) and {c['file'] for c in evidence['cases']}==set(run['files']),'Browser selection/coverage incomplete')
+           phases=execution['phases'];prepared={(p['kind'],p['id']) for p in phases if p['outcome']=='success'}
+           require(all((s['kind'],s['id']) in prepared for s in row['assignedSetup']),'Canonical owning prerequisite missing')
+           require(any(p['kind']=='cleanup' and p['outcome']=='success' for p in phases),'Executor cleanup missing')
+           require(all(r['outcome']=='success' for r in load(out/'compose-cleanup.json')),'Owned Compose cleanup failed')
+           coverage=load(out/'coverage-before.json')
+           for r in assigned:coverage[r['id']]=r['files']
+           require(all(set(r['files'])<=set(coverage[r['id']]) for r in plan['runs']),'Final mandatory file coverage gap')
+           (out/'coverage-verdict.json').write_text(json.dumps({'source':plan['source'],'planDigest':plan['digest'],'nativeRunIds':expected,'carriedOriginalGroups':len(row['carryForward']),'mandatoryGroups':len(plan['runs']),'outcome':'success','attribution':'Original hosted Linux receipts plus explicit complete-input carry-forwards plus this exact source native diagnostic; not a full local test:review execution.'},indent=2)+'\n')
+           print('Native cases, complete file assignment, canonical setup/cleanup and total attributed mandatory coverage verified')
+          else:raise RuntimeError('Unknown guard phase')
+          GUARD_PY
+          python3 "$PS525_OUTPUT/diagnostic-guard.py" before
+          test "$(bun --version)" = "1.4.4"
+          test "$(node --version)" = v26.7.0
+          test "$(jq -r .packageManager package.json)" = bun@1.4.4
+          bun run test:review --base origin/main --list > "$PS525_OUTPUT/selected-plan.json"
+          python3 "$PS525_OUTPUT/diagnostic-guard.py" receipts
+          scratch="$(mktemp -d /tmp/ps525.XXXXXX)"
+          printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$scratch/owner"
+          {
+            echo "PS525_SCRATCH=$scratch"
+            echo "TMPDIR=$scratch"
+            echo "TMP=$scratch"
+            echo "TEMP=$scratch"
+            echo "PS525_NATIVE_BUN=$(command -v bun)"
+          } >> "$GITHUB_ENV"
+
+      - name: Install locked dependencies and prepare the owning browsers
+        shell: bash
+        run: |
+          sudo -n true
+          {
+            cat /etc/os-release
+            node --version
+            bun --version
+            docker version
+            docker compose version
+            command -v xvfb-run
+            dpkg-query -W xvfb
+            df -h "$GITHUB_WORKSPACE" /tmp
+          } > "$PS525_OUTPUT/toolchain.log"
+          bun install --frozen-lockfile --concurrent-scripts 1
+          bun run --cwd packages/ui typegen:tokens
+          if jq -e 'any(.assignedRuns[]; .runner == "app")' "$PS525_OUTPUT/assignment.json" > /dev/null; then
+            (cd packages/e2e && bun x --no-install playwright install --with-deps chromium firefox) 2>&1 | tee "$PS525_OUTPUT/browser-setup.log"
+          else
+            (cd packages/e2e && bun x --no-install playwright install --with-deps firefox) 2>&1 | tee "$PS525_OUTPUT/browser-setup.log"
+          fi
+          test -z "$(git status --porcelain)"
+
+      - name: Execute only the sealed source groups with canonical prerequisites
+        shell: bash
+        run: |
+          test "$(command -v bun)" = "$PS525_NATIVE_BUN"
+          bun --no-orphans - <<'NATIVE_BUN' 2>&1 | tee "$PS525_OUTPUT/console.log"
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+          import { executePlan } from "./scripts/ci/run-test-plan";
+          const root = process.cwd();
+          const scratch = process.env.PS525_SCRATCH;
+          const relative = process.env.PS525_OUTPUT;
+          const executionId = process.env.GITHUB_RUN_ID + "/" + process.env.GITHUB_RUN_ATTEMPT;
+          if (!scratch || !/^\/tmp\/ps525\.[A-Za-z0-9]{6}$/.test(scratch) || !relative)
+            throw new Error("Unexpected owned scratch or report path");
+          const output = resolve(root, relative);
+          const assignment = await Bun.file(resolve(output, "assignment.json")).json();
+          const { testPlan } = await Bun.file(resolve(output, "selected-plan.json")).json();
+          for (const [key, value] of Object.entries(localReviewEnvironment(scratch))) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+          process.env.CI_PLAN_OUTPUT_DIR = relative + "/native";
+          let passed = false;
+          try {
+            const result = await executePlan(testPlan, {
+              root, runIds: assignment.assignedRuns.map((run: { id: string }) => run.id),
+              prebuilt: false, executionId,
+              env: { CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+            });
+            passed = result.complete && result.outcome === "success";
+          } finally {
+            const cleanup = await cleanupReviewCompose(scratch);
+            await Bun.write(resolve(output, "compose-cleanup.json"), JSON.stringify(cleanup, null, 2));
+            passed &&= cleanup.every(entry => entry.outcome === "success");
+            process.exitCode = passed ? 0 : 1;
+          }
+          NATIVE_BUN
+
+      - name: Verify native cases, file coverage, setup and attributed total coverage
+        shell: bash
+        run: |
+          python3 "$PS525_OUTPUT/diagnostic-guard.py" after
+          git diff --exit-code
+          test -z "$(git status --porcelain)"
+
+      - name: Retain and remove only this invocation's temporary state
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$PS525_OUTPUT"
+          if [[ -n "${PS525_SCRATCH:-}" ]]; then
+            [[ "$PS525_SCRATCH" =~ ^/tmp/ps525\.[A-Za-z0-9]{6}$ ]]
+            test "$(cat "$PS525_SCRATCH/owner")" = "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+            bun - <<'CLEANUP_BUN'
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          const cleanup = await cleanupReviewCompose(process.env.PS525_SCRATCH!);
+          await Bun.write(resolve(process.env.PS525_OUTPUT!, "compose-cleanup-final.json"), JSON.stringify(cleanup, null, 2));
+          if (cleanup.some(entry => entry.outcome !== "success")) process.exitCode = 1;
+          CLEANUP_BUN
+            if [[ -f "$PS525_SCRATCH/compose-projects.jsonl" ]]; then
+              cp "$PS525_SCRATCH/compose-projects.jsonl" "$PS525_OUTPUT/"
+            fi
+            rm -rf -- "$PS525_SCRATCH"
+            test ! -e "$PS525_SCRATCH"
+            printf '%s\n' 'Owned temporary directory removed' > "$PS525_OUTPUT/scratch-cleanup.txt"
+          fi
+          {
+            docker ps -a --format '{{.Names}} {{.Status}} {{.Label "com.docker.compose.project"}}'
+            docker network ls --format '{{.Name}} {{.Label "com.docker.compose.project"}}'
+            docker volume ls --format '{{.Name}} {{.Label "com.docker.compose.project"}}'
+          } > "$PS525_OUTPUT/docker-after.txt"
+
+      - name: Retain exact assignments, native evidence and original receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps525-source-gaps-${{ matrix.pr }}-${{ matrix.head }}-attempt-${{ github.run_attempt }}
+          path: |
+            ${{ env.PS525_OUTPUT }}
+            packages/e2e/test-results
+            packages/e2e/playwright-report
+          if-no-files-found: error
