@@ -19,7 +19,10 @@ const bypassOnboarding = async (page: import("@playwright/test").Page, projectId
 
 // Critical risk: a person must be able to allow and revoke an extension's environment access
 // from its details. Without that, a declared provider key can never reach the agent child.
-test("allow and revoke an extension's requested environment names from its details", async ({ page, request }) => {
+test("revoke an allowed environment grant after the extension removes its requested names", async ({
+  page,
+  request,
+}) => {
   const home = process.env.E2E_HOME;
   if (!home) throw new Error("E2E_HOME is required for extension tests.");
   const unique = Date.now();
@@ -61,6 +64,7 @@ test("allow and revoke an extension's requested environment names from its detai
     },
   );
   expect(enabled.ok(), await enabled.text()).toBe(true);
+  const { instanceId } = (await enabled.json()) as { instanceId: string };
   const permissionUrl = `${apiBase}/v1/projects/${project.id}/extension-process-environment/${extensionId}`;
 
   await bypassOnboarding(page, project.id);
@@ -81,6 +85,12 @@ test("allow and revoke an extension's requested environment names from its detai
     .toEqual(["E2E_AGENT_KEY"]);
   await expect(access.getByTestId("extension-environment-revoke")).toBeEnabled();
 
+  writeFileSync(join(sourcePath, "package.json"), JSON.stringify({ ...manifest, pstdio: {} }));
+  const reloaded = await request.post(`${apiBase}/v1/projects/${project.id}/extensions/${instanceId}/reload`);
+  expect(reloaded.ok(), await reloaded.text()).toBe(true);
+  await expect(access.getByText("E2E_AGENT_KEY", { exact: true })).toHaveCount(0);
+  await expect(access.getByTestId("extension-environment-revoke")).toBeEnabled();
+
   const revoked = page.waitForResponse(
     (response) => response.url() === permissionUrl && response.request().method() === "DELETE",
   );
@@ -89,6 +99,6 @@ test("allow and revoke an extension's requested environment names from its detai
   await expect
     .poll(async () => ((await (await request.get(permissionUrl)).json()) as { granted: string[] }).granted)
     .toEqual([]);
-  await expect(access.getByTestId("extension-environment-revoke")).toBeDisabled();
+  await expect(access).toHaveCount(0);
   rmSync(sourcePath, { recursive: true, force: true });
 });
