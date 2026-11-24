@@ -19,10 +19,15 @@ const getCloudLocalRemoval = createRuntimeState((owner) => {
   const operations = getWorkbenchOperations(queries);
   const api = getRuntimeApiClient(owner).account;
   const client = getDashboardQueryClient(owner);
+  const domain = "project.remove-device-copy";
   const active = (id: string) =>
     operations.getSnapshot().pending.some((entry) => entry.subjects.includes(cloudProjectCopySubject(id)));
   return {
     active,
+    isRemoving: (id: string) =>
+      operations
+        .getSnapshot()
+        .pending.some((entry) => entry.domain === domain && entry.subjects.includes(cloudProjectCopySubject(id))),
     snapshot: operations.getSnapshot,
     subscribe: operations.subscribe,
     preflight: (id: string, signal: AbortSignal) => api.projectLocalRemoval(id, { signal }),
@@ -36,7 +41,7 @@ const getCloudLocalRemoval = createRuntimeState((owner) => {
       const catalogKey = cloudCatalogKeyFor(accountOrigin, accountId, login?.deviceId);
       const syncKey = cloudCopySyncKey(scope);
       return operations.submit<RemoveLocalProjectResult>({
-        domain: "project.remove-device-copy",
+        domain,
         subjects: [cloudProjectCopySubject(id)],
         title: `Delete local version of “${name}”`,
         sourceCommand: { id: dashboardCommandIds.openProjects },
