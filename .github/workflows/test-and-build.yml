@@ -1,5 +1,5 @@
 name: Test and Build
-run-name: PS-1200 scoped browser qualification
+run-name: PS-1200 Home and Notes on PR head
 on:
   workflow_dispatch:
 permissions:
@@ -17,26 +17,16 @@ jobs:
       max-parallel: 2
       matrix:
         include:
-          - id: planner
-            label: Packaged Planner with delivered Timeline fix
-            source: 1274656e007130f262a56de3ad1a263dccfc4ac2
-            test: packages/e2e/src/packaged/packaged-planner-runtime.p2.spec.ts
-            priority: P2
           - id: home
-            label: Home source refresh on main
-            source: e75e68afea06d1ec1540895c7acde79c37f65046
+            label: Home source refresh on PR head
+            source: a56948d199e9097c3dee881dc5df801d50af1a00
             test: packages/e2e/src/ui/home-project-source.p1.spec.ts
             priority: P1
           - id: notes
-            label: Packaged Notes quarantine on main
-            source: e75e68afea06d1ec1540895c7acde79c37f65046
+            label: Packaged Notes quarantine on PR head
+            source: a56948d199e9097c3dee881dc5df801d50af1a00
             test: packages/e2e/src/packaged/packaged-notes-page.p2.spec.ts
             priority: P2
-          - id: marketplace
-            label: Two unfinished Marketplace cases on PR head
-            source: a56948d199e9097c3dee881dc5df801d50af1a00
-            test: packages/e2e/src/ui/marketplace-extension-lifecycle.p1.spec.ts
-            priority: P1
     env:
       NX_DAEMON: "false"
       BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
@@ -68,7 +58,6 @@ jobs:
         with:
           profile: playwright
       - name: Run the complete selected file through its owning runner
-        if: matrix.id != 'marketplace'
         shell: bash
         run: |
           if [[ "$DIAGNOSTIC_ID" == notes ]]; then
@@ -77,13 +66,6 @@ jobs:
             bun scripts/test.ts --file "$DIAGNOSTIC_FILE" --list --out test-results/ci/ps1200-browser-plan.json
           fi
           bun scripts/test.ts --plan test-results/ci/ps1200-browser-plan.json
-      - name: Build the owning Marketplace browser prerequisites
-        if: matrix.id == 'marketplace'
-        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
-      - name: Run the two unfinished Marketplace browser cases
-        if: matrix.id == 'marketplace'
-        run: |
-          bun run --cwd packages/e2e test:ui -- src/ui/marketplace-extension-lifecycle.p1.spec.ts --grep 'keeps all dropdown automation switches disabled while a change is saving|turns automations off and on in the extension list dropdown'
       - name: Preserve exact source, logs, and test results
         if: always()
         uses: actions/upload-artifact@v4
