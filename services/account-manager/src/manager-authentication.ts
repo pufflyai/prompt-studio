@@ -87,7 +87,8 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
     ],
   });
   const readSession = (headers: Headers) => auth.api.getSession({ headers, query: { disableCookieCache: true } });
-  const deviceLogin = createDeviceLogin(withGoogleAccount);
+  const withPersonalAccount = createPersonalAccountAccess(connection.db, readSession);
+  const deviceLogin = createDeviceLogin(withPersonalAccount);
   const relayDigest = config.projectDeletionRelayToken
     ? Buffer.from(digestCredential(config.projectDeletionRelayToken), "hex")
     : null;

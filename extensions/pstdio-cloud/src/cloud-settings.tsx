@@ -7,6 +7,7 @@ import { Button } from "./button";
 import { useCloudContext } from "./cloud-context";
 import { CloudError } from "./cloud-error";
 import { CloudIcon, CloudLabel } from "./cloud-label";
+import { TeamAccounts } from "./team-accounts";
 import { useCloud } from "./use-cloud";
 
 const SectionTitle = (props: { icon: string; children: ReactNode }) => {
@@ -201,6 +202,14 @@ export const CloudSettings = (props: { projectId?: string }) => {
               </Stack>
             </SimpleCardBody>
           </SimpleCard>
+          {account?.login && !account.signInRequired && (
+            <TeamAccounts
+              key={JSON.stringify([account.login.managerOrigin, account.login.accountId])}
+              account={account}
+              login={account.login}
+              refresh={refresh}
+            />
+          )}
           {account?.login && (
             <SimpleCard>
               <SimpleCardBody>
