@@ -431,3 +431,38 @@ it("retirement rejects account startup while its awaited context is being delive
   expect(authenticate).not.toHaveBeenCalled();
   await registry.dispose();
 });
+
+it("retirement stops a sign-in's own child before waiting for the sign-in to finish", async () => {
+  const exited = Promise.withResolvers<{ code: number | null; signal: string | null }>();
+  const child = {
+    id: "login-child",
+    started: Promise.resolve(),
+    exited: exited.promise,
+    write: async () => {},
+    end: async () => {},
+    kill: async () => exited.resolve({ code: null, signal: "SIGTERM" }),
+    events: () => ({ [Symbol.asyncIterator]: async function* () {} }),
+  };
+  const entered = Promise.withResolvers<void>();
+  const source = record({
+    authenticate: async (context) => {
+      const login = context.process.spawn({ command: ["login"] });
+      entered.resolve();
+      await login.exited;
+    },
+  });
+  const registry = createHarnessRegistry([source], (record, options) => ({
+    ...buildContext(record, options),
+    process: { ...buildContext(record, options).process, spawn: () => child as never },
+  }));
+  const handle = registry.get(source.id)!;
+  const signingIn = handle.authenticate!(
+    { action: "login" },
+    { signal: new AbortController().signal, emit: async () => {}, request: async () => "" },
+  ).catch(() => {});
+  await entered.promise;
+  const retired = await Promise.race([handle.dispose().then(() => "retired"), Bun.sleep(2_000).then(() => "stuck")]);
+  expect(retired).toBe("retired");
+  await signingIn;
+  await registry.dispose();
+});
