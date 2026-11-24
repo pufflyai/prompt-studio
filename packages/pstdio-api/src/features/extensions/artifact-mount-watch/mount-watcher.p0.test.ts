@@ -29,6 +29,7 @@ const watchOneFolder: WatchDirectory = (path, listener, onError) => {
 
 const startWatch = async (
   options: {
+    initialFiles?: Record<string, string>;
     initialFolders?: string[];
     maxFolders?: number;
     onFolderLimit?: () => void;
@@ -36,11 +37,13 @@ const startWatch = async (
     watchRoot?: WatchDirectory;
   } = {},
 ) => {
-  const { initialFolders = [], ...watchOptions } = options;
+  const { initialFiles = {}, initialFolders = [], ...watchOptions } = options;
   const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-mount-watch-"));
   const location = { repoRoot, extensionId: "pstdio.dashboards", mountPath: "boards" };
   const root = resolveArtifactMountRoot(location);
+  mkdirSync(root, { recursive: true });
   for (const folder of initialFolders) mkdirSync(join(root, folder), { recursive: true });
+  for (const [file, text] of Object.entries(initialFiles)) writeFileSync(join(root, file), text);
   const ledger = createArtifactMountWriteLedger();
   const changes: string[][] = [];
   const watcher = watchArtifactMount({
@@ -64,11 +67,43 @@ const startWatch = async (
 
 describe("watchArtifactMount", () => {
   test("reports replaced manifests when the tree watch delivers no notification", async () => {
-    const { changes, root } = await startWatch({ watch: () => ({ close: () => {} }), watchRoot: watchOneFolder });
-    writeFileSync(join(root, ".manifest.new"), "{}");
+    const { changes, root } = await startWatch({
+      initialFiles: { "manifest.json": '{"version":1}' },
+      watch: () => ({ close: () => {} }),
+      watchRoot: watchOneFolder,
+    });
+    writeFileSync(join(root, ".manifest.new"), '{"version":2}');
     renameSync(join(root, ".manifest.new"), join(root, "manifest.json"));
     await waitFor(() => changes.length > 0);
     expect(changes[0]).toContain("manifest.json");
+  });
+
+  test("drops staggered echoes from both watches and reports a subsequent direct edit", async () => {
+    let emitTree: (event: string, file: string) => void = () => {};
+    let emitRoot: (event: string, file: string) => void = () => {};
+    const { changes, mount, root } = await startWatch({
+      watch: (_path, listener) => {
+        emitTree = listener;
+        return { close: () => {} };
+      },
+      watchRoot: (_path, listener) => {
+        emitRoot = listener;
+        return { close: () => {} };
+      },
+    });
+
+    await mount.writeText("manifest.json", "{}");
+    emitRoot("rename", "manifest.json");
+    await Bun.sleep(250);
+    expect(changes).toEqual([]);
+    emitTree("rename", "manifest.json");
+    await Bun.sleep(250);
+    expect(changes).toEqual([]);
+
+    writeFileSync(join(root, "manifest.json"), '{"version":2}');
+    emitRoot("change", "manifest.json");
+    await waitFor(() => changes.length > 0);
+    expect(changes).toEqual([["manifest.json"]]);
   });
 
   test("reports one change with every path of a burst of direct edits", async () => {

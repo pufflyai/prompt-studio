@@ -56,7 +56,7 @@ export const watchArtifactMount = (input: ArtifactMountWatcherInput) => {
   let incomplete = false;
 
   const report = () => {
-    const changed = input.ledger.dropEchoes([...pending]);
+    const changed = input.ledger.dropEchoes([...pending], { keepMatchedWrites: directRoot !== undefined });
     const reloadAll = rootChanged || incomplete || changed.length > MAX_PATHS;
     pending.clear();
     rootChanged = false;

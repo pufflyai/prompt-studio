@@ -65,12 +65,12 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
       const state = readState(path);
       entries.set(path, { recordedAt: now(), state: state && { size: state.size, mtimeMs: state.mtimeMs } });
     },
-    /** Return the paths that changed outside the mount API. A matched write is forgotten. */
-    dropEchoes: (paths: string[]) => {
+    /** Return external changes. Keep matched writes when independent watchers can still echo them. */
+    dropEchoes: (paths: string[], { keepMatchedWrites = false } = {}) => {
       forgetExpired();
       const matched = new Set<string>();
       const kept = paths.filter((path) => !isEcho(path, matched));
-      for (const path of matched) entries.delete(path);
+      if (!keepMatchedWrites) for (const path of matched) entries.delete(path);
       return kept;
     },
   };
