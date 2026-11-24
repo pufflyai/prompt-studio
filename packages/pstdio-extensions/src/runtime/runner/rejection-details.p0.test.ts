@@ -35,3 +35,26 @@ for (const host of [false, true]) {
     expect(outcome).toEqual({ ...details, ok: false, status: "rejected", notices: [...details.notices, collected] });
   });
 }
+
+test("an owner can reject a validated command before its write", async () => {
+  const runner = makeRunner({
+    commands: [
+      {
+        id: "save",
+        ref: { kind: "command", id: "save" },
+        title: "Save",
+        async run(ctx) {
+          throw new Error("Version changed", {
+            cause: ctx.commands.reject({ code: "stale_revision", reason: "Version changed" }),
+          });
+        },
+      },
+    ],
+  });
+  expect(await runner.execute({ commandId: "pstdio.lab.command.save", projectId: "p1" })).toMatchObject({
+    ok: false,
+    status: "rejected",
+    code: "stale_revision",
+    reason: "Version changed",
+  });
+});

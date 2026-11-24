@@ -62,8 +62,11 @@ export const createCommandHarness = (modes: boolean) =>
       return {
         execution: "control",
         invoke: async () => {
-          if (modes && command[1] === "goal")
+          if (modes && command[1] === "goal") {
             await ctx.state.set(`goal:${input.sessionId}`, command[2] ?? "Native fixture objective");
+            if (command[2] === "Saved before failure")
+              throw new Error("Native operation errored after saving the goal.");
+          }
           if (modes && command[1] === "plan" && command[2])
             await ctx.state.set(`plan:${input.sessionId}`, { id: crypto.randomUUID(), text: command[2] });
           return { kind: "completed", message: modes ? undefined : "Native action completed", params };

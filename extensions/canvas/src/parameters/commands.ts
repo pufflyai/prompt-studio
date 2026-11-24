@@ -1,4 +1,4 @@
-import { type CommandContext, defineCommand, defineMiddleware, l10n, params } from "@pstdio/sdk/extensions";
+import { type CommandContext, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { buildFiles, readBuild } from "../build-mount";
 import { parametersChanged } from "../events";
 import type { Values } from "./model";
@@ -135,6 +135,16 @@ const prepareDelete = async (ctx: CommandContext, input: VersionInput) => {
   return { source, file };
 };
 
+const checkedWrite = async <T>(ctx: CommandContext, read: () => Promise<T>) => {
+  try {
+    return await read();
+  } catch (error) {
+    ctx.signal.throwIfAborted();
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(reason, { cause: ctx.commands.reject({ code: "invalid_parameter_version", reason }) });
+  }
+};
+
 const save = defineCommand({
   id: "parameters.save",
   cli: true,
@@ -147,7 +157,7 @@ const save = defineCommand({
     values: params.json<Values, { required: true }>({ required: true }),
   },
   async run(ctx, input) {
-    const { source, file, data, values } = await prepareSave(ctx, input);
+    const { source, file, data, values } = await checkedWrite(ctx, () => prepareSave(ctx, input));
     const saved = source.key ? { ...data, [source.key]: values } : values;
     await source.files.writeText(source.path(file), `${JSON.stringify(saved, null, 2)}\n`);
     if (!source.key && input.name)
@@ -164,7 +174,7 @@ const select = defineCommand({
   title: l10n("parameters.select", "Choose a saved frame version"),
   params: { ...frameParams, file: params.text({ required: true }) },
   async run(ctx, input) {
-    const { source, data, values } = await prepareSelect(ctx, input);
+    const { source, data, values } = await checkedWrite(ctx, () => prepareSelect(ctx, input));
     await ctx.storage.collection<string>("parameter-versions").put(selectionKey(input), input.file);
     await ctx.events.emit(parametersChanged, {});
     return { file: input.file, name: await displayName(ctx, source, input.file, data), values };
@@ -177,7 +187,7 @@ const rename = defineCommand({
   title: l10n("parameters.rename", "Rename a saved frame version"),
   params: { ...frameParams, file: params.text({ required: true }), name: params.text({ required: true }) },
   async run(ctx, input) {
-    const { source, data } = await prepareRename(ctx, input);
+    const { source, data } = await checkedWrite(ctx, () => prepareRename(ctx, input));
     if (source.key)
       await source.files.writeText(
         source.path(input.file),
@@ -196,7 +206,7 @@ const remove = defineCommand({
   title: l10n("parameters.delete", "Delete a saved frame version"),
   params: { ...frameParams, file: params.text({ required: true }) },
   async run(ctx, input) {
-    const { source, file } = await prepareDelete(ctx, input);
+    const { source, file } = await checkedWrite(ctx, () => prepareDelete(ctx, input));
     await source.files.delete(source.path(file));
     await ctx.storage.collection("parameter-version-names").delete(source.path(file));
     const selection = ctx.storage.collection<string>("parameter-versions");
@@ -207,50 +217,6 @@ const remove = defineCommand({
     return { file: next };
   },
 });
-
-type WriteCommand = {
-  id: string;
-  ref: { kind: "command"; id: string };
-  params?: Record<string, { type: "text" | "json"; required?: boolean }>;
-};
-
-const hasDeclaredFields = (input: unknown, fields: NonNullable<WriteCommand["params"]>) =>
-  typeof input === "object" &&
-  input !== null &&
-  !Array.isArray(input) &&
-  Object.entries(fields).every(([key, field]) => {
-    const value: unknown = Object.hasOwn(input, key) ? Reflect.get(input, key) : undefined;
-    return value === undefined ? !field.required : field.type === "json" || typeof value === "string";
-  });
-
-const validateWrite = <T extends FrameInput>(
-  command: WriteCommand,
-  prepare: (ctx: CommandContext, input: T) => Promise<unknown>,
-) =>
-  defineMiddleware({
-    id: `${command.id}.validate`,
-    command: command.ref,
-    async run(ctx, input: T) {
-      // The runtime reports malformed command arguments after middleware has run.
-      if (!command.params || !hasDeclaredFields(input, command.params)) return;
-      try {
-        await prepare(ctx, input);
-      } catch (error) {
-        ctx.signal.throwIfAborted();
-        return ctx.commands.reject({
-          code: "invalid_parameter_version",
-          reason: error instanceof Error ? error.message : String(error),
-        });
-      }
-    },
-  });
-
-export const parameterMiddlewares = [
-  validateWrite(save, prepareSave),
-  validateWrite(select, prepareSelect),
-  validateWrite(rename, prepareRename),
-  validateWrite(remove, prepareDelete),
-];
 
 export const parameterCommands = {
   "parameters.versions": versions,

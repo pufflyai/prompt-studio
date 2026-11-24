@@ -113,5 +113,16 @@ for (const [harness, modes] of [
     await send.click();
     await expect(editor).toHaveText("/fail");
     await expect(main.getByText(/Native command \/fail failed/).filter({ visible: true })).toBeVisible();
+    if (modes) {
+      await editor.fill("/goal Saved before failure");
+      await send.click();
+      await expect(main.getByText("Message delivery could not be confirmed.", { exact: true })).toBeVisible();
+      await expect
+        .poll(async () => JSON.stringify((await (await request.get(`${url}/harness-commands`)).json()).modes))
+        .toContain("Saved before failure");
+      await expect(main.getByRole("button", { name: "Restore draft", exact: true })).toHaveCount(0);
+      await editor.fill("Another message");
+      await expect(send).toBeDisabled();
+    }
   });
 }

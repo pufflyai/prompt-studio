@@ -8,6 +8,7 @@ import type {
 import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
 import type { RuntimeCommandRecord, RuntimeMiddlewareRecord } from "../../types/runtime";
 import { validateCollectionQueryRequest, validateCollectionQueryResult } from "./collection-query";
+import { readCommandRejection } from "./command-rejection";
 import { createCommandStreamWriter } from "./command-stream";
 import type { RunnerState } from "./context";
 import { lifecycleEventId } from "./dispatch";
@@ -204,14 +205,23 @@ const runExtensionCommand = async (
     );
     return withNotices({ ok: true, status: "success", value }, notices);
   } catch (err) {
+    const rejection = readCommandRejection(err, scope.signal);
+    if (rejection) {
+      await state.dispatcher.dispatch(
+        lifecycleEventId("rejected", record.id),
+        { ...startedPayload, ...rejection },
+        input,
+      );
+      return withNotices({ ok: false, status: "rejected", ...rejection }, notices);
+    }
     const elapsedMs = Date.now() - start;
-    const message = err instanceof Error ? err.message : String(err);
+    const error = serializeError(err);
     await state.dispatcher.dispatch(
       lifecycleEventId("failed", record.id),
       {
         ...startedPayload,
-        reason: message,
-        error: serializeError(err),
+        reason: error.message,
+        error: structuredClone(error),
         elapsedMs,
       },
       input,
@@ -221,8 +231,8 @@ const runExtensionCommand = async (
         ok: false,
         status: "error",
         code: streamCancelled(input, scope) ? "command_stream_cancelled" : "handler_threw",
-        reason: message,
-        error: serializeError(err),
+        reason: error.message,
+        error,
       },
       notices,
     );

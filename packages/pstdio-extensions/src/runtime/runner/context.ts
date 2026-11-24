@@ -18,6 +18,7 @@ import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionRuntime } from "../../types/runtime";
 import { canonicalNavigationOwners } from "../canonical-navigation-owners";
 import { boundedQueryAutomation, boundedQueryStorage, rejectUnboundedCollectionRead } from "./collection-query";
+import { createCommandRejection } from "./command-rejection";
 import { type EventDispatcher, refId } from "./dispatch";
 import type { NavigationScope } from "./navigation-scope";
 import type { InvocationScope } from "./scope";
@@ -145,7 +146,7 @@ const buildCommandsApi = (
   patchParams: (params) => ({ type: "patchParams", params }),
   replaceParams: (params) => ({ type: "replaceParams", params }),
   replaceInvocation: (invocation) => ({ type: "replaceInvocation", invocation }),
-  reject: (input) => ({ type: "reject", ...input }),
+  reject: createCommandRejection,
 });
 
 export const createExecuteBuilder = (runRef: {
