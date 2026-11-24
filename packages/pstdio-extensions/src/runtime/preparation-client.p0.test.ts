@@ -880,3 +880,43 @@ test.each([
     await Promise.allSettled([edit, original]);
   }
 });
+
+test("a long step of the preemptor does not spend the interrupted job's hold", async () => {
+  const client = fixture();
+  const background = gate();
+  const firstStep = gate();
+  let lost = 0;
+  let backgroundEntries = 0;
+  const resumed = Promise.withResolvers<void>();
+  const unsubscribe = client.subscribe((event) => {
+    if (event.kind === "worker-lost") lost++;
+    if (event.entered === "background-check" && ++backgroundEntries === 2) resumed.resolve();
+  });
+  const check = client.withContinuation(
+    () => withBackgroundPreparation(() => client.run("wait", { name: "background-check", url: background.url })),
+    { priority: "background" },
+  );
+  await background.entered.promise;
+  const edit = client.withContinuation(() =>
+    withBackgroundPreparation(async () => {
+      const first = client.run("wait", { name: "edit-step-1", url: firstStep.url });
+      await firstStep.entered.promise;
+      // The step runs longer than the hold; only the host gap after it may count as idle time.
+      await Bun.sleep(1_150);
+      firstStep.release.resolve();
+      await first;
+      const readmitted = await Promise.race([resumed.promise.then(() => true), Bun.sleep(175).then(() => false)]);
+      await client.run("value", { name: "edit-step-2" });
+      return readmitted;
+    }),
+  );
+  try {
+    expect(await edit).toBe(false);
+    expect(lost).toBe(1);
+  } finally {
+    unsubscribe();
+    firstStep.release.resolve();
+    background.release.resolve();
+    await Promise.allSettled([edit, check]);
+  }
+});

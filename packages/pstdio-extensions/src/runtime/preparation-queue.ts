@@ -41,8 +41,8 @@ export interface Job {
   home: string;
   env: NodeJS.ProcessEnv;
   waiters: Set<Waiter>;
-  /** Live continuations this job's worker was retired for, each until its hold lapses. */
-  yielded?: Map<Continuation, number>;
+  /** Live continuations this job's worker was retired for, with when each owner went idle. */
+  yielded?: Map<Continuation, { idleSince?: number }>;
 }
 export const createJob = (
   id: number,
@@ -93,23 +93,65 @@ export const preparationQueuePriority =
 // Retiring a worker for a continuation's job resumes the interrupted job after that
 // continuation, not in its next database gap, where its next job would retire it again.
 /**
- * How long an interrupted job stays out of its preemptor's gaps. It covers a continuation's
- * consecutive steps, and bounds the delay of a waiter that reaches the job without a loan.
+ * How long an interrupted job stays out of its preemptor's gaps while that preemptor is idle: it has
+ * no queued or running job. A long step of its own never spends the hold, and a waiter that reaches
+ * the job without a loan is delayed at most this long once the preemptor stops running work.
  */
 export const PREPARATION_YIELD_HOLD_MS = 1_000;
 
-export const yieldPreparation = (job: Job, next: Job, now = performance.now()) => {
+/** Tells the queue whether a continuation still has work, and when to look at a held job again. */
+export interface YieldClock {
+  busy: (owner: Continuation) => boolean;
+  now: () => number;
+  wake: (delay: number) => void;
+}
+
+export const createYieldClock = (jobs: () => Iterable<Job | undefined>, resume: () => void): YieldClock => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let wakeAt = Number.POSITIVE_INFINITY;
+  const now = () => performance.now();
+  return {
+    busy: (owner) =>
+      [...jobs()].some((job) => job && [...job.waiters].some((waiter) => preparationIncludes(waiter.scope, owner))),
+    now,
+    wake: (delay) => {
+      if (timer && now() + delay >= wakeAt) return;
+      clearTimeout(timer);
+      wakeAt = now() + delay;
+      timer = setTimeout(() => {
+        timer = undefined;
+        wakeAt = Number.POSITIVE_INFINITY;
+        resume();
+      }, delay + 1);
+      timer.unref?.();
+    },
+  };
+};
+
+export const yieldPreparation = (job: Job, next: Job) => {
   for (const waiter of next.waiters) {
     const owner = waiter.scope?.continuation;
     if (!owner?.continuing) continue;
     job.yielded ??= new Map();
-    job.yielded.set(owner, now + PREPARATION_YIELD_HOLD_MS);
+    job.yielded.set(owner, {});
   }
   return job;
 };
-const awaitsYield = (job: Job, now = performance.now()) => {
+const holds = (owner: Continuation, hold: { idleSince?: number }, clock: YieldClock) => {
+  if (clock.busy(owner)) {
+    hold.idleSince = undefined;
+    return true;
+  }
+  const now = clock.now();
+  hold.idleSince ??= now;
+  const left = hold.idleSince + PREPARATION_YIELD_HOLD_MS - now;
+  if (left > 0) clock.wake(left);
+  return left > 0;
+};
+const awaitsYield = (job: Job, clock?: YieldClock) => {
   if (!job.yielded) return false;
-  for (const [owner, until] of job.yielded) if (!owner.continuing || until <= now) job.yielded.delete(owner);
+  for (const [owner, hold] of job.yielded)
+    if (!owner.continuing || (clock && !holds(owner, hold, clock))) job.yielded.delete(owner);
   // A continuation that now waits on the interrupted job itself, directly or through a loan, needs it to run.
   // Membership is exact: a lent continuation still counts when a more urgent one ranks first.
   return (
@@ -120,10 +162,16 @@ const awaitsYield = (job: Job, now = performance.now()) => {
   );
 };
 
+/** Re-reads every hold whenever work starts or ends, so idle time counts only between the owner's jobs. */
+export const refreshYieldHolds = (jobs: Iterable<Job>, clock: YieldClock) => {
+  for (const job of jobs) awaitsYield(job, clock);
+};
+
 export const orderPreparationQueue = (
   queued: Job[],
   priority: (job: Job) => number,
   continuations: ReturnType<typeof createPreparationContinuations>,
+  clock?: YieldClock,
 ) => {
   queued.sort((a, b) => priority(a) - priority(b) || a.id - b.id);
   if (queued[0] && !Number.isFinite(priority(queued[0]))) return false;
@@ -132,7 +180,7 @@ export const orderPreparationQueue = (
     const dependency = queued.findIndex(
       (job) =>
         Number.isFinite(priority(job)) &&
-        !awaitsYield(job) &&
+        !awaitsYield(job, clock) &&
         [...job.waiters].some(
           (waiter) =>
             waiter.scope?.continuation?.continuing &&
