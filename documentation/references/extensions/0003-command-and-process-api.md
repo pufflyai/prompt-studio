@@ -64,6 +64,11 @@ exact extension source. The call then fails, and no child starts, when:
 - the host environment does not have the variable (`process_environment_unavailable`);
 - `env` also sets the name. `env` cannot replace a value requested with `envFromHost`.
 
+Processes the host starts for a harness or a workspace provider in a project, such as an
+availability check or a model list, get the names the user allowed for that extension and source in
+that project without asking. A name the host environment does not have is left out. Outside a
+project, for example at startup, they get none.
+
 The value goes into the child's environment only, and no `ctx` API returns it. The host replaces it
 with `[Redacted]` in the child's `stdout` and `stderr` before returning them. That only prevents
 accidental output: the extension chooses the command, so it can still pass the value on. Allowing a
