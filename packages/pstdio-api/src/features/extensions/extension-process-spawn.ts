@@ -4,6 +4,7 @@ import { createProcessHandleProxy, type ProcessOwner, processError } from "pstdi
 import type { ProcessTarget } from "./extension-targets";
 import { resolveProcessEnvironmentCommand } from "./process-command";
 import type { ProcessEnvironmentLease } from "./process-environment/permissions";
+import { processGroupExited } from "./process-group";
 import { spawnProcessHandle } from "./process-handle";
 import { redactProcessOutput } from "./process-output-redaction";
 
@@ -42,12 +43,18 @@ const spawnLocal = async (
   const cwd = input.cwd === undefined ? root : resolve(root ?? process.cwd(), input.cwd);
   const { env, lease, granted } = await options.prepareEnvironment({ ...input, cwd }, active);
   let handle: ProcessHandle;
+  let spawned: { pid: number; exited: Promise<unknown> } | undefined;
   try {
     active();
     const resolved = resolveProcessEnvironmentCommand(input.command, env, cwd);
     handle = spawnProcessHandle(
       { argv: resolved.argv, cwd, env, windowsVerbatimArguments: resolved.windowsVerbatimArguments },
-      { spawner: options.spawner },
+      {
+        spawner: options.spawner,
+        onSpawn: (child) => {
+          spawned = child;
+        },
+      },
     );
   } catch (error) {
     lease?.release();
@@ -56,7 +63,10 @@ const spawnLocal = async (
   if (lease) {
     // A revoked grant stops the child before the revocation takes effect.
     lease.attach(() => handle.kill("SIGKILL"));
-    void handle.exited.finally(lease.release);
+    // Programs the child left running in its group keep the granted values, so a revocation
+    // must still reach them after the child exits.
+    if (spawned) void processGroupExited(spawned).then(lease.release, lease.release);
+    else void handle.exited.finally(lease.release);
   }
   await handle.started;
   return redactProcessOutput(handle, granted);
