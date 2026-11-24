@@ -5,6 +5,7 @@ import { historicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
 import {
   type ArtifactMountWriteObserver,
+  type ArtifactParentWrite,
   createSafeFileRoot,
   filesystemIdentity,
   observeArtifactParentWrite,
@@ -18,6 +19,17 @@ export interface FileIdentity {
 }
 export const sameFile = (a: FileIdentity, b: FileIdentity) => a.kind === b.kind && a.hash === b.hash;
 export const absentFile: FileIdentity = { kind: null, hash: null };
+
+const placeDirectory = async (
+  operationPath: string,
+  reportedPath: string,
+  createdDirectories?: Map<string, string>,
+) => {
+  const created = await mkdir(operationPath, { recursive: true });
+  if (!created || !createdDirectories) return;
+  const stats = await stat(operationPath, { bigint: true }).catch(() => undefined);
+  if (stats?.isDirectory()) createdDirectories.set(reportedPath, filesystemIdentity(stats));
+};
 
 export const createFileProjectionIO = (input: {
   root: string;
@@ -81,27 +93,28 @@ export const createFileProjectionIO = (input: {
     const scoped = boundary(path);
     const requestedPath = join(input.root, path);
     if (!target.kind) {
-      input.onWrite?.(requestedPath, undefined, parentWrite?.());
+      input.onWrite?.(requestedPath, undefined, parentWrite ? [parentWrite()] : undefined);
       return;
     }
     const createdDirectories = input.onWrite ? new Map<string, string>() : undefined;
+    const parentWrites: ArtifactParentWrite[] = [];
     const destination = await scoped.safe.resolveForWrite(
       scoped.path,
-      createdDirectories && ((folder, identity) => createdDirectories.set(folder, identity)),
+      createdDirectories &&
+        ((folder, identity, directoryParentWrite) => {
+          createdDirectories.set(folder, identity);
+          parentWrites.push(directoryParentWrite);
+        }),
     );
     const changedPath = join(requestedPath, relative(destination.operationPath, destination.realPath));
     const observedParent =
       input.onWrite && dirname(requestedPath) !== dirname(changedPath)
         ? observeArtifactParentWrite(changedPath)
         : parentWrite;
-    if (target.kind === "directory") {
-      const created = await mkdir(destination.operationPath, { recursive: true });
-      if (created && createdDirectories) {
-        const stats = await stat(destination.operationPath, { bigint: true }).catch(() => undefined);
-        if (stats?.isDirectory()) createdDirectories.set(changedPath, filesystemIdentity(stats));
-      }
-    } else if (temporary) await rename(temporary, destination.realPath);
-    input.onWrite?.(changedPath, createdDirectories, observedParent?.());
+    if (target.kind === "directory") await placeDirectory(destination.operationPath, changedPath, createdDirectories);
+    else if (temporary) await rename(temporary, destination.realPath);
+    if (observedParent) parentWrites.push(observedParent());
+    input.onWrite?.(changedPath, createdDirectories, parentWrites);
   };
   const install = async (
     path: string,

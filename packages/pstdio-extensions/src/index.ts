@@ -29,6 +29,7 @@ export {
 } from "./artifacts";
 export type { ArtifactMountWriteObserver } from "./artifacts/artifact-mount";
 export {
+  type ArtifactParentWrite,
   createSafeFileRoot,
   filesystemIdentity,
   observeArtifactParentWrite,

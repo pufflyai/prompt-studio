@@ -81,7 +81,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     return matchesCreatedDirectory(path, current, keepMatchedWrites) || (!current && matchesAncestorDeletion(path));
   };
 
-  const record: ArtifactMountWriteObserver = (path, createdDirectories, parentWrite) => {
+  const record: ArtifactMountWriteObserver = (path, createdDirectories, parentWrites) => {
     forgetExpired();
     const recordedAt = now();
     entries.set(path, { recordedAt, state: readArtifactFileState(path) });
@@ -89,9 +89,11 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
       const observed = readArtifactFileState(folder);
       if (observed?.directory && observed.identity === identity) directories.set(folder, { observed, recordedAt });
     }
-    if (parentWrite?.before && parentWrite.after?.identity === parentWrite.before.identity) {
-      const directory = directories.get(parentWrite.path);
-      if (directory && sameState(directory.observed, parentWrite.before)) directory.observed = parentWrite.after;
+    for (const { path: parentPath, before, after } of parentWrites ?? []) {
+      const directory = directories.get(parentPath);
+      if (directory && before && after?.identity === before.identity && sameState(directory.observed, before)) {
+        directory.observed = after;
+      }
     }
   };
 

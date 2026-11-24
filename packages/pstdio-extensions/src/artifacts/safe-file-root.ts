@@ -67,7 +67,7 @@ export const observeArtifactParentWrite = (path: string) => {
   return (): ArtifactParentWrite => ({ path: parent, before, after: readArtifactFileState(parent) });
 };
 
-type OnDirectoryCreated = (path: string, identity: string) => void;
+type OnDirectoryCreated = (path: string, identity: string, parentWrite: ArtifactParentWrite) => void;
 
 export const createSafeFileRoot = (mountRoot: string) => {
   const absoluteRoot = resolve(mountRoot);
@@ -104,6 +104,7 @@ export const createSafeFileRoot = (mountRoot: string) => {
     let current = root;
     for (const segment of relativePath.split("/").filter(Boolean)) {
       current = join(current, segment);
+      const parentWrite = onDirectoryCreated && observeArtifactParentWrite(join(absoluteRoot, relative(root, current)));
       // Another writer can create the same folder at the same time. The checks below still
       // reject a folder that resolves outside the root or is not a folder.
       const created = await mkdir(current).then(
@@ -121,7 +122,12 @@ export const createSafeFileRoot = (mountRoot: string) => {
       if (!stats.isDirectory()) {
         throw new Error(`Artifact directory is not a directory: ${relativePath}`);
       }
-      if (created) onDirectoryCreated?.(join(absoluteRoot, relative(root, currentRealPath)), filesystemIdentity(stats));
+      if (created && parentWrite)
+        onDirectoryCreated?.(
+          join(absoluteRoot, relative(root, currentRealPath)),
+          filesystemIdentity(stats),
+          parentWrite(),
+        );
       current = currentRealPath;
     }
     return current;

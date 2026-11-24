@@ -116,6 +116,19 @@ describe("artifact mount write ledger", () => {
     expect(ledger.dropEchoes([folder, join(folder, "second.json")], options)).toEqual([]);
   });
 
+  test("a delayed ancestor echo still matches after an owned subfolder is created", async () => {
+    const ledger = createArtifactMountWriteLedger();
+    const { mount, root } = createMount(ledger);
+    const folder = join(root, "sales");
+    const archive = join(folder, "archive");
+    const options = { keepMatchedWrites: true };
+    await mount.writeText("sales/first.json", "{}");
+    expect(ledger.dropEchoes([folder, join(folder, "first.json")], options)).toEqual([]);
+
+    await mount.writeText("sales/archive/second.json", "[]");
+    expect(ledger.dropEchoes([folder, archive, join(archive, "second.json")], options)).toEqual([]);
+  });
+
   test("drops everything a mount delete removed", async () => {
     const ledger = createArtifactMountWriteLedger();
     const { mount, root } = createMount(ledger);

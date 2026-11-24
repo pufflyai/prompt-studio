@@ -25,7 +25,7 @@ type ArtifactMountLocation = {
 export type ArtifactMountWriteObserver = (
   path: string,
   createdDirectories?: ReadonlyMap<string, string>,
-  parentWrite?: ArtifactParentWrite,
+  parentWrites?: readonly ArtifactParentWrite[],
 ) => void;
 
 type CreateArtifactMountInput = ArtifactMountLocation & {
@@ -104,14 +104,20 @@ const createFileMountState = (
     join(resolve(mountRoot), ...relativePath.split("/"), linkTarget);
   const write = async (path: string, value: string | Uint8Array) => {
     const createdDirectories = onWrite ? new Map<string, string>() : undefined;
+    const parentWrites: ArtifactParentWrite[] = [];
     const { operationPath, realPath, relativePath } = await safeRoot.resolveForWrite(
       path,
-      createdDirectories && ((folder, identity) => createdDirectories.set(folder, identity)),
+      createdDirectories &&
+        ((folder, identity, parentWrite) => {
+          createdDirectories.set(folder, identity);
+          parentWrites.push(parentWrite);
+        }),
     );
     const changedPath = observedPath(relativePath, relative(operationPath, realPath));
     const parentWrite = onWrite && observeArtifactParentWrite(changedPath);
     await writeFile(operationPath, value);
-    onWrite?.(changedPath, createdDirectories, parentWrite?.());
+    if (parentWrite) parentWrites.push(parentWrite());
+    onWrite?.(changedPath, createdDirectories, parentWrites);
   };
   const mount: ArtifactMount = {
     exists: (path) => read(async () => Boolean(await safeRoot.tryResolveExisting(path))),
@@ -168,7 +174,7 @@ const createFileMountState = (
       const changedPath = observedPath(relativePath);
       const parentWrite = onWrite && observeArtifactParentWrite(changedPath);
       await rm(operationPath, { recursive: true, force: true });
-      onWrite?.(changedPath, undefined, parentWrite?.());
+      onWrite?.(changedPath, undefined, parentWrite ? [parentWrite()] : undefined);
     },
   };
   return { mount, safeRoot };
