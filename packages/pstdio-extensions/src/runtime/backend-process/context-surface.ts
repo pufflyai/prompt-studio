@@ -101,6 +101,14 @@ type ContextData = {
   storage?: unknown;
 };
 
+// The host still ends a session with the call that opened it; the worker's handle stays readable until dropped.
+const terminalSurface = object({
+  openSession: {
+    kind: "handle",
+    members: { id: "id", write: "notify", resize: "notify", kill: "async", events: "iterate" },
+  },
+});
+
 /** Describes only supported services that are present on this invocation's host context. */
 export const extensionContextSurface = (context: ContextData) => {
   const { projectId, extensionId, storage } = context;
@@ -122,6 +130,9 @@ export const extensionContextSurface = (context: ContextData) => {
     }),
     events: object(calls("emit")),
     settings: object(calls("all", "get", "set", "delete")),
+    state: object(calls("get", "set", "delete")),
+    ...calls("localDirectory"),
+    terminal: terminalSurface,
     storage: storageSurface(projectId, {
       deviceId: ((storage as { positions?: object } | undefined)?.positions as Record<symbol, string> | undefined)?.[
         storagePositionsDevice
