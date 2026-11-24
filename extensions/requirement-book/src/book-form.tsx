@@ -16,6 +16,7 @@ interface FormProps {
   draftError?: string;
   onRetryDraft?: () => void;
   canDiscardSubmission: boolean;
+  hasSubmissionProof: boolean;
   onSubmit: (
     values: Record<string, unknown>,
     expectedRevision: string,
@@ -39,6 +40,7 @@ export function BookForm(props: FormProps) {
     draft,
     submissionStatus,
     canDiscardSubmission,
+    hasSubmissionProof,
     draftRevision,
     draftError,
     onRetryDraft,
@@ -123,7 +125,7 @@ export function BookForm(props: FormProps) {
     setSaving(true);
     setError("");
     try {
-      if (!(await onCheckSubmission?.())) setError("The submission is still unconfirmed.");
+      if (!(await onCheckSubmission?.()) && hasSubmissionProof) setError("The submission is still unconfirmed.");
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : String(failure));
     } finally {
@@ -213,6 +215,11 @@ export function BookForm(props: FormProps) {
                       {submissionMessage[submissionStatus]}
                     </Text>
                   ) : null}
+                  {submissionUnconfirmed && !hasSubmissionProof && submissionStatus !== "confirmed" ? (
+                    <Text color="fg.muted" textStyle="paragraph/S/regular">
+                      This draft has no saved chapter identity. Inspect the book in this workspace before discarding it.
+                    </Text>
+                  ) : null}
                   {(error || draftError) && (
                     <Text role="alert" color="fg.error" textStyle="paragraph/S/regular">
                       {error || draftError}
@@ -229,11 +236,11 @@ export function BookForm(props: FormProps) {
             <Dialog.Footer>
               <HStack gap="sm">
                 <Button variant="ghost" disabled={saving} onClick={close}>
-                  Cancel
+                  {submissionUnconfirmed && !hasSubmissionProof ? "Inspect book" : "Cancel"}
                 </Button>
                 {onCheckSubmission && submissionStatus !== "confirmed" ? (
                   <Button disabled={saving} onClick={() => void check()}>
-                    Check again
+                    {hasSubmissionProof ? "Check again" : "Refresh draft status"}
                   </Button>
                 ) : null}
                 <Button

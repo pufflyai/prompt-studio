@@ -149,6 +149,7 @@ export function AuthoringForm(props: Props) {
         revision === undefined ? undefined : ((draft?.submissionId ? draft : (restored ?? draft))?.revision ?? revision)
       }
       canDiscardSubmission={draft?.submissionStatus !== "writing" && Boolean(draft?.revision ?? revision)}
+      hasSubmissionProof={Boolean(draft?.submissionProof)}
       onSubmit={submit}
       onClose={onClose}
       onPreviewDraft={(values, expectedRevision) => {
