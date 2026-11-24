@@ -6,6 +6,7 @@ export * from "./automation";
 export * from "./board-views";
 export { resolveCommandResourceParams, resourceContextValue } from "./command-resource-params";
 export * from "./conversation-changes";
+export { applyConversationPatch, normalizeConversationPatch } from "./conversation-patch";
 export { createDataMigrationRunner } from "./data-migration";
 export * from "./device-commands";
 export * from "./environment";

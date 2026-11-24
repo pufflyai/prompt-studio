@@ -1,4 +1,4 @@
-import type { ExtensionLogApi, ExtensionLogOptions } from "pstdio-api-contracts/extension-kernel";
+import type { ExtensionLogApi, ExtensionLogOptions, StorageLogEntry } from "pstdio-api-contracts/extension-kernel";
 import { createReadBoundary } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 
@@ -52,10 +52,24 @@ export const createExtensionLogApi = (
       const owned = structuredClone(options);
       return read(async () => (await open()).read(owned));
     },
-    async *follow(options = {}) {
-      const signals = [input.signal, options.signal].filter((signal): signal is AbortSignal => !!signal);
-      const signal = signals.length ? AbortSignal.any(signals) : undefined;
-      yield* (await open()).follow({ after: options.after, signal });
+    follow(options = {}) {
+      // return() aborts the wait for the next entry. A generator's own return() would queue behind
+      // that wait, which lasts until the next write, so a reader closed while idle stayed open.
+      const stop = new AbortController();
+      const signals = [input.signal, options.signal, stop.signal].filter((signal): signal is AbortSignal => !!signal);
+      const signal = AbortSignal.any(signals);
+      const entries = (async function* () {
+        yield* (await open()).follow({ after: options.after, signal });
+      })();
+      const iterator: AsyncIterableIterator<StorageLogEntry> = {
+        next: () => entries.next(),
+        return: (value?: unknown) => {
+          stop.abort();
+          return entries.return(value as undefined);
+        },
+        [Symbol.asyncIterator]: () => iterator,
+      };
+      return iterator;
     },
   };
   return api;

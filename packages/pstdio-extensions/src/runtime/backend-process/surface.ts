@@ -24,6 +24,11 @@ export type BackendSurface =
   | { kind: "iterate"; signalArg?: number }
   | { kind: "migrate"; projectId: string }
   | { kind: "object"; members: Record<string, BackendSurface> }
+  /**
+   * A synchronous host method that opens a live handle, such as `terminal.openSession`. The worker
+   * returns its own handle at once and forwards each member to the host's handle once it opens.
+   */
+  | { kind: "handle"; members: Record<string, HandleMember> }
   /** A synchronous scope selection, such as `storage.collection(name)`, evaluated for each host call. */
   | {
       kind: "factory";
@@ -41,6 +46,12 @@ export type BackendSurface =
   | { kind: "local"; name: "fileUrl"; prefix: string }
   /** The middleware result constructors of ctx.commands, such as `continue()` and `patchParams(params)`. */
   | { kind: "local"; name: "middlewareResult"; type: MiddlewareResultType };
+
+/**
+ * `id` is created in the worker, because the host's id arrives only after the handle opens.
+ * `notify` members return nothing and run in call order; `iterate` members have one consumer.
+ */
+type HandleMember = "id" | "notify" | "async" | "iterate";
 
 type MiddlewareResultType = "continue" | "patchParams" | "replaceParams" | "replaceInvocation" | "reject";
 
@@ -102,7 +113,14 @@ const methodOf = (target: unknown, name: string, path: SurfaceStep[]) => {
 };
 
 // Members the worker calls asynchronously and whose result it keeps locally, such as a subscription.
-const ASYNC_METHODS = new Set<BackendSurface["kind"]>(["async", "subscribe", "iterate", "migrate", "asset-stage"]);
+const ASYNC_METHODS = new Set<BackendSurface["kind"]>([
+  "async",
+  "subscribe",
+  "iterate",
+  "migrate",
+  "asset-stage",
+  "handle",
+]);
 
 const resolveCallMember = (surface: BackendSurface, path: SurfaceStep[], kind: "async" | "notify") => {
   let current = surface;
@@ -142,6 +160,10 @@ export const resolveSurfaceCall = (
     ? openIterator(method.bind(target), input, member.signalArg)
     : method.apply(target, input);
 };
+
+/** The kind of member a path ends at, or undefined when the path is not part of the surface. */
+export const surfaceMemberKind = (surface: BackendSurface, path: SurfaceStep[]) =>
+  resolveCallMember(surface, path, "async")?.kind;
 
 const valueKey = (path: string[]) => JSON.stringify(path);
 
@@ -231,6 +253,41 @@ const lazyIterable = (open: () => Promise<unknown>): AsyncIterable<unknown> => (
   },
 });
 
+// Members run in call order on the host's handle. A failed open rejects every later member call.
+const openHandle = (opened: Promise<unknown>, members: Record<string, HandleMember>) => {
+  opened.catch(() => {});
+  let tail: Promise<unknown> = Promise.resolve();
+  const run = (name: string, args: unknown[]) => {
+    const next = tail
+      .then(() => opened)
+      .then((host) => (host as Record<string, (...args: unknown[]) => unknown>)[name]!(...args));
+    // Order only: the queue must not keep a result, such as an iterator, reachable.
+    tail = next.then(
+      () => {},
+      () => {},
+    );
+    return next;
+  };
+  const handle: Record<string, unknown> = {};
+  for (const [name, member] of Object.entries(members)) {
+    if (member === "id") handle[name] = crypto.randomUUID();
+    else if (member === "notify")
+      handle[name] = (...args: unknown[]) => {
+        run(name, args).catch(() => {});
+      };
+    else if (member === "async") handle[name] = (...args: unknown[]) => run(name, args);
+    else {
+      let claimed = false;
+      handle[name] = (...args: unknown[]) => {
+        if (claimed) throw new Error(`${name}() has one consumer per handle.`);
+        claimed = true;
+        return lazyIterable(() => run(name, args));
+      };
+    }
+  }
+  return handle;
+};
+
 /** Builds the worker-side object for a surface. No I/O happens until an async member is called. */
 export const createSurfaceFacade = (
   surface: BackendSurface,
@@ -264,6 +321,8 @@ export const createSurfaceFacade = (
           storageMigrate(migrateNamespace(values[valueKey(["extensionId"])], current.projectId, path), (args) =>
             channel.call(path, args),
           )(version, run);
+      case "handle":
+        return (...args: unknown[]) => openHandle(channel.call(path, args), current.members);
       case "local":
         return localMember(current);
       case "factory":

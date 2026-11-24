@@ -24,6 +24,7 @@ export type * from "./kanban-renderer";
 export type * from "./navigation-target";
 export type * from "./pages";
 export type * from "./params";
+export type * from "./process-spawn";
 export type * from "./renderer-base";
 export type * from "./resource-activity";
 export type * from "./resource-binding";

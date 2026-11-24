@@ -8,8 +8,9 @@ import {
   serializeBackendError,
   type WorkerToHostMessage,
 } from "./protocol";
-import { type createFunctionTable, discardValue, importValue } from "./remote-values";
-import { type BackendSurface, resolveSurfaceCall } from "./surface";
+import { withSnapshotSinks } from "./remote-markers";
+import { type createFunctionTable, type createImportTracker, discardValue, importValue } from "./remote-values";
+import { type BackendSurface, resolveSurfaceCall, surfaceMemberKind } from "./surface";
 
 type Enter = ReturnType<typeof AsyncLocalStorage.snapshot>;
 
@@ -21,6 +22,7 @@ export interface HostInvocation {
   cancelled?: boolean;
   /** Host functions this invocation handed to the worker, such as a migration helper or a close(). */
   table: ReturnType<typeof createFunctionTable>;
+  tracker: ReturnType<typeof createImportTracker>;
 }
 
 type Call = Extract<WorkerToHostMessage, { type: "call" | "fn-call" }>;
@@ -29,28 +31,45 @@ export const createHostCalls = (
   send: (message: HostToWorkerMessage) => boolean,
   invocation: (invocationId: string) => HostInvocation | undefined,
   workerError: (error: SerializedBackendError) => Error,
+  checkLifetime: (id: string) => void,
 ) => {
   const pending = createPendingCalls<Enter>();
   const hostCallOwner = new AsyncLocalStorage<string>();
+  const inFlight = new Map<string, number>();
   let nextRequest = 0;
 
+  const track = async <T>(id: string, run: () => Promise<T>) => {
+    inFlight.set(id, (inFlight.get(id) ?? 0) + 1);
+    try {
+      return await run();
+    } finally {
+      const left = inFlight.get(id)! - 1;
+      if (left) inFlight.set(id, left);
+      else inFlight.delete(id);
+      checkLifetime(id);
+    }
+  };
+
   const importFrom = (invocationId: string, value: unknown) =>
-    importValue(value, (fnId, args) => callWorker(invocationId, fnId, args));
+    importValue(value, (fnId, args) => callWorker(invocationId, fnId, args), invocation(invocationId)?.tracker);
 
   const callWorker = async (invocationId: string, fnId: string, args: unknown[]): Promise<unknown> => {
     const running = invocation(invocationId);
     if (!running || running.cancelled) throw new BackendUnavailableError("The invocation is no longer running.");
-    const exported = (await running.table.exportValue(args)) as unknown[];
-    const requestId = `h${nextRequest++}`;
-    // A listener can be called by a different invocation's event. Only a host operation owned
-    // by this invocation can give its callback narrower async context.
-    const enter = hostCallOwner.getStore() === invocationId ? AsyncLocalStorage.snapshot() : running.enter;
-    const reply = pending.start(invocationId, requestId, enter);
-    if (!send({ v: BACKEND_PROTOCOL_VERSION, type: "fn-call", invocationId, requestId, fnId, args: exported })) {
-      pending.take(invocationId, requestId);
-      throw new BackendUnavailableError("The extension backend is not available.");
-    }
-    return importFrom(invocationId, await reply.promise);
+    return track(invocationId, async () => {
+      const exported = (await running.table.exportValue(args.map(withSnapshotSinks))) as unknown[];
+      if (invocation(invocationId) !== running || running.cancelled)
+        throw new BackendUnavailableError("The invocation is no longer running.");
+      const requestId = `h${nextRequest++}`;
+      // Only a host operation owned by this invocation can give its callback narrower async context.
+      const enter = hostCallOwner.getStore() === invocationId ? AsyncLocalStorage.snapshot() : running.enter;
+      const reply = pending.start(invocationId, requestId, enter);
+      if (!send({ v: BACKEND_PROTOCOL_VERSION, type: "fn-call", invocationId, requestId, fnId, args: exported })) {
+        pending.take(invocationId, requestId);
+        throw new BackendUnavailableError("The extension backend is not available.");
+      }
+      return importFrom(invocationId, await reply.promise);
+    });
   };
 
   // A callback may have entered a narrower host scope (for example a database migration).
@@ -74,20 +93,34 @@ export const createHostCalls = (
       const running = invocation(invocationId);
       if (!running) throw new BackendUnavailableError("The invocation is no longer running.");
       // Cancellation ends callback scopes. The table still permits calls to existing cleanup references.
-      const enter =
-        running.cancelled && message.type === "fn-call"
-          ? running.enter
-          : enterFor(running, invocationId, message.within);
-      await enter(async () => {
-        const result = await hostCallOwner.run(invocationId, () => runCall(running, message));
-        if (invocation(invocationId) !== running || (running.cancelled && message.type === "call")) {
-          discardValue(result);
-          return;
-        }
-        const value = await running.table.exportValue(result);
-        if (!send({ v: BACKEND_PROTOCOL_VERSION, type: "reply", invocationId, requestId, ok: true, value }))
-          throw new Error("The host result could not be sent to the worker.");
-      });
+      const cleanupOnly = running.cancelled && message.type === "fn-call";
+      const enter = cleanupOnly ? running.enter : enterFor(running, invocationId, message.within);
+      const revoked = () => invocation(invocationId) !== running || (!cleanupOnly && running.cancelled);
+      await track(invocationId, () =>
+        enter(async () => {
+          const result = await hostCallOwner.run(invocationId, () => runCall(running, message));
+          if (revoked()) {
+            discardValue(result);
+            return;
+          }
+          const pin =
+            message.type === "fn-call"
+              ? running.table.isPinned(message.fnId)
+              : surfaceMemberKind(running.surface, message.path) === "handle";
+          const { value, kept } = await running.table.exportResult(result, pin).catch((error) => {
+            if (revoked()) discardValue(result);
+            throw error;
+          });
+          if (revoked()) {
+            running.table.release(kept);
+            return;
+          }
+          if (!send({ v: BACKEND_PROTOCOL_VERSION, type: "reply", invocationId, requestId, ok: true, value })) {
+            running.table.release(kept);
+            throw new Error("The host result could not be sent to the worker.");
+          }
+        }),
+      );
     } catch (error) {
       send({
         v: BACKEND_PROTOCOL_VERSION,
@@ -122,5 +155,5 @@ export const createHostCalls = (
     }
   };
 
-  return { handle, reject: pending.reject };
+  return { handle, reject: pending.reject, importFrom, busy: (id: string) => inFlight.has(id) };
 };
