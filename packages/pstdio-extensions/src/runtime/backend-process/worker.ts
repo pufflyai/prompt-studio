@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { createPendingCalls } from "./pending-calls";
 import type { ProcessHandle } from "pstdio-api-contracts/extension-kernel";
+import { createPendingCalls } from "./pending-calls";
 import {
   BACKEND_PROTOCOL_VERSION,
   type BackendHandlerRef,

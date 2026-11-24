@@ -7,12 +7,12 @@ import {
   processError,
   trackProcessCleanup,
 } from "pstdio-extensions";
+import { watchLease } from "./extension-process-lifetime";
 import type { ProcessTarget } from "./extension-targets";
 import { resolveProcessEnvironmentCommand } from "./process-command";
 import type { ProcessEnvironmentLease } from "./process-environment/permissions";
-import { processGroupExited } from "./process-group";
 import { spawnProcessHandle } from "./process-handle";
-import { redactProcessOutput } from "./process-output-redaction";
+import { redactProcessOutput } from "./process-output-stream-redaction";
 
 export interface ProcessSpawnOptions {
   owner(lifetime: "call" | "extension"): ProcessOwner | undefined;
@@ -49,35 +49,31 @@ const spawnLocal = async (
   // The selected target's root anchors a relative cwd; a cwd never selects another target.
   const cwd = input.cwd === undefined ? root : resolve(root ?? process.cwd(), input.cwd);
   const { env, lease, granted } = await options.prepareEnvironment({ ...input, cwd }, active);
-  let handle: ProcessHandle;
-  let spawned: { pid: number; exited: Promise<unknown> } | undefined;
+  let treeExited: Promise<void> | undefined;
   try {
     if (owner.ready) await owner.ready;
     active();
     const resolved = resolveProcessEnvironmentCommand(input.command, env, cwd);
-    handle = spawnProcessHandle(
-      { argv: resolved.argv, cwd, env, windowsVerbatimArguments: resolved.windowsVerbatimArguments },
-      {
-        spawner: options.spawner,
-        onSpawn: (child) => {
-          spawned = child;
+    const start = () => {
+      const handle = spawnProcessHandle(
+        { argv: resolved.argv, cwd, env, windowsVerbatimArguments: resolved.windowsVerbatimArguments },
+        {
+          spawner: options.spawner,
+          onSpawn: (exited) => {
+            treeExited = exited;
+          },
         },
-      },
-    );
-  } catch (error) {
-    lease?.release();
-    throw error;
+      );
+      return { value: handle, stop: () => handle.kill("SIGKILL") };
+    };
+    // Lease admission and registration of its stop callback must be one step.
+    const handle = lease ? lease.start(start) : start().value;
+    if (lease) watchLease(treeExited ?? handle.exited.then(() => {}), lease);
+    // Open the proxy before the Windows launcher acknowledges target startup so kill can stop it.
+    return trackProcessCleanup(redactProcessOutput(handle, granted), processCleanup(handle));
+  } finally {
+    lease?.releaseUnused();
   }
-  if (lease) {
-    // A revoked grant stops the child before the revocation takes effect.
-    lease.attach(() => handle.kill("SIGKILL"));
-    // Programs the child left running in its group keep the granted values, so a revocation
-    // must still reach them after the child exits.
-    if (spawned) void processGroupExited(spawned).then(lease.release, lease.release);
-    else void handle.exited.finally(lease.release);
-  }
-  await handle.started;
-  return trackProcessCleanup(redactProcessOutput(handle, granted), processCleanup(handle));
 };
 
 const ownerFor = (options: ProcessSpawnOptions, lifetime: "call" | "extension") => {

@@ -9,7 +9,7 @@ import {
 } from "pstdio-extensions";
 import { redactSensitiveText } from "pstdio-logging";
 import { apiLogger } from "../../lib/logger";
-import { startProcessChild } from "./extension-process-lifetime";
+import { startProcessChild, watchLease } from "./extension-process-lifetime";
 import { createProcessSpawn } from "./extension-process-spawn";
 import type { ProcessTarget } from "./extension-targets";
 import { resolveProcessEnvironmentCommand } from "./process-command";
@@ -106,16 +106,6 @@ const createStopGate = (kill: () => Promise<void>) => {
       return stopping;
     },
   };
-};
-
-const watchLease = (treeExited: Promise<void> | undefined, lease?: ProcessEnvironmentLease) => {
-  if (!treeExited || !lease) return;
-  void treeExited.then(lease.release, (error: unknown) => {
-    apiLogger.warn(
-      { err: error, event: "extension.process.grant_tracking_failed" },
-      "Could not verify granted process exit",
-    );
-  });
 };
 
 export interface ProcessApiOptions {
