@@ -21,6 +21,10 @@ export const createCommandEditingDocument = (input: {
 }) => {
   const members = new Set<CommandEditingMember>();
   const serialize = createEditingCommandQueue();
+  const retainsFormDraft =
+    input.owner.extensionId === "pstdio.requirement-book" &&
+    input.open.command.commandId === "pstdio.requirement-book.command.drafts.save-editing" &&
+    input.open.read.commandId === "pstdio.requirement-book.command.drafts.read-editing";
   const recovery = createCommandEditingRecovery(input.queries, input.owner, input.open);
   let closed = false;
   let ready: Promise<void> | undefined;
@@ -79,7 +83,7 @@ export const createCommandEditingDocument = (input: {
   const close = (member: CommandEditingMember) => {
     members.delete(member);
     try {
-      journal.cancel(member);
+      if (!retainsFormDraft || closed || sources.retired() || !journal.retainFormDraft(member)) journal.cancel(member);
     } finally {
       readExecutor = [...members].at(-1)?.execute;
       updateObservation();
@@ -111,6 +115,7 @@ export const createCommandEditingDocument = (input: {
       assertOpen();
       members.add(member);
       readExecutor = member.execute;
+      if (retainsFormDraft) journal.reopenFormDraft(member);
       updateObservation();
       ready ??= sources.initialize().then(() => sources.ready());
       await ready;

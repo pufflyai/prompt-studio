@@ -45,6 +45,7 @@ export const createCommandEditingJournal = (input: {
   let revision = 0;
   let savedRevision = 0;
   let previews = new Map<CommandEditingMember, WebviewEditingChange[]>();
+  let retainedFormDraft: CommandEditingMember | undefined;
   let error: WebviewEditingSnapshot["error"];
   const validate = (result: WebviewEditingCommandResult) => {
     if (result.value === undefined) applyEditingChanges(baseline, result.changes);
@@ -110,6 +111,30 @@ export const createCommandEditingJournal = (input: {
     previews = rebaseEditingChanges(rebased.value, previews).drafts;
     publish();
   };
+  const execute = (
+    member: CommandEditingMember,
+    request: Extract<WebviewEditingSessionParams, { operation: "execute" }>,
+  ) => {
+    if (jobs.length >= 128) throw editingFailure("editing_command_queue_full");
+    const ownPreview = editingSequence(member).complete(request.sequence);
+    const changes = structuredClone([...(ownPreview ? (previews.get(member) ?? []) : []), ...request.changes]);
+    applyEditingChanges(committed(), changes);
+    const params = structuredClone({ ...input.command.params, ...request.params, operationId: crypto.randomUUID() });
+    if (ownPreview) previews.delete(member);
+    const job: CommandEditingJob = {
+      params,
+      changes,
+      revision: ++revision,
+      execute: member.execute,
+      workbench: member.workbench,
+      channel: request.channel,
+    };
+    jobs.push(job);
+    if (!writer.blocked()) error = undefined;
+    previews = rebaseEditingChanges(committed(), previews).drafts;
+    publish({ member, sequence: request.sequence });
+    return writer.wait([job]);
+  };
   return {
     snapshot,
     validate,
@@ -133,26 +158,34 @@ export const createCommandEditingJournal = (input: {
       previews = next;
       publish({ member, sequence: request.sequence });
     },
-    execute(member: CommandEditingMember, request: Extract<WebviewEditingSessionParams, { operation: "execute" }>) {
-      if (jobs.length >= 128) throw editingFailure("editing_command_queue_full");
-      const ownPreview = editingSequence(member).complete(request.sequence);
-      const changes = structuredClone([...(ownPreview ? (previews.get(member) ?? []) : []), ...request.changes]);
-      applyEditingChanges(committed(), changes);
-      const params = structuredClone({ ...input.command.params, ...request.params, operationId: crypto.randomUUID() });
-      if (ownPreview) previews.delete(member);
-      const job: CommandEditingJob = {
-        params,
-        changes,
-        revision: ++revision,
-        execute: member.execute,
-        workbench: member.workbench,
-        channel: request.channel,
-      };
-      jobs.push(job);
-      if (!writer.blocked()) error = undefined;
-      previews = rebaseEditingChanges(committed(), previews).drafts;
-      publish({ member, sequence: request.sequence });
-      return writer.wait([job]);
+    execute,
+    reopenFormDraft(member: CommandEditingMember) {
+      if (!retainedFormDraft) return;
+      const retained = previews.get(retainedFormDraft);
+      previews.delete(retainedFormDraft);
+      retainedFormDraft = undefined;
+      if (retained) previews.set(member, retained);
+    },
+    retainFormDraft(member: CommandEditingMember) {
+      const changes = previews.get(member);
+      const field = (name: string) => changes?.find(({ path }) => path.length === 1 && path[0] === name)?.value;
+      const draft = field("draft");
+      const expectedRevision = field("draftBase") ?? baseline.revision;
+      if (typeof draft !== "string" || typeof expectedRevision !== "string") return false;
+      if (jobs.length >= 128) {
+        if (retainedFormDraft) previews.delete(retainedFormDraft);
+        retainedFormDraft = member;
+        return true;
+      }
+      void execute(member, {
+        operation: "execute",
+        sessionId: member.id,
+        sequence: 0,
+        changes: [],
+        params: { draft, expectedRevision },
+        channel: "document",
+      }).catch(() => {});
+      return true;
     },
     cancel(member: CommandEditingMember, sequence?: number) {
       if (!editingSequence(member).cancel(sequence)) return;
@@ -160,6 +193,7 @@ export const createCommandEditingJournal = (input: {
     },
     clear() {
       baseline = {};
+      retainedFormDraft = undefined;
       previews.clear();
     },
   };

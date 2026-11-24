@@ -766,3 +766,82 @@ test("retains active and queued semantic edits across account retirement without
     await fixture.dispose().catch(() => {});
   }
 });
+
+test("disconnecting a Requirement Book form commits its latest unblurred text through the original owner", async () => {
+  const extensionId = "pstdio.requirement-book";
+  const projectId = "project";
+  const read = { commandId: `${extensionId}.command.drafts.read-editing` };
+  const command = {
+    commandId: `${extensionId}.command.drafts.save-editing`,
+    params: { workspaceId: "work", chapter: 2 },
+  };
+  const core = createWorkbench();
+  const received = Promise.withResolvers<unknown>();
+  const written = Promise.withResolvers<void>();
+  const secondFrame = createHostEventPublisher();
+  let writes = 0;
+  core.pageLocations.setProject(projectId);
+  core.commands.registerCommand(
+    { id: read.commandId, label: "Load draft" },
+    {
+      execute: () => ({
+        value: { draft: "{}", revision: "original" },
+        sources: [{ id: "authoring-draft", read, dependsOn: [] }],
+      }),
+    },
+  );
+  core.commands.registerCommand(
+    { id: command.commandId, label: "Save draft" },
+    {
+      execute: async (params) => {
+        writes++;
+        received.resolve(params);
+        await written.promise;
+        return { value: { draft: (params as { draft: string }).draft, revision: "saved" } };
+      },
+    },
+  );
+  const frame = (hostEvents: ReturnType<typeof createHostEventPublisher>, sessionId: string) => {
+    const gate = createHostCapabilityGate({
+      capabilities: createWorkbenchWebviewHostCapabilities({ workbench: core, projectId, extensionId, hostEvents }),
+      declaredCapabilities: ["editing.session"],
+    });
+    return (params: object) => gate.call({ method: "editing.session", params: { sessionId, ...params } });
+  };
+  const options = { key: "authoring-test", read, command, dependsOn: [] };
+  const firstFrame = createHostEventPublisher();
+  const first = frame(firstFrame, "first");
+  try {
+    await first({ operation: "open-command", ...options });
+    const latest = '{"title":"Typed immediately before closing"}';
+    await first({ operation: "preview", sequence: 1, changes: [{ path: ["draft"], value: '{"title":"Older"}' }] });
+    await first({
+      operation: "preview",
+      sequence: 2,
+      changes: [
+        { path: ["draft"], value: latest },
+        { path: ["draftBase"], value: "original" },
+      ],
+    });
+    firstFrame.unbind();
+    expect(await received.promise).toMatchObject({
+      draft: latest,
+      expectedRevision: "original",
+      workspaceId: "work",
+      chapter: 2,
+    });
+    const returning = frame(secondFrame, "returning");
+    expect(await returning({ operation: "open-command", ...options })).toMatchObject({
+      value: { draft: latest },
+      pendingCommands: 1,
+    });
+    written.resolve();
+    await returning({ operation: "save" });
+    expect(writes).toBe(1);
+  } finally {
+    written.resolve();
+    secondFrame.unbind();
+    firstFrame.unbind();
+    await core.dispose();
+  }
+});
