@@ -12,7 +12,8 @@ export const useChatMessageVisibility = (
     const content = list.current;
     if (!root || !content || !changed || typeof IntersectionObserver === "undefined") return;
     const visible = new Set<string>();
-    const mounted = new Set(rows.split("\0"));
+    const groups: string[][] = JSON.parse(rows);
+    const mounted = new Map(groups.map((ids) => [ids[0], ids]));
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -21,7 +22,7 @@ export const useChatMessageVisibility = (
           if (entry.isIntersecting && entry.intersectionRect.height > 0) visible.add(id);
           else visible.delete(id);
         }
-        changed([...visible]);
+        changed([...visible].flatMap((id) => mounted.get(id) ?? []));
       },
       { root },
     );

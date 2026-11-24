@@ -6,6 +6,7 @@ import { StickyUserMessage } from "./sticky-user-message";
 interface ChatMessageRowLayoutProps {
   rowType: ChatMessageRow["type"];
   rowId: string;
+  occurrences: number;
   message: SessionMessage;
   index: number;
   start: number;
@@ -56,6 +57,7 @@ export const ChatMessageRowLayout = (props: ChatMessageRowLayoutProps) => {
         >
           <StickyUserMessage
             message={message}
+            occurrences={props.occurrences}
             expanded={expanded}
             animatedKeys={animatedKeys}
             onToggle={onToggleStickyMessage}
@@ -76,6 +78,7 @@ export const ChatMessageRowLayout = (props: ChatMessageRowLayoutProps) => {
     >
       <ChatMessageListResponse
         message={message}
+        occurrences={props.occurrences}
         streaming={streaming}
         hideQuestionForms={hideQuestionForms}
         animatedKeys={animatedKeys}
