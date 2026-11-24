@@ -2,11 +2,11 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createMemoryStorage } from "@pstdio/sdk/testing";
 import type { Api } from "./connection";
 import { cleanupRunEnvironment } from "./environment-cleanup";
 import { activeRun, claimEnvironment } from "./environments";
 import { localProcess } from "./process-fixture";
+import { createRunStorage as createMemoryStorage } from "./run-storage-fixture";
 import { checkRun, listRuns, type RunDeps, startRun } from "./runs";
 
 let root: string;
@@ -116,7 +116,7 @@ test.each([
   { branchTemplate: false, otherOwner: true },
   { branchTemplate: true, otherOwner: false },
   { branchTemplate: true, otherOwner: true },
-])("failed setup only stops an environment it owns (%j)", async ({ branchTemplate, otherOwner }) => {
+])("unacknowledged submissions preserve workspace ownership (%j)", async ({ branchTemplate, otherOwner }) => {
   const store = createMemoryStorage();
   const requests: string[] = [];
   const server = Bun.serve({
@@ -124,7 +124,7 @@ test.each([
     async fetch(request) {
       const path = new URL(request.url).pathname;
       requests.push(path);
-      if (path === "/v1/workspaces" && otherOwner) await claimEnvironment(store, "branch-env", "other-running-run", 60);
+      if (path === "/v1/workspaces" && otherOwner) await claimEnvironment(store, "branch-env", "other-running-run");
       if (path.endsWith("/requests")) return new Response("Submission failed", { status: 503 });
       return Response.json({ id: "branch-env", state: "ready", metadata: { pstdio_project_id: "project" } });
     },
@@ -147,23 +147,15 @@ test.each([
     await expect(startRun(deps, { root, branchTemplate })).rejects.toThrow(
       otherOwner ? "another test run" : "Submission failed",
     );
-    expect(requests.includes("/v1/workspaces/branch-env/cancel")).toBe(!otherOwner);
-    expect(await activeRun(store, "branch-env")).toBe(otherOwner ? "other-running-run" : null);
+    expect(requests.includes("/v1/workspaces/branch-env/cancel")).toBe(false);
     const records = await listRuns(store);
+    expect(await activeRun(store, "branch-env")).toBe(otherOwner ? "other-running-run" : records[0]?.runId);
     expect(records).toHaveLength(otherOwner ? 0 : 1);
     if (!otherOwner) {
       const record = records[0]!;
-      expect(record.summary).toMatchObject({
-        status: "error",
-        error: "Submission failed",
-        exitCode: null,
-        logPath: null,
-        tail: "",
-      });
-      expect(record.summary?.durationMs).toBeGreaterThanOrEqual(0);
-      const requestCount = requests.length;
-      expect(await checkRun(deps, record)).toEqual(record.summary ?? null);
-      expect(requests).toHaveLength(requestCount);
+      expect(record.summary).toBeUndefined();
+      expect(record.submissionPending).toBe(true);
+      expect(await claimEnvironment(store, "branch-env", "competing-run")).toBe(false);
     }
   } finally {
     server.stop(true);
@@ -191,4 +183,147 @@ test.each(["synchronous", "asynchronous"])("an accepted run survives notificatio
   expect(record.summary).toBeUndefined();
   expect(requests.filter((request) => request.endsWith("/requests"))).toHaveLength(1);
   expect(requests).not.toContain("POST /v1/workspaces/accepted-env/cancel");
+});
+
+test("a recovered setup cannot submit after its original caller resumes", async () => {
+  const store = createMemoryStorage();
+  const entered = Promise.withResolvers<void>();
+  const ready = Promise.withResolvers<void>();
+  let submissions = 0;
+  const environment = {
+    id: "env",
+    state: "provisioning",
+    change_cursor: 0,
+    metadata: { pstdio_project_id: "project" },
+  };
+  const api: Api = async ({ path }) => {
+    if (path.includes("/changes?")) {
+      entered.resolve();
+      await ready.promise;
+      return { workspace: { ...environment, state: "ready" } } as never;
+    }
+    if (path.endsWith("/requests")) submissions++;
+    return environment as never;
+  };
+  const deps = runDeps(api, store);
+  const pending = startRun(deps, { root, environmentId: "env" });
+  await entered.promise;
+  const claims = store.collection<{ runId: string; setup?: { until: number; stop: boolean } }>("environment-claims");
+  const claim = await claims.get("env");
+  expect(claim?.setup?.until).toBeGreaterThan(Date.now());
+  await claims.put("env", { runId: claim!.runId, setup: { until: 0, stop: false } });
+  ready.resolve();
+  await expect(pending).rejects.toThrow("setup");
+  expect(submissions).toBe(0);
+  expect((await listRuns(store))[0]?.summary?.status).toBe("error");
+});
+
+test("submission acknowledgement preserves a concurrently collected result", async () => {
+  const store = createMemoryStorage();
+  const api: Api = async ({ path }) => {
+    if (path.endsWith("/requests")) {
+      const record = (await listRuns(store))[0]!;
+      await store.set(`run:${record.runId}`, {
+        ...record,
+        summary: {
+          runId: record.runId,
+          environmentId: "env",
+          status: "passed",
+          exitCode: 0,
+          durationMs: 10,
+          logPath: "run.log",
+          tail: "finished",
+        },
+      });
+    }
+    return { id: "env", state: "ready", metadata: { pstdio_project_id: "project" } } as never;
+  };
+  const { record } = await startRun(runDeps(api, store), { root });
+  expect((await listRuns(store))[0]).toMatchObject({
+    runId: record.runId,
+    submissionPending: false,
+    summary: { status: "passed", logPath: "run.log" },
+  });
+});
+
+test("a lost submission reply preserves a concurrently saved timeout", async () => {
+  const store = createMemoryStorage();
+  const api: Api = async ({ path }) => {
+    if (path.endsWith("/requests")) {
+      const record = (await listRuns(store))[0]!;
+      await store.set(`run:${record.runId}`, {
+        ...record,
+        summary: {
+          runId: record.runId,
+          environmentId: "env",
+          status: "timed_out",
+          exitCode: null,
+          durationMs: 60000,
+          logPath: "run.log",
+          tail: "timed out",
+        },
+      });
+      throw new Error("Lost submission reply");
+    }
+    return { id: "env", state: "ready", metadata: { pstdio_project_id: "project" } } as never;
+  };
+  await expect(startRun(runDeps(api, store), { root })).rejects.toThrow("Lost submission reply");
+  expect((await listRuns(store))[0]?.summary).toMatchObject({
+    status: "timed_out",
+    durationMs: 60000,
+    logPath: "run.log",
+    tail: "timed out",
+  });
+});
+
+test("a lost accepted submission reply keeps a reused workspace claimed until the exact request finishes", async () => {
+  const store = createMemoryStorage();
+  let submissions = 0;
+  const api: Api = async ({ path }) => {
+    if (path.endsWith("/requests")) {
+      submissions++;
+      throw new Error("Accepted request reply was lost");
+    }
+    return { id: "env", state: "ready", metadata: { pstdio_project_id: "project" } } as never;
+  };
+  const recovered: string[] = [];
+  const deps = {
+    ...runDeps(api, store),
+    recoverRun: async (runId: string) => {
+      recovered.push(runId);
+    },
+  };
+  await expect(startRun(deps, { root, environmentId: "env", keepEnvironment: true })).rejects.toThrow("reply was lost");
+  const record = (await listRuns(store))[0]!;
+  expect(record.summary).toBeUndefined();
+  expect(record.submissionPending).toBe(true);
+  expect(recovered).toEqual([record.runId]);
+  expect(await activeRun(store, "env")).toBe(record.runId);
+  expect(await claimEnvironment(store, "env", "competing-run")).toBe(false);
+  deps.api = async ({ path }) => {
+    expect(path).toBe(`/v1/workspaces/env/requests/${record.requestId}?conversationId=${record.conversationId}`);
+    return {
+      finalizedAt: new Date().toISOString(),
+      acceptance: { execution: {} },
+      outcome: { finalResponse: 'REMOTE_TEST_RESULT {"exitCode":0,"durationMs":10,"timedOut":false}' },
+    } as never;
+  };
+  expect((await checkRun(deps, record))?.status).toBe("passed");
+  expect(await activeRun(store, "env")).toBeNull();
+  expect(submissions).toBe(1);
+});
+
+test.each([true, false])("an accepted run survives failure to persist acknowledgement (reused=%s)", async (reused) => {
+  const store = createMemoryStorage();
+  const commit = store.records.commit;
+  store.records.commit = async (group) => {
+    if (group.edits.some((edit) => edit.set?.["/submissionPending"] === false))
+      throw new Error("Acknowledgement write unavailable");
+    return commit(group);
+  };
+  const api: Api = async () => ({ id: "env", state: "ready", metadata: { pstdio_project_id: "project" } }) as never;
+  const { record } = await startRun(runDeps(api, store), { root, ...(reused ? { environmentId: "env" } : {}) });
+  expect((await listRuns(store))[0]?.summary).toBeUndefined();
+  expect(await activeRun(store, "env")).toBe(record.runId);
+  expect(await claimEnvironment(store, "env", "competing-run")).toBe(false);
 });

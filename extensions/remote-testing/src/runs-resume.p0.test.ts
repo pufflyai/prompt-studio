@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test";
 import type { ExtensionAutomationApi } from "@pstdio/sdk/extensions";
-import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
+import { makeCommandContext } from "@pstdio/sdk/testing";
 import { startCollection } from "./collection";
 import { showRun } from "./commands";
+import { createRunStorage as createMemoryStorage } from "./run-storage-fixture";
 import type { RunRecord } from "./runs";
 import { runsView } from "./workbench";
 
@@ -164,13 +165,15 @@ test("an explicit wait can retry a permanent collector failure", async () => {
   expect(f.queued).toHaveLength(1);
 });
 
-test("legacy runs retain one-shot collection instead of getting a new worker", async () => {
+test("legacy runs retain one-shot collection and separately recover timeout logs", async () => {
   const f = await fixture("none");
   const { stopAfterRun: _, ...legacy } = f.record;
   await f.store.set("run:run", legacy);
   const table = await runsView.body.query(f.ctx);
   expect(table.rows[0]?.id).toBe("run");
-  expect(f.queued).toHaveLength(0);
+  expect(table.rows[0]?.values.status).toBe("timed_out");
+  expect(f.queued).toHaveLength(1);
+  expect(f.queued[0]?.command).toMatchObject({ id: "runs.collect-log" });
 });
 
 test("provider configuration failure does not hide saved runs or prevent worker recovery", async () => {

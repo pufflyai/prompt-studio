@@ -1,22 +1,23 @@
 import { expect, test } from "bun:test";
-import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { claimEnvironment, releaseEnvironment } from "./environments";
+import { activeRun, claimEnvironment, releaseEnvironment } from "./environments";
+import { createRunStorage as createMemoryStorage } from "./run-storage-fixture";
 
 test("only one concurrent run can claim the same environment", async () => {
   const store = createMemoryStorage();
   const claims = await Promise.all([
-    claimEnvironment(store, "environment", "first", 60),
-    claimEnvironment(store, "environment", "second", 60),
+    claimEnvironment(store, "environment", "first"),
+    claimEnvironment(store, "environment", "second"),
   ]);
   expect(claims.filter(Boolean)).toHaveLength(1);
 });
 
 test("a late release cannot remove a replacement claim", async () => {
   const store = createMemoryStorage();
-  expect(await claimEnvironment(store, "environment", "old", -1)).toBe(true);
-  expect(await claimEnvironment(store, "environment", "new", 60)).toBe(true);
+  expect(await claimEnvironment(store, "environment", "old")).toBe(true);
   await releaseEnvironment(store, "environment", "old");
-  expect(await claimEnvironment(store, "environment", "other", 60)).toBe(false);
+  expect(await claimEnvironment(store, "environment", "new")).toBe(true);
+  await releaseEnvironment(store, "environment", "old");
+  expect(await claimEnvironment(store, "environment", "other")).toBe(false);
 });
 
 test("lists owned branch environments across controller pages", async () => {
@@ -55,4 +56,19 @@ test("lists owned branch environments across controller pages", async () => {
   } finally {
     server.stop(true);
   }
+});
+
+test("an elapsed setup lease never makes an unfinished run available for reuse", async () => {
+  const store = createMemoryStorage();
+  await store.collection("environment-claims").put("environment", { runId: "old", until: Date.now() - 1 });
+  expect(await claimEnvironment(store, "environment", "new")).toBe(false);
+  expect(await activeRun(store, "environment")).toBe("old");
+});
+
+test("durable claims remain fenced for readers of the legacy until field", async () => {
+  const store = createMemoryStorage();
+  await claimEnvironment(store, "new", "owner");
+  const claim = await store.collection<{ runId: string; until: number }>("environment-claims").get("new");
+  expect(claim?.until).toBe(Number.MAX_SAFE_INTEGER);
+  expect(claim!.until > Date.now()).toBe(true);
 });
