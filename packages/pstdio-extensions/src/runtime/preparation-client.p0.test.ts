@@ -10,6 +10,8 @@ import {
   withBackgroundPreparation,
   withRequestedPreparation,
 } from "./preparation-client";
+import { preparationBuildConcurrency } from "./preparation-command-slots";
+import { PREPARATION_YIELD_HOLD_MS } from "./preparation-queue";
 
 const clients: ReturnType<typeof createPreparationClient>[] = [];
 const gates: ReturnType<typeof Bun.serve>[] = [];
@@ -17,8 +19,40 @@ afterEach(async () => {
   for (const client of clients.splice(0)) await client.stop();
   for (const gate of gates.splice(0)) await gate.stop(true);
 });
-const fixture = () => {
-  const client = createPreparationClient(() => new Worker(new URL("./preparation-worker.fixture.ts", import.meta.url)));
+const fixture = (
+  options: {
+    workers?: 2;
+    startupUrl?: (worker: number) => string | undefined;
+    onWorkerReady?: (worker: number) => void;
+    beforeWorkerTermination?: (worker: number) => Promise<void> | undefined;
+  } = {},
+) => {
+  let workers = 0;
+  // A worker can wait on a startup gate, as a slow module load would.
+  const client = createPreparationClient(
+    () => {
+      const index = ++workers;
+      const startupUrl = options.startupUrl?.(index);
+      const worker = new Worker(
+        new URL("./preparation-worker.fixture.ts", import.meta.url),
+        startupUrl ? { workerData: { startupUrl } } : {},
+      );
+      if (options.onWorkerReady)
+        worker.on("message", (message) => {
+          if (message.kind === "ready") options.onWorkerReady?.(index);
+        });
+      if (options.beforeWorkerTermination) {
+        const terminate = worker.terminate.bind(worker);
+        worker.terminate = async () => {
+          await options.beforeWorkerTermination?.(index);
+          return terminate();
+        };
+      }
+      return worker;
+    },
+    undefined,
+    { workers: options.workers },
+  );
   clients.push(client);
   return client;
 };
@@ -37,6 +71,19 @@ const gate = () => {
   gates.push(server);
   return { entered, release, url: server.url.href };
 };
+// When an interrupted job starts again after its preemptor retired it.
+const restartOf = (client: ReturnType<typeof createPreparationClient>, name: string) => {
+  let entries = 0;
+  const restarted = Promise.withResolvers<number>();
+  const unsubscribe = client.subscribe((event) => {
+    if (event.entered === name && ++entries === 2) restarted.resolve(performance.now());
+  });
+  return { restarted: restarted.promise, unsubscribe };
+};
+// Within the window the preemptor keeps a job running on its second worker, so the hold cannot lapse.
+// Only a loan or a direct wait can restart the interrupted job; without one it must stay held.
+const restartWhileBusy = (restarted: Promise<number>) =>
+  Promise.race([restarted.then(() => "restarted"), Bun.sleep(PREPARATION_YIELD_HOLD_MS * 2).then(() => "held")]);
 
 test.each([
   "idle",
@@ -778,8 +825,21 @@ test("cancelling an interrupted owner keeps its idle replacement worker", async 
   }
 });
 
-test("an edit's host gaps do not readmit the attachment check it interrupted", async () => {
-  const client = fixture();
+test.each([
+  "ready-replacement",
+  // The replacement worker starts slower than the hold. The edit reserved on it still owns the slot.
+  "slow-replacement",
+] as const)("an edit's host gaps do not readmit the attachment check it interrupted (%s)", async (mode) => {
+  const startup = gate();
+  const client = fixture(
+    mode === "slow-replacement" ? { startupUrl: (worker) => (worker > 1 ? startup.url : undefined) } : {},
+  );
+  if (mode === "slow-replacement")
+    void startup.entered.promise.then(async () => {
+      await Bun.sleep(PREPARATION_YIELD_HOLD_MS + 200);
+      startup.release.resolve();
+    });
+  else startup.release.resolve();
   const blocked = gate();
   const attach = () =>
     client.withContinuation(
@@ -815,6 +875,7 @@ test("an edit's host gaps do not readmit the attachment check it interrupted", a
     await Promise.all(work);
   } finally {
     unsubscribe();
+    startup.release.resolve();
     blocked.release.resolve();
     await Promise.allSettled([edit, ...work]);
   }
@@ -826,13 +887,16 @@ test.each([
   // Without a loan the hold cannot see the dependency. It only delays the job until the hold lapses.
   "unlent-await",
 ] as const)("a continuation that waits on the job it interrupted lets it run (%s)", async (mode) => {
-  const client = fixture();
+  const client = fixture({ workers: 2 });
   const blocked = gate();
+  const busy = gate();
   let lost = 0;
   const unsubscribe = client.subscribe((event) => {
     if (event.kind === "worker-lost") lost++;
   });
   const input = { name: "predecessor", url: blocked.url };
+  const options = { priority: "background", resources: ["/same"] } as const;
+  const restart = restartOf(client, input.name);
   let predecessor: ReturnType<typeof createPreparationScope> | undefined;
   // A restoration continuation owns the predecessor, so it ranks before the edit that interrupts it.
   const original = client.withContinuation(
@@ -840,43 +904,48 @@ test.each([
       withBackgroundPreparation(() => {
         const scope = createPreparationScope();
         predecessor = scope;
-        return scope.run(() => client.run("wait", input, { priority: "background" })).finally(scope.dispose);
+        return scope.run(() => client.run("wait", input, options)).finally(scope.dispose);
       }),
     { priority: "restoration" },
   );
   await blocked.entered.promise;
   const edit = client.withContinuation(async () => {
-    await client.run("value", { name: "urgent-step" });
+    await client.run("value", { name: "urgent-step" }, { resources: ["/same"] });
     expect(lost).toBe(1);
+    // A disjoint step keeps the edit busy on the second worker while it waits for the predecessor.
+    const running = client.run("wait", { name: "busy-step", url: busy.url }, { resources: ["/busy"] });
+    await busy.entered.promise;
     blocked.release.resolve();
-    if (mode === "same-job") {
-      await client.run("wait", input, { priority: "background" });
-      return;
-    }
-    if (mode === "unlent-await") {
-      await original;
-      return;
-    }
+    if (mode === "same-job") await client.run("wait", input, options);
+    else if (mode === "unlent-await") await original;
     // The edit lends itself to the predecessor it now waits for, through the supported request API.
-    await withBackgroundPreparation(async () => {
-      const caller = createPreparationScope();
-      const release = predecessor!.request(caller);
-      try {
-        await original;
-      } finally {
-        release();
-        caller.dispose();
-      }
-    });
+    else
+      await withBackgroundPreparation(async () => {
+        const caller = createPreparationScope();
+        const release = predecessor!.request(caller);
+        try {
+          await original;
+        } finally {
+          release();
+          caller.dispose();
+        }
+      });
+    await running;
   });
   try {
+    expect(await restartWhileBusy(restart.restarted)).toBe(mode === "unlent-await" ? "held" : "restarted");
+    busy.release.resolve();
     expect(await Promise.race([edit.then(() => "completed"), Bun.sleep(3_000).then(() => "stalled")])).toBe(
       "completed",
     );
     expect(lost).toBe(1);
   } finally {
     unsubscribe();
+    restart.unsubscribe();
+    busy.release.resolve();
     blocked.release.resolve();
+    // A stalled job never settles on its own; stopping rejects it so the assertion is reported.
+    await client.stop();
     await Promise.allSettled([edit, original]);
   }
 });
@@ -927,13 +996,15 @@ test.each([
   // No loan: only the bounded fallback can release the job while a barred peer waits.
   "unlent-with-peer",
 ] as const)("a preemptor waiting on its interrupted restoration and a queued peer completes (%s)", async (mode) => {
-  const client = fixture();
+  const client = fixture({ workers: 2 });
   const blocked = gate();
+  const busy = gate();
   let lost = 0;
   const unsubscribe = client.subscribe((event) => {
     if (event.kind === "worker-lost") lost++;
   });
   const input = { name: "predecessor", url: blocked.url };
+  const restart = restartOf(client, input.name);
   let predecessor: ReturnType<typeof createPreparationScope> | undefined;
   const original = client.withContinuation(
     () =>
@@ -941,37 +1012,950 @@ test.each([
         const scope = createPreparationScope();
         predecessor = scope;
         return scope
-          .run(() => withBackgroundPreparation(() => client.run("wait", input, { priority: "background" })))
+          .run(() =>
+            withBackgroundPreparation(() =>
+              client.run("wait", input, { priority: "background", resources: ["/same"] }),
+            ),
+          )
           .finally(scope.dispose);
       }),
     { priority: "restoration" },
   );
   await blocked.entered.promise;
   const edit = client.withContinuation(async () => {
-    await client.run("value", { name: "urgent-step" });
+    await client.run("value", { name: "urgent-step" }, { resources: ["/same"] });
     expect(lost).toBe(1);
+    const running = client.run("wait", { name: "busy-step", url: busy.url }, { resources: ["/busy"] });
+    await busy.entered.promise;
     blocked.release.resolve();
     await withBackgroundPreparation(async () => {
       const caller = createPreparationScope();
       const release = mode === "nested-loan-with-peer" ? predecessor!.request(caller) : () => {};
       try {
         // Live restoration bars this background peer, so it must not count as the preemptor's work.
-        const peer = client.run("value", { name: "edit-background-peer" }, { priority: "background" });
+        const peer = client.run(
+          "value",
+          { name: "edit-background-peer" },
+          { priority: "background", resources: ["/same"] },
+        );
         await Promise.all([original, peer]);
       } finally {
         release();
         caller.dispose();
       }
     });
+    await running;
   });
   try {
+    expect(await restartWhileBusy(restart.restarted)).toBe(mode === "unlent-with-peer" ? "held" : "restarted");
+    busy.release.resolve();
     expect(await Promise.race([edit.then(() => "completed"), Bun.sleep(3_000).then(() => "stalled")])).toBe(
       "completed",
     );
     expect(lost).toBe(1);
   } finally {
     unsubscribe();
+    restart.unsubscribe();
+    busy.release.resolve();
     blocked.release.resolve();
+    await client.stop();
     await Promise.allSettled([edit, original]);
+  }
+});
+
+test("an unrelated worker's slow startup does not hold the job a preemptor interrupted", async () => {
+  const unrelatedStartup = gate();
+  const client = fixture({ workers: 2, startupUrl: (worker) => (worker === 2 ? unrelatedStartup.url : undefined) });
+  const warm = gate();
+  const restoration = gate();
+  const step = gate();
+  let lost = 0;
+  const restart = restartOf(client, "restoration");
+  const unsubscribe = client.subscribe((event) => {
+    if (event.kind === "worker-lost") lost++;
+  });
+  const work: Promise<unknown>[] = [];
+  // Held work is rejected when the client stops; observe it from the start.
+  const track = <T>(promise: Promise<T>) => {
+    work.push(promise.catch(() => undefined));
+    return promise;
+  };
+  let edit: Promise<unknown> | undefined;
+  try {
+    const occupied = client.run("wait", { name: "warm", url: warm.url }, { resources: ["/same"] });
+    await warm.entered.promise;
+    // The overflow slot starts for disjoint background work, and its worker never becomes ready.
+    track(
+      client.withContinuation(
+        () => client.run("value", { name: "unrelated" }, { resources: ["/unrelated"], priority: "background" }),
+        { priority: "background" },
+      ),
+    );
+    await unrelatedStartup.entered.promise;
+    warm.release.resolve();
+    await occupied;
+    const original = client.withContinuation(
+      () =>
+        client.run(
+          "wait",
+          { name: "restoration", url: restoration.url },
+          { resources: ["/same"], priority: "background" },
+        ),
+      { priority: "restoration" },
+    );
+    track(original);
+    await restoration.entered.promise;
+    edit = client.withContinuation(async () => {
+      await client.run("wait", { name: "foreground", url: step.url }, { resources: ["/same"] });
+      // Live restoration bars this peer, and no worker it needs is starting for the edit.
+      const peer = client.run("value", { name: "peer" }, { resources: ["/same"], priority: "background" });
+      await Promise.all([original, peer]);
+    });
+    await step.entered.promise;
+    expect(lost).toBe(1);
+    restoration.release.resolve();
+    step.release.resolve();
+    expect(await Promise.race([edit.then(() => "completed"), Bun.sleep(3_000).then(() => "stalled")])).toBe(
+      "completed",
+    );
+    await restart.restarted;
+    expect(lost).toBe(1);
+  } finally {
+    unsubscribe();
+    restart.unsubscribe();
+    for (const open of [warm, restoration, step, unrelatedStartup]) open.release.resolve();
+    await client.stop();
+    await Promise.allSettled([edit, ...work]);
+  }
+});
+
+test("a build-admission retirement keeps the holder out of its preemptor's host gap", async () => {
+  const client = fixture({ workers: 2 });
+  const occupied = Promise.withResolvers<void>();
+  const resumed = Promise.withResolvers<void>();
+  const releaseHolder = Promise.withResolvers<void>();
+  let holderCommands = 0;
+  const builds = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: async (request) => {
+      if (new URL(request.url).searchParams.get("worker") !== "holder") return new Response("ok");
+      if (++holderCommands === preparationBuildConcurrency) occupied.resolve();
+      if (holderCommands > preparationBuildConcurrency) resumed.resolve();
+      await releaseHolder.promise;
+      return new Response("ok");
+    },
+  });
+  gates.push(builds);
+  const commands = (name: string, resource: string, priority?: "background") =>
+    client.run("commands", { name, url: builds.url.href }, { resources: [resource], priority });
+  let lost = 0;
+  const unsubscribe = client.subscribe((event) => {
+    if (event.kind === "worker-lost") lost++;
+  });
+  const gap = Promise.withResolvers<void>();
+  const nextStep = Promise.withResolvers<void>();
+  const work: Promise<unknown>[] = [];
+  // Held work is rejected when the client stops; observe it from the start.
+  const track = <T>(promise: Promise<T>) => {
+    work.push(promise.catch(() => undefined));
+    return promise;
+  };
+  try {
+    await Promise.all(["a", "b"].map((name) => client.run("value", { name }, { resources: [name] })));
+    // A live background continuation holds every build permit, as an attachment check building webviews does.
+    track(client.withContinuation(() => commands("holder", "/holder", "background"), { priority: "background" }));
+    await occupied.promise;
+    const edit = client.withContinuation(async () => {
+      await commands("edit-1", "/edit");
+      gap.resolve();
+      await nextStep.promise;
+      await commands("edit-2", "/edit");
+    });
+    track(edit);
+    await gap.promise;
+    expect(await Promise.race([resumed.promise.then(() => "resumed"), Bun.sleep(700).then(() => "held")])).toBe("held");
+    nextStep.resolve();
+    await edit;
+    expect(lost).toBe(1);
+  } finally {
+    unsubscribe();
+    nextStep.resolve();
+    releaseHolder.resolve();
+    await client.stop();
+    await Promise.allSettled(work);
+  }
+});
+
+test("a preemptor step dispatched behind unrelated work restarts the interrupted job's hold", async () => {
+  const client = fixture();
+  const prior = gate();
+  const step1 = gate();
+  const step2 = gate();
+  const unrelated = gate();
+  const run = (name: string, url: string) => client.run("wait", { name, url }, { resources: ["/same"] });
+  const restart = restartOf(client, "prior");
+  const gap = Promise.withResolvers<void>();
+  const later = Promise.withResolvers<void>();
+  const queued = Promise.withResolvers<void>();
+  const work: Promise<unknown>[] = [];
+  // Held work is rejected when the client stops; observe it from the start.
+  const track = <T>(promise: Promise<T>) => {
+    work.push(promise.catch(() => undefined));
+    return promise;
+  };
+  let secondEnd = 0;
+  try {
+    const restoration = client.withContinuation(() => run("prior", prior.url), { priority: "restoration" });
+    track(restoration);
+    await prior.entered.promise;
+    const edit = client.withContinuation(async () => {
+      await run("step1", step1.url);
+      gap.resolve();
+      await later.promise;
+      const step = run("step2", step2.url);
+      queued.resolve();
+      await step;
+      secondEnd = performance.now();
+      await restoration;
+    });
+    track(edit);
+    await step1.entered.promise;
+    prior.release.resolve();
+    step1.release.resolve();
+    await gap.promise;
+    await Bun.sleep(100);
+    track(run("unrelated", unrelated.url));
+    await unrelated.entered.promise;
+    later.resolve();
+    await queued.promise;
+    // A later job at the head of the queue stops the search before it reaches the held restoration.
+    track(client.run("value", { name: "later" }, { resources: ["/same"] }));
+    await Bun.sleep(120);
+    unrelated.release.resolve();
+    await step2.entered.promise;
+    await Bun.sleep(450);
+    step2.release.resolve();
+    await edit;
+    // The hold counts from the end of step 2, not from the idle time before it was dispatched.
+    expect((await restart.restarted) - secondEnd).toBeGreaterThanOrEqual(PREPARATION_YIELD_HOLD_MS / 2);
+  } finally {
+    restart.unsubscribe();
+    for (const open of [prior, step1, step2, unrelated]) open.release.resolve();
+    later.resolve();
+    await client.stop();
+    await Promise.allSettled(work);
+  }
+});
+
+test("cancelling the step a slot was retired for ends its startup credit", async () => {
+  const replacement = gate();
+  const client = fixture({ workers: 2, startupUrl: (worker) => (worker === 2 ? replacement.url : undefined) });
+  const prior = gate();
+  const controller = new AbortController();
+  const cancelled = new Error("Cancel only the first edit step");
+  let lost = 0;
+  const restart = restartOf(client, "prior");
+  const unsubscribe = client.subscribe((event) => {
+    if (event.kind === "worker-lost") lost++;
+  });
+  const gap = Promise.withResolvers<void>();
+  const work: Promise<unknown>[] = [];
+  const track = <T>(promise: Promise<T>) => {
+    work.push(promise.catch(() => undefined));
+    return promise;
+  };
+  try {
+    const restoration = track(
+      client.withContinuation(() => client.run("wait", { name: "prior", url: prior.url }, { resources: ["/same"] }), {
+        priority: "restoration",
+      }),
+    );
+    await prior.entered.promise;
+    const edit = track(
+      client.withContinuation(async () => {
+        // The first step retires the restoration and waits for a replacement worker that never starts.
+        await client
+          .run("value", { name: "cancelled-step" }, { resources: ["/same"], signal: controller.signal })
+          .catch((error) => {
+            if (error !== cancelled) throw error;
+          });
+        // Live restoration bars this sibling. Waiting for it must not keep the cancelled step's credit.
+        const sibling = client.run("value", { name: "sibling" }, { resources: ["/same"], priority: "background" });
+        gap.resolve();
+        await Promise.all([restoration, sibling]);
+      }),
+    );
+    await replacement.entered.promise;
+    expect(lost).toBe(1);
+    prior.release.resolve();
+    controller.abort(cancelled);
+    await gap.promise;
+    expect(await Promise.race([edit.then(() => "completed"), Bun.sleep(3_000).then(() => "stalled")])).toBe(
+      "completed",
+    );
+    await restart.restarted;
+    expect(lost).toBe(1);
+  } finally {
+    unsubscribe();
+    restart.unsubscribe();
+    controller.abort(cancelled);
+    prior.release.resolve();
+    replacement.release.resolve();
+    await client.stop();
+    await Promise.allSettled(work);
+  }
+});
+
+test.each([
+  // The host configures a new worker factory while the edit's replacement worker is starting.
+  "reconfigured",
+  // The starting replacement worker exits; a busy peer slot leaves the edit's step queued.
+  "lost-while-starting",
+] as const)("an edit keeps its startup credit when its replacement worker is %s", async (mode) => {
+  const attachment = gate();
+  const first = gate();
+  const second = gate();
+  const other = gate();
+  const workers: Worker[] = [];
+  const firstReplacement = mode === "lost-while-starting" ? 3 : 2;
+  const make = (startupUrl?: string) => {
+    const worker = new Worker(
+      new URL("./preparation-worker.fixture.ts", import.meta.url),
+      startupUrl ? { workerData: { startupUrl } } : {},
+    );
+    workers.push(worker);
+    return worker;
+  };
+  // The first replacement waits on the first gate; after it is lost, the next one waits on the second.
+  const startupUrl = () => {
+    if (workers.length === firstReplacement - 1) return first.url;
+    if (mode === "lost-while-starting" && workers.length === firstReplacement) return second.url;
+  };
+  const client = createPreparationClient(() => make(startupUrl()), undefined, {
+    workers: mode === "lost-while-starting" ? 2 : 1,
+  });
+  clients.push(client);
+  const resources = mode === "lost-while-starting" ? ["/boundary"] : undefined;
+  const work: Promise<unknown>[] = [];
+  const track = <T>(promise: Promise<T>) => {
+    work.push(promise.catch(() => undefined));
+    return promise;
+  };
+  const attach = () =>
+    client.withContinuation(
+      () =>
+        withBackgroundPreparation(() => client.run("wait", { name: "attachment", url: attachment.url }, { resources })),
+      { priority: "background" },
+    );
+  let lost = 0;
+  let attachments = 0;
+  // Like the source watcher, every lost worker restores its watch and reconciles attachments.
+  const unsubscribe = client.subscribe((event) => {
+    if (event.entered === "attachment") attachments++;
+    if (event.kind !== "worker-lost") return;
+    lost++;
+    const restored = track(
+      client.withContinuation(() => client.run("value", { name: "restore" }, { priority: "background", resources }), {
+        priority: "restoration",
+      }),
+    );
+    track(restored.then(attach));
+  });
+  try {
+    track(attach());
+    await attachment.entered.promise;
+    if (mode === "lost-while-starting") {
+      track(client.run("wait", { name: "busy-peer", url: other.url }, { resources: ["/other"] }));
+      await other.entered.promise;
+    }
+    const edit = track(
+      client.withContinuation(() =>
+        withBackgroundPreparation(async () => {
+          for (let step = 0; step < 5; step++) {
+            await client.run("value", { name: `edit-${step}` }, { resources });
+            await Bun.sleep(1);
+          }
+        }),
+      ),
+    );
+    await first.entered.promise;
+    expect(lost).toBe(1);
+    if (mode === "reconfigured") client.configureWorker(() => make(workers.length === 2 ? second.url : undefined));
+    else void workers[firstReplacement - 1]!.terminate();
+    await second.entered.promise;
+    expect(lost).toBe(2);
+    const before = attachments;
+    // The second startup outlasts the hold; the edit's queued step still owns the slot it waits for.
+    await Bun.sleep(PREPARATION_YIELD_HOLD_MS + 250);
+    second.release.resolve();
+    await edit;
+    expect(attachments).toBe(before);
+    expect(lost).toBe(2);
+  } finally {
+    unsubscribe();
+    for (const open of [attachment, first, second, other]) open.release.resolve();
+    await client.stop();
+    await Promise.allSettled(work);
+  }
+});
+
+test("an edit keeps its credit while a restoration occupies its ready replacement worker", async () => {
+  const client = fixture();
+  const attachment = gate();
+  const restoration = gate();
+  let lost = 0;
+  let attachments = 0;
+  const work: Promise<unknown>[] = [];
+  const track = <T>(promise: Promise<T>) => {
+    work.push(promise.catch(() => undefined));
+    return promise;
+  };
+  const attach = () =>
+    client.withContinuation(
+      () => withBackgroundPreparation(() => client.run("wait", { name: "attachment", url: attachment.url })),
+      { priority: "background" },
+    );
+  // The watcher's restoration runs first on the ready replacement and outlasts the hold.
+  const unsubscribe = client.subscribe((event) => {
+    if (event.entered === "attachment") attachments++;
+    if (event.kind !== "worker-lost") return;
+    lost++;
+    const restored = track(
+      client.withContinuation(
+        () => client.run("wait", { name: "restore", url: restoration.url }, { priority: "background" }),
+        { priority: "restoration" },
+      ),
+    );
+    track(restored.then(attach));
+  });
+  try {
+    track(attach());
+    await attachment.entered.promise;
+    let steps = 0;
+    const edit = track(
+      client.withContinuation(() =>
+        withBackgroundPreparation(async () => {
+          for (let step = 0; step < 5; step++) {
+            await client.run("value", { name: `edit-${step}` });
+            steps++;
+            await Bun.sleep(1);
+          }
+        }),
+      ),
+    );
+    await restoration.entered.promise;
+    expect(lost).toBe(1);
+    expect(steps).toBe(0);
+    const before = attachments;
+    await Bun.sleep(PREPARATION_YIELD_HOLD_MS + 200);
+    restoration.release.resolve();
+    await edit;
+    expect(attachments).toBe(before);
+    expect(lost).toBe(1);
+  } finally {
+    unsubscribe();
+    attachment.release.resolve();
+    restoration.release.resolve();
+    await client.stop();
+    await Promise.allSettled(work);
+  }
+});
+
+test("a reserved queue head does not stop a later request from retiring its own blocker", async () => {
+  const overflow = gate();
+  const client = fixture({ workers: 2, startupUrl: (worker) => (worker === 2 ? overflow.url : undefined) });
+  const attachment = gate();
+  let lost = 0;
+  const unsubscribe = client.subscribe((event) => {
+    if (event.kind === "worker-lost") lost++;
+  });
+  const work: Promise<unknown>[] = [];
+  const track = <T>(promise: Promise<T>) => {
+    work.push(promise.catch(() => undefined));
+    return promise;
+  };
+  try {
+    track(
+      client.withContinuation(
+        () =>
+          withBackgroundPreparation(() =>
+            client.run("wait", { name: "attachment", url: attachment.url }, { resources: ["/primary"] }),
+          ),
+        { priority: "background" },
+      ),
+    );
+    await attachment.entered.promise;
+    // An older disjoint request is reserved on the overflow slot, whose worker never becomes ready.
+    track(client.run("value", { name: "reserved" }, { resources: ["/overflow"] }));
+    await overflow.entered.promise;
+    // The reservation retires nothing for itself.
+    expect(lost).toBe(0);
+    const request = track(client.run("value", { name: "request" }, { resources: ["/primary"] }));
+    expect(await Promise.race([request.then(() => "dispatched"), Bun.sleep(1_000).then(() => "waiting")])).toBe(
+      "dispatched",
+    );
+    expect(lost).toBe(1);
+  } finally {
+    unsubscribe();
+    attachment.release.resolve();
+    overflow.release.resolve();
+    await client.stop();
+    await Promise.allSettled(work);
+  }
+});
+
+test.each([
+  // One worker: the edit is reserved on its ready replacement, then a restoration also waits on the held job.
+  ["single", 1_550],
+  // Control: only the restoration's waiter is cancelled, so the edit runs first.
+  ["single-cancel", 1_550],
+  // A restoration occupies the edit's slot and another restoration waits on the held job.
+  ["busy", 1_550],
+  // As busy, with the edit's admission closed by an urgent continuation.
+  ["busy-preserved", 1_550],
+  // Control: no earlier barred request; the restoration's request retires the lower-ranked overflow job.
+  ["head-clear", 550],
+  // An earlier barred request precedes the eligible one; it must not hide it from preemption.
+  ["head-barred", 550],
+] as const)("held jobs and preemption stay available to restoration (%s)", async (mode, within) => {
+  const held = gate();
+  const overflow = gate();
+  const occupant = gate();
+  const startup = gate();
+  const single = mode.startsWith("single");
+  const head = mode.startsWith("head");
+  const client = fixture({
+    workers: single ? undefined : 2,
+    startupUrl: (worker) => ((single || head) && worker === 2 ? startup.url : undefined),
+  });
+  const work: Promise<unknown>[] = [];
+  const track = <T>(promise: Promise<T>) => {
+    work.push(promise.catch(() => undefined));
+    return promise;
+  };
+  const wait = (name: string, url: string, resource: string, options = {}) =>
+    client.run("wait", { name, url }, { resources: [resource], ...options });
+  const background = <T>(work: () => Promise<T>) =>
+    client.withContinuation(() => withBackgroundPreparation(work), { priority: "background" });
+  const edit = <T>(work: () => Promise<T>) => client.withContinuation(() => withBackgroundPreparation(work));
+  const restore = <T>(work: () => Promise<T>) => client.withContinuation(work, { priority: "restoration" });
+  const prior = () => wait("R", held.url, "/r");
+  let lost = 0;
+  const ready = Promise.withResolvers<void>();
+  const restart = restartOf(client, "R");
+  let workers = 0;
+  const unsubscribe = client.subscribe((event) => {
+    if (event.kind === "worker-ready" && ++workers === 2) ready.resolve();
+    if (event.kind !== "worker-lost") return;
+    lost++;
+    if (!single && !head && lost === 1) track(restore(() => wait("Z", occupant.url, "/z")));
+  });
+  const settled = (promise: Promise<unknown>) =>
+    Promise.race([promise.then(() => "dispatched"), Bun.sleep(within).then(() => "held")]);
+  try {
+    if (single) {
+      const original = track(background(prior));
+      await held.entered.promise;
+      const request = track(edit(() => client.run("value", { name: "J" }, { resources: ["/r"] })));
+      await startup.entered.promise;
+      const cancel = new AbortController();
+      const restoring = track(restore(() => wait("R", held.url, "/r", { signal: cancel.signal })));
+      held.release.resolve();
+      startup.release.resolve();
+      await ready.promise;
+      if (mode === "single-cancel") cancel.abort();
+      expect(await settled(Promise.all([original, request, restoring.catch(() => undefined)]))).toBe("dispatched");
+    } else if (head) {
+      track(background(() => wait("G", overflow.url, "/g")));
+      await overflow.entered.promise;
+      track(restore(() => client.run("value", { name: "reserved" }, { resources: ["/x"] })));
+      await startup.entered.promise;
+      if (mode === "head-barred") track(edit(() => client.run("value", { name: "barred" }, { resources: ["/a"] })));
+      const request = track(restore(() => client.run("value", { name: "eligible" }, { resources: ["/g"] })));
+      expect(await settled(request)).toBe("dispatched");
+      expect(lost).toBe(1);
+    } else {
+      track(background(prior));
+      await held.entered.promise;
+      const peer = track(background(() => wait("G", overflow.url, "/g")));
+      await overflow.entered.promise;
+      // Keep the occupant's scheduling from retiring the overflow job while the primary still retires.
+      const keepPeer = new AbortController();
+      track(wait("G", overflow.url, "/g", { signal: keepPeer.signal }));
+      track(
+        edit(() =>
+          client.run(
+            "value",
+            { name: "J" },
+            { resources: ["/r"], preserveActiveContinuation: mode === "busy-preserved" },
+          ),
+        ),
+      );
+      await occupant.entered.promise;
+      expect(lost).toBe(1);
+      keepPeer.abort();
+      track(restore(prior));
+      held.release.resolve();
+      expect(await settled(restart.restarted)).toBe("dispatched");
+      void peer;
+    }
+  } finally {
+    unsubscribe();
+    restart.unsubscribe();
+    for (const open of [held, overflow, occupant, startup]) open.release.resolve();
+    await client.stop();
+    await Promise.allSettled(work);
+  }
+});
+
+test.each([
+  // One restoration: its only job runs on the ready replacement and outlasts the hold.
+  "single-restore",
+  // One restoration queues a second ordinary job behind its running first one.
+  "same-owner",
+  // A second restoration's job waits behind the first restoration's running job.
+  "separate-owners",
+] as const)("an edit keeps its credit while restoration work waits only for capacity (%s)", async (mode) => {
+  const client = fixture();
+  const attachment = gate();
+  const first = gate();
+  let lost = 0;
+  let attachments = 0;
+  const work: Promise<unknown>[] = [];
+  const track = <T>(promise: Promise<T>) => {
+    work.push(promise.catch(() => undefined));
+    return promise;
+  };
+  const attach = () =>
+    client.withContinuation(
+      () => withBackgroundPreparation(() => client.run("wait", { name: "attachment", url: attachment.url })),
+      { priority: "background" },
+    );
+  const restore = <T>(restoring: () => Promise<T>) => client.withContinuation(restoring, { priority: "restoration" });
+  const blocking = () => client.run("wait", { name: "restore-first", url: first.url }, { priority: "background" });
+  const following = () => client.run("value", { name: "restore-second" }, { priority: "background" });
+  // Like the root and source watchers, each lost worker restores its watches before reconciling attachments.
+  const unsubscribe = client.subscribe((event) => {
+    if (event.entered === "attachment") attachments++;
+    if (event.kind !== "worker-lost") return;
+    lost++;
+    const restored = track(
+      mode === "same-owner" ? restore(() => Promise.all([blocking(), following()])) : restore(blocking),
+    );
+    if (mode === "separate-owners") track(restore(following));
+    track(restored.then(attach));
+  });
+  try {
+    track(attach());
+    await attachment.entered.promise;
+    let steps = 0;
+    const edit = track(
+      client.withContinuation(() =>
+        withBackgroundPreparation(async () => {
+          for (let step = 0; step < 5; step++) {
+            await client.run("value", { name: `edit-${step}` });
+            steps++;
+            await Bun.sleep(1);
+          }
+        }),
+      ),
+    );
+    await first.entered.promise;
+    expect(lost).toBe(1);
+    expect(steps).toBe(0);
+    const before = attachments;
+    await Bun.sleep(PREPARATION_YIELD_HOLD_MS + 200);
+    first.release.resolve();
+    await edit;
+    expect(attachments).toBe(before);
+    expect(lost).toBe(1);
+  } finally {
+    unsubscribe();
+    attachment.release.resolve();
+    first.release.resolve();
+    await client.stop();
+    await Promise.allSettled(work);
+  }
+});
+
+test("restoration uses ready overflow when it blocks a reserved edit still starting", async () => {
+  const startup = gate();
+  const client = fixture({ workers: 2, startupUrl: (worker) => (worker === 3 ? startup.url : undefined) });
+  const primary = gate();
+  const overflow = gate();
+  const prior = gate();
+  const peer = gate();
+  const restart = restartOf(client, "held");
+  const work: Promise<unknown>[] = [];
+  const track = <T>(promise: Promise<T>) => {
+    work.push(promise.catch(() => undefined));
+    return promise;
+  };
+  const wait = (name: string, url: string, resource: string) =>
+    client.run("wait", { name, url }, { resources: [resource] });
+  const held = () => wait("held", prior.url, "/held");
+  try {
+    const warm = track(
+      Promise.all([wait("warm-primary", primary.url, "/primary"), wait("warm-overflow", overflow.url, "/overflow")]),
+    );
+    await Promise.all([primary.entered.promise, overflow.entered.promise]);
+    primary.release.resolve();
+    overflow.release.resolve();
+    await warm;
+
+    track(client.withContinuation(() => withBackgroundPreparation(held), { priority: "background" }));
+    await prior.entered.promise;
+    const occupied = track(wait("peer", peer.url, "/peer"));
+    await peer.entered.promise;
+    track(
+      client.withContinuation(() =>
+        withBackgroundPreparation(() => client.run("value", { name: "edit" }, { resources: ["/edit"] })),
+      ),
+    );
+    await startup.entered.promise;
+    track(client.withContinuation(held, { priority: "restoration" }));
+    prior.release.resolve();
+    peer.release.resolve();
+    await occupied;
+
+    expect(await Promise.race([restart.restarted.then(() => "restarted"), Bun.sleep(1_550).then(() => "held")])).toBe(
+      "restarted",
+    );
+  } finally {
+    restart.unsubscribe();
+    for (const pending of [startup, primary, overflow, prior, peer]) pending.release.resolve();
+    await client.stop();
+    await Promise.allSettled(work);
+  }
+});
+
+test.each([
+  "loan",
+  "requested",
+] as const)("a queued restoration that can run keeps the edit's hold intact (%s)", async (mode) => {
+  const attachment = gate();
+  const interrupted = gate();
+  const blocker = gate();
+  const client = fixture({ workers: 2 });
+  const work: Promise<unknown>[] = [];
+  const track = <T>(promise: Promise<T>) => {
+    work.push(promise.catch(() => undefined));
+    return promise;
+  };
+  const background = <T>(run: () => Promise<T>) =>
+    client.withContinuation(() => withBackgroundPreparation(run), { priority: "background" });
+  const restore = <T>(run: () => Promise<T>) => client.withContinuation(run, { priority: "restoration" });
+  const coalesced = () =>
+    client.run("wait", { name: "coalesced", url: interrupted.url }, { resources: ["/coalesced"] });
+  const blocking = () => client.run("wait", { name: "restore-first", url: blocker.url });
+  let scope: ReturnType<typeof createPreparationScope> | undefined;
+  let releaseLoan: (() => void) | undefined;
+  let lost = 0;
+  let attachments = 0;
+  const unsubscribe = client.subscribe((event) => {
+    if (event.entered === "attachment") attachments++;
+    if (event.kind === "worker-lost") lost++;
+  });
+  try {
+    track(
+      background(() => client.run("wait", { name: "attachment", url: attachment.url }, { resources: ["/attachment"] })),
+    );
+    await attachment.entered.promise;
+    track(
+      background(() => {
+        scope = createPreparationScope();
+        return scope.run(coalesced);
+      }),
+    );
+    await interrupted.entered.promise;
+    const edit = track(
+      client.withContinuation(() =>
+        withBackgroundPreparation(async () => {
+          const caller = createPreparationScope();
+          // The first, exclusive step retires both workers for the same edit.
+          const step = client.run("value", { name: "edit-0" });
+          if (mode === "loan") releaseLoan = scope!.request(caller);
+          caller.dispose();
+          await step;
+          for (let index = 1; index < 5; index++) {
+            await Bun.sleep(1);
+            await client.run("value", { name: `edit-${index}` });
+          }
+        }),
+      ),
+    );
+    expect(lost).toBe(1);
+    // An exclusive restoration occupies the capacity the edit and second restoration need.
+    track(restore(blocking));
+    if (mode === "requested") track(blocking());
+    await blocker.entered.promise;
+    track(restore(coalesced));
+    if (mode === "requested") track(coalesced());
+    interrupted.release.resolve();
+
+    await Bun.sleep(PREPARATION_YIELD_HOLD_MS + 200);
+    blocker.release.resolve();
+    await edit;
+    expect(attachments).toBe(1);
+    expect(lost).toBe(1);
+  } finally {
+    unsubscribe();
+    releaseLoan?.();
+    scope?.dispose();
+    for (const pending of [attachment, interrupted, blocker]) pending.release.resolve();
+    await client.stop();
+    await Promise.allSettled(work);
+  }
+});
+
+test.each([
+  "workerless",
+  "ready",
+] as const)("an urgent resumed request can retire a blocker without a starting reservation (%s)", async (mode) => {
+  const startup = gate();
+  const replacementReady = Promise.withResolvers<void>();
+  const client = fixture({
+    workers: 2,
+    startupUrl: (worker) => (mode === "ready" && worker === 3 ? startup.url : undefined),
+    onWorkerReady: (worker) => {
+      if (worker === 3) replacementReady.resolve();
+    },
+  });
+  const primary = gate();
+  const prior = gate();
+  const restoring = gate();
+  const allowRestore = Promise.withResolvers<void>();
+  const work: Promise<unknown>[] = [];
+  const track = <T>(promise: Promise<T>) => {
+    work.push(promise.catch(() => undefined));
+    return promise;
+  };
+  let lost = 0;
+  const unsubscribe = client.subscribe((event) => {
+    if (event.kind === "worker-lost") lost++;
+  });
+  const held = () => client.run("wait", { name: "held", url: prior.url }, { resources: ["/held"] });
+  const edit = () =>
+    client.run(
+      "value",
+      { name: "edit" },
+      {
+        resources: mode === "ready" ? ["/held"] : ["/held", "/primary"],
+      },
+    );
+  try {
+    const blocker = track(client.run("wait", { name: "primary", url: primary.url }, { resources: ["/primary"] }));
+    await primary.entered.promise;
+    track(client.withContinuation(() => withBackgroundPreparation(held), { priority: "background" }));
+    await prior.entered.promise;
+    track(client.withContinuation(() => withBackgroundPreparation(edit)));
+    if (mode === "ready") await startup.entered.promise;
+    track(
+      client.withContinuation(
+        async () => {
+          await allowRestore.promise;
+          return client.run("wait", { name: "restoring", url: restoring.url });
+        },
+        { priority: "restoration" },
+      ),
+    );
+    if (mode === "ready") {
+      // The restoration owns the continuation gap, so the edit stays parked when its worker becomes ready.
+      startup.release.resolve();
+      await replacementReady.promise;
+    }
+    allowRestore.resolve();
+    primary.release.resolve();
+    await blocker;
+    await restoring.entered.promise;
+    expect(lost).toBe(0);
+
+    prior.release.resolve();
+    const requested = track(mode === "ready" ? edit() : held());
+    expect(await Promise.race([requested.then(() => "dispatched"), Bun.sleep(750).then(() => "held")])).toBe(
+      "dispatched",
+    );
+    expect(lost).toBe(1);
+  } finally {
+    unsubscribe();
+    allowRestore.resolve();
+    for (const pending of [startup, primary, prior, restoring]) pending.release.resolve();
+    await client.stop();
+    await Promise.allSettled(work);
+  }
+});
+
+test.each([
+  "resume",
+  "independent-request",
+  "overlapping-request",
+] as const)("an urgent request keeps its retiring slot while other work uses compatible capacity (%s)", async (mode) => {
+  const retirementEntered = Promise.withResolvers<void>();
+  const retirementReleased = Promise.withResolvers<void>();
+  const client = fixture({
+    workers: 2,
+    beforeWorkerTermination: (worker) => {
+      if (worker !== 2) return undefined;
+      retirementEntered.resolve();
+      return retirementReleased.promise;
+    },
+  });
+  const peer = gate();
+  const prior = gate();
+  const cancel = new AbortController();
+  const work: Promise<unknown>[] = [];
+  const track = <T>(promise: Promise<T>) => {
+    work.push(promise.catch(() => undefined));
+    return promise;
+  };
+  const background = <T>(run: () => Promise<T>) =>
+    client.withContinuation(() => withBackgroundPreparation(run), { priority: "background" });
+  const held = () => client.run("wait", { name: "held", url: prior.url }, { resources: ["/held"] });
+  let lost = 0;
+  const unsubscribe = client.subscribe((event) => {
+    if (event.kind === "worker-lost") lost++;
+  });
+  try {
+    track(background(() => client.run("wait", { name: "peer", url: peer.url }, { resources: ["/peer"] })));
+    await peer.entered.promise;
+    track(background(held));
+    await prior.entered.promise;
+    track(
+      client.withContinuation(() =>
+        withBackgroundPreparation(() =>
+          client.run("value", { name: "edit" }, { resources: ["/held"], signal: cancel.signal }),
+        ),
+      ),
+    );
+    // Withdraw the edit and rejoin the interrupted job before its worker exits.
+    cancel.abort();
+    await retirementEntered.promise;
+    const requested = track(held());
+    expect(lost).toBe(0);
+    let later: Promise<unknown> | undefined;
+    if (mode !== "resume") {
+      const resources = mode === "overlapping-request" ? ["/peer", "/held"] : ["/peer"];
+      later = track(client.run("value", { name: "later" }, { resources }));
+      if (mode === "overlapping-request") {
+        expect(lost).toBe(0);
+      } else {
+        expect(await Promise.race([later.then(() => "dispatched"), Bun.sleep(750).then(() => "held")])).toBe(
+          "dispatched",
+        );
+      }
+    }
+    retirementReleased.resolve();
+    prior.release.resolve();
+    await Promise.all([requested, later]);
+    expect(lost).toBe(mode === "resume" ? 0 : 1);
+  } finally {
+    unsubscribe();
+    retirementReleased.resolve();
+    cancel.abort();
+    prior.release.resolve();
+    peer.release.resolve();
+    await client.stop();
+    await Promise.allSettled(work);
   }
 });
