@@ -109,8 +109,10 @@ export const getBridgeWebviewHostEventPublisher = (
     owners.delete(key);
     watch.dispose();
   };
-  const watch = watchClosedTerminalPlacements(workbench, viewId, undefined, projectId, (closedId) => {
-    if (closedId === instance.instanceId) dispose();
+  const watch = watchClosedTerminalPlacements(workbench, viewId, undefined, projectId, {
+    closePlacement(closedId) {
+      if (closedId === instance.instanceId) dispose();
+    },
   });
   owners.set(key, { hostEvents, projectId, viewId: renderedViewId, dispose });
   return hostEvents;

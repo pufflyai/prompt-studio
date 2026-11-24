@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { resourceKey } from "@pstdio/sdk/extensions";
+import { createScopedQueryClient, resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench, type ResourceRef, shellPlacementContributionId, type WorkbenchLayout } from "../../core";
 import { registerResourcePage } from "../../core/controllers/page-runtime/page-runtime-test-support";
+import type { WorkbenchTerminalSessionAdapter } from "../../core/controllers/terminal/terminal-controller-types";
+import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import {
   createWorkbenchTerminalModule,
   openWorkbenchTerminal,
@@ -261,8 +263,7 @@ describe("terminal session lifecycle", () => {
     expect(workbench.layout.getActivePanel("secondary")?.instanceId).toBe(placement.instanceId);
     expect(killSignals).toHaveLength(0);
     expect(workbench.terminal.getSession("carried-terminal")?.status).toBe("running");
-    workbench.closePlacement(placement.placementIdentity!);
-    await Promise.resolve();
+    await workbench.closePlacement(placement.placementIdentity!);
     expect(workbench.layout.getPersistenceScope()).toBe(activeWorkspaceResource.id);
     expect(killSignals).toHaveLength(1);
     expect(workbench.terminal.getSession("carried-terminal")?.status).toBe("killed");
@@ -327,4 +328,80 @@ describe("terminal session lifecycle", () => {
       }),
     ]);
   });
+});
+
+test("terminal close refuses to hide the tab when System activity cannot admit it", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "terminal-test", extensionId: "pstdio" });
+  const workbench = createWorkbench({ queries });
+  workbench.registerModule(createWorkbenchTerminalModule());
+  const operations = getWorkbenchOperations(queries);
+  const busy = Promise.withResolvers<void>();
+  let stops = 0;
+  const adapter = {
+    id: "at-capacity",
+    write() {},
+    resize() {},
+    kill: async () => {
+      stops++;
+    },
+    onData: () => () => {},
+    onExit: () => () => {},
+    onError: () => () => {},
+  };
+  try {
+    workbench.terminal.setSessionOpener(async () => adapter);
+    const tab = openWorkbenchTerminal(workbench);
+    await workbench.terminal.open({ bindingId: tab.instanceId, request: { cols: 80, rows: 24 } });
+    for (let index = 0; index < 128; index++) {
+      void operations
+        .submit({ title: "Existing work", domain: "fixture", subjects: [String(index)], write: () => busy.promise })
+        .result.catch(() => {});
+    }
+    await expect(Promise.resolve().then(() => workbench.closePlacement(tab.placementIdentity!))).rejects.toMatchObject({
+      name: "OperationCapacityError",
+    });
+    expect(workbench.layout.getActivePanel("secondary")?.instanceId).toBe(tab.instanceId);
+    expect(stops).toBe(0);
+  } finally {
+    busy.resolve();
+    await workbench.dispose();
+    queries.dispose();
+  }
+});
+
+test("closing during terminal startup stops the original admission when it receives an adapter", async () => {
+  const workbench = setup();
+  const opener = Promise.withResolvers<WorkbenchTerminalSessionAdapter>();
+  const stopped = Promise.withResolvers<void>();
+  let kills = 0;
+  let signal: AbortSignal | undefined;
+  workbench.terminal.setSessionOpener((_request, _view, originalSignal) => {
+    signal = originalSignal;
+    return opener.promise;
+  });
+  try {
+    const tab = openWorkbenchTerminal(workbench);
+    const opening = workbench.terminal.open({ bindingId: tab.instanceId, request: { cols: 80, rows: 24 } });
+    await workbench.closePlacement(tab.placementIdentity!);
+    expect(workbench.layout.getActivePanel("secondary")).toBeUndefined();
+    expect(signal?.aborted).toBe(false);
+    opener.resolve({
+      id: "starting-session",
+      write() {},
+      resize() {},
+      kill: async () => {
+        kills++;
+        stopped.resolve();
+      },
+      onData: () => () => {},
+      onExit: () => () => {},
+      onError: () => () => {},
+    });
+    await opening;
+    await stopped.promise;
+    expect(kills).toBe(1);
+  } finally {
+    opener.reject(new Error("Test finished"));
+    await workbench.dispose();
+  }
 });
