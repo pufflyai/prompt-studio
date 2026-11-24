@@ -9,14 +9,27 @@ import {
   removeLocalProjectInputSchema,
   removeLocalProjectResultSchema,
 } from "pstdio-api-contracts";
+import { identitySchema } from "pstdio-sync-contracts";
 import { apiLogger } from "../../lib/logger";
 import { LocalRemovalPending } from "../../services/account/local-project-removal";
 import type { createNativeAccount } from "../../services/account/native-account";
 import type { AppBindings } from "../../types";
-import { expectedAccountQuery, readExpectedAccount } from "./read-identity";
+import {
+  expectedAccountQuery,
+  expectedCopyDeviceQuery,
+  readExpectedAccount,
+  readExpectedCopyDevice,
+} from "./read-identity";
 
 const tags = ["Account"];
 const params = z.object({ id: z.string().min(1) });
+const copyOwnerQuery = expectedCopyDeviceQuery
+  .safeExtend(expectedAccountQuery.shape)
+  .refine(
+    ({ accountId, managerOrigin }) => Boolean(accountId) === Boolean(managerOrigin),
+    "An expected account needs its manager origin",
+  );
+const catalogQuery = expectedCopyDeviceQuery.safeExtend({ accountId: identitySchema.optional() });
 const response = <T extends z.ZodType>(description: string, schema: T) => ({
   description,
   content: { "application/json": { schema } },
@@ -32,19 +45,23 @@ export const registerCloudProjectRoutes = (
       method: "get",
       path: "/account/projects",
       tags,
+      request: { query: catalogQuery },
       responses: {
         200: response("Known cloud projects and outstanding deletions.", cloudProjectCatalogSchema),
         400: unavailable,
       },
     }),
-    async (c) => c.json(await account.catalogProjects(), 200),
+    async (c) => {
+      const query = c.req.valid("query");
+      return c.json(await account.catalogProjects(query.accountId, readExpectedCopyDevice(query)), 200);
+    },
   );
   routes.openapi(
     createRoute({
       method: "get",
       path: "/account/projects/{id}/local-removal",
       tags,
-      request: { params },
+      request: { params, query: expectedCopyDeviceQuery },
       responses: {
         200: response("Local project cleanup and upload certainty.", localRemovalPreflightSchema),
         400: unavailable,
@@ -52,7 +69,10 @@ export const registerCloudProjectRoutes = (
       },
     }),
     async (c) => {
-      const preflight = await account.inspectLocalRemoval(c.req.valid("param").id);
+      const preflight = await account.inspectLocalRemoval(
+        c.req.valid("param").id,
+        readExpectedCopyDevice(c.req.valid("query")),
+      );
       return preflight ? c.json(preflight, 200) : c.json({ error: "Downloaded cloud project not found" }, 404);
     },
   );
@@ -103,7 +123,7 @@ export const registerCloudProjectRoutes = (
       method: "post",
       path: "/account/projects/{id}/download",
       tags,
-      request: { params, query: expectedAccountQuery },
+      request: { params, query: copyOwnerQuery },
       responses: {
         200: response("The cloud project is downloaded.", downloadCloudProjectResultSchema),
         202: response("Cloud project download accepted.", downloadCloudProjectResultSchema),
@@ -111,9 +131,11 @@ export const registerCloudProjectRoutes = (
       },
     }),
     async (c) => {
+      const query = c.req.valid("query");
       const result = await account.downloadCloudProject(
         c.req.valid("param").id,
-        readExpectedAccount(c.req.valid("query")),
+        readExpectedAccount(query),
+        readExpectedCopyDevice(query),
       );
       return result.presence === "downloaded" ? c.json(result, 200) : c.json(result, 202);
     },
@@ -125,7 +147,7 @@ export const registerCloudProjectRoutes = (
       tags,
       request: {
         params,
-        query: expectedAccountQuery,
+        query: copyOwnerQuery,
       },
       responses: {
         200: response("Authoritative deletion status.", cloudProjectDeletionSchema),
@@ -134,8 +156,13 @@ export const registerCloudProjectRoutes = (
       },
     }),
     async (c) => {
-      const expected = readExpectedAccount(c.req.valid("query"));
-      const status = await account.cloudProjectDeletion(c.req.valid("param").id, c.req.raw.signal, expected);
+      const query = c.req.valid("query");
+      const status = await account.cloudProjectDeletion(
+        c.req.valid("param").id,
+        c.req.raw.signal,
+        readExpectedAccount(query),
+        readExpectedCopyDevice(query),
+      );
       return status ? c.json(status, 200) : c.json({ error: "No deletion for this cloud project" }, 404);
     },
   );

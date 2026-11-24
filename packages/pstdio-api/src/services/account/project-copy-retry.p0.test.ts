@@ -3,13 +3,15 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ProjectSyncStatus } from "pstdio-api-contracts";
+import { scopeDeviceLogin } from "./native-store";
 import { createProjectCloudCatalog } from "./project-cloud-catalog";
 import { createProjectCopyStore } from "./project-copy-store";
 
 test.each([
-  true,
-  false,
-])("copy retry keeps the old failure unavailable through native refresh and restart (stored copy: %s)", async (storedCopy) => {
+  [true, false],
+  [false, false],
+  [true, true],
+] as const)("copy retry holds its scope through refresh and restart (stored copy: %s, team: %s)", async (storedCopy, team) => {
   const root = await mkdtemp(join(tmpdir(), "project-copy-retry-"));
   const accountFile = join(root, "account.json");
   const copies = createProjectCopyStore(accountFile);
@@ -20,6 +22,8 @@ test.each([
     deviceId: "device",
     token: "fixture-credential",
   };
+  let teamGrant = true;
+  const copyLogin = scopeDeviceLogin(login, team ? "team" : undefined);
   const id = "example-project";
   const project = {
     id,
@@ -32,8 +36,9 @@ test.each([
     updated_at: "2026-01-01",
     deleted_at: null,
   };
-  const refreshStarted = Promise.withResolvers<void>();
-  const finishRefresh = Promise.withResolvers<void>();
+  let refreshStarted = Promise.withResolvers<void>();
+  let finishRefresh = Promise.withResolvers<void>();
+  let retryReleased = Promise.withResolvers<void>();
   const retryStarted = Promise.withResolvers<void>();
   const finishRetry = Promise.withResolvers<void>();
   let attempts = 0;
@@ -43,14 +48,19 @@ test.each([
   const catalog = createProjectCloudCatalog({
     accountFile,
     login: async () => login,
-    cloud: () => ({
-      ...login,
-      credential: login.token,
-      ids: [id],
-      features: { relay: true },
-      projectDeletion: false,
-      deletions: [],
-    }),
+    projectLogin: async (actor) => scopeDeviceLogin(actor, team ? "team" : undefined),
+    cloud: (actor) => {
+      if (team && !teamGrant) return;
+      return {
+        ...actor,
+        credential: login.token,
+        ids: [id],
+        features: { relay: true },
+        projectDeletion: false,
+        deletions: [],
+      };
+    },
+    changed: () => retryReleased.resolve(),
     projects: { get: async () => project },
     online: () => true,
     syncStatus: async () => status,
@@ -70,12 +80,16 @@ test.each([
       await finishRetry.promise;
     },
   });
-  const canDownload = async () => (await catalog.catalogProjects()).projects[0]?.actions.download;
+  const catalogForCopy = () => catalog.catalogProjects(team ? copyLogin.accountId : undefined, login);
+  const download = () =>
+    catalog.downloadCloudProject(id, { accountId: copyLogin.accountId, managerOrigin: copyLogin.managerOrigin }, login);
+  const canDownload = async () => (await catalogForCopy()).projects[0]?.actions.download;
   try {
     if (storedCopy)
       await copies.write({
         managerOrigin: login.managerOrigin,
-        accountId: login.accountId,
+        accountId: copyLogin.accountId,
+        userId: copyLogin.userId,
         deviceId: login.deviceId,
         projectId: id,
         name: project.name,
@@ -83,33 +97,46 @@ test.each([
         automatic: true,
       });
     status = { ...status, state: "first-download-incomplete" };
-    expect(await catalog.downloadCloudProject(id)).toEqual({ projectId: id, presence: "downloading" });
+    expect(await download()).toEqual({ projectId: id, presence: "downloading" });
     await new Promise<void>((resolve) => setImmediate(resolve));
     expect({ attempts, refreshes }).toEqual({ attempts: 0, refreshes: 1 });
-    if (storedCopy) expect((await copies.forAccount(login))[0]?.automatic).toBeUndefined();
+    if (storedCopy) expect((await copies.forAccount(copyLogin))[0]?.automatic).toBeUndefined();
     status = { ...status, state: "needs-attention" };
     holdRefresh = true;
     expect(await canDownload()).toBe(true);
-    expect(await catalog.downloadCloudProject(id)).toEqual({ projectId: id, presence: "downloading" });
+    expect(await download()).toEqual({ projectId: id, presence: "downloading" });
     await refreshStarted.promise;
     expect(await canDownload()).toBe(false);
     expect((await catalog.fenceLocalStatus(id, login, async () => status)).state).toBe("first-download-incomplete");
     expect((await catalog.fenceLocalStatus(id, { ...login, deviceId: "other" }, async () => status)).state).toBe(
       "needs-attention",
     );
-    await catalog.downloadCloudProject(id);
+    await download();
     expect(attempts).toBe(0);
     finishRefresh.resolve();
     await retryStarted.promise;
     expect(await canDownload()).toBe(false);
     expect((await catalog.fenceLocalStatus(id, login, async () => status)).state).toBe("first-download-incomplete");
-    await catalog.downloadCloudProject(id);
+    await download();
     expect(attempts).toBe(1);
     finishRetry.resolve();
-    await new Promise<void>((resolve) => setImmediate(resolve));
+    await retryReleased.promise;
     expect(await canDownload()).toBe(true);
     expect((await catalog.fenceLocalStatus(id, login, async () => status)).state).toBe("needs-attention");
 
+    if (team) {
+      refreshStarted = Promise.withResolvers<void>();
+      finishRefresh = Promise.withResolvers<void>();
+      retryReleased = Promise.withResolvers<void>();
+      await download();
+      await refreshStarted.promise;
+      teamGrant = false;
+      finishRefresh.resolve();
+      await retryReleased.promise;
+      expect(attempts).toBe(1);
+      expect(await canDownload()).toBeUndefined();
+      teamGrant = true;
+    }
     if (storedCopy) {
       let preparations = 0;
       catalog.connectProjectCopies({
@@ -120,13 +147,13 @@ test.each([
       });
       status = { state: "synced", offlineReady: true };
       await expect(catalog.prepareDownloadedProject(id)).rejects.toThrow("Folder cannot be prepared yet");
-      expect((await catalog.catalogProjects()).projects[0]?.downloadError).toBeDefined();
+      expect((await catalogForCopy()).projects[0]?.downloadError).toBeDefined();
       holdRefresh = false;
-      await catalog.downloadCloudProject(id);
-      expect((await catalog.catalogProjects()).projects[0]?.downloadError).toBeUndefined();
+      await download();
+      expect((await catalogForCopy()).projects[0]?.downloadError).toBeUndefined();
       await catalog.prepareDownloadedProject(id);
       expect({ preparations, attempts }).toEqual({ preparations: 2, attempts: 1 });
-      expect((await catalog.catalogProjects()).projects[0]?.presence).toBe("downloaded");
+      expect((await catalogForCopy()).projects[0]?.presence).toBe("downloaded");
     }
   } finally {
     finishRefresh.resolve();

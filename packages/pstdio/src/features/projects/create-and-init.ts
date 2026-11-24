@@ -1,8 +1,8 @@
 import { apiClient } from "@/features/api-client";
 import { createProject } from "./api/create-project";
 
-export const createAndInitProject = async (path: string, name?: string) => {
-  const project = await createProject(path, name);
+export const createAndInitProject = async (path: string, name?: string, teamAccountId?: string) => {
+  const project = await createProject(path, name, teamAccountId);
   const workspaces = await apiClient().workspaces.list(project.id);
   const home = workspaces.find((workspace) => workspace.is_default);
   if (home?.setup_error) throw new Error(home.setup_error);

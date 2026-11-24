@@ -124,7 +124,10 @@ export const createAppAccount = (
               for (const session of [...active, ...queued]) await app.deps.sessionService.cancel(session.id);
               await collectLegacyProjectRecovery(app.deps, copy);
               await removeProjectFolderRecovery(app.deps.projectRecovery.root, id);
-              await app.deps.personalHistoryService.logs.removeProject(copy);
+              await app.deps.personalHistoryService.logs.removeProject({
+                ...copy,
+                accountId: copy.userId ?? copy.accountId,
+              });
               await evictProjectCopy(app.deps, id);
             },
           });
