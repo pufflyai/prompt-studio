@@ -25,6 +25,7 @@ export type ArtifactMountWatcherInput = {
   maxFolders?: number;
   watch?: WatchDirectory;
   watchRoot?: WatchDirectory;
+  platform?: NodeJS.Platform;
 };
 
 const watchFlatRoot: WatchDirectory = (path, listener, onError) => {
@@ -111,7 +112,8 @@ export const watchArtifactMount = (input: ArtifactMountWatcherInput) => {
     watch: input.watch,
   });
   // macOS recursive notifications can miss an atomic file replacement in the mount root.
-  const watchRoot = input.watchRoot ?? (tree.recursive && process.platform === "darwin" ? watchFlatRoot : undefined);
+  const platform = input.platform ?? process.platform;
+  const watchRoot = input.watchRoot ?? (!input.watch && platform === "darwin" ? watchFlatRoot : undefined);
   const directRoot =
     watchRoot &&
     createDirectoryTreeWatcher({

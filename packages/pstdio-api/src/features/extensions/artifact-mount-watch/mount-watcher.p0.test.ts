@@ -36,6 +36,7 @@ const startWatch = async (
     onFolderLimit?: () => void;
     watch?: WatchDirectory;
     watchRoot?: WatchDirectory;
+    platform?: NodeJS.Platform;
   } = {},
 ) => {
   const { initialFiles = {}, initialFolders = [], ...watchOptions } = options;
@@ -67,16 +68,16 @@ const startWatch = async (
 };
 
 describe("watchArtifactMount", () => {
-  test.skipIf(process.platform !== "darwin")("starts recursive and flat root watches by default on macOS", async () => {
+  test.each(["darwin", "linux", "win32"] as const)("uses the default root watch policy for %s", async (platform) => {
     const nativeWatch = fs.watch;
     const watches = spyOn(fs, "watch").mockImplementation(nativeWatch);
     try {
-      const { root } = await startWatch({ initialFolders: ["nested"] });
+      const { root } = await startWatch(platform === process.platform ? {} : { platform });
+      const recursive = process.platform === "darwin" || process.platform === "win32";
       const registrations: unknown[] = watches.mock.calls.map(([path, options]) => [path, options]);
-      expect(registrations).toEqual([
-        [root, { recursive: true }],
-        [root, { recursive: false }],
-      ]);
+      const expected = [[root, { recursive }]];
+      if (platform === "darwin") expected.push([root, { recursive: false }]);
+      expect(registrations).toEqual(expected);
     } finally {
       watches.mockRestore();
     }

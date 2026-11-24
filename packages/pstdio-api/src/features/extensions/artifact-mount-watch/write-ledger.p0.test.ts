@@ -53,6 +53,16 @@ describe("artifact mount write ledger", () => {
     expect(ledger.dropEchoes([path])).toEqual([path]);
   });
 
+  test.each([true, false])("filters owned folder echoes independently of batch order (%s)", async (fileFirst) => {
+    const ledger = createArtifactMountWriteLedger();
+    const { mount, root } = createMount(ledger);
+    const folder = join(root, "sales");
+    const path = join(folder, "q3.json");
+    await mount.writeText("sales/q3.json", "{}");
+    writeFileSync(path, '{"total":1}');
+    expect(ledger.dropEchoes(fileFirst ? [path, folder] : [folder, path], { keepMatchedWrites: true })).toEqual([path]);
+  });
+
   test("drops everything a mount delete removed", async () => {
     const ledger = createArtifactMountWriteLedger();
     const { mount, root } = createMount(ledger);

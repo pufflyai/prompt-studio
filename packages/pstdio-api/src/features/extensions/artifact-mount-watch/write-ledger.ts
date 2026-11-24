@@ -51,15 +51,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     }
   };
 
-  const isEcho = (path: string, matched: Set<string>, keepMatchedWrites: boolean) => {
-    const current = readState(path);
-    if (keepMatchedWrites && current) rememberReappearance(path);
-    const entry = entries.get(path);
-    if (entry && sameState(entry.state, current) && !entry.reappeared?.has(path)) {
-      matched.add(path);
-      return true;
-    }
-    if (entry?.state && keepMatchedWrites) entries.delete(path);
+  const matchesRelatedWrite = (path: string, current: ReturnType<typeof readState>) => {
     for (const [recordedPath, recorded] of entries) {
       // A folder the mount created on the way to a file it wrote.
       if (recorded.state && current?.directory && isInside(recordedPath, path)) return true;
@@ -68,6 +60,18 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
       if (!current && pathDeletedByMount) return true;
     }
     return false;
+  };
+
+  const isEcho = (path: string, consumed: Set<string>, keepMatchedWrites: boolean) => {
+    const current = readState(path);
+    if (keepMatchedWrites && current) rememberReappearance(path);
+    const entry = entries.get(path);
+    if (entry && sameState(entry.state, current) && !entry.reappeared?.has(path)) {
+      if (!keepMatchedWrites) consumed.add(path);
+      return true;
+    }
+    if (entry?.state && keepMatchedWrites) consumed.add(path);
+    return matchesRelatedWrite(path, current);
   };
 
   return {
@@ -80,9 +84,10 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     /** Return external changes. Keep matched writes when independent watchers can still echo them. */
     dropEchoes: (paths: string[], { keepMatchedWrites = false } = {}) => {
       forgetExpired();
-      const matched = new Set<string>();
-      const kept = paths.filter((path) => !isEcho(path, matched, keepMatchedWrites));
-      if (!keepMatchedWrites) for (const path of matched) entries.delete(path);
+      const consumed = new Set<string>();
+      const kept = paths.filter((path) => !isEcho(path, consumed, keepMatchedWrites));
+      // A write can explain a folder notification elsewhere in the same batch.
+      for (const path of consumed) entries.delete(path);
       return kept;
     },
   };
