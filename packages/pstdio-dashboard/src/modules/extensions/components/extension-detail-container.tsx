@@ -15,6 +15,7 @@ import {
   useUninstallProjectExtension,
   useUpdateProjectExtensionSetting,
 } from "@/shared/extensions/use-project-extensions";
+import { useExtensionProcessEnvironment } from "../data/use-extension-process-environment";
 import type { ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionDetail } from "./extension-detail";
 import { unavailableExtensionHarnesses } from "./extension-harness-availability";
@@ -58,6 +59,11 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
   const { t } = useTranslation("projects");
   const setAutomationEnabled = useSetExtensionAutomationEnabled(projectId);
   const settingsQuery = useProjectExtensionSettings(projectId, extension.id);
+  const environmentPermission = useExtensionProcessEnvironment(
+    projectId,
+    extension.extensionId,
+    !extension.processEnvironment?.length,
+  );
   // The per-extension endpoint documents contributions even while the extension
   // is disabled, unlike the workbench metadata which only covers enabled ones.
   const contributionsQuery = useExtensionContributions(projectId, extension.id);
@@ -110,6 +116,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         workbench={settingsInput?.workbench}
         projectId={projectId}
         extension={extension}
+        hasStaleEnvironmentGrant={environmentPermission.data?.stale}
         metadata={contributions}
         unavailableHarnesses={unavailableExtensionHarnesses(
           extension,

@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import type { ProcessEnvironmentSource } from "../extensions/process-environment/permissions";
 import { defaultWorkspaceProviderRuntime, runWorkspaceProviderOperation } from "./workspace-provider-runtime";
 
 const emptyRuntime = {
@@ -56,25 +57,41 @@ describe("defaultWorkspaceProviderRuntime", () => {
     // The user allowed the name for the granted extension in this project only.
     const granted = (projectId: string, owner: string) =>
       projectId === "project-1" && owner === "example.granted" ? [variable] : [];
+    const source = {
+      id: "source-1",
+      extension_id: extensionId,
+      source_path: "/fake/example",
+      source_hash: "fixture",
+      manifest_json: {},
+    };
     const deps = {
       extensionRuntimeCatalog: {
         get: async () => ({
           enabledSources: [
             {
               instance: { id: "instance-1" },
-              installedSource: { id: "source-1", extension_id: extensionId, source_path: "/fake/example" },
+              installedSource: source,
             },
           ],
           project: { id: "project-1", name: "Example", shorthand: "EX" },
           runtime: {
             ...emptyRuntime,
-            workspaceTypes: [{ id: "example.remote", extensionId, name: "remote", provider }],
+            workspaceTypes: [
+              { id: "example.remote", extensionId, name: "remote", sourcePath: "/fake/example/extension.ts", provider },
+            ],
           },
         }),
       },
       extensionProcessEnvironment: {
-        grantedNames: async (projectId: string, owner: string) => granted(projectId, owner),
-        authorizeCurrent: async () => ({ attach: () => {}, release: () => {} }),
+        grantedNames: async (projectId: string, owner: ProcessEnvironmentSource) => {
+          expect(owner).toBe(source);
+          return granted(projectId, owner.extension_id);
+        },
+        authorize: async () => ({
+          start: <T>(spawn: () => { value: T }) => spawn().value,
+          release: () => {},
+          releaseUnused: () => {},
+        }),
       },
     } as never;
     try {
@@ -111,7 +128,15 @@ describe("defaultWorkspaceProviderRuntime", () => {
     };
     const runtime = {
       ...emptyRuntime,
-      workspaceTypes: [{ id: "example.remote", extensionId: "example.extension", name: "remote", provider }],
+      workspaceTypes: [
+        {
+          id: "example.remote",
+          extensionId: "example.extension",
+          name: "remote",
+          sourcePath: "/fake/example/extension.ts",
+          provider,
+        },
+      ],
     };
     const deps = {
       extensionRuntimeCatalog: {

@@ -12,6 +12,7 @@ import {
 } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { createCommandEnvironment } from "../extensions/command-environment";
+import { resolveEnabledSourceForRecord } from "../extensions/project-extension-runtime-snapshot";
 import type { WorkspacesRouteDeps } from "./deps";
 import { createWorkspaceProviderDirectory } from "./workspace-provider-directory";
 import { legacyGitProviderId, runtimeProviderId, worktreeProviderId } from "./workspace-provider-identity";
@@ -51,6 +52,11 @@ export const defaultWorkspaceProviderRuntime: WorkspaceProviderRuntime = {
     const snapshot = await deps.extensionRuntimeCatalog.get(input.projectId);
     const record = findWorkspaceProviderRecord(snapshot.runtime, input.providerId);
     if (!record) return undefined;
+    const installedSource = resolveEnabledSourceForRecord(
+      record.sourcePath,
+      snapshot.enabledSources,
+      snapshot.runtime.extensions,
+    )?.installedSource;
 
     const runner = createCommandRunner(snapshot.runtime, {
       logger: providerLogger,
@@ -91,7 +97,11 @@ export const defaultWorkspaceProviderRuntime: WorkspaceProviderRuntime = {
       );
       // Only the direct lifecycle callback can prepare an unavailable target.
       // Commands and hooks keep the runner's ordinary readiness checks.
-      context.process = createWorkspaceProviderProcess(deps, { ...input, extensionId: record.extensionId }, scope);
+      context.process = createWorkspaceProviderProcess(
+        deps,
+        { ...input, extensionId: record.extensionId, installedSource },
+        scope,
+      );
       if (directory) context.localDirectory = directory;
       return context;
     };

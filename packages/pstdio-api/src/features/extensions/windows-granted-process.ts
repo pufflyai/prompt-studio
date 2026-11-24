@@ -1,0 +1,107 @@
+import { dirname } from "node:path";
+import { isPackagedRuntime } from "pstdio-paths";
+import type { ResolvedProcessCommand } from "./process-command";
+import { exitedWithin } from "./process-group";
+import { createWindowsProcessJob } from "./windows-process-job";
+
+// This entry point stays idle until the host assigns it to the job and sends the command.
+const launcherSource = `
+  let launched = false;
+  process.once("disconnect", () => {
+    if (!launched) process.exit(1);
+  });
+  process.once("message", async ({ argv, cwd, env, detached, windowsVerbatimArguments }) => {
+    launched = true;
+    let child;
+    try {
+      child = Bun.spawn(argv, {
+        cwd, env, detached, windowsVerbatimArguments, windowsHide: true,
+        stdin: "ignore", stdout: detached ? "ignore" : "inherit", stderr: detached ? "ignore" : "inherit",
+      });
+    } catch {
+      process.send({ failed: true }, () => process.exit(1));
+      return;
+    }
+    await new Promise((resolve, reject) => process.send({ pid: child.pid }, (error) => error ? reject(error) : resolve()));
+    process.exit(await child.exited);
+  });
+`;
+
+type StartInput = {
+  spawner: typeof Bun.spawn;
+  command: ResolvedProcessCommand;
+  cwd?: string;
+  env: NodeJS.ProcessEnv;
+  detached: boolean;
+  stopTimeoutMs: number;
+};
+
+const pollJob = async (job: ReturnType<typeof createWindowsProcessJob>) => {
+  while (job.hasProcesses()) await new Promise((resolve) => setTimeout(resolve, 250).unref());
+  job.close();
+};
+
+/**
+ * Bun cannot attach a job at process creation. Assign a trusted, idle Bun launcher to the job
+ * first, then admit the requested program. Windows puts its ordinary descendants in the same job.
+ */
+export const startWindowsGrantedProcess = (input: StartInput) => {
+  const job = createWindowsProcessJob();
+  const started = Promise.withResolvers<number>();
+  started.promise.catch(() => {});
+  const output = input.detached ? "ignore" : "pipe";
+  const launchError = () => new Error("The granted Windows process could not start.");
+  let child: ReturnType<typeof Bun.spawn> | undefined;
+  try {
+    child = input.spawner([process.execPath, "--no-env-file", "-e", launcherSource], {
+      cwd: dirname(process.execPath),
+      env: {
+        SystemRoot: process.env.SystemRoot,
+        ...(isPackagedRuntime() ? { BUN_BE_BUN: "1" } : {}),
+      },
+      stdin: "ignore",
+      stdout: output,
+      stderr: output,
+      windowsHide: true,
+      detached: input.detached,
+      ipc: (message, launcher) => {
+        if (message && typeof message.pid === "number") started.resolve(message.pid);
+        else started.reject(launchError());
+        launcher.disconnect();
+      },
+      onDisconnect: () => started.reject(launchError()),
+    });
+    job.attachLauncher(child.pid);
+    child.send({
+      argv: input.command.argv,
+      cwd: input.cwd ?? process.cwd(),
+      windowsVerbatimArguments: input.command.windowsVerbatimArguments,
+      env: input.env,
+      detached: input.detached,
+    });
+  } catch (error) {
+    // An unassigned launcher is waiting and has not received the command.
+    try {
+      child?.kill();
+    } finally {
+      job.close();
+    }
+    throw error;
+  }
+
+  const exited = Promise.all([started.promise, child.exited]).then(([, exitCode]) => exitCode);
+  exited.catch(() => {});
+  const treeExited = child.exited.then(() => pollJob(job));
+  treeExited.catch(() => {});
+  return {
+    child,
+    pid: started.promise,
+    exited,
+    treeExited,
+    async stop() {
+      if (job.hasProcesses()) job.terminate();
+      if (!(await exitedWithin(treeExited, input.stopTimeoutMs)))
+        throw new Error("The granted Windows process job did not exit after it was stopped.");
+    },
+  };
+};
