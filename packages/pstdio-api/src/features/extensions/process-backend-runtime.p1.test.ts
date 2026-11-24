@@ -296,3 +296,54 @@ test("a rejected revision keeps a cold accepted command callable through the cat
   });
   expect((await response.json()).outcome).toMatchObject({ ok: true, value: "accepted" });
 });
+
+test("an accepted source can return to the same content after another generation ran", async () => {
+  const source = join(root, "restored-candidate");
+  const extensionId = "example.restored-candidate";
+  await mkdir(source);
+  await writeFile(
+    join(source, "package.json"),
+    JSON.stringify({
+      name: "restored-candidate",
+      publisher: "example",
+      version: "1.0.0",
+      main: "./extension.ts",
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+      pstdio: { backendRuntime: "process" },
+    }),
+  );
+  const entryPath = join(source, "extension.ts");
+  const define = (value: string) =>
+    `export default { commands: [{
+      id: "ping", ref: { kind: "command", id: "ping" }, title: "Ping", run: () => ${JSON.stringify(value)}
+    }] };`;
+  const original = define("original");
+  await writeFile(entryPath, original);
+  await handle.deps.extensionService.enableInstalledSourceForProject({
+    projectId,
+    installName: "restored-candidate",
+    extensionId,
+    name: "restored-candidate",
+    displayName: "Restored candidate",
+    sourcePath: source,
+    sourceKind: "local_path",
+    manifest: {},
+  });
+  const ping = async () => {
+    const response = await handle.app.request(
+      `/v1/projects/${projectId}/extensions/commands/${extensionId}.command.ping/execute`,
+      { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ params: {} }) },
+    );
+    return (await response.json()).outcome;
+  };
+  expect(await ping()).toMatchObject({ ok: true, value: "original" });
+  await writeFile(entryPath, define("replacement"));
+  await handle.deps.extensionService.reloadInstalledSourceBySourcePath(source);
+  expect(await ping()).toMatchObject({ ok: true, value: "replacement" });
+  await writeFile(entryPath, original);
+  await handle.deps.extensionService.reloadInstalledSourceBySourcePath(source);
+  expect(await ping()).toMatchObject({ ok: true, value: "original" });
+  await writeFile(entryPath, define("replacement"));
+  await handle.deps.extensionService.reloadInstalledSourceBySourcePath(source);
+  expect(await ping()).toMatchObject({ ok: true, value: "replacement" });
+});
