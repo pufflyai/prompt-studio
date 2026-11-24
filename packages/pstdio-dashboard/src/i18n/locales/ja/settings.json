@@ -41,12 +41,22 @@
     }
   },
   "appearance": {
+    "showSidePanelBubble": "サイドパネルのバブルを表示",
     "title": "外観",
     "description": "Prompt Studio の見た目を選びます。Alt+Shift+T でもテーマを変更できます。",
     "theme": "テーマ",
     "themeHelper": "すべてのプロジェクトに適用されます。",
     "openRelatedResources": "関連リソースを開く",
-    "openRelatedResourcesHelper": "各種類の最近の関連リソースを、ピン留めされていないプレビューで自動的に開きます。"
+    "openRelatedResourcesHelper": "各種類の最近の関連リソースを、ピン留めされていないプレビューで自動的に開きます。",
+    "defaultSidePanel": "既定のサイドパネル",
+    "defaultSidePanelHelper": "バブルをクリックしたときに開きます。",
+    "defaultPanel": "既定（{{panel}}）",
+    "newSession": "新しいセッション",
+    "sidePanel": "サイドパネル",
+    "unavailableSidePanel": "利用できないパネル",
+    "floatingPanelMovement": "フローティングパネルの移動",
+    "snapToAlignment": "配置にスナップ",
+    "moveFreely": "自由に移動"
   },
   "updates": {
     "title": "アップデートチャネル",

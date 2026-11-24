@@ -35,7 +35,9 @@ export const createRootLevelLocationTracker = (input: RootLevelLocationTrackerIn
     // A removed resource cannot be opened again, so the project falls back to its start page.
     forget(resource: ResourceRef) {
       const removed = input.resourceKey(resource);
-      if (saved && usesResource(saved, (candidate) => input.resourceKey(candidate) === removed)) saved = undefined;
+      if (!usesResource(saved, (candidate) => input.resourceKey(candidate) === removed)) return false;
+      saved = undefined;
+      return true;
     },
 
     // A saved location stops resolving once its page is gone, which leaves the start page.

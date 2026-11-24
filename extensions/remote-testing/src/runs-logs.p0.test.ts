@@ -1,7 +1,7 @@
 import { afterAll, afterEach, expect, spyOn, test } from "bun:test";
-import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { activeRun, claimEnvironment } from "./environments";
 import { localProcess } from "./process-fixture";
+import { createRunStorage as createMemoryStorage } from "./run-storage-fixture";
 import { awaitRun, checkRun, type RunDeps, type RunRecord } from "./runs";
 import { gcsStorage } from "./storage";
 
@@ -49,7 +49,7 @@ async function fixture() {
     storage: gcsStorage({ bucket: "fixture", signer: "fixture", token: async () => "fixture" }),
     saveLog: async () => "run.log",
   };
-  await claimEnvironment(deps.store, "env", "run", 60);
+  await claimEnvironment(deps.store, "env", "run");
   return { deps, record, calls: () => ({ stops, reads }) };
 }
 

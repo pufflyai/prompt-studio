@@ -10,12 +10,14 @@ import { createBranchTemplate, openPromptStudio, runPromptStudio } from "./src/b
 import { commands } from "./src/commands";
 import { connection, templatePublisher } from "./src/connection";
 import { recoverEnvironmentCleanup } from "./src/environment-cleanup";
+import { runRecoveryIndex } from "./src/run-recovery";
 import { settingsSchema } from "./src/settings";
 import { environmentsView, navigation, remoteTestsPage, runsView } from "./src/workbench";
 
 export default defineExtension({
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
   settings: { properties: settingsSchema },
+  storageIndexes: [runRecoveryIndex],
   connections: [connection, templatePublisher],
   commands: [...commands, createBranchTemplate, runPromptStudio, openPromptStudio],
   schedules: [

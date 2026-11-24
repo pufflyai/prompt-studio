@@ -56,12 +56,22 @@
     }
   },
   "appearance": {
+    "showSidePanelBubble": "Show Side Panel bubble",
     "title": "Appearance",
     "description": "Choose how Prompt Studio looks. You can also change the theme with Alt+Shift+T.",
     "theme": "Theme",
     "themeHelper": "Applies to every project.",
     "openRelatedResources": "Open related resources",
-    "openRelatedResourcesHelper": "Automatically open a recent related resource of each kind as an unpinned preview."
+    "openRelatedResourcesHelper": "Automatically open a recent related resource of each kind as an unpinned preview.",
+    "defaultSidePanel": "Default Side Panel",
+    "defaultSidePanelHelper": "Opens when you click the bubble.",
+    "defaultPanel": "Default ({{panel}})",
+    "newSession": "New session",
+    "sidePanel": "Side Panel",
+    "unavailableSidePanel": "Unavailable panel",
+    "floatingPanelMovement": "Floating panel movement",
+    "snapToAlignment": "Snap to alignment",
+    "moveFreely": "Move freely"
   },
   "updates": {
     "title": "Update channel",

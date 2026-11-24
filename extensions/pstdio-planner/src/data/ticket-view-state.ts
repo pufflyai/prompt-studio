@@ -218,7 +218,19 @@ export const ticketViewState = async (
                         op: "and",
                         args: [
                           { op: "eq", args: [rank(), rank(1)] },
-                          { op: "gt", args: [{ field: "planPosition" }, { field: "planPosition", up: 1 }] },
+                          {
+                            op: "or",
+                            args: [
+                              { op: "gt", args: [{ field: "planPosition" }, { field: "planPosition", up: 1 }] },
+                              {
+                                op: "and",
+                                args: [
+                                  { op: "missing", args: [{ field: "planPosition" }] },
+                                  { op: "not", args: [{ op: "missing", args: [{ field: "planPosition", up: 1 }] }] },
+                                ],
+                              },
+                            ],
+                          },
                         ],
                       },
                     ],

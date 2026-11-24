@@ -22,13 +22,20 @@ export const moveTicketInPlan = async (
       return ticket.id;
     };
     const ticketId = await planTicketId(ticketKey);
-    const workflow = usableWorkflowStatuses(await readWorkflowStatuses(ctx));
-    await initializePlanPlacements(ctx, workflow.completedStatusIds);
-    const current = (await planPlacements(ctx.storage).get(ticketId))?.deadlineId ?? null;
+    const existing = await planPlacements(ctx.storage).get(ticketId);
+    const deadlineId = deadline === undefined ? (existing?.deadlineId ?? null) : deadlineOrNone(plan, deadline);
+    const beforeId = before ? await planTicketId(before) : undefined;
+    const target = beforeId ? await planPlacements(ctx.storage).get(beforeId) : undefined;
+    // Known positions can be moved within the durable prefix or into a known deadline.
+    // Appending to unassigned work still needs its complete tail, as do unplaced sources.
+    if (!existing || (!deadlineId && (!target || target.deadlineId !== deadlineId))) {
+      const workflow = usableWorkflowStatuses(await readWorkflowStatuses(ctx));
+      await initializePlanPlacements(ctx, workflow.completedStatusIds);
+    }
     const moved = await movePlanPlacement(ctx.storage, {
       ticketId,
-      deadlineId: deadline === undefined ? current : deadlineOrNone(plan, deadline),
-      ...(before ? { beforeId: await planTicketId(before) } : {}),
+      deadlineId,
+      ...(beforeId ? { beforeId } : {}),
     });
     await ctx.events.emit(planChanged, { reason: "move" });
     return moved ? { ticketId: moved.ticketId, deadlineId: moved.deadlineId } : undefined;
