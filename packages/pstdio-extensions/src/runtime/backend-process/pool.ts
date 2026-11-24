@@ -20,6 +20,9 @@ export const backendWorkerCommand = () =>
 // A disabled or removed extension stops being called, so idle retirement also releases its worker.
 const IDLE_MS = 10 * 60_000;
 
+// A worker that keeps crashing, hanging or failing to start gets a cooldown instead of a restart loop.
+const RESTART_BUDGET = { failures: 3, windowMs: 60_000, cooldownMs: 30_000 };
+
 interface WorkerEntry {
   starting: Promise<BackendWorker>;
   lastUsed: number;
@@ -28,12 +31,28 @@ interface WorkerEntry {
 
 export const createBackendWorkerPool = (
   start: (key: string) => Omit<BackendWorkerOptions, "command">,
-  { idleMs = IDLE_MS } = {},
+  { idleMs = IDLE_MS, restartBudget = RESTART_BUDGET } = {},
 ) => {
   const workers = new Map<string, WorkerEntry>();
+  const failures = new Map<string, number[]>();
   const stopping = new Set<Promise<void>>();
   let closing: Promise<void> | undefined;
   let sweep: ReturnType<typeof setInterval> | undefined;
+
+  const recordFailure = (key: string) => {
+    const now = performance.now();
+    const recent = (failures.get(key) ?? []).filter((at) => now - at < restartBudget.windowMs);
+    failures.set(key, [...recent, now]);
+  };
+
+  const coolingDown = (key: string) => {
+    const recent = failures.get(key) ?? [];
+    if (recent.length < restartBudget.failures) return 0;
+    const wait = restartBudget.cooldownMs - (performance.now() - recent.at(-1)!);
+    if (wait > 0) return wait;
+    failures.delete(key);
+    return 0;
+  };
 
   const retireIdle = () => {
     const now = performance.now();
@@ -51,11 +70,20 @@ export const createBackendWorkerPool = (
       existing.lastUsed = now;
       return existing.starting;
     }
+    const wait = coolingDown(key);
+    if (wait > 0)
+      return Promise.reject(
+        new BackendUnavailableError(
+          `The extension backend stopped unexpectedly ${restartBudget.failures} times; it can start again in ${Math.ceil(wait / 1000)} s.`,
+        ),
+      );
     const starting = startBackendWorker({ command: backendWorkerCommand(), ...start(key) });
     const entry: WorkerEntry = { starting, lastUsed: now };
     workers.set(key, entry);
     const forget = () => {
-      if (workers.get(key) === entry) workers.delete(key);
+      if (workers.get(key) !== entry) return;
+      workers.delete(key);
+      recordFailure(key);
     };
     void starting.then((worker) => {
       entry.worker = worker;

@@ -74,32 +74,12 @@ const formatImportError = (error: unknown, fallback: string) => {
 // preserve the per-load identity without rebuilding immutable output (ADR 0151).
 const importWithCacheKey = (filePath: string) => import(`${filePath}?pstdio_cache=${process.pid}-${importCounter++}`);
 
-// Provider contracts return live handles (native sessions, streams), which cannot cross the boundary yet.
-const PROCESS_UNSUPPORTED = ["harnesses", "workspaceTypes", "textSources", "resourceHierarchyProviders"] as const;
-
 // The host never imports a process-mode entry; the worker reports data and handler references.
-const loadInWorker = async (
-  packagePath: string,
-  revision: PreparedExtensionRevision,
-  diagnostics: ExtensionDiagnostic[],
-  definitionOnly?: boolean,
-) => {
+const loadInWorker = async (packagePath: string, revision: PreparedExtensionRevision, definitionOnly?: boolean) => {
   const started = startRuntimeOperation("extension.backend.start");
   const { definition: reported, acquire } = await acquireBackendWorker(packagePath, revision, definitionOnly);
   finishRuntimeOperation(started, { extensionId: revision.manifest.id });
   const definition = hydrateBackendDefinition(reported, acquire) as Record<string, unknown>;
-  for (const key of PROCESS_UNSUPPORTED) {
-    if (definition[key] === undefined) continue;
-    delete definition[key];
-    diagnostics.push(
-      createDiagnostic({
-        code: "extension_process_runtime_unsupported",
-        message: `${key} are not available to extensions with pstdio.backendRuntime "process" yet. Remove the setting to keep using them.`,
-        sourcePath: revision.entryPath,
-        extensionId: revision.manifest.id,
-      }),
-    );
-  }
   return { default: definition };
 };
 
@@ -167,7 +147,7 @@ export const loadExtensionPackage = async (
     retainPreparedRevision(preparedRevision);
     const imported =
       manifest.pstdio?.backendRuntime === "process"
-        ? await loadInWorker(pkg.path, preparedRevision, diagnostics, options.definitionOnly)
+        ? await loadInWorker(pkg.path, preparedRevision, options.definitionOnly)
         : await importWithCacheKey(preparedRevision.entryPath);
     const mod = (
       options.immutableAssets ? imported : remapPackageAssets(imported, preparedRevision.packagePath, pkg.path)

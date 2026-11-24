@@ -14,8 +14,9 @@ import {
   serializeBackendError,
   type WorkerToHostMessage,
 } from "./protocol";
-import { createFunctionTable } from "./remote-values";
+import { createFunctionTable, createImportTracker } from "./remote-values";
 import { type BackendSurface, collectSurfaceValues, surfaceAllowsCommandRejection } from "./surface";
+import { createWatchdog, type WatchdogOptions } from "./watchdog";
 
 const STOP_GRACE_MS = 2_000;
 const DRAIN_DEADLINE_MS = 30_000;
@@ -49,7 +50,7 @@ export interface BackendWorker {
   readonly exited: Promise<number | null>;
   /** Whether an invocation is running, so an idle worker can be retired without interrupting one. */
   readonly busy: boolean;
-  /** A monotonic timestamp for the end of the last active invocation. */
+  /** Monotonic time the last invocation or its retained references ended. */
   readonly idleSince: number;
 }
 
@@ -59,21 +60,105 @@ export interface BackendWorkerOptions {
   /** The complete child environment. Pass an allowlisted environment, never the host's own. */
   env: Record<string, string | undefined>;
   entryPath: string;
+  watchdog?: WatchdogOptions;
+  drainDeadlineMs?: number;
 }
 
 type Running = HostInvocation & {
-  settle: ReturnType<typeof Promise.withResolvers<unknown>>;
+  /** Cleared once settled, so a kept entry does not also keep the caller's result alive. */
+  settle?: ReturnType<typeof Promise.withResolvers<unknown>>;
   drain?: ReturnType<typeof setTimeout>;
 };
+
+const createInvoke =
+  ({
+    invocations,
+    stopped,
+    send,
+    trackImports,
+    closeInvocation,
+    drainInvocation,
+  }: {
+    invocations: Map<string, Running>;
+    stopped: () => BackendUnavailableError | undefined;
+    send: (message: HostToWorkerMessage) => boolean;
+    trackImports: (id: string) => Running["tracker"];
+    closeInvocation: (id: string, running: Running, error?: unknown) => void;
+    drainInvocation: (id: string, running: Running, reason: unknown) => void;
+  }) =>
+  (input: BackendInvocation) => {
+    try {
+      const unavailable = stopped();
+      if (unavailable) throw unavailable;
+      const { context, surface, handlerId, args, signal } = input;
+      signal?.throwIfAborted();
+      const values = collectSurfaceValues(context, surface);
+      signal?.throwIfAborted();
+
+      const invocationId = crypto.randomUUID();
+      const table = createFunctionTable();
+      const settle = Promise.withResolvers<unknown>();
+      const running: Running = {
+        settle,
+        context,
+        surface,
+        table,
+        tracker: trackImports(invocationId),
+        enter: AsyncLocalStorage.snapshot(),
+      };
+      invocations.set(invocationId, running);
+
+      const cancelPreparation = () => {
+        closeInvocation(invocationId, running, signal?.reason);
+        settle.reject(signal?.reason);
+      };
+      const cancel = () => {
+        const current = invocations.get(invocationId);
+        if (!current?.settle) return;
+        current.settle = undefined;
+        settle.reject(signal?.reason);
+        drainInvocation(invocationId, current, signal?.reason);
+      };
+      signal?.addEventListener("abort", cancelPreparation, { once: true });
+
+      const deliver = async () => {
+        const exported = await table.exportPinned(args);
+        if (!invocations.has(invocationId)) return;
+        signal?.removeEventListener("abort", cancelPreparation);
+        if (
+          !send({
+            v: BACKEND_PROTOCOL_VERSION,
+            type: "invoke",
+            invocationId,
+            handlerId,
+            surface,
+            values,
+            args: exported as unknown[],
+          })
+        ) {
+          throw stopped() ?? new TypeError("The invocation arguments cannot be sent to the extension backend.");
+        }
+        // Register after sending, then catch an abort caused by a getter during IPC serialization.
+        signal?.addEventListener("abort", cancel, { once: true });
+        if (signal?.aborted) cancel();
+      };
+      void deliver().catch((error) => {
+        if (!invocations.has(invocationId)) return;
+        closeInvocation(invocationId, running, error);
+        settle.reject(error);
+      });
+      return settle.promise.finally(() => {
+        signal?.removeEventListener("abort", cancelPreparation);
+        signal?.removeEventListener("abort", cancel);
+      });
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  };
 
 export const startBackendWorker = async (options: BackendWorkerOptions): Promise<BackendWorker> => {
   const invocations = new Map<string, Running>();
   let idleSince = performance.now();
-  const forget = (invocationId: string) => {
-    const deleted = invocations.delete(invocationId);
-    if (deleted && invocations.size === 0) idleSince = performance.now();
-    return deleted;
-  };
   const ready = Promise.withResolvers<void>();
   const loaded = Promise.withResolvers<unknown>();
   let stopped: BackendUnavailableError | undefined;
@@ -87,8 +172,8 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     ready.reject(error);
     loaded.reject(error);
     for (const [id, running] of invocations) {
+      running.settle?.reject(error);
       closeInvocation(id, running, error);
-      running.settle.reject(error);
     }
   };
 
@@ -103,28 +188,70 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     }
   };
 
-  const hostCalls = createHostCalls(send, (invocationId) => invocations.get(invocationId), workerError);
-
-  // Idle time starts when the last invocation is finally removed, after any cancellation drain.
-  const closeInvocation = (id: string, running: Running, error: unknown) => {
-    forget(id);
+  const closeInvocation = (id: string, running: Running, error?: unknown) => {
+    if (!invocations.delete(id)) return;
     clearTimeout(running.drain);
-    hostCalls.reject(id, error);
+    hostCalls.reject(id, error ?? new BackendUnavailableError("The invocation has finished."));
     running.table.clear();
+    if (invocations.size === 0) idleSince = performance.now();
+  };
+
+  // A settled invocation stays while either side still holds the other's references.
+  const dispose = (id: string) => {
+    const running = invocations.get(id);
+    if (!running || running.settle || running.drain || hostCalls.busy(id) || running.table.size || running.tracker.live)
+      return;
+    closeInvocation(id, running);
+  };
+
+  // This closure must not retain the caller's result while the import tracker lives.
+  const trackImports = (invocationId: string) =>
+    createImportTracker((fnIds) => {
+      if (!invocations.has(invocationId)) return;
+      send({ v: BACKEND_PROTOCOL_VERSION, type: "release", invocationId, fnIds });
+      dispose(invocationId);
+    });
+
+  const hostCalls = createHostCalls(send, (id) => invocations.get(id), workerError, dispose);
+
+  const discard = (invocationId: string, running: Running) => {
+    closeInvocation(invocationId, running);
+    send({ v: BACKEND_PROTOCOL_VERSION, type: "discard", invocationId });
+  };
+
+  const drainInvocation = (invocationId: string, running: Running, reason: unknown) => {
+    // Revoke pending callback scopes and ordinary calls. Existing cleanup references can still finish.
+    running.cancelled = true;
+    hostCalls.reject(invocationId, reason);
+    running.table.dispose();
+    running.drain = setTimeout(() => discard(invocationId, running), options.drainDeadlineMs ?? DRAIN_DEADLINE_MS);
+    running.drain.unref?.();
+    send({ v: BACKEND_PROTOCOL_VERSION, type: "cancel", invocationId, reason: serializeBackendError(reason) });
   };
 
   const settle = (message: Extract<WorkerToHostMessage, { type: "result" }>) => {
-    const running = invocations.get(message.invocationId);
+    const { invocationId } = message;
+    const running = invocations.get(invocationId);
     if (!running) return;
-    closeInvocation(message.invocationId, running, new BackendUnavailableError("The invocation has finished."));
-    if (message.ok) {
-      running.settle.resolve(message.value);
+    if (running.drain) {
+      // Discard on the owning side, without importing unused promises or waiting for garbage collection.
+      discard(invocationId, running);
       return;
     }
-    const error = workerError(message.error);
-    if (message.rejection && surfaceAllowsCommandRejection(running.surface))
-      error.cause = createCommandRejection(message.rejection);
-    running.settle.reject(error);
+    const resolvers = running.settle;
+    if (!resolvers) return;
+    running.settle = undefined;
+    hostCalls.reject(invocationId, new BackendUnavailableError("The invocation has finished."));
+    running.table.seal();
+    if (message.ok) {
+      resolvers.resolve(hostCalls.importFrom(invocationId, message.value));
+    } else {
+      const error = workerError(message.error);
+      if (message.rejection && surfaceAllowsCommandRejection(running.surface))
+        error.cause = createCommandRejection(message.rejection);
+      resolvers.reject(error);
+    }
+    dispose(invocationId);
   };
 
   const receive = (raw: unknown) => {
@@ -134,7 +261,11 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
       if (message.ok) loaded.resolve(message.value);
       else loaded.reject(workerError(message.error));
     } else if (message?.type === "result") settle(message);
-    else if (message) hostCalls.handle(message);
+    else if (message?.type === "pong") watchdog.answered(message.rss);
+    else if (message?.type === "release") {
+      invocations.get(message.invocationId)?.table.release(message.fnIds);
+      dispose(message.invocationId);
+    } else if (message) hostCalls.handle(message);
   };
 
   const spawn = () => {
@@ -159,7 +290,17 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
   };
   const child = spawn();
 
+  const watchdog = createWatchdog(
+    (seq) => send({ v: BACKEND_PROTOCOL_VERSION, type: "ping", seq }),
+    (reason) => {
+      fail(new BackendUnavailableError(reason));
+      child.kill("SIGKILL");
+    },
+    options.watchdog,
+  );
+
   const exited = child.exited.then((code) => {
+    watchdog.stop();
     fail(new BackendUnavailableError(`The extension backend exited (${code}).`));
     rmSync(cwd, { recursive: true, force: true });
     return code;
@@ -176,59 +317,14 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     clearTimeout(timer);
   };
 
-  const invoke = (input: BackendInvocation) => {
-    if (stopped) return Promise.reject(stopped);
-    const { context, surface, handlerId, args, signal } = input;
-    if (signal?.aborted) return Promise.reject(signal.reason);
-    const invocationId = crypto.randomUUID();
-    let values: Record<string, unknown>;
-    try {
-      values = collectSurfaceValues(context, surface);
-    } catch (error) {
-      return Promise.reject(error);
-    }
-    // A getter may abort while collecting context values.
-    if (signal?.aborted) return Promise.reject(signal.reason);
-    const settle = Promise.withResolvers<unknown>();
-    const running: Running = {
-      settle,
-      context,
-      surface,
-      table: createFunctionTable(),
-      enter: AsyncLocalStorage.snapshot(),
-    };
-    invocations.set(invocationId, running);
-    const sent = send({
-      v: BACKEND_PROTOCOL_VERSION,
-      type: "invoke",
-      invocationId,
-      handlerId,
-      surface,
-      values,
-      args,
-    });
-    if (!sent) {
-      forget(invocationId);
-      return Promise.reject(
-        stopped ?? new TypeError("The invocation arguments cannot be sent to the extension backend."),
-      );
-    }
-    const cancel = () => {
-      if (!invocations.has(invocationId) || running.cancelled) return;
-      const error = signal?.reason;
-      running.cancelled = true;
-      hostCalls.reject(invocationId, error);
-      running.table.dispose();
-      running.drain = setTimeout(() => closeInvocation(invocationId, running, error), DRAIN_DEADLINE_MS);
-      running.drain.unref?.();
-      settle.reject(error);
-      send({ v: BACKEND_PROTOCOL_VERSION, type: "cancel", invocationId, reason: serializeBackendError(error) });
-    };
-    signal?.addEventListener("abort", cancel, { once: true });
-    // IPC serialization can also run getters. Send cancellation after the invocation message.
-    if (signal?.aborted) cancel();
-    return settle.promise.finally(() => signal?.removeEventListener("abort", cancel));
-  };
+  const invoke = createInvoke({
+    invocations,
+    stopped: () => stopped,
+    send,
+    trackImports,
+    closeInvocation,
+    drainInvocation,
+  });
 
   const deadline = setTimeout(
     () => fail(new BackendUnavailableError(`The extension backend did not load within ${LOAD_DEADLINE_MS / 1000} s.`)),
