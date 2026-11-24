@@ -99,3 +99,45 @@ test("a quiet file save survives a lost response without replaying the write", a
     queries.dispose();
   }
 });
+
+test("checking the first save retains newer text through an account switch before its autosave", async () => {
+  const scope = { runtimeId: "workbench", extensionId: "notes", projectId: "project", accountId: "original" };
+  const queries = createScopedQueryClient(scope);
+  const operations = getWorkbenchOperations(queries);
+  const submitted = "First saved text";
+  const newer = "Text still in the editor";
+  let writes = 0;
+  let retain: ((draft: unknown) => void) | undefined;
+  try {
+    await expect(
+      saveWithDocumentRecovery({
+        queries,
+        scope,
+        loadKey: "note",
+        title: "Save note",
+        value: submitted,
+        filePath: "note.md",
+        retainDraft(update) {
+          retain = update;
+        },
+        async write() {
+          writes++;
+          throw new PstdioConnectionError(new Error("Reply lost"));
+        },
+        read: async () => ({ content: { content: submitted, filePath: "note.md" } }),
+        accept() {},
+      }),
+    ).rejects.toMatchObject({ name: "UnconfirmedFileSaveError" });
+    retain?.({ submitted, draft: newer });
+    const entry = operations.getSnapshot().recovery[0]!;
+    await operations.check(entry.id);
+    expect(operations.getSnapshot().pending).toEqual([]);
+    queries.setAuthority({ accountId: "other" });
+    expect(operations.getSnapshot().recovery).toEqual([]);
+    queries.setAuthority({ accountId: "original" });
+    expect(operations.getSnapshot().recovery[0]).toMatchObject({ id: entry.id, draft: newer, canCheck: false });
+    expect(writes).toBe(1);
+  } finally {
+    queries.dispose();
+  }
+});

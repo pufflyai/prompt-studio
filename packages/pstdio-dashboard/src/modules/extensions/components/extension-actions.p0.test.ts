@@ -225,3 +225,28 @@ test.each([
     queries.dispose();
   }
 });
+
+test("an installed extension action stays fenced after returning to its original account", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio", accountId: "original" });
+  const operations = getWorkbenchOperations(queries);
+  const tracker = { projectId: "project", operations };
+  const key = "notes-instance";
+  let writes = 0;
+  const write = async () => {
+    if (++writes === 1) throw new PstdioConnectionError(new Error("Response lost"));
+  };
+  try {
+    expect(await createExtensionActions(tracker).run(key, labels, write, { draft: { id: key } })).toBe(false);
+    const id = operations.getSnapshot().recovery[0]!.id;
+    queries.setAuthority({ accountId: "other" });
+    queries.setAuthority({ accountId: "original" });
+    const reopened = createExtensionActions(tracker);
+    expect(await reopened.run(key, labels, write)).toBe(false);
+    expect(writes).toBe(1);
+    operations.discard(id);
+    expect(await reopened.run(key, labels, write)).toBe(true);
+    expect(writes).toBe(2);
+  } finally {
+    queries.dispose();
+  }
+});

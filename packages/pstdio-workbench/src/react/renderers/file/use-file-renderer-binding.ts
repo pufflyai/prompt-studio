@@ -162,7 +162,6 @@ export const useFileRendererBinding = (input: {
             loadKey: cacheKey,
             readBaseline: () => baseline,
             available: () => !removed && !retired,
-            detached: () => cancelled || retired || removed,
             retainDraft(submitted, updateDraft) {
               let retained = submitted;
               retainDraft = () => {

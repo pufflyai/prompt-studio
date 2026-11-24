@@ -33,7 +33,6 @@ export const saveWithDocumentRecovery = async (input: {
   read(signal: AbortSignal): Promise<FileSaveReceipt>;
   accept(receipt: FileSaveReceipt, signal: AbortSignal): void;
   retainDraft?(updateDraft: (draft: unknown) => void): void;
-  detached?(): boolean;
 }) => {
   const operations = getWorkbenchOperations(input.queries);
   const subject = fileSubject(input.loadKey);
@@ -54,8 +53,7 @@ export const saveWithDocumentRecovery = async (input: {
     unsentError: blocked ? new UnconfirmedFileSaveError() : undefined,
     retainedAfterReconcile(draft) {
       const newer = newerText(draft);
-      if (newer !== undefined && input.detached?.() !== false)
-        return { draft: newer, error: new Error("Newer text remains unsaved.") };
+      if (newer !== undefined) return { draft: newer, error: new Error("Newer text remains unsaved.") };
     },
     classify: classifyApiWrite,
     write: input.write,
@@ -112,7 +110,6 @@ export const prepareFileRendererSave =
     loadKey: string;
     readBaseline(): FileRendererContent | undefined;
     available(): boolean;
-    detached?(): boolean;
     accept(receipt: FileSaveReceipt): void;
     retainDraft?(submitted: string, updateDraft: (draft: unknown) => void): void;
   }) =>
@@ -142,7 +139,6 @@ export const prepareFileRendererSave =
           source: resource,
           title: `Save ${resource?.label ?? baseline?.fileName ?? contribution.title}`,
           value,
-          detached: input.detached,
           retainDraft: (update) => input.retainDraft?.(value, update),
           filePath: baseline?.filePath,
           write: (signal) =>

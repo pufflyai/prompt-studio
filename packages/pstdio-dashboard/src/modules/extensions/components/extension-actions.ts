@@ -94,11 +94,11 @@ export const createExtensionActions = (tracker?: InventoryTracker) => {
   ) => {
     if (active.has(id) || tracker?.isCurrent?.() === false) return false;
     const subject = tracker && extensionInventorySubject(tracker.projectId, id);
-    const blocked = tracker?.operations
-      .getSnapshot()
-      .pending.some(
-        (entry) => subject && entry.subjects.includes(subject) && ["unknown", "unconfirmed"].includes(entry.status),
-      );
+    const operationSnapshot = tracker?.operations.getSnapshot();
+    const unresolvedSubject = (entry: { subjects: readonly string[]; status: string }) =>
+      subject && entry.subjects.includes(subject) && (entry.status === "unknown" || entry.status === "unconfirmed");
+    const blocked =
+      operationSnapshot?.pending.some(unresolvedSubject) || operationSnapshot?.recovery.some(unresolvedSubject);
     const { operation, enabled, queuedLabel } = options;
     const unresolved = () =>
       setAction(id, {

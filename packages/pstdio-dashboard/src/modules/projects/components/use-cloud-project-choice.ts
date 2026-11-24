@@ -86,14 +86,12 @@ const useCloudCopyDownload = (
     if (!current.active && !current.failure) download.mutate({ id, account, owner, name: entry?.name ?? id });
   };
   const checkDownload = async () => {
-    const current = operations.state(id).failure;
-    if (current?.canCheck) await operations.check(current.id);
-    void refresh();
+    if (unresolved?.canCheck && operations.state(id).failure?.id === unresolved.id)
+      await operations.check(unresolved.id);
   };
   const discardDownload = () => {
-    const current = operations.state(id).failure;
-    if (!current || entry?.presence !== "cloud-only") return;
-    operations.discard(id, current.id);
+    if (!unresolved || entry?.presence !== "cloud-only" || operations.state(id).failure?.id !== unresolved.id) return;
+    operations.discard(id, unresolved.id);
     download.reset();
     clearIntent();
   };
