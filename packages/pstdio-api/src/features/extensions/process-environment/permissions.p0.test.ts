@@ -226,7 +226,10 @@ describe("process environment permissions", () => {
     const { permissions, path, create, source } = setup();
     const { sourceIdentity } = await permissions.read("project-1", "acme.agent");
     await permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity });
+    // POSIX refuses the temporary file in a read-only folder; Windows ignores folder modes but
+    // refuses to replace a read-only file.
     chmodSync(dirname(path), 0o500);
+    chmodSync(path, 0o400);
     const failures: unknown[] = [];
     try {
       for (const change of [
@@ -237,6 +240,7 @@ describe("process environment permissions", () => {
         await change().catch((error: unknown) => failures.push(error));
     } finally {
       chmodSync(dirname(path), 0o700);
+      chmodSync(path, 0o600);
     }
 
     expect(failures).toHaveLength(2);
