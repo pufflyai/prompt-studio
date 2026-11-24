@@ -50,8 +50,14 @@ export const runWorkbenchWebviewCommandOperation = async (input: {
         );
       if (!command.mutating) return await execute(input.signal);
       input.signal?.throwIfAborted();
+      const declaresGateCheck =
+        command.id === plannerGateLaunch &&
+        command.extensionId === "pstdio.planner" &&
+        metadata.commands.some(
+          (record) => record.id === plannerGateLaunchCheck && record.extensionId === "pstdio.planner",
+        );
       const check =
-        command.id === plannerGateLaunch && command.extensionId === "pstdio.planner" && input.readGateLaunch
+        declaresGateCheck && input.readGateLaunch
           ? checkExactGateLaunch(request.params, input.readGateLaunch, unwrapCommandValue)
           : undefined;
       return await runWorkbenchCommandOperation({

@@ -129,14 +129,13 @@ export const runWorkbenchCommandOperation = <T>(input: {
     releaseOnDiscard: true,
     showPending: true,
     classify: (error) => {
-      const refusal = isPlannerAttempt(command) ? "AttemptLaunchRefused" : "GateLaunchRefused";
-      if (
-        (isPlannerAttempt(command) || isPlannerGateLaunch(command)) &&
-        error instanceof CommandOutcomeError &&
-        error.outcome.status === "error" &&
-        error.outcome.error?.name === refusal
-      )
-        return "rejected";
+      if (error instanceof CommandOutcomeError && error.outcome.status === "error") {
+        const name = error.outcome.error?.name;
+        if (isPlannerAttempt(command) && name === "AttemptLaunchRefused") return "rejected";
+        // Older Planner releases forward the session owner's definitive preflight refusal.
+        if (isPlannerGateLaunch(command) && (name === "GateLaunchRefused" || name === "SessionCreateRefused"))
+          return "rejected";
+      }
       return classifyApiWrite(error);
     },
     check: input.check,

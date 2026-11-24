@@ -12,6 +12,55 @@ import { executeWorkbenchExtensionCommand } from "./workbench-extension-command"
 const command = { id: "planner.create-ticket", extensionId: "planner", title: "Create ticket" };
 
 test.each([
+  "SessionCreateRefused",
+  "Error",
+])("older Planner gate metadata handles %s without an undeclared check", async (name) => {
+  const queries = createScopedQueryClient({ runtimeId: "desktop", extensionId: "pstdio" });
+  const operations = getWorkbenchOperations(queries);
+  const workbench = createWorkbench({ queries });
+  const launch = { id: plannerGateLaunch, extensionId: "pstdio.planner", title: "Review gate", mutating: true };
+  const failure = {
+    outcome: {
+      ok: false,
+      status: "error",
+      reason: "Cannot start session",
+      error: { name, message: "Cannot start session" },
+    },
+  };
+  const success = { outcome: { ok: true, status: "success", value: { id: "known-session" } } };
+  let launches = 0;
+  const invoke = () =>
+    runWorkbenchWebviewCommandOperation({
+      workbench,
+      projectId: "project",
+      metadata: { commands: [launch] },
+      request: { commandId: plannerGateLaunch, params: { ticket: "gate", attemptId: "rolling-client" } },
+      readGateLaunch: async () => {
+        throw new Error("Older Planner does not expose this command");
+      },
+      execute: async () => (++launches === 1 ? failure : success),
+    });
+  try {
+    expect(await invoke()).toEqual(failure);
+    const refusal = name === "SessionCreateRefused";
+    expect(operations.getSnapshot().recovery[0]).toMatchObject({
+      status: refusal ? "rejected" : "unknown",
+      canCheck: false,
+    });
+    if (refusal) {
+      expect(await invoke()).toEqual(success);
+      expect(launches).toBe(2);
+    } else {
+      await expect(invoke()).rejects.toThrow("still pending");
+      expect(launches).toBe(1);
+    }
+  } finally {
+    await workbench.dispose();
+    queries.dispose();
+  }
+});
+
+test.each([
   "original",
   "returned",
 ] as const)("the %s authority can confirm the exact Planner gate through the bridge", async (authority) => {
