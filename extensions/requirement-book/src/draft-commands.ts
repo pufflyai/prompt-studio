@@ -1,6 +1,15 @@
 import { defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
 import { z } from "zod";
-import { announce, type Draft, deleteRecord, digest, readRecord, type SubmissionProof, saveRecord } from "./records";
+import {
+  announce,
+  changed,
+  type Draft,
+  deleteRecord,
+  digest,
+  readRecord,
+  type SubmissionProof,
+  saveRecord,
+} from "./records";
 import { readRepository, resolveWorkspace } from "./repository";
 
 const draftTitle = l10n("book.draft.save", "Save an authoring draft");
@@ -62,7 +71,19 @@ export const draftCommands = {
     async run(ctx, { workspaceId, chapter }) {
       const { workspace } = await resolveWorkspace(ctx, workspaceId);
       const { value, record } = await readRecord<Draft>(ctx.storage, "draft", draftId(workspace.id, chapter));
-      return { value: editingValue(value, record.revision), sources: [] };
+      return {
+        value: editingValue(value, record.revision),
+        sources: [
+          {
+            id: "authoring-draft",
+            read: {
+              commandId: `${ctx.extensionId}.command.drafts.read-editing`,
+              params: { workspaceId: workspace.id, chapter },
+            },
+            dependsOn: [changed],
+          },
+        ],
+      };
     },
   }),
   "drafts.save-editing": defineCommand({

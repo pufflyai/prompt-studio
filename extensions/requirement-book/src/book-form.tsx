@@ -16,6 +16,7 @@ interface FormProps {
   canDiscardSubmission: boolean;
   onSubmit: (values: Record<string, unknown>, expectedRevision: string) => Promise<void>;
   onClose: () => void;
+  onPreviewDraft: (values: Record<string, unknown>, expectedRevision: string) => void;
   onSaveDraft: (values: Record<string, unknown>, expectedRevision: string) => Promise<string>;
   onDiscard: (expectedRevision: string) => Promise<void>;
   onCheckSubmission?: () => Promise<boolean>;
@@ -37,6 +38,7 @@ export function BookForm(props: FormProps) {
     onSubmit,
     onClose,
     onSaveDraft,
+    onPreviewDraft,
     onDiscard,
     onCheckSubmission,
   } = props;
@@ -46,6 +48,7 @@ export function BookForm(props: FormProps) {
   const changeValues = (next: Record<string, unknown>) => {
     editedRevision.current ??= draftRevision;
     setValues(next);
+    if (editedRevision.current !== undefined) onPreviewDraft(next, editedRevision.current);
   };
   const expectedRevision = () => {
     const observed = editedRevision.current ?? draftRevision;

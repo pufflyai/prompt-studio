@@ -33,6 +33,9 @@ export function AuthoringForm(props: Props) {
   const editing = useRef<Promise<WebviewCommandEditingSession<{ draft: string; revision: string }>> | undefined>(
     undefined,
   );
+  const activeEditing = useRef<WebviewCommandEditingSession<{ draft: string; revision: string }> | undefined>(
+    undefined,
+  );
   const [restored, setRestored] = useState<Draft>();
   const [revision, setRevision] = useState<string>();
   useEffect(() => {
@@ -41,9 +44,11 @@ export function AuthoringForm(props: Props) {
     editing.current = opening;
     void opening
       .then((session) => {
+        if (!active) return;
+        activeEditing.current = session;
         const snapshot = session.getSnapshot();
-        if (active) setRevision(snapshot.value.revision);
-        if (active && (snapshot.pendingCommands || snapshot.error))
+        setRevision(snapshot.value.revision);
+        if (snapshot.pendingCommands || snapshot.hasDrafts || snapshot.error)
           setRestored({
             id: `${workspaceId}-${draftChapter}`,
             workspaceId,
@@ -58,6 +63,7 @@ export function AuthoringForm(props: Props) {
     return () => {
       active = false;
       const previous = editing.current;
+      activeEditing.current = undefined;
       editing.current = undefined;
       void previous?.then((session) => session.close()).catch(() => {});
     };
@@ -69,6 +75,7 @@ export function AuthoringForm(props: Props) {
       if (editing.current === opening) editing.current = undefined;
       throw error;
     });
+    activeEditing.current = session;
     const text = JSON.stringify(values);
     await session.execute(
       { draft: text, expectedRevision },
@@ -121,6 +128,14 @@ export function AuthoringForm(props: Props) {
       canDiscardSubmission={draft?.submissionStatus !== "writing" && Boolean(draft?.revision ?? revision)}
       onSubmit={submit}
       onClose={onClose}
+      onPreviewDraft={(values, expectedRevision) => {
+        void activeEditing.current
+          ?.preview([
+            { path: ["draft"], value: JSON.stringify(values) },
+            { path: ["draftBase"], value: expectedRevision },
+          ])
+          .catch(() => {});
+      }}
       onSaveDraft={saveDraft}
       onCheckSubmission={
         draft?.submissionId && draft.submissionProof
@@ -135,6 +150,7 @@ export function AuthoringForm(props: Props) {
           : undefined
       }
       onDiscard={async (expectedRevision) => {
+        await activeEditing.current?.cancel();
         await client.commands["drafts.discard"]({
           workspaceId,
           chapter: draftChapter,
