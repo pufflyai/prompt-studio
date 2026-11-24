@@ -198,15 +198,26 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
     ensureActive();
 
     const { env, lease, hide } = await prepareEnvironment(input);
+    let spawned: { pid: number; exited: Promise<unknown> } | undefined;
     try {
-      const result = await runChild(input, env, lease);
+      const result = await runChild(input, env, lease, (child) => {
+        spawned = child;
+      });
       return { ...result, stdout: hide(result.stdout), stderr: hide(result.stderr) };
     } finally {
-      lease?.release();
+      // Programs the child left running in its group keep the granted values, so a revocation
+      // must still reach them after the child exits.
+      if (lease && spawned) void processGroupExited(spawned).then(lease.release, lease.release);
+      else lease?.release();
     }
   };
 
-  const runChild = async (input: ProcessRunInput, env: NodeJS.ProcessEnv, lease?: ProcessEnvironmentLease) => {
+  const runChild = async (
+    input: ProcessRunInput,
+    env: NodeJS.ProcessEnv,
+    lease?: ProcessEnvironmentLease,
+    onSpawn: (child: { pid: number; exited: Promise<unknown> }) => void = () => {},
+  ) => {
     const resolved = resolveProcessEnvironmentCommand(input.command, env, input.cwd);
     // Unix needs a separate process group to stop descendants. Windows detachment
     // disconnects the console instead and loses output from commands inside npm shims.
@@ -219,6 +230,7 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
       windowsHide: true,
       windowsVerbatimArguments: resolved.windowsVerbatimArguments,
     });
+    onSpawn(child);
 
     const gate = createStopGate(async () => {
       await signalProcessTree(child, "SIGKILL");
