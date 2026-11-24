@@ -186,3 +186,69 @@ test("releases a definitively refused launch and preserves a prior completed rev
     status: "unconfirmed",
   });
 });
+
+test("a different attempt that loses the gate reservation cannot remain unconfirmed as a writer", async () => {
+  const beforeReserve = Promise.withResolvers<void>();
+  const winner = Promise.withResolvers<string>();
+  const release = Promise.withResolvers<void>();
+  const linked = new Map<string, ReturnType<typeof sessionRecord>>();
+  let waiting = 0;
+  let writes = 0;
+  const [ctx] = makeCommandArgs({
+    storage: createMemoryStorage(),
+    params: {},
+    overrides: {
+      workspaces: {
+        getDefault: async () => {
+          if (++waiting === 2) beforeReserve.resolve();
+          await beforeReserve.promise;
+          return { id: "workspace" } as never;
+        },
+      },
+      sessions: {
+        create: async ({ anchors = [] }) => {
+          const anchor = anchors.find((item) => item.type === "planner-gate-launch")!;
+          const attemptId = anchor.id.split(":").at(-1)!;
+          writes++;
+          winner.resolve(attemptId);
+          await release.promise;
+          const session = sessionRecord({ id: "winner-session", title: "Gate review", status: "in_progress" });
+          linked.set(anchor.id, session);
+          return session;
+        },
+        query: async (query) => {
+          const session = linked.get(query?.anchor?.id ?? "");
+          return { items: session ? [session] : [], nextCursor: null };
+        },
+      },
+      navigation: { open: () => {} },
+    },
+  });
+  const { id: ticket } = await createTicketCommand.run(ctx, { title: "Concurrent reviews" });
+  const attempts = new Map(
+    ["first", "second"].map((attemptId) => [attemptId, launchGateCommand.run(ctx, { ticket, attemptId })]),
+  );
+  const settled = Promise.allSettled(attempts.values());
+  try {
+    const winningId = await winner.promise;
+    const losingId = winningId === "first" ? "second" : "first";
+    await expect(attempts.get(losingId)!).rejects.toMatchObject({ name: "GateLaunchRefused" });
+    await expect(launchGateCommand.run(ctx, { ticket, attemptId: "later" })).rejects.toMatchObject({
+      name: "GateLaunchRefused",
+    });
+    await expect(launchGateCommand.run(ctx, { ticket, attemptId: winningId })).rejects.toThrow("unconfirmed");
+    expect(writes).toBe(1);
+    release.resolve();
+    await expect(attempts.get(winningId)!).resolves.toMatchObject({ id: "winner-session" });
+    await expect(checkGateLaunchCommand.run(ctx, { ticket, attemptId: losingId })).resolves.toEqual({
+      status: "unconfirmed",
+    });
+    await expect(launchGateCommand.run(ctx, { ticket, attemptId: "retry" })).resolves.toMatchObject({
+      id: "winner-session",
+    });
+    expect(writes).toBe(1);
+  } finally {
+    release.resolve();
+    await settled;
+  }
+});

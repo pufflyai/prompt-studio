@@ -39,6 +39,11 @@ class GateLaunchRefused extends Error {
   }
 }
 
+const gateReservationError = (ownerId?: string, attemptId?: string) =>
+  attemptId && attemptId !== ownerId
+    ? new GateLaunchRefused("Another review changed the gate before this launch started.")
+    : new GateLaunchUnconfirmed();
+
 const launchAnchor = (ctx: CommandContext, ticket: string, attempt: string): ResourceAnchor => ({
   type: "planner-gate-launch",
   id: `${ticket}:${attempt}`,
@@ -105,10 +110,8 @@ export const launchGateCommand = defineCommand({
     const launches = gateLaunches(ctx);
     const current = await launches.read(row.id);
     if (current) {
-      const session = await readGateLaunch(ctx, row.id, current.value.launchId).catch(() => {
-        throw new GateLaunchUnconfirmed();
-      });
-      if (!session) throw new GateLaunchUnconfirmed();
+      const session = await readGateLaunch(ctx, row.id, current.value.launchId).catch(() => undefined);
+      if (!session) throw gateReservationError(current.value.launchId, attemptId);
       if (after !== session.id || isLiveSession(session) || attemptId === current.value.launchId) {
         openGateReview(ctx, session);
         return { ...session, type: "session" as const };
@@ -130,7 +133,7 @@ export const launchGateCommand = defineCommand({
     const reserved = current
       ? await launches.updateIfUnchanged(row.id, current.revision, launch)
       : await launches.createIfAbsent(row.id, launch);
-    if (!reserved) throw new GateLaunchUnconfirmed();
+    if (!reserved) throw gateReservationError((await launches.get(row.id))?.launchId, launch.launchId);
     try {
       const session = await ctx.sessions.create({
         title: `Review gate: ${row.shorthand}`,
