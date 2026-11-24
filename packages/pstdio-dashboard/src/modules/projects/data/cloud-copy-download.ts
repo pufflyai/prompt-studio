@@ -73,8 +73,9 @@ export const getCloudCopyDownloads = createRuntimeState((owner) => {
   const isCheckingAccount = () => accountStatus.getSnapshot().fetching;
   const isCurrent = (id: string, scope: string) => {
     if (owner.isDisposed() || getRuntimeCollections() !== owner) return false;
-    const login = accountStatus.getSnapshot().data?.login;
-    return scope === cloudCopyScopeFor(id, cloudCatalogScopeFor(String(owner.id), login));
+    const { data, error } = accountStatus.getSnapshot();
+    // A failed read retains the previous login, but it cannot confirm the current device.
+    return !error && scope === cloudCopyScopeFor(id, cloudCatalogScopeFor(String(owner.id), data?.login));
   };
   const state = (id: string, scope: string) => {
     const { pending, recovery } = operations.getSnapshot();

@@ -33,6 +33,7 @@ test.each([
   const next = { accountId: "account-b", managerOrigin: "https://new-accounts.example.test", deviceId: "new-device" };
   const replacement = { ...original, [changed]: next[changed] };
   let active = original;
+  let failReplacement = changed === "deviceId";
   const started = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
   const readingReplacement = Promise.withResolvers<void>();
@@ -46,9 +47,10 @@ test.each([
       const url = new URL(request.url);
       const { deviceId, ...account } = active;
       if (url.pathname === "/v1/account") {
-        if (active === replacement && changed === "deviceId") {
+        if (active === replacement && failReplacement) {
           readingReplacement.resolve();
           await releaseReplacement.promise;
+          return Response.json({ error: "Could not verify the current device" }, { status: 503 });
         }
         return Response.json({
           login: { ...account, deviceId },
@@ -157,8 +159,19 @@ test.each([
       await act(async () => until(() => renderer!.root.findByType("button").props["data-presence"] === "downloaded"));
     }
     expect({ opened, closed }).toEqual({ opened: 0, closed: 0 });
+    if (changed === "deviceId") {
+      await act(async () => {
+        releaseReplacement.resolve();
+        await until(() => Boolean(status.getSnapshot().error) && !status.getSnapshot().fetching);
+      });
+      expect(status.getSnapshot().data?.login?.deviceId).toBe(original.deviceId);
+      expect({ opened, closed }).toEqual({ opened: 0, closed: 0 });
+    }
     await act(async () => {
-      releaseReplacement.resolve();
+      if (changed === "deviceId") {
+        failReplacement = false;
+        publishExtensionEvent({ id: accountEvents.changed.id }, owner);
+      }
       await until(() => status.getSnapshot().data?.login?.[changed] === replacement[changed]);
     });
     const replacementCatalog = cloudCatalogKeyFor(

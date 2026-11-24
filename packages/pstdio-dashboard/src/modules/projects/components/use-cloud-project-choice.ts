@@ -27,7 +27,7 @@ const useCloudCopyDownload = (
     downloading: boolean;
     requested: boolean;
     deleting: boolean;
-    checkingAccount: boolean;
+    accountUnconfirmed: boolean;
     localRemoval: ReturnType<typeof useCloudLocalRemoval>;
     entry?: CloudProjectCatalogEntry;
     account?: ProjectCopyAccount;
@@ -42,7 +42,7 @@ const useCloudCopyDownload = (
     downloading,
     requested,
     deleting,
-    checkingAccount,
+    accountUnconfirmed,
     localRemoval,
     entry,
     account,
@@ -95,7 +95,7 @@ const useCloudCopyDownload = (
       entry?.presence !== "downloaded" ||
       !localName ||
       deleting ||
-      checkingAccount ||
+      accountUnconfirmed ||
       removing ||
       localRemoval.isRemoving(id) ||
       !operations.isCurrent(id, scope) ||
@@ -114,7 +114,7 @@ const useCloudCopyDownload = (
     requested,
     localName,
     deleting,
-    checkingAccount,
+    accountUnconfirmed,
     removing,
     localRemoval,
     operations,
@@ -125,10 +125,11 @@ const useCloudCopyDownload = (
   const statusObserved =
     entry?.presence === "downloaded" || Boolean(entry?.downloadError) || entry?.presence === "downloading";
   useEffect(() => {
-    if (!statusObserved || !unresolved?.canCheck || checkedDownload.current === unresolved.id) return;
+    if (accountUnconfirmed || !statusObserved || !unresolved?.canCheck || checkedDownload.current === unresolved.id)
+      return;
     checkedDownload.current = unresolved.id;
     void operations.check(unresolved.id);
-  }, [statusObserved, operations, unresolved?.id, unresolved?.canCheck]);
+  }, [accountUnconfirmed, statusObserved, operations, unresolved?.id, unresolved?.canCheck]);
 
   const action = cloudCopyDownloadAction(entry, sync.data);
   const requestDownload = () => {
@@ -146,7 +147,8 @@ const useCloudCopyDownload = (
       await operations.check(unresolved.id);
   };
   const canDiscard = Boolean(
-    unresolved &&
+    !accountUnconfirmed &&
+      unresolved &&
       (entry?.presence === "cloud-only" || (entry?.presence === "downloading" && unresolved.status === "unknown")),
   );
   const discardDownload = () => {
@@ -166,7 +168,7 @@ const useCloudCopyDownload = (
     download,
     refresh,
     requestDownload,
-    checkDownload: unresolved?.canCheck ? checkDownload : undefined,
+    checkDownload: !accountUnconfirmed && unresolved?.canCheck ? checkDownload : undefined,
     discardDownload: canDiscard ? discardDownload : undefined,
     action,
     active,
@@ -233,7 +235,7 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
       downloading,
       requested,
       deleting,
-      checkingAccount: cloud.checkingAccount,
+      accountUnconfirmed: cloud.accountUnconfirmed,
       localRemoval,
       entry,
       account,
@@ -256,7 +258,7 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
   const showProgress = (downloading || pending) && !deleting && !failure && entry?.presence !== "downloaded";
   const canDownload = Boolean(
     action &&
-      !cloud.checkingAccount &&
+      !cloud.accountUnconfirmed &&
       !invalidated &&
       !unresolved &&
       !copyBusy &&
