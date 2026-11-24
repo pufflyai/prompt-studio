@@ -113,7 +113,7 @@ pst connections check --project <project-id> \
 
 ## Run a workspace
 
-Choose **Launch PocketCoder session** from the command palette or project actions menu. Set **PocketCoder template** to `pi-harness`, leave the optional fields empty, and enter a prompt. The command waits for the workspace to become ready and starts its agent session.
+Choose **Launch PocketCoder session** from the command palette. Set **PocketCoder template** to `pi-harness`, leave the optional fields empty, and enter a prompt. The command waits for the workspace to become ready and starts its agent session.
 
 The equivalent CLI command is:
 

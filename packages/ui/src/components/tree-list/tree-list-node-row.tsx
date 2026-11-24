@@ -170,7 +170,7 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
       minW="0"
       maxW="full"
       position="relative"
-      bg={dropPosition === "inside" ? "bg.accent-subtle" : undefined}
+      layerStyle={dropPosition === "inside" ? "dropTarget" : undefined}
       draggable={Boolean(onMoveNode && node.canDrag)}
       onDragStart={node.canDrag ? handleDragStart : undefined}
       onDragOver={onMoveNode ? handleDragOver : undefined}

@@ -34,11 +34,11 @@ export const statusBarSlotRecipe = defineSlotRecipe({
       "&[data-dragging]": { opacity: 0 },
     },
     placeholder: {
+      layerStyle: "widgetDropIndicator",
       position: "absolute",
       insetBlock: "0",
       marginBlock: "status-widget-inset",
-      borderRadius: "xs",
-      bg: "bg.accent-subtle",
+      _after: { bg: "bg.drop" },
       pointerEvents: "none",
     },
     dragPreview: {

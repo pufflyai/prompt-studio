@@ -1,8 +1,12 @@
 import { expect, test } from "bun:test";
+import { EnvironmentProvider } from "@chakra-ui/react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { createWorkbench } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchBreadcrumbView } from "./breadcrumb-view";
+
+// The renderer has no DOM. Tooltip focus tracking resolves an environment root even here.
+const environmentRoot = new EventTarget() as Document;
 
 test("shows the resource owner's changing icon in the page breadcrumb", async () => {
   const workbench = createWorkbench();
@@ -53,9 +57,11 @@ test("shows the resource owner's changing icon in the page breadcrumb", async ()
   try {
     await act(async () => {
       renderer = create(
-        <WorkbenchThemeProvider>
-          <WorkbenchBreadcrumbView workbench={workbench} />
-        </WorkbenchThemeProvider>,
+        <EnvironmentProvider value={environmentRoot}>
+          <WorkbenchThemeProvider>
+            <WorkbenchBreadcrumbView workbench={workbench} />
+          </WorkbenchThemeProvider>
+        </EnvironmentProvider>,
       );
     });
     expect(statusLabel()).toEqual(["Draft publication"]);
@@ -118,9 +124,11 @@ test("a page tab without a label shows its resource's title in the breadcrumb", 
   try {
     await act(async () => {
       renderer = create(
-        <WorkbenchThemeProvider>
-          <WorkbenchBreadcrumbView workbench={workbench} />
-        </WorkbenchThemeProvider>,
+        <EnvironmentProvider value={environmentRoot}>
+          <WorkbenchThemeProvider>
+            <WorkbenchBreadcrumbView workbench={workbench} />
+          </WorkbenchThemeProvider>
+        </EnvironmentProvider>,
       );
     });
     expect(JSON.stringify(renderer!.toJSON())).toContain("Recover before closing");

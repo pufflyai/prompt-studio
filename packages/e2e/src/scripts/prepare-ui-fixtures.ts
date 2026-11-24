@@ -14,11 +14,17 @@ const prepareFixtures = async (
   env: NodeJS.ProcessEnv,
   signal: AbortSignal,
   packageArtifacts?: Readonly<Record<string, string>>,
+  profile: "candidate" | "compatibility" = "candidate",
 ) => {
   const names = JSON.parse(env.E2E_FIXTURE_EXTENSIONS ?? JSON.stringify(uiFixtureExtensions)) as string[];
+  // Older production providers keep the public contract they were built against.
+  // Planner explicitly exercises the candidate contract in this implementation.
+  const dependencies = Object.fromEntries(
+    names.map((name) => [name, profile === "compatibility" && name !== "pstdio-planner" ? "declared" : "candidate"]),
+  ) as Record<string, "declared" | "candidate">;
   const started = performance.now();
   const reused = env.E2E_PREPARED_FIXTURES
-    ? copyPreparedFixtures(env.E2E_PREPARED_FIXTURES, env.E2E_HOME!, names)
+    ? copyPreparedFixtures(env.E2E_PREPARED_FIXTURES, env.E2E_HOME!, names, dependencies)
     : undefined;
   if (reused) env.E2E_BUN_CACHE_DIR = reused.packageCache;
   await mkdir(env.E2E_BUN_CACHE_DIR!, { recursive: true });
@@ -33,13 +39,14 @@ const prepareFixtures = async (
       : undefined);
   // Preparations share one Bun cache; finish each installer before starting the next.
   for (const name of names) {
-    if (!sources[name])
+    const reusedSource = Boolean(sources[name]);
+    if (!reusedSource)
       sources[name] = await preparePackagedExtensionSource(
         join(env.E2E_HOME!, "fixtures", name),
         join(import.meta.dirname, "../../../../extensions", name),
-        { env: installEnv, signal, packageArtifacts: artifacts },
+        { env: installEnv, signal, packageArtifacts: artifacts, dependencies: dependencies[name] },
       );
-    if (!reused)
+    if (!reusedSource)
       await promisify(execFile)("bun", ["install", "--frozen-lockfile", "--ignore-scripts"], {
         cwd: sources[name],
         env: installEnv,
@@ -47,6 +54,7 @@ const prepareFixtures = async (
       });
   }
   env.E2E_EXTENSION_SOURCES = JSON.stringify(sources);
+  env.E2E_FIXTURE_DEPENDENCIES = JSON.stringify(dependencies);
   if (env.CI_PLAN_FIXTURE_STATS)
     await writeFile(
       env.CI_PLAN_FIXTURE_STATS,
@@ -71,7 +79,8 @@ export const prepareUiFixtures = (
   env: NodeJS.ProcessEnv,
   signal: AbortSignal,
   packageArtifacts?: Readonly<Record<string, string>>,
-) => prepareFixtures(env, signal, packageArtifacts);
+  profile: "candidate" | "compatibility" = "candidate",
+) => prepareFixtures(env, signal, packageArtifacts, profile);
 
 if (import.meta.main) {
   const directory = process.argv[process.argv.indexOf("--out") + 1];
@@ -97,7 +106,14 @@ if (import.meta.main) {
     for (const source of Object.values(sources))
       await rm(join(source, "node_modules"), { recursive: true, force: true });
     controller.signal.throwIfAborted();
-    await writeFile(join(directory, "sources.json"), JSON.stringify({ sources, packageCache: env.E2E_BUN_CACHE_DIR }));
+    await writeFile(
+      join(directory, "sources.json"),
+      JSON.stringify({
+        sources,
+        packageCache: env.E2E_BUN_CACHE_DIR,
+        dependencies: JSON.parse(env.E2E_FIXTURE_DEPENDENCIES!),
+      }),
+    );
   } finally {
     process.off("SIGINT", stop);
     process.off("SIGTERM", stop);

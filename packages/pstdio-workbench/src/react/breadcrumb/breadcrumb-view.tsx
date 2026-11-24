@@ -1,6 +1,6 @@
 import { HStack, Text } from "@chakra-ui/react";
-import { Breadcrumb, type ResourceContextAction } from "@pstdio/ui";
-import type { ReactNode } from "react";
+import { Breadcrumb, type ResourceContextAction, Tooltip } from "@pstdio/ui";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { WorkbenchBreadcrumbItem, WorkbenchCore } from "../../core";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { useWorkbenchResourceActionResolver } from "../menus/resource-actions";
@@ -32,26 +32,47 @@ const WorkbenchBreadcrumbIcon = (props: { item: WorkbenchBreadcrumbItem }) => {
 const WorkbenchBreadcrumbTitle = (props: { item: WorkbenchBreadcrumbItem; draggable?: boolean }) => {
   const { item, draggable } = props;
   const title = item.title as ReactNode;
+  const labelRef = useRef<HTMLSpanElement>(null);
+  const [clippedByTrail, setClippedByTrail] = useState(false);
+
+  useEffect(() => {
+    const label = labelRef.current;
+    const trail = label?.closest("nav");
+    if (!label || !trail) return;
+
+    // The trail can crop an ancestor label that still fits inside its own element.
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setClippedByTrail(entry.intersectionRect.width < entry.boundingClientRect.width);
+      },
+      { root: trail, threshold: [0, 1] },
+    );
+    observer.observe(label);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <HStack
-      as="span"
-      gap="2xs"
-      minW="0"
-      data-workbench-page-drag-handle={draggable || undefined}
-      css={
-        draggable
-          ? {
-              "[data-workbench-page-drag][data-panel-draggable] &": { cursor: "grab", userSelect: "none" },
-              "[data-workbench-page-drag][data-panel-dragging] &": { cursor: "grabbing" },
-            }
-          : undefined
-      }
-    >
-      <WorkbenchBreadcrumbIcon item={item} />
-      <Text as="span" minW="0" maxW="15rem" truncate>
-        {title}
-      </Text>
-    </HStack>
+    <Tooltip content={title} overflowRef={clippedByTrail ? undefined : labelRef} positioning={{ placement: "bottom" }}>
+      <HStack
+        as="span"
+        gap="2xs"
+        minW="0"
+        data-workbench-page-drag-handle={draggable || undefined}
+        css={
+          draggable
+            ? {
+                "[data-workbench-page-drag][data-panel-draggable] &": { cursor: "grab", userSelect: "none" },
+                "[data-workbench-page-drag][data-panel-dragging] &": { cursor: "grabbing" },
+              }
+            : undefined
+        }
+      >
+        <WorkbenchBreadcrumbIcon item={item} />
+        <Text asChild minW="0" maxW="15rem" truncate>
+          <span ref={labelRef}>{title}</span>
+        </Text>
+      </HStack>
+    </Tooltip>
   );
 };
 export const buildWorkbenchBreadcrumbItems = (

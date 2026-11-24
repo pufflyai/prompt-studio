@@ -25,7 +25,7 @@ export function useCanvasPan(
   zoom: number,
   changeZoom: ReturnType<typeof useCanvasZoom>["change"],
 ) {
-  const drag = useRef<{ pointerId: number; x: number; y: number; left: number; top: number } | undefined>(undefined);
+  const drag = useRef<{ pointerId: number; x: number; y: number } | undefined>(undefined);
   const touches = useRef(new Map<number, Point>());
   const pinch = useRef<(ZoomOrigin & { distance: number }) | undefined>(undefined);
   const moved = useRef(false);
@@ -51,7 +51,7 @@ export function useCanvasPan(
     const [remaining] = touches.current;
     if (remaining) {
       const [pointerId, point] = remaining;
-      drag.current = { pointerId, ...point, left: event.currentTarget.scrollLeft, top: event.currentTarget.scrollTop };
+      drag.current = { pointerId, ...point };
     }
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
@@ -82,6 +82,7 @@ export function useCanvasPan(
         if (step) {
           event.preventDefault();
           event.currentTarget.scrollBy({ left: step[0], top: step[1] });
+          return { x: step[0], y: step[1] };
         }
       },
 
@@ -109,8 +110,6 @@ export function useCanvasPan(
           pointerId: event.pointerId,
           x: event.clientX,
           y: event.clientY,
-          left: event.currentTarget.scrollLeft,
-          top: event.currentTarget.scrollTop,
         };
         // Focus keeps arrow-key panning. It comes from the pointer, so it must not draw a keyboard focus ring.
         event.currentTarget.focus({ preventScroll: true, focusVisible: false });
@@ -142,8 +141,10 @@ export function useCanvasPan(
 
         moved.current = true;
         setPanning(true);
-        ref.current.scrollLeft = start.left - dx;
-        ref.current.scrollTop = start.top - dy;
+        ref.current.scrollLeft -= dx;
+        ref.current.scrollTop -= dy;
+        drag.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+        return { x: -dx, y: -dy };
       },
       onPointerUpCapture: finish,
       onPointerCancelCapture: finish,

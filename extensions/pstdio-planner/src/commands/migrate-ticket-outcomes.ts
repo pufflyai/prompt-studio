@@ -9,7 +9,8 @@ import {
   params,
   type ResourceRef,
 } from "@pstdio/sdk/extensions";
-import { listAttempts, putAttempt, readAttempt } from "../data/attempt-storage";
+import { readTicketAttempts } from "../data/attempt-queries";
+import { putAttempt, readAttempt } from "../data/attempt-storage";
 import type { AttemptRecord, ActorRef as PlannerActor } from "../data/attempt-types";
 import { findTicket } from "../data/resolve";
 import { withQueuedWriteGuard } from "../data/write-guard";
@@ -143,7 +144,7 @@ export const migrateTicketOutcomesCommand = defineCommand({
     const ticket = await findTicket(ctx, input.id);
     if (!ticket) throw new Error("Ticket not found.");
     const resource = { projectId: ctx.projectId, extensionId: ctx.extensionId, type: "ticket", id: ticket.id };
-    const attempts = (await listAttempts(ctx.storage)).filter((attempt) => attempt.ticketId === ticket.id);
+    const attempts = await readTicketAttempts(ctx.storage, [ticket.id]);
     for (const attempt of attempts)
       await withQueuedWriteGuard(ctx, `attempt:${attempt.workspaceId}`, async () => {
         const latest = await readAttempt(ctx.storage, attempt.workspaceId);
