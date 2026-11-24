@@ -163,7 +163,8 @@ export const createRecentResourcesModule = () =>
               .flatMap((item) => {
                 const kind = ctx.resources.getKind(item.resource.type, item.resource.extensionId);
                 if (!kind || !available(ctx, item.target)) return [];
-                const resource = kind.resolve ? kind.resolve(item.resource) : item.resource;
+                const resolved = kind.resolve ? kind.resolve(item.resource) : item.resource;
+                const resource = resolved && ctx.resources.preview.resolve(resolved);
                 return resource
                   ? [{ resource: { ...resource, icon: resource.icon ?? kind.icon }, target: item.target }]
                   : [];
@@ -215,6 +216,7 @@ export const createRecentResourcesModule = () =>
         if (state.layout.activeWidgetId !== previous.layout.activeWidgetId) rememberActive();
       });
       const kinds = ctx.resources.store.subscribe(() => changed());
+      const previews = ctx.resources.preview.store.subscribe(() => changed());
       const placements = ctx.modePlacements.onDidChange(() => changed());
       const navigation = ctx.pageLocations.onDidNavigate((location) => {
         if (location.resource) remember(location.resource, pageTarget(location));
@@ -267,6 +269,7 @@ export const createRecentResourcesModule = () =>
         { dispose: references },
         { dispose: layouts },
         { dispose: kinds },
+        { dispose: previews },
         placements,
       ];
     },
