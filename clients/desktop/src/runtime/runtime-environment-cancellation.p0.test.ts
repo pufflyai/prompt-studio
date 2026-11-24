@@ -18,13 +18,21 @@ for (const shell of ["/bin/bash", "/bin/zsh"]) {
       const home = mkdtempSync(join(tmpdir(), "desktop-shell-processes-"));
       const startup =
         'printf "%s" "$$" > "$HOME/shell.pid"\n/bin/sleep 30 &\nprintf "%s" "$!" > "$HOME/child.pid"\nwait\n';
-      writeFileSync(join(home, shell.endsWith("bash") ? ".bash_profile" : ".zshrc"), startup);
+      const bash = shell === "/bin/bash";
+      writeFileSync(join(home, bash ? ".bashrc" : ".zshrc"), startup);
+      const fixtureShell = bash ? join(home, "bash") : shell;
+      if (bash) {
+        // Give Bash the fixture directly so a system login profile cannot move HOME first.
+        writeFileSync(fixtureShell, '#!/bin/sh\nexec /bin/bash --noprofile --rcfile "$ZDOTDIR/.bashrc" "$@"\n', {
+          mode: 0o700,
+        });
+      }
       const controller = new AbortController();
       const reason = new Error("Runtime startup cancelled");
       const outcome = resolveRuntimeEnvironment(controller.signal, {
         HOME: home,
         ZDOTDIR: home,
-        SHELL: shell,
+        SHELL: fixtureShell,
         PATH: "/usr/bin:/bin:/usr/sbin:/sbin",
       }).catch((error) => error);
       const readPids = () =>
