@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, expect, test } from "bun:test";
+import { afterAll, beforeAll, expect, spyOn, test } from "bun:test";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -63,6 +63,16 @@ export default {
     },
     { id: "observed-abort", title: "Observed abort", run: () => observedAbort },
     { id: "crash", title: "Crash", run: () => process.exit(7) },
+    {
+      id: "shape",
+      title: "Shape",
+      run(ctx) {
+        const item = { blob: new Blob(["asset bytes"]) };
+        const items = { async *[Symbol.asyncIterator]() { yield "entry"; } };
+        return ctx.inspect({ first: item, second: item, items });
+      },
+    },
+    { id: "finish", title: "Finish", run: (ctx) => ctx.finish() },
     {
       id: "edges",
       title: "Edges",
@@ -578,6 +588,92 @@ test("listener failures, host objects, abort signals and abandoned iterators sta
   } finally {
     process.off("unhandledRejection", onUnhandled);
     await worker.stop();
+  }
+});
+
+test("Blob conversion preserves shared records and plain async iterables over worker IPC", async () => {
+  const worker = await start();
+  try {
+    const context = {
+      async inspect(value: { first: { blob: Blob }; second: { blob: Blob }; items: AsyncIterable<string> }) {
+        return {
+          sameRecord: value.first === value.second,
+          first: value.first.blob instanceof Blob ? await value.first.blob.text() : undefined,
+          second: value.second.blob instanceof Blob ? await value.second.blob.text() : undefined,
+          items: await Array.fromAsync(value.items),
+        };
+      },
+    };
+    expect(
+      await worker.invoke({
+        handlerId: handlerOf(worker.definition, "shape"),
+        context,
+        surface: { kind: "object", members: { inspect: { kind: "async" } } },
+        args: [],
+      }),
+    ).toEqual({ sameRecord: true, first: "asset bytes", second: "asset bytes", items: ["entry"] });
+  } finally {
+    await worker.stop();
+  }
+});
+
+test("a normally completed long call gets a full idle window", async () => {
+  const interval = setInterval(() => {}, 60_000);
+  const schedule = spyOn(globalThis, "setInterval").mockReturnValue(interval);
+  const pool = createBackendWorkerPool(() => ({ env: createExtensionProcessEnvironment(), entryPath }), {
+    idleMs: 100,
+  });
+  try {
+    const worker = await pool.acquire("source@1");
+    const entered = Promise.withResolvers<void>();
+    const finish = Promise.withResolvers<string>();
+    const running = worker.invoke({
+      handlerId: handlerOf(worker.definition, "finish"),
+      context: {
+        finish: () => {
+          entered.resolve();
+          return finish.promise;
+        },
+      },
+      surface: { kind: "object", members: { finish: { kind: "async" } } },
+      args: [],
+    });
+    await entered.promise;
+    await Bun.sleep(125);
+    finish.resolve("settled");
+    expect(await running).toBe("settled");
+    const [sweep] = schedule.mock.calls[0]!;
+    if (typeof sweep !== "function") throw new Error("Expected to schedule the idle sweep");
+    await sweep();
+    await Promise.resolve();
+    expect(await pool.acquire("source@1")).toBe(worker);
+  } finally {
+    schedule.mockRestore();
+    clearInterval(interval);
+    await pool.close();
+  }
+});
+
+test("closing a reusable worker pool clears each owned idle timer", async () => {
+  const schedule = spyOn(globalThis, "setInterval");
+  const clear = spyOn(globalThis, "clearInterval");
+  const pool = createBackendWorkerPool(() => ({ env: createExtensionProcessEnvironment(), entryPath }));
+  try {
+    await pool.acquire("source@1");
+    const first = schedule.mock.results[0]?.value;
+    expect(first).toBeDefined();
+    await pool.close();
+    expect(clear).toHaveBeenCalledWith(first);
+    await pool.acquire("source@2");
+    const second = schedule.mock.results[1]?.value;
+    expect(second).toBeDefined();
+    await pool.close();
+    expect(clear).toHaveBeenCalledWith(second);
+  } finally {
+    await pool.close();
+    for (const { value } of schedule.mock.results) clearInterval(value as ReturnType<typeof setInterval>);
+    clear.mockRestore();
+    schedule.mockRestore();
   }
 });
 

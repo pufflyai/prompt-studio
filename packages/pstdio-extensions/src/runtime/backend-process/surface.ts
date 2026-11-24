@@ -1,5 +1,6 @@
 import { createStorageId, createStorageMigration, createStoragePositions } from "pstdio-api-contracts";
 import { isNavigationTarget } from "pstdio-api-contracts/extension-kernel";
+import { exportAssetStageInput, importAssetStageInput } from "./asset-source";
 import { openIterator } from "./iterator-lifetime";
 
 /**
@@ -14,6 +15,7 @@ export type BackendSurface =
   | { kind: "signal" }
   /** An asynchronous host method. The worker awaits the host's reply. */
   | { kind: "async" }
+  | { kind: "asset-stage" }
   /** A one-way host method, such as logging. The worker does not wait for it. */
   | { kind: "notify"; check?: "navigationTarget" }
   /** A synchronous host method that returns a `{ close() }` handle, such as `storage.observe`. */
@@ -99,17 +101,18 @@ const methodOf = (target: unknown, name: string, path: SurfaceStep[]) => {
   return method as (...args: unknown[]) => unknown;
 };
 
-const matchesCall = (member: BackendSurface, kind: "async" | "notify") => {
-  if (member.kind === kind) return true;
-  return kind === "async" && (member.kind === "subscribe" || member.kind === "iterate" || member.kind === "migrate");
-};
+// Members the worker calls asynchronously and whose result it keeps locally, such as a subscription.
+const ASYNC_METHODS = new Set<BackendSurface["kind"]>(["async", "subscribe", "iterate", "migrate", "asset-stage"]);
 
-const resolveSurfaceMember = (surface: BackendSurface, path: SurfaceStep[], kind: "async" | "notify") => {
+const resolveCallMember = (surface: BackendSurface, path: SurfaceStep[], kind: "async" | "notify") => {
   let current = surface;
   for (const [index, step] of path.entries()) {
     const member = memberOf(current, step.name);
     if (!member) return;
-    if (index === path.length - 1) return !step.args && matchesCall(member, kind) ? member : undefined;
+    if (index === path.length - 1)
+      return !step.args && (kind === "async" ? ASYNC_METHODS.has(member.kind) : member.kind === "notify")
+        ? member
+        : undefined;
     if (member.kind === "object" && !step.args) current = member;
     else if (member.kind === "factory" && step.args) current = member.returns;
     else return;
@@ -124,7 +127,7 @@ export const resolveSurfaceCall = (
   args: unknown[] | (() => unknown[]),
   kind: "async" | "notify",
 ) => {
-  const member = resolveSurfaceMember(surface, path, kind);
+  const member = resolveCallMember(surface, path, kind);
   if (!member) throw new SurfaceCallRejectedError(path);
   let target = root;
   for (const step of path.slice(0, -1))
@@ -133,7 +136,8 @@ export const resolveSurfaceCall = (
       : (target as Record<string, unknown>)[step.name];
   const last = path.at(-1)!;
   const method = methodOf(target, last.name, path);
-  const input = typeof args === "function" ? args() : args;
+  const supplied = typeof args === "function" ? args() : args;
+  const input = member.kind === "asset-stage" ? [importAssetStageInput(supplied[0])] : supplied;
   return member.kind === "iterate" && member.signalArg !== undefined
     ? openIterator(method.bind(target), input, member.signalArg)
     : method.apply(target, input);
@@ -241,6 +245,9 @@ export const createSurfaceFacade = (
         return channel.signal;
       case "async":
         return (...args: unknown[]) => channel.call(path, args);
+      case "asset-stage":
+        return async (input: Parameters<typeof exportAssetStageInput>[0]) =>
+          channel.call(path, [exportAssetStageInput(input, channel.signal)]);
       case "notify":
         return (...args: unknown[]) => {
           // A one-way notification cannot return the host's synchronous validation error.
