@@ -21,6 +21,7 @@ beforeAll(async () => {
   await writeFile(
     entryPath,
     `
+const cleanup = Promise.withResolvers();
 export default {
   commands: [
     { id: "migration", run(ctx) {
@@ -48,6 +49,25 @@ export default {
         await ctx.live.markCallbackRunning();
         await new Promise(() => {});
       });
+    } },
+    { id: "cancel-cleanup", async run(ctx) {
+      try {
+        await ctx.live.runCallback(async () => {
+          const handle = await ctx.live.open();
+          try {
+            await ctx.live.wait();
+          } finally {
+            const close = await handle.close().then(() => "released", (error) => error.message);
+            const touch = await handle.touch().then(() => "ran", () => "refused");
+            cleanup.resolve({ close, touch });
+          }
+        });
+      } finally {
+        await cleanup.promise;
+      }
+    } },
+    { id: "cleanup-result", run() {
+      return cleanup.promise;
     } },
     { id: "watch-context", async run(ctx) {
       await ctx.live.listen(() => ctx.live.read());
@@ -282,6 +302,44 @@ test("cancelling a handler unblocks its host callback without affecting another 
     unrelated.resolve("unrelated callback finished");
     expect(await deadline(other)).toBe("unrelated callback finished");
     await deadline(released.promise);
+  });
+});
+
+test("draining a cancelled callback may close its existing handle but cannot call other functions", async () => {
+  await withWorker(async (invoke) => {
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const controller = new AbortController();
+    const cancellation = new Error("cancel callback");
+    let closes = 0;
+    let touches = 0;
+    const result = invoke("cancel-cleanup", {
+      ...fixture({
+        runCallback: (callback: () => Promise<unknown>) => callback(),
+        open: () => ({
+          close: () => closes++,
+          touch: () => touches++,
+        }),
+        wait: () => {
+          entered.resolve();
+          return release.promise;
+        },
+      }),
+      signal: controller.signal,
+    }).catch((error) => error);
+    try {
+      await deadline(entered.promise);
+      controller.abort(cancellation);
+      expect(await result).toBe(cancellation);
+      expect(await deadline(invoke("cleanup-result", fixture({})))).toEqual({
+        close: "released",
+        touch: "refused",
+      });
+      expect(closes).toBe(1);
+      expect(touches).toBe(0);
+    } finally {
+      release.resolve();
+    }
   });
 });
 
