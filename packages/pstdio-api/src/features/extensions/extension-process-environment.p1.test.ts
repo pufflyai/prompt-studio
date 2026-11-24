@@ -420,3 +420,28 @@ test.skipIf(process.platform !== "win32")(
     }
   },
 );
+
+test.skipIf(process.platform !== "win32")(
+  "a missing Windows executable is reported distinctly from an invalid directory",
+  async () => {
+    const handle = spawnProcessHandle({
+      argv: [join(root, `${crypto.randomUUID()}.exe`)],
+      cwd: root,
+      env: createExtensionProcessEnvironment(),
+    });
+    try {
+      expect(
+        await handle.started.then(
+          () => "started",
+          (error: unknown) => error,
+        ),
+      ).toMatchObject({
+        code: "process_command_not_found",
+      });
+      expect(await handle.exited).toEqual({ code: null, signal: null });
+      expect(await Array.fromAsync(handle.events())).toEqual([{ type: "exit", exit: { code: null, signal: null } }]);
+    } finally {
+      await handle.kill("SIGKILL");
+    }
+  },
+);

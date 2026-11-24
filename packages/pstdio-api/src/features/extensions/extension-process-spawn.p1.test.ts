@@ -383,3 +383,69 @@ test("a process from a retired source cannot open its target before eligibility 
     await scope.close();
   }
 });
+
+test.skipIf(process.platform === "win32")(
+  "a locally admitted child stays owned if cleanup fails before the public handle opens",
+  async () => {
+    const owner = createProcessOwner();
+    const slot = Promise.withResolvers<{ firstClose: Promise<unknown> }>();
+    let physicalChild: ReturnType<typeof Bun.spawn<"pipe", "pipe", "pipe">> | undefined;
+    let stopAllowed = false;
+    let stopAttempts = 0;
+    const api = createProcessApi({
+      callOwner: owner,
+      spawner: (() => {
+        // This private fixture is in the test's group, so only the stand-in's kill owns its stop.
+        const child = Bun.spawn([process.execPath, "-e", "setInterval(() => {}, 1000)"], {
+          stdin: "pipe",
+          stdout: "pipe",
+          stderr: "pipe",
+          detached: false,
+        });
+        physicalChild = child;
+        queueMicrotask(() => {
+          slot.resolve({
+            firstClose: owner.close().then(
+              () => "silently closed",
+              (error: unknown) => error,
+            ),
+          });
+        });
+        return {
+          pid: child.pid,
+          stdin: child.stdin,
+          stdout: child.stdout,
+          stderr: child.stderr,
+          exited: child.exited,
+          get signalCode() {
+            return child.signalCode;
+          },
+          kill() {
+            stopAttempts++;
+            if (stopAllowed) child.kill("SIGKILL");
+          },
+        };
+      }) as unknown as typeof Bun.spawn,
+    });
+    const handle = api.spawn({ command: [process.execPath, "-e", "setInterval(() => {}, 1000)"] });
+    try {
+      const { firstClose } = await slot.promise;
+      expect(await firstClose).toMatchObject({
+        message: "Owned process cleanup failed.",
+        errors: [{ message: "The process tree did not stop." }],
+      });
+      expect(owner.closed).toBe(true);
+      expect(stopAttempts).toBeGreaterThan(0);
+      expect(alive(physicalChild!.pid)).toBe(true);
+      stopAllowed = true;
+      await owner.close();
+      await physicalChild!.exited;
+      expect(alive(physicalChild!.pid)).toBe(false);
+    } finally {
+      stopAllowed = true;
+      physicalChild?.kill("SIGKILL");
+      await physicalChild?.exited;
+      await handle.exited;
+    }
+  },
+);
