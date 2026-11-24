@@ -64,12 +64,11 @@ export function useAutoBuild(client: PlanClient) {
       const saved = await save();
       if (!abort.signal.aborted) projection.accept(token, saved);
       // The command already committed. A failed catch-up remains a read error with its ACK intact.
-      if (projection.current(token) && !abort.signal.aborted) {
-        try {
-          await query.refresh(abort.signal);
-          projection.complete(token);
-        } catch {}
-      }
+      if (projection.current(token) && !abort.signal.aborted)
+        void query.refresh(abort.signal).then(
+          () => projection.complete(token),
+          () => {},
+        );
       return true;
     } catch (reason) {
       setOperation((current) =>

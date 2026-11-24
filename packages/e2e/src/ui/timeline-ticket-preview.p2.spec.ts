@@ -125,13 +125,26 @@ test("selecting a gate preview keeps its gate review controls accessible", async
       data: { default_agent_id: "pstdio.workbench-fixture.harness.fake" },
     });
     expect(configured.ok()).toBe(true);
-    const gate = await executePlannerCommand<{ ticket: { id: string } }>(
+    const gate = await executePlannerCommand<{ ticket: { id: string }; launchError: string | null }>(
       request,
       uiOrigin,
       id,
       "timeline.gate.create",
       { content: "# Review dependency gate" },
     );
+    expect(gate.launchError).toBeNull();
+    const check = await executePlannerCommand<{ status: string; session: { id: string } }>(
+      request,
+      uiOrigin,
+      id,
+      "timeline.gate.check-launch",
+      { ticket: gate.ticket.id },
+    );
+    expect(check).toMatchObject({ status: "confirmed", session: { id: expect.any(String) } });
+    const repeated = await executePlannerCommand<{ id: string }>(request, uiOrigin, id, "timeline.gate.launch", {
+      ticket: gate.ticket.id,
+    });
+    expect(repeated.id).toBe(check.session.id);
     await page.addInitScript(() => {
       if (window === window.top) localStorage.setItem("onboarding-complete", "true");
     });

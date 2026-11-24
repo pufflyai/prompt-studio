@@ -177,10 +177,30 @@ test("keeps note titles independent of the body and renames them through the con
     await expect(dialog.getByRole("textbox")).toHaveValue(note.title);
     await expect(dialog.getByRole("textbox")).toBeFocused();
     await dialog.getByRole("textbox").fill("Renamed title");
-    await dialog.getByRole("button", { name: "Run", exact: true }).click();
+    const renameRoute = "**/extensions/commands/pstdio.notes.command.notes.rename/execute";
+    const releaseRename = Promise.withResolvers<void>();
+    const heldRename = Promise.withResolvers<void>();
+    await page.route(
+      renameRoute,
+      async (route) => {
+        heldRename.resolve();
+        await releaseRename.promise;
+        await route.continue();
+      },
+      { times: 1 },
+    );
+    const saved = page.waitForResponse(renameRoute);
     const renamed = sidebar.getByRole("option", { name: "Renamed title", exact: true });
-    await expect(renamed).toHaveAttribute("aria-selected", "true");
-    await expectOpenNote(page, "Renamed title");
+    try {
+      await dialog.getByRole("button", { name: "Run", exact: true }).click();
+      await heldRename.promise;
+      await expect(dialog).toBeHidden();
+      await expect(renamed).toHaveAttribute("aria-selected", "true");
+      await expectOpenNote(page, "Renamed title");
+    } finally {
+      releaseRename.resolve();
+    }
+    expect((await (await saved).json()).outcome.ok).toBe(true);
     await expect(editor).toHaveText(body);
     expect(await mountedEditor!.evaluate((node) => node.isConnected)).toBe(true);
     expect(documentReads).toEqual([]);
