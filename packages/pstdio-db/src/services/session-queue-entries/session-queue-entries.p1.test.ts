@@ -35,6 +35,31 @@ afterEach(async () => {
 });
 
 describe("session queue entries service", () => {
+  test("a claimed sender request prepares one immutable boundary owned by its exact run", async () => {
+    const session = await sessionsService.create({ project_id: projectId, title: "Sender boundary", agent: "fake" });
+    const entry = await queueService.create({
+      session_id: session.id,
+      prompt: "Inspect",
+      request_kind: "start",
+      sender_json: { type: "user", id: "person", name: "Alex" },
+    });
+    const run = "2026-11-24T18:00:00.001Z";
+    expect(await queueService.setDispatchSenderBoundary(entry.queue_position, 0, run)).toBeNull();
+    await queueService.markDispatchStarted(entry.queue_position);
+    const results = await Promise.all([
+      queueService.setDispatchSenderBoundary(entry.queue_position, 0, run),
+      queueService.setDispatchSenderBoundary(entry.queue_position, 4, "2026-11-24T18:00:00.002Z"),
+    ]);
+    expect(results.filter((result) => result?.created)).toHaveLength(1);
+    const prepared = results.find((result) => result?.created)!;
+    expect(
+      results.every(
+        (result) => JSON.stringify(result?.entry.sender_json) === JSON.stringify(prepared.entry.sender_json),
+      ),
+    ).toBe(true);
+    expect((await queueService.get(entry.queue_position))?.sender_json).toEqual(prepared.entry.sender_json);
+  });
+
   test("creates steering evidence held from insertion so it cannot dispatch as a new turn", async () => {
     const session = await sessionsService.create({ project_id: projectId, title: "Active", agent: "fake" });
     const delivery = { id: "delivery", runStartedAt: session.last_request_started! };

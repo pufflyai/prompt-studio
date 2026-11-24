@@ -1,24 +1,27 @@
 import type { SessionMessageSender } from "pstdio-api-contracts";
-import { recoverMessageSenders } from "./recover-message-senders";
-
 import { submittedMessageSender } from "./submitted-message-identity";
 
 export const prepareSubmittedSender = async (
   conversation: import("./session-conversation").SessionConversation,
   input: { sessionId: string; prompt: string; submittedQueuePosition?: number; sender?: SessionMessageSender },
-  queue?: import("./deps").SessionsRouteDeps["sessionQueueEntriesService"],
+  deps: Pick<import("./deps").SessionsRouteDeps, "sessionService"> & {
+    sessionQueueEntriesService?: import("./deps").SessionsRouteDeps["sessionQueueEntriesService"];
+  },
 ) => {
   if (!input.sender) return;
+  const queue = deps.sessionQueueEntriesService;
   let afterTurn: number | undefined;
   if (queue && input.submittedQueuePosition !== undefined) {
     const count = conversation.getMessages().filter((message) => message.role === "user").length;
-    const entry = await queue.setDispatchSenderBoundary(input.submittedQueuePosition, count);
-    if (!entry) throw new Error("Submitted request is no longer available.");
-    afterTurn = entry.sender_json?.afterTurn;
-    const previous = conversation.getMessages();
-    const restored = recoverMessageSenders(previous, [entry]);
-    if (restored.some((message, index) => message !== previous[index]))
-      conversation.push({ op: "replace", path: "/messages", value: restored });
+    const session = await deps.sessionService.get(input.sessionId);
+    if (!session?.last_request_started) throw new Error("Submitted request has no active run.");
+    const boundary = await queue.setDispatchSenderBoundary(
+      input.submittedQueuePosition,
+      count,
+      session.last_request_started,
+    );
+    if (!boundary?.created) throw new Error("Submitted request was already prepared or is no longer available.");
+    afterTurn = boundary.entry.sender_json?.afterTurn;
   }
   conversation.attributePrompt(input.prompt, submittedMessageSender(input), undefined, afterTurn);
 };

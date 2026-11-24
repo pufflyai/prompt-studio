@@ -42,6 +42,7 @@ interface ChatOutlineProps {
 export const ChatOutline = ({ host, rows, active, onJump }: ChatOutlineProps) => {
   const entries = getOutlineEntries(rows);
   const viewport = useRef<HTMLDivElement>(null);
+  const pendingFocus = useRef<number | null>(null);
   const { virtualizer, virtualItems, totalSize } = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: entries.length,
     getScrollElement: () => viewport.current,
@@ -50,6 +51,23 @@ export const ChatOutline = ({ host, rows, active, onJump }: ChatOutlineProps) =>
     overscan: 4,
   });
   const activeEntry = entries.findIndex((entry) => entry.index === active);
+  const focusEntry = (index: number) => {
+    pendingFocus.current = index;
+    virtualizer.scrollToIndex(index, { align: "auto" });
+    const button = viewport.current?.querySelector<HTMLButtonElement>(`[data-outline-index="${index}"]`);
+    if (button) {
+      button.focus();
+      pendingFocus.current = null;
+    }
+  };
+  useLayoutEffect(() => {
+    if (pendingFocus.current === null || !virtualItems.some((item) => item.index === pendingFocus.current)) return;
+    const button = viewport.current?.querySelector<HTMLButtonElement>(`[data-outline-index="${pendingFocus.current}"]`);
+    if (button) {
+      button.focus();
+      pendingFocus.current = null;
+    }
+  }, [virtualItems]);
   useEffect(() => {
     const scroller = viewport.current;
     if (scroller && activeEntry >= 0 && !scroller.contains(scroller.ownerDocument.activeElement))
@@ -57,8 +75,8 @@ export const ChatOutline = ({ host, rows, active, onJump }: ChatOutlineProps) =>
   }, [activeEntry, virtualizer]);
 
   return createPortal(
-    <Box as="nav" aria-label="Conversation outline" w="full" maxH="full" display="flex" pointerEvents="auto">
-      <ScrollArea viewportRef={viewport} w="full" maxH="full" showHorizontalScrollbar={false}>
+    <Box as="nav" aria-label="Conversation outline" w="full" h="full" minH="0" display="flex" pointerEvents="auto">
+      <ScrollArea viewportRef={viewport} w="full" h="full" minH="0" showHorizontalScrollbar={false}>
         <Box position="relative" style={{ height: totalSize }}>
           {virtualItems.map((item) => {
             const entry = entries[item.index];
@@ -84,6 +102,20 @@ export const ChatOutline = ({ host, rows, active, onJump }: ChatOutlineProps) =>
                     type="button"
                     aria-label={entry.prompt}
                     aria-current={active === entry.index ? "location" : undefined}
+                    data-outline-index={item.index}
+                    aria-keyshortcuts="ArrowUp ArrowDown Home End"
+                    onKeyDown={(event) => {
+                      let next: number;
+                      if (event.key === "Home") next = 0;
+                      else if (event.key === "End") next = entries.length - 1;
+                      else if (event.key === "ArrowUp" || (event.key === "Tab" && event.shiftKey))
+                        next = item.index - 1;
+                      else if (event.key === "ArrowDown" || event.key === "Tab") next = item.index + 1;
+                      else return;
+                      if (next < 0 || next >= entries.length) return;
+                      event.preventDefault();
+                      focusEntry(next);
+                    }}
                     onClick={() => onJump(entry.index)}
                   >
                     <Box as="span" />

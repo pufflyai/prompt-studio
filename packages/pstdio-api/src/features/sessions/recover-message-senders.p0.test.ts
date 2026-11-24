@@ -19,18 +19,23 @@ const prompt = (id: string, createdAt?: number): SessionMessage => ({
   parts: [{ type: "text", text: "Check" }],
 });
 
-test("recovered native prompts use their request's sender without attributing an older identical prompt", () => {
+test("matching native text and a saved turn do not prove which request submitted it", () => {
   const old = prompt("old", 10);
   const delivered = prompt("delivered", 100);
-  expect(recoverMessageSenders([old, delivered], [request])).toEqual([old, { ...delivered, sender: attributed }]);
+  expect(recoverMessageSenders([old, delivered], [request])).toEqual([old, delivered]);
   expect(recoverMessageSenders([old], [request])).toEqual([old]);
 });
 
-test("a saved dispatch boundary restores attribution when native timestamps are absent", () => {
+test("native prompts without timestamps stay unattributed without exact request evidence", () => {
   const old = prompt("old");
   const delivered = prompt("delivered");
-  expect(recoverMessageSenders([old, delivered], [request])).toEqual([old, { ...delivered, sender: attributed }]);
+  expect(recoverMessageSenders([old, delivered], [request])).toEqual([old, delivered]);
   expect(recoverMessageSenders([old], [request])).toEqual([old]);
+});
+
+test("a host checkpoint keeps its exact request identity", () => {
+  const delivered = { ...prompt("delivered"), sender: attributed };
+  expect(recoverMessageSenders([delivered], [request])).toEqual([delivered]);
 });
 
 test("uncertain steering restores attribution only for its confirmed delivery identity", () => {

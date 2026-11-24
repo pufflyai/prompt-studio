@@ -156,7 +156,6 @@ export const questionResponseSchema = z.object({
 
 export const followUpInputSchema = z.object({
   source: sessionMessageSourceSchema.optional(),
-  sourceSessionId: z.string().min(1).optional(),
   prompt: z.string().min(1).optional(),
   agent: z.string().optional(),
   model: z.string().optional(),

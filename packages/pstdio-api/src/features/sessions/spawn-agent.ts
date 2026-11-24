@@ -71,7 +71,7 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
   entry.executionSettings = { model: input.model ?? null, params: input.params ?? {} };
 
   const conversation = await entry.conversationReady;
-  await prepareSubmittedSender(conversation, input, deps.sessionQueueEntriesService);
+  await prepareSubmittedSender(conversation, input, deps);
   input.signal?.throwIfAborted();
 
   let cwd = input.cwd;
@@ -157,7 +157,7 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
   entry.executionSettings = { model: input.model ?? null, params: input.params ?? {} };
 
   const conversation = await entry.conversationReady;
-  await prepareSubmittedSender(conversation, input, deps.sessionQueueEntriesService);
+  await prepareSubmittedSender(conversation, input, deps);
   input.signal?.throwIfAborted();
 
   const session = await harness.resume(
@@ -269,8 +269,6 @@ export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps
     "reattach",
   );
   const conversation = await entry.conversationReady;
-  if (input.prompt !== undefined)
-    await prepareSubmittedSender(conversation, { ...input, prompt: input.prompt }, deps.sessionQueueEntriesService);
   input.signal?.throwIfAborted();
 
   if (!harness.supportsReattach) throw new Error(`Harness does not support reattach: ${input.agentId}`);

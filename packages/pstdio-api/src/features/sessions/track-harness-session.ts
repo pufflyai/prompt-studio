@@ -1,9 +1,10 @@
-import { type HarnessSession, type SessionMessage, submittedPrompt } from "pstdio-api-contracts";
+import type { HarnessSession, SessionMessage } from "pstdio-api-contracts";
 import { resolveHarnessExit } from "pstdio-api-runtime-host";
 import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
 import { checkpointConversation } from "./session-checkpoint";
 import { type ActiveSession, cancelSessionControls } from "./session-store";
+import { hasSubmittedMessageCheckpoint } from "./submitted-message-checkpoint";
 
 type TrackingDeps = Pick<SessionsRouteDeps, "fileService" | "sessionService"> & {
   processExitTimeoutMs?: number;
@@ -19,12 +20,6 @@ const finishControls = async (entry: ActiveSession | null, status: string) => {
   if (status !== "completed") cancelSessionControls(entry);
   await Promise.all(Array.from(entry.controlInvocations, (control) => control.done));
 };
-
-const messagesReferenceFile = (messages: SessionMessage[], fileId: string) =>
-  messages.some((message) => message.parts.some((part) => part.type === "file" && part.fileId === fileId));
-
-const messagesReferenceSubmittedAttachments = (messages: SessionMessage[], fileIds: string[]) =>
-  fileIds.every((fileId) => messagesReferenceFile(messages, fileId));
 
 type SubmittedMessages = {
   submittedAttachmentFileIds: string[];
@@ -54,15 +49,7 @@ const saveCompletedConversation = async (
 
     // Keep the attachment guard until the complete checkpoint is durable.
     if (submitted?.submittedQueuePosition !== undefined && deps.sessionQueueEntriesService) {
-      const persistedReference =
-        messages !== null &&
-        messagesReferenceSubmittedAttachments(messages, submitted.submittedAttachmentFileIds) &&
-        (!submitted.sender ||
-          messages.some(
-            (message) =>
-              message.sender?.requestId === submitted.sender?.requestId &&
-              submittedPrompt(message) === submitted.prompt?.trim(),
-          ));
+      const persistedReference = messages !== null && hasSubmittedMessageCheckpoint(messages, submitted);
 
       if (persistedReference) {
         await deps.sessionQueueEntriesService.remove(submitted.submittedQueuePosition);

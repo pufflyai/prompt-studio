@@ -231,8 +231,8 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
   };
 
   return {
-    setDispatchSenderBoundary: (position: number, afterTurn: number) =>
-      setDispatchSenderBoundary(db, position, afterTurn),
+    setDispatchSenderBoundary: (position: number, afterTurn: number, runStartedAt: string) =>
+      setDispatchSenderBoundary(db, position, afterTurn, runStartedAt),
     hasEntries,
     get,
     movePending: (input: Parameters<typeof movePending>[1]) => movePending(db, input),

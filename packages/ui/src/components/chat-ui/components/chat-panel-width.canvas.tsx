@@ -74,12 +74,13 @@ export const LoadingWidePane: Story = {
   args: { messages: [], queuedFollowUps: [], loading: true, loaderComponent: <ChatSkeleton /> },
 };
 
-const outlineMessages: SessionMessage[] = Array.from({ length: 24 }, (_, index) => [
+const outlineTurnCount = 80;
+const outlineMessages: SessionMessage[] = Array.from({ length: outlineTurnCount }, (_, index) => [
   {
     id: `q-${index}`,
     role: "user" as const,
     ...(index === 0 ? { sender: { type: "session" as const, id: "release-checks", name: "Release checks" } } : {}),
-    ...(index === 23 ? { sender: { type: "user" as const, id: "alex", name: "Alex" } } : {}),
+    ...(index === outlineTurnCount - 1 ? { sender: { type: "user" as const, id: "alex", name: "Alex" } } : {}),
     parts: [{ type: "text" as const, text: `Check build ${index + 1}` }],
   },
   {
