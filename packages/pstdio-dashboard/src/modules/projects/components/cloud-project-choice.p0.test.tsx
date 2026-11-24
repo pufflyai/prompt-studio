@@ -35,6 +35,8 @@ test.each([
   let active = original;
   const started = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
+  const readingReplacement = Promise.withResolvers<void>();
+  const releaseReplacement = Promise.withResolvers<void>();
   const requestedAccounts: unknown[] = [];
   let opened = 0;
   let closed = 0;
@@ -43,7 +45,11 @@ test.each([
     async fetch(request) {
       const url = new URL(request.url);
       const { deviceId, ...account } = active;
-      if (url.pathname === "/v1/account")
+      if (url.pathname === "/v1/account") {
+        if (active === replacement && changed === "deviceId") {
+          readingReplacement.resolve();
+          await releaseReplacement.promise;
+        }
         return Response.json({
           login: { ...account, deviceId },
           features: { relay: true },
@@ -51,6 +57,7 @@ test.each([
           cloudProjectsLoaded: true,
           signInRequired: false,
         });
+      }
       if (url.pathname.endsWith("/download")) {
         requestedAccounts.push({
           accountId: url.searchParams.get("accountId"),
@@ -107,7 +114,7 @@ test.each([
   const Probe = () => {
     const choice = useCloudProjectChoice(input);
     return (
-      <button disabled={!choice.canDownload} onClick={choice.requestDownload}>
+      <button data-presence={choice.entry?.presence} disabled={!choice.canDownload} onClick={choice.requestDownload}>
         Download
       </button>
     );
@@ -140,6 +147,18 @@ test.each([
         .getWriter("projects")!
         .upsert({ id, name: "B's local copy", shorthand: "B", created_at: "2026-01-01", updated_at: "2026-01-01" });
       publishExtensionEvent({ id: accountEvents.changed.id }, owner);
+      if (changed === "deviceId") {
+        await readingReplacement.promise;
+        const key = cloudCatalogKeyFor(original.managerOrigin, original.accountId, original.deviceId);
+        await client.refetchQueries({ queryKey: key, exact: true }, { cancelRefetch: false });
+      }
+    });
+    if (changed === "deviceId") {
+      await act(async () => until(() => renderer!.root.findByType("button").props["data-presence"] === "downloaded"));
+    }
+    expect({ opened, closed }).toEqual({ opened: 0, closed: 0 });
+    await act(async () => {
+      releaseReplacement.resolve();
       await until(() => status.getSnapshot().data?.login?.[changed] === replacement[changed]);
     });
     const replacementCatalog = cloudCatalogKeyFor(
@@ -174,6 +193,7 @@ test.each([
     });
   } finally {
     release.resolve();
+    releaseReplacement.resolve();
     await act(async () => renderer?.unmount());
     client.clear();
     await owner.dispose();
@@ -195,7 +215,7 @@ const copyStates = [
   "rejected removal after retry",
 ] as const;
 
-const copyDevice = (outcome: (typeof copyStates)[number]) => {
+const copyDevice = (outcome: (typeof copyStates)[number], retry: boolean) => {
   const id = "recovered-project";
   const account = { managerOrigin: "https://accounts.example.test", accountId: "account-a" };
   const folderError = "Could not prepare the project folder";
@@ -203,15 +223,19 @@ const copyDevice = (outcome: (typeof copyStates)[number]) => {
   const removingCopy = outcome === "removal receipt" || outcome.endsWith("after retry");
   const device: {
     presence: string;
+    id: string;
     downloadError?: string;
+    lostReply?: "before-write" | "after-write";
     syncFailed: boolean;
     downloads: number;
     holdCatalog?: boolean;
     catalogUnavailable?: boolean;
     downloadUnavailable?: boolean;
   } = {
-    presence: removingCopy ? "downloading" : "cloud-only",
-    syncFailed: removingCopy,
+    presence: removingCopy || retry ? "downloading" : "cloud-only",
+    id: "device",
+    downloadError: retry && outcome === "folder error" ? folderError : undefined,
+    syncFailed: removingCopy || (retry && outcome === "sync error"),
     downloads: 0,
   };
   const started = Promise.withResolvers<void>();
@@ -221,19 +245,23 @@ const copyDevice = (outcome: (typeof copyStates)[number]) => {
   const catalogCaptured = Promise.withResolvers<void>();
   const releaseCatalog = Promise.withResolvers<void>();
   const download = async () => {
+    const lostReply = device.lostReply;
+    device.lostReply = undefined;
+    const failed = () => Response.json({ error: "Download response lost" }, { status: 503 });
     device.downloads++;
     started.resolve();
     await release.promise;
-    if (device.downloads > 1 || outcome.endsWith("after retry")) {
+    if (lostReply === "before-write") return failed();
+    if (retry || device.downloads > 1 || outcome.endsWith("after retry")) {
       device.presence = "downloading";
       device.downloadError = undefined;
       device.syncFailed = false;
-      return Response.json({ projectId: id, presence: device.presence });
+      return lostReply === "after-write" ? failed() : Response.json({ projectId: id, presence: device.presence });
     }
     device.presence = outcome === "folder error" || outcome === "sync error" ? "downloading" : outcome;
     if (outcome === "folder error") device.downloadError = folderError;
     if (outcome === "sync error") device.syncFailed = true;
-    return Response.json({ error: "Download response lost" }, { status: 503 });
+    return failed();
   };
   const deleteCloud = async () => {
     removalStarted.resolve();
@@ -259,7 +287,7 @@ const copyDevice = (outcome: (typeof copyStates)[number]) => {
       const url = new URL(request.url);
       if (url.pathname === "/v1/account")
         return Response.json({
-          login: { ...account, deviceId: "device" },
+          login: { ...account, deviceId: device.id },
           features: { relay: true },
           cloudProjects: [id],
           cloudProjectsLoaded: true,
@@ -318,8 +346,8 @@ const copyDevice = (outcome: (typeof copyStates)[number]) => {
   };
 };
 
-const mountCopyChoices = async (outcome: (typeof copyStates)[number]) => {
-  const fixture = copyDevice(outcome);
+const mountCopyChoices = async (outcome: (typeof copyStates)[number], retry = false) => {
+  const fixture = copyDevice(outcome, retry);
   const { id, server, release, releaseRemoval, releaseCatalog } = fixture;
   const opened: unknown[] = [];
   let closed = 0;
@@ -395,7 +423,7 @@ const mountCopyChoices = async (outcome: (typeof copyStates)[number]) => {
     await server.stop(true);
   };
   try {
-    if (outcome === "removal receipt" || outcome.endsWith("after retry")) addLocalProject();
+    if (retry || outcome === "removal receipt" || outcome.endsWith("after retry")) addLocalProject();
     await getDashboardAccountStatusQuery(owner).read();
     await act(async () => {
       renderer = create(
@@ -424,6 +452,16 @@ const mountCopyChoices = async (outcome: (typeof copyStates)[number]) => {
       clickAndSettle,
       cleanup,
       unmountPeer: () => act(async () => peerRenderer?.unmount()),
+      remountPeer: () =>
+        act(async () => {
+          peerRenderer?.update(
+            <QueryClientProvider client={client}>
+              <StrictMode>
+                <Probe key={fixture.device.id} other />
+              </StrictMode>
+            </QueryClientProvider>,
+          );
+        }),
       get closed() {
         return closed;
       },
@@ -641,7 +679,7 @@ test.each(copyStates)("two views check the current device state before downloadi
       device.presence = "downloaded";
       addLocalProject();
       publishExtensionEvent({ id: accountEvents.changed.id }, owner);
-      await until(() => fixture.choice.entry?.presence === "downloaded");
+      await until(() => fixture.choice.entry?.presence === "downloaded" && opened.length > 0);
     });
     expect(opened).toEqual([
       {
@@ -651,6 +689,88 @@ test.each(copyStates)("two views check the current device state before downloadi
     ]);
     expect(fixture.closed).toBe(1);
     expect(device.downloads).toBe(1 + Number(shouldRetry) + Number(hasRetryableFailure));
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test.each([
+  "folder error",
+  "sync error",
+] as const)("a lost Retry with the same %s stays unresolved", async (outcome) => {
+  const fixture = await mountCopyChoices(outcome, true);
+  const { device, release } = fixture;
+  try {
+    const initialFailure = fixture.choice.failure;
+    expect(initialFailure).toBeDefined();
+    release.resolve();
+    device.lostReply = "before-write";
+    await fixture.clickAndSettle(fixture.choice.requestDownload);
+    await act(async () => {
+      await until(() => !fixture.choice.downloadBlocking || Boolean(fixture.choice.checkDownload));
+      await fixture.choice.checkDownload?.();
+    });
+    expect({
+      blocking: fixture.choice.downloadBlocking,
+      failure: fixture.choice.failure,
+      progress: fixture.choice.showProgress,
+    }).toEqual({ blocking: true, failure: initialFailure, progress: false });
+    expect(fixture.peer.canDownload).toBe(false);
+    expect(fixture.choice.discardDownload).toBeDefined();
+    await act(async () => fixture.choice.discardDownload?.());
+    await act(async () => until(() => fixture.peer.canDownload));
+    await fixture.clickAndSettle(fixture.peer.requestDownload);
+    expect([device.downloads, fixture.peer.downloadBlocking]).toEqual([2, false]);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test.each([
+  "folder error",
+  "sync error",
+] as const)("a lost Retry with progress from %s confirms the copy", async (outcome) => {
+  const fixture = await mountCopyChoices(outcome, true);
+  try {
+    fixture.release.resolve();
+    fixture.device.lostReply = "after-write";
+    await fixture.clickAndSettle(fixture.choice.requestDownload);
+    await act(async () => until(() => !fixture.choice.downloadBlocking));
+    expect({ attempts: fixture.device.downloads, progress: fixture.choice.showProgress }).toEqual({
+      attempts: 1,
+      progress: true,
+    });
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test("a lost download from another device does not block a new device on the same account", async () => {
+  const fixture = await mountCopyChoices("cloud-only");
+  const { device, release, owner } = fixture;
+  try {
+    release.resolve();
+    device.lostReply = "before-write";
+    await fixture.clickAndSettle(fixture.choice.requestDownload);
+    await act(async () => until(() => Boolean(fixture.choice.checkDownload)));
+    const staleCheck = fixture.choice.checkDownload;
+    await act(async () => {
+      device.id = "new-device";
+      publishExtensionEvent({ id: accountEvents.changed.id }, owner);
+      await until(() => getDashboardAccountStatusQuery(owner).getSnapshot().data?.login?.deviceId === device.id);
+    });
+    await fixture.remountPeer();
+    await act(async () => until(() => fixture.peer.entry?.presence === "cloud-only"));
+    expect({ canDownload: fixture.peer.canDownload, blocking: fixture.peer.downloadBlocking }).toEqual({
+      canDownload: true,
+      blocking: false,
+    });
+    await act(async () => staleCheck?.());
+    await expect(fixture.deletions.start(fixture.id, "Recovered notes", fixture.account)).rejects.toThrow(
+      "This project already has a pending Cloud change.",
+    );
+    await fixture.clickAndSettle(fixture.peer.requestDownload);
+    expect([device.downloads, fixture.peer.downloadBlocking]).toEqual([2, false]);
   } finally {
     await fixture.cleanup();
   }

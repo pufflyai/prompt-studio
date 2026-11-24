@@ -12,6 +12,7 @@ test.each([
 ])("copy retry keeps the old failure unavailable through native refresh and restart (stored copy: %s)", async (storedCopy) => {
   const root = await mkdtemp(join(tmpdir(), "project-copy-retry-"));
   const accountFile = join(root, "account.json");
+  const copies = createProjectCopyStore(accountFile);
   const login = {
     managerOrigin: "https://accounts.example.test",
     relayOrigin: "https://relay.example.test",
@@ -72,21 +73,21 @@ test.each([
   const canDownload = async () => (await catalog.catalogProjects()).projects[0]?.actions.download;
   try {
     if (storedCopy)
-      await createProjectCopyStore(accountFile).write({
+      await copies.write({
         managerOrigin: login.managerOrigin,
         accountId: login.accountId,
         deviceId: login.deviceId,
         projectId: id,
         name: project.name,
         phase: "downloading",
+        automatic: true,
       });
-    if (!storedCopy) {
-      status = { ...status, state: "first-download-incomplete" };
-      expect(await catalog.downloadCloudProject(id)).toEqual({ projectId: id, presence: "downloading" });
-      await new Promise<void>((resolve) => setImmediate(resolve));
-      expect({ attempts, refreshes }).toEqual({ attempts: 0, refreshes: 1 });
-      status = { ...status, state: "needs-attention" };
-    }
+    status = { ...status, state: "first-download-incomplete" };
+    expect(await catalog.downloadCloudProject(id)).toEqual({ projectId: id, presence: "downloading" });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect({ attempts, refreshes }).toEqual({ attempts: 0, refreshes: 1 });
+    if (storedCopy) expect((await copies.forAccount(login))[0]?.automatic).toBeUndefined();
+    status = { ...status, state: "needs-attention" };
     holdRefresh = true;
     expect(await canDownload()).toBe(true);
     expect(await catalog.downloadCloudProject(id)).toEqual({ projectId: id, presence: "downloading" });
@@ -108,6 +109,25 @@ test.each([
     await new Promise<void>((resolve) => setImmediate(resolve));
     expect(await canDownload()).toBe(true);
     expect((await catalog.fenceLocalStatus(id, login, async () => status)).state).toBe("needs-attention");
+
+    if (storedCopy) {
+      let preparations = 0;
+      catalog.connectProjectCopies({
+        inspect: async () => ({ removesManagedFolder: true, providerWorkspaceCount: 0 }),
+        async prepareFolder() {
+          if (++preparations === 1) throw new Error("Folder cannot be prepared yet");
+        },
+      });
+      status = { state: "synced", offlineReady: true };
+      await expect(catalog.prepareDownloadedProject(id)).rejects.toThrow("Folder cannot be prepared yet");
+      expect((await catalog.catalogProjects()).projects[0]?.downloadError).toBeDefined();
+      holdRefresh = false;
+      await catalog.downloadCloudProject(id);
+      expect((await catalog.catalogProjects()).projects[0]?.downloadError).toBeUndefined();
+      await catalog.prepareDownloadedProject(id);
+      expect({ preparations, attempts }).toEqual({ preparations: 2, attempts: 1 });
+      expect((await catalog.catalogProjects()).projects[0]?.presence).toBe("downloaded");
+    }
   } finally {
     finishRefresh.resolve();
     finishRetry.resolve();
