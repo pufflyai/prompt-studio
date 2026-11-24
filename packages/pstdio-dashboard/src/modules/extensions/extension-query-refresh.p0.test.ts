@@ -52,4 +52,43 @@ for (const table of ["extension_instances", "installed_extension_sources"] as co
       writer.remove(projectId);
     }
   });
+
+  test(`refreshes an extension's environment access after ${table} changes`, async () => {
+    const projectId = `environment-refresh-${table}`;
+    const owner = getRuntimeCollections();
+    const queryClient = getDashboardQueryClient(owner);
+    const queryKey = ["extension-process-environment", projectId, "acme.agent"];
+    let sourceIdentity = "source-1";
+    const observer = new QueryObserver(queryClient, {
+      queryKey,
+      queryFn: async () => ({ sourceIdentity }),
+      staleTime: Number.POSITIVE_INFINITY,
+    });
+    const unsubscribe = observer.subscribe(() => undefined);
+    const workbench = createWorkbench();
+    selectDashboardProject(workbench, { id: projectId, name: "Environment refresh" });
+    const extensions = workbench.registerModule(
+      createExtensionsModule({
+        loadAppearance: async () => emptyAppearance,
+        loadMetadata: async () => emptyDashboardExtensionMetadata,
+      }),
+    );
+    owner.getCollection(table);
+    const writer = owner.getWriter(table)!;
+    try {
+      await flushMicrotasks();
+      expect(observer.getCurrentResult().data).toEqual({ sourceIdentity: "source-1" });
+      sourceIdentity = "source-2";
+      writer.upsert({ id: projectId });
+      await flushMicrotasks();
+      await flushMicrotasks();
+      expect(observer.getCurrentResult().data).toEqual({ sourceIdentity: "source-2" });
+    } finally {
+      extensions.dispose();
+      unsubscribe();
+      observer.destroy();
+      queryClient.removeQueries({ queryKey });
+      writer.remove(projectId);
+    }
+  });
 }
