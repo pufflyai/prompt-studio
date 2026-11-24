@@ -1,0 +1,187 @@
+name: PS-975 exact source CLI review
+
+on:
+  push:
+    branches:
+      - chore/ps975-2343-source-cli-9695e5e2
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  source_cli:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PS975_HEAD: 9695e5e2b7345dc8c9861b52f9f57ed811bbd4e0
+      PS975_TREE: f19100ef79af3a3937dcaa0ea3503361da48bc11
+      PS975_BASE: 5f0cdebee14c9166fcf159b54a50091f43ffe843
+      PS975_POLICY: 0919c441a350ecbfcce669094d433f8f02a2b3f45c4d0571f798af77d9b341da
+      PS975_CLI_GROUP: 72480638f874d13d0838a290
+      PS975_CLI_FILES_SHA256: 58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a
+      PS975_OUTPUT: test-results/ps975-2343-source-cli
+      PS975_ORDINARY_RUN: "45512903891"
+      PS975_ORDINARY_SOURCE: a8d36f9899cfa4737340aade879bbd971aa8c664
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.PS975_HEAD }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+
+      - name: Verify the source and sealed Linux plan
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = refs/heads/chore/ps975-2343-source-cli-9695e5e2
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$PS975_HEAD"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" =             "$(printf 'A\t.github/workflows/ps975-2343-source-cli-9695e5e2.yml')"
+          test "$(git rev-parse HEAD)" = "$PS975_HEAD"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$PS975_TREE"
+          git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main             refs/heads/feature/numeric-property-gesture-prerequisite:refs/remotes/origin/feature/numeric-property-gesture-prerequisite
+          test "$(git rev-parse origin/feature/numeric-property-gesture-prerequisite)" = "$PS975_HEAD"
+          main="$(git rev-parse origin/main)"
+          test "$(git merge-base HEAD "$main")" = "$PS975_BASE"
+          incoming="$(git rev-list --count "HEAD..$main")"
+          test "$incoming" -le 10
+          prospective="$(git merge-tree --write-tree --no-messages HEAD "$main")"
+          test "$(git cat-file -t "$prospective")" = tree
+          test -z "$(git status --porcelain)"
+          test "$(bun --version)" = "1.4.4"
+          test "$(node --version)" = "v26.7.0"
+          test "$(jq -r .packageManager package.json)" = "bun@1.4.4"
+          mkdir -p "$PS975_OUTPUT"
+          bun run test:review --base origin/main --list \
+            --test packages/canvas-tests/src/ui/ui/number-editing.p1.spec.ts > "$PS975_OUTPUT/selected-plan.json"
+          jq -e --arg sha "$PS975_HEAD" --arg tree "$PS975_TREE" --arg base "$PS975_BASE"             --arg policy "$PS975_POLICY" --arg group "$PS975_CLI_GROUP" '
+              .head == $sha and .mergeBase == $base and (.testPlan.digest | test("^[a-f0-9]{64}$"))
+              and .testPlan.source == {sha:$sha,tree:$tree,policy:$policy,dirty:false}
+              and any(.selected[]; .file == "packages/ui/src/components/param-editor/inputs/number-editing.p0.test.tsx")
+              and any(.deferred[]; .file == "packages/canvas-tests/src/ui/ui/number-editing.p1.spec.ts"
+                and .evidence == "edited_tests")
+              and all(.testPlan.runs[]; .target == {platform:"linux",arch:"x64"})
+              and ([.testPlan.runs[] | select(.id == $group and .job == "local-additions")] | length) == 1
+              and any(.testPlan.runs[]; .id == $group and .owner == "e2e" and .cwd == "packages/e2e"
+                and .runner == "cli" and .priority == "P1" and .lane == "stable" and .artifact == "source"
+                and .requires == ["build-e5b1f54fca1c52cd"] and (.files | length) == 10)
+              and any(.testPlan.setup[]; .id == "build-e5b1f54fca1c52cd" and .owners == ["e2e"]
+                and .kind == "build" and .requires == [])
+            ' "$PS975_OUTPUT/selected-plan.json"
+          bun -e '
+            import { validateTestPlan } from "./scripts/ci/test-plan";
+            const { testPlan } = await Bun.file(process.env.PS975_OUTPUT + "/selected-plan.json").json();
+            validateTestPlan(testPlan);
+          '
+          sealed_digest="$(jq -er '.testPlan.digest' "$PS975_OUTPUT/selected-plan.json")"
+          echo "PS975_PLAN=$sealed_digest" >> "$GITHUB_ENV"
+          jq -c --arg group "$PS975_CLI_GROUP" '.testPlan.runs[] | select(.id == $group) | .files'             "$PS975_OUTPUT/selected-plan.json" > "$PS975_OUTPUT/assigned-files.json"
+          printf '%s  %s\n' "$PS975_CLI_FILES_SHA256" "$PS975_OUTPUT/assigned-files.json" | sha256sum -c -
+          jq -n --arg sha "$PS975_HEAD" --arg tree "$PS975_TREE" --arg main "$main" --arg base "$PS975_BASE"             --arg prospective "$prospective" --arg plan "$sealed_digest" --arg workflow "$GITHUB_WORKFLOW_SHA"             --argjson incoming "$incoming" --arg ordinary "$PS975_ORDINARY_RUN"             --arg ordinarySource "$PS975_ORDINARY_SOURCE"             '{sha:$sha,tree:$tree,main:$main,mergeBase:$base,mergeTree:$prospective,incoming:$incoming,
+              planDigest:$plan,diagnosticCommit:$workflow,ordinaryCiRun:$ordinary,ordinaryCiSha:$ordinarySource}'             > "$PS975_OUTPUT/identity.json"
+
+      - name: Open an owned private temporary directory
+        shell: bash
+        run: |
+          scratch="$(mktemp -d /tmp/ps975.XXXXXX)"
+          printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$scratch/owner"
+          {
+            echo "PS975_CLI_TMP=$scratch"
+            echo "TMPDIR=$scratch"
+            echo "TMP=$scratch"
+            echo "TEMP=$scratch"
+            echo "PS975_NATIVE_BUN=$(command -v bun)"
+          } >> "$GITHUB_ENV"
+          { node --version; bun --version; docker version; df -h /tmp "$GITHUB_WORKSPACE"; }             > "$PS975_OUTPUT/toolchain.log"
+
+      - name: Install locked dependencies and prepare Firefox
+        shell: bash
+        run: |
+          bun install --frozen-lockfile --concurrent-scripts 1
+          bun run --cwd packages/ui typegen:tokens
+          (cd packages/e2e && bun x --no-install playwright install --with-deps firefox) 2>&1             | tee "$PS975_OUTPUT/browser-setup.log"
+          test -z "$(git status --porcelain)"
+
+      - name: Execute only the ten-file source CLI group
+        shell: bash
+        run: |
+          test "$(command -v bun)" = "$PS975_NATIVE_BUN"
+          bun --no-orphans - <<'BUN' 2>&1 | tee "$PS975_OUTPUT/console.log"
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+          import { executePlan } from "./scripts/ci/run-test-plan";
+
+          const root = process.cwd();
+          const { PS975_CLI_TMP: scratch, PS975_OUTPUT: relative, PS975_CLI_GROUP: group } = process.env;
+          if (!scratch || !/^\/tmp\/ps975\.[A-Za-z0-9]{6}$/.test(scratch) || !relative || !group)
+            throw new Error("Unexpected native review assignment");
+          const executionId = process.env.GITHUB_RUN_ID + "/" + process.env.GITHUB_RUN_ATTEMPT;
+          const output = resolve(root, relative);
+          for (const [key, value] of Object.entries(localReviewEnvironment(scratch))) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+          process.env.CI_PLAN_OUTPUT_DIR = relative + "/native";
+          const { testPlan } = await Bun.file(resolve(output, "selected-plan.json")).json();
+          let passed = false;
+          try {
+            const result = await executePlan(testPlan, {
+              root, runIds: [group], prebuilt: false, executionId,
+              env: { CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+            });
+            passed = result.complete && result.outcome === "success";
+          } finally {
+            const cleanup = await cleanupReviewCompose(scratch);
+            await Bun.write(resolve(output, "compose-cleanup.json"), JSON.stringify(cleanup, null, 2));
+            passed &&= cleanup.every(entry => entry.outcome === "success");
+            process.exitCode = passed ? 0 : 1;
+          }
+          BUN
+
+      - name: Verify exact native execution and file coverage
+        shell: bash
+        run: |
+          jq -e --arg group "$PS975_CLI_GROUP" --arg digest "$PS975_PLAN"             --slurpfile expected "$PS975_OUTPUT/assigned-files.json"             --slurpfile sealed "$PS975_OUTPUT/selected-plan.json" '
+              .source == $sealed[0].testPlan.source and .planDigest == $digest
+              and .complete and .outcome == "success" and .errors == [] and .runIds == [$group]
+              and (.results | length) == 1
+              and all(.results[]; .runId == $group and .complete and .outcome == "success"
+                and .exitCode == 0 and .nativeFailure != true and (.reportedFiles | sort) == ($expected[0] | sort))
+              and [.phases[] | select(.kind == "build") | [.id,.outcome]] == [["build-e5b1f54fca1c52cd","success"]]
+              and any(.phases[]; .kind == "cleanup" and .outcome == "success")
+            ' "$PS975_OUTPUT/native/execution.json"
+          jq -e 'all(.[]; .outcome == "success")' "$PS975_OUTPUT/compose-cleanup.json"
+          git diff --exit-code
+
+      - name: Retain and clean this invocation's temporary files
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$PS975_OUTPUT"
+          if [[ -n "${PS975_CLI_TMP:-}" ]]; then
+            [[ "$PS975_CLI_TMP" =~ ^/tmp/ps975\.[A-Za-z0-9]{6}$ ]]
+            test "$(cat "$PS975_CLI_TMP/owner")" = "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+            if [[ -f "$PS975_CLI_TMP/compose-projects.jsonl" ]]; then
+              cp "$PS975_CLI_TMP/compose-projects.jsonl" "$PS975_OUTPUT/"
+            fi
+            rm -rf -- "$PS975_CLI_TMP"
+            test ! -e "$PS975_CLI_TMP"
+            printf '%s\n' 'Owned temporary directory removed' > "$PS975_OUTPUT/scratch-cleanup.txt"
+          fi
+
+      - name: Upload the fixture and native receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps975-2343-source-cli-9695e5e2-attempt-${{ github.run_attempt }}
+          path: ${{ env.PS975_OUTPUT }}
+          if-no-files-found: error
