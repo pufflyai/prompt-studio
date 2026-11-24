@@ -26,3 +26,32 @@ test("values split over several chunks and at the very end are hidden", async ()
     "a[Redacted]b [Redacted]",
   );
 });
+
+test("output that cannot start a granted value is not held back", async () => {
+  const seen: string[] = [];
+  const handle = redactProcessOutput(
+    {
+      events: async function* () {
+        yield { type: "stdout", data: new TextEncoder().encode("ready\n") } as ProcessEvent;
+        // The child waits for input here; the prompt must already be visible.
+        expect(seen).toEqual(["ready\n"]);
+        yield { type: "stdout", data: new TextEncoder().encode("sec") } as ProcessEvent;
+        expect(seen).toEqual(["ready\n"]);
+        yield { type: "stdout", data: new TextEncoder().encode("ret done") } as ProcessEvent;
+        yield { type: "exit", exit: { code: 0, signal: null } } as ProcessEvent;
+      },
+    } as unknown as ProcessHandle,
+    ["a-very-long-granted-credential", "secret"],
+  );
+  for await (const event of handle.events())
+    if (event.type === "stdout") seen.push(new TextDecoder().decode(event.data));
+  expect(seen.join("")).toBe("ready\n[Redacted] done");
+});
+
+test("many matches of one value redact in linear time when another value is absent", async () => {
+  const chunk = "ab".repeat(200_000);
+  const started = performance.now();
+  const text = await stdout(redactProcessOutput(streamed(chunk), ["ab", "x".repeat(64)]));
+  expect(text).toBe("[Redacted]".repeat(200_000));
+  expect(performance.now() - started).toBeLessThan(2_000);
+});
