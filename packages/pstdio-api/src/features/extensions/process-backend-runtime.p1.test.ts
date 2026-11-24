@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { closeBackendWorkers, uncoveredContextFunctions } from "pstdio-extensions";
+import { closeBackendWorkers, prepareExtensionRevision, uncoveredContextFunctions } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
 
 let root: string;
@@ -231,4 +231,68 @@ test("process-mode navigation checks invalid targets only for scoped invocations
     reason: "Invalid navigation target.",
   });
   expect((await execute("navigate")).outcome).toMatchObject({ ok: true, value: "ignored" });
+});
+
+test("a rejected revision keeps a cold accepted command callable through the catalog", async () => {
+  const source = join(root, "cold-candidate");
+  const extensionId = "example.cold-candidate";
+  await mkdir(source);
+  await writeFile(
+    join(source, "package.json"),
+    JSON.stringify({
+      name: "cold-candidate",
+      publisher: "example",
+      version: "1.0.0",
+      main: "./extension.ts",
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+      pstdio: { backendRuntime: "process" },
+    }),
+  );
+  const entryPath = join(source, "extension.ts");
+  await writeFile(
+    entryPath,
+    `export default { commands: [{
+      id: "ping", ref: { kind: "command", id: "ping" }, title: "Ping", run: () => "accepted"
+    }] };`,
+  );
+  await handle.deps.extensionService.enableInstalledSourceForProject({
+    projectId,
+    installName: "cold-candidate",
+    extensionId,
+    name: "cold-candidate",
+    displayName: "Cold candidate",
+    sourcePath: source,
+    sourceKind: "local_path",
+    manifest: {},
+  });
+  const catalog = handle.deps.extensionRuntimeCatalog;
+  const accepted = await catalog.get(projectId);
+  const commandId = `${extensionId}.command.ping`;
+  expect(accepted.runtime.commands.some((command) => command.id === commandId)).toBe(true);
+
+  await writeFile(
+    entryPath,
+    `export default { resourceKinds: [{
+      id: "invalid", ref: { kind: "resource-kind", id: "invalid" }, label: "Invalid", prefix: "WS"
+    }] };`,
+  );
+  const inspected = await prepareExtensionRevision(source);
+  const rejection = await catalog
+    .validateResourcePrefixes(projectId, {
+      extension_id: extensionId,
+      source_path: source,
+      source_kind: "local_path",
+      preparedRevision: inspected,
+    })
+    .catch((error) => error);
+  expect(rejection).toMatchObject({
+    diagnostics: [expect.objectContaining({ code: "extension_resource_prefix_invalid" })],
+  });
+
+  const response = await handle.app.request(`/v1/projects/${projectId}/extensions/commands/${commandId}/execute`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ params: {} }),
+  });
+  expect((await response.json()).outcome).toMatchObject({ ok: true, value: "accepted" });
 });
