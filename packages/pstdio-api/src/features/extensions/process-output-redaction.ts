@@ -11,10 +11,35 @@ const indexOf = (haystack: Uint8Array, needle: Uint8Array, from: number) => {
   return -1;
 };
 
+// Whether the bytes at `from` match the secret, as far as both go.
 const startsWith = (secret: Uint8Array, bytes: Uint8Array, from: number) => {
-  for (let offset = 0; from + offset < bytes.length; offset++)
+  for (let offset = 0; offset < secret.length && from + offset < bytes.length; offset++)
     if (secret[offset] !== bytes[from + offset]) return false;
   return true;
+};
+
+/**
+ * Extends a match over every secret that overlaps it, so `abc` and `bcdefg` in `abcdefg` hide the
+ * whole run rather than leave `defg`. Returns undefined when an overlapping secret may continue
+ * past the bytes seen so far, unless the stream has ended.
+ */
+const coveredEnd = (bytes: Uint8Array, secrets: Uint8Array[], start: number, end: number, final: boolean) => {
+  let covered = end;
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (const secret of secrets) {
+      // Only starts inside the run can overlap it, so the search stays within the run.
+      for (let at = start; at < covered && at + secret.length <= bytes.length; at++)
+        if (at + secret.length > covered && startsWith(secret, bytes, at)) {
+          covered = at + secret.length;
+          changed = true;
+        }
+    }
+  }
+  if (final) return covered;
+  for (let at = start; at < covered; at++)
+    if (secrets.some((secret) => secret.length > bytes.length - at && startsWith(secret, bytes, at))) return undefined;
+  return covered;
 };
 
 /**
@@ -22,7 +47,7 @@ const startsWith = (secret: Uint8Array, bytes: Uint8Array, from: number) => {
  * Each secret's next position is searched once and moved forward only when passed, so many
  * matches of one value do not rescan the buffer for the others.
  */
-const redactUpTo = (bytes: Uint8Array, secrets: Uint8Array[], limit: number) => {
+const redactUpTo = (bytes: Uint8Array, secrets: Uint8Array[], limit: number, final = false) => {
   const next = secrets.map((secret) => indexOf(bytes, secret, 0));
   const parts: Uint8Array[] = [];
   let position = 0;
@@ -40,10 +65,23 @@ const redactUpTo = (bytes: Uint8Array, secrets: Uint8Array[], limit: number) => 
       position = limit;
       break;
     }
-    parts.push(bytes.subarray(position, match.start), REDACTED);
-    position = match.start + match.length;
+    const end = coveredEnd(bytes, secrets, match.start, match.start + match.length, final);
+    parts.push(bytes.subarray(position, match.start));
+    position = match.start;
+    // An overlapping secret may still be arriving: hold the whole run for the next chunk.
+    if (end === undefined) break;
+    parts.push(REDACTED);
+    position = end;
   }
   return { emitted: Buffer.concat(parts), rest: bytes.subarray(position) };
+};
+
+/** Hides granted values in collected output, overlapping ones included. */
+export const redactText = (text: string, values: string[]) => {
+  const secrets = values.filter(Boolean).map((value) => new TextEncoder().encode(value));
+  if (secrets.length === 0) return text;
+  const bytes = new TextEncoder().encode(text);
+  return new TextDecoder().decode(redactUpTo(bytes, secrets, bytes.length, true).emitted);
 };
 
 /**
@@ -73,7 +111,7 @@ export const redactProcessOutput = (handle: ProcessHandle, values: string[]) => 
     for await (const event of source) {
       if (event.type === "exit") {
         for (const type of ["stdout", "stderr"] as const) {
-          const { emitted } = redactUpTo(held[type], secrets, held[type].length);
+          const { emitted } = redactUpTo(held[type], secrets, held[type].length, true);
           if (emitted.length) yield { type, data: emitted } satisfies ProcessEvent;
         }
         yield event;
