@@ -104,17 +104,25 @@ const restoreUpdate = async (files: Files, owner: StorageOwner, row: Row, head: 
   head.updates.sort((first, second) => first.revision - second.revision);
   head.revision = Math.max(head.revision, revision);
 };
-const restoreRetry = async (files: Files, owner: StorageOwner, row: Row, head: DocumentFileHead, input: Input) => {
-  if (typeof input.operation_id !== "string" || typeof input.fingerprint !== "string")
-    throw new Error("Invalid released document retry fact");
-  const known: Record<string, string> = head.operations
+const restoreRetries = async (files: Files, owner: StorageOwner, row: Row, head: DocumentFileHead, inputs: Input[]) => {
+  const saved: Record<string, string> = head.operations
     ? JSON.parse(Buffer.from(await files.read(owner.workbenchId, row.id, "operations", head.operations)).toString())
     : {};
-  const previous = Object.getOwnPropertyDescriptor(known, input.operation_id)?.value;
-  if (previous !== undefined && previous !== input.fingerprint)
-    throw new Error("Document storage restoration conflict: storage_document_operations");
-  const operations = Object.fromEntries([...Object.entries(known), [input.operation_id, input.fingerprint]]);
-  head.operations = await files.put(owner.workbenchId, row.id, "operations", Buffer.from(JSON.stringify(operations)));
+  const known = new Map(Object.entries(saved));
+  for (const input of inputs) {
+    if (typeof input.operation_id !== "string" || typeof input.fingerprint !== "string")
+      throw new Error("Invalid released document retry fact");
+    const previous = known.get(input.operation_id);
+    if (previous !== undefined && previous !== input.fingerprint)
+      throw new Error("Document storage restoration conflict: storage_document_operations");
+    known.set(input.operation_id, input.fingerprint);
+  }
+  head.operations = await files.put(
+    owner.workbenchId,
+    row.id,
+    "operations",
+    Buffer.from(JSON.stringify(Object.fromEntries(known))),
+  );
 };
 
 export const publishRestoredHeads = async (
@@ -178,12 +186,19 @@ export const restoreDocumentFileBatch = async (tx: Transaction, table: string, i
       if (!row) throw new Error("Released document history has no saved snapshot");
       const head = await readFileDocumentHead(files, owner.workbenchId, row);
       trackDocumentFiles(tx, owner.workbenchId, row.id);
-      for (const { input } of group) {
-        if (table === "storage_document_updates") await restoreUpdate(files, owner, row, head, input);
-        else await restoreRetry(files, owner, row, head, input);
-      }
+      if (table === "storage_document_updates")
+        for (const { input } of group) await restoreUpdate(files, owner, row, head, input);
+      else
+        await restoreRetries(
+          files,
+          owner,
+          row,
+          head,
+          group.map(({ input }) => input),
+        );
       return { project: owner.workbenchId, row, head };
     }),
   );
   await publishRestoredHeads(tx, heads);
+  return heads.map(({ project, row }) => ({ project, id: row.id }));
 };

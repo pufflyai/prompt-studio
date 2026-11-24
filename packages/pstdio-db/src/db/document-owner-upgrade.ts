@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import { getTableColumns, getTableName, sql } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
+import { pruneDocumentFiles } from "../services/extension-storage/document-file-retention";
 import { documentFilesFor } from "../services/extension-storage/document-files";
 import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
@@ -168,7 +169,18 @@ export const prepareDocumentOwnerUpgrade = async (db: DbClient, path: string) =>
       if (!pending.length) return;
       const batch = pending.splice(0);
       pendingBytes = 0;
-      await db.transaction((tx) => restoreBatch(tx, source, batch));
+      const restored = await db.transaction((tx) => restoreBatch(tx, source, batch));
+      if (restored) {
+        const projects = new Map<string, number[]>();
+        for (const { project, id } of restored) {
+          const ids = projects.get(project) ?? [];
+          ids.push(id);
+          projects.set(project, ids);
+        }
+        // Only committed heads may release older generations. Keep disk use
+        // bounded while later batches and interrupted upgrades remain resumable.
+        for (const [project, ids] of projects) await pruneDocumentFiles(db, project, ids);
+      }
     };
     const restore = await prepareUpgradeSnapshot(
       db,

@@ -92,7 +92,6 @@ for (const interruption of ["normal", "schema", "restore"]) {
     const phases: Record<string, number> = {};
     let phaseStart = performance.now();
     const markPhase = (phase: string) => {
-      if (interruption !== "restore") return;
       const now = performance.now();
       phases[phase] = Math.round(now - phaseStart);
       phaseStart = now;
@@ -110,6 +109,7 @@ for (const interruption of ["normal", "schema", "restore"]) {
       INSERT INTO storage_documents SELECT 'project-a','example.other',document_id,state,revision,folded_revision FROM storage_documents WHERE workbench_id='project-b';
       INSERT INTO storage_document_updates SELECT workbench_id,extension_id,document_id,r,decode(CASE WHEN r=2 THEN '' ELSE 'ff00' END,'hex') FROM storage_documents CROSS JOIN generate_series(2,3) r;
       INSERT INTO storage_document_operations SELECT workbench_id,extension_id,document_id,'same-operation','exact-' || document_id FROM storage_documents;
+      INSERT INTO storage_document_operations SELECT 'project-a','pstdio','document-001','retry-' || n,'exact-retry-' || n FROM generate_series(1,401) n;
       INSERT INTO storage_record_projections (workbench_id,extension_id,document_id,revision,live_count) SELECT workbench_id,extension_id,'records',73,1 FROM storage_documents WHERE document_id='records';
       INSERT INTO storage_current_records (workbench_id,extension_id,record_id,deleted,value,query_values,revision,record_lifetime)
         SELECT workbench_id,extension_id,document_id,false,'{"state":"open"}'::jsonb,'{"things":{"state":"open"}}'::jsonb,'same-revision','life-' || document_id FROM storage_documents;
@@ -156,7 +156,7 @@ for (const interruption of ["normal", "schema", "restore"]) {
       markPhase("interrupted restore");
       await previous.close();
       closed = true;
-      store = await createDb({ path: previous.path });
+      store = await createDb({ path: previous.path, onPhase: markPhase });
       const restored = async () => {
         const fileRows = { ...(await releasedDocumentRows(store!)), ...(await releasedRecordRows(store!.db)) };
         return Promise.all(tables.map((table) => readRestoredTable(store!.pglite, table, fileRows)));
@@ -184,12 +184,11 @@ for (const interruption of ["normal", "schema", "restore"]) {
       if (!closed) await previous.close();
       await store?.close();
       await rm(root, { recursive: true, force: true });
-      if (interruption === "restore") {
-        markPhase("cleanup");
-        console.info("Interrupted document owner upgrade phases (ms)", JSON.stringify(phases));
-      }
+      markPhase("cleanup");
+      console.info("Document owner upgrade phases (ms)", interruption, JSON.stringify(phases));
     }
   };
-  // The interrupted variant attempts a failed restore and verifies durability on a second reopen.
-  test(name, check, interruption === "restore" ? 10_000 : undefined);
+  // Each variant restores 401 additional retry facts across committed batches,
+  // collects obsolete files and verifies durability on a second reopen.
+  test(name, check, 10_000);
 }
