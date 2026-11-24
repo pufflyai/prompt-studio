@@ -160,7 +160,9 @@ Explicit Git refs and other repository sources use the system Git executable. Wh
   are reused across restarts while the extension's source, its installed dependencies, Bun, and the
   host executable are unchanged. Once a changed source loads, earlier bundles of that folder that no
   load still uses are removed. Bundles of another host executable are removed after a week unused.
-  An interrupted copy or a partially written bundle is never reused.
+  An interrupted copy or a partially written bundle is never reused. Bundling runs in its own
+  process, so build macros never run in the host, and it must finish within 2 minutes. A macro that
+  never returns fails the load instead of blocking it.
 - A webview whose entry file is missing reports a build failure that names the file. The project's
   other tools still load, and adding the file builds it again.
 - Each webview build runs in a new Bun process, so a build after an update reads the dependencies
@@ -209,23 +211,37 @@ provider keys and the runtime token are not in its `process.env`.
 It is not a sandbox. The worker still runs as your OS account and can read the same files as the
 host, including the Prompt Studio home folder.
 
-In this release, handler code in the worker can use almost every `ctx` member. Functions you pass
-to the host, such as a `storage.migrate` callback or a `storage.observe` listener, and functions
-or async iterables the host returns, such as a `close()` handle or `log.follow()`, work across the
-process boundary. They stay valid until the handler that created them returns.
+Handler code in the worker can use every `ctx` member. Functions you pass to the host, such as a
+`storage.migrate` callback or a `storage.observe` listener, and functions or async iterables the
+host returns, such as a `close()` handle or `log.follow()`, work across the process boundary. They
+stay valid while either side still holds them.
 
-`terminal` and `localDirectory` are not available yet. `ids.create`, `records.id` (also inside
+`terminal.openSession` returns its handle at once, as in the host. `write`, `resize` and `kill`
+run in call order once the session opens. The handle's `id` is created in the worker, so it differs
+from the host's own session id. The host still ends a session when the call that opened it ends.
+
+`ids.create`, `records.id` (also inside
 `storage.scope(...)`), `positions.between`, `urlFor` and the middleware helpers are computed in the
 worker with the same results as the host. `Blob` arguments and `ReadableStream` results, such as
 `storage.assets.stage` and `read`, work across the boundary.
 
 A worker that has run nothing for 10 minutes stops. The next call starts it again.
 
+The host watches each worker from outside:
+- A worker whose event loop does not answer for 60 seconds is stopped, for example one stuck in an
+  endless loop. Time the host itself was blocked does not count.
+- A worker that uses more than 2 GiB of memory is also stopped.
+
+Its running calls fail with `backend_unavailable`. A worker that stops unexpectedly 3 times within a
+minute is not started again for 30 seconds; calls fail with `backend_unavailable` until then. These
+limits are not yet calibrated on every supported device.
+
 An `AbortSignal` you pass to a host call, such as `sessions.stream(id, onEvent, { signal })`, still
 cancels it. When your handler returns, the host closes any stream or iterator it left open.
 
-Harnesses, workspace types, text sources and resource hierarchy providers are not loaded, and the
-extension reports an `extension_process_runtime_unsupported` diagnostic. Other arguments and results
+Harnesses run in the worker too. A session handle that `start` or `resume` returns, with its `done`
+promise and methods, keeps working until the host releases it. The event sink's `getMessages()` stays
+synchronous. Workspace types, text sources and resource hierarchy providers run in the worker as well. Other arguments and results
 must be plain data: objects, arrays, strings, numbers, booleans, `Date` and bytes.
 
 The host inspects contributions in a short-lived worker. A runtime worker starts on the first

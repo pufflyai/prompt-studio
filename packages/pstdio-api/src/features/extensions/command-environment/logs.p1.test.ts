@@ -58,6 +58,14 @@ test("declared extension logs preserve owner scopes and publication write permis
     });
     await comments.append({ text: "saved offline" }, { id: "comment" });
     expect((await comments.read({ after: 0 })).entries.map((entry) => entry.id)).toEqual(["comment"]);
+    // A reader closed while it waits for the next entry ends at once instead of at the next write.
+    const idle = comments.follow({ after: 0 })[Symbol.asyncIterator]();
+    expect((await idle.next()).value?.id).toBe("comment");
+    const waiting = idle.next().catch(() => ({ done: true as const, value: undefined }));
+    await Bun.sleep(50);
+    const closing = idle.return?.().then(() => "closed");
+    expect(await Promise.race([closing, Bun.sleep(2_000).then(() => "still waiting")])).toBe("closed");
+    expect((await waiting).done).toBe(true);
     expect((await first.api.log("comments").read({ after: 0 })).entries).toEqual([]);
     expect((await second.api.log("comments").read({ after: 0 })).entries).toEqual([]);
     await expect(first.api.log("undeclared").read({ after: 0 })).rejects.toThrow("not declared");

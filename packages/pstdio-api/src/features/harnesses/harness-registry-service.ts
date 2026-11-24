@@ -9,6 +9,7 @@ import {
   type HarnessSessionResources,
 } from "pstdio-api-runtime-host";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
+import { markHostContext } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { installMissingDefaultExtensions } from "../extensions/default-extensions";
 import { createProcessApi, findFreePort } from "../extensions/extension-process-api";
@@ -92,19 +93,21 @@ export const createHarnessRegistryService = (input: {
       yield await Promise.reject(new Error("Extension connections are not available in this host."));
     },
   };
-  const buildContext: HarnessContextFactory = (record, options) => ({
-    projectId: options?.projectId,
-    extensionId: record.extensionId,
-    name: record.name,
-    process: createProcessApi({ extensionId: record.extensionId }),
-    net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
-    connections:
-      options?.projectId && input.createConnectionsApi
-        ? input.createConnectionsApi({ projectId: options.projectId, extensionId: record.extensionId })
-        : unavailableConnections,
-    logger: harnessLogger(record.extensionId),
-    state: createHarnessStateApi(record.extensionId),
-  });
+  // Marked so a process-mode harness reaches this context through its worker's allowlist.
+  const buildContext: HarnessContextFactory = (record, options) =>
+    markHostContext({
+      projectId: options?.projectId,
+      extensionId: record.extensionId,
+      name: record.name,
+      process: createProcessApi({ extensionId: record.extensionId }),
+      net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
+      connections:
+        options?.projectId && input.createConnectionsApi
+          ? input.createConnectionsApi({ projectId: options.projectId, extensionId: record.extensionId })
+          : unavailableConnections,
+      logger: harnessLogger(record.extensionId),
+      state: createHarnessStateApi(record.extensionId),
+    });
 
   // Sources registered in the DB only exist once a project synced them, but agents are
   // host-wide and must resolve before the first project: also scan the user extensions root.

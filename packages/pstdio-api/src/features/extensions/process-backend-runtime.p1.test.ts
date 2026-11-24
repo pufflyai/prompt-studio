@@ -11,6 +11,7 @@ import { createTestApp } from "../../test-utils/create-test-app";
 let root: string;
 let handle: Awaited<ReturnType<typeof createTestApp>>;
 let projectId: string;
+let terminalProjectId: string;
 const previous = { home: process.env.PSTDIO_HOME, defaults: process.env.PSTDIO_DEFAULT_EXTENSIONS };
 
 const assetBody = `${"part".repeat(65_537)}asset body`;
@@ -19,7 +20,6 @@ const entry = `
 const item = (ctx) => ctx.storage.collection("items");
 export default {
   storage: { logs: ["worker-events"] },
-  harnesses: [{ id: "agent" }],
   middlewares: [
     {
       id: "shout",
@@ -198,6 +198,23 @@ export default {
       run: (ctx) => ctx.net.findFreePort(),
     },
     {
+      id: "terminal",
+      ref: { kind: "command", id: "terminal" },
+      title: "Terminal",
+      async run(ctx, params) {
+        const session = ctx.terminal.openSession({ command: params.command, cols: 80, rows: 24 });
+        session.write("hello\\r");
+        const events = [];
+        let text = "";
+        for await (const event of session.events()) {
+          events.push(event.kind);
+          if (event.kind === "data") text += new TextDecoder().decode(event.chunk);
+          if (event.kind === "error") text += event.message;
+        }
+        return { text, last: events.at(-1) };
+      },
+    },
+    {
       id: "spin",
       ref: { kind: "command", id: "spin" },
       title: "Spin",
@@ -249,16 +266,27 @@ beforeAll(async () => {
   handle = await createTestApp({ databasePath: ":memory:", storageRoot: join(root, "storage") });
   const project = await handle.deps.projectService.create({ name: "Isolated" });
   projectId = project.id;
-  await handle.deps.extensionService.enableInstalledSourceForProject({
-    projectId,
-    installName: "isolated",
-    extensionId: "example.isolated",
-    name: "isolated",
-    displayName: "Isolated",
-    sourcePath: source,
-    sourceKind: "local_path",
-    manifest: {},
+  const terminalProject = await handle.deps.projectService.create({ name: "With terminal workspace" });
+  terminalProjectId = terminalProject.id;
+  const folder = join(root, "project");
+  await mkdir(folder);
+  await handle.deps.workspaceService.ensureDefault({
+    project_id: terminalProjectId,
+    root_path: folder,
+    name: "Project folder",
   });
+  for (const id of [projectId, terminalProjectId]) {
+    await handle.deps.extensionService.enableInstalledSourceForProject({
+      projectId: id,
+      installName: "isolated",
+      extensionId: "example.isolated",
+      name: "isolated",
+      displayName: "Isolated",
+      sourcePath: source,
+      sourceKind: "local_path",
+      manifest: {},
+    });
+  }
   await handle.deps.extensionService.enableInstalledSourceForProject({
     projectId,
     installName: "in-process",
@@ -279,9 +307,14 @@ afterAll(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-const execute = async (command: string, params: Record<string, unknown> = {}, source?: string) => {
+const execute = async (
+  command: string,
+  params: Record<string, unknown> = {},
+  source?: string,
+  selectedProject = projectId,
+) => {
   const response = await handle.app.request(
-    `/v1/projects/${projectId}/extensions/commands/example.isolated.command.${command}/execute`,
+    `/v1/projects/${selectedProject}/extensions/commands/example.isolated.command.${command}/execute`,
     { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ params, source }) },
   );
   return (await response.json()) as { outcome: { ok: boolean; value: unknown } };
@@ -330,15 +363,11 @@ test("a CPU-bound process-mode command does not block the API", async () => {
   expect((await spinning).outcome).toMatchObject({ ok: true, value: "spun" });
 });
 
-test("process-mode hooks run in the worker and unsupported providers are reported, not loaded", async () => {
+test("process-mode hooks run in the worker", async () => {
   await execute("save", { id: "b", text: "again" });
   const stored = await execute("read-hooked");
   expect(stored.outcome.ok).toBe(true);
   expect((stored.outcome.value as { pid: number }).pid).not.toBe(process.pid);
-  const snapshot = await handle.deps.extensionRuntimeCatalog.get(projectId);
-  expect(snapshot.runtime.diagnostics).toEqual(
-    expect.arrayContaining([expect.objectContaining({ code: "extension_process_runtime_unsupported" })]),
-  );
 });
 
 test("a crashed worker fails only its running call; the next call starts a new worker", async () => {
@@ -550,4 +579,18 @@ test("process-mode handlers resume file-backed assets and read verified bytes", 
   expect(await service.get(owner, operationId)).toMatchObject({ status: "staging", uploadedByteLength: offset });
   expect((await execute("asset")).outcome).toMatchObject({ ok: true, value: { asset, verifiedSha256: asset.sha256 } });
   expect(await service.get(owner, operationId)).toMatchObject({ status: "complete", asset });
+});
+
+test("a process-mode handler opens a terminal session, writes to it and reads it to the end", async () => {
+  const script = `process.stdin.once("data", (data) => { process.stdout.write("got:" + String(data).trim()); process.exit(0); });`;
+  const { outcome } = await execute(
+    "terminal",
+    { command: [process.execPath, "-e", script] },
+    undefined,
+    terminalProjectId,
+  );
+  expect(outcome.ok).toBe(true);
+  const value = outcome.value as { text: string; last: string };
+  expect(value.text).toContain("got:hello");
+  expect(value.last).toBe("exit");
 });
