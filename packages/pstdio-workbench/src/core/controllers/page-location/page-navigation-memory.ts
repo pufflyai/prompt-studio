@@ -3,34 +3,49 @@ import type { WorkbenchPageContribution, WorkbenchPageResourceCodec } from "../.
 import { workbenchPageLocationKey, workbenchPageRefKey } from "./page-location-normalization";
 import type { RememberedWorkbenchPageLocation } from "./page-location-types";
 
+interface MemoryEntry {
+  saved: RememberedWorkbenchPageLocation;
+  resourceKeys?: Set<string>;
+}
+
 export const createPageNavigationMemory = (input: {
   pages(): readonly WorkbenchPageContribution[];
   resources: WorkbenchPageResourceCodec;
 }) => {
   let project: string | undefined;
-  let entries: readonly RememberedWorkbenchPageLocation[] = [];
+  const entries = new Set<MemoryEntry>();
+  let references: Map<string, Set<MemoryEntry>> | undefined;
   const key = (resource: ResourceRef) => input.resources.toUri(input.resources.normalize(resource));
-  // The entries array is replaced on navigation and project switches. Build the reverse
-  // lookup only when sync actually removes a resource from this navigation snapshot.
-  const references = new WeakMap<typeof entries, Map<string, Set<RememberedWorkbenchPageLocation>>>();
-  const indexReferences = () => {
-    const index = new Map<string, Set<RememberedWorkbenchPageLocation>>();
-    for (const entry of entries) {
-      for (const start of [entry, entry.location]) {
-        for (let location: PageLocation | undefined = start; location; location = location.parent) {
-          if (!location.resource) continue;
-          const uri = key(location.resource);
-          let matches = index.get(uri);
-          if (!matches) {
-            matches = new Set();
-            index.set(uri, matches);
-          }
-          matches.add(entry);
-        }
+  const indexEntry = (entry: MemoryEntry, index: Map<string, Set<MemoryEntry>>) => {
+    const keys = new Set<string>();
+    for (const start of [entry.saved, entry.saved.location]) {
+      for (let location: PageLocation | undefined = start; location; location = location.parent) {
+        if (location.resource) keys.add(key(location.resource));
       }
     }
-    references.set(entries, index);
-    return index;
+    entry.resourceKeys = keys;
+    for (const uri of keys) {
+      let matches = index.get(uri);
+      if (!matches) {
+        matches = new Set();
+        index.set(uri, matches);
+      }
+      matches.add(entry);
+    }
+  };
+  const addEntry = (saved: RememberedWorkbenchPageLocation) => {
+    const entry: MemoryEntry = { saved };
+    entries.add(entry);
+    if (references) indexEntry(entry, references);
+  };
+  const removeEntry = (entry: MemoryEntry) => {
+    entries.delete(entry);
+    if (!references || !entry.resourceKeys) return;
+    for (const uri of entry.resourceKeys) {
+      const matches = references.get(uri);
+      matches?.delete(entry);
+      if (matches?.size === 0) references.delete(uri);
+    }
   };
   const declaration = (context: Pick<PageLocation, "page">) =>
     input.pages().find((page) => workbenchPageRefKey(page.ref) === workbenchPageRefKey(context.page));
@@ -49,41 +64,49 @@ export const createPageNavigationMemory = (input: {
     load(projectId: string | undefined, saved: readonly RememberedWorkbenchPageLocation[] = []) {
       if (project === projectId) return;
       project = projectId;
-      entries = [...saved];
+      references = undefined;
+      entries.clear();
+      for (const entry of saved) addEntry(entry);
     },
     find(context: PageLocation) {
       const entry = [...entries]
         .reverse()
-        .find((entry) => contextKey(entry) === contextKey(context) && entry.modeId === mode(context));
-      return entry?.modeId === mode(context) ? entry?.location : undefined;
+        .find(({ saved }) => contextKey(saved) === contextKey(context) && saved.modeId === mode(context));
+      return entry?.saved.location;
     },
     remember(location: PageLocation) {
       for (let context: PageLocation | undefined = location; context; context = context.parent) {
         const modeId = mode(context);
         if (!modeId || modeId !== mode(location)) continue;
-        entries = [
-          ...entries.filter((entry) => contextKey(entry) !== contextKey(context)),
-          {
-            page: context.page,
-            ...(context.resource ? { resource: context.resource } : {}),
-            ...(context.parent ? { parent: context.parent } : {}),
-            modeId,
-            location,
-          },
-        ];
+        const wanted = contextKey(context);
+        for (const entry of entries) {
+          if (contextKey(entry.saved) === wanted) removeEntry(entry);
+        }
+        addEntry({
+          page: context.page,
+          ...(context.resource ? { resource: context.resource } : {}),
+          ...(context.parent ? { parent: context.parent } : {}),
+          modeId,
+          location,
+        });
       }
-      return entries;
+      return Array.from(entries, (entry) => entry.saved);
     },
     consume(location: PageLocation | undefined) {
       if (!location) return;
       const key = locationKey(location);
-      entries = entries.filter((entry) => locationKey(entry.location) !== key);
+      for (const entry of entries) {
+        if (locationKey(entry.saved.location) === key) removeEntry(entry);
+      }
     },
     forgetResource(resource: ResourceRef) {
-      const index = references.get(entries) ?? indexReferences();
-      const matches = index.get(key(resource));
+      if (!references) {
+        references = new Map();
+        for (const entry of entries) indexEntry(entry, references);
+      }
+      const matches = references.get(key(resource));
       if (!matches) return false;
-      entries = entries.filter((entry) => !matches.has(entry));
+      for (const entry of matches) removeEntry(entry);
       return true;
     },
   };

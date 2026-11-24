@@ -19,7 +19,7 @@ if (runtime.diagnostics.length) throw new Error(JSON.stringify(runtime.diagnosti
 // Resolve external owners against their real declarations, but let each test's
 // Workspaces helper own its registrations instead of registering that provider twice.
 const allMetadata = createWorkbenchExtensionMetadata({ runtime });
-const metadata = Object.fromEntries(
+export const sessionProviderMetadata = Object.fromEntries(
   Object.entries(allMetadata).map(([key, records]) => [
     key,
     Array.isArray(records)
@@ -46,7 +46,7 @@ export const registerSessionProvider = (
   return registerWorkbenchExtensionContributions({
     workbench,
     projectId: input.projectId ?? "project-1",
-    metadata,
+    metadata: sessionProviderMetadata,
     createKeybindingWhenExpression: buildDashboardWorkbenchWhenExpression,
     createMenuWhenExpression: (contribution) => buildDashboardWorkbenchWhenExpression(contribution.when),
     async executeCommand(commandId, body) {

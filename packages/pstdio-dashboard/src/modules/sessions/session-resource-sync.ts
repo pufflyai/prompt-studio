@@ -1,5 +1,5 @@
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
-import { subscribeCollections } from "@/lib/sync/collections";
+import { type CollectionRowChange, subscribeCollections } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 
 const closeSessionViews = (ctx: WorkbenchModuleContext, projectId: string, id: string) => {
@@ -15,27 +15,34 @@ const closeSessionViews = (ctx: WorkbenchModuleContext, projectId: string, id: s
   for (const resource of references) ctx.resources.removed(resource);
 };
 
+const syncSession = (
+  ctx: WorkbenchModuleContext,
+  projectId: string,
+  retired: Set<string>,
+  { key: id, value, previousValue }: CollectionRowChange,
+) => {
+  if ((value ?? previousValue)?.project_id !== projectId) return;
+  if (value?.archived !== true) {
+    retired.delete(id);
+    if (value) return;
+  }
+  // Only this subscriber retires all four aliases. A resolver can retire just the open one.
+  if (retired.has(id)) return;
+  closeSessionViews(ctx, projectId, id);
+  if (value) retired.add(id);
+};
+
 export const registerSessionResourceSync = (ctx: WorkbenchModuleContext) => {
-  let selectionVersion = ctx.resources.getRemovalVersion();
+  let retiredArchives = new Set<string>();
   const stopProject = subscribeDashboardSelectedProject(ctx, () => {
-    selectionVersion = ctx.resources.getRemovalVersion();
+    retiredArchives = new Set();
   });
   const stopSync = subscribeCollections((change) => {
     if (change?.table !== "sessions") return;
     const projectId = getDashboardSelectedProjectId(ctx);
     if (!projectId) return;
-    for (const { key: id, value, previousValue } of change.changes) {
-      if ((value ?? previousValue)?.project_id !== projectId || (value && value.archived !== true)) continue;
-      // A full resync includes old archives. Retire their restored views on first observation,
-      // and again after a real archive transition, including for legacy resource identities.
-      if (
-        value?.archived === true &&
-        previousValue?.archived === true &&
-        ctx.resources.wasRemovedSince({ type: "session", extensionId: "pstdio", projectId, id }, selectionVersion)
-      )
-        continue;
-      closeSessionViews(ctx, projectId, id);
-    }
+    const retired = retiredArchives;
+    for (const row of change.changes) syncSession(ctx, projectId, retired, row);
   });
   return () => {
     stopSync();
