@@ -32,4 +32,29 @@ describe("DashboardRenderer public component", () => {
   test("offers editing when the caller can accept a definition", () => {
     expect(render(() => {})).toContain("Edit dashboard");
   });
+
+  test("renders caller content with editing controls in the page toolbar", () => {
+    const html = renderToString(
+      <ChakraProvider value={psTheme}>
+        <DashboardRenderer
+          title="Default toolbar title"
+          value={{
+            ...value,
+            widgets: [{ ...value.widgets[0], title: "", kind: "custom", source: "pipeline" }],
+          }}
+          sources={[{ id: "pipeline", name: "Pipeline history", content: <button>Show category</button> }]}
+          onChange={() => {}}
+          renderToolbar={(controls) => (
+            <div aria-label="Page actions" role="toolbar">
+              {controls}
+            </div>
+          )}
+        />
+      </ChakraProvider>,
+    );
+    expect(html).toContain('aria-label="Pipeline history"');
+    expect(html).toContain("Show category");
+    expect(html).toMatch(/aria-label="Page actions" role="toolbar">.*Edit dashboard/s);
+    expect(html).not.toContain("Default toolbar title");
+  });
 });

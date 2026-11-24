@@ -53,7 +53,8 @@ export function GridWidget(props: GridWidgetProps) {
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
   const draggable = useDraggable({ id: widget.id, disabled: !editing });
   const selected = selectedId === widget.id;
-  const label = widgetLabel(widget);
+  const source = sources.find(({ id }) => id === widget.source);
+  const label = widgetLabel(widget, source?.name);
   const content = (
     <Box
       ref={draggable.setNodeRef}
@@ -69,7 +70,7 @@ export function GridWidget(props: GridWidgetProps) {
     >
       <WidgetCard
         widget={widget}
-        source={sources.find(({ id }) => id === widget.source)}
+        source={source}
         controls={
           editing ? (
             <HStack css={styles.widgetToolbar} data-dashboard-controls="" aria-label={`${label} controls`}>

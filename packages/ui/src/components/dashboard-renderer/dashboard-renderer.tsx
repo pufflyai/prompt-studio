@@ -11,12 +11,13 @@ import {
   type DashboardDefinition,
   type DashboardRendererProps,
   type DashboardWidget,
+  sourcesForKind,
   widgetKinds,
   widgetLabel,
 } from "./dashboard-types";
 
 export function DashboardRenderer(props: DashboardRendererProps) {
-  const { value, sources, onChange, title = "Overview", actions } = props;
+  const { value, sources, onChange, title = "Overview", actions, renderToolbar } = props;
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
   const container = useRef<HTMLDivElement>(null);
   const editButton = useRef<HTMLButtonElement>(null);
@@ -50,14 +51,18 @@ export function DashboardRenderer(props: DashboardRendererProps) {
       setApplying(false);
     }
   };
-  const add = (kind: string) => {
-    if (!draft || !sources.length) return;
+  const availableKinds = widgetKinds.filter(({ id }) => sourcesForKind(sources, id).length > 0);
+  const add = (id: string) => {
+    const kind = availableKinds.find((option) => option.id === id);
+    if (!draft || !kind) return;
+    const source = sourcesForKind(sources, kind.id)[0];
+    if (!source) return;
     const widget: DashboardWidget = {
       id: crypto.randomUUID(),
-      title: `New ${widgetKinds.find(({ id }) => id === kind)?.name.toLowerCase()}`,
-      kind: kind as DashboardWidget["kind"],
-      source: sources[0].id,
-      layout: { x: 0, y: 0, w: 6, h: kind === "metric" ? 3 : 8 },
+      title: kind.id === "custom" ? "" : `New ${kind.name.toLowerCase()}`,
+      kind: kind.id,
+      source: source.id,
+      layout: { x: 0, y: 0, w: 6, h: kind.id === "metric" ? 3 : 8 },
     };
     setDraft({ ...definition, widgets: appendWidget(widgets, widget, mode) });
     setSelectedId(null);
@@ -65,71 +70,78 @@ export function DashboardRenderer(props: DashboardRendererProps) {
       widgetButton(widget.id)?.scrollIntoView({ block: "nearest" });
       setSelectedId(widget.id);
     });
-    setAnnouncement(`${widget.title} added.`);
+    setAnnouncement(`${widgetLabel(widget, source.name)} added.`);
   };
 
+  const controls = (
+    <Box css={styles.actions} role="group" aria-label="Dashboard controls">
+      {actions}
+      {editing ? (
+        <>
+          <SelectionMenu
+            triggerAriaLabel="Add widget"
+            triggerLabel={
+              <>
+                <Plus />
+                Add widget
+              </>
+            }
+            options={availableKinds}
+            selectedIds={[]}
+            multiSelect={false}
+            onToggle={add}
+            disabled={!availableKinds.length || applying}
+          />
+          <Button onClick={finishEditing} disabled={applying}>
+            Cancel
+          </Button>
+          <Button ref={applyButton} variant="primary" onClick={apply} disabled={applying}>
+            {saveError ? "Retry" : "Apply"}
+          </Button>
+          <DashboardDisplaySettings
+            mode={mode}
+            disabled={applying}
+            onModeChange={(nextMode) => {
+              setSelectedId(null);
+              setDraft({ mode: nextMode, widgets: compactWidgets(widgets, nextMode) });
+            }}
+          />
+        </>
+      ) : (
+        onChange && (
+          <Button ref={editButton} onClick={() => setDraft(value)}>
+            <Pencil />
+            Edit dashboard
+          </Button>
+        )
+      )}
+      {saveError && editing && (
+        <Text role="alert" color="fg.error" textStyle="label/S/regular">
+          {saveError}
+        </Text>
+      )}
+    </Box>
+  );
   return (
     <Box ref={container} css={styles.root}>
-      <Box css={styles.toolbar}>
-        <HStack gap="sm" minW="0">
-          <LayoutDashboard aria-hidden />
-          <Text as="h1" textStyle="heading/S">
-            {title}
-          </Text>
-          {editing && (
-            <Text textStyle="label/XS/regular" color="fg.muted">
-              Editing
+      {renderToolbar ? (
+        renderToolbar(controls)
+      ) : (
+        <Box css={styles.toolbar}>
+          <HStack gap="sm" minW="0">
+            <LayoutDashboard aria-hidden />
+            <Text as="h1" textStyle="heading/S">
+              {title}
             </Text>
-          )}
-        </HStack>
-        <Box css={styles.actions} role="group" aria-label="Dashboard controls">
-          {actions}
-          {editing ? (
-            <>
-              <SelectionMenu
-                triggerAriaLabel="Add widget"
-                triggerLabel={
-                  <>
-                    <Plus />
-                    Add widget
-                  </>
-                }
-                options={widgetKinds}
-                selectedIds={[]}
-                multiSelect={false}
-                onToggle={add}
-                disabled={!sources.length || applying}
-              />
-              <Button onClick={finishEditing} disabled={applying}>
-                Cancel
-              </Button>
-              <Button ref={applyButton} variant="primary" onClick={apply} disabled={applying}>
-                {saveError ? "Retry" : "Apply"}
-              </Button>
-              <DashboardDisplaySettings
-                mode={mode}
-                disabled={applying}
-                onModeChange={(nextMode) => {
-                  setSelectedId(null);
-                  setDraft({ mode: nextMode, widgets: compactWidgets(widgets, nextMode) });
-                }}
-              />
-            </>
-          ) : (
-            onChange && (
-              <Button ref={editButton} onClick={() => setDraft(value)}>
-                <Pencil />
-                Edit dashboard
-              </Button>
-            )
-          )}
-          {saveError && editing && (
-            <Text role="alert" color="fg.error" textStyle="label/S/regular">
-              {saveError}
-            </Text>
-          )}
+            {editing && (
+              <Text textStyle="label/XS/regular" color="fg.muted">
+                Editing
+              </Text>
+            )}
+          </HStack>
+          {controls}
         </Box>
-      </Box>
+      )}
       <Box css={styles.body}>
         <ScrollArea flex="1" minH="0" minW="0">
           {widgets.length ? (
@@ -163,7 +175,9 @@ export function DashboardRenderer(props: DashboardRendererProps) {
                   ),
                 });
                 setSelectedId(null);
-                setAnnouncement(`${widgetLabel(widgets[index])} removed.`);
+                const removed = widgets[index];
+                const source = sources.find(({ id }) => id === removed.source);
+                setAnnouncement(`${widgetLabel(removed, source?.name)} removed.`);
                 requestAnimationFrame(() => (next ? widgetButton(next.id) : applyButton.current)?.focus());
               }}
               onGestureStart={() => setSelectedId(null)}
