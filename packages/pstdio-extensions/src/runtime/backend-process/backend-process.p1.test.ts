@@ -7,7 +7,7 @@ import { join } from "node:path";
 import type { ProcessHandle } from "pstdio-api-contracts/extension-kernel";
 import { runtimeOperationChannel } from "pstdio-diagnostics";
 import { createExtensionProcessEnvironment } from "../process-environment";
-import { failedProcessHandle, processError } from "../process-owner";
+import { createProcessHandleProxy, createProcessOwner, failedProcessHandle, processError } from "../process-owner";
 import { markHostContext } from "../runner/host-context";
 import { expectRejection } from "./expect-rejection.test-utils";
 import { backendWorkerCommand, createBackendWorkerPool } from "./pool";
@@ -42,12 +42,27 @@ class ProviderChild {
     yield { type: "exit", exit: await this.exited };
   }
 }
+class FinishedProviderLeader {
+  id = "provider-leader";
+  started = Promise.resolve();
+  exited = Promise.resolve({ code: 0, signal: null });
+  stops = 0;
+  async write() {}
+  async end() {}
+  async kill() { this.stops++; }
+  async *events() { yield { type: "stdout", data: new Uint8Array([this.stops]) }; }
+}
 export default {
   workspaceTypes: [
     { spawn: () => new ProviderChild() },
     { spawn: () => {
       const child = new ProviderChild();
       return { ...child, write: child.write, end: child.end, kill: child.kill, events: child.events };
+    } },
+    { spawn: (_ctx, confirmed) => {
+      const child = new FinishedProviderLeader();
+      if (confirmed) child.treeExited = Promise.resolve();
+      return child;
     } },
   ],
   commands: [
@@ -359,6 +374,8 @@ export default {
         const iterator = handle.events()[Symbol.asyncIterator]();
         const first = (await iterator.next()).value;
         await handle.kill();
+        const treeExitReported = handle.treeExited instanceof Promise;
+        await handle.treeExited;
         const rest = [];
         for (let next = await iterator.next(); !next.done; next = await iterator.next()) rest.push(next.value);
         return {
@@ -366,6 +383,7 @@ export default {
           first: { type: first.type, text: new TextDecoder().decode(first.data) },
           rest,
           exited: await handle.exited,
+          treeExitReported,
           pending: await Promise.race([stuck, new Promise((resolve) => setTimeout(() => resolve("still waiting"), 50))]),
         };
       },
@@ -1569,6 +1587,7 @@ test("a spawned process handle opens at once, forwards its members and settles i
             id: "host-id",
             started: Promise.resolve(),
             exited: exited.promise,
+            treeExited: exited.promise.then(() => {}),
             write: (data: string) => {
               writes.push(data);
               return data === "stuck" ? new Promise(() => {}) : Promise.resolve();
@@ -1591,6 +1610,7 @@ test("a spawned process handle opens at once, forwards its members and settles i
       first: { type: "stdout", text: "out" },
       rest: [{ type: "exit", exit: { code: null, signal: "SIGTERM" } }],
       exited: { code: null, signal: "SIGTERM" },
+      treeExitReported: true,
       pending: "still waiting",
     });
     expect(writes).toEqual(["stuck", "hello", "<end>"]);
@@ -1611,7 +1631,7 @@ test("worker workspace providers can return class and object process handles wit
   try {
     const workspaceTypes = (worker.definition as { workspaceTypes: { spawn: Record<string, string> }[] })
       .workspaceTypes;
-    for (const [index, { spawn }] of workspaceTypes.entries()) {
+    for (const [index, { spawn }] of workspaceTypes.slice(0, 2).entries()) {
       const child = (await worker.invoke({
         handlerId: spawn[HANDLER_MARKER]!,
         context: {},
@@ -1632,6 +1652,38 @@ test("worker workspace providers can return class and object process handles wit
         { type: "stdout", data: new Uint8Array([3, 4]) },
         { type: "exit", exit },
       ]);
+    }
+  } finally {
+    await worker.stop();
+  }
+});
+
+test("materialized workspace provider handles retain cleanup after the direct child exits", async () => {
+  const worker = await start();
+  try {
+    const workspaceTypes = (worker.definition as { workspaceTypes: { spawn: Record<string, string> }[] })
+      .workspaceTypes;
+    for (const cleanup of ["kill", "owner close", "confirmed exit"] as const) {
+      const confirmed = cleanup === "confirmed exit";
+      const materialized = (await worker.invoke({
+        handlerId: workspaceTypes[2]!.spawn[HANDLER_MARKER]!,
+        context: {},
+        surface: { kind: "object", members: {} },
+        args: [confirmed],
+      })) as ProcessHandle;
+      if (confirmed) expect(materialized.treeExited).toBeInstanceOf(Promise);
+      else expect(materialized.treeExited).toBeUndefined();
+      const owner = createProcessOwner();
+      const child = createProcessHandleProxy(Promise.resolve(materialized));
+      owner.adopt(child);
+      expect(await child.exited).toEqual({ code: 0, signal: null });
+      if (cleanup === "kill") await child.kill();
+      if (confirmed) await child.treeExited;
+      await owner.close();
+      await child.treeExited;
+      const output = [];
+      for await (const event of await materialized.events()) output.push(event);
+      expect(output).toEqual([{ type: "stdout", data: new Uint8Array([confirmed ? 0 : 1]) }]);
     }
   } finally {
     await worker.stop();

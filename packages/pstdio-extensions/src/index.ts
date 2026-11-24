@@ -88,7 +88,6 @@ export {
   ProcessEnvironmentUnavailableError,
   type ProcessOwner,
   parseProcessEnvironmentDeclaration,
-  processCleanup,
   processError,
   pstdioExtensionsRoot,
   pstdioHomeRoot,
@@ -104,7 +103,6 @@ export {
   type ScopedHostApis,
   toCommandPaletteContributions,
   toSettingDefinitionRecord,
-  trackProcessCleanup,
   validateCommandParams,
 } from "./runtime";
 export * from "./runtime/backend-process";
