@@ -502,3 +502,39 @@ test("a finalized timeout in a kept workspace preserves its duration and release
   expect(await activeRun(deps.store, "env")).toBeNull();
   expect(await deps.store.collection("environment-cleanups").get("run:env")).toBeUndefined();
 });
+
+test("an unacknowledged missing submission in a kept workspace eventually queues a safe stop", async () => {
+  const { deps, record } = fixture(async <TBody>() => ({ status: 404, headers: {}, body: {} as TBody }));
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  record.stopAfterRun = false;
+  record.submissionPending = true;
+  await claimEnvironment(deps.store, "env", "run");
+  expect(await checkRun(deps, record)).toMatchObject({ status: "timed_out" });
+  expect(await deps.store.get("run:run")).toMatchObject({ summary: { status: "timed_out" } });
+  expect(await activeRun(deps.store, "env")).toBe("run");
+  expect(await claimEnvironment(deps.store, "env", "competing-run")).toBe(false);
+  expect(await deps.store.collection("environment-cleanups").get("run:env")).toMatchObject({ stop: true });
+});
+
+test("a saved lifecycle outcome ends a collector holding a stale pending record", async () => {
+  let reads = 0;
+  const { deps, record } = fixture(async () => {
+    reads++;
+    throw new Error("Must not poll a completed run");
+  });
+  record.submissionPending = true;
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  const summary = {
+    runId: "run",
+    environmentId: "env",
+    status: "error" as const,
+    exitCode: null,
+    durationMs: 100,
+    logPath: null,
+    tail: "",
+    error: "Setup was recovered",
+  };
+  await deps.store.set("run:run", { ...record, summary });
+  expect(await checkRun(deps, record)).toEqual(summary);
+  expect(reads).toBe(0);
+});

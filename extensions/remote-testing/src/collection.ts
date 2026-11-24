@@ -1,5 +1,6 @@
 import { type CommandContext, defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
 import { runDeps } from "./context";
+import type { Claim } from "./environments";
 import { awaitRun, type RunRecord, readRun } from "./runs";
 
 export const collectRun = defineCommand({
@@ -80,5 +81,13 @@ export async function resumeCollection(
         ),
       )
       .catch(() => {});
+  }
+}
+
+export async function resumeClaimedCollection(ctx: Pick<ExtensionContextBase, "storage" | "automation" | "logger">) {
+  for (const claim of await ctx.storage.collection<Claim>("environment-claims").list()) {
+    if (claim.setup) continue;
+    const record = await ctx.storage.get<RunRecord>(`run:${claim.runId}`);
+    if (record) await resumeCollection(ctx, record);
   }
 }

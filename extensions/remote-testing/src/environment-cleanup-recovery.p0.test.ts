@@ -262,3 +262,25 @@ test("an expired setup claim is recoverable without a run or cleanup record", as
   expect(f.stops()).toBe(0);
   expect(await activeRun(f.store, "env")).toBeNull();
 });
+
+test("a record-backed claim recovers collection after acknowledgement but before collector admission", async () => {
+  const f = await recoveryFixture();
+  await f.store.set("run:owner", {
+    runId: "owner",
+    environmentId: "env",
+    requestId: "request",
+    conversationId: "conversation",
+    root: "/",
+    command: "bun test",
+    startedAt: new Date().toISOString(),
+    timeoutSeconds: 60,
+    stopAfterRun: false,
+    submissionPending: false,
+  });
+  await recoverEnvironmentCleanup.run(f.ctx, {});
+  expect(f.queued).toHaveLength(1);
+  expect(f.queued[0]?.command).toMatchObject({ id: "runs.collect" });
+  expect(f.queued[0]?.input.params).toEqual({ runId: "owner" });
+  expect(await activeRun(f.store, "env")).toBe("owner");
+  expect(f.stops()).toBe(0);
+});

@@ -122,3 +122,51 @@ test("an unavailable log download preserves both the timeout and recovery intent
   expect((await f.store.get<RunRecord>("run:run"))?.summary).toEqual(f.record.summary);
   expect(await f.store.collection("pending-run-logs").get("run")).toMatchObject({ runId: "run" });
 });
+
+test("a late uploaded timeout log survives an initial missing-object response", async () => {
+  const f = await fixture();
+  await f.store.collection("pending-run-logs").put("run", { runId: "run", missingUntil: Date.now() + 30_000 });
+  let downloads = 0;
+  await collectSavedRunLog(
+    {
+      store: f.store,
+      api: async () => {
+        throw new Error("No workspace access");
+      },
+      storage: { download: async () => (++downloads === 1 ? null : new TextEncoder().encode("late uploaded log")) },
+      saveLog: async () => "run.log",
+    },
+    "run",
+  );
+  expect((await f.store.get<RunRecord>("run:run"))?.summary).toMatchObject({
+    status: "timed_out",
+    durationMs: 60000,
+    logPath: "run.log",
+    tail: "late uploaded log",
+  });
+});
+
+test("expired missing-log recovery makes one final read and retains the timeout", async () => {
+  const f = await fixture();
+  await f.store.collection("pending-run-logs").put("run", { runId: "run", missingUntil: Date.now() - 1 });
+  let downloads = 0;
+  await collectSavedRunLog(
+    {
+      store: f.store,
+      api: async () => {
+        throw new Error("No workspace access");
+      },
+      storage: {
+        download: async () => {
+          downloads++;
+          return null;
+        },
+      },
+      saveLog: async () => "unused",
+    },
+    "run",
+  );
+  expect(downloads).toBe(1);
+  expect(await f.store.collection("pending-run-logs").get("run")).toBeUndefined();
+  expect((await f.store.get<RunRecord>("run:run"))?.summary).toEqual(f.record.summary);
+});

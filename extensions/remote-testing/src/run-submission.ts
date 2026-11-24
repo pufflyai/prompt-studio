@@ -15,7 +15,7 @@ export async function saveSubmissionFailure(deps: RunDeps, record: RunRecord | u
   const recordId = deps.store.records.id(`run:${record.runId}`);
   while (true) {
     const current = await deps.store.records.read(recordId);
-    if (current.deleted || (current.value as unknown as RunRecord)?.summary) return;
+    if (!current.exists || current.deleted || (current.value as unknown as RunRecord)?.summary) return;
     if (
       await deps.store.records.commitIfCurrent({
         operationId: crypto.randomUUID(),

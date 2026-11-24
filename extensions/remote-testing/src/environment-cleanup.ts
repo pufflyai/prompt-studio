@@ -5,6 +5,7 @@ import {
   l10n,
   params,
 } from "@pstdio/sdk/extensions";
+import { resumeClaimedCollection } from "./collection";
 import { type Api, canRetryControllerRequest, connectionApi, waitForControllerPoll } from "./connection";
 import { ownsEnvironment, releaseEnvironment, stopEnvironment } from "./environments";
 import { changed } from "./events";
@@ -146,6 +147,7 @@ async function resumeCleanup(ctx: Pick<ExtensionContextBase, "automation" | "sto
 
 export async function resumeEnvironmentCleanups(ctx: Pick<ExtensionContextBase, "automation" | "logger" | "storage">) {
   await recoverSetupClaims(ctx);
+  await resumeClaimedCollection(ctx);
   await resumeRunLogs(ctx);
   for (const intent of await cleanupIntents(ctx.storage).list()) {
     await resumeCleanup(ctx, cleanupId(intent)).catch((error) => reportCleanupQueueError(ctx, intent, error));

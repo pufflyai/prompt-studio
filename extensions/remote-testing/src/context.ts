@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { publishBranchTemplate } from "./branch-templates";
+import { collectRun } from "./collection";
 import { connectionApi } from "./connection";
 import { enqueueEnvironmentCleanup, resumeEnvironmentCleanups } from "./environment-cleanup";
 import { changed } from "./events";
@@ -40,6 +41,17 @@ export async function runDeps(ctx: ExtensionContextBase): Promise<RunDeps> {
     api: connectionApi(ctx.connections),
     cleanupEnvironment: (input) => enqueueEnvironmentCleanup(ctx, input),
     collectRunLog: (runId) => enqueueRunLog(ctx, runId),
+    recoverRun: (runId) =>
+      ctx.automation
+        .enqueue({
+          command: collectRun.ref,
+          input: { params: { runId } },
+          key: `remote-tests:collect:${runId}:first`,
+        })
+        .catch((error) => {
+          ctx.logger.error(`Could not admit collector for uncertain submission ${runId}: ${String(error)}`);
+          throw error;
+        }),
     publishTemplate: (kind, source, signal) => publishBranchTemplate(ctx, kind, source, signal),
     storage: gcsStorage({
       bucket: settings.storageBucket,

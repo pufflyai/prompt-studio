@@ -25,6 +25,7 @@ export interface RunDeps {
   api: Api;
   cleanupEnvironment(input: EnvironmentCleanupInput): Promise<void>;
   collectRunLog?(runId: string): Promise<void>;
+  recoverRun?(runId: string): Promise<unknown>;
   publishTemplate?(kind: BranchKind, source: BranchSource, signal?: AbortSignal): Promise<TemplateRef>;
   storage: RunStorage;
   store: ExtensionStorageApi;
@@ -131,6 +132,7 @@ export async function startRun(
     : await pickEnvironment(deps, input.environmentId, signal);
   let ownsEnvironment = false;
   let record: RunRecord | undefined;
+  let submissionAttempted = false;
   try {
     ownsEnvironment = await claimEnvironment(deps.store, environment.id, runId, setup);
     if (!ownsEnvironment) throw new Error(`Environment ${environment.id} is running another test run.`);
@@ -160,6 +162,7 @@ export async function startRun(
     };
     await deps.store.set(`run:${runId}`, record);
     await activateEnvironment(deps.store, environment.id, runId);
+    submissionAttempted = true;
     await deps.api({
       method: "POST",
       path: `/v1/workspaces/${ready.id}/requests`,
@@ -167,13 +170,24 @@ export async function startRun(
       signal,
     });
     record = { ...record, submissionPending: false };
-    await deps.store.records.commit({
-      operationId: crypto.randomUUID(),
-      edits: [{ recordId: deps.store.records.id(`run:${runId}`), set: { "/submissionPending": false } }],
-    });
+    await deps.store.records
+      .commit({
+        operationId: crypto.randomUUID(),
+        edits: [{ recordId: deps.store.records.id(`run:${runId}`), set: { "/submissionPending": false } }],
+      })
+      .catch(() => {});
     await notifyRunChange(deps);
     return { record, files, bytes };
   } catch (error) {
+    if (submissionAttempted && record) {
+      // An unacknowledged POST may already be executing. Its saved identity and
+      // claim must survive transport failure and caller cancellation.
+      await Promise.resolve()
+        .then(() => deps.recoverRun?.(runId))
+        .catch(() => {});
+      await notifyRunChange(deps);
+      throw error;
+    }
     await Promise.allSettled([
       saveSubmissionFailure(deps, record, error),
       Promise.resolve().then(() =>
@@ -235,21 +249,27 @@ async function stopCollectedEnvironment(
   }
 }
 
-async function saveTimedOutRun(deps: RunCollectionDeps, record: RunRecord, summary: RunSummary, finalized: boolean) {
+async function saveTimedOutRun(
+  deps: RunCollectionDeps,
+  record: RunRecord,
+  summary: RunSummary,
+  finalized: boolean,
+  stop: boolean,
+) {
   // Independent cleanup and log workers own remote retries. A network outage must
   // not keep an overdue result looking like an active test run.
-  if (record.stopAfterRun && (await ownsEnvironment(deps.store, record.environmentId, record.runId)))
+  if (stop && (await ownsEnvironment(deps.store, record.environmentId, record.runId)))
     await rememberEnvironmentCleanup(deps.store, {
       environmentId: record.environmentId,
       runId: record.runId,
       stop: true,
     });
-  await rememberRunLog(deps.store, record.runId);
+  await rememberRunLog(deps.store, record.runId, !finalized);
+  if (finalized && !stop) await releaseEnvironment(deps.store, record.environmentId, record.runId);
   await deps.store.set(`run:${record.runId}`, { ...record, summary });
-  if (finalized && !record.stopAfterRun) await releaseEnvironment(deps.store, record.environmentId, record.runId);
   await notifyRunChange(deps);
   await Promise.allSettled([
-    ...(record.stopAfterRun
+    ...(stop
       ? [
           Promise.resolve().then(() =>
             deps.cleanupEnvironment?.({
@@ -273,25 +293,28 @@ export async function checkRun(
   signal?: AbortSignal,
   retryTransient = false,
 ) {
+  const saved = await deps.store.get<RunRecord>(`run:${record.runId}`);
+  if (saved?.summary) return saved.summary;
   if (record.summary) return record.summary;
   const receipt = await readRunReceipt<Receipt>(deps.api, requestPath(record), record, signal, retryTransient);
   const terminal = receipt?.finalizedAt ? receiptSummary(record, receipt) : null;
   const expired = !receipt?.finalizedAt && Date.now() >= runDeadline(record);
   if (!receipt?.finalizedAt && !expired) return null;
   if (expired || terminal?.status === "timed_out") {
-    if (expired && !record.stopAfterRun && (await ownsEnvironment(deps.store, record.environmentId, record.runId))) {
+    const stop = record.stopAfterRun === true || (expired && record.submissionPending === true && !receipt);
+    if (expired && !stop && (await ownsEnvironment(deps.store, record.environmentId, record.runId))) {
       // Cancellation acknowledges intent. Keep a reusable workspace claimed until
       // a terminal receipt proves the old command can no longer write its files.
       if (receipt) await cancelOverdueRequest(deps.api, record, receipt, signal);
       return null;
     }
-    return saveTimedOutRun(deps, record, terminal ?? timeoutSummary(record), terminal !== null);
+    return saveTimedOutRun(deps, record, terminal ?? timeoutSummary(record), terminal !== null, stop);
   }
   // The runner uploads its log before the controller finalizes the request.
   if (record.stopAfterRun) await stopCollectedEnvironment(deps, record, signal, retryTransient);
   const summary = await summarize(deps, record, receipt!, signal, retryTransient);
-  await deps.store.set(`run:${record.runId}`, { ...record, summary });
   await releaseEnvironment(deps.store, record.environmentId, record.runId);
+  await deps.store.set(`run:${record.runId}`, { ...record, summary });
   await notifyRunChange(deps);
   return summary;
 }

@@ -1,3 +1,4 @@
+import { setTimeout as delay } from "node:timers/promises";
 import {
   defineCommand,
   type ExtensionContextBase,
@@ -11,16 +12,24 @@ import { collectLog } from "./run-result";
 import { readRun } from "./run-store";
 import type { RunCollectionDeps, RunRecord } from "./runs";
 
-type LogIntent = { runId: string; jobId?: string };
+type LogIntent = { runId: string; jobId?: string; missingUntil?: number };
 const intents = (store: ExtensionStorageApi) => store.collection<LogIntent>("pending-run-logs");
-export async function rememberRunLog(store: ExtensionStorageApi, runId: string) {
-  await intents(store).createIfAbsent(runId, { runId });
+export async function rememberRunLog(store: ExtensionStorageApi, runId: string, waitForUpload = false) {
+  await intents(store).createIfAbsent(runId, {
+    runId,
+    ...(waitForUpload ? { missingUntil: Date.now() + 30_000 } : {}),
+  });
 }
 
 export async function collectSavedRunLog(deps: RunCollectionDeps, runId: string, signal?: AbortSignal) {
   const initial = await readRun(deps.store, runId);
   if (!initial.summary) throw new Error("Save the test result before collecting its log.");
-  const log = initial.summary.logPath ? { logPath: null, tail: "" } : await collectLog(deps, runId, signal, true);
+  let log = initial.summary.logPath ? { logPath: null, tail: "" } : await collectLog(deps, runId, signal, true);
+  const deadline = (await intents(deps.store).get(runId))?.missingUntil ?? 0;
+  while (!initial.summary.logPath && !log.logPath && Date.now() < deadline) {
+    await delay(Math.min(3000, deadline - Date.now()), undefined, { signal });
+    log = await collectLog(deps, runId, signal, true);
+  }
   // Cleanup can already have released the workspace. Only enrich the saved result.
   const recordId = deps.store.records.id(`run:${runId}`);
   while (log.logPath) {
@@ -78,7 +87,10 @@ export async function enqueueRunLog(ctx: LogContext, runId: string) {
       input: { params: { runId } },
       key: `remote-tests:log:${runId}:${priorId ?? "first"}`,
     });
-    if (!(await pending.updateIfUnchanged(runId, current.revision, { runId, jobId: job.id })) || resumable(job))
+    if (
+      !(await pending.updateIfUnchanged(runId, current.revision, { ...current.value, jobId: job.id })) ||
+      resumable(job)
+    )
       continue;
     return;
   }
