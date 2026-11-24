@@ -1,4 +1,4 @@
-import type { CloudProjectCatalog } from "@pstdio/sdk/client";
+import type { AccountStatus, CloudProjectCatalog } from "@pstdio/sdk/client";
 import { accountEvents } from "@pstdio/sdk/extensions";
 import { useScopedQuery } from "@pstdio/sdk/extensions/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +12,9 @@ export const cloudProjectCatalogKey = ["cloud-project-catalog"] as const;
 
 export const cloudCatalogKeyFor = (managerOrigin?: string, accountId?: string, deviceId?: string) =>
   [...cloudProjectCatalogKey, managerOrigin, accountId, deviceId] as const;
+
+export const cloudCatalogScopeFor = (runtimeId: string, login?: AccountStatus["login"]) =>
+  JSON.stringify([runtimeId, login?.managerOrigin, login?.accountId, login?.deviceId]);
 
 export const useCloudProjectCatalog = () => {
   const runtime = getRuntimeCollections();
@@ -53,7 +56,7 @@ export const useCloudProjectCatalog = () => {
     ...catalog,
     signedIn,
     signInRequired: Boolean(status?.signInRequired),
-    scope: JSON.stringify([String(runtime.id), login?.managerOrigin, login?.accountId, login?.deviceId]),
+    scope: cloudCatalogScopeFor(String(runtime.id), login),
     accountKnown: Boolean(status),
     membershipKnown: catalog.data?.membershipKnown ?? status?.cloudProjectsLoaded,
   };
