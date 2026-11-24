@@ -1,11 +1,12 @@
 import { existsSync } from "node:fs";
+import { dirname, relative } from "node:path";
 import type {
   createExtensionInstancesDBService,
   createExtensionStorageDBService,
   createExtensionUserDataDBService,
   createInstalledExtensionSourcesDBService,
 } from "pstdio-db";
-import { type PreparedExtensionRevision, withRequestedPreparation } from "pstdio-extensions";
+import { type PreparedExtensionRevision, pstdioExtensionsRoot, withRequestedPreparation } from "pstdio-extensions";
 import { isAlwaysEnabledExtensionSource } from "../features/extensions/always-on-extensions";
 import {
   type ExtensionInstallTransaction,
@@ -112,13 +113,13 @@ const projectOfInstance = async (instances: ExtensionServiceDeps["extensionInsta
   return instance?.scope_type === "project" ? instance.scope_id : null;
 };
 
-// The project can be removed between a sync's check and its instance. Its removal already cleaned up
-// the project's sources, so whatever the sync added for it must go too.
+// A project removed between the sync's check and attachment can no longer own the instance.
 const attachUnlessRemoved = async <Source extends { id: string }, Attached extends { instance: { id: string } }>(
   deps: ExtensionServiceDeps,
   projectId: string,
   installedSource: Source,
   attach: (projectId: string, installedSource: Source) => Promise<Attached>,
+  preserveSource: boolean,
 ) => {
   const installedSourceId = installedSource.id;
   const attached = await attach(projectId, installedSource).catch(async (error) => {
@@ -132,9 +133,11 @@ const attachUnlessRemoved = async <Source extends { id: string }, Attached exten
     (await deps.extensionInstancesService.findByScopeInstalledSource("project", projectId, installedSourceId));
   if (instance && (await deps.extensionInstancesService.remove(instance.id)))
     deps.eventBus?.emit("extension_instances", "delete", instance);
-  const users = await deps.extensionInstancesService.list({ installed_extension_id: installedSourceId });
-  if (users.length === 0 && (await deps.installedExtensionSourcesService.remove(installedSourceId)))
-    deps.eventBus?.emit("installed_extension_sources", "delete", { id: installedSourceId });
+  if (!preserveSource) {
+    const users = await deps.extensionInstancesService.list({ installed_extension_id: installedSourceId });
+    if (users.length === 0 && (await deps.installedExtensionSourcesService.remove(installedSourceId)))
+      deps.eventBus?.emit("installed_extension_sources", "delete", { id: installedSourceId });
+  }
   throw new ProjectNotFoundError(projectId);
 };
 
@@ -174,7 +177,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   // Publishing a prepared tool includes its live notification/imports. Keep that
   // adoption from inheriting startup priority and being repeatedly retired by readers.
   const registerInstalledSource = (input: RegisterInstalledSourceInput) =>
-    withRequestedPreparation(() => registerSource(input, notifyInstalledSourcesChanged));
+    withRequestedPreparation(async () => (await registerSource(input, notifyInstalledSourcesChanged)).installedSource);
 
   const getInstalledSource = (installName: string) =>
     deps.installedExtensionSourcesService.getByInstallName(installName);
@@ -194,25 +197,14 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   ) => {
     const existing = await deps.installedExtensionSourcesService.getBySourcePath(input.sourcePath);
     if (existing && input.sourceHash && existing.source_hash && input.sourceHash !== existing.source_hash) {
-      return existing;
+      return { installedSource: existing, created: false };
     }
 
     return registerSource(input, notify);
   };
 
-  const resolveProjectInstalledSource = async (
-    input: EnableInstalledSourceInput,
-    resolveSource: (
-      source: RegisterInstalledSourceInput,
-    ) => Promise<Awaited<ReturnType<typeof registerInstalledSource>>>,
-  ) => {
-    const project = await deps.projectService.get(input.projectId);
-    if (!project) throw new ProjectNotFoundError(input.projectId);
-
-    const installedSource = await resolveSource(input);
-    const existing = await findProjectInstanceForSource(input, installedSource);
-
-    return { existing, installedSource };
+  const assertProjectExists = async (projectId: string) => {
+    if (!(await deps.projectService.get(projectId))) throw new ProjectNotFoundError(projectId);
   };
 
   const createProjectInstance = async (
@@ -243,8 +235,9 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
         source_path: input.sourcePath,
         preparedRevision: input.preparedRevision,
       });
-      const { existing, installedSource } = await resolveProjectInstalledSource(input, registerInstalledSource);
-
+      await assertProjectExists(input.projectId);
+      const installedSource = await registerInstalledSource(input);
+      const existing = await findProjectInstanceForSource(input, installedSource);
       const candidate = existing ?? (await createProjectInstance(input, installedSource));
       const instance = await claimExtensionId(candidate, installedSource);
       if (!instance) throw new Error(`Failed to enable extension: ${input.name}`);
@@ -280,10 +273,11 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   const syncInstalledSourceForProject = (input: SyncInstalledSourceInput) =>
     mutateSourceAndRefresh(input.sourcePath, async (notify) => {
       if (!(deps.sourceExists ?? existsSync)(input.sourcePath)) return null;
-      const { installedSource } = await resolveProjectInstalledSource(input, (source) =>
-        attachInstalledSource(source, notify),
-      );
-      return attachUnlessRemoved(deps, input.projectId, installedSource, attachProjectInstance);
+      await assertProjectExists(input.projectId);
+      const { installedSource, created } = await attachInstalledSource(input, notify);
+      // The user's existing installation outlives the last project that used it.
+      const preserveSource = !created && relative(pstdioExtensionsRoot(), dirname(installedSource.source_path)) === "";
+      return attachUnlessRemoved(deps, input.projectId, installedSource, attachProjectInstance, preserveSource);
     });
 
   const attachRegisteredSourceForProject = async (input: { projectId: string; installedSourceId: string }) => {
@@ -292,7 +286,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     return mutateSource(source.source_path, async () => {
       const current = await deps.installedExtensionSourcesService.get(source.id);
       if (!current || !(deps.sourceExists ?? existsSync)(current.source_path)) return null;
-      if (!(await deps.projectService.get(input.projectId))) throw new ProjectNotFoundError(input.projectId);
+      await assertProjectExists(input.projectId);
       return attachProjectInstance(input.projectId, current);
     });
   };
