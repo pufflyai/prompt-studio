@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import type { TeamOwnershipDecision } from "pstdio-sync-contracts";
 import type { ManagerTransaction } from "./database";
 import { accounts, teamMembers, teamOwnershipOffers } from "./schema";
@@ -25,20 +25,30 @@ export const readOwnershipOffer = async (transaction: ManagerTransaction, accoun
     : null;
 };
 
-const activeMember = async (transaction: ManagerTransaction, accountId: string, userId: string) => {
-  const [member] = await transaction
-    .select({ userId: teamMembers.userId })
+const eligiblePair = async (
+  transaction: ManagerTransaction,
+  accountId: string,
+  ownerUserId: string,
+  recipientUserId: string,
+) => {
+  const members = await transaction
+    .select({ userId: teamMembers.userId, role: teamMembers.role })
     .from(teamMembers)
     .innerJoin(accounts, eq(accounts.id, teamMembers.userId))
     .where(
       and(
         eq(teamMembers.accountId, accountId),
-        eq(teamMembers.userId, userId),
-        eq(teamMembers.role, "member"),
+        inArray(teamMembers.userId, [ownerUserId, recipientUserId]),
         eq(accounts.state, "active"),
       ),
-    );
-  return Boolean(member);
+    )
+    // Hold the personal account states through commit without taking personal advisory locks after the team lock.
+    .orderBy(asc(accounts.id))
+    .for("share", { of: accounts });
+  return (
+    members.some((member) => member.userId === ownerUserId && member.role === "owner") &&
+    members.some((member) => member.userId === recipientUserId && member.role === "member")
+  );
 };
 
 // All offer and role changes occur under the same owning team lock as membership and grants.
@@ -48,7 +58,7 @@ export const createOwnershipOffer = async (
   ownerUserId: string,
   recipientUserId: string,
 ) => {
-  if (!(await activeMember(transaction, accountId, recipientUserId)))
+  if (!(await eligiblePair(transaction, accountId, ownerUserId, recipientUserId)))
     throw new TeamMembershipDenied("Offer team ownership to an active member");
   const current = await find(transaction, accountId);
   if (current?.state === "pending") {
@@ -96,8 +106,8 @@ export const finishOwnershipOffer = async (
   if (offer.state !== "pending") throw new TeamMembershipDenied("The team ownership offer is unavailable");
 
   if (decision === "accept") {
-    if (!(await activeMember(transaction, accountId, offer.recipientUserId)))
-      throw new TeamMembershipDenied("The team ownership recipient is unavailable");
+    if (!(await eligiblePair(transaction, accountId, offer.ownerUserId, offer.recipientUserId)))
+      throw new TeamMembershipDenied("The team ownership offer is unavailable");
     // Demote first to respect the unique-owner index. The transaction publishes both roles together.
     await setRole(transaction, accountId, offer.ownerUserId, "owner", "member");
     await setRole(transaction, accountId, offer.recipientUserId, "member", "owner");

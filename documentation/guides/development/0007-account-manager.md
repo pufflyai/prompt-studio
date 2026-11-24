@@ -165,6 +165,6 @@ Pausing a team project ends its active grants and rotates the shared key. An own
 
 ## Ownership consent and recovery
 
-Ownership offers target an active member's stable user ID. Only the current owner issues or cancels an offer, and only its recipient can accept or decline. The manager updates both roles under the team lock and commits them together. Acceptance never rewrites project grants, devices, or keys.
+Ownership offers target an active member's stable user ID. Only the current owner issues or cancels an offer, and only its recipient can accept or decline. The manager verifies that both accounts remain active, updates both roles under the team lock and commits them together. Acceptance never rewrites project grants, devices, or keys.
 
 Removing a recipient closes their pending offer. Restore closes outstanding offers and keeps the roles of existing teams. Snapshot recovery never reapplies an older offer or overwrites a surviving team with historical roles.

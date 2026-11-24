@@ -78,6 +78,26 @@ test("team owners transfer by verified member identity without moving project gr
     expect((await request(alex.token, `${team}/members/${morgan.accountId}/remove`, {})).status).toBe(200);
     await join(morgan);
     expect((await answer(morgan.token, removed.id, "accept")).status).toBe(403);
+
+    const disabledOwner = await person();
+    const extraTeam = await (await request(disabledOwner.token, "/v1/teams", { name: "Disabled sender" })).json();
+    const extra = `/v1/teams/${extraTeam.accountId}`;
+    const extraInvite = await request(disabledOwner.token, `${extra}/invitations`, { email: morgan.email });
+    const { url } = await extraInvite.json();
+    expect(
+      (await request(morgan.token, "/v1/team-invitations/accept", { secret: new URL(url).hash.slice(1) })).status,
+    ).toBe(200);
+    const extraOffer = await request(disabledOwner.token, `${extra}/ownership`, { recipientUserId: morgan.accountId });
+    const { id: disabledOffer } = await extraOffer.json();
+    await manager.reconcile({
+      requestId: "disable-owner-with-offer",
+      accountId: disabledOwner.accountId,
+      state: "disabled",
+      owner: { issuer: "https://accounts.google.com", subject: disabledOwner.subject },
+    });
+    expect((await request(morgan.token, `${extra}/ownership/${disabledOffer}`, { decision: "accept" })).status).toBe(
+      403,
+    );
     const historical = await manager.snapshot();
 
     const final = await start();
