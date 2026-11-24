@@ -1,0 +1,145 @@
+--- a/packages/pstdio-api/src/features/sessions/endpoints/create-session.p1.test.ts
++++ b/packages/pstdio-api/src/features/sessions/endpoints/create-session.p1.test.ts
+@@ -1,5 +1,5 @@
+ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+-import { mkdtempSync, rmSync } from "node:fs";
++import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+ import { tmpdir } from "node:os";
+ import { join } from "node:path";
+ import type { OpenAPIHono } from "@hono/zod-openapi";
+@@ -21,6 +21,17 @@
+ let closeApp: () => Promise<void>;
+ let tempRoot: string;
+
++type ObservedCase = "fallback" | "explicit-model";
++type TraceDetail = Record<string, number | string>;
++let observedCase: ObservedCase | undefined;
++const traceStarted = performance.now();
++const traceEpochMs = Date.now();
++const phases: { case: ObservedCase; phase: string; elapsedMs: number; detail: TraceDetail }[] = [];
++const trace = (phase: string, detail: TraceDetail, target = observedCase) => {
++  if (target === undefined || phases.length >= 160) return;
++  phases.push({ case: target, phase, elapsedMs: performance.now() - traceStarted, detail });
++};
++
+ // Mirrors the canonical fake harness: pushes a user + assistant message then completes shortly after.
+ const createFakeHarnessRecord = (): RuntimeHarnessRecord => {
+   const sessions = new Map<string, SessionMessage[]>();
+@@ -31,12 +42,17 @@
+     parts: [{ type: "text" as const, text }],
+   });
+
+-  const session = (agentSessionId: string): HarnessSession => ({
++  const session = (agentSessionId: string, target?: ObservedCase): HarnessSession => ({
+     agentSessionId,
+     done: new Promise<HarnessExit>((resolve) => {
+-      setTimeout(() => resolve({ status: "completed" }), 50);
++      setTimeout(() => {
++        if (target !== undefined) trace("provider-finished", { agentSessionId, status: "completed" }, target);
++        resolve({ status: "completed" });
++      }, 50);
+     }),
+-    stop: () => {},
++    stop: () => {
++      if (target !== undefined) trace("provider-stopped", { agentSessionId }, target);
++    },
+   });
+
+   return createTestHarnessRecord("fake", {
+@@ -44,6 +60,8 @@
+       listModels: () => [{ id: "fake-model" }],
+       start: (_ctx, input) => {
+         const agentSessionId = `fake-${crypto.randomUUID()}`;
++        const target = observedCase;
++        trace("provider-start", { agentSessionId }, target);
+         const messages = [
+           message(agentSessionId, 0, "user", input.prompt),
+           message(agentSessionId, 1, "assistant", `Fake Agent: completed "${input.prompt}"`),
+@@ -52,7 +70,7 @@
+         for (const [index, value] of messages.entries()) {
+           input.events.push({ op: "add", path: `/messages/${index}`, value });
+         }
+-        return session(agentSessionId);
++        return session(agentSessionId, target);
+       },
+       resume: (_ctx, input) => {
+         const existing = sessions.get(input.agentSessionId) ?? [];
+@@ -75,8 +93,11 @@
+ const waitForSessionStatus = async (sessionId: string, expectedStatus: string) => {
+   for (let attempt = 0; attempt < 30; attempt += 1) {
+     const getRes = await app.request(`/v1/sessions/${sessionId}`);
++    const detail: TraceDetail = { sessionId, attempt: attempt + 1, httpStatus: getRes.status };
++    trace("poll-response", detail);
+     expect(getRes.status).toBe(200);
+     const body = await getRes.json();
++    if (typeof body.status === "string") detail.status = body.status;
+     if (body.status === expectedStatus) return body;
+     await Bun.sleep(20);
+   }
+@@ -103,8 +124,15 @@
+ });
+
+ afterAll(async () => {
+-  await closeApp();
+-  rmSync(tempRoot, { recursive: true, force: true });
++  try {
++    await closeApp();
++    rmSync(tempRoot, { recursive: true, force: true });
++  } finally {
++    const destination = process.env.API_TEST_SESSION_TRACE_FILE;
++    if (destination) {
++      writeFileSync(destination, JSON.stringify({ pid: process.pid, traceEpochMs, phases }, null, 2));
++    }
++  }
+ });
+
+ describe("POST /v1/sessions", () => {
+@@ -117,6 +145,8 @@
+     expect(projectRes.status).toBe(201);
+     const project = await projectRes.json();
+
++    observedCase = "fallback";
++    trace("post-start", {});
+     const createRes = await app.request("/v1/sessions", {
+       method: "POST",
+       headers: { "content-type": "application/json" },
+@@ -126,11 +156,14 @@
+         prompt: "run fake flow",
+       }),
+     });
++    trace("post-response", { httpStatus: createRes.status });
+     expect(createRes.status).toBe(201);
+     const created = await createRes.json();
++    trace("session-created", { sessionId: created.id, status: created.status });
+
+     const session = await waitForSessionStatus(created.id, "completed");
+     expect(session.agent).toBe(FAKE_ID);
++    observedCase = undefined;
+   });
+
+   test("persists explicit model as the last selected model for dashboard-created sessions", async () => {
+@@ -142,6 +175,8 @@
+     expect(projectRes.status).toBe(201);
+     const project = await projectRes.json();
+
++    observedCase = "explicit-model";
++    trace("post-start", {});
+     const createRes = await app.request("/v1/sessions", {
+       method: "POST",
+       headers: { "content-type": "application/json" },
+@@ -153,12 +188,15 @@
+         model: "fake-model",
+       }),
+     });
++    trace("post-response", { httpStatus: createRes.status });
+     expect(createRes.status).toBe(201);
+     const created = await createRes.json();
++    trace("session-created", { sessionId: created.id, status: created.status });
+     expect(created.last_selected_model).toBe("fake-model");
+
+     const session = await waitForSessionStatus(created.id, "completed");
+     expect(session.last_selected_model).toBe("fake-model");
++    observedCase = undefined;
+   });
+
+   test("returns 400 when the requested agent does not resolve for the project", async () => {

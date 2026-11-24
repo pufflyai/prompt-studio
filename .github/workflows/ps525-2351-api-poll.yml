@@ -1,0 +1,200 @@
+name: PS-525 API P1 session poll diagnostic
+on:
+  push:
+    branches:
+      - chore/ps525-2351-api-poll-611-trace
+
+permissions:
+  actions: read
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  SOURCE_SHA: 611358c85b0a5c25a8a2a7bb365356465eb7b759
+  SOURCE_TREE: 1658a9fdc9eb38aab0048d6dc07f0de67849a933
+  FOCAL_FILE: packages/pstdio-api/src/features/sessions/endpoints/create-session.p1.test.ts
+  FOCAL_BLOB: 56ef0f83150da387f1690b83d0a9c3fd1637ba4f
+  CI_PRIORITY: P1
+  TEST_PRIORITIES: P1
+  CI_PROFILE: pull_request
+  CI_SOURCE_COVERAGE: "0"
+  NX_DAEMON: "false"
+
+jobs:
+  api_shard:
+    if: github.repository == 'pufflyai/prompt-studio'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Verify and stage the diagnostic kit
+        run: |
+          set -eu
+          test "$(git rev-parse HEAD^)" = "$SOURCE_SHA"
+          diagnostic_kit="$RUNNER_TEMP/ps525-2351-kit"
+          evidence="$RUNNER_TEMP/ps525-2351-evidence"
+          mkdir -p "$diagnostic_kit" "$evidence"
+          cp diagnostics/ps525-2351/selected.json diagnostics/ps525-2351/create-session.trace.patch "$diagnostic_kit/"
+          (
+            cd "$diagnostic_kit"
+            printf '%s  %s\n' e929444e5536c6205fce9213f376cb5e05f10070097c1669ebf4d119ac0b3a79 selected.json |
+              sha256sum --check
+          )
+          cp "$diagnostic_kit/selected.json" "$diagnostic_kit/create-session.trace.patch" "$evidence/"
+          printf 'diagnostic_commit=%s\noriginal_ci_run=45481076633\noriginal_plan_artifact=14961887334\noriginal_shard_artifact=14959629969\noriginal_execution=26496fdb7a99e838c59c2871\n' \
+            "$(git rev-parse HEAD)" > "$evidence/identity.txt"
+
+      - uses: actions/checkout@v5
+        with:
+          ref: "611358c85b0a5c25a8a2a7bb365356465eb7b759"
+          persist-credentials: false
+
+      - name: Verify the clean source checkout
+        run: |
+          set -eu
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$SOURCE_TREE"
+          test "$(git hash-object "$FOCAL_FILE")" = "$FOCAL_BLOB"
+          test -z "$(git status --porcelain)"
+          test "$(uname -m)" = x86_64
+          {
+            printf 'source_commit=%s\nsource_tree=%s\nclean_focal_blob=%s\n' "$SOURCE_SHA" "$SOURCE_TREE" "$FOCAL_BLOB"
+            uname -a
+            cat /etc/os-release
+            printf 'runner_image=%s\nrunner_image_version=%s\n' "${ImageOS:-unknown}" "${ImageVersion:-unknown}"
+            nproc
+            free -h
+          } >> "$RUNNER_TEMP/ps525-2351-evidence/identity.txt"
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - uses: ./.github/actions/setup-ci-cache
+
+      - name: Restore the original shared build archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          diagnostic_kit="$RUNNER_TEMP/ps525-2351-kit"
+          evidence="$RUNNER_TEMP/ps525-2351-evidence"
+          shared_build="$diagnostic_kit/shared-build"
+          mkdir -p "$shared_build/build_host"
+          printf 'header = "Authorization: Bearer %s"\n' "$GH_TOKEN" |
+            curl --config - --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+              --output "$diagnostic_kit/original-shared-build.zip" \
+              "https://api.github.com/repos/pufflyai/prompt-studio/actions/artifacts/14961957584/zip"
+          (
+            cd "$diagnostic_kit"
+            printf '%s  %s\n' b696161610ea31708d0360cb3c48175c0fc41b7870425668fcd7ad64019243e8 original-shared-build.zip |
+              sha256sum --check
+            sha256sum original-shared-build.zip > "$evidence/shared-build.sha256"
+          )
+          unzip -q "$diagnostic_kit/original-shared-build.zip" -d "$shared_build/build_host"
+          bun scripts/ci/merge-build-cache.ts "$shared_build" .cache/ci-build
+
+      - name: Prepare pstdio-api and dependency builds
+        run: |
+          set -eu
+          evidence="$RUNNER_TEMP/ps525-2351-evidence"
+          {
+            node --version
+            bun --version
+          } >> "$evidence/identity.txt"
+          bun scripts/ci/run-ci-checks.ts --priority P1 -- \
+            bun run build -- --scope pstdio-api --include-dependencies 2>&1 | tee "$evidence/build.log"
+          git diff --exit-code
+
+      - name: Trace the original P1 API shard
+        id: trace_shard
+        env:
+          PSTDIO_DEFAULT_EXTENSIONS: "[]"
+          PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0"
+        run: |
+          set -eu
+          diagnostic_kit="$RUNNER_TEMP/ps525-2351-kit"
+          evidence="$RUNNER_TEMP/ps525-2351-evidence"
+          restore_test() {
+            git -C "$GITHUB_WORKSPACE" restore --source="$SOURCE_SHA" -- "$FOCAL_FILE"
+            git -C "$GITHUB_WORKSPACE" diff --exit-code
+          }
+          trap restore_test EXIT
+          git apply --check "$diagnostic_kit/create-session.trace.patch"
+          git apply "$diagnostic_kit/create-session.trace.patch"
+          test "$(git diff --name-only)" = "$FOCAL_FILE"
+          sha256sum "$FOCAL_FILE" >> "$evidence/identity.txt"
+          git diff --binary -- "$FOCAL_FILE" > "$evidence/applied-overlay.diff"
+
+          files=$(jq -cer '.files | select(length == 74)' "$diagnostic_kit/selected.json")
+          export API_TEST_REPORT_DIR="$evidence/api"
+          trace_key=API_TEST_SESSION_TRACE_FILE
+          grep -Fq 'key.startsWith("PSTDIO_")' scripts/test-setup.ts
+          case "$trace_key" in
+            PSTDIO_*) echo "::error::Test preload removes the trace destination key"; exit 1 ;;
+          esac
+          grep -Fq "process.env.$trace_key" "$FOCAL_FILE"
+          export "$trace_key=$evidence/session-trace.json"
+          cd packages/pstdio-api
+          bun x --no-install cross-env PSTDIO_DEFAULT_EXTENSIONS='[]' PSTDIO_EXTENSION_WEBVIEW_BUILDS=0 \
+            bun src/test-utils/run-api-tests.ts "--files=$files" 2>&1 | tee "$evidence/owning-shard.log"
+
+      - name: Verify focal session phase evidence
+        if: ${{ !cancelled() && (steps.trace_shard.outcome == 'success' || steps.trace_shard.outcome == 'failure') }}
+        env:
+          SHARD_OUTCOME: ${{ steps.trace_shard.outcome }}
+        run: |
+          set -eu
+          phase_file="$RUNNER_TEMP/ps525-2351-evidence/session-trace.json"
+          if [ ! -s "$phase_file" ]; then
+            echo "::error::The focal session phase file was not recorded"
+            exit 1
+          fi
+          jq -e --arg outcome "$SHARD_OUTCOME" '
+            def valid_event:
+              (.case == "fallback" or .case == "explicit-model")
+              and (.phase as $phase | [
+                "post-start", "post-response", "session-created", "poll-response",
+                "provider-start", "provider-finished", "provider-stopped"
+              ] | index($phase) != null)
+              and (.elapsedMs | type == "number" and . >= 0)
+              and (.detail | type == "object");
+            def completed_case($name):
+              [.phases[] | select(.case == $name)]
+              | any(.[]; .phase == "post-response" and .detail.httpStatus == 201)
+                and any(.[]; .phase == "session-created" and (.detail.sessionId | type == "string" and length > 0))
+                and any(.[]; .phase == "provider-start" and (.detail.agentSessionId | type == "string" and length > 0))
+                and any(.[]; .phase == "provider-finished" and .detail.status == "completed")
+                and any(.[]; .phase == "poll-response" and .detail.httpStatus == 200 and .detail.status == "completed"
+                  and (.detail.attempt | type == "number" and . >= 1 and . <= 30));
+            (.pid | type == "number" and . > 0)
+            and (.traceEpochMs | type == "number" and . > 0)
+            and (.phases | type == "array" and length > 0 and length <= 160 and all(.[]; valid_event))
+            and (if $outcome == "success" then completed_case("fallback") and completed_case("explicit-model")
+                else any(.phases[]; .phase == "post-start") end)
+          ' "$phase_file"
+
+      - name: Preserve diagnostic results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps525-2351-611-api-poll-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ps525-2351-evidence
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Remove diagnostic scratch
+        if: always()
+        run: |
+          rm -rf -- "$RUNNER_TEMP/ps525-2351-kit" "$RUNNER_TEMP/ps525-2351-evidence"
