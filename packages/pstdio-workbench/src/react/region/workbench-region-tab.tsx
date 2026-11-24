@@ -1,6 +1,7 @@
 import { Box, CloseButton, Tabs, Text, useTabsContext } from "@chakra-ui/react";
 import { DropIndicator, PaletteShortcut, Tooltip } from "@pstdio/ui";
 import { useRef } from "react";
+import { runUserAction } from "../../core/shared/run-user-action";
 import { ActivityDot } from "../resource-changes/activity-dot";
 import { WorkbenchIcon } from "../shared/icon";
 import { RegionTabMenu } from "./region-tab-menu";
@@ -133,7 +134,8 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
                 onClick={(event) => {
                   event.stopPropagation();
                   if (disabled) return;
-                  if (placement.placementIdentity) workbench.closePlacement(placement.placementIdentity);
+                  const identity = placement.placementIdentity;
+                  if (identity) void runUserAction(workbench, "Close tab", () => workbench.closePlacement(identity));
                   else workbench.layout.closePanel(placement.widgetId);
                 }}
               />

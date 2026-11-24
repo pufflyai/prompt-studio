@@ -1,4 +1,5 @@
 import type { ChatQueuedRequest, ChatRendererAction } from "@pstdio/sdk/extensions";
+import type { UnresolvedSubmissionError } from "@pstdio/ui";
 import { applySessionMessagePatch, type SessionMessage } from "@pstdio/ui/chat-ui";
 import { createPendingChatQueuePresentation } from "./chat-pending-queue";
 import { createChatSubmissionHistory } from "./chat-submission-history";
@@ -14,6 +15,7 @@ export const createChatPendingSubmission = (
   sequence,
   queue,
   failure: undefined as string | undefined,
+  unresolved: undefined as UnresolvedSubmissionError | undefined,
   failureDismissed: false,
   recoveryAdded: false,
   echoed: false,
@@ -40,6 +42,9 @@ export const createChatPendingSubmission = (
   },
 });
 export type ChatPendingSubmission = ReturnType<typeof createChatPendingSubmission>;
+
+const failedSubmissionMessage = (item: ChatPendingSubmission): SessionMessage =>
+  item.unresolved ? item.message : { ...item.message, delivery: "unsent" };
 
 /** Presentation is separate from canonical indexes so live patches never address optimistic rows. */
 export const createChatSubmissionPresentation = () => {
@@ -83,7 +88,7 @@ export const createChatSubmissionPresentation = () => {
     const issued = new Map([...receipts, ...pending].map((item) => [item.message.id, item]));
     claimSubmittedChatMessages(
       canonical,
-      [...issued.values()].sort((a, b) => a.sequence - b.sequence),
+      [...issued.values()].filter((item) => !item.unresolved).sort((a, b) => a.sequence - b.sequence),
       claimed,
     );
     const queue = queuePresentation.present(queued, pending, canonical);
@@ -92,7 +97,7 @@ export const createChatSubmissionPresentation = () => {
     const waiting: ChatPendingSubmission[] = [...queue.pending];
     for (const item of [...queue.transcript, ...queue.pending.filter((item) => item.failure)]) {
       if (item.failure) {
-        present.push({ ...item.message, delivery: "unsent" });
+        present.push(failedSubmissionMessage(item));
         continue;
       }
       const accepted = canonical.find(

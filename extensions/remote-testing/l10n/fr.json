@@ -82,5 +82,6 @@
   "remote-testing.remote-tests": "Tests à distance",
   "remote-testing.runs": "Exécutions",
   "remote-testing.environments": "Environnements",
+  "remote-testing.recover-interrupted-setup": "Récupérer la préparation interrompue",
   "remote-testing.resume-environment-cleanup": "Reprendre le nettoyage des environnements"
 }

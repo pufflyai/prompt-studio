@@ -67,7 +67,7 @@ export const webviewEditingSessionParamsSchema = z.discriminatedUnion("operation
     channel: z.enum(["document", "presentation"]).optional(),
   }),
   z.object({ ...edit, operation: z.literal("commit") }),
-  z.object({ ...edit, operation: z.literal("preview") }),
+  z.object({ ...edit, operation: z.literal("preview"), retainFormDraft: z.literal(true).optional() }),
   z.object({ ...session, operation: z.literal("cancel"), sequence: z.number().int().positive().optional() }),
   z.object({ ...session, operation: z.literal("close") }),
   z.object({ ...session, operation: z.literal("save") }),

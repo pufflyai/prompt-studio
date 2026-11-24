@@ -57,6 +57,7 @@ test("storage resets follow source, provider and resolved-target owners with a c
   const server = Bun.serve({
     port: 0,
     async fetch(request) {
+      if (request.method === "GET") return Response.json({ login: null, cloudProjects: [] });
       const { resources } = (await request.json()) as { resources: unknown[] };
       return Response.json(resources.map((resource) => ({ resource })));
     },

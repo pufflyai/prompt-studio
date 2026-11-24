@@ -6,6 +6,7 @@ import { useState } from "react";
 import { getApiClient } from "@/lib/api";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { FolderPicker } from "@/shared/filesystem/folder-picker";
+import { useProjectFolderAssignment } from "@/shared/projects/project-folder-operations";
 import { findDashboardProject } from "../data/project-data";
 import { ProjectFolderChoice, type ProjectFolderMethod } from "./project-folder-choice";
 
@@ -31,9 +32,10 @@ export const ProjectFolderWidget = (props: { input: WorkbenchPanelRenderInput })
     queryFn: () => getApiClient().projects.folder(projectId!),
     enabled: Boolean(projectId),
   });
+  const folderAssignment = useProjectFolderAssignment(projectId);
   const close = () => input.workbench.layout.removeWidgetPlacement(input.instance.instanceId);
   const choose = useMutation({
-    mutationFn: (choice: { path: string; clone: boolean }) => getApiClient().projects.chooseFolder(projectId!, choice),
+    mutationFn: (choice: { path: string; clone: boolean }) => folderAssignment.assign({ mode: "choose", ...choice }),
     onSuccess: close,
   });
   if (!projectId || !folder.data) return null;
@@ -59,8 +61,12 @@ export const ProjectFolderWidget = (props: { input: WorkbenchPanelRenderInput })
         gitRemote={gitRemote}
         method={activeMethod}
         clonePath={target}
-        pending={choose.isPending}
-        error={choose.error?.message}
+        pending={folderAssignment.working}
+        blocked={folderAssignment.busy}
+        error={
+          choose.error?.message ??
+          (folderAssignment.error instanceof Error ? folderAssignment.error.message : undefined)
+        }
         onMethodChange={setMethod}
         onClonePathChange={setClonePath}
         onBrowse={() => setBrowsing("clone")}
@@ -79,7 +85,11 @@ export const ProjectFolderWidget = (props: { input: WorkbenchPanelRenderInput })
         <Dialog.Backdrop />
         <Dialog.Positioner>
           <Dialog.Content>
-            <FolderPicker onClose={() => setBrowsing(undefined)} onSelect={pickFolder} />
+            <FolderPicker
+              onClose={() => setBrowsing(undefined)}
+              onSelect={pickFolder}
+              selectionDisabled={folderAssignment.busy}
+            />
           </Dialog.Content>
         </Dialog.Positioner>
       </Dialog.Root>

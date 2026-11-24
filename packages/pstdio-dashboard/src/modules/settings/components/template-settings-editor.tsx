@@ -1,12 +1,11 @@
 import { Box, IconButton, Stack } from "@chakra-ui/react";
-import { DeleteConfirmationModal, SettingsContentSkeleton } from "@pstdio/ui";
+import { AlertMessage, DeleteConfirmationModal, SettingsContentSkeleton } from "@pstdio/ui";
 import { CodeEditor } from "@pstdio/ui/diff";
 import { SettingsHeaderContent, useSettingsChanges } from "@pstdio/workbench/react";
 import { Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { flushSync } from "react-dom";
 import type { ProjectTemplateAsset } from "../data/template-provider-api";
-import { useDeleteProjectTemplate, useProjectTemplate, useUpdateProjectTemplate } from "../data/use-templates";
+import { useTemplateEditor } from "../data/use-templates";
 
 interface TemplateSettingsEditorProps {
   template: ProjectTemplateAsset;
@@ -16,31 +15,51 @@ interface TemplateSettingsEditorProps {
 // Per-template editor for the Templates collection. The component is keyed by
 // template id at the call site, so local edit state resets per template.
 export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
-  const { template, onDeleted } = props;
-  const { data, isLoading } = useProjectTemplate(template);
-  const updateTemplate = useUpdateProjectTemplate(template);
-  const deleteTemplate = useDeleteProjectTemplate();
-  const [content, setContent] = useState("");
+  const query = useTemplateEditor(props.template);
+  return (
+    <TemplateEditorForm
+      key={JSON.stringify([query.scope, props.template.projectId, props.template.id])}
+      {...props}
+      query={query}
+    />
+  );
+};
+
+const TemplateEditorForm = (props: TemplateSettingsEditorProps & { query: ReturnType<typeof useTemplateEditor> }) => {
+  const { template, onDeleted, query } = props;
+  const { data, isLoading, pending, deleting, deleted } = query;
+  const [draft, setDraft] = useState<string>();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
-  useEffect(() => {
-    if (data) setContent(data.content);
-  }, [data]);
+  const projected = !deleting && typeof pending?.intent === "string" ? pending.intent : data?.content;
+  const content = draft ?? projected ?? "";
+  const working = Boolean(pending && pending.status !== "unknown" && pending.status !== "unconfirmed");
+  const deleteUnconfirmed = deleting && !working;
+  const [deleteError, setDeleteError] = useState<string>();
 
+  useEffect(() => {
+    if (deleted && !pending) onDeleted();
+  }, [deleted, pending, onDeleted]);
   const save = async () => {
-    await updateTemplate.mutateAsync(content);
+    await query.save(content);
+    setDraft((previous) => (previous === content ? undefined : previous));
   };
 
   useSettingsChanges({
-    dirty: Boolean(data) && content !== data?.content,
-    saving: updateTemplate.isPending || deleteTemplate.isPending,
+    dirty: Boolean(data) && draft !== undefined && draft !== data?.content,
+    saving: working,
+    disabled: !data || Boolean(pending),
     onSave: save,
-    onReset: () => setContent(data?.content ?? ""),
+    onReset: () => setDraft(undefined),
   });
   const remove = async () => {
-    await deleteTemplate.mutateAsync(template);
-    flushSync(() => setContent(data?.content ?? ""));
-    onDeleted();
+    setDeleteError(undefined);
+    try {
+      await query.remove(draft);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Could not delete template.");
+      throw error;
+    }
   };
 
   return (
@@ -50,7 +69,7 @@ export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
           size="sm"
           variant="destructive-ghost"
           aria-label="Delete template"
-          disabled={isLoading || updateTemplate.isPending || deleteTemplate.isPending}
+          disabled={isLoading || !data || pending !== undefined}
           onClick={() => setIsDeleteOpen(true)}
         >
           <Trash2 />
@@ -64,8 +83,8 @@ export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
             language="markdown"
             fileName={`${template.name}.md`}
             code={content}
-            onChange={setContent}
-            isEditable={!updateTemplate.isPending && !deleteTemplate.isPending}
+            onChange={setDraft}
+            isEditable={Boolean(data) && !working}
             showLineNumbers
           />
         </Box>
@@ -75,10 +94,17 @@ export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
         open={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
         onDelete={remove}
+        confirmDisabled={pending !== undefined}
         headline="Delete template"
         notificationText={`This permanently deletes "${template.title}". Reset changes cannot restore a deleted template.`}
         buttonText="Delete template"
-      />
+      >
+        {deleteUnconfirmed ? (
+          <AlertMessage status="warning">Template deletion could not be confirmed. See System activity.</AlertMessage>
+        ) : (
+          deleteError && <AlertMessage status="error">{deleteError}</AlertMessage>
+        )}
+      </DeleteConfirmationModal>
     </Stack>
   );
 };

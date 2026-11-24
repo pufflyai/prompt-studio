@@ -1,4 +1,5 @@
 import { rmSync } from "node:fs";
+import type { WebSocketRoute } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { homePage } from "../helpers/home-loading";
 import { expect, test } from "../scripts/session-test";
@@ -108,6 +109,45 @@ test("opens default and worktree terminals in their effective workspace director
   } finally {
     await request.delete(`${apiBase}/v1/projects/${project.id}`);
     rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test("shows a pending terminal until the socket reports the result without replaying the open", async ({
+  page,
+  request,
+}) => {
+  const created = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "Terminal startup feedback" }),
+  });
+  expect(created.ok()).toBe(true);
+  const project = (await created.json()) as { id: string };
+  const opening = Promise.withResolvers<WebSocketRoute>();
+  let openRequests = 0;
+
+  try {
+    await page.routeWebSocket(/\/v1\/terminal(?:\?|$)/, (socket) => {
+      socket.onMessage((message) => {
+        const { type } = JSON.parse(String(message)) as { type: string };
+        if (type === "open" || type === "openView") {
+          openRequests += 1;
+          opening.resolve(socket);
+        }
+      });
+    });
+    await prepareDashboard(page, project.id);
+    await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
+    await openWorkspaceTerminal(page, "Project folder");
+    const terminal = page.getByRole("region", { name: "Secondary Panel" });
+    await expect(terminal.getByRole("status").filter({ hasText: /opening terminal/i })).toBeVisible();
+
+    const socket = await opening.promise;
+    await socket.close({ code: 1011, reason: "Connection lost during startup" });
+
+    await expect(terminal.getByRole("alert")).toBeVisible();
+    await expect(terminal.getByRole("status").filter({ hasText: /opening terminal/i })).toHaveCount(0);
+    expect(openRequests).toBe(1);
+  } finally {
+    await request.delete(`${apiBase}/v1/projects/${project.id}`);
   }
 });
 
@@ -296,7 +336,8 @@ test("keeps tab-menu focus when the terminal renderer finishes loading", async (
     const reset = page.getByRole("menuitem", { name: "Reset layout", exact: true });
     await expect(reset).toBeVisible();
     const menu = page.getByRole("menu");
-    await menu.press("End");
+    await expect(menu).toBeFocused();
+    await page.keyboard.press("End");
     await expect(reset).toHaveAttribute("data-highlighted", "");
     await expect(menu).toBeFocused();
     release.resolve();

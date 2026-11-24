@@ -4,9 +4,11 @@ import { connectionApi } from "./connection";
 import { changed, googleToken, projectRoot, runDeps } from "./context";
 import { cleanupEnvironmentCommand, recoverEnvironmentCleanup } from "./environment-cleanup";
 import { createEnvironment, isBusy, listEnvironments, stopEnvironment } from "./environments";
+import { collectRunLog } from "./run-log";
 import { awaitRun, cancelRun, listRuns, readRun, startRun } from "./runs";
 import { sessionResource } from "./session-link";
 import { readSettings } from "./settings";
+import { waitForRunSetup } from "./setup-claims";
 
 // Table row actions pass the row as `rowId`; the CLI names it explicitly.
 const runParams = {
@@ -131,7 +133,11 @@ export const showRun = defineCommand({
   },
   params: runParams,
   async run(ctx, input) {
-    const record = await readRun(ctx.storage, runOf(input));
+    let record = await waitForRunSetup(ctx, runOf(input), ctx.signal);
+    if (record.pendingResult) {
+      await collectRun.run(ctx, { runId: record.runId });
+      record = await readRun(ctx.storage, record.runId);
+    }
     if (record.summary) return record.summary;
     if (record.stopAfterRun === undefined) return awaitRun(await runDeps(ctx), record, ctx.signal);
     return waitForCollection(ctx, record.runId, await startCollection(ctx, record.runId));
@@ -293,6 +299,7 @@ export const commands = [
   run,
   showRun,
   collectRun,
+  collectRunLog,
   listRunsCommand,
   cancelRunCommand,
   openSession,

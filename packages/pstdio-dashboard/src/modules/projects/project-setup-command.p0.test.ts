@@ -3,8 +3,8 @@ import { workbenchCommands } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { getCollection, getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
+import { createProjectSetupRequests } from "@/shared/projects/project-setup-requests";
 import { registerProjectSetupCommand } from "./project-setup-command";
-import { createProjectSetupRequests } from "./project-setup-requests";
 
 const attachWorkspace = () => {
   getCollection("workspaces");

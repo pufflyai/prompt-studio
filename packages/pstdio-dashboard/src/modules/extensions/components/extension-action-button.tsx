@@ -33,6 +33,7 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
   const running = action?.status === "running";
   const queued = action?.status === "queued";
   const failed = action?.status === "error";
+  const retryAction = action?.retryable === false ? undefined : onRetry;
   const label = action?.label;
   const retry = retryLabel ?? t("projectSettings.extensionsPanel.feedback.retry", "Retry");
   const error = action?.error === action?.label ? undefined : action?.error;
@@ -49,14 +50,14 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
       <ProgressButton
         {...rest}
         status={action?.status}
-        disabled={disabled || running || queued || (failed && !onRetry)}
+        disabled={disabled || running || queued || (failed && !retryAction)}
         flexShrink={compact ? 1 : undefined}
         aria-busy={running || undefined}
-        aria-label={failed && onRetry ? `${name} · ${retry}` : name}
+        aria-label={failed && retryAction ? `${name} · ${retry}` : name}
         aria-live="polite"
         aria-atomic="true"
         progress={progress}
-        onClick={failed ? onRetry : onAction}
+        onClick={failed ? retryAction : onAction}
       >
         <ActionIcon status={action?.status} icon={icon} />
         <Text as="span" truncate={compact} title={compact ? name : undefined}>
@@ -67,7 +68,7 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
               · {error}
             </Text>
           )}
-          {failed && onRetry && ` · ${retry}`}
+          {failed && retryAction && ` · ${retry}`}
         </Text>
       </ProgressButton>
       {failed && onDismiss && (

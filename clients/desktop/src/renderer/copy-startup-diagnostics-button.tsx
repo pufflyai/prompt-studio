@@ -1,11 +1,14 @@
-import { Button } from "@chakra-ui/react";
+import { Button, type ButtonProps } from "@chakra-ui/react";
 import { createGlyphIcon } from "@pstdio/ui";
 import { useState } from "react";
 
 const CopyIcon = createGlyphIcon("copy");
 
-export const CopyStartupDiagnosticsButton = (props: { copyDiagnostics: () => Promise<void> }) => {
-  const { copyDiagnostics } = props;
+export const CopyStartupDiagnosticsButton = (props: {
+  copyDiagnostics: () => Promise<void>;
+  variant?: ButtonProps["variant"];
+}) => {
+  const { copyDiagnostics, variant } = props;
   const [status, setStatus] = useState<"ready" | "copying" | "copied" | "failed">("ready");
   const copy = async () => {
     setStatus("copying");
@@ -20,7 +23,7 @@ export const CopyStartupDiagnosticsButton = (props: { copyDiagnostics: () => Pro
   if (status === "copied") label = "Copied";
   if (status === "failed") label = "Copy failed. Try again.";
   return (
-    <Button aria-label="Copy diagnostics" loading={status === "copying"} onClick={copy}>
+    <Button variant={variant} aria-label="Copy diagnostics" loading={status === "copying"} onClick={copy}>
       <CopyIcon />
       {label}
     </Button>

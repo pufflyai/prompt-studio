@@ -1,12 +1,14 @@
 import type { Settings, UpdateSettingsInput } from "../api/settings";
-import type { RequestFn } from "./request";
+import type { RequestFn, RequestOptions } from "./request";
+
+type SettingsRequestOptions = Pick<RequestOptions, "signal">;
 
 export type SettingsClient = {
-  get(): Promise<Settings>;
-  update(input: UpdateSettingsInput): Promise<Settings>;
+  get(options?: SettingsRequestOptions): Promise<Settings>;
+  update(input: UpdateSettingsInput, options?: SettingsRequestOptions): Promise<Settings>;
 };
 
 export const createSettingsClient = (request: RequestFn): SettingsClient => ({
-  get: () => request("/v1/settings"),
-  update: (input) => request("/v1/settings", { method: "PATCH", body: input }),
+  get: (options) => request("/v1/settings", options),
+  update: (input, options) => request("/v1/settings", { ...options, method: "PATCH", body: input }),
 });

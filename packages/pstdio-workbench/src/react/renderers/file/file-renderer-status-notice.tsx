@@ -15,6 +15,9 @@ export const FileRendererStatusNotice = (props: FileRendererStatusNoticeProps) =
       <FileRendererErrorNotice message="This resource was removed. Your draft is kept here. Copy it before closing this tab." />
     );
   if (loadError) return <FileRendererErrorNotice message={loadError} onRetry={retryRead} />;
-  if (state.saveError) return <FileRendererErrorNotice message={state.saveError} onRetry={retrySave} />;
+  if (state.saveError)
+    return (
+      <FileRendererErrorNotice message={state.saveError} onRetry={state.saveUnconfirmed ? undefined : retrySave} />
+    );
   return null;
 };

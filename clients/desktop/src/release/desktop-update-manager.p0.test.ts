@@ -22,6 +22,7 @@ type UpdateCheckOptions = {
 const createUpdateCheck = (options: UpdateCheckOptions = {}) => {
   const events = new EventEmitter();
   const notifications: string[] = [];
+  const progress: string[] = [];
   const errors: Error[] = [];
   const logged: Error[] = [];
   const feeds: unknown[] = [];
@@ -44,6 +45,7 @@ const createUpdateCheck = (options: UpdateCheckOptions = {}) => {
     onUpdateNotAvailable: () => notifications.push("up-to-date"),
     onUpdateDownloaded: (version: string) => notifications.push(`downloaded:${version}`),
     onUpdateError: (error: Error) => errors.push(error),
+    onUpdateProgress: (phase?: string) => progress.push(phase ?? "finished"),
     logError: (error: Error) => logged.push(error),
     fetchReleases: async () => (options.releaseVersions ?? ["0.33.3"]).map(macRelease),
   });
@@ -58,6 +60,7 @@ const createUpdateCheck = (options: UpdateCheckOptions = {}) => {
     manager,
     events,
     notifications,
+    progress,
     errors,
     logged,
     feeds,
@@ -104,6 +107,37 @@ describe("desktop update results", () => {
     check.events.emit("update-downloaded");
     await Promise.all([first, second]);
     expect(check.notifications).toEqual(["downloaded:0.33.3"]);
+  });
+
+  test("an interactive check immediately reports progress through the native download", async () => {
+    const check = createUpdateCheck();
+    const first = check.manager.checkForUpdates();
+    const second = check.manager.checkForUpdates();
+    expect(check.progress).toEqual(["checking"]);
+    await check.nativeCheckStarted(1);
+    check.events.emit("update-available");
+    expect(check.progress).toEqual(["checking", "downloading"]);
+    expect(check.notifications).toEqual([]);
+    check.events.emit("update-downloaded");
+    await Promise.all([first, second]);
+    expect(check.progress).toEqual(["checking", "downloading", "finished"]);
+    expect(check.notifications).toEqual(["downloaded:0.33.3"]);
+    expect(check.checks()).toBe(1);
+  });
+
+  test("an interactive check joins a background download at its current phase", async () => {
+    const check = createUpdateCheck();
+    const background = check.manager.checkInBackground();
+    await check.nativeCheckStarted(1);
+    check.events.emit("update-available");
+    expect(check.progress).toEqual([]);
+    const manual = check.manager.checkForUpdates();
+    expect(check.progress).toEqual(["downloading"]);
+    check.events.emit("error", new Error("offline"));
+    await Promise.all([manual, background]);
+    expect(check.progress).toEqual(["downloading", "finished"]);
+    expect(check.errors.map((error) => error.message)).toEqual(["offline"]);
+    expect(check.checks()).toBe(1);
   });
 
   test("allows a retry after a native error without reporting a successful download", async () => {

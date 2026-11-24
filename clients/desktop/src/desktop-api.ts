@@ -28,11 +28,13 @@ export interface DesktopProjectTabsState {
   projectIds: string[];
 }
 
-export interface DesktopUpdateNotice {
-  level: "info" | "error";
-  title: string;
-  message?: string;
-}
+export type DesktopUpdatePhase = "checking" | "downloading";
+
+export type DesktopUpdateOutcome = { level: "info" | "error"; title: string; message?: string };
+
+export type DesktopUpdateNotice =
+  | DesktopUpdateOutcome
+  | { kind: "progress"; title?: string | null; outcome?: DesktopUpdateOutcome; installed?: DesktopUpdateOutcome };
 
 export interface PromptStudioDesktopApi {
   cancelQuit: () => Promise<void>;

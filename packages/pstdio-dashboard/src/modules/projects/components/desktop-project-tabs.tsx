@@ -7,6 +7,7 @@ import { useSyncExternalStore } from "react";
 import { useCollectionSelection } from "@/lib/sync/use-collection-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
+import { useProjectNameOperations } from "@/shared/projects/project-name-operations";
 import { findDashboardProjectRow } from "../data/project-data";
 import type { DesktopProjectTabsController } from "../desktop-project-tabs-controller";
 
@@ -42,6 +43,7 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
   const { workbench, controller, platform } = props;
   const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
   const projectIds = useSyncExternalStore(controller.subscribe, controller.getProjectIds, controller.getProjectIds);
+  useProjectNameOperations();
   const dataVersion = useCollectionSelection({ tables: ["projects"], rowIds: projectIds });
   const selected = useWorkbenchStore(
     workbench.context.store,

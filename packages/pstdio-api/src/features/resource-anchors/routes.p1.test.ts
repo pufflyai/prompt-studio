@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { createTestApp } from "../../test-utils/create-test-app";
 
 test("HTTP links host resources with project scope and preserves links in sync snapshots", async () => {
@@ -115,6 +115,51 @@ test("reverse anchor changes notify personal history of both host endpoints", as
     }
   } finally {
     await stop?.();
+    await handle.close();
+  }
+});
+
+test("an endpoint refresh failure preserves the committed link outcome", async () => {
+  const handle = await createTestApp();
+  const originalGet = handle.deps.workspaceService.get;
+  let failRefresh = false;
+  let emitted = false;
+  const stop = handle.deps.eventBus.subscribe((event) => {
+    if (event.table === "resource_anchor_events") failRefresh = true;
+    if (event.table === "workspaces" && failRefresh) emitted = true;
+  });
+  const get = spyOn(handle.deps.workspaceService, "get");
+  try {
+    const project = await handle.deps.projectService.create({ name: "Link refresh" });
+    const first = await handle.deps.workspaceService.createStandalone({ project_id: project.id });
+    const second = await handle.deps.workspaceService.createStandalone({ project_id: project.id });
+    get.mockImplementation((id) => {
+      if (failRefresh && id === first.id) return Promise.reject(new Error("Endpoint read failed"));
+      return originalGet(id);
+    });
+    const resource = { type: "workspace", id: first.id };
+    const anchor = { type: "workspace", id: second.id, role: "result" };
+    const write = (operation: string, body: unknown) =>
+      handle.app.request(`/v1/projects/${project.id}/resource-anchors/${operation}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    for (const [operation, body, count] of [
+      ["add", { resource, anchors: [anchor] }, 1],
+      ["remove", { resource, refs: [anchor] }, 0],
+    ] as const) {
+      const result = await write(operation, body);
+      expect(result.status).toBe(200);
+      expect(emitted).toBe(true);
+      failRefresh = false;
+      emitted = false;
+      const links = await write("query-page", { resource, direction: "outgoing" });
+      expect((await links.json()).items).toHaveLength(count);
+    }
+  } finally {
+    get.mockRestore();
+    stop();
     await handle.close();
   }
 });

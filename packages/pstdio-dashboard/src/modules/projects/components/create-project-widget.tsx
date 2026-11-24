@@ -1,9 +1,9 @@
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
-import { useMutation, useMutationState } from "@tanstack/react-query";
+import { useSyncExternalStore } from "react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { FolderPicker } from "@/shared/filesystem/folder-picker";
-import { createProject } from "../data/project-creation";
+import { getProjectCreation, projectCreationPresentation } from "../data/project-creation";
 
 interface CreateProjectWidgetProps {
   input: WorkbenchPanelRenderInput;
@@ -11,16 +11,12 @@ interface CreateProjectWidgetProps {
 }
 export const CreateProjectWidget = (props: CreateProjectWidgetProps) => {
   const { input, onProjectOpening } = props;
-  const mutationKey = ["create-project", input.instance.instanceId];
-  const mutation = useMutation({ mutationKey, mutationFn: createProject });
-  // Setup temporarily replaces this view; the mutation cache retains its owner across remounts.
-  const attempts = useMutationState({
-    filters: { mutationKey, exact: true },
-    select: (attempt) => ({ pending: attempt.state.status === "pending", error: attempt.state.error?.message }),
-  });
+  const creation = getProjectCreation();
+  const snapshot = useSyncExternalStore(creation.subscribe, creation.read, creation.read);
+  const presentation = projectCreationPresentation(snapshot);
   const openProject = async (path: string) => {
     const initialProjectId = getDashboardSelectedProjectId(input.workbench);
-    const creating = mutation.mutateAsync({ path });
+    const creating = creation.open(path);
     // Track the expected project before creation; setup waits for enabled contributions.
     const setup = onProjectOpening?.(creating);
     try {
@@ -37,8 +33,9 @@ export const CreateProjectWidget = (props: CreateProjectWidgetProps) => {
   };
   return (
     <FolderPicker
-      isOpening={attempts.some((attempt) => attempt.pending)}
-      error={attempts.at(-1)?.error}
+      isOpening={presentation.isOpening}
+      error={presentation.error}
+      initialPath={presentation.path}
       onSelect={openProject}
       onClose={() => input.workbench.layout.removeWidgetPlacement(input.instance.instanceId)}
     />

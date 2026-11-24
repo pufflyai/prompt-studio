@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import type { AccountStatus } from "@pstdio/sdk/client";
+import { getWorkbenchOperations } from "@pstdio/workbench";
 import { publishExtensionEvent, publishExtensionEventReset } from "@/shared/extensions/extension-webview-broadcast";
 import { getDashboardAccountStatusQuery, getDashboardScopedQueries } from "./scoped-queries";
 import { createRuntimeCollections } from "./sync/collections";
@@ -59,6 +60,10 @@ test("one runtime account reader revokes active and retained data before publish
   try {
     const account = getDashboardAccountStatusQuery(owner);
     const root = getDashboardScopedQueries(owner);
+    const projectRetirements: string[] = [];
+    const stopRetirements = root.subscribeScopeRetirement(({ projectId }) => {
+      if (projectId) projectRetirements.push(projectId);
+    });
     const first = account.subscribe(() => {});
     const second = account.subscribe(() => {});
     await account.read();
@@ -67,7 +72,7 @@ test("one runtime account reader revokes active and retained data before publish
     const warm = root.forScope({ projectId: "b" }).query({ id: "notes", read: async () => "private warm" });
     const stop = query.subscribe(() => {});
     await Promise.all([query.read(), warm.read()]);
-    current = status("second");
+    current = { ...status("second"), cloudProjects: ["a"] };
     publishExtensionEvent({ id: "account.changed" }, owner);
     await account.read();
     expect(reads).toBe(2);
@@ -75,22 +80,29 @@ test("one runtime account reader revokes active and retained data before publish
     expect(warm.isDisposed()).toBe(true);
     expect(query.getSnapshot().data).toBeUndefined();
     expect(account.getSnapshot().data?.login?.accountId).toBe("second");
+    expect(projectRetirements).toEqual([]);
     const replacement = root.forScope({ projectId: "a" }).query({ id: "notes", read: async () => "second" });
     expect(replacement.key).toContain("second");
     current = status("second", "https://different.example");
     publishExtensionEventReset({}, owner);
     await account.read();
     expect(replacement.isDisposed()).toBe(true);
-    const signedIn = root.forScope({ projectId: "a" }).query({ id: "notes", read: async () => "second" });
-    current = { ...current, signInRequired: true };
+    current = { ...current, cloudProjects: ["b"] };
+    publishExtensionEvent({ id: "account.changed" }, owner);
+    await account.read();
+    expect(projectRetirements).toEqual(["a"]);
+    const signedIn = root.forScope({ projectId: "b" }).query({ id: "notes", read: async () => "second" });
+    current = { ...current, signInRequired: true, cloudProjects: [] };
     publishExtensionEvent({ id: "account.changed" }, owner);
     await account.read();
     expect(signedIn.isDisposed()).toBe(true);
+    expect(projectRetirements).toEqual(["a"]);
+    stopRetirements();
     stop();
     first();
     second();
     await turn();
-    expect(reads).toBe(4);
+    expect(reads).toBe(5);
   } finally {
     await owner.dispose();
     await server.stop(true);
@@ -120,6 +132,75 @@ test("another runtime's account signals do not reread identity and disposal stop
   } finally {
     await owner.dispose();
     await other.dispose();
+    await server.stop(true);
+  }
+});
+
+test("retired recovery follows the owning account's confirmed Cloud roster and surviving local copies", async () => {
+  let current = { ...status("first"), cloudProjects: ["shared", "downloaded", "detached", "removed-copy"] };
+  const server = Bun.serve({ port: 0, fetch: () => Response.json(current) });
+  const owner = createRuntimeCollections({ baseUrl: server.url.origin, token: "" });
+  try {
+    const rows = owner.getWriter("projects")!;
+    rows.upsert({ id: "downloaded" });
+    rows.upsert({ id: "removed-copy" });
+    owner.markInitialCollectionsSyncComplete();
+    const account = getDashboardAccountStatusQuery(owner);
+    const operations = getWorkbenchOperations(getDashboardScopedQueries(owner));
+    const apply = async (next: AccountStatus) => {
+      current = next;
+      publishExtensionEvent({ id: "account.changed" }, owner);
+      await account.read();
+    };
+    let writes = 0;
+    const loseResponse = (projectId: string, fromCloudPicker = false) =>
+      operations.submit({
+        projectId,
+        subjects: [projectId],
+        domain: "recovery",
+        title: "Change project",
+        draft: projectId,
+        ...(fromCloudPicker ? { recoverySource: "cloud-project-picker" } : {}),
+        write() {
+          writes++;
+          throw new Error("Reply lost");
+        },
+      }).result;
+    const unavailableProjects = () =>
+      operations
+        .getSnapshot()
+        .recovery.filter((item) => item.projectUnavailable)
+        .map((item) => item.projectId);
+    await account.read();
+    for (const id of current.cloudProjects)
+      await expect(loseResponse(id, id === "shared" || id === "detached")).rejects.toThrow("Reply lost");
+    await apply({ ...status("second"), cloudProjects: ["shared"] });
+    expect(operations.getSnapshot().recovery).toEqual([]);
+    await expect(loseResponse("shared", true)).rejects.toThrow("Reply lost");
+    await apply({ ...current, cloudProjects: [], cloudProjectsLoaded: false });
+    expect(operations.getSnapshot().pending).toHaveLength(1);
+    expect(unavailableProjects()).toEqual([]);
+    await apply({ ...current, cloudProjectsLoaded: true });
+    expect(operations.getSnapshot().pending).toEqual([]);
+    expect(unavailableProjects()).toEqual(["shared"]);
+    await apply({ ...status("first"), cloudProjects: ["shared", "removed-copy"] });
+    expect(unavailableProjects()).toEqual(["detached"]);
+    expect(operations.getSnapshot().recovery.map((item) => item.draft)).toEqual([
+      "shared",
+      "downloaded",
+      "detached",
+      "removed-copy",
+    ]);
+    operations.discard(operations.getSnapshot().recovery[2]!.id);
+    rows.remove("downloaded");
+    expect(unavailableProjects()).toEqual(["downloaded"]);
+    rows.upsert({ id: "downloaded" });
+    expect(unavailableProjects()).toEqual([]);
+    rows.remove("removed-copy");
+    expect(unavailableProjects()).toEqual(["removed-copy"]);
+    expect(writes).toBe(5);
+  } finally {
+    await owner.dispose();
     await server.stop(true);
   }
 });

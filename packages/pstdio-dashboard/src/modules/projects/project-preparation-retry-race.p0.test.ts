@@ -4,9 +4,9 @@ import { createWorkbench } from "@pstdio/workbench";
 import { getCollection, getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { publishExtensionEventReset } from "@/shared/extensions/extension-webview-broadcast";
+import { createProjectSetupRequests } from "@/shared/projects/project-setup-requests";
 import { registerProjectOpening } from "./project-opening";
 import { registerProjectSetupCommand } from "./project-setup-command";
-import { createProjectSetupRequests } from "./project-setup-requests";
 
 test.each(["automatic", "retry"])("%s project preparation shares ownership with the other caller", async (first) => {
   const held = Promise.withResolvers<void>();

@@ -9,6 +9,7 @@ export const dashboardCommandIds = {
   archiveSession: "dashboard.archiveSession",
   deleteSession: "dashboard.deleteSession",
   openCommandPalette: "dashboard.openCommandPalette",
+  openExtensions: "dashboard.openExtensions",
   openNotifications: "dashboard.openNotifications",
   openCurrentWorkspace: "dashboard.openCurrentWorkspace",
   openDiscord: "dashboard.openDiscord",

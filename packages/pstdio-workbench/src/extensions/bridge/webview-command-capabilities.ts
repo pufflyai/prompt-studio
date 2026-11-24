@@ -1,8 +1,10 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
 import type { WebviewArtifactsReadParams, WebviewHostCapabilityResults } from "pstdio-api-contracts/extension-kernel";
+import { plannerGateLaunchCheck } from "../host/workbench-command-operation";
 import { createExtensionSlot, executeWorkbenchExtensionCommandResponse } from "../host/workbench-extension-command";
 import type { CreateBridgeWebviewHostAdapters } from "./bridge-webview-renderer";
 import type { ExtensionWebviewFilesAdapter } from "./extension-webview-host-adapters";
+import { runWorkbenchWebviewCommandOperation, type WebviewCommandMetadata } from "./webview-command-operations";
 import { createWorkbenchWebviewHostAdapters } from "./webview-host-capabilities";
 
 type ExtensionWebviewSlotKind = NonNullable<CommandExecuteRequest["slot"]>["kind"];
@@ -19,6 +21,7 @@ interface CreateWorkbenchExtensionWebviewAdaptersInput {
   extensionIdForWebview(webviewId: string): string | undefined;
   files?: ExtensionWebviewFileCapabilities;
   projectId: string;
+  metadata?: WebviewCommandMetadata;
   slotKind: ExtensionWebviewSlotKind;
 }
 
@@ -46,8 +49,32 @@ export const createWorkbenchExtensionWebviewAdapters =
         }),
       });
     };
+    const base = createWorkbenchWebviewHostAdapters({
+      ...context,
+      extensionId,
+      projectId: input.projectId,
+      executeCommand,
+    });
     return {
-      ...createWorkbenchWebviewHostAdapters({ ...context, extensionId, projectId: input.projectId, executeCommand }),
+      ...base,
+      executeCommand: (request: Parameters<typeof base.executeCommand>[0], signal?: AbortSignal) =>
+        runWorkbenchWebviewCommandOperation({
+          workbench: context.workbench,
+          projectId: input.projectId,
+          resource: context.placement.resource,
+          request,
+          signal,
+          metadata: input.metadata,
+          execute: (current) => base.executeCommand(request, current),
+          readGateLaunch: (params, current) =>
+            Promise.resolve(
+              input.executeCommand(
+                plannerGateLaunchCheck,
+                { projectId: input.projectId, params, source: "dashboard" },
+                current,
+              ),
+            ),
+        }),
       files: input.files,
       artifacts: input.artifacts
         ? { read: (params) => input.artifacts!.read(params, { webviewId: context.webviewId }) }

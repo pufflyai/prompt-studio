@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionCommandPaletteResourceRecord } from "@pstdio/sdk/api";
 import { createWorkbench } from "../../core";
+import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
+import { getWorkbenchQueries } from "../../core/workbench-queries";
+import { executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
 import { registerWorkbenchExtensionCommandPaletteResources } from "./command-palette-resource-contributions";
 
 const record: WorkbenchExtensionCommandPaletteResourceRecord = {
@@ -152,4 +155,46 @@ test("resource queries retain the declared kind and live accessible indicator", 
     resource: { extensionId: "owner", projectId: "p1", id: "saved" },
   });
   await workbench.dispose();
+});
+
+test("a selected provider result shares admission with the registered action", async () => {
+  const commandId = "pstdio.lab.command.publish";
+  const workbench = createWorkbench();
+  const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
+  const release = Promise.withResolvers<string>();
+  let writes = 0;
+  const context = {
+    projectId: "p1",
+    workbench,
+    operations,
+    metadata: { commands: [{ id: commandId, extensionId: record.extensionId, title: "Publish", mutating: true }] },
+    executeCommand: (id: string) => {
+      if (id === commandId) {
+        writes++;
+        return release.promise;
+      }
+      return {
+        items: [
+          {
+            id: "intro",
+            label: "Intro",
+            target: { kind: "command", target: { command: { kind: "command", id: "publish" } } },
+          },
+        ],
+      };
+    },
+  };
+  try {
+    registerWorkbenchExtensionCommandPaletteResources(context, [record]);
+    const groups = await workbench.commandPaletteResources.queryProviders({ query: "", limit: 10 });
+    const first = executeWorkbenchExtensionCommand(context, commandId, { foreground: true });
+    const activation = groups[0]!.results[0]!.activate();
+    release.resolve("Published");
+    await expect(activation).rejects.toThrow("still pending");
+    expect(await first).toBe("Published");
+    expect(writes).toBe(1);
+  } finally {
+    release.resolve("Published");
+    await workbench.dispose();
+  }
 });

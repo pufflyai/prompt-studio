@@ -5,7 +5,15 @@ import type { LegacyChatDraftTransfer } from "./chat-legacy-draft";
 import type { ChatSession } from "./chat-session";
 
 const clientKey = "pstdio-workbench:chat-draft-client";
-const browserOwners = new WeakMap<Storage, Map<string, symbol>>();
+interface BrowserDraftOwner {
+  discard?(contentKey: string): void;
+}
+const browserOwners = new WeakMap<Storage, Map<string, BrowserDraftOwner>>();
+
+const withoutRecovery = (draft: ChatDraft, contentKey: string) => {
+  const recovered = draft.recovered?.filter((item) => chatDraftContentKey(item) !== contentKey);
+  return recovered?.length === draft.recovered?.length ? draft : { ...draft, recovered };
+};
 
 export const createLocalChatDrafts = (key: string, readLegacy: () => LegacyChatDraftTransfer | undefined) => {
   // Recovery receipts require durable browser storage, never the workbench's memory fallback.
@@ -22,8 +30,8 @@ export const createLocalChatDrafts = (key: string, readLegacy: () => LegacyChatD
   };
   const localKey = `pstdio-workbench:chat-draft:${key}`;
   const pendingKey = `pstdio-workbench:chat-draft-pending:${key}`;
-  const owners = (browserStorage && browserOwners.get(browserStorage)) ?? new Map<string, symbol>();
-  const owner = Symbol();
+  const owners = (browserStorage && browserOwners.get(browserStorage)) ?? new Map<string, BrowserDraftOwner>();
+  const owner: BrowserDraftOwner = {};
   if (browserStorage) browserOwners.set(browserStorage, owners);
   owners.set(localKey, owner);
   const current = () => owners.get(localKey) === owner;
@@ -61,7 +69,29 @@ export const createLocalChatDrafts = (key: string, readLegacy: () => LegacyChatD
       if (restoreFailure) throw restoreFailure.cause;
       write(draft);
     },
+    discardRecovery(contentKey: string) {
+      const active = browserStorage && browserOwners.get(browserStorage)?.get(localKey);
+      if (active?.discard) {
+        active.discard(contentKey);
+        return;
+      }
+      const store = storage();
+      const raw = store.getItem(localKey);
+      const saved = parse(raw);
+      if (!saved) return;
+      const next = withoutRecovery(saved, contentKey);
+      if (saved !== next && store.getItem(localKey) === raw) store.setItem(localKey, JSON.stringify(next));
+    },
     restore(session: ChatSession) {
+      owner.discard = (contentKey) => {
+        if (restoreFailure) throw restoreFailure.cause;
+        const currentDraft = session.getSnapshot().draft;
+        const saved = read(localKey);
+        const nextSaved = saved && withoutRecovery(saved, contentKey);
+        if (nextSaved && saved !== nextSaved) write(nextSaved);
+        const nextDraft = withoutRecovery(currentDraft, contentKey);
+        if (nextDraft !== currentDraft) session.changeDraft({ recovered: nextDraft.recovered });
+      };
       try {
         const local = read(localKey);
         const pendingRaw = storage().getItem(pendingKey);

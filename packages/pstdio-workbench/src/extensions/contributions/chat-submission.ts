@@ -1,17 +1,31 @@
 import type { ChatDraft, ChatRendererAction, ChatRendererSnapshot } from "@pstdio/sdk/extensions";
+import { UnresolvedSubmissionError } from "@pstdio/ui";
 import { chatDraftContentKey, hydrateChatDraft, recoverChatDraft } from "./chat-draft-recovery";
+import { discardPendingChatSubmission } from "./chat-draft-restoration";
 import { type ChatPendingSubmission, createChatPendingSubmission } from "./chat-pending-submission";
 
 type Submit = Extract<ChatRendererAction, { type: "submit" }>;
 type Handler = (action: ChatRendererAction) => Promise<unknown>;
+export type TrackChatSubmission = <T>(
+  action: Submit,
+  execute: () => Promise<T>,
+  discard: () => string | undefined,
+) => Promise<T>;
 
 /** The resource owner keeps a single in-flight handoff even while its presentation is closed. */
 export const createChatSubmissionRunner = (input: {
-  read(): { draft: ChatDraft; conversation: ChatRendererSnapshot; edits: number; pending?: ChatPendingSubmission[] };
+  read(): {
+    draft: ChatDraft;
+    conversation: ChatRendererSnapshot;
+    edits: number;
+    active?: boolean;
+    pending?: ChatPendingSubmission[];
+  };
   execute(action: ChatRendererAction, handler: Handler): Promise<{ snapshot?: ChatRendererSnapshot }>;
-  publish(update: { sending: boolean; pending?: ChatPendingSubmission[]; error?: string }): void;
+  publish(update: { sending?: boolean; pending?: ChatPendingSubmission[]; error?: string }): void;
   changeDraft(draft: Partial<ChatDraft>): void;
   fail(error: unknown): void;
+  trackSubmission?: TrackChatSubmission;
   markRecoverable(): void;
 }) => {
   let submission: Promise<void> | undefined;
@@ -20,6 +34,8 @@ export const createChatSubmissionRunner = (input: {
     if (submission) return submission;
     const source = { ...input, ...invocation };
     const before = source.read();
+    const retained = before.pending?.find((item) => item.unresolved?.recovery.isRetained());
+    if (retained) return Promise.reject(retained.unresolved);
     sequence = Math.max(sequence, ...(before.pending ?? []).map((item) => item.sequence));
     const pending = !action.questionResponse
       ? createChatPendingSubmission(
@@ -31,8 +47,20 @@ export const createChatSubmissionRunner = (input: {
         )
       : undefined;
     source.publish({ sending: true, pending: [...(before.pending ?? []), ...(pending ? [pending] : [])] });
-    submission = source
-      .execute(action, handler)
+    const execute = () => source.execute(action, handler);
+    const discard = () => {
+      if (!pending) return;
+      const current = source.read();
+      if (current.active !== false) {
+        discardPendingChatSubmission(source, pending.message.id);
+        return;
+      }
+      const retained = current.pending?.find((item) => item.message.id === pending.message.id && item.recoveryAdded);
+      return retained ? chatDraftContentKey(retained) : undefined;
+    };
+    submission = (
+      source.trackSubmission && !action.questionResponse ? source.trackSubmission(action, execute, discard) : execute()
+    )
       .then((result) => {
         const current = source.read();
         // Submitted-input tags are an explicit alternative to a canonical user echo
@@ -55,6 +83,24 @@ export const createChatSubmissionRunner = (input: {
       })
       .catch((error) => {
         const current = source.read();
+        if (error instanceof UnresolvedSubmissionError && pending) {
+          const attempted = { text: action.text, attachments: action.attachments, values: action.values };
+          const recoveryAdded = !current.draft.recovered?.some(
+            (saved) => chatDraftContentKey(saved) === chatDraftContentKey(attempted),
+          );
+          const retained =
+            current.edits === before.edits ? { ...current.draft, text: "", attachments: [] } : current.draft;
+          source.changeDraft(hydrateChatDraft(retained, attempted));
+          source.publish({
+            sending: false,
+            pending: current.pending?.map((item) =>
+              item.message.id === pending.message.id
+                ? { ...item, failure: error.message, unresolved: error, recoveryAdded }
+                : item,
+            ),
+          });
+          throw error;
+        }
         const queued = current.pending?.find((item) => item.message.id === pending?.message.id && item.queue);
         if (queued && !queued.echoed) {
           const failed = { text: action.text, attachments: action.attachments, values: action.values };

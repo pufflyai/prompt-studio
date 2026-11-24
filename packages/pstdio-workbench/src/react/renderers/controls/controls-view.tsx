@@ -20,7 +20,9 @@ import {
 import { runUserAction } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-param-field";
 import { SettingsPageContext, useSettingsChanges } from "../../settings/settings-page-context";
+import { projectControlValues } from "../collection-operation-projection";
 import { RendererReadNotice } from "../renderer-read-notice";
+import { collectionReadIdentity, useCollectionOperations } from "../use-collection-operations";
 import { usePageParams } from "../use-page-params";
 import { useRendererRead } from "../use-renderer-read";
 import { mergeControlDraft } from "./control-draft";
@@ -46,6 +48,7 @@ const controlsValues = (defaults: ControlValueMap | undefined, result: ControlsQ
   controlValuesSchema.parse(
     resolveParamEditorValues(result?.params ?? [], result?.groups ?? [], { ...defaults, ...result?.values }),
   );
+const writeOptions = { refreshAfterHandlerFailure: true };
 const initialState: ControlsViewState = {
   params: [],
   groups: [],
@@ -75,34 +78,55 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
   const [state, setState] = useState<ControlsViewState>(initialState);
   const [pending, setPending] = useState(false);
   const changes = useRef(0);
-  const read = useRendererRead({
-    workbench,
-    ownerKey: rendererReadKey(placement),
+  const query = {
     sourceId: contribution.id,
-    queryEvents: contribution.queryEvents,
     queryScope: contribution.queryScope,
     dependency: { resourceKey: resourceKey(resource), resourceId: resource?.id },
     queryKey: JSON.stringify([contribution.id, resourceKey(resource), pageParams]),
-
+  };
+  const read = useRendererRead({
+    ...query,
+    workbench,
+    ownerKey: rendererReadKey(placement),
+    queryEvents: contribution.queryEvents,
     load: (signal) => contribution.executeQuery(resource, signal, pageParams),
     subscribe: contribution.subscribe,
   });
+  const row = { id: resource?.id ?? "controls", resource };
+  const mutations = useCollectionOperations(workbench, query, [row]);
+  const accepted = read.acceptedValue;
+  const rowId = row.id;
   useEffect(() => {
-    if (!read.value) {
+    if (!accepted) {
       setState(initialState);
       return;
     }
-    const result = read.value;
+    const result = accepted;
+    const saved = projectControlValues(
+      controlsValues(contribution.defaultValues, result),
+      { id: rowId, resource },
+      mutations.pending,
+      contribution.id,
+      query.queryScope?.projectId,
+    );
     setState((previous) => ({
       ...previous,
       params: result.params ?? [],
       groups: result.groups ?? [],
-      values: mergeControlDraft(previous.values, controlsValues(contribution.defaultValues, result), previous.changed),
+      values: mergeControlDraft(previous.values, saved, previous.changed),
       readOnly: Boolean(result.readOnly),
       loading: false,
     }));
-  }, [read.value, contribution.defaultValues]);
-  const readOnly = pending || state.readOnly || (!contribution.updateValue && !contribution.apply);
+  }, [
+    accepted,
+    contribution.defaultValues,
+    contribution.id,
+    mutations.pending,
+    query.queryScope?.projectId,
+    resource,
+    rowId,
+  ]);
+  const readOnly = state.readOnly || (!contribution.updateValue && !contribution.apply);
   const showFooter =
     Boolean(read.value) &&
     !state.loading &&
@@ -115,23 +139,19 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
     const values = { ...state.values, [id]: value };
     const revision = ++changes.current;
     if (contribution.updateValue)
-      void runUserAction(workbench, "Update value", () =>
-        read.mutate(
-          (current) => current,
-          async () => {
-            try {
-              await contribution.updateValue!({ controlId: id, value, values, resource });
-            } finally {
-              setState((previous) => {
-                if (previous.changed[id] !== revision) return previous;
-                const changed = { ...previous.changed };
-                delete changed[id];
-                return { ...previous, changed };
-              });
-            }
-          },
-        ),
-      );
+      void runUserAction(workbench, "Update value", async () => {
+        await mutations.submit(
+          { rowId, attributes: { [id]: value } },
+          () => contribution.updateValue!({ controlId: id, value, values, resource }),
+          writeOptions,
+        );
+        setState((previous) => {
+          if (previous.changed[id] !== revision) return previous;
+          const changed = { ...previous.changed };
+          delete changed[id];
+          return { ...previous, changed };
+        });
+      });
     setState((prev) => ({
       ...prev,
       values: { ...prev.values, [id]: value },
@@ -143,18 +163,26 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
     setPending(true);
     setState((previous) => ({ ...previous, error: undefined }));
     try {
-      await read.mutate(
-        (current) => current,
+      await mutations.submit(
+        { rowId, attributes: reset ? (contribution.defaultValues ?? {}) : state.values },
         async () => {
           if (reset) await contribution.reset?.({ resource });
           else await contribution.apply?.({ values: state.values, resource });
         },
+        writeOptions,
       );
-      setState((previous) => ({
-        ...previous,
-        changed: {},
-        values: reset ? controlsValues(contribution.defaultValues, read.value) : previous.values,
-      }));
+      const settled = reset
+        ? workbench.views.reads.peek<ControlsQueryResult>(collectionReadIdentity(query))?.data
+        : undefined;
+      setState((previous) => {
+        const changed = Object.fromEntries(
+          Object.entries(previous.changed).filter(([id, revision]) => state.changed[id] !== revision),
+        );
+        const values = reset
+          ? mergeControlDraft(previous.values, controlsValues(contribution.defaultValues, settled ?? accepted), changed)
+          : previous.values;
+        return { ...previous, changed, values };
+      });
     } catch (error) {
       setState((previous) => ({ ...previous, error: error instanceof Error ? error.message : String(error) }));
       if (settingsPage) throw error;
@@ -173,7 +201,7 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
               ...previous,
               changed: {},
               error: undefined,
-              values: controlsValues(contribution.defaultValues, read.value),
+              values: controlsValues(contribution.defaultValues, read.acceptedValue),
             })),
         }
       : undefined,

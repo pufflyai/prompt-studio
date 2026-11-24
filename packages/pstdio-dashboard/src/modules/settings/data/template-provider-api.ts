@@ -19,7 +19,7 @@ interface TemplateSummary {
   type: string;
 }
 
-interface TemplateContent extends TemplateSummary {
+export interface TemplateContent extends TemplateSummary {
   content: string;
 }
 
@@ -27,6 +27,8 @@ export const templateTypesForProject = (projectId: string) =>
   [...(getCachedDashboardExtensionMetadata(projectId)?.templateTypes ?? [])]
     .filter((type) => type.commands)
     .sort((left, right) => (left.order ?? 0) - (right.order ?? 0) || left.id.localeCompare(right.id));
+
+export const projectTemplateAssetsQueryKey = (projectId: string | undefined) => ["project-template-assets", projectId];
 
 export const getProjectTemplateAssets = async (projectId: string) => {
   const types = templateTypesForProject(projectId);
@@ -60,18 +62,22 @@ export const getProjectTemplateAssets = async (projectId: string) => {
   ).flat();
 };
 
-export const getProjectTemplate = (template: ProjectTemplateAsset) =>
-  executeExtensionCommandValue<TemplateContent | null>(template.projectId, template.commands.read, {
+export const getProjectTemplate = (template: ProjectTemplateAsset, run = executeExtensionCommandValue) =>
+  run<TemplateContent | null>(template.projectId, template.commands.read, {
     name: template.name,
   });
 
-export const saveProjectTemplate = (template: ProjectTemplateAsset, content: string) =>
-  executeExtensionCommandValue<TemplateContent>(template.projectId, template.commands.save, {
+export const saveProjectTemplate = (
+  template: ProjectTemplateAsset,
+  content: string,
+  run = executeExtensionCommandValue,
+) =>
+  run<TemplateContent | null>(template.projectId, template.commands.save, {
     name: template.name,
     title: template.title,
     type: template.localType,
     content,
   });
 
-export const deleteProjectTemplate = (template: ProjectTemplateAsset) =>
-  executeExtensionCommandValue(template.projectId, template.commands.delete, { name: template.name });
+export const deleteProjectTemplate = (template: ProjectTemplateAsset, run = executeExtensionCommandValue) =>
+  run(template.projectId, template.commands.delete, { name: template.name });

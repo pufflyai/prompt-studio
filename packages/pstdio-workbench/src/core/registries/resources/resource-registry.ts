@@ -1,6 +1,6 @@
 import type { PlacementIdentity, RelatedResourceOpenings, ResourceRef } from "@pstdio/sdk/extensions";
 import type { NavigationTarget } from "../navigation/navigation-registry";
-import { createResourcePreview } from "./resource-preview";
+import { createResourcePreview, observeResourceRemoval } from "./resource-preview";
 
 export type { ResourceRef } from "@pstdio/sdk/extensions";
 
@@ -143,6 +143,7 @@ export interface ResourceRegistry {
   onDidDetectHierarchyCycle(listener: (cycle: ResourceHierarchyCycle) => void): Disposable;
 }
 export interface CreateResourceRegistryInput {
+  preview?: ReturnType<typeof createResourcePreview>;
   remove?(resource: ResourceRef, retained: readonly PlacementIdentity[]): void;
   // Resolves the active primary resource so listResources can scope provider candidates.
   getPrimary?: () => ResourceRef | undefined;
@@ -164,9 +165,10 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
     name: "workbench.resources",
     initialState: { kinds: {}, providers: {}, hierarchyProviders: {} },
   });
+  const preview = input.preview ?? createResourcePreview();
   return {
     store,
-    preview: createResourcePreview(),
+    preview,
     getRemovalVersion: () => removalVersion,
     getRemovalEpoch: () => removalEpoch,
     wasRemovedSince: (resource, version) => (removals.get(resourceKey(resource)) ?? 0) > version,
@@ -176,6 +178,7 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
       try {
         input.remove?.(resource, retained);
       } finally {
+        observeResourceRemoval(preview, resource);
         for (const listener of removedListeners) listener(resource);
       }
     },

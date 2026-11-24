@@ -2,8 +2,9 @@ import { expect, spyOn, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
+import { makeCommandContext } from "@pstdio/sdk/testing";
 import { collectRun, waitForCollection } from "./collection";
+import { createRunStorage as createMemoryStorage } from "./run-storage-fixture";
 import type { RunRecord } from "./runs";
 
 test("a large log stays readable while the collection worker returns a small receipt", async () => {

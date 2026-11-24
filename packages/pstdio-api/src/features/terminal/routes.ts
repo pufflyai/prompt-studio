@@ -77,6 +77,7 @@ export const createTerminalWebSocketEvents = (deps: TerminalSocketDeps): WSEvent
 
   // A retained terminal keeps running when its socket goes away; only a kill message ends it.
   const releaseSocket = () => {
+    if (closed) return;
     if (!retained || !deps.retained) {
       void closeSession();
       return;
@@ -224,6 +225,7 @@ export const createTerminalWebSocketEvents = (deps: TerminalSocketDeps): WSEvent
 
   return {
     onMessage(event, socket) {
+      if (closed) return;
       const message = JSON.parse(String(event.data)) as TerminalWebSocketClientMessage;
 
       if (message.type === "open" || message.type === "openView") {
@@ -243,7 +245,13 @@ export const createTerminalWebSocketEvents = (deps: TerminalSocketDeps): WSEvent
       } else if (message.type === "resize") {
         session?.resize(message.cols, message.rows);
       } else {
-        void closeSession(message.signal).finally(() => socket.close(1000));
+        void closeSession(message.signal).then(
+          () => socket.close(1000),
+          (error: unknown) => {
+            sendMessage(socket, { type: "error", message: errorMessage(error) });
+            socket.close(1011, "Terminal stop could not be confirmed");
+          },
+        );
       }
     },
     onClose() {

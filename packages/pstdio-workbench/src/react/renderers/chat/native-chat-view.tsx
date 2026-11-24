@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { ChatAttachment, ChatQueuedRequest, ChatRendererSnapshot } from "@pstdio/sdk/extensions";
 import { type ChatLinkHandler, ChatPanel } from "@pstdio/ui/chat-ui";
-import { type ComponentProps, type ComponentType, useState, useSyncExternalStore } from "react";
+import { type ComponentProps, type ComponentType, useCallback, useState, useSyncExternalStore } from "react";
 import { visibleChatDraftAttachments } from "../../../extensions/contributions/chat-pending-submission";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-param-field";
@@ -21,9 +21,10 @@ import {
   nativeChatDecision,
 } from "./native-chat-controls";
 import type { NativeChatHostProps, NativeChatHostServices } from "./native-chat-host";
-import { findQueuedChatRequest, queuedChatDraft } from "./native-chat-queue";
-import { NativeChatErrors, NativeChatNotices } from "./native-chat-status";
+import { findQueuedChatRequest, projectQueuedFollowUps, queuedChatDraft } from "./native-chat-queue";
+import { NativeChatComposerHeader, NativeChatNotices } from "./native-chat-status";
 import { NativeChatWorkspace } from "./native-chat-workspace";
+import { useNativeChatActions } from "./use-native-chat-actions";
 import { useNativeChatObservation } from "./use-native-chat-observation";
 import { type NativeChatPresentation, useNativeChatPresentation } from "./use-native-chat-presentation";
 
@@ -54,11 +55,12 @@ interface NativeChatComposerAvailability {
   sending: boolean;
   uploading: boolean;
   editingQueue: boolean;
+  unresolved: boolean;
 }
 
 const nativeChatComposerAvailability = (props: NativeChatComposerAvailability) => {
-  const { conversation, account, text, sending, uploading, editingQueue } = props;
-  const composerRequestsDisabled = Boolean(conversation.readOnly || account?.progress);
+  const { conversation, account, text, sending, uploading, editingQueue, unresolved } = props;
+  const composerRequestsDisabled = Boolean(conversation.readOnly || account?.progress || unresolved);
   const inputDisabled = sending || uploading;
   return {
     inputDisabled,
@@ -113,6 +115,7 @@ const NativeChatContent = (props: NativeChatViewProps) => {
     observe: props.observe,
     visible: props.visible,
   });
+  const unresolved = useUnresolvedSubmission(presentation.session);
   return (
     <NativeChatConversation
       key={key}
@@ -120,23 +123,43 @@ const NativeChatContent = (props: NativeChatViewProps) => {
       {...presentation}
       conversationKey={key}
       transcriptRevision={transcript.revision}
+      unresolved={unresolved}
     />
   );
 };
 
-const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevision: number }) => {
-  const { session, conversationKey, renderParamField } = props;
+const useUnresolvedSubmission = (session: ChatSession) => {
+  const subscribe = useCallback(
+    (changed: () => void) => {
+      const stopSubmissions = session.subscribeSubmissions(changed);
+      const stopView = session.subscribeToView(changed);
+      return () => {
+        stopSubmissions();
+        stopView();
+      };
+    },
+    [session],
+  );
+  return useSyncExternalStore(subscribe, session.hasUnresolvedSubmission, session.hasUnresolvedSubmission);
+};
+
+const runQueueGesture = (work: () => Promise<unknown>, report: (error: unknown) => void) =>
+  void Promise.resolve().then(work).catch(report);
+
+const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevision: number; unresolved: boolean }) => {
+  const { session, conversationKey, renderParamField, unresolved } = props;
   const state = useSyncExternalStore(session.subscribeToView, session.getSnapshot, session.getSnapshot);
-  const { conversation, draft, messages, queuedFollowUps, pending, loading, initializing, sending } = state;
+  const { conversation: confirmed, draft, messages, queuedFollowUps, pending, loading, initializing, sending } = state;
   const observation = useNativeChatObservation(props, state);
+  const pendingActions = useNativeChatActions(session, confirmed);
+  const conversation = pendingActions.queue ? { ...confirmed, queueReadOnly: true } : confirmed;
   const run: ChatSession["run"] = (action) => runNativeChatAction(session, action, props.action, Boolean(selected));
   const [uploading, setUploading] = useState(0);
   const [selected, setSelected] = useState<ChatQueuedRequest | null>(null);
   const [edits, setEdits] = useState<Record<string, { values: typeof draft.values; attachments: ChatAttachment[] }>>(
     {},
   );
-  const edit = selected ? edits[selected.id] : undefined;
-  const activeDraft = edit ? { ...draft, ...edit } : draft;
+  const activeDraft = selected && edits[selected.id] ? { ...draft, ...edits[selected.id] } : draft;
   const values = activeDraft.values;
   const attachments = visibleChatDraftAttachments(activeDraft.attachments, selected ? undefined : pending);
   const changeActive = (update: Partial<typeof activeDraft>) => {
@@ -175,6 +198,10 @@ const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevisio
     : undefined;
   const Host = props.Host ?? PassthroughChatHost;
   const approval = nativeChatApproval(conversation, run, session.reportError);
+  const interrupt =
+    conversation.streaming && !conversation.readOnly && !pendingActions.stop
+      ? () => void run({ type: "stop" }).catch(() => undefined)
+      : undefined;
   return (
     <Host
       session={session}
@@ -190,6 +217,7 @@ const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevisio
           account: host.account,
           text: draft.text,
           sending,
+          unresolved,
           uploading: uploading > 0,
           editingQueue: Boolean(selected),
         });
@@ -230,6 +258,7 @@ const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevisio
             streamingStartedAt={conversation.streamingStartedAt}
             {...availability}
             readOnlyQueue={conversation.readOnly || conversation.queueReadOnly}
+            agentQuestionSubmitDisabled={availability.agentQuestionSubmitDisabled || Boolean(pendingActions.approval)}
             queueSteeringUnavailableReason={conversation.queueSteeringUnavailableReason}
             onSubmitMessage={(text, files, questionResponse) =>
               approval && questionResponse && questionResponse.callId === approval.prompt.callId
@@ -240,13 +269,7 @@ const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevisio
                     questionResponse,
                   )
             }
-            onInterrupt={
-              conversation.streaming && !conversation.readOnly
-                ? () => {
-                    void run({ type: "stop" }).catch(() => undefined);
-                  }
-                : undefined
-            }
+            onInterrupt={interrupt}
             chatInputQuestionPrompt={approval?.prompt}
             chatInputCommands={
               availability.composerRequestsDisabled ? [] : nativeChatCommands(conversation, host.account, run, values)
@@ -270,7 +293,7 @@ const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevisio
               />
             }
             actions={<NativeChatControls {...controlProps} />}
-            composerHeader={<NativeChatErrors state={state} session={session} />}
+            composerHeader={<NativeChatComposerHeader state={state} session={session} pending={pendingActions} />}
             conversationNotices={<NativeChatNotices host={host} state={state} session={session} />}
             {...nativeChatAttachmentHandlers(conversation.readOnly, upload)}
             attachmentActions={
@@ -289,7 +312,7 @@ const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevisio
                 />
               ) : undefined
             }
-            queuedFollowUps={queuedFollowUps}
+            queuedFollowUps={projectQueuedFollowUps(queuedFollowUps, pendingActions.queue)}
             onQueuedFollowUpSelect={(item) => {
               setSelected(item);
               if (item)
@@ -323,15 +346,12 @@ const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevisio
               const saved = edits[id];
               if (saved) session.changeDraft(saved);
             }}
-            onQueuedFollowUpRemove={(id) =>
-              void Promise.resolve()
-                .then(() => queue("remove", find(id)))
-                .catch(session.reportError)
-            }
+            onQueuedFollowUpRemove={(id) => runQueueGesture(() => queue("remove", find(id)), session.reportError)}
             onQueuedFollowUpMove={(id, direction, steps, selection) =>
-              void Promise.resolve()
-                .then(() => queue("move", selection?.source ?? find(id), { direction, steps }))
-                .catch(session.reportError)
+              runQueueGesture(
+                () => queue("move", selection?.source ?? find(id), { direction, steps }),
+                session.reportError,
+              )
             }
             onQueuedFollowUpCombine={(source, target) => queue("combine", source, { target })}
             onQueuedFollowUpSteer={(item) => queue("steer", item)}

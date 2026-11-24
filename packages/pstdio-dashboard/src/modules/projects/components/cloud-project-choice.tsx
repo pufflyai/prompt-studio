@@ -15,7 +15,9 @@ export const CloudProjectChoice = ({ input }: { input: WorkbenchPanelRenderInput
     scope,
     deleting,
     downloading,
-    download,
+    canDownload,
+    downloadPending,
+    downloadBlocking,
     sync,
     refresh,
     setDeletionScope,
@@ -26,6 +28,8 @@ export const CloudProjectChoice = ({ input }: { input: WorkbenchPanelRenderInput
     showDownload,
     invalidated,
     requestDownload,
+    checkDownload,
+    discardDownload,
   } = useCloudProjectChoice(input);
 
   if (invalidated) return null;
@@ -60,7 +64,7 @@ export const CloudProjectChoice = ({ input }: { input: WorkbenchPanelRenderInput
               name={name}
               account={account}
               receipt={receipt}
-              canDelete={Boolean(entry?.actions.deleteCloud)}
+              canDelete={Boolean(entry?.actions.deleteCloud && !downloadBlocking)}
               cloudOnly
               key={scope}
               onSubmitted={() => setDeletionScope(scope)}
@@ -72,14 +76,19 @@ export const CloudProjectChoice = ({ input }: { input: WorkbenchPanelRenderInput
           <Button ref={backButton} variant="ghost" size="sm" onClick={back}>
             Back
           </Button>
+          {checkDownload ? (
+            <Button size="sm" variant="outline" onClick={() => void checkDownload()}>
+              Check download
+            </Button>
+          ) : null}
+          {discardDownload ? (
+            <Button size="sm" variant="destructive" onClick={discardDownload}>
+              Discard attempt
+            </Button>
+          ) : null}
           {showDownload && (
-            <Button
-              size="sm"
-              disabled={!entry?.actions.download || (!downloading && download.isPending)}
-              loading={download.isPending}
-              onClick={requestDownload}
-            >
-              {downloading || download.error ? "Retry" : "Download"}
+            <Button size="sm" disabled={!canDownload} loading={downloadPending} onClick={requestDownload}>
+              {failure ? "Retry" : "Download"}
             </Button>
           )}
         </HStack>

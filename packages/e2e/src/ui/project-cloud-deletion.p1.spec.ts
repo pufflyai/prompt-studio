@@ -79,8 +79,12 @@ for (const loseDownloadResponse of [false, true]) {
           },
         }),
       );
+      const removing = Promise.withResolvers<void>();
+      const finishRemoval = Promise.withResolvers<void>();
       await page.route(`**${endpoint}/remove-local`, async (route) => {
         expect(route.request().postDataJSON()).toEqual({ discardUnsynced: true, expectedAccount: account });
+        removing.resolve();
+        await finishRemoval.promise;
         presence = "cloud-only";
         const removed = await request.delete(`${uiOrigin}/v1/projects/${id}`);
         expect(removed.status()).toBe(204);
@@ -117,6 +121,12 @@ for (const loseDownloadResponse of [false, true]) {
       await discard.press("Space");
       await expect(discard).toBeChecked();
       await submit.click();
+      try {
+        await removing.promise;
+        await expect(submit).toBeDisabled();
+      } finally {
+        finishRemoval.resolve();
+      }
 
       await expect(page.getByText("Cloud only", { exact: true })).toBeVisible();
       await page.reload();
@@ -134,13 +144,13 @@ for (const loseDownloadResponse of [false, true]) {
       await page.keyboard.press("Enter");
       const permanent = page.getByRole("dialog", { name: /Delete cloud project/ });
       await permanent.getByRole("button", { name: "Close", exact: true }).filter({ hasText: "Close" }).click();
+      await expect(page.getByText(`Delete cloud project “${name}”?`, { exact: true })).toBeHidden();
       await expect(cloudDelete).toBeFocused();
       expect(downloadCalls).toBe(0);
       expect(cloudDeleteCalls).toBe(0);
 
       const download = cloud.getByRole("button", { name: "Download", exact: true });
-      await download.focus();
-      await page.keyboard.press("Enter");
+      await download.press("Enter");
       await expect(cloud).toBeHidden();
       expect(downloadCalls).toBe(1);
       expect(cloudDeleteCalls).toBe(0);
@@ -160,6 +170,7 @@ test("Cloud deletion recovers from a lost request and resumes the same operation
   const endpoint = `/v1/account/projects/${id}`;
   let online = true;
   let posts = 0;
+  const releaseFirst = Promise.withResolvers<void>();
   let receipt: CloudProjectDeletion | undefined;
 
   await page.route("**/v1/account", (route) =>
@@ -196,10 +207,11 @@ test("Cloud deletion recovers from a lost request and resumes the same operation
       ? route.fulfill({ json: receipt })
       : route.fulfill({ status: 404, json: { error: "No deletion for this cloud project" } });
   });
-  await page.route(`**${endpoint}/delete-cloud`, (route) => {
+  await page.route(`**${endpoint}/delete-cloud`, async (route) => {
     expect(route.request().postDataJSON()).toEqual({ confirm: true, expectedAccount: account });
     posts += 1;
     if (posts === 1) {
+      await releaseFirst.promise;
       online = false;
       return route.abort();
     }
@@ -222,6 +234,19 @@ test("Cloud deletion recovers from a lost request and resumes the same operation
   await choice.getByRole("button", { name: "Delete cloud project", exact: true }).click();
   const confirmation = page.getByRole("dialog", { name: /Delete cloud project/ });
   await confirmation.getByRole("button", { name: "Delete cloud project", exact: true }).click();
+  try {
+    await expect(choice.getByText("Deleting cloud project", { exact: true })).toBeVisible();
+    await expect(choice.getByRole("button", { name: "Retry", exact: true })).toHaveCount(0);
+    await choice.getByRole("button", { name: "Back", exact: true }).click();
+    await page
+      .getByRole("dialog", { name: "Projects", exact: true })
+      .getByRole("option", { name, exact: true })
+      .click();
+    await expect(choice.getByText("Deleting cloud project", { exact: true })).toBeVisible();
+    await expect(choice.getByRole("button", { name: "Download", exact: true })).toHaveCount(0);
+  } finally {
+    releaseFirst.resolve();
+  }
   await expect(choice.getByText("Checking whether Cloud deletion started")).toBeVisible();
   const offline = choice.getByText("Connect to Cloud to download or delete this project.");
   await expect(offline).toBeVisible();

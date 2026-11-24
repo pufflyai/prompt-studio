@@ -275,6 +275,34 @@ test("Recent hides unavailable contextual ancestors and restores entries when th
   expect(await read()).toHaveLength(1);
 });
 
+test("Recent projects held resource changes and restores its items after rejection", async () => {
+  const { w, read } = harness();
+  const target = open("ticket", "before");
+  const item = target.resource;
+  await w.navigation.openTarget(target);
+  try {
+    const rename = Promise.withResolvers<void>();
+    const pendingRename = w.resources.preview
+      .submit(item, () => rename.promise, { label: "During rename" }, "Rename ticket")
+      .catch((error: unknown) => error);
+    expect(await read()).toMatchObject([{ resource: { label: "During rename" }, target }]);
+    rename.reject(new Error("Rename refused"));
+    await pendingRename;
+    expect(await read()).toMatchObject([{ resource: { label: "before" }, target }]);
+
+    const removal = Promise.withResolvers<void>();
+    const pendingRemoval = w.resources.preview
+      .submit(item, () => removal.promise, { removed: true }, "Remove ticket")
+      .catch((error: unknown) => error);
+    expect(await read()).toEqual([]);
+    removal.reject(new Error("Removal refused"));
+    await pendingRemoval;
+    expect(await read()).toMatchObject([{ resource: { label: "before" }, target }]);
+  } finally {
+    await w.dispose();
+  }
+});
+
 test("syncing unrelated archived sessions leaves recent resources alone", async () => {
   const { w, values } = harness();
   await w.navigation.openTarget(open("ticket", "keep"));

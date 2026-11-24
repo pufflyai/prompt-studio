@@ -97,7 +97,15 @@ test("keeps setup blocked by a file open and retries the same project after repa
     const [failed] = await (await request.get(workspaceUrl)).json();
     expect(failed.setup_error).toBeTruthy();
     rmSync(configPath, { recursive: true });
-    expect((await openFolder(page, picker)).id).toBe(projectId);
+    const retry = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname === `/v1/projects/${projectId}/retry-setup`,
+    );
+    await picker.getByRole("button", { name: "Open folder", exact: true }).click();
+    const retried = await retry;
+    expect(retried.ok()).toBe(true);
+    expect(await retried.json()).toMatchObject({ id: failed.id, project_id: projectId });
     await expect(picker).toBeHidden();
     const [ready] = await (await request.get(workspaceUrl)).json();
     expect(ready).toMatchObject({ id: failed.id, project_id: projectId, setup_error: null, initializing: false });

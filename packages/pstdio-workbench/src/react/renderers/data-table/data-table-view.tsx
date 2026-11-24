@@ -24,9 +24,11 @@ import { runUserAction } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
+import { projectTableRows } from "../collection-operation-projection";
 import { rendererPagePresentation, tablePageFields, tableSearchFields } from "../renderer-page-fields";
 import { rendererQueryKey } from "../renderer-query-key";
 import { RendererReadNotice } from "../renderer-read-notice";
+import { useCollectionOperations } from "../use-collection-operations";
 import { usePageParams } from "../use-page-params";
 import { useRendererPages } from "../use-renderer-pages";
 import { useRendererRead } from "../use-renderer-read";
@@ -125,18 +127,21 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
     presentation: rendererPagePresentation(pageColumns.columns.map(({ id, label }) => ({ id, label }))),
     initialPageSize: contribution.initialPageSize,
   });
+  const source = {
+    sourceId: contribution.id,
+    queryScope: contribution.queryScope,
+    queryKey,
+    // Paged providers also receive display fields and search before selecting a bounded page.
+    refreshKey: rendererQueryKey([filter, sorts, pageParams, ...(paged ? [settings, pages.refreshKey] : [])]),
+  };
   const read = useRendererRead({
+    ...source,
     enabled: views.ready,
     workbench,
     ownerKey: rendererReadKey(placement),
-    sourceId: contribution.id,
     queryEvents: contribution.queryEvents,
-    queryScope: contribution.queryScope,
-    queryKey,
     onAccept: pages.accept,
     onInvalidate: pages.reset,
-    // Paged providers also receive display fields and search before selecting a bounded page.
-    refreshKey: rendererQueryKey([filter, sorts, pageParams, ...(paged ? [settings, pages.refreshKey] : [])]),
     load: async (signal) => {
       const query = (page?: CollectionPageRequest) =>
         contribution.executeQuery(
@@ -152,7 +157,9 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
     },
     subscribe: contribution.subscribe,
   });
-  const result = read.value ?? initialResult;
+  const result = read.acceptedValue ?? initialResult;
+  const mutations = useCollectionOperations(workbench, source, result.rows);
+  const rows = projectTableRows(result.rows, mutations.pending, source.queryScope?.projectId);
   const notice = read.error ? (
     <RendererReadNotice
       error={read.error}
@@ -167,7 +174,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const loading =
     (read.loading && !read.value) ||
     pageColumns.pending(read.value?.position?.fields, pages.request.fields, read.error);
-  const model = buildDataTableRendererData(result.rows, columns);
+  const model = buildDataTableRendererData(rows, columns);
   const labels = Object.fromEntries(
     columns.filter((column) => column.label).map((column) => [column.id, column.label!]),
   );

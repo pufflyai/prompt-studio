@@ -302,6 +302,70 @@ describe("terminal WebSocket", () => {
   });
 });
 
+test("a failed terminal stop closes with an error rather than acknowledging a clean stop", async () => {
+  const terminal = createLiveHandle("stop-failed");
+  const events = createTerminalWebSocketEvents({
+    terminal: {
+      openSession: () => ({
+        ...terminal.handle,
+        async kill() {
+          throw new Error("Stop unavailable");
+        },
+      }),
+    },
+  });
+  const { socket, closes, messages } = createSocket();
+  send(events, socket, { type: "open", request: { cols: 80, rows: 24 } });
+  send(events, socket, { type: "kill" });
+  await waitFor(() => closes.length === 1);
+  expect(closes[0]?.code).toBe(1011);
+  expect(messages.at(-1)).toEqual({ type: "error", message: "Stop unavailable" });
+});
+
+test("a failed stop keeps its original terminal without acknowledging a duplicate stop", async () => {
+  const terminal = createLiveHandle("original");
+  const stopping = Promise.withResolvers<void>();
+  const started = Promise.withResolvers<void>();
+  let opens = 0;
+  const deps = {
+    retained: createRetainedTerminals(),
+    terminal: {
+      openSession() {
+        opens += 1;
+        return {
+          ...terminal.handle,
+          kill() {
+            started.resolve();
+            return stopping.promise;
+          },
+        };
+      },
+    },
+  };
+  const original = createTerminalWebSocketEvents(deps);
+  const first = createSocket();
+  const open = { type: "open", request: { cols: 80, rows: 24 }, attachKey: "retained" } as const;
+  send(original, first.socket, open);
+  send(original, first.socket, { type: "kill" });
+  await started.promise;
+  send(original, first.socket, { type: "kill" });
+  await Bun.sleep(0);
+  expect(first.closes).toEqual([]);
+
+  const waiting = createSocket();
+  send(createTerminalWebSocketEvents(deps), waiting.socket, open);
+  expect(waiting.messages.at(-1)).toMatchObject({ type: "error" });
+  expect(opens).toBe(1);
+  stopping.reject(new Error("Stop unavailable"));
+  await waitFor(() => first.closes.length === 1);
+  expect(first.closes[0]?.code).toBe(1011);
+
+  const reopened = createSocket();
+  send(createTerminalWebSocketEvents(deps), reopened.socket, open);
+  expect(reopened.messages[0]).toEqual({ type: "open", sessionId: "original" });
+  expect(opens).toBe(1);
+});
+
 test("a native view reattaches its live shell after reload and checks its installed owner before replay", async () => {
   const live = createLiveHandle("native-retained");
   const retained = createRetainedTerminals();

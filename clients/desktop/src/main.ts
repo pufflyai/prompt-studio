@@ -91,6 +91,7 @@ const updateManager = new DesktopUpdateManager({
   channel: updateChannel.current,
   updater: autoUpdater,
   openExternal: (url) => shell.openExternal(url),
+  onUpdateProgress: updateNotifications.progress,
   onUpdateNotAvailable: updateNotifications.notAvailable,
   onUpdateDownloaded: updateNotifications.downloaded,
   onUpdateError: updateNotifications.failed,

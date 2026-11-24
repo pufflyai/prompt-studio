@@ -149,7 +149,7 @@ const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInpu
           return attachFileStorageVersions((unwrapCommandValue(result) ?? {}) as FileRendererContent, result);
         },
         save: record.saveHandlerId
-          ? async (resource, content, origin, loaded) => {
+          ? async (resource, content, origin, loaded, signal) => {
               const result = await executeFileCommand(
                 input,
                 record.id,
@@ -161,6 +161,7 @@ const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInpu
                   ...(origin ? { fileRendererOrigin: origin } : {}),
                   ...(resourceKey(resource) ? { fileRendererResourceKey: resourceKey(resource) } : {}),
                 },
+                signal,
               );
               const revision = revisionFromValue(unwrapCommandValue(result));
               return attachFileStorageVersions(revision ? { revision } : {}, result);

@@ -36,3 +36,14 @@ export const ActiveToken: Story = {
     onCopy: () => {},
   },
 };
+
+export const IssueOutcomeUnconfirmed: Story = {
+  id: "projectsettings-machinetokenspanel--issue-outcome-unconfirmed",
+  args: {
+    ...ActiveToken.args!,
+    issuedToken: null,
+    name: "Agent",
+    scopes: "pstdio.planner.command.start-attempt",
+    unresolvedIssue: true,
+  },
+};

@@ -1,18 +1,15 @@
 import { Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
-import type { ExtensionConnectionRecord, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { useEffect, useState } from "react";
+import type { ExtensionConnectionRecord } from "@pstdio/sdk/api";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import { useActionError } from "@/shared/components/use-action-error";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import {
-  useCheckExtensionConnection,
-  useConfigureExtensionConnection,
-  useDeleteExtensionConnection,
+  type ConnectionDefinition,
+  useExtensionConnectionActions,
   useExtensionConnections,
 } from "../data/use-extension-connections";
-
-type ConnectionDefinition = NonNullable<WorkbenchExtensionMetadata["connections"]>[number];
 
 interface ExtensionConnectionRowProps {
   projectId: string;
@@ -24,17 +21,11 @@ const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
   const { projectId, definition, configured } = props;
   const { showError, errorNotice, clearError } = useActionError();
   const { t } = useTranslation("projects");
-  const configure = useConfigureExtensionConnection(projectId);
-  const check = useCheckExtensionConnection(projectId);
-  const remove = useDeleteExtensionConnection(projectId);
-  const [baseUrl, setBaseUrl] = useState("");
+  const connection = useExtensionConnectionActions(projectId, definition);
+  const [draftUrl, setBaseUrl] = useState<string>();
+  const baseUrl = draftUrl ?? configured?.baseUrl ?? "";
   const [secret, setSecret] = useState("");
 
-  useEffect(() => {
-    setBaseUrl(configured?.baseUrl ?? "");
-  }, [configured?.baseUrl]);
-
-  const connectionInput = { extensionId: definition.extensionId, connectionId: definition.localId };
   const notifyError = (error: Error) =>
     showError({
       title: t("projectSettings.extensionsPanel.connections.actionFailed"),
@@ -42,13 +33,10 @@ const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
     });
   const handleConfigure = () => {
     clearError();
-    configure.mutate(
-      { ...connectionInput, baseUrl, secret: secret || undefined },
-      {
-        onSuccess: () => setSecret(""),
-        onError: notifyError,
-      },
-    );
+    void connection.run({ action: "configure", baseUrl, secret: secret || undefined }).then(() => {
+      setSecret("");
+      setBaseUrl(undefined);
+    }, notifyError);
   };
 
   return (
@@ -107,8 +95,8 @@ const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
         <Button
           size="2xs"
           onClick={handleConfigure}
-          disabled={!baseUrl || (!configured?.configured && !secret)}
-          loading={configure.isPending}
+          disabled={connection.busy || !baseUrl || (!configured?.configured && !secret)}
+          loading={connection.phase === "configure"}
         >
           {configured?.configured
             ? t("projectSettings.extensionsPanel.connections.reconnect")
@@ -118,11 +106,11 @@ const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
           <Button
             size="2xs"
             variant="outline"
-            disabled={!configured?.configured}
-            loading={check.isPending}
+            disabled={connection.busy || !configured?.configured}
+            loading={connection.phase === "check"}
             onClick={() => {
               clearError();
-              check.mutate(connectionInput, { onError: notifyError });
+              void connection.run({ action: "check" }).catch(notifyError);
             }}
           >
             {t("projectSettings.extensionsPanel.connections.check")}
@@ -132,10 +120,11 @@ const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
           <Button
             size="2xs"
             variant="destructive"
-            loading={remove.isPending}
+            loading={connection.phase === "revoke"}
+            disabled={connection.busy}
             onClick={() => {
               clearError();
-              remove.mutate(connectionInput, { onError: notifyError });
+              void connection.run({ action: "revoke" }).catch(notifyError);
             }}
           >
             {t("projectSettings.extensionsPanel.connections.revoke")}
@@ -161,7 +150,7 @@ export const ExtensionConnectionsCard = (props: { projectId: string; definitions
       </Stack>
       {definitions.map((definition) => (
         <ExtensionConnectionRow
-          key={definition.id}
+          key={JSON.stringify([connections.authority, projectId, definition.id])}
           projectId={projectId}
           definition={definition}
           configured={connections.data?.connections.find(

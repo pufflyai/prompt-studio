@@ -51,8 +51,8 @@ export const resolveMenuEntries = (input: ResolveMenuEntriesInput) => {
         ? () =>
             onRequestParams({
               request: { record: { command: record.command }, label, args, context },
-              run: async (nextArgs) => {
-                await workbench.commands.executeCommand(record.command.id, nextArgs, context);
+              run: async (nextArgs, onAdmitted) => {
+                await workbench.commands.executeCommand(record.command.id, nextArgs, { ...context, onAdmitted });
               },
             })
         : undefined;
