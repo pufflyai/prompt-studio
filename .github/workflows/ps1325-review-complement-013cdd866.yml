@@ -1,0 +1,215 @@
+name: PS-1325 exact selected review complement
+
+on:
+  push:
+    branches:
+      - chore/ps1325-review-013cdd866-complement
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CANDIDATE_SHA: 013cdd866e8a36ddaedca5833c7cbc81b91e8a98
+      CANDIDATE_TREE: b8562721ce561e52108ea70fee530b6127c78084
+      CANDIDATE_MERGE_BASE: e75e68afea06d1ec1540895c7acde79c37f65046
+      SOURCE_POLICY: 0919c441a350ecbfcce669094d433f8f02a2b3f45c4d0571f798af77d9b341da
+      PLAN_DIGEST: a8bc767de3832ace37edc491102859e36db583b7c65c91af62c016e55c6393ac
+      LIVE_RELOAD_SPEC: packages/e2e/src/ui/extension-webview-live-reload.p2.spec.ts
+      ORIGINAL_RUN: "45448809948"
+      ORIGINAL_EXECUTION: local-3284-1795541558038
+      PLAN_DISPLAY: "true"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Download the original exact selected review
+        uses: actions/download-artifact@v4
+        with:
+          name: ps1325-review-013cdd866-attempt-1
+          path: test-results/ps1325-original
+          run-id: ${{ env.ORIGINAL_RUN }}
+          github-token: ${{ github.token }}
+
+      - name: Verify source, full plan, and failed group selection
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = refs/heads/chore/ps1325-review-013cdd866-complement
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$CANDIDATE_TREE"
+          test "$(git show --no-patch --format=%P "$GITHUB_WORKFLOW_SHA")" = "$CANDIDATE_SHA"
+          git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
+          main_head="$(git rev-parse origin/main)"
+          test "$(git merge-base HEAD "$main_head")" = "$CANDIDATE_MERGE_BASE"
+          incoming="$(git rev-list --count "$CANDIDATE_SHA..$main_head")"
+          test "$incoming" -le 10
+          prospective_tree="$(git merge-tree --write-tree --no-messages "$main_head" "$CANDIDATE_SHA")"
+          test "$(git cat-file -t "$prospective_tree")" = tree
+          test "$(git diff-tree --no-commit-id --name-only -r "$GITHUB_WORKFLOW_SHA")" = \
+            ".github/workflows/ps1325-review-complement-013cdd866.yml"
+          test -z "$(git status --porcelain)"
+
+          prior=test-results/ps1325-original
+          out=test-results/ps1325-complement
+          mkdir -p "$out"
+          jq -e --arg head "$CANDIDATE_SHA" --arg tree "$CANDIDATE_TREE" --arg base "$CANDIDATE_MERGE_BASE" \
+            '.head == $head and .tree == $tree and .mergeBase == $base
+            and .workflowSha == "cae4cea4105c96a57886d17e84c8a8c9721a64bf"' \
+            "$prior/ps1325-review/identity.json"
+          jq -e --arg head "$CANDIDATE_SHA" \
+            '.head == $head and (.results | length) == 70 and all(.results[]; .outcome == "success")' \
+            "$prior/ps1325-review/pstdio-local-review-GoXKdZ/checks.json"
+          bun run test:review --base origin/main --test "$LIVE_RELOAD_SPEC" --list > "$out/selected-plan.json"
+          jq -e --arg head "$CANDIDATE_SHA" --arg tree "$CANDIDATE_TREE" --arg policy "$SOURCE_POLICY" \
+            --arg digest "$PLAN_DIGEST" \
+            '.testPlan.digest == $digest
+            and .testPlan.source == {sha:$head,tree:$tree,policy:$policy,dirty:false}
+            and (.testPlan.runs | length) == 80 and (.selected | length) == 2609 and (.queueFiles | length) == 2597' \
+            "$out/selected-plan.json"
+          jq -S '.testPlan' "$out/selected-plan.json" > "$out/plan.json"
+          jq -S '.testPlan' "$prior/ps1325-review/selected-plan.json" | cmp - "$out/plan.json"
+
+          receipt="$prior/ps1325-review/pstdio-local-review-GoXKdZ/test-results/ci/planned/3284-1795541558038/execution.json"
+          jq -e --slurpfile plan "$out/plan.json" --arg digest "$PLAN_DIGEST" --arg execution "$ORIGINAL_EXECUTION" \
+            '.source == $plan[0].source and .planDigest == $digest and .executionId == $execution
+            and .complete and .outcome == "failure" and (.errors | length) == 0
+            and ([.results[].runId] | sort) == ([$plan[0].runs[].id] | sort)
+            and (.runIds | sort) == ([$plan[0].runs[].id] | sort)
+            and all(.results[]; .complete)
+            and ([.results[] | select(.outcome == "success")] | length) == 68
+            and ([.results[] | select(.outcome == "failure")] | length) == 12' "$receipt"
+          jq '[.results[] | select(.outcome == "failure") | .runId]' "$receipt" > "$out/assigned-groups.json"
+          jq -e '. == [
+            "48bea04fc550c74b32983df9", "17a6f4a45b802635172e439e", "2a8ea6db520685a9df29aadf",
+            "61f5db38bbaf57f4bf80a1f8", "ceb00cf6cf0238b259ab751f", "663b8552c50f3cd04718d371",
+            "4d971518f0bd64ec5e9f5de7", "4dccdfb6923873f7c4fb463c", "336206f55e684f82a16be354",
+            "d4e326c64d469b0126d68ff2", "efab1885100feb29dbd697ae", "72480638f874d13d0838a290"
+          ]' "$out/assigned-groups.json"
+          jq -n --arg head "$CANDIDATE_SHA" --arg tree "$CANDIDATE_TREE" --arg digest "$PLAN_DIGEST" \
+            --arg base "$main_head" --arg mergeBase "$CANDIDATE_MERGE_BASE" \
+            --argjson incoming "$incoming" --arg prospectiveTree "$prospective_tree" \
+            --arg workflow "$GITHUB_WORKFLOW_REF" --arg workflowSha "$GITHUB_WORKFLOW_SHA" \
+            --arg originalRun "$ORIGINAL_RUN" --arg originalExecution "$ORIGINAL_EXECUTION" \
+            '{head:$head,tree:$tree,digest:$digest,base:$base,mergeBase:$mergeBase,workflow:$workflow,
+              incoming:$incoming,prospectiveTree:$prospectiveTree,workflowSha:$workflowSha,
+              originalRun:$originalRun,originalExecution:$originalExecution}' > "$out/identity.json"
+
+      - name: Prepare browsers and a short private temporary directory
+        shell: bash
+        run: |
+          docker version
+          docker compose version
+          sudo -n true
+          bunx playwright@1.60.0 install --with-deps chromium firefox
+          command -v xvfb-run
+          private_tmp="$(mktemp -d /tmp/ps1325.XXXXXX)"
+          {
+            echo "PS1325_REVIEW_TMP=$private_tmp"
+            echo "TMPDIR=$private_tmp"
+            echo "TMP=$private_tmp"
+            echo "TEMP=$private_tmp"
+          } >> "$GITHUB_ENV"
+
+      - name: Install unchanged locked workspace dependencies
+        shell: bash
+        run: |
+          bun install --frozen-lockfile --concurrent-scripts 1
+          bun run --cwd packages/ui typegen:tokens
+
+      - name: Run the twelve complete owning groups
+        shell: bash
+        run: |
+          bun --no-orphans - <<'BUN' 2>&1 | tee test-results/ps1325-complement/console.log
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+          import { executePlan } from "./scripts/ci/run-test-plan";
+
+          const root = process.cwd();
+          const output = resolve(root, "test-results/ps1325-complement");
+          const scratch = process.env.PS1325_REVIEW_TMP;
+          if (!scratch || !/^\/tmp\/ps1325\.[A-Za-z0-9]{6}$/.test(scratch))
+            throw new Error("Unexpected review temporary directory");
+          for (const [key, value] of Object.entries(localReviewEnvironment(scratch))) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+          process.env.CI_PLAN_OUTPUT_DIR = "test-results/ps1325-complement/native";
+          const plan = await Bun.file(resolve(output, "plan.json")).json();
+          const runIds = await Bun.file(resolve(output, "assigned-groups.json")).json();
+          let passed = false;
+          try {
+            const result = await executePlan(plan, {
+              root,
+              runIds,
+              prebuilt: false,
+              env: { CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+            });
+            passed = result.complete && result.outcome === "success";
+          } finally {
+            const cleanup = await cleanupReviewCompose(scratch);
+            await Bun.write(resolve(output, "compose-cleanup.json"), JSON.stringify(cleanup, null, 2));
+            passed &&= cleanup.every((entry) => entry.outcome === "success");
+            process.exitCode = passed ? 0 : 1;
+          }
+          BUN
+
+      - name: Verify native receipts for every assigned group
+        shell: bash
+        run: |
+          out=test-results/ps1325-complement
+          jq -e --arg digest "$PLAN_DIGEST" --slurpfile plan "$out/plan.json" \
+            --slurpfile assigned "$out/assigned-groups.json" \
+            '.complete and .outcome == "success" and .planDigest == $digest and .source == $plan[0].source
+            and (.runIds | sort) == ($assigned[0] | sort)
+            and ([.results[].runId] | sort) == ($assigned[0] | sort)
+            and .errors == []
+            and all(.results[]; .complete and .outcome == "success" and .exitCode == 0 and .nativeFailure != true)
+            and any(.phases[]; .kind == "desktop" and .outcome == "success")
+            and any(.phases[]; .kind == "cleanup" and .outcome == "success")' "$out/native/execution.json"
+          jq -e 'all(.[]; .outcome == "success")' "$out/compose-cleanup.json"
+
+      - name: Collect failed-group and cleanup evidence
+        if: always()
+        shell: bash
+        run: |
+          out=test-results/ps1325-complement
+          mkdir -p "$out"
+          docker ps -a --format '{{.Names}} {{.Status}} {{.Label "com.docker.compose.project"}}' > "$out/docker-after.txt"
+          if [[ -n "$PS1325_REVIEW_TMP" ]]; then
+            [[ "$PS1325_REVIEW_TMP" =~ ^/tmp/ps1325\.[A-Za-z0-9]{6}$ ]]
+            if [[ -f "$PS1325_REVIEW_TMP/compose-projects.jsonl" ]]; then
+              cp "$PS1325_REVIEW_TMP/compose-projects.jsonl" "$out/"
+            fi
+            rm -rf -- "$PS1325_REVIEW_TMP"
+            test ! -e "$PS1325_REVIEW_TMP"
+            printf '%s\n' "$PS1325_REVIEW_TMP removed" > "$out/scratch-cleanup.txt"
+          fi
+          test ! -s "$out/docker-after.txt"
+
+      - name: Upload exact twelve-group execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps1325-complement-013cdd866-attempt-${{ github.run_attempt }}
+          path: |
+            test-results/ps1325-complement
+            packages/e2e/test-results
+            clients/desktop/test-results
+          if-no-files-found: error
