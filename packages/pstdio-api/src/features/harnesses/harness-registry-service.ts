@@ -12,9 +12,10 @@ import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
 import { markHostContext } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { installMissingDefaultExtensions } from "../extensions/default-extensions";
-import { createProcessApi, findFreePort } from "../extensions/extension-process-api";
+import { createProcessApi, findFreePort, hostStartedGrants } from "../extensions/extension-process-api";
 import { resolvePstdioHome } from "../extensions/install-extension-source";
 import { selectExistingSources } from "../extensions/installed-extension-runtime";
+import type { ProcessEnvironmentPermissions } from "../extensions/process-environment/permissions";
 import type { ProjectExtensionRuntimeCatalog } from "../extensions/project-extension-runtime-catalog";
 import type { ProjectExtensionRuntimeSnapshot } from "../extensions/project-extension-runtime-snapshot";
 import { ExtensionRuntimeProjectMissingError } from "../extensions/project-extension-runtime-snapshot";
@@ -84,6 +85,8 @@ export const createHarnessRegistryService = (input: {
   detectCacheTtlMs?: number;
   sessionResources?: HarnessSessionResources;
   createConnectionsApi?: (scope: { projectId: string; extensionId: string }) => ExtensionConnectionsApi;
+  /** Host values the user allowed a harness extension in a project reach its processes. */
+  processEnvironment?: Pick<ProcessEnvironmentPermissions, "grantedNames" | "authorizeCurrent">;
 }): HarnessRegistryService => {
   const unavailableConnections: ExtensionConnectionsApi = {
     request: async () => {
@@ -97,12 +100,16 @@ export const createHarnessRegistryService = (input: {
   const buildContext: HarnessContextFactory = (record, options) => {
     const extensionId = record.extensionId;
     const logger = harnessLogger(extensionId);
+    const processOptions = {
+      extensionId,
+      ...hostStartedGrants(input.processEnvironment, options?.projectId, extensionId),
+    };
     return markHostContext(
       {
         projectId: options?.projectId,
         extensionId,
         name: record.name,
-        process: createProcessApi({ extensionId }),
+        process: createProcessApi(processOptions),
         net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
         connections:
           options?.projectId && input.createConnectionsApi
@@ -111,7 +118,7 @@ export const createHarnessRegistryService = (input: {
         logger,
         state: createHarnessStateApi(extensionId),
       },
-      { logger, withScope: (scope) => ({ process: createProcessApi({ extensionId, scope }) }) },
+      { logger, withScope: (scope) => ({ process: createProcessApi({ ...processOptions, scope }) }) },
     );
   };
 

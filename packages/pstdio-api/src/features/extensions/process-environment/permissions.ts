@@ -138,7 +138,7 @@ export const createProcessEnvironmentPermissions = (input: {
     return run;
   };
 
-  return {
+  const permissions = {
     read: async (projectId: string, extensionId: string) =>
       describe(
         projectId,
@@ -223,7 +223,32 @@ export const createProcessEnvironmentPermissions = (input: {
         },
       };
     },
+
+    /**
+     * The names allowed for the extension's current source in the project, for processes the host
+     * starts on its behalf, such as a harness's or a workspace provider's. Empty when none are.
+     */
+    async grantedNames(projectId: string, extensionId: string) {
+      const source = await input.findSource(projectId, extensionId);
+      const grant = (await grants()).get(grantKey(projectId, extensionId));
+      if (!source || !grant || retiring.has(grantKey(projectId, extensionId))) return [];
+      if (grant.sourceIdentity !== sourceIdentity(source)) return [];
+      const requested = requestedNames(source);
+      return grant.names.filter((name) => requested.includes(name));
+    },
+
+    /** Authorizes names against the extension's current source, for those host-started processes. */
+    async authorizeCurrent(projectId: string, extensionId: string, names: string[]) {
+      const source = await input.findSource(projectId, extensionId);
+      if (!source)
+        throw new ProcessEnvironmentPermissionError(
+          "extension_not_found",
+          `${extensionId} is not enabled in this project, so it has no environment access.`,
+        );
+      return permissions.authorize(projectId, source, names);
+    },
   };
+  return permissions;
 };
 
 export type ProcessEnvironmentPermissions = ReturnType<typeof createProcessEnvironmentPermissions>;

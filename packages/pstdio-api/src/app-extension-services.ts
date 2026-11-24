@@ -167,6 +167,7 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
     installedExtensionSourcesService: input.installedExtensionSourcesDBService,
     extensionRuntimeCatalog,
     createConnectionsApi: (scope) => createExtensionConnectionsApi(extensionConnectionService, scope),
+    processEnvironment: extensionProcessEnvironment,
   });
   const extensionRuntime = createInstalledExtensionRuntime({
     eventBus: input.eventBus,
