@@ -1,10 +1,18 @@
 // Launch a gate review that checks project dependencies and updates the saved plan.
-import { defineCommand, params, sessionBrowser } from "@pstdio/sdk/extensions";
+import {
+  type CommandContext,
+  defineCommand,
+  l10n,
+  params,
+  type ResourceAnchor,
+  sessionBrowser,
+} from "@pstdio/sdk/extensions";
+import { isLiveSession } from "../../commands/auto-build-sessions";
 import { findTicket } from "../../data/resolve";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../../data/workflow-statuses";
 import type { PlanRow } from "../contracts";
 import { plannerExtensionId } from "../planner";
-import { registerGate } from "./gate-store";
+import { gateLaunches, registerGate, releaseRefusedGateLaunch } from "./gate-store";
 
 function reviewPrompt(row: Pick<PlanRow, "id" | "shorthand" | "title" | "instructions">) {
   return [
@@ -19,43 +27,152 @@ function reviewPrompt(row: Pick<PlanRow, "id" | "shorthand" | "title" | "instruc
   ].join("\n\n");
 }
 
+export class GateLaunchUnconfirmed extends Error {
+  constructor() {
+    super("The review launch is unconfirmed. Check for its session before launching again.");
+  }
+}
+
+class GateLaunchRefused extends Error {
+  constructor(reason: unknown) {
+    super(reason instanceof Error ? reason.message : String(reason), { cause: reason });
+    this.name = "GateLaunchRefused";
+  }
+}
+
+const launchAnchor = (ctx: CommandContext, ticket: string, attempt: string): ResourceAnchor => ({
+  type: "planner-gate-launch",
+  id: `${ticket}:${attempt}`,
+  extensionId: plannerExtensionId,
+  projectId: ctx.projectId,
+  role: "context",
+});
+
+async function readGateLaunch(ctx: CommandContext, ticket: string, attempt: string) {
+  const { items } = await ctx.sessions.query({
+    anchor: launchAnchor(ctx, ticket, attempt),
+    includeArchived: true,
+    limit: 1,
+  });
+  return items[0];
+}
+
+function openGateReview<T extends { id: string; title: string }>(ctx: CommandContext, session: T) {
+  ctx.navigation.open({
+    kind: "panel",
+    panel: sessionBrowser.panels.conversation,
+    open: "preview",
+    resource: { type: "session", id: session.id, extensionId: "pstdio", label: session.title },
+  });
+  return { ...session, type: "session" as const };
+}
+
+async function readEarlierGateLaunch(ctx: CommandContext, ticketId: string, ownerId?: string, attemptId?: string) {
+  if (!attemptId || attemptId === ownerId) return undefined;
+  return readGateLaunch(ctx, ticketId, attemptId).catch(() => {
+    throw new GateLaunchUnconfirmed();
+  });
+}
+
+const gateReservationError = (ownerId?: string, attemptId?: string) =>
+  attemptId && attemptId !== ownerId
+    ? new GateLaunchRefused("Another review changed the gate before this launch started.")
+    : new GateLaunchUnconfirmed();
+
+async function requireOpenGate(ctx: CommandContext, ticket: string) {
+  const row = await findTicket(ctx, ticket);
+  if (!row || row.archived) throw new GateLaunchRefused("Unknown ticket.");
+  const workflow = usableWorkflowStatuses(await readWorkflowStatuses(ctx));
+  if (workflow.completedStatusIds.includes(row.statusId ?? "")) throw new GateLaunchRefused("This gate is complete.");
+  return row;
+}
+
+export const checkGateLaunchCommand = defineCommand({
+  id: "timeline.gate.check-launch",
+  title: l10n("timeline.gate.checkLaunch.title", "Check gate review launch"),
+  cli: { description: "Check whether an agent gate already launched its review session." },
+  params: { ticket: params.text({ required: true }), attemptId: params.text() },
+  async run(ctx, { ticket, attemptId }) {
+    const row = await findTicket(ctx, ticket);
+    if (!row || row.archived) throw new Error("Unknown ticket.");
+    const launchId = attemptId ?? (await gateLaunches(ctx).get(row.id))?.launchId;
+    if (!launchId) return { status: "ready" as const };
+    const session = await readGateLaunch(ctx, row.id, launchId);
+    if (!session) return { status: "unconfirmed" as const };
+    openGateReview(ctx, session);
+    return { status: "confirmed" as const, launchId, session };
+  },
+});
+
 export const launchGateCommand = defineCommand({
   id: "timeline.gate.launch",
   title: "Review agent gate",
   cli: { description: "Mark a ticket as an agent gate and launch its planning review." },
   mutating: true,
-  params: { ticket: params.text({ required: true }) },
-  async run(ctx, { ticket }) {
-    const row = await findTicket(ctx, ticket);
-    if (!row || row.archived) {
-      throw new Error("Unknown ticket.");
+  params: {
+    ticket: params.text({ required: true }),
+    after: params.text({ description: "Confirmed session ID to replace after its review has ended." }),
+    attemptId: params.text(),
+  },
+  async run(ctx, { ticket, after, attemptId }) {
+    const row = await requireOpenGate(ctx, ticket);
+    const launches = gateLaunches(ctx);
+    const current = await launches.read(row.id);
+    if (current) {
+      const prior = await readEarlierGateLaunch(ctx, row.id, current.value.launchId, attemptId);
+      if (prior) return openGateReview(ctx, prior);
+      const session = await readGateLaunch(ctx, row.id, current.value.launchId).catch(() => undefined);
+      if (!session) throw gateReservationError(current.value.launchId, attemptId);
+      if (after !== session.id || isLiveSession(session) || attemptId === current.value.launchId)
+        return openGateReview(ctx, session);
+    } else if (after) {
+      throw new GateLaunchRefused("The preceding gate review could not be found.");
     }
-    const workflow = usableWorkflowStatuses(await readWorkflowStatuses(ctx));
-    if (workflow.completedStatusIds.includes(row.statusId ?? "")) {
-      throw new Error("This gate is complete.");
+    if (!(await ctx.workspaces.getDefault()))
+      throw new GateLaunchRefused("Attach a workspace before starting a session.");
+    await registerGate(ctx, row.id).catch((error: unknown) => {
+      throw new GateLaunchRefused(error);
+    });
+    const launch = { launchId: attemptId ?? ctx.storage.ids.create() };
+    const reserved = current
+      ? await launches.updateIfUnchanged(row.id, current.revision, launch)
+      : await launches.createIfAbsent(row.id, launch);
+    if (!reserved) {
+      const owner = await launches.get(row.id).catch(() => {
+        throw new GateLaunchUnconfirmed();
+      });
+      const prior = await readEarlierGateLaunch(ctx, row.id, owner?.launchId, launch.launchId);
+      if (prior) return openGateReview(ctx, prior);
+      throw gateReservationError(owner?.launchId, launch.launchId);
     }
-    await registerGate(ctx, row.id);
-    const session = await ctx.sessions.create({
-      title: `Review gate: ${row.shorthand}`,
-      prompt: reviewPrompt({ ...row, instructions: row.content }),
-      anchors: [
-        {
-          type: "ticket",
-          id: row.id,
-          extensionId: plannerExtensionId,
-          projectId: ctx.projectId,
-          shorthand: row.shorthand,
-          label: `${row.shorthand} ${row.title}`,
-          role: "primary",
-        },
-      ],
-    });
-    ctx.navigation.open({
-      kind: "panel",
-      panel: sessionBrowser.panels.conversation,
-      open: "preview",
-      resource: { type: "session", id: session.id, extensionId: "pstdio", label: session.title },
-    });
-    return session;
+    try {
+      const session = await ctx.sessions.create({
+        title: `Review gate: ${row.shorthand}`,
+        prompt: reviewPrompt({ ...row, instructions: row.content }),
+        anchors: [
+          {
+            type: "ticket",
+            id: row.id,
+            extensionId: plannerExtensionId,
+            projectId: ctx.projectId,
+            shorthand: row.shorthand,
+            label: `${row.shorthand} ${row.title}`,
+            role: "primary",
+          },
+          launchAnchor(ctx, row.id, launch.launchId),
+        ],
+      });
+      openGateReview(ctx, session);
+      return session;
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.name === "SessionCreateRefused" &&
+        (await releaseRefusedGateLaunch(ctx, row.id, launch, current?.value))
+      )
+        throw new GateLaunchRefused(error);
+      ctx.logger.warn("Gate review launch could not be confirmed", { ticketId: row.id, error: String(error) });
+      throw new GateLaunchUnconfirmed();
+    }
   },
 });

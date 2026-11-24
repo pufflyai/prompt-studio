@@ -8,9 +8,18 @@ import {
 import { createSessionsApi } from "./sessions";
 
 test("public extension sessions allow optional-cwd chat in a cloud project while requiring a folder for coding", async () => {
+  let catalogAvailable = false;
   const handle = await createTestApp({
     harnessRegistry: createTestHarnessRegistry([
-      createTestHarnessRecord("chat", { provider: { cwdRequirement: "optional" } }),
+      createTestHarnessRecord("chat", {
+        provider: {
+          cwdRequirement: "optional",
+          async listModels() {
+            if (!catalogAvailable) throw new Error("Model catalog unavailable");
+            return [];
+          },
+        },
+      }),
       createTestHarnessRecord("coder", { provider: { cwdRequirement: "required" } }),
     ]),
   });
@@ -21,7 +30,14 @@ test("public extension sessions allow optional-cwd chat in a cloud project while
     await expect(
       api.create({ title: "Code", prompt: "Hello", harness: { harnessId: testHarnessId("coder") } }),
     ).rejects.toThrow("folder");
-    const chat = await api.create({ title: "Chat", prompt: "Hello", harness: { harnessId: testHarnessId("chat") } });
+    const chatInput = { title: "Chat", prompt: "Hello", harness: { harnessId: testHarnessId("chat") } };
+    await expect(api.create(chatInput)).rejects.toMatchObject({
+      name: "SessionCreateRefused",
+      message: "Model catalog unavailable",
+    });
+    expect((await api.query({ limit: 10 })).items).toEqual([]);
+    catalogAvailable = true;
+    const chat = await api.create(chatInput);
     expect(chat.cwd).toBeNull();
     expect(chat.workspaceId).toBeTruthy();
   } finally {

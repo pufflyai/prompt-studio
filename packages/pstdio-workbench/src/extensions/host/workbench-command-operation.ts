@@ -13,6 +13,8 @@ const artifactPublication = "pstdio.artifacts.command.publish";
 const plannerAttempt = "pstdio.planner.command.run-attempt";
 const plannerReview = "pstdio.planner.command.review";
 const plannerAutoBuildConfigure = "pstdio.planner.command.auto-build.configure";
+const plannerTimelineTicketCreate = "pstdio.planner.command.timeline.ticket.create";
+const plannerTimelineGateCreate = "pstdio.planner.command.timeline.gate.create";
 export const plannerGateLaunch = "pstdio.planner.command.timeline.gate.launch";
 export const plannerGateLaunchCheck = "pstdio.planner.command.timeline.gate.check-launch";
 const reviewDraftSchema = z.object({
@@ -30,9 +32,22 @@ const autoBuildDraftSchema = z.object({
   requireMergedDependencies: z.boolean().optional(),
   blockOnReview: z.boolean().optional(),
 });
+const timelineCreateDraftSchema = z.object({
+  content: z.string(),
+  deadline: z.string().optional(),
+  dependsOn: z.array(z.string()).optional(),
+  attributes: z
+    .record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(z.string())]))
+    .optional(),
+  attachments: z
+    .array(z.object({ id: z.string(), name: z.string(), hash: z.string(), mimeType: z.string().nullable() }))
+    .optional(),
+});
 const plannerDraftSchemas = new Map<string, z.ZodType<Record<string, unknown>>>([
   [plannerReview, reviewDraftSchema],
   [plannerAutoBuildConfigure, autoBuildDraftSchema],
+  [plannerTimelineTicketCreate, timelineCreateDraftSchema],
+  [plannerTimelineGateCreate, timelineCreateDraftSchema],
 ]);
 const isPlannerAttempt = (command: ExtensionCommandRecord) =>
   command.id === plannerAttempt && command.extensionId === "pstdio.planner";

@@ -18,11 +18,12 @@ interface PlanEditorProps {
   t: (key: string, fallback?: string) => string;
   client: PlanClient;
   plan: Plan;
+  projectId: string;
   onDone: (ticketId?: string) => void;
 }
 
 export function PlanEditor(props: PlanEditorProps) {
-  const { editor, host, t, client, plan, onDone } = props;
+  const { editor, host, t, client, plan, projectId, onDone } = props;
   let title = "New milestone";
   if (editor.kind === "track") {
     title = "New feature track";
@@ -40,6 +41,7 @@ export function PlanEditor(props: PlanEditorProps) {
         t={t}
         client={client}
         plan={plan}
+        projectId={projectId}
         context={editor.context}
         kind={editor.kind}
         onDone={onDone}

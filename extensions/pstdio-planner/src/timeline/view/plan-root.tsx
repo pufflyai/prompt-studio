@@ -249,6 +249,7 @@ function PlanContent(props: PlanContentProps) {
             editor={editor}
             client={client}
             plan={plan}
+            projectId={schema.projectId}
             onDone={done}
           />
         </Suspense>

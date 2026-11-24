@@ -1,7 +1,7 @@
 import { defineCommand } from "@pstdio/sdk/extensions";
 import { createPlacedTicket, timelineTicketParams } from "./create-ticket";
 import { registerGate } from "./gate-store";
-import { launchGateCommand } from "./launch-gate";
+import { GateLaunchUnconfirmed, launchGateCommand } from "./launch-gate";
 export const createGateCommand = defineCommand({
   id: "timeline.gate.create",
   title: "Create agent gate",
@@ -11,15 +11,18 @@ export const createGateCommand = defineCommand({
   async run(ctx, input) {
     if (!input.content.trim()) throw new Error("An agent gate needs review instructions.");
     const result = await createPlacedTicket(ctx, input);
+    const launchAttemptId = ctx.storage.ids.create();
     let launchError: string | null = null;
+    let launchStatus: "refused" | "unconfirmed" | null = null;
     try {
       await registerGate(ctx, result.ticket.id);
       if (!result.placementError) {
-        await launchGateCommand.run(ctx, { ticket: result.ticket.id });
+        await launchGateCommand.run(ctx, { ticket: result.ticket.id, attemptId: launchAttemptId });
       }
     } catch (reason) {
       launchError = String(reason);
+      launchStatus = reason instanceof GateLaunchUnconfirmed ? "unconfirmed" : "refused";
     }
-    return { ...result, launchError };
+    return { ...result, launchError, launchStatus, launchAttemptId };
   },
 });
