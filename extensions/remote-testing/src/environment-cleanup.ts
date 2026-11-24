@@ -130,12 +130,16 @@ export async function enqueueEnvironmentCleanup(
     // This atomic write is not a cancelled read. Persist before admission so both
     // a lost queue reply and a restart before the worker body can be recovered.
     await rememberEnvironmentCleanup(ctx.storage, input);
-    await ctx.automation.enqueue({
+    const first = await ctx.automation.enqueue({
       command: cleanupEnvironmentCommand.ref,
       input: { params: { ...input } },
       key: `remote-tests:cleanup:${input.runId}:${input.environmentId}:first`,
     });
+    // First admission precedes cancellation-sensitive reads. A terminal replay
+    // follows the same bounded generation recovery as the scheduled sweep.
+    if (resumableCleanup(first)) await resumeCleanup(budgetedRecovery(ctx, "cleanup"), cleanupId(input));
   } catch (error) {
+    if (error instanceof RecoveryBudgetExhausted) return;
     reportCleanupQueueError(ctx, input, error);
     throw error;
   }

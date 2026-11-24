@@ -233,3 +233,23 @@ test.each(["show", "check"])("saved setup result stays visible when %s cleanup a
   expect(f.stops()).toBe(0);
   if (entry === "show") expect(errors[0]).toContain("Queue unavailable");
 });
+
+test("explicit show retries a failed first setup cleanup without an assigned schedule", async () => {
+  const f = await fixture(false, -1, true);
+  const first = await showRun.run(f.ctx, { runId: "run" });
+  expect(first).toMatchObject({ status: "error" });
+  expect(f.queued).toHaveLength(1);
+  const prior = f.jobs.get("job-0")!;
+  prior.status = "failed";
+  prior.error = { code: "command_failed", message: "Release storage unavailable", retryable: false };
+  expect(await showRun.run(f.ctx, { runId: "run" })).toEqual(first);
+  expect(f.queued).toHaveLength(2);
+  expect(f.queued[1]?.key).toBe("remote-tests:cleanup:run:env:job-0");
+  expect(f.queued[1]?.input.params).toEqual({ environmentId: "env", runId: "run", stop: false });
+  expect(prior.error).toMatchObject({ retryable: false });
+  expect(await activeRun(f.store, "env")).toBe("run");
+  await cleanupEnvironmentCommand.run(f.ctx, f.queued[1]!.input.params as never);
+  expect(await activeRun(f.store, "env")).toBeNull();
+  expect(f.reads()).toBe(0);
+  expect(f.stops()).toBe(0);
+});
