@@ -164,6 +164,7 @@ export const createProcessSpawn = (options: ProcessSpawnOptions) => (input: Proc
   const handle = createProcessHandleProxy(open, {
     cancel,
     admittedLocal: () => admission.local,
+    mayOpenAfterAbort: () => admission.releaseRemote !== undefined,
     onLateStopFailure: (error) => {
       apiLogger.warn(
         { err: error, event: "extension.process.late_cleanup_failed" },
