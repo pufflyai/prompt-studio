@@ -144,13 +144,13 @@ for (const loseDownloadResponse of [false, true]) {
       await page.keyboard.press("Enter");
       const permanent = page.getByRole("dialog", { name: /Delete cloud project/ });
       await permanent.getByRole("button", { name: "Close", exact: true }).filter({ hasText: "Close" }).click();
+      await expect(page.getByText(`Delete cloud project “${name}”?`, { exact: true })).toBeHidden();
       await expect(cloudDelete).toBeFocused();
       expect(downloadCalls).toBe(0);
       expect(cloudDeleteCalls).toBe(0);
 
       const download = cloud.getByRole("button", { name: "Download", exact: true });
-      await download.focus();
-      await page.keyboard.press("Enter");
+      await download.press("Enter");
       await expect(cloud).toBeHidden();
       expect(downloadCalls).toBe(1);
       expect(cloudDeleteCalls).toBe(0);

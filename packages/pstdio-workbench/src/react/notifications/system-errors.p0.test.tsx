@@ -96,7 +96,7 @@ test("scoped recovery keeps the widget reachable after an alert is dismissed", a
   }
 });
 
-test("live recovery follows the selected project and explicitly retired project recovery stays reachable", async () => {
+test("live recovery follows the selected project and unavailable project recovery stays reachable", async () => {
   const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
   const previous = environment.IS_REACT_ACT_ENVIRONMENT;
   environment.IS_REACT_ACT_ENVIRONMENT = true;
@@ -132,11 +132,17 @@ test("live recovery follows the selected project and explicitly retired project 
     await act(async () => queries.setAuthority({ accountId: "other" }));
     await act(async () => queries.setAuthority({ accountId: "person" }));
     expect(tree!.root.findByType("span").children).toEqual([]);
-    await act(async () => queries.clearScope({ projectId: "original" }));
+    await act(async () => {
+      queries.clearScope({ projectId: "original" });
+      operations.updateRetiredProjectAvailability(() => false);
+    });
     expect(tree!.root.findByType("span").children).toEqual(["System errors: Link resources"]);
     await act(async () => queries.setAuthority({ accountId: "other" }));
     expect(tree!.root.findByType("span").children).toEqual([]);
-    await act(async () => queries.setAuthority({ accountId: "person" }));
+    await act(async () => {
+      queries.setAuthority({ accountId: "person" });
+      operations.updateRetiredProjectAvailability(() => false);
+    });
     const entry = operations.getSnapshot().recovery[0]!;
     const root = Object.assign(new EventTarget(), {
       nodeType: 9,

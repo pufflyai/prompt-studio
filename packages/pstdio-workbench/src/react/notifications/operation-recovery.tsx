@@ -24,7 +24,7 @@ export const useOperationActivity = (workbench: WorkbenchCore) => {
         entry.status !== "unknown" &&
         entry.status !== "unconfirmed",
     ),
-    recovery: snapshot.recovery.filter((entry) => entry.projectRetired || inProject(entry, projectId)),
+    recovery: snapshot.recovery.filter((entry) => entry.projectUnavailable || inProject(entry, projectId)),
   };
 };
 
@@ -40,17 +40,17 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
   const { id, sourceCommand, draft, status } = entry;
   const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
   const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
-  const sourceIsCurrent = !entry.projectRetired && inProject(entry, projectId);
+  const sourceIsCurrent = !entry.projectUnavailable && inProject(entry, projectId);
   const currentRecovery = () =>
     operations
       .getSnapshot()
       .recovery.find(
         (item) =>
-          item.id === id && (item.projectRetired || inProject(item, workbench.pages.store.getState().projectId)),
+          item.id === id && (item.projectUnavailable || inProject(item, workbench.pages.store.getState().projectId)),
       );
   const sourceIsStillCurrent = () => {
     const current = currentRecovery();
-    return Boolean(current && !current.projectRetired);
+    return Boolean(current && !current.projectUnavailable);
   };
   const target = `system-errors.operation.${id.description ?? "recovery"}`;
   const report = (title: string) => workbench.notifications.captureActionError(title, target);

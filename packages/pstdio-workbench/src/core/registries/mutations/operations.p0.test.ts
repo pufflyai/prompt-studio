@@ -445,10 +445,11 @@ test("returning to the owning account can discard a retired project draft and fr
     expect(() => operations.submit(input)).toThrow(OperationCapacityError);
 
     queries.setAuthority({ accountId: "personal" });
+    operations.updateRetiredProjectAvailability(() => false);
     expect(operations.getSnapshot().recovery).toHaveLength(128);
     expect(operations.getSnapshot().recovery[0]).toMatchObject({
       retired: true,
-      projectRetired: true,
+      projectUnavailable: true,
       dismissed: true,
     });
     expect(operations.getSnapshot().recovery[0]?.draft).toBeUndefined();

@@ -27,7 +27,7 @@ export interface Entry {
   acknowledged?: boolean;
   error?: unknown;
   dismissed: boolean;
-  projectRetired?: true;
+  projectUnavailable?: true;
 }
 
 export const emptySnapshot: OperationSnapshot = { pending: [], recovery: [] };
@@ -52,6 +52,34 @@ export const retireEntry = (entry: Entry) => {
   changeStatus(entry, status === "queued" ? "rejected" : interrupted);
   entry.error = error;
   entry.reject(error);
+};
+
+export const retireOperations = (entries: Iterable<Entry>, retired: Partial<QueryScope>, returningOwner?: string) => {
+  const fields = Object.entries(retired);
+  for (const entry of entries) {
+    if (entry.owner === returningOwner) entry.projectUnavailable = undefined;
+    if (entry.controller.signal.aborted) continue;
+    if (fields.every(([key, value]) => entry.scope[key as keyof QueryScope] === value)) retireEntry(entry);
+  }
+};
+
+export const reconcileProjectAvailability = (
+  entries: Iterable<Entry>,
+  owner: string,
+  isAvailable: (projectId: string) => boolean | undefined,
+) => {
+  let updated = false;
+  for (const entry of entries) {
+    const { projectId } = entry.preview;
+    if (!projectId || !entry.controller.signal.aborted || entry.owner !== owner) continue;
+    const available = isAvailable(projectId);
+    if (available === undefined) continue;
+    const unavailable = available ? undefined : true;
+    if (entry.projectUnavailable === unavailable) continue;
+    entry.projectUnavailable = unavailable;
+    updated = true;
+  }
+  return updated;
 };
 
 export const initialPreview = <T>(
@@ -97,7 +125,7 @@ export const snapshotForOperations = (entries: Iterable<Entry>, owner: string): 
         dismissed: entry.dismissed,
         canCheck: Boolean(entry.check) && !retired,
         ...(retired ? { retired: true } : {}),
-        ...(entry.projectRetired ? { projectRetired: true } : {}),
+        ...(entry.projectUnavailable ? { projectUnavailable: true } : {}),
         ...(entry.acknowledged ? { acknowledged: true } : {}),
       });
     }

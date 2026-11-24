@@ -69,7 +69,7 @@ export interface OperationRecovery {
   dismissed: boolean;
   canCheck: boolean;
   retired?: true;
-  projectRetired?: true;
+  projectUnavailable?: true;
   acknowledged?: true;
 }
 

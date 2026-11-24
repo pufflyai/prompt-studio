@@ -4,9 +4,10 @@ import {
   type Entry,
   emptySnapshot,
   initialPreview,
+  reconcileProjectAvailability,
   recoveryStatus,
   retiredError,
-  retireEntry,
+  retireOperations,
   snapshotForOperations,
 } from "./operation-state";
 import type { OperationFailure, OperationInput, OperationPreview, OperationRead } from "./operation-types";
@@ -18,7 +19,7 @@ export class OperationCapacityError extends Error {
     super(
       otherAuthority
         ? "The workbench is holding its limit of pending changes and drafts. Free space in System activity, or switch to the account that owns the other drafts."
-        : "The workbench is holding its limit of pending changes and drafts. Finish a change or recover a draft from System activity in its project.",
+        : "The workbench is holding its limit of pending changes and drafts. Open the project's System activity to recover a draft and free space.",
     );
     this.name = "OperationCapacityError";
   }
@@ -150,12 +151,9 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
   queries.subscribeScopeRetirement((retired) => {
     authorityVersion++;
     scope = queries.getScope();
+    const previousOwner = owner;
     owner = operationAuthorityKey(scope);
-    for (const entry of entries.values()) {
-      if (!Object.entries(retired).every(([key, value]) => entry.scope[key as keyof QueryScope] === value)) continue;
-      if (retired.projectId !== undefined) entry.projectRetired = true;
-      if (!entry.controller.signal.aborted) retireEntry(entry);
-    }
+    retireOperations(entries.values(), retired, owner !== previousOwner ? owner : undefined);
     publish();
     schedule();
   });
@@ -191,6 +189,9 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
       return () => {
         listeners.delete(listener);
       };
+    },
+    updateRetiredProjectAvailability(isAvailable: (projectId: string) => boolean | undefined) {
+      if (!queries.isDisposed() && reconcileProjectAvailability(entries.values(), owner, isAvailable)) publish();
     },
     submit<T>(input: OperationInput<T>) {
       if (queries.isDisposed()) throw retiredError();
