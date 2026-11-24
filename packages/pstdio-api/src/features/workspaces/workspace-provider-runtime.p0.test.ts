@@ -39,16 +39,13 @@ const emptyRuntime = {
 
 describe("defaultWorkspaceProviderRuntime", () => {
   test.each([
-    ["example.granted", "provider-grant"],
-    ["example.other", null],
+    ["example.granted", true],
+    ["example.other", false],
   ])("limits process environment grants to the owning provider extension %s", async (extensionId, expected) => {
-    const variable = "PSTDIO_TEST_PROVIDER_PROCESS_GRANT";
-    const previous = {
-      [variable]: process.env[variable],
-      PSTDIO_EXTENSION_PROCESS_ENV: process.env.PSTDIO_EXTENSION_PROCESS_ENV,
-    };
+    // Names starting with PSTDIO_ are reserved and can never be granted.
+    const variable = "EXAMPLE_PROVIDER_PROCESS_GRANT";
+    const previous = process.env[variable];
     process.env[variable] = "provider-grant";
-    process.env.PSTDIO_EXTENSION_PROCESS_ENV = `example.granted:${variable}`;
     const provider = {
       id: "remote",
       ref: { kind: "workspace-type", id: "remote" },
@@ -56,6 +53,9 @@ describe("defaultWorkspaceProviderRuntime", () => {
       create: async () => ({}),
       resolve: async () => ({}),
     };
+    // The user allowed the name for the granted extension in this project only.
+    const granted = (projectId: string, owner: string) =>
+      projectId === "project-1" && owner === "example.granted" ? [variable] : [];
     const deps = {
       extensionRuntimeCatalog: {
         get: async () => ({
@@ -72,6 +72,10 @@ describe("defaultWorkspaceProviderRuntime", () => {
           },
         }),
       },
+      extensionProcessEnvironment: {
+        grantedNames: async (projectId: string, owner: string) => granted(projectId, owner),
+        authorizeCurrent: async () => ({ attach: () => {}, release: () => {} }),
+      },
     } as never;
     try {
       const handle = await defaultWorkspaceProviderRuntime.find(deps, {
@@ -79,18 +83,21 @@ describe("defaultWorkspaceProviderRuntime", () => {
         providerId: "example.remote",
       });
       expect(handle).toBeDefined();
+      // Granted values are redacted from output, so the child reports whether it got the value.
       const result = await runWorkspaceProviderOperation(handle!, (context) =>
         context.process.runOrThrow({
           cwd: process.cwd(),
-          command: [process.execPath, "-e", `process.stdout.write(JSON.stringify(process.env.${variable} ?? null))`],
+          command: [
+            process.execPath,
+            "-e",
+            `process.stdout.write(JSON.stringify(process.env.${variable} === "provider-grant"))`,
+          ],
         }),
       );
       expect(JSON.parse(result.stdout)).toBe(expected);
     } finally {
-      for (const [key, value] of Object.entries(previous)) {
-        if (value === undefined) delete process.env[key];
-        else process.env[key] = value;
-      }
+      if (previous === undefined) delete process.env[variable];
+      else process.env[variable] = previous;
     }
   });
 
