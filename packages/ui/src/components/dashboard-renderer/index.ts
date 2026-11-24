@@ -4,6 +4,7 @@ export type {
   DashboardDefinition,
   DashboardLayoutMode,
   DashboardRendererProps,
+  DashboardScatterPoint,
   DashboardSeriesPoint,
   DashboardWidget,
   DashboardWidgetKind,
