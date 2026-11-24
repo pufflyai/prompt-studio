@@ -15,6 +15,8 @@ export interface ActionBarAction {
 }
 
 export interface ActionBarMenu {
+  /** Append current resource actions using the primary view's live placement and authorization. */
+  readonly includeResourceActions?: boolean;
   readonly id: string;
   readonly label: Localizable<string>;
   readonly icon?: string;

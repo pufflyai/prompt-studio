@@ -1,9 +1,11 @@
-import type { WebviewFilesDownloadParams } from "pstdio-api-contracts/extension-kernel";
+import type { WebviewFilesDownloadParams, WebviewFilesSaveResult } from "pstdio-api-contracts/extension-kernel";
 import type { GuestHost } from "./guest-host";
 
 export interface WebviewFilesClient {
   /** Requires files.download. Resolves when the host starts the browser download, not when it finishes. */
   download(input: WebviewFilesDownloadParams): Promise<void>;
+  /** Requires files.save. Desktop waits for Save as and disk write; browsers report initiation only. */
+  save(input: WebviewFilesDownloadParams): Promise<WebviewFilesSaveResult>;
   pick(opts?: { accept?: string; multiple?: boolean }): Promise<File[]>;
   upload(input: {
     name: string;
@@ -45,6 +47,7 @@ const pickFiles = (opts: { accept?: string; multiple?: boolean } = {}) =>
 
 export const createWebviewFilesClient = (host: GuestHost): WebviewFilesClient => ({
   download: (input) => host.call("files.download", input),
+  save: (input) => host.call("files.save", input),
   pick: pickFiles,
   upload: (input) => host.call("files.upload", input),
   list: async (input) => {

@@ -85,6 +85,7 @@ const imports = defineView({
 | `files.pick(options?)` | None | `{ accept?, multiple? }` | Browser `File[]`; an empty array means the user cancelled. |
 | `files.upload(input)` | `files.upload` | `{ name, data, mimeType?, scope? }` | The stored `ExtensionBlobRef`. `data` accepts `Uint8Array` or `ArrayBuffer`. |
 | `files.download(input)` | `files.download` | `{ name, data, mimeType? }` | Starts a download on the user's device. `data` accepts `Uint8Array` or `ArrayBuffer`; `name` is a filename, without a directory. |
+| `files.save(input)` | `files.save` | `{ name, data, mimeType? }` | Desktop Save as returns `{ status: "saved" }` after the write or `{ status: "cancelled" }`. A browser returns `{ status: "initiated" }` after handing off to its download UI. |
 | `files.list(input?)` | `files.list` | `{ scope? }` | `ExtensionBlobRef[]` for the exact scope. |
 | `files.delete(id)` | `files.delete` | A file id returned by upload or list. | Resolves after the host deletes the owned file. |
 
@@ -97,6 +98,17 @@ The promise resolves after initiation. The browser's download UI owns completion
 cancellation and the final location; it does not report a successful disk save to
 the extension. A rejected bridge call can be shown beside the export control and
 retried. Publish the supporting SDK and host before releasing a consumer.
+
+On `main`, the additive `files.save` capability accepts the same already-authorized
+bytes. Desktop opens its native Save as dialog and writes to the chosen destination.
+The host stages the file before replacing an existing destination, so a failed write
+preserves the previous file. The destination path stays private to the device host.
+Dialog and write failures reject with a recoverable message. Cancellation is a
+resolved outcome and must not be reported as a failure or successful save.
+Browsers reuse `files.download` and report initiation only; later browser
+cancellation and disk completion remain unknown. An older desktop without Save as
+rejects with update guidance instead of silently reporting a native save.
+Publish the supporting host and SDK before independently releasing a consumer.
 
 ```ts
 import { createWebviewClient, defineExtensionView } from "@pstdio/sdk/extensions";
@@ -609,4 +621,4 @@ Agents use the same authenticated API:
 
 These routes store extension-owned values. Declared settings use the settings API. Theme and locale remain host appearance choices. Use `ctx.storage` for extension product data rather than view preferences.
 
-*Updated at: 2026-11-09*
+*Updated at: 2026-11-22*

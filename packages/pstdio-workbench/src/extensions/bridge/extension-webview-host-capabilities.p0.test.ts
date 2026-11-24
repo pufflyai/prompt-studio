@@ -29,6 +29,7 @@ const requests = {
   "terminal.session": { operation: "kill", sessionId: "terminal" },
   "files.upload": { name: "note.txt", data: new Uint8Array([1]) },
   "files.download": { name: "page.html", data: new Uint8Array([1]) },
+  "files.save": { name: "page.svg", data: new Uint8Array([1]) },
   "resources.actions.register": { operation: "unregister", registrationId: "49cd7198-aa2c-41c1-8080-453bff23d6e0" },
   "files.list": {},
   "files.delete": { id: "file" },
@@ -130,6 +131,35 @@ test("native workbench commands return a full rejection through the same factory
   );
   const capabilities = createExtensionWebviewHostCapabilities(createWorkbenchWebviewHostAdapters({ workbench }));
   await expect(capabilities["commands.execute"]({ commandId: "save" })).resolves.toEqual({ outcome });
+});
+
+test("device saves preserve native outcomes and reject untrusted sources before delivery", async () => {
+  const saved: unknown[] = [];
+  const capabilities = createExtensionWebviewHostCapabilities({
+    files: {
+      save: (input) => {
+        saved.push(input);
+        return { status: "cancelled" as const };
+      },
+      upload: () => {
+        throw new Error("Unexpected upload");
+      },
+      list: () => ({ files: [] }),
+      delete() {},
+    },
+  });
+  const input = { name: "wave.svg", mimeType: "image/svg+xml", data: new Uint8Array([1, 2]) };
+  expect(await capabilities["files.save"](input)).toEqual({ status: "cancelled" });
+  for (const rejected of [
+    { ...input, name: "../wave.svg" },
+    { ...input, data: "file:///private/wave.svg" },
+    { ...input, path: "/private/wave.svg" },
+  ]) {
+    await expect(Promise.resolve().then(() => capabilities["files.save"](rejected))).rejects.toMatchObject({
+      code: "invalid_params",
+    });
+  }
+  expect(saved).toEqual([input]);
 });
 
 test("workbench adapters route every capability through shared validation or unsupported", async () => {

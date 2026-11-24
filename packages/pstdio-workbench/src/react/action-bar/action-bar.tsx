@@ -2,13 +2,15 @@ import { IconButton, Stack } from "@chakra-ui/react";
 import { DndContext } from "@dnd-kit/core";
 import { type RendererContext, resourceKey } from "@pstdio/sdk/extensions";
 import { ScrollArea, Tooltip } from "@pstdio/ui";
-import { type KeyboardEvent, useState } from "react";
+import { type KeyboardEvent, useState, useSyncExternalStore } from "react";
 import { useShallow } from "zustand/react/shallow";
 import type { ResourceRef, WorkbenchPanelRenderInput } from "../../core";
 import { rendererReadKey } from "../../core";
 import { runUserAction } from "../../core/shared/run-user-action";
 import type { NativeActionBarSnapshot } from "../../extensions/contributions/action-bar-snapshot";
+import { useBreadcrumbPlacement } from "../breadcrumb/use-breadcrumb-placement";
 import { WorkbenchShortcutHint } from "../keybindings/shortcut-hint";
+import { createResourceActionSource } from "../menus/resource-action-source";
 import { RendererReadNotice } from "../renderers/renderer-read-notice";
 import { usePageParams } from "../renderers/use-page-params";
 import { useRendererRead } from "../renderers/use-renderer-read";
@@ -71,6 +73,16 @@ const ActionBarContents = (props: WorkbenchActionBarProps & { resource?: Resourc
   } = props;
   const { workbench, instance } = render;
   const pageParams = usePageParams(workbench, instance);
+  const primary = useBreadcrumbPlacement(workbench).placement;
+  const resourceActionsSource = createResourceActionSource(workbench, primary?.resource, {
+    projectId,
+    placement: primary?.placementIdentity,
+  });
+  const resourceActions = useSyncExternalStore(
+    resourceActionsSource.subscribe,
+    resourceActionsSource.getSnapshot,
+    resourceActionsSource.getSnapshot,
+  );
   const horizontal = orientation === "horizontal";
   const [focused, setFocused] = useState<string>();
   useWorkbenchStore(workbench.commands.store, (state) => state);
@@ -205,6 +217,7 @@ const ActionBarContents = (props: WorkbenchActionBarProps & { resource?: Resourc
                   onFocus={() => setFocused(item.id)}
                   available={available}
                   run={run}
+                  resourceActions={resourceActions}
                 />
               ) : (
                 <Tooltip

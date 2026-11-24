@@ -1,11 +1,13 @@
 import { Box, Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import type { CanvasMeta } from "@pstdio/canvas";
+import { AlertMessage } from "@pstdio/ui";
 import { useState } from "react";
 import { createWorkbench } from "../../core";
 import { toActionBarSnapshot } from "../../extensions/contributions/action-bar-snapshot";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchActionBar } from "./action-bar";
+import { ActionBarMenuButton } from "./action-bar-menu";
 
 export default {
   title: "Product/Workbench/Views/Action bar",
@@ -123,6 +125,78 @@ export const ToolsAndDocumentMenu = () => {
             <Input aria-label="Document title" defaultValue="The Great Wave" />
           </Stack>
         </Stack>
+      </Stack>
+    </WorkbenchThemeProvider>
+  );
+};
+
+export const DeviceExport = () => {
+  const [workbench] = useState(() => createWorkbench());
+  const [outcome, setOutcome] = useState("saved");
+  const [status, setStatus] = useState("");
+  const run = async () => setStatus(outcome);
+  return (
+    <WorkbenchThemeProvider>
+      <Stack gap="sm" p="md">
+        <HStack>
+          {["saved", "cancelled", "failed", "initiated"].map((value) => (
+            <Button
+              key={value}
+              size="xs"
+              variant={outcome === value ? "subtle" : "ghost"}
+              onClick={() => setOutcome(value)}
+            >
+              {value}
+            </Button>
+          ))}
+        </HStack>
+        <HStack align="start">
+          <ActionBarMenuButton
+            item={{
+              id: "document",
+              label: "Document actions",
+              icon: "Ellipsis",
+              items: [],
+              includeResourceActions: true,
+            }}
+            workbench={workbench}
+            horizontal={false}
+            tabIndex={0}
+            onFocus={() => {}}
+            available={() => true}
+            run={() => {}}
+            resourceActions={[{ key: "export", label: "Export SVG", onClick: run }]}
+          />
+          <Stack flex="1">
+            <Text textStyle="label/M/medium">Great Wave</Text>
+            {status === "failed" ? (
+              <AlertMessage
+                compact
+                status="error"
+                title="Could not export SVG"
+                onClose={() => setStatus("")}
+                endElement={
+                  <Button size="xs" onClick={() => void run()}>
+                    Retry
+                  </Button>
+                }
+              >
+                Check available space and folder permissions, then try again.
+              </AlertMessage>
+            ) : (
+              <Text role="status">
+                {
+                  (
+                    { saved: "SVG saved", cancelled: "Export cancelled", initiated: "Download started" } as Record<
+                      string,
+                      string
+                    >
+                  )[status]
+                }
+              </Text>
+            )}
+          </Stack>
+        </HStack>
       </Stack>
     </WorkbenchThemeProvider>
   );

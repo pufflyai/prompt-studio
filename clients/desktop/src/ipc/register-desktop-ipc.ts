@@ -15,6 +15,7 @@ import { type TitleBarAppearance, titleBarOverlayOptions } from "../windows/titl
 import { registerTitleBarGeometryIpc } from "./title-bar-geometry-ipc";
 
 type DesktopIpcOptions = {
+  saveFile: (input: unknown) => Promise<unknown>;
   isFullScreen: () => boolean;
   setTitleBarAppearance: (appearance: TitleBarAppearance) => Promise<void>;
   titleBarGeometrySource: WebContents;
@@ -83,6 +84,7 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
   };
 
   handle(DESKTOP_CHANNELS.cancelQuit, options.cancelQuit);
+  handle(DESKTOP_CHANNELS.saveFile, options.saveFile);
   handle(DESKTOP_CHANNELS.isFullScreen, options.isFullScreen);
   handle(DESKTOP_CHANNELS.titleBarAppearance, (appearance) =>
     options.setTitleBarAppearance(titleBarOverlayOptions(appearance)),

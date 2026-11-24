@@ -139,6 +139,13 @@ the user's browser download UI, without adding sandbox permissions or file read
 access. Publish the host and SDK before independent extensions adopt it. See
 [webview files](0005-webview-and-storage-api.md#webview-files).
 
+The optional `files.save` capability and `client.files.save` also join API 0.5.1
+on `main`. They preserve existing `files.download` semantics and add explicit
+desktop saved/cancelled outcomes, with browser initiation reported separately.
+Native action-bar menus can add `includeResourceActions` to reuse the primary
+reader's leased actions. Publish the supporting host and SDK before independent
+consumer adoption.
+
 The optional `resources.actions.register` capability and `registerWebviewResourceAction`
 also share API 0.5.0. They attach live reader actions to native resource menus,
 bound to the calling extension, project, placement and resource. Closing or
