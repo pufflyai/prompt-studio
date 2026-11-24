@@ -1,5 +1,5 @@
 import type { ExtensionStorageApi, StoragePredicate } from "@pstdio/sdk/extensions";
-import { pendingReviewRequest } from "./review-query-indexes";
+import { pendingReviewRequest, validReviewOutcome } from "./review-query-indexes";
 import { preparePlannerIndexes } from "./storage-indexes";
 
 export interface TicketInputState {
@@ -15,6 +15,8 @@ export const readTicketInputStates = async (storage: ExtensionStorageApi, ids: s
     const implementation: StoragePredicate = {
       any: [
         { field: "valid", op: "ne", value: true },
+        // Pending excludes valid answers; an unreadable saved outcome blocks every action.
+        { exists: { ...validReviewOutcome.exists, where: undefined } },
         {
           all: [
             { field: "affectedAction", op: "ne", value: "merge" },
@@ -23,15 +25,11 @@ export const readTicketInputStates = async (storage: ExtensionStorageApi, ids: s
         },
       ],
     };
-    const [all, work] = await Promise.all([
-      storage.records.aggregate({ index: "review-request-state", where, groupBy: "ticketId", groupLimit: 100 }),
-      storage.records.aggregate({
-        index: "review-request-state",
-        where: { all: [where, implementation] },
-        groupBy: "ticketId",
-        groupLimit: 100,
-      }),
-    ]);
+    const [all, work] = await Promise.all(
+      [where, { all: [where, implementation] }].map((where) =>
+        storage.records.aggregate({ index: "review-request-state", where, groupBy: "ticketId", groupLimit: 100 }),
+      ),
+    );
     if (all.revision !== work.revision) throw new Error("Review input changed; read it again");
     const pending = new Set(all.groups.map(({ value }) => String(value)));
     const pendingImplementation = new Set(work.groups.map(({ value }) => String(value)));
