@@ -1,4 +1,3 @@
-import type { TerminalViewBinding } from "@pstdio/sdk/api";
 import { createWorkbenchStore } from "../../shared/store/workbench-store";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import { createTerminalBindingStops, registerTerminalBindingStops } from "./terminal-binding-stops";
@@ -7,7 +6,6 @@ import type {
   WorkbenchTerminalSessionAdapter,
   WorkbenchTerminalSessionModel,
   WorkbenchTerminalSessionOpener,
-  WorkbenchTerminalSessionRequest,
   WorkbenchTerminalSessionSink,
   WorkbenchTerminalState,
 } from "./terminal-controller-types";
@@ -146,13 +144,7 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
     if (sessionId) await kill({ sessionId });
   };
 
-  const open = async (input: {
-    bindingId?: string;
-    ownerId?: string;
-    view?: TerminalViewBinding;
-    request: WorkbenchTerminalSessionRequest;
-    title?: string;
-  }) => {
+  const open: WorkbenchTerminalController["open"] = async (input) => {
     if (disposed || !opener) throw new Error("Terminal sessions are not available in this workbench host.");
 
     const bindingId = input.bindingId && bindingKey(input.bindingId, input.ownerId);
@@ -166,7 +158,9 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
     const controller = new AbortController();
     let openedAdapter: WorkbenchTerminalSessionAdapter | undefined;
     const openSession = (async () => {
-      const adapter = await opener(input.request, input.view, controller.signal, bindingId, input.bindingId);
+      const transportBinding = input.transientBinding ? undefined : bindingId;
+      const placement = input.transientBinding ? undefined : input.bindingId;
+      const adapter = await opener(input.request, input.view, controller.signal, transportBinding, placement);
       if (disposed || controller.signal.aborted) {
         await adapter.kill();
         throw new Error("Terminal admission was cancelled");
@@ -202,7 +196,7 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
         onExit: (exit) => {
           patchSession(adapter.id, { status: "exited", exit }, "terminalSessionExited");
           // Keep bounded history and the exit status for bound presentations.
-          if (bindingId) releaseAdapter(adapter.id);
+          if (bindingId && !input.transientBinding) releaseAdapter(adapter.id);
           else cleanupSession(adapter.id);
         },
       });

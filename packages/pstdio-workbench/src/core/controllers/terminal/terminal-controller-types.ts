@@ -59,6 +59,8 @@ export interface WorkbenchTerminalController {
   /** Opens a session; the live adapter stays host-side and only the id is returned. */
   open(input: {
     bindingId?: string;
+    /** Keep a local stop identity without requesting an attachable host PTY. */
+    transientBinding?: true;
     ownerId?: string;
     view?: TerminalViewBinding;
     request: WorkbenchTerminalSessionRequest;

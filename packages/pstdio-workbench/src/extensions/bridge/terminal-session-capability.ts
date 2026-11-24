@@ -34,9 +34,12 @@ export const createTerminalSessionCapability = (input: CreateTerminalSessionCapa
   const open = async (request: Extract<TerminalSessionOperation, { operation: "open" }>["request"]) => {
     if (closing) throw new Error("Terminal owner is closing");
     const bindingId = crypto.randomUUID();
+    for (const binding of bindings) {
+      if (!captureTerminalBindingStop(terminal, binding, ownerId)) bindings.delete(binding);
+    }
     bindings.add(bindingId);
     try {
-      const { sessionId } = await terminal.open({ ownerId, bindingId, request });
+      const { sessionId } = await terminal.open({ ownerId, bindingId, transientBinding: true, request });
       if (disposed) throw new Error("Terminal owner is disposed");
       ownedSessions.add(sessionId);
       return { operation: "open", sessionId } satisfies TerminalSessionResult;

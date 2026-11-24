@@ -365,12 +365,16 @@ test("a raw webview tab reserves its terminal stop before removing the tab and r
   const { workbench, scripted } = setupTerminal();
   const stop = Promise.withResolvers<void>();
   let kills = 0;
-  workbench.terminal.setSessionOpener(async () => ({
-    ...scripted.adapter,
-    kill() {
-      if (++kills === 1) return stop.promise;
-    },
-  }));
+  workbench.terminal.setSessionOpener(async (_request, _view, _signal, attachable, placement) => {
+    expect(attachable).toBeUndefined();
+    expect(placement).toBeUndefined();
+    return {
+      ...scripted.adapter,
+      kill() {
+        if (++kills === 1) return stop.promise;
+      },
+    };
+  });
   workbench.pageLocations.setProject("project");
   workbench.modes.registerMode({ id: "project", panels: ["main", "side", "secondary"], activate() {} });
   workbench.views.registerView({ id: "guest", title: "Guest", body: { kind: "react", render: () => null } });
