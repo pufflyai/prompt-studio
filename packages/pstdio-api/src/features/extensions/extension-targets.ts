@@ -16,6 +16,7 @@ import {
   type WorkspaceProviderHandle,
 } from "../workspaces/workspace-provider-runtime";
 import { resolveLocalWorkspaceTarget, type WorkspaceTargetInput } from "./command-environment/workspace-target";
+import { exitedWithin, PROCESS_STOP_TIMEOUT_MS } from "./process-group";
 
 export type ProcessTarget =
   | { kind: "local"; root: string }
@@ -78,7 +79,10 @@ const spawnThroughProvider = (
       // Some providers report the direct child's exit while their descendants can still be stopped.
       // Keep their scope available until an explicit stop or the provider confirms the entire tree.
       const done = Promise.withResolvers<void>();
+      let confirmed = false;
       const completed = () => {
+        if (confirmed) return;
+        confirmed = true;
         done.resolve();
         void scope.close();
       };
@@ -92,8 +96,14 @@ const spawnThroughProvider = (
         end: opened.end.bind(opened),
         events: opened.events.bind(opened),
         async kill(signal) {
-          await opened.kill(signal);
-          completed();
+          if (confirmed) return;
+          // A timeout limits what teardown waits for. The provider can still acknowledge this
+          // attempt later, and a later retry uses the same handle.
+          const stop = Promise.resolve()
+            .then(() => opened.kill(signal))
+            .then(completed);
+          if (!(await exitedWithin(Promise.race([stop, done.promise]), PROCESS_STOP_TIMEOUT_MS)))
+            throw new Error("The remote process did not confirm cleanup within 5 seconds. Retry stopping it.");
         },
       } satisfies ProcessHandle;
     },

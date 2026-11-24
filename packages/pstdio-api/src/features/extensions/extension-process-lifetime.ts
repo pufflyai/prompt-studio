@@ -1,10 +1,8 @@
 import { apiLogger } from "../../lib/logger";
 import type { ResolvedProcessCommand } from "./process-command";
 import type { ProcessEnvironmentLease } from "./process-environment/permissions";
-import { processGroupExited, signalProcessTree, treeExitedWithin } from "./process-group";
+import { PROCESS_STOP_TIMEOUT_MS, processGroupExited, signalProcessTree, treeExitedWithin } from "./process-group";
 import { startWindowsGrantedProcess } from "./windows-granted-process";
-
-const STOP_TIMEOUT_MS = 5_000;
 
 type ChildInput = {
   spawner: typeof Bun.spawn;
@@ -18,7 +16,7 @@ type ChildInput = {
 
 const launchChild = (input: ChildInput) => {
   if (process.platform === "win32" && input.trackTree)
-    return startWindowsGrantedProcess({ ...input, stopTimeoutMs: STOP_TIMEOUT_MS });
+    return startWindowsGrantedProcess({ ...input, stopTimeoutMs: PROCESS_STOP_TIMEOUT_MS });
 
   const output = input.detached ? "ignore" : "pipe";
   const child = input.spawner(input.command.argv, {
@@ -39,7 +37,7 @@ const launchChild = (input: ChildInput) => {
     treeExited: input.trackTree ? processGroupExited(child) : undefined,
     async stop() {
       await signalProcessTree(child, "SIGKILL");
-      if (input.trackTree && !(await treeExitedWithin(child, STOP_TIMEOUT_MS)))
+      if (input.trackTree && !(await treeExitedWithin(child, PROCESS_STOP_TIMEOUT_MS)))
         throw new Error(`The granted process group ${child.pid} did not exit after being stopped.`);
       await child.exited;
     },
