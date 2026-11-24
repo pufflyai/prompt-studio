@@ -2,7 +2,7 @@ import { teamInviteSecretSchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import type { createManagerAuthentication } from "./manager-authentication";
 import { DeviceAccessDenied } from "./renewal-errors";
-import { TeamMembershipDenied } from "./team-invitations";
+import { TeamMembershipDenied } from "./teams";
 
 type Authentication = ReturnType<typeof createManagerAuthentication>;
 

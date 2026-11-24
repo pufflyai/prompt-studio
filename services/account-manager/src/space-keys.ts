@@ -1,4 +1,4 @@
-import { and, asc, eq, exists, max, notExists, or } from "drizzle-orm";
+import { and, asc, eq, exists, inArray, max, notExists, or, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { SpaceKeys } from "pstdio-sync-contracts";
 import { readAccountFeatures } from "./account-features";
@@ -9,14 +9,7 @@ import { projectDeletions, spaceKeys, workbenches } from "./schema";
 const spaces = ["project", "personal"] as const;
 const createSecret = () => Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
 
-// A removed device keeps the keys it already has, so only data sealed with the next generation is closed to it.
-export const rotateSpaceKeysInTransaction = async (
-  transaction: ManagerTransaction,
-  accountId: string,
-  userId = accountId,
-) => {
-  const ownerId = userId === accountId ? "" : userId;
-  const acknowledged = alias(spaceKeys, "issued_private_keys");
+const rotateMatchingKeys = async (transaction: ManagerTransaction, accountId: string, filter?: SQL) => {
   const latest = await transaction
     .select({
       workbenchId: spaceKeys.workbenchId,
@@ -28,21 +21,7 @@ export const rotateSpaceKeysInTransaction = async (
     .where(
       and(
         eq(spaceKeys.accountId, accountId),
-        or(eq(spaceKeys.space, "project"), eq(spaceKeys.ownerId, ownerId)),
-        userId === accountId
-          ? undefined
-          : exists(
-              transaction
-                .select({ ownerId: acknowledged.ownerId })
-                .from(acknowledged)
-                .where(
-                  and(
-                    eq(acknowledged.accountId, spaceKeys.accountId),
-                    eq(acknowledged.workbenchId, spaceKeys.workbenchId),
-                    eq(acknowledged.ownerId, ownerId),
-                  ),
-                ),
-            ),
+        filter,
         notExists(
           transaction
             .select()
@@ -69,6 +48,44 @@ export const rotateSpaceKeysInTransaction = async (
     })),
   );
 };
+
+// A removed device keeps the keys it already has, so only data sealed with the next generation is closed to it.
+export const rotateSpaceKeysInTransaction = async (
+  transaction: ManagerTransaction,
+  accountId: string,
+  userId = accountId,
+) => {
+  const ownerId = userId === accountId ? "" : userId;
+  const acknowledged = alias(spaceKeys, "issued_private_keys");
+  await rotateMatchingKeys(
+    transaction,
+    accountId,
+    and(
+      or(eq(spaceKeys.space, "project"), eq(spaceKeys.ownerId, ownerId)),
+      userId === accountId
+        ? undefined
+        : exists(
+            transaction
+              .select({ ownerId: acknowledged.ownerId })
+              .from(acknowledged)
+              .where(
+                and(
+                  eq(acknowledged.accountId, spaceKeys.accountId),
+                  eq(acknowledged.workbenchId, spaceKeys.workbenchId),
+                  eq(acknowledged.ownerId, ownerId),
+                ),
+              ),
+          ),
+    ),
+  );
+};
+
+export const rotateProjectSharedKeys = (transaction: ManagerTransaction, accountId: string, workbenchIds: string[]) =>
+  rotateMatchingKeys(
+    transaction,
+    accountId,
+    and(eq(spaceKeys.space, "project"), inArray(spaceKeys.workbenchId, workbenchIds)),
+  );
 
 /**
  * The keys of a cloud project, or null when the account has no such project. The first request

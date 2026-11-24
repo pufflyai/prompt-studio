@@ -107,7 +107,8 @@ export const addWorkbenchInTransaction = async (transaction: ManagerTransaction,
   return transaction
     .insert(workbenches)
     .values({ accountId: input.accountId, id: input.workbenchId })
-    .onConflictDoNothing();
+    .onConflictDoNothing()
+    .returning({ id: workbenches.id });
 };
 
 export const removeWorkbenchInTransaction = (transaction: ManagerTransaction, input: WorkbenchInput) =>

@@ -1,10 +1,10 @@
-import { startProjectDeletionSchema, teamInviteRecipientSchema, teamInviteSecretSchema } from "pstdio-sync-contracts";
+import { identitySchema, startProjectDeletionSchema, teamInviteRecipientSchema, teamInviteSecretSchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import { AccountFeatureDenied } from "./account-features";
 import type { createManagerAuthentication } from "./manager-authentication";
 import { ProjectRetired } from "./project-deletion";
 import { DeviceAccessDenied } from "./renewal-errors";
-import { TeamMembershipDenied } from "./team-invitations";
+import { TeamMembershipDenied } from "./teams";
 
 type Authentication = ReturnType<typeof createManagerAuthentication>;
 const json = (value: unknown, status = 200) =>
@@ -126,6 +126,20 @@ const teamMembershipRoute = async (auth: Authentication, address: string, reques
   return section === "leave" && !target ? ok(devices.leave(token, id)) : null;
 };
 
+const teamProjectAccessRoute = async (devices: Authentication["devices"], request: Request, path: string) => {
+  const operation = /^\/v1\/teams\/([^/]+)\/projects(?:\/([^/]+)\/access)?$/.exec(path);
+  if (!operation) return null;
+  const token = bearer(request);
+  const teamId = decodeURIComponent(operation[1]);
+  if (request.method === "GET" && !operation[2]) return json(await devices.projectAccess(token, teamId));
+  if (request.method !== "POST" || !operation[2]) return null;
+  const { userId, granted } = z
+    .strictObject({ userId: identitySchema, granted: z.boolean() })
+    .parse(await request.json());
+  const updated = await devices.updateProjectAccess(token, teamId, decodeURIComponent(operation[2]), userId, granted);
+  return updated ? json({ ok: true }) : json({ error: "Unknown workbench" }, 404);
+};
+
 const teamInvitationRoute = async (devices: Authentication["devices"], request: Request, path: string) => {
   const operation = /^\/v1\/team-invitations\/(inspect|accept)$/.exec(path);
   if (!operation || request.method !== "POST") return null;
@@ -176,6 +190,7 @@ export const deviceHttp = async (auth: Authentication, address: string, request:
       (path === "/v1/teams" ? await teamRoute(auth.devices, request) : null) ??
       (await teamMembershipRoute(auth, address, request, path)) ??
       (await teamInvitationRoute(auth.devices, request, path)) ??
+      (await teamProjectAccessRoute(auth.devices, request, path)) ??
       (await deletionRoute(auth, request, path, accountId)) ??
       (await route(auth, new URL(address).origin, request, path, accountId)) ??
       json({ error: "Method not allowed" }, 405)

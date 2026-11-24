@@ -35,9 +35,9 @@ import {
   listTeamInvitations,
   listTeamMembers,
   removeTeamMember,
-  TeamMembershipDenied,
 } from "./team-invitations";
-import { createTeam, listTeams, requireTeamMember } from "./teams";
+import { hasTeamProjectGrant, listTeamProjectAccess, updateTeamProjectGrant } from "./team-project-access";
+import { createTeam, listTeams, requireTeamMember, TeamMembershipDenied } from "./teams";
 import { lockAccount, withAccountTransaction } from "./transactions";
 
 type SessionReader = (headers: Headers) => Promise<{ user: { id: string } } | null>;
@@ -145,6 +145,11 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
 
   return {
     members: (token: string, id: string) => team(token, id, listTeamMembers),
+    projectAccess: (token: string, id: string) => owner(token, id, listTeamProjectAccess),
+    updateProjectAccess: (token: string, id: string, project: string, userId: string, granted: boolean) =>
+      owner(token, id, (transaction, accountId) =>
+        updateTeamProjectGrant(transaction, accountId, identitySchema.parse(project), userId, granted),
+      ),
     invitations: (token: string, id: string) => owner(token, id, listTeamInvitations),
     invite: (token: string, id: string, recipient: TeamInviteRecipient) =>
       owner(token, id, (transaction, accountId) => createTeamInvitation(transaction, accountId, recipient)),
@@ -219,19 +224,8 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
     keys: (token: string, value: string, selected?: string) =>
       scoped(token, selected, async (transaction, accountId, userId) => {
         const workbenchId = identitySchema.parse(value);
-        if (accountId !== userId) {
-          const [grant] = await transaction
-            .select({ userId: projectMembers.userId })
-            .from(projectMembers)
-            .where(
-              and(
-                eq(projectMembers.accountId, accountId),
-                eq(projectMembers.workbenchId, workbenchId),
-                eq(projectMembers.userId, userId),
-              ),
-            );
-          if (!grant) return null;
-        }
+        if (accountId !== userId && !(await hasTeamProjectGrant(transaction, accountId, workbenchId, userId)))
+          return null;
         return spaceKeysInTransaction(transaction, { accountId, workbenchId }, userId);
       }),
     addWorkbench: (token: string, value: string, selected?: string) =>
@@ -239,9 +233,13 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
         if (!owner) throw new DeviceAccessDenied();
         const workbenchId = identitySchema.parse(value);
         await requireRelay(transaction, accountId);
-        await addWorkbenchInTransaction(transaction, { accountId, workbenchId });
-        if (accountId !== userId)
-          await transaction.insert(projectMembers).values({ accountId, workbenchId, userId }).onConflictDoNothing();
+        const [created] = await addWorkbenchInTransaction(transaction, { accountId, workbenchId });
+        if (accountId === userId) return;
+        if (created) {
+          await transaction.insert(projectMembers).values({ accountId, workbenchId, userId });
+        } else if (!(await hasTeamProjectGrant(transaction, accountId, workbenchId, userId))) {
+          throw new TeamMembershipDenied("Grant yourself access before opening this team project");
+        }
       }),
     removeWorkbench: (token: string, workbenchId: string, selected?: string) =>
       scoped(token, selected, async (transaction, accountId, _userId, owner) => {

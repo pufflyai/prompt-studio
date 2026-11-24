@@ -17,13 +17,14 @@ import {
   teamMembers,
   teams,
 } from "./schema";
+import { rotateProjectSharedKeys } from "./space-keys";
+import { teamUserProjectIds } from "./team-project-access";
+import { TeamMembershipDenied } from "./teams";
 import { lockAccount } from "./transactions";
 
 const google = "https://accounts.google.com";
 const invitationLifetimeMs = 7 * 24 * 60 * 60 * 1000;
 type Invitation = typeof teamInvitations.$inferSelect;
-
-export class TeamMembershipDenied extends Error {}
 
 const googleAccount = and(
   eq(accounts.ownerIssuer, google),
@@ -171,11 +172,13 @@ export const cancelTeamInvitation = async (transaction: ManagerTransaction, acco
 };
 
 export const removeTeamMember = async (transaction: ManagerTransaction, accountId: string, userId: string) => {
+  const projects = await teamUserProjectIds(transaction, accountId, userId);
   const [removed] = await transaction
     .delete(teamMembers)
     .where(and(eq(teamMembers.accountId, accountId), eq(teamMembers.userId, userId), eq(teamMembers.role, "member")))
     .returning({ userId: teamMembers.userId });
   if (!removed) return;
+  if (projects.length) await rotateProjectSharedKeys(transaction, accountId, projects);
 
   const revokedAt = sql`clock_timestamp()`;
   await transaction
