@@ -39,6 +39,24 @@ const unfinishedIn = (bytes: Uint8Array, secrets: Uint8Array[], start: number, c
   return undefined;
 };
 
+type Match = { start: number; length: number };
+
+/**
+ * The leftmost secret at or after `position`, the longest one when several start there. Each
+ * secret's next position is searched once and moved forward only when passed, so many matches of
+ * one value do not rescan the buffer for the others.
+ */
+const leftmostMatch = (bytes: Uint8Array, secrets: Uint8Array[], next: number[], position: number, carried?: Match) => {
+  let match = carried;
+  for (const [index, secret] of secrets.entries()) {
+    if (next[index]! >= 0 && next[index]! < position) next[index] = indexOf(bytes, secret, position);
+    const start = next[index]!;
+    if (start >= 0 && (!match || start < match.start || (start === match.start && secret.length > match.length)))
+      match = { start, length: secret.length };
+  }
+  return match;
+};
+
 /**
  * Replaces secrets that start before `limit` and returns the redacted bytes with the raw rest.
  * `forced` bytes at the start belong to a run already being hidden. A run that may still grow
@@ -56,19 +74,10 @@ const redactUpTo = (
   const next = secrets.map((secret) => indexOf(bytes, secret, 0));
   const keep = Math.max(...secrets.map((secret) => secret.length));
   const parts: Uint8Array[] = [];
+  const carried = forced > 0 ? { start: 0, length: Math.min(forced, bytes.length) } : undefined;
   let position = 0;
-  let held = 0;
-  let heldMarked = false;
   while (position < limit) {
-    // The leftmost secret at or after `position`, the longest one when several start there.
-    let match: { start: number; length: number } | undefined =
-      position === 0 && forced > 0 ? { start: 0, length: Math.min(forced, bytes.length) } : undefined;
-    for (const [index, secret] of secrets.entries()) {
-      if (next[index]! >= 0 && next[index]! < position) next[index] = indexOf(bytes, secret, position);
-      const start = next[index]!;
-      if (start >= 0 && (!match || start < match.start || (start === match.start && secret.length > match.length)))
-        match = { start, length: secret.length };
-    }
+    const match = leftmostMatch(bytes, secrets, next, position, position === 0 ? carried : undefined);
     if (!match || match.start >= limit) {
       parts.push(bytes.subarray(position, limit));
       position = limit;
@@ -77,25 +86,19 @@ const redactUpTo = (
     const covered = coveredEnd(bytes, secrets, match.start, match.start + match.length);
     parts.push(bytes.subarray(position, match.start));
     // A run carried over from the last chunk already has its marker when that chunk emitted one.
-    const continues = match.start === 0 && forced > 0 && marked;
+    const continues = match.start === 0 && carried !== undefined && marked;
     const unfinished = final ? undefined : unfinishedIn(bytes, secrets, match.start, covered, keep);
+    if (!continues && (unfinished === undefined || unfinished > match.start)) parts.push(REDACTED);
     if (unfinished === undefined) {
-      if (!continues) parts.push(REDACTED);
       position = covered;
       continue;
     }
-    if (unfinished > match.start && !continues) parts.push(REDACTED);
-    position = unfinished;
-    held = covered - unfinished;
-    heldMarked = continues || unfinished > match.start;
-    break;
+    const held = { forced: covered - unfinished, marked: continues || unfinished > match.start };
+    return { emitted: Buffer.concat(parts), rest: bytes.subarray(unfinished), ...held };
   }
   // Nothing processed: the bytes still owed to a run stay owed.
-  if (position === 0 && held === 0) {
-    held = forced;
-    heldMarked = marked;
-  }
-  return { emitted: Buffer.concat(parts), rest: bytes.subarray(position), forced: held, marked: heldMarked };
+  const owed = position === 0 ? { forced, marked } : { forced: 0, marked: false };
+  return { emitted: Buffer.concat(parts), rest: bytes.subarray(position), ...owed };
 };
 
 /** Hides granted values in collected output, overlapping ones included. */
