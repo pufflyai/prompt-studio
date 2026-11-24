@@ -1,6 +1,6 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { type ComponentProps, useState } from "react";
+import { type ComponentProps, useRef, useState } from "react";
 import type { Command, RegisteredCommand } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { CommandParamsDialog } from "./command-params-dialog";
@@ -257,5 +257,53 @@ export const RunFailed: Story = {
     onRun: async () => {
       throw new Error("PS-458 can't start: it waits on PS-457, which is not done and has no attempt to build on.");
     },
+  },
+};
+
+const renameNoteCommand = registerCommand({
+  id: "preview.note.rename",
+  label: "Rename note",
+  params: { title: { type: "text", label: "Title", required: true } },
+  resourceMutation: { kind: "rename", resourceType: "note", idParam: "noteId", labelParam: "title" },
+});
+
+export const RenameNoteWithPendingSave: Story = {
+  render: (args) => {
+    const [title, setTitle] = useState("Meeting notes");
+    const [pending, setPending] = useState(false);
+    const finish = useRef<(() => void) | undefined>(undefined);
+    return (
+      <Stack gap="sm" p="md">
+        <Text>{title}</Text>
+        {pending ? (
+          <Button
+            onClick={() => {
+              finish.current?.();
+              setPending(false);
+            }}
+          >
+            Confirm save
+          </Button>
+        ) : null}
+        <CommandParameterExample
+          {...args}
+          request={{
+            label: "Rename note",
+            record: renameNoteCommand,
+            submitLabel: "Rename",
+            args: { title },
+          }}
+          onRun={({ args: values, context }) => {
+            const nextTitle = (values as { title: string }).title;
+            setTitle(nextTitle);
+            setPending(true);
+            context?.onAdmitted?.();
+            return new Promise<void>((resolve) => {
+              finish.current = resolve;
+            });
+          }}
+        />
+      </Stack>
+    );
   },
 };

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import type { WorkbenchPanelInstance } from "../../../core";
 import { getWorkbenchRenderers, type ResourceRef, type TreeNode, type WorkbenchCore } from "../../../core";
 import { treeStateKey } from "../../../core/registries/renderers/tree-state-scope";
+import { getRendererReadCache } from "../../../core/registries/views/renderer-read-registry";
 import { reportUserActionError } from "../../../core/shared/run-user-action";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { useSharedEqualValue } from "../share-equal-value";
@@ -101,6 +102,8 @@ export const useTreeData = (
   useTreeResourceRefresh(workbench, pages, read.retry);
   const renderer = getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId);
   const movement = useTreeMovement({
+    workbench,
+    projectId: queryScope?.projectId,
     scope: childrenKey,
     body: pages.body,
     revision: read.request,
@@ -115,10 +118,18 @@ export const useTreeData = (
           viewId,
           sections: pages.body,
           childrenByNodeId: NO_CHILDREN,
-          onError: onMoveError,
+          throwErrors: true,
         })
       : undefined,
-    refresh: read.retry,
+    onError: onMoveError,
+    read: {
+      key: childrenKey,
+      refresh: (signal) =>
+        getRendererReadCache(workbench.views.reads).refreshRequired(
+          { queryScope, sourceId: treeViewId, queryKey: childrenKey },
+          signal,
+        ),
+    },
   });
   return {
     ...movement,

@@ -3,13 +3,14 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ExtensionAutomationApi, ExtensionConnectionsApi } from "@pstdio/sdk/extensions";
-import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
+import { makeCommandContext } from "@pstdio/sdk/testing";
 import { commands } from "./commands";
 import { type Api, PocketCoderError } from "./connection";
 import { runDeps } from "./context";
 import { cleanupRunEnvironment, enqueueEnvironmentCleanup } from "./environment-cleanup";
 import { activeRun, claimEnvironment } from "./environments";
 import { localProcess } from "./process-fixture";
+import { createRunStorage as createMemoryStorage } from "./run-storage-fixture";
 import { listRuns, startRun } from "./runs";
 
 let root: string;
@@ -135,9 +136,9 @@ test.each([
   expect(stops).toHaveLength("environmentId" in input ? 0 : 1);
 });
 
-test.each([60, -1])("cleanup preserves another owner's claim with %s seconds remaining", async (seconds) => {
+test("cleanup preserves another owner's claim", async () => {
   const store = createMemoryStorage();
-  await claimEnvironment(store, "env", "other", seconds);
+  await claimEnvironment(store, "env", "other");
   let stops = 0;
   const api: Api = async () => {
     stops++;
@@ -152,12 +153,12 @@ test.each([60, -1])("cleanup preserves another owner's claim with %s seconds rem
 
 test("failed cleanup retains the owning claim and can resume safely", async () => {
   const store = createMemoryStorage();
-  await claimEnvironment(store, "env", "owner", -1);
+  await claimEnvironment(store, "env", "owner");
   const failure = new PocketCoderError(401, "Sign in again");
   let failing = true;
   const api: Api = async () => {
     expect(await activeRun(store, "env")).toBe("owner");
-    expect(await claimEnvironment(store, "env", "competitor", 60)).toBe(false);
+    expect(await claimEnvironment(store, "env", "competitor")).toBe(false);
     if (failing) throw failure;
     return {} as never;
   };
@@ -191,7 +192,7 @@ test("an unavailable cleanup queue reports the environment and preserves its err
       },
     },
   });
-  await claimEnvironment(ctx.storage, "env", "run", 60);
+  await claimEnvironment(ctx.storage, "env", "run");
   await expect(enqueueEnvironmentCleanup(ctx, { environmentId: "env", runId: "run", stop: true })).rejects.toBe(
     failure,
   );

@@ -245,3 +245,23 @@ for (const scoped of [true, false])
     s.navigate("library");
     expect(s.ids("main")).toEqual(["a"]);
   });
+
+test("historical removals leave an unrelated active page and its saved navigation untouched", () => {
+  let saves = 0;
+  const { core, open } = setup({
+    pageLocationPersistence: {
+      load: () => undefined,
+      save: () => {
+        saves++;
+      },
+    },
+  });
+  open("keep");
+  const previous = saves;
+  for (let i = 0; i < 50; i++) core.resources.removed(resource(String(i)));
+  expect(saves).toBe(previous);
+  expect(core.getPrimaryResource()?.id).toBe("keep");
+  core.resources.removed(resource("keep"));
+  expect(saves).toBeGreaterThan(previous);
+  expect(core.getPrimaryResource()).toBeUndefined();
+});

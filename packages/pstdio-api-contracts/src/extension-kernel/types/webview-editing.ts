@@ -81,7 +81,13 @@ export type WebviewEditingSessionParams =
       changes: WebviewEditingChange[];
       channel?: "document" | "presentation";
     }
-  | { operation: "commit" | "preview"; sessionId: string; sequence: number; changes: WebviewEditingChange[] }
+  | {
+      operation: "commit" | "preview";
+      sessionId: string;
+      sequence: number;
+      changes: WebviewEditingChange[];
+      retainFormDraft?: true;
+    }
   | { operation: "cancel"; sessionId: string; sequence?: number }
   | { operation: "close" | "save"; sessionId: string }
   | { operation: "refresh"; sessionId: string; expectedVersion: number; value: JsonObject };

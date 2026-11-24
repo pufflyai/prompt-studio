@@ -21,7 +21,7 @@ export interface TreeActionParamsRequest {
   request: CommandParamsRequest;
   sectionId?: string;
   inlineInput?: TreeAction["inlineInput"];
-  run: (args: unknown) => Promise<void>;
+  run: (args: unknown, onAdmitted?: () => void) => Promise<void>;
 }
 
 interface CreateTreeActionItemsInput {
@@ -163,7 +163,13 @@ const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
                 args: action.args,
                 context,
               },
-              run: (args) => executeTreeAction({ action, args, context, workbench }),
+              run: (args, onAdmitted) =>
+                executeTreeAction({
+                  action,
+                  args,
+                  context: onAdmitted ? { ...context, onAdmitted } : context,
+                  workbench,
+                }),
             })
         : undefined;
     items.push({
@@ -243,7 +249,13 @@ export const createTreeActionItems = (input: CreateTreeActionItemsInput) => {
                 args: action.args,
                 context,
               },
-              run: (args) => executeTreeAction({ action, args, context, workbench }),
+              run: (args, onAdmitted) =>
+                executeTreeAction({
+                  action,
+                  args,
+                  context: onAdmitted ? { ...context, onAdmitted } : context,
+                  workbench,
+                }),
             })
         : undefined;
     items.push({

@@ -2,8 +2,8 @@ import { Button, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { type CloudProjectDeletion, type ProjectCopyAccount, PstdioApiError } from "@pstdio/sdk/client";
 import { AlertMessage, DeleteConfirmationModal } from "@pstdio/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { getApiClient } from "@/lib/api";
+import { useEffect, useRef, useState } from "react";
+import { cloudProjectDeletionKey, useCloudProjectDeletions } from "../data/cloud-project-deletion-operations";
 import { cloudProjectCatalogKey } from "../data/project-catalog";
 
 interface DeletionProps {
@@ -68,11 +68,16 @@ const useDeletionCompletion = (completed: boolean, onCompleted?: () => void) => 
   }, [completed, onCompleted]);
 };
 
-const useCloudDeletion = ({ id, account, receipt, onSubmitted, onCompleted }: DeletionProps) => {
+const useCloudDeletion = ({ id, name, account, receipt, onSubmitted, onCompleted }: DeletionProps) => {
   const observed = useObservedDeletion(account, receipt);
   const [submittedAccount, setSubmittedAccount] = useState<ProjectCopyAccount>();
   const [started, setStarted] = useState<CloudProjectDeletion>();
   const [uncertain, setUncertain] = useState(false);
+  const deletions = useCloudProjectDeletions();
+  const active = deletions.active(id);
+  const checking = active?.status === "unknown" || active?.status === "unconfirmed";
+  const writing = Boolean(active && !checking);
+  const checked = useRef<symbol>(undefined);
   const [retrying, setRetrying] = useState(false);
   const [error, setError] = useState<string>();
   const queryClient = useQueryClient();
@@ -83,22 +88,27 @@ const useCloudDeletion = ({ id, account, receipt, onSubmitted, onCompleted }: De
     expected && account?.managerOrigin === expected.managerOrigin && account.accountId === expected.accountId,
   );
   const operation = useQuery({
-    queryKey: ["project-cloud-deletion", expected?.managerOrigin, expected?.accountId, id],
-    queryFn: ({ signal }) => getApiClient().account.projectDeletionStatus(id, { signal, expected }),
-    enabled: accountMatches && Boolean(started ?? receipt ?? observed?.receipt ?? uncertain),
+    queryKey: cloudProjectDeletionKey(id, expected),
+    queryFn: ({ signal }) => deletions.read(id, expected, signal),
+    enabled: accountMatches && Boolean(started || receipt || observed?.receipt || uncertain || checking),
     retry: false,
     refetchInterval: ({ state }) => (state.data?.state === "completed" ? false : 2000),
   });
   const latest = started?.state === "completed" ? started : (operation.data ?? started ?? receipt ?? observed?.receipt);
   const current = accountMatches ? latest : undefined;
   useDeletionCompletion(current?.state === "completed", onCompleted);
+  useEffect(() => {
+    if (!current || !active || !checking || checked.current === active.id) return;
+    checked.current = active.id;
+    void deletions.check(active.id);
+  }, [active, checking, current, deletions]);
 
   const submit = async (expectedAccount: ProjectCopyAccount) => {
     setSubmittedAccount(expectedAccount);
     setError(undefined);
     onSubmitted?.();
     try {
-      const result = await getApiClient().account.deleteCloudProject(id, { confirm: true, expectedAccount });
+      const result = await deletions.start(id, name, expectedAccount);
       setStarted(result);
       setUncertain(false);
       if (operation.data && operation.data.state !== result.state) await operation.refetch();
@@ -111,7 +121,9 @@ const useCloudDeletion = ({ id, account, receipt, onSubmitted, onCompleted }: De
   };
 
   const retry = async () => {
-    if (!expected) return;
+    if (!expected || writing) return;
+    // The caller has a definitive status response for this project. The server resumes by project ID.
+    if (active) deletions.discard(active.id);
     setRetrying(true);
     try {
       await submit(expected);
@@ -125,8 +137,36 @@ const useCloudDeletion = ({ id, account, receipt, onSubmitted, onCompleted }: De
     void refreshCatalog();
   };
 
-  return { current, uncertain, error, retrying, operation, accountMatches, retryStatus, retry, submit };
+  return {
+    current,
+    uncertain: uncertain || checking,
+    writing,
+    error,
+    retrying,
+    operation,
+    accountMatches,
+    retryStatus,
+    retry,
+    submit,
+  };
 };
+
+const cloudDeletionProgress = (
+  state: CloudProjectDeletion["state"] | undefined,
+  input: { uncertain: boolean; canDelete: boolean; error?: string; readError?: Error | null },
+) => ({
+  canResubmit:
+    state === "needs-attention" ||
+    (!state &&
+      input.uncertain &&
+      input.canDelete &&
+      input.readError instanceof PstdioApiError &&
+      input.readError.status === 404),
+  failure:
+    input.readError?.message ??
+    (state ? undefined : input.error) ??
+    (state === "needs-attention" ? "Cloud cleanup has paused. Retry to resume the same operation." : undefined),
+});
 
 export const CloudProjectDeletionAction = ({
   id,
@@ -139,23 +179,22 @@ export const CloudProjectDeletionAction = ({
   onCompleted,
 }: DeletionProps) => {
   const [confirmation, setConfirmation] = useState<ProjectCopyAccount>();
-  const { current, uncertain, error, retrying, operation, accountMatches, retryStatus, retry, submit } =
+  const { current, uncertain, writing, error, retrying, operation, accountMatches, retryStatus, retry, submit } =
     useCloudDeletion({ id, name, account, receipt, canDelete, cloudOnly, onSubmitted, onCompleted });
 
-  if (accountMatches && (current || uncertain)) {
+  if (accountMatches && (current || uncertain || writing)) {
     const state = current?.state;
-    const canResubmit =
-      state === "needs-attention" ||
-      (!state && uncertain && canDelete && operation.error instanceof PstdioApiError && operation.error.status === 404);
-    const failure =
-      operation.error?.message ??
-      (current ? undefined : error) ??
-      (state === "needs-attention" ? "Cloud cleanup has paused. Retry to resume the same operation." : undefined);
+    const { canResubmit, failure } = cloudDeletionProgress(state, {
+      uncertain,
+      canDelete,
+      error,
+      readError: operation.error,
+    });
     return (
       <DeletionProgress
-        state={state}
+        state={state ?? (writing ? "deleting" : undefined)}
         error={state === "completed" ? undefined : failure}
-        canRetry={canResubmit || operation.isError}
+        canRetry={!writing && (canResubmit || operation.isError)}
         retrying={retrying}
         onRetry={canResubmit ? retry : retryStatus}
       />

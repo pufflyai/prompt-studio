@@ -163,7 +163,8 @@ export const createRecentResourcesModule = () =>
               .flatMap((item) => {
                 const kind = ctx.resources.getKind(item.resource.type, item.resource.extensionId);
                 if (!kind || !available(ctx, item.target)) return [];
-                const resource = kind.resolve ? kind.resolve(item.resource) : item.resource;
+                const resolved = kind.resolve ? kind.resolve(item.resource) : item.resource;
+                const resource = resolved && ctx.resources.preview.resolve(resolved);
                 return resource
                   ? [{ resource: { ...resource, icon: resource.icon ?? kind.icon }, target: item.target }]
                   : [];
@@ -215,6 +216,7 @@ export const createRecentResourcesModule = () =>
         if (state.layout.activeWidgetId !== previous.layout.activeWidgetId) rememberActive();
       });
       const kinds = ctx.resources.store.subscribe(() => changed());
+      const previews = ctx.resources.preview.store.subscribe(() => changed());
       const placements = ctx.modePlacements.onDidChange(() => changed());
       const navigation = ctx.pageLocations.onDidNavigate((location) => {
         if (location.resource) remember(location.resource, pageTarget(location));
@@ -249,24 +251,37 @@ export const createRecentResourcesModule = () =>
         remember(target.resource, { kind: "compound", targets: [pageTarget(location), panel] });
       });
       const active = ctx.onDidChangeActiveResource(rememberActive);
+      // Session sync can retire hundreds of historical resources in the same snapshot.
+      // Consult the preference once until its contents or the removal's project changes.
+      let removalIndex: { projectId: string; keys: Set<string> } | undefined;
+      const preferences = ctx.preferences.onDidChangeValue((name) => {
+        if (name === preference) removalIndex = undefined;
+      });
       const removed = ctx.resources.onDidRemove((resource) => {
         const projectId = resource.projectId ?? ctx.pages.store.getState().projectId;
-        if (projectId)
-          void save(
-            projectId,
-            readSaved(ctx, projectId).filter(
-              (item) => resourceKey(item.resource) !== resourceKey(canonicalDashboardResource(resource, projectId)),
-            ),
-          );
+        if (!projectId) return;
+        const key = resourceKey(canonicalDashboardResource(resource, projectId));
+        let items: RecentResource[] | undefined;
+        if (removalIndex?.projectId !== projectId) {
+          items = readSaved(ctx, projectId);
+          removalIndex = { projectId, keys: new Set(items.map((item) => resourceKey(item.resource))) };
+        }
+        if (!removalIndex.keys.has(key)) return;
+        save(
+          projectId,
+          (items ?? readSaved(ctx, projectId)).filter((item) => resourceKey(item.resource) !== key),
+        );
       });
       return [
         navigation,
         opened,
         active,
         removed,
+        preferences,
         { dispose: references },
         { dispose: layouts },
         { dispose: kinds },
+        { dispose: previews },
         placements,
       ];
     },

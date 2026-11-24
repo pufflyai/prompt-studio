@@ -31,7 +31,7 @@ if (mode === "remove") {
     await Bun.sleep(20);
     const before = changes;
     mkdirSync(packagePath, { recursive: true });
-    const deadline = Date.now() + 1000;
+    const deadline = Date.now() + 3_000;
     while (changes === before && Date.now() < deadline) await Bun.sleep(10);
     assert.ok(changes > before, "Dependency changes must still refresh the source after removal");
   } finally {

@@ -82,29 +82,32 @@ test("production duplicate boards share semantic queries while retaining indepen
     first = Promise.resolve(output.a.onAttributeChange?.("row", "a", 1));
     second = Promise.resolve(output.b.onAttributeChange?.("row", "b", 1));
   });
+  expect(output.a.rows[0].attributes).toEqual({ a: 1, b: 1 });
+  expect(output.b.rows[0].attributes).toEqual({ a: 1, b: 1 });
   await act(async () => {
     gates.a.resolve();
     await first;
   });
-  expect(calls).toBe(1);
-  expect(output.a.rows[0].attributes.a).toBe(1);
-  // Changing query parameters cannot bypass a peer's still-pending accepted write.
+  // The first write crosses a fresh read barrier shared by both boards.
+  expect(calls).toBe(2);
+  expect(output.a.rows[0].attributes).toEqual({ a: 1, b: 1 });
   await act(async () => output.a.page?.onSearchChange("Row"));
-  expect(calls).toBe(1);
+  expect(calls).toBe(3);
+  expect(output.a.rows[0].attributes.b).toBe(1);
   await act(async () => {
     gates.b.resolve();
     await second;
   });
-  expect(calls).toBe(3); // One reconciliation for each distinct search request.
+  expect(calls).toBe(5); // One fresh read for each distinct search request.
   expect(output.a.rows[0].attributes).toEqual(server);
   expect(output.b.rows[0].attributes).toEqual(server);
   await act(async () => output.b.page?.onSearchChange("Row"));
-  expect(calls).toBe(3);
+  expect(calls).toBe(5);
   await act(async () => tree?.update(content(false)));
   renderers.refreshKanbanRenderer("shared board");
-  expect(calls).toBe(3);
+  expect(calls).toBe(5);
   await act(async () => tree?.update(content(true)));
-  expect(calls).toBe(4);
+  expect(calls).toBe(6);
 });
 
 test("create and open leaves the departing board stale until it is visible again", async () => {

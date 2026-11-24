@@ -11,24 +11,24 @@ import { createPersistedPageResourceRemover } from "./persisted-resource-removal
 export const createPageResourceRemover = <Value>(input: {
   getState(): WorkbenchPageRegistryStoreState<Value>;
   resources: WorkbenchPageResourceCodec;
-  forgetRootLevel(resource: ResourceRef): void;
-  forgetMemory(resource: ResourceRef): void;
+  forgetRootLevel(resource: ResourceRef): boolean;
+  forgetMemory(resource: ResourceRef): boolean;
   persistence: WorkbenchPageLocationPersistence;
   start(): ResolvedPageLocation;
   commit(projectId: string, location: ResolvedPageLocation, history: "replace" | "none", action: string): unknown;
 }) => {
   const removePersisted = createPersistedPageResourceRemover(input);
-  return (resource: ResourceRef, retained: readonly PlacementIdentity[]) => {
+  return (resource: ResourceRef, retained: readonly PlacementIdentity[], placementsChanged = false) => {
     const current = input.getState();
     if (resource.projectId && resource.projectId !== current.projectId) {
       removePersisted(resource);
       return;
     }
-    input.forgetMemory(resource);
-    input.forgetRootLevel(resource);
+    const memoryChanged = input.forgetMemory(resource);
+    const rootChanged = input.forgetRootLevel(resource);
     if (!current.projectId || !current.location) return;
     const next = removePageResource(current, resource, input.resources, retained);
-    if (!next.location) return;
+    if (!next.location || !(next.referenced || placementsChanged || rootChanged || memoryChanged)) return;
     const changed = !workbenchPageLocationsEqual(
       current.location,
       next.location,

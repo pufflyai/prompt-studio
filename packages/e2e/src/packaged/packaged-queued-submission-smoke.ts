@@ -20,7 +20,7 @@ export const expectPackagedQueuedSubmission = async (page: Page, sessionId: stri
         extensionId: "pstdio.session-browser",
         outcome: {
           ok: false,
-          status: "error",
+          status: "rejected",
           reason: "Could not send",
           error: { message: "Could not send" },
           notices: [],

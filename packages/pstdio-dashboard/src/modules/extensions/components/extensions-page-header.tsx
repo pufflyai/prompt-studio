@@ -16,7 +16,7 @@ export const ExtensionsPageHeader = ({ input }: { input: WorkbenchPanelRenderInp
   const changing = usePendingExtensionSourceChanges(projectId);
   const actions = useExtensionPanelActions(projectId, inventory.data?.upgradeConcurrency);
   const upgradable =
-    inventory.data?.extensions.filter((extension) => extension.canUpgrade && !changing.has(extension.id)) ?? [];
+    inventory.data?.extensions.filter((extension) => extension.canUpgrade && !changing(extension.id)) ?? [];
   return (
     <ExtensionsPanelHeader
       searchId={`extension-search-${input.instance.instanceId}`}

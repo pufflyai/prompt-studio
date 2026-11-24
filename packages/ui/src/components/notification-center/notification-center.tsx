@@ -181,6 +181,7 @@ export const NotificationCenter = (props: NotificationCenterProps) => {
     emptyLabel = "No notifications.",
     error,
     footerEnd,
+    bodyBefore,
     footerStart,
     items,
     loading = false,
@@ -245,6 +246,7 @@ export const NotificationCenter = (props: NotificationCenterProps) => {
       searchIcon={<Search size={14} />}
       searchInputRef={inputRef}
       searchAutoFocus={autoFocus}
+      bodyBefore={bodyBefore}
       footerStart={footerStart}
       footerEnd={footerEnd}
       scrollAreaProps={{ maxH: "24rem", showHorizontalScrollbar: false }}

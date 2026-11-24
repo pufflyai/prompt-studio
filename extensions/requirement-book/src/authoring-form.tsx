@@ -1,22 +1,132 @@
+import type { WebviewCommandEditingSession } from "@pstdio/sdk/extensions";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BookForm } from "./book-form";
 import type { BookClient } from "./client";
-import { acceptanceConditions, chapterFields, draftChapterFor, findingFields, ruleFields, splitRefs } from "./forms";
-import { createRuleReference, ruleSchema } from "./model";
+import { chapterFields, draftChapterFor, findingFields, ruleFields } from "./forms";
 import type { BookData } from "./read";
-import type { Draft } from "./records";
+import { changed, type Draft } from "./records";
 export type FormMode = "rule" | "finding" | "chapter";
 interface Props {
   mode: FormMode;
   chapter: number;
   data: BookData;
   client: BookClient;
+  isCurrentWorkspace: (workspaceId: string) => boolean;
   onClose: () => void;
   onSaved: () => void;
   onDraftSaved: (draft: Draft) => void;
 }
+type DraftSnapshot = { draft: string; revision: string; draftBase?: string };
+
+const openDraftEditing = (client: BookClient, workspaceId: string, chapter: number) => {
+  const params = { workspaceId, chapter };
+  return client.editing.openCommand<DraftSnapshot>({
+    key: JSON.stringify(["authoring-draft", workspaceId, chapter]),
+    read: { commandId: `${changed.extensionId}.command.drafts.read-editing`, params },
+    command: { commandId: `${changed.extensionId}.command.drafts.save-editing`, params },
+    dependsOn: [changed],
+  });
+};
+
 export function AuthoringForm(props: Props) {
-  const { mode, chapter, data, client, onClose, onSaved, onDraftSaved } = props;
+  const { mode, chapter, data, client, isCurrentWorkspace, onClose, onSaved, onDraftSaved } = props;
   const draftChapter = draftChapterFor(mode, chapter);
+  const { workspaceId } = data;
+  const draft = data.drafts.find((item) => item.workspaceId === workspaceId && item.chapter === draftChapter);
+  const mounted = useRef(false);
+  const editing = useRef<Promise<WebviewCommandEditingSession<DraftSnapshot>> | undefined>(undefined);
+  const activeEditing = useRef<WebviewCommandEditingSession<DraftSnapshot> | undefined>(undefined);
+  const [restored, setRestored] = useState<Draft>();
+  const [revision, setRevision] = useState<string>();
+  const [draftError, setDraftError] = useState<string>();
+  const [openingFailed, setOpeningFailed] = useState(false);
+  const [openAttempt, retryOpening] = useState(0);
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: an explicit retry opens the same draft again.
+  useEffect(() => {
+    let active = true;
+    let unsubscribe: (() => void) | undefined;
+    setRevision(undefined);
+    setRestored(undefined);
+    setDraftError(undefined);
+    setOpeningFailed(false);
+    const opening = openDraftEditing(client, workspaceId, draftChapter);
+    editing.current = opening;
+    void opening
+      .then((session) => {
+        if (!active) return;
+        activeEditing.current = session;
+        const hydrate = () => {
+          const snapshot = session.getSnapshot();
+          if (!active || snapshot.retired) return;
+          const draftRevision = snapshot.value.draftBase ?? snapshot.value.revision;
+          setRestored({
+            id: `${workspaceId}-${draftChapter}`,
+            workspaceId,
+            chapter: draftChapter,
+            values: JSON.parse(snapshot.value.draft),
+            revision: draftRevision,
+          });
+          if (snapshot.pendingCommands && !snapshot.error) return;
+          setRevision(draftRevision);
+          setDraftError(snapshot.error?.message);
+          unsubscribe?.();
+        };
+        unsubscribe = session.subscribe(hydrate);
+        hydrate();
+      })
+      .catch((error: unknown) => {
+        if (!active || editing.current !== opening) return;
+        editing.current = undefined;
+        setDraftError(error instanceof Error ? error.message : String(error));
+        setOpeningFailed(true);
+      });
+    return () => {
+      active = false;
+      unsubscribe?.();
+      const previous = editing.current;
+      activeEditing.current = undefined;
+      editing.current = undefined;
+      void previous?.then((session) => session.close()).catch(() => {});
+    };
+  }, [client, workspaceId, draftChapter, openAttempt]);
+  const isCurrentForm = () => mounted.current && isCurrentWorkspace(workspaceId);
+  const requireOpenForm = () => {
+    if (!isCurrentForm()) throw new Error("The authoring form closed.");
+  };
+  const rememberDraft = (values: Record<string, unknown>, savedRevision: string) => {
+    if (!isCurrentForm()) return;
+    const saved = {
+      id: `${workspaceId}-${draftChapter}`,
+      workspaceId,
+      chapter: draftChapter,
+      values,
+      revision: savedRevision,
+    };
+    setRestored(saved);
+    setRevision(savedRevision);
+    setDraftError(undefined);
+    onDraftSaved(saved);
+  };
+  const saveDraft = async (values: Record<string, unknown>, expectedRevision: string) => {
+    requireOpenForm();
+    editing.current ??= openDraftEditing(client, workspaceId, draftChapter);
+    const opening = editing.current;
+    const session = await opening.catch((error) => {
+      if (editing.current === opening) editing.current = undefined;
+      throw error;
+    });
+    requireOpenForm();
+    activeEditing.current = session;
+    const savedRevision = await client.saveDraft(session.id, JSON.stringify(values), expectedRevision);
+    rememberDraft(values, savedRevision);
+    return savedRevision;
+  };
   const fields = {
     rule: ruleFields(),
     finding: findingFields,
@@ -27,63 +137,68 @@ export function AuthoringForm(props: Props) {
     finding: "New finding",
     chapter: "New chapter",
   }[mode];
-  const submit = async (values: Record<string, unknown>) => {
-    if (mode === "rule") {
-      const targetChapter = data.chapters.find((item) => item.id === chapter);
-      if (!targetChapter) throw new Error("Choose an existing chapter.");
-      const rule = ruleSchema.parse({
-        ref: createRuleReference(targetChapter),
-        chapter,
-        level: 2,
-        title: String(values.title),
-        statement: String(values.statement),
-        rationale: "",
-        status: "proposed",
-        section: "Behavior",
-        acceptance: acceptanceConditions(values.acceptance),
-        related: splitRefs(values.related),
-        governing: [],
-      });
-      await client.commands.suggest({
-        workspaceId: data.workspaceId,
-        title: `Add ${rule.title}`,
-        reason: String(values.reason),
-        operations: [{ type: "ADD", before: null, after: rule }],
-      });
-    } else if (mode === "finding")
-      await client.commands["findings.save"]({
-        workspaceId: data.workspaceId,
-        title: String(values.title),
-        kind: String(values.kind),
-        explanation: String(values.explanation),
-        requirements: splitRefs(values.requirements),
-      });
-    else
-      await client.commands["chapters.create"]({
-        workspaceId: data.workspaceId,
-        title: String(values.title),
-        group: String(values.group),
-      });
-    onSaved();
+  const submit = async (values: Record<string, unknown>, expectedRevision: string) => {
+    requireOpenForm();
+    const result = await client.commands["drafts.submit"]({ workspaceId, chapter, mode, values, expectedRevision });
+    if ("refused" in result) {
+      rememberDraft(values, result.refused.revision);
+      return result.refused;
+    }
+    if (isCurrentForm()) onSaved();
+    void client.commands["drafts.discard"]({
+      workspaceId,
+      chapter: draftChapter,
+      submissionId: result.submissionId,
+    }).catch(() => {});
+    return undefined;
   };
   return (
     <BookForm
       title={title}
       fields={fields}
       submitLabel={mode === "rule" ? "Create suggestion" : "Create"}
-      draft={data.drafts.find((item) => item.chapter === draftChapter)}
+      draft={draft?.submissionId ? draft : (restored ?? draft)}
+      submissionStatus={draft?.submissionStatus}
+      draftError={draftError}
+      onRetryDraft={openingFailed ? () => retryOpening((attempt) => attempt + 1) : undefined}
+      draftRevision={
+        revision === undefined ? undefined : ((draft?.submissionId ? draft : (restored ?? draft))?.revision ?? revision)
+      }
+      canDiscardSubmission={draft?.submissionStatus !== "writing" && Boolean(draft?.revision ?? revision)}
+      hasSubmissionProof={Boolean(draft?.submissionProof)}
       onSubmit={submit}
-      onClose={onClose}
-      onSaveDraft={async (values) => {
-        const draft = await client.commands["drafts.save"]({
-          workspaceId: data.workspaceId,
-          chapter: draftChapter,
-          values,
-        });
-        onDraftSaved(draft);
+      onClose={() => {
+        if (isCurrentForm()) onClose();
       }}
-      onDiscard={async () => {
-        await client.commands["drafts.discard"]({ workspaceId: data.workspaceId, chapter: draftChapter });
+      onPreviewDraft={(values, expectedRevision) => {
+        const session = activeEditing.current;
+        if (session)
+          void client
+            .retainDraft(session.id, { text: JSON.stringify(values), baseRevision: expectedRevision })
+            .catch(() => {});
+      }}
+      onSaveDraft={saveDraft}
+      onCheckSubmission={
+        draft?.submissionId
+          ? async () => {
+              const result = await client.commands["drafts.check-submission"]({
+                workspaceId,
+                chapter: draftChapter,
+                submissionId: draft.submissionId!,
+              });
+              return result.confirmed;
+            }
+          : undefined
+      }
+      onDiscard={async (expectedRevision) => {
+        const session = activeEditing.current;
+        if (session) await client.retainDraft(session.id, null);
+        await client.commands["drafts.discard"]({
+          workspaceId,
+          chapter: draftChapter,
+          submissionId: draft?.submissionId,
+          expectedRevision,
+        });
       }}
     />
   );

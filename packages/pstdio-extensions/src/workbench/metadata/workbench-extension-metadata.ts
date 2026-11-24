@@ -52,6 +52,7 @@ const toCommandRecord = (command: ExtensionRuntime["commands"][number]) => ({
   cliAliases: command.cli?.deprecatedPaths?.map((alias) => alias.join(" ")),
   examples: command.cli?.examples,
   automation: command.automation,
+  mutating: command.mutating || undefined,
   copyResultToClipboard: command.copyResultToClipboard,
   resourceMutation: command.resourceMutation,
   confirmation: command.confirmation,

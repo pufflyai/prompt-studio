@@ -7,13 +7,20 @@ import type {
   WorkbenchPanelRegion,
 } from "../../core";
 import { resolveCommandResourceParams } from "../../core/registries/commands/command-resource-params";
+import type { WorkbenchOperations } from "../../core/registries/mutations/operations";
 import { isPageContent } from "../../core/registries/pages/page-main";
-import { copyCommandResult } from "./command-clipboard";
+import { applyCommandClipboard } from "./command-clipboard";
 import { unwrapCommandValue } from "./command-response";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
+import { checkExactGateLaunch, readAndSettleGateLaunch } from "./planner-gate-launch-check";
+import { remoteWorkspaceLaunchCommand, runRemoteWorkspaceLaunch } from "./remote-workspace-launch";
+import { plannerGateLaunch, plannerGateLaunchCheck, runWorkbenchCommandOperation } from "./workbench-command-operation";
+import { type CreateOperationFeedback, runCreateOperation } from "./workbench-create-operation";
 import { runResourceMutation } from "./workbench-resource-mutation";
 export interface WorkbenchExtensionCommandContext {
   metadata?: Pick<WorkbenchExtensionMetadata, "commands">;
+  createCommandIds?: ReadonlySet<string>;
+  operations?: WorkbenchOperations;
   executeCommand(commandId: string, body: CommandExecuteRequest, signal?: AbortSignal): Promise<unknown> | unknown;
   prepareCommandArgs?(
     commandId: string,
@@ -26,6 +33,8 @@ export interface WorkbenchExtensionCommandContext {
 }
 export interface ExecuteWorkbenchExtensionCommandInput {
   onViewerReplace?(resource: ResourceRef): void;
+  onAdmitted?(): void;
+  createFeedback?: CreateOperationFeedback;
   removalVersion?: number;
   isViewerCurrent?(): boolean;
   placement?: PlacementIdentity;
@@ -33,6 +42,7 @@ export interface ExecuteWorkbenchExtensionCommandInput {
   workspaceId?: string;
   signal?: AbortSignal;
   metadata?: Record<string, unknown>;
+  foreground?: true;
   params?: Record<string, unknown>;
   resource?: ResourceRef;
   slot?: CommandExecuteRequest["slot"];
@@ -92,14 +102,18 @@ export const executeWorkbenchExtensionCommandResponse = async (
       input.signal,
     ),
   );
-  const command =
-    context.metadata?.commands.find((candidate) => candidate.id === commandId) ??
-    context.workbench.commands?.getCommand(commandId)?.command;
+  const declaredCommand = context.metadata?.commands.find((candidate) => candidate.id === commandId);
+  const command = declaredCommand ?? context.workbench.commands?.getCommand(commandId)?.command;
   // Start writing before awaiting the remote command, while the selecting gesture is active.
-  const copying = command?.copyResultToClipboard
-    ? copyCommandResult(pendingResponse, input.signal, invocation.isViewerCurrent)
-    : undefined;
-  const [response] = await Promise.all([pendingResponse, copying]);
+  const response = await (command?.copyResultToClipboard
+    ? applyCommandClipboard({
+        response: pendingResponse,
+        mutating: declaredCommand?.mutating,
+        signal: input.signal,
+        isViewerCurrent: invocation.isViewerCurrent,
+        reportError: context.workbench.notifications.captureActionError("Copy command result"),
+      })
+    : pendingResponse);
   const outcome = (response as Partial<CommandExecutionResult> | undefined)?.outcome;
   if (outcome?.status === "success" && !input.signal?.aborted) {
     for (const target of outcome.navigationRequests ?? []) {
@@ -129,10 +143,64 @@ export const executeWorkbenchExtensionCommand = async (
   const resolved = command
     ? { ...resolveCommandResourceParams(command.params, input.params, { resource: input.resource }), ...input.params }
     : input.params;
-  const params = command?.confirmation ? { ...resolved, [command.confirmation.confirmedParam]: true } : resolved;
-  const persist = async () =>
-    unwrapCommandValue(await executeWorkbenchExtensionCommandResponse(context, commandId, { ...input, params }));
-  return command
-    ? runResourceMutation(context, command, params, { resource: input.resource, signal: input.signal }, persist)
-    : persist();
+  const provided = command?.confirmation ? { ...resolved, [command.confirmation.confirmedParam]: true } : resolved;
+  const hasGateCheck = context.metadata?.commands.some(
+    (record) => record.id === plannerGateLaunchCheck && record.extensionId === "pstdio.planner",
+  );
+  const trackGate = hasGateCheck && command?.id === plannerGateLaunch && command.extensionId === "pstdio.planner";
+  const params =
+    trackGate && typeof provided?.ticket === "string"
+      ? { ...provided, attemptId: provided.attemptId ?? crypto.randomUUID() }
+      : provided;
+  const send = async (signal?: AbortSignal, id = commandId, bodyParams = params) =>
+    unwrapCommandValue(
+      await executeWorkbenchExtensionCommandResponse(context, id, {
+        ...input,
+        params: bodyParams,
+        signal: signal && input.signal ? AbortSignal.any([signal, input.signal]) : (signal ?? input.signal),
+      }),
+    );
+  const operations = context.operations;
+  if (operations && hasGateCheck && commandId === plannerGateLaunchCheck)
+    return readAndSettleGateLaunch(operations, context.projectId, params?.ticket, send, (value) => value);
+  if (operations && commandId === remoteWorkspaceLaunchCommand) {
+    return runRemoteWorkspaceLaunch({
+      commands: context.metadata?.commands ?? [],
+      operations,
+      projectId: context.projectId,
+      params,
+      execute: (id, values, signal) => send(signal, id, values),
+    });
+  }
+  const create = context.createCommandIds?.has(commandId);
+  const foreground = input.foreground || input.slot?.kind === "menu";
+  if (operations && command?.mutating && !command.resourceMutation && !create && foreground)
+    return runWorkbenchCommandOperation({
+      operations,
+      projectId: context.projectId,
+      command,
+      source: input.resource,
+      params,
+      onAdmitted: input.onAdmitted,
+      check: trackGate
+        ? checkExactGateLaunch(
+            params,
+            (args, signal) =>
+              Promise.resolve(
+                context.executeCommand(
+                  plannerGateLaunchCheck,
+                  { projectId: context.projectId, params: args, source: "dashboard" },
+                  signal,
+                ),
+              ),
+            unwrapCommandValue,
+          )
+        : undefined,
+      write: send,
+    });
+  const persist =
+    operations && command && create
+      ? () => runCreateOperation(operations, context.projectId, command, resolved, send, input.createFeedback)
+      : send;
+  return command ? runResourceMutation(context, command, params, input, persist) : persist();
 };

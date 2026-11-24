@@ -21,6 +21,7 @@ import type {
   AttributeDescriptor,
   KanbanRendererCreateRowConfig,
   KanbanRendererCreateSubmission,
+  KanbanRendererPendingCreation,
   KanbanRendererRow,
   KanbanRendererSavedView,
   KanbanRendererSettings,
@@ -77,6 +78,8 @@ export interface KanbanRendererProps<TRow extends KanbanRendererRow = KanbanRend
   onMove?: (move: KanbanRendererMove) => Promise<void> | void;
   onReorder?: (rowId: string, beforeRowId?: string) => Promise<void> | void;
   createRow?: KanbanRendererCreateRowConfig;
+  createDraftAuthority?: string;
+  pendingCreations?: readonly KanbanRendererPendingCreation[];
   onCreateRow?: (submission: KanbanRendererCreateSubmission) => Promise<void> | void;
   onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;
   getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig;
@@ -245,6 +248,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
         onEditFilter={hideToolbar ? undefined : () => setOpenMenu("filter")}
         viewMode={settings.viewMode}
         boardColumns={boardColumns}
+        pendingCreations={props.pendingCreations}
         listItems={listItems}
         listExpandedGroups={expandedGroups}
         selectedRowId={selectedRowId}
@@ -267,7 +271,8 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
           columnAttributeId={settings.columnGrouping === NO_GROUPING ? undefined : settings.columnGrouping}
           attributes={attributes}
           config={createRow}
-          draftKey={JSON.stringify([storageKey, activeViewId, filter])}
+          key={props.createDraftAuthority}
+          draftKey={JSON.stringify([storageKey, props.createDraftAuthority, activeViewId, filter])}
           filter={filter}
           onClose={() => setCreateColumnId(null)}
           onSubmit={onCreateRow}

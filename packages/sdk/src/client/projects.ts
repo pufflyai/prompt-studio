@@ -43,8 +43,11 @@ export type ProjectClient = {
   query(input?: PageQuery): Promise<Page<Project & ProjectDetails>>;
   /** @deprecated Use query to read one bounded page. */
   list(): Promise<Project[]>;
-  get(projectId: string): Promise<Project & ProjectDetails>;
-  create(input: ProjectCreateRequest | CreateProjectInput): Promise<Project & ProjectDetails>;
+  get(projectId: string, options?: { signal?: AbortSignal }): Promise<Project & ProjectDetails>;
+  create(
+    input: ProjectCreateRequest | CreateProjectInput,
+    options?: { signal?: AbortSignal },
+  ): Promise<Project & ProjectDetails>;
   bindEnvironment(
     workbenchId: string,
     input: BindEnvironmentInput,
@@ -74,8 +77,12 @@ export type ProjectClient = {
   restoreFolder(projectId: string, input: RestoreProjectFolderInput): Promise<ProjectFolderRecoveryStatus>;
   /** Cancels the running folder download or restore and removes only its staging. */
   cancelFolderRecovery(projectId: string): Promise<ProjectFolderRecoveryStatus>;
-  retrySetup(projectId: string): Promise<Workspace & ExtensionWorkspace>;
-  update(projectId: string, input: ProjectUpdateRequest | UpdateProjectInput): Promise<Project & ProjectDetails>;
+  retrySetup(projectId: string, options?: { signal?: AbortSignal }): Promise<Workspace & ExtensionWorkspace>;
+  update(
+    projectId: string,
+    input: ProjectUpdateRequest | UpdateProjectInput,
+    options?: { signal?: AbortSignal },
+  ): Promise<Project & ProjectDetails>;
   delete(projectId: string): Promise<void>;
 };
 
@@ -94,8 +101,8 @@ export const createProjectClient = (request: RequestFn): ProjectClient => ({
     request(`/v1/projects/${encodeURIComponent(projectId)}/restore`, { method: "POST", body: input }),
   query: (input) => request(`/v1/projects/query${pageQuery(input)}`),
   list: () => request("/v1/projects"),
-  get: (projectId) => request(`/v1/projects/${projectId}`),
-  create: (input) => request("/v1/projects", { method: "POST", body: input }),
+  get: (projectId, options) => request(`/v1/projects/${projectId}`, { signal: options?.signal }),
+  create: (input, options) => request("/v1/projects", { method: "POST", body: input, signal: options?.signal }),
   bindEnvironment: (workbenchId, input) =>
     request(`/v1/projects/${encodeURIComponent(workbenchId)}/environment-binding`, { method: "PUT", body: input }),
   attachInitialWorkspace: (projectId, input) =>
@@ -114,7 +121,9 @@ export const createProjectClient = (request: RequestFn): ProjectClient => ({
     request(`/v1/projects/${encodeURIComponent(projectId)}/folder/restore`, { method: "POST", body: input }),
   cancelFolderRecovery: (projectId) =>
     request(`/v1/projects/${encodeURIComponent(projectId)}/folder/cancel`, { method: "POST" }),
-  retrySetup: (projectId) => request(`/v1/projects/${projectId}/retry-setup`, { method: "POST" }),
-  update: (projectId, input) => request(`/v1/projects/${projectId}`, { method: "PATCH", body: input }),
+  retrySetup: (projectId, options) =>
+    request(`/v1/projects/${projectId}/retry-setup`, { method: "POST", signal: options?.signal }),
+  update: (projectId, input, options) =>
+    request(`/v1/projects/${projectId}`, { method: "PATCH", body: input, signal: options?.signal }),
   delete: (projectId) => request(`/v1/projects/${projectId}`, { method: "DELETE" }),
 });

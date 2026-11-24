@@ -1,10 +1,47 @@
-import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
+import { defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
 import { z } from "zod";
+import { DraftSubmissionRefused } from "./draft-commands";
 import { findRule } from "./model";
 import { requireBook } from "./read";
 import { readRecordGroups } from "./read-index";
 import { announce, digest, type Finding, readRecord, saveRecord, suggestionDigest } from "./records";
 import { readRepository } from "./repository";
+
+export const saveFinding = async (
+  ctx: ExtensionContextBase,
+  input: {
+    workspaceId?: string;
+    id?: string;
+    kind: string;
+    title: string;
+    explanation: string;
+    requirements?: string[];
+    resolved?: boolean;
+  },
+  plannedId?: string,
+) => {
+  const snapshot = await readRepository(ctx, input.workspaceId);
+  const book = requireBook(snapshot.book);
+  for (const ref of input.requirements ?? [])
+    if (!findRule(book.rules, ref)) throw new DraftSubmissionRefused(`Unknown requirement ${ref}`);
+  const previous = input.id ? await readRecord<Finding>(ctx.storage, "finding", input.id) : null;
+  if (input.id && !previous?.value) throw new Error("Finding no longer exists.");
+  if (previous?.value && previous.value.workspaceId !== snapshot.workspaceId)
+    throw new Error("Finding belongs to another workspace.");
+  const finding: Finding = {
+    id: input.id ?? plannedId ?? ctx.storage.ids.create(),
+    workspaceId: snapshot.workspaceId,
+    kind: z.enum(["violation", "potential-conflict", "missing-evidence", "stale-evidence"]).parse(input.kind),
+    title: input.title,
+    explanation: input.explanation,
+    requirements: input.requirements ?? [],
+    resolved: input.resolved ?? false,
+    updatedAt: new Date().toISOString(),
+  };
+  await saveRecord(ctx.storage, "finding", { ...previous?.value, ...finding }, previous?.record.revision);
+  await announce(ctx, snapshot.workspaceId);
+  return finding;
+};
 
 export const reviewCommands = {
   "findings.save": defineCommand({
@@ -21,29 +58,7 @@ export const reviewCommands = {
       requirements: params.list(),
       resolved: params.boolean(),
     },
-    async run(ctx, input) {
-      const snapshot = await readRepository(ctx, input.workspaceId);
-      const book = requireBook(snapshot.book);
-      for (const ref of input.requirements ?? [])
-        if (!findRule(book.rules, ref)) throw new Error(`Unknown requirement ${ref}`);
-      const previous = input.id ? await readRecord<Finding>(ctx.storage, "finding", input.id) : null;
-      if (input.id && !previous?.value) throw new Error("Finding no longer exists.");
-      if (previous?.value && previous.value.workspaceId !== snapshot.workspaceId)
-        throw new Error("Finding belongs to another workspace.");
-      const finding: Finding = {
-        id: input.id ?? ctx.storage.ids.create(),
-        workspaceId: snapshot.workspaceId,
-        kind: z.enum(["violation", "potential-conflict", "missing-evidence", "stale-evidence"]).parse(input.kind),
-        title: input.title,
-        explanation: input.explanation,
-        requirements: input.requirements ?? [],
-        resolved: input.resolved ?? false,
-        updatedAt: new Date().toISOString(),
-      };
-      await saveRecord(ctx.storage, "finding", { ...previous?.value, ...finding }, previous?.record.revision);
-      await announce(ctx, snapshot.workspaceId);
-      return finding;
-    },
+    run: (ctx, input) => saveFinding(ctx, input),
   }),
   "review.mark-read": defineCommand({
     id: "review.mark-read",

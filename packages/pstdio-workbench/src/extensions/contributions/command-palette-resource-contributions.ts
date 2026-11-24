@@ -38,6 +38,7 @@ const activateTarget = async (
   if (target.kind === "command") {
     await executeWorkbenchExtensionCommand(context, commandIdOf(target.target.command, record.extensionId), {
       params: target.target.params,
+      foreground: true,
     });
     // A selected command may mutate extension data; refresh providers so a reopened
     // palette reflects the change without an app reload.

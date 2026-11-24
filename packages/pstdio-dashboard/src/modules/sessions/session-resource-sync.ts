@@ -1,10 +1,8 @@
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
-import { subscribeCollections } from "@/lib/sync/collections";
-import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import { type CollectionRowChange, subscribeCollections } from "@/lib/sync/collections";
+import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 
-const closeSessionViews = (ctx: WorkbenchModuleContext, id: string) => {
-  const projectId = getDashboardSelectedProjectId(ctx);
-  if (!projectId) return;
+const closeSessionViews = (ctx: WorkbenchModuleContext, projectId: string, id: string) => {
   // Legacy URLs/layouts omitted either scope. Retire all known keys, including
   // closed history not returned by getOpenResources; explicit foreign scopes differ.
   const base = { type: "session", id };
@@ -17,13 +15,37 @@ const closeSessionViews = (ctx: WorkbenchModuleContext, id: string) => {
   for (const resource of references) ctx.resources.removed(resource);
 };
 
-export const registerSessionResourceSync = (ctx: WorkbenchModuleContext) =>
-  subscribeCollections((change) => {
-    if (change?.table !== "sessions") return;
-    for (const { key: id, value, previousValue } of change.changes) {
-      if ((value ?? previousValue)?.project_id !== getDashboardSelectedProjectId(ctx)) continue;
-      if (value && value.archived !== true) continue;
-      // Archive also removes visible placements without deleting the saved session.
-      closeSessionViews(ctx, id);
-    }
+const syncSession = (
+  ctx: WorkbenchModuleContext,
+  projectId: string,
+  retired: Set<string>,
+  { key: id, value, previousValue }: CollectionRowChange,
+) => {
+  if ((value ?? previousValue)?.project_id !== projectId) return;
+  if (value?.archived !== true) {
+    retired.delete(id);
+    if (value) return;
+  }
+  // Only this subscriber retires all four aliases. A resolver can retire just the open one.
+  if (retired.has(id)) return;
+  closeSessionViews(ctx, projectId, id);
+  if (value) retired.add(id);
+};
+
+export const registerSessionResourceSync = (ctx: WorkbenchModuleContext) => {
+  let retiredArchives = new Set<string>();
+  const stopProject = subscribeDashboardSelectedProject(ctx, () => {
+    retiredArchives = new Set();
   });
+  const stopSync = subscribeCollections((change) => {
+    if (change?.table !== "sessions") return;
+    const projectId = getDashboardSelectedProjectId(ctx);
+    if (!projectId) return;
+    const retired = retiredArchives;
+    for (const row of change.changes) syncSession(ctx, projectId, retired, row);
+  });
+  return () => {
+    stopSync();
+    stopProject();
+  };
+};

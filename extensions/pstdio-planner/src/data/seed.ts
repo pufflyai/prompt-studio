@@ -181,3 +181,8 @@ export const seedDefaultTags = async (storage: ExtensionStorageApi) => {
     tagSeedPromises.delete(storage);
   }
 };
+
+/** Finish default writes before a caller pins its query revision. */
+export const ensureDefaultTags = async (storage: ExtensionStorageApi) => {
+  if (!(await storage.get(TAG_SEED_MARKER))) await seedDefaultTags(storage);
+};

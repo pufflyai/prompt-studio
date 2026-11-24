@@ -28,4 +28,10 @@ test("the related resource picker is reachable from commands for the current res
   const explicit = { ...resource, id: "explicit-row" };
   await workbench.commands.executeCommand(resourceLinksCommandId, undefined, { resource: explicit });
   expect(workbench.layout.getLayout().regions.overlay.widgets.at(-1)?.resource).toEqual(explicit);
+  workbench.getActiveResource = () => undefined;
+  workbench.getPrimaryResource = () => undefined;
+  const recovered = { ...resource, id: "recovered-source" };
+  await workbench.commands.executeCommand(resourceLinksCommandId, { resource: recovered });
+  expect(workbench.layout.getLayout().regions.overlay.widgets.at(-1)?.resource).toEqual(recovered);
+  await workbench.dispose();
 });

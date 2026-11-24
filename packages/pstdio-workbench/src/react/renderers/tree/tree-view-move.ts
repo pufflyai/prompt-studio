@@ -18,6 +18,7 @@ interface MoveTreeNodeContext {
   sections: TreeViewSection[];
   childrenByNodeId: Record<string, TreeNode[]>;
   onError?: (error: unknown) => void;
+  throwErrors?: boolean;
 }
 
 export const canMoveTreeNode = (
@@ -57,6 +58,7 @@ export const createMoveTreeNode = (context: MoveTreeNodeContext) =>
           });
           return true;
         } catch (error) {
+          if (context.throwErrors) throw error;
           if (context.onError) context.onError(error);
           else reportUserActionError(context.workbench, "Move", error);
           return false;

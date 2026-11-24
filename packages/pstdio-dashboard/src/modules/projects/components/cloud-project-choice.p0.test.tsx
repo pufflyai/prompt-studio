@@ -162,15 +162,22 @@ test("an old account's pending download cannot open the new account's same-ID co
   }
 });
 
-test("a download opens its completed local copy after its response is lost", async () => {
+test.each([
+  false,
+  true,
+])("two views recover the same copy after a lost download response (folder error %p)", async (folderError) => {
   const id = "recovered-project";
   const account = { managerOrigin: "https://accounts.example.test", accountId: "account-a" };
   let presence = "cloud-only";
+  let downloadError: string | undefined;
+  let downloads = 0;
+  const started = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
   const opened: unknown[] = [];
   let closed = 0;
   const server = Bun.serve({
     port: 0,
-    fetch(request) {
+    async fetch(request) {
       const url = new URL(request.url);
       if (url.pathname === "/v1/account")
         return Response.json({
@@ -181,7 +188,15 @@ test("a download opens its completed local copy after its response is lost", asy
           signInRequired: false,
         });
       if (url.pathname.endsWith("/download")) {
+        downloads++;
+        started.resolve();
+        await release.promise;
         presence = "downloading";
+        if (downloads > 1) {
+          downloadError = undefined;
+          return Response.json({ projectId: id, presence });
+        }
+        if (folderError) downloadError = "Could not prepare the project folder";
         return Response.json({ error: "Download response lost" }, { status: 503 });
       }
       if (url.pathname === "/v1/account/projects")
@@ -195,6 +210,7 @@ test("a download opens its completed local copy after its response is lost", asy
               name: "Recovered notes",
               online: true,
               presence,
+              downloadError,
               actions: { download: presence !== "downloaded", removeLocal: false, deleteCloud: false },
             },
           ],
@@ -228,11 +244,15 @@ test("a download opens its completed local copy after its response is lost", asy
     },
   } as unknown as WorkbenchPanelRenderInput;
   let choice: ReturnType<typeof useCloudProjectChoice>;
-  const Probe = () => {
-    choice = useCloudProjectChoice(input);
+  let peer: ReturnType<typeof useCloudProjectChoice>;
+  const Probe = ({ other }: { other?: boolean }) => {
+    const state = useCloudProjectChoice(input);
+    if (other) peer = state;
+    else choice = state;
     return null;
   };
   let renderer: ReactTestRenderer | undefined;
+  let peerRenderer: ReactTestRenderer | undefined;
   try {
     await getDashboardAccountStatusQuery(owner).read();
     await act(async () => {
@@ -246,8 +266,34 @@ test("a download opens its completed local copy after its response is lost", asy
     expect(opened).toEqual([]);
     await act(async () => {
       choice.requestDownload();
-      await until(() => Boolean(choice.download.error));
+      await started.promise;
     });
+    await act(async () => {
+      peerRenderer = create(
+        <QueryClientProvider client={client}>
+          <Probe other />
+        </QueryClientProvider>,
+      );
+    });
+    expect(peer!.showProgress).toBe(true);
+    expect(peer!.canDownload).toBe(false);
+    await act(async () => {
+      peer!.requestDownload();
+      release.resolve();
+      await until(() => Boolean(choice.failure) && Boolean(peer!.failure));
+    });
+    if (folderError) {
+      await act(async () => until(() => choice.canDownload && peer!.canDownload));
+      expect(downloads).toBe(1);
+      await act(async () => {
+        choice.requestDownload();
+        await until(() => downloads === 2);
+      });
+    } else {
+      expect(peer!.canDownload).toBe(false);
+      await act(async () => peer!.requestDownload());
+    }
+    await act(async () => peerRenderer?.unmount());
     await act(async () => {
       presence = "downloaded";
       owner.getWriter("projects")!.upsert({
@@ -267,8 +313,13 @@ test("a download opens its completed local copy after its response is lost", asy
       },
     ]);
     expect(closed).toBe(1);
+    expect(downloads).toBe(folderError ? 2 : 1);
   } finally {
-    await act(async () => renderer?.unmount());
+    release.resolve();
+    await act(async () => {
+      renderer?.unmount();
+      peerRenderer?.unmount();
+    });
     client.clear();
     await owner.dispose();
     runtime.__PSTDIO_CONFIG__ = previous;

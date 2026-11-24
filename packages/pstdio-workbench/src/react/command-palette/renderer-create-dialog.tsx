@@ -1,22 +1,42 @@
 import { CloseButton } from "@chakra-ui/react";
+import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import { ScopedDialog as Dialog, LoadingState } from "@pstdio/ui";
 import { KanbanRendererCreateDialog } from "@pstdio/ui/kanban-renderer";
 import { useEffect, useState } from "react";
-import type { RegisteredKanbanRendererContribution, ResourceRef } from "../../core";
+import type { RegisteredKanbanRendererContribution, ResourceRef, WorkbenchCore } from "../../core";
 import { bindKanbanRendererContribution } from "../../core/registries/renderers/kanban-renderer-binding";
 import type { ReactRegisteredKanbanRendererContribution } from "../renderers/kanban/kanban-presentation";
 import { useKanbanAttributes } from "../renderers/kanban/use-kanban-attributes";
 import { RendererReadNotice } from "../renderers/renderer-read-notice";
+import { useOperationAuthority } from "../shared/use-operation-authority";
 
 interface RendererCreateDialogProps {
   contribution: RegisteredKanbanRendererContribution;
+  workbench: WorkbenchCore;
   /** The resource the create command was invoked for; its board reads and writes that resource. */
   resource?: ResourceRef;
+  placement?: PlacementIdentity;
   onClose(): void;
 }
 
 export const RendererCreateDialog = (props: RendererCreateDialogProps) => {
   const { onClose } = props;
+  const { workbench } = props;
+  const draftAuthority = useOperationAuthority(workbench);
+  const [canOpenCreatedRow] = useState(() => {
+    const { location, activePageId, projectId } = workbench.pages.store.getState();
+    const placement = props.placement ?? workbench.pages.getContent()?.placementIdentity;
+    const viewer = workbench.viewers.captureContext(placement);
+    return () => {
+      const current = workbench.pages.store.getState();
+      return (
+        current.location === location &&
+        current.activePageId === activePageId &&
+        current.projectId === projectId &&
+        viewer.isViewerCurrent?.() !== false
+      );
+    };
+  });
   const contribution = bindKanbanRendererContribution(props.contribution as ReactRegisteredKanbanRendererContribution, {
     instanceId: "create-dialog",
     resource: props.resource,
@@ -59,10 +79,11 @@ export const RendererCreateDialog = (props: RendererCreateDialogProps) => {
         columnId=""
         attributes={attributes}
         config={contribution.createRow!}
-        draftKey={JSON.stringify([contribution.id, contribution.storageScope, "create"])}
+        key={draftAuthority}
+        draftKey={JSON.stringify([contribution.id, contribution.storageScope, draftAuthority, "create"])}
         filter={contribution.defaultFilter}
         onClose={onClose}
-        onSubmit={contribution.onCreateRow!}
+        onSubmit={(submission) => contribution.onCreateRow!({ ...submission, canOpenCreatedRow })}
       />
     );
   return (

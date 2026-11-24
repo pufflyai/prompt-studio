@@ -2,16 +2,21 @@ import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
 import { resourceLinkTarget } from "pstdio-api-contracts/extension-kernel";
-import { getApiClient } from "@/lib/api";
+import { getRuntimeApiClient } from "@/lib/api";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
+import { getResourceLinkAuthority } from "./resource-link-authority";
 
 export const resolveLinkedResources = async (
   ctx: WorkbenchModuleContext,
   projectId: string,
   resources: ResourceRef[],
   signal?: AbortSignal,
+  owner = getRuntimeCollections(),
+  authority = getResourceLinkAuthority(owner)(projectId),
 ) => {
+  authority.throwIfAborted();
   signal?.throwIfAborted();
   const refs = [
     ...new Map(
@@ -21,7 +26,8 @@ export const resolveLinkedResources = async (
       }),
     ).values(),
   ];
-  const resolved = await getApiClient().projects.resolveResourceOpenings(projectId, refs, { signal });
+  const resolved = await getRuntimeApiClient(owner).projects.resolveResourceOpenings(projectId, refs, { signal });
+  authority.throwIfAborted();
   signal?.throwIfAborted();
   const order = new Map(refs.map((ref, index) => [resourceKey(ref), index]));
   return resolved
@@ -31,7 +37,13 @@ export const resolveLinkedResources = async (
       target: target ? toWorkbenchNavigationTarget(target) : undefined,
       open: target
         ? async () => {
-            if (signal?.aborted || getDashboardSelectedProjectId(ctx) !== projectId) return;
+            if (
+              authority.aborted ||
+              owner.isDisposed() ||
+              getRuntimeCollections() !== owner ||
+              getDashboardSelectedProjectId(ctx) !== projectId
+            )
+              return;
             await ctx.navigation.openTarget(toWorkbenchNavigationTarget(resourceLinkTarget(target)));
           }
         : undefined,

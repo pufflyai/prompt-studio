@@ -1,11 +1,12 @@
 import type { Disposable, TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { createCollectionSelection } from "@/lib/sync/collection-selection";
-import { getRuntimeCollections, subscribeCollections } from "@/lib/sync/collections";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { notificationsEnabled } from "@/shared/settings/synced-settings";
+import { getNotificationStatusOperations } from "@/shared/notifications/notification-status-operations";
+import { getInstallationSettings, notificationsEnabled } from "@/shared/settings/synced-settings";
 import {
   dashboardNavigationSections,
   registerDashboardNavigationContribution,
@@ -106,8 +107,21 @@ export const createNotificationsModule = () =>
         }
         refreshSidenavs(ctx);
       };
-      const unsubscribe = subscribeCollections((change) => {
-        if (!change || change.table === "settings") refresh();
+      let previousEnabled = notificationsEnabled();
+      const unsubscribe = getInstallationSettings().subscribe(() => {
+        const enabled = notificationsEnabled();
+        if (enabled === previousEnabled) return;
+        previousEnabled = enabled;
+        refresh();
+      });
+      const statuses = getNotificationStatusOperations();
+      const statusPatches = () => statuses.readPatches(getDashboardSelectedProjectId(ctx));
+      let lastPatches = statusPatches();
+      const stopStatusPreviews = statuses.subscribe(() => {
+        const patches = statusPatches();
+        if (patches === lastPatches) return;
+        lastPatches = patches;
+        if (registrations.length) refreshSidenavs(ctx);
       });
       let stopNotifications = () => {};
       const observeNotifications = () => {
@@ -128,6 +142,7 @@ export const createNotificationsModule = () =>
       return [
         { dispose: unsubscribe },
         { dispose: unsubscribeProject },
+        { dispose: stopStatusPreviews },
         { dispose: () => stopNotifications() },
         { dispose: disable },
       ];

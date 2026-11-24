@@ -4,10 +4,13 @@ import { createWorkbench } from "@pstdio/workbench";
 import type { CommandParamEntry, CommandParamValue } from "@pstdio/workbench/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
-import type { ProjectTemplateAsset } from "@/modules/settings/data/template-provider-api";
+import {
+  type ProjectTemplateAsset,
+  projectTemplateAssetsQueryKey,
+} from "@/modules/settings/data/template-provider-api";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { ResourceParamField } from "./resource-param-field";
-import { projectTemplateAssetsQueryKey, TemplateParamField } from "./template-param-field";
+import { TemplateParamField } from "./template-param-field";
 
 const projectId = "project-1";
 const workbench = createWorkbench();

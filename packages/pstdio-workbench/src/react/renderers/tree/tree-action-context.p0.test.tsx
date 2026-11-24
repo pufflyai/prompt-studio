@@ -7,11 +7,13 @@ test("keeps the clicked resource when command parameters are submitted after the
   const clicked: ResourceRef = { type: "ticket", id: "clicked" };
   let requested: TreeActionParamsRequest | undefined;
   let renamed: { resource?: ResourceRef; args: unknown } | undefined;
+  let admitted = false;
   workbench.commands.registerCommand(
     { id: "rename", label: "Rename", params: { name: { type: "text", label: "Name" } } },
     {
       execute: (args, context) => {
         renamed = { resource: context?.resource, args };
+        context?.onAdmitted?.();
       },
     },
   );
@@ -28,6 +30,9 @@ test("keeps the clicked resource when command parameters are submitted after the
   expect(requested?.request.context?.resource).toEqual(clicked);
   workbench.context.set("workbench.resource.kind", "workspace");
   workbench.context.set("workbench.resource.id", "other");
-  await requested?.run({ name: "Updated" });
+  await requested?.run({ name: "Updated" }, () => {
+    admitted = true;
+  });
+  expect(admitted).toBe(true);
   expect(renamed).toEqual({ resource: clicked, args: { name: "Updated" } });
 });

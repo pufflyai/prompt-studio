@@ -1,6 +1,7 @@
 import type { ScopedQueryClient } from "@pstdio/sdk/extensions";
 import type { WebviewEditingSessionParams, WebviewEditingSnapshot } from "pstdio-api-contracts/extension-kernel";
 import { createCommandEditingJournal } from "./command-editing-journal";
+import { createCommandEditingRecovery } from "./command-editing-recovery";
 import { createCommandEditingSources } from "./command-editing-sources";
 import {
   type CommandEditingMember,
@@ -20,6 +21,11 @@ export const createCommandEditingDocument = (input: {
 }) => {
   const members = new Set<CommandEditingMember>();
   const serialize = createEditingCommandQueue();
+  const retainsFormDraft =
+    input.owner.extensionId === "pstdio.requirement-book" &&
+    input.open.command.commandId === "pstdio.requirement-book.command.drafts.save-editing" &&
+    input.open.read.commandId === "pstdio.requirement-book.command.drafts.read-editing";
+  const recovery = createCommandEditingRecovery(input.queries, input.owner, input.open);
   let closed = false;
   let ready: Promise<void> | undefined;
   let readExecutor: EditingExecutor | undefined;
@@ -47,7 +53,9 @@ export const createCommandEditingDocument = (input: {
   };
   const journal = createCommandEditingJournal({
     command: input.open.command,
+    ...(retainsFormDraft ? { retainsFormDraft: true } : {}),
     serialize,
+    track: recovery.track,
     changed: publish,
     accepted: (result) => sources.accept(result),
   });
@@ -76,7 +84,7 @@ export const createCommandEditingDocument = (input: {
   const close = (member: CommandEditingMember) => {
     members.delete(member);
     try {
-      journal.cancel(member);
+      if (!retainsFormDraft || closed || sources.retired() || !journal.retainFormDraft(member)) journal.cancel(member);
     } finally {
       readExecutor = [...members].at(-1)?.execute;
       updateObservation();
@@ -108,6 +116,7 @@ export const createCommandEditingDocument = (input: {
       assertOpen();
       members.add(member);
       readExecutor = member.execute;
+      if (retainsFormDraft) journal.reopenFormDraft(member);
       updateObservation();
       ready ??= sources.initialize().then(() => sources.ready());
       await ready;
@@ -127,14 +136,17 @@ export const createCommandEditingDocument = (input: {
       assertOpen();
       switch (request.operation) {
         case "preview":
-          journal.preview(member, request);
+          if (retainsFormDraft && request.retainFormDraft) journal.setFormDraft(member, request);
+          else journal.preview(member, request);
           break;
         case "cancel":
           journal.cancel(member, request.sequence);
           break;
-        case "execute":
-          await journal.execute(member, request);
+        case "execute": {
+          const savedDraftRevision = await journal.execute(member, request);
+          if (savedDraftRevision && !closed) return { ...snapshot(), savedDraftRevision };
           break;
+        }
         case "save":
           await journal.flush();
           if (!closed) await sources.retry();
@@ -177,6 +189,7 @@ export const createCommandEditingDocument = (input: {
         })
         .then(() => {
           journal.clear();
+          recovery.stop();
           if (errors.length) settled.reject(new AggregateError(errors, "Command editing could not finish"));
           else settled.resolve();
         });

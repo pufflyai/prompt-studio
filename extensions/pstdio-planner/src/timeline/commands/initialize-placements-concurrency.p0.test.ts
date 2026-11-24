@@ -43,7 +43,7 @@ const readOrder = async (ctx: CommandContext, count: number) => {
   return ordered;
 };
 
-test("concurrent Timeline initialization preserves execution order across placement batches", async () => {
+test("a bounded Timeline initializer and a full initializer preserve execution order across batches", async () => {
   const { ctx, peer, ids } = await fixture(203);
   const storage = ctx.storage;
   const readers = new AsyncLocalStorage<"first" | "second">();
@@ -88,7 +88,7 @@ test("concurrent Timeline initialization preserves execution order across placem
   storage.records.commit = observedCommit;
   peer.storage.records.commit = observedCommit;
 
-  const first = readers.run("first", () => initializePlanPlacements(ctx, ["done"]));
+  const first = readers.run("first", () => initializePlanPlacements(ctx, ["done"], 50));
   await firstTail.promise;
   const second = readers.run("second", () => initializePlanPlacements(peer, ["done"]));
   // Drain the second memory-backed request while the first tail is held.

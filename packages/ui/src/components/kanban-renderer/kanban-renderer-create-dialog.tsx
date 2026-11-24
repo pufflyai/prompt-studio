@@ -6,6 +6,7 @@ import type { Param, ParamValueMap } from "@/components/param-editor/param-edito
 import { ParamEditorHorizontal } from "@/components/param-editor/param-editor-horizontal";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
+import { UnresolvedSubmission, UnresolvedSubmissionError } from "../primitives/unresolved-submission";
 import { useKanbanCreatePreference } from "./kanban-create-preference.store";
 import { KanbanCreateSubmit } from "./kanban-create-submit";
 import { CreateFieldControl } from "./kanban-renderer-create-field";
@@ -39,6 +40,31 @@ const emptyValue = (field: KanbanRendererCreateField) => {
 
 const initialFieldValues = (fields: KanbanRendererCreateField[]) =>
   Object.fromEntries(fields.map((field) => [field.id, field.defaultValue ?? emptyValue(field)]));
+
+const dropSavedFile = (values: Record<string, unknown>, file: File) =>
+  Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [
+      key,
+      Array.isArray(value) ? value.filter((entry) => entry !== file) : value,
+    ]),
+  );
+
+const splitCreateFields = (fields: KanbanRendererCreateRowConfig["fields"], values: Record<string, unknown>) => {
+  const fileFieldIds = new Set(fields.filter((field) => field.type === "files").map((field) => field.id));
+  return {
+    files: [...fileFieldIds].flatMap((id) => (Array.isArray(values[id]) ? (values[id] as File[]) : [])),
+    values: Object.fromEntries(Object.entries(values).filter(([id]) => !fileFieldIds.has(id))),
+  };
+};
+
+const downloadDraftFile = (file: File) => {
+  const url = URL.createObjectURL(file);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = file.name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
 
 const isFilled = (field: KanbanRendererCreateField, value: unknown) => {
   if (!field.required) return true;
@@ -90,9 +116,11 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
   const localKey = useId();
   const { draft, setDraft, clearDraft } = useKanbanCreateDraft(draftKey ?? localKey);
   const { openCreatedRow, setOpenCreatedRow } = useKanbanCreatePreference();
+  const unresolved = draft?.unresolved;
   const values = draft?.values ?? {};
   const attributeValues = draft?.attributeValues ?? {};
   const [submitting, setSubmitting] = useState(false);
+  const waiting = submitting || Boolean(draft?.pending);
   const [error, setError] = useState("");
   const editableAttributes = editableCreateAttributes(attributes);
 
@@ -160,40 +188,64 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
   };
 
   const discard = () => {
-    if (submitting) return;
+    if (waiting) return;
     clearDraft();
     onClose();
   };
 
   const valid = config.fields.every((field) => isFilled(field, values[field.id]));
 
+  if (!draft) return null;
+  const canSubmit = valid && !waiting && !unresolved;
+  const shouldOpen = config.labels.submitWithoutOpening ? openCreatedRow : true;
   const submit = async () => {
-    if (!valid || submitting) return;
+    if (!canSubmit) return;
     setSubmitting(true);
     setError("");
-    try {
-      const fileFieldIds = new Set(config.fields.filter((field) => field.type === "files").map((field) => field.id));
-      const files = [...fileFieldIds].flatMap((id) => (Array.isArray(values[id]) ? (values[id] as File[]) : []));
-      const declaredValues = Object.fromEntries(Object.entries(values).filter(([id]) => !fileFieldIds.has(id)));
-
-      await onSubmit({
+    let admitted = false;
+    const pending = Symbol("create row");
+    const updateSubmittedDraft = (result: (current: NonNullable<typeof draft>) => NonNullable<typeof draft> | null) =>
+      setDraft((current) =>
+        current && (current === draft || current.submission === pending) ? result(current) : current,
+      );
+    const submission = () => {
+      return {
         columnId,
         columnAttributeId,
-        values: declaredValues,
+        ...splitCreateFields(config.fields, values),
         attributeValues,
-        files,
-        openCreatedRow: config.labels.submitWithoutOpening ? openCreatedRow : true,
-      });
-      clearDraft();
-      onClose();
+        openCreatedRow: shouldOpen,
+        onAdmitted: () => {
+          admitted = true;
+          updateSubmittedDraft((current) => ({ ...current, pending: true, submission: pending }));
+          onClose();
+        },
+        onDiscard: () => updateSubmittedDraft(() => null),
+        onSettled: (attachmentError?: unknown) =>
+          updateSubmittedDraft((current) =>
+            attachmentError instanceof UnresolvedSubmissionError
+              ? { ...current, pending: false, unresolved: attachmentError }
+              : null,
+          ),
+        onAttachmentSaved: (file: File) =>
+          updateSubmittedDraft((current) => ({
+            ...current,
+            values: dropSavedFile(current.values, file),
+          })),
+      };
+    };
+    try {
+      await onSubmit(submission());
+      updateSubmittedDraft(() => null);
+      if (!admitted) onClose();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : config.labels.submitError);
+      const unresolved = caught instanceof UnresolvedSubmissionError ? caught : undefined;
+      updateSubmittedDraft((current) => ({ ...current, pending: false, unresolved }));
+      if (!unresolved && !admitted) setError(caught instanceof Error ? caught.message : config.labels.submitError);
     } finally {
-      setSubmitting(false);
+      if (!admitted) setSubmitting(false);
     }
   };
-
-  if (!draft) return null;
 
   return (
     <Dialog.Root
@@ -206,13 +258,11 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
     >
       <Dialog.Backdrop />
       <Dialog.Positioner>
-        <Dialog.Content
-          onKeyDownCapture={(event) => handleDialogAcceptShortcut(event, () => void submit(), valid && !submitting)}
-        >
+        <Dialog.Content onKeyDownCapture={(event) => handleDialogAcceptShortcut(event, () => void submit(), canSubmit)}>
           <Dialog.Header>
             <Dialog.Title>{config.title}</Dialog.Title>
             <Dialog.CloseTrigger asChild>
-              <CloseButton size="sm" disabled={submitting} onClick={discard} />
+              <CloseButton size="sm" disabled={waiting} onClick={unresolved ? close : discard} />
             </Dialog.CloseTrigger>
           </Dialog.Header>
           <ScrollArea flex="1" minH="0" height="auto">
@@ -224,7 +274,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
                     field={field}
                     removeLabel={config.labels.removeFile}
                     value={values[field.id]}
-                    disabled={submitting}
+                    disabled={waiting || Boolean(unresolved)}
                     onChange={(value) =>
                       setDraft((current) => current && { ...current, values: { ...current.values, [field.id]: value } })
                     }
@@ -239,7 +289,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
                         attributeToParam(attribute, attribute.id === columnAttributeId),
                       )}
                       defaultValues={attributeValues as ParamValueMap}
-                      readOnly={submitting}
+                      readOnly={waiting || Boolean(unresolved)}
                       onChange={(attributeId, value) =>
                         setDraft(
                           (current) =>
@@ -251,6 +301,21 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
                       }
                     />
                   </Stack>
+                ) : null}
+                {unresolved ? (
+                  <>
+                    <UnresolvedSubmission submission={unresolved} onClose={close} onDiscard={discard} />
+                    {splitCreateFields(config.fields, values).files.map((file, index) => (
+                      <Button
+                        key={`${file.name}.${index}`}
+                        size="xs"
+                        variant="outline"
+                        onClick={() => downloadDraftFile(file)}
+                      >
+                        Download {file.name}
+                      </Button>
+                    ))}
+                  </>
                 ) : null}
                 {error ? (
                   <Text textStyle="paragraph/S/regular" color="fg.error">
@@ -271,8 +336,8 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
                 openCreatedRow={openCreatedRow}
                 onChoose={setOpenCreatedRow}
                 onSubmit={() => void submit()}
-                disabled={!valid}
-                submitting={submitting}
+                disabled={!valid || Boolean(unresolved)}
+                submitting={waiting}
               />
             </HStack>
           </Dialog.Footer>

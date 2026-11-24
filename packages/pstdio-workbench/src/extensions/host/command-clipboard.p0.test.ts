@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 import { createWorkbench } from "../../core";
+import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
+import { getWorkbenchQueries } from "../../core/workbench-queries";
 import { executeWorkbenchExtensionCommand } from "./workbench-extension-command";
 
 test("extension commands copy opted-in text results and leave ordinary results alone", async () => {
@@ -102,5 +104,65 @@ test("extension commands copy opted-in text results and leave ordinary results a
     if (previousItem) Object.defineProperty(globalThis, "ClipboardItem", previousItem);
     else Reflect.deleteProperty(globalThis, "ClipboardItem");
     workbench.dispose();
+  }
+});
+
+test("a clipboard failure cannot release an in-flight mutation", async () => {
+  const workbench = createWorkbench();
+  const previous = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  const previousItem = Object.getOwnPropertyDescriptor(globalThis, "ClipboardItem");
+  Object.defineProperty(globalThis, "ClipboardItem", { configurable: true, value: class {} });
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: {
+      write() {
+        throw new Error("Clipboard permission denied");
+      },
+    },
+  });
+  const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
+  const pending = Promise.withResolvers<string>();
+  let writes = 0;
+  const context = {
+    projectId: "project",
+    workbench,
+    operations,
+    metadata: {
+      commands: [
+        {
+          id: "publish",
+          extensionId: "acme.tool",
+          title: "Publish",
+          mutating: true,
+          copyResultToClipboard: true,
+        },
+      ],
+    },
+    executeCommand() {
+      writes += 1;
+      return pending.promise;
+    },
+  };
+  try {
+    const first = executeWorkbenchExtensionCommand(context, "publish", { foreground: true });
+    void first.catch(() => {});
+    await Bun.sleep(0);
+    expect(operations.getSnapshot().pending[0]?.status).toBe("writing");
+    await expect(executeWorkbenchExtensionCommand(context, "publish", { foreground: true })).rejects.toThrow(
+      "still pending",
+    );
+    pending.resolve("Confirmed reference");
+    expect(await first).toBe("Confirmed reference");
+    expect(writes).toBe(1);
+    expect(workbench.notifications.listNotifications()).toMatchObject([
+      { level: "error", message: "Clipboard permission denied" },
+    ]);
+  } finally {
+    pending.resolve("Confirmed reference");
+    if (previous) Object.defineProperty(navigator, "clipboard", previous);
+    else Reflect.deleteProperty(navigator, "clipboard");
+    if (previousItem) Object.defineProperty(globalThis, "ClipboardItem", previousItem);
+    else Reflect.deleteProperty(globalThis, "ClipboardItem");
+    await workbench.dispose();
   }
 });

@@ -1,5 +1,6 @@
 import type { AccountStatus } from "@pstdio/sdk/client";
 import { accountEvents, createScopedQueryClient } from "@pstdio/sdk/extensions";
+import { getWorkbenchOperations } from "@pstdio/workbench";
 import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import {
   publishExtensionEvent,
@@ -53,19 +54,46 @@ const runtimeQueries = createRuntimeState(
     const stopCatalog = subscribeExtensionCatalogChanges(owner, (event) => publishExtensionEvent(event, owner));
     // One event-driven identity guard remains active for this runtime; there is no timer.
     let applied: AccountStatus | undefined;
+    let knownCloudProjects = new Set<string>();
+    const updateProjectRecovery = () => {
+      const projects = owner.getCollection("projects");
+      const localProjectsLoaded = owner.isInitialCollectionsSyncComplete();
+      getWorkbenchOperations(queries).updateRetiredProjectAvailability((projectId, source) => {
+        const row = projects.get(projectId);
+        if (row && !row.deleted_at) return true;
+        if (source === "cloud-project-picker") {
+          if (knownCloudProjects.has(projectId)) return true;
+          if (!applied?.cloudProjectsLoaded) return undefined;
+        }
+        return localProjectsLoaded ? false : undefined;
+      });
+    };
     const applyAuthority = () => {
       const status = account.getSnapshot().data;
       if (!status || status === applied) return;
-      queries.setAuthority(dashboardQueryAuthority(status));
-      for (const projectId of applied?.cloudProjects ?? [])
-        if (!status.cloudProjects.includes(projectId)) queries.clearScope({ projectId });
+      const previous = queries.getScope();
+      const next = dashboardQueryAuthority(status);
+      queries.setAuthority(next);
+      if (previous.accountId !== next.accountId || previous.accountOrigin !== next.accountOrigin) {
+        knownCloudProjects.clear();
+      }
+      if (status.cloudProjectsLoaded) {
+        const accessible = new Set(status.cloudProjects);
+        for (const projectId of knownCloudProjects)
+          if (!accessible.has(projectId)) queries.clearScope({ ...next, projectId });
+        knownCloudProjects = accessible;
+      }
       applied = status;
+      updateProjectRecovery();
     };
     const stopAccount = account.subscribe(applyAuthority);
     applyAuthority();
     const stopRows = owner.subscribeCollections((change) => {
-      if (change?.table !== "projects") return;
-      for (const row of change.changes) if (!row.value) queries.clearScope({ projectId: row.key });
+      if (change && change.table !== "projects") return;
+      for (const row of change?.changes ?? [])
+        if (!row.value || (!row.previousValue?.deleted_at && row.value.deleted_at))
+          queries.clearScope({ projectId: row.key });
+      updateProjectRecovery();
     });
     return {
       queries,

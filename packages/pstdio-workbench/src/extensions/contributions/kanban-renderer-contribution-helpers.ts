@@ -3,6 +3,7 @@ import type {
   KanbanRendererBoardColumnConfig as WireBoardColumnConfig,
   NavigationTarget as WireNavigationTarget,
 } from "@pstdio/sdk/extensions";
+import { deriveMarkdownTitle } from "@pstdio/sdk/extensions";
 import type { WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
 import type { KanbanRendererCreateField, KanbanRendererCreateFieldType, ResourceRef } from "../../core";
 import { createWorkbenchStore } from "../../core/shared/store/workbench-store";
@@ -216,6 +217,21 @@ const createKanbanRendererSlot = (
     projectId: context.projectId,
     context: { kanbanRendererId: record.id },
   });
+export const prepareKanbanCreationFeedback = (
+  submission: import("../../core/registries/renderers/kanban-renderer-registry").KanbanRendererCreateRequest,
+): import("../host/workbench-create-operation").CreateOperationFeedback => {
+  const { originatingRead, columnId, values } = submission;
+  const { title, content } = values;
+  const label =
+    typeof title === "string" ? title : deriveMarkdownTitle(typeof content === "string" ? content : "", "New item");
+  return {
+    onAdmitted: submission.onAdmitted,
+    onDiscard: submission.onDiscard,
+    originatingRead,
+    board: originatingRead && columnId ? { viewKey: originatingRead.key, columnId, title: label } : undefined,
+  };
+};
+
 export const executeKanbanRendererCommand = (
   context: WorkbenchExtensionCommandContext,
   record: WorkbenchExtensionKanbanRendererRecord,
@@ -224,6 +240,7 @@ export const executeKanbanRendererCommand = (
   resource?: ResourceRef,
   signal?: AbortSignal,
   pageParams?: import("@pstdio/sdk/extensions").PageParams,
+  createFeedback?: import("../host/workbench-create-operation").CreateOperationFeedback,
 ) => {
   const commandResource = resource ?? context.workbench.getPrimaryResource();
   return executeWorkbenchExtensionCommand(context, commandId, {
@@ -239,6 +256,7 @@ export const executeKanbanRendererCommand = (
     },
     resource: commandResource,
     signal,
+    createFeedback,
     slot: createKanbanRendererSlot(context, record),
     metadata: { kanbanRendererId: record.id },
   });

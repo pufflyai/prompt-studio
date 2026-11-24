@@ -18,8 +18,8 @@ export const createWorkbenchResourceLinksModule = (options: WorkbenchResourceLin
     id: "workbench.resource-links",
     activate(ctx) {
       const previews = registerRelatedResourcePreviews(ctx, options);
-      const currentResource = () => {
-        const resource = ctx.getActiveResource() ?? ctx.getPrimaryResource();
+      const currentResource = (requested?: ResourceRef) => {
+        const resource = requested ?? ctx.getActiveResource() ?? ctx.getPrimaryResource();
         return resource && options.canonicalize(resource);
       };
       ctx.views.registerView({
@@ -48,12 +48,16 @@ export const createWorkbenchResourceLinksModule = (options: WorkbenchResourceLin
       ctx.commands.registerCommand(
         { id: resourceLinksCommandId, label: "Related resources", icon: "link", category: "Resources" },
         {
-          isEnabled: () => Boolean(currentResource()),
+          isEnabled: (args) => Boolean(currentResource((args as { resource?: ResourceRef } | undefined)?.resource)),
           isVisible: () => Boolean(currentResource()),
           execute: (args, context) => {
-            const fromActive = (args as { source?: string } | undefined)?.source === "active-resource";
+            const input = args as { source?: string; resource?: ResourceRef } | undefined;
+            const fromActive = input?.source === "active-resource";
             const current =
-              (fromActive ? undefined : context?.resource) ?? ctx.getActiveResource() ?? ctx.getPrimaryResource();
+              input?.resource ??
+              (fromActive ? undefined : context?.resource) ??
+              ctx.getActiveResource() ??
+              ctx.getPrimaryResource();
             const resource = current && options.canonicalize(current);
             if (resource) ctx.overlays.openOverlay(viewId, { resource, title: "Related resources" });
           },

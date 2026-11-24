@@ -1,10 +1,11 @@
 import { expect, test } from "bun:test";
 import type { ExtensionConnectionsApi } from "@pstdio/sdk/extensions";
-import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
+import { makeCommandContext } from "@pstdio/sdk/testing";
 import { connectionApi } from "./connection";
-import { activeRun, claimEnvironment } from "./environments";
+import { activeRun, claimEnvironment, releaseEnvironment } from "./environments";
 import { localProcess } from "./process-fixture";
-import { awaitRun, checkRun, type RunDeps, type RunRecord } from "./runs";
+import { createRunStorage as createMemoryStorage } from "./run-storage-fixture";
+import { awaitRun, cancelRun, checkRun, type RunDeps, type RunRecord } from "./runs";
 
 function fixture(request: ExtensionConnectionsApi["request"]) {
   const store = createMemoryStorage();
@@ -50,6 +51,168 @@ const receipt = {
   outcome: { finalResponse: 'REMOTE_TEST_RESULT {"exitCode":0,"durationMs":10,"timedOut":false}' },
 };
 
+test("a crashed runner cannot keep an unfinished run and its workspace open past the deadline", async () => {
+  const calls: string[] = [];
+  const { deps, record } = fixture(
+    async <TBody>(_id: string, input: Parameters<ExtensionConnectionsApi["request"]>[1]) => {
+      calls.push(`${input.method} ${input.path}`);
+      return { status: 200, headers: {}, body: { finalizedAt: null, acceptance: { execution: {} } } as TBody };
+    },
+  );
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  await claimEnvironment(deps.store, "env", "run");
+  const summary = await checkRun(deps, record);
+  expect(summary).toMatchObject({ status: "timed_out", exitCode: null });
+  expect(summary?.error).toContain("final receipt");
+  expect(calls).toEqual(["GET /v1/workspaces/env/requests/request?conversationId=conversation"]);
+  expect(await activeRun(deps.store, "env")).toBe("run");
+  expect(await deps.store.collection("environment-cleanups").get("run:env")).toMatchObject({ stop: true });
+  expect(await deps.store.get("run:run")).toMatchObject({ summary });
+});
+
+test("a receipt finalized before collection keeps its real result even after the deadline", async () => {
+  const { deps, record } = fixture(async <TBody>() => ({ status: 200, headers: {}, body: receipt as TBody }));
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  expect(await checkRun(deps, record)).toMatchObject({ status: "passed", exitCode: 0 });
+});
+
+test("an unfinished run within its deadline remains active", async () => {
+  const { deps, record } = fixture(async <TBody>() => ({
+    status: 200,
+    headers: {},
+    body: { finalizedAt: null, acceptance: { execution: {} } } as TBody,
+  }));
+  await claimEnvironment(deps.store, "env", "run");
+  expect(await checkRun(deps, record)).toBeNull();
+  expect(await activeRun(deps.store, "env")).toBe("run");
+});
+
+test("a controller outage cannot make receipt retries outlive the run deadline", async () => {
+  const calls: string[] = [];
+  const { deps, record } = fixture(
+    async <TBody>(_id: string, input: Parameters<ExtensionConnectionsApi["request"]>[1]) => {
+      calls.push(`${input.method} ${input.path}`);
+      if (input.method === "GET") throw new Error("Runner unreachable");
+      return { status: 200, headers: {}, body: {} as TBody };
+    },
+  );
+  record.startedAt = new Date(Date.now() - 1_859_900).toISOString();
+  await claimEnvironment(deps.store, "env", "run");
+  expect(await awaitRun(deps, record)).toMatchObject({ status: "timed_out", exitCode: null });
+  expect(calls).toEqual([
+    "GET /v1/workspaces/env/requests/request?conversationId=conversation",
+    "GET /v1/workspaces/env/requests/request?conversationId=conversation",
+  ]);
+});
+
+test("an overdue collector cannot stop a workspace now owned by another run", async () => {
+  const calls: string[] = [];
+  const { deps, record } = fixture(
+    async <TBody>(_id: string, input: Parameters<ExtensionConnectionsApi["request"]>[1]) => {
+      calls.push(input.method);
+      return { status: 200, headers: {}, body: { finalizedAt: null, acceptance: { execution: {} } } as TBody };
+    },
+  );
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  await claimEnvironment(deps.store, "env", "new-owner");
+  expect(await checkRun(deps, record)).toMatchObject({ status: "timed_out" });
+  expect(calls).toEqual(["GET"]);
+  expect(await activeRun(deps.store, "env")).toBe("new-owner");
+});
+
+test("source preparation does not consume the command timeout", async () => {
+  const { deps, record } = fixture(async <TBody>() => ({
+    status: 200,
+    headers: {},
+    body: { finalizedAt: null, acceptance: { execution: {} } } as TBody,
+  }));
+  record.startedAt = new Date(Date.now() - 120_000).toISOString();
+  expect(await checkRun(deps, record)).toBeNull();
+});
+
+test("a kept workspace remains claimed until its overdue request actually stops", async () => {
+  const calls: string[] = [];
+  const { deps, record } = fixture(
+    async <TBody>(_id: string, input: Parameters<ExtensionConnectionsApi["request"]>[1]) => {
+      calls.push(`${input.method} ${input.path}`);
+      return {
+        status: 200,
+        headers: {},
+        body: { finalizedAt: null, acceptance: { execution: { requestId: "request" } } } as TBody,
+      };
+    },
+  );
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  record.stopAfterRun = false;
+  await claimEnvironment(deps.store, "env", "run");
+  expect(await checkRun(deps, record)).toBeNull();
+  expect(calls).toEqual([
+    "GET /v1/workspaces/env/requests/request?conversationId=conversation",
+    "POST /v1/workspaces/env/executions/request/cancel",
+  ]);
+  expect(await activeRun(deps.store, "env")).toBe("run");
+  expect(await claimEnvironment(deps.store, "env", "next-run")).toBe(false);
+  deps.api = async () => ({ ...receipt, outcome: { status: "canceled" } }) as never;
+  expect(await checkRun(deps, record)).toMatchObject({ status: "canceled" });
+  expect(await activeRun(deps.store, "env")).toBeNull();
+});
+
+test("an unavailable overdue request never frees a kept workspace for reuse", async () => {
+  const { deps, record } = fixture(async () => {
+    throw new Error("Controller unavailable");
+  });
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  record.stopAfterRun = false;
+  await claimEnvironment(deps.store, "env", "run");
+  expect(await checkRun(deps, record)).toBeNull();
+  expect(await activeRun(deps.store, "env")).toBe("run");
+  expect(await deps.store.get("run:run")).toBeUndefined();
+});
+
+test("overdue collection respects a previously accepted manual cancellation", async () => {
+  const calls: string[] = [];
+  const { deps, record } = fixture(
+    async <TBody>(_id: string, input: Parameters<ExtensionConnectionsApi["request"]>[1]) => {
+      calls.push(input.method);
+      return {
+        status: 200,
+        headers: {},
+        body: { finalizedAt: null, cancel: { cancelId: "manual-cancel" }, acceptance: { execution: {} } } as TBody,
+      };
+    },
+  );
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  record.stopAfterRun = false;
+  await claimEnvironment(deps.store, "env", "run");
+  expect(await checkRun(deps, record)).toBeNull();
+  expect(await cancelRun(deps, record)).toBe(true);
+  expect(calls).toEqual(["GET", "GET"]);
+  expect(await activeRun(deps.store, "env")).toBe("run");
+});
+
+test("a lost cancel reply keeps the workspace claimed and retries the same cancel identity", async () => {
+  const cancellations: unknown[] = [];
+  const { deps, record } = fixture(
+    async <TBody>(_id: string, input: Parameters<ExtensionConnectionsApi["request"]>[1]) => {
+      if (input.method === "POST") {
+        cancellations.push(input.body);
+        throw new Error("Cancel reply lost");
+      }
+      return { status: 200, headers: {}, body: { finalizedAt: null, acceptance: { execution: {} } } as TBody };
+    },
+  );
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  record.stopAfterRun = false;
+  await claimEnvironment(deps.store, "env", "run");
+  expect(await checkRun(deps, record)).toBeNull();
+  expect(await checkRun(deps, record)).toBeNull();
+  expect(cancellations).toEqual([
+    { execution: {}, cancelId: "run", scope: "operation" },
+    { execution: {}, cancelId: "run", scope: "operation" },
+  ]);
+  expect(await activeRun(deps.store, "env")).toBe("run");
+});
+
 test.each([
   "network",
   "server",
@@ -68,7 +231,7 @@ test.each([
       return { status: 200, headers: {}, body: receipt as TBody };
     },
   );
-  await claimEnvironment(deps.store, record.environmentId, record.runId, 60);
+  await claimEnvironment(deps.store, record.environmentId, record.runId);
   const summary = await awaitRun(deps, record);
   expect(summary).toMatchObject({ status: "passed", logPath: "run.log", tail: "finished" });
   expect(reads).toBe(2);
@@ -140,7 +303,7 @@ test.each([401, 403])("collection surfaces structured host HTTP %i errors", asyn
   expect(surfaced).toBe(failure);
 });
 
-test("recovered collection preserves a newer owner after the original lease expires", async () => {
+test("recovered collection preserves a newer owner after an explicit handoff", async () => {
   const entered = Promise.withResolvers<void>();
   let reads = 0;
   let stops = 0;
@@ -154,10 +317,11 @@ test("recovered collection preserves a newer owner after the original lease expi
       return { status: 200, headers: {}, body: receipt as TBody };
     },
   );
-  await claimEnvironment(deps.store, "env", "run", -1);
+  await claimEnvironment(deps.store, "env", "run");
   const waiting = awaitRun(deps, record);
   await entered.promise;
-  expect(await claimEnvironment(deps.store, "env", "new-owner", 60)).toBe(true);
+  await releaseEnvironment(deps.store, "env", "run");
+  expect(await claimEnvironment(deps.store, "env", "new-owner")).toBe(true);
   const summary = await waiting;
   expect(summary.status).toBe("passed");
   expect(stops).toBe(0);
@@ -177,7 +341,7 @@ test.each(["expired", "missing"])("terminal cleanup requires a matching claim (%
       return { status: 200, headers: {}, body: receipt as TBody };
     },
   );
-  if (claim === "expired") await claimEnvironment(deps.store, "env", "run", -1);
+  if (claim === "expired") await claimEnvironment(deps.store, "env", "run");
   expect((await awaitRun(deps, record)).status).toBe("passed");
   expect(stops).toBe(claim === "expired" ? 1 : 0);
   expect<string | null>(ownerAtStop).toBe(claim === "expired" ? "run" : null);
@@ -196,7 +360,7 @@ test.each(["network", "server"])("terminal collection recovers a transient stop 
       return { status: 200, headers: {}, body: receipt as TBody };
     },
   );
-  await claimEnvironment(deps.store, "env", "run", 60);
+  await claimEnvironment(deps.store, "env", "run");
   const summary = await awaitRun(deps, record);
   expect(summary).toMatchObject({ status: "passed", logPath: "run.log" });
   expect(reads).toBe(1);
@@ -211,20 +375,195 @@ test("a shutdown retry rechecks ownership before touching a newly claimed enviro
     async <TBody>(_id: string, input: Parameters<ExtensionConnectionsApi["request"]>[1]) => {
       if (input.method === "POST") {
         stops++;
-        const claims = deps.store.collection<{ runId: string; until: number }>("environment-claims");
-        const current = await claims.read("env");
-        if (!current) throw new Error("Missing fixture claim");
-        await claims.updateIfUnchanged("env", current.revision, { runId: "run", until: Date.now() - 1 });
-        expect(await claimEnvironment(deps.store, "env", "new-owner", 60)).toBe(true);
+        await releaseEnvironment(deps.store, "env", "run");
+        expect(await claimEnvironment(deps.store, "env", "new-owner")).toBe(true);
         return { status: 503, headers: {}, body: { error: { message: "Controller unavailable" } } as TBody };
       }
       return { status: 200, headers: {}, body: receipt as TBody };
     },
   );
-  await claimEnvironment(deps.store, "env", "run", 60);
+  await claimEnvironment(deps.store, "env", "run");
   const summary = await awaitRun(deps, record);
   expect(summary.status).toBe("passed");
   expect(stops).toBe(1);
   expect(await activeRun(deps.store, "env")).toBe("new-owner");
   expect(await deps.store.get("run:run")).toMatchObject({ summary });
+});
+
+test.each(["stop", "log"])("an overdue result is saved independently of an unavailable %s service", async (service) => {
+  const { deps, record } = fixture(
+    async <TBody>(_id: string, input: Parameters<ExtensionConnectionsApi["request"]>[1]) => {
+      if (input.method === "POST" && service === "stop") return { status: 503, headers: {}, body: {} as TBody };
+      return { status: 200, headers: {}, body: { finalizedAt: null, acceptance: { execution: {} } } as TBody };
+    },
+  );
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  deps.storage.download = async (_object, options) => {
+    if (service === "log") {
+      await new Promise<void>((_, reject) => {
+        options?.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true });
+      });
+    }
+    return null;
+  };
+  await claimEnvironment(deps.store, "env", "run");
+  expect(await checkRun(deps, record, AbortSignal.timeout(300), true)).toMatchObject({ status: "timed_out" });
+  expect(await deps.store.get("run:run")).toMatchObject({ summary: { status: "timed_out" } });
+  expect(await activeRun(deps.store, "env")).toBe("run");
+  expect(await deps.store.collection("environment-cleanups").get("run:env")).toMatchObject({
+    runId: "run",
+    environmentId: "env",
+    stop: true,
+  });
+});
+
+test.each([
+  "stop",
+  "log",
+])("a finalized timeout is saved independently of an unavailable %s service", async (service) => {
+  const { deps, record } = fixture(
+    async <TBody>(_id: string, input: Parameters<ExtensionConnectionsApi["request"]>[1]) => {
+      if (input.method === "POST" && service === "stop") return { status: 503, headers: {}, body: {} as TBody };
+      return {
+        status: 200,
+        headers: {},
+        body: {
+          ...receipt,
+          outcome: {
+            finalResponse: 'REMOTE_TEST_RESULT {"exitCode":null,"durationMs":60000,"timedOut":true}',
+          },
+        } as TBody,
+      };
+    },
+  );
+  deps.storage.download = async (_object, options) => {
+    if (service === "log") {
+      await new Promise<void>((_, reject) => {
+        options?.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true });
+      });
+    }
+    return null;
+  };
+  await claimEnvironment(deps.store, "env", "run");
+  const summary = await checkRun(deps, record, AbortSignal.timeout(300), true);
+  expect(summary).toMatchObject({ status: "timed_out", exitCode: null, durationMs: 60000 });
+  expect(summary?.error).toBeUndefined();
+  expect(await deps.store.get("run:run")).toMatchObject({ summary });
+  expect(await activeRun(deps.store, "env")).toBe("run");
+  expect(await deps.store.collection("environment-cleanups").get("run:env")).toMatchObject({
+    runId: "run",
+    environmentId: "env",
+    stop: true,
+  });
+});
+
+test("a timeout queues cleanup immediately after saving its result", async () => {
+  const { deps, record } = fixture(async <TBody>() => ({
+    status: 200,
+    headers: {},
+    body: { finalizedAt: null, acceptance: { execution: {} } } as TBody,
+  }));
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  await claimEnvironment(deps.store, "env", "run");
+  let admissions = 0;
+  deps.cleanupEnvironment = async (input) => {
+    expect(input).toEqual({ runId: "run", environmentId: "env", stop: true });
+    expect(await deps.store.get("run:run")).toMatchObject({ summary: { status: "timed_out" } });
+    admissions++;
+  };
+  expect((await checkRun(deps, record))?.status).toBe("timed_out");
+  expect(admissions).toBe(1);
+});
+
+test("a saved timeout retains independent log recovery after workspace cleanup", async () => {
+  const { deps, record } = fixture(async <TBody>() => ({
+    status: 200,
+    headers: {},
+    body: { finalizedAt: null, acceptance: { execution: {} } } as TBody,
+  }));
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  await claimEnvironment(deps.store, "env", "run");
+  await checkRun(deps, record);
+  await releaseEnvironment(deps.store, "env", "run");
+  expect(await deps.store.collection("pending-run-logs").get("run")).toMatchObject({ runId: "run" });
+});
+
+test("a finalized timeout in a kept workspace preserves its duration and releases terminal ownership", async () => {
+  const { deps, record } = fixture(async <TBody>() => ({
+    status: 200,
+    headers: {},
+    body: {
+      ...receipt,
+      outcome: { finalResponse: 'REMOTE_TEST_RESULT {"exitCode":null,"durationMs":60000,"timedOut":true}' },
+    } as TBody,
+  }));
+  record.stopAfterRun = false;
+  await claimEnvironment(deps.store, "env", "run");
+  expect(await checkRun(deps, record)).toMatchObject({ status: "timed_out", durationMs: 60000 });
+  expect(await activeRun(deps.store, "env")).toBeNull();
+  expect(await deps.store.collection("environment-cleanups").get("run:env")).toBeUndefined();
+});
+
+test("an unacknowledged missing submission in a kept workspace eventually queues a safe stop", async () => {
+  const { deps, record } = fixture(async <TBody>() => ({ status: 404, headers: {}, body: {} as TBody }));
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  record.stopAfterRun = false;
+  record.submissionPending = true;
+  await claimEnvironment(deps.store, "env", "run");
+  expect(await checkRun(deps, record)).toMatchObject({ status: "timed_out" });
+  expect(await deps.store.get("run:run")).toMatchObject({ summary: { status: "timed_out" } });
+  expect(await activeRun(deps.store, "env")).toBe("run");
+  expect(await claimEnvironment(deps.store, "env", "competing-run")).toBe(false);
+  expect(await deps.store.collection("environment-cleanups").get("run:env")).toMatchObject({ stop: true });
+});
+
+test("a saved lifecycle outcome ends a collector holding a stale pending record", async () => {
+  let reads = 0;
+  const { deps, record } = fixture(async () => {
+    reads++;
+    throw new Error("Must not poll a completed run");
+  });
+  record.submissionPending = true;
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  const summary = {
+    runId: "run",
+    environmentId: "env",
+    status: "error" as const,
+    exitCode: null,
+    durationMs: 100,
+    logPath: null,
+    tail: "",
+    error: "Setup was recovered",
+  };
+  await deps.store.set("run:run", { ...record, summary });
+  expect(await checkRun(deps, record)).toEqual(summary);
+  expect(reads).toBe(0);
+});
+
+test.each([
+  "before",
+  "during",
+])("a kept run uses the saved acknowledgement before a stop decision (%s)", async (when) => {
+  const { deps, record } = fixture(async <TBody>() => {
+    if (when === "during") await deps.store.set("run:run", { ...record, submissionPending: false });
+    return { status: 503, headers: {}, body: {} as TBody };
+  });
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  record.stopAfterRun = false;
+  record.submissionPending = true;
+  await deps.store.set("run:run", { ...record, submissionPending: when !== "before" });
+  await claimEnvironment(deps.store, "env", "run");
+  expect(await checkRun(deps, record)).toBeNull();
+  expect(await activeRun(deps.store, "env")).toBe("run");
+  expect(await deps.store.collection("environment-cleanups").get("run:env")).toBeUndefined();
+});
+
+test("a kept uncertain submission is not stopped merely because the receipt service is unavailable", async () => {
+  const { deps, record } = fixture(async <TBody>() => ({ status: 503, headers: {}, body: {} as TBody }));
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  record.stopAfterRun = false;
+  record.submissionPending = true;
+  await claimEnvironment(deps.store, "env", "run");
+  expect(await checkRun(deps, record)).toBeNull();
+  expect(await activeRun(deps.store, "env")).toBe("run");
 });

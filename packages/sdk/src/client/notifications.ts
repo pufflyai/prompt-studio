@@ -8,7 +8,7 @@ import type {
   SetNotificationStatusInput,
   UpdateNotificationInput,
 } from "pstdio-api-contracts";
-import type { RequestFn } from "./request";
+import type { RequestFn, RequestOptions } from "./request";
 
 export type NotificationsClient = {
   query(projectId: string, input?: ListNotificationsQuery): Promise<Page<Notification>>;
@@ -18,12 +18,17 @@ export type NotificationsClient = {
     projectId: string,
     query?: Pick<ListNotificationsQuery, "status" | "priority" | "sourceExtensionId">,
   ): Promise<{ count: number }>;
-  get(projectId: string, id: string): Promise<Notification>;
+  get(projectId: string, id: string, options?: Pick<RequestOptions, "signal">): Promise<Notification>;
   create(projectId: string, input: Omit<CreateNotificationInput, "projectId">): Promise<Notification>;
   /** @deprecated Pass projectId as the first argument. */
   create(input: CreateNotificationInput): Promise<Notification>;
   update(projectId: string, id: string, input: UpdateNotificationInput): Promise<Notification>;
-  setStatus(projectId: string, id: string, input: SetNotificationStatusInput): Promise<Notification | null>;
+  setStatus(
+    projectId: string,
+    id: string,
+    input: SetNotificationStatusInput,
+    options?: Pick<RequestOptions, "signal">,
+  ): Promise<Notification | null>;
   setStatusByKey(projectId: string, key: string, input: SetNotificationStatusInput): Promise<Notification[]>;
   /** @deprecated Use setStatus. */
   markRead(projectId: string, id: string): Promise<Notification>;
@@ -68,7 +73,7 @@ export const createNotificationsClient = (request: RequestFn): NotificationsClie
   },
   list: (projectId, query) => request(notificationPath(projectId, buildQuery(query))),
   count: (projectId, query) => request(notificationPath(projectId, `/count${buildQuery(query)}`)),
-  get: (projectId, id) => request(notificationPath(projectId, `/${encodeURIComponent(id)}`)),
+  get: (projectId, id, options) => request(notificationPath(projectId, `/${encodeURIComponent(id)}`), options),
   create: (projectOrInput: string | CreateNotificationInput, input?: Omit<CreateNotificationInput, "projectId">) => {
     const { projectId, ...body } =
       typeof projectOrInput === "string" ? { ...input, projectId: projectOrInput } : projectOrInput;
@@ -76,8 +81,12 @@ export const createNotificationsClient = (request: RequestFn): NotificationsClie
   },
   update: (projectId, id, input) =>
     request(notificationPath(projectId, `/${encodeURIComponent(id)}`), { method: "PATCH", body: input }),
-  setStatus: (projectId, id, input) =>
-    request(notificationPath(projectId, `/${encodeURIComponent(id)}/status`), { method: "POST", body: input }),
+  setStatus: (projectId, id, input, options) =>
+    request(notificationPath(projectId, `/${encodeURIComponent(id)}/status`), {
+      ...options,
+      method: "POST",
+      body: input,
+    }),
   setStatusByKey: (projectId, key, input) =>
     request(notificationPath(projectId, "/status-by-key"), { method: "POST", body: { key, ...input } }),
   markRead: (projectId, id) =>

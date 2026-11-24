@@ -22,7 +22,7 @@ const ACTIVE = ["queued", "provisioning", "connected", "ready"];
 const ENDED = ["succeeded", "failed", "canceled", "expired", "preserved"];
 const path = (id: string) => `/v1/workspaces/${encodeURIComponent(id)}`;
 
-export async function listEnvironments(api: Api, projectId: string) {
+export async function listEnvironments(api: Api, projectId: string, includeEnded = false) {
   const environments: Environment[] = [];
   let cursor: string | null = null;
   do {
@@ -35,7 +35,7 @@ export async function listEnvironments(api: Api, projectId: string) {
     environments.push(
       ...page.items.filter(
         (item) =>
-          ACTIVE.includes(item.state) &&
+          (includeEnded || ACTIVE.includes(item.state)) &&
           MANAGED_PURPOSES.includes(item.metadata?.purpose ?? "") &&
           item.metadata.pstdio_project_id === projectId,
       ),
@@ -94,15 +94,30 @@ export async function stopEnvironment(api: Api, id: string, signal?: AbortSignal
   return api<Environment>({ method: "POST", path: `${path(id)}/cancel`, signal });
 }
 
-type Claim = { runId: string; until: number };
+export type Claim = {
+  runId: string;
+  until?: number;
+  setup?: { until: number; stop: boolean; environmentId: string };
+  legacy?: { environmentId: string };
+};
 
-export async function claimEnvironment(store: ExtensionStorageApi, id: string, runId: string, seconds: number) {
+// Older readers use until to decide reuse. Keep them from expiring new ownership.
+export const durableClaim = (runId: string) => ({ runId, until: Number.MAX_SAFE_INTEGER });
+
+// Ownership ends through collection or cleanup, never through elapsed wall time.
+export async function claimEnvironment(
+  store: ExtensionStorageApi,
+  id: string,
+  runId: string,
+  setup?: Omit<NonNullable<Claim["setup"]>, "environmentId">,
+) {
   const claims = store.collection<Claim>("environment-claims");
-  const current = await claims.read(id);
-  if (current && current.value.runId !== runId && current.value.until > Date.now()) return false;
-  const next = { runId, until: Date.now() + seconds * 1000 };
-  if (current) return claims.updateIfUnchanged(id, current.revision, next);
-  return claims.createIfAbsent(id, next);
+  const current = await claims.get(id);
+  if (current) return current.runId === runId;
+  return claims.createIfAbsent(id, {
+    ...durableClaim(runId),
+    ...(setup ? { setup: { ...setup, environmentId: id } } : {}),
+  });
 }
 
 export async function releaseEnvironment(store: ExtensionStorageApi, id: string, runId: string) {
@@ -114,24 +129,13 @@ export async function releaseEnvironment(store: ExtensionStorageApi, id: string,
   }
 }
 
-export async function renewEnvironmentClaim(store: ExtensionStorageApi, id: string, runId: string, seconds: number) {
-  const claims = store.collection<Claim>("environment-claims");
-  while (true) {
-    const current = await claims.read(id);
-    if (!current || current.value.runId !== runId) return false;
-    if (
-      await claims.updateIfUnchanged(id, current.revision, {
-        runId,
-        until: Math.max(current.value.until, Date.now() + seconds * 1000),
-      })
-    )
-      return true;
-  }
+export async function ownsEnvironment(store: ExtensionStorageApi, id: string, runId: string) {
+  return (await activeRun(store, id)) === runId;
 }
 
 export async function activeRun(store: ExtensionStorageApi, id: string) {
   const claim = await store.collection<Claim>("environment-claims").get(id);
-  return claim && claim.until > Date.now() ? claim.runId : null;
+  return claim?.runId ?? null;
 }
 
 export async function isBusy(store: ExtensionStorageApi, id: string) {

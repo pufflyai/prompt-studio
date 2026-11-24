@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { BookClient } from "./client";
 import type { BookData } from "./read";
 import { changed, type Draft } from "./records";
 export function useBook(client: BookClient) {
   const [data, setData] = useState<BookData>();
+  const workspace = useRef<string>(undefined);
   const [query, setQuery] = useState({ revision: "working" as const });
   const refresh = () => setQuery((current) => ({ ...current }));
   const [error, setError] = useState("");
@@ -15,6 +16,7 @@ export function useBook(client: BookClient) {
       .read(query)
       .then((value) => {
         if (active) {
+          workspace.current = value.workspaceId;
           setData(value);
           setError("");
         }
@@ -45,9 +47,12 @@ export function useBook(client: BookClient) {
   };
   return {
     data,
+    isCurrentWorkspace: (id: string) => workspace.current === id,
     cacheDraft: (draft: Draft) =>
       setData((current) =>
-        current ? { ...current, drafts: [...current.drafts.filter((item) => item.id !== draft.id), draft] } : current,
+        current?.workspaceId === draft.workspaceId
+          ? { ...current, drafts: [...current.drafts.filter((item) => item.id !== draft.id), draft] }
+          : current,
       ),
     error,
     setError,

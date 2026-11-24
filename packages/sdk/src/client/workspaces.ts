@@ -44,7 +44,7 @@ export type WorkspaceClient = ReturnType<typeof createWorkspaceDiffClient> & {
   listProviders(projectId: string, options?: { signal?: AbortSignal }): Promise<WorkspaceProviderDescriptor[]>;
   query(projectId: string, input?: WorkspaceQuery): Promise<Page<WorkspaceListItem & ExtensionWorkspace>>;
   /** @deprecated Use query to read one bounded page. */
-  list(projectId: string): Promise<(WorkspaceListItem & ExtensionWorkspace)[]>;
+  list(projectId: string, options?: { signal?: AbortSignal }): Promise<(WorkspaceListItem & ExtensionWorkspace)[]>;
   getByShorthand(projectId: string, shorthand: string): Promise<Workspace & ExtensionWorkspace>;
   create(
     projectId: string,
@@ -153,7 +153,8 @@ export const createWorkspaceClient = (
     if (input?.anchors !== undefined) query.set("anchors", JSON.stringify(input.anchors));
     return request(`/v1/projects/${encodeURIComponent(projectId)}/workspaces?${query}`);
   },
-  list: (projectId) => request(`/v1/workspaces?projectId=${encodeURIComponent(projectId)}`),
+  list: (projectId, options) =>
+    request(`/v1/workspaces?projectId=${encodeURIComponent(projectId)}`, { signal: options?.signal }),
   getByShorthand: (projectId, shorthand) =>
     request(
       `/v1/workspaces/by-shorthand?projectId=${encodeURIComponent(projectId)}&shorthand=${encodeURIComponent(shorthand)}`,

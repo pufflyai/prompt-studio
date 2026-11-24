@@ -40,10 +40,8 @@ const createCommandEditingRoot = (queries: ScopedQueryClient) => {
   const retire = (key: string, document: Document) => {
     if (documents.get(key)?.document === document) documents.delete(key);
     for (const member of document.members) connections.get(member.events)?.delete(member.id);
-    void document.dispose().then(
-      () => all.delete(document),
-      () => undefined,
-    );
+    all.delete(document);
+    void document.dispose().catch(() => undefined);
   };
   queries.subscribeRetirement(() => {
     for (const [key, entry] of [...documents]) if (entry.document.retired()) retire(key, entry.document);
