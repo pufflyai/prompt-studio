@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { createExtensionProcessEnvironment } from "../process-environment";
 import { backendWorkerCommand, createBackendWorkerPool } from "./pool";
 import { HANDLER_MARKER } from "./protocol";
-import { BackendUnavailableError, startBackendWorker } from "./supervisor";
+import { type BackendInvocation, BackendUnavailableError, startBackendWorker } from "./supervisor";
 import type { BackendSurface } from "./surface";
 
 let root: string;
@@ -17,6 +17,7 @@ beforeAll(async () => {
   await writeFile(
     entryPath,
     `
+let observedAbort = false;
 export default {
   commands: [
     {
@@ -54,8 +55,12 @@ export default {
     {
       id: "wait",
       title: "Wait",
-      run: (ctx) => new Promise((resolve) => ctx.signal.addEventListener("abort", () => resolve("aborted"))),
+      run: (ctx) => new Promise((resolve) => ctx.signal.addEventListener("abort", () => {
+        observedAbort = true;
+        resolve("aborted");
+      })),
     },
+    { id: "observed-abort", title: "Observed abort", run: () => observedAbort },
     { id: "crash", title: "Crash", run: () => process.exit(7) },
     {
       id: "disconnect",
@@ -176,14 +181,13 @@ test("a command runs in its own process and reaches only the host surface it was
 });
 
 test("the worker environment carries no host secrets", async () => {
-  process.env.PSTDIO_API_TOKEN = "runtime-token";
-  process.env.OPENAI_API_KEY = "provider-key";
+  const hostEnv = { ...process.env, PSTDIO_API_TOKEN: "runtime-token", OPENAI_API_KEY: "provider-key" };
   const previousCwd = process.cwd();
   // Bun loads .env from a process's working directory; the worker must not start in the host's.
   await writeFile(join(root, ".env"), "SECRET_FROM_DOTENV=leaked\n");
-  process.chdir(root);
   try {
-    const worker = await start();
+    process.chdir(root);
+    const worker = await start(createExtensionProcessEnvironment(hostEnv));
     try {
       const env = (await worker.invoke({
         handlerId: handlerOf(worker.definition, "environment"),
@@ -200,8 +204,6 @@ test("the worker environment carries no host secrets", async () => {
     }
   } finally {
     process.chdir(previousCwd);
-    delete process.env.PSTDIO_API_TOKEN;
-    delete process.env.OPENAI_API_KEY;
   }
 });
 
@@ -218,6 +220,65 @@ test("cancelling settles the caller and aborts the worker's signal", async () =>
     });
     controller.abort(new Error("stop"));
     await expect(waiting).rejects.toThrow("stop");
+    expect(
+      await worker.invoke({
+        handlerId: handlerOf(worker.definition, "observed-abort"),
+        context: {},
+        surface,
+        args: [],
+      }),
+    ).toBe(true);
+  } finally {
+    await worker.stop();
+  }
+});
+
+test("an abort during context value collection settles the invocation", async () => {
+  const worker = await start();
+  try {
+    const controller = new AbortController();
+    const waiting = worker.invoke({
+      handlerId: handlerOf(worker.definition, "wait"),
+      context: {
+        get projectId() {
+          controller.abort(new Error("stopped during context read"));
+          return "p1";
+        },
+      },
+      surface,
+      args: [],
+      signal: controller.signal,
+    });
+    // The worker can answer a separate command even when the waiting invocation never settles.
+    const status = worker.invoke({
+      handlerId: handlerOf(worker.definition, "observed-abort"),
+      context: {},
+      surface,
+      args: [],
+    });
+    const outcome = await Promise.race([waiting.catch((error: Error) => error.message), status.then(() => "pending")]);
+    expect(outcome).toBe("stopped during context read");
+  } finally {
+    await worker.stop();
+  }
+});
+
+test("a worker invocation keeps its original host context when the caller reuses the input", async () => {
+  const worker = await start();
+  try {
+    const given = hostContext();
+    const next = hostContext();
+    const invocation: BackendInvocation = {
+      handlerId: handlerOf(worker.definition, "save"),
+      context: given.context,
+      surface,
+      args: [{ id: "first" }],
+    };
+    const pending = worker.invoke(invocation);
+    invocation.context = next.context;
+    await pending;
+    expect(given.logs).toEqual(["saved first"]);
+    expect(next.logs).toEqual([]);
   } finally {
     await worker.stop();
   }
@@ -318,4 +379,56 @@ test("closing the pool refuses new workers and stops every running one", async (
   const reopened = await pool.acquire("source@1");
   expect(reopened).not.toBe(running);
   await pool.close();
+});
+
+test("concurrent closes both wait for the worker to exit", async () => {
+  const pool = createBackendWorkerPool(() => ({ env: createExtensionProcessEnvironment(), entryPath }));
+  try {
+    const running = await pool.acquire("source@1");
+    let exited = false;
+    void running.exited.then(() => {
+      exited = true;
+    });
+    const closing = pool.close();
+    try {
+      await pool.close();
+      expect(exited).toBe(true);
+    } finally {
+      await closing;
+    }
+  } finally {
+    await pool.close();
+  }
+});
+
+test("closing waits for a retirement the pool did not start", async () => {
+  const pool = createBackendWorkerPool(() => ({ env: createExtensionProcessEnvironment(), entryPath }));
+  try {
+    await pool.acquire("source@1");
+    const retiring = pool.retire("source@1");
+    const closing = pool.close();
+    try {
+      await expect(pool.acquire("source@2")).rejects.toBeInstanceOf(BackendUnavailableError);
+    } finally {
+      await Promise.all([retiring, closing]);
+    }
+  } finally {
+    await pool.close();
+  }
+});
+
+test("closing an empty pool allows subsequent workers to be started and closed", async () => {
+  const pool = createBackendWorkerPool(() => ({ env: createExtensionProcessEnvironment(), entryPath }));
+  await pool.close();
+  const running = await pool.acquire("source@1");
+  let exited = false;
+  void running.exited.then(() => {
+    exited = true;
+  });
+  try {
+    await pool.close();
+    expect(exited).toBe(true);
+  } finally {
+    await running.stop();
+  }
 });
