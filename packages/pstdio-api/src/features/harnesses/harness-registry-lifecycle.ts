@@ -1,7 +1,14 @@
 import type { HarnessHandle, HarnessRegistry } from "pstdio-api-runtime-host";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
+import {
+  type ProcessEnvironmentSource,
+  processEnvironmentSourceIdentity,
+} from "../extensions/process-environment/permissions";
 
-type Entry = { record: RuntimeHarnessRecord; handle: HarnessHandle };
+type Entry = { record: RuntimeHarnessRecord; handle: HarnessHandle; sourceIdentity?: string };
+type SourceForRecord = (record: RuntimeHarnessRecord) => ProcessEnvironmentSource | undefined;
+
+const identityOf = (source?: ProcessEnvironmentSource) => source && processEnvironmentSourceIdentity(source);
 type Scope = { entries: Map<string, Entry>; cleanup: Promise<void> };
 
 const sameProvider = (left: RuntimeHarnessRecord, right: RuntimeHarnessRecord) => {
@@ -18,7 +25,9 @@ const sameProvider = (left: RuntimeHarnessRecord, right: RuntimeHarnessRecord) =
 
 // Handles, rather than catalog snapshots, own workers. Rebuilding view metadata
 // must not close a healthy worker from an unchanged provider module.
-export const createHarnessRegistryLifecycle = (build: (records: RuntimeHarnessRecord[]) => HarnessRegistry) => {
+export const createHarnessRegistryLifecycle = (
+  build: (records: RuntimeHarnessRecord[], sourceForRecord?: SourceForRecord) => HarnessRegistry,
+) => {
   const scopes = new Map<string | undefined, Scope>();
   let closed = false;
   let closing: Promise<void> | undefined;
@@ -55,7 +64,7 @@ export const createHarnessRegistryLifecycle = (build: (records: RuntimeHarnessRe
       await scope.cleanup;
       scopes.delete(projectId);
     },
-    get: async (records: RuntimeHarnessRecord[], projectId?: string) => {
+    get: async (records: RuntimeHarnessRecord[], projectId?: string, sourceForRecord?: SourceForRecord) => {
       ensureActive();
       const scope = scopeFor(projectId);
       // Namespaced ids are unique: the last install of a colliding id wins, and the
@@ -68,9 +77,9 @@ export const createHarnessRegistryLifecycle = (build: (records: RuntimeHarnessRe
       }
       retire(
         scope,
-        [...scope.entries.values()].filter(({ record }) => {
+        [...scope.entries.values()].filter(({ record, sourceIdentity }) => {
           const next = selected.get(record.id);
-          return !next || !sameProvider(record, next);
+          return !next || sourceIdentity !== identityOf(sourceForRecord?.(next)) || !sameProvider(record, next);
         }),
       );
       for (;;) {
@@ -80,10 +89,11 @@ export const createHarnessRegistryLifecycle = (build: (records: RuntimeHarnessRe
       }
       ensureActive();
       const missing = [...selected.values()].filter((record) => !scope.entries.has(record.id));
-      const added = build(missing);
+      const added = build(missing, sourceForRecord);
       for (const record of missing) {
         const handle = added.get(record.id);
-        if (handle) scope.entries.set(record.id, { record, handle });
+        if (handle)
+          scope.entries.set(record.id, { record, handle, sourceIdentity: identityOf(sourceForRecord?.(record)) });
       }
       const handles = [...selected.keys()].flatMap((id) => {
         const entry = scope.entries.get(id);

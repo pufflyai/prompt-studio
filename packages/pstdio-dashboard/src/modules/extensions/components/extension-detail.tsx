@@ -34,6 +34,7 @@ export interface ExtensionDetailProps {
   workbench?: WorkbenchCore;
   extension: ProjectExtensionInstance;
   metadata: DashboardExtensionMetadata | undefined;
+  hasStaleEnvironmentGrant?: boolean;
   automations: WorkbenchExtensionAutomationRecord[];
   diagnostics: ExtensionDiagnostic[];
   unavailableHarnesses?: AgentInfo[];
@@ -105,7 +106,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     projectId,
     extensionId: extension.extensionId,
     connections: metadata?.connections ?? [],
-    requestedEnvironment: extension.processEnvironment,
+    showEnvironment: Boolean(extension.processEnvironment?.length || props.hasStaleEnvironmentGrant),
   };
   const hasHostAccess = hasExtensionHostAccess(hostAccess);
   const hasSettingsContent = hasSettings || Boolean(settingsViews) || hasHostAccess || automations.length > 0;
