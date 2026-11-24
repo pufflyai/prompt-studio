@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createProjectsDBService } from "pstdio-db";
 import { artifactFilesFixture } from "../../../services/shared-files/artifact-files.fixture";
+import { createTestExtensionProcessOwners } from "../../../test-utils/create-test-extension-process-owners";
 import { EventBus } from "../../sync/event-bus";
 import { createProjectExtensionRuntimeCatalog } from "../project-extension-runtime-catalog";
 import { createArtifactMountWatchService } from "./watch-service";
@@ -117,11 +118,14 @@ const createHarness = async (listProjectIds = async () => ["project-1"]) => {
     projectService: projectService as never,
     workspaceService: workspaceService as never,
   });
+  const extensionProcessOwners = createTestExtensionProcessOwners(extensionService.listEnabledSourcesForProject);
+  cleanups.unshift(extensionProcessOwners.dispose);
   const service = createArtifactMountWatchService({
     deps: {
       ...shared.deps,
       artifactMountWrites: createArtifactMountWriteLedger(),
       eventBus,
+      extensionProcessOwners,
       extensionRuntimeCatalog: catalog,
       extensionService,
       projectService,

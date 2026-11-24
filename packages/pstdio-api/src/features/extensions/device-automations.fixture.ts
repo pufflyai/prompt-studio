@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { StorageOwner } from "pstdio-sync";
 import { createMemoryDocumentStore } from "pstdio-sync";
 import { createDocumentStorage } from "pstdio-sync/records";
+import { createTestExtensionProcessOwners } from "../../test-utils/create-test-extension-process-owners";
 import { EventBus } from "../sync/event-bus";
 import type { ScheduleAdmissionDeps } from "./deps";
 import type { openDeviceAutomations } from "./device-automations";
@@ -28,6 +29,7 @@ export const createDeviceAutomationFixture = async () => {
   };`,
   );
   const loaded = await loadExtensionSource(source);
+  const processOwners: ReturnType<typeof createTestExtensionProcessOwners>[] = [];
   return {
     root,
     projectId,
@@ -100,7 +102,10 @@ export const createDeviceAutomationFixture = async () => {
       };
       const projectService = { get: async () => ({ id: projectId, name: "Clock", shorthand: "PS" }) };
       const workspaceService = { get: async () => null, getDefault: async () => null };
+      const extensionProcessOwners = createTestExtensionProcessOwners(extensionService.listEnabledSourcesForProject);
+      processOwners.push(extensionProcessOwners);
       const deps = {
+        extensionProcessOwners,
         environmentService: { get: async () => ({ environmentId: deviceId }) },
         accountService: {
           watch: () => () => {},
@@ -121,6 +126,7 @@ export const createDeviceAutomationFixture = async () => {
       return { deps };
     },
     async close() {
+      await Promise.all(processOwners.splice(0).map((owner) => owner.dispose()));
       await rm(root, { recursive: true, force: true });
       delete (globalThis as Record<string, unknown>).__deviceAutomationRun;
     },

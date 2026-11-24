@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { createTestExtensionProcessOwners } from "../../test-utils/create-test-extension-process-owners";
 import type { ProcessEnvironmentSource } from "../extensions/process-environment/permissions";
 import { defaultWorkspaceProviderRuntime, runWorkspaceProviderOperation } from "./workspace-provider-runtime";
 
@@ -64,15 +65,12 @@ describe("defaultWorkspaceProviderRuntime", () => {
       source_hash: "fixture",
       manifest_json: {},
     };
+    const enabledSources = [{ instance: { id: "instance-1" }, installedSource: source }];
     const deps = {
+      extensionProcessOwners: createTestExtensionProcessOwners(() => enabledSources),
       extensionRuntimeCatalog: {
         get: async () => ({
-          enabledSources: [
-            {
-              instance: { id: "instance-1" },
-              installedSource: source,
-            },
-          ],
+          enabledSources,
           project: { id: "project-1", name: "Example", shorthand: "EX" },
           runtime: {
             ...emptyRuntime,
@@ -138,15 +136,17 @@ describe("defaultWorkspaceProviderRuntime", () => {
         },
       ],
     };
+    const enabledSources = [
+      {
+        instance: { id: "instance-1" },
+        installedSource: { id: "source-1", extension_id: "example.extension", source_path: "/fake/example" },
+      },
+    ];
     const deps = {
+      extensionProcessOwners: createTestExtensionProcessOwners(() => enabledSources),
       extensionRuntimeCatalog: {
         get: async () => ({
-          enabledSources: [
-            {
-              instance: { id: "instance-1" },
-              installedSource: { id: "source-1", extension_id: "example.extension", source_path: "/fake/example" },
-            },
-          ],
+          enabledSources,
           project: { id: "project-1", name: "Example", shorthand: "EX" },
           runtime,
         }),

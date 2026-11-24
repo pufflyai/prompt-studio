@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { defineHook } from "@pstdio/sdk/extensions";
 import type { EventContext } from "pstdio-api-contracts/extension-kernel";
 import { normalizeExtensionSources } from "pstdio-extensions";
+import { createTestExtensionProcessOwners } from "../../test-utils/create-test-extension-process-owners";
 import { EventBus } from "../sync/event-bus";
 import { fireExtensionEvent } from "./extension-event-runtime";
 
@@ -10,18 +11,20 @@ test.each([true, false])("publishes nested refresh events while initial broadcas
   const entered = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
   const eventId = "example.worker.event.automation-run-changed";
+  const enabledSources = [
+    {
+      instance: { id: "instance" },
+      installedSource: { id: "source", extension_id: "example.worker", source_path: "/tmp/worker" },
+    },
+  ];
   const dispatch = fireExtensionEvent(
     {
       eventBus,
+      extensionProcessOwners: createTestExtensionProcessOwners(() => enabledSources),
       workspaceService: { getDefault: async () => null },
       extensionRuntimeCatalog: {
         get: async () => ({
-          enabledSources: [
-            {
-              instance: { id: "instance" },
-              installedSource: { id: "source", extension_id: "example.worker", source_path: "/tmp/worker" },
-            },
-          ],
+          enabledSources,
           project: { id: "project", name: "Project", shorthand: "P" },
           runtime: {
             ...normalizeExtensionSources([]),
@@ -96,19 +99,21 @@ test("broadcast false suppresses historical notices as well as canonical notices
       },
     },
   ]);
+  const enabledSources = [
+    {
+      instance: { id: "notes" },
+      installedSource: { id: "notes", extension_id: "pstdio.notes", source_path: "/notes" },
+    },
+  ];
   await fireExtensionEvent(
     {
       eventBus,
+      extensionProcessOwners: createTestExtensionProcessOwners(() => enabledSources),
       workspaceService: { getDefault: async () => null },
       extensionRuntimeCatalog: {
         get: async () => ({
           runtime,
-          enabledSources: [
-            {
-              instance: { id: "notes" },
-              installedSource: { id: "notes", extension_id: "pstdio.notes", source_path: "/notes" },
-            },
-          ],
+          enabledSources,
           project: { id: "project", name: "Project", shorthand: "P" },
         }),
       },

@@ -7,26 +7,40 @@ import { folderWorkspaceCapabilities } from "pstdio-db";
 import { apiLogger } from "../../lib/logger";
 import { createProjectWork } from "../../services/project-work";
 import { createTestDocumentStorage } from "../../test-utils/create-test-document-storage";
+import { createTestExtensionProcessOwners } from "../../test-utils/create-test-extension-process-owners";
 import { EventBus } from "../sync/event-bus";
 import { fireExtensionEvent } from "./extension-event-runtime";
 import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
 const tempRoots: string[] = [];
+const processOwners: ReturnType<typeof createTestExtensionProcessOwners>[] = [];
 
-const withRuntimeCatalog = <T extends { extensionService: object; projectService: object; workspaceService: object }>(
+const withRuntimeCatalog = <
+  T extends {
+    extensionService: { listEnabledSourcesForProject: Parameters<typeof createTestExtensionProcessOwners>[0] };
+    projectService: object;
+    workspaceService: object;
+  },
+>(
   deps: T,
-) => ({
-  ...deps,
-  projectService: { ...deps.projectService, work: createProjectWork() },
-  eventBus: new EventBus(),
-  extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({
-    extensionService: deps.extensionService as never,
-    projectService: deps.projectService as never,
-    workspaceService: deps.workspaceService as never,
-  }),
-});
+) => {
+  const extensionProcessOwners = createTestExtensionProcessOwners(deps.extensionService.listEnabledSourcesForProject);
+  processOwners.push(extensionProcessOwners);
+  return {
+    ...deps,
+    projectService: { ...deps.projectService, work: createProjectWork() },
+    eventBus: new EventBus(),
+    extensionProcessOwners,
+    extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({
+      extensionService: deps.extensionService as never,
+      projectService: deps.projectService as never,
+      workspaceService: deps.workspaceService as never,
+    }),
+  };
+};
 
-afterEach(() => {
+afterEach(async () => {
+  await Promise.all(processOwners.splice(0).map((owner) => owner.dispose()));
   for (const root of tempRoots.splice(0)) {
     rmSync(root, { recursive: true, force: true });
   }
