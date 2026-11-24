@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { ProcessHandle } from "pstdio-api-contracts/extension-kernel";
+import type { ProcessEvent, ProcessHandle } from "pstdio-api-contracts/extension-kernel";
 import { createProcessHandleProxy } from "./process-owner";
 
 test("end() closes input after writes made before it, even ones nobody awaited", async () => {
@@ -86,4 +86,52 @@ test("a provider that returns before starting keeps queued input inside the star
   expect(beforeReady).toEqual([]);
   expect(await second).toBe("over credit");
   expect(accepted).toEqual([bytes.length]);
+});
+
+test("return releases a pending output read without waiting for the process", async () => {
+  const read = Promise.withResolvers<IteratorResult<ProcessEvent>>();
+  const entered = Promise.withResolvers<void>();
+  let stoppedReading = false;
+  let killed = false;
+  const proxy = createProcessHandleProxy(
+    Promise.resolve({
+      id: "quiet",
+      started: Promise.resolve(),
+      exited: new Promise(() => {}),
+      write: async () => {},
+      end: async () => {},
+      kill: async () => {
+        killed = true;
+      },
+      events: () => ({
+        [Symbol.asyncIterator]: () => ({
+          next: () => {
+            entered.resolve();
+            return read.promise;
+          },
+          return: async () => {
+            stoppedReading = true;
+            const done = { done: true, value: undefined } as const;
+            read.resolve(done);
+            return done;
+          },
+        }),
+      }),
+    }),
+  );
+  const iterator = proxy.events()[Symbol.asyncIterator]();
+  const next = iterator.next();
+  await entered.promise;
+  const returned = iterator.return!();
+  try {
+    expect(await Promise.race([Promise.all([next, returned]), Bun.sleep(100).then(() => "pending")])).toEqual([
+      { done: true, value: undefined },
+      { done: true, value: undefined },
+    ]);
+    expect(stoppedReading).toBe(true);
+    expect(killed).toBe(false);
+  } finally {
+    read.resolve({ done: true, value: undefined });
+    await returned;
+  }
 });

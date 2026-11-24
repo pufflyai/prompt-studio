@@ -72,6 +72,48 @@ type OpenedHandle = Omit<ProcessHandle, "events"> & {
   events(): AsyncIterable<ProcessEvent> | Promise<AsyncIterable<ProcessEvent>>;
 };
 
+const closedIterator = { done: true, value: undefined } as const;
+
+const processEvents = (gate: Promise<OpenedHandle>) => {
+  type Read = ReturnType<typeof Promise.withResolvers<IteratorResult<ProcessEvent>>>;
+  const reads = new Set<Read>();
+  let source: Promise<AsyncIterator<ProcessEvent> | undefined> | undefined;
+  let closed = false;
+
+  const getSource = () =>
+    (source ??= gate.then(
+      async (handle) => (closed ? undefined : (await handle.events())[Symbol.asyncIterator]()),
+      async function* () {
+        yield { type: "exit", exit: NO_EXIT } satisfies ProcessEvent;
+      },
+    ));
+
+  const iterator: AsyncIterableIterator<ProcessEvent> = {
+    [Symbol.asyncIterator]: () => iterator,
+    next() {
+      if (closed) return Promise.resolve(closedIterator);
+      const read = Promise.withResolvers<IteratorResult<ProcessEvent>>();
+      reads.add(read);
+      void getSource()
+        .then((inner) => (closed || !inner ? closedIterator : inner.next()))
+        .then(read.resolve, read.reject)
+        .finally(() => reads.delete(read));
+      return read.promise;
+    },
+    async return() {
+      if (!closed) {
+        closed = true;
+        for (const read of reads) read.resolve(closedIterator);
+        reads.clear();
+        // The underlying provider may still be opening or waiting on a read.
+        void source?.then((inner) => inner?.return?.()).catch(() => {});
+      }
+      return closedIterator;
+    },
+  };
+  return iterator;
+};
+
 const byteLength = (data: string | Uint8Array) =>
   typeof data === "string" ? Buffer.byteLength(data) : data.byteLength;
 
@@ -143,18 +185,7 @@ export const createProcessHandleProxy = (open: Promise<OpenedHandle>, cancel = n
   const events = () => {
     if (claimed) throw new Error("A process handle has one output consumer.");
     claimed = true;
-    return {
-      async *[Symbol.asyncIterator]() {
-        let handle: OpenedHandle;
-        try {
-          handle = await gate;
-        } catch {
-          yield { type: "exit", exit: NO_EXIT } satisfies ProcessEvent;
-          return;
-        }
-        yield* await handle.events();
-      },
-    };
+    return processEvents(gate);
   };
 
   const stopWhileOpening = () => {

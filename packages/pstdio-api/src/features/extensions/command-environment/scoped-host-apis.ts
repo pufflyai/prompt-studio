@@ -5,7 +5,7 @@ import type {
   TerminalSessionRequest,
 } from "pstdio-api-contracts/extension-kernel";
 import { workspaceEvents } from "pstdio-api-contracts/extension-kernel";
-import type { InvocationScope, ScopedHostApis } from "pstdio-extensions";
+import type { InvocationScope, ProcessOwner, ScopedHostApis } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createProcessApi } from "../extension-process-api";
 import { resolveProcessTarget } from "../extension-targets";
@@ -49,6 +49,7 @@ export const createScopedHostApis = (
     eventId?: string;
     /** The installed source generation this invocation runs. Host environment grants are checked against it. */
     source: ProcessEnvironmentSource;
+    extensionOwner: () => ProcessOwner;
   },
   hosts: { connections: ExtensionConnectionsApi; terminal?: ExtensionTerminalApi },
   runtimeDeps: CommandEnvironmentRuntimeDeps,
@@ -88,7 +89,7 @@ export const createScopedHostApis = (
       scope,
       resolveCwd,
       resolveTarget,
-      extensionOwner: () => deps.extensionProcessOwners.owner(input.projectId, input.source),
+      extensionOwner: input.extensionOwner,
       extensionId: input.extensionId,
       hostEnvironment: (names) => deps.extensionProcessEnvironment.authorize(input.projectId, input.source, names),
     }),

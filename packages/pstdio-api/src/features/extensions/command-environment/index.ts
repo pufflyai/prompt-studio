@@ -84,6 +84,11 @@ export const createCommandEnvironment = (
     pstdio?: { projectFiles?: { tracked?: boolean } };
   };
 
+  const extensionOwner = deps.extensionProcessOwners.capture(
+    input.projectId,
+    enabledSource.instance.id,
+    enabledSource.installedSource,
+  );
   const scopedHostApis = (scope?: InvocationScope) => {
     const signal = scope?.signal;
     // Presentation lookups may dispatch another tool. They must stop when their caller returns,
@@ -183,7 +188,7 @@ export const createCommandEnvironment = (
       },
       ...createScopedHostApis(
         deps,
-        { ...input, source: enabledSource.installedSource },
+        { ...input, source: enabledSource.installedSource, extensionOwner },
         { connections, terminal },
         runtimeDeps,
         scope,
