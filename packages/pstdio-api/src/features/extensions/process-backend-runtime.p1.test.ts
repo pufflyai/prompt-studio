@@ -616,7 +616,12 @@ test("a process-mode handler opens a terminal session, writes to it and reads it
 
 test("a process-mode handler spawns a host-owned child, writes its stdin and streams its output to the exit", async () => {
   const script = `for await (const chunk of Bun.stdin.stream()) process.stdout.write(new TextDecoder().decode(chunk).toUpperCase());`;
-  const { outcome } = await execute("spawn", { command: [process.execPath, "-e", script] });
+  const { outcome } = await execute(
+    "spawn",
+    { command: [process.execPath, "-e", script] },
+    undefined,
+    terminalProjectId,
+  );
   expect(outcome.ok).toBe(true);
   const value = outcome.value as {
     seen: { type: string; text?: string; exit?: unknown }[];
