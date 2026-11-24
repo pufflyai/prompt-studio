@@ -7,6 +7,7 @@ import type { configureAutoBuildCommand, readAutoBuildCommand } from "../../comm
 import type { stopAutoBuildCommand } from "../../commands/auto-build-stop";
 import type { openReviewRequestCommand, reviewCommand } from "../../commands/review-requests";
 import type { setTicketAttributeCommand } from "../../commands/set-ticket-attribute";
+import { plannerSchemaChanged } from "../../events";
 import type { commands } from "../commands/index";
 import { planChanged } from "../contracts";
 import { plannerTicketsChanged } from "../planner";
@@ -25,10 +26,12 @@ type PlanCommands = typeof commands & {
   "review-requests.open": typeof openReviewRequestCommand;
 };
 
+export const createPlanClient = (host: GuestHost) => createWebviewClient<PlanCommands>(host);
+
 export type PlanClient = ReturnType<typeof createWebviewClient<PlanCommands>>;
 
 // Planner reports tag changes as ticket changes, so track names stay current too.
-const planEvents = [
+export const planEvents = [
   plannerTicketsChanged,
   planChanged,
   viewDataEvents.boardViewsChanged,
@@ -37,11 +40,16 @@ const planEvents = [
 ];
 
 export function usePlan(host: GuestHost) {
-  const [client] = useState(() => createWebviewClient<PlanCommands>(host));
+  const [client] = useState(() => createPlanClient(host));
   const {
     value: plan,
     error,
     retry,
-  } = usePlannerQuery(client, client.commands["timeline.plan.read"].query(undefined, { events: planEvents }));
+  } = usePlannerQuery(
+    client,
+    client.commands["timeline.plan.schema"].query(undefined, {
+      events: [plannerSchemaChanged, viewDataEvents.boardViewsChanged],
+    }),
+  );
   return { client, plan, error, retry };
 }

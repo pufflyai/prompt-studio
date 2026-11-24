@@ -13,13 +13,19 @@ export const shouldSelectTreeNodeForNavigationTarget = (target: NavigationTarget
 };
 
 export const createToggleTreeSection =
-  (workbench: WorkbenchCore, treeViewId: string, expandedIds: string[]) => (sectionId: string) => {
-    getWorkbenchRenderers(workbench).setSectionExpanded(treeViewId, sectionId, !expandedIds.includes(sectionId));
+  (workbench: WorkbenchCore, treeViewId: string, expandedIds: string[], stateScope?: string) => (sectionId: string) => {
+    getWorkbenchRenderers(workbench).setSectionExpanded(
+      treeViewId,
+      sectionId,
+      !expandedIds.includes(sectionId),
+      stateScope,
+    );
   };
 
 interface ToggleTreeNodeContext {
   workbench: WorkbenchCore;
   treeViewId: string;
+  stateScope?: string;
   body: TreeViewSection[];
   header: TreeViewSection[];
   footer: TreeViewSection[];
@@ -35,7 +41,7 @@ export const createToggleTreeNode = (context: ToggleTreeNodeContext) => (nodeId:
   if (!node) return;
 
   const expanded = context.expandedNodeIds.includes(nodeId);
-  getWorkbenchRenderers(context.workbench).setNodeExpanded(context.treeViewId, nodeId, !expanded);
+  getWorkbenchRenderers(context.workbench).setNodeExpanded(context.treeViewId, nodeId, !expanded, context.stateScope);
   if (expanded) return;
 
   context.loadChildren(node);

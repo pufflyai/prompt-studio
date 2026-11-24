@@ -1,9 +1,15 @@
 // Share the execution plan's JSON shapes and events between commands and the browser view.
 
-import { eventRef, type NavigationTargetPage } from "@pstdio/sdk/extensions";
+import { eventRef, type NavigationTargetPage, type PageRef } from "@pstdio/sdk/extensions";
 import type { ReviewRequestView } from "../data/review-request-types";
 import type { StoredStatus, StoredTag } from "../data/types";
 import type { TicketState } from "./model/state";
+
+export const autoBuildPageRef = {
+  kind: "page",
+  extensionId: "pstdio.planner",
+  id: "auto-build",
+} as const satisfies PageRef;
 
 export const planChanged = eventRef<{ reason: string }>({
   extensionId: "pstdio.planner",
@@ -44,6 +50,8 @@ export interface PlanRow {
   state: TicketState;
   trackId: string | null;
   requests: ReviewRequestView[];
+  reviewCounts?: { total: number; pending: number; answered: number };
+  relationsPaged?: true;
   requestErrors: string[];
   // Only agent gates display their document inside the timeline.
   instructions: string;
@@ -75,6 +83,7 @@ export interface PlanSection {
   deadline: PlanDeadline | null;
   rows: PlanRow[];
   counts: { total: number; done: number; reviewNeeded: number; blocked: number; atRisk: number };
+  globalCounts?: { total: number; done: number };
 }
 
 export type PlanTag = StoredTag;

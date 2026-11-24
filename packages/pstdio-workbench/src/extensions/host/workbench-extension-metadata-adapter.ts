@@ -49,6 +49,7 @@ const panels = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtensio
     const menus = panelMenus(metadata, view);
     return {
       id: view.id,
+      headerViewId: view.header ? contributionRefId(view.header.view) : undefined,
       extensionId: view.extensionId,
       title: view.title,
       icon: view.icon,
@@ -74,6 +75,7 @@ const kanbanRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenc
       {
         ...body,
         id: view.id,
+        headerViewId: view.header ? contributionRefId(view.header.view) : undefined,
         extensionId: view.extensionId,
         title: view.title,
         icon: view.icon,
@@ -112,6 +114,7 @@ const dataTableRenderers = (
       {
         ...body,
         id: view.id,
+        headerViewId: view.header ? contributionRefId(view.header.view) : undefined,
         extensionId: view.extensionId,
         title: view.title,
         icon: view.icon,
@@ -129,6 +132,7 @@ const treeRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchE
           {
             ...view.body,
             id: view.id,
+            headerViewId: view.header ? contributionRefId(view.header.view) : undefined,
             extensionId: view.extensionId,
             title: view.title,
             icon: view.icon,
@@ -144,6 +148,7 @@ const fileRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchE
           {
             ...view.body,
             id: view.id,
+            headerViewId: view.header ? contributionRefId(view.header.view) : undefined,
             extensionId: view.extensionId,
             title: view.title,
             icon: view.icon,
@@ -161,6 +166,7 @@ const controlsRenderers = (
           {
             ...view.body,
             id: view.id,
+            headerViewId: view.header ? contributionRefId(view.header.view) : undefined,
             extensionId: view.extensionId,
             title: view.title,
             icon: view.icon,

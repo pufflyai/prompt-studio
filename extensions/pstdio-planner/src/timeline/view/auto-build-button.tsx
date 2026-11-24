@@ -10,6 +10,7 @@ import type { AutoBuildFormProps } from "./auto-build-form";
 import { AutoBuildHelp } from "./auto-build-help";
 import { AutoBuildIndicator, resolveAutoBuildIndicatorStatus } from "./auto-build-indicator";
 import type { AutoBuildSession } from "./auto-build-session-row";
+import { RequestWindowControls } from "./request-window";
 import { RequestsDialog } from "./ticket-requests-dialog";
 
 const AutoBuildForm = lazy(async () => {
@@ -19,9 +20,14 @@ const AutoBuildForm = lazy(async () => {
 
 export interface AutoBuildButtonProps {
   enabled: boolean;
+  /** Header guests delegate full-sized surfaces to host dialog navigation. */
+  onOpen?: () => void;
   paused?: boolean;
   reviewRequests?: ReviewRequestView[];
   requestErrors?: string[];
+  requestPage?: { offset: number; total: number; hasNext: boolean };
+  requestLoading?: boolean;
+  onRequestPage?: (offset: number) => void;
   onAnswerRequest?: (requestId: string, response: ReviewResponse) => Promise<unknown>;
   onOpenRequestChat?: (requestId: string) => Promise<unknown>;
   onPause?: () => Promise<boolean>;
@@ -42,7 +48,7 @@ export interface AutoBuildButtonProps {
   disabled?: boolean;
   configuration?: Omit<AutoBuildFormProps, "onClose" | "t">;
   onStop: () => Promise<boolean>;
-  onOpenSession: (session: AutoBuildSession) => void;
+  onOpenSession: (session: AutoBuildSession) => unknown;
   t: (key: string, fallback?: string) => string;
 }
 
@@ -102,6 +108,11 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
             variant="outline"
             disabled={disabled}
             onClick={(event) => {
+              if (props.onOpen) {
+                event.preventDefault();
+                props.onOpen();
+                return;
+              }
               if (inspectable) return;
               event.preventDefault();
               setContent("configuration");
@@ -114,6 +125,7 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
         open={content === "sessions"}
         failed={failed}
         onOpenChange={(open) => {
+          if (props.onOpen) return;
           if (open) setContent("sessions");
           else close();
         }}
@@ -124,6 +136,18 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
       <RequestsDialog
         title={t("timeline.autoBuild.requests", "Needs attention")}
         row={{ requests: reviewRequests, requestErrors }}
+        total={props.requestPage?.total}
+        loading={props.requestLoading}
+        footer={
+          props.requestPage && props.onRequestPage ? (
+            <RequestWindowControls
+              result={props.requestPage}
+              offset={props.requestPage.offset}
+              move={props.onRequestPage}
+              loading={props.requestLoading}
+            />
+          ) : undefined
+        }
         open={content === "requests"}
         pendingOnly
         trigger={trigger.current}

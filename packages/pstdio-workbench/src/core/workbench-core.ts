@@ -22,6 +22,7 @@ import {
   createPageLayoutCacheHandlers,
   createShellLayoutContext,
 } from "./controllers/page-runtime/workbench-layout-context";
+import { createMenuHeaderSideResolver } from "./controllers/panel-menus/menu-header-settings";
 import { createWorkbenchPanelMenuStateController } from "./controllers/panel-menus/panel-menu-state-controller";
 import { createResourceViewerRuntime } from "./controllers/resource-viewers/displayed-viewers";
 import { createWorkbenchViewerController } from "./controllers/resource-viewers/resource-viewers";
@@ -93,6 +94,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const layoutCache = createCoreLayoutCache(input, () => core);
   const cachedInput = { ...input, persistence: undefined, layoutPersistence: layoutCache.layout };
   const locationAwareLayout = createLayoutModel({
+    resolvePanelMenuSide: createMenuHeaderSideResolver(() => core),
     defaultRegionVisibility: {
       ...input.defaultPanelOpenByRegionId,
       side: (input.initialSidePanelMode ?? "floating") !== "closed",
@@ -123,7 +125,6 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const { views, viewMenus, statusBar, overlays } = createCoreViews(input, renderers, layout);
-  const pageResources = input.pageResources ?? defaultPageResourceCodec;
 
   const modePlacements = createWorkbenchModePlacementRegistry({
     resourceReferenceKey: (resource) => core?.pages.resourceReferenceKey(resource) ?? resourceKey(resource),
@@ -187,6 +188,8 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     layout,
     sidePanel,
     getPolicy: (region) => workbenchPanelPolicy(core, region),
+    getPanelDestinations: (instanceId) => core.getPanelDestinations(instanceId),
+    onMoveSecondaryToSide: () => core.focus.setActiveRegion("side"),
   });
 
   const pages = createLiveWorkbenchPageRegistry({
@@ -205,7 +208,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     shellPlacements,
     views,
     viewMenus,
-    resources: pageResources,
+    resources: input.pageResources ?? defaultPageResourceCodec,
     overlays,
   });
 
@@ -220,6 +223,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const composition = createCoreCompositionController(() => core);
   const viewers = createWorkbenchViewerController(() => core);
   const modules = createWorkbenchModuleRegistry(() => core);
+  const { getTreeState, setLoading, setNodeExpanded, setSectionExpanded, setSelectedNode } = renderers;
 
   core = {
     activation,
@@ -252,12 +256,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     navigationTrees,
     panelMenuState,
     preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
-    treeViews: {
-      getTreeState: renderers.getTreeState,
-      setNodeExpanded: renderers.setNodeExpanded,
-      setSectionExpanded: renderers.setSectionExpanded,
-      setSelectedNode: renderers.setSelectedNode,
-    },
+    treeViews: { getTreeState, setLoading, setNodeExpanded, setSectionExpanded, setSelectedNode },
     commandPaletteResources: createCommandPaletteResourceRegistry(),
     resources,
     views,

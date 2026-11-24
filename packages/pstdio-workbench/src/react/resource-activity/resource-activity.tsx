@@ -122,6 +122,7 @@ export const WorkbenchResourceActivity = (props: {
   binding: ResourceActivityBinding;
   resource: ResourceRef;
   visible: boolean;
+  menu?: boolean;
 }) => {
   const { workbench, binding, resource, visible } = props;
   const controller = useResourceActivity(workbench, binding, resource, visible);
@@ -131,10 +132,18 @@ export const WorkbenchResourceActivity = (props: {
   const error = controller.error ?? (history.failed ? "Cannot retrieve earlier activity." : undefined);
   const upload = useRef<HTMLInputElement>(null);
   return (
-    <Box layerStyle="markdownEditorInset" flexShrink="0">
-      <Activity.Root aria-label="Resource activity" layerStyle="documentContent" overflowAnchor="none">
-        <Separator />
-        <Activity.Header />
+    <Box layerStyle={props.menu ? undefined : "markdownEditorInset"} p={props.menu ? "sm" : undefined} flexShrink="0">
+      <Activity.Root
+        aria-label="Resource activity"
+        layerStyle={props.menu ? undefined : "documentContent"}
+        overflowAnchor="none"
+      >
+        {!props.menu ? (
+          <>
+            <Separator />
+            <Activity.Header />
+          </>
+        ) : null}
         {error && (
           <HStack role="status" layerStyle="resourceActivityNotice">
             <Text flex="1" minW="0" lineClamp={2} title={error}>

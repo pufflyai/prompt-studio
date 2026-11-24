@@ -3,8 +3,9 @@ import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putTicket, ticketsCollection } from "../data/ticket-context.fixture";
 
 import type { Ticket } from "../data/types";
-import { archiveArgs } from "./archive-context.fixture";
+import { archiveArgs, queuedRun } from "./archive-context.fixture";
 import { archiveTicketColumnActionCommand, archiveTicketCommand } from "./archive-ticket";
+import { cleanupTicketWorkspacesCommand } from "./ticket-workspace-cleanup";
 
 const now = "2026-06-08T10:00:00.000Z";
 
@@ -47,6 +48,38 @@ const deferred = () => {
   });
   return { promise, resolve };
 };
+
+test("archive all queues cleanup only when the selected tickets have linked workspaces", async () => {
+  const storage = createMemoryStorage();
+  await putTicket(storage, makeTicket({ statusId: "done" }));
+  const [ctx, input] = await archiveArgs({ storage, params: { columnId: "done", actionId: "archive_all" } });
+  let jobs = 0;
+  ctx.automation.enqueue = async () => {
+    jobs++;
+    return queuedRun();
+  };
+  const result = await archiveTicketColumnActionCommand.run(ctx, input);
+  expect(result.archivedCount).toBe(1);
+  expect((await ticketsCollection(storage).get("ticket-1"))?.archived).toBe(true);
+  expect(jobs).toBe(0);
+});
+
+test("archive all preserves durable cleanup when workspace discovery fails", async () => {
+  const storage = createMemoryStorage();
+  await putTicket(storage, makeTicket({ statusId: "done" }));
+  const [ctx, input] = await archiveArgs({ storage, params: { columnId: "done", actionId: "archive_all" } });
+  ctx.workspaces.query = async () => {
+    throw new Error("Private workspace history is temporarily unavailable");
+  };
+  let jobs = 0;
+  ctx.automation.enqueue = async () => {
+    jobs++;
+    return queuedRun();
+  };
+  const result = await archiveTicketColumnActionCommand.run(ctx, input);
+  expect(result.archivedCount).toBe(1);
+  expect(jobs).toBe(1);
+});
 
 describe("archive ticket", () => {
   test("archives the ticket and cascades to its linked workspaces only", async () => {
@@ -140,20 +173,28 @@ describe("archive ticket", () => {
       { id: "ws-other", workspace_shorthand: "T-3_A1", anchors_json: [ticketAnchor("T-3", "ticket-3")] },
     ];
 
-    const result = (await archiveTicketColumnActionCommand.run(
-      ...(await archiveArgs({
-        storage,
-        params: { columnId: "done", actionId: "archive_all" },
-        overrides: {
-          workspaces: {
-            list: async () => workspaces,
-            delete: async (id: string) => {
-              archived.push(id);
-            },
+    const [ctx, input] = await archiveArgs({
+      storage,
+      params: { columnId: "done", actionId: "archive_all" },
+      overrides: {
+        workspaces: {
+          list: async () => workspaces,
+          delete: async (id: string) => {
+            archived.push(id);
           },
         },
-      })),
-    )) as { archivedCount: number };
+      },
+    });
+    const cleanupJobs: Promise<unknown>[] = [];
+    ctx.automation.enqueue = async ({ input }) => {
+      cleanupJobs.push(
+        Promise.resolve(cleanupTicketWorkspacesCommand.run(ctx, { ticketIds: input.params?.ticketIds as string[] })),
+      );
+      return queuedRun();
+    };
+    const result = await archiveTicketColumnActionCommand.run(ctx, input);
+    // The column action persists archival before its queued workspace cleanup finishes.
+    await Promise.all(cleanupJobs);
 
     expect(result.archivedCount).toBe(2);
     expect((await ticketsCollection(storage).get("ticket-1"))?.archived).toBe(true);

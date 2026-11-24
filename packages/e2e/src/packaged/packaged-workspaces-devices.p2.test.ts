@@ -26,12 +26,12 @@ setupPackagedSmokeTests(async () => {
   extensionSource = await preparePackagedExtensionSource(
     join(fixturesRoot, "source"),
     join(import.meta.dirname, "../../../../extensions/pstdio-workspaces"),
-    { install: true },
+    { install: true, dependencies: "declared" },
   );
   sessionsSource = await preparePackagedExtensionSource(
     join(fixturesRoot, "sessions-source"),
     join(import.meta.dirname, "../../../../extensions/pstdio-session-browser"),
-    { install: true },
+    { install: true, dependencies: "declared" },
   );
   harness = join(fixturesRoot, "harness");
   await mkdir(harness);
@@ -359,5 +359,7 @@ test(
       progress("cleanup complete");
     }
   },
-  PACKAGED_TEST_TIMEOUT,
+  // Two cold hosts install their tools before the online/offline assertions.
+  // Linux CI spent 29 seconds preparing them within the former 30-second limit.
+  Math.max(PACKAGED_TEST_TIMEOUT, 60_000),
 );

@@ -12,11 +12,10 @@ export const getSidenavEntry = async (page: Page, label: string) => {
   return entry;
 };
 
-// Leaves the open Sidenav level: the breadcrumb's project button returns to the project start page.
-export const openProjectHome = (page: Page, projectName: string) =>
+export const leaveSidenavLevel = (page: Page) =>
   page
-    .locator('[data-workbench-region="nav"]')
-    .getByRole("button", { name: new RegExp(`${projectName}$`) })
+    .locator('[data-workbench-region="sidenav"]')
+    .getByRole("button", { name: "Back to project", exact: true })
     .click();
 
 export const showSidenavEntry = async (page: Page, label: string) => {

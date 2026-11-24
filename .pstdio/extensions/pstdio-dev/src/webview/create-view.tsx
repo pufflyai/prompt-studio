@@ -7,6 +7,7 @@ import { Activity, type ComponentType, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import type { devCommands } from "../commands";
 import { BenchmarksContext } from "./client";
+import { HostTheme } from "./host-theme";
 
 const subscribeVisibility = (listener: () => void) => {
   document.addEventListener("visibilitychange", listener);
@@ -30,13 +31,15 @@ export const createView = (Component: ComponentType) =>
       };
       root.render(
         <ChakraProvider value={psTheme}>
-          <QueryClientProvider client={queryClient}>
-            <BenchmarksContext.Provider value={{ host, client }}>
-              <Box h="100dvh" w="full" minH="0" minW="0" overflow="hidden" bg="bg" color="fg">
-                <Content />
-              </Box>
-            </BenchmarksContext.Provider>
-          </QueryClientProvider>
+          <HostTheme>
+            <QueryClientProvider client={queryClient}>
+              <BenchmarksContext.Provider value={{ host, client }}>
+                <Box h="100dvh" w="full" minH="0" minW="0" overflow="hidden" bg="bg" color="fg">
+                  <Content />
+                </Box>
+              </BenchmarksContext.Provider>
+            </QueryClientProvider>
+          </HostTheme>
         </ChakraProvider>,
       );
       return () => {

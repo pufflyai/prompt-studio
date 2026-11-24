@@ -59,7 +59,7 @@ The tooltip appears below the tab after 300 ms.
 
 Views in tab panels have closable tabs. Main has one header row with history and either tabs or page breadcrumbs with a resource-action dropdown, followed by view menus. A page with `main.presentation: "page"` owns Main directly and has no tab or close action. Its `main.tab` presentation supplies the breadcrumb label, icon and resource actions. Tabbed pages keep their single scrolling tab row even when one tab remains.
 
-Drag empty page-header space to transfer that individual live view to an auxiliary panel or its tab strip. It becomes a tab there. The same Move actions are available in its resource dropdown and header context menu. Moving out of a dedicated Main page returns Main to its configured default. Whole tabbed panels retain their existing layout-position gestures and never become tabs or merge groups.
+Drag empty page-header space to transfer that individual live view to an auxiliary panel or its tab strip. It becomes a tab there. The same Move actions are available in its resource dropdown and header context menu. Moving out of a dedicated Main page returns Main to its configured default. Whole tabbed panels retain their existing layout-position gestures and never become tabs or merge groups. When Side is closed, move the Bottom panel to the left or right to open its complete tray in Side. The two trays swap, preserving the former Side tabs in the closed Bottom panel. Header Move actions offer the same destinations, subject to the mode's movement and panel policies.
 
 Opening a resource explicitly uses its requested destination. An existing view in that panel is selected; a compatible view elsewhere moves there. A requested different renderer is opened as that semantic view while the conflicting independent representation is retired. Main page navigation brings a resource out of Side when necessary. Panel opens with no explicit host region retain that declared placement's existing location. Passive restoration and background completion preserve placement.
 
@@ -91,9 +91,51 @@ Use `SearchableMenu` or resource actions with `isSelected` for shared selection 
 Native Chakra menu choices use `Menu.ItemText` and `Menu.ItemIndicator` with the shared recipe.
 
 The floating Side Panel hides its launcher while open and restores it when closed.
+Drag the bubble or unused floating header space to the left, center, or right.
+Both share their saved alignment and move visibly while dragging. During a snap drag,
+three destination indicators appear above the status area, with the pointer's
+destination highlighted. Bubble indicators use the same small dots as widget drops,
+centered on the bubble's resting positions. The dots match the thickness of panel
+drop indicators. Floating-panel indicators are short markers at the
+bottom-left, center and bottom-right anchors, using the same gap as the panel's
+bottom edge. Releasing saves that alignment. Right-click either surface for
+**Align left**, **Align center**, or **Align right**. While the bubble has focus,
+Alt+Shift+Left/Right changes alignment. The floating header uses that shortcut in
+snap mode. These user preferences
+persist across projects and reloads.
+
+Choose **Snap to alignment** or **Move freely** under **Floating panel movement**
+in Appearance or the floating header context menu. Snap is the default. Free
+movement follows the pointer horizontally and vertically without snap indicators;
+Alt+Shift+arrow keys move a focused floating header. The bubble keeps its alignment.
+Resize from the top-left corner when aligned right, the top-right corner when aligned left,
+or either top corner when centered. Muted corner strokes appear on close hover,
+keyboard focus or while resizing. Docking targets use short borderless marks with
+the floating-panel highlight color, and reserve narrow strips at panel edges.
+Dropping onto an existing panel outlines that panel while it is the active target.
+In snap mode, its left and right gaps
+match its bottom gap. Resizing retains the selected horizontal anchor throughout
+the gesture and after release; free resizing keeps the opposite corner fixed. Focus a resize handle and use arrow keys to resize; Shift uses larger steps. Size and free position persist
+across close/reopen and reload. Escape cancels an active move or resize.
+A smaller viewport fits the panel temporarily
+without replacing its saved frame. Panel policy can disable resizing.
+The public `floatingSidePanelPreferences` keys store movement (`snap` or `free`)
+and the user frame (`x`, `y`, `width`, `height`); an empty frame uses the default size.
+
+**Settings → Workbench → Appearance** contains **Show Side Panel bubble** and
+**Default Side Panel**. The picker offers the Side Panel's available tabs and a generic
+**Side Panel** option. Changing the default does not require clearing existing tabs.
+Clicking the bubble activates the chosen tab when present.
+Existing Side tabs keep their own resource when Main navigates elsewhere.
+If a panel allows only one tab, choosing it restores its default view while keeping its resource.
+An unavailable saved choice opens the generic shell and stays saved for when its
+extension is enabled again. The dashboard defaults to **New session** only while
+Sessions is enabled. Hiding the bubble leaves the regular panel controls
+available. Fullscreen uses its temporary Side overlay without changing the saved layout.
+
 The hidden launcher is inert and outside the accessibility tree. Panel content stays
 mounted while closed, so minimizing and reopening preserves drafts. See the
 [menu selection story](../../../packages/ui/src/components/overlays/menu-selection.canvas.tsx)
 and [Side Panel stories](../../../packages/pstdio-workbench/src/examples/side-panel/side-panel.canvas.tsx).
 
-*Updated at: 2026-11-09*
+*Updated at: 2026-11-23*

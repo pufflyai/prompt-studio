@@ -16,11 +16,15 @@ The geometry reproduction uses the real chat panel, an animated width and height
 
 The same library also clears its escaped-following intent when visible content shrinks near the bottom. This can undo an explicit stop before the next response arrives. The stopped-following shrink regression observes a visible negative resize clearing the live stopped intent, then the next batch seizing the reader's position. This is a separate contract from losing automatic follow. The original complete resize file passes on the current unmodified-main control; it does not contain this new regression, so that pass is not evidence of a matching-main failure.
 
+The browser can deliver a pending scroll event after an explicit stop. The callback then receives the current classification generation but compares the stop's position with an older offset. A previously queued downward move can resume following before a resize or a new response. Changes in viewport height can also move the reader's anchor down without changing content height.
+
 ## Temporary repair
 
 Patch the library to capture the bottom offset with each scroll event. An upward event that remains at that event's bottom is not an escape. Capture a monotonic classification generation with the event as well: any intervening visible content observation or newer explicit follow/stop/wheel intent invalidates that delayed classification, even when a later observation has already reset the height difference to zero. This prevents an older layout-driven scroll from being mistaken for reader input after a newer response changes the bottom. Keep the library's wheel, selection, animation, and other upward-scroll behavior. On the viewport itself, native history keys (Up, Page Up, Home and Shift Space) record the existing stopped intent immediately, just as an upward wheel already does. This preserves keyboard reading even when the key's ensuing scroll overlaps a resize notification; text editors and nested controls retain their own keyboard behavior. This avoids introducing a second scroll controller or a second copy of follow state.
 
 The patch also guards the negative-resize re-lock with the existing live escaped intent. A shrink may clamp pixels, but it cannot clear an explicit stop. The negative-resize guard leaves normal following, positive-resize, selection and wheel behavior intact. Native viewport history keys use the same existing stopped-intent owner as the upward wheel; no second intent state is introduced.
+
+At the moment of an explicit stop, capture the viewport's current offset and bottom target as the baseline for subsequent scroll events. A queued event delivered later at that offset preserves the stop. Clear a stop after a downward move only when the bottom target remained unchanged between the two scroll samples. This preserves a stop across viewport changes and allows a new downward scroll on settled geometry to resume following.
 
 The repository records the patch through Bun's supported dependency patch mechanism. The UI build bundles this one dependency so published UI consumers receive the repair as well; the package's other dependencies remain external. The hidden-panel restoration in ADR 0075 remains unchanged.
 
@@ -30,4 +34,4 @@ The patch is bound to library version 1.1.3 and must be reviewed when that depen
 
 ## Removal
 
-Remove the patch and restore the dependency's normal externalization when an upstream release both classifies layout-driven clamps against the scroll event's geometry and intervening resize observations, and preserves escaped intent across visible content shrink. Keep the real Canvas resize, wheel, Page Up, history-reading, and return-to-latest regression checks when upgrading. Retest hidden-panel restoration separately when changing that integration.
+Remove the patch and restore the dependency's normal externalization when an upstream release classifies layout-driven clamps against the scroll event's geometry and intervening resize observations, and preserves escaped intent across visible content shrink and pending scroll delivery. Keep the real Canvas resize, wheel, Page Up, history-reading, and return-to-latest regression checks when upgrading. Retest hidden-panel restoration separately when changing that integration.

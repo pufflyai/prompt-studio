@@ -1,5 +1,5 @@
 import { type ChildProcess, execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -240,7 +240,31 @@ const verifyPackagedBehavior = async (browserCase: (typeof webviewBrowsers)[numb
       );
       phase("collection checked; document state start");
       await verifyPackagedDocumentState(page, started.baseUrl, project.id);
-      phase("documents checked; tree start");
+      phase("documents checked; artifact links start");
+      writeFileSync(
+        join(projectFolder, "report.html"),
+        '<title>Report</title><a href="#details">Jump to details</a><div style="height:200vh"></div><h2 id="details">Details</h2>',
+      );
+      const published = await fetch(
+        `${started.baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.artifacts.command.publish/execute`,
+        {
+          method: "POST",
+          headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+          body: JSON.stringify({ params: { file_path: "report.html" }, source: "api" }),
+        },
+      );
+      expect(published.status).toBe(200);
+      const { outcome } = await published.json();
+      expect(outcome.status, outcome.reason).toBe("success");
+      await page.goto(`${started.baseUrl}${outcome.value.url}`);
+      const artifact = page
+        .frameLocator('iframe[title="Artifacts"]:visible')
+        .last()
+        .frameLocator('iframe[title^="Preview: "]')
+        .frameLocator("iframe");
+      await artifact.getByRole("link", { name: "Jump to details" }).click();
+      await expect(artifact.locator("#details:target")).toBeInViewport();
+      phase("artifact links checked; tree start");
       await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
       const sidenav = page.locator('[data-workbench-region="sidenav"]');
       await verifyTreeGroups(page, sidenav, sidenav.getByRole("option", { name: "Search", exact: true }));

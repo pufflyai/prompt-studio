@@ -44,6 +44,44 @@ test("localizing a label retains unchanged payloads and leaves the source intact
   expect(localized.entries).toBe(source.entries);
   expect(source.title).toEqual({ $l10n: "missing", default: "Title" });
   expect(localizeExtensionValue(tokens)).toBe(tokens);
+  const plain = { type: "select", options: [{ label: "Plain", value: "plain" }] };
+  expect(localizeExtensionValue(plain)).toBe(plain);
+});
+
+test.each([
+  "select",
+  "multi-select",
+])("static %s choices translate without changing their values or string fallback", async (type) => {
+  const owner = createRuntimeCollections();
+  const registration = registerExtensionTranslationBundles(
+    {
+      themes: [],
+      fileIconThemes: [],
+      diagnostics: [],
+      translations: [{ extensionId: "choices", defaultLocale: "en", bundles: { fr: { fast: "Rapide" } } }],
+    },
+    owner,
+  );
+  const option = { label: "Fast", localizedLabel: { $l10n: "fast" }, value: "fast" };
+  const source = { type, options: [option, { label: "Custom", value: "custom" }] };
+  try {
+    await i18n.changeLanguage("fr");
+    const localized = localizeExtensionValue(source, "choices", owner) as typeof source;
+    expect(localized.options[0]).toMatchObject({ label: "Rapide", value: "fast" });
+    expect(localized.options[1]).toBe(source.options[1]);
+    expect(source.options[0]?.label).toBe("Fast");
+    await i18n.changeLanguage("en");
+    expect((localizeExtensionValue(source, "choices", owner) as typeof source).options[0]?.label).toBe("Fast");
+    expect(localizeExtensionValue({ value: "data", label: "Literal", localizedLabel: "Other" })).toEqual({
+      value: "data",
+      label: "Literal",
+      localizedLabel: "Other",
+    });
+  } finally {
+    registration.dispose();
+    await owner.dispose();
+    await i18n.changeLanguage("en");
+  }
 });
 
 test("bulk labels retain their namespace, fallback and current locale", async () => {

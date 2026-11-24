@@ -11,6 +11,7 @@ import type {
   TreeRendererState,
   TreeRendererStoreState,
 } from "./tree-renderer-types";
+import { treeStateKey } from "./tree-state-scope";
 
 export type * from "./tree-renderer-types";
 
@@ -32,6 +33,12 @@ const toggleId = (ids: string[], id: string, expanded: boolean) => {
   if (expanded) return ids.includes(id) ? ids : [...ids, id];
   return ids.includes(id) ? ids.filter((value) => value !== id) : ids;
 };
+
+const expandedState =
+  (field: "expandedNodeIds" | "expandedSectionIds", id: string, expanded: boolean) => (state: TreeRendererState) => {
+    const ids = toggleId(state[field], id, expanded);
+    return ids === state[field] ? state : { ...state, [field]: ids };
+  };
 
 export const createTreeRendererRegistry = (input: CreateTreeRendererRegistryInput): TreeRendererRegistry => {
   const { rendererRegistry, persistence } = input;
@@ -55,9 +62,10 @@ export const createTreeRendererRegistry = (input: CreateTreeRendererRegistryInpu
     return tree;
   };
 
-  const ensureState = (id: string) => {
+  const ensureState = (id: string, stateScope?: string) => {
+    const key = treeStateKey(id, stateScope);
     const current = treeStore.getState();
-    const existing = current.statesByTreeId[id];
+    const existing = current.statesByTreeId[key];
     if (existing) return existing;
 
     const tree = current.trees[id];
@@ -67,7 +75,7 @@ export const createTreeRendererRegistry = (input: CreateTreeRendererRegistryInpu
     treeStore.setState(
       {
         ...current,
-        statesByTreeId: { ...current.statesByTreeId, [id]: fresh },
+        statesByTreeId: { ...current.statesByTreeId, [key]: fresh },
       },
       false,
       "ensureTreeState",
@@ -85,8 +93,13 @@ export const createTreeRendererRegistry = (input: CreateTreeRendererRegistryInpu
     persistence.setTreeStates({ statesByTreeId });
   };
 
-  const updateState = (id: string, update: (state: TreeRendererState) => TreeRendererState, action: string) => {
-    const current = ensureState(id);
+  const updateState = (
+    id: string,
+    update: (state: TreeRendererState) => TreeRendererState,
+    action: string,
+    stateScope?: string,
+  ) => {
+    const current = ensureState(id, stateScope);
     const next = update(current);
     if (next === current) return;
 
@@ -94,7 +107,7 @@ export const createTreeRendererRegistry = (input: CreateTreeRendererRegistryInpu
     treeStore.setState(
       {
         ...snapshot,
-        statesByTreeId: { ...snapshot.statesByTreeId, [id]: next },
+        statesByTreeId: { ...snapshot.statesByTreeId, [treeStateKey(id, stateScope)]: next },
       },
       false,
       action,
@@ -169,9 +182,9 @@ export const createTreeRendererRegistry = (input: CreateTreeRendererRegistryInpu
     async getBody(id, ctx = {}) {
       return await requireTree(id).getBody({
         ...ctx,
-        state: registry.getTreeState(id),
+        state: registry.getTreeState(id, ctx.stateScope),
         refresh: () => registry.refresh(id),
-        setSelectedNode: (nodeId) => registry.setSelectedNode(id, nodeId),
+        setSelectedNode: (nodeId) => registry.setSelectedNode(id, nodeId, ctx.stateScope),
       });
     },
 
@@ -180,9 +193,9 @@ export const createTreeRendererRegistry = (input: CreateTreeRendererRegistryInpu
       if (!tree.getHeader) return [];
       return await tree.getHeader({
         ...ctx,
-        state: registry.getTreeState(id),
+        state: registry.getTreeState(id, ctx.stateScope),
         refresh: () => registry.refresh(id),
-        setSelectedNode: (nodeId) => registry.setSelectedNode(id, nodeId),
+        setSelectedNode: (nodeId) => registry.setSelectedNode(id, nodeId, ctx.stateScope),
       });
     },
 
@@ -191,58 +204,42 @@ export const createTreeRendererRegistry = (input: CreateTreeRendererRegistryInpu
       if (!tree.getFooter) return [];
       return await tree.getFooter({
         ...ctx,
-        state: registry.getTreeState(id),
+        state: registry.getTreeState(id, ctx.stateScope),
         refresh: () => registry.refresh(id),
-        setSelectedNode: (nodeId) => registry.setSelectedNode(id, nodeId),
+        setSelectedNode: (nodeId) => registry.setSelectedNode(id, nodeId, ctx.stateScope),
       });
     },
 
     async getChildren(id, node, ctx = {}) {
       return await requireTree(id).getChildren(node, {
         ...ctx,
-        state: registry.getTreeState(id),
+        state: registry.getTreeState(id, ctx.stateScope),
         refresh: () => registry.refresh(id),
-        setSelectedNode: (nodeId) => registry.setSelectedNode(id, nodeId),
+        setSelectedNode: (nodeId) => registry.setSelectedNode(id, nodeId, ctx.stateScope),
       });
     },
 
-    getTreeState(id) {
-      const state = ensureState(id);
+    getTreeState(id, stateScope) {
+      const { statesByTreeId } = treeStore.getState();
+      const state = statesByTreeId[treeStateKey(id, stateScope)] ?? createDefaultState(requireTree(id));
       return {
         expandedNodeIds: [...state.expandedNodeIds],
         expandedSectionIds: [...state.expandedSectionIds],
         selectedNodeId: state.selectedNodeId,
-        loading: state.loading,
+        loading: statesByTreeId[id]?.loading,
       };
     },
 
-    setNodeExpanded(id, nodeId, expanded) {
+    setNodeExpanded(id, nodeId, expanded, stateScope) {
       requireTree(id);
-      updateState(
-        id,
-        (state) => {
-          const nextIds = toggleId(state.expandedNodeIds, nodeId, expanded);
-          if (nextIds === state.expandedNodeIds) return state;
-          return { ...state, expandedNodeIds: nextIds };
-        },
-        "setNodeExpanded",
-      );
+      updateState(id, expandedState("expandedNodeIds", nodeId, expanded), "setNodeExpanded", stateScope);
+    },
+    setSectionExpanded(id, sectionId, expanded, stateScope) {
+      requireTree(id);
+      updateState(id, expandedState("expandedSectionIds", sectionId, expanded), "setSectionExpanded", stateScope);
     },
 
-    setSectionExpanded(id, sectionId, expanded) {
-      requireTree(id);
-      updateState(
-        id,
-        (state) => {
-          const nextIds = toggleId(state.expandedSectionIds, sectionId, expanded);
-          if (nextIds === state.expandedSectionIds) return state;
-          return { ...state, expandedSectionIds: nextIds };
-        },
-        "setSectionExpanded",
-      );
-    },
-
-    setSelectedNode(id, nodeId) {
+    setSelectedNode(id, nodeId, stateScope) {
       requireTree(id);
       updateState(
         id,
@@ -251,6 +248,7 @@ export const createTreeRendererRegistry = (input: CreateTreeRendererRegistryInpu
           return { ...state, selectedNodeId: nodeId };
         },
         "setSelectedNode",
+        stateScope,
       );
     },
 

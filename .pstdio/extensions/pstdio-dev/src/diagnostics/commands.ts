@@ -1,5 +1,6 @@
 import { defineCommand, type ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { storageReportChanged } from "./events";
+import { readDatabaseSchema } from "./schema";
 import { buildStorageReport, STORAGE_REPORT_FILE, STORAGE_RUN_FILE, type StorageReport } from "./storage";
 import { readTimeline } from "./timeline";
 
@@ -25,6 +26,15 @@ const storageWorker = defineCommand({
 });
 
 export const diagnosticsCommands = {
+  "diagnostics.database-schema": defineCommand({
+    id: "diagnostics.database-schema",
+    title: "Browse the declared database schema",
+    cli: true,
+    async run(ctx) {
+      const folder = await ctx.workspaces.getDefault();
+      return readDatabaseSchema(folder?.root_path ?? null);
+    },
+  }),
   "diagnostics.startup-timeline": defineCommand({
     id: "diagnostics.startup-timeline",
     title: "Read runtime startup and project setup timings",

@@ -148,9 +148,9 @@ test("session resources use their panel menu and toggle from its opener", async 
     .locator('[data-workbench-panel="side"]')
     .getByRole("tab", { name: "Review session", exact: true })
     .click();
-  const opener = preview.getByRole("button", { name: "Open Side right menu", exact: true });
+  const opener = preview.getByRole("button", { name: /^(Open|Close) Side right menu$/ });
   await opener.click();
-  const menu = preview.locator('[data-workbench-panel-menu-controls="side-right-menu"]');
+  const menu = preview.getByRole("region", { name: "Side right menu", exact: true });
   await expect(menu.getByRole("option", { name: "Relationship test", exact: true })).toBeVisible();
   await test.info().attach("Session resources panel menu", { body: await page.screenshot(), contentType: "image/png" });
   await opener.click();
@@ -187,7 +187,7 @@ test("the Side launcher leaves the session composer operable beside its resource
   await floating.getByRole("tab", { name: "Review session", exact: true }).click();
   await floating.getByRole("button", { name: "Open Side right menu", exact: true }).click();
   await preview
-    .locator('[data-workbench-panel-menu-controls="side-right-menu"]')
+    .getByRole("region", { name: "Side right menu", exact: true })
     .getByRole("option", { name: "Relationship test", exact: true })
     .click();
   await expect(main).toContainText("Ticket collection");

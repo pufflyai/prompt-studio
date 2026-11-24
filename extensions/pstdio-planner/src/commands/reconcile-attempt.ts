@@ -2,14 +2,14 @@ import { type CommandContext, defineCommand, params, type SessionRunSnapshot } f
 import { actorFromSource } from "../data/attempt-actors";
 import { legacyAttemptOutput } from "../data/attempt-compatibility";
 import { attemptId, resolveAttemptId } from "../data/attempt-identity";
+import { readAttemptPage } from "../data/attempt-page";
 import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
-import { appendAttemptEvent, listAttempts, putAttempt, readAttempt } from "../data/attempt-storage";
+import { appendAttemptEvent, putAttempt, readAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { hasFolderWriter } from "../data/folder-writers";
-import { readSessionHistory } from "../data/session-history";
+import { hasWorkspaceWriter } from "../data/workspace-writers";
 import { withWriteGuard } from "../data/write-guard";
 import { readImplementationCapacity } from "./attempt-readiness";
-import { isLiveSession } from "./auto-build-sessions";
 import { blockAttempt } from "./reconcile-blocker";
 import { reconcileReview } from "./reconcile-review";
 
@@ -21,11 +21,9 @@ const retryImplementation = async (ctx: CommandContext, attempt: AttemptRecord, 
   const capacity = await readImplementationCapacity(ctx);
   if (capacity.running >= capacity.limit) throw new Error("Implementation capacity is full.");
   if (
-    attempt.base === null
-      ? await hasFolderWriter(ctx, attempt.workspaceId, session.id)
-      : (await readSessionHistory(ctx.sessions, { workspaceId: attempt.workspaceId })).some(
-          (other) => other.id !== session.id && isLiveSession(other),
-        )
+    await (attempt.base === null
+      ? hasFolderWriter(ctx, attempt.workspaceId, session.id)
+      : hasWorkspaceWriter(ctx.sessions, attempt.workspaceId, session.id))
   )
     throw new Error("Another session is executing in this workspace.");
   await ctx.sessions.followup({
@@ -130,9 +128,14 @@ export const listAttemptsCommand = defineCommand({
   id: "list-attempts",
   title: "List managed attempts",
   cli: true,
-  params: {},
-  async run(ctx, _commandParams) {
-    return Promise.all((await listAttempts(ctx.storage)).map((attempt) => legacyAttemptOutput(ctx.storage, attempt)));
+  params: { limit: params.number(), cursor: params.text() },
+  async run(ctx, input) {
+    const { variants, ...page } = await readAttemptPage(ctx.storage, input);
+    const retired = await readRetiredWorkspaceIds(ctx.storage, variants.map(attemptId));
+    return {
+      ...page,
+      attempts: await Promise.all(variants.map((attempt) => legacyAttemptOutput(ctx.storage, attempt, retired))),
+    };
   },
 });
 
@@ -140,7 +143,6 @@ export const listVariantsCommand = defineCommand({
   id: "list-variants",
   title: "List implementation variants",
   cli: true,
-  async run(ctx) {
-    return listAttempts(ctx.storage);
-  },
+  params: { limit: params.number(), cursor: params.text() },
+  run: (ctx, input) => readAttemptPage(ctx.storage, input),
 });

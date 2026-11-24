@@ -3,6 +3,7 @@
   "navigation.workspaces": "ワークスペース",
   "navigation.sessions": "セッション",
   "timeline.page.title": "プロジェクトタイムライン",
+  "timeline.actions.title": "タイムラインの操作",
   "timeline.view.title": "プロジェクトタイムライン",
   "commands.autoBuild.title": "自動ビルド",
   "commands.openTickets": "チケットを開く",

@@ -12,6 +12,7 @@ interface AutoBuildPreviewProps {
   failPause?: boolean;
   empty?: boolean;
   warning?: boolean;
+  initialRequestOffset?: number;
 }
 
 export function AutoBuildPreview(props: AutoBuildPreviewProps) {
@@ -19,6 +20,8 @@ export function AutoBuildPreview(props: AutoBuildPreviewProps) {
   const [actionError, setActionError] = useState<string>();
   const [paused, setPaused] = useState(false);
   const [pending, setPending] = useState(requests);
+  const [offset, setOffset] = useState(props.initialRequestOffset ?? 0);
+  const paginated = props.initialRequestOffset !== undefined;
   return (
     <AutoBuildButton
       enabled={!paused}
@@ -46,7 +49,9 @@ export function AutoBuildPreview(props: AutoBuildPreviewProps) {
       }}
       onOpenSession={() => {}}
       t={(_key, fallback) => fallback ?? _key}
-      reviewRequests={pending}
+      reviewRequests={paginated ? pending.slice(offset, offset + 25) : pending}
+      requestPage={paginated ? { offset, total: pending.length, hasNext: offset + 25 < pending.length } : undefined}
+      onRequestPage={setOffset}
       onAnswerRequest={async (id) => {
         if (failSave) throw new Error("Unable to save. Try again.");
         setPending((current) => current.filter((request) => request.id !== id));

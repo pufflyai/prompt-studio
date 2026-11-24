@@ -106,7 +106,7 @@ export const defaultWorkspaceProviderRuntime: WorkspaceProviderRuntime = {
       );
       // Only the direct lifecycle callback can prepare an unavailable target.
       // Commands and hooks keep the runner's ordinary readiness checks.
-      context.process = createWorkspaceProviderProcess(deps, input, scope);
+      context.process = createWorkspaceProviderProcess(deps, { ...input, extensionId: record.extensionId }, scope);
       if (directory) context.localDirectory = directory;
       return context;
     };

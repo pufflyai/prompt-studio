@@ -22,7 +22,7 @@ export const useConfigureExtensionConnection = (projectId: string) => {
         baseUrl: input.baseUrl,
         secret: input.secret,
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: connectionsKey(projectId) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["extension-connections"] }),
   });
 };
 
@@ -31,7 +31,7 @@ export const useCheckExtensionConnection = (projectId: string) => {
   return useMutation({
     mutationFn: (input: { extensionId: string; connectionId: string }) =>
       checkExtensionConnection(projectId, input.extensionId, input.connectionId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: connectionsKey(projectId) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["extension-connections"] }),
   });
 };
 
@@ -40,6 +40,6 @@ export const useDeleteExtensionConnection = (projectId: string) => {
   return useMutation({
     mutationFn: (input: { extensionId: string; connectionId: string }) =>
       deleteExtensionConnection(projectId, input.extensionId, input.connectionId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: connectionsKey(projectId) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["extension-connections"] }),
   });
 };

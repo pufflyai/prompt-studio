@@ -5,6 +5,18 @@ import {
 } from "./panel-menu-state-controller";
 
 describe("createWorkbenchPanelMenuStateController", () => {
+  test("selects one owner's menu atomically without closing another owner", () => {
+    const panels = createWorkbenchPanelMenuStateController();
+    panels.setOpen("other-owner", true);
+    const changes: unknown[] = [];
+    const subscription = panels.onDidChange((state) => changes.push(state));
+    panels.setSelection(["files", "properties"], "properties");
+    expect(panels.isOpen("files")).toBe(false);
+    expect(panels.isOpen("properties")).toBe(true);
+    expect(panels.isOpen("other-owner")).toBe(true);
+    expect(changes).toHaveLength(1);
+    subscription.dispose();
+  });
   test("defaults isOpen to true for any unseen menu", () => {
     const panels = createWorkbenchPanelMenuStateController();
 
