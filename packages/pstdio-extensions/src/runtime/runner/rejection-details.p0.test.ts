@@ -44,8 +44,9 @@ test("an owner can reject a validated command before its write", async () => {
         ref: { kind: "command", id: "save" },
         title: "Save",
         async run(ctx) {
+          const failedRead = { ok: false, status: "error", code: "stale_revision", reason: "Version changed" } as const;
           throw new Error("Version changed", {
-            cause: ctx.commands.reject({ code: "stale_revision", reason: "Version changed" }),
+            cause: ctx.commands.reject(failedRead),
           });
         },
       },

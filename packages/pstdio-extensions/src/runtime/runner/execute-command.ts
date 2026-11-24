@@ -212,7 +212,7 @@ const runExtensionCommand = async (
         { ...startedPayload, ...rejection },
         input,
       );
-      return withNotices({ ok: false, status: "rejected", ...rejection }, notices);
+      return withNotices({ ...rejection, ok: false, status: "rejected" }, notices);
     }
     const elapsedMs = Date.now() - start;
     const error = serializeError(err);
