@@ -107,6 +107,7 @@ export function BookApp(props: Props) {
           chapter={state.chapter}
           data={data}
           client={client}
+          isCurrentWorkspace={state.isCurrentWorkspace}
           onClose={() => {
             state.setForm(null);
             state.refresh();

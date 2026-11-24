@@ -11,6 +11,7 @@ interface Props {
   chapter: number;
   data: BookData;
   client: BookClient;
+  isCurrentWorkspace: (workspaceId: string) => boolean;
   onClose: () => void;
   onSaved: () => void;
   onDraftSaved: (draft: Draft) => void;
@@ -28,10 +29,10 @@ const openDraftEditing = (client: BookClient, workspaceId: string, chapter: numb
 };
 
 export function AuthoringForm(props: Props) {
-  const { mode, chapter, data, client, onClose, onSaved, onDraftSaved } = props;
+  const { mode, chapter, data, client, isCurrentWorkspace, onClose, onSaved, onDraftSaved } = props;
   const draftChapter = draftChapterFor(mode, chapter);
   const { workspaceId } = data;
-  const draft = data.drafts.find((item) => item.chapter === draftChapter);
+  const draft = data.drafts.find((item) => item.workspaceId === workspaceId && item.chapter === draftChapter);
   const mounted = useRef(false);
   const editing = useRef<Promise<WebviewCommandEditingSession<DraftSnapshot>> | undefined>(undefined);
   const activeEditing = useRef<WebviewCommandEditingSession<DraftSnapshot> | undefined>(undefined);
@@ -94,11 +95,12 @@ export function AuthoringForm(props: Props) {
       void previous?.then((session) => session.close()).catch(() => {});
     };
   }, [client, workspaceId, draftChapter, openAttempt]);
+  const isCurrentForm = () => mounted.current && isCurrentWorkspace(workspaceId);
   const requireOpenForm = () => {
-    if (!mounted.current) throw new Error("The authoring form closed.");
+    if (!isCurrentForm()) throw new Error("The authoring form closed.");
   };
   const rememberDraft = (values: Record<string, unknown>, savedRevision: string) => {
-    if (!mounted.current) return;
+    if (!isCurrentForm()) return;
     const saved = {
       id: `${workspaceId}-${draftChapter}`,
       workspaceId,
@@ -142,7 +144,7 @@ export function AuthoringForm(props: Props) {
       rememberDraft(values, result.refused.revision);
       return result.refused;
     }
-    if (mounted.current) onSaved();
+    if (isCurrentForm()) onSaved();
     void client.commands["drafts.discard"]({
       workspaceId,
       chapter: draftChapter,
@@ -166,7 +168,7 @@ export function AuthoringForm(props: Props) {
       hasSubmissionProof={Boolean(draft?.submissionProof)}
       onSubmit={submit}
       onClose={() => {
-        if (mounted.current) onClose();
+        if (isCurrentForm()) onClose();
       }}
       onPreviewDraft={(values, expectedRevision) => {
         const session = activeEditing.current;
