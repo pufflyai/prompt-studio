@@ -15,10 +15,16 @@ import { installMissingDefaultExtensions } from "../extensions/default-extension
 import { createProcessApi, findFreePort, hostStartedGrants } from "../extensions/extension-process-api";
 import { resolvePstdioHome } from "../extensions/install-extension-source";
 import { selectExistingSources } from "../extensions/installed-extension-runtime";
-import type { ProcessEnvironmentPermissions } from "../extensions/process-environment/permissions";
+import type {
+  ProcessEnvironmentPermissions,
+  ProcessEnvironmentSource,
+} from "../extensions/process-environment/permissions";
 import type { ProjectExtensionRuntimeCatalog } from "../extensions/project-extension-runtime-catalog";
 import type { ProjectExtensionRuntimeSnapshot } from "../extensions/project-extension-runtime-snapshot";
-import { ExtensionRuntimeProjectMissingError } from "../extensions/project-extension-runtime-snapshot";
+import {
+  ExtensionRuntimeProjectMissingError,
+  resolveEnabledSourceForRecord,
+} from "../extensions/project-extension-runtime-snapshot";
 import { createHarnessRegistryLifecycle } from "./harness-registry-lifecycle";
 import { createHarnessStateApi } from "./harness-state";
 
@@ -46,6 +52,10 @@ type BuildRegistryInput = {
 // `detect()` shells out to `<cli> --version`; reuse a probe across a burst of
 // `/agents/info` polls instead of spawning one process per request.
 const DETECT_CACHE_TTL_MS = 5_000;
+
+const sourceForHarness = (snapshot: ProjectExtensionRuntimeSnapshot, record: Parameters<HarnessContextFactory>[0]) =>
+  resolveEnabledSourceForRecord(record.sourcePath, snapshot.enabledSources, snapshot.runtime.extensions)
+    ?.installedSource;
 
 export const resolveHarnessName = (handle: Pick<HarnessHandle, "label" | "localId">) => {
   if (isLocalizedString(handle.label)) return handle.label.default ?? handle.label.$l10n;
@@ -86,7 +96,7 @@ export const createHarnessRegistryService = (input: {
   sessionResources?: HarnessSessionResources;
   createConnectionsApi?: (scope: { projectId: string; extensionId: string }) => ExtensionConnectionsApi;
   /** Host values the user allowed a harness extension in a project reach its processes. */
-  processEnvironment?: Pick<ProcessEnvironmentPermissions, "grantedNames" | "authorizeCurrent">;
+  processEnvironment?: Pick<ProcessEnvironmentPermissions, "grantedNames" | "authorize">;
 }): HarnessRegistryService => {
   const unavailableConnections: ExtensionConnectionsApi = {
     request: async () => {
@@ -97,23 +107,27 @@ export const createHarnessRegistryService = (input: {
     },
   };
   // Marked so a process-mode harness reaches this context through its worker's allowlist.
-  const buildContext: HarnessContextFactory = (record, options) =>
-    markHostContext({
-      projectId: options?.projectId,
-      extensionId: record.extensionId,
-      name: record.name,
-      process: createProcessApi({
+  const buildContext =
+    (
+      sourceForRecord?: (record: Parameters<HarnessContextFactory>[0]) => ProcessEnvironmentSource | undefined,
+    ): HarnessContextFactory =>
+    (record, options) =>
+      markHostContext({
+        projectId: options?.projectId,
         extensionId: record.extensionId,
-        ...hostStartedGrants(input.processEnvironment, options?.projectId, record.extensionId),
-      }),
-      net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
-      connections:
-        options?.projectId && input.createConnectionsApi
-          ? input.createConnectionsApi({ projectId: options.projectId, extensionId: record.extensionId })
-          : unavailableConnections,
-      logger: harnessLogger(record.extensionId),
-      state: createHarnessStateApi(record.extensionId),
-    });
+        name: record.name,
+        process: createProcessApi({
+          extensionId: record.extensionId,
+          ...hostStartedGrants(input.processEnvironment, options?.projectId, sourceForRecord?.(record)),
+        }),
+        net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
+        connections:
+          options?.projectId && input.createConnectionsApi
+            ? input.createConnectionsApi({ projectId: options.projectId, extensionId: record.extensionId })
+            : unavailableConnections,
+        logger: harnessLogger(record.extensionId),
+        state: createHarnessStateApi(record.extensionId),
+      });
 
   // Sources registered in the DB only exist once a project synced them, but agents are
   // host-wide and must resolve before the first project: also scan the user extensions root.
@@ -152,8 +166,8 @@ export const createHarnessRegistryService = (input: {
     createHarnessSessionResources({
       onError: (err) => apiLogger.error({ err, event: "harness.session_cleanup.error" }, "Idle session cleanup failed"),
     });
-  const lifecycle = createHarnessRegistryLifecycle((records) =>
-    createHarnessRegistry(records, buildContext, resources),
+  const lifecycle = createHarnessRegistryLifecycle((records, sourceForRecord) =>
+    createHarnessRegistry(records, buildContext(sourceForRecord), resources),
   );
   let closed = false;
   let resolutionGeneration = 0;
@@ -242,7 +256,10 @@ export const createHarnessRegistryService = (input: {
       });
       const cached = projectRegistries.get(projectId);
       if (cached && cached.snapshot === snapshot) return cached.registry;
-      const loaded = await lifecycle.get(snapshot.runtime.harnesses, projectId);
+      const sourceForRecord =
+        input.processEnvironment &&
+        ((record: Parameters<HarnessContextFactory>[0]) => sourceForHarness(snapshot, record));
+      const loaded = await lifecycle.get(snapshot.runtime.harnesses, projectId, sourceForRecord);
       ensureActive();
       if (generation !== resolutionGeneration) continue;
       const registry = createRegistryView(loaded);

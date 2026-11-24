@@ -1,8 +1,15 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { createProcessEnvironmentPermissions, type ProcessEnvironmentSource } from "./permissions";
+import {
+  createProcessEnvironmentPermissions,
+  type ProcessEnvironmentLease,
+  type ProcessEnvironmentSource,
+} from "./permissions";
+
+const startLease = (lease: ProcessEnvironmentLease, stop: (reason: unknown) => Promise<void>) =>
+  lease.start(() => ({ value: undefined, stop }));
 
 const roots: string[] = [];
 
@@ -126,7 +133,7 @@ describe("process environment permissions", () => {
     await permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity });
     const events: string[] = [];
     const lease = await permissions.authorize("project-1", source("hash-1"), ["GH_TOKEN"]);
-    lease.attach(async () => {
+    startLease(lease, async () => {
       events.push(`stopped while granted: ${(await permissions.read("project-1", "acme.agent")).granted.length > 0}`);
     });
 
@@ -139,30 +146,31 @@ describe("process environment permissions", () => {
     });
   });
 
-  test("a child authorized before a revocation is stopped as soon as it starts", async () => {
+  test("a retired lease refuses to start any process", async () => {
     const { permissions, source } = setup();
     const { sourceIdentity } = await permissions.read("project-1", "acme.agent");
     await permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity });
     const lease = await permissions.authorize("project-1", source("hash-1"), ["GH_TOKEN"]);
     await permissions.revoke("project-1", "acme.agent");
-    let stopped = false;
-
-    lease.attach(async () => {
-      stopped = true;
-    });
-
-    expect(stopped).toBe(true);
+    let started = false;
+    expect(() =>
+      lease.start(() => {
+        started = true;
+        return { value: undefined, stop: async () => {} };
+      }),
+    ).toThrow("revoked");
+    expect(started).toBe(false);
+    lease.releaseUnused();
   });
 
   test("a revocation that finishes while a child is being authorized refuses that child", async () => {
     const { path, sources } = setup();
-    let lookups = 0;
     const lookup = Promise.withResolvers<void>();
     const permissions = createProcessEnvironmentPermissions({
       path,
-      findSource: async (projectId) => {
-        // The third lookup is authorize's; hold it until the revocation is done.
-        if (++lookups === 3) await lookup.promise;
+      findSource: async (projectId, _extensionId, enabledOnly) => {
+        // Hold the process's enabled-source lookup until the revocation is done.
+        if (enabledOnly) await lookup.promise;
         return sources.get(projectId);
       },
     });
@@ -180,7 +188,7 @@ describe("process environment permissions", () => {
     await permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity });
     const lease = await permissions.authorize("project-1", sources.get("project-1")!, ["GH_TOKEN"]);
     const stopping = Promise.withResolvers<void>();
-    lease.attach(() => stopping.promise);
+    startLease(lease, () => stopping.promise);
     const revoking = permissions.revoke("project-1", "acme.agent");
     const granting = permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity });
     await Bun.sleep(10);
@@ -197,7 +205,8 @@ describe("process environment permissions", () => {
     const { sourceIdentity } = await permissions.read("project-1", "acme.agent");
     await permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN", "ANTHROPIC_API_KEY"], sourceIdentity });
     let stopped = false;
-    (await permissions.authorize("project-1", source("hash-1"), ["ANTHROPIC_API_KEY"])).attach(async () => {
+    const lease = await permissions.authorize("project-1", source("hash-1"), ["ANTHROPIC_API_KEY"]);
+    startLease(lease, async () => {
       stopped = true;
     });
 
@@ -212,7 +221,7 @@ describe("process environment permissions", () => {
     await permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity });
     let stopped = false;
     const lease = await permissions.authorize("project-1", source("hash-1"), ["GH_TOKEN"]);
-    lease.attach(async () => {
+    startLease(lease, async () => {
       stopped = true;
     });
     lease.release();
@@ -221,7 +230,9 @@ describe("process environment permissions", () => {
 
     expect(stopped).toBe(false);
   });
+});
 
+describe("process environment grant persistence", () => {
   test("a grant change that cannot be saved leaves the saved grant in effect", async () => {
     const { permissions, path, create, source } = setup();
     const { sourceIdentity } = await permissions.read("project-1", "acme.agent");
@@ -264,6 +275,43 @@ describe("process environment permissions", () => {
     expect((await create().read("project-1", "acme.agent")).granted).toEqual([]);
   });
 
+  test("a temporary grant file error can be corrected without restarting the permission service", async () => {
+    const { permissions, path } = setup();
+    mkdirSync(path, { recursive: true });
+    const failed = await permissions.read("project-1", "acme.agent").catch((error: unknown) => error);
+    expect(failed).toBeInstanceOf(Error);
+
+    rmSync(path, { recursive: true });
+    writeFileSync(path, JSON.stringify({ version: 1, grants: [] }));
+    expect(await permissions.read("project-1", "acme.agent")).toMatchObject({ granted: [] });
+  });
+
+  test("a grant waiting for another change still requires the source the person saw", async () => {
+    const { permissions, sources, source } = setup();
+    const { sourceIdentity } = await permissions.read("project-1", "acme.agent");
+    await permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity });
+    const stopped = Promise.withResolvers<void>();
+    const stopping = Promise.withResolvers<void>();
+    const lease = await permissions.authorize("project-1", source("hash-1"), ["GH_TOKEN"]);
+    startLease(lease, async () => {
+      stopping.resolve();
+      await stopped.promise;
+    });
+    const revoke = permissions.revoke("project-1", "acme.agent");
+    await stopping.promise;
+    const grant = permissions
+      .grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity })
+      .catch((error: unknown) => error);
+    // The pending stop keeps the change queued until after the source is replaced.
+    await Bun.sleep(0);
+    sources.set("project-1", source("hash-2"));
+    stopped.resolve();
+
+    await revoke;
+    expect(await grant).toMatchObject({ code: "process_environment_source_changed" });
+    expect(await permissions.read("project-1", "acme.agent")).toMatchObject({ granted: [], stale: false });
+  });
+
   test("reading an extension the project does not have reports it as missing", async () => {
     const { permissions } = setup();
 
@@ -273,37 +321,45 @@ describe("process environment permissions", () => {
   });
 });
 
-// Awaited before matching: the outcome is read without an expect(promise) matcher.
-const refusal = async (work: Promise<unknown>) => {
-  try {
-    await work;
-    return "allowed";
-  } catch (error) {
-    return String(error);
-  }
-};
-
 describe("process environment grants for host-started processes", () => {
-  test("host-started processes get the names granted for the extension's current source in the project", async () => {
+  test("host-started processes get only the grants for their source generation", async () => {
     const { permissions, sources, source } = setup();
+    const original = source("hash-1");
     const { sourceIdentity } = await permissions.read("project-1", "acme.agent");
-    expect(await permissions.grantedNames("project-1", "acme.agent")).toEqual([]);
+    expect(await permissions.grantedNames("project-1", original)).toEqual([]);
     await permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity });
+    expect(await permissions.grantedNames("project-1", original)).toEqual(["GH_TOKEN"]);
 
-    expect(await permissions.grantedNames("project-1", "acme.agent")).toEqual(["GH_TOKEN"]);
-    expect(await permissions.grantedNames("project-2", "acme.agent")).toEqual([]);
-    expect(await permissions.grantedNames("project-1", "other.agent")).toEqual([]);
-    const lease = await permissions.authorizeCurrent("project-1", "acme.agent", ["GH_TOKEN"]);
-    lease.release();
+    const current = source("hash-2");
+    sources.set("project-1", current);
+    expect(await permissions.grantedNames("project-1", current)).toEqual([]);
+    const observed = await permissions.read("project-1", "acme.agent");
+    await permissions.grant("project-1", "acme.agent", {
+      names: ["GH_TOKEN"],
+      sourceIdentity: observed.sourceIdentity,
+    });
+    expect(await permissions.grantedNames("project-1", current)).toEqual(["GH_TOKEN"]);
 
-    // Changed source content needs a new grant before its processes get the name again.
-    sources.set("project-1", source("hash-2"));
-    expect(await permissions.grantedNames("project-1", "acme.agent")).toEqual([]);
-    expect(await refusal(permissions.authorizeCurrent("project-1", "acme.agent", ["GH_TOKEN"]))).toContain(
-      "not granted",
-    );
-    expect(await refusal(permissions.authorizeCurrent("project-1", "other.agent", ["GH_TOKEN"]))).toContain(
-      "not enabled",
-    );
+    const otherProject = await permissions.grantedNames("project-2", current).catch((error: unknown) => error);
+    expect(otherProject).toMatchObject({ code: "process_environment_source_changed" });
+    const oldGeneration = await permissions.grantedNames("project-1", original).catch((error: unknown) => error);
+    expect(oldGeneration).toMatchObject({ code: "process_environment_source_changed" });
+  });
+
+  test("a disabled source keeps visible grant settings without process access", async () => {
+    const { path, source } = setup();
+    const installed = source("hash-1");
+    let enabled = true;
+    const permissions = createProcessEnvironmentPermissions({
+      path,
+      findSource: async (_project, _extension, enabledOnly) => (enabledOnly && !enabled ? undefined : installed),
+    });
+    const { sourceIdentity } = await permissions.read("project-1", "acme.agent");
+    await permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity });
+    enabled = false;
+
+    expect(await permissions.read("project-1", "acme.agent")).toMatchObject({ granted: ["GH_TOKEN"] });
+    const result = await permissions.grantedNames("project-1", installed).catch((error: unknown) => error);
+    expect(result).toMatchObject({ code: "process_environment_source_changed" });
   });
 });

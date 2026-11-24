@@ -7,13 +7,15 @@ import {
 } from "pstdio-extensions";
 import { redactSensitiveText } from "pstdio-logging";
 import { apiLogger } from "../../lib/logger";
+import { startProcessChild } from "./extension-process-lifetime";
 import { resolveProcessEnvironmentCommand } from "./process-command";
 import {
   type ProcessEnvironmentLease,
   ProcessEnvironmentPermissionError,
   type ProcessEnvironmentPermissions,
+  type ProcessEnvironmentSource,
 } from "./process-environment/permissions";
-import { processGroupExited, signalProcessTree } from "./process-group";
+import { redactText } from "./process-output-redaction";
 
 type ProcessSpawner = typeof Bun.spawn;
 
@@ -102,6 +104,16 @@ const createStopGate = (kill: () => Promise<void>) => {
   };
 };
 
+const watchLease = (treeExited: Promise<void> | undefined, lease?: ProcessEnvironmentLease) => {
+  if (!treeExited || !lease) return;
+  void treeExited.then(lease.release, (error: unknown) => {
+    apiLogger.warn(
+      { err: error, event: "extension.process.grant_tracking_failed" },
+      "Could not verify granted process exit",
+    );
+  });
+};
+
 export interface ProcessApiOptions {
   extensionId?: string;
   /**
@@ -125,14 +137,14 @@ export interface ProcessApiOptions {
  * such as harness detection at startup, there is no grant to use.
  */
 export const hostStartedGrants = (
-  permissions: Pick<ProcessEnvironmentPermissions, "grantedNames" | "authorizeCurrent"> | undefined,
+  permissions: Pick<ProcessEnvironmentPermissions, "grantedNames" | "authorize"> | undefined,
   projectId: string | undefined,
-  extensionId: string,
+  source: ProcessEnvironmentSource | undefined,
 ): Pick<ProcessApiOptions, "grantedNames" | "hostEnvironment"> =>
-  permissions && projectId
+  permissions && projectId && source
     ? {
-        grantedNames: () => permissions.grantedNames(projectId, extensionId),
-        hostEnvironment: (names) => permissions.authorizeCurrent(projectId, extensionId, names),
+        grantedNames: () => permissions.grantedNames(projectId, source),
+        hostEnvironment: (names) => permissions.authorize(projectId, source, names),
       }
     : {};
 
@@ -146,8 +158,9 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
   };
   const resolveInput = async (input: ProcessRunInput) => {
     ensureActive();
-    const cwd = await options.resolveCwd?.(input);
-    return { ...input, cwd: input.cwd ?? cwd };
+    const resolved = { ...input, envFromHost: input.envFromHost && [...input.envFromHost] };
+    const cwd = await options.resolveCwd?.(resolved);
+    return { ...resolved, cwd: resolved.cwd ?? cwd };
   };
 
   // Children outliving the invocation that started them is the leak this owns. The scope
@@ -184,8 +197,7 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
       const secrets = Object.entries(env).flatMap(([name, value]) =>
         requested.has(name.toUpperCase()) && value ? [value] : [],
       );
-      const hide = (text: string) =>
-        secrets.reduce((current, secret) => current.replaceAll(secret, "[Redacted]"), text);
+      const hide = (text: string) => redactText(text, secrets);
       return { env, lease, hide };
     } catch (error) {
       lease.release();
@@ -198,46 +210,41 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
     ensureActive();
 
     const { env, lease, hide } = await prepareEnvironment(input);
-    let spawned: { pid: number; exited: Promise<unknown> } | undefined;
     try {
-      const result = await runChild(input, env, lease, (child) => {
-        spawned = child;
-      });
+      ensureActive();
+      const result = await runChild(input, env, hide, lease);
       return { ...result, stdout: hide(result.stdout), stderr: hide(result.stderr) };
-    } finally {
-      // Programs the child left running in its group keep the granted values, so a revocation
-      // must still reach them after the child exits.
-      if (lease && spawned) void processGroupExited(spawned).then(lease.release, lease.release);
-      else lease?.release();
+    } catch (error) {
+      lease?.releaseUnused();
+      throw error;
     }
   };
 
   const runChild = async (
     input: ProcessRunInput,
     env: NodeJS.ProcessEnv,
+    hide: (text: string) => string,
     lease?: ProcessEnvironmentLease,
-    onSpawn: (child: { pid: number; exited: Promise<unknown> }) => void = () => {},
   ) => {
     const resolved = resolveProcessEnvironmentCommand(input.command, env, input.cwd);
-    // Unix needs a separate process group to stop descendants. Windows detachment
-    // disconnects the console instead and loses output from commands inside npm shims.
-    const child = spawner(resolved.argv, {
-      cwd: input.cwd,
-      detached: process.platform !== "win32",
-      env,
-      stderr: "pipe",
-      stdout: "pipe",
-      windowsHide: true,
-      windowsVerbatimArguments: resolved.windowsVerbatimArguments,
-    });
-    onSpawn(child);
-
-    const gate = createStopGate(async () => {
-      await signalProcessTree(child, "SIGKILL");
-      await child.exited;
-    });
+    const start = () => {
+      const started = startProcessChild({
+        spawner,
+        command: resolved,
+        cwd: input.cwd,
+        env,
+        detached: false,
+        trackTree: lease !== undefined,
+      });
+      const gate = createStopGate(started.stop);
+      return {
+        value: { started, gate },
+        stop: (reason: unknown) => (gate.stopped ? started.stop() : gate.stop(reason)),
+      };
+    };
+    const { started, gate } = lease ? lease.start(start) : start().value;
+    watchLease(started.treeExited, lease);
     running.add(gate.stop);
-    lease?.attach(gate.stop);
 
     const timeout =
       input.timeoutMs === undefined
@@ -258,10 +265,13 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
       );
 
     const collect = Promise.all([
-      readWithinBudget(child.stdout as ReadableStream<Uint8Array>, budget, onExceeded, gate.released),
-      readWithinBudget(child.stderr as ReadableStream<Uint8Array>, budget, onExceeded, gate.released),
-      child.exited,
-    ]).then(([stdout, stderr, exitCode]) => (gate.stopped ? gate.failed : { exitCode, stdout, stderr }));
+      readWithinBudget(started.child.stdout as ReadableStream<Uint8Array>, budget, onExceeded, gate.released),
+      readWithinBudget(started.child.stderr as ReadableStream<Uint8Array>, budget, onExceeded, gate.released),
+      started.exited,
+    ]).then(
+      ([stdout, stderr, exitCode]) => (gate.stopped ? gate.failed : { exitCode, stdout, stderr }),
+      (error: unknown) => (gate.stopped ? gate.failed : Promise.reject(error)),
+    );
     collect.catch(() => {});
 
     try {
@@ -273,7 +283,7 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
             event: "extension.process.failed",
             extensionId: options.extensionId,
             exitCode: result.exitCode,
-            stderr: redactSensitiveText(result.stderr, secrets, 4096).trim(),
+            stderr: redactSensitiveText(hide(result.stderr), secrets, 4096).trim(),
           },
           "Extension subprocess exited unsuccessfully.",
         );
@@ -299,35 +309,28 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
       input = await resolveInput(input);
       ensureActive();
       const { env, lease } = await prepareEnvironment(input);
-      let proc: ReturnType<ProcessSpawner>;
       try {
+        ensureActive();
         const resolved = resolveProcessEnvironmentCommand(input.command, env, input.cwd);
-        proc = spawner(resolved.argv, {
-          detached: true,
-          cwd: input.cwd,
-          env,
-          stderr: "ignore",
-          stdin: "ignore",
-          stdout: "ignore",
-          windowsHide: true,
-          windowsVerbatimArguments: resolved.windowsVerbatimArguments,
-        });
+        const start = () => {
+          const child = startProcessChild({
+            spawner,
+            command: resolved,
+            cwd: input.cwd,
+            env,
+            detached: true,
+            trackTree: lease !== undefined,
+          });
+          return { value: child, stop: child.stop };
+        };
+        const child = lease ? lease.start(start) : start().value;
+        child.child.unref();
+        watchLease(child.treeExited, lease);
+        return { pid: await child.pid };
       } catch (error) {
-        lease?.release();
+        lease?.releaseUnused();
         throw error;
       }
-      proc.unref();
-      // The extension owns a detached child's lifetime, except that it cannot outlive its grant.
-      if (lease) {
-        lease.attach(async () => {
-          await signalProcessTree(proc, "SIGKILL");
-          await proc.exited;
-        });
-        // Programs the child left running in its group keep the granted values, so a revocation
-        // must still reach them after the child exits.
-        void processGroupExited(proc).then(lease.release, lease.release);
-      }
-      return { pid: proc.pid };
     },
   };
 
