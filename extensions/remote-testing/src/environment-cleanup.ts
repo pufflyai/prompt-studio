@@ -10,7 +10,7 @@ import { type Api, canRetryControllerRequest, connectionApi, waitForControllerPo
 import { ownsEnvironment, readEnvironment, releaseEnvironment, stopEnvironment } from "./environments";
 import { changed } from "./events";
 import { handoffLegacyRun, recoverLegacyClaims } from "./legacy-claims";
-import { budgetedRecovery, RecoveryBudgetExhausted } from "./recovery-budget";
+import { budgetedRecovery, RecoveryBudgetExhausted, recoveryOrder } from "./recovery-budget";
 import { resumeRunLogs } from "./run-log";
 import { recoverSetupClaims } from "./setup-claims";
 
@@ -170,7 +170,12 @@ export async function resumeEnvironmentCleanups(
     ctx.logger.warn(`Could not reconcile legacy workspace claims: ${String(error)}`),
   );
   await recoverSetupClaims(ctx);
-  for (const intent of await cleanupIntents(ctx.storage).list()) {
+  for (const intent of await recoveryOrder(
+    ctx.storage,
+    "cleanup",
+    await cleanupIntents(ctx.storage).list(),
+    cleanupId,
+  )) {
     try {
       await resumeCleanup(budgetedRecovery(ctx, "cleanup"), cleanupId(intent));
     } catch (error) {

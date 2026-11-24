@@ -21,13 +21,21 @@ command there, stops the environment when the run finishes, and saves the full l
   queues independent workspace cleanup and log collection, with the existing once-per-minute
   recovery schedule as a fallback. Confirmed runner timeouts also save their actual result
   before shutdown or log-service retries. Uploaded logs are backfilled without changing the
-  saved outcome or duration. Missing logs from unfinalized timeouts get a fixed 30-second
+  saved outcome or duration. A durable result checkpoint survives summary-write or ownership-release
+  failures; recovery completes it even when the host labels the failed worker non-retryable.
+  Incomplete cleanup and log intents also recover from those failures, preserving the original
+  job error. Cleanup checks controller state before retrying a stop. Missing logs from unfinalized timeouts get a fixed 30-second
   upload grace period, including a final read after restart. Setup claims carry a finite
   recovery window; the next launch,
   Runs access, or assigned recovery schedule fences submission before cleaning an interrupted
   setup. Without an assigned schedule, recovery starts on the next launch or Runs access;
   reuse stays blocked until its asynchronous cleanup finishes. Workspace ownership
   remains held until cleanup accepts the stop; elapsed time never makes it reusable.
+  Expired claims saved by older versions without a run record are reconciled against this
+  project's managed workspace inventory and stopped before ownership is released. Recovery
+  prioritizes cleanup and logs and admits at most 20 background jobs per rolling minute
+  (8 cleanup, 8 log, 4 collection), leaving room within the host's 60-job limit for launches.
+  Durable sweep cursors rotate admission so failing earlier intents cannot starve later work.
   An explicitly kept environment stays open; collection
   cancels its overdue request when the controller can return its receipt and retains the
   workspace claim until a terminal receipt confirms cancellation. If an unacknowledged

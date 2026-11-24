@@ -8,7 +8,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { runDeps } from "./context";
 import { changed } from "./events";
-import { RecoveryBudgetExhausted } from "./recovery-budget";
+import { RecoveryBudgetExhausted, recoveryOrder } from "./recovery-budget";
 import { collectLog } from "./run-result";
 import { readRun } from "./run-store";
 import type { RunCollectionDeps, RunRecord } from "./runs";
@@ -96,7 +96,12 @@ export async function enqueueRunLog(ctx: LogContext, runId: string) {
 }
 
 export async function resumeRunLogs(ctx: LogContext) {
-  for (const intent of await intents(ctx.storage).list()) {
+  for (const intent of await recoveryOrder(
+    ctx.storage,
+    "log",
+    await intents(ctx.storage).list(),
+    (item) => item.runId,
+  )) {
     try {
       await enqueueRunLog(ctx, intent.runId);
     } catch (error) {

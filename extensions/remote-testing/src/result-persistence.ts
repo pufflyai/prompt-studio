@@ -5,6 +5,20 @@ import type { RunCollectionDeps, RunRecord, RunSummary } from "./runs";
 
 type ResultDeps = Pick<RunCollectionDeps, "store" | "changed" | "readSavedLog">;
 
+export async function prepareResultStorage<T>(operation: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+  while (true) {
+    signal?.throwIfAborted();
+    try {
+      return await operation();
+    } catch (error) {
+      signal?.throwIfAborted();
+      if (error instanceof TypeError || error instanceof SyntaxError) throw error;
+      // No marker is durable yet: retain ownership and retry only local storage.
+      await waitForControllerPoll(signal);
+    }
+  }
+}
+
 async function checkpointSummary(deps: ResultDeps, record: RunRecord, known?: RunSummary) {
   const metadata = record.pendingResult!.summary;
   if (known) return { ...metadata, tail: known.tail };
@@ -64,33 +78,28 @@ export async function persistResult(
   const pendingResult = { id: crypto.randomUUID(), summary: metadata, release };
   while (true) {
     signal?.throwIfAborted();
-    const current = await deps.store.records.read(recordId);
+    const current = await prepareResultStorage(() => deps.store.records.read(recordId), signal);
     const value = current.value as unknown as RunRecord;
     if (current.deleted) throw new Error("The remote test run was removed before its result could be saved.");
     if (value?.pendingResult) return finishPendingResult(deps, value);
     if (value?.summary) return value.summary;
-    try {
-      if (!current.exists) await deps.store.set(`run:${record.runId}`, { ...record, pendingResult });
-      else {
-        const saved = await deps.store.records.commitIfCurrent({
-          operationId: crypto.randomUUID(),
-          edits: [
-            {
-              recordId,
-              expectedRevision: current.revision,
-              set: { "/pendingResult": pendingResult },
-            },
-          ],
-        });
-        if (!saved) continue;
+    const saved = await prepareResultStorage(async () => {
+      if (!current.exists) {
+        await deps.store.set(`run:${record.runId}`, { ...record, pendingResult });
+        return true;
       }
-      break;
-    } catch (error) {
-      signal?.throwIfAborted();
-      if (error instanceof TypeError || error instanceof SyntaxError) throw error;
-      // No marker is durable yet: retain ownership and retry only this local write.
-      await waitForControllerPoll(signal);
-    }
+      return deps.store.records.commitIfCurrent({
+        operationId: crypto.randomUUID(),
+        edits: [
+          {
+            recordId,
+            expectedRevision: current.revision,
+            set: { "/pendingResult": pendingResult },
+          },
+        ],
+      });
+    }, signal);
+    if (saved) break;
   }
   return finishPendingResult(deps, record, summary);
 }

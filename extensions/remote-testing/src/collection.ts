@@ -3,7 +3,7 @@ import { readSavedLog, runDeps } from "./context";
 import { resumeEnvironmentCleanups } from "./environment-cleanup";
 import type { Claim } from "./environments";
 import { changed } from "./events";
-import { RecoveryBudgetExhausted } from "./recovery-budget";
+import { RecoveryBudgetExhausted, recoveryCursor } from "./recovery-budget";
 import { finishPendingResult } from "./result-persistence";
 import { unfinishedRuns } from "./run-recovery";
 import { awaitRun, type RunRecord, readRun } from "./runs";
@@ -116,5 +116,9 @@ export async function resumeCollection(
 }
 
 export async function resumeUnfinishedCollection(ctx: Pick<ExtensionContextBase, "storage" | "automation" | "logger">) {
-  for await (const record of unfinishedRuns(ctx.storage)) if (!(await resumeCollection(ctx, record))) break;
+  const cursor = await recoveryCursor(ctx.storage, "collector");
+  for await (const record of unfinishedRuns(ctx.storage, cursor)) if (!(await resumeCollection(ctx, record))) return;
+  if (cursor)
+    for await (const record of unfinishedRuns(ctx.storage, undefined, cursor))
+      if (!(await resumeCollection(ctx, record))) return;
 }

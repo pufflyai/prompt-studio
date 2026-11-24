@@ -4,7 +4,9 @@ import { makeCommandContext } from "@pstdio/sdk/testing";
 import { collectRun } from "./collection";
 import { recoverEnvironmentCleanup } from "./environment-cleanup";
 import { activeRun, claimEnvironment } from "./environments";
+import { persistResult } from "./result-persistence";
 import { createRunStorage } from "./run-storage-fixture";
+import { saveTimedOutRun } from "./run-timeout";
 import { checkRun, type RunRecord } from "./runs";
 
 test.each([
@@ -143,4 +145,118 @@ test.each([
   expect((await store.get<RunRecord>("run:run"))?.pendingResult).toBeUndefined();
   expect(receiptReads).toBe(1);
   expect(await activeRun(store, "env")).toBeNull();
+});
+
+test.each([
+  "read",
+  "write",
+])("a temporary pre-checkpoint %s failure retains ownership and retries local storage", async (failure) => {
+  const store = createRunStorage();
+  const record: RunRecord = {
+    runId: "run",
+    environmentId: "env",
+    requestId: "request",
+    conversationId: "conversation",
+    root: "/",
+    command: "bun test",
+    startedAt: new Date().toISOString(),
+    timeoutSeconds: 60,
+    stopAfterRun: false,
+  };
+  await store.set("run:run", record);
+  await claimEnvironment(store, "env", "run");
+  const read = store.records.read;
+  const commit = store.records.commitIfCurrent;
+  let failed = false;
+  const failOnce = async () => {
+    expect(await activeRun(store, "env")).toBe("run");
+    failed = true;
+    throw new Error("Checkpoint storage temporarily unavailable");
+  };
+  store.records.read = async (id) => {
+    if (failure === "read" && !failed) await failOnce();
+    return read(id);
+  };
+  store.records.commitIfCurrent = async (group) => {
+    if (failure === "write" && !failed) await failOnce();
+    return commit(group);
+  };
+  const summary = {
+    runId: "run",
+    environmentId: "env",
+    status: "passed" as const,
+    exitCode: 0,
+    durationMs: 17,
+    logPath: null,
+    tail: "",
+  };
+  await expect(persistResult({ store }, record, summary, true)).resolves.toEqual(summary);
+  expect(failed).toBe(true);
+  expect(await activeRun(store, "env")).toBeNull();
+  expect((await store.get<RunRecord>("run:run"))?.pendingResult).toBeUndefined();
+});
+
+test.each([
+  "environment-cleanups",
+  "pending-run-logs",
+])("timeout preparation retries a temporary %s write without losing its result", async (failure) => {
+  const store = createRunStorage();
+  const record: RunRecord = {
+    runId: "run",
+    environmentId: "env",
+    requestId: "request",
+    conversationId: "conversation",
+    root: "/",
+    command: "bun test",
+    startedAt: new Date().toISOString(),
+    timeoutSeconds: 60,
+    stopAfterRun: true,
+  };
+  await store.set("run:run", record);
+  await claimEnvironment(store, "env", "run");
+  const collection = store.collection.bind(store);
+  let failed = false;
+  store.collection = <T>(name: string) => {
+    const current = collection<T>(name);
+    return {
+      ...current,
+      createIfAbsent: async (id: string, value: T) => {
+        if (name === failure && !failed) {
+          failed = true;
+          throw new Error("Intent storage temporarily unavailable");
+        }
+        return current.createIfAbsent(id, value);
+      },
+    };
+  };
+  const summary = {
+    runId: "run",
+    environmentId: "env",
+    status: "timed_out" as const,
+    exitCode: null,
+    durationMs: 60000,
+    logPath: null,
+    tail: "",
+  };
+  await expect(
+    saveTimedOutRun(
+      {
+        store,
+        api: async () => {
+          throw new Error("No remote request expected");
+        },
+        storage: { download: async () => null },
+        saveLog: async () => "unused",
+      },
+      record,
+      summary,
+      true,
+      true,
+    ),
+  ).resolves.toEqual(summary);
+  expect(failed).toBe(true);
+  expect(await activeRun(store, "env")).toBe("run");
+  expect(await store.collection("environment-cleanups").get("run:env")).toMatchObject({ runId: "run", stop: true });
+  expect(await store.collection("pending-run-logs").get("run")).toMatchObject({ runId: "run" });
+  expect((await store.get<RunRecord>("run:run"))?.summary).toEqual(summary);
 });

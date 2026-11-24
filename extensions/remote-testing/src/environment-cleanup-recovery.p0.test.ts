@@ -21,8 +21,8 @@ test.each(["network", "server"])("failed-launch cleanup recovers a temporary sto
   const result = await cleanupRunEnvironment(
     {
       store,
-      api: async (_path, init) => {
-        if (init?.method !== "POST") return { id: "env", state: "ready" } as never;
+      api: async (input) => {
+        if (input.method !== "POST") return { id: "env", state: "ready" } as never;
         expect(await activeRun(store, "env")).toBe("owner");
         if (++attempts === 1) {
           if (failure === "network") throw new Error("Connection reset");
@@ -45,8 +45,8 @@ test("a failed-launch cleanup retry preserves a newer environment owner", async 
   const result = await cleanupRunEnvironment(
     {
       store,
-      api: async (_path, init) => {
-        if (init?.method !== "POST") return { id: "env", state: "ready" } as never;
+      api: async (input) => {
+        if (input.method !== "POST") return { id: "env", state: "ready" } as never;
         stops++;
         await releaseEnvironment(store, "env", "owner");
         expect(await claimEnvironment(store, "env", "new-owner")).toBe(true);
@@ -182,8 +182,8 @@ test("cleanup releases ownership when a same-owner record changes during release
     await cleanupRunEnvironment(
       {
         store: racing,
-        api: async (_path, init) => {
-          if (init?.method !== "POST") return { id: "env", state: "ready" } as never;
+        api: async (input) => {
+          if (input.method !== "POST") return { id: "env", state: "ready" } as never;
           stops++;
           return {} as never;
         },

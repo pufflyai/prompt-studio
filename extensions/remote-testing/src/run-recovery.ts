@@ -12,8 +12,7 @@ export const runRecoveryIndex = {
   orderBy: [{ field: "runId", direction: "asc" }],
 } satisfies StorageRecordIndex;
 
-export async function* unfinishedRuns(store: ExtensionStorageApi) {
-  let after: string | undefined;
+export async function* unfinishedRuns(store: ExtensionStorageApi, after?: string, through?: string) {
   while (true) {
     const page = await store.records.query({
       index: runRecoveryIndex.name,
@@ -30,6 +29,7 @@ export async function* unfinishedRuns(store: ExtensionStorageApi) {
             ],
           },
           ...(after ? [{ field: "runId", op: "gt" as const, value: after }] : []),
+          ...(through ? [{ field: "runId", op: "lte" as const, value: through }] : []),
         ],
       },
     });

@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import type { ExtensionAutomationApi } from "@pstdio/sdk/extensions";
 import { makeCommandContext } from "@pstdio/sdk/testing";
 import { startCollection } from "./collection";
@@ -60,7 +60,7 @@ test("background recovery prioritizes lifecycle work and leaves admission room f
     const runId = `collect-${String(index).padStart(3, "0")}`;
     await store.set(`run:${runId}`, record(runId));
   }
-  for (let index = 0; index < 8; index++) {
+  for (let index = 0; index < 9; index++) {
     const runId = `cleanup-${index}`;
     const environmentId = `env-${index}`;
     await claimEnvironment(store, environmentId, runId);
@@ -91,4 +91,20 @@ test("background recovery prioritizes lifecycle work and leaves admission room f
   ]);
   await recoverEnvironmentCleanup.run(ctx, {});
   expect(jobs.size).toBe(21);
+  for (const job of jobs.values())
+    if (job.id !== "job-20") {
+      job.status = "failed";
+      job.error = { code: "command_failed", message: "Storage unavailable", retryable: false };
+    }
+  const clock = spyOn(Date, "now").mockReturnValue(Date.now() + 60_001);
+  try {
+    await recoverEnvironmentCleanup.run(ctx, {});
+    const next = queued.slice(21);
+    expect(next[0]?.input.params?.runId).toBe("cleanup-8");
+    expect(next[8]?.input.params?.runId).toBe("log-8");
+    expect(next[16]?.input.params?.runId).toBe("collect-004");
+    expect(jobs.size).toBe(41);
+  } finally {
+    clock.mockRestore();
+  }
 });
