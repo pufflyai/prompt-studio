@@ -17,6 +17,14 @@ import { resolveExtensionPrompt, resolveHarnessInput } from "./prompt";
 import { createSessionAccess, type SessionApiScope } from "./session-access";
 import { createRemoteSession } from "./session-remote";
 
+// The local session scheduler has not been called when this error is raised.
+class SessionCreateRefused extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SessionCreateRefused";
+  }
+}
+
 export const createScopedSession = async (
   deps: ExtensionsRouteDeps,
   input: SessionApiScope,
@@ -38,7 +46,7 @@ export const createScopedSession = async (
   const workspace = sessionInput.workspaceId
     ? await requireProjectWorkspace(sessionInput.workspaceId)
     : await read(() => deps.workspaceService.getDefault(input.projectId));
-  if (!workspace) throw new Error("Attach a workspace before starting a session.");
+  if (!workspace) throw new SessionCreateRefused("Attach a workspace before starting a session.");
   if (sessionInput.originalSessionId) await read(() => requireProjectSession(sessionInput.originalSessionId!));
   const project = await deps.projectService.get(input.projectId);
   if (!project) throw new Error(`Project not found: ${input.projectId}`);
@@ -47,15 +55,19 @@ export const createScopedSession = async (
   const resolvedAgent = await resolveCreateSessionAgent(harness.agent, project, deps.harnessRegistry);
 
   if (resolvedAgent.type === "error") {
-    throw new Error(resolvedAgent.error);
+    throw new SessionCreateRefused(resolvedAgent.error);
   }
 
   const agentId = resolvedAgent.agentId;
   if (!agentId) {
-    throw new Error("No harness available. Install and enable a harness extension first.");
+    throw new SessionCreateRefused("No harness available. Install and enable a harness extension first.");
   }
 
-  if (needsProjectFolder(workspace, resolvedAgent.harness)) throw new ProjectFolderMissingError();
+  if (needsProjectFolder(workspace, resolvedAgent.harness)) {
+    const error = new ProjectFolderMissingError();
+    error.name = "SessionCreateRefused";
+    throw error;
+  }
 
   const model = await resolveCreateSessionModel(harness.model, project, agentId, deps.harnessRegistry, {
     requestAgentWasOmitted: !harness.agent,

@@ -36,7 +36,8 @@ import {
   createDashboardWebviewSettingsAdapter,
 } from "../webview-service-adapters";
 import { createDashboardWebviewServiceQueries } from "../webview-service-queries";
-import { executeWebviewCommand, webviewCommandSlot } from "./extension-webview-command";
+import { getCachedDashboardExtensionMetadata } from "../workbench-extension-contributions";
+import { createFrameCommandAdapters, webviewCommandSlot } from "./extension-webview-command";
 import { BridgedWebviewSurface, StaticWebviewSurface, type WebviewDescriptor } from "./extension-webview-surfaces";
 import { PausedExtensionView } from "./paused-extension-view";
 import type { WebviewLoadingKind } from "./webview-loading";
@@ -72,6 +73,15 @@ const webviewOwnerKey = (props: ExtensionWebviewFrameProps, installedExtensionId
   ]);
 
 const currentLocale = () => i18n.resolvedLanguage ?? i18n.language ?? "en";
+const useWebviewLocale = () => {
+  const [locale, setLocale] = useState(currentLocale);
+  useEffect(() => {
+    const onLanguageChanged = () => setLocale(currentLocale());
+    i18n.on("languageChanged", onLanguageChanged);
+    return () => i18n.off("languageChanged", onLanguageChanged);
+  }, []);
+  return locale;
+};
 export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const owner = getRuntimeCollections();
   const queryScope = useDashboardQueryScope();
@@ -98,20 +108,14 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       : fallbackHostEvents;
   const { pageLocation, pageParams } = useWebviewPageProps(props.workbench, props.placement);
   const [lastCommand, setLastCommand] = useState<ExtensionCommandEvent | null>(null);
-  const [locale, setLocale] = useState(currentLocale);
+  const locale = useWebviewLocale();
   const paused = usePausedExtensions();
   const projectExtensions = useProjectExtensions(projectId);
   const installedExtensionId = webview?.runtimeUrl
     ? parseExtensionWebviewPath(webview.runtimeUrl)?.scope.installedExtensionId
     : undefined;
-  const isPaused = installedExtensionId ? paused.has(installedExtensionId) : false;
   useEffect(() => subscribeToExtensionCommandFeed((event) => setLastCommand(event)), []);
   useEffect(() => subscribeWebviewExtensionEvents(hostEvents, projectId), [hostEvents, projectId]);
-  useEffect(() => {
-    const onLanguageChanged = () => setLocale(currentLocale());
-    i18n.on("languageChanged", onLanguageChanged);
-    return () => i18n.off("languageChanged", onLanguageChanged);
-  }, []);
 
   if (!webview) return null;
 
@@ -155,32 +159,17 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       performanceQueries: serviceQueries.performance,
       hostEvents,
       terminal,
-      executeCommand: (commandInput, signal, invocation) => {
-        clearError();
-        return executeWebviewCommand({
-          ...commandInput,
-          placement: props.placement?.placementIdentity,
-          isViewerCurrent: invocation?.isViewerCurrent,
-          signal,
-          resource: commandInput.resource ?? resource ?? props.placement?.resource,
-          slot: webviewCommandSlot({ projectId, webviewId, slotKind: props.slotKind }),
-          workbench: props.workbench,
-          projectId,
-          executeExtensionCommand: (input) =>
-            executeCommand.mutateAsync({
-              signal,
-              commandId: input.commandId,
-              body: {
-                metadata: input.metadata,
-                params: input.params,
-                workspaceId: input.workspaceId,
-                resource: input.resource,
-                slot: input.slot,
-                source: "dashboard",
-              },
-            }),
-        });
-      },
+      ...createFrameCommandAdapters({
+        workbench: props.workbench,
+        projectId,
+        placement: props.placement?.placementIdentity,
+        resource: resource ?? props.placement?.resource,
+        slot: webviewCommandSlot({ projectId, webviewId, slotKind: props.slotKind }),
+        declarations: () => getCachedDashboardExtensionMetadata(projectId, owner),
+        clearError,
+        execute: ({ commandId, ...body }, signal) =>
+          executeCommand.mutateAsync({ signal, commandId, body: { ...body, source: "dashboard" } }),
+      }),
       streamCommand: projectId
         ? (input, signal) => {
             const { commandId, ...body } = input;
@@ -188,8 +177,15 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
           }
         : undefined,
       commandCompleted: (response) => publishExtensionCommandEvent(response, { projectId }, owner),
-      settings: createDashboardWebviewSettingsAdapter({ projectId, extensionInstanceId, installName }),
+      settings: createDashboardWebviewSettingsAdapter(
+        owner,
+        props,
+        installedExtensionId,
+        serviceQueries.requireCurrent,
+      ),
       notifications: createDashboardWebviewNotificationsAdapter({
+        runtime: owner,
+        assertCurrent: serviceQueries.requireCurrent,
         projectId,
         extensionId,
         showError,
@@ -226,7 +222,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   }
 
   // A paused extension's frames unmount, so Chromium ends its renderer process.
-  if (installedExtensionId && isPaused) {
+  if (installedExtensionId && paused.has(installedExtensionId)) {
     const extensionName =
       projectExtensions.data?.extensions.find((extension) => extension.installedExtensionId === installedExtensionId)
         ?.displayName ?? frameTitle;

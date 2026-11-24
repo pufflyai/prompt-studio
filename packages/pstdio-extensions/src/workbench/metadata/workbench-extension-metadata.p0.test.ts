@@ -74,6 +74,14 @@ test("preserves clipboard command declarations through normalization and public 
   const metadata = createWorkbenchExtensionMetadata({ runtime });
   expect(metadata.commands[0]?.copyResultToClipboard).toBe(true);
 });
+test("publishes mutation declarations with the commands the workbench can run", () => {
+  const publish = defineCommand({ id: "publish", title: "Publish artifact", mutating: true, run: () => {} });
+  const inspect = defineCommand({ id: "inspect", title: "Inspect artifact", run: () => {} });
+  const runtime = normalizeExtensionSources([source(defineExtension({ commands: [publish, inspect] }))]);
+  const { commands } = workbenchExtensionMetadataSchema.parse(createWorkbenchExtensionMetadata({ runtime }));
+  expect(commands.find(({ localId }) => localId === "publish")?.mutating).toBe(true);
+  expect(commands.find(({ localId }) => localId === "inspect")?.mutating).toBeUndefined();
+});
 test("keeps status detail views qualified through runtime normalization and public metadata", () => {
   const view = defineView({
     id: "details",

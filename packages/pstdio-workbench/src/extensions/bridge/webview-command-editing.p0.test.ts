@@ -9,8 +9,10 @@ import type { WebviewEditingSource } from "pstdio-api-contracts/extension-kernel
 import { createHostCapabilityGate } from "pstdio-extensions/bridge/contract";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { createWorkbench } from "../../core";
+import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import { createWebviewKeyboardShortcuts } from "../../react/keybindings/webview-keyboard-shortcuts";
 import { inspectCommandEditingSessions } from "./command-editing-sessions";
+import { prepareWorkbenchEditingCommand } from "./webview-editing-adapter";
 import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
 
 const editor = (provided?: ScopedQueryClient, typedEvents = false) => {
@@ -686,18 +688,13 @@ test("an inapplicable authoritative acknowledgement retains its required command
         revision: 1,
         savedRevision: 0,
         pendingCommands: 1,
-        error: { message: "The editing state root must be an object" },
+        error: { message: expect.stringContaining("could not be confirmed") },
       },
     });
-    expect(await frame.call({ operation: "save" })).toMatchObject({
-      value: { tool: "hand" },
-      savedRevision: 1,
-      pendingCommands: 0,
-    });
-    expect(fixture.actions).toHaveLength(2);
-    expect(fixture.actions[0]).toEqual(fixture.actions[1]);
+    await expect(frame.call({ operation: "save" })).rejects.toThrow("root must be an object");
+    expect(fixture.actions).toHaveLength(1);
   } finally {
-    await fixture.dispose();
+    await expect(fixture.dispose()).rejects.toThrow();
   }
 });
 
@@ -731,5 +728,222 @@ test("a full source result cannot silently cover another source's newer invalida
   } finally {
     held.release.resolve();
     await fixture.dispose();
+  }
+});
+
+test("retains active and queued semantic edits across account retirement without retrying them", async () => {
+  const fixture = editor();
+  const view = fixture.frame("private");
+  const operations = getWorkbenchOperations(fixture.queries);
+  try {
+    await view.open();
+    fixture.hold();
+    const changes = [{ path: ["title"], value: "Private draft" }];
+    const submitted = view.call({ operation: "execute", sequence: 1, params: { title: "Private draft" }, changes });
+    const settled = submitted.catch((error: unknown) => error);
+    const queuedChanges = [{ path: ["tool"], value: "hand" }];
+    const queued = view
+      .call({ operation: "execute", sequence: 2, params: { tool: "hand" }, changes: queuedChanges })
+      .catch((error: unknown) => error);
+    await Bun.sleep(0);
+    expect(fixture.actions).toHaveLength(1);
+    fixture.queries.setAuthority({ accountId: "another" });
+    expect(operations.getSnapshot().recovery).toEqual([]);
+    expect(await settled).toBeInstanceOf(Error);
+    expect(await queued).toBeInstanceOf(Error);
+    await expect(prepareWorkbenchEditingCommand(fixture.core, "example.editor.command.edit")).resolves.toBeUndefined();
+    fixture.queries.setAuthority({ accountId: undefined });
+    expect(operations.getSnapshot().recovery[0]).toMatchObject({
+      domain: "command.editing",
+      status: "unknown",
+      draft: { changes: [...changes, ...queuedChanges] },
+    });
+    fixture.release();
+    await Bun.sleep(0);
+    expect(fixture.actions).toHaveLength(1);
+    expect(operations.getSnapshot().recovery[0]?.draft).toMatchObject({ changes: [...changes, ...queuedChanges] });
+  } finally {
+    await fixture.dispose().catch(() => {});
+  }
+});
+
+test("disconnecting a Requirement Book form commits its latest unblurred text through the original owner", async () => {
+  const extensionId = "pstdio.requirement-book";
+  const projectId = "project";
+  const read = { commandId: `${extensionId}.command.drafts.read-editing` };
+  const command = {
+    commandId: `${extensionId}.command.drafts.save-editing`,
+    params: { workspaceId: "work", chapter: 2 },
+  };
+  const core = createWorkbench();
+  const received = Promise.withResolvers<unknown>();
+  const written = Promise.withResolvers<void>();
+  const secondFrame = createHostEventPublisher();
+  let writes = 0;
+  core.pageLocations.setProject(projectId);
+  core.commands.registerCommand(
+    { id: read.commandId, label: "Load draft" },
+    {
+      execute: () => ({
+        value: { draft: "{}", revision: "original" },
+        sources: [{ id: "authoring-draft", read, dependsOn: [] }],
+      }),
+    },
+  );
+  core.commands.registerCommand(
+    { id: command.commandId, label: "Save draft" },
+    {
+      execute: async (params) => {
+        writes++;
+        received.resolve(params);
+        await written.promise;
+        return { value: { draft: (params as { draft: string }).draft, revision: "saved" } };
+      },
+    },
+  );
+  const frame = (hostEvents: ReturnType<typeof createHostEventPublisher>, sessionId: string) => {
+    const gate = createHostCapabilityGate({
+      capabilities: createWorkbenchWebviewHostCapabilities({ workbench: core, projectId, extensionId, hostEvents }),
+      declaredCapabilities: ["editing.session"],
+    });
+    return (params: object) => gate.call({ method: "editing.session", params: { sessionId, ...params } });
+  };
+  const options = { key: "authoring-test", read, command, dependsOn: [] };
+  const firstFrame = createHostEventPublisher();
+  const first = frame(firstFrame, "first");
+  try {
+    await first({ operation: "open-command", ...options });
+    const latest = '{"title":"Typed immediately before closing"}';
+    const acknowledge = Promise.withResolvers<void>();
+    const firstPreview = first({
+      operation: "preview",
+      retainFormDraft: true,
+      sequence: 1,
+      changes: [
+        { path: ["draft"], value: '{"title":"Older"}' },
+        { path: ["draftBase"], value: "original" },
+      ],
+    }).then(() => acknowledge.promise);
+    await first({
+      operation: "preview",
+      retainFormDraft: true,
+      sequence: 2,
+      changes: [
+        { path: ["draft"], value: latest },
+        { path: ["draftBase"], value: "original" },
+      ],
+    });
+    firstFrame.unbind();
+    acknowledge.resolve();
+    await firstPreview;
+    expect(await received.promise).toMatchObject({
+      draft: latest,
+      expectedRevision: "original",
+      workspaceId: "work",
+      chapter: 2,
+    });
+    const returning = frame(secondFrame, "returning");
+    expect(await returning({ operation: "open-command", ...options })).toMatchObject({
+      value: { draft: latest },
+      pendingCommands: 1,
+    });
+    written.resolve();
+    await returning({ operation: "save" });
+    expect(writes).toBe(1);
+  } finally {
+    written.resolve();
+    secondFrame.unbind();
+    firstFrame.unbind();
+    await core.dispose();
+  }
+});
+
+test.each([
+  false,
+  true,
+])("a held Requirement Book save returns its own revision and preserves newer text (close while held: %s)", async (closeWhileHeld) => {
+  const extensionId = "pstdio.requirement-book";
+  const projectId = "project";
+  const read = { commandId: `${extensionId}.command.drafts.read-editing` };
+  const command = { commandId: `${extensionId}.command.drafts.save-editing` };
+  const core = createWorkbench();
+  const firstWrite = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const hostEvents = createHostEventPublisher();
+  const writes: { expectedRevision: string; draft: string }[] = [];
+  let revision = "original";
+  let saved = "{}";
+  core.pageLocations.setProject(projectId);
+  core.commands.registerCommand(
+    { id: read.commandId, label: "Read draft" },
+    {
+      execute: () => ({
+        value: { draft: saved, revision },
+        sources: [{ id: "authoring-draft", read, dependsOn: [] }],
+      }),
+    },
+  );
+  core.commands.registerCommand(
+    { id: command.commandId, label: "Save draft" },
+    {
+      execute: async (params) => {
+        const input = params as { expectedRevision: string; draft: string };
+        writes.push(input);
+        if (writes.length === 1) {
+          firstWrite.resolve();
+          await release.promise;
+        }
+        if (input.expectedRevision !== revision) throw new Error("stale draft");
+        revision = `save-${writes.length}`;
+        saved = input.draft;
+        return { value: { draft: saved, revision, savedDraftRevision: revision } };
+      },
+    },
+  );
+  const gate = createHostCapabilityGate({
+    capabilities: createWorkbenchWebviewHostCapabilities({ workbench: core, projectId, extensionId, hostEvents }),
+    declaredCapabilities: ["editing.session"],
+  });
+  const call = (params: object) => gate.call({ method: "editing.session", params: { sessionId: "form", ...params } });
+  const preview = (sequence: number, draft: string) =>
+    call({
+      operation: "preview",
+      retainFormDraft: true,
+      sequence,
+      changes: [
+        { path: ["draft"], value: draft },
+        { path: ["draftBase"], value: "original" },
+      ],
+    });
+  const first = '{"title":"First text"}';
+  const second = '{"title":"Text typed while the first save was held"}';
+  try {
+    await call({ operation: "open-command", key: "form", read, command, dependsOn: [] });
+    await preview(1, first);
+    const response = call({
+      operation: "execute",
+      sequence: 2,
+      params: { draft: first, expectedRevision: "original" },
+      changes: [{ path: ["draft"], value: first }],
+    });
+    await firstWrite.promise;
+    await preview(3, second);
+    if (closeWhileHeld) hostEvents.unbind();
+    release.resolve();
+    expect(await response).toMatchObject({
+      value: { draft: second },
+      savedDraftRevision: "save-1",
+    });
+    if (!closeWhileHeld) hostEvents.unbind();
+    await prepareWorkbenchEditingCommand(core, command.commandId);
+    expect(writes).toEqual([
+      expect.objectContaining({ draft: first, expectedRevision: "original" }),
+      expect.objectContaining({ draft: second, expectedRevision: "save-1" }),
+    ]);
+    expect(saved).toBe(second);
+  } finally {
+    release.resolve();
+    hostEvents.unbind();
+    await core.dispose();
   }
 });

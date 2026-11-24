@@ -35,7 +35,7 @@ export const ExtensionToggle = (props: ExtensionToggleProps) => {
       <Switch
         ref={input}
         size="sm"
-        checked={enabled}
+        checked={action?.enabled ?? enabled}
         onCheckedChange={(details) => {
           restoreFocus.current = input.current?.ownerDocument.activeElement === input.current;
           onToggle(details.checked);

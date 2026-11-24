@@ -66,19 +66,3 @@ export const addLocalExtensionFolder = (projectId: string, folder: DroppedExtens
   for (const file of folder.files) upload.append("files", file, file.name);
   return client.extensions.install(projectId, { upload });
 };
-export const listProjectExtensionSettings = (projectId: string, instanceId: string) =>
-  getApiClient().extensions.projectSettings.all(projectId, instanceId);
-export const getProjectExtensionSetting = (projectId: string, instanceId: string, key: string) =>
-  getApiClient().extensions.projectSettings.get(projectId, instanceId, key);
-export const updateProjectExtensionSetting = (projectId: string, instanceId: string, key: string, value: unknown) =>
-  getApiClient().extensions.projectSettings.set(projectId, instanceId, key, value);
-export const deleteProjectExtensionSetting = (projectId: string, instanceId: string, key: string) =>
-  getApiClient().extensions.projectSettings.delete(projectId, instanceId, key);
-export const listGlobalExtensionSettings = (installName: string) =>
-  getApiClient().extensions.installedSettings.all(installName);
-export const getGlobalExtensionSetting = (installName: string, key: string) =>
-  getApiClient().extensions.installedSettings.get(installName, key);
-export const updateGlobalExtensionSetting = (installName: string, key: string, value: unknown) =>
-  getApiClient().extensions.installedSettings.set(installName, key, value);
-export const deleteGlobalExtensionSetting = (installName: string, key: string) =>
-  getApiClient().extensions.installedSettings.delete(installName, key);

@@ -3,6 +3,7 @@ import { matchesResourceWhen } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type { Disposable, WorkbenchCommandExecutionContext } from "../../core";
 import { workbenchCommandPaletteMenuPath } from "../../core";
+import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import { installResourceChanges } from "../../react/resource-changes/change-store";
 import { registerWorkbenchExtensionActionBars } from "../contributions/action-bar-contributions";
 import { registerWorkbenchExtensionChatRenderers } from "../contributions/chat-renderer-contributions";
@@ -21,6 +22,7 @@ import { registerWorkbenchExtensionTerminalRenderers } from "../contributions/te
 import { registerWorkbenchExtensionTreeRenderers } from "../contributions/tree-renderer-contributions";
 import { registerResourceKinds } from "./resource-kind-contributions";
 import { registerResourcePageMenus } from "./resource-page-menus";
+import { declaredCreateCommandIds } from "./workbench-create-operation";
 import {
   createExtensionSlot,
   executeWorkbenchExtensionCommand,
@@ -73,6 +75,7 @@ const registerCommands = (
           executeWorkbenchExtensionCommand(context, command.id, {
             ...executionContext,
             params: asParams(args),
+            foreground: true,
             resource: executionContext?.resource,
             signal: executionContext?.signal,
             region: executionContext?.region,
@@ -215,7 +218,11 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     }),
   };
   let terminals: ReturnType<typeof registerWorkbenchExtensionTerminalRenderers> | undefined;
-  const context: WorkbenchExtensionCommandContext = input;
+  const context: WorkbenchExtensionCommandContext = {
+    ...input,
+    operations: input.queries ? getWorkbenchOperations(input.queries) : undefined,
+    createCommandIds: declaredCreateCommandIds(sourceInput.metadata),
+  };
   try {
     disposables.push(installResourceChanges(sourceInput));
     disposables.push(registerWorkbenchExtensionChatRenderers(sourceInput));
@@ -242,7 +249,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     );
     disposables.push(registerWorkbenchExtensionFileRenderers(input));
     disposables.push(registerWorkbenchExtensionControlsRenderers(context, input.metadata.controlsRenderers ?? []));
-    disposables.push(...registerWebviewPanels(input));
+    disposables.push(...registerWebviewPanels(input, sourceInput.metadata));
     disposables.push(...registerSettings(input));
     // Status-backed renderers query their provider while they register. Providers
     // must exist first so the renderer's live option source can load immediately.

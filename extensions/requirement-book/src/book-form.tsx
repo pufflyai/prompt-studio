@@ -2,6 +2,7 @@ import { Button, CloseButton, Dialog, Field, HStack, Input, Portal, Stack, Text,
 import { ScrollArea } from "@pstdio/ui";
 import type { KanbanRendererCreateRowConfig } from "@pstdio/ui/kanban-renderer";
 import { useRef, useState } from "react";
+import { submitBookForm } from "./book-form-submission";
 import { BookSelect } from "./book-select";
 import type { Draft } from "./records";
 
@@ -10,45 +11,97 @@ interface FormProps {
   fields: NonNullable<KanbanRendererCreateRowConfig["fields"]>;
   submitLabel: string;
   draft?: Draft;
-  onSubmit: (values: Record<string, unknown>) => Promise<void>;
+  submissionStatus?: Draft["submissionStatus"];
+  draftRevision?: string;
+  draftError?: string;
+  onRetryDraft?: () => void;
+  canDiscardSubmission: boolean;
+  hasSubmissionProof: boolean;
+  onSubmit: (
+    values: Record<string, unknown>,
+    expectedRevision: string,
+  ) => Promise<{ reason: string; revision: string } | undefined>;
   onClose: () => void;
-  onSaveDraft: (values: Record<string, unknown>) => Promise<void>;
-  onDiscard: () => Promise<void>;
+  onPreviewDraft: (values: Record<string, unknown>, expectedRevision: string) => void;
+  onSaveDraft: (values: Record<string, unknown>, expectedRevision: string) => Promise<string>;
+  onDiscard: (expectedRevision: string) => Promise<void>;
+  onCheckSubmission?: () => Promise<boolean>;
 }
+const submissionMessage = {
+  confirmed: "This submission was saved.",
+  writing: "Saving this submission…",
+  unconfirmed: "Check the book for this submission before discarding its draft.",
+};
 export function BookForm(props: FormProps) {
-  const { title, fields, submitLabel, draft, onSubmit, onClose, onSaveDraft, onDiscard } = props;
-  const [values, setValues] = useState<Record<string, unknown>>(() => ({
+  const {
+    title,
+    fields,
+    submitLabel,
+    draft,
+    submissionStatus,
+    canDiscardSubmission,
+    hasSubmissionProof,
+    draftRevision,
+    draftError,
+    onRetryDraft,
+    onSubmit,
+    onClose,
+    onSaveDraft,
+    onPreviewDraft,
+    onDiscard,
+    onCheckSubmission,
+  } = props;
+  const submissionUnconfirmed = submissionStatus !== undefined;
+  const [input, setValues] = useState<Record<string, unknown>>();
+  const editedRevision = useRef<string | undefined>(undefined);
+  const changeValues = (next: Record<string, unknown>) => {
+    editedRevision.current ??= draftRevision;
+    setValues(next);
+    if (editedRevision.current !== undefined) onPreviewDraft(next, editedRevision.current);
+  };
+  const expectedRevision = () => {
+    const observed = editedRevision.current ?? draftRevision;
+    if (observed === undefined) throw new Error("The draft is still opening.");
+    return observed;
+  };
+  const values = (!submissionUnconfirmed && input) || {
     ...Object.fromEntries(fields.map((field) => [field.id, field.defaultValue ?? ""])),
     ...draft?.values,
-  }));
+  };
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const queue = useRef(Promise.resolve());
   const persist = (next: Record<string, unknown>) => {
-    queue.current = queue.current.catch(() => {}).then(() => onSaveDraft(next));
+    queue.current = queue.current
+      .catch(() => {})
+      .then(async () => {
+        editedRevision.current = await onSaveDraft(next, expectedRevision());
+      });
     return queue.current;
   };
-  const close = async () => {
-    if (saving) return;
-    setSaving(true);
-    try {
-      await persist(values);
-      onClose();
-    } catch (failure) {
-      setError(String(failure));
-    } finally {
-      setSaving(false);
-    }
+  const close = () => {
+    if (!saving) onClose();
   };
   const submit = async () => {
-    if (saving || fields.some((field) => field.required && !String(values[field.id] ?? "").trim())) return;
+    if (
+      saving ||
+      submissionUnconfirmed ||
+      fields.some((field) => field.required && !String(values[field.id] ?? "").trim())
+    )
+      return;
     setSaving(true);
     setError("");
     try {
-      await queue.current.catch(() => {});
-      await onSubmit(values);
-      await onDiscard();
-      onClose();
+      await submitBookForm({
+        persist: () => persist(values),
+        submit: async () => {
+          const refusal = await onSubmit(values, expectedRevision());
+          if (!refusal) return;
+          editedRevision.current = refusal.revision;
+          throw new Error(refusal.reason);
+        },
+        close: onClose,
+      });
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : String(failure));
     } finally {
@@ -60,10 +113,21 @@ export function BookForm(props: FormProps) {
     setSaving(true);
     try {
       await queue.current.catch(() => {});
-      await onDiscard();
+      await onDiscard(submissionStatus && draftRevision !== undefined ? draftRevision : expectedRevision());
       onClose();
     } catch (failure) {
       setError(String(failure));
+    } finally {
+      setSaving(false);
+    }
+  };
+  const check = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      if (!(await onCheckSubmission?.()) && hasSubmissionProof) setError("The submission is still unconfirmed.");
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : String(failure));
     } finally {
       setSaving(false);
     }
@@ -73,7 +137,7 @@ export function BookForm(props: FormProps) {
     <Dialog.Root
       open
       onOpenChange={(details) => {
-        if (!details.open) void close();
+        if (!details.open) close();
       }}
     >
       <Portal>
@@ -93,7 +157,7 @@ export function BookForm(props: FormProps) {
             <Dialog.CloseTrigger asChild>
               <CloseButton
                 size="sm"
-                disabled={saving}
+                disabled={saving || !canDiscardSubmission}
                 aria-label="Discard draft"
                 onClick={(event) => {
                   event.preventDefault();
@@ -114,7 +178,8 @@ export function BookForm(props: FormProps) {
                           value={values[field.id]}
                           onChange={(value) => {
                             const next = { ...values, [field.id]: value };
-                            setValues(next);
+                            if (saving || submissionUnconfirmed || draftRevision === undefined) return;
+                            changeValues(next);
                             void persist(next).catch((failure) => setError(String(failure)));
                           }}
                         />
@@ -122,8 +187,10 @@ export function BookForm(props: FormProps) {
                       {field.type === "longtext" && (
                         <Textarea
                           value={String(values[field.id] ?? "")}
-                          onChange={(event) => setValues({ ...values, [field.id]: event.target.value })}
+                          disabled={saving || submissionUnconfirmed || draftRevision === undefined}
+                          onChange={(event) => changeValues({ ...values, [field.id]: event.target.value })}
                           onBlur={() => {
+                            if (saving || submissionUnconfirmed || draftRevision === undefined) return;
                             void persist(values).catch((failure) => setError(String(failure)));
                           }}
                         />
@@ -133,28 +200,54 @@ export function BookForm(props: FormProps) {
                           autoFocus={field === fields[0]}
                           value={String(values[field.id] ?? "")}
                           placeholder={field.placeholder}
-                          onChange={(event) => setValues({ ...values, [field.id]: event.target.value })}
+                          disabled={saving || submissionUnconfirmed || draftRevision === undefined}
+                          onChange={(event) => changeValues({ ...values, [field.id]: event.target.value })}
                           onBlur={() => {
+                            if (saving || submissionUnconfirmed || draftRevision === undefined) return;
                             void persist(values).catch((failure) => setError(String(failure)));
                           }}
                         />
                       )}
                     </Field.Root>
                   ))}
-                  {error && (
+                  {submissionUnconfirmed && !saving ? (
+                    <Text role="status" color="fg.muted" textStyle="paragraph/S/regular">
+                      {submissionMessage[submissionStatus]}
+                    </Text>
+                  ) : null}
+                  {submissionUnconfirmed && !hasSubmissionProof && submissionStatus !== "confirmed" ? (
+                    <Text color="fg.muted" textStyle="paragraph/S/regular">
+                      This draft has no saved chapter identity. Inspect the book in this workspace before discarding it.
+                    </Text>
+                  ) : null}
+                  {(error || draftError) && (
                     <Text role="alert" color="fg.error" textStyle="paragraph/S/regular">
-                      {error}
+                      {error || draftError}
                     </Text>
                   )}
+                  {onRetryDraft ? (
+                    <Button variant="outline" onClick={onRetryDraft}>
+                      Retry opening draft
+                    </Button>
+                  ) : null}
                 </Stack>
               </Dialog.Body>
             </ScrollArea>
             <Dialog.Footer>
               <HStack gap="sm">
-                <Button variant="ghost" disabled={saving} onClick={() => void close()}>
-                  Cancel
+                <Button variant="ghost" disabled={saving} onClick={close}>
+                  {submissionUnconfirmed && !hasSubmissionProof ? "Inspect book" : "Cancel"}
                 </Button>
-                <Button variant="solid" disabled={!valid || saving} onClick={() => void submit()}>
+                {onCheckSubmission && submissionStatus !== "confirmed" ? (
+                  <Button disabled={saving} onClick={() => void check()}>
+                    {hasSubmissionProof ? "Check again" : "Refresh draft status"}
+                  </Button>
+                ) : null}
+                <Button
+                  variant="solid"
+                  disabled={!valid || saving || submissionUnconfirmed || draftRevision === undefined}
+                  onClick={() => void submit()}
+                >
                   {saving ? "Saving…" : submitLabel}
                 </Button>
               </HStack>

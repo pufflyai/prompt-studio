@@ -40,10 +40,8 @@ const createOwner = (
   };
   const observe = () => {
     stopOwnership ??= input.workbench.terminal.onDidChangeOwnership(detachWatch);
-    watch ??= watchClosedTerminalPlacements(input.workbench, view.id, ownerId, input.projectId, (instanceId) => {
-      void runUserAction(input.workbench, "Close terminal", () =>
-        input.workbench.terminal.killBinding(instanceId, ownerId),
-      ).finally(detachWatch);
+    watch ??= watchClosedTerminalPlacements(input.workbench, view.id, ownerId, input.projectId, {
+      stopSettled: detachWatch,
     });
   };
   const nativeView = { ownerId, projectId: input.projectId, viewId: view.id, isCurrent: () => current };

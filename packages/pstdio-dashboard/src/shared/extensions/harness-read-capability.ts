@@ -9,6 +9,8 @@ import {
   resolveInitialHarnessSelection,
 } from "@/shared/command-params/recent-harness-param";
 
+import { getProjectDefaultOperations } from "@/shared/projects/synced-project-defaults";
+
 interface HarnessReadOptions {
   client?: Pick<PstdioClient, "agents" | "projects">;
   storage?: RecentHarnessStorage;
@@ -20,10 +22,13 @@ export const createHarnessReadCapability =
   (projectId: string, options: HarnessReadOptions = {}) =>
   async (input: WebviewHostCapabilityParams["harnesses.read"]) => {
     const api = options.client ?? getApiClient();
-    const [harnesses, project] = await Promise.all([
+    const [harnesses, confirmed] = await Promise.all([
       api.agents.info({ project: projectId }),
       api.projects.get(projectId),
     ]);
+    const project = options.client
+      ? confirmed
+      : (getProjectDefaultOperations().project(projectId, confirmed) ?? confirmed);
     // Each read is a new picker initialization, including explicit harness switches.
     const saved = input.harnessId ? readRecentHarnessSetup(projectId, input.harnessId, options.storage) : undefined;
     const initial = resolveInitialHarnessSelection({

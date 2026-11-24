@@ -91,3 +91,22 @@ export const UpgradeFeedback = () => {
     </Stack>
   );
 };
+
+export const InstallOutcomeUnconfirmed = () => (
+  <Stack padding="lg" gap="md" align="flex-start">
+    <Text textStyle="heading/M">Notes</Text>
+    <ExtensionActionButton
+      size="sm"
+      action={{
+        status: "error",
+        label: "Outcome unconfirmed",
+        error: "Inspect Extensions or discard this attempt in System activity.",
+        retryable: false,
+      }}
+      onRetry={() => {}}
+      onDismiss={() => {}}
+    >
+      Install
+    </ExtensionActionButton>
+  </Stack>
+);

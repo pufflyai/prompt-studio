@@ -20,12 +20,14 @@ export const createCommandEditingWriter = (input: {
   run(job: CommandEditingJob, accepted: (result: WebviewEditingCommandResult) => void): Promise<void>;
   accepted(job: CommandEditingJob, result: WebviewEditingCommandResult): void;
   failed(cause: unknown, job: CommandEditingJob): void;
+  canRetry(cause: unknown): boolean;
   changed(): void;
 }) => {
   const jobs: CommandEditingJob[] = [];
   let running = false;
+  let blocked: { cause: unknown } | undefined;
   const pump = () => {
-    if (running || !jobs.length) return;
+    if (running || blocked || !jobs.length) return;
     running = true;
     void Promise.resolve().then(async () => {
       try {
@@ -43,7 +45,10 @@ export const createCommandEditingWriter = (input: {
           });
         }
       } catch (cause) {
-        if (jobs[0]) input.failed(cause, jobs[0]);
+        if (jobs[0]) {
+          if (!input.canRetry(cause)) blocked = { cause };
+          input.failed(cause, jobs[0]);
+        }
         for (const job of jobs) {
           job.settlement?.reject(cause);
           job.settlement = undefined;
@@ -56,6 +61,7 @@ export const createCommandEditingWriter = (input: {
   };
   const wait = (selected: CommandEditingJob[]) => {
     if (!selected.length) return Promise.resolve();
+    if (blocked) return Promise.reject(blocked.cause);
     const pending = selected.map((job) => {
       job.settlement ??= Promise.withResolvers<void>();
       return job.settlement.promise;
@@ -66,6 +72,7 @@ export const createCommandEditingWriter = (input: {
   return {
     jobs,
     active: () => running || jobs.length > 0,
+    blocked: () => Boolean(blocked),
     wait,
     flush(workbench?: CommandEditingMember["workbench"]) {
       return wait(jobs.filter((job) => !workbench || job.workbench === workbench));

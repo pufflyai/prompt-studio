@@ -6,7 +6,7 @@ import { CollectionFilterEmptyState } from "../collection-view/collection-filter
 import { CollectionViewEmptyState } from "../collection-view/collection-view-empty-state";
 import { KanbanRendererBoard, type KanbanRendererBoardColumn } from "./kanban-renderer-board";
 import { KanbanRendererList, type KanbanRendererListItem } from "./kanban-renderer-list";
-import type { KanbanRendererSettings } from "./types";
+import type { KanbanRendererPendingCreation, KanbanRendererSettings } from "./types";
 
 interface KanbanRendererEmptyStateProps {
   emptyState?: ReactNode;
@@ -28,6 +28,7 @@ interface KanbanRendererContentProps {
   onEditFilter?: () => void;
   viewMode: KanbanRendererSettings["viewMode"];
   boardColumns: KanbanRendererBoardColumn[];
+  pendingCreations?: readonly KanbanRendererPendingCreation[];
   listItems: KanbanRendererListItem[];
   listExpandedGroups: Record<string, boolean>;
   selectedRowId: string | null;
@@ -107,6 +108,7 @@ export const KanbanRendererContent = (props: KanbanRendererContentProps) => {
               onLoadMore={props.onLoadMore}
               loadingMore={props.loadingMore}
               columns={boardColumns}
+              pendingCreations={props.pendingCreations}
               selectedItemId={selectedRowId}
               onMoveItem={onBoardMoveItem}
               onMoveToGroup={onBoardMoveToGroup}

@@ -70,7 +70,7 @@ export const createPendingChatQueuePresentation = (messageClaims: Map<string, st
     const transcript: ChatPendingSubmission[] = [];
     // Give sends already presented in the queue first claim on matching queue rows.
     for (const item of [...pending.filter((item) => item.queue), ...pending.filter((item) => !item.queue)]) {
-      const next = reconcile(item, saved, echoed.has(item.message.id));
+      const next = item.unresolved ? { pending: item } : reconcile(item, saved, echoed.has(item.message.id));
       if (next.transcript) transcript.push(next.transcript);
       if (next.pending) waiting.push(next.pending);
       if (next.row) items.push(next.row);

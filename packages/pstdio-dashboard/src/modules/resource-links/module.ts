@@ -1,8 +1,8 @@
 import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { createWorkbenchResourceLinksModule, type ResourceLinksService } from "@pstdio/workbench/react";
-import { getApiClient } from "@/lib/api";
-import { subscribeCollections } from "@/lib/sync/collections";
+import { getRuntimeApiClient } from "@/lib/api";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import {
   subscribeToExtensionEventFeed,
@@ -10,33 +10,43 @@ import {
 } from "@/shared/extensions/extension-webview-broadcast";
 import { subscribeToResourceAnchorChanges } from "@/shared/extensions/resource-anchor-feed";
 import { subscribeToResourceRemovals } from "@/shared/extensions/resource-removal-feed";
+import { getResourceLinkAuthority } from "./resource-link-authority";
 import { createResourceLinkDependencies } from "./resource-link-dependencies";
 import { linkableResource } from "./resource-link-identity";
+import { getResourceLinkOperations } from "./resource-link-operations";
 import { resolveLinkedResources } from "./resource-link-resolution";
 import { searchLinkResources } from "./resource-link-search";
 
 export const createResourceLinksService = (
   ctx: WorkbenchModuleContext,
   resource: ResourceRef,
+  owner = getRuntimeCollections(),
 ): ResourceLinksService => {
   const projectId = resource.projectId!;
   const dependencies = createResourceLinkDependencies(ctx, resource);
-  const api = () => getApiClient().resources;
+  const authority = getResourceLinkAuthority(owner)(projectId);
+  const api = getRuntimeApiClient(owner).resources;
   return {
-    list: (input) => api().listAnchors(projectId, input),
-    add: (source, targets) => api().addAnchors(projectId, source, targets),
-    remove: (source, targets) => api().removeAnchors(projectId, source, targets),
-    search: (query, signal) => searchLinkResources(ctx, projectId, query, signal),
+    ...getResourceLinkOperations(owner)(resource),
+    retirementSignal: authority,
+    async list(input) {
+      authority.throwIfAborted();
+      const result = await api.listAnchors(projectId, input);
+      authority.throwIfAborted();
+      return result;
+    },
+    search: (query, signal) =>
+      searchLinkResources(ctx, projectId, query, signal ? AbortSignal.any([authority, signal]) : authority),
     resolve: (resources, signal) => {
       dependencies.resolved(resources);
-      return resolveLinkedResources(ctx, projectId, resources, signal);
+      return resolveLinkedResources(ctx, projectId, resources, signal, owner, authority);
     },
     subscribe: (listener) => {
       const disposers = [
         ctx.pages.store.subscribe(listener),
         ctx.resources.store.subscribe(listener),
         ctx.commandPaletteResources.store.subscribe(listener),
-        subscribeCollections((change) => {
+        owner.subscribeCollections((change) => {
           if (!change) return listener();
           if (!["workspaces", "sessions", "projects", "extension_instances"].includes(change.table)) return;
           if (
@@ -58,20 +68,20 @@ export const createResourceLinksService = (
             )
           )
             listener();
-        }),
+        }, owner),
         subscribeToResourceRemovals((ref) => {
           if (ref.projectId === projectId) listener();
-        }),
+        }, owner),
         subscribeToExtensionEventFeed((event) => {
           if (
             event.projectId === projectId &&
             ctx.commandPaletteResources.listProviders().some((provider) => provider.refreshEventIds?.includes(event.id))
           )
             listener();
-        }),
+        }, owner),
         subscribeToExtensionEventReset((reset) => {
           if (dependencies.matches(reset)) listener();
-        }),
+        }, owner),
       ];
       return () => {
         for (const dispose of disposers) dispose();
@@ -84,7 +94,9 @@ export const createResourceLinksModule = () =>
   ({
     id: "dashboard.resource-links",
     activate(ctx) {
-      const services = new Map<string, ResourceLinksService>();
+      const owner = getRuntimeCollections();
+      const authorities = getResourceLinkAuthority(owner);
+      const servicesByAuthority = new WeakMap<AbortSignal, Map<string, ResourceLinksService>>();
       return ctx.registerChildModule(
         createWorkbenchResourceLinksModule({
           canonicalize: (resource) => {
@@ -93,8 +105,14 @@ export const createResourceLinksModule = () =>
             return linkableResource(resource, projectId);
           },
           createService: (ref) => {
+            const authority = authorities(ref.projectId!);
+            let services = servicesByAuthority.get(authority);
+            if (!services) {
+              services = new Map();
+              servicesByAuthority.set(authority, services);
+            }
             const key = resourceKey(ref);
-            const service = services.get(key) ?? createResourceLinksService(ctx, ref);
+            const service = services.get(key) ?? createResourceLinksService(ctx, ref, owner);
             services.set(key, service);
             return service;
           },

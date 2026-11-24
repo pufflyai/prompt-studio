@@ -2,13 +2,10 @@ import { workbenchCommands } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { getApiClient } from "@/lib/api";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import type { ProjectSetupRequests } from "@/shared/projects/project-setup-requests";
 import { isProjectWorkspaceAttached } from "@/shared/workspaces/workspace-state";
-import type { createProjectSetupRequests } from "./project-setup-requests";
 
-export const registerProjectSetupCommand = (
-  ctx: WorkbenchModuleContext,
-  requests: ReturnType<typeof createProjectSetupRequests>,
-) =>
+export const registerProjectSetupCommand = (ctx: WorkbenchModuleContext, requests: ProjectSetupRequests) =>
   ctx.commands.registerCommand(
     { id: workbenchCommands.retryProjectSetup.id, label: "Retry project setup", category: "Project" },
     {

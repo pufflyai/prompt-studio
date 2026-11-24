@@ -50,7 +50,7 @@ export interface ExtensionDetailProps {
   sourceChanging?: boolean;
   upgrading?: boolean;
   uninstalling?: boolean;
-  togglingAutomationId?: string;
+  togglingAutomation?: boolean;
   onToggle: (enabled: boolean) => void;
   onToggleAutomation: (automation: WorkbenchExtensionAutomationRecord, enabled: boolean) => void;
   /** Runs the commands that load a setting's choices. */
@@ -83,7 +83,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     sourceChanging,
     upgrading,
     uninstalling,
-    togglingAutomationId,
+    togglingAutomation,
     onToggle,
     onToggleAutomation,
     executeOptionCommand,
@@ -302,7 +302,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                         <Switch
                           size="sm"
                           checked={automation.enabled}
-                          disabled={togglingAutomationId === automation.id || changingSource}
+                          disabled={togglingAutomation || changingSource}
                           onCheckedChange={(details) => onToggleAutomation(automation, details.checked)}
                           aria-label={t("projectSettings.extensionsPanel.automations.toggleAriaLabel", {
                             name: resolveString(automation.title, automation.extensionId),

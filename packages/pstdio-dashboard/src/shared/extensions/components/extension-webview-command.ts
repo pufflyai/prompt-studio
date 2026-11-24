@@ -1,6 +1,11 @@
 import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
 import type { WorkbenchCore } from "@pstdio/workbench";
-import { createExtensionSlot, executeWorkbenchExtensionCommandResponse } from "@pstdio/workbench/extensions";
+import {
+  createExtensionSlot,
+  type ExtensionWebviewHostAdapters,
+  executeWorkbenchExtensionCommandResponse,
+  runWorkbenchWebviewCommandOperation,
+} from "@pstdio/workbench/extensions";
 
 interface ExtensionCommandInput {
   commandId: string;
@@ -13,7 +18,9 @@ interface ExtensionCommandInput {
 interface ExecuteWebviewCommandInput extends ExtensionCommandInput {
   placement?: PlacementIdentity;
   isViewerCurrent?(): boolean;
-  executeExtensionCommand: (input: ExtensionCommandInput) => Promise<unknown>;
+  executeExtensionCommand: (input: ExtensionCommandInput, signal?: AbortSignal) => Promise<unknown>;
+  declarations?: Parameters<typeof runWorkbenchWebviewCommandOperation>[0]["metadata"];
+  trackOperation?: false;
   signal?: AbortSignal;
   workbench?: WorkbenchCore;
   projectId?: string;
@@ -32,16 +39,28 @@ export const executeWebviewCommand = async (input: ExecuteWebviewCommandInput) =
     });
     return { commandId, extensionId: "pstdio", eventIds: [], outcome: { ok: true, status: "success", value } };
   }
-  const execute = () =>
-    executeExtensionCommand({ commandId, metadata, params, workspaceId, resource, ...(slot ? { slot } : {}) });
-  if (workbench && input.projectId) {
-    return executeWorkbenchExtensionCommandResponse(
-      { projectId: input.projectId, workbench, executeCommand: execute },
-      commandId,
-      { placement: input.placement, signal: input.signal, isViewerCurrent: input.isViewerCurrent },
-    );
+  const execute = (signal?: AbortSignal) =>
+    executeExtensionCommand({ commandId, metadata, params, workspaceId, resource, ...(slot ? { slot } : {}) }, signal);
+  const projectId = input.projectId;
+  if (workbench && projectId) {
+    const dispatch = (signal?: AbortSignal) =>
+      executeWorkbenchExtensionCommandResponse(
+        { projectId, workbench, executeCommand: (_ignoredId, _ignoredBody, commandSignal) => execute(commandSignal) },
+        commandId,
+        { placement: input.placement, signal, isViewerCurrent: input.isViewerCurrent },
+      );
+    if (input.trackOperation === false) return dispatch(input.signal);
+    return runWorkbenchWebviewCommandOperation({
+      workbench,
+      projectId,
+      resource,
+      request: { commandId, params, resource },
+      metadata: input.declarations,
+      signal: input.signal,
+      execute: dispatch,
+    });
   }
-  return execute();
+  return execute(input.signal);
 };
 
 export const webviewCommandSlot = (input: {
@@ -57,3 +76,34 @@ export const webviewCommandSlot = (input: {
         context: { panelId: input.webviewId },
       })
     : undefined;
+
+export const createFrameCommandAdapters = (input: {
+  workbench?: WorkbenchCore;
+  projectId?: string;
+  placement?: PlacementIdentity;
+  resource?: ResourceRef;
+  slot?: ExtensionCommandInput["slot"];
+  declarations(): ExecuteWebviewCommandInput["declarations"];
+  execute: ExecuteWebviewCommandInput["executeExtensionCommand"];
+  clearError(): void;
+}) => {
+  const invoke =
+    (trackOperation?: false): NonNullable<ExtensionWebviewHostAdapters["executeCommand"]> =>
+    (request, signal, invocation) => {
+      input.clearError();
+      return executeWebviewCommand({
+        ...request,
+        signal,
+        resource: request.resource ?? input.resource,
+        placement: input.placement,
+        isViewerCurrent: invocation?.isViewerCurrent,
+        slot: input.slot,
+        workbench: input.workbench,
+        projectId: input.projectId,
+        declarations: input.declarations(),
+        executeExtensionCommand: input.execute,
+        trackOperation,
+      });
+    };
+  return { executeCommand: invoke(), executeEditingCommand: invoke(false) };
+};

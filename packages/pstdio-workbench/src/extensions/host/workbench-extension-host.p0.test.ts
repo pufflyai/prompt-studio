@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import { PstdioConnectionError } from "@pstdio/sdk/client";
+import { createScopedQueryClient } from "@pstdio/sdk/extensions";
 import { createMemoryActivity } from "@pstdio/sdk/testing";
 import { createWorkbench, getWorkbenchRenderers, type WorkbenchModuleContribution } from "../../core";
+import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import { resolvePanelMenuRegionState } from "../../react/panel-menu/panel-menu-placements";
 import { buildSettingsTreeBody } from "../../react/settings/settings-tree";
 import { registerWorkbenchExtensionContributions } from "./workbench-extension-host";
@@ -516,5 +519,49 @@ test("a page exposes Activity for a resource kind owned by another extension", (
     );
   } finally {
     registration.dispose();
+  }
+});
+
+test("uses the shared create declaration for the command's other entry points", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
+  const workbench = createWorkbench({ queries });
+  const operations = getWorkbenchOperations(queries);
+  const commandId = `${extensionId}.command.create-folder`;
+  const registration = registerWorkbenchExtensionContributions({
+    metadata: {
+      ...metadata,
+      commands: [{ id: commandId, extensionId, title: "Create folder" }],
+      keybindings: [
+        {
+          id: `${extensionId}.keybinding.create-folder`,
+          extensionId,
+          layer: "create",
+          action: { kind: "command", target: { command: { kind: "command", id: "create-folder", extensionId } } },
+          key: "F",
+          canonicalChord: "F",
+          parsed: { key: "F", ctrl: false, shift: false, alt: false, meta: false, modifiers: [] },
+        },
+      ],
+    },
+    projectId: "project",
+    queries,
+    workbench,
+    executeCommand: () => {
+      throw new PstdioConnectionError(new Error("Response lost"));
+    },
+  });
+  try {
+    await expect(workbench.commands.executeCommand(commandId, { name: "Draft folder" })).rejects.toMatchObject({
+      name: "UnresolvedSubmissionError",
+    });
+    expect(operations.getSnapshot().recovery[0]).toMatchObject({
+      title: "Create folder",
+      status: "unknown",
+      draft: { name: "Draft folder" },
+    });
+  } finally {
+    registration.dispose();
+    await workbench.dispose();
+    queries.dispose();
   }
 });

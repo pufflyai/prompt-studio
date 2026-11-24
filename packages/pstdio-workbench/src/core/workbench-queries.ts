@@ -1,10 +1,10 @@
 import { createScopedQueryClient, type ScopedQueryClient } from "@pstdio/sdk/extensions";
 import type { WorkbenchCore } from "./workbench-core-types";
 
-const contexts = new WeakMap<WorkbenchCore, ScopedQueryClient>();
+const contexts = new WeakMap<WorkbenchCore["terminal"], ScopedQueryClient>();
 
-export const getWorkbenchQueries = (core: WorkbenchCore) => {
-  const queries = contexts.get(core);
+export const getWorkbenchQueries = (core: Pick<WorkbenchCore, "terminal">) => {
+  const queries = contexts.get(core.terminal);
   if (!queries || queries.isDisposed()) throw new Error("Workbench query authority is closed");
   return queries;
 };
@@ -17,10 +17,10 @@ export const createWorkbenchQueryContext = (provided?: ScopedQueryClient) => {
     queries,
     bind(core: WorkbenchCore) {
       owner = core;
-      contexts.set(core, queries);
+      contexts.set(core.terminal, queries);
     },
     dispose() {
-      if (owner) contexts.delete(owner);
+      if (owner) contexts.delete(owner.terminal);
       owner = undefined;
       if (!provided) queries.dispose();
     },

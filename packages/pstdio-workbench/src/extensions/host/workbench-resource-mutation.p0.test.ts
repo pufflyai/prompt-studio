@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { createScopedQueryClient } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "../../core";
 import { runResourceMutation } from "./workbench-resource-mutation";
 
@@ -9,7 +10,11 @@ const command = {
   title: "Rename note",
   resourceMutation: { kind: "rename" as const, resourceType: "note", idParam: "noteId", labelParam: "title" },
 };
-const setup = () => ({ projectId: "project", workbench: createWorkbench(), executeCommand: () => undefined });
+const setup = (workbench = createWorkbench()) => ({
+  projectId: "project",
+  workbench,
+  executeCommand: () => undefined,
+});
 test("removes the declared subject when an extension acts on a host-owned resource", async () => {
   const context = setup();
   const subject = { type: "workspace", id: "one", extensionId: "pstdio", projectId: "project" };
@@ -40,16 +45,18 @@ test("removes the declared subject when an extension acts on a host-owned resour
 test("renames immediately, then restores the previous label on command failure", async () => {
   const context = setup();
   let reject!: (error: Error) => void;
+  const projectedTitles: (string | undefined)[] = [];
   const pending = runResourceMutation(
     context,
     command,
     { noteId: "one", title: "New" },
-    undefined,
+    { onAdmitted: () => projectedTitles.push(context.workbench.resources.preview.resolve(resource)?.label) },
     () =>
       new Promise((_, fail) => {
         reject = fail;
       }),
   );
+  expect(projectedTitles).toEqual(["New"]);
   expect(context.workbench.resources.preview.resolve(resource)?.label).toBe("New");
   await Promise.resolve();
   await Promise.resolve();
@@ -236,4 +243,42 @@ test("removal confirmation names its resource and keeps failed saves available f
   expect(await pending).toBe("saved");
   expect(writes).toBe(2);
   await context.workbench.dispose();
+});
+
+test("separate workbenches project the same resource and wait for each other's reconciliation", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "desktop", extensionId: "pstdio" });
+  const firstView = setup(createWorkbench({ queries }));
+  const secondView = setup(createWorkbench({ queries }));
+  const firstWrite = Promise.withResolvers<void>();
+  const reconcile = Promise.withResolvers<void>();
+  const secondWrite = Promise.withResolvers<void>();
+  const writes: string[] = [];
+  const refresh = secondView.workbench.resources.preview.subscribeRefresh(() => reconcile.promise);
+  try {
+    const first = runResourceMutation(firstView, command, { noteId: "one", title: "First" }, { resource }, () => {
+      writes.push("first");
+      return firstWrite.promise;
+    });
+    expect(secondView.workbench.resources.preview.resolve(resource)?.label).toBe("First");
+    const second = runResourceMutation(secondView, command, { noteId: "one", title: "Second" }, { resource }, () => {
+      writes.push("second");
+      return secondWrite.promise;
+    });
+    expect(firstView.workbench.resources.preview.resolve(resource)?.label).toBe("Second");
+    firstWrite.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(writes).toEqual(["first"]);
+    reconcile.resolve();
+    await first;
+    secondWrite.resolve();
+    await second;
+    expect(writes).toEqual(["first", "second"]);
+  } finally {
+    refresh.dispose();
+    firstWrite.resolve();
+    secondWrite.resolve();
+    await Promise.all([firstView.workbench.dispose(), secondView.workbench.dispose()]);
+    queries.dispose();
+  }
 });

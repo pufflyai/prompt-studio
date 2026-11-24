@@ -12,6 +12,13 @@ import {
 import { marketplaceActionKey } from "./extension-actions";
 import { useExtensionActions } from "./use-extension-actions";
 
+const extensionSource = (id: string, label: string) => ({
+  type: "extension",
+  extensionId: "pstdio",
+  id,
+  label,
+});
+
 export const useExtensionPanelActions = (projectId: string | undefined, capacity?: number) => {
   const { t } = useTranslation("projects");
   const feedback = useExtensionActions(projectId);
@@ -37,7 +44,11 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
                 return send();
               })),
         }),
-      { queuedLabel: pool && t("projectSettings.extensionsPanel.feedback.queued") },
+      {
+        queuedLabel: pool && t("projectSettings.extensionsPanel.feedback.queued"),
+        draft: { extension: extension.displayName, installName: extension.installName },
+        source: extensionSource(`installed:${extension.id}`, extension.displayName),
+      },
     );
   const handleUpgradeAll = (extensions: ProjectExtensionInstance[]) => {
     const pool = createExtensionUpgradePool(capacity);
@@ -51,7 +62,12 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
         failed: t("projectSettings.extensionsPanel.toggleErrorTitle"),
       },
       () => toggle.mutateAsync({ instanceId: extension.id, enabled }),
-      { operation: "toggle" },
+      {
+        operation: "toggle",
+        enabled,
+        draft: { extension: extension.displayName, enabled },
+        source: extensionSource(`installed:${extension.id}`, extension.displayName),
+      },
     );
   const handleInstall = async (extension: MarketplaceExtension, force = false) => {
     await feedback.run(
@@ -70,7 +86,11 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
           throw error;
         }
       },
-      { installedId: (result) => result.extension.id },
+      {
+        installedId: (result) => result.extension.id,
+        draft: { extension: extension.displayName, installName: extension.installName },
+        source: extensionSource(marketplaceActionKey(extension.installName), extension.displayName),
+      },
     );
   };
   const handleDrop = async (folder: DroppedExtensionFolder) => {
@@ -90,7 +110,7 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
           throw error;
         }
       },
-      { installedId: (result) => result.extension.id },
+      { installedId: (result) => result.extension.id, draft: { folder: folder.name, force: folder.force === true } },
     );
   };
   return {

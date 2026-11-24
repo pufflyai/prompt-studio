@@ -1,11 +1,12 @@
 import { Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import type { AutomationTokenRecord } from "@pstdio/sdk/api";
-import { SettingsContentSkeleton } from "@pstdio/ui";
+import { AlertMessage, SettingsContentSkeleton } from "@pstdio/ui";
 import { ParamEditor } from "@pstdio/ui/param-editor";
+import { classifyApiWrite } from "@pstdio/workbench";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useActionError } from "@/shared/components/use-action-error";
-import { useAutomationTokens, useIssueAutomationToken, useRevokeAutomationToken } from "../data/use-automation-tokens";
+import { useMachineTokens } from "../data/use-automation-tokens";
 
 interface MachineTokensPanelViewProps {
   tokens: AutomationTokenRecord[];
@@ -15,7 +16,8 @@ interface MachineTokensPanelViewProps {
   expiresInDays: string;
   loading?: boolean;
   issuing?: boolean;
-  revokingTokenId?: string;
+  unresolvedIssue?: boolean;
+  revoking?: boolean;
   onNameChange: (value: string) => void;
   onScopesChange: (value: string) => void;
   onExpiresInDaysChange: (value: string) => void;
@@ -33,7 +35,8 @@ export const MachineTokensPanelView = (props: MachineTokensPanelViewProps) => {
     expiresInDays,
     loading,
     issuing,
-    revokingTokenId,
+    unresolvedIssue,
+    revoking,
     onNameChange,
     onScopesChange,
     onExpiresInDaysChange,
@@ -66,6 +69,11 @@ export const MachineTokensPanelView = (props: MachineTokensPanelViewProps) => {
 
       <Stack gap="sm">
         <Text textStyle="label/L/medium">{t("projectSettings.machineTokens.issueTitle")}</Text>
+        {unresolvedIssue && (
+          <AlertMessage compact status="warning" title="Token issuance could not be confirmed.">
+            Review active tokens. The request is available in System activity.
+          </AlertMessage>
+        )}
         <ParamEditor
           fullWidth
           readOnly={issuing}
@@ -98,15 +106,20 @@ export const MachineTokensPanelView = (props: MachineTokensPanelViewProps) => {
             if (id === "expiry") onExpiresInDaysChange(String(value));
           }}
         />
-        <Button size="sm" alignSelf="start" disabled={!canIssue} loading={issuing} onClick={onIssue}>
+        <Button size="sm" alignSelf="start" disabled={!canIssue || unresolvedIssue} loading={issuing} onClick={onIssue}>
           {t("projectSettings.machineTokens.issue")}
         </Button>
       </Stack>
 
       <Stack gap="sm">
         <Text textStyle="label/S/medium">{t("projectSettings.machineTokens.activeTitle")}</Text>
+        {revoking && (
+          <Text role="status" textStyle="label/S/regular">
+            Revoking machine token…
+          </Text>
+        )}
         {loading ? <SettingsContentSkeleton /> : null}
-        {!loading && tokens.length === 0 ? (
+        {!loading && !revoking && tokens.length === 0 ? (
           <Text textStyle="paragraph/XS/regular" color="fg.muted">
             {t("projectSettings.machineTokens.empty")}
           </Text>
@@ -132,12 +145,7 @@ export const MachineTokensPanelView = (props: MachineTokensPanelViewProps) => {
                   })}
                 </Text>
               </Stack>
-              <Button
-                size="2xs"
-                variant="destructive"
-                loading={revokingTokenId === token.id}
-                onClick={() => onRevoke(token.id)}
-              >
+              <Button size="2xs" variant="destructive" onClick={() => onRevoke(token.id)}>
                 {t("projectSettings.machineTokens.revoke")}
               </Button>
             </HStack>
@@ -147,19 +155,22 @@ export const MachineTokensPanelView = (props: MachineTokensPanelViewProps) => {
   );
 };
 
-export const MachineTokensPanel = (props: { projectId?: string }) => {
-  const { projectId } = props;
+export const MachineTokensPanel = ({ projectId }: { projectId?: string }) => {
+  const tokens = useMachineTokens(projectId ?? "");
+  return projectId ? <MachineTokensForm key={tokens.formKey} {...tokens} /> : null;
+};
+
+const MachineTokensForm = (props: ReturnType<typeof useMachineTokens>) => {
+  const { tokens, issue, revoke, presentation } = props;
   const { showError, errorNotice, clearError } = useActionError();
   const { t } = useTranslation("projects");
-  const tokens = useAutomationTokens(projectId ?? "");
-  const issue = useIssueAutomationToken(projectId ?? "");
-  const revoke = useRevokeAutomationToken(projectId ?? "");
-  const [name, setName] = useState("");
-  const [scopes, setScopes] = useState("");
-  const [expiresInDays, setExpiresInDays] = useState("30");
+  const { draft, revokingIds } = presentation;
+  const [name, setName] = useState(draft?.name ?? "");
+  const [scopes, setScopes] = useState(draft?.commandScopes.join("\n") ?? "");
+  const [expiresInDays, setExpiresInDays] = useState(
+    draft?.expiresInSeconds ? String(draft.expiresInSeconds / 86_400) : "30",
+  );
   const [issuedToken, setIssuedToken] = useState<string | null>(null);
-
-  if (!projectId) return null;
 
   const handleIssue = () => {
     clearError();
@@ -178,11 +189,13 @@ export const MachineTokensPanel = (props: { projectId?: string }) => {
           setName("");
           setScopes("");
         },
-        onError: (error) =>
+        onError: (error) => {
+          if (classifyApiWrite(error) === "unknown") return;
           showError({
             title: t("projectSettings.machineTokens.issueFailed"),
             description: error.message,
-          }),
+          });
+        },
       },
     );
   };
@@ -191,14 +204,15 @@ export const MachineTokensPanel = (props: { projectId?: string }) => {
     <>
       {errorNotice}
       <MachineTokensPanelView
-        tokens={tokens.data?.tokens.filter((token) => !token.revokedAt) ?? []}
+        tokens={tokens.data?.tokens.filter((token) => !token.revokedAt && !revokingIds.has(token.id)) ?? []}
         issuedToken={issuedToken}
         name={name}
         scopes={scopes}
         expiresInDays={expiresInDays}
         loading={tokens.isLoading}
-        issuing={issue.isPending}
-        revokingTokenId={revoke.isPending ? revoke.variables : undefined}
+        issuing={presentation.issuing}
+        unresolvedIssue={presentation.unresolved}
+        revoking={presentation.revoking}
         onNameChange={setName}
         onScopesChange={setScopes}
         onExpiresInDaysChange={setExpiresInDays}

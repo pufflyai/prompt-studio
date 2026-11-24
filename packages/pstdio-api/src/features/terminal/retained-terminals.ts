@@ -17,6 +17,7 @@ interface Entry extends RetainedTerminal {
   backlog: Uint8Array[];
   backlogBytes: number;
   attachment: TerminalAttachment | undefined;
+  stopping?: Promise<void>;
 }
 
 const remember = (entry: Entry, chunk: Uint8Array) => {
@@ -73,6 +74,7 @@ export const createRetainedTerminals = () => {
     attach(key: string, attachment: TerminalAttachment) {
       for (const entry of entries) {
         if (entry.key !== key || entry.attachment) continue;
+        if (entry.stopping) throw new Error("The terminal is still stopping.");
         entry.attachment = attachment;
         return { terminal: entry as RetainedTerminal, backlog: joinBacklog(entry) };
       }
@@ -84,11 +86,19 @@ export const createRetainedTerminals = () => {
       if (entry.attachment === attachment) entry.attachment = undefined;
     },
 
-    async kill(terminal: RetainedTerminal, signal?: string) {
+    kill(terminal: RetainedTerminal, signal?: string) {
       const entry = terminal as Entry;
-      entries.delete(entry);
+      if (entry.stopping) return entry.stopping;
       entry.attachment = undefined;
-      await entry.session.kill(signal);
+      entry.stopping = Promise.resolve()
+        .then(() => entry.session.kill(signal))
+        .then(() => {
+          entries.delete(entry);
+        })
+        .finally(() => {
+          entry.stopping = undefined;
+        });
+      return entry.stopping;
     },
   };
 };

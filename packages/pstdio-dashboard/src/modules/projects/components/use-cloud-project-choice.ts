@@ -1,11 +1,14 @@
 import type { CloudProjectCatalogEntry, ProjectCopyAccount } from "@pstdio/sdk/client";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { getRuntimeApiClient } from "@/lib/api";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import { useCollectionSelection } from "@/lib/sync/use-collection-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
+import { getCloudCopyDownloads } from "../data/cloud-copy-download";
+import { useCloudLocalRemoval } from "../data/cloud-local-removal";
+import { useCloudProjectDeletions } from "../data/cloud-project-deletion-operations";
 import { cloudProjectCatalogKey, useCloudProjectCatalog } from "../data/project-catalog";
 import { findDashboardProject } from "../data/project-data";
 
@@ -22,11 +25,16 @@ const useCloudCopyDownload = (
     account?: ProjectCopyAccount;
     owner: DownloadOwner;
     rememberIntent: (owner: DownloadOwner) => void;
+    clearIntent: () => void;
     scope: string;
   },
 ) => {
-  const { id, downloading, requested, deleting, entry, account, owner, rememberIntent, scope } = options;
-  const client = getRuntimeApiClient(getRuntimeCollections());
+  const { id, downloading, requested, deleting, entry, account, owner, rememberIntent, clearIntent, scope } = options;
+  const runtime = getRuntimeCollections();
+  const client = getRuntimeApiClient(runtime);
+  const operations = getCloudCopyDownloads(runtime);
+  useSyncExternalStore(operations.subscribe, operations.snapshot, operations.snapshot);
+  const { active, failure: unresolved } = operations.state(id);
   const queryClient = useQueryClient();
   useCollectionSelection({ tables: ["projects", "workspaces"] });
   const localName = findDashboardProject(id)?.name;
@@ -39,16 +47,11 @@ const useCloudCopyDownload = (
   });
   const refresh = () => queryClient.invalidateQueries({ queryKey: cloudProjectCatalogKey });
   const download = useMutation({
-    mutationFn: (admission: {
-      id: string;
-      account?: ProjectCopyAccount;
-      owner: DownloadOwner;
-      client: typeof client;
-    }) => {
+    mutationFn: (admission: { id: string; account?: ProjectCopyAccount; owner: DownloadOwner; name: string }) => {
       if (!admission.account) throw new Error("The active Cloud account changed. Choose the project again.");
       // The host may finish the download even if its response never reaches us.
       rememberIntent(admission.owner);
-      return admission.client.account.downloadCloudProject(admission.id, { expected: admission.account });
+      return operations.start(admission.id, admission.name, admission.account);
     },
     onSettled() {
       void refresh();
@@ -69,8 +72,39 @@ const useCloudCopyDownload = (
     });
   }, [entry?.presence, id, input.instance.instanceId, input.workbench, requested, localName, deleting]);
 
-  const requestDownload = () => download.mutate({ id, account, owner, client });
-  return { sync, download, refresh, requestDownload };
+  const checkedDownload = useRef<symbol>(undefined);
+  const statusObserved =
+    entry?.presence === "downloaded" || Boolean(entry?.downloadError) || entry?.presence === "downloading";
+  useEffect(() => {
+    if (!statusObserved || !unresolved?.canCheck || checkedDownload.current === unresolved.id) return;
+    checkedDownload.current = unresolved.id;
+    void operations.check(unresolved.id);
+  }, [statusObserved, operations, unresolved?.id, unresolved?.canCheck]);
+
+  const requestDownload = () => {
+    const current = operations.state(id);
+    if (!current.active && !current.failure) download.mutate({ id, account, owner, name: entry?.name ?? id });
+  };
+  const checkDownload = async () => {
+    if (unresolved?.canCheck && operations.state(id).failure?.id === unresolved.id)
+      await operations.check(unresolved.id);
+  };
+  const discardDownload = () => {
+    if (!unresolved || entry?.presence !== "cloud-only" || operations.state(id).failure?.id !== unresolved.id) return;
+    operations.discard(id, unresolved.id);
+    download.reset();
+    clearIntent();
+  };
+  return {
+    sync,
+    download,
+    refresh,
+    requestDownload,
+    checkDownload: unresolved?.canCheck ? checkDownload : undefined,
+    discardDownload: unresolved && entry?.presence === "cloud-only" ? discardDownload : undefined,
+    active,
+    unresolved,
+  };
 };
 
 const downloadMessage = (error: Error | null, entry?: CloudProjectCatalogEntry, syncState?: string) => {
@@ -97,7 +131,9 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
   if (owner.scope !== scope) setOwner({ scope, requested: false });
   const requested = owner.scope === scope && owner.requested;
   const [deletionScope, setDeletionScope] = useState<string>();
-  const deleting = Boolean(receipt || deletionScope === scope);
+  const deletion = useCloudProjectDeletions();
+  const copyBusy = useCloudLocalRemoval().active(id);
+  const deleting = Boolean(receipt || deletionScope === scope || deletion.active(id));
   useEffect(() => {
     if (receipt) setDeletionScope(scope);
   }, [receipt, scope]);
@@ -106,18 +142,20 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
     backButton.current?.focus();
   }, []);
   const downloading = requested || entry?.presence === "downloading";
-  const { sync, download, refresh, requestDownload } = useCloudCopyDownload(input, {
-    id,
-    downloading,
-    requested,
-    deleting,
-    entry,
-    account,
-    owner,
-    rememberIntent: (admitted) =>
-      setOwner((current) => (current === admitted ? { ...current, requested: true } : current)),
-    scope,
-  });
+  const { sync, download, refresh, requestDownload, checkDownload, discardDownload, active, unresolved } =
+    useCloudCopyDownload(input, {
+      id,
+      downloading,
+      requested,
+      deleting,
+      entry,
+      account,
+      owner,
+      rememberIntent: (admitted) =>
+        setOwner((current) => (current === admitted ? { ...current, requested: true } : current)),
+      clearIntent: () => setOwner((current) => (current.scope === scope ? { ...current, requested: false } : current)),
+      scope,
+    });
   const refetchCatalog = cloud.refetch;
   useEffect(() => {
     if (!requested || invalidated || deleting || entry?.presence !== "cloud-only") return;
@@ -131,8 +169,14 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
     void input.workbench.commands.executeCommand(dashboardCommandIds.openProjects);
   };
 
-  const failure = downloadMessage(download.error ?? cloud.error ?? sync.error, entry, sync.data?.state);
-  const showProgress = downloading && !deleting && !failure && entry?.presence !== "downloaded";
+  const sharedError = unresolved?.error instanceof Error ? unresolved.error : undefined;
+  const requestError = entry?.presence === "downloading" ? null : (download.error ?? sharedError ?? null);
+  const failure = downloadMessage(requestError ?? cloud.error ?? sync.error, entry, sync.data?.state);
+  const pending = Boolean(active && !unresolved);
+  const showProgress = (downloading || pending) && !deleting && !failure && entry?.presence !== "downloaded";
+  const canDownload = Boolean(
+    entry?.actions.download && !unresolved && !copyBusy && !deleting && (!downloading || failure),
+  );
   const showDownload = !receipt && !deleting && entry?.presence !== "removing";
 
   return {
@@ -143,8 +187,10 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
     account,
     scope,
     deleting,
-    downloading,
-    download,
+    downloading: downloading || pending,
+    canDownload,
+    downloadBlocking: Boolean(active),
+    downloadPending: pending,
     sync,
     refresh,
     setDeletionScope,
@@ -155,5 +201,7 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
     showDownload,
     invalidated,
     requestDownload,
+    checkDownload,
+    discardDownload,
   };
 };

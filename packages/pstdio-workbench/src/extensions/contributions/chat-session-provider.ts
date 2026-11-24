@@ -1,13 +1,61 @@
 import { commandRefId, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import type { WorkbenchPanelRenderInput } from "../../core";
+import type { OperationRecovery } from "../../core/registries/mutations/operation-types";
+import { getWorkbenchOperations, resourceOperationSubject } from "../../core/registries/mutations/operations";
 import { getWorkbenchQueries } from "../../core/workbench-queries";
+import { runTrackedCreate } from "../host/workbench-create-operation";
 import type { RegisterWorkbenchExtensionContributionsInput } from "../host/workbench-extension-host-types";
+import { createChatActionOperations } from "./chat-action-operations";
 import type { createChatCommandBinding } from "./chat-command-binding";
 import { createChatDraftPersistence } from "./chat-draft-persistence";
 import { transferLegacyChatDraft } from "./chat-legacy-draft";
 import { createLocalChatDrafts } from "./chat-local-drafts";
 import type { ChatRecord } from "./chat-renderer-contributions";
-import { createChatSession } from "./chat-session";
+import { type ChatSessionInput, createChatSession } from "./chat-session";
+
+const trackChatSubmissions = (
+  queries: ReturnType<typeof getWorkbenchQueries>,
+  resource: ResourceRef | undefined,
+  extensionId: string,
+  projectId: string,
+  discardRecovered?: (key: string) => void,
+): Pick<ChatSessionInput, "hasRetainedSubmission" | "trackSubmission" | "subscribeSubmissions"> => {
+  if (
+    !resource ||
+    (resource.type !== "session-draft" && (resource.type !== "session" || extensionId !== "pstdio.session-browser"))
+  )
+    return {};
+  const creating = resource.type === "session-draft";
+  const operations = getWorkbenchOperations(queries);
+  const subject = resourceOperationSubject(resource);
+  const findUnresolved = (recovery: readonly OperationRecovery[]) =>
+    recovery.find(
+      (entry) => entry.domain === "resource.create" && entry.status === "unknown" && entry.subjects.includes(subject),
+    );
+  return {
+    hasRetainedSubmission: () => Boolean(findUnresolved(operations.getSnapshot().recovery)),
+    trackSubmission: (action, execute, discard) =>
+      runTrackedCreate(
+        operations,
+        {
+          projectId,
+          subjects: [subject],
+          source: resource,
+          title: creating ? "Start session" : "Send message",
+          draft: { text: action.text, attachments: action.attachments },
+          write: execute,
+          onDiscardAfterRetirement: discardRecovered ? true : undefined,
+          onDiscard: () => {
+            const key = discard();
+            if (key) discardRecovered?.(key);
+          },
+        },
+        findUnresolved,
+        creating ? "Session creation could not be confirmed." : "Message delivery could not be confirmed.",
+      ),
+    subscribeSubmissions: operations.subscribe,
+  };
+};
 
 export const createChatSessionProvider = (source: {
   input: () => RegisterWorkbenchExtensionContributionsInput;
@@ -23,6 +71,7 @@ export const createChatSessionProvider = (source: {
     { view, render, key, draftKey, binding } = source,
     body = view.body;
   const resource = render.instance.resource;
+  const sourceResource = source.normalized ?? resource;
   let drafts: ReturnType<typeof createChatDraftPersistence> | undefined;
   let watchSource: RegisterWorkbenchExtensionContributionsInput | undefined;
   const readLegacy = () =>
@@ -40,6 +89,18 @@ export const createChatSessionProvider = (source: {
   const acknowledgeRecovery = body.browserDraft?.acknowledgeRecoveryHandlerId;
   const providerSave = !local && body.saveDraftHandlerId;
   const session = createChatSession({
+    actionOperations:
+      sourceResource?.type === "session" && view.extensionId === "pstdio.session-browser"
+        ? createChatActionOperations(queries, sourceResource, input.projectId)
+        : undefined,
+    ...trackChatSubmissions(
+      queries,
+      sourceResource,
+      view.extensionId,
+      input.projectId,
+      local ? (key) => localDrafts?.discardRecovery(key) : undefined,
+    ),
+    inspectResources: () => render.workbench.commandPalette.open(),
     queryContext: {
       queries,
       scope: { projectId: input.projectId, extensionId: view.extensionId },

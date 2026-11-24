@@ -4,8 +4,32 @@ import { restoreFailedChatSubmission } from "./chat-failed-submission";
 import type { ChatPendingSubmission } from "./chat-pending-submission";
 import type { createChatSnapshot } from "./chat-snapshot";
 
+export const hasUnresolvedChatSubmission = (pending?: ChatPendingSubmission[]) =>
+  pending?.some((item) => item.unresolved?.recovery.isRetained()) ?? false;
+
+export const discardPendingChatSubmission = (
+  input: {
+    read: () => { draft: ChatDraft; pending?: ChatPendingSubmission[] };
+    changeDraft: (draft: Partial<ChatDraft>) => void;
+    publish: (update: { pending?: ChatPendingSubmission[] }) => void;
+  },
+  id: string,
+) => {
+  const { draft, pending } = input.read();
+  const attempt = pending?.find((item) => item.message.id === id && item.unresolved);
+  if (!attempt) return;
+  if (attempt.recoveryAdded) {
+    const key = chatDraftContentKey(attempt);
+    input.changeDraft({ recovered: draft.recovered?.filter((saved) => chatDraftContentKey(saved) !== key) });
+  }
+  input.publish({ pending: pending?.filter((item) => item !== attempt) });
+};
+
 export const createChatDraftRestoration = (input: {
   active: () => boolean;
+  hasRetainedSubmission?: () => boolean;
+  subscribeSubmissions?: (listener: () => void) => () => void;
+  inspectResources?: () => void;
   read: () => { draft: ChatDraft; pending?: ChatPendingSubmission[] };
   values: ReturnType<typeof createChatSnapshot>["values"];
   changeDraft: (draft: Partial<ChatDraft>) => void;
@@ -21,6 +45,13 @@ export const createChatDraftRestoration = (input: {
     input.publish({ pending: restored.pending });
   };
   return {
+    hasUnresolvedSubmission: () =>
+      Boolean(input.hasRetainedSubmission?.()) || hasUnresolvedChatSubmission(input.read().pending),
+    subscribeSubmissions: input.subscribeSubmissions ?? (() => () => {}),
+    inspectResources: input.inspectResources,
+    discardUnresolvedSubmission(id: string) {
+      if (input.active()) discardPendingChatSubmission(input, id);
+    },
     dismissSubmission(id: string) {
       if (!input.active()) return;
       const { pending } = input.read();
@@ -39,6 +70,7 @@ export const createChatDraftRestoration = (input: {
       const failed =
         saved &&
         pending?.find((item) => item.failureDismissed && chatDraftContentKey(item) === chatDraftContentKey(saved));
+      if (failed?.unresolved?.recovery.isRetained()) return;
       if (failed) return restoreSubmission(failed.message.id);
       const restored = restoreChatDraft(draft, index);
       input.values.claim(restored.values);

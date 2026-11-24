@@ -1,9 +1,15 @@
 import { Stack, Text } from "@chakra-ui/react";
 import { AlertMessage, SettingsContentSkeleton } from "@pstdio/ui";
 import { ParamEditorRow, type ReadOnlyParam, type SelectionParam } from "@pstdio/ui/param-editor";
+import { getWorkbenchOperations } from "@pstdio/workbench";
+import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
+import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import type { UpdateChannel, UpdateChannelBridge } from "../update-channel-bridge";
+
+import { changeUpdateChannel, projectUpdateChannel } from "../update-channel-operation";
 
 const updateChannelQueryKey = ["desktop", "update-channel"];
 const appInfoQueryKey = ["desktop", "app-info"];
@@ -27,7 +33,7 @@ export const UpdateChannelContent = (props: UpdateChannelContentProps) => {
     type: "selection",
     defaultValue: channel ?? "",
     placeholder: t("updates.loading"),
-    disabled: channel === undefined || saving,
+    disabled: channel === undefined,
     options: [
       { id: "stable", name: t("updates.stable") },
       { id: "nightly", name: t("updates.nightly") },
@@ -54,6 +60,11 @@ export const UpdateChannelContent = (props: UpdateChannelContentProps) => {
             }}
           />
         )}
+        {saving ? (
+          <Text role="status" px="sm" textStyle="label/S/regular" color="fg.muted">
+            {t("updates.saving", { defaultValue: "Saving…" })}
+          </Text>
+        ) : null}
         {channel && (
           <Stack gap="2xs" px="sm" pb="xs">
             <Text textStyle="label/S/regular" color="fg.muted">
@@ -82,21 +93,27 @@ export const UpdateChannelPanel = (props: UpdateChannelPanelProps) => {
   const queryClient = useQueryClient();
   const channel = useQuery({ queryKey: updateChannelQueryKey, queryFn: () => bridge.getUpdateChannel() });
   const appInfo = useQuery({ queryKey: appInfoQueryKey, queryFn: () => bridge.getAppInfo() });
-  // Shows the new channel at once and restores the previous one if the desktop rejects it.
+  const operations = getWorkbenchOperations(getDashboardScopedQueries());
+  const displayed = () => projectUpdateChannel(operations, channel.data);
+  const selected = useSyncExternalStore(operations.subscribe, displayed, displayed);
   const change = useMutation({
-    mutationFn: (next: UpdateChannel) => bridge.setUpdateChannel(next),
-    onMutate: async (next) => {
-      await queryClient.cancelQueries({ queryKey: updateChannelQueryKey });
-      const previous = queryClient.getQueryData<UpdateChannel | null>(updateChannelQueryKey);
-      queryClient.setQueryData(updateChannelQueryKey, next);
-      return { previous };
-    },
-    onError: (_error, _next, result) => queryClient.setQueryData(updateChannelQueryKey, result?.previous),
+    mutationFn: (next: UpdateChannel) =>
+      changeUpdateChannel({
+        operations,
+        bridge,
+        channel: next,
+        sourceCommand: { id: WORKBENCH_SETTINGS_OPEN_COMMAND_ID, args: { panelId: "update-channel" } },
+        async accept(confirmed, signal) {
+          await queryClient.cancelQueries({ queryKey: updateChannelQueryKey });
+          signal.throwIfAborted();
+          queryClient.setQueryData(updateChannelQueryKey, confirmed);
+        },
+      }),
   });
 
   return (
     <UpdateChannelContent
-      channel={channel.data ?? undefined}
+      channel={selected ?? undefined}
       version={appInfo.data?.version}
       saving={change.isPending}
       error={change.isError ? t("updates.saveError") : undefined}

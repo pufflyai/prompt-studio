@@ -138,6 +138,7 @@ export {
   ThemePreferenceSurface,
   useThemePreference,
 } from "@/utils/theme-preference";
+export { UnresolvedSubmission, UnresolvedSubmissionError } from "./components/primitives/unresolved-submission";
 export { SettingsContentSkeleton, SettingsNavigationSkeleton } from "./components/settings/settings-loading";
 export {
   SettingsActions,

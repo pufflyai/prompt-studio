@@ -32,3 +32,21 @@ test("failed batch feedback announces its status once and retains direct retry w
   expect(html).toContain('aria-label="Two failures · Retry all"');
   expect(html).toContain('data-testid="extension-action-dismiss"');
 });
+
+test("unconfirmed installation stays disabled and exposes dismissal without a retry action", () => {
+  const html = renderToStaticMarkup(
+    <ChakraProvider value={psTheme}>
+      <ExtensionActionButton
+        action={{ status: "error", label: "Outcome unconfirmed", retryable: false }}
+        onRetry={() => {}}
+        onDismiss={() => {}}
+      >
+        Install
+      </ExtensionActionButton>
+    </ChakraProvider>,
+  );
+  expect(html).toContain('aria-label="Outcome unconfirmed"');
+  expect(html).toContain('disabled=""');
+  expect(html).not.toContain("Retry");
+  expect(html).toContain('data-testid="extension-action-dismiss"');
+});

@@ -19,7 +19,7 @@ export const view = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./view.tsx", import.meta.url),
-    capabilities: ["commands.execute", "navigation.open", "page.params.update", "clipboard.write"],
+    capabilities: ["commands.execute", "editing.session", "navigation.open", "page.params.update", "clipboard.write"],
   },
 });
 export const page = definePage({

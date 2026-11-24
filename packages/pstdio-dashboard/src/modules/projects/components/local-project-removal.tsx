@@ -2,8 +2,8 @@ import { Button, HStack, Spinner, Text } from "@chakra-ui/react";
 import { LocalRemovalConflictError, type LocalRemovalPreflight, type ProjectCopyAccount } from "@pstdio/sdk/client";
 import { AlertMessage, Checkbox, DeleteConfirmationModal } from "@pstdio/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
-import { getApiClient } from "@/lib/api";
+import { useEffect, useRef, useState } from "react";
+import { useCloudLocalRemoval } from "../data/cloud-local-removal";
 import { cloudProjectCatalogKey } from "../data/project-catalog";
 
 interface LocalRemovalProps {
@@ -25,6 +25,9 @@ export const LocalProjectRemoval = ({ id, name, account, disabled, pending, onRe
   const [discard, setDiscard] = useState(false);
   const [error, setError] = useState<string>();
   const queryClient = useQueryClient();
+  const removal = useCloudLocalRemoval();
+  const busy = removal.active(id);
+  useEffect(() => () => request.current?.abort(), []);
 
   const inspect = async (expected: ProjectCopyAccount) => {
     request.current?.abort();
@@ -33,8 +36,12 @@ export const LocalProjectRemoval = ({ id, name, account, disabled, pending, onRe
     setError(undefined);
     setReading(true);
     try {
-      const result = await getApiClient().account.projectLocalRemoval(id, { signal: controller.signal });
-      if (result.account?.managerOrigin !== expected.managerOrigin || result.account?.accountId !== expected.accountId)
+      const result = await removal.preflight(id, controller.signal);
+      if (
+        result.projectId !== id ||
+        result.account?.managerOrigin !== expected.managerOrigin ||
+        result.account?.accountId !== expected.accountId
+      )
         throw new Error("The active Cloud account changed. Reopen this action to confirm again.");
       if (!controller.signal.aborted) setPreflight(result);
     } catch (failure) {
@@ -45,7 +52,7 @@ export const LocalProjectRemoval = ({ id, name, account, disabled, pending, onRe
     }
   };
   const begin = () => {
-    if (!account) return;
+    if (!account || removal.active(id)) return;
     setConfirmedAccount(account);
     setDiscard(false);
     setPreflight(undefined);
@@ -58,10 +65,8 @@ export const LocalProjectRemoval = ({ id, name, account, disabled, pending, onRe
   const submit = async () => {
     setError(undefined);
     try {
-      await getApiClient().account.removeLocalProject(id, {
-        discardUnsynced: discard,
-        expectedAccount: confirmedAccount,
-      });
+      if (!confirmedAccount || !accountMatches) throw new Error("Reopen this action to confirm the active account.");
+      await removal.remove(id, name, confirmedAccount, discard);
       onRemoved?.();
     } catch (failure) {
       if (failure instanceof LocalRemovalConflictError) {
@@ -77,7 +82,7 @@ export const LocalProjectRemoval = ({ id, name, account, disabled, pending, onRe
 
   return (
     <>
-      <Button size="sm" variant="destructive" disabled={disabled || !account} onClick={begin}>
+      <Button size="sm" variant="destructive" disabled={disabled || busy || !account} onClick={begin}>
         {pending ? "Retry local removal" : "Delete local version"}
       </Button>
       <DeleteConfirmationModal
@@ -85,7 +90,12 @@ export const LocalProjectRemoval = ({ id, name, account, disabled, pending, onRe
         onClose={close}
         onDelete={submit}
         confirmDisabled={
-          disabled || !accountMatches || reading || !preflight?.account || (preflight.requiresDiscard && !discard)
+          disabled ||
+          busy ||
+          !accountMatches ||
+          reading ||
+          !preflight?.account ||
+          (preflight.requiresDiscard && !discard)
         }
         headline={`Delete local version of “${name}”?`}
         notificationText="Downloaded Prompt Studio data, local recovery copies, and caches will be removed from this device. User-selected source folders stay on disk."

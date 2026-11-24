@@ -138,11 +138,12 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
             const actionParams = toActionParams(params, toRecordParams(action.params));
             if (action.command?.extensionId === "pstdio") {
               await input.workbench.commands.executeCommand(commandId, actionParams, {
+                ...execution,
                 resource,
               });
               return;
             }
-            await executeTreeActionCommand(input, record, commandId, actionParams, resource);
+            await executeTreeActionCommand(input, record, commandId, actionParams, resource, execution?.onAdmitted);
             ctx.refresh();
           }
         : undefined,

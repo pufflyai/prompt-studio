@@ -65,7 +65,11 @@ export { openRelatedResourcesPreference } from "./resource-links/related-resourc
 export { RelatedResources } from "./resource-links/related-resources";
 export type { WorkbenchResourceLinksOptions } from "./resource-links/resource-links-module";
 export { createWorkbenchResourceLinksModule, resourceLinksCommandId } from "./resource-links/resource-links-module";
-export type { ResourceLinkCandidate, ResourceLinksService } from "./resource-links/resource-links-types";
+export type {
+  ResourceLinkCandidate,
+  ResourceLinkChange,
+  ResourceLinksService,
+} from "./resource-links/resource-links-types";
 export type { WorkbenchSettingsModuleOptions } from "./settings/settings-module";
 export {
   createWorkbenchSettingsModule,
