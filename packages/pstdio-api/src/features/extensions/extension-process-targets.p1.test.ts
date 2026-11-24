@@ -35,6 +35,20 @@ const ready = (input) => ({ state: "ready", executionKind: "remote", providerRef
 export default {
   commands: [
     {
+      id: "delay-spawn",
+      ref: { kind: "command", id: "delay-spawn" },
+      title: "Delay spawn",
+      async run(ctx, params) {
+        const gate = globalThis.__delaySpawn;
+        gate.entered();
+        await gate.resume;
+        const child = ctx.process.spawn({ command: params.command, lifetime: "extension" });
+        const started = await child.started.then(() => "started", (error) => error.code);
+        await child.exited;
+        return started;
+      },
+    },
+    {
       id: "spawn",
       ref: { kind: "command", id: "spawn" },
       title: "Spawn",
@@ -287,6 +301,40 @@ test("target files read local paths relative to the workspace or the home, and r
   expect(seen().slice(before)).toMatchObject([
     { provider: true, input: { workspaceId: workspaces.remote, providerRef, path: "~/.claude/projects/s.jsonl" } },
   ]);
+});
+
+test("a still-running old command cannot start after identical source re-enable", async () => {
+  const entered = Promise.withResolvers<void>();
+  const resume = Promise.withResolvers<void>();
+  const context = globalThis as typeof globalThis & { __delaySpawn?: object };
+  context.__delaySpawn = { entered: entered.resolve, resume: resume.promise };
+  const marker = join(root, "reenable-local-marker");
+  const old = execute(projects.main, "delay-spawn", {
+    command: [process.execPath, "-e", 'await Bun.write(process.argv[1], "ran")', marker],
+  });
+  try {
+    await Promise.race([
+      entered.promise,
+      old.then((outcome) => {
+        throw new Error(`The original command ended before disable: ${JSON.stringify(outcome)}`);
+      }),
+    ]);
+    await handle.deps.extensionService.setProjectExtensionEnabled(instanceId, false);
+    await handle.deps.extensionService.setProjectExtensionEnabled(instanceId, true);
+    resume.resolve();
+    const outcome = await old;
+    expect(outcome).toMatchObject({ ok: true, value: "process_owner_closed" });
+    expect(existsSync(marker)).toBe(false);
+    const fresh = await spawn({
+      command: [process.execPath, "-e", "process.stdout.write('new generation')"],
+      lifetime: "extension",
+    });
+    expect(fresh).toEqual({ startError: null, stdout: "new generation", exit: { code: 0, signal: null } });
+  } finally {
+    resume.resolve();
+    await old.catch(() => {});
+    delete context.__delaySpawn;
+  }
 });
 
 test("an extension-owned child survives its command and unchanged catalog rebuilds, and stops on disable", async () => {

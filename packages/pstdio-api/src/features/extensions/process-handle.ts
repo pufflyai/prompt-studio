@@ -182,11 +182,12 @@ export const spawnProcessHandle = (
   const stopGroup = async (signal: "SIGTERM" | "SIGINT" | "SIGKILL") => {
     if (!child || groupFinished) return;
     await signalProcessTree(child, signal);
-    const stopped = await treeExitedWithin(child, KILL_GRACE_MS);
-    if (!stopped && !groupFinished && signal !== "SIGKILL") {
-      await signalProcessTree(child, "SIGKILL");
-      await treeExitedWithin(child, KILL_GRACE_MS);
+    if (signal !== "SIGKILL") {
+      if (await treeExitedWithin(child, KILL_GRACE_MS)) return;
+      if (!groupFinished) await signalProcessTree(child, "SIGKILL");
     }
+    if (!groupFinished && !(await treeExitedWithin(child, KILL_GRACE_MS)))
+      throw new Error("The process tree did not stop.");
   };
 
   const kill = (signal: "SIGTERM" | "SIGINT" | "SIGKILL" = "SIGTERM") => {

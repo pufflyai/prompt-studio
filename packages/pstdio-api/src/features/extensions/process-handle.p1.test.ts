@@ -186,3 +186,44 @@ test("return ends every pending output read without stopping a quiet child", asy
     await handle.kill("SIGKILL");
   }
 });
+
+test.skipIf(process.platform === "win32")(
+  "kill reports failure if it cannot confirm even the direct child stopped",
+  async () => {
+    const quiet = Bun.spawn([process.execPath, "-e", "setInterval(() => {}, 1000)"], {
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const handle = spawnProcessHandle(
+      { argv: ["owned-fixture"], env },
+      {
+        // Own a real fixture, but simulate a platform that cannot deliver the signal through its handle.
+        spawner: (() => ({
+          pid: quiet.pid,
+          stdin: quiet.stdin,
+          stdout: quiet.stdout,
+          stderr: quiet.stderr,
+          exited: quiet.exited,
+          get signalCode() {
+            return quiet.signalCode;
+          },
+          kill() {},
+        })) as unknown as typeof Bun.spawn,
+      },
+    );
+    const result = handle.kill("SIGKILL").then(
+      () => "stopped",
+      (error: Error) => error.message,
+    );
+    try {
+      expect(await Promise.race([result, Bun.sleep(1_000).then(() => "pending")])).toBe(
+        "The process tree did not stop.",
+      );
+    } finally {
+      quiet.kill("SIGKILL");
+      await quiet.exited;
+      await result;
+    }
+  },
+);
