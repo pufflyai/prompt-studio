@@ -143,32 +143,40 @@ test("a source session from another project is never attributed to the local sen
 
 test("a saved account with an empty email still produces a valid user sender", async () => {
   const root = await mkdtemp(join(tmpdir(), "pstdio-sender-email-"));
-  const app = await createTestApp();
-  const file = join(root, "native-account.json");
-  const account = createNativeAccount({
-    file,
-    environment: app.deps.environmentService,
-    projects: app.deps.projectService,
-  });
   try {
-    const project = await app.deps.projectService.create({ name: "User sender fallback" });
-    await createNativeStore(file).save({
-      managerOrigin: "https://accounts.example.test",
-      relayOrigin: "https://relay.example.test",
-      accountId: "account",
-      deviceId: (await app.deps.environmentService.get()).environmentId,
-      token: "credential",
-      email: "",
-    });
-    expect((await account.status()).login?.email).toBe("");
-    const sender = await resolveMessageSender({ ...app.deps, accountService: account }, project.id, { type: "user" });
-    const local = await resolveMessageSender(app.deps, project.id, { type: "user" });
-    expect(sender).toMatchObject({ type: "user", id: "account" });
-    expect(sessionMessageSenderSchema.safeParse(sender).success).toBe(true);
-    expect(sender!.name).toBe(local!.name);
+    const app = await createTestApp();
+    try {
+      const file = join(root, "native-account.json");
+      const account = createNativeAccount({
+        file,
+        environment: app.deps.environmentService,
+        projects: app.deps.projectService,
+      });
+      try {
+        const project = await app.deps.projectService.create({ name: "User sender fallback" });
+        await createNativeStore(file).save({
+          managerOrigin: "https://accounts.example.test",
+          relayOrigin: "https://relay.example.test",
+          accountId: "account",
+          deviceId: (await app.deps.environmentService.get()).environmentId,
+          token: "credential",
+          email: "",
+        });
+        expect((await account.status()).login?.email).toBe("");
+        const sender = await resolveMessageSender({ ...app.deps, accountService: account }, project.id, {
+          type: "user",
+        });
+        const local = await resolveMessageSender(app.deps, project.id, { type: "user" });
+        expect(sender).toMatchObject({ type: "user", id: "account" });
+        expect(sessionMessageSenderSchema.safeParse(sender).success).toBe(true);
+        expect(sender!.name).toBe(local!.name);
+      } finally {
+        await account.close();
+      }
+    } finally {
+      await app.close();
+    }
   } finally {
-    await account.close();
-    await app.close();
     await rm(root, { recursive: true, force: true });
   }
 });
