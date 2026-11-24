@@ -57,7 +57,12 @@ export interface RunRecord {
   /** The Prompt Studio session whose agent started the run, when one did. */
   sessionId?: string;
   summary?: RunSummary;
-  pendingResult?: { id: string; summary: Omit<RunSummary, "tail">; release: boolean };
+  pendingResult?: {
+    id: string;
+    summary: Omit<RunSummary, "tail">;
+    release: boolean;
+    cleanup?: { stop: boolean };
+  };
   submissionPending?: boolean;
   template?: TemplateRef;
 }
@@ -190,9 +195,15 @@ export async function startRun(
     }
     // A proven rejection has no remote receipt to recover. Make its original
     // outcome durable before cleanup can relinquish the only recovery fence.
-    if (definitive) await saveSubmissionFailure(deps, record, error, { signal });
+    if (definitive) {
+      await saveSubmissionFailure(deps, record, error, {
+        signal,
+        cleanup: { environmentId: environment.id, runId, stop: !input.environmentId && ownsEnvironment },
+      });
+      throw error;
+    }
     await Promise.allSettled([
-      definitive ? Promise.resolve() : saveSubmissionFailure(deps, record, error),
+      saveSubmissionFailure(deps, record, error),
       Promise.resolve().then(() =>
         deps.cleanupEnvironment({
           environmentId: environment.id,

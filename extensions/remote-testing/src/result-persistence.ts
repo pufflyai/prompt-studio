@@ -1,4 +1,5 @@
 import { waitForControllerPoll } from "./connection";
+import { rememberEnvironmentCleanup } from "./environment-cleanup";
 import { releaseEnvironment } from "./environments";
 import { notifyRunChange } from "./events";
 import { UnknownRunError } from "./run-store";
@@ -53,6 +54,14 @@ export async function finishPendingResult(
       });
       if (!saved) continue;
     }
+    // A rejection checkpoint owns the summary-to-cleanup crash interval. Keep it
+    // indexed until shutdown ownership is durable or the kept claim is released.
+    if (pending.cleanup?.stop)
+      await rememberEnvironmentCleanup(deps.store, {
+        environmentId: value.environmentId,
+        runId: value.runId,
+        stop: true,
+      });
     if (pending.release) await releaseEnvironment(deps.store, value.environmentId, value.runId);
     const latest = await deps.store.records.read(recordId);
     const latestValue = latest.value as unknown as RunRecord;
@@ -73,10 +82,15 @@ export async function persistResult(
   summary: RunSummary,
   release: boolean,
   signal?: AbortSignal,
+  cleanup?: { stop: boolean },
 ) {
   const recordId = deps.store.records.id(`run:${record.runId}`);
   const { tail: _tail, ...metadata } = summary;
-  const pendingResult = { id: crypto.randomUUID(), summary: metadata, release };
+  const pendingResult = { id: crypto.randomUUID(), summary: metadata, release, ...(cleanup ? { cleanup } : {}) };
+  // Definitive rejection has no remote receipt. Save its visible outcome and
+  // unfinished handoff atomically, so neither restart nor queue/storage failure
+  // can strand a terminal record behind a permanent claim.
+  const rejection = cleanup ? { summary } : {};
   while (true) {
     signal?.throwIfAborted();
     const current = await prepareResultStorage(() => deps.store.records.read(recordId), signal);
@@ -86,7 +100,7 @@ export async function persistResult(
     if (value?.summary) return value.summary;
     const saved = await prepareResultStorage(async () => {
       if (!current.exists) {
-        await deps.store.set(`run:${record.runId}`, { ...record, pendingResult });
+        await deps.store.set(`run:${record.runId}`, { ...record, pendingResult, ...rejection });
         return true;
       }
       return deps.store.records.commitIfCurrent({
@@ -95,7 +109,7 @@ export async function persistResult(
           {
             recordId,
             expectedRevision: current.revision,
-            set: { "/pendingResult": pendingResult },
+            set: { "/pendingResult": pendingResult, ...(cleanup ? { "/summary": { ...summary } } : {}) },
           },
         ],
       });

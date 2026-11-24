@@ -1,5 +1,6 @@
 import { PocketCoderError } from "./connection";
-import { prepareResultStorage } from "./result-persistence";
+import type { EnvironmentCleanupInput } from "./environment-cleanup";
+import { persistResult } from "./result-persistence";
 import type { RunDeps, RunRecord, RunSummary } from "./runs";
 
 // The controller validates this registration before executions.accept. Other
@@ -12,7 +13,7 @@ export async function saveSubmissionFailure(
   deps: RunDeps,
   record: RunRecord | undefined,
   error: unknown,
-  preparation?: { signal?: AbortSignal },
+  preparation?: { signal?: AbortSignal; cleanup: EnvironmentCleanupInput },
 ) {
   if (!record) return;
   const summary: RunSummary = {
@@ -25,9 +26,11 @@ export async function saveSubmissionFailure(
     tail: "",
     error: error instanceof Error ? error.message : String(error),
   };
-  const save = () => saveFailureSummary(deps, record, summary);
-  if (preparation) await prepareResultStorage(save, preparation.signal);
-  else await save();
+  if (preparation) {
+    const { cleanup, signal } = preparation;
+    await persistResult(deps, record, summary, !cleanup.stop, signal, { stop: cleanup.stop });
+    if (cleanup.stop) await Promise.allSettled([Promise.resolve().then(() => deps.cleanupEnvironment(cleanup))]);
+  } else await saveFailureSummary(deps, record, summary);
 }
 
 async function saveFailureSummary(deps: RunDeps, record: RunRecord, summary: RunSummary) {

@@ -95,7 +95,7 @@ test.each([
       Date.now = clock;
     }
     expect(failures).toBe(Number(saveFault === "transient"));
-    expect(intents).toEqual([{ environmentId: "kept", runId: record.runId, stop: false }]);
+    expect(intents).toEqual([]);
     expect(afterLaunch).toEqual({ summary: "error", claim: null });
     expect(outcome).toMatchObject({ status: "error", error: expect.stringContaining("HTTP 409") });
     expect(calls).not.toContain("POST /v1/workspaces/kept/cancel");
