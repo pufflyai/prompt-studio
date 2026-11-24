@@ -42,7 +42,11 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     }
   };
 
-  const rememberReappearance = (path: string) => {
+  const rememberReappearance = (path: string, current: NonNullable<FileState>) => {
+    // An independently returned folder can contain children that had no separate creation event.
+    if (entries.get(path)?.state === null && !sameState(directories.get(path)?.observed ?? null, current)) {
+      entries.delete(path);
+    }
     for (const [recordedPath, entry] of entries) {
       if (entry.state === null && (path === recordedPath || isInside(path, recordedPath))) {
         entry.reappeared ??= new Set();
@@ -66,9 +70,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     return matches;
   };
 
-  const isEcho = (path: string, consumed: Set<string>, keepMatchedWrites: boolean) => {
-    const current = readArtifactFileState(path);
-    if (keepMatchedWrites && current) rememberReappearance(path);
+  const isEcho = (path: string, current: FileState, consumed: Set<string>, keepMatchedWrites: boolean) => {
     const entry = entries.get(path);
     if (entry && sameState(entry.state, current) && !entry.reappeared?.has(path)) {
       if (!keepMatchedWrites) {
@@ -84,7 +86,9 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
   const record: ArtifactMountWriteObserver = (path, createdDirectories, parentWrites) => {
     forgetExpired();
     const recordedAt = now();
-    entries.set(path, { recordedAt, state: readArtifactFileState(path) });
+    const state = readArtifactFileState(path);
+    entries.set(path, { recordedAt, state });
+    if (!state) directories.delete(path);
     for (const [folder, identity] of createdDirectories ?? []) {
       const observed = readArtifactFileState(folder);
       if (observed?.directory && observed.identity === identity) directories.set(folder, { observed, recordedAt });
@@ -103,8 +107,16 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     /** Return external changes. Keep matched writes when independent watchers can still echo them. */
     dropEchoes: (paths: string[], { keepMatchedWrites = false } = {}) => {
       forgetExpired();
+      const observations = paths.map((path) => [path, readArtifactFileState(path)] as const);
+      if (keepMatchedWrites) {
+        for (const [path, current] of observations) {
+          if (current) rememberReappearance(path, current);
+        }
+      }
       const consumed = new Set<string>();
-      const kept = paths.filter((path) => !isEcho(path, consumed, keepMatchedWrites));
+      const kept = observations
+        .filter(([path, current]) => !isEcho(path, current, consumed, keepMatchedWrites))
+        .map(([path]) => path);
       // A write can explain a folder notification elsewhere in the same batch.
       for (const path of consumed) entries.delete(path);
       return kept;

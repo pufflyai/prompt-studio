@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, mkdtempSync, renameSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import * as fsPromises from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { createArtifactMount, resolveArtifactMountRoot } from "pstdio-extensions";
 import { createArtifactMountWriteLedger } from "./write-ledger";
 
@@ -64,7 +65,9 @@ describe("artifact mount write ledger", () => {
     writeFileSync(path, '{"total":1}');
     expect(ledger.dropEchoes(fileFirst ? [path, folder] : [folder, path], { keepMatchedWrites: true })).toEqual([path]);
   });
+});
 
+describe("artifact mount directory echoes", () => {
   test.each([true, false])("reports a replaced folder and missing child in either order (%s)", async (fileFirst) => {
     const ledger = createArtifactMountWriteLedger();
     const { mount, root } = createMount(ledger);
@@ -129,6 +132,41 @@ describe("artifact mount write ledger", () => {
     expect(ledger.dropEchoes([folder, archive, join(archive, "second.json")], options)).toEqual([]);
   });
 
+  test("reports a parent edit made while the newly created child is checked", async () => {
+    const ledger = createArtifactMountWriteLedger();
+    const { mount, root } = createMount(ledger);
+    const folder = join(root, "sales");
+    const archive = join(folder, "archive");
+    const outside = join(dirname(root), "external-sales");
+    const options = { keepMatchedWrites: true };
+    await mount.writeText("sales/first.json", "{}");
+    expect(ledger.dropEchoes([folder, join(folder, "first.json")], options)).toEqual([]);
+
+    const realpath = fsPromises.realpath;
+    let edited = false;
+    const editDuringLookup = async (...args: Parameters<typeof realpath>) => {
+      const result: string | Buffer = await Reflect.apply(realpath, fsPromises, args);
+      if (!edited && basename(String(args[0])) === "archive") {
+        edited = true;
+        renameSync(folder, outside);
+        writeFileSync(join(outside, "external.json"), "{}");
+        utimesSync(outside, new Date(), new Date(Date.now() + 5_000));
+        renameSync(outside, folder);
+      }
+      return result;
+    };
+    const lookup = spyOn(fsPromises, "realpath").mockImplementation(editDuringLookup as typeof realpath);
+    try {
+      await mount.writeText("sales/archive/second.json", "[]");
+    } finally {
+      lookup.mockRestore();
+    }
+    expect(edited).toBe(true);
+    expect(ledger.dropEchoes([folder, archive, join(archive, "second.json")], options)).toEqual([folder]);
+  });
+});
+
+describe("artifact mount deletions and expiry", () => {
   test("drops everything a mount delete removed", async () => {
     const ledger = createArtifactMountWriteLedger();
     const { mount, root } = createMount(ledger);
@@ -185,6 +223,26 @@ describe("artifact mount write ledger", () => {
     expect(ledger.dropEchoes([join(root, "sales"), newPath, oldPath], options)).toEqual([]);
     rmSync(newPath);
     expect(ledger.dropEchoes([newPath, oldPath], options)).toEqual([newPath]);
+  });
+
+  test("reports later child deletions when an external directory returns with only a folder notification", async () => {
+    const ledger = createArtifactMountWriteLedger();
+    const { mount, root } = createMount(ledger);
+    const folder = join(root, "sales");
+    const outside = join(dirname(root), "external-sales");
+    const options = { keepMatchedWrites: true };
+    await mount.writeText("sales/old.json", "{}");
+    await mount.delete("sales");
+    expect(ledger.dropEchoes([folder, join(folder, "old.json")], options)).toEqual([]);
+
+    mkdirSync(outside);
+    writeFileSync(join(outside, "new.json"), "{}");
+    renameSync(outside, folder);
+    expect(ledger.dropEchoes([folder], options)).toEqual([folder]);
+
+    const removed = join(folder, "new.json");
+    rmSync(removed);
+    expect(ledger.dropEchoes([removed], options)).toEqual([removed]);
   });
 
   test("forgets writes after the echo window", async () => {

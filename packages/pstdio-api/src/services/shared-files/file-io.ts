@@ -24,11 +24,20 @@ const placeDirectory = async (
   operationPath: string,
   reportedPath: string,
   createdDirectories?: Map<string, string>,
+  observeParent?: () => ArtifactParentWrite,
 ) => {
   const created = await mkdir(operationPath, { recursive: true });
-  if (!created || !createdDirectories) return;
-  const stats = await stat(operationPath, { bigint: true }).catch(() => undefined);
-  if (stats?.isDirectory()) createdDirectories.set(reportedPath, filesystemIdentity(stats));
+  const parentWrite = observeParent?.();
+  if (created && createdDirectories) {
+    const stats = await stat(operationPath, { bigint: true }).catch(() => undefined);
+    if (stats?.isDirectory()) createdDirectories.set(reportedPath, filesystemIdentity(stats));
+  }
+  return parentWrite;
+};
+
+const placeFile = async (path: string, temporary?: string, observeParent?: () => ArtifactParentWrite) => {
+  if (temporary) await rename(temporary, path);
+  return observeParent?.();
 };
 
 export const createFileProjectionIO = (input: {
@@ -111,9 +120,11 @@ export const createFileProjectionIO = (input: {
       input.onWrite && dirname(requestedPath) !== dirname(changedPath)
         ? observeArtifactParentWrite(changedPath)
         : parentWrite;
-    if (target.kind === "directory") await placeDirectory(destination.operationPath, changedPath, createdDirectories);
-    else if (temporary) await rename(temporary, destination.realPath);
-    if (observedParent) parentWrites.push(observedParent());
+    const finalParent =
+      target.kind === "directory"
+        ? await placeDirectory(destination.operationPath, changedPath, createdDirectories, observedParent)
+        : await placeFile(destination.realPath, temporary, observedParent);
+    if (finalParent) parentWrites.push(finalParent);
     input.onWrite?.(changedPath, createdDirectories, parentWrites);
   };
   const install = async (

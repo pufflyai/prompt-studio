@@ -108,10 +108,10 @@ export const createSafeFileRoot = (mountRoot: string) => {
       // Another writer can create the same folder at the same time. The checks below still
       // reject a folder that resolves outside the root or is not a folder.
       const created = await mkdir(current).then(
-        () => true,
+        () => parentWrite?.(),
         (error: NodeJS.ErrnoException) => {
           if (error.code !== "EEXIST") throw error;
-          return false;
+          return undefined;
         },
       );
       const currentRealPath = await realpath(current);
@@ -122,12 +122,8 @@ export const createSafeFileRoot = (mountRoot: string) => {
       if (!stats.isDirectory()) {
         throw new Error(`Artifact directory is not a directory: ${relativePath}`);
       }
-      if (created && parentWrite)
-        onDirectoryCreated?.(
-          join(absoluteRoot, relative(root, currentRealPath)),
-          filesystemIdentity(stats),
-          parentWrite(),
-        );
+      if (created)
+        onDirectoryCreated?.(join(absoluteRoot, relative(root, currentRealPath)), filesystemIdentity(stats), created);
       current = currentRealPath;
     }
     return current;
