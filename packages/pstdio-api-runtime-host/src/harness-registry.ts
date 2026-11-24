@@ -200,11 +200,18 @@ const toHandle = (
             options?: HarnessCallOptions,
           ) => {
             ensureActive();
-            await calls.once(options, (context) =>
-              authentication.run(channel, async (channel) => {
-                await provider.authenticate!(context, input, channel);
-              }),
-            );
+            const call = await calls.open(options);
+            try {
+              await authentication.run(
+                channel,
+                async (channel) => {
+                  await provider.authenticate!(call.context, input, channel);
+                },
+                call.close,
+              );
+            } finally {
+              call.close();
+            }
           },
         }
       : {}),
