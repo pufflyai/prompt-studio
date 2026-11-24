@@ -24,20 +24,24 @@ export function checkExactGateLaunch<T>(
   };
 }
 
-export async function settleCheckedGateLaunch(
+export async function readAndSettleGateLaunch<T>(
   operations: WorkbenchOperations,
   projectId: string,
   ticket: unknown,
-  value: unknown,
+  read: () => Promise<T>,
+  unwrap: (result: T) => unknown,
 ) {
-  const confirmed = confirmedGateLaunch.safeParse(value);
-  if (!confirmed.success || typeof ticket !== "string") return;
-  const entry = operations.getSnapshot().recovery.find(({ projectId: id, canCheck, draft }) => {
-    if (id !== projectId || !canCheck || !draft || typeof draft !== "object") return false;
+  const confirm = operations.captureRecoveryConfirmation();
+  const result = await read();
+  const proof = confirmedGateLaunch.safeParse(unwrap(result));
+  if (!proof.success || typeof ticket !== "string") return result;
+  const entry = operations.getSnapshot().recovery.find(({ projectId: id, status, draft }) => {
+    if (id !== projectId || status === "rejected" || !draft || typeof draft !== "object") return false;
     const params = draft as Record<string, unknown>;
     return (
-      params.commandId === plannerGateLaunch && params.ticket === ticket && params.attemptId === confirmed.data.launchId
+      params.commandId === plannerGateLaunch && params.ticket === ticket && params.attemptId === proof.data.launchId
     );
   });
-  if (entry) await operations.check(entry.id);
+  if (entry) confirm(entry.id);
+  return result;
 }

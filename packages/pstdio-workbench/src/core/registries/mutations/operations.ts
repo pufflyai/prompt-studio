@@ -77,6 +77,7 @@ const discardEntry = (entry: Entry, clearDraft: (entry: Entry) => void) => {
 const createWorkbenchOperations = (queries: ScopedQueryClient) => {
   let scope = queries.getScope();
   let owner = operationAuthorityKey(scope);
+  let authorityVersion = 0;
   let snapshot = emptySnapshot;
   const listeners = new Set<() => void>();
   const entries = new Map<symbol, Entry>();
@@ -121,6 +122,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
   };
 
   queries.subscribeScopeRetirement((retired) => {
+    authorityVersion++;
     scope = queries.getScope();
     owner = operationAuthorityKey(scope);
     for (const entry of entries.values()) {
@@ -270,6 +272,14 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
     check(id: symbol) {
       const entry = findRecovery(id);
       if (entry && !entry.controller.signal.aborted) return entry.check?.();
+    },
+    /** Capture before starting a read that can prove a particular saved outcome. */
+    captureRecoveryConfirmation() {
+      const version = authorityVersion;
+      return (id: symbol) => {
+        const entry = version === authorityVersion && findRecovery(id);
+        if (entry && entry.preview.status !== "rejected") finish(entry);
+      };
     },
     dismiss(id: symbol) {
       const entry = findRecovery(id);

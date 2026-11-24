@@ -5,7 +5,7 @@ import type { WorkbenchCore } from "../../core";
 import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import { getWorkbenchQueries } from "../../core/workbench-queries";
 import { unwrapCommandValue } from "../host/command-response";
-import { checkExactGateLaunch, settleCheckedGateLaunch } from "../host/planner-gate-launch-check";
+import { checkExactGateLaunch, readAndSettleGateLaunch } from "../host/planner-gate-launch-check";
 import {
   plannerGateLaunch,
   plannerGateLaunchCheck,
@@ -40,11 +40,14 @@ export const runWorkbenchWebviewCommandOperation = async (input: {
     if (!command || !metadata) return await execute(input.signal);
     if (!declaredCreateCommandIds(metadata).has(command.id)) {
       const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
-      if (command.id === plannerGateLaunchCheck && command.extensionId === "pstdio.planner") {
-        const result = await execute(input.signal);
-        await settleCheckedGateLaunch(operations, projectId, request.params?.ticket, unwrapCommandValue(result));
-        return result;
-      }
+      if (command.id === plannerGateLaunchCheck && command.extensionId === "pstdio.planner")
+        return await readAndSettleGateLaunch(
+          operations,
+          projectId,
+          request.params?.ticket,
+          () => execute(input.signal),
+          unwrapCommandValue,
+        );
       if (!command.mutating) return await execute(input.signal);
       input.signal?.throwIfAborted();
       const check =

@@ -12,7 +12,7 @@ import { isPageContent } from "../../core/registries/pages/page-main";
 import { applyCommandClipboard } from "./command-clipboard";
 import { unwrapCommandValue } from "./command-response";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
-import { checkExactGateLaunch, settleCheckedGateLaunch } from "./planner-gate-launch-check";
+import { checkExactGateLaunch, readAndSettleGateLaunch } from "./planner-gate-launch-check";
 import { remoteWorkspaceLaunchCommand, runRemoteWorkspaceLaunch } from "./remote-workspace-launch";
 import { plannerGateLaunch, plannerGateLaunchCheck, runWorkbenchCommandOperation } from "./workbench-command-operation";
 import { type CreateOperationFeedback, runCreateOperation } from "./workbench-create-operation";
@@ -161,11 +161,8 @@ export const executeWorkbenchExtensionCommand = async (
       }),
     );
   const operations = context.operations;
-  if (operations && hasGateCheck && commandId === plannerGateLaunchCheck) {
-    const result = await send();
-    await settleCheckedGateLaunch(operations, context.projectId, params?.ticket, result);
-    return result;
-  }
+  if (operations && hasGateCheck && commandId === plannerGateLaunchCheck)
+    return readAndSettleGateLaunch(operations, context.projectId, params?.ticket, send, (value) => value);
   if (operations && commandId === remoteWorkspaceLaunchCommand) {
     return runRemoteWorkspaceLaunch({
       commands: context.metadata?.commands ?? [],

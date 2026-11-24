@@ -11,8 +11,11 @@ import { executeWorkbenchExtensionCommand } from "./workbench-extension-command"
 
 const command = { id: "planner.create-ticket", extensionId: "planner", title: "Create ticket" };
 
-test("a Planner gate read reconciles the exact bridge operation, allowing an intentional later launch", async () => {
-  const queries = createScopedQueryClient({ runtimeId: "desktop", extensionId: "pstdio" });
+test.each([
+  "original",
+  "returned",
+] as const)("the %s authority can confirm the exact Planner gate through the bridge", async (authority) => {
+  const queries = createScopedQueryClient({ runtimeId: "desktop", extensionId: "pstdio", accountId: "original" });
   const operations = getWorkbenchOperations(queries);
   const workbench = createWorkbench({ queries });
   const projectId = "project";
@@ -52,13 +55,16 @@ test("a Planner gate read reconciles the exact bridge operation, allowing an int
         return success({ id: "review-2" });
       },
     });
-  const check = (launchId: string) =>
+  const check = (launchId: string, held?: Promise<void>) =>
     runWorkbenchWebviewCommandOperation({
       workbench,
       projectId,
       metadata,
       request: { commandId: plannerGateLaunchCheck, params: { ticket } },
-      execute: async () => success(confirmed(launchId)),
+      execute: async () => {
+        await held;
+        return success(confirmed(launchId));
+      },
     });
   try {
     await expect(launch("lost")).rejects.toBeInstanceOf(PstdioConnectionError);
@@ -67,6 +73,16 @@ test("a Planner gate read reconciles the exact bridge operation, allowing an int
     await operations.check(entry!.id);
     expect(operations.getSnapshot().recovery).toHaveLength(1);
     await expect(launch("blind-repeat")).rejects.toThrow("still pending");
+    if (authority === "returned") {
+      const held = Promise.withResolvers<void>();
+      const stale = check("lost", held.promise);
+      queries.setAuthority({ accountId: "other" });
+      expect(operations.getSnapshot().recovery).toEqual([]);
+      queries.setAuthority({ accountId: "original" });
+      held.resolve();
+      await stale;
+      expect(operations.getSnapshot().recovery[0]).toMatchObject({ status: "unknown", canCheck: false });
+    }
     visible = true;
     await check("unrelated");
     expect(operations.getSnapshot().recovery).toHaveLength(1);
