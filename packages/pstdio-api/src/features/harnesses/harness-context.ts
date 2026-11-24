@@ -4,7 +4,10 @@ import { createInvocationScope, markHostContext, processError } from "pstdio-ext
 import { apiLogger } from "../../lib/logger";
 import { createProcessApi, findFreePort, hostStartedGrants } from "../extensions/extension-process-api";
 import type { ExtensionTargets } from "../extensions/extension-targets";
-import type { ProcessEnvironmentPermissions, ProcessEnvironmentSource } from "../extensions/process-environment/permissions";
+import type {
+  ProcessEnvironmentPermissions,
+  ProcessEnvironmentSource,
+} from "../extensions/process-environment/permissions";
 import { createHarnessStateApi } from "./harness-state";
 
 const harnessLogger = (extensionId: string) => ({

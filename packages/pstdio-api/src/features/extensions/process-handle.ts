@@ -1,6 +1,7 @@
 import type { ProcessEvent, ProcessExit, ProcessHandle } from "pstdio-api-contracts/extension-kernel";
-import { trackProcessCleanup } from "pstdio-extensions";
-import { processGroupExited, signalProcessTree, treeExitedWithin } from "./process-group";
+import { processError, trackProcessCleanup } from "pstdio-extensions";
+import { startProcessChild } from "./extension-process-lifetime";
+import { signalProcessTree, treeExitedWithin } from "./process-group";
 
 /** Unread output a handle may hold, shared by stdout and stderr. Same allowance as `run`. */
 export const PROCESS_OUTPUT_CREDIT_BYTES = 8 * 1024 * 1024;
@@ -14,7 +15,7 @@ export interface SpawnProcessHandleInput {
   argv: string[];
   cwd?: string;
   env: Record<string, string | undefined>;
-  windowsVerbatimArguments?: boolean;
+  windowsVerbatimArguments?: true;
 }
 
 const spawnError = (error: unknown) =>
@@ -59,7 +60,7 @@ export const spawnProcessHandle = (
   {
     spawner = Bun.spawn as typeof Bun.spawn,
     creditBytes = PROCESS_OUTPUT_CREDIT_BYTES,
-    onSpawn = (_child: { pid: number; exited: Promise<unknown> }) => {},
+    onSpawn = (_treeExited: Promise<void>) => {},
   } = {},
 ): ProcessHandle => {
   const started = Promise.withResolvers<void>();
@@ -88,21 +89,25 @@ export const spawnProcessHandle = (
   };
   const childExited = Promise.withResolvers<void>();
 
+  let lifetime: ReturnType<typeof startProcessChild> | undefined;
   let child: Child | undefined;
   try {
-    child = spawner(input.argv, {
+    lifetime = startProcessChild({
+      spawner,
+      command: { argv: input.argv, windowsVerbatimArguments: input.windowsVerbatimArguments },
       cwd: input.cwd,
       env: input.env,
+      detached: false,
+      trackTree: true,
       stdin: "pipe",
-      stdout: "pipe",
-      stderr: "pipe",
-      // Unix needs a separate process group to stop descendants; Windows uses its tree cleanup.
-      detached: process.platform !== "win32",
-      windowsHide: true,
-      windowsVerbatimArguments: input.windowsVerbatimArguments,
-    }) as Child;
-    onSpawn(child);
-    started.resolve();
+    });
+    // Both the direct child and the retained Windows launcher use all three pipes in this mode.
+    child = lifetime.child as Child;
+    onSpawn(lifetime.treeExited!);
+    void lifetime.pid.then(
+      () => started.resolve(),
+      (error) => started.reject(spawnError(error)),
+    );
   } catch (error) {
     started.reject(spawnError(error));
     finish({ code: null, signal: null });
@@ -159,28 +164,33 @@ export const spawnProcessHandle = (
   let groupFinished = false;
   let outputClosed = Promise.resolve();
   let cleanup: Promise<unknown> = exited.promise;
-  if (child) {
+  if (child && lifetime) {
     const running = child;
     const pumps = Promise.allSettled([pump(running.stdout, "stdout"), pump(running.stderr, "stderr")]);
-    outputClosed = running.exited.then(async (code) => {
-      const signal = running.signalCode == null ? null : String(running.signalCode);
-      const exit = { code: signal ? null : code, signal };
+    const status = Promise.all([started.promise, lifetime.exited]).then(
+      ([, code]) => {
+        const signal = process.platform === "win32" || running.signalCode == null ? null : String(running.signalCode);
+        return { code: signal ? null : code, signal };
+      },
+      () => ({ code: null, signal: null }),
+    );
+    outputClosed = status.then(async (exit) => {
       exited.resolve(exit);
       childExited.resolve();
-      // A forced cleanup does not wait for readers; a natural exit delivers what was written.
       await pumps;
       finish(exit);
     });
-    const groupClosed = processGroupExited(running).then(() => {
+    const groupClosed = lifetime.treeExited!.then(() => {
       groupFinished = true;
     });
-    cleanup = Promise.allSettled([outputClosed, groupClosed]);
+    cleanup = Promise.all([outputClosed, groupClosed]);
   }
 
   const { write, end } = stdinFor(child, started.promise, () => discarding);
 
   const stopGroup = async (signal: "SIGTERM" | "SIGINT" | "SIGKILL") => {
     if (!child || groupFinished) return;
+    if (process.platform === "win32") return lifetime?.stop();
     await signalProcessTree(child, signal);
     if (signal !== "SIGKILL") {
       if (await treeExitedWithin(child, KILL_GRACE_MS)) return;
@@ -200,6 +210,7 @@ export const spawnProcessHandle = (
 
   const kill = (signal: "SIGTERM" | "SIGINT" | "SIGKILL" = "SIGTERM") => {
     if (!killing) {
+      started.reject(processError("process_owner_closed", "The process was stopped before it started."));
       discardOutput();
       // Start signaling before cancelling pipes so the child sees the requested stop first.
       const stopped = stopGroup(signal);
