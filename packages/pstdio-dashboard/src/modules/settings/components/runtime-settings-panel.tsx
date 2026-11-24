@@ -10,7 +10,7 @@ import {
 } from "@pstdio/ui";
 import { ParamEditorRow } from "@pstdio/ui/param-editor";
 import { useSettingsChanges } from "@pstdio/workbench/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSettings, useUpdateSettings } from "../data/use-settings";
 import { ProjectDefaultsCard } from "./project-defaults-card";
@@ -24,22 +24,22 @@ const parseLimit = (value: string | null) => {
 export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
   const { t } = useTranslation("settings");
   const { data: settings, error, isLoading, refetch } = useSettings();
-  const update = useUpdateSettings();
-  const [value, setValue] = useState<string | null>(null);
-  useEffect(() => {
-    if (settings) setValue(settings.max_concurrent_sessions?.toString() ?? null);
-  }, [settings]);
+  const update = useUpdateSettings("runtime");
+  const [draft, setDraft] = useState<string | null>();
+  const confirmed = settings?.max_concurrent_sessions?.toString() ?? null;
+  const value = draft === undefined ? confirmed : draft;
   const parsed = parseLimit(value);
   useSettingsChanges({
-    dirty: Boolean(settings) && value !== (settings?.max_concurrent_sessions?.toString() ?? null),
+    dirty: Boolean(settings) && value !== confirmed,
     saving: update.isPending,
     disabled: parsed === undefined,
     onSave: async () => {
       if (parsed === undefined) throw new Error(t("runtimeSettings.maxConcurrentSessions.invalid"));
       await update.mutateAsync({ max_concurrent_sessions: parsed });
+      setDraft((current) => (current === value ? undefined : current));
     },
     onReset: () => {
-      setValue(settings?.max_concurrent_sessions?.toString() ?? null);
+      setDraft(undefined);
       update.reset();
     },
   });
@@ -70,8 +70,7 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
               <Switch
                 aria-label={t("runtimeSettings.maxConcurrentSessions.limit")}
                 checked={value !== null}
-                disabled={update.isPending}
-                onCheckedChange={({ checked }) => setValue(checked ? "1" : null)}
+                onCheckedChange={({ checked }) => setDraft(checked ? "1" : null)}
               />
             ),
           }}
@@ -90,8 +89,7 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
                 min={1}
                 step={1}
                 value={value}
-                disabled={update.isPending}
-                onValueChange={({ value }) => setValue(value)}
+                onValueChange={({ value }) => setDraft(value)}
               >
                 <NumberInputField
                   aria-label={t("runtimeSettings.maxConcurrentSessions.label")}

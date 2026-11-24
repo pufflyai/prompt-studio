@@ -1,6 +1,7 @@
 import type { ResourceAnchor, ResourceRef } from "pstdio-api-contracts/extension-kernel";
 import { legacyResourceOwner } from "pstdio-db";
 import type { EventBus } from "../features/sync/event-bus";
+import { apiLogger } from "../lib/logger";
 
 export const publishResourceAnchorChanges = (
   bus: EventBus,
@@ -8,12 +9,16 @@ export const publishResourceAnchorChanges = (
   operation: "add" | "remove",
 ) => {
   if (!items.length) return;
-  bus.emit("resource_anchor_events", "set", {
-    id: crypto.randomUUID(),
-    projectId: items[0]!.source.projectId,
-    operation,
-    items,
-  });
+  try {
+    bus.emit("resource_anchor_events", "set", {
+      id: crypto.randomUUID(),
+      projectId: items[0]!.source.projectId,
+      operation,
+      items,
+    });
+  } catch (err) {
+    apiLogger.warn({ err, event: "resource_anchors.publish_failed" }, "Could not publish committed resource links");
+  }
 };
 
 export const publishCreatedResourceAnchors = (
@@ -56,7 +61,15 @@ export const refreshResourceAnchorEndpoints = async (
     if (source.type !== "project" && source.type !== "workspace" && source.type !== "session") continue;
     const read = readers[source.type];
     if (!read) continue;
-    const row = await read(source.id);
-    if (row && !("deleted_at" in row && row.deleted_at)) bus.emit(`${source.type}s`, "set", row);
+    try {
+      const row = await read(source.id);
+      if (row && !("deleted_at" in row && row.deleted_at)) bus.emit(`${source.type}s`, "set", row);
+    } catch (err) {
+      // Endpoint refreshes follow the committed edge write. Continue refreshing the remaining endpoints.
+      apiLogger.warn(
+        { err, event: "resource_anchors.endpoint_refresh_failed", kind: source.type },
+        "Could not refresh a linked resource",
+      );
+    }
   }
 };

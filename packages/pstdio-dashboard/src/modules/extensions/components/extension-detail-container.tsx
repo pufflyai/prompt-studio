@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useActionError } from "@/shared/components/use-action-error";
 import { executeExtensionCommandValue } from "@/shared/extensions/api";
+import { useProjectedAutomationPreferences } from "@/shared/extensions/automation-preferences";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import {
   useExtensionContributions,
@@ -57,7 +58,8 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
     ) ?? [];
   const { t } = useTranslation("projects");
   const setAutomationEnabled = useSetExtensionAutomationEnabled(projectId);
-  const settingsQuery = useProjectExtensionSettings(projectId, extension.id);
+  const settingTarget = { projectId, instanceId: extension.id, installedExtensionId: extension.installedExtensionId };
+  const settingsQuery = useProjectExtensionSettings(settingTarget);
   // The per-extension endpoint documents contributions even while the extension
   // is disabled, unlike the workbench metadata which only covers enabled ones.
   const contributionsQuery = useExtensionContributions(projectId, extension.id);
@@ -68,7 +70,8 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
   const [deleteUserData, setDeleteUserData] = useState(false);
 
   const contributions = contributionsQuery.data;
-  const automations = (contributions?.automations ?? []).filter(
+  const automationPreferences = useProjectedAutomationPreferences(projectId, contributions?.automations);
+  const automations = automationPreferences.rows.filter(
     (automation) => automation.extensionId === extension.extensionId,
   );
   const diagnostics = (metadata?.diagnostics ?? []).filter(
@@ -79,7 +82,10 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
   const handleReload = () => {
     clearError();
     reload.mutate(
-      { instanceId: extension.id },
+      {
+        instanceId: extension.id,
+        title: `${t("projectSettings.extensionsPanel.reload.action")} ${extension.displayName}`,
+      },
       {
         onSuccess: (updated) => {
           if (updated.status !== "loaded") showError({ title: t("projectSettings.extensionsPanel.reload.failed") });
@@ -93,7 +99,11 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
   const handleUninstall = async () => {
     clearError();
     try {
-      await uninstall.mutateAsync({ instanceId: extension.id, deleteUserData });
+      await uninstall.mutateAsync({
+        instanceId: extension.id,
+        title: `${t("projectSettings.extensionsPanel.deleteConfirm.button")} ${extension.displayName}`,
+        deleteUserData,
+      });
       onBack();
     } catch (error) {
       showError({
@@ -135,9 +145,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         onRetryToggle={onRetryAction}
         onRetryUpgrade={upgradeAction?.status === "error" ? onRetryAction : undefined}
         uninstalling={uninstall.isPending}
-        togglingAutomationId={
-          setAutomationEnabled.isPending ? (setAutomationEnabled.variables?.automationId ?? undefined) : undefined
-        }
+        togglingAutomation={automationPreferences.instances.has(extension.id)}
         onToggle={props.onToggle}
         onToggleAutomation={(automation, enabled) =>
           setAutomationEnabled.mutate(
@@ -151,8 +159,10 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         }}
         onChangeSetting={(key, value) => {
           clearError();
+          const setting = settingsQuery.data?.settings.find((record) => record.key === key);
+          if (!setting) return;
           updateSetting.mutate(
-            { instanceId: extension.id, key, value },
+            { target: settingTarget, setting: { key, scope: setting.scope, extensionId: setting.extensionId }, value },
             { onError: (error) => showError({ title: error.message }) },
           );
         }}
@@ -170,6 +180,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
           setDeleteUserData(false);
         }}
         onDelete={handleUninstall}
+        confirmDisabled={props.sourceChanging}
         headline={t("projectSettings.extensionsPanel.deleteConfirm.headline")}
         notificationText={t(
           extension.scope === "global"

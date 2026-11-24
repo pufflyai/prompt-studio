@@ -1,17 +1,16 @@
 import { Button, Dialog, HStack, Portal, Stack, Text } from "@chakra-ui/react";
-import { SimpleCard, SimpleCardBody } from "@pstdio/ui";
+import { AlertMessage, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { WorkbenchIcon } from "@pstdio/workbench/react";
-import { useEffect, useRef, useState } from "react";
-import type {
-  DesktopActivity,
-  DesktopActivityItem,
-  DesktopLifecycleBridge,
-  DesktopLifecycleState,
-} from "@/lib/desktop-lifecycle-bridge";
+import { useRef, useSyncExternalStore } from "react";
+import type { DesktopActivity, DesktopActivityItem, DesktopLifecycleBridge } from "@/lib/desktop-lifecycle-bridge";
+import { type DesktopQuitChoice, getDesktopQuitDecision } from "./desktop-quit-decision";
 
 interface DesktopQuitConfirmationDialogProps {
   /** The work that quitting would cancel. The dialog is open while this is set. */
   activity: DesktopActivity | null;
+  pending?: DesktopQuitChoice;
+  error?: string;
+  onCheck?: () => void;
   onKeepOpen: () => void;
   onQuit: () => void;
 }
@@ -44,7 +43,7 @@ const ActiveWorkCard = (props: { item: DesktopActivityItem; kind: string; icon: 
 };
 
 export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDialogProps) => {
-  const { activity, onKeepOpen, onQuit } = props;
+  const { activity, pending, error, onCheck, onKeepOpen, onQuit } = props;
   const keepOpenRef = useRef<HTMLButtonElement>(null);
 
   return (
@@ -54,6 +53,7 @@ export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDial
       scrollBehavior="inside"
       initialFocusEl={() => keepOpenRef.current}
       closeOnInteractOutside={false}
+      closeOnEscape={!pending}
       onOpenChange={(details) => {
         if (!details.open) onKeepOpen();
       }}
@@ -67,6 +67,22 @@ export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDial
             </Dialog.Header>
             <Dialog.Body>
               <Stack gap="sm">
+                {error && (
+                  <AlertMessage
+                    compact
+                    status="error"
+                    title="Desktop quit"
+                    endElement={
+                      onCheck && (
+                        <Button size="sm" onClick={onCheck}>
+                          Check status
+                        </Button>
+                      )
+                    }
+                  >
+                    {error}
+                  </AlertMessage>
+                )}
                 <Dialog.Description color="fg.muted" textStyle="paragraph/M/regular">
                   Quitting will stop these activities.
                 </Dialog.Description>
@@ -87,10 +103,24 @@ export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDial
               </Stack>
             </Dialog.Body>
             <Dialog.Footer flexWrap="wrap">
-              <Button ref={keepOpenRef} size="sm" onClick={onKeepOpen}>
+              <Button
+                ref={keepOpenRef}
+                size="sm"
+                disabled={pending === "quit"}
+                loading={pending === "keep-open"}
+                loadingText="Keeping Prompt Studio open…"
+                onClick={onKeepOpen}
+              >
                 Keep Prompt Studio open
               </Button>
-              <Button size="sm" variant="destructive" onClick={onQuit}>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={pending === "keep-open"}
+                loading={pending === "quit"}
+                loadingText="Quitting…"
+                onClick={onQuit}
+              >
                 Cancel work and quit
               </Button>
             </Dialog.Footer>
@@ -101,32 +131,18 @@ export const DesktopQuitConfirmationDialog = (props: DesktopQuitConfirmationDial
   );
 };
 
-const confirmationActivity = (state: DesktopLifecycleState) =>
-  state.kind === "confirming_active_work" && state.activity ? state.activity : null;
-
 /** Shows the desktop quit warning over the workbench while Electron waits for a choice. */
 export const DesktopQuitConfirmation = (props: { bridge: DesktopLifecycleBridge }) => {
-  const { bridge } = props;
-  const [activity, setActivity] = useState<DesktopActivity | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    const unsubscribe = bridge.onStartupState((state) => setActivity(confirmationActivity(state)));
-    // A reloaded workbench must still show a confirmation that started before it loaded.
-    void bridge.getStartupState().then((state) => {
-      if (active) setActivity(confirmationActivity(state));
-    });
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, [bridge]);
-
+  const decision = getDesktopQuitDecision(props.bridge);
+  const { activity, pending, error, canCheck } = useSyncExternalStore(decision.subscribe, decision.read, decision.read);
   return (
     <DesktopQuitConfirmationDialog
       activity={activity}
-      onKeepOpen={() => void bridge.cancelQuit()}
-      onQuit={() => void bridge.confirmQuit()}
+      pending={pending}
+      error={error}
+      onCheck={canCheck ? () => void decision.check() : undefined}
+      onKeepOpen={() => void decision.choose("keep-open")}
+      onQuit={() => void decision.choose("quit")}
     />
   );
 };

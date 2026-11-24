@@ -11,6 +11,7 @@ export interface ProjectFolderChoiceProps {
   method: ProjectFolderMethod;
   clonePath: string;
   pending: boolean;
+  blocked?: boolean;
   error?: string;
   onMethodChange: (method: ProjectFolderMethod) => void;
   onClonePathChange: (path: string) => void;
@@ -26,6 +27,7 @@ export const ProjectFolderChoice = (props: ProjectFolderChoiceProps) => {
     method,
     clonePath,
     pending,
+    blocked,
     error,
     onMethodChange,
     onClonePathChange,
@@ -85,7 +87,7 @@ export const ProjectFolderChoice = (props: ProjectFolderChoiceProps) => {
           variant="primary"
           size="sm"
           loading={pending}
-          disabled={cloning && !clonePath.trim()}
+          disabled={blocked || (cloning && !clonePath.trim())}
           onClick={onContinue}
         >
           {cloning ? t("folder.cloneAndContinue") : t("folder.chooseFolder")}

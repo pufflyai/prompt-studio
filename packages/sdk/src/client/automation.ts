@@ -9,9 +9,12 @@ import type {
 import type { RequestFn } from "./request";
 
 export type AutomationClient = {
-  issueToken(input: IssueAutomationTokenInput): Promise<IssueAutomationTokenResponse>;
-  listTokens(projectId: string): Promise<ListAutomationTokensResponse>;
-  revokeToken(tokenId: string): Promise<void>;
+  issueToken(
+    input: IssueAutomationTokenInput,
+    options?: { signal?: AbortSignal },
+  ): Promise<IssueAutomationTokenResponse>;
+  listTokens(projectId: string, options?: { signal?: AbortSignal }): Promise<ListAutomationTokensResponse>;
+  revokeToken(tokenId: string, options?: { signal?: AbortSignal }): Promise<void>;
   createRun(projectId: string, idempotencyKey: string, input: CreateAutomationRunInput): Promise<AutomationRun>;
   getRun(projectId: string, runId: string): Promise<AutomationRun>;
   listRunEvents(projectId: string, runId: string, after?: number): Promise<ListAutomationRunEventsResponse>;
@@ -19,9 +22,11 @@ export type AutomationClient = {
 };
 
 export const createAutomationClient = (request: RequestFn): AutomationClient => ({
-  issueToken: (body) => request("/v1/auth/tokens", { method: "POST", body }),
-  listTokens: (projectId) => request(`/v1/auth/tokens?projectId=${encodeURIComponent(projectId)}`),
-  revokeToken: (tokenId) => request(`/v1/auth/tokens/${encodeURIComponent(tokenId)}`, { method: "DELETE" }),
+  issueToken: (body, options) => request("/v1/auth/tokens", { method: "POST", body, signal: options?.signal }),
+  listTokens: (projectId, options) =>
+    request(`/v1/auth/tokens?projectId=${encodeURIComponent(projectId)}`, { signal: options?.signal }),
+  revokeToken: (tokenId, options) =>
+    request(`/v1/auth/tokens/${encodeURIComponent(tokenId)}`, { method: "DELETE", signal: options?.signal }),
   createRun: (projectId, idempotencyKey, body) =>
     request(`/v1/projects/${projectId}/automation-runs`, {
       method: "POST",

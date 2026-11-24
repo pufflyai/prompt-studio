@@ -14,25 +14,32 @@ import type {
   FileRendererRefreshOrigin,
   FileRendererSaveResult,
 } from "../../../core/registries/renderers/file-renderer-registry";
+import { UnconfirmedFileSaveError } from "./file-renderer-save-operation";
 import { acquireFileSaveTurn } from "./file-renderer-save-queue";
 
 export interface FileEditControllerState {
   dirty: boolean;
   saving: boolean;
   saveError?: string;
+  saveUnconfirmed?: true;
   removed?: true;
 }
 
-export interface FileEditControllerInput {
+type FileSave = (value: string, origin: FileRendererRefreshOrigin) => Promise<FileRendererSaveResult | undefined>;
+
+export type FileEditControllerInput = {
   binding: Omit<FileRendererRefreshOrigin, "operationId"> & { resourceKey?: string };
   debounceMs: number;
   saveMode?: "auto" | "manual";
   saveKey?: string;
+  saveOwner?: object;
   load: (event?: FileRendererRefreshEnvelope) => void;
-  save: (value: string, origin: FileRendererRefreshOrigin) => Promise<FileRendererSaveResult | undefined>;
   createOperationId?: () => string;
   onStateChange?: (state: FileEditControllerState) => void;
-}
+} & (
+  | { save: FileSave; prepareSave?: never }
+  | { prepareSave: (...input: Parameters<FileSave>) => () => ReturnType<FileSave>; save?: never }
+);
 
 export type FileEditController = ReturnType<typeof createFileEditController>;
 
@@ -45,6 +52,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
   let pendingSave: string | null = null;
   let saveTurn: ReturnType<typeof acquireFileSaveTurn> | undefined;
   let saveError: string | undefined;
+  let saveUnconfirmed = false;
   let deferredRevision: string | undefined;
   let genericRefreshDeferred = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -57,6 +65,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
     dirty: draft !== null || (activeSave !== null && activeSave.value !== baseline),
     saving: activeSave !== null,
     ...(saveError ? { saveError } : {}),
+    ...(saveUnconfirmed ? { saveUnconfirmed: true as const } : {}),
     ...(removed ? { removed: true as const } : {}),
   });
   const notify = () => input.onStateChange?.(getState());
@@ -100,8 +109,20 @@ export const createFileEditController = (input: FileEditControllerInput) => {
     if (generic) input.load({ resourceKey: input.binding.resourceKey });
   };
 
+  const acceptSave = (value: string, revision?: string) => {
+    baseline = value;
+    baselineRevision = revision ?? baselineRevision;
+    if (draft === baseline) {
+      draft = null;
+      clearTimer();
+    }
+    notify();
+    if (draft !== null) schedule();
+    else takeDeferredRefresh(revision);
+  };
+
   const runSave = (value = draft) => {
-    if (removed || value === null || activeSave || saveError) return;
+    if (removed || value === null || activeSave || saveError || saveUnconfirmed) return;
     const shown = draft ?? baseline;
     draft = shown === value ? null : (shown ?? null);
     const origin = {
@@ -111,8 +132,8 @@ export const createFileEditController = (input: FileEditControllerInput) => {
     };
     activeSave = { value, origin };
     notify();
-    if (input.saveKey) saveTurn ??= acquireFileSaveTurn(input.saveKey);
-    const save = () => input.save(value, origin);
+    if (input.saveKey) saveTurn ??= acquireFileSaveTurn(input.saveKey, input.saveOwner);
+    const save = input.prepareSave?.(value, origin) ?? (() => input.save!(value, origin));
     const saving = saveTurn?.ready ? saveTurn.ready.then(save) : Promise.resolve(save());
     void saving
       .then((result) => {
@@ -120,18 +141,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
         activeSave = null;
         completedOperationIds.add(origin.operationId);
         if (completedOperationIds.size > 20) completedOperationIds.delete(completedOperationIds.values().next().value!);
-        baseline = value;
-        baselineRevision = result?.revision ?? baselineRevision;
-        if (draft === baseline) {
-          draft = null;
-          clearTimer();
-        }
-        notify();
-        if (draft !== null) {
-          schedule();
-          return;
-        }
-        takeDeferredRefresh(result?.revision);
+        acceptSave(value, result?.revision);
       })
       .catch((error) => {
         if (removed) return;
@@ -139,12 +149,13 @@ export const createFileEditController = (input: FileEditControllerInput) => {
         activeSave = null;
         if (draft === null) draft = value;
         saveError = describeError(error);
+        saveUnconfirmed = error instanceof UnconfirmedFileSaveError;
         notify();
       })
       .finally(() => {
         const requested = pendingSave;
         pendingSave = null;
-        if (requested !== null && !removed) {
+        if (requested !== null && !removed && !saveUnconfirmed) {
           saveError = undefined;
           runSave(requested);
           return;
@@ -176,9 +187,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
       notify();
       return retain;
     },
-    getBaseline() {
-      return baseline;
-    },
+    getBaseline: () => baseline,
     getState,
     setBaseline(value: string | undefined, revision?: string) {
       baseline = value;
@@ -208,7 +217,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
         return;
       }
       if (saveError && value === draft) return;
-      saveError = undefined;
+      if (!saveUnconfirmed) saveError = undefined;
       if (value === baseline && !activeSave) {
         draft = null;
         clearTimer();
@@ -238,8 +247,14 @@ export const createFileEditController = (input: FileEditControllerInput) => {
       if (event.revision && baselineRevision && event.revision.localeCompare(baselineRevision) <= 0) return;
       input.load(event);
     },
+    confirmSave(value: string, revision?: string) {
+      if (!saveUnconfirmed || removed) return;
+      saveError = undefined;
+      saveUnconfirmed = false;
+      acceptSave(value, revision);
+    },
     retry() {
-      if (!saveError || draft === null || activeSave) return;
+      if (!saveError || saveUnconfirmed || draft === null || activeSave) return;
       saveError = undefined;
       notify();
       runSave();
@@ -250,7 +265,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
     },
     flush() {
       clearTimer();
-      if (input.saveMode === "manual") saveError = undefined;
+      if (input.saveMode === "manual" && !saveUnconfirmed) saveError = undefined;
       if (activeSave) {
         pendingSave = draft;
         return;

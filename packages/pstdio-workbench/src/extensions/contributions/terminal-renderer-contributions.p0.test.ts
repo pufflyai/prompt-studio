@@ -1,6 +1,8 @@
 import { expect, spyOn, test } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { createWorkbench, getWorkbenchRenderers, type WorkbenchCore, type WorkbenchPanelRenderInput } from "../../core";
+import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
+import { getWorkbenchQueries } from "../../core/workbench-queries";
 import { createControllerTerminalBridge } from "../../react/terminal/workbench-terminal-panel";
 import { registerWorkbenchExtensionContributions } from "../host/workbench-extension-host";
 import { emptyWorkbenchExtensionMetadata } from "./extension-contributions";
@@ -30,7 +32,7 @@ const nativeView = (w: WorkbenchCore) => {
   return element.props.nativeView;
 };
 
-test("installed native terminal ownership survives movement, hiding, and unchanged metadata registration", async () => {
+test("native terminals survive movement and retain an unconfirmed stop after closing their tab", async () => {
   const w = createWorkbench();
   const owners = createWorkbenchExtensionTerminalRendererOwners();
   const input = {
@@ -54,6 +56,7 @@ test("installed native terminal ownership survives movement, hiding, and unchang
   const panel = w.layout.listPanelInstances().find((panel) => panel.viewId === viewId)!;
   let opens = 0;
   let kills = 0;
+  const stop = Promise.withResolvers<void>();
   w.terminal.setSessionOpener(async (_request, binding) => {
     expect(binding).toEqual({ projectId: "project", viewId, resource: undefined });
     opens += 1;
@@ -62,7 +65,7 @@ test("installed native terminal ownership survives movement, hiding, and unchang
       write() {},
       resize() {},
       kill() {
-        kills += 1;
+        if (++kills === 1) return stop.promise;
       },
       onData: () => () => {},
       onExit: () => () => {},
@@ -91,6 +94,15 @@ test("installed native terminal ownership survives movement, hiding, and unchang
   expect(kills).toBe(0);
   w.closePlacement(identity);
   await Bun.sleep(0);
+  expect(kills).toBe(1);
+  const operations = getWorkbenchOperations(getWorkbenchQueries(w));
+  expect(w.layout.listPanelInstances().some(({ instanceId }) => instanceId === panel.instanceId)).toBe(false);
+  expect(operations.getSnapshot().pending).toMatchObject([{ projectId: "project", showPending: true }]);
+  stop.reject(new Error("Connection lost before terminal stop"));
+  await Bun.sleep(0);
+  expect(operations.getSnapshot().recovery).toMatchObject([
+    { projectId: "project", status: "unknown", canCheck: false },
+  ]);
   expect(kills).toBe(1);
   registration.dispose();
   owners.dispose();

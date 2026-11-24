@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
+import { createScopedQueryClient } from "@pstdio/sdk/extensions";
 import { createFileEditController } from "./file-renderer-edit-state";
 import {
   acceptFileRendererLoad,
+  createFileContentCache,
+  getFileContentCache,
   type LoadedFile,
-  readCachedFileContent,
-  storeCachedFileContent,
 } from "./file-renderer-load-state";
 
 let documents = 0;
@@ -20,9 +21,13 @@ const createHarness = (input?: { failSaves?: number }) => {
   let loaded: LoadedFile | null = null;
   let loads = 0;
   const loadKey = `planner.ticketContent:ticket-${++documents}`;
+  const cache = createFileContentCache();
   const applyLoad = (key = loadKey) => {
     const update = acceptFileRendererLoad(stored, key, controller);
-    if (update) loaded = update(loaded);
+    if (update) {
+      cache.store(key, stored);
+      loaded = update(loaded);
+    }
   };
   const controller = createFileEditController({
     binding: { rendererId: "planner.ticketContent", instanceId: "planner.ticketEditor:1" },
@@ -43,7 +48,7 @@ const createHarness = (input?: { failSaves?: number }) => {
   });
   // The view's mount: show the cached document at once, then reconcile it.
   const open = (key = loadKey) => {
-    const cached = readCachedFileContent(key);
+    const cached = cache.read(key);
     loaded = cached ? { ...cached, editorRevision: 1, loadKey: key } : null;
     if (cached) controller.setBaseline(cached.content, cached.revision);
     applyLoad(key);
@@ -133,19 +138,41 @@ describe("file renderer content loads", () => {
 });
 
 describe("file content cache", () => {
-  test("stores and reads the last loaded document per binding", () => {
-    storeCachedFileContent("cache-test:a", { content: "hello" });
+  test("a retired project or account cannot warm a reopened document under another authority", () => {
+    const scope = { runtimeId: "desktop", accountId: "first", extensionId: "notes" };
+    const first = createScopedQueryClient(scope);
+    const second = createScopedQueryClient(scope);
+    try {
+      const cache = getFileContentCache(first);
+      cache.store("source", { content: "First runtime" }, { ...scope, projectId: "closed-project" });
+      cache.store("other", { content: "Other project" }, { ...scope, projectId: "active-project" });
+      expect(getFileContentCache(second).read("source")).toBeUndefined();
+      first.clearScope({ projectId: "closed-project" });
+      expect(cache.read("source")).toBeUndefined();
+      expect(cache.read("other")?.content).toBe("Other project");
+      first.setAuthority({ accountId: "second" });
+      expect(cache.read("other")).toBeUndefined();
+    } finally {
+      first.dispose();
+      second.dispose();
+    }
+  });
 
-    expect(readCachedFileContent("cache-test:a")).toEqual({ content: "hello" });
-    expect(readCachedFileContent("cache-test:missing")).toBeUndefined();
+  test("stores and reads the last loaded document per binding", () => {
+    const cache = createFileContentCache();
+    cache.store("cache-test:a", { content: "hello" });
+
+    expect(cache.read("cache-test:a")).toEqual({ content: "hello" });
+    expect(cache.read("cache-test:missing")).toBeUndefined();
   });
 
   test("evicts the oldest binding beyond the limit", () => {
+    const cache = createFileContentCache();
     for (let index = 0; index < 31; index += 1) {
-      storeCachedFileContent(`cache-evict:${index}`, { content: String(index) });
+      cache.store(`cache-evict:${index}`, { content: String(index) });
     }
 
-    expect(readCachedFileContent("cache-evict:0")).toBeUndefined();
-    expect(readCachedFileContent("cache-evict:30")).toEqual({ content: "30" });
+    expect(cache.read("cache-evict:0")).toBeUndefined();
+    expect(cache.read("cache-evict:30")).toEqual({ content: "30" });
   });
 });

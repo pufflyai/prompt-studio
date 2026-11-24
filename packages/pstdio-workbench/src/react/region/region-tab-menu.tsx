@@ -3,6 +3,7 @@ import { ScopedMenu as Menu, Portal, type ResourceContextAction, ResourceMenuIte
 import { useId, useRef } from "react";
 import type { WorkbenchCore, WorkbenchTabMenuGroup, WorkbenchWidgetPlacement } from "../../core";
 import { findPlacementByWidgetId } from "../../core/registries/layout/layout-operations";
+import { runUserAction } from "../../core/shared/run-user-action";
 import { useWorkbenchResourceActionResolver } from "../menus/resource-actions";
 import { createWorkbenchResourceMenu } from "../menus/resource-menu";
 import { WorkbenchIcon } from "../shared/icon";
@@ -29,7 +30,8 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
     else workbench.layout.updatePanel(placement.widgetId, { strategy: { kind: pinned ? "persistent" : "preview" } });
   };
   const close = () => {
-    if (placement.placementIdentity) workbench.closePlacement(placement.placementIdentity);
+    const identity = placement.placementIdentity;
+    if (identity) void runUserAction(workbench, "Close tab", () => workbench.closePlacement(identity));
     else workbench.layout.closePanel(placement.widgetId);
   };
   const tabAction = (

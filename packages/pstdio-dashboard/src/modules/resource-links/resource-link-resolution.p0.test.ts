@@ -16,6 +16,7 @@ test("bare links resolve once and preview in Side without leaving their source p
   const server = Bun.serve({
     port: 0,
     async fetch(request) {
+      if (request.method === "GET") return Response.json({ login: null, cloudProjects: [] });
       calls.push({ path: new URL(request.url).pathname, body: await request.json() });
       return Response.json([{ resource: refs[1] }, { resource: refs[0], target }]);
     },

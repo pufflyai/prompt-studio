@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 
 export interface ExtensionActionState {
   operation?: "toggle";
+  enabled?: boolean;
+  retryable?: boolean;
   status: "queued" | "running" | "error";
   label: string;
   error?: string;
@@ -29,6 +31,7 @@ export const ExtensionActionFeedback = (props: ExtensionActionFeedbackProps) => 
         title={action.label}
         onClose={onDismiss}
         endElement={
+          action.retryable !== false &&
           onRetry && (
             <Button onClick={onRetry} disabled={retryDisabled}>
               {t("projectSettings.extensionsPanel.feedback.retry", "Retry")}

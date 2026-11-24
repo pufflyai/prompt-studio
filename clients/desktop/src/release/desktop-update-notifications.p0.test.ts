@@ -21,3 +21,66 @@ test("an update completed before the workbench connects is delivered once", () =
   expect(notifications.take()).toMatchObject({ level: "info", message: expect.stringContaining("2.0.0") });
   expect(notifications.take()).toBeUndefined();
 });
+
+test("completed native results replace progress and survive its cleanup", () => {
+  const notifications = createDesktopUpdateNotifications({
+    currentVersion: "1.0.0",
+    receipt: { recordDownload: () => {}, consumeInstalled: () => false },
+    onNotice: () => {},
+    logError: () => {},
+  });
+  notifications.progress("checking");
+  expect(notifications.take()).toMatchObject({ kind: "progress", title: expect.any(String) });
+  notifications.progress("downloading");
+  notifications.downloaded("2.0.0");
+  notifications.progress(undefined);
+  expect(notifications.take()).toMatchObject({
+    kind: "progress",
+    title: null,
+    outcome: { message: expect.stringContaining("2.0.0") },
+  });
+
+  notifications.progress("checking");
+  expect(notifications.take()).toBeDefined();
+  notifications.progress(undefined);
+  expect(notifications.take()).toEqual({ kind: "progress", title: null });
+});
+
+test("an interactive check keeps an unread installed update notice", () => {
+  const notifications = createDesktopUpdateNotifications({
+    currentVersion: "2.0.0",
+    receipt: { recordDownload: () => {}, consumeInstalled: () => true },
+    onNotice: () => {},
+    logError: () => {},
+  });
+  notifications.installed();
+  notifications.progress("checking");
+  const checking = notifications.take();
+  expect(checking).toMatchObject({
+    kind: "progress",
+    title: expect.any(String),
+    installed: { level: "info", message: expect.stringContaining("2.0.0") },
+  });
+
+  notifications.progress(undefined);
+  expect(notifications.take()).toEqual({ kind: "progress", title: null });
+});
+
+test("installation and check outcomes both survive a fast check before the workbench connects", () => {
+  const notifications = createDesktopUpdateNotifications({
+    currentVersion: "2.0.0",
+    receipt: { recordDownload: () => {}, consumeInstalled: () => true },
+    onNotice: () => {},
+    logError: () => {},
+  });
+  notifications.installed();
+  notifications.progress("checking");
+  notifications.notAvailable();
+  expect(notifications.take()).toMatchObject({
+    kind: "progress",
+    title: null,
+    installed: { message: expect.stringContaining("2.0.0") },
+    outcome: { level: "info" },
+  });
+  expect(notifications.take()).toBeUndefined();
+});

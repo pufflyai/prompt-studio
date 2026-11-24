@@ -1,7 +1,13 @@
 import { Box, Button, Heading, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { EmptyState, LogoLoader, resolveIconComponent, ScrollArea, WindowTitleBar } from "@pstdio/ui";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
+import { CopyStartupDiagnosticsButton } from "./copy-startup-diagnostics-button";
+import {
+  createDesktopRecoveryFeedback,
+  type DesktopRecoveryAction,
+  observeDesktopStartupState,
+} from "./desktop-recovery-feedback";
 import { DesktopStartingState } from "./desktop-starting-state";
 
 interface DesktopLifecycleActions {
@@ -28,21 +34,15 @@ const RecoveryIcon = resolveIconComponent("circle-alert");
 
 const useDesktopState = (initialState: DesktopState) => {
   const [state, setState] = useState(initialState);
-  useEffect(() => {
-    let active = true;
-    const refresh = async () => {
-      const next = await window.promptStudioDesktop.getStartupState();
-      if (active) setState(next);
-    };
-    const unsubscribe = window.promptStudioDesktop.onStartupState(setState);
-    void refresh();
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, []);
+  useEffect(() => observeDesktopStartupState(window.promptStudioDesktop, setState), []);
   return state;
 };
+
+const recoveryErrors = {
+  retry: "The retry could not start. Try again.",
+  open_logs: "Prompt Studio could not open the logs.",
+  quit: "The quit request could not be confirmed.",
+} satisfies Record<DesktopRecoveryAction, string>;
 
 const RecoveryState = (props: {
   actions: DesktopLifecycleActions;
@@ -50,6 +50,11 @@ const RecoveryState = (props: {
 }) => {
   const { actions, state } = props;
   const availableActions = new Set(state.error.actions);
+  const [feedback] = useState(createDesktopRecoveryFeedback);
+  const statuses = useSyncExternalStore(feedback.subscribe, feedback.snapshot, feedback.snapshot);
+  const run = (action: DesktopRecoveryAction, execute: () => Promise<void>) => {
+    void feedback.run(action, execute);
+  };
   return (
     <ScrollArea width="full" maxHeight="full" viewportProps={{ maxHeight: "full" }}>
       <EmptyState
@@ -59,21 +64,38 @@ const RecoveryState = (props: {
         icon={<Icon as={RecoveryIcon} color="fg.error" aria-hidden="true" />}
       >
         <HStack gap="xs" flexWrap="wrap" justify="center">
-          {availableActions.has("retry") && <Button onClick={actions.retryRuntime}>Retry</Button>}
+          {availableActions.has("retry") && (
+            <Button loading={statuses.get("retry") === "pending"} onClick={() => run("retry", actions.retryRuntime)}>
+              Retry
+            </Button>
+          )}
           {availableActions.has("open_logs") && (
-            <Button variant="outline" onClick={actions.openLogs}>
+            <Button
+              variant="outline"
+              loading={statuses.get("open_logs") === "pending"}
+              onClick={() => run("open_logs", actions.openLogs)}
+            >
               Open logs
             </Button>
           )}
-          <Button variant="outline" onClick={actions.copyDiagnostics}>
-            Copy diagnostics
-          </Button>
+          <CopyStartupDiagnosticsButton variant="outline" copyDiagnostics={actions.copyDiagnostics} />
           {availableActions.has("quit") && (
-            <Button variant="ghost" onClick={actions.quitApp}>
+            <Button
+              variant="ghost"
+              loading={statuses.get("quit") === "pending"}
+              onClick={() => run("quit", actions.quitApp)}
+            >
               Quit
             </Button>
           )}
         </HStack>
+        {[...statuses]
+          .filter(([, status]) => status === "failed")
+          .map(([action]) => (
+            <Text key={action} role="alert" color="fg.error">
+              {recoveryErrors[action]}
+            </Text>
+          ))}
       </EmptyState>
     </ScrollArea>
   );

@@ -9,7 +9,12 @@ export const registerCopyPageLink = (ctx: WorkbenchModuleContext) => {
     { id: copyPageLinkCommandId, label: "Copy link", icon: "link" },
     {
       execute: async () => {
-        await navigator.clipboard.writeText(window.location.href);
+        const pending = ctx.notifications.show({ level: "info", title: "Copying link…" });
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+        } finally {
+          ctx.notifications.dismiss(pending.id);
+        }
         ctx.notifications.show({ level: "success", title: "Link copied" });
       },
     },

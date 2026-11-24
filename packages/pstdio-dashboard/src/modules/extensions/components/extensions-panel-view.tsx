@@ -40,7 +40,7 @@ export interface ExtensionsPanelViewProps {
   automations: WorkbenchExtensionAutomationRecord[];
   harnesses?: WorkbenchExtensionHarnessRecord[];
   agents?: AgentInfo[];
-  togglingAutomation?: boolean;
+  togglingAutomation?: boolean | ReadonlySet<string>;
   onToggle?: (extension: ProjectExtensionInstance, enabled: boolean) => void;
   onToggleAutomation?: (
     extension: ProjectExtensionInstance,
@@ -190,7 +190,9 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
                   diagnostics={diagnosticsByExtensionId.get(extension.extensionId) ?? []}
                   automations={automations.filter((automation) => automation.extensionInstanceId === extension.id)}
                   unavailableHarnesses={unavailableExtensionHarnesses(extension, harnesses, agents)}
-                  togglingAutomation={togglingAutomation}
+                  togglingAutomation={
+                    typeof togglingAutomation === "boolean" ? togglingAutomation : togglingAutomation?.has(extension.id)
+                  }
                   action={actionStates[extension.id]}
                   sourceChanging={sourceChangingIds?.has(extension.id)}
                   onDismissAction={(expected) => onDismissAction?.(extension.id, expected)}

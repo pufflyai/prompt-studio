@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { createHostCapabilityGate, type HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
 import { createHostEventPublisher, type HostEventMessage } from "pstdio-extensions/bridge/host";
 import { createWorkbench, type WorkbenchTerminalSessionAdapter } from "../../core";
+import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
+import { getWorkbenchQueries } from "../../core/workbench-queries";
 import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
 import { createTerminalSessionCapability } from "./terminal-session-capability";
 import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
@@ -354,6 +356,93 @@ test("reused webview placement identities have separate project owners", async (
     expect(kills).toEqual(["session-2"]);
     await a.capability({ operation: "write", sessionId: "session-1", data: "retained" });
   } finally {
+    await workbench.dispose();
+  }
+});
+
+test.each([
+  "guarded close",
+  "already stopped",
+  "layout departure",
+] as const)("a raw webview at operation capacity handles %s", async (caseName) => {
+  const { getBridgeWebviewHostEventPublisher } = await import("./bridge-webview-renderer");
+  const { workbench, scripted } = setupTerminal();
+  const stop = Promise.withResolvers<void>();
+  let kills = 0;
+  workbench.terminal.setSessionOpener(async (_request, _view, _signal, attachable, placement) => {
+    expect(attachable).toBeUndefined();
+    expect(placement).toBeUndefined();
+    return {
+      ...scripted.adapter,
+      kill() {
+        if (++kills === 1 && caseName === "guarded close") return stop.promise;
+      },
+    };
+  });
+  workbench.pageLocations.setProject("project");
+  workbench.modes.registerMode({ id: "project", panels: ["main", "side", "secondary"], activate() {} });
+  workbench.views.registerView({ id: "guest", title: "Guest", body: { kind: "react", render: () => null } });
+  workbench.shellPlacements.registerPlacement({
+    id: "guest",
+    item: { kind: "view", view: { kind: "view", id: "guest" }, presence: "closed" },
+    region: "secondary",
+  });
+  const identity = workbench.shellPlacements.openPlacement({ placementId: "guest", region: "secondary" });
+  const instance = workbench.layout.listPanelInstances().find((panel) => panel.viewId === "guest")!;
+  const events = getBridgeWebviewHostEventPublisher(workbench, instance);
+  const capability = createWorkbenchWebviewHostCapabilities({
+    workbench,
+    projectId: "project",
+    extensionId: "guest",
+    hostEvents: events,
+  })["terminal.session"];
+  const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
+  const release = Promise.withResolvers<void>();
+  const retained = Array.from(
+    { length: 128 },
+    (_, index) =>
+      operations.submit({
+        title: "Held write",
+        domain: "test",
+        subjects: [String(index)],
+        write: () => release.promise,
+      }).result,
+  );
+  try {
+    await capability({ operation: "open", request: { cols: 80, rows: 24 } });
+    if (caseName === "already stopped") {
+      await capability({ operation: "kill", sessionId: scripted.adapter.id });
+      await workbench.closePlacement(identity);
+    }
+    if (caseName === "layout departure") workbench.shellPlacements.closePlacement(identity);
+    if (caseName !== "guarded close") {
+      expect(workbench.layout.listPanelInstances().some((panel) => panel.instanceId === instance.instanceId)).toBe(
+        false,
+      );
+      await expect(capability({ operation: "write", sessionId: scripted.adapter.id, data: "retired" })).rejects.toThrow(
+        "disposed",
+      );
+      expect(kills).toBe(1);
+      return;
+    }
+    await expect(workbench.closePlacement(identity)).rejects.toThrow("limit");
+    expect(kills).toBe(0);
+    expect(workbench.layout.listPanelInstances().some((panel) => panel.instanceId === instance.instanceId)).toBe(true);
+    release.resolve();
+    await Promise.all(retained);
+    await workbench.closePlacement(identity);
+    expect(kills).toBe(1);
+    expect(operations.getSnapshot().pending).toMatchObject([{ domain: "terminal.stop", status: "writing" }]);
+    stop.reject(new Error("Lost terminal stop response"));
+    await Bun.sleep(0);
+    expect(kills).toBe(1);
+    expect(operations.getSnapshot().recovery).toMatchObject([
+      { domain: "terminal.stop", status: "unknown", projectId: "project" },
+    ]);
+  } finally {
+    stop.resolve();
+    release.resolve();
+    await Promise.all(retained);
     await workbench.dispose();
   }
 });

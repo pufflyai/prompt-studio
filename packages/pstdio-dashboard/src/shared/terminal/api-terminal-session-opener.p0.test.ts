@@ -44,9 +44,10 @@ class TestWebSocket extends EventTarget {
     this.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(message) }));
   }
 
-  emitClose(wasClean: boolean) {
+  emitClose(wasClean: boolean, code = wasClean ? 1000 : 1006) {
+    this.readyState = 3;
     const event = new Event("close");
-    Object.defineProperty(event, "wasClean", { value: wasClean });
+    Object.defineProperties(event, { wasClean: { value: wasClean }, code: { value: code } });
     this.dispatchEvent(event);
   }
 }
@@ -76,7 +77,9 @@ describe("openDashboardTerminalSession", () => {
     socket.emitMessage({ type: "open", sessionId: "host-session" });
     const session = await opening;
     expect(session.id).toBe("host-session");
-    await session.kill();
+    const stopping = session.kill();
+    socket.emitClose(true);
+    await stopping;
   });
   test("opens a same-origin cookie-authenticated URL without credentials in the query", async () => {
     globalThis.WebSocket = TestWebSocket as unknown as typeof WebSocket;
@@ -88,7 +91,9 @@ describe("openDashboardTerminalSession", () => {
 
     expect(TestWebSocket.latest.url).toBe("ws://localhost/v1/terminal");
     expect(TestWebSocket.latest.url).not.toContain("token");
-    session.kill();
+    const stopping = session.kill();
+    TestWebSocket.latest.emitClose(true);
+    await stopping;
   });
 
   test("uses the complete runtime terminal WebSocket URL", async () => {
@@ -104,7 +109,9 @@ describe("openDashboardTerminalSession", () => {
     const session = await sessionPromise;
 
     expect(TestWebSocket.latest.url).toBe("wss://terminal.test/prefix/pty?channel=dev");
-    session.kill();
+    const stopping = session.kill();
+    TestWebSocket.latest.emitClose(true);
+    await stopping;
   });
 
   test("a keyed terminal detaches without killing its shell, and kills only when asked", async () => {
@@ -116,7 +123,7 @@ describe("openDashboardTerminalSession", () => {
     socket.emitMessage({ type: "open", sessionId: "session-1" });
     const session = await sessionPromise;
     session.detach?.();
-    session.kill();
+    await expect(Promise.resolve(session.kill())).rejects.toThrow("could not be confirmed");
 
     expect(socket.sent.map((message) => JSON.parse(message))).toEqual([
       { type: "open", request: { cols: 80, rows: 24 }, attachKey: "p/terminal-1" },
@@ -154,4 +161,40 @@ test("cancelling pending native admission closes its socket without waiting for 
   controller.abort(new Error("Admission cancelled"));
   expect(await rejected).toMatchObject({ message: "Admission cancelled" });
   expect(socket.closed).toBe(true);
+});
+
+test("stopping a terminal shares one request and waits for its native acknowledgement", async () => {
+  globalThis.WebSocket = TestWebSocket as unknown as typeof WebSocket;
+  const opening = openDashboardTerminalSession({ cols: 80, rows: 24 });
+  const socket = TestWebSocket.latest;
+  socket.emitOpen();
+  socket.emitMessage({ type: "open", sessionId: "session" });
+  const session = await opening;
+
+  let complete = false;
+  const stopping = Promise.resolve(session.kill()).then(() => {
+    complete = true;
+  });
+  const duplicate = session.kill();
+  await Promise.resolve();
+  expect(complete).toBe(false);
+  expect(socket.closed).toBe(false);
+  expect(socket.sent.map((message) => JSON.parse(message).type)).toEqual(["open", "kill"]);
+  socket.emitClose(true);
+  await Promise.all([stopping, duplicate]);
+  expect(complete).toBe(true);
+});
+
+test("a lost connection cannot acknowledge a terminal stop", async () => {
+  globalThis.WebSocket = TestWebSocket as unknown as typeof WebSocket;
+  const opening = openDashboardTerminalSession({ cols: 80, rows: 24 });
+  const socket = TestWebSocket.latest;
+  socket.emitOpen();
+  socket.emitMessage({ type: "open", sessionId: "session" });
+  const session = await opening;
+  const stopping = Promise.resolve(session.kill());
+  socket.emitClose(false);
+  await expect(stopping).rejects.toThrow("could not be confirmed");
+  await expect(Promise.resolve(session.kill())).rejects.toThrow("could not be confirmed");
+  expect(socket.sent.map((message) => JSON.parse(message).type)).toEqual(["open", "kill"]);
 });

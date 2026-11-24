@@ -91,6 +91,9 @@ export const createScopedQueryClient = (
   >();
   let disposed = false;
   const retirementListeners = new Set<() => void>();
+  const scopeRetirementListeners = new Set<(scope: Partial<QueryScope>) => void>();
+  const notifyScopeRetirement = (scope: Partial<QueryScope>) =>
+    runQueryCleanup([...scopeRetirementListeners].map((listener) => () => listener(scope)));
   const notifyRetirement = () => runQueryCleanup([...retirementListeners]);
   const trim = (protectedKey?: string) => {
     const inactive = [...entries].filter(([key, entry]) => key !== protectedKey && !entry.active());
@@ -168,7 +171,11 @@ export const createScopedQueryClient = (
     );
     // Notify only after the old identities are gone; subscribers may bind a new authority synchronously.
     for (const [key] of retired) entries.delete(key);
-    if (retired.length) runQueryCleanup([...retired.map(([, entry]) => entry.dispose), notifyRetirement]);
+    runQueryCleanup([
+      () => notifyScopeRetirement(scope),
+      ...retired.map(([, entry]) => entry.dispose),
+      ...(retired.length ? [notifyRetirement] : []),
+    ]);
   };
   return {
     ...forScope({}),
@@ -181,6 +188,15 @@ export const createScopedQueryClient = (
       retirementListeners.add(listener);
       return () => {
         retirementListeners.delete(listener);
+      };
+    },
+    getScope: (): Readonly<QueryScope> => ({ ...baseScope }),
+    /** Execution revocation includes explicit scope clearing without a live query. */
+    subscribeScopeRetirement(listener: (scope: Partial<QueryScope>) => void) {
+      if (disposed) throw new Error("Query client is disposed");
+      scopeRetirementListeners.add(listener);
+      return () => {
+        scopeRetirementListeners.delete(listener);
       };
     },
     setAuthority(next: Pick<QueryScope, "accountId" | "accountOrigin">) {
@@ -197,9 +213,15 @@ export const createScopedQueryClient = (
       const retiring = [...entries.values()];
       entries.clear();
       try {
-        runQueryCleanup([() => stop?.(), ...retiring.map((entry) => entry.dispose), notifyRetirement]);
+        runQueryCleanup([
+          () => stop?.(),
+          () => notifyScopeRetirement({}),
+          ...retiring.map((entry) => entry.dispose),
+          notifyRetirement,
+        ]);
       } finally {
         retirementListeners.clear();
+        scopeRetirementListeners.clear();
       }
     },
   };

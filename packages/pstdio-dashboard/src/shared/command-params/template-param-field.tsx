@@ -2,7 +2,7 @@ import { ParamEditorRow, type SelectionParam } from "@pstdio/ui/param-editor";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { type CommandParamFieldProps, commandParamName } from "@pstdio/workbench/react";
 import { useQuery } from "@tanstack/react-query";
-import { getProjectTemplateAssets } from "@/modules/settings/data/template-provider-api";
+import { getProjectTemplateAssets, projectTemplateAssetsQueryKey } from "@/modules/settings/data/template-provider-api";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { buildTemplateParamOptions } from "./template-param-options";
 
@@ -11,8 +11,6 @@ interface TemplateParamFieldProps extends CommandParamFieldProps {
 }
 
 const getStringValue = (value: CommandParamFieldProps["value"]) => (typeof value === "string" ? value : "");
-
-export const projectTemplateAssetsQueryKey = (projectId: string | undefined) => ["project-template-assets", projectId];
 
 export const TemplateParamField = (props: TemplateParamFieldProps) => {
   const { entry, value, disabled, onChange, workbench } = props;

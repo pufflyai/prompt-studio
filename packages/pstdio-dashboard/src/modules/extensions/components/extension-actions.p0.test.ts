@@ -1,4 +1,7 @@
 import { expect, test } from "bun:test";
+import { PstdioConnectionError } from "@pstdio/sdk/client";
+import { createScopedQueryClient } from "@pstdio/sdk/extensions";
+import { getWorkbenchOperations } from "@pstdio/workbench";
 import { createExtensionActions, getExtensionActions } from "./extension-actions";
 
 const labels = { running: "Upgrading", failed: "Upgrade failed" };
@@ -151,4 +154,99 @@ test("reinstalling clears a stale failure and retry from the restored instance",
   expect(owner.getSnapshot().actions["notes-instance"]?.status).toBe("running");
   gate.resolve();
   await upgrade;
+});
+
+test("uncertain installs remain blocked across views and dismissal until the draft is discarded", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
+  const operations = getWorkbenchOperations(queries);
+  const inventory = {};
+  const list = getExtensionActions(inventory, { projectId: "project", operations });
+  const detail = getExtensionActions(inventory, { projectId: "project", operations });
+  const key = "marketplace:notes";
+  const installLabels = { running: "Installing", failed: "Install failed" };
+  let writes = 0;
+  const draft = { extension: "Notes", installName: "notes" };
+  const submit = (view: typeof list) =>
+    view.run(
+      key,
+      installLabels,
+      async () => {
+        writes++;
+        if (writes === 1) throw new PstdioConnectionError(new Error("Response lost"));
+      },
+      { draft },
+    );
+
+  expect(await submit(list)).toBe(false);
+  const entry = operations.getSnapshot().recovery[0];
+  expect(entry).toMatchObject({ projectId: "project", status: "unknown", draft, canCheck: false });
+  expect(detail.getSnapshot().actions[key]).toMatchObject({ retryable: false });
+  detail.dismiss(key);
+  expect(await submit(detail)).toBe(false);
+  expect(writes).toBe(1);
+  expect(operations.getSnapshot().recovery[0]?.draft).toEqual(draft);
+  operations.discard(entry.id);
+  expect(await submit(detail)).toBe(true);
+  expect(writes).toBe(2);
+  queries.dispose();
+});
+
+test.each([
+  "toggle",
+  "upgrade",
+] as const)("discard releases an uncertain installed extension %s without replaying it", async (operation) => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
+  const operations = getWorkbenchOperations(queries);
+  const owner = createExtensionActions({ projectId: "project", operations });
+  const key = "notes-instance";
+  let writes = 0;
+  const submit = () =>
+    owner.run(
+      key,
+      labels,
+      async () => {
+        if (++writes === 1) throw new PstdioConnectionError(new Error("Response lost"));
+      },
+      { ...(operation === "toggle" ? { operation } : {}), draft: { id: key, operation } },
+    );
+  try {
+    expect(await submit()).toBe(false);
+    const entry = operations.getSnapshot().recovery[0]!;
+    expect(owner.getSnapshot().actions[key]).toMatchObject({ retryable: false });
+    owner.dismiss(key);
+    expect(await submit()).toBe(false);
+    operations.discard(entry.id);
+    expect(operations.getSnapshot().recovery).toEqual([]);
+    expect(owner.getSnapshot().actions[key]).toBeUndefined();
+    expect(writes).toBe(1);
+    expect(await submit()).toBe(true);
+    expect(writes).toBe(2);
+  } finally {
+    queries.dispose();
+  }
+});
+
+test("an installed extension action stays fenced after returning to its original account", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio", accountId: "original" });
+  const operations = getWorkbenchOperations(queries);
+  const tracker = { projectId: "project", operations };
+  const key = "notes-instance";
+  let writes = 0;
+  const write = async () => {
+    if (++writes === 1) throw new PstdioConnectionError(new Error("Response lost"));
+  };
+  try {
+    expect(await createExtensionActions(tracker).run(key, labels, write, { draft: { id: key } })).toBe(false);
+    const id = operations.getSnapshot().recovery[0]!.id;
+    queries.setAuthority({ accountId: "other" });
+    queries.setAuthority({ accountId: "original" });
+    const reopened = createExtensionActions(tracker);
+    expect(await reopened.run(key, labels, write)).toBe(false);
+    expect(writes).toBe(1);
+    operations.discard(id);
+    expect(await reopened.run(key, labels, write)).toBe(true);
+    expect(writes).toBe(2);
+  } finally {
+    queries.dispose();
+  }
 });

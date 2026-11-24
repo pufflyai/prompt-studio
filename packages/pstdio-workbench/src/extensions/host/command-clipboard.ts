@@ -1,6 +1,6 @@
 import { unwrapCommandValue } from "./command-response";
 
-export const copyCommandResult = (
+export const copyCommandResult = async (
   response: Promise<unknown>,
   signal?: AbortSignal,
   isViewerCurrent?: () => boolean,
@@ -16,4 +16,27 @@ export const copyCommandResult = (
   void text.catch(() => {});
   const writing = navigator.clipboard.write([new ClipboardItem({ "text/plain": text })]);
   return Promise.all([text, writing]).then(() => {});
+};
+
+export const applyCommandClipboard = (input: {
+  response: Promise<unknown>;
+  mutating?: boolean;
+  signal?: AbortSignal;
+  isViewerCurrent?: () => boolean;
+  reportError(error: unknown): void;
+}) => {
+  const { response, mutating, signal, isViewerCurrent, reportError } = input;
+  const copying = copyCommandResult(response, signal, isViewerCurrent);
+  if (!mutating) return Promise.all([response, copying]).then(([result]) => result);
+
+  // A denied clipboard write must leave the server mutation pending.
+  void copying.catch(async (error: unknown) => {
+    try {
+      unwrapCommandValue(await response);
+    } catch {
+      return;
+    }
+    if (!signal?.aborted && isViewerCurrent?.() !== false) reportError(error);
+  });
+  return response;
 };

@@ -5,7 +5,8 @@ import type { ResourceContextAction } from "@/components/overlays/resource-conte
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { BoardColumnCards } from "./kanban-renderer-board-column";
 import { ColumnHeader } from "./kanban-renderer-board-column-header";
-import type { KanbanRendererCard } from "./kanban-renderer-card";
+import { KanbanRendererCard } from "./kanban-renderer-card";
+import type { KanbanRendererPendingCreation } from "./types";
 import { useBoardDragScroll } from "./use-board-drag-scroll";
 import { useBoardPan } from "./use-board-pan";
 
@@ -53,6 +54,7 @@ interface KanbanRendererBoardProps {
   onLoadMore?: () => void;
   loadingMore?: boolean;
   columns: KanbanRendererBoardColumn[];
+  pendingCreations?: readonly KanbanRendererPendingCreation[];
   selectedItemId?: string | null;
   onMoveItem?: (
     itemId: string,
@@ -140,6 +142,16 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
           onDrop={handleDrop(column.id)}
         >
           <ColumnHeader column={column} onCreateStart={onCreateStart} onColumnAction={onColumnAction} />
+          {props.pendingCreations
+            ?.filter((creation) => creation.columnId === column.id)
+            .map((creation) => (
+              <Stack key={String(creation.key)} px="xs" role="status" data-testid="pending-board-creation">
+                <KanbanRendererCard
+                  title={creation.title}
+                  eyebrow={creation.unconfirmed ? "Creation unconfirmed" : "Creating…"}
+                />
+              </Stack>
+            ))}
 
           <BoardColumnCards
             onLoadMore={props.onLoadMore}

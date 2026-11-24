@@ -2,6 +2,7 @@ import type { CloudProjectCatalog, CloudProjectCatalogEntry } from "@pstdio/sdk/
 import { type ResourceRef, standardResourceIcons } from "@pstdio/workbench";
 import { getCollection, type SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource } from "@/shared/app/resources";
+import { getProjectNameOperations } from "@/shared/projects/project-name-operations";
 import { isDefaultWorkspaceOnThisDevice } from "@/shared/workspaces/workspace-state";
 
 export interface DashboardProject {
@@ -50,7 +51,7 @@ const isVisibleRow = (row: SyncedRow) => !row.deleted_at;
 
 export const findDashboardProjectRow = (projectId: string) => {
   const row = getCollection("projects").get(projectId);
-  if (row && isVisibleRow(row)) return row;
+  if (row && isVisibleRow(row)) return getProjectNameOperations().project(row);
 };
 
 export const listVisibleDashboardProjectIds = () =>
@@ -88,7 +89,11 @@ export const buildDashboardProjectsFromRows = (rows: DashboardProjectRows) => {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 };
 
-export const createDashboardProjects = () => buildDashboardProjectsFromRows(readDashboardProjectRows());
+export const createDashboardProjects = () => {
+  const rows = readDashboardProjectRows();
+  const names = getProjectNameOperations();
+  return buildDashboardProjectsFromRows({ ...rows, projects: rows.projects.map(names.project) });
+};
 
 export const findDashboardProject = (projectId: string | undefined) =>
   createDashboardProjects().find((project) => project.id === projectId);

@@ -2,13 +2,13 @@ import { Button, HStack, Stack, Text } from "@chakra-ui/react";
 import type { ProjectCopyAccount } from "@pstdio/sdk/client";
 import { AlertMessage, DeleteConfirmationModal, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { WorkbenchIcon } from "@pstdio/workbench/react";
-import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { getApiClient } from "@/lib/api";
 import { useActionError } from "@/shared/components/use-action-error";
 import { CloudProjectDeletionAction } from "../../projects/components/cloud-project-deletion";
 import { LocalProjectRemoval } from "../../projects/components/local-project-removal";
+import { useLocalProjectDeletion } from "../../projects/data/local-project-deletion";
 import { useCloudProjectCatalog } from "../../projects/data/project-catalog";
+import { findDashboardProjectRow } from "../../projects/data/project-data";
 
 interface ProjectDangerZoneProps {
   projectId?: string;
@@ -18,13 +18,9 @@ interface ProjectDangerZoneProps {
 const LocalProjectDangerZone = (props: ProjectDangerZoneProps) => {
   const { projectId, onDeleted } = props;
   const { showError, errorNotice, clearError } = useActionError();
-  const deleteProject = useMutation({
-    mutationFn: async (input: { projectId: string }) => {
-      await getApiClient().projects.delete(input.projectId);
-    },
-  });
+  const deletion = useLocalProjectDeletion();
   const [isDeleteOpen, setDeleteOpen] = useState(false);
-  const canDeleteProject = Boolean(projectId) && !deleteProject.isPending;
+  const canDeleteProject = Boolean(projectId && !deletion.deleting(projectId));
 
   const handleOpenDelete = () => {
     if (!projectId) return;
@@ -42,7 +38,8 @@ const LocalProjectDangerZone = (props: ProjectDangerZoneProps) => {
     }
 
     try {
-      await deleteProject.mutateAsync({ projectId });
+      const name = findDashboardProjectRow(projectId)?.name;
+      await deletion.remove(projectId, typeof name === "string" ? name : undefined);
       setDeleteOpen(false);
       onDeleted?.();
     } catch (error) {
@@ -80,6 +77,7 @@ const LocalProjectDangerZone = (props: ProjectDangerZoneProps) => {
         open={isDeleteOpen}
         onClose={handleCloseDelete}
         onDelete={handleDeleteProject}
+        confirmDisabled={!canDeleteProject}
         headline="Delete project?"
         notificationText="This removes the project and all related data."
         buttonText="Delete project"

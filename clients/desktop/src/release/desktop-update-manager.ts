@@ -1,5 +1,6 @@
 import type { UpdateChannel } from "pstdio-paths";
 import { gt } from "semver";
+import type { DesktopUpdatePhase } from "../desktop-api";
 import {
   desktopReleasesUrl,
   type GitHubRelease,
@@ -10,6 +11,7 @@ import {
 
 type NativeUpdater = {
   on: {
+    (event: "update-available", listener: () => void): unknown;
     (event: "update-not-available", listener: () => void): unknown;
     (event: "update-downloaded", listener: () => void): unknown;
     (event: "error", listener: (error: Error) => void): unknown;
@@ -26,6 +28,7 @@ type DesktopUpdateManagerOptions = {
   channel: () => UpdateChannel;
   updater: NativeUpdater;
   openExternal: (url: string) => Promise<unknown>;
+  onUpdateProgress?: (phase: DesktopUpdatePhase | undefined) => void;
   onUpdateNotAvailable: () => void;
   onUpdateDownloaded: (version: string) => void;
   onUpdateError: (error: Error) => void;
@@ -38,18 +41,25 @@ export class DesktopUpdateManager {
   #checkInProgress: Promise<void> | null = null;
   // A person asked during this check, so it must answer even if it started in the background.
   #interactive = false;
+  #phase: DesktopUpdatePhase | undefined;
   #download: ReturnType<typeof Promise.withResolvers<"downloaded" | "not-available">> | null = null;
   #downloadedVersion: string | null = null;
 
   constructor(options: DesktopUpdateManagerOptions) {
     this.#options = options;
+    options.updater.on("update-available", () => {
+      if (this.#download) this.#setPhase("downloading");
+    });
     options.updater.on("update-not-available", () => this.#download?.resolve("not-available"));
     options.updater.on("update-downloaded", () => this.#download?.resolve("downloaded"));
     options.updater.on("error", (error) => this.#download?.reject(error));
   }
 
   checkForUpdates() {
-    this.#interactive = true;
+    if (!this.#interactive) {
+      this.#interactive = true;
+      if (this.#phase) this.#options.onUpdateProgress?.(this.#phase);
+    }
     return this.#run();
   }
 
@@ -63,6 +73,12 @@ export class DesktopUpdateManager {
     return this.#run();
   }
 
+  #setPhase(phase: DesktopUpdatePhase | undefined) {
+    if (phase === this.#phase) return;
+    this.#phase = phase;
+    if (this.#interactive) this.#options.onUpdateProgress?.(phase);
+  }
+
   #run() {
     this.#checkInProgress ??= this.#check()
       .catch((error: unknown) => {
@@ -71,6 +87,7 @@ export class DesktopUpdateManager {
         else this.#options.logError(failure);
       })
       .finally(() => {
+        this.#setPhase(undefined);
         this.#download = null;
         this.#checkInProgress = null;
         this.#interactive = false;
@@ -79,6 +96,7 @@ export class DesktopUpdateManager {
   }
 
   async #check() {
+    this.#setPhase("checking");
     const lookup = {
       platform: this.#options.platform,
       arch: this.#options.arch,

@@ -67,6 +67,59 @@ const terminalWebSocketUrl = () => {
   return url.toString();
 };
 
+const terminalStopTimeoutMs = 10_000;
+const unconfirmedStop = () => new Error("The terminal stop could not be confirmed.");
+
+const createTerminalStop = (socket: WebSocket, send: (message: TerminalWebSocketClientMessage) => void) => {
+  let request: ReturnType<typeof Promise.withResolvers<void>> | undefined;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  let ended = false;
+  let detached = false;
+  const settle = (error?: Error) => {
+    if (!request) return;
+    clearTimeout(timeout);
+    const completion = request;
+    request = undefined;
+    if (error) completion.reject(error);
+    else completion.resolve();
+  };
+  const acknowledge = () => {
+    ended = true;
+    settle();
+  };
+  return {
+    kill(signal?: string) {
+      if (ended) return Promise.resolve();
+      if (detached) return Promise.reject(unconfirmedStop());
+      if (request) return request.promise;
+      if (socket.readyState !== WebSocket.OPEN) return Promise.reject(unconfirmedStop());
+      const pending = Promise.withResolvers<void>();
+      request = pending;
+      timeout = setTimeout(() => {
+        settle(unconfirmedStop());
+        socket.close();
+      }, terminalStopTimeoutMs);
+      try {
+        send({ type: "kill", signal });
+      } catch {
+        settle(unconfirmedStop());
+      }
+      return pending.promise;
+    },
+    detach() {
+      detached = true;
+      settle(unconfirmedStop());
+      socket.close();
+    },
+    exit: acknowledge,
+    close(event: CloseEvent) {
+      if (!request) return;
+      if (!detached && event.wasClean && event.code === 1000) acknowledge();
+      else settle(unconfirmedStop());
+    },
+  };
+};
+
 /**
  * Opens a PTY over one bidirectional WebSocket, including stdin and resize. With an attach key the
  * PTY outlives the socket: `detach` leaves it running, and the next open with that key resumes it.
@@ -92,6 +145,7 @@ export const openDashboardTerminalSession = (
     signal?.addEventListener("abort", cancelAdmission, { once: true });
 
     const send = (message: TerminalWebSocketClientMessage) => socket.send(JSON.stringify(message));
+    const stop = createTerminalStop(socket, send);
 
     socket.addEventListener("open", () =>
       send(
@@ -106,6 +160,7 @@ export const openDashboardTerminalSession = (
     );
     socket.addEventListener("message", (event) => {
       const message = JSON.parse(String(event.data)) as TerminalWebSocketServerMessage;
+      if (message.type === "exit") stop.exit();
       if (message.type !== "open") {
         if (!opened && message.type === "error") {
           releaseAdmission();
@@ -117,7 +172,6 @@ export const openDashboardTerminalSession = (
 
       opened = true;
       releaseAdmission();
-      let detached = false;
       resolve({
         id: message.sessionId,
         write(data) {
@@ -126,19 +180,8 @@ export const openDashboardTerminalSession = (
         resize(cols, rows) {
           send({ type: "resize", cols, rows });
         },
-        kill(signal) {
-          if (detached) return;
-          if (socket.readyState === WebSocket.OPEN) send({ type: "kill", signal });
-          socket.close();
-        },
-        ...(attachKey
-          ? {
-              detach() {
-                detached = true;
-                socket.close();
-              },
-            }
-          : {}),
+        kill: stop.kill,
+        ...(attachKey ? { detach: stop.detach } : {}),
         onData: hub.onData,
         onTitle: hub.onTitle,
         onExit: hub.onExit,
@@ -150,6 +193,7 @@ export const openDashboardTerminalSession = (
       if (!opened) reject(new Error("Could not open a terminal session."));
     });
     socket.addEventListener("close", (event) => {
+      stop.close(event);
       releaseAdmission();
       if (!opened) reject(new Error("The terminal connection closed before the session opened."));
       else if (!event.wasClean) hub.dispatch({ type: "error", message: "Terminal connection lost." });

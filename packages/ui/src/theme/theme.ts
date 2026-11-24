@@ -50,6 +50,7 @@ import { stickyUserMessageRecipe } from "./recipes/sticky-user-message";
 import { switchSlotRecipe } from "./recipes/switch";
 import { tabsSlotRecipe } from "./recipes/tabs";
 import { tagSlotRecipe } from "./recipes/tag";
+import { terminalSessionNoticeRecipe } from "./recipes/terminal-session-notice";
 import { textareaRecipe } from "./recipes/textarea";
 import { timelineSlotRecipe } from "./recipes/timeline";
 import { tooltipRecipe } from "./recipes/tooltip";
@@ -91,6 +92,7 @@ const config = defineConfig({
       link: linkRecipe,
       listRowAccessory: listRowAccessoryRecipe,
       skeleton: skeletonRecipe,
+      terminalSessionNotice: terminalSessionNoticeRecipe,
       textarea: textareaRecipe,
     },
     tokens: {

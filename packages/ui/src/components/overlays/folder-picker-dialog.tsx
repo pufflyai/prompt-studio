@@ -20,6 +20,7 @@ export interface FolderPickerProps {
   isUnavailable?: boolean;
   isLoading?: boolean;
   isOpening?: boolean;
+  selectionDisabled?: boolean;
   error?: string;
   onClose: () => void;
   onSelect: () => void;
@@ -35,6 +36,7 @@ export const FolderPicker = (props: FolderPickerProps) => {
     isUnavailable,
     isLoading,
     isOpening,
+    selectionDisabled,
     error,
     onClose,
     onSelect,
@@ -205,7 +207,7 @@ export const FolderPicker = (props: FolderPickerProps) => {
             variant="primary"
             onClick={onSelect}
             loading={isOpening}
-            disabled={!currentPath || isUnavailable || isLoading || saving}
+            disabled={selectionDisabled || !currentPath || isUnavailable || isLoading || saving}
           >
             Open folder
           </Button>
