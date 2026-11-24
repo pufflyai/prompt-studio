@@ -5,6 +5,7 @@ import type {
   ProcessSpawnErrorCode,
   TargetFileErrorCode,
 } from "pstdio-api-contracts/extension-kernel";
+import { markCleanupFunction } from "./backend-process/remote-markers";
 
 export const processError = (code: ProcessSpawnErrorCode | TargetFileErrorCode, message: string, cause?: unknown) =>
   Object.assign(new Error(message), { code, ...(cause === undefined ? {} : { cause }) });
@@ -253,7 +254,7 @@ export const createProcessHandleProxy = (
         );
       return ending;
     },
-    kill: (signal?: Parameters<ProcessHandle["kill"]>[0]) => {
+    kill: markCleanupFunction((signal?: Parameters<ProcessHandle["kill"]>[0]) => {
       stopping = true;
       // Local admission can start a child before the async target result reaches this proxy.
       const target = admittedLocal?.() ?? opened;
@@ -263,7 +264,7 @@ export const createProcessHandleProxy = (
       stopped.reject(reason);
       if (mayOpenAfterAbort?.() === false) cleanup.resolve();
       return Promise.resolve();
-    },
+    }),
     events,
   } satisfies ProcessHandle;
 };
