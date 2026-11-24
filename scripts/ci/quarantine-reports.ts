@@ -1,4 +1,5 @@
 import { relative, resolve } from "node:path";
+import { stripVTControlCharacters } from "node:util";
 import { junitCases } from "./bun-test-evidence";
 
 interface ExpectedCase {
@@ -29,7 +30,11 @@ export const verifyBunQuarantineCases = (reported: ReportedCase[], expected: Exp
         signature &&
         (!signature.length ||
           !actual.errorMessages?.length ||
-          actual.errorMessages.some((message) => !signature.every((text) => message.includes(text))))
+          actual.errorMessages.some((message) => {
+            // Playwright's native report can color parts of a recorded failure signature.
+            const plain = stripVTControlCharacters(message);
+            return !signature.every((text) => plain.includes(text));
+          }))
       )
         throw new Error(`Unexpected quarantine failure: ${entry.file}: ${entry.name}`);
       failures++;

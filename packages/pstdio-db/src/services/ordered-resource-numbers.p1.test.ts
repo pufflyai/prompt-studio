@@ -398,7 +398,10 @@ const numberBoundary = (limit: "record" | "group") => {
 };
 
 for (const limit of ["record", "group"] as const) {
-  test(`number repair crossing the ${limit} limit suppresses pending optimism and refuses the atomic group`, async () => {
+  // The group case exercises a full 4 MiB commit boundary across two PGlite replicas.
+  const timeout = limit === "group" && process.platform === "linux" ? 10_000 : undefined;
+  const name = `number repair crossing the ${limit} limit suppresses pending optimism and refuses the atomic group`;
+  const verifyBoundary = async () => {
     const f = await pair(2, true);
     try {
       const [first, second] = f.devices;
@@ -453,7 +456,8 @@ for (const limit of ["record", "group"] as const) {
     } finally {
       await f.close();
     }
-  });
+  };
+  test(name, verifyBoundary, timeout);
 }
 
 for (const limit of ["record", "group"] as const) {

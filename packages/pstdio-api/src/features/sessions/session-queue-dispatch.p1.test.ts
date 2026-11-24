@@ -125,3 +125,65 @@ test("dispatch uses the saved request model and complete parameters after the dr
     await app.close();
   }
 });
+
+test("dispatches reordered follow-ups in their saved queue order", async () => {
+  const dispatched: string[] = [];
+  const bothDispatched = Promise.withResolvers<void>();
+  const app = await createTestApp({
+    harnessRegistry: createTestHarnessRegistry([
+      createTestHarnessRecord("queue-order", {
+        provider: {
+          resume: (_ctx, input) => {
+            dispatched.push(input.prompt);
+            if (dispatched.length === 2) bothDispatched.resolve();
+            return {
+              agentSessionId: input.agentSessionId,
+              done: Promise.resolve({ status: "completed" }),
+              stop: () => {},
+            };
+          },
+          getMessages: () => [],
+        },
+      }),
+    ]),
+  });
+  try {
+    const project = await app.deps.projectService.create({ name: "Queue order" });
+    const session = await app.deps.sessionService.create({
+      project_id: project.id,
+      title: "Active turn",
+      agent: testHarnessId("queue-order"),
+      cwd: tmpdir(),
+    });
+    await app.deps.sessionService.update(session.id, { agent_session_id: "active" });
+    const queue = app.deps.sessionQueueEntriesService;
+    const first = await queue.create({
+      session_id: session.id,
+      request_kind: "follow_up",
+      prompt: "First",
+      created_at: "2026-01-01T00:00:00.000Z",
+    });
+    await queue.create({
+      session_id: session.id,
+      request_kind: "follow_up",
+      prompt: "Second",
+      created_at: "2026-01-01T00:00:01.000Z",
+    });
+    const response = await app.app.request(
+      `/v1/sessions/${session.id}/queued-follow-ups/${first.queue_position}/move`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ direction: "down" }),
+      },
+    );
+    expect(response.status).toBe(200);
+    expect((await queue.listPendingBySession(session.id)).map((entry) => entry.prompt)).toEqual(["Second", "First"]);
+
+    await app.deps.sessionService.transitionStatus(session.id, "completed");
+    await bothDispatched.promise;
+    expect(dispatched).toEqual(["Second", "First"]);
+  } finally {
+    await app.close();
+  }
+});
