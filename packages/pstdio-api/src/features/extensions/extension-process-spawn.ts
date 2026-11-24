@@ -45,6 +45,7 @@ const spawnLocal = async (
   root: string | undefined,
   owner: ProcessOwner,
   active: () => void,
+  admitted: (handle: ProcessHandle) => void,
 ) => {
   // The selected target's root anchors a relative cwd; a cwd never selects another target.
   const cwd = input.cwd === undefined ? root : resolve(root ?? process.cwd(), input.cwd);
@@ -70,7 +71,9 @@ const spawnLocal = async (
     const handle = lease ? lease.start(start) : start().value;
     if (lease) watchLease(treeExited ?? handle.exited.then(() => {}), lease);
     // Open the proxy before the Windows launcher acknowledges target startup so kill can stop it.
-    return trackProcessCleanup(redactProcessOutput(handle, granted), processCleanup(handle));
+    const output = trackProcessCleanup(redactProcessOutput(handle, granted), processCleanup(handle));
+    admitted(output);
+    return output;
   } finally {
     lease?.releaseUnused();
   }
@@ -103,13 +106,14 @@ const openOnTarget = async (
   owner: ProcessOwner,
   active: () => void,
   signal: AbortSignal,
+  admitted: (handle: ProcessHandle) => void,
 ) => {
   if (owner.ready) await owner.ready;
   active();
   const target = options.resolveTarget ? await options.resolveTarget(input.workspaceId, signal) : undefined;
   if (owner.ready) await owner.ready;
   active();
-  if (target?.kind !== "remote") return spawnLocal(options, input, target?.root, owner, active);
+  if (target?.kind !== "remote") return spawnLocal(options, input, target?.root, owner, active, admitted);
   if (input.envFromHost?.length)
     throw processError("process_target_unsupported", "envFromHost passes host values to local children only.");
   return target.spawn({ ...input, lifetime: input.lifetime ?? "call" }, signal);
@@ -122,16 +126,26 @@ const openOnTarget = async (
 export const createProcessSpawn = (options: ProcessSpawnOptions) => (input: ProcessSpawnInput) => {
   const cancel = new AbortController();
   let owner: ProcessOwner | undefined;
+  let local: ProcessHandle | undefined;
   let open: Promise<ProcessHandle>;
   try {
     const lifetime = checkInput(input);
     owner = ownerFor(options, lifetime);
     options.ensureActive();
-    open = openOnTarget(options, input, owner, activeCheck(options, lifetime, owner, cancel.signal), cancel.signal);
+    open = openOnTarget(
+      options,
+      input,
+      owner,
+      activeCheck(options, lifetime, owner, cancel.signal),
+      cancel.signal,
+      (handle) => {
+        local = handle;
+      },
+    );
   } catch (error) {
     open = Promise.reject(error);
   }
-  const handle = createProcessHandleProxy(open, cancel);
+  const handle = createProcessHandleProxy(open, cancel, () => local);
   // The owner holds the handle before any child exists, so closing it never misses one.
   owner?.adopt(handle);
   return handle;

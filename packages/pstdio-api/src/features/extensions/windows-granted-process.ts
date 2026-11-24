@@ -1,6 +1,7 @@
 import { dirname } from "node:path";
 import { isPackagedRuntime } from "pstdio-paths";
 import { createWindowsProcessJob } from "pstdio-paths/windows-process-job";
+import { apiLogger } from "../../lib/logger";
 import type { ResolvedProcessCommand } from "./process-command";
 import { exitedWithin } from "./process-group";
 
@@ -19,8 +20,15 @@ const launcherSource = `
         stdin: stdin === "pipe" ? "inherit" : "ignore",
         stdout: detached ? "ignore" : "inherit", stderr: detached ? "ignore" : "inherit",
       });
-    } catch {
-      process.send({ failed: true }, () => process.exit(1));
+    } catch (error) {
+      let commandMissing = false;
+      if (error?.code === "ENOENT") {
+        try {
+          commandMissing = require("node:fs").statSync(cwd).isDirectory();
+        } catch {}
+      }
+      // Only the classification crosses IPC. Raw spawn errors can contain command details.
+      process.send({ commandMissing }, () => process.exit(1));
       return;
     }
     await new Promise((resolve, reject) => process.send({ pid: child.pid }, (error) => error ? reject(error) : resolve()));
@@ -38,9 +46,29 @@ type StartInput = {
   stopTimeoutMs: number;
 };
 
-const pollJob = async (job: ReturnType<typeof createWindowsProcessJob>) => {
+type JobExit = Pick<ReturnType<typeof createWindowsProcessJob>, "hasProcesses" | "close">;
+
+const pollJob = async (job: JobExit) => {
   while (job.hasProcesses()) await new Promise((resolve) => setTimeout(resolve, 250).unref());
   job.close();
+};
+
+/** Keep the lifetime pending on an accounting error and let a later stop request a fresh check. */
+export const watchJobExit = (job: JobExit, launcherExited: Promise<unknown>, onFailure: (error: unknown) => void) => {
+  const verified = Promise.withResolvers<void>();
+  let checking: Promise<void> | undefined;
+  const check = () => {
+    if (!checking) {
+      checking = launcherExited.then(() => pollJob(job));
+      void checking.then(verified.resolve, (error: unknown) => {
+        checking = undefined;
+        onFailure(error);
+      });
+    }
+    return checking;
+  };
+  void check();
+  return { treeExited: verified.promise, check };
 };
 
 /**
@@ -52,7 +80,10 @@ export const startWindowsGrantedProcess = (input: StartInput) => {
   const started = Promise.withResolvers<number>();
   started.promise.catch(() => {});
   const output = input.detached ? "ignore" : "pipe";
-  const launchError = () => new Error("The Windows process could not start.");
+  const launchError = (commandMissing = false) => {
+    const error = new Error("The Windows process could not start.");
+    return commandMissing ? Object.assign(error, { code: "ENOENT" }) : error;
+  };
   let child: ReturnType<typeof Bun.spawn> | undefined;
   try {
     child = input.spawner([process.execPath, "--no-env-file", "-e", launcherSource], {
@@ -68,7 +99,7 @@ export const startWindowsGrantedProcess = (input: StartInput) => {
       detached: input.detached,
       ipc: (message, launcher) => {
         if (message && typeof message.pid === "number") started.resolve(message.pid);
-        else started.reject(launchError());
+        else started.reject(launchError(message?.commandMissing === true));
         launcher.disconnect();
       },
       onDisconnect: () => started.reject(launchError()),
@@ -94,8 +125,12 @@ export const startWindowsGrantedProcess = (input: StartInput) => {
 
   const exited = Promise.all([started.promise, child.exited]).then(([, exitCode]) => exitCode);
   exited.catch(() => {});
-  const treeExited = child.exited.then(() => pollJob(job));
-  treeExited.catch(() => {});
+  const { treeExited, check } = watchJobExit(job, child.exited, (error) => {
+    apiLogger.warn(
+      { err: error, event: "extension.process.job_tracking_failed" },
+      "Could not verify Windows process job exit",
+    );
+  });
   return {
     child,
     pid: started.promise,
@@ -103,7 +138,7 @@ export const startWindowsGrantedProcess = (input: StartInput) => {
     treeExited,
     async stop() {
       if (job.hasProcesses()) job.terminate();
-      if (!(await exitedWithin(treeExited, input.stopTimeoutMs)))
+      if (!(await exitedWithin(check(), input.stopTimeoutMs)))
         throw new Error("The Windows process job did not exit after it was stopped.");
     },
   };
