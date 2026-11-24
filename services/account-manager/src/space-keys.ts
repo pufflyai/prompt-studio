@@ -4,7 +4,7 @@ import type { SpaceKeys } from "pstdio-sync-contracts";
 import { readAccountFeatures } from "./account-features";
 import type { WorkbenchInput } from "./contracts";
 import type { ManagerTransaction } from "./database";
-import { projectDeletions, spaceKeys, workbenches } from "./schema";
+import { projectDeletions, projectMembers, spaceKeys, workbenches } from "./schema";
 
 const spaces = ["project", "personal"] as const;
 const createSecret = () => Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
@@ -49,34 +49,50 @@ const rotateMatchingKeys = async (transaction: ManagerTransaction, accountId: st
   );
 };
 
-// A removed device keeps the keys it already has, so only data sealed with the next generation is closed to it.
-export const rotateSpaceKeysInTransaction = async (
-  transaction: ManagerTransaction,
-  accountId: string,
-  userId = accountId,
-) => {
-  const ownerId = userId === accountId ? "" : userId;
-  const acknowledged = alias(spaceKeys, "issued_private_keys");
-  await rotateMatchingKeys(
+// A removed device keeps old keys. Rotate before issuing the next generation to retained devices.
+export const rotatePersonalAccountKeys = (transaction: ManagerTransaction, accountId: string) =>
+  rotateMatchingKeys(transaction, accountId);
+
+export const rotateTeamKeysForRemovedDevice = (transaction: ManagerTransaction, accountId: string, userId: string) => {
+  const issued = alias(spaceKeys, "issued_private_keys");
+  const grant = exists(
+    transaction
+      .select({ userId: projectMembers.userId })
+      .from(projectMembers)
+      .where(
+        and(
+          eq(projectMembers.accountId, spaceKeys.accountId),
+          eq(projectMembers.workbenchId, spaceKeys.workbenchId),
+          eq(projectMembers.userId, userId),
+        ),
+      ),
+  );
+  // Making a project local drops the active grant rows. Issued keys for a paused project
+  // must still rotate while nothing prevents the same workbench from syncing again later.
+  const paused = and(
+    notExists(
+      transaction
+        .select({ id: workbenches.id })
+        .from(workbenches)
+        .where(and(eq(workbenches.accountId, spaceKeys.accountId), eq(workbenches.id, spaceKeys.workbenchId))),
+    ),
+    exists(
+      transaction
+        .select({ ownerId: issued.ownerId })
+        .from(issued)
+        .where(
+          and(
+            eq(issued.accountId, spaceKeys.accountId),
+            eq(issued.workbenchId, spaceKeys.workbenchId),
+            eq(issued.ownerId, userId),
+          ),
+        ),
+    ),
+  );
+  return rotateMatchingKeys(
     transaction,
     accountId,
-    and(
-      or(eq(spaceKeys.space, "project"), eq(spaceKeys.ownerId, ownerId)),
-      userId === accountId
-        ? undefined
-        : exists(
-            transaction
-              .select({ ownerId: acknowledged.ownerId })
-              .from(acknowledged)
-              .where(
-                and(
-                  eq(acknowledged.accountId, spaceKeys.accountId),
-                  eq(acknowledged.workbenchId, spaceKeys.workbenchId),
-                  eq(acknowledged.ownerId, ownerId),
-                ),
-              ),
-          ),
-    ),
+    or(eq(spaceKeys.ownerId, userId), and(eq(spaceKeys.space, "project"), or(grant, paused))),
   );
 };
 

@@ -1,7 +1,9 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
+import { sql } from "drizzle-orm";
 import { createAuthorityFixture, deviceProfile } from "./authority.fixture";
 import * as implementation from "./index";
 import { createAuthenticationFixture } from "./manager-authentication.fixture";
+import { lockAccount } from "./transactions";
 
 const fixture = createAuthorityFixture(implementation);
 beforeAll(() => fixture.initialize());
@@ -14,7 +16,7 @@ test("team project access is explicit and revocation rotates only the affected s
   const handler = implementation.createManagerHandler(auth, config.origin);
   const device = async (email?: string) => {
     const login = await authentication.login(crypto.randomUUID(), email);
-    return auth.loginDevice(login.headers, deviceProfile());
+    return { ...(await auth.loginDevice(login.headers, deviceProfile())), subject: login.subject };
   };
   const request = (token: string, path: string, body?: unknown) =>
     handler(
@@ -27,7 +29,9 @@ test("team project access is explicit and revocation rotates only the affected s
   try {
     const alex = await device();
     const morganEmail = `${crypto.randomUUID()}@fixture.test`;
-    const morgan = await device(morganEmail);
+    const morganLogin = await authentication.login(crypto.randomUUID(), morganEmail);
+    const morgan = await auth.loginDevice(morganLogin.headers, deviceProfile());
+    const oldMorganDevice = await auth.loginDevice(morganLogin.headers, deviceProfile());
     const caseyEmail = `${crypto.randomUUID()}@fixture.test`;
     const casey = await device(caseyEmail);
     const { accountId } = await (await request(alex.token, "/v1/teams", { name: "Studio" })).json();
@@ -71,7 +75,30 @@ test("team project access is explicit and revocation rotates only the affected s
     expect(morganBefore.project).toEqual(alexBefore.project);
     expect(morganBefore.personal).not.toEqual(alexBefore.personal);
 
-    expect((await grant("project-a", morgan.accountId, false)).status).toBe(200);
+    const beforeRevocation = await manager.snapshot();
+    const locked = Promise.withResolvers<void>();
+    const fence = authentication.connection.db.transaction(async (transaction) => {
+      await lockAccount(transaction, morgan.accountId);
+      locked.resolve();
+      // Renewal prepares its signature before it queues on the person's account.
+      const end = Date.now() + 2000;
+      for (;;) {
+        const waiting = await transaction.execute<{ waiting: boolean }>(sql`
+          select exists (
+            select 1 from pg_locks
+            where locktype = 'advisory' and classid = 1
+              and objid = hashtext(${morgan.accountId})::oid and not granted
+          ) as waiting
+        `);
+        if (waiting.rows[0]?.waiting) break;
+        if (Date.now() >= end) throw new Error("Renewal did not reach the delivery fence");
+        await Bun.sleep(5);
+      }
+      expect((await grant("project-a", morgan.accountId, false)).status).toBe(200);
+    });
+    const pendingRenewal = locked.promise.then(() => renew(morgan.token, "project-a"));
+    await fence;
+    expect((await pendingRenewal).status).toBe(401);
     expect(await catalog(morgan.token)).toEqual([]);
     expect((await keys(morgan.token, "project-a")).status).toBe(404);
     expect((await renew(morgan.token, "project-a")).status).toBe(401);
@@ -89,11 +116,37 @@ test("team project access is explicit and revocation rotates only the affected s
     expect((await request(alex.token, `${team}/projects`)).status).toBe(200);
     expect((await grant("project-a", alex.accountId, true)).status).toBe(200);
     expect((await grant("project-b", morgan.accountId, true)).status).toBe(200);
-    await keys(morgan.token, "project-b");
+    const morganB = await (await keys(morgan.token, "project-b")).json();
+    expect((await renew(oldMorganDevice.token, "project-b")).status).toBe(200);
+    expect((await request(morgan.token, `/v1/devices/${oldMorganDevice.deviceId}/remove`, {})).status).toBe(200);
+    expect((await renew(oldMorganDevice.token, "project-b")).status).toBe(401);
+    const afterDeviceRemovalA = await (await keys(alex.token, "project-a")).json();
+    const afterDeviceRemovalB = await (await keys(morgan.token, "project-b")).json();
+    expect(afterDeviceRemovalA.project).toHaveLength(3);
+    expect(afterDeviceRemovalB.project).toHaveLength(2);
+    expect(afterDeviceRemovalB.personal).toEqual([...morganB.personal, { generation: 2, secret: expect.any(String) }]);
+    expect((await (await keys(alex.token, "project-b")).json()).personal).toEqual(projectBBefore.personal);
     expect((await request(morgan.token, `${team}/leave`, {})).status).toBe(200);
     expect((await renew(morgan.token, "project-b")).status).toBe(401);
-    expect((await (await keys(alex.token, "project-b")).json()).project).toHaveLength(2);
+    expect((await (await keys(alex.token, "project-b")).json()).project).toHaveLength(3);
     expect((await (await keys(alex.token, "project-a")).json()).project).toHaveLength(3);
+
+    await manager.restore("restore-before-revocation", beforeRevocation);
+    const reopen = async (id: string, subject?: string) =>
+      manager.reconcile({
+        requestId: `restore-${id}`,
+        accountId: id,
+        state: "active",
+        ...(subject && { owner: { issuer: "https://accounts.google.com", subject } }),
+      });
+    await reopen(alex.accountId, alex.subject);
+    await reopen(morgan.accountId, morganLogin.subject);
+    await reopen(accountId);
+    const morganAfterRestore = await manager.registerDevice({ accountId: morgan.accountId, ...deviceProfile() });
+    expect((await renew(morganAfterRestore.token, "project-a")).status).toBe(401);
+    expect((await renew(morganAfterRestore.token, "project-b")).status).toBe(401);
+    const alexAfterRestore = await manager.registerDevice({ accountId: alex.accountId, ...deviceProfile() });
+    expect((await (await keys(alexAfterRestore.token, "project-b")).json()).project).toHaveLength(3);
   } finally {
     await Promise.all([manager.close(), authentication.close()]);
   }

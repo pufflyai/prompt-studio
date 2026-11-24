@@ -30,6 +30,7 @@ export type {
   TeamMembershipReadResult,
   TeamMembershipWrite,
   TeamMembershipWriteResult,
+  TeamProjectAccess,
 } from "../../account";
 export type {
   ProjectReturnAction,

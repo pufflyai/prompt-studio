@@ -6,8 +6,8 @@ import { createCredential, digestCredential } from "./credential";
 import type { ManagerDatabase, ManagerTransaction } from "./database";
 import { assertProjectCanSync } from "./project-deletion";
 import { DeviceAccessDenied } from "./renewal-errors";
-import { accounts, devices, spaceKeys, workbenches } from "./schema";
-import { rotateSpaceKeysInTransaction } from "./space-keys";
+import { accounts, devices, projectMembers, spaceKeys, workbenches } from "./schema";
+import { rotatePersonalAccountKeys, rotateTeamKeysForRemovedDevice } from "./space-keys";
 import { canUseTeamProject } from "./teams";
 import { lockAccount } from "./transactions";
 
@@ -77,15 +77,21 @@ export const removeDeviceInTransaction = async (transaction: ManagerTransaction,
 };
 
 export const rotateRemovedDeviceKeys = async (transaction: ManagerTransaction, userId: string) => {
-  await rotateSpaceKeysInTransaction(transaction, userId);
+  await rotatePersonalAccountKeys(transaction, userId);
   const keyAccounts = await transaction
     .selectDistinct({ accountId: spaceKeys.accountId })
     .from(spaceKeys)
     .where(eq(spaceKeys.ownerId, userId))
-    .orderBy(asc(spaceKeys.accountId));
+    .union(
+      transaction
+        .select({ accountId: projectMembers.accountId })
+        .from(projectMembers)
+        .where(eq(projectMembers.userId, userId)),
+    )
+    .orderBy(({ accountId }) => asc(accountId));
   for (const { accountId } of keyAccounts) {
     await lockAccount(transaction, accountId);
-    await rotateSpaceKeysInTransaction(transaction, accountId, userId);
+    await rotateTeamKeysForRemovedDevice(transaction, accountId, userId);
   }
 };
 

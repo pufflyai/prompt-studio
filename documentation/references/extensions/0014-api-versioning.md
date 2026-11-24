@@ -589,4 +589,6 @@ API 0.5.1 also permits `viewMenus.side: "bottom"`. Menu sides define an initial 
 
 Extensions adopting these fields or commands require `^0.5.1` and a supporting published SDK.
 
+Team owners use `readTeamMembership({ op: "projectAccess", accountId }, expected)` to list projects and grants that they manage. `writeTeamMembership({ op: "setProjectAccess", accountId, workbenchId, userId, granted }, expected)` changes one member's grant. The workbench name is available only when the native device has a matching local team copy. This API returns grant metadata and carries no encryption key or project content.
+
 *Updated at: 2026-11-24*

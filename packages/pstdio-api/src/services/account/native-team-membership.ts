@@ -10,6 +10,7 @@ import {
   teamInvitationViewSchema,
   teamInviteSecretSchema,
   teamMemberSchema,
+  teamProjectAccessSchema,
 } from "pstdio-sync-contracts";
 import { z } from "zod";
 import { ManagerRequestDenied } from "./manager-client";
@@ -42,6 +43,7 @@ export const createNativeTeamMembership = (input: {
   current: () => Promise<DeviceLogin>;
   call: ReturnType<typeof createNativeManagerCall>;
   refresh: () => Promise<void>;
+  localProjectNames: (managerOrigin: string, accountId: string) => Promise<Map<string, string>>;
 }) => {
   const assertCurrent = async (previous: DeviceLogin) => {
     const login = await input.current();
@@ -61,7 +63,7 @@ export const createNativeTeamMembership = (input: {
     const call = (path: string, body?: unknown) =>
       input.call(path, body, login.token, signal, login, true).catch((error) => {
         if (error instanceof ManagerRequestDenied && error.status === 403)
-          throw new AccountRequestError("The team or invitation is unavailable to the signed-in account");
+          throw new AccountRequestError("This team action is unavailable to the signed-in account");
         throw error;
       });
     const result = await run(login, call);
@@ -80,6 +82,13 @@ export const createNativeTeamMembership = (input: {
               return z.array(teamMemberSchema).parse(await call(`${teamPath(request.accountId)}/members`));
             case "invitations":
               return z.array(teamInvitationSchema).parse(await call(`${teamPath(request.accountId)}/invitations`));
+            case "projectAccess": {
+              const access = z
+                .array(teamProjectAccessSchema)
+                .parse(await call(`${teamPath(request.accountId)}/projects`));
+              const names = await input.localProjectNames(login.managerOrigin, request.accountId);
+              return access.map(({ workbenchId, userIds }) => ({ workbenchId, name: names.get(workbenchId), userIds }));
+            }
             case "inspectInvitation":
               return teamInvitationViewSchema.parse(
                 await call("/v1/team-invitations/inspect", {
@@ -112,6 +121,16 @@ export const createNativeTeamMembership = (input: {
             case "removeMember":
               return ok.parse(
                 await call(`${teamPath(request.accountId)}/members/${encodeURIComponent(request.userId)}/remove`, {}),
+              );
+            case "setProjectAccess":
+              return ok.parse(
+                await call(
+                  `${teamPath(request.accountId)}/projects/${encodeURIComponent(request.workbenchId)}/access`,
+                  {
+                    userId: request.userId,
+                    granted: request.granted,
+                  },
+                ),
               );
             case "leave":
               return ok.parse(await call(`${teamPath(request.accountId)}/leave`, {}));

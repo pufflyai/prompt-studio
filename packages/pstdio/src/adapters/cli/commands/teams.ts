@@ -3,6 +3,11 @@ import { apiClient } from "@/features/api-client";
 
 const team = (command: Argv) => command.positional("accountId", { type: "string", demandOption: true });
 
+const projectMember = (command: Argv) =>
+  team(command)
+    .positional("workbenchId", { type: "string", demandOption: true })
+    .positional("userId", { type: "string", demandOption: true });
+
 const invitation = async () => {
   if (process.stdin.isTTY) throw new Error("Pass the invitation link on standard input");
   const url = (await Bun.stdin.text()).trim();
@@ -73,6 +78,41 @@ export const teamsCommand = {
         (command) => team(command).positional("userId", { type: "string", demandOption: true }),
         async ({ accountId, userId }) => {
           print(await apiClient().account.writeTeamMembership({ op: "removeMember", accountId, userId }));
+        },
+      )
+      .command("project-access <accountId>", "List team project grants", team, async ({ accountId }) => {
+        print(await apiClient().account.readTeamMembership({ op: "projectAccess", accountId }));
+      })
+      .command(
+        "grant-project <accountId> <workbenchId> <userId>",
+        "Give a team member project access",
+        projectMember,
+        async ({ accountId, workbenchId, userId }) => {
+          print(
+            await apiClient().account.writeTeamMembership({
+              op: "setProjectAccess",
+              accountId,
+              workbenchId,
+              userId,
+              granted: true,
+            }),
+          );
+        },
+      )
+      .command(
+        "revoke-project <accountId> <workbenchId> <userId>",
+        "Remove a team member's project access",
+        projectMember,
+        async ({ accountId, workbenchId, userId }) => {
+          print(
+            await apiClient().account.writeTeamMembership({
+              op: "setProjectAccess",
+              accountId,
+              workbenchId,
+              userId,
+              granted: false,
+            }),
+          );
         },
       )
       .command("leave <accountId>", "Leave a team", team, async ({ accountId }) => {

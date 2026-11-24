@@ -266,7 +266,7 @@ export const createNativeAccount = (input: {
     },
   });
   const refresh = refreshes.refresh;
-  const membership = createNativeTeamMembership({ current, call, refresh });
+  const membership = createNativeTeamMembership({ current, call, refresh, localProjectNames: teams.localProjectNames });
   const logout = createNativeLogout({ logins, readLogin, store, refresh });
 
   return {

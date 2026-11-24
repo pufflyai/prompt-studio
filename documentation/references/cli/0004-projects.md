@@ -88,4 +88,10 @@ Open the link in a browser or pass it on standard input to `pst teams inspect-in
 
 Use `pst teams remove-member <team-account-id> <user-id>` as the owner or `pst teams leave <team-account-id>` as a member. The sole owner must transfer ownership before leaving.
 
+## Team project access
+
+As the team owner, use `pst teams project-access <team-account-id>` to list the team projects you can manage and their granted user IDs. Use `pst teams members <team-account-id>` to obtain the stable user IDs.
+
+Use `pst teams grant-project <team-account-id> <project-id> <user-id>` to grant read and write access for one project. Use `pst teams revoke-project <team-account-id> <project-id> <user-id>` to remove it. The personal account, other grants and downloaded copies stay available.
+
 *Updated at: 2026-11-24*

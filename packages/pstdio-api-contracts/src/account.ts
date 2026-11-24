@@ -14,6 +14,7 @@ export {
   type TeamMembershipReadResult,
   type TeamMembershipWrite,
   type TeamMembershipWriteResult,
+  type TeamProjectAccess,
   teamMembershipReadSchema,
   teamMembershipWriteSchema,
 } from "pstdio-sync-contracts";

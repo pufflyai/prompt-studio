@@ -38,6 +38,14 @@ export const teamInvitationViewSchema = z.strictObject({
 });
 export const joinedTeamSchema = z.strictObject({ state: z.literal("joined"), accountId: identitySchema });
 
+export const teamProjectAccessSchema = z.strictObject({
+  workbenchId: identitySchema,
+  name: z.string().optional(),
+  userIds: z.array(identitySchema),
+});
+export const teamProjectGrantSchema = z.strictObject({ userId: identitySchema, granted: z.boolean() });
+
+export type TeamProjectAccess = z.infer<typeof teamProjectAccessSchema>;
 export type TeamInvitation = z.infer<typeof teamInvitationSchema>;
 export type CreatedTeamInvitation = z.infer<typeof createdTeamInvitationSchema>;
 export type TeamMember = z.infer<typeof teamMemberSchema>;
@@ -49,6 +57,7 @@ const invitationLink = z.strictObject({ url: z.url().max(2048) });
 export const teamMembershipReadSchema = z.discriminatedUnion("op", [
   teamTarget.extend({ op: z.literal("members") }),
   teamTarget.extend({ op: z.literal("invitations") }),
+  teamTarget.extend({ op: z.literal("projectAccess") }),
   invitationLink.extend({ op: z.literal("inspectInvitation") }),
 ]);
 export const teamMembershipWriteSchema = z.discriminatedUnion("op", [
@@ -56,6 +65,11 @@ export const teamMembershipWriteSchema = z.discriminatedUnion("op", [
   teamTarget.extend({ op: z.literal("cancelInvitation"), invitationId: identitySchema }),
   teamTarget.extend({ op: z.literal("removeMember"), userId: identitySchema }),
   teamTarget.extend({ op: z.literal("leave") }),
+  teamTarget.extend({
+    op: z.literal("setProjectAccess"),
+    workbenchId: identitySchema,
+    ...teamProjectGrantSchema.shape,
+  }),
   invitationLink.extend({ op: z.literal("acceptInvitation") }),
 ]);
 
@@ -64,6 +78,7 @@ export type TeamMembershipWrite = z.infer<typeof teamMembershipWriteSchema>;
 export type TeamMembershipReadResult<Request extends TeamMembershipRead> = {
   members: TeamMember[];
   invitations: TeamInvitation[];
+  projectAccess: TeamProjectAccess[];
   inspectInvitation: TeamInvitationView;
 }[Request["op"]];
 export type TeamMembershipWriteResult<Request extends TeamMembershipWrite> = {
@@ -71,5 +86,6 @@ export type TeamMembershipWriteResult<Request extends TeamMembershipWrite> = {
   cancelInvitation: { ok: true };
   removeMember: { ok: true };
   leave: { ok: true };
+  setProjectAccess: { ok: true };
   acceptInvitation: JoinedTeam;
 }[Request["op"]];

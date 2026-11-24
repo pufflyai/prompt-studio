@@ -1,4 +1,4 @@
-import { identitySchema, startProjectDeletionSchema, teamInviteRecipientSchema, teamInviteSecretSchema } from "pstdio-sync-contracts";
+import { startProjectDeletionSchema, teamInviteRecipientSchema, teamInviteSecretSchema, teamProjectGrantSchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import { AccountFeatureDenied } from "./account-features";
 import type { createManagerAuthentication } from "./manager-authentication";
@@ -133,9 +133,7 @@ const teamProjectAccessRoute = async (devices: Authentication["devices"], reques
   const teamId = decodeURIComponent(operation[1]);
   if (request.method === "GET" && !operation[2]) return json(await devices.projectAccess(token, teamId));
   if (request.method !== "POST" || !operation[2]) return null;
-  const { userId, granted } = z
-    .strictObject({ userId: identitySchema, granted: z.boolean() })
-    .parse(await request.json());
+  const { userId, granted } = teamProjectGrantSchema.parse(await request.json());
   const updated = await devices.updateProjectAccess(token, teamId, decodeURIComponent(operation[2]), userId, granted);
   return updated ? json({ ok: true }) : json({ error: "Unknown workbench" }, 404);
 };

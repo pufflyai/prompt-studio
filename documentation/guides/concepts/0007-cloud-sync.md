@@ -92,4 +92,12 @@ Open the link, check the signed-in address and team name, and select **Join team
 
 An owner can remove a member, and a member can leave. The sole owner needs to transfer ownership before leaving. A removed member needs a fresh invitation to rejoin.
 
+## Share a team project
+
+A team owner can open **Project access** in Cloud settings for the owning team. Choose a project and grant access to the people who should edit it. A team member sees only projects shared with them. If an owner removes their own grant, they can still manage grants and can explicitly grant their access again.
+
+Revoking project access stops new keys and access renewals. The previously issued access lasts until its expiry. Remaining devices fetch fresh keys before resuming sync with a new lease. Everyone keeps material previously downloaded. Device management, command access and personal sessions stay with their signed-in user.
+
+Leaving a team or removing a member revokes that person's grants for every team project and keeps the projects available to the other members.
+
 *Updated at: 2026-11-24*
