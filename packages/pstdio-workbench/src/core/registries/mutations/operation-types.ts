@@ -27,6 +27,10 @@ export interface OperationInput<T> {
   releaseOnDiscard?: boolean;
   showPending?: true;
   onDiscard?(): void;
+  /** Preserve a submitted draft without dispatching its write. */
+  unsentError?: Error;
+  /** Retain only edits that differ from an already reconciled write. */
+  retainedAfterReconcile?(draft: unknown): { draft: unknown; error: Error } | undefined;
   write(signal: AbortSignal): T | Promise<T>;
   reconcile?(result: T, signal: AbortSignal): void | Promise<void>;
   onReconciled?(): void;

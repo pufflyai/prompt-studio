@@ -18,7 +18,7 @@ export const useOperationActivity = (workbench: WorkbenchCore) => {
     pending: snapshot.pending.filter(
       (entry) => entry.showPending && visible(entry) && entry.status !== "unknown" && entry.status !== "unconfirmed",
     ),
-    recovery: snapshot.recovery.filter(visible),
+    recovery: snapshot.recovery,
   };
 };
 
@@ -33,6 +33,14 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
   const { workbench, entry } = props;
   const { id, sourceCommand, draft, status } = entry;
   const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
+  const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
+  const sourceIsCurrent = entry.projectId === undefined || entry.projectId === projectId;
+  const currentRecovery = () => operations.getSnapshot().recovery.find((item) => item.id === id);
+  const sourceIsStillCurrent = () =>
+    Boolean(
+      currentRecovery() &&
+        (entry.projectId === undefined || entry.projectId === workbench.pages.store.getState().projectId),
+    );
   const target = `system-errors.operation.${id.description ?? "recovery"}`;
   const report = (title: string) => workbench.notifications.captureActionError(title, target);
   const discard = () => {
@@ -43,8 +51,8 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
     }
   };
   const download = (file: File) => {
-    const current = operations.getSnapshot().recovery.find((entry) => entry.id === id);
-    if (!current?.files?.includes(file) || current.projectId !== workbench.pages.store.getState().projectId) return;
+    const current = currentRecovery();
+    if (!current?.files?.includes(file)) return;
     const url = URL.createObjectURL(file);
     const link = document.createElement("a");
     link.href = url;
@@ -55,6 +63,7 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
   const failure = entry.error instanceof Error ? entry.error.message : "The change could not be confirmed.";
   const message = status === "unknown" ? (entry.description ?? "The result could not be confirmed.") : failure;
   const canInspect =
+    sourceIsCurrent &&
     status === "unknown" &&
     (entry.domain === "resource.create" ||
       entry.domain === extensionCommandOperation ||
@@ -69,14 +78,15 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
     >
       <Text>{message}</Text>
       <HStack gap="xs" wrap="wrap">
-        {sourceCommand ? (
+        {sourceCommand && sourceIsCurrent ? (
           <Button
             size="2xs"
-            onClick={() =>
+            onClick={() => {
+              if (!sourceIsStillCurrent()) return;
               void workbench.commands
                 .executeCommand(sourceCommand.id, sourceCommand.args)
-                .catch(report("Return to source"))
-            }
+                .catch(report("Return to source"));
+            }}
           >
             Return to source
           </Button>
@@ -84,18 +94,24 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
         {canInspect && (
           <Button
             size="2xs"
-            onClick={() =>
+            onClick={() => {
+              if (!sourceIsStillCurrent()) return;
               workbench.commandPalette.open({
                 view: "main",
                 initialQuery: entry.domain === "resource.presentation" ? entry.source?.label : undefined,
-              })
-            }
+              });
+            }}
           >
             Inspect resources
           </Button>
         )}
-        {entry.canCheck ? (
-          <Button size="2xs" onClick={() => void operations.check(id)}>
+        {entry.canCheck && sourceIsCurrent ? (
+          <Button
+            size="2xs"
+            onClick={() => {
+              if (sourceIsStillCurrent()) void operations.check(id);
+            }}
+          >
             Check again
           </Button>
         ) : null}
@@ -105,7 +121,11 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
               size="2xs"
               onClick={() => {
                 void Promise.resolve()
-                  .then(() => navigator.clipboard.writeText(typeof draft === "string" ? draft : JSON.stringify(draft)))
+                  .then(() => {
+                    const value = currentRecovery()?.draft;
+                    if (value !== undefined)
+                      return navigator.clipboard.writeText(typeof value === "string" ? value : JSON.stringify(value));
+                  })
                   .catch(report("Copy draft"));
               }}
             >

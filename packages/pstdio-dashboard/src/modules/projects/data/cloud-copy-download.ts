@@ -18,7 +18,9 @@ export const getCloudCopyDownloads = createRuntimeState((owner) => {
   const state = (id: string) => {
     const { pending, recovery } = operations.getSnapshot();
     const active = pending.find((entry) => entry.domain === domain && entry.projectId === id);
-    const failure = active && recovery.find((entry) => entry.id === active.id);
+    const failure = recovery.find(
+      (entry) => entry.domain === domain && entry.projectId === id && entry.status !== "rejected",
+    );
     return { active, failure };
   };
 
@@ -27,12 +29,15 @@ export const getCloudCopyDownloads = createRuntimeState((owner) => {
     snapshot: operations.getSnapshot,
     subscribe: operations.subscribe,
     check: operations.check,
+    discard(id: string, attempt: symbol) {
+      if (state(id).failure?.id === attempt) operations.discard(attempt);
+    },
     async start(id: string, name: string, expected: ProjectCopyAccount) {
       const authority = getDashboardScopedQueries(owner).getScope();
       if (authority.accountId !== expected.accountId || authority.accountOrigin !== expected.managerOrigin)
         throw new Error("The active Cloud account changed. Choose the project again.");
       const subject = cloudProjectCopySubject(id);
-      if (operations.getSnapshot().pending.some((entry) => entry.subjects.includes(subject)))
+      if (state(id).failure || operations.getSnapshot().pending.some((entry) => entry.subjects.includes(subject)))
         throw new Error("This project already has a pending Cloud change.");
       const login = getDashboardAccountStatusQuery(owner).getSnapshot().data?.login;
       const queryKey = cloudCatalogKeyFor(expected.managerOrigin, expected.accountId, login?.deviceId);
@@ -52,6 +57,7 @@ export const getCloudCopyDownloads = createRuntimeState((owner) => {
         sourceCommand: { id: dashboardCommandIds.openProjects },
         title: `Download ${name}`,
         draft: { projectId: id, name },
+        releaseOnDiscard: true,
         classify: classifyApiWrite,
         write: (signal) => api.downloadCloudProject(id, { signal, expected }),
         async reconcile(receipt, signal) {
@@ -68,7 +74,7 @@ export const getCloudCopyDownloads = createRuntimeState((owner) => {
         },
         async check(signal) {
           const { project } = await observe(signal);
-          if (project?.presence === "downloaded")
+          if (project?.presence === "downloaded" || project?.presence === "downloading")
             return { status: "confirmed", result: { projectId: id, presence: project.presence } };
           if (project?.downloadError) return { status: "rejected", error: new Error(project.downloadError) };
           return { status: "unknown" };

@@ -129,7 +129,8 @@ export const createExtensionActions = (tracker?: InventoryTracker) => {
               source: options.source,
               sourceCommand: { id: dashboardCommandIds.openExtensions },
               draft: options.draft,
-              releaseOnDiscard: id.startsWith(marketplaceActionPrefix) || id === "$folder",
+              releaseOnDiscard: true,
+              onDiscard: () => dismiss(id),
               classify: classifyApiWrite,
               write: async (signal) => {
                 signal.throwIfAborted();

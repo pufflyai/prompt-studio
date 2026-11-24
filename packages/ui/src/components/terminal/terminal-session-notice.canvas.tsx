@@ -1,3 +1,4 @@
+import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { TerminalSessionNotice } from "./terminal-session-notice";
 
@@ -5,9 +6,9 @@ const meta = {
   title: "Design system/Components/Media/Terminal session feedback",
   component: TerminalSessionNotice,
   render: (args) => (
-    <div style={{ position: "relative", width: "min(720px, 90vw)", height: "320px", background: "#1e1e1e" }}>
-      <TerminalSessionNotice {...args} color="#d4d4d4" />
-    </div>
+    <Box position="relative" width="full" maxWidth="2xl" height="xs" bg="bg.subtle">
+      <TerminalSessionNotice {...args} />
+    </Box>
   ),
 } satisfies CanvasMeta<typeof TerminalSessionNotice>;
 export default meta;

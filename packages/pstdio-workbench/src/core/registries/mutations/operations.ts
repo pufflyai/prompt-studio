@@ -14,9 +14,11 @@ import type { OperationFailure, OperationInput, OperationPreview, OperationRead 
 const operationLimit = 128;
 
 export class OperationCapacityError extends Error {
-  constructor() {
+  constructor(otherAuthority = false) {
     super(
-      "The workbench is holding its limit of pending changes and drafts. Finish a change or recover a draft to free space.",
+      otherAuthority
+        ? "The workbench is holding its limit of pending changes and drafts. Free space in System activity, or switch to the account that owns the other drafts."
+        : "The workbench is holding its limit of pending changes and drafts. Finish a change or recover a draft to free space.",
     );
     this.name = "OperationCapacityError";
   }
@@ -69,9 +71,31 @@ const createRejectionReconciler = (
 };
 
 const discardEntry = (entry: Entry, clearDraft: (entry: Entry) => void) => {
-  entry.onDiscard?.();
+  if (!entry.controller.signal.aborted) entry.onDiscard?.();
   entry.onDiscard = undefined;
   clearDraft(entry);
+};
+
+const settleReconciledDraft = (
+  entry: Entry,
+  retain: OperationInput<unknown>["retainedAfterReconcile"],
+  complete: (entry: Entry) => void,
+  changed: () => void,
+) => {
+  const newer = retain?.(entry.draft);
+  if (!newer) return complete(entry);
+  changeStatus(entry, "rejected");
+  entry.draft = newer.draft;
+  entry.error = newer.error;
+  changed();
+};
+
+const retainUnsentEntry = (entry: Entry, error: Error) => {
+  entry.execute = undefined;
+  entry.check = undefined;
+  changeStatus(entry, "rejected");
+  entry.error = error;
+  entry.reject(error);
 };
 
 const createWorkbenchOperations = (queries: ScopedQueryClient) => {
@@ -107,18 +131,20 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
     });
   };
 
-  const finish = (entry: Entry) => {
-    entries.delete(entry.preview.id);
+  const changed = () => {
     publish();
     schedule();
+  };
+  const finish = (entry: Entry) => {
+    entries.delete(entry.preview.id);
+    changed();
   };
 
   const fail = (entry: Entry, error: unknown, status: OperationFailure | "unconfirmed") => {
     changeStatus(entry, status);
     entry.error = error;
     entry.reject(error);
-    publish();
-    schedule();
+    changed();
   };
 
   queries.subscribeScopeRetirement((retired) => {
@@ -141,7 +167,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
   };
 
   const clearDraft = (entry: Entry) => {
-    if (entry.preview.status === "rejected" || entry.releaseOnDiscard) {
+    if (entry.controller.signal.aborted || entry.preview.status === "rejected" || entry.releaseOnDiscard) {
       finish(entry);
     } else {
       entry.draft = undefined;
@@ -168,7 +194,8 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
     },
     submit<T>(input: OperationInput<T>) {
       if (queries.isDisposed()) throw retiredError();
-      if (entries.size >= operationLimit) throw new OperationCapacityError();
+      if (entries.size >= operationLimit)
+        throw new OperationCapacityError([...entries.values()].some((entry) => entry.owner !== owner));
       if (input.subjects.length === 0) throw new Error("An operation needs at least one subject.");
       const id = Symbol(`${input.domain}.${++nextId}`);
       const result = Promise.withResolvers<T>();
@@ -205,7 +232,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
           return fail(entry, error, "unconfirmed");
         }
         if (signal.aborted) return;
-        finish(entry);
+        settleReconciledDraft(entry, input.retainedAfterReconcile, finish, changed);
         result.resolve(value);
         input.onReconciled?.();
       };
@@ -251,8 +278,8 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
         await reconcile(value);
       };
       entries.set(id, entry);
-      publish();
-      schedule();
+      if (input.unsentError) retainUnsentEntry(entry, input.unsentError);
+      changed();
       return {
         id,
         result: result.promise,

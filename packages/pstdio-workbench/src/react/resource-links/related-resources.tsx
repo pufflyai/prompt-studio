@@ -20,10 +20,13 @@ const RelatedResourceListRow = (props: {
   onRemove(source: ResourceRef, target: ResourceRef): Promise<void>;
 }) => {
   const {
-    row: { edge, candidate, incoming },
+    row: { edge, candidate, incoming, pending },
     onOpen,
     onRemove,
   } = props;
+  const pendingLabel = pending === "unconfirmed" ? "Unconfirmed" : "Linking…";
+  const state = pending ? pendingLabel : undefined;
+  const availability = state ?? (candidate.open ? undefined : "Unavailable");
   return (
     <ListRow
       label={
@@ -31,7 +34,9 @@ const RelatedResourceListRow = (props: {
         candidate.resource.shorthand ??
         `${candidate.resource.type}: ${candidate.resource.id}`
       }
-      description={`${incoming ? "Incoming" : "Outgoing"} · ${edge.target.role ?? "context"}${candidate.open ? "" : " · Unavailable"}`}
+      description={[incoming ? "Incoming" : "Outgoing", edge.target.role ?? "context", availability]
+        .filter(Boolean)
+        .join(" · ")}
       tooltip={`${candidate.resource.extensionId ?? "pstdio"} · ${candidate.resource.type}: ${candidate.resource.id}`}
       icon={<WorkbenchIcon name={candidate.resource.icon ?? "file-text"} />}
       onActivate={
@@ -42,28 +47,32 @@ const RelatedResourceListRow = (props: {
           : undefined
       }
       actionsVisibility="always"
-      actions={[
-        {
-          id: "resource-actions",
-          label: "Link actions",
-          icon: <WorkbenchIcon name="ellipsis" />,
-          menuItems: [
-            {
-              id: "open",
-              label: "Open resource",
-              icon: <WorkbenchIcon name="arrow-up-right" />,
-              disabled: !candidate.open,
-              onAction: () => void onOpen(candidate),
-            },
-            {
-              id: "remove",
-              label: "Remove link",
-              icon: <WorkbenchIcon name="unlink" />,
-              onAction: () => void onRemove(edge.source, edge.target),
-            },
-          ],
-        },
-      ]}
+      actions={
+        pending
+          ? []
+          : [
+              {
+                id: "resource-actions",
+                label: "Link actions",
+                icon: <WorkbenchIcon name="ellipsis" />,
+                menuItems: [
+                  {
+                    id: "open",
+                    label: "Open resource",
+                    icon: <WorkbenchIcon name="arrow-up-right" />,
+                    disabled: !candidate.open,
+                    onAction: () => void onOpen(candidate),
+                  },
+                  {
+                    id: "remove",
+                    label: "Remove link",
+                    icon: <WorkbenchIcon name="unlink" />,
+                    onAction: () => void onRemove(edge.source, edge.target),
+                  },
+                ],
+              },
+            ]
+      }
     />
   );
 };
@@ -133,11 +142,11 @@ export const RelatedResources = (props: RelatedResourcesProps) => {
     if (adding.current) return;
     adding.current = true;
     setBusy(true);
+    setCursor(undefined);
     try {
       await update(async () => {
         await service.add(resource, [{ ...candidate.resource, role }]);
         setPicker(false);
-        setCursor(undefined);
       });
     } finally {
       adding.current = false;
@@ -184,6 +193,20 @@ export const RelatedResources = (props: RelatedResourcesProps) => {
           />
           {failure ? <AlertMessage status="error" title={failure} /> : null}
           <ResourceLinkProgress pending={pending} unconfirmed={unconfirmed} />
+          {rows.some((row) => row.pending) ? (
+            <ScrollArea maxH="40" aria-label="Pending links">
+              {rows
+                .filter((row) => row.pending)
+                .map((row) => (
+                  <RelatedResourceListRow
+                    key={JSON.stringify([resourceKey(row.edge.source), resourceKey(row.edge.target)])}
+                    row={row}
+                    onOpen={open}
+                    onRemove={remove}
+                  />
+                ))}
+            </ScrollArea>
+          ) : null}
           {picker ? (
             <ResourceLinkPicker
               service={service}
@@ -205,14 +228,16 @@ export const RelatedResources = (props: RelatedResourcesProps) => {
                 </Text>
               ) : null}
               <ScrollArea maxH="80">
-                {rows.map((row) => (
-                  <RelatedResourceListRow
-                    key={JSON.stringify([resourceKey(row.edge.source), resourceKey(row.edge.target)])}
-                    row={row}
-                    onOpen={open}
-                    onRemove={remove}
-                  />
-                ))}
+                {rows
+                  .filter((row) => !row.pending)
+                  .map((row) => (
+                    <RelatedResourceListRow
+                      key={JSON.stringify([resourceKey(row.edge.source), resourceKey(row.edge.target)])}
+                      row={row}
+                      onOpen={open}
+                      onRemove={remove}
+                    />
+                  ))}
               </ScrollArea>
               <ResourceLinkPagination cursor={cursor} nextCursor={nextCursor} loading={loading} onChange={setCursor} />
             </>

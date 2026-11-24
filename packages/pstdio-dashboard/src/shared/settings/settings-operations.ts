@@ -85,6 +85,7 @@ export const createSettingsOperations = (input: SettingsOperationInput) => {
         sourceCommand,
         intent: patch,
         draft: patch,
+        releaseOnDiscard: true,
         write: (signal) => input.update(patch, signal),
         async reconcile(_saved, signal) {
           const before = input.read();

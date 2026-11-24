@@ -84,7 +84,7 @@ export const useFileRendererBinding = (input: {
     const read = workbench.views.reads.bind(ownerKey);
     let controller: FileEditController | null = null;
     let stopObservingSave: (() => void) | undefined;
-    let retainDraftOnClose: (() => void) | undefined;
+    let retainDraft: (() => void) | undefined;
     setError(null);
     // A recently viewed document mounts immediately from the cache; the load
     // below reconciles it (unchanged content keeps the editor mounted).
@@ -129,6 +129,7 @@ export const useFileRendererBinding = (input: {
           saveOwner: queries,
           load: () => load(),
           onStateChange: (state) => {
+            retainDraft?.();
             if (cancelled) return;
             setEditState(state);
             if (state.saveUnconfirmed && !stopObservingSave) {
@@ -161,12 +162,16 @@ export const useFileRendererBinding = (input: {
             loadKey: cacheKey,
             readBaseline: () => baseline,
             available: () => !removed && !retired,
+            detached: () => cancelled || retired || removed,
             retainDraft(submitted, updateDraft) {
-              retainDraftOnClose = () => {
-                const draft = controller?.getDraft();
-                if (draft !== undefined && draft !== submitted) updateDraft({ submitted, draft });
+              let retained = submitted;
+              retainDraft = () => {
+                const draft = controller?.getDraft() ?? submitted;
+                if (draft === retained) return;
+                retained = draft;
+                updateDraft(draft === submitted ? submitted : { submitted, draft });
               };
-              if (cancelled) retainDraftOnClose();
+              retainDraft();
             },
             accept(receipt) {
               baseline = receipt.content;
@@ -195,7 +200,7 @@ export const useFileRendererBinding = (input: {
     });
     return () => {
       cancelled = true;
-      retainDraftOnClose?.();
+      retainDraft?.();
       read.dispose();
       stopRetirement();
       stopObservingSave?.();

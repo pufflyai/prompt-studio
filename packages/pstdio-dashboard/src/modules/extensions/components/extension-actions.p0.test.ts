@@ -190,3 +190,38 @@ test("uncertain installs remain blocked across views and dismissal until the dra
   expect(writes).toBe(2);
   queries.dispose();
 });
+
+test.each([
+  "toggle",
+  "upgrade",
+] as const)("discard releases an uncertain installed extension %s without replaying it", async (operation) => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
+  const operations = getWorkbenchOperations(queries);
+  const owner = createExtensionActions({ projectId: "project", operations });
+  const key = "notes-instance";
+  let writes = 0;
+  const submit = () =>
+    owner.run(
+      key,
+      labels,
+      async () => {
+        if (++writes === 1) throw new PstdioConnectionError(new Error("Response lost"));
+      },
+      { ...(operation === "toggle" ? { operation } : {}), draft: { id: key, operation } },
+    );
+  try {
+    expect(await submit()).toBe(false);
+    const entry = operations.getSnapshot().recovery[0]!;
+    expect(owner.getSnapshot().actions[key]).toMatchObject({ retryable: false });
+    owner.dismiss(key);
+    expect(await submit()).toBe(false);
+    operations.discard(entry.id);
+    expect(operations.getSnapshot().recovery).toEqual([]);
+    expect(owner.getSnapshot().actions[key]).toBeUndefined();
+    expect(writes).toBe(1);
+    expect(await submit()).toBe(true);
+    expect(writes).toBe(2);
+  } finally {
+    queries.dispose();
+  }
+});

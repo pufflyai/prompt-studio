@@ -6,6 +6,7 @@ export interface RelatedResourceRow {
   edge: ResourceAnchorPage["items"][number];
   candidate: ResourceLinkCandidate;
   incoming: boolean;
+  pending?: "pending" | "unconfirmed";
 }
 
 const noChanges: readonly ResourceLinkChangePreview[] = [];
@@ -15,24 +16,53 @@ const subscribeToNoChanges = () => () => {};
 const edgeKey = (source: ResourceRef, target: ResourceRef) =>
   JSON.stringify([resourceKey(source), resourceKey(target)]);
 
-export const projectResourceLinkRows = (rows: RelatedResourceRow[], changes: readonly ResourceLinkChangePreview[]) => {
-  if (!changes.length) return rows;
-  const pending = new Map<string, { role: ResourceAnchorPage["items"][number]["target"]["role"] } | null>();
-  for (const { change } of changes) {
+type PendingLink = { edge: RelatedResourceRow["edge"]; status: NonNullable<RelatedResourceRow["pending"]> };
+
+const indexPendingLinks = (changes: readonly ResourceLinkChangePreview[]) => {
+  const pending = new Map<string, PendingLink | null>();
+  for (const { change, status } of changes) {
+    if (status === "rejected") continue;
     if (change.kind === "remove") {
       for (const target of change.targets) pending.set(edgeKey(change.source, target), null);
     } else {
-      for (const target of change.targets) pending.set(edgeKey(change.source, target), { role: target.role });
+      for (const target of change.targets)
+        pending.set(edgeKey(change.source, target), {
+          edge: { source: change.source, target },
+          status: status === "unknown" || status === "unconfirmed" ? "unconfirmed" : "pending",
+        });
     }
   }
+  return pending;
+};
 
-  return rows.flatMap((row) => {
-    const operation = pending.get(edgeKey(row.edge.source, row.edge.target));
+export const projectResourceLinkRows = (
+  rows: RelatedResourceRow[],
+  changes: readonly ResourceLinkChangePreview[],
+  resource?: ResourceRef,
+) => {
+  if (!changes.length) return rows;
+  const pending = indexPendingLinks(changes);
+  const projected = rows.flatMap((row) => {
+    const key = edgeKey(row.edge.source, row.edge.target);
+    const operation = pending.get(key);
+    pending.delete(key);
     if (operation === undefined) return [row];
     if (operation === null) return [];
-    const target = { ...row.edge.target, role: operation.role };
+    const target = { ...row.edge.target, role: operation.edge.target.role };
     return [{ ...row, edge: { ...row.edge, target } }];
   });
+  if (!resource) return projected;
+  const resourceId = resourceKey(resource);
+  let additions = 0;
+  for (const operation of pending.values()) {
+    if (!operation) continue;
+    const { edge, status } = operation;
+    const incoming = resourceKey(edge.source) !== resourceId;
+    if (incoming && resourceKey(edge.target) !== resourceId) continue;
+    projected.push({ edge, incoming, pending: status, candidate: { resource: incoming ? edge.source : edge.target } });
+    if (++additions === 25) break;
+  }
+  return projected;
 };
 
 export const useResourceLinkRows = (service: ResourceLinksService, resource: ResourceRef, cursor?: string) => {
@@ -113,7 +143,7 @@ export const useResourceLinkRows = (service: ResourceLinksService, resource: Res
   }, [resource, service, cursor, revision]);
 
   return {
-    rows: projectResourceLinkRows(rows, changes),
+    rows: projectResourceLinkRows(rows, changes, cursor === undefined ? resource : undefined),
     changes,
     nextCursor,
     loading,

@@ -28,6 +28,8 @@ export const CloudProjectChoice = ({ input }: { input: WorkbenchPanelRenderInput
     showDownload,
     invalidated,
     requestDownload,
+    checkDownload,
+    discardDownload,
   } = useCloudProjectChoice(input);
 
   if (invalidated) return null;
@@ -74,6 +76,16 @@ export const CloudProjectChoice = ({ input }: { input: WorkbenchPanelRenderInput
           <Button ref={backButton} variant="ghost" size="sm" onClick={back}>
             Back
           </Button>
+          {checkDownload ? (
+            <Button size="sm" variant="outline" onClick={() => void checkDownload()}>
+              Check download
+            </Button>
+          ) : null}
+          {discardDownload ? (
+            <Button size="sm" variant="destructive" onClick={discardDownload}>
+              Discard attempt
+            </Button>
+          ) : null}
           {showDownload && (
             <Button size="sm" disabled={!canDownload} loading={downloadPending} onClick={requestDownload}>
               {failure ? "Retry" : "Download"}

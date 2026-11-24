@@ -33,17 +33,17 @@ export const saveWithDocumentRecovery = async (input: {
   read(signal: AbortSignal): Promise<FileSaveReceipt>;
   accept(receipt: FileSaveReceipt, signal: AbortSignal): void;
   retainDraft?(updateDraft: (draft: unknown) => void): void;
+  detached?(): boolean;
 }) => {
   const operations = getWorkbenchOperations(input.queries);
   const subject = fileSubject(input.loadKey);
-  if (
-    operations
-      .getSnapshot()
-      .pending.some(
-        (entry) => entry.subjects.includes(subject) && (entry.status === "unknown" || entry.status === "unconfirmed"),
-      )
-  )
-    throw new UnconfirmedFileSaveError();
+  const blocked = operations
+    .getSnapshot()
+    .pending.some(
+      (entry) => entry.subjects.includes(subject) && (entry.status === "unknown" || entry.status === "unconfirmed"),
+    );
+  const newerText = (draft: unknown) =>
+    draft && typeof draft === "object" && "draft" in draft && typeof draft.draft === "string" ? draft.draft : undefined;
   const attempt = operations.submit<FileSaveReceipt>({
     projectId: input.scope.projectId,
     domain,
@@ -51,6 +51,12 @@ export const saveWithDocumentRecovery = async (input: {
     subjects: [subject],
     source: input.source,
     draft: input.value,
+    unsentError: blocked ? new UnconfirmedFileSaveError() : undefined,
+    retainedAfterReconcile(draft) {
+      const newer = newerText(draft);
+      if (newer !== undefined && input.detached?.() !== false)
+        return { draft: newer, error: new Error("Newer text remains unsaved.") };
+    },
     classify: classifyApiWrite,
     write: input.write,
     async check(signal) {
@@ -68,7 +74,7 @@ export const saveWithDocumentRecovery = async (input: {
       }
     },
   });
-  input.retainDraft?.(attempt.updateDraft);
+  input.retainDraft?.((draft) => attempt.updateDraft(blocked ? (newerText(draft) ?? draft) : draft));
   try {
     return await attempt.result;
   } catch (error) {
@@ -106,6 +112,7 @@ export const prepareFileRendererSave =
     loadKey: string;
     readBaseline(): FileRendererContent | undefined;
     available(): boolean;
+    detached?(): boolean;
     accept(receipt: FileSaveReceipt): void;
     retainDraft?(submitted: string, updateDraft: (draft: unknown) => void): void;
   }) =>
@@ -135,6 +142,7 @@ export const prepareFileRendererSave =
           source: resource,
           title: `Save ${resource?.label ?? baseline?.fileName ?? contribution.title}`,
           value,
+          detached: input.detached,
           retainDraft: (update) => input.retainDraft?.(value, update),
           filePath: baseline?.filePath,
           write: (signal) =>

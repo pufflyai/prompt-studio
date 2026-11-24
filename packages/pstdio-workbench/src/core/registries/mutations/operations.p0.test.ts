@@ -416,3 +416,37 @@ test("capacity preserves all retained drafts and sends no new write", async () =
   expect(operations.getSnapshot().recovery).toHaveLength(128);
   expect(wrote).toBe(false);
 });
+
+test("returning to the owning account can discard a retired project draft and free capacity", async () => {
+  const { queries, operations, subject } = setup();
+  const input = {
+    projectId: "retired-project",
+    subjects: [subject],
+    domain: "test",
+    title: "Change project",
+    draft: "Preserve this draft",
+    write: () => Promise.reject(new Error("Reply lost")),
+  };
+  try {
+    for (let index = 0; index < 128; index++) {
+      const attempt = operations.submit(input);
+      await expect(attempt.result).rejects.toThrow("Reply lost");
+      queries.clearScope({ projectId: input.projectId });
+    }
+    const [original] = operations.getSnapshot().recovery;
+    queries.setAuthority({ accountId: "different" });
+    expect(operations.getSnapshot().recovery).toEqual([]);
+    expect(() => operations.submit(input)).toThrow("switch to the account");
+    operations.discard(original!.id);
+    expect(() => operations.submit(input)).toThrow(OperationCapacityError);
+
+    queries.setAuthority({ accountId: "personal" });
+    expect(operations.getSnapshot().recovery).toHaveLength(128);
+    operations.discard(original!.id);
+    expect(operations.getSnapshot().recovery).toHaveLength(127);
+    queries.setAuthority({ accountId: "different" });
+    await operations.submit({ ...input, write: async () => {} }).result;
+  } finally {
+    queries.dispose();
+  }
+});
