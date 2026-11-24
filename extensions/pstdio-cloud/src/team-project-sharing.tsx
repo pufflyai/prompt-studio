@@ -82,11 +82,10 @@ export const TeamProjectSharing = (props: { accountId: string; login: DeviceLogi
       {!model && !error && <Text role="status">{t("sharing.loading", "Loading project access…")}</Text>}
       {model?.projects.length === 0 && <Text color="fg.muted">{t("teams.noProjects", "No cloud projects yet")}</Text>}
       {!!model?.projects.length && (
-        <NativeSelect.Root size="sm">
+        <NativeSelect.Root size="sm" disabled={busy}>
           <NativeSelect.Field
             aria-label={t("sharing.project", "Team project")}
             value={project?.workbenchId ?? ""}
-            disabled={busy}
             onChange={(event) => setProjectId(event.target.value)}
           >
             <option value="" disabled>
@@ -131,7 +130,7 @@ export const TeamProjectSharing = (props: { accountId: string; login: DeviceLogi
           open
           onClose={() => setConfirmation(undefined)}
           onDelete={() => run({ ...confirmation, granted: false })}
-          title={t("sharing.revokeNamed", "Revoke access for {{name}}", { name: confirmation.member.name })}
+          headline={t("sharing.revokeNamed", "Revoke access for {{name}}", { name: confirmation.member.name })}
           buttonText={t("sharing.revoke", "Revoke access")}
           notificationText={t(
             "sharing.revokeEffect",

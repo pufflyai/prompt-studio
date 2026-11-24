@@ -157,3 +157,72 @@ test("Cloud settings checks the signed-in identity before offering to join a tea
   await expect(settings.getByText("Sign in with the Google account that received this invitation.")).toBeVisible();
   await expect(settings.getByRole("button", { name: "Join team" })).toHaveCount(0);
 });
+
+test("project access changes apply only to the selected team project and member", async ({ page, request }) => {
+  const createdProject = await request.post(`${uiOrigin}/v1/projects`, {
+    data: folderProjectInput({ name: "Local project" }),
+  });
+  expect(createdProject.ok()).toBe(true);
+  const { id } = await createdProject.json();
+  const expected = { accountId: "fixture-owner", managerOrigin: "https://accounts.example.test" };
+  const owner = { userId: expected.accountId, name: "Alex", role: "owner" };
+  const member = { userId: "fixture-member", name: "Morgan", role: "member" };
+  const team = { accountId: "studio", name: "Studio Team", role: "owner", features: { relay: true } };
+  const access = [
+    { workbenchId: "project-a", name: "Project A", userIds: [owner.userId, member.userId] },
+    { workbenchId: "project-b", name: "Project B", userIds: [owner.userId] },
+  ];
+  await page.route("**/v1/account", (route) =>
+    route.fulfill({
+      json: {
+        login: { ...expected, deviceId: "fixture-device", relayOrigin: "https://relay.example.test" },
+        cloudProjects: [],
+        cloudProjectsLoaded: true,
+        features: { relay: true },
+        teamAccounts: [team],
+        teamProjectOwners: {},
+      },
+    }),
+  );
+  await page.route(`**/v1/account/projects/${id}/sync*`, (route) =>
+    route.fulfill({ json: { state: "local", offlineReady: false } }),
+  );
+  await page.route("**/v1/account/devices*", (route) => route.fulfill({ json: [] }));
+  await page.route("**/v1/account/team-membership/read", (route) => {
+    const { request, expected: identity } = route.request().postDataJSON();
+    expect(identity).toEqual(expected);
+    expect(request.accountId).toBe(team.accountId);
+    return route.fulfill({ json: request.op === "projectAccess" ? access : [owner, member] });
+  });
+  await page.route("**/v1/account/team-membership/write", (route) => {
+    expect(route.request().postDataJSON()).toEqual({
+      request: {
+        op: "setProjectAccess",
+        accountId: team.accountId,
+        workbenchId: "project-a",
+        userId: member.userId,
+        granted: false,
+      },
+      expected,
+    });
+    access[0].userIds = [owner.userId];
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+  await page.goto(`/projects/${id}/`);
+  await page.locator("footer").getByRole("button", { name: "Prompt Studio Cloud", exact: true }).click();
+  await page.frameLocator('iframe[title="Cloud details"]').getByRole("button", { name: "Cloud settings" }).click();
+  const settings = page.frameLocator('iframe[title="Cloud"]');
+  await settings.getByRole("button", { name: "Studio Team" }).click();
+  await settings.getByRole("button", { name: "Project access" }).click();
+  const project = settings.getByRole("combobox", { name: "Team project" });
+  await project.selectOption({ label: "Project B" });
+  await expect(settings.getByRole("button", { name: "Grant access to Morgan" })).toBeVisible();
+  await project.selectOption({ label: "Project A" });
+  await settings.getByRole("button", { name: "Revoke access for Morgan" }).click();
+  const confirmation = settings.getByRole("dialog");
+  await expect(confirmation.getByText("Project A", { exact: true })).toBeVisible();
+  await confirmation.getByRole("button", { name: "Revoke access", exact: true }).click();
+  await expect(settings.getByRole("button", { name: "Grant access to Morgan" })).toBeVisible();
+});
