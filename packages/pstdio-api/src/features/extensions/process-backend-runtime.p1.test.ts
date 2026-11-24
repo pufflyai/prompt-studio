@@ -60,6 +60,23 @@ export default {
       },
     },
     {
+      id: "reject-stale",
+      ref: { kind: "command", id: "reject-stale" },
+      title: "Reject stale",
+      run(ctx) {
+        const rejection = ctx.commands.reject({
+          code: "stale_revision",
+          reason: "Version changed",
+          data: { expectedRevision: 1, actualRevision: 2 },
+          cause: { code: "concurrent_save" },
+          error: { message: "Changed", cause: { source: "storage" } },
+          notices: [{ type: "warning", message: "Reload" }],
+          diagnostics: [{ code: "conflict", message: "Revision changed", severity: "warning" }],
+        });
+        throw new Error("Version changed", { cause: rejection });
+      },
+    },
+    {
       id: "read-hooked",
       ref: { kind: "command", id: "read-hooked" },
       title: "Read hooked",
@@ -168,6 +185,21 @@ test("a process-mode command runs in its worker and uses host storage through ct
   expect(value.pid).not.toBe(process.pid);
   expect(value.stored).toEqual({ text: "HELLO" });
   expect(value.id).toBe(handle.deps.extensionStorageService.recordId("project", projectId, "a"));
+});
+
+test("a process-mode command preserves a structured command rejection", async () => {
+  const { outcome } = await execute("reject-stale");
+  expect(outcome).toMatchObject({
+    ok: false,
+    status: "rejected",
+    code: "stale_revision",
+    reason: "Version changed",
+    data: { expectedRevision: 1, actualRevision: 2 },
+    cause: { code: "concurrent_save" },
+    error: { message: "Changed", cause: { source: "storage" } },
+    notices: [{ type: "warning", message: "Reload" }],
+    diagnostics: [{ code: "conflict", message: "Revision changed", severity: "warning" }],
+  });
 });
 
 test("a CPU-bound process-mode command does not block the API", async () => {

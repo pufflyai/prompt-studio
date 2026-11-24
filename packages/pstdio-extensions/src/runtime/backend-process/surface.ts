@@ -1,5 +1,6 @@
 import { createStorageId } from "pstdio-api-contracts";
 import { isNavigationTarget } from "pstdio-api-contracts/extension-kernel";
+import { createCommandRejection } from "../runner/command-rejection";
 
 /**
  * The explicit allowlist of host capabilities a backend worker may reach. The host resolves every
@@ -31,7 +32,7 @@ const middlewareResult = (type: MiddlewareResultType) => {
   if (type === "continue") return () => ({ type });
   if (type === "patchParams" || type === "replaceParams") return (params: unknown) => ({ type, params });
   if (type === "replaceInvocation") return (invocation: unknown) => ({ type, invocation });
-  return (input: Record<string, unknown>) => ({ type, ...input });
+  return createCommandRejection;
 };
 
 const localMember = (surface: Extract<BackendSurface, { kind: "local" }>) => {
@@ -56,6 +57,12 @@ export class SurfaceCallRejectedError extends Error {
 
 const memberOf = (surface: BackendSurface, name: string) =>
   surface.kind === "object" && Object.hasOwn(surface.members, name) ? surface.members[name] : undefined;
+
+export const surfaceAllowsCommandRejection = (surface: BackendSurface) => {
+  const commands = memberOf(surface, "commands");
+  const reject = commands && memberOf(commands, "reject");
+  return reject?.kind === "local" && reject.name === "middlewareResult" && reject.type === "reject";
+};
 
 const methodOf = (target: unknown, name: string, path: SurfaceStep[]) => {
   const method = (target as Record<string, unknown> | null | undefined)?.[name];

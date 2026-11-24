@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createCommandRejection } from "../runner/command-rejection";
 import {
   BACKEND_PROTOCOL_VERSION,
   deserializeBackendError,
@@ -11,7 +12,12 @@ import {
   serializeBackendError,
   type WorkerToHostMessage,
 } from "./protocol";
-import { type BackendSurface, collectSurfaceValues, resolveSurfaceCall } from "./surface";
+import {
+  type BackendSurface,
+  collectSurfaceValues,
+  resolveSurfaceCall,
+  surfaceAllowsCommandRejection,
+} from "./surface";
 
 /** Raised to every caller waiting on a worker that exited or was retired. Never replayed. */
 export class BackendUnavailableError extends Error {
@@ -115,8 +121,15 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
   const settle = (message: Extract<WorkerToHostMessage, { type: "result" }>) => {
     const running = invocations.get(message.invocationId);
     invocations.delete(message.invocationId);
-    if (message.ok) running?.settle.resolve(message.value);
-    else running?.settle.reject(workerError(message.error));
+    if (!running) return;
+    if (message.ok) {
+      running.settle.resolve(message.value);
+      return;
+    }
+    const error = workerError(message.error);
+    if (message.rejection && surfaceAllowsCommandRejection(running.surface))
+      error.cause = createCommandRejection(message.rejection);
+    running.settle.reject(error);
   };
 
   const relay = (message: Extract<WorkerToHostMessage, { type: "notify" }>) => {
