@@ -79,6 +79,18 @@ export default {
       },
     },
     {
+      id: "fire-extension",
+      ref: { kind: "command", id: "fire-extension" },
+      title: "Fire for extension lifetime",
+      async run(ctx, params) {
+        const fixture = globalThis.__lateProvider;
+        const child = ctx.process.spawn({ ...params, lifetime: "extension" });
+        fixture.observe(child.started);
+        await fixture.dispatched;
+        return "returned";
+      },
+    },
+    {
       id: "keep",
       ref: { kind: "command", id: "keep" },
       title: "Keep",
@@ -311,6 +323,10 @@ test.each([
   "owner",
 ] as const)("a late remote child keeps its failing cleanup available to the %s", async (retryThrough) => {
   const owner = createProcessOwner();
+  let drained = false;
+  void owner.drained.then(() => {
+    drained = true;
+  });
   const entered = Promise.withResolvers<void>();
   const reply = Promise.withResolvers<ProcessHandle>();
   const stopping = Promise.withResolvers<void>();
@@ -346,6 +362,7 @@ test.each([
     await entered.promise;
     const firstClose = await Promise.race([owner.close().then(() => "closed"), Bun.sleep(300).then(() => "hung")]);
     expect(firstClose).toBe("closed");
+    expect(drained).toBe(false);
     await expect(child.started).rejects.toMatchObject({ code: "process_owner_closed" });
     expect(await child.exited).toEqual({ code: null, signal: null });
     expect(stops).toBe(0);
@@ -365,6 +382,7 @@ test.each([
     await expect(remote.exited).resolves.toEqual({ code: null, signal: "SIGKILL" });
     expect(fixture.spawns).toBe(1);
     expect(stops).toBe(2);
+    await owner.drained;
   } finally {
     reply.resolve(remote);
     rejectStop.resolve();
@@ -431,10 +449,62 @@ test("an extension-owned child survives its command and unchanged catalog rebuil
   expect(await waitFor(() => !pids.some(alive))).toBe(true);
 });
 
-test("shutdown stops extension-owned children", async () => {
+test("shutdown stops extension-owned children and retries late cleanup after disable", async () => {
   const pids = await keep(projects.other, join(root, "kept-other"));
   expect(pids.every(alive)).toBe(true);
-  closed = true;
-  await handle.close();
-  expect(await waitFor(() => !pids.some(alive))).toBe(true);
+  await handle.deps.extensionService.setProjectExtensionEnabled(instanceId, true);
+  const dispatched = Promise.withResolvers<void>();
+  const reply = Promise.withResolvers<ProcessHandle>();
+  const cancelled = Promise.withResolvers<string>();
+  const exited = Promise.withResolvers<ProcessExit>();
+  const fixture = {
+    entered: dispatched.resolve,
+    dispatched: dispatched.promise,
+    reply: reply.promise,
+    spawns: 0,
+    observe(started: Promise<void>) {
+      void started.then(
+        () => cancelled.resolve("started"),
+        (error) => cancelled.resolve(error.code),
+      );
+    },
+  };
+  const context = globalThis as typeof globalThis & { __lateProvider?: typeof fixture };
+  context.__lateProvider = fixture;
+  let stops = 0;
+  const remote: ProcessHandle = {
+    id: "late-extension-child",
+    started: Promise.resolve(),
+    exited: exited.promise,
+    write: async () => {},
+    end: async () => {},
+    async kill() {
+      if (++stops === 1) throw new Error("The fixture could not stop the remote child yet.");
+      exited.resolve({ code: null, signal: "SIGKILL" });
+    },
+    events: async function* () {},
+  };
+  try {
+    const outcome = await execute(projects.main, "fire-extension", {
+      command: ["agent"],
+      workspaceId: workspaces.late,
+    });
+    expect(outcome).toMatchObject({ ok: true, value: "returned" });
+    await handle.deps.extensionService.setProjectExtensionEnabled(instanceId, false);
+    expect(await Promise.race([cancelled.promise, Bun.sleep(3_000).then(() => "hung")])).toBe("process_owner_closed");
+    expect(stops).toBe(0);
+
+    reply.resolve(remote);
+    expect(await waitFor(() => stops === 1, 1_000)).toBe(true);
+    closed = true;
+    await handle.close();
+    expect(stops).toBe(2);
+    expect(fixture.spawns).toBe(1);
+    expect(await exited.promise).toEqual({ code: null, signal: "SIGKILL" });
+    expect(await waitFor(() => !pids.some(alive))).toBe(true);
+  } finally {
+    reply.resolve(remote);
+    exited.resolve({ code: null, signal: null });
+    delete context.__lateProvider;
+  }
 });
