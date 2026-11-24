@@ -13,6 +13,7 @@ interface FormProps {
   draft?: Draft;
   submissionStatus?: Draft["submissionStatus"];
   draftRevision?: string;
+  draftError?: string;
   canDiscardSubmission: boolean;
   onSubmit: (values: Record<string, unknown>, expectedRevision: string) => Promise<void>;
   onClose: () => void;
@@ -35,6 +36,7 @@ export function BookForm(props: FormProps) {
     submissionStatus,
     canDiscardSubmission,
     draftRevision,
+    draftError,
     onSubmit,
     onClose,
     onSaveDraft,
@@ -201,9 +203,9 @@ export function BookForm(props: FormProps) {
                       {submissionMessage[submissionStatus]}
                     </Text>
                   ) : null}
-                  {error && (
+                  {(error || draftError) && (
                     <Text role="alert" color="fg.error" textStyle="paragraph/S/regular">
-                      {error}
+                      {error || draftError}
                     </Text>
                   )}
                 </Stack>

@@ -36,30 +36,44 @@ export function AuthoringForm(props: Props) {
   const activeEditing = useRef<WebviewCommandEditingSession<DraftSnapshot> | undefined>(undefined);
   const [restored, setRestored] = useState<Draft>();
   const [revision, setRevision] = useState<string>();
+  const [draftError, setDraftError] = useState<string>();
   useEffect(() => {
     let active = true;
+    let unsubscribe: (() => void) | undefined;
+    setRevision(undefined);
+    setRestored(undefined);
+    setDraftError(undefined);
     const opening = openDraftEditing(client, workspaceId, draftChapter);
     editing.current = opening;
     void opening
       .then((session) => {
         if (!active) return;
         activeEditing.current = session;
-        const snapshot = session.getSnapshot();
-        setRevision(snapshot.value.revision);
-        if (snapshot.pendingCommands || snapshot.hasDrafts || snapshot.error)
+        const hydrate = () => {
+          const snapshot = session.getSnapshot();
+          if (!active || snapshot.retired) return;
+          const draftRevision = snapshot.value.draftBase ?? snapshot.value.revision;
           setRestored({
             id: `${workspaceId}-${draftChapter}`,
             workspaceId,
             chapter: draftChapter,
             values: JSON.parse(snapshot.value.draft),
-            revision: snapshot.value.draftBase ?? snapshot.value.revision,
+            revision: draftRevision,
           });
+          if (snapshot.pendingCommands && !snapshot.error) return;
+          setRevision(draftRevision);
+          setDraftError(snapshot.error?.message);
+          unsubscribe?.();
+        };
+        unsubscribe = session.subscribe(hydrate);
+        hydrate();
       })
       .catch(() => {
         if (editing.current === opening) editing.current = undefined;
       });
     return () => {
       active = false;
+      unsubscribe?.();
       const previous = editing.current;
       activeEditing.current = undefined;
       editing.current = undefined;
@@ -76,6 +90,7 @@ export function AuthoringForm(props: Props) {
     activeEditing.current = session;
     const savedRevision = await client.saveDraft(session.id, JSON.stringify(values), expectedRevision);
     setRevision(savedRevision);
+    setDraftError(undefined);
     onDraftSaved({
       id: `${workspaceId}-${draftChapter}`,
       workspaceId,
@@ -111,6 +126,7 @@ export function AuthoringForm(props: Props) {
       submitLabel={mode === "rule" ? "Create suggestion" : "Create"}
       draft={draft?.submissionId ? draft : (restored ?? draft)}
       submissionStatus={draft?.submissionStatus}
+      draftError={draftError}
       draftRevision={
         revision === undefined ? undefined : ((draft?.submissionId ? draft : (restored ?? draft))?.revision ?? revision)
       }
