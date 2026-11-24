@@ -7,7 +7,7 @@ import { publishSessionContent } from "./session-content-publications";
 import { persistSessionMessages } from "./session-messages";
 import { withSchedulingLock } from "./session-scheduler-internals";
 import type { ActiveSession } from "./session-store";
-import { submittedMessageSender } from "./submitted-message-sender";
+import { submittedMessageSender } from "./submitted-message-identity";
 
 export type SteeringQueueEntry = NonNullable<
   Awaited<ReturnType<SessionsRouteDeps["sessionQueueEntriesService"]["get"]>>

@@ -1,8 +1,9 @@
 import type { SessionsRouteDeps } from "./deps";
+import { recoverMessageSenders } from "./recover-message-senders";
 import { getSessionHistory } from "./session-history";
 import { persistSessionMessages } from "./session-messages";
 import { type ExistingSession, type PendingQueueEntry, withSchedulingLock } from "./session-scheduler-internals";
-import { submittedRequestId } from "./submitted-message-sender";
+import { submittedRequestId } from "./submitted-message-identity";
 
 // A sender-bearing request can outlive launch while its first checkpoint is pending.
 // Positive native/checkpoint evidence retires that guard; it must never start the prompt again.
@@ -12,7 +13,7 @@ export const recoverDispatchSender = async (
   entry: PendingQueueEntry,
 ) => {
   if (!entry.sender_json || entry.sender_json.afterTurn === undefined) return false;
-  const messages = await getSessionHistory(session.id, deps);
+  const messages = recoverMessageSenders(await getSessionHistory(session.id, deps), [entry]);
   const requestId = submittedRequestId(session.id, entry.queue_position);
   if (!messages.some((message) => message.role === "user" && message.sender?.requestId === requestId)) return true;
   return withSchedulingLock(async () => {

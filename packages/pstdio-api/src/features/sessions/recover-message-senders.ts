@@ -1,6 +1,6 @@
 import { type SessionMessage, submittedPrompt } from "pstdio-api-contracts";
 import type { PendingQueueEntry } from "./session-scheduler-internals";
-import { submittedMessageSender } from "./submitted-message-sender";
+import { submittedMessageSender } from "./submitted-message-identity";
 
 type SenderEntry = Pick<
   PendingQueueEntry,

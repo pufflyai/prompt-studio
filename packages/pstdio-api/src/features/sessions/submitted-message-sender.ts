@@ -1,15 +1,7 @@
 import type { SessionMessageSender } from "pstdio-api-contracts";
+import { recoverMessageSenders } from "./recover-message-senders";
 
-export const submittedRequestId = (sessionId: string, position: number) => `${sessionId}:${position}`;
-export const submittedMessageSender = (input: {
-  sessionId: string;
-  submittedQueuePosition?: number;
-  sender?: SessionMessageSender;
-}) => {
-  if (!input.sender || input.submittedQueuePosition === undefined) return input.sender;
-  const { type, id, name } = input.sender;
-  return { type, id, name, requestId: submittedRequestId(input.sessionId, input.submittedQueuePosition) };
-};
+import { submittedMessageSender } from "./submitted-message-identity";
 
 export const prepareSubmittedSender = async (
   conversation: import("./session-conversation").SessionConversation,
@@ -23,6 +15,10 @@ export const prepareSubmittedSender = async (
     const entry = await queue.setDispatchSenderBoundary(input.submittedQueuePosition, count);
     if (!entry) throw new Error("Submitted request is no longer available.");
     afterTurn = entry.sender_json?.afterTurn;
+    const previous = conversation.getMessages();
+    const restored = recoverMessageSenders(previous, [entry]);
+    if (restored.some((message, index) => message !== previous[index]))
+      conversation.push({ op: "replace", path: "/messages", value: restored });
   }
   conversation.attributePrompt(input.prompt, submittedMessageSender(input), undefined, afterTurn);
 };

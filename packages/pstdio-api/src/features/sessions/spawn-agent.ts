@@ -8,7 +8,8 @@ import {
   rejectPersistedSessionCancellation,
   rejectStoreSessionCancellation,
 } from "./session-request-cancellation";
-import { prepareSubmittedSender, submittedMessageSender } from "./submitted-message-sender";
+import { submittedMessageSender } from "./submitted-message-identity";
+import { prepareSubmittedSender } from "./submitted-message-sender";
 import { trackHarnessSession } from "./track-harness-session";
 
 type SpawnInput = {

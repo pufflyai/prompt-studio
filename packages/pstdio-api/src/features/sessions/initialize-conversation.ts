@@ -7,7 +7,7 @@ import { loadSessionHistory } from "./session-history";
 import { persistSessionMessages } from "./session-messages";
 
 type InitializationDeps = Pick<SessionsRouteDeps, "sessionService" | "fileService" | "harnessRegistry"> &
-  Partial<Pick<SessionsRouteDeps, "workspaceSessionService" | "sessionQueueEntriesService">>;
+  Partial<Pick<SessionsRouteDeps, "workspaceSessionService">>;
 
 export const initializeConversation = (
   sessionId: string,

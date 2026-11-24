@@ -38,11 +38,6 @@ type UpdateInput = Partial<
 class PendingSwapFailed extends Error {}
 
 const nowTimestamp = () => new Date().toISOString();
-const listDispatchStartedBySession = (db: DbClient, sessionId: string) =>
-  db
-    .select()
-    .from(session_queue_entries)
-    .where(and(eq(session_queue_entries.session_id, sessionId), isNotNull(session_queue_entries.dispatch_started_at)));
 
 export const createSessionQueueEntriesDBService = (db: DbClient) => {
   const hasEntries = async (sessionId: string) => {
@@ -251,7 +246,6 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
     listUndispatchedBySession,
     listUndispatched,
     listDispatchStarted,
-    listDispatchStartedBySession: (sessionId: string) => listDispatchStartedBySession(db, sessionId),
     markDispatchStarted,
     updatePending,
     swapPending,
