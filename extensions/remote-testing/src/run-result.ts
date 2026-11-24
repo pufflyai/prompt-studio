@@ -10,17 +10,17 @@ export interface Receipt {
 const MARKER = "REMOTE_TEST_RESULT ";
 const TAIL_LINES = 60;
 const logs = (runId: string) => `logs/${runId}.log`;
-export function timeoutReceipt(record: RunRecord): Receipt {
+export function timeoutSummary(record: RunRecord) {
   return {
-    acceptance: { execution: {} },
-    outcome: {
-      finalResponse: `${MARKER}${JSON.stringify({
-        exitCode: null,
-        durationMs: Date.now() - Date.parse(record.startedAt),
-        timedOut: true,
-      })}`,
-    },
-  };
+    runId: record.runId,
+    environmentId: record.environmentId,
+    status: "timed_out",
+    exitCode: null,
+    durationMs: Date.now() - Date.parse(record.startedAt),
+    logPath: null,
+    tail: "",
+    error: "The remote runner did not return a final receipt before the run deadline.",
+  } satisfies RunSummary;
 }
 
 export async function summarize(

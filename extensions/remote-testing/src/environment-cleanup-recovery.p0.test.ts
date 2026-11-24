@@ -2,13 +2,18 @@ import { expect, test } from "bun:test";
 import type { ExtensionAutomationApi, ExtensionConnectionsApi } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { PocketCoderError } from "./connection";
-import { cleanupEnvironmentCommand, cleanupRunEnvironment, enqueueEnvironmentCleanup } from "./environment-cleanup";
-import { activeRun, claimEnvironment } from "./environments";
+import {
+  cleanupEnvironmentCommand,
+  cleanupRunEnvironment,
+  enqueueEnvironmentCleanup,
+  rememberEnvironmentCleanup,
+} from "./environment-cleanup";
+import { activeRun, claimEnvironment, releaseEnvironment } from "./environments";
 import { runsView } from "./workbench";
 
 test.each(["network", "server"])("failed-launch cleanup recovers a temporary stop failure (%s)", async (failure) => {
   const store = createMemoryStorage();
-  await claimEnvironment(store, "env", "owner", -1);
+  await claimEnvironment(store, "env", "owner");
   let attempts = 0;
   const result = await cleanupRunEnvironment(
     {
@@ -31,16 +36,15 @@ test.each(["network", "server"])("failed-launch cleanup recovers a temporary sto
 
 test("a failed-launch cleanup retry preserves a newer environment owner", async () => {
   const store = createMemoryStorage();
-  await claimEnvironment(store, "env", "owner", 60);
+  await claimEnvironment(store, "env", "owner");
   let stops = 0;
   const result = await cleanupRunEnvironment(
     {
       store,
       api: async () => {
         stops++;
-        const claims = store.collection<{ runId: string; until: number }>("environment-claims");
-        await claims.put("env", { runId: "owner", until: Date.now() - 1 });
-        expect(await claimEnvironment(store, "env", "new-owner", 60)).toBe(true);
+        await releaseEnvironment(store, "env", "owner");
+        expect(await claimEnvironment(store, "env", "new-owner")).toBe(true);
         throw new PocketCoderError(503, "Temporary failure");
       },
     },
@@ -54,7 +58,7 @@ test("a failed-launch cleanup retry preserves a newer environment owner", async 
 type Job = NonNullable<Awaited<ReturnType<ExtensionAutomationApi["get"]>>>;
 async function recoveryFixture() {
   const store = createMemoryStorage();
-  await claimEnvironment(store, "env", "owner", -1);
+  await claimEnvironment(store, "env", "owner");
   const jobs = new Map<string, Job>();
   const queued: Parameters<ExtensionAutomationApi["enqueue"]>[0][] = [];
   const keys = new Map<string, string>();
@@ -135,50 +139,9 @@ test("cleanup recovery retains permanent failures without blindly retrying them"
   expect(f.stops()).toBe(0);
 });
 
-test("cleanup survives a competing renewal by the same environment owner", async () => {
+test("cleanup releases ownership when a same-owner record changes during release", async () => {
   const store = createMemoryStorage();
-  await claimEnvironment(store, "env", "owner", 60);
-  let first = true;
-  const racing = {
-    ...store,
-    collection<T>(name: string) {
-      const collection = store.collection<T>(name);
-      return {
-        ...collection,
-        async updateIfUnchanged(id: string, revision: string, value: T) {
-          if (name === "environment-claims" && first) {
-            first = false;
-            const claim = store.collection<{ runId: string; until: number }>(name);
-            const current = await claim.read(id);
-            if (!current) throw new Error("Expected an owned claim");
-            await claim.updateIfUnchanged(id, current.revision, { ...current.value, until: Date.now() + 120000 });
-            return false;
-          }
-          return collection.updateIfUnchanged(id, revision, value);
-        },
-      };
-    },
-  };
-  let stops = 0;
-  expect(
-    await cleanupRunEnvironment(
-      {
-        store: racing,
-        api: async () => {
-          stops++;
-          return {} as never;
-        },
-      },
-      { environmentId: "env", runId: "owner", stop: true },
-    ),
-  ).toEqual({ stopped: true });
-  expect(stops).toBe(1);
-  expect(await activeRun(store, "env")).toBeNull();
-});
-
-test("cleanup releases its lease when the same owner renews during release", async () => {
-  const store = createMemoryStorage();
-  await claimEnvironment(store, "env", "owner", 60);
+  await claimEnvironment(store, "env", "owner");
   let first = true;
   const racing = {
     ...store,
@@ -247,4 +210,39 @@ test("canceled setup queues cleanup before reading its canceled host storage", a
   await cleanupEnvironmentCommand.run(f.ctx, { environmentId: "env", runId: "owner", stop: true });
   expect(f.stops()).toBe(1);
   expect(await activeRun(f.store, "env")).toBeNull();
+});
+
+test("opening a saved timeout resumes its independent workspace cleanup", async () => {
+  const f = await recoveryFixture();
+  const input = { environmentId: "env", runId: "owner", stop: true };
+  await rememberEnvironmentCleanup(f.store, input);
+  await f.store.set("run:owner", {
+    runId: "owner",
+    environmentId: "env",
+    requestId: "request",
+    conversationId: "conversation",
+    root: "/",
+    command: "bun test",
+    startedAt: "2026-01-01T00:00:00Z",
+    timeoutSeconds: 60,
+    stopAfterRun: true,
+    summary: {
+      runId: "owner",
+      environmentId: "env",
+      status: "timed_out",
+      exitCode: null,
+      durationMs: 1000,
+      logPath: null,
+      tail: "",
+    },
+  });
+  const table = await f.query();
+  expect(table.rows[0]?.values.status).toBe("timed_out");
+  expect(f.queued).toHaveLength(1);
+  expect(f.queued[0]?.input.params).toEqual(input);
+  expect(await activeRun(f.store, "env")).toBe("owner");
+  await cleanupEnvironmentCommand.run(f.ctx, input);
+  expect(f.stops()).toBe(1);
+  expect(await activeRun(f.store, "env")).toBeNull();
+  expect(await f.store.get("run:owner")).toMatchObject({ summary: { status: "timed_out" } });
 });

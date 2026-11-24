@@ -36,7 +36,7 @@ async function finishedRun(stopAfterRun: boolean) {
       return "test.log";
     },
   } satisfies Parameters<typeof checkRun>[0];
-  await claimEnvironment(deps.store, record.environmentId, record.runId, 60);
+  await claimEnvironment(deps.store, record.environmentId, record.runId);
   return { deps, record, apiCalls };
 }
 
@@ -56,7 +56,7 @@ test("an explicit request to keep the environment preserves it", async () => {
 
 test.each(["synchronous", "asynchronous"])("collection survives notification failure (%s)", async (mode) => {
   const { deps, record, apiCalls } = await finishedRun(true);
-  await claimEnvironment(deps.store, record.environmentId, record.runId, 60);
+  await claimEnvironment(deps.store, record.environmentId, record.runId);
   const result = await checkRun(
     {
       ...deps,

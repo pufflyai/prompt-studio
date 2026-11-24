@@ -94,15 +94,14 @@ export async function stopEnvironment(api: Api, id: string, signal?: AbortSignal
   return api<Environment>({ method: "POST", path: `${path(id)}/cancel`, signal });
 }
 
-type Claim = { runId: string; until: number };
+type Claim = { runId: string };
 
-export async function claimEnvironment(store: ExtensionStorageApi, id: string, runId: string, seconds: number) {
+// Ownership ends through collection or cleanup, never through elapsed wall time.
+export async function claimEnvironment(store: ExtensionStorageApi, id: string, runId: string) {
   const claims = store.collection<Claim>("environment-claims");
-  const current = await claims.read(id);
-  if (current && current.value.runId !== runId && current.value.until > Date.now()) return false;
-  const next = { runId, until: Date.now() + seconds * 1000 };
-  if (current) return claims.updateIfUnchanged(id, current.revision, next);
-  return claims.createIfAbsent(id, next);
+  const current = await claims.get(id);
+  if (current) return current.runId === runId;
+  return claims.createIfAbsent(id, { runId });
 }
 
 export async function releaseEnvironment(store: ExtensionStorageApi, id: string, runId: string) {
@@ -114,24 +113,13 @@ export async function releaseEnvironment(store: ExtensionStorageApi, id: string,
   }
 }
 
-export async function renewEnvironmentClaim(store: ExtensionStorageApi, id: string, runId: string, seconds: number) {
-  const claims = store.collection<Claim>("environment-claims");
-  while (true) {
-    const current = await claims.read(id);
-    if (!current || current.value.runId !== runId) return false;
-    if (
-      await claims.updateIfUnchanged(id, current.revision, {
-        runId,
-        until: Math.max(current.value.until, Date.now() + seconds * 1000),
-      })
-    )
-      return true;
-  }
+export async function ownsEnvironment(store: ExtensionStorageApi, id: string, runId: string) {
+  return (await activeRun(store, id)) === runId;
 }
 
 export async function activeRun(store: ExtensionStorageApi, id: string) {
   const claim = await store.collection<Claim>("environment-claims").get(id);
-  return claim && claim.until > Date.now() ? claim.runId : null;
+  return claim?.runId ?? null;
 }
 
 export async function isBusy(store: ExtensionStorageApi, id: string) {

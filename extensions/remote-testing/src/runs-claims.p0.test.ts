@@ -124,7 +124,7 @@ test.each([
     async fetch(request) {
       const path = new URL(request.url).pathname;
       requests.push(path);
-      if (path === "/v1/workspaces" && otherOwner) await claimEnvironment(store, "branch-env", "other-running-run", 60);
+      if (path === "/v1/workspaces" && otherOwner) await claimEnvironment(store, "branch-env", "other-running-run");
       if (path.endsWith("/requests")) return new Response("Submission failed", { status: 503 });
       return Response.json({ id: "branch-env", state: "ready", metadata: { pstdio_project_id: "project" } });
     },

@@ -6,7 +6,7 @@ import {
   params,
 } from "@pstdio/sdk/extensions";
 import { type Api, canRetryControllerRequest, connectionApi, waitForControllerPoll } from "./connection";
-import { releaseEnvironment, renewEnvironmentClaim, stopEnvironment } from "./environments";
+import { ownsEnvironment, releaseEnvironment, stopEnvironment } from "./environments";
 import { changed } from "./events";
 
 export interface EnvironmentCleanupInput {
@@ -17,6 +17,10 @@ export interface EnvironmentCleanupInput {
 type CleanupIntent = EnvironmentCleanupInput & { jobId?: string };
 const cleanupId = (input: EnvironmentCleanupInput) => `${input.runId}:${input.environmentId}`;
 const cleanupIntents = (store: ExtensionStorageApi) => store.collection<CleanupIntent>("environment-cleanups");
+
+export async function rememberEnvironmentCleanup(store: ExtensionStorageApi, input: EnvironmentCleanupInput) {
+  await cleanupIntents(store).createIfAbsent(cleanupId(input), { ...input });
+}
 
 async function forgetCleanup(store: ExtensionStorageApi, input: EnvironmentCleanupInput) {
   const intents = cleanupIntents(store);
@@ -29,10 +33,10 @@ export async function cleanupRunEnvironment(
   input: EnvironmentCleanupInput,
   signal?: AbortSignal,
 ) {
-  // Keep ownership through the remote stop, even when a queued job starts after the original lease expired.
+  // Keep ownership through the remote stop, including delayed or resumed cleanup.
   while (true) {
     signal?.throwIfAborted();
-    if (!(await renewEnvironmentClaim(deps.store, input.environmentId, input.runId, 1800))) return { stopped: false };
+    if (!(await ownsEnvironment(deps.store, input.environmentId, input.runId))) return { stopped: false };
     if (!input.stop) break;
     try {
       await stopEnvironment(deps.api, input.environmentId, signal);
@@ -84,7 +88,7 @@ export async function enqueueEnvironmentCleanup(
   try {
     // This atomic write is not a cancelled read. Persist before admission so both
     // a lost queue reply and a restart before the worker body can be recovered.
-    await cleanupIntents(ctx.storage).createIfAbsent(cleanupId(input), { ...input });
+    await rememberEnvironmentCleanup(ctx.storage, input);
     await ctx.automation.enqueue({
       command: cleanupEnvironmentCommand.ref,
       input: { params: { ...input } },

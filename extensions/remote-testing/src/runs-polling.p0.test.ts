@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import type { ExtensionConnectionsApi } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { connectionApi } from "./connection";
-import { activeRun, claimEnvironment } from "./environments";
+import { activeRun, claimEnvironment, releaseEnvironment } from "./environments";
 import { localProcess } from "./process-fixture";
 import { awaitRun, cancelRun, checkRun, type RunDeps, type RunRecord } from "./runs";
 
@@ -59,12 +59,13 @@ test("a crashed runner cannot keep an unfinished run and its workspace open past
     },
   );
   record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
-  await claimEnvironment(deps.store, "env", "run", 60);
+  await claimEnvironment(deps.store, "env", "run");
   const summary = await checkRun(deps, record);
   expect(summary).toMatchObject({ status: "timed_out", exitCode: null });
   expect(summary?.error).toContain("final receipt");
-  expect(calls).toContain("POST /v1/workspaces/env/cancel");
-  expect(await activeRun(deps.store, "env")).toBeNull();
+  expect(calls).toEqual(["GET /v1/workspaces/env/requests/request?conversationId=conversation"]);
+  expect(await activeRun(deps.store, "env")).toBe("run");
+  expect(await deps.store.collection("environment-cleanups").get("run:env")).toMatchObject({ stop: true });
   expect(await deps.store.get("run:run")).toMatchObject({ summary });
 });
 
@@ -80,7 +81,7 @@ test("an unfinished run within its deadline remains active", async () => {
     headers: {},
     body: { finalizedAt: null, acceptance: { execution: {} } } as TBody,
   }));
-  await claimEnvironment(deps.store, "env", "run", 60);
+  await claimEnvironment(deps.store, "env", "run");
   expect(await checkRun(deps, record)).toBeNull();
   expect(await activeRun(deps.store, "env")).toBe("run");
 });
@@ -95,11 +96,11 @@ test("a controller outage cannot make receipt retries outlive the run deadline",
     },
   );
   record.startedAt = new Date(Date.now() - 1_859_900).toISOString();
-  await claimEnvironment(deps.store, "env", "run", 60);
+  await claimEnvironment(deps.store, "env", "run");
   expect(await awaitRun(deps, record)).toMatchObject({ status: "timed_out", exitCode: null });
   expect(calls).toEqual([
     "GET /v1/workspaces/env/requests/request?conversationId=conversation",
-    "POST /v1/workspaces/env/cancel",
+    "GET /v1/workspaces/env/requests/request?conversationId=conversation",
   ]);
 });
 
@@ -112,7 +113,7 @@ test("an overdue collector cannot stop a workspace now owned by another run", as
     },
   );
   record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
-  await claimEnvironment(deps.store, "env", "new-owner", 60);
+  await claimEnvironment(deps.store, "env", "new-owner");
   expect(await checkRun(deps, record)).toMatchObject({ status: "timed_out" });
   expect(calls).toEqual(["GET"]);
   expect(await activeRun(deps.store, "env")).toBe("new-owner");
@@ -142,14 +143,14 @@ test("a kept workspace remains claimed until its overdue request actually stops"
   );
   record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
   record.stopAfterRun = false;
-  await claimEnvironment(deps.store, "env", "run", 60);
+  await claimEnvironment(deps.store, "env", "run");
   expect(await checkRun(deps, record)).toBeNull();
   expect(calls).toEqual([
     "GET /v1/workspaces/env/requests/request?conversationId=conversation",
     "POST /v1/workspaces/env/executions/request/cancel",
   ]);
   expect(await activeRun(deps.store, "env")).toBe("run");
-  expect(await claimEnvironment(deps.store, "env", "next-run", 60)).toBe(false);
+  expect(await claimEnvironment(deps.store, "env", "next-run")).toBe(false);
   deps.api = async () => ({ ...receipt, outcome: { status: "canceled" } }) as never;
   expect(await checkRun(deps, record)).toMatchObject({ status: "canceled" });
   expect(await activeRun(deps.store, "env")).toBeNull();
@@ -161,7 +162,7 @@ test("an unavailable overdue request never frees a kept workspace for reuse", as
   });
   record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
   record.stopAfterRun = false;
-  await claimEnvironment(deps.store, "env", "run", 60);
+  await claimEnvironment(deps.store, "env", "run");
   expect(await checkRun(deps, record)).toBeNull();
   expect(await activeRun(deps.store, "env")).toBe("run");
   expect(await deps.store.get("run:run")).toBeUndefined();
@@ -181,7 +182,7 @@ test("overdue collection respects a previously accepted manual cancellation", as
   );
   record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
   record.stopAfterRun = false;
-  await claimEnvironment(deps.store, "env", "run", 60);
+  await claimEnvironment(deps.store, "env", "run");
   expect(await checkRun(deps, record)).toBeNull();
   expect(await cancelRun(deps, record)).toBe(true);
   expect(calls).toEqual(["GET", "GET"]);
@@ -201,7 +202,7 @@ test("a lost cancel reply keeps the workspace claimed and retries the same cance
   );
   record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
   record.stopAfterRun = false;
-  await claimEnvironment(deps.store, "env", "run", 60);
+  await claimEnvironment(deps.store, "env", "run");
   expect(await checkRun(deps, record)).toBeNull();
   expect(await checkRun(deps, record)).toBeNull();
   expect(cancellations).toEqual([
@@ -229,7 +230,7 @@ test.each([
       return { status: 200, headers: {}, body: receipt as TBody };
     },
   );
-  await claimEnvironment(deps.store, record.environmentId, record.runId, 60);
+  await claimEnvironment(deps.store, record.environmentId, record.runId);
   const summary = await awaitRun(deps, record);
   expect(summary).toMatchObject({ status: "passed", logPath: "run.log", tail: "finished" });
   expect(reads).toBe(2);
@@ -301,7 +302,7 @@ test.each([401, 403])("collection surfaces structured host HTTP %i errors", asyn
   expect(surfaced).toBe(failure);
 });
 
-test("recovered collection preserves a newer owner after the original lease expires", async () => {
+test("recovered collection preserves a newer owner after an explicit handoff", async () => {
   const entered = Promise.withResolvers<void>();
   let reads = 0;
   let stops = 0;
@@ -315,10 +316,11 @@ test("recovered collection preserves a newer owner after the original lease expi
       return { status: 200, headers: {}, body: receipt as TBody };
     },
   );
-  await claimEnvironment(deps.store, "env", "run", -1);
+  await claimEnvironment(deps.store, "env", "run");
   const waiting = awaitRun(deps, record);
   await entered.promise;
-  expect(await claimEnvironment(deps.store, "env", "new-owner", 60)).toBe(true);
+  await releaseEnvironment(deps.store, "env", "run");
+  expect(await claimEnvironment(deps.store, "env", "new-owner")).toBe(true);
   const summary = await waiting;
   expect(summary.status).toBe("passed");
   expect(stops).toBe(0);
@@ -338,7 +340,7 @@ test.each(["expired", "missing"])("terminal cleanup requires a matching claim (%
       return { status: 200, headers: {}, body: receipt as TBody };
     },
   );
-  if (claim === "expired") await claimEnvironment(deps.store, "env", "run", -1);
+  if (claim === "expired") await claimEnvironment(deps.store, "env", "run");
   expect((await awaitRun(deps, record)).status).toBe("passed");
   expect(stops).toBe(claim === "expired" ? 1 : 0);
   expect<string | null>(ownerAtStop).toBe(claim === "expired" ? "run" : null);
@@ -357,7 +359,7 @@ test.each(["network", "server"])("terminal collection recovers a transient stop 
       return { status: 200, headers: {}, body: receipt as TBody };
     },
   );
-  await claimEnvironment(deps.store, "env", "run", 60);
+  await claimEnvironment(deps.store, "env", "run");
   const summary = await awaitRun(deps, record);
   expect(summary).toMatchObject({ status: "passed", logPath: "run.log" });
   expect(reads).toBe(1);
@@ -372,20 +374,44 @@ test("a shutdown retry rechecks ownership before touching a newly claimed enviro
     async <TBody>(_id: string, input: Parameters<ExtensionConnectionsApi["request"]>[1]) => {
       if (input.method === "POST") {
         stops++;
-        const claims = deps.store.collection<{ runId: string; until: number }>("environment-claims");
-        const current = await claims.read("env");
-        if (!current) throw new Error("Missing fixture claim");
-        await claims.updateIfUnchanged("env", current.revision, { runId: "run", until: Date.now() - 1 });
-        expect(await claimEnvironment(deps.store, "env", "new-owner", 60)).toBe(true);
+        await releaseEnvironment(deps.store, "env", "run");
+        expect(await claimEnvironment(deps.store, "env", "new-owner")).toBe(true);
         return { status: 503, headers: {}, body: { error: { message: "Controller unavailable" } } as TBody };
       }
       return { status: 200, headers: {}, body: receipt as TBody };
     },
   );
-  await claimEnvironment(deps.store, "env", "run", 60);
+  await claimEnvironment(deps.store, "env", "run");
   const summary = await awaitRun(deps, record);
   expect(summary.status).toBe("passed");
   expect(stops).toBe(1);
   expect(await activeRun(deps.store, "env")).toBe("new-owner");
   expect(await deps.store.get("run:run")).toMatchObject({ summary });
+});
+
+test.each(["stop", "log"])("an overdue result is saved independently of an unavailable %s service", async (service) => {
+  const { deps, record } = fixture(
+    async <TBody>(_id: string, input: Parameters<ExtensionConnectionsApi["request"]>[1]) => {
+      if (input.method === "POST" && service === "stop") return { status: 503, headers: {}, body: {} as TBody };
+      return { status: 200, headers: {}, body: { finalizedAt: null, acceptance: { execution: {} } } as TBody };
+    },
+  );
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  deps.storage.download = async (_object, options) => {
+    if (service === "log") {
+      await new Promise<void>((_, reject) => {
+        options?.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true });
+      });
+    }
+    return null;
+  };
+  await claimEnvironment(deps.store, "env", "run");
+  expect(await checkRun(deps, record, AbortSignal.timeout(300), true)).toMatchObject({ status: "timed_out" });
+  expect(await deps.store.get("run:run")).toMatchObject({ summary: { status: "timed_out" } });
+  expect(await activeRun(deps.store, "env")).toBe("run");
+  expect(await deps.store.collection("environment-cleanups").get("run:env")).toMatchObject({
+    runId: "run",
+    environmentId: "env",
+    stop: true,
+  });
 });

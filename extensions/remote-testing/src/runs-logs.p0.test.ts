@@ -49,7 +49,7 @@ async function fixture() {
     storage: gcsStorage({ bucket: "fixture", signer: "fixture", token: async () => "fixture" }),
     saveLog: async () => "run.log",
   };
-  await claimEnvironment(deps.store, "env", "run", 60);
+  await claimEnvironment(deps.store, "env", "run");
   return { deps, record, calls: () => ({ stops, reads }) };
 }
 

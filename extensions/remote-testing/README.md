@@ -18,7 +18,10 @@ command there, stops the environment when the run finishes, and saves the full l
   after the CLI returns. If a runner disappears without a final receipt, collection marks
   the run timed out after its command duration and the existing 30-minute source-transfer
   and log-collection allowance, then
-  stops its owned environment. An explicitly kept environment stays open; collection
+  records independent workspace cleanup for the existing once-per-minute recovery schedule.
+  The timeout result does not wait for shutdown or log-service retries. Workspace ownership
+  remains held until cleanup accepts the stop; elapsed time never makes it reusable.
+  An explicitly kept environment stays open; collection
   cancels its overdue request when the controller can return its receipt and retains the
   workspace claim until a terminal receipt confirms cancellation. A receipt that
   already finished retains its actual result. Double-click a run, or use its menu, to

@@ -9,6 +9,22 @@ const RECEIPT_READ_MS = 30_000;
 export const runDeadline = (record: RunRecord) =>
   Date.parse(record.startedAt) + (record.timeoutSeconds + TRANSFER_ALLOWANCE_SECONDS) * 1000;
 
+function boundedSignal(timeout: number, signal?: AbortSignal) {
+  const deadline = AbortSignal.timeout(Math.max(1, timeout));
+  return { deadline, bounded: signal ? AbortSignal.any([signal, deadline]) : deadline };
+}
+
+async function finalRead<T>(api: Api, path: string, signal?: AbortSignal) {
+  const { deadline, bounded } = boundedSignal(RECEIPT_READ_MS, signal);
+  try {
+    return await api<T>({ method: "GET", path, signal: bounded });
+  } catch (error) {
+    signal?.throwIfAborted();
+    if (deadline.aborted || canRetryControllerRequest(error)) return null;
+    throw error;
+  }
+}
+
 export async function readRunReceipt<T>(
   api: Api,
   path: string,
@@ -17,16 +33,17 @@ export async function readRunReceipt<T>(
   retryTransient: boolean,
 ) {
   const remaining = runDeadline(record) - Date.now();
-  // An overdue collector still reads once: a completed receipt beats a local timeout.
-  const deadline = AbortSignal.timeout(Math.max(1, remaining > 0 ? remaining : RECEIPT_READ_MS));
-  const bounded = signal ? AbortSignal.any([signal, deadline]) : deadline;
+  // A completed receipt wins over a local timeout, including at the boundary.
+  if (remaining <= 0) return finalRead<T>(api, path, signal);
+  const { deadline, bounded } = boundedSignal(remaining, signal);
   try {
-    return retryTransient && remaining > 0
+    return retryTransient
       ? await readControllerWithRetry<T>(api, path, bounded)
       : await api<T>({ method: "GET", path, signal: bounded });
   } catch (error) {
     signal?.throwIfAborted();
-    if (Date.now() >= runDeadline(record) && (deadline.aborted || canRetryControllerRequest(error))) return null;
+    if (Date.now() >= runDeadline(record) && (deadline.aborted || canRetryControllerRequest(error)))
+      return finalRead<T>(api, path, signal);
     throw error;
   }
 }

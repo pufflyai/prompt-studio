@@ -1,18 +1,18 @@
 import type { ExtensionProcessApi, ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import type { BranchKind, BranchSource, TemplateRef } from "./branch-templates";
 import { type Api, canRetryControllerRequest, waitForControllerPoll } from "./connection";
-import type { EnvironmentCleanupInput } from "./environment-cleanup";
+import { type EnvironmentCleanupInput, rememberEnvironmentCleanup } from "./environment-cleanup";
 import {
   claimEnvironment,
   createEnvironment,
+  ownsEnvironment,
   readEnvironment,
   releaseEnvironment,
-  renewEnvironmentClaim,
   stopEnvironment,
   waitUntilReady,
 } from "./environments";
 import { readRunReceipt, runDeadline, TRANSFER_ALLOWANCE_SECONDS } from "./run-deadline";
-import { type Receipt, summarize, timeoutReceipt } from "./run-result";
+import { type Receipt, summarize, timeoutSummary } from "./run-result";
 import type { Settings } from "./settings";
 import { withSourceArchive } from "./source";
 import type { RunStorage } from "./storage";
@@ -136,12 +136,12 @@ export async function startRun(
           source_sha256: sha256,
         },
       )
-    : await pickEnvironment(deps, runId, timeoutSeconds, input.environmentId, signal);
+    : await pickEnvironment(deps, runId, input.environmentId, signal);
   let ownsEnvironment = !template;
   let record: RunRecord | undefined;
   try {
     if (template) {
-      ownsEnvironment = await claimEnvironment(deps.store, environment.id, runId, timeoutSeconds + 1800);
+      ownsEnvironment = await claimEnvironment(deps.store, environment.id, runId);
       if (!ownsEnvironment) throw new Error(`Environment ${environment.id} is running another test run.`);
     }
     const ready = await waitUntilReady(deps.api, environment, signal);
@@ -192,27 +192,20 @@ export async function startRun(
   }
 }
 
-async function pickEnvironment(
-  deps: RunDeps,
-  runId: string,
-  seconds: number,
-  requested: string | undefined,
-  signal?: AbortSignal,
-) {
-  // Claims cover the wait for readiness too.
-  const hold = seconds + 1800;
+async function pickEnvironment(deps: RunDeps, runId: string, requested: string | undefined, signal?: AbortSignal) {
+  // Ownership covers provisioning as well as execution.
   if (requested) {
     const selected = await readEnvironment(deps.api, requested, signal);
     if (selected.metadata.pstdio_project_id !== deps.projectId)
       throw new Error("Select an environment created by this project.");
-    if (!(await claimEnvironment(deps.store, requested, runId, hold)))
+    if (!(await claimEnvironment(deps.store, requested, runId)))
       throw new Error(`Environment ${requested} is running another test run.`);
     return selected;
   }
   // Claims live in one project's storage, while the controller lists all projects.
   // Start isolated unless the caller explicitly selects a workspace to reuse.
   const created = await createEnvironment(deps.api, deps.settings, signal, { pstdio_project_id: deps.projectId });
-  if (!(await claimEnvironment(deps.store, created.id, runId, hold)))
+  if (!(await claimEnvironment(deps.store, created.id, runId)))
     throw new Error(`Environment ${created.id} is running another test run.`);
   return created;
 }
@@ -238,7 +231,7 @@ async function stopCollectedEnvironment(
 ) {
   while (true) {
     signal?.throwIfAborted();
-    if (!(await renewEnvironmentClaim(deps.store, record.environmentId, record.runId, 1800))) return;
+    if (!(await ownsEnvironment(deps.store, record.environmentId, record.runId))) return;
     try {
       await stopEnvironment(deps.api, record.environmentId, signal);
       return;
@@ -259,22 +252,32 @@ export async function checkRun(
   retryTransient = false,
 ) {
   if (record.summary) return record.summary;
-  let receipt = await readRunReceipt<Receipt>(deps.api, requestPath(record), record, signal, retryTransient);
+  const receipt = await readRunReceipt<Receipt>(deps.api, requestPath(record), record, signal, retryTransient);
   const expired = !receipt?.finalizedAt && Date.now() >= runDeadline(record);
   if (!receipt?.finalizedAt && !expired) return null;
   if (expired) {
-    if (!record.stopAfterRun && (await renewEnvironmentClaim(deps.store, record.environmentId, record.runId, 1800))) {
+    if (!record.stopAfterRun && (await ownsEnvironment(deps.store, record.environmentId, record.runId))) {
       // Cancellation acknowledges intent. Keep a reusable workspace claimed until
       // a terminal receipt proves the old command can no longer write its files.
       if (receipt) await cancelOverdueRequest(deps.api, record, receipt, signal);
       return null;
     }
-    receipt = timeoutReceipt(record);
+    // The scheduled cleanup worker owns remote retries. A network outage must
+    // not keep an overdue result looking like an active test run.
+    if (record.stopAfterRun && (await ownsEnvironment(deps.store, record.environmentId, record.runId)))
+      await rememberEnvironmentCleanup(deps.store, {
+        environmentId: record.environmentId,
+        runId: record.runId,
+        stop: true,
+      });
+    const summary = timeoutSummary(record);
+    await deps.store.set(`run:${record.runId}`, { ...record, summary });
+    await notifyRunChange(deps);
+    return summary;
   }
   // The runner uploads its log before the controller finalizes the request.
   if (record.stopAfterRun) await stopCollectedEnvironment(deps, record, signal, retryTransient);
   const summary = await summarize(deps, record, receipt!, signal, retryTransient);
-  if (expired) summary.error = "The remote runner did not return a final receipt before the run deadline.";
   await deps.store.set(`run:${record.runId}`, { ...record, summary });
   await releaseEnvironment(deps.store, record.environmentId, record.runId);
   await notifyRunChange(deps);
