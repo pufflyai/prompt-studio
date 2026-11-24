@@ -2,7 +2,7 @@ import type { StoragePredicate } from "@pstdio/sdk/extensions";
 import { defineCommand, type KanbanRendererQueryParams, params } from "@pstdio/sdk/extensions";
 import { readTicketViewPage } from "../../data/query-ticket-page";
 import { ensureTicketStorage } from "../../data/read-migrated-tickets";
-import { seedDefaultTags } from "../../data/seed";
+import { ensureDefaultTags } from "../../data/seed";
 import { timelineBoard } from "../../data/ticket-board";
 import { ticketSummaryFields } from "../../data/ticket-query-summary";
 import { activeTicket } from "../../data/ticket-view-state";
@@ -11,7 +11,7 @@ import { daysBetween } from "../model/days";
 import type { MilestoneDisplay } from "../model/milestone-visibility";
 import { summarizeSection } from "../model/section-summary";
 import { initializePlanPlacements } from "./initialize-placements";
-import { planPlacements, readPlanMetadata } from "./placement-store";
+import { planPlacements } from "./placement-store";
 import { planPageRows } from "./plan-page-rows";
 import { planQuerySummary } from "./plan-query-summary";
 import { planReadWindow } from "./plan-read-window";
@@ -35,56 +35,15 @@ export const readPlanCommand = defineCommand({
   async run(ctx, input) {
     await ensureTicketStorage(ctx);
     const workflow = usableWorkflowStatuses(await readWorkflowStatuses(ctx));
-    const metadata = await readPlanMetadata(ctx.storage);
-    const hidden = input.display?.collapsedMilestones ?? [];
-    const visible: StoragePredicate[] = [];
-    if (input.display?.collapsedTracks?.length) {
-      const track = await readTrack(ctx, await seedDefaultTags(ctx.storage));
-      const options = Object.fromEntries(track?.options.map(({ id }) => [id, true]) ?? []);
-      const selected = {
-        op: "first" as const,
-        args: [
-          {
-            each: { get: { field: "tags" }, key: track?.id ?? "" },
-            as: "trackOption",
-            mode: "filter" as const,
-            where: {
-              op: "eq" as const,
-              args: [{ get: { literal: options }, key: { variable: "trackOption" } }, { literal: true }],
-            },
-          },
-        ],
-      };
-      const hidden = Object.fromEntries(input.display.collapsedTracks.map((id) => [id, true]));
-      visible.push({
-        not: {
-          test: {
-            op: "eq",
-            args: [
-              {
-                get: { literal: hidden },
-                key: { op: "if", args: [{ op: "missing", args: [selected] }, { literal: "unassigned" }, selected] },
-              },
-              { literal: true },
-            ],
-          },
-        },
-      });
-    }
-    if (hidden.length)
-      visible.push({ field: "deadlineId", op: "notIn", value: hidden.map((id) => (id === "none" ? null : id)) });
-    if (input.display?.showCompletedMilestones === false)
-      visible.push({ field: "milestoneState", op: "notIn", value: ["complete", "completed-past"] });
-    if (input.display?.showPassedMilestones === false)
-      visible.push({
-        field: "deadlineId",
-        op: "notIn",
-        value: metadata.deadlines
-          .filter(({ date }) => date < new Intl.DateTimeFormat("en-CA").format(new Date()))
-          .map(({ id }) => id),
-      });
-    await seedDefaultTags(ctx.storage);
-    const { executionOffset, initializationCount } = planReadWindow(input, visible.length > 0);
+    await ensureDefaultTags(ctx.storage);
+    const display = input.display;
+    const hidden = Boolean(
+      display?.collapsedMilestones?.length ||
+        display?.collapsedTracks?.length ||
+        display?.showCompletedMilestones === false ||
+        display?.showPassedMilestones === false,
+    );
+    const { executionOffset, initializationCount } = planReadWindow(input, hidden);
     const selected = input.ticketId ? await planPlacements(ctx.storage).get(input.ticketId) : undefined;
     const initializedRevision = await initializePlanPlacements(
       ctx,
@@ -107,7 +66,57 @@ export const readPlanCommand = defineCommand({
       : input;
     const view = await readTicketViewPage(ctx, readInput, {
       where: input.ticketId ? { all: [activeTicket, { field: "id", op: "eq", value: input.ticketId }] } : activeTicket,
-      visible: visible.length ? { all: visible } : undefined,
+      // Metadata and tags used by visibility belong to query preparation's guarded revision.
+      visible: async ({ metadata, tags }) => {
+        const hidden = input.display?.collapsedMilestones ?? [];
+        const visible: StoragePredicate[] = [];
+        if (input.display?.collapsedTracks?.length) {
+          const track = await readTrack(ctx, tags);
+          const options = Object.fromEntries(track?.options.map(({ id }) => [id, true]) ?? []);
+          const selected = {
+            op: "first" as const,
+            args: [
+              {
+                each: { get: { field: "tags" }, key: track?.id ?? "" },
+                as: "trackOption",
+                mode: "filter" as const,
+                where: {
+                  op: "eq" as const,
+                  args: [{ get: { literal: options }, key: { variable: "trackOption" } }, { literal: true }],
+                },
+              },
+            ],
+          };
+          const hidden = Object.fromEntries(input.display.collapsedTracks.map((id) => [id, true]));
+          visible.push({
+            not: {
+              test: {
+                op: "eq",
+                args: [
+                  {
+                    get: { literal: hidden },
+                    key: { op: "if", args: [{ op: "missing", args: [selected] }, { literal: "unassigned" }, selected] },
+                  },
+                  { literal: true },
+                ],
+              },
+            },
+          });
+        }
+        if (hidden.length)
+          visible.push({ field: "deadlineId", op: "notIn", value: hidden.map((id) => (id === "none" ? null : id)) });
+        if (input.display?.showCompletedMilestones === false)
+          visible.push({ field: "milestoneState", op: "notIn", value: ["complete", "completed-past"] });
+        if (input.display?.showPassedMilestones === false)
+          visible.push({
+            field: "deadlineId",
+            op: "notIn",
+            value: metadata.deadlines
+              .filter(({ date }) => date < new Intl.DateTimeFormat("en-CA").format(new Date()))
+              .map(({ id }) => id),
+          });
+        return visible.length ? { all: visible } : undefined;
+      },
       groups: [],
       owner: ctx.extensionId,
       attentionPage: "timeline",

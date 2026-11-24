@@ -9,7 +9,7 @@ import { readPlanCommand } from "./read-plan";
 
 test("the first Timeline page initializes its execution prefix and continues without losing unloaded work", async () => {
   const storage = createMemoryStorage();
-  const ids = Array.from({ length: 203 }, (_, i) => `ticket-${String(203 - i).padStart(4, "0")}`);
+  const ids = Array.from({ length: 403 }, (_, i) => `ticket-${String(403 - i).padStart(4, "0")}`);
   let position: string | undefined;
   for (const [i, id] of [...ids, "archived"].entries()) {
     position = storage.positions.between(position);
@@ -33,8 +33,8 @@ test("the first Timeline page initializes its execution prefix and continues wit
   const page = (offset: number) => ({ limit: 50, offset, fields: ["id"], search: "" });
   const first = await readPlanCommand.run(ctx, { page: page(0) });
   expect(first.ticketRows.map(({ id }) => id)).toEqual(ids.slice(0, 50));
-  expect(first.page.total).toBe(203);
-  expect(first.sections[0].globalCounts?.total).toBe(203);
+  expect(first.page.total).toBe(403);
+  expect(first.sections[0].globalCounts?.total).toBe(403);
   expect(first.sections[0].rows[0].flags).toContain("out-of-order");
   expect((await storage.records.aggregate({ index: "timeline-placements" })).count).toBe(103);
 
@@ -43,12 +43,6 @@ test("the first Timeline page initializes its execution prefix and continues wit
   expect((await storage.records.aggregate({ index: "timeline-placements" })).count).toBe(103);
   await moveTicketInPlan(ctx, { ticket: ids[30], before: ids[31] });
   expect((await storage.records.aggregate({ index: "timeline-placements" })).count).toBe(103);
-
-  await expect(
-    readPlanCommand.run(ctx, {
-      page: { ...page(0), limit: 100, cursor: first.page.cursor ?? undefined, revision: first.page.revision },
-    }),
-  ).rejects.toThrow("stale");
 
   // The existing continuation contract rejects a revision changed by initialization.
   // The renderer restarts the same offset once without its old cursor/revision.
@@ -60,10 +54,40 @@ test("the first Timeline page initializes its execution prefix and continues wit
   const later = await readPlanCommand.run(ctx, { page: page(100) });
   expect(later.ticketRows.map(({ id }) => id)).toEqual(ids.slice(100, 150));
   expect(later.sections[0].rows.map(({ step }) => step)).toEqual(Array.from({ length: 50 }, (_, i) => i + 101));
-  expect((await storage.records.aggregate({ index: "timeline-placements" })).count).toBe(205);
-  const last = await readPlanCommand.run(ctx, { page: page(200) });
-  expect(last.ticketRows.map(({ id }) => id)).toEqual(ids.slice(200));
-  expect(last.sections[0].globalCounts?.total).toBe(203);
+  expect((await storage.records.aggregate({ index: "timeline-placements" })).count).toBe(203);
+  expect(await planPlacements(storage).get(ids[250])).toBeUndefined();
+  const next = await readPlanCommand.run(ctx, { page: page(200) });
+  expect(next.ticketRows.map(({ id }) => id)).toEqual(ids.slice(200, 250));
+  expect((await storage.records.aggregate({ index: "timeline-placements" })).count).toBe(303);
+  expect(await planPlacements(storage).get(ids[350])).toBeUndefined();
+  const last = await readPlanCommand.run(ctx, { page: page(400) });
+  expect(last.ticketRows.map(({ id }) => id)).toEqual(ids.slice(400));
+  expect(last.sections[0].globalCounts?.total).toBe(403);
+});
+
+test("a cursor continuation that initializes the tail rejects its earlier revision", async () => {
+  const storage = createMemoryStorage();
+  for (let i = 0; i < 203; i++)
+    await putTicket(storage, {
+      id: `cursor-${i}`,
+      shorthand: `C-${i + 1}`,
+      title: "Ticket",
+      content: "",
+      statusId: "ready",
+      archived: false,
+      createdAt: "before",
+      updatedAt: "after",
+    });
+  const ctx = makeCommandContext({ storage, params: {} });
+  const page = { limit: 50, offset: 0, fields: ["id"], search: "" };
+  const first = await readPlanCommand.run(ctx, { page });
+  expect((await storage.records.aggregate({ index: "timeline-placements" })).count).toBe(100);
+  await expect(
+    readPlanCommand.run(ctx, {
+      page: { ...page, cursor: first.page.cursor ?? undefined, revision: first.page.revision },
+    }),
+  ).rejects.toThrow("stale");
+  expect((await storage.records.aggregate({ index: "timeline-placements" })).count).toBe(203);
 });
 
 test("a cycle broken in the first execution prefix still flags its unloaded later prerequisite", async () => {
