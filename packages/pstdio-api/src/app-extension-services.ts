@@ -143,11 +143,15 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
   });
   const extensionProcessEnvironment = createProcessEnvironmentPermissions({
     path: join(input.storageRoot, "extension-process-environment.json"),
-    findSource: async (projectId, extensionId) => {
+    findSource: async (projectId, extensionId, enabledOnly) => {
       try {
-        return (await extensionService.listProjectExtensionInstances(projectId)).find(
+        const matching = (await extensionService.listProjectExtensionInstances(projectId)).filter(
           ({ installedSource }) => installedSource.extension_id === extensionId,
-        )?.installedSource;
+        );
+        return (
+          matching.find(({ instance }) => instance.enabled)?.installedSource ??
+          (enabledOnly ? undefined : matching[0]?.installedSource)
+        );
       } catch (error) {
         // An unknown project has no extension to grant for.
         if (error instanceof ProjectNotFoundError) return undefined;

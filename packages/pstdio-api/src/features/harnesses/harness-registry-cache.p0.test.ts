@@ -6,6 +6,8 @@ import type { ExtensionConnectionRequest, ExtensionConnectionsApi } from "pstdio
 import type { HarnessRegistry } from "pstdio-api-runtime-host";
 import { createHarnessRegistry } from "pstdio-api-runtime-host";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
+import type { ProcessEnvironmentSource } from "../extensions/process-environment/permissions";
+import type { EnabledExtensionSource } from "../extensions/project-extension-runtime-snapshot";
 import { createHarnessRegistryService } from "./harness-registry-service";
 import { createTestHarnessRecord, testHarnessId } from "./test-harness-registry";
 
@@ -36,11 +38,11 @@ const buildFakeRegistry = (records: RuntimeHarnessRecord[]): HarnessRegistry =>
 
 type SourceRow = { source_path: string; source_kind: "local_path" };
 
-const fakeSnapshot = (generation: number, records: RuntimeHarnessRecord[]) =>
+const fakeSnapshot = (generation: number, records: RuntimeHarnessRecord[], source?: ProcessEnvironmentSource) =>
   ({
     generation,
     project: { id: "p1", name: "Project", shorthand: "PS" },
-    enabledSources: [],
+    enabledSources: source ? [{ installedSource: source } as EnabledExtensionSource] : [],
     runtime: { harnesses: records },
     stale: null,
   }) as never;
@@ -176,13 +178,23 @@ describe("harness registry project scope", () => {
     // The user allowed the name for the granted extension in this project only.
     const granted = (projectId: string, extensionId: string) =>
       projectId === SCOPE.projectId && extensionId === "pstdio.pstdio-granted" ? [variable] : [];
+    const source = {
+      extension_id: record.extensionId,
+      source_path: `/test/${record.name}`,
+      source_hash: "fixture-hash",
+      manifest_json: {},
+    };
     const service = makeService({
-      snapshot: () => fakeSnapshot(1, [record]),
+      snapshot: () => fakeSnapshot(1, [record], source),
       processEnvironment: {
-        grantedNames: async (projectId, extensionId) => granted(projectId, extensionId),
-        authorizeCurrent: async (projectId, extensionId, names) => {
-          expect(names).toEqual(granted(projectId, extensionId));
-          return { attach: () => {}, release: () => {} };
+        grantedNames: async (projectId, owner) => {
+          expect(owner).toBe(source);
+          return granted(projectId, owner.extension_id);
+        },
+        authorize: async (projectId, owner, names) => {
+          expect(owner).toBe(source);
+          expect(names).toEqual(granted(projectId, owner.extension_id));
+          return { start: (spawn) => spawn().value, release: () => {}, releaseUnused: () => {} };
         },
       },
     });

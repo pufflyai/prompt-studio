@@ -33,8 +33,8 @@ const groupAlive = (pid: number) => {
   try {
     process.kill(-pid, 0);
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "EPERM";
   }
 };
 
@@ -70,7 +70,9 @@ export const exitedWithin = async (exited: Promise<unknown>, timeoutMs: number) 
   const deadline = new Promise<boolean>((resolve) => {
     timer = setTimeout(() => resolve(false), timeoutMs);
   });
-  const stopped = await Promise.race([exited.then(() => true), deadline]);
-  clearTimeout(timer);
-  return stopped;
+  try {
+    return await Promise.race([exited.then(() => true), deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
 };
