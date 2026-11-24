@@ -23,7 +23,7 @@ test("a delayed private team log cannot use the renewed attempt's access", async
   const old = new AbortController();
   const next = new AbortController();
   const owner = { workbenchId: "project", extensionId: "personal" };
-  const documents = createPersonalDocuments({
+  const input = {
     config: {
       accountId: "team",
       userId: "person",
@@ -43,13 +43,18 @@ test("a delayed private team log cannot use the renewed attempt's access", async
       return { token: "renewed-team-lease", expiresAt: new Date(Date.now() + 30_000).toISOString() };
     },
     subscribe() {},
-  });
+  };
+  const documents = createPersonalDocuments(input);
   try {
     const first = await documents.prepare(old.signal);
     const delayed = documents.relayFor(first.personal);
     const previews: string[] = [];
-    const send = documents.bindLiveSend((message: string) => previews.push(message));
+    const publish = (message: string) => previews.push(message);
+    const send = documents.bindLiveSend(publish);
     const delayedPreview = send(first.personal);
+    expect(send(first.personal)).toBe(delayedPreview);
+    const personal = createPersonalDocuments({ ...input, config: { ...input.config, userId: undefined } });
+    expect(personal.bindLiveSend(publish)(undefined)).toBe(publish);
     old.abort(new Error("Old team sync attempt ended"));
     const current = await documents.prepare(next.signal);
     delayedPreview("old generation");

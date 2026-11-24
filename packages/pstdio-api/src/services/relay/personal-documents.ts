@@ -70,8 +70,18 @@ export const createPersonalDocuments = (input: {
     relayFor,
     close,
     bindLiveSend<Message>(send: (message: Message) => void) {
-      return (space: SyncSpace | undefined) => (message: Message) => {
-        if (!config.userId || (space && currentSpace() === space)) send(message);
+      if (!config.userId) return () => send;
+      const bound = new WeakMap<SyncSpace, typeof send>();
+      const unavailable = () => {};
+      return (space: SyncSpace | undefined) => {
+        if (!space) return unavailable;
+        const existing = bound.get(space);
+        if (existing) return existing;
+        const live = (message: Message) => {
+          if (currentSpace() === space) send(message);
+        };
+        bound.set(space, live);
+        return live;
       };
     },
     invalidateKeys() {
