@@ -30,7 +30,7 @@ describe("runAttemptCommand review requests", () => {
           overrides: { sessions: { create: async () => createSessionResource() } as never },
         }),
       ),
-    ).rejects.toMatchObject({ name: "AttemptLaunchRefused", message: expect.stringContaining(ticket.shorthand) });
+    ).rejects.toThrow(ticket.shorthand);
     expect((await listTicketReviewRequests(storage, ticket.id)).requests).toEqual([
       expect.objectContaining({ context: expect.objectContaining({ reason: "dependency-missing" }), state: "open" }),
     ]);

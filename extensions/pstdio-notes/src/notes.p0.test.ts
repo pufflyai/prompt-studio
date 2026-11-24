@@ -1,16 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage as createIdStorage, createMemoryStorageDevices } from "@pstdio/sdk/testing";
 import { createFolder, listFolders } from "./folders";
-import {
-  createNote,
-  deleteNote,
-  hasSavedNoteTitle,
-  listNotes,
-  noteExists,
-  readNote,
-  renameNote,
-  writeNote,
-} from "./notes";
+import { createNote, deleteNote, listNotes, noteExists, readNote, renameNote, writeNote } from "./notes";
 import { createNotesMount } from "./test-mount";
 
 const coreIds = createIdStorage().ids;
@@ -203,16 +194,4 @@ describe("notes", () => {
     expect(note.id).not.toMatch(/[./\\]/);
     expect(await listNotes(mount)).toMatchObject([{ title: "../../escape attempt" }]);
   });
-});
-
-test("a matching legacy title still needs the canonical document update", async () => {
-  const mount = createNotesMount();
-  const id = coreIds.create();
-  await mount.writeText(`${id}/content.md`, "Keep the body");
-  await mount.writeText(`${id}/title.txt`, "Saved title");
-  expect(await hasSavedNoteTitle(mount, id, "Saved title")).toBe(false);
-  await renameNote(mount, id, "Saved title");
-  expect(await hasSavedNoteTitle(mount, id, "Saved title")).toBe(true);
-  expect(await hasSavedNoteTitle(mount, id, "Different title")).toBe(false);
-  expect(await readNote(mount, id)).toBe("Keep the body");
 });

@@ -70,12 +70,6 @@ export const renameNote = async (mount: NotesMount, id: string, rawTitle: string
     return { id, title };
   });
 
-export const hasSavedNoteTitle = (mount: NotesMount, id: string, title: string) =>
-  writeResourceInOrder(id, async () => {
-    if (!(await noteExists(mount, id)) || (await mount.exists(titlePath(id)))) return false;
-    return parseNoteDocument(await mount.readText(notePath(id))).title === title;
-  });
-
 export const listNotes = async (mount: NotesMount) => {
   const files = await mount.list(`*${CONTENT_PATH}`);
   const notes = await Promise.all(

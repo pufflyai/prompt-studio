@@ -3,7 +3,7 @@
 import { createTicketCommand } from "./create-ticket";
 import { createDeadlineCommand, deleteDeadlineCommand, updateDeadlineCommand } from "./deadline-commands";
 import { createGateCommand } from "./gate-commands";
-import { checkGateLaunchCommand, launchGateCommand } from "./launch-gate";
+import { launchGateCommand } from "./launch-gate";
 import { moveTicketCommand } from "./move-ticket";
 import { planSchemaCommand } from "./plan-schema";
 import { readPlanCommand } from "./read-plan";
@@ -35,7 +35,6 @@ export const commands = {
   "timeline.ticket.create": createTicketCommand,
   "timeline.gate.create": createGateCommand,
   "timeline.gate.launch": launchGateCommand,
-  "timeline.gate.check-launch": checkGateLaunchCommand,
   "timeline.deadline.create": createDeadlineCommand,
   "timeline.deadline.update": updateDeadlineCommand,
   "timeline.deadline.delete": deleteDeadlineCommand,

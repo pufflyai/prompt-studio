@@ -1,7 +1,6 @@
 // Explain the free-form agent review and let a failed or completed run be relaunched while the gate is open.
 import { Button, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
-import { isLiveSession } from "../../commands/auto-build-sessions";
 import type { PlanRow } from "../contracts";
 import { Instructions } from "./instructions";
 import type { PlanClient } from "./use-plan";
@@ -10,30 +9,12 @@ export function GatePanel(props: { row: PlanRow; client: PlanClient }) {
   const { row, client } = props;
   const [launching, setLaunching] = useState(false);
   const [error, setError] = useState<string>();
-  const [recovery, setRecovery] = useState<{ ticketId: string; session?: { id: string; status: string } }>();
-  const result = recovery?.ticketId === row.id ? recovery : undefined;
-  const check = result && !result.session;
-  const previous = result?.session && !isLiveSession(result.session) ? result.session.id : undefined;
-  const reviewLabel = previous ? "Review again" : "Review gate";
   const launch = async () => {
     setLaunching(true);
     setError(undefined);
     try {
-      if (check) {
-        const current = await client.commands["timeline.gate.check-launch"]({ ticket: row.id });
-        if (current.status === "confirmed") setRecovery({ ticketId: row.id, session: current.session });
-        if (current.status === "ready") setRecovery(undefined);
-        if (current.status === "unconfirmed") setError("No review session has been confirmed yet.");
-      } else {
-        const session = await client.commands["timeline.gate.launch"]({
-          ticket: row.id,
-          after: previous,
-          attemptId: crypto.randomUUID(),
-        });
-        setRecovery({ ticketId: row.id, session });
-      }
+      await client.commands["timeline.gate.launch"]({ ticket: row.id });
     } catch (reason) {
-      setRecovery({ ticketId: row.id });
       setError(String(reason));
     } finally {
       setLaunching(false);
@@ -58,7 +39,7 @@ export function GatePanel(props: { row: PlanRow; client: PlanClient }) {
       <Instructions text={row.instructions} />
       {!row.done ? (
         <Button size="sm" variant="outline" loading={launching} onClick={() => void launch()}>
-          {check ? "Check review launch" : reviewLabel}
+          Review gate
         </Button>
       ) : null}
       {error ? (

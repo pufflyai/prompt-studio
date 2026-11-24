@@ -1,6 +1,5 @@
 import { defineExtension, defineKeybinding, packageAsset } from "@pstdio/sdk/extensions";
 import {
-  checkNoteTitleCommand,
   createNoteCommand,
   deleteNoteCommand,
   renameNoteCommand,
@@ -30,7 +29,6 @@ export default defineExtension({
     resolveNotesCommand,
     createNoteCommand,
     deleteNoteCommand,
-    checkNoteTitleCommand,
     renameNoteCommand,
     resolveNoteCommand,
     resolveNoteOpeningCommand,
