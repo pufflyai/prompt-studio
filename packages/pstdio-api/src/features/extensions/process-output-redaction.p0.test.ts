@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { ProcessEvent, ProcessHandle } from "pstdio-api-contracts/extension-kernel";
-import { redactProcessOutput } from "./process-output-redaction";
+import { redactProcessOutput, redactText } from "./process-output-redaction";
 
 const streamed = (...chunks: string[]) =>
   ({
@@ -54,4 +54,11 @@ test("many matches of one value redact in linear time when another value is abse
   const text = await stdout(redactProcessOutput(streamed(chunk), ["ab", "x".repeat(64)]));
   expect(text).toBe("[Redacted]".repeat(200_000));
   expect(performance.now() - started).toBeLessThan(2_000);
+});
+
+test("overlapping granted values are hidden whole, in streams and in collected output", async () => {
+  expect(await stdout(redactProcessOutput(streamed("x abcdefg y"), ["abc", "bcdefg"]))).toBe("x [Redacted] y");
+  // The second value only completes in the next chunk.
+  expect(await stdout(redactProcessOutput(streamed("x abcd", "efg y"), ["abc", "bcdefg"]))).toBe("x [Redacted] y");
+  expect(redactText("x abcdefg y", ["abc", "bcdefg"])).toBe("x [Redacted] y");
 });
