@@ -6,14 +6,17 @@ import type {
   StorageRecordQuery,
   ViewFilterGroup,
 } from "@pstdio/sdk/extensions";
-import { readPlanMetadata } from "../timeline/commands/placement-store";
+import { type PlanMetadata, readPlanMetadata } from "../timeline/commands/placement-store";
 import { timelineTicketAttributes } from "../timeline/model/ticket-properties";
+import { sortedBySortOrder } from "../utils/sort";
+import { readTagDefinitions } from "./definition-query";
 import { buildTicketAttributes } from "./mappers";
 import { ensureTicketStorage } from "./read-migrated-tickets";
-import { seedDefaultStatuses, seedDefaultTags } from "./seed";
+import { ensureDefaultTags, seedDefaultStatuses } from "./seed";
 import { ticketSummaryFields } from "./ticket-query-summary";
 import { ticketViewFields } from "./ticket-view-fields";
 import { activeMilestoneValue, ticketViewState } from "./ticket-view-state";
+import type { StoredTag } from "./types";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "./workflow-statuses";
 
 export type TicketQueryContext = Pick<
@@ -22,7 +25,9 @@ export type TicketQueryContext = Pick<
 >;
 export interface TicketViewSelection {
   where?: StoragePredicate;
-  visible?: StoragePredicate;
+  visible?:
+    | StoragePredicate
+    | ((context: { metadata: PlanMetadata; tags: StoredTag[] }) => Promise<StoragePredicate | undefined>);
   orderBy?: StorageRecordQuery["orderBy"];
   groups?: string[];
   select?: string[];
@@ -40,9 +45,13 @@ export const prepareTicketViewQuery = async (
   selection: TicketViewSelection = {},
 ) => {
   await ensureTicketStorage(ctx);
-  const [tags, statuses] = await Promise.all([seedDefaultTags(ctx.storage), seedDefaultStatuses(ctx.storage)]);
+  const { visible, ...viewSelection } = selection;
+  await ensureDefaultTags(ctx.storage);
+  const statuses = await seedDefaultStatuses(ctx.storage);
   const [workflow] = await Promise.all([readWorkflowStatuses(ctx, statuses), readPlanMetadata(ctx.storage)]);
   const before = await ctx.storage.records.query({ index: "ticket-view", fields: [], limit: 0, orderBy: [] });
+  // Seed writes finish above; a fresh read cannot reuse a pre-snapshot seeder result.
+  const tags = sortedBySortOrder(await readTagDefinitions(ctx.storage));
   const point = selection.pointTicketId
     ? await ctx.storage.records.query({
         index: "ticket-view",
@@ -100,7 +109,8 @@ export const prepareTicketViewQuery = async (
     ],
     orderBy: [{ field: "position", direction: "asc" }],
     page: input.page,
-    ...selection,
+    ...viewSelection,
+    visible: typeof visible === "function" ? await visible({ metadata, tags }) : visible,
   });
   Object.assign(computed, scope.computed);
   for (const [name, format] of Object.entries(scope.formats ?? {})) {
