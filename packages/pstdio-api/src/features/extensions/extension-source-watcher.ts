@@ -110,7 +110,9 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
   };
   const unsubscribe = subscribePreparationEvents((event) => {
     if (disposed) return;
-    if (registered && (event.kind === "worker-ready" || event.kind === "worker-lost")) {
+    // Every replacement reports the lost worker first, and that restoration waits for the new one.
+    // Restoring again when it is ready starts after the slot has resumed other work and retires it.
+    if (registered && event.kind === "worker-lost") {
       void withPreparationContinuation(refresh, { priority: "restoration" }).catch((error) => input.onError?.(error));
       return;
     }
