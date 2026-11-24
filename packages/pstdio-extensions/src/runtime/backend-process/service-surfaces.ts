@@ -75,6 +75,7 @@ export const serviceSurfaces: Members = {
         id: "id",
         started: "promise",
         exited: "promise",
+        treeExited: "promise",
         write: "async",
         end: "async",
         kill: "async",
