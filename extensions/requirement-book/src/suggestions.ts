@@ -1,5 +1,6 @@
 import { defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
 import { z } from "zod";
+import { DraftSubmissionRefused } from "./draft-commands";
 import {
   applyOperations,
   type Operation,
@@ -11,8 +12,6 @@ import {
 import { requireBook } from "./read";
 import { announce, deleteRecord, digest, readRecord, type Suggestion, saveRecord, suggestionDigest } from "./records";
 import { readRepository, writeRepository } from "./repository";
-
-export class SuggestionValidationRefused extends Error {}
 
 export const saveSuggestion = async (
   ctx: ExtensionContextBase,
@@ -38,7 +37,7 @@ export const saveSuggestion = async (
     throw new Error("Applied suggestions cannot be edited. Create another suggestion.");
   const operations = z.array(operationSchema).min(1).parse(input.operations);
   const issues = operationIssues(book, operations);
-  if (issues.length) throw new SuggestionValidationRefused(issues.join("\n"));
+  if (issues.length) throw new DraftSubmissionRefused(issues.join("\n"));
   const now = new Date().toISOString();
   const suggestion: Suggestion = {
     id: input.id ?? plannedId ?? ctx.storage.ids.create(),

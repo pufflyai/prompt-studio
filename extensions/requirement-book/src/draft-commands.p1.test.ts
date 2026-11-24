@@ -1,9 +1,10 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandArgs } from "@pstdio/sdk/testing";
 import { commands } from "./commands";
+import { draftChapterFor } from "./forms";
 import { serializeBook } from "./model";
 import { bookFixture } from "./model.fixture";
-import { type Draft, listRecords, readRecord, type Suggestion } from "./records";
+import { type Draft, type Finding, listRecords, readRecord, type Suggestion } from "./records";
 
 test("authoring writes persist the exact submitted draft in its own workspace and chapter", async () => {
   const storage = createMemoryStorage();
@@ -62,10 +63,16 @@ test("authoring writes persist the exact submitted draft in its own workspace an
   expect(recovered).toEqual({ value: { draft: JSON.stringify(newer), revision: current.record.revision } });
 });
 
-test("invalid references leave a rule draft editable and corrected input can create its suggestion", async () => {
+test.each([
+  "rule",
+  "finding",
+] as const)("invalid references leave a %s draft editable before and after reservation", async (mode) => {
   const storage = createMemoryStorage();
   const workspaceId = "workspace";
   const chapter = 1;
+  const draftChapter = draftChapterFor(mode, chapter);
+  const referenceField = mode === "rule" ? "related" : "requirements";
+  const kind = mode === "rule" ? "suggestion" : "finding";
   let readsBeforeRemoval: number | undefined;
   const [ctx] = makeCommandArgs({
     storage,
@@ -101,19 +108,21 @@ test("invalid references leave a rule draft editable and corrected input can cre
     statement: "Keep authoring input when validation refuses it.",
     reason: "Cover authoring recovery.",
     acceptance: "The same draft can be edited and submitted.",
-    related: "RB 999.A.1",
+    kind: "violation",
+    explanation: "Cover the finding owner with the same retained values.",
+    [referenceField]: "RB 999.A.1",
   };
-  await commands["drafts.save"].run(ctx, { workspaceId, chapter, values: input });
-  const recordId = `${workspaceId}-${chapter}`;
+  await commands["drafts.save"].run(ctx, { workspaceId, chapter: draftChapter, values: input });
+  const recordId = `${workspaceId}-${draftChapter}`;
   const { record } = await readRecord<Draft>(storage, "draft", recordId);
-  const draft = { workspaceId, chapter, mode: "rule", expectedRevision: record.revision };
+  const draft = { workspaceId, chapter, mode, expectedRevision: record.revision };
   await expect(commands["drafts.submit"].run(ctx, { ...draft, values: input })).resolves.toMatchObject({
     refused: { reason: expect.stringContaining("RB 999.A.1"), revision: record.revision },
   });
   expect((await readRecord<Draft>(storage, "draft", recordId)).value).toMatchObject({ values: input });
   expect((await readRecord<Draft>(storage, "draft", recordId)).value?.submissionStatus).toBeUndefined();
-  expect(await listRecords<Suggestion>(storage, "suggestion")).toHaveLength(0);
-  const corrected = { ...input, related: "RB 1.A.1" };
+  expect(await listRecords(storage, kind)).toHaveLength(0);
+  const corrected = { ...input, [referenceField]: "RB 1.A.1" };
   readsBeforeRemoval = 2;
   const result = await commands["drafts.submit"].run(ctx, { ...draft, values: corrected });
   const restored = await readRecord<Draft>(storage, "draft", recordId);
@@ -123,13 +132,14 @@ test("invalid references leave a rule draft editable and corrected input can cre
   });
   expect(restored.value).toMatchObject({ values: corrected });
   expect(restored.value?.submissionStatus).toBeUndefined();
-  expect(await listRecords<Suggestion>(storage, "suggestion")).toHaveLength(0);
+  expect(await listRecords(storage, kind)).toHaveLength(0);
   await commands["drafts.submit"].run(ctx, {
     ...draft,
     expectedRevision: restored.record.revision,
-    values: { ...corrected, related: "RB 1.A.2" },
+    values: { ...corrected, [referenceField]: "RB 1.A.2" },
   });
-  expect((await listRecords<Suggestion>(storage, "suggestion"))[0]?.operations[0]?.after?.related).toEqual([
-    "RB 1.A.2",
-  ]);
+  const effects = await listRecords<Finding | Suggestion>(storage, kind);
+  expect(effects).toHaveLength(1);
+  const effect = effects[0]!;
+  expect("operations" in effect ? effect.operations[0]?.after?.related : effect.requirements).toEqual(["RB 1.A.2"]);
 });

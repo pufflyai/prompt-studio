@@ -1,5 +1,6 @@
 import { defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
 import { z } from "zod";
+import { DraftSubmissionRefused } from "./draft-commands";
 import { findRule } from "./model";
 import { requireBook } from "./read";
 import { readRecordGroups } from "./read-index";
@@ -22,7 +23,7 @@ export const saveFinding = async (
   const snapshot = await readRepository(ctx, input.workspaceId);
   const book = requireBook(snapshot.book);
   for (const ref of input.requirements ?? [])
-    if (!findRule(book.rules, ref)) throw new Error(`Unknown requirement ${ref}`);
+    if (!findRule(book.rules, ref)) throw new DraftSubmissionRefused(`Unknown requirement ${ref}`);
   const previous = input.id ? await readRecord<Finding>(ctx.storage, "finding", input.id) : null;
   if (input.id && !previous?.value) throw new Error("Finding no longer exists.");
   if (previous?.value && previous.value.workspaceId !== snapshot.workspaceId)

@@ -11,7 +11,9 @@ import {
   saveRecord,
 } from "./records";
 import { resolveWorkspace } from "./repository";
-import { SuggestionValidationRefused } from "./suggestions";
+
+/** Used by a write owner only while it can prove that it saved no result. */
+export class DraftSubmissionRefused extends Error {}
 
 const draftTitle = l10n("book.draft.save", "Save an authoring draft");
 const draftId = (workspaceId: string, chapter: number) => `${workspaceId}-${chapter}`;
@@ -255,7 +257,7 @@ export const submitDraft = async (
     try {
       await write();
     } catch (error) {
-      if (error instanceof SuggestionValidationRefused) return await restoreEditableDraft(error.message);
+      if (error instanceof DraftSubmissionRefused) return await restoreEditableDraft(error.message);
       await finish("unconfirmed");
       throw error;
     }

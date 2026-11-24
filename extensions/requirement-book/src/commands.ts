@@ -125,7 +125,8 @@ export const commands = {
           })
           .parse(values);
         const requirements = splitRefs(values.requirements);
-        for (const ref of requirements) if (!findRule(book.rules, ref)) throw new Error(`Unknown requirement ${ref}`);
+        const missing = requirements.find((ref) => !findRule(book.rules, ref));
+        if (missing) return { refused: { reason: `Unknown requirement ${missing}`, revision: input.expectedRevision } };
         const id = ctx.storage.ids.create();
         return submitDraft(ctx, { ...draft, proof: { kind: "finding", id } }, async () =>
           saveFinding(ctx, { ...finding, workspaceId, requirements }, id),
