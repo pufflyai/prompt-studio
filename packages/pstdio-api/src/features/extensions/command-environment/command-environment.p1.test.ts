@@ -6,10 +6,10 @@ import { join } from "node:path";
 import { folderWorkspaceCapabilities } from "pstdio-db";
 import { artifactFilesFixture } from "../../../services/shared-files/artifact-files.fixture";
 import { blobFilesFixture } from "../../../services/shared-files/blob-files.fixture";
+import { createTestCommandEnvironment } from "../../../test-utils/create-test-command-environment";
 import { createTestDocumentStorage } from "../../../test-utils/create-test-document-storage";
 import { createArtifactMountWriteLedger } from "../artifact-mount-watch/write-ledger";
 import { createFilesApi } from "./files";
-import { createCommandEnvironment } from "./index";
 import { createSessionsApi } from "./sessions";
 
 const tempRoots: string[] = [];
@@ -127,7 +127,7 @@ describe("createCommandEnvironment host primitives", () => {
     writeFileSync(join(sourcePath, "guide.md"), "# Guide");
     const enabledSources = makeEnabledSources();
     enabledSources[0]!.installedSource.source_path = sourcePath;
-    const env = createCommandEnvironment(
+    const env = createTestCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
         workspaceService: {
@@ -165,7 +165,7 @@ describe("createCommandEnvironment host primitives", () => {
   });
 
   test("lists the project workspaces from extension context helpers", async () => {
-    const env = createCommandEnvironment(
+    const env = createTestCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
         personalHistoryService: { workspaces: async () => [] },
@@ -196,7 +196,7 @@ describe("createCommandEnvironment host primitives", () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-repo-files-test-"));
     tempRoots.push(root);
 
-    const env = createCommandEnvironment(
+    const env = createTestCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
 
@@ -243,7 +243,7 @@ describe("createCommandEnvironment host primitives", () => {
     const worktreeRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-worktree-"));
     tempRoots.push(repoRoot, worktreeRoot);
 
-    const env = createCommandEnvironment(
+    const env = createTestCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
 
@@ -300,7 +300,7 @@ describe("createCommandEnvironment host primitives", () => {
 
 describe("createCommandEnvironment storage scopes", () => {
   test("rejects storage scopes that are missing their required id", () => {
-    const env = createCommandEnvironment(
+    const env = createTestCommandEnvironment(
       { extensionStorageService: makeStorageService() } as never,
       makeEnabledSources() as never,
       {
@@ -404,7 +404,7 @@ describe("createCommandEnvironment file scopes", () => {
 describe("createCommandEnvironment", () => {
   test("finds enabled sources by extension id when stored namespace is stale", () => {
     expect(() =>
-      createCommandEnvironment(
+      createTestCommandEnvironment(
         { extensionStorageService: makeStorageService() } as never,
         makeEnabledSources() as never,
         {
@@ -418,7 +418,7 @@ describe("createCommandEnvironment", () => {
   });
 
   test("runs process commands that must succeed", async () => {
-    const env = createCommandEnvironment(
+    const env = createTestCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
         workspaceService: {
@@ -459,7 +459,7 @@ describe("createCommandEnvironment", () => {
     const repoPath = join(root, "repo");
     mkdirSync(repoPath, { recursive: true });
 
-    const env = createCommandEnvironment(
+    const env = createTestCommandEnvironment(
       {
         artifactMountWrites: createArtifactMountWriteLedger(),
         ...f.deps,
@@ -516,7 +516,7 @@ describe("createCommandEnvironment workspaces", () => {
   test("creates anchored workspaces from extension context helpers", async () => {
     const repoPath = createGitRepo();
     const created: unknown[] = [];
-    const env = createCommandEnvironment(
+    const env = createTestCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
         workspaceProviderRuntime: {
@@ -588,7 +588,7 @@ describe("createCommandEnvironment workspaces", () => {
   });
 
   test("resolves workspaces by shorthand from extension context helpers", async () => {
-    const env = createCommandEnvironment(
+    const env = createTestCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
         workspaceService: {
@@ -619,7 +619,7 @@ describe("createCommandEnvironment workspaces", () => {
   });
 
   test("resolves a ref-less default workspace as a local execution target", async () => {
-    const env = createCommandEnvironment(
+    const env = createTestCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
 
@@ -683,7 +683,7 @@ describe("createCommandEnvironment project boundaries", () => {
       cwd: null,
       last_selected_model: null,
     };
-    const env = createCommandEnvironment(
+    const env = createTestCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
         preferencesDBService: { get: async () => null },
@@ -721,7 +721,7 @@ describe("createCommandEnvironment project boundaries", () => {
   });
 
   test("allocates a real free port", async () => {
-    const env = createCommandEnvironment(
+    const env = createTestCommandEnvironment(
       { extensionStorageService: makeStorageService() } as never,
       makeEnabledSources() as never,
       {
@@ -745,12 +745,16 @@ describe("createCommandEnvironment storage files", () => {
     const enabled = makeEnabledSources();
     enabled[0]!.instance.id = f.scope.extension_instance_id;
     enabled[0]!.installedSource.extension_id = f.owner.extensionId;
-    const env = createCommandEnvironment({ ...f.deps, extensionFileService: f.service } as never, enabled as never, {
-      extensionId: f.owner.extensionId,
-      name: "example-documents",
-      project: projectContext,
-      projectId: f.owner.workbenchId,
-    });
+    const env = createTestCommandEnvironment(
+      { ...f.deps, extensionFileService: f.service } as never,
+      enabled as never,
+      {
+        extensionId: f.owner.extensionId,
+        name: "example-documents",
+        project: projectContext,
+        projectId: f.owner.workbenchId,
+      },
+    );
     const projectFile = await env.storage.files.put({
       name: "notes.txt",
       data: Buffer.from("hello"),
@@ -770,7 +774,7 @@ describe("createCommandEnvironment storage files", () => {
 
 describe("createCommandEnvironment settings", () => {
   test("settings use declared defaults and reject unknown keys", async () => {
-    const env = createCommandEnvironment(
+    const env = createTestCommandEnvironment(
       {
         extensionSettingsService: makeSettingsService(),
         extensionStorageService: makeStorageService(),
@@ -803,7 +807,7 @@ describe("createCommandEnvironment settings", () => {
         },
       };
     })();
-    const env = createCommandEnvironment(
+    const env = createTestCommandEnvironment(
       {
         extensionSettingsService: makeSettingsService(),
         extensionStorageService: storageService,
@@ -829,7 +833,7 @@ describe("createCommandEnvironment workspaces worktree mode", () => {
     const repoPath = createGitRepo();
     const provisioned: { projectId: string; workspace: { id: string }; repoPath: string }[] = [];
 
-    const env = createCommandEnvironment(
+    const env = createTestCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
         workspaceProviderRuntime: {

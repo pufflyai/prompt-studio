@@ -6,9 +6,9 @@ import { createProjectsDBService } from "pstdio-db";
 import { createInvocationScope } from "pstdio-extensions";
 import { artifactFilesFixture } from "../../../services/shared-files/artifact-files.fixture";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { createTestCommandEnvironment } from "../../../test-utils/create-test-command-environment";
 import { createOpeningBoundaryFixture } from "../../projects/resource-opening-boundaries.test-fixture";
 import { createArtifactMountWriteLedger } from "../artifact-mount-watch/write-ledger";
-import { createCommandEnvironment } from "./index";
 import { createResourcesApi } from "./resources";
 import { createSessionsApi } from "./sessions";
 import { createWorkspacesApi } from "./workspaces";
@@ -19,7 +19,7 @@ test("cancelling scoped reads leaves artifact, project and extension saves indep
   await createProjectsDBService(shared.db).create({ id: "p", name: "Scoped saves" });
   const controller = new AbortController();
   const workspace = Promise.withResolvers<Record<string, unknown>>();
-  const environment = createCommandEnvironment(
+  const environment = createTestCommandEnvironment(
     {
       ...shared.deps,
       artifactMountWrites: createArtifactMountWriteLedger(),

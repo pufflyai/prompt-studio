@@ -5,10 +5,12 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestCronDriver } from "pstdio-scheduler/testing";
 import { createTestDocumentStorage } from "../../test-utils/create-test-document-storage";
+import { createTestExtensionProcessOwners } from "../../test-utils/create-test-extension-process-owners";
 import { createExtensionScheduler } from "./extension-scheduler";
 import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
 const tempRoots: string[] = [];
+const processOwners: ReturnType<typeof createTestExtensionProcessOwners>[] = [];
 const schedulers: Array<{ dispose: () => Promise<void> }> = [];
 
 const createTempRoot = () => {
@@ -103,7 +105,10 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
   const projectService = {
     get: async () => ({ id: "project-1", name: "Project", shorthand: "PS" }),
   };
+  const extensionProcessOwners = createTestExtensionProcessOwners(extensionService.listEnabledSourcesForProject);
+  processOwners.push(extensionProcessOwners);
   return {
+    extensionProcessOwners,
     accountService: { watch: () => () => {}, projectSyncStatus: async () => ({ state: "local" }) },
     environmentService: { get: async () => ({ environmentId: "local" }) },
     extensionAutomationPreferencesService: {
@@ -139,6 +144,7 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
 
 afterEach(async () => {
   await Promise.all(schedulers.splice(0).map((scheduler) => scheduler.dispose()));
+  await Promise.all(processOwners.splice(0).map((owner) => owner.dispose()));
   delete (globalThis as Record<string, unknown>).__extensionScheduleState;
 
   for (const root of tempRoots.splice(0)) {
