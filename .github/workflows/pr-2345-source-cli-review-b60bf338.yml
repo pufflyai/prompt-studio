@@ -1,0 +1,176 @@
+name: PR 2345 exact source CLI review
+
+on:
+  push:
+    branches:
+      - chore/pr-2345-source-cli-review-b60bf338
+
+permissions:
+  contents: read
+
+jobs:
+  source_cli:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PR2345_HEAD: b60bf338a83f13c49adcc0b140f02bc369fcf9c7
+      PR2345_TREE: 9237d64a88575fc03edbf888349c6112997e0ba7
+      PR2345_BASE: 2c01704eb089bab55d18b8f75d88b4b678b08d20
+      PR2345_POLICY: 0919c441a350ecbfcce669094d433f8f02a2b3f45c4d0571f798af77d9b341da
+      PR2345_CLI_GROUP: 72480638f874d13d0838a290
+      PR2345_CLI_FILES_SHA256: 58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a
+      PR2345_OUTPUT: test-results/pr-2345-source-cli
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.PR2345_HEAD }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+
+      - name: Verify the source and sealed Linux plan
+        shell: bash
+        run: |
+          mkdir -p "$PR2345_OUTPUT"
+          git show -s --format='%H %T %P' HEAD "$GITHUB_WORKFLOW_SHA" "$PR2345_BASE" > "$PR2345_OUTPUT/git-identities.log"
+          test "$GITHUB_REF" = refs/heads/chore/pr-2345-source-cli-review-b60bf338
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$PR2345_HEAD"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" = \
+            "$(printf 'A\t.github/workflows/pr-2345-source-cli-review-b60bf338.yml')"
+          test "$(git rev-parse HEAD)" = "$PR2345_HEAD"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$PR2345_TREE"
+          test "$(git merge-base HEAD "$PR2345_BASE")" = "$PR2345_BASE"
+          test -z "$(git status --porcelain)"
+          test "$(bun --version)" = "1.4.4"
+          test "$(jq -r .packageManager package.json)" = "bun@1.4.4"
+          bun run test:review --base "$PR2345_BASE" --list > "$PR2345_OUTPUT/selected-plan.json"
+          jq -e --arg sha "$PR2345_HEAD" --arg tree "$PR2345_TREE" --arg base "$PR2345_BASE" \
+            --arg policy "$PR2345_POLICY" --arg group "$PR2345_CLI_GROUP" '
+              .head == $sha and .mergeBase == $base
+              and .testPlan.source == {sha:$sha,tree:$tree,policy:$policy,dirty:false}
+              and (.testPlan.digest | test("^[0-9a-f]{64}$"))
+              and all(.testPlan.runs[]; .target == {platform:"linux",arch:"x64"})
+              and ([.testPlan.runs[] | select(.job == "local-additions") | .id] == [$group])
+              and any(.testPlan.runs[]; .id == $group and .owner == "e2e" and .cwd == "packages/e2e"
+                and .runner == "cli" and .priority == "P1" and .lane == "stable" and .artifact == "source"
+                and .requires == ["build-e5b1f54fca1c52cd"] and (.files | length) == 10)
+              and any(.testPlan.setup[]; .id == "build-e5b1f54fca1c52cd" and .owners == ["e2e"]
+                and .kind == "build" and .requires == [])
+            ' "$PR2345_OUTPUT/selected-plan.json"
+          jq -c --arg group "$PR2345_CLI_GROUP" '.testPlan.runs[] | select(.id == $group) | .files' \
+            "$PR2345_OUTPUT/selected-plan.json" > "$PR2345_OUTPUT/assigned-files.json"
+          printf '%s  %s\n' "$PR2345_CLI_FILES_SHA256" "$PR2345_OUTPUT/assigned-files.json" | sha256sum -c -
+          jq -n --arg sha "$PR2345_HEAD" --arg tree "$PR2345_TREE" --arg base "$PR2345_BASE" \
+            --arg workflow "$GITHUB_WORKFLOW_SHA" --arg ordinaryRun "45509874368" \
+            '{sha:$sha,tree:$tree,mergeBase:$base,diagnosticCommit:$workflow,ordinaryCiRun:$ordinaryRun}' \
+            > "$PR2345_OUTPUT/identity.json"
+
+      - name: Create a private temporary directory
+        shell: bash
+        run: |
+          scratch="$(mktemp -d /tmp/pr2345.XXXXXX)"
+          printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$scratch/owner"
+          {
+            echo "PR2345_CLI_TMP=$scratch"
+            echo "TMPDIR=$scratch"
+            echo "TMP=$scratch"
+            echo "TEMP=$scratch"
+            echo "PR2345_NATIVE_BUN=$(command -v bun)"
+          } >> "$GITHUB_ENV"
+          { node --version; bun --version; docker version; df -h /tmp "$GITHUB_WORKSPACE"; } \
+            > "$PR2345_OUTPUT/toolchain.log"
+
+      - name: Install locked dependencies and prepare Firefox
+        shell: bash
+        run: |
+          bun install --frozen-lockfile --concurrent-scripts 1
+          bun run --cwd packages/ui typegen:tokens
+          (cd packages/e2e && bun x --no-install playwright install --with-deps firefox) 2>&1 \
+            | tee "$PR2345_OUTPUT/browser-setup.log"
+          test -z "$(git status --porcelain)"
+
+      - name: Execute only the ten-file source CLI group
+        shell: bash
+        run: |
+          test "$(command -v bun)" = "$PR2345_NATIVE_BUN"
+          bun --no-orphans - <<'BUN' 2>&1 | tee "$PR2345_OUTPUT/console.log"
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+          import { executePlan } from "./scripts/ci/run-test-plan";
+
+          const root = process.cwd();
+          const { PR2345_CLI_TMP: scratch, PR2345_OUTPUT: relative, PR2345_CLI_GROUP: group } = process.env;
+          if (!scratch || !/^\/tmp\/pr2345\.[A-Za-z0-9]{6}$/.test(scratch) || !relative || !group)
+            throw new Error("Unexpected native review assignment");
+          const executionId = process.env.GITHUB_RUN_ID + "/" + process.env.GITHUB_RUN_ATTEMPT;
+          const output = resolve(root, relative);
+          for (const [key, value] of Object.entries(localReviewEnvironment(scratch))) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+          process.env.CI_PLAN_OUTPUT_DIR = relative + "/native";
+          const { testPlan } = await Bun.file(resolve(output, "selected-plan.json")).json();
+          let passed = false;
+          try {
+            const result = await executePlan(testPlan, {
+              root, runIds: [group], prebuilt: false, executionId,
+              env: { CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+            });
+            passed = result.complete && result.outcome === "success";
+          } finally {
+            const cleanup = await cleanupReviewCompose(scratch);
+            await Bun.write(resolve(output, "compose-cleanup.json"), JSON.stringify(cleanup, null, 2));
+            passed &&= cleanup.every(entry => entry.outcome === "success");
+            process.exitCode = passed ? 0 : 1;
+          }
+          BUN
+
+      - name: Verify exact native execution and file coverage
+        shell: bash
+        run: |
+          jq -e --arg group "$PR2345_CLI_GROUP" \
+            --slurpfile expected "$PR2345_OUTPUT/assigned-files.json" \
+            --slurpfile sealed "$PR2345_OUTPUT/selected-plan.json" '
+              .source == $sealed[0].testPlan.source and .planDigest == $sealed[0].testPlan.digest
+              and .complete and .outcome == "success" and .errors == [] and .runIds == [$group]
+              and (.results | length) == 1
+              and all(.results[]; .runId == $group and .complete and .outcome == "success"
+                and .exitCode == 0 and .nativeFailure != true and (.reportedFiles | sort) == ($expected[0] | sort))
+              and [.phases[] | select(.kind == "build") | [.id,.outcome]] == [["build-e5b1f54fca1c52cd","success"]]
+              and any(.phases[]; .kind == "cleanup" and .outcome == "success")
+            ' "$PR2345_OUTPUT/native/execution.json"
+          jq -e 'all(.[]; .outcome == "success")' "$PR2345_OUTPUT/compose-cleanup.json"
+          git diff --exit-code
+
+      - name: Retain and clean this invocation's temporary files
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$PR2345_OUTPUT"
+          if [[ -n "${PR2345_CLI_TMP:-}" ]]; then
+            [[ "$PR2345_CLI_TMP" =~ ^/tmp/pr2345\.[A-Za-z0-9]{6}$ ]]
+            test "$(cat "$PR2345_CLI_TMP/owner")" = "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+            if [[ -f "$PR2345_CLI_TMP/compose-projects.jsonl" ]]; then
+              cp "$PR2345_CLI_TMP/compose-projects.jsonl" "$PR2345_OUTPUT/"
+            fi
+            rm -rf -- "$PR2345_CLI_TMP"
+            test ! -e "$PR2345_CLI_TMP"
+            printf '%s\n' 'Owned temporary directory removed' > "$PR2345_OUTPUT/scratch-cleanup.txt"
+          fi
+
+      - name: Upload the fixture and native receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-2345-source-cli-b60bf338-attempt-${{ github.run_attempt }}
+          path: ${{ env.PR2345_OUTPUT }}
+          if-no-files-found: error
