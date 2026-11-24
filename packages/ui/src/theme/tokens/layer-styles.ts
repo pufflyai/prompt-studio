@@ -1,5 +1,21 @@
 import { defineLayerStyles } from "@chakra-ui/react";
 
+const dropDot = {
+  _after: {
+    content: '""',
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    width: "1.5",
+    height: "1.5",
+    borderRadius: "full",
+    bg: "bg.drop.muted/40",
+    transform: "translate(-50%, -50%)",
+    pointerEvents: "none",
+  },
+  "&[data-drop-active]::after": { bg: "bg.drop" },
+} as const;
+
 const compactDropZone = {
   _after: {
     content: '""',
@@ -98,23 +114,7 @@ export const layerStyles = defineLayerStyles({
     },
   },
   panelDropZone: { value: compactDropZone },
-  widgetDropIndicator: {
-    value: {
-      _after: {
-        content: '""',
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        width: "2",
-        height: "2",
-        borderRadius: "full",
-        bg: "bg.drop.muted/40",
-        transform: "translate(-50%, -50%)",
-        pointerEvents: "none",
-      },
-      "&[data-drop-active]::after": { bg: "bg.drop" },
-    },
-  },
+  widgetDropIndicator: { value: dropDot },
   bubbleButton: { value: { aspectRatio: "square" } },
   dropTarget: {
     value: {
@@ -137,10 +137,13 @@ export const layerStyles = defineLayerStyles({
       borderRadius: "pill",
       bg: "bg.drop.muted/40",
       boxShadow: "sm",
-      "&[data-drop-active]": { bg: "bg.drop" },
+      "&[data-drop-active]:not([data-drop-surface=bubble])": { bg: "bg.drop" },
       "&[data-drop-surface=bubble]": {
+        ...dropDot,
+        position: "relative",
         height: "12",
         borderRadius: "full",
+        bg: "transparent",
         boxShadow: "none",
       },
     },

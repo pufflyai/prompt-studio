@@ -38,7 +38,7 @@ export const statusBarSlotRecipe = defineSlotRecipe({
       position: "absolute",
       insetBlock: "0",
       marginBlock: "status-widget-inset",
-      _after: { width: "auto", height: "full", aspectRatio: "square", bg: "bg.drop" },
+      _after: { bg: "bg.drop" },
       pointerEvents: "none",
     },
     dragPreview: {

@@ -94,8 +94,9 @@ The floating Side Panel hides its launcher while open and restores it when close
 Drag the bubble or unused floating header space to the left, center, or right.
 Both share their saved alignment and move visibly while dragging. During a snap drag,
 three destination indicators appear above the status area, with the pointer's
-destination highlighted. Bubble indicators are circles matching the bubble's exact
-size and resting positions. Floating-panel indicators are short markers at the
+destination highlighted. Bubble indicators use the same small dots as widget drops,
+centered on the bubble's resting positions. The dots match the thickness of panel
+drop indicators. Floating-panel indicators are short markers at the
 bottom-left, center and bottom-right anchors, using the same gap as the panel's
 bottom edge. Releasing saves that alignment. Right-click either surface for
 **Align left**, **Align center**, or **Align right**. While the bubble has focus,
