@@ -38,7 +38,7 @@ export const reviewQueryIndexes: StorageRecordIndex[] = [
   },
 ];
 
-export const validReviewOutcome: StoragePredicate = {
+export const validReviewOutcome = {
   exists: {
     index: "review-outcome-state",
     on: [{ sourceField: "id", relatedField: "requestKey" }],
@@ -49,7 +49,7 @@ export const validReviewOutcome: StoragePredicate = {
       ],
     },
   },
-};
+} satisfies StoragePredicate;
 
 export const pendingReviewRequest: StoragePredicate = {
   any: [{ field: "valid", op: "ne", value: true }, { not: validReviewOutcome }],
