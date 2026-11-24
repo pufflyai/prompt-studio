@@ -28,7 +28,8 @@ export const createRootWatcherClient = async (input: CreateExtensionRootWatcherI
     running.set(path, work);
   };
   const unsubscribe = subscribePreparationEvents((event) => {
-    if (!disposed && registered && (event.kind === "worker-ready" || event.kind === "worker-lost")) {
+    // A replacement reports the lost worker first; that restoration already runs on the new one.
+    if (!disposed && registered && event.kind === "worker-lost") {
       void withPreparationContinuation(refresh, { priority: "restoration" }).catch((error) => input.onError?.(error));
       return;
     }
