@@ -4,11 +4,12 @@ import {
   KanbanRendererCreateDialog,
   type KanbanRendererCreateSubmission,
 } from "@pstdio/ui/kanban-renderer";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { buildTicketAttributes } from "../../data/mappers";
 import { createTicketFormConfig, localizeTicketFormOption, localizeTicketFormValue } from "../../ticket-create-form";
 import type { Plan } from "../contracts";
 import { timelineTicketProperties } from "../model/ticket-properties";
+import { isDefiniteGateLaunchRefusal } from "./gate-launch-recovery";
 import type { PlanClient } from "./use-plan";
 
 export interface CreateContext {
@@ -19,6 +20,7 @@ interface TicketFormProps {
   client: PlanClient;
   host: GuestHost;
   plan: Plan;
+  projectId: string;
   context: CreateContext;
   kind: "ticket" | "gate";
   onDone: (id?: string) => void;
@@ -26,8 +28,13 @@ interface TicketFormProps {
 }
 
 export function TicketForm(props: TicketFormProps) {
-  const { client, host, plan, context, kind, onDone, t } = props;
-  const [created, setCreated] = useState<{ id: string; pending: "placement" | "launch" | "check-launch" }>();
+  const { client, host, plan, projectId, context, kind, onDone, t } = props;
+  const [created, setCreated] = useState<{
+    id: string;
+    pending: "placement" | "launch" | "check-launch";
+    attemptId?: string;
+  }>();
+  const keepOpenAfterSubmit = useRef(false);
   const shared = createTicketFormConfig(t);
   const milestoneOptions = [
     { value: "none", label: "Unscheduled", icon: "calendar-off" },
@@ -80,10 +87,11 @@ export function TicketForm(props: TicketFormProps) {
     }[created.pending];
     Object.assign(config, recovery);
   }
-  const retryCreated = async ({ id, pending }: NonNullable<typeof created>, deadline: string) => {
+  const retryCreated = async ({ id, pending, attemptId }: NonNullable<typeof created>, deadline: string) => {
     if (pending === "check-launch") {
-      const result = await client.commands["timeline.gate.check-launch"]({ ticket: id });
+      const result = await client.commands["timeline.gate.check-launch"]({ ticket: id, attemptId });
       if (result.status === "ready") {
+        keepOpenAfterSubmit.current = true;
         setCreated({ id, pending: "launch" });
         return;
       }
@@ -93,8 +101,17 @@ export function TicketForm(props: TicketFormProps) {
     }
     if (pending === "placement") await client.commands["timeline.plan.move"]({ ticket: id, deadline });
     if (kind === "gate") {
-      setCreated({ id, pending: "check-launch" });
-      await client.commands["timeline.gate.launch"]({ ticket: id, attemptId: crypto.randomUUID() });
+      const launchId = crypto.randomUUID();
+      try {
+        await client.commands["timeline.gate.launch"]({ ticket: id, attemptId: launchId });
+      } catch (error) {
+        setCreated(
+          isDefiniteGateLaunchRefusal(error)
+            ? { id, pending: "launch" }
+            : { id, pending: "check-launch", attemptId: launchId },
+        );
+        throw error;
+      }
     }
     onDone(id);
   };
@@ -125,13 +142,17 @@ export function TicketForm(props: TicketFormProps) {
     const result =
       kind === "gate"
         ? await client.commands["timeline.gate.create"](input)
-        : { ...(await client.commands["timeline.ticket.create"](input)), launchError: null, launchStatus: null };
+        : { ...(await client.commands["timeline.ticket.create"](input)), launchError: null };
     if (result.placementError) {
       setCreated({ id: result.ticket.id, pending: "placement" });
       throw new Error(`Ticket created. Could not save its milestone: ${result.placementError}`);
     }
     if (result.launchError) {
-      setCreated({ id: result.ticket.id, pending: result.launchStatus === "unconfirmed" ? "check-launch" : "launch" });
+      setCreated(
+        result.launchStatus === "unconfirmed"
+          ? { id: result.ticket.id, pending: "check-launch", attemptId: result.launchAttemptId }
+          : { id: result.ticket.id, pending: "launch" },
+      );
       throw new Error(`Gate created. Could not launch its review: ${result.launchError}`);
     }
     onDone(result.ticket.id);
@@ -141,6 +162,7 @@ export function TicketForm(props: TicketFormProps) {
   return (
     <KanbanRendererCreateDialog
       open
+      draftKey={JSON.stringify(["timeline-create", projectId, kind, context.trackId, context.deadlineId])}
       columnId={context.trackId ?? defaultStatusId}
       columnAttributeId={columnAttributeId}
       attributes={created ? [] : attributes}
@@ -163,7 +185,13 @@ export function TicketForm(props: TicketFormProps) {
             }
           : config
       }
-      onClose={() => onDone()}
+      onClose={() => {
+        if (keepOpenAfterSubmit.current) {
+          keepOpenAfterSubmit.current = false;
+          return;
+        }
+        onDone();
+      }}
       onSubmit={submit}
     />
   );

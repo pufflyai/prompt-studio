@@ -3,6 +3,7 @@ import { Button, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
 import { isLiveSession } from "../../commands/auto-build-sessions";
 import type { PlanRow } from "../contracts";
+import { isDefiniteGateLaunchRefusal } from "./gate-launch-recovery";
 import { Instructions } from "./instructions";
 import type { PlanClient } from "./use-plan";
 
@@ -10,17 +11,22 @@ export function GatePanel(props: { row: PlanRow; client: PlanClient }) {
   const { row, client } = props;
   const [launching, setLaunching] = useState(false);
   const [error, setError] = useState<string>();
-  const [recovery, setRecovery] = useState<{ ticketId: string; session?: { id: string; status: string } }>();
+  const [recovery, setRecovery] = useState<{
+    ticketId: string;
+    session?: { id: string; status: string };
+    attemptId?: string;
+  }>();
   const result = recovery?.ticketId === row.id ? recovery : undefined;
   const check = result && !result.session;
   const previous = result?.session && !isLiveSession(result.session) ? result.session.id : undefined;
   const reviewLabel = previous ? "Review again" : "Review gate";
   const launch = async () => {
+    const attemptId = check ? result.attemptId : crypto.randomUUID();
     setLaunching(true);
     setError(undefined);
     try {
       if (check) {
-        const current = await client.commands["timeline.gate.check-launch"]({ ticket: row.id });
+        const current = await client.commands["timeline.gate.check-launch"]({ ticket: row.id, attemptId });
         if (current.status === "confirmed") setRecovery({ ticketId: row.id, session: current.session });
         if (current.status === "ready") setRecovery(undefined);
         if (current.status === "unconfirmed") setError("No review session has been confirmed yet.");
@@ -28,12 +34,12 @@ export function GatePanel(props: { row: PlanRow; client: PlanClient }) {
         const session = await client.commands["timeline.gate.launch"]({
           ticket: row.id,
           after: previous,
-          attemptId: crypto.randomUUID(),
+          attemptId,
         });
         setRecovery({ ticketId: row.id, session });
       }
     } catch (reason) {
-      setRecovery({ ticketId: row.id });
+      if (!check && !isDefiniteGateLaunchRefusal(reason)) setRecovery({ ticketId: row.id, attemptId });
       setError(String(reason));
     } finally {
       setLaunching(false);
