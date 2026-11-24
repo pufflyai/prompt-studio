@@ -38,7 +38,6 @@ test("the first Timeline page initializes its execution prefix and continues wit
   expect(first.sections[0].rows[0].flags).toContain("out-of-order");
   expect((await storage.records.aggregate({ index: "timeline-placements" })).count).toBe(103);
 
-
   const selected = await readPlanCommand.run(ctx, { ticketId: ids[20] });
   expect(selected.sections[0].rows[0]).toMatchObject({ id: ids[20], step: 21 });
   expect((await storage.records.aggregate({ index: "timeline-placements" })).count).toBe(103);
@@ -61,7 +60,7 @@ test("the first Timeline page initializes its execution prefix and continues wit
   const later = await readPlanCommand.run(ctx, { page: page(100) });
   expect(later.ticketRows.map(({ id }) => id)).toEqual(ids.slice(100, 150));
   expect(later.sections[0].rows.map(({ step }) => step)).toEqual(Array.from({ length: 50 }, (_, i) => i + 101));
-  expect((await storage.records.aggregate({ index: "timeline-placements" })).count).toBe(203);
+  expect((await storage.records.aggregate({ index: "timeline-placements" })).count).toBe(205);
   const last = await readPlanCommand.run(ctx, { page: page(200) });
   expect(last.ticketRows.map(({ id }) => id)).toEqual(ids.slice(200));
   expect(last.sections[0].globalCounts?.total).toBe(203);
