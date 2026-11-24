@@ -136,7 +136,8 @@ export const draftCommands = {
     params: { ...editScope, submissionId: params.text({ required: true }) },
     async run(ctx, { workspaceId, chapter, submissionId }) {
       const { workspace } = await resolveWorkspace(ctx, workspaceId);
-      const current = await readRecord<Draft>(ctx.storage, "draft", draftId(workspace.id, chapter));
+      const id = draftId(workspace.id, chapter);
+      const current = await readRecord<Draft>(ctx.storage, "draft", id);
       const draft = current.value;
       if (!draft || draft.submissionId !== submissionId) return { confirmed: false };
       if (submitting.has(submissionKey(ctx, draft))) return { confirmed: false };
@@ -146,12 +147,19 @@ export const draftCommands = {
       const confirmed = saved?.value?.workspaceId === workspace.id;
       const interrupted = draft.submissionStatus === "writing";
       if (confirmed || interrupted) {
-        await saveRecord(
-          ctx.storage,
-          "draft",
-          { ...draft, submissionStatus: confirmed ? "confirmed" : "unconfirmed" },
-          current.record.revision,
-        );
+        try {
+          await saveRecord(
+            ctx.storage,
+            "draft",
+            { ...draft, submissionStatus: confirmed ? "confirmed" : "unconfirmed" },
+            current.record.revision,
+          );
+        } catch (error) {
+          const latest = await readRecord<Draft>(ctx.storage, "draft", id).catch(() => undefined);
+          if (latest?.value?.submissionId === submissionId && latest.value.submissionStatus === "confirmed")
+            return { confirmed: true };
+          throw error;
+        }
         await announce(ctx, workspace.id);
       }
       return { confirmed };

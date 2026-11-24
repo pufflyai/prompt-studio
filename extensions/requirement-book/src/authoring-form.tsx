@@ -1,5 +1,5 @@
 import type { WebviewCommandEditingSession } from "@pstdio/sdk/extensions";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BookForm } from "./book-form";
 import type { BookClient } from "./client";
 import { chapterFields, draftChapterFor, findingFields, ruleFields } from "./forms";
@@ -32,6 +32,7 @@ export function AuthoringForm(props: Props) {
   const draftChapter = draftChapterFor(mode, chapter);
   const { workspaceId } = data;
   const draft = data.drafts.find((item) => item.chapter === draftChapter);
+  const mounted = useRef(false);
   const editing = useRef<Promise<WebviewCommandEditingSession<DraftSnapshot>> | undefined>(undefined);
   const activeEditing = useRef<WebviewCommandEditingSession<DraftSnapshot> | undefined>(undefined);
   const [restored, setRestored] = useState<Draft>();
@@ -39,6 +40,12 @@ export function AuthoringForm(props: Props) {
   const [draftError, setDraftError] = useState<string>();
   const [openingFailed, setOpeningFailed] = useState(false);
   const [openAttempt, retryOpening] = useState(0);
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   // biome-ignore lint/correctness/useExhaustiveDependencies: an explicit retry opens the same draft again.
   useEffect(() => {
     let active = true;
@@ -87,7 +94,11 @@ export function AuthoringForm(props: Props) {
       void previous?.then((session) => session.close()).catch(() => {});
     };
   }, [client, workspaceId, draftChapter, openAttempt]);
+  const requireOpenForm = () => {
+    if (!mounted.current) throw new Error("The authoring form closed.");
+  };
   const rememberDraft = (values: Record<string, unknown>, savedRevision: string) => {
+    if (!mounted.current) return;
     const saved = {
       id: `${workspaceId}-${draftChapter}`,
       workspaceId,
@@ -101,12 +112,14 @@ export function AuthoringForm(props: Props) {
     onDraftSaved(saved);
   };
   const saveDraft = async (values: Record<string, unknown>, expectedRevision: string) => {
+    requireOpenForm();
     editing.current ??= openDraftEditing(client, workspaceId, draftChapter);
     const opening = editing.current;
     const session = await opening.catch((error) => {
       if (editing.current === opening) editing.current = undefined;
       throw error;
     });
+    requireOpenForm();
     activeEditing.current = session;
     const savedRevision = await client.saveDraft(session.id, JSON.stringify(values), expectedRevision);
     rememberDraft(values, savedRevision);
@@ -123,12 +136,13 @@ export function AuthoringForm(props: Props) {
     chapter: "New chapter",
   }[mode];
   const submit = async (values: Record<string, unknown>, expectedRevision: string) => {
+    requireOpenForm();
     const result = await client.commands["drafts.submit"]({ workspaceId, chapter, mode, values, expectedRevision });
     if ("refused" in result) {
       rememberDraft(values, result.refused.revision);
       return result.refused;
     }
-    onSaved();
+    if (mounted.current) onSaved();
     void client.commands["drafts.discard"]({
       workspaceId,
       chapter: draftChapter,
@@ -151,7 +165,9 @@ export function AuthoringForm(props: Props) {
       canDiscardSubmission={draft?.submissionStatus !== "writing" && Boolean(draft?.revision ?? revision)}
       hasSubmissionProof={Boolean(draft?.submissionProof)}
       onSubmit={submit}
-      onClose={onClose}
+      onClose={() => {
+        if (mounted.current) onClose();
+      }}
       onPreviewDraft={(values, expectedRevision) => {
         const session = activeEditing.current;
         if (session)
