@@ -20,7 +20,9 @@ test("jump to an earlier turn, then resize the conversation panel", async ({ pag
   const sender = preview.getByRole("img", { name: "Message from Release checks", exact: true });
   await expect(sender).toBeVisible();
   await sender.focus();
-  await expect(preview.getByRole("tooltip")).toHaveText("Release checks");
+  const senderTooltip = preview.getByRole("tooltip", { name: "Release checks", exact: true });
+  await expect(senderTooltip).toBeVisible();
+  await expect(senderTooltip).toHaveText("Release checks");
   await expect(first).toHaveAttribute("aria-current", "location");
   await last.click();
   await expect(preview.locator('[data-chat-message-id="a-23"]')).toBeInViewport();
