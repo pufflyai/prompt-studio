@@ -32,9 +32,12 @@ export type HostToWorkerMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
       args: unknown[];
     }
   | { type: "cancel"; invocationId: string; reason: SerializedBackendError }
+  | { type: "discard"; invocationId: string }
   | ({ type: "reply"; invocationId: string; requestId: string } & Settled)
   /** Calls a function the worker passed to the host during this invocation. */
   | { type: "fn-call"; invocationId: string; requestId: string; fnId: string; args: unknown[] }
+  | { type: "ping"; seq: number }
+  | { type: "release"; invocationId: string; fnIds: string[] }
 );
 
 export type WorkerToHostMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
@@ -46,6 +49,8 @@ export type WorkerToHostMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
   /** Calls a function the host passed to the worker during this invocation. */
   | { type: "fn-call"; invocationId: string; requestId: string; fnId: string; args: unknown[]; within?: string }
   | ({ type: "reply"; invocationId: string; requestId: string } & Settled)
+  | { type: "pong"; seq: number; rss: number }
+  | { type: "release"; invocationId: string; fnIds: string[] }
 );
 
 /** Marks a function in the definition the worker reports. Only the worker can run it. */
@@ -108,44 +113,39 @@ const isPath = (value: unknown) =>
     (step) => isRecord(step) && typeof step.name === "string" && (step.args === undefined || Array.isArray(step.args)),
   );
 
+type Message = Record<string, unknown>;
+const isString = (value: unknown) => typeof value === "string";
+
+const workerMessageChecks: Record<string, (message: Message) => boolean> = {
+  ready: () => true,
+  loaded: isSettled,
+  result: (message) => isString(message.invocationId) && isSettled(message),
+  call: (message) =>
+    isString(message.invocationId) &&
+    isString(message.requestId) &&
+    isPath(message.path) &&
+    Array.isArray(message.args) &&
+    optionalString(message.within),
+  "fn-call": (message) =>
+    isString(message.invocationId) &&
+    isString(message.requestId) &&
+    isString(message.fnId) &&
+    Array.isArray(message.args) &&
+    optionalString(message.within),
+  reply: (message) => isString(message.invocationId) && isString(message.requestId) && isSettled(message),
+  notify: (message) =>
+    isString(message.invocationId) &&
+    isPath(message.path) &&
+    Array.isArray(message.args) &&
+    optionalString(message.within),
+  release: (message) => isString(message.invocationId) && Array.isArray(message.fnIds) && message.fnIds.every(isString),
+  pong: (message) =>
+    Number.isSafeInteger(message.seq) && typeof message.rss === "number" && Number.isFinite(message.rss),
+};
+
 /** Validates what the worker sends. The host never trusts its shape or its claimed identity. */
 export const parseWorkerMessage = (message: unknown): WorkerToHostMessage | undefined => {
-  if (!isRecord(message) || message.v !== BACKEND_PROTOCOL_VERSION) return;
-  switch (message.type) {
-    case "ready":
-      return message as WorkerToHostMessage;
-    case "loaded":
-      return isSettled(message) ? (message as WorkerToHostMessage) : undefined;
-    case "result":
-      return typeof message.invocationId === "string" && isSettled(message)
-        ? (message as WorkerToHostMessage)
-        : undefined;
-    case "call":
-      return typeof message.invocationId === "string" &&
-        typeof message.requestId === "string" &&
-        isPath(message.path) &&
-        Array.isArray(message.args) &&
-        optionalString(message.within)
-        ? (message as WorkerToHostMessage)
-        : undefined;
-    case "fn-call":
-      return typeof message.invocationId === "string" &&
-        typeof message.requestId === "string" &&
-        typeof message.fnId === "string" &&
-        Array.isArray(message.args) &&
-        optionalString(message.within)
-        ? (message as WorkerToHostMessage)
-        : undefined;
-    case "reply":
-      return typeof message.invocationId === "string" && typeof message.requestId === "string" && isSettled(message)
-        ? (message as WorkerToHostMessage)
-        : undefined;
-    case "notify":
-      return typeof message.invocationId === "string" &&
-        isPath(message.path) &&
-        Array.isArray(message.args) &&
-        optionalString(message.within)
-        ? (message as WorkerToHostMessage)
-        : undefined;
-  }
+  if (!isRecord(message) || message.v !== BACKEND_PROTOCOL_VERSION || !isString(message.type)) return;
+  const check = Object.hasOwn(workerMessageChecks, message.type) ? workerMessageChecks[message.type] : undefined;
+  return check?.(message) ? (message as WorkerToHostMessage) : undefined;
 };
