@@ -99,7 +99,7 @@ export const startRelayExtension = async (input: {
               .map((candidate) => candidate.relativePath),
             signal,
             resolveWriteRoot: () => resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write"),
-            onWrite: (path) => deps.artifactMountWrites.record(path),
+            onWrite: deps.artifactMountWrites.record,
           }),
         )
     : [];

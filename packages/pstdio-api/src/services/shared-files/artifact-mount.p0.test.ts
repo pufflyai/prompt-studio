@@ -142,13 +142,20 @@ test("write notifications keep the workspace path used by filesystem watchers", 
   const alias = join(f.root, "workspace-link");
   await symlink(f.input.repoRoot, alias, "junction");
   const writes: string[] = [];
+  const directories: string[] = [];
   const mount = createSharedArtifactMount(f.deps, {
     ...f.input,
     repoRoot: alias,
-    onWrite: (path) => writes.push(path),
+    onWrite: (path, created) => {
+      writes.push(path);
+      directories.push(...(created?.keys() ?? []));
+    },
   });
   await mount.writeText("note.md", "saved through linked workspace");
+  await mount.writeText("nested/first.md", "created the directory");
+  await mount.writeText("nested/second.md", "used the existing directory");
   expect(writes).toContain(join(alias, ".pstdio/extension-storage/example.documents/documents/note.md"));
+  expect(directories).toEqual([join(alias, ".pstdio/extension-storage/example.documents/documents/nested")]);
 });
 
 test("a mount reports the full-ID folder that filesystem watchers must observe", async () => {

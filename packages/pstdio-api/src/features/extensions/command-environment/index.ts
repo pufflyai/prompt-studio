@@ -143,7 +143,7 @@ export const createCommandEnvironment = (
             extensionInstanceId: enabledSource.instance.id,
             source: enabledSource.installedSource,
           }).write,
-          onWrite: (path) => deps.artifactMountWrites.record(path),
+          onWrite: deps.artifactMountWrites.record,
           signal,
         },
         deps,

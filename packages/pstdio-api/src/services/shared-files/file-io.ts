@@ -3,7 +3,7 @@ import { dirname, join, relative } from "node:path";
 import type { AssetOwner, AssetReference } from "pstdio-api-contracts";
 import { historicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
-import { createSafeFileRoot } from "pstdio-extensions";
+import { type ArtifactMountWriteObserver, createSafeFileRoot, filesystemIdentity } from "pstdio-extensions";
 import type { createAssetTransferService } from "../asset-transfer-service";
 import { blobHash } from "./file-state";
 
@@ -23,7 +23,7 @@ export const createFileProjectionIO = (input: {
   assets: ReturnType<typeof createAssetTransferService>;
   signal?: AbortSignal;
   beforeWrite?: () => Promise<unknown>;
-  onWrite?: (path: string) => void;
+  onWrite?: ArtifactMountWriteObserver;
 }) => {
   const safe = createSafeFileRoot(input.root);
   const boundaries = input.roots
@@ -73,10 +73,20 @@ export const createFileProjectionIO = (input: {
       input.onWrite?.(join(input.root, path));
       return;
     }
-    const destination = await scoped.safe.resolveForWrite(scoped.path);
-    if (target.kind === "directory") await mkdir(destination.operationPath, { recursive: true });
-    else if (temporary) await rename(temporary, destination.realPath);
-    input.onWrite?.(join(input.root, path, relative(destination.operationPath, destination.realPath)));
+    const createdDirectories = input.onWrite ? new Map<string, string>() : undefined;
+    const destination = await scoped.safe.resolveForWrite(
+      scoped.path,
+      createdDirectories && ((folder, identity) => createdDirectories.set(folder, identity)),
+    );
+    const changedPath = join(input.root, path, relative(destination.operationPath, destination.realPath));
+    if (target.kind === "directory") {
+      const created = await mkdir(destination.operationPath, { recursive: true });
+      if (created && createdDirectories) {
+        const stats = await stat(destination.operationPath, { bigint: true }).catch(() => undefined);
+        if (stats?.isDirectory()) createdDirectories.set(changedPath, filesystemIdentity(stats));
+      }
+    } else if (temporary) await rename(temporary, destination.realPath);
+    input.onWrite?.(changedPath, createdDirectories);
   };
   const install = async (
     path: string,

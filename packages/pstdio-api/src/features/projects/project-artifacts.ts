@@ -36,7 +36,7 @@ export const restoreProjectArtifacts = async (deps: ProjectsRouteDeps, projectId
         .map((candidate) => candidate.relativePath),
       assertWritable: access.write,
       resolveWriteRoot: () => resolveWorkspaceFilesPath(deps, target, "write"),
-      onWrite: (path) => deps.artifactMountWrites.record(path),
+      onWrite: deps.artifactMountWrites.record,
     }).refresh();
   }
 };

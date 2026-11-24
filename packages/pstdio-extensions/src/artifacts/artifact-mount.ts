@@ -17,10 +17,12 @@ type ArtifactMountLocation = {
   mountPath: string;
 };
 
+export type ArtifactMountWriteObserver = (path: string, createdDirectories?: ReadonlyMap<string, string>) => void;
+
 type CreateArtifactMountInput = ArtifactMountLocation & {
   signal?: AbortSignal;
   /** Called after each write, update, or delete with the changed path under the mount root. */
-  onWrite?: (path: string) => void;
+  onWrite?: ArtifactMountWriteObserver;
 };
 
 type FileMountOptions = Pick<CreateArtifactMountInput, "signal" | "onWrite">;
@@ -89,17 +91,22 @@ const createFileMountState = (
   const read = createReadBoundary(signal);
   // Report paths under the root as given, not the root's resolved real path, so they match what a
   // watcher on that root reports. A write through a linked file changes the file it points to.
-  const reportWrite = (relativePath: string, linkTarget = "") =>
-    onWrite?.(join(resolve(mountRoot), ...relativePath.split("/"), linkTarget));
+  const reportWrite = (relativePath: string, linkTarget = "", createdDirectories?: ReadonlyMap<string, string>) =>
+    onWrite?.(join(resolve(mountRoot), ...relativePath.split("/"), linkTarget), createdDirectories);
+  const write = async (path: string, value: string | Uint8Array) => {
+    const createdDirectories = onWrite ? new Map<string, string>() : undefined;
+    const { operationPath, realPath, relativePath } = await safeRoot.resolveForWrite(
+      path,
+      createdDirectories && ((folder, identity) => createdDirectories.set(folder, identity)),
+    );
+    await writeFile(operationPath, value);
+    reportWrite(relativePath, relative(operationPath, realPath), createdDirectories);
+  };
   const mount: ArtifactMount = {
     exists: (path) => read(async () => Boolean(await safeRoot.tryResolveExisting(path))),
     readText: (path) =>
       read(async () => readFile((await safeRoot.resolveExisting(path)).operationPath, { encoding: "utf8", signal })),
-    writeText: async (path, value) => {
-      const { operationPath, realPath, relativePath } = await safeRoot.resolveForWrite(path);
-      await writeFile(operationPath, value, "utf8");
-      reportWrite(relativePath, relative(operationPath, realPath));
-    },
+    writeText: write,
     updateText: async (path, value) => {
       const { operationPath, realPath, relativePath } = await safeRoot.resolveExisting(path);
       // Opening without O_CREAT keeps a racing delete authoritative. An unlinked
@@ -117,11 +124,7 @@ const createFileMountState = (
       read(
         async () => new Uint8Array(await readFile((await safeRoot.resolveExisting(path)).operationPath, { signal })),
       ),
-    writeBytes: async (path, value) => {
-      const { operationPath, realPath, relativePath } = await safeRoot.resolveForWrite(path);
-      await writeFile(operationPath, value);
-      reportWrite(relativePath, relative(operationPath, realPath));
-    },
+    writeBytes: write,
     list: (pattern) =>
       read(async () => {
         // The scoped-walk shortcut must honor the same escape guard as every other

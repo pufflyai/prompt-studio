@@ -2,6 +2,7 @@ import { dirname, join, posix, resolve } from "node:path";
 import { historicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
 import {
+  type ArtifactMountWriteObserver,
   createFileMount,
   createSafeFileRoot,
   normalizeMountRelativePath,
@@ -53,7 +54,7 @@ export const createSharedArtifactMount = (
     mountPath: string;
     mountPaths?: string[];
     signal?: AbortSignal;
-    onWrite?: (path: string) => void;
+    onWrite?: ArtifactMountWriteObserver;
     assertWritable?: () => Promise<void>;
     resolveWriteRoot?: () => Promise<string>;
   },

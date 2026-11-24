@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, renameSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { createArtifactMount, resolveArtifactMountRoot } from "pstdio-extensions";
@@ -10,9 +10,10 @@ const createMount = (ledger: ReturnType<typeof createArtifactMountWriteLedger>) 
   const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-mount-ledger-"));
   roots.push(repoRoot);
   const location = { repoRoot, extensionId: "pstdio.dashboards", mountPath: "boards" };
+  const root = resolveArtifactMountRoot(location);
   return {
     mount: createArtifactMount({ ...location, onWrite: ledger.record }),
-    root: resolveArtifactMountRoot(location),
+    root,
   };
 };
 
@@ -26,6 +27,7 @@ describe("artifact mount write ledger", () => {
     const { mount, root } = createMount(ledger);
 
     await mount.writeText("sales/q3.json", "{}");
+    await mount.writeText("sales/q3.json", "[]");
 
     expect(ledger.dropEchoes([join(root, "sales"), join(root, "sales", "q3.json")])).toEqual([]);
   });
@@ -61,6 +63,24 @@ describe("artifact mount write ledger", () => {
     await mount.writeText("sales/q3.json", "{}");
     writeFileSync(path, '{"total":1}');
     expect(ledger.dropEchoes(fileFirst ? [path, folder] : [folder, path], { keepMatchedWrites: true })).toEqual([path]);
+  });
+
+  test.each([true, false])("reports a replaced folder and missing child in either order (%s)", async (fileFirst) => {
+    const ledger = createArtifactMountWriteLedger();
+    const { mount, root } = createMount(ledger);
+    const folder = join(root, "sales");
+    const path = join(folder, "q3.json");
+    const replacement = join(root, "incoming");
+    mkdirSync(replacement, { recursive: true });
+    writeFileSync(join(replacement, "q4.json"), "{}");
+
+    await mount.writeText("sales/q3.json", "{}");
+    renameSync(folder, join(root, "previous"));
+    renameSync(replacement, folder);
+    await mount.writeText("sales/q5.json", "{}");
+
+    const paths = fileFirst ? [path, folder] : [folder, path];
+    expect(ledger.dropEchoes(paths, { keepMatchedWrites: true })).toEqual(paths);
   });
 
   test("drops everything a mount delete removed", async () => {
