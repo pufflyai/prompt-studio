@@ -13,9 +13,7 @@ const AutoBuildForm = lazy(async () => {
 });
 
 export function AutoBuildDialogContent(props: AutoBuildButtonProps & { onClose?: () => void }) {
-  const { disabled, configuration, t } = props;
-  // Mount only after the initial authoritative mode arrives, then retain the chosen panel.
-  if (disabled && !configuration) return <Text p="md">Loading Auto Build…</Text>;
+  const { t } = props;
   return (
     <Stack h="full" minH="0" gap="0">
       <Header variant="narrow">
@@ -47,7 +45,9 @@ function AutoBuildPanels(props: AutoBuildButtonProps & { onClose?: () => void })
     onClose,
   } = props;
   const failed = (!completed && supervisor?.status === "failed") || Boolean(error);
-  const [panel, setPanel] = useState(enabled || paused || failed ? "activity" : "configuration");
+  const [selectedPanel, setPanel] = useState<string>();
+  const panel = selectedPanel ?? (enabled || paused || failed ? "activity" : "configuration");
+  if (props.disabled && !configuration) return <Text p="md">Loading Auto Build…</Text>;
   if (panel === "configuration" && configuration) {
     return (
       <Flex direction="column" h="full" minH="0">
