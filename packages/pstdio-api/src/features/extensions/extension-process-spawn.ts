@@ -1,12 +1,7 @@
 import { resolve } from "node:path";
 import type { ProcessHandle, ProcessRunInput, ProcessSpawnInput } from "pstdio-api-contracts/extension-kernel";
-import {
-  createProcessHandleProxy,
-  type ProcessOwner,
-  processCleanup,
-  processError,
-  trackProcessCleanup,
-} from "pstdio-extensions";
+import { createProcessHandleProxy, type ProcessOwner, processError } from "pstdio-extensions";
+import { apiLogger } from "../../lib/logger";
 import { watchLease } from "./extension-process-lifetime";
 import type { ProcessTarget } from "./extension-targets";
 import { resolveProcessEnvironmentCommand } from "./process-command";
@@ -26,6 +21,26 @@ export interface ProcessSpawnOptions {
   spawner?: typeof Bun.spawn;
 }
 
+// An opening remote call can still return a child after cancellation. Reserve its ownership
+// before invoking the provider, and free it only once the proxy verifies it has no live tree.
+const MAX_REMOTE_PROCESSES_PER_OWNER = 256;
+const remoteProcesses = new WeakMap<ProcessOwner, number>();
+
+const reserveRemote = (owner: ProcessOwner) => {
+  const count = remoteProcesses.get(owner) ?? 0;
+  if (count >= MAX_REMOTE_PROCESSES_PER_OWNER)
+    throw processError(
+      "process_target_unavailable",
+      `This process owner has ${MAX_REMOTE_PROCESSES_PER_OWNER} remote processes awaiting cleanup. Stop an earlier process before starting another.`,
+    );
+  remoteProcesses.set(owner, count + 1);
+  return () => {
+    const remaining = remoteProcesses.get(owner)! - 1;
+    if (remaining === 0) remoteProcesses.delete(owner);
+    else remoteProcesses.set(owner, remaining);
+  };
+};
+
 const checkInput = (input: ProcessSpawnInput) => {
   if (
     !Array.isArray(input.command) ||
@@ -39,13 +54,15 @@ const checkInput = (input: ProcessSpawnInput) => {
   return lifetime;
 };
 
+type ProcessAdmission = { local?: ProcessHandle; releaseRemote?: () => void };
+
 const spawnLocal = async (
   options: ProcessSpawnOptions,
   input: ProcessSpawnInput,
   root: string | undefined,
   owner: ProcessOwner,
   active: () => void,
-  admitted: (handle: ProcessHandle) => void,
+  admission: ProcessAdmission,
 ) => {
   // The selected target's root anchors a relative cwd; a cwd never selects another target.
   const cwd = input.cwd === undefined ? root : resolve(root ?? process.cwd(), input.cwd);
@@ -71,8 +88,8 @@ const spawnLocal = async (
     const handle = lease ? lease.start(start) : start().value;
     if (lease) watchLease(treeExited ?? handle.exited.then(() => {}), lease);
     // Open the proxy before the Windows launcher acknowledges target startup so kill can stop it.
-    const output = trackProcessCleanup(redactProcessOutput(handle, granted), processCleanup(handle));
-    admitted(output);
+    const output = redactProcessOutput(handle, granted);
+    admission.local = output;
     return output;
   } finally {
     lease?.releaseUnused();
@@ -106,16 +123,17 @@ const openOnTarget = async (
   owner: ProcessOwner,
   active: () => void,
   signal: AbortSignal,
-  admitted: (handle: ProcessHandle) => void,
+  admission: ProcessAdmission,
 ) => {
   if (owner.ready) await owner.ready;
   active();
   const target = options.resolveTarget ? await options.resolveTarget(input.workspaceId, signal) : undefined;
   if (owner.ready) await owner.ready;
   active();
-  if (target?.kind !== "remote") return spawnLocal(options, input, target?.root, owner, active, admitted);
+  if (target?.kind !== "remote") return spawnLocal(options, input, target?.root, owner, active, admission);
   if (input.envFromHost?.length)
     throw processError("process_target_unsupported", "envFromHost passes host values to local children only.");
+  admission.releaseRemote = reserveRemote(owner);
   return target.spawn({ ...input, lifetime: input.lifetime ?? "call" }, signal);
 };
 
@@ -126,7 +144,7 @@ const openOnTarget = async (
 export const createProcessSpawn = (options: ProcessSpawnOptions) => (input: ProcessSpawnInput) => {
   const cancel = new AbortController();
   let owner: ProcessOwner | undefined;
-  let local: ProcessHandle | undefined;
+  const admission: ProcessAdmission = {};
   let open: Promise<ProcessHandle>;
   try {
     const lifetime = checkInput(input);
@@ -138,14 +156,22 @@ export const createProcessSpawn = (options: ProcessSpawnOptions) => (input: Proc
       owner,
       activeCheck(options, lifetime, owner, cancel.signal),
       cancel.signal,
-      (handle) => {
-        local = handle;
-      },
+      admission,
     );
   } catch (error) {
     open = Promise.reject(error);
   }
-  const handle = createProcessHandleProxy(open, cancel, () => local);
+  const handle = createProcessHandleProxy(open, {
+    cancel,
+    admittedLocal: () => admission.local,
+    onLateStopFailure: (error) => {
+      apiLogger.warn(
+        { err: error, event: "extension.process.late_cleanup_failed" },
+        "Could not stop a process that arrived after cancellation",
+      );
+    },
+  });
+  void handle.treeExited.then(() => admission.releaseRemote?.());
   // The owner holds the handle before any child exists, so closing it never misses one.
   owner?.adopt(handle);
   return handle;

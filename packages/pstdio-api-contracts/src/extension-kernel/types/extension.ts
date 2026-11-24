@@ -213,8 +213,9 @@ export interface WorkspaceTypeProvider extends ContributionDefinition<"workspace
   delete?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<void>;
   /**
    * Runs `ctx.process.spawn` for a remote workspace. `ctx` is this provider's own context. The host
-   * owns the returned handle and kills it when its caller's lifetime ends. Without this method,
-   * spawning on the workspace fails with `process_target_unsupported`.
+   * owns the returned handle and kills it when its caller's lifetime ends. Resolve `treeExited`
+   * to confirm natural cleanup of the entire tree. Without `spawn`, starting a process on the
+   * workspace fails with `process_target_unsupported`.
    */
   spawn?(ctx: ExtensionContextBase, input: WorkspaceProviderSpawnInput): MaybePromise<ProcessHandle>;
   /**
