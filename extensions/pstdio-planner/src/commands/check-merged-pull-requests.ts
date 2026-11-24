@@ -172,7 +172,13 @@ export const checkMergedPullRequestsCommand = defineCommand({
     // Only a submitted attempt can record a merge. Idle projects need no ticket scan.
     await preparePlannerIndexes(ctx.storage);
     await upgradeAttemptStorage(ctx.storage);
-    const attempts = await ctx.storage.records.query({ index: "attempt-ticket", fields: [], orderBy: [], limit: 1 });
+    const attempts = await ctx.storage.records.query({
+      index: "attempt-ticket",
+      fields: [],
+      orderBy: [],
+      limit: 1,
+      where: { field: "revisionHeads", op: "notEmpty" },
+    });
     if (!attempts.records.length) return destination.status ? undefined : { reason: destination.reason };
     const reads: GithubReads = new Map();
     for await (const metadata of mergeTicketPages(ctx.storage)) {
