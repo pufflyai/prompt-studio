@@ -51,6 +51,10 @@ export const createDbInWorker = async (
   const opened = Promise.withResolvers<string>();
   let exited = false;
   let closeRequested = false;
+  // Opening counts as busy: startup migrations and maintenance write before the database is ready.
+  let opening = true;
+  const tracked = { busy: () => opening || remote.busy() };
+  openWorkers.add(tracked);
 
   worker.onmessage = (event: MessageEvent<DatabaseWorkerMessage>) => {
     const message = event.data;
@@ -62,7 +66,7 @@ export const createDbInWorker = async (
   const stopped = (reason: string) => {
     if (exited) return;
     exited = true;
-    openWorkers.delete(remote);
+    openWorkers.delete(tracked);
     const error = new Error(`The database worker stopped: ${reason}`);
     opened.reject(error);
     remote.fail(error);
@@ -73,19 +77,20 @@ export const createDbInWorker = async (
 
   const abort = () => worker.postMessage({ type: "abort" });
   signal?.addEventListener("abort", abort, { once: true });
-  worker.postMessage({ type: "open", options: open });
   let path: string;
   try {
+    worker.postMessage({ type: "open", options: open });
     path = await opened.promise;
   } catch (error) {
     closeRequested = true;
+    openWorkers.delete(tracked);
     if (!exited) worker.terminate();
     throw error;
   } finally {
+    opening = false;
     signal?.removeEventListener("abort", abort);
   }
 
-  openWorkers.add(remote);
   // Diagnostics channels are per thread, so queries are observed here, where subscribers listen.
   const pglite = observePgliteQueries(remote.pglite as unknown as PGlite);
   const db = drizzle(pglite, { schema });
@@ -104,7 +109,7 @@ export const createDbInWorker = async (
       try {
         if (!exited) await remote.call({ type: "close" });
       } finally {
-        openWorkers.delete(remote);
+        openWorkers.delete(tracked);
         worker.terminate();
       }
     })();

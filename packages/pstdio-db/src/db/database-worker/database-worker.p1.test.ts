@@ -167,3 +167,14 @@ test("a fatal exit can wait for a statement already running in the worker", asyn
   expect(finished).toBe(true);
   await running;
 });
+
+test("a fatal exit waits for a database that is still running its startup statements", async () => {
+  let opened = false;
+  const opening = createDbInWorker({ path: ":memory:" }).then((startup) => {
+    opened = true;
+    return startup;
+  });
+  await waitForDatabaseWorkersIdle(30_000);
+  expect(opened).toBe(true);
+  await (await opening).close();
+});
