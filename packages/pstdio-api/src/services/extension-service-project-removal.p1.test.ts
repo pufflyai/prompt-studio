@@ -6,6 +6,7 @@ import { writeExtension } from "../features/extensions/default-extensions-test-f
 import { hashExtensionSource, loadExtensionSource } from "../features/extensions/extension-runtime";
 import { createTestExtensionSource } from "../features/extensions/test-utils/create-test-extension-source";
 import { createTestApp } from "../test-utils/create-test-app";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { ProjectNotFoundError } from "./extension-service";
 
 let root: string;
@@ -128,4 +129,44 @@ test("a project removed while a required extension attaches leaves no instance o
   // The source goes only once no instance uses it, so this also shows the added instance was removed.
   const installed = (await deps.installedExtensionSourcesService.list()).map((row) => row.source_path);
   expect(installed).not.toContain(sourcePath);
+});
+
+test("removing the last project during discovery preserves an already installed user extension", async () => {
+  const { deps } = handle;
+  await handle.startupSettled;
+  const project = await deps.projectService.create({ name: "Last project" });
+  const sourcePath = join(process.env.PSTDIO_HOME!, "extensions", "user-tool");
+  writeExtension(sourcePath, "user-tool", "user");
+  const loaded = await loadExtensionSource(sourcePath);
+  const source = {
+    displayName: loaded.metadata.displayName,
+    extensionId: loaded.metadata.id,
+    installName: "user-tool",
+    manifest: loaded.manifest,
+    name: loaded.metadata.name,
+    sourceHash: hashExtensionSource(sourcePath),
+    sourcePath,
+    version: loaded.metadata.version,
+  };
+  const registered = await deps.extensionService.registerInstalledSource(source);
+  const get = deps.projectService.get;
+  let removed = false;
+  deps.projectService.get = async (id) => {
+    const found = await get(id);
+    if (!removed && id === project.id) {
+      removed = true;
+      const response = await handle.app.request(`/v1/projects/${id}`, { method: "DELETE" });
+      expect(response.status).toBe(204);
+    }
+    return found;
+  };
+  try {
+    await expectRejection(
+      deps.extensionService.syncInstalledSourceForProject({ ...source, projectId: project.id }),
+    ).toBeInstanceOf(ProjectNotFoundError);
+  } finally {
+    deps.projectService.get = get;
+  }
+  expect(await get(project.id)).toBeNull();
+  expect(await deps.installedExtensionSourcesService.get(registered.id)).toMatchObject({ source_path: sourcePath });
 });

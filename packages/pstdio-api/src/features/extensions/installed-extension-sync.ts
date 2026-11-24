@@ -1,6 +1,10 @@
 import { basename, join } from "node:path";
 import { getExtensionApiVersionError } from "pstdio-extensions";
-import type { PruneProjectExtensionInstancesInput, SyncInstalledSourceInput } from "../../services/extension-service";
+import {
+  ProjectNotFoundError,
+  type PruneProjectExtensionInstancesInput,
+  type SyncInstalledSourceInput,
+} from "../../services/extension-service";
 import { listExtensionSources } from "./discover-extension-sources";
 import {
   type hashExtensionSource,
@@ -186,8 +190,12 @@ export const syncInstalledExtensionsForProjects = async (deps: SyncInstalledExte
     while (next < projects.length) {
       const index = next++;
       const projectId = projects[index]!.id;
-      const projectSynced = await syncSnapshotForProject({ ...deps, projectId, snapshot, snapshotStartedAt });
-      synced[index] = projectSynced.map((entry) => ({ ...entry, projectId }));
+      try {
+        const projectSynced = await syncSnapshotForProject({ ...deps, projectId, snapshot, snapshotStartedAt });
+        synced[index] = projectSynced.map((entry) => ({ ...entry, projectId }));
+      } catch (error) {
+        if (!(error instanceof ProjectNotFoundError) || error.projectId !== projectId) throw error;
+      }
     }
   };
   // A project's frontend refresh must not hold every other project's disabled

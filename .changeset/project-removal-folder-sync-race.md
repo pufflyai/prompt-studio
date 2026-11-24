@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Removing a project while its folder's extensions sync no longer leaves one of them installed and attached to the removed project.
+Removing a project while extensions sync cleans up its leftover attachments, preserves existing user installations, and lets startup continue for the remaining projects.
