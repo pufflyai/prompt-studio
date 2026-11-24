@@ -27,7 +27,7 @@ const deletionReceipt = (input: unknown) => {
   return { ...deletion, projectId: workbenchId };
 };
 
-const folderKey = (copy: ProjectCopy) =>
+const copyKey = (copy: Pick<ProjectCopy, "managerOrigin" | "accountId" | "deviceId" | "projectId">) =>
   JSON.stringify([copy.managerOrigin, copy.accountId, copy.deviceId, copy.projectId]);
 
 interface CatalogInput {
@@ -40,7 +40,7 @@ interface CatalogInput {
   returnedUploadState: (id: string) => Promise<LocalRemovalPreflight["uploadState"]>;
   call: ReturnType<typeof createNativeManagerCall>;
   refresh: () => Promise<void>;
-  retry: (id: string) => Promise<void>;
+  retry: (id: string, requireCurrent: () => Promise<void>) => Promise<void>;
   withdraw?: (id: string) => Promise<void>;
   changed?: () => void;
 }
@@ -53,6 +53,7 @@ const createCatalogEntry =
     online: boolean,
     member: boolean,
     cloudDeletion: boolean,
+    retrying: () => boolean,
   ): Promise<CloudProjectCatalogEntry | undefined> => {
     const project = await input.projects.get(id);
     if (!project && !choice && !member) return;
@@ -64,13 +65,72 @@ const createCatalogEntry =
       name,
       presence,
       online,
-      downloadError: choice?.phase === "downloading" ? folderErrors.get(folderKey(choice)) : undefined,
+      downloadError: choice?.phase === "downloading" ? folderErrors.get(copyKey(choice)) : undefined,
       actions: {
         removeLocal: presence === "removing" || Boolean(member && project && !choice),
-        download: online && member && (presence === "cloud-only" || presence === "downloading"),
+        download: online && member && !retrying() && (presence === "cloud-only" || presence === "downloading"),
         deleteCloud: online && member && cloudDeletion,
       },
     };
+  };
+
+const createCopyRetries = (
+  input: Pick<CatalogInput, "refresh" | "projects" | "online" | "cloud" | "retry" | "changed">,
+  requireCurrent: (login: DeviceLogin) => Promise<void>,
+) => {
+  const pending = new Set<string>();
+  const keyFor = (login: DeviceLogin, id: string) => copyKey({ ...login, projectId: id });
+  return {
+    active: (login: DeviceLogin, id: string) => pending.has(keyFor(login, id)),
+    start(login: DeviceLogin, id: string) {
+      const key = keyFor(login, id);
+      const requireRetryScope = async () => {
+        await requireCurrent(login);
+        if (!input.online() || !input.cloud(login)?.ids.includes(id))
+          throw new AccountRequestError("Connect to Cloud before downloading this project");
+      };
+      pending.add(key);
+      void input
+        .refresh()
+        .then(async () => {
+          if (!(await input.projects.get(id))) return;
+          await requireRetryScope();
+          await input.retry(id, requireRetryScope);
+        })
+        .catch(() => {})
+        .finally(() => {
+          pending.delete(key);
+          input.changed?.();
+        });
+    },
+  };
+};
+
+const requestDiscoveredCopy = async (
+  input: Pick<CatalogInput, "projects" | "refresh" | "syncStatus">,
+  id: string,
+  retry: () => Promise<void>,
+) => {
+  const local = await input.projects.get(id);
+  const status = local ? await input.syncStatus(id) : undefined;
+  if (status?.offlineReady) return { projectId: id, presence: "downloaded" as const };
+  if (status?.state === "needs-attention") await retry();
+  else void input.refresh();
+  return { projectId: id, presence: "downloading" as const };
+};
+
+const createCopySyncStatus =
+  (copies: ReturnType<typeof createProjectCopyStore>, retries: ReturnType<typeof createCopyRetries>) =>
+  async (id: string, login: DeviceLogin | null, read: () => Promise<ProjectSyncStatus>) => {
+    const pendingRetry = login && retries.active(login, id);
+    const status = await read();
+    if (login && status.state === "needs-attention" && (pendingRetry || retries.active(login, id)))
+      return { ...status, state: "first-download-incomplete" as const, offlineReady: false };
+    if (!login || status.state !== "local") return status;
+    const choice = (await copies.forAccount(login)).find((row) => row.projectId === id);
+    return choice?.phase === "downloading"
+      ? { state: "first-download-incomplete" as const, offlineReady: false }
+      : status;
   };
 
 export const createProjectCloudCatalog = (input: CatalogInput) => {
@@ -99,6 +159,7 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
       throw new AccountRequestError("The active account changed before the request completed");
   };
 
+  const retries = createCopyRetries(input, requireCurrent);
   const removal = createLocalProjectRemoval({
     copies,
     login: requireDevice,
@@ -162,15 +223,7 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
       });
       if (!admitted) throw new AccountRequestError("This device removed its copy of the project");
     },
-    async fenceLocalStatus(
-      id: string,
-      login: DeviceLogin | null,
-      status: ProjectSyncStatus,
-    ): Promise<ProjectSyncStatus> {
-      if (!login || status.state !== "local") return status;
-      const choice = (await copies.forAccount(login)).find((row) => row.projectId === id);
-      return choice?.phase === "downloading" ? { state: "first-download-incomplete", offlineReady: false } : status;
-    },
+    fenceLocalStatus: createCopySyncStatus(copies, retries),
     downloadCloudProject: (id: string, expected?: ProjectCopyAccount): Promise<DownloadCloudProjectResult> =>
       removal.serialize(id, async () => {
         const login = await requireDevice();
@@ -180,22 +233,18 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
           throw new AccountRequestError("Connect to Cloud before downloading this project");
         const choice = (await copies.forAccount(login)).find((row) => row.projectId === id);
         if (choice?.phase === "removing") throw new AccountRequestError("Finish removing the local copy first");
-        if (!choice) {
-          const project = await input.projects.get(id);
-          if (project && (await input.syncStatus(id)).offlineReady) return { projectId: id, presence: "downloaded" };
-          void input.refresh();
-          return { projectId: id, presence: "downloading" };
-        }
+        const downloading = { projectId: id, presence: "downloading" } as const;
+        if (retries.active(login, id)) return downloading;
+        if (!choice)
+          return requestDiscoveredCopy(input, id, async () => {
+            await requireCurrent(login);
+            retries.start(login, id);
+          });
         await requireCurrent(login);
-        folderErrors.delete(folderKey(choice));
+        folderErrors.delete(copyKey(choice));
         await copies.write({ ...choice, phase: "downloading", automatic: undefined });
-        void input
-          .refresh()
-          .then(async () => {
-            if (await input.projects.get(id)) await input.retry(id);
-          })
-          .catch(() => {});
-        return { projectId: id, presence: "downloading" };
+        retries.start(login, id);
+        return downloading;
       }),
     async prepareDownloadedProject(id: string) {
       if (!projectCopies || preparingFolders.has(id)) return;
@@ -208,7 +257,7 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
           if (choice?.phase !== "downloading" || !(await input.syncStatus(id)).offlineReady) return;
           await requireCurrent(login);
           if (!choice.automatic) {
-            const key = folderKey(choice);
+            const key = copyKey(choice);
             if (folderErrors.has(key)) return;
             try {
               await projectCopies!.prepareFolder(id);
@@ -249,7 +298,14 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
       }
       const projects = [];
       for (const id of ids) {
-        const project = await entry(id, choices.get(id), online, members.has(id), Boolean(cached?.projectDeletion));
+        const project = await entry(
+          id,
+          choices.get(id),
+          online,
+          members.has(id),
+          Boolean(cached?.projectDeletion),
+          () => retries.active(login, id),
+        );
         if (project) projects.push(project);
       }
       const deletions = [];

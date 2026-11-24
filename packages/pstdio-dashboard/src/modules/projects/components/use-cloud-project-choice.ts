@@ -167,6 +167,23 @@ const downloadMessage = (error: Error | null, entry?: CloudProjectCatalogEntry, 
   if (syncState === "needs-attention") return "Cloud download needs attention. Retry to continue.";
 };
 
+const useCloudOnlyCatalogRefresh = (
+  cloud: ReturnType<typeof useCloudProjectCatalog>,
+  entry: CloudProjectCatalogEntry | undefined,
+  { requested, invalidated, deleting }: { requested: boolean; invalidated: boolean; deleting: boolean },
+) => {
+  const { refetch, isRefetchError } = cloud;
+  const checkingAvailability = isRefetchError && entry?.actions.download === false;
+  const enabled = (requested || checkingAvailability) && !invalidated && !deleting && entry?.presence === "cloud-only";
+  useEffect(() => {
+    if (!enabled) return;
+    const timer = setInterval(() => {
+      void refetch({ cancelRefetch: false });
+    }, 1500);
+    return () => clearInterval(timer);
+  }, [enabled, refetch]);
+};
+
 export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
   const id = input.instance.resource?.id ?? "";
   const cloud = useCloudProjectCatalog();
@@ -212,14 +229,7 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
       clearIntent: () => setOwner((current) => (current.scope === scope ? { ...current, requested: false } : current)),
       scope,
     });
-  const refetchCatalog = cloud.refetch;
-  useEffect(() => {
-    if (!requested || invalidated || deleting || entry?.presence !== "cloud-only") return;
-    const timer = setInterval(() => {
-      void refetchCatalog({ cancelRefetch: false });
-    }, 1500);
-    return () => clearInterval(timer);
-  }, [requested, invalidated, deleting, entry?.presence, refetchCatalog]);
+  useCloudOnlyCatalogRefresh(cloud, entry, { requested, invalidated, deleting });
   const back = () => {
     input.workbench.overlays.closeOverlay(input.instance.instanceId);
     void input.workbench.commands.executeCommand(dashboardCommandIds.openProjects);
