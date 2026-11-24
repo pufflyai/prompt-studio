@@ -17,10 +17,13 @@ type Stoppable = Pick<ProcessHandle, "exited" | "kill" | "treeExited">;
  */
 export interface ProcessOwner {
   readonly closed: boolean;
+  /** Confirms cleanup of all children admitted before closing. */
+  readonly drained: Promise<void>;
   /** Eligibility check for an enabled source generation, when applicable. */
   ready?: Promise<void>;
   /** Stops the handle when the owner closes, or at once when it already has. */
   adopt(handle: Stoppable): void;
+  /** Cancels opening processes and awaits the current stop attempts. */
   close(): Promise<void>;
 }
 
@@ -28,10 +31,16 @@ export const createProcessOwner = () => {
   const running = new Set<Stoppable>();
   let closed = false;
   let closing: Promise<void> | undefined;
+  const drained = Promise.withResolvers<void>();
+  const forget = (handle: Stoppable) => {
+    running.delete(handle);
+    if (closed && running.size === 0) drained.resolve();
+  };
   const owner: ProcessOwner = {
     get closed() {
       return closed;
     },
+    drained: drained.promise,
     adopt(handle) {
       if (closed) {
         void Promise.resolve()
@@ -41,19 +50,20 @@ export const createProcessOwner = () => {
       }
       running.add(handle);
       void (handle.treeExited ?? handle.exited).then(
-        () => running.delete(handle),
+        () => forget(handle),
         () => {},
       );
     },
     close() {
       closed = true;
+      if (running.size === 0) drained.resolve();
       if (!closing) {
         closing = Promise.resolve().then(async () => {
           const results = await Promise.allSettled(
             [...running].map(async (handle) => {
               await handle.kill();
               // A proxy can acknowledge cancellation before an opening child is available.
-              if (!handle.treeExited) running.delete(handle);
+              if (!handle.treeExited) forget(handle);
             }),
           );
           const failures = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
@@ -138,10 +148,13 @@ export const createProcessHandleProxy = (
   {
     cancel = new AbortController(),
     admittedLocal,
+    mayOpenAfterAbort,
     onLateStopFailure,
   }: {
     cancel?: AbortController;
     admittedLocal?: () => OpenedHandle | undefined;
+    /** Unknown opens may still return a child after cancellation unless the caller can rule it out. */
+    mayOpenAfterAbort?: () => boolean;
     onLateStopFailure?: (error: unknown) => void;
   } = {},
 ) => {
@@ -248,6 +261,7 @@ export const createProcessHandleProxy = (
       const reason = processError("process_owner_closed", "The process was stopped before it started.");
       cancel.abort(reason);
       stopped.reject(reason);
+      if (mayOpenAfterAbort?.() === false) cleanup.resolve();
       return Promise.resolve();
     },
     events,

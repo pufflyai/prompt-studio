@@ -386,6 +386,9 @@ test("closing an owner does not wait for a target that is still opening, and a l
   expect(targetSignal?.aborted).toBe(true);
   await expect(handle.started).rejects.toMatchObject({ code: "process_owner_closed" });
   expect(await handle.exited).toEqual({ code: null, signal: null });
+  expect(await Promise.race([handle.treeExited!.then(() => "drained"), Bun.sleep(300).then(() => "pending")])).toBe(
+    "drained",
+  );
   target.resolve({ kind: "local", root: join(root, "workspace") });
   await Bun.sleep(100);
   // The run above is the only child that ever started.
