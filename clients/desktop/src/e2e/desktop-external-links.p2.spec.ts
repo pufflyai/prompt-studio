@@ -37,7 +37,9 @@ test("opens chat website links in the external browser without creating app wind
     if (line.startsWith("opened-external:")) opened.push(line.slice("opened-external:".length));
   });
   try {
+    const fixtureUrl = "data:text/html,<main>Chat links</main>";
     const page = await application.firstWindow();
+    await page.waitForURL(fixtureUrl);
     for (const url of [
       "https://example.com/docs",
       "http://example.com/docs",
@@ -53,7 +55,7 @@ test("opens chat website links in the external browser without creating app wind
       await expect.poll(() => opened.filter((value) => value === url).length).toBe(2);
     }
     expect(await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(1);
-    expect(page.url()).toBe("data:text/html,<main>Chat links</main>");
+    expect(page.url()).toBe(fixtureUrl);
   } finally {
     output.close();
     await application.close();

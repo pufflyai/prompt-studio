@@ -4,6 +4,8 @@ import type { StoragePredicate, StorageRecordIndex } from "pstdio-sync-contracts
 import { queryExpressionSql } from "./query-expression-sql";
 import { expressionArray, expressionComparable } from "./query-expression-values";
 import { predicateSql, recordEqualitySql, recordFieldSql, recordScopeSql } from "./record-query-sql";
+import { relatedScalarMembershipSql } from "./record-related-membership";
+import { relatedReferenceCandidatesSql } from "./record-related-reference-candidates";
 
 export const loadRelatedQueryIndexes = async (
   where: StoragePredicate | undefined,
@@ -35,9 +37,21 @@ export const relatedRecordPredicateSql = (
     const result: SQL = predicateSql(
       source,
       predicate,
-      (outer, selection) => {
+      (outer, selection, _alias, negated) => {
         const target = indexFor(selection.index);
         const targetAlias = `related_${statement}_${depth}`;
+        const membership = relatedScalarMembershipSql(
+          owner,
+          outer,
+          target,
+          selection,
+          indexFor,
+          alias,
+          targetAlias,
+          negated,
+          predicate,
+        );
+        if (membership) return membership;
         const joins = selection.on.map((join) => {
           const left = recordFieldSql(outer, join.sourceField, alias, indexFor, owner);
           const right = recordFieldSql(target, join.relatedField, targetAlias, indexFor, owner);
@@ -73,9 +87,20 @@ export const relatedRecordPredicateSql = (
         const each = selection.every;
         const itemAlias = sql.identifier(`related_item_${statement}_${depth}`);
         const names = each ? new Map(variables).set(each.as, sql`${itemAlias}.value`) : variables;
+        const parents = [{ index: source, alias }, ...ancestors];
+        const candidates = relatedReferenceCandidatesSql(
+          owner,
+          outer,
+          target,
+          selection,
+          targetAlias,
+          parents,
+          indexFor,
+        );
         const selected = sql`SELECT 1 FROM storage_current_records AS ${sql.identifier(targetAlias)}
           WHERE ${recordScopeSql(owner, target, targetAlias)} AND ${sql.join(joins, sql` AND `)}
-          AND ${compile(target, selection.where, targetAlias, depth + 1, [{ index: source, alias }, ...ancestors], names)}`;
+          AND ${candidates ?? sql`true`}
+          AND ${compile(target, selection.where, targetAlias, depth + 1, parents, names)}`;
         if (!each) return sql`EXISTS (${selected})`;
         const values = recordFieldSql(outer, each.field, alias, indexFor, owner);
         const matched =

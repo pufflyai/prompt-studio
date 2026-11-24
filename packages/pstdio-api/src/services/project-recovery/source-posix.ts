@@ -23,15 +23,24 @@ export const openRecoverySource = async (selected: string) => {
       code: "ENOTSUP",
     });
   const darwin = process.platform === "darwin";
+  // Intel Darwin keeps the legacy directory ABI under the unqualified symbols.
+  const inode64 = darwin && process.arch === "x64";
   const load = () =>
     dlopen(darwin ? "/usr/lib/libSystem.B.dylib" : "libc.so.6", {
       openat: { args: ["int", "ptr", "int"], returns: "int" },
       close: { args: ["int"], returns: "int" },
-      fdopendir: { args: ["int"], returns: "ptr" },
-      readdir: { args: ["ptr"], returns: "ptr" },
+      ...(inode64
+        ? {
+            fdopendir$INODE64: { args: ["int"], returns: "ptr" },
+            readdir$INODE64: { args: ["ptr"], returns: "ptr" },
+          }
+        : {
+            fdopendir: { args: ["int"], returns: "ptr" },
+            readdir: { args: ["ptr"], returns: "ptr" },
+          }),
       closedir: { args: ["ptr"], returns: "int" },
       readlinkat: { args: ["int", "ptr", "ptr", "u64"], returns: "i64" },
-      [darwin ? "__error" : "__errno_location"]: { args: [], returns: "ptr" },
+      ...(darwin ? { __error: { args: [], returns: "ptr" } } : { __errno_location: { args: [], returns: "ptr" } }),
     });
   let library: ReturnType<typeof load>;
   try {
@@ -43,9 +52,12 @@ export const openRecoverySource = async (selected: string) => {
     });
   }
   const native = library.symbols;
+  const openDirectory = "fdopendir$INODE64" in native ? native.fdopendir$INODE64 : native.fdopendir;
+  const readDirectory = "readdir$INODE64" in native ? native.readdir$INODE64 : native.readdir;
+  const errnoPointer = "__error" in native ? native.__error : native.__errno_location;
   const handles = new Set<number>();
-  const streams = new Set<NonNullable<ReturnType<typeof native.fdopendir>>>();
-  const errno = new DataView(toArrayBuffer(native[darwin ? "__error" : "__errno_location"]!()!, 0, 4));
+  const streams = new Set<NonNullable<ReturnType<typeof openDirectory>>>();
+  const errno = new DataView(toArrayBuffer(errnoPointer()!, 0, 4));
   const failure = () => {
     const value = errno.getInt32(0, true);
     return Object.assign(new Error("Recovery source filesystem access failed"), {
@@ -73,9 +85,9 @@ export const openRecoverySource = async (selected: string) => {
     handles.add(fd);
     return fd;
   };
-  const nextName = (directory: NonNullable<ReturnType<typeof native.fdopendir>>) => {
+  const nextName = (directory: NonNullable<ReturnType<typeof openDirectory>>) => {
     errno.setInt32(0, 0, true);
-    const entry = native.readdir(directory);
+    const entry = readDirectory(directory);
     if (!entry) {
       if (errno.getInt32(0, true)) throw failure();
       return null;
@@ -89,7 +101,7 @@ export const openRecoverySource = async (selected: string) => {
     if (end < 0) throw new Error("Unterminated native recovery directory entry");
     return new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(0, end));
   };
-  const closeDirectory = (directory: NonNullable<ReturnType<typeof native.fdopendir>>) => {
+  const closeDirectory = (directory: NonNullable<ReturnType<typeof openDirectory>>) => {
     if (streams.delete(directory) && native.closedir(directory) !== 0) throw failure();
   };
   const handle = (fd: number) => {
@@ -142,7 +154,7 @@ export const openRecoverySource = async (selected: string) => {
       *children() {
         active();
         const child = openAt(fd, Buffer.from(".\0"), constants.O_RDONLY | constants.O_DIRECTORY);
-        const directory = native.fdopendir(child);
+        const directory = openDirectory(child);
         if (!directory) {
           closeFd(child);
           throw failure();

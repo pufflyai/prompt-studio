@@ -29,7 +29,8 @@ const resourcePanel = (
   if (region === "main" && page.slots.some((slot) => slot.region === "main")) return;
   if (page.main.kind === "view") return portablePagePanel(page, core.modePlacements);
   if (page.main.kind !== "panels") return;
-  const ref = page.main.landing;
+  const panelView = region !== "main" ? page.panelView : undefined;
+  const ref = panelView ?? page.main.landing;
   if (typeof ref === "string" && region !== "main") {
     const landing = page.slots.find((slot) => slot.id === ref && slot.region === "main");
     const portable = landing && portablePageSlotPanel(page, landing.id);
@@ -39,7 +40,7 @@ const resourcePanel = (
   const landing = core.modePlacements.getPlacement(ref);
   if (
     landing?.modeId === page.modeId &&
-    landing.region === "main" &&
+    (panelView || landing.region === "main") &&
     landing.item.kind === "binding" &&
     landing.item.binding.cardinality === "many" &&
     resource &&

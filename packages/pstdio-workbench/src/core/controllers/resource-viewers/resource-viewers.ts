@@ -1,35 +1,34 @@
 import type {
   NavigationTargetViewer,
-  PageLocation,
   PlacementIdentity,
   ResourceRef,
   ViewLocation,
 } from "pstdio-api-contracts/extension-kernel";
-import { isWorkbenchModePanelAvailable } from "../../registries/modes/mode-layout";
 import type { NavigationInvocationContext } from "../../registries/navigation/navigation-registry";
-import { removeLocationResources } from "../../registries/pages/page-location-resource-removal";
-import { isPageContent, isSingleViewPage, PAGE_MAIN_SLOT_ID } from "../../registries/pages/page-main";
+import { isPageContent, PAGE_MAIN_SLOT_ID } from "../../registries/pages/page-main";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { revealPanelRegion } from "../../workbench-core-navigation";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { pageLocationTarget } from "../page-location/page-location-target";
-import { departingPagePreviews } from "../page-runtime/page-preview-lifetime";
-import { getWorkbenchPanelLayout } from "../page-runtime/workbench-layout-context";
 import { requirePanelOpen } from "../shell/panel-open-policy";
 import {
   type DisplayedResourceViewer,
   displayedResourceViewers,
   findDisplayedResource,
   resourceViewerBinding,
+  resourceViewerConstraint,
   sameViewer,
+  viewerResourceKey,
 } from "./displayed-viewers";
 import { replaceMainViewerTab } from "./replace-main-viewer-tab";
 import { retainedViewerSource } from "./retained-viewer-source";
 import { createViewerCaptures } from "./viewer-captures";
 import { replaceViewerHost } from "./viewer-host-continuity";
+import { captureViewerMenuHosts } from "./viewer-menu-host-continuity";
 import { navigatePanelViewer } from "./viewer-panel-navigation";
 import { currentViewerSource } from "./viewer-source";
+import { viewerTargetBinding } from "./viewer-target-binding";
 
 export interface WorkbenchViewerController {
   captureContext(identity?: PlacementIdentity): NavigationInvocationContext;
@@ -44,54 +43,8 @@ export interface WorkbenchViewerController {
     context?: NavigationInvocationContext,
   ): "changed" | "focused" | "stale";
 }
-export const restorePageLocation = (
-  core: WorkbenchCore,
-  location: PageLocation,
-  projectId = core.pages.store.getState().projectId,
-  removalVersion?: number,
-): PageLocation => {
-  if (removalVersion !== undefined)
-    location = removeLocationResources(location, core.pages.listPages(), (resource) =>
-      core.resources.wasRemovedSince(resource, removalVersion),
-    );
-  if (!location.resource) return location;
-  const page = core.pages
-    .listPages()
-    .find((page) => page.ref.id === location.page.id && page.ref.extensionId === location.page.extensionId);
-  if (!page) return location;
-  const key = core.pages.resourceReferenceKey(location.resource);
-  const previous = core.pages.store.getState();
-  const next = {
-    ...previous,
-    projectId,
-    activePageId: page.id,
-    activeModeId: page.modeId,
-    location,
-  };
-  const layout = getWorkbenchPanelLayout(core, page.modeId, next);
-  const departing = new Set(
-    departingPagePreviews(next, previous, core.layout.getLayout()).map((widget) => widget.widgetId),
-  );
-  const mode = core.modes.getMode(page.modeId);
-  const conflict = (["side", "secondary"] as const).some(
-    (region) =>
-      isWorkbenchModePanelAvailable(mode, region) &&
-      layout.regions[region].widgets.some(
-        (widget) =>
-          widget.resource &&
-          !departing.has(widget.widgetId) &&
-          widget.placementIdentity &&
-          resourceViewerBinding(core, widget.placementIdentity)?.kind === "binding" &&
-          core.pages.resourceReferenceKey(widget.resource) === key,
-      ),
-  );
-  if (!conflict) return location;
-  if (isSingleViewPage(page) && page?.main.empty) {
-    const { resource: _resource, section: _section, position: _position, ...landing } = location;
-    return landing;
-  }
-  return location.parent ? restorePageLocation(core, location.parent, projectId) : { page: location.page };
-};
+export { restorePageLocation } from "./restore-page-location";
+
 const validateViewerFocus = (core: WorkbenchCore, viewer: DisplayedResourceViewer) => {
   if (core.pages.getContent()?.widgetId !== viewer.widget.widgetId)
     requirePanelOpen(core, viewer.region, { identity: viewer.identity });
@@ -150,6 +103,7 @@ const validateMainPage = (core: WorkbenchCore, request: ViewerChange) => {
 };
 const replaceMainResource = (core: WorkbenchCore, request: ViewerChange) => {
   const source = core.pages.getContent();
+  const transferMenus = captureViewerMenuHosts(core, source);
   const page = validateMainPage(core, request);
   const current = core.pages.store.getState().location!;
   const samePage = current.page.id === page.id && current.page.extensionId === page.extensionId;
@@ -163,7 +117,10 @@ const replaceMainResource = (core: WorkbenchCore, request: ViewerChange) => {
     position: request.position,
   });
   if (!result.ok) throw new Error(result.diagnostic.message);
-  if (request.operation === "replace") replaceViewerHost(core, source, core.pages.getContent());
+  if (request.operation === "replace") {
+    replaceViewerHost(core, source, core.pages.getContent());
+    transferMenus(core.pages.getContent());
+  }
   if (request.operation === "replace" && region && region !== "main") {
     if (selected) core.layout.activatePanel(selected);
     core.focus.setActiveRegion(region);
@@ -306,19 +263,24 @@ export const createWorkbenchViewerController = (resolveCore: () => WorkbenchCore
       const core = resolveCore();
       if (!viewerInvocationCurrent(core, request, context)) return "stale";
       const viewer = currentViewerSource(core, identity);
-      const currentKey = viewer?.resource ? core.pages.resourceReferenceKey(viewer.resource) : undefined;
-      const expectedKey = request.from ? core.pages.resourceReferenceKey(request.from) : undefined;
+      const currentKey = viewer?.resource ? viewerResourceKey(core, viewer.resource, viewer.identity) : undefined;
+      const expectedKey = request.from
+        ? viewerResourceKey(core, request.from, viewer?.identity ?? identity)
+        : undefined;
       if (!viewer || currentKey !== expectedKey) return "stale";
       identity = viewer.identity;
       const content = validateViewerChange(core, identity, request);
-      if (!request.page && currentKey === core.pages.resourceReferenceKey(request.resource)) {
+      const targetBinding = request.page
+        ? viewerTargetBinding(core, { kind: "page", page: request.page })
+        : resourceViewerConstraint(core, identity);
+      if (!request.page && currentKey === core.pages.resourceReferenceKey(request.resource, targetBinding)) {
         return batchWorkbenchChanges(() => {
           updateViewerReference(core, { ...viewer, resource: request.resource }, request.resource, request);
           if (request.operation === "switch") focusViewer(core, { ...viewer, resource: request.resource });
           return "changed" as const;
         });
       }
-      const existing = findDisplayedResource(core, request.resource, identity);
+      const existing = findDisplayedResource(core, request.resource, identity, targetBinding);
       if (existing) {
         if (request.operation === "switch")
           return batchWorkbenchChanges(() => {

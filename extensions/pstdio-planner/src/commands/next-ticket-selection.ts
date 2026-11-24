@@ -20,7 +20,7 @@ export const readNextTicketSelection = async (
 ) => {
   await upgradeAttemptStorage(ctx.storage);
   const prepared = await prepareTicketViewQuery(ctx, { filter: mode.eligible }, { groups: [] });
-  await initializePlanPlacements(ctx.storage, prepared.workflow.completedStatusIds);
+  await initializePlanPlacements(ctx, prepared.workflow.completedStatusIds);
   const track = await readTrack(ctx, prepared.tags);
   const select = async (query: NextTicketQuery): Promise<StoragePredicate> => {
     const base = await ticketScopePredicate(ctx, query);

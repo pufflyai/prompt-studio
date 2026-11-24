@@ -34,7 +34,7 @@ export const readPlanCommand = defineCommand({
   async run(ctx, input) {
     await ensureTicketStorage(ctx);
     const workflow = usableWorkflowStatuses(await readWorkflowStatuses(ctx));
-    await initializePlanPlacements(ctx.storage, workflow.completedStatusIds);
+    await initializePlanPlacements(ctx, workflow.completedStatusIds);
     const metadata = await readPlanMetadata(ctx.storage);
     const hidden = input.display?.collapsedMilestones ?? [];
     const visible: StoragePredicate[] = [];

@@ -79,13 +79,14 @@ export const useActionBarDrag = (
 interface SortableActionBarItemProps {
   id: string;
   reorderable: boolean;
+  flexible?: boolean;
   horizontal: boolean;
   dropEdge?: ActionBarDropEdge;
   children: ReactNode;
 }
 
 export const SortableActionBarItem = (props: SortableActionBarItemProps) => {
-  const { id, reorderable, horizontal, dropEdge, children } = props;
+  const { id, reorderable, horizontal, dropEdge, children, flexible } = props;
   const drag = useDraggable({ id, disabled: !reorderable });
   const target = useDroppable({ id, disabled: !reorderable });
   const edges = horizontal ? { before: "left", after: "right" } : { before: "top", after: "bottom" };
@@ -95,16 +96,27 @@ export const SortableActionBarItem = (props: SortableActionBarItemProps) => {
         drag.setNodeRef(node);
         target.setNodeRef(node);
       }}
+      flex={flexible ? "0 1 420px" : undefined}
+      minW={flexible ? "0" : undefined}
+      maxW={flexible ? "420px" : undefined}
       data-action-bar-item={id}
       data-dragging={drag.isDragging || undefined}
       opacity={drag.isDragging ? 0.5 : undefined}
       position="relative"
       onPointerDownCapture={(event) => {
         // Menu triggers can prevent the mouse event that follows pointerdown.
+        if (
+          (event.target as Element).closest("input, textarea, select, [contenteditable]:not([contenteditable=false])")
+        )
+          return;
         if (event.pointerType !== "touch" && event.currentTarget.contains(event.target as Node))
           drag.listeners?.onPointerDown?.(event);
       }}
       onTouchStartCapture={(event) => {
+        if (
+          (event.target as Element).closest("input, textarea, select, [contenteditable]:not([contenteditable=false])")
+        )
+          return;
         if (event.currentTarget.contains(event.target as Node)) drag.listeners?.onTouchStart?.(event);
       }}
     >

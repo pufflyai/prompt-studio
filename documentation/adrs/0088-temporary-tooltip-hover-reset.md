@@ -22,6 +22,8 @@ The callback currently ignores its event argument. The helper casts it to a no-a
 
 ## Limitations
 
+Retained views also advance a dismissal revision when navigation leaves them. A tooltip inside React Activity may skip the inactive render, so the shared scoped tooltip root resets hover when it next observes that revision. This covers primitive and direct-root callers. The revision reset runs in a passive effect: Zag queues its machine restart from a parent layout effect, and an earlier leave event is dropped while the machine is stopped. Disabling still uses the existing layout reset. The native machine's controlled-property reconciliation is covered separately by [ADR 0160](0160-temporary-zag-activity-property-watchers.md).
+
 This is a temporary workaround for upstream tooltip behavior, not the intended design. It relies on the current public trigger callback accepting a call without an event. A dependency upgrade must verify this assumption or remove the helper.
 
 ## Removal

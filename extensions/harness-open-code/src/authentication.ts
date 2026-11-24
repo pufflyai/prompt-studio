@@ -5,8 +5,15 @@ import {
   type HarnessAuthenticationChannel,
   type HarnessAuthenticationInput,
 } from "@pstdio/sdk/extensions";
+import { afterOpencodePlugins } from "./opencode-catalog-readiness";
 import { collectFormAnswers } from "./opencode-forms";
-import { buildRequestUrl, type OpencodeFetcher, requestJson, requireResponseOk } from "./opencode-http";
+import {
+  buildRequestUrl,
+  OPENCODE_GET_TIMEOUT_MS,
+  type OpencodeFetcher,
+  requestJson,
+  requireResponseOk,
+} from "./opencode-http";
 import type { WithServerUrl } from "./opencode-server";
 import { waitForNextPoll } from "./opencode-session-poller";
 
@@ -19,28 +26,44 @@ const interactiveMethods = (integration?: IntegrationInfo) =>
   integration?.methods.filter((method) => method.type !== "env") ?? [];
 
 export const createOpencodeAuthentication = (deps: AuthenticationDeps) => {
-  const request = <T>(path: string, method = "GET", body?: unknown, signal?: AbortSignal) =>
-    deps.withServerUrl(
-      async (base) => {
-        const response = await requestJson<T>(deps.fetcher, buildRequestUrl(base, path, process.cwd()), {
-          method,
-          body,
-          signal,
-          headers: { "content-type": "application/json" },
-        });
-        // Native errors may contain submitted credentials. Keep them within the harness.
-        requireResponseOk(response.response, "", "OpenCode account request failed");
-        return response.parsed as T;
-      },
-      { retry: method === "GET" || method === "DELETE" },
-    );
-  const catalog = async () => {
-    const [providers, integrations] = await Promise.all([
-      request<{ data: ProviderInfo[] }>("/api/provider"),
-      request<{ data: IntegrationInfo[] }>("/api/integration"),
-    ]);
-    return { providers: providers.data, integrations: integrations.data };
+  const directory = process.cwd();
+  const requestAt = async <T>(baseUrl: string, path: string, method: string, body?: unknown, signal?: AbortSignal) => {
+    const response = await requestJson<T>(deps.fetcher, buildRequestUrl(baseUrl, path, directory), {
+      method,
+      body,
+      signal,
+      headers: { "content-type": "application/json" },
+    });
+    // Native errors may contain submitted credentials. Keep them within the harness.
+    requireResponseOk(response.response, "", "OpenCode account request failed");
+    return response.parsed as T;
   };
+  const request = <T>(path: string, method = "GET", body?: unknown, signal?: AbortSignal) =>
+    deps.withServerUrl((baseUrl) => requestAt<T>(baseUrl, path, method, body, signal), {
+      retry: method === "GET" || method === "DELETE",
+    });
+  const catalog = (providerId?: string, signal?: AbortSignal) =>
+    deps.withServerUrl(
+      async (baseUrl) => {
+        const deadline = AbortSignal.timeout(OPENCODE_GET_TIMEOUT_MS);
+        const catalogSignal = signal ? AbortSignal.any([deadline, signal]) : deadline;
+        const read = async (readSignal?: AbortSignal) => {
+          const [providers, integrations] = await Promise.all([
+            requestAt<{ data: ProviderInfo[] }>(baseUrl, "/api/provider", "GET", undefined, readSignal),
+            requestAt<{ data: IntegrationInfo[] }>(baseUrl, "/api/integration", "GET", undefined, readSignal),
+          ]);
+          return { providers: providers.data, integrations: integrations.data };
+        };
+        const initial = await read(catalogSignal);
+        if (
+          initial.providers.length &&
+          (!providerId || initial.providers.some((provider) => provider.id === providerId))
+        )
+          return initial;
+        return afterOpencodePlugins({ fetcher: deps.fetcher, baseUrl, directory, signal: catalogSignal }, read);
+      },
+      { retry: true },
+    );
   const state = (data: Awaited<ReturnType<typeof catalog>>, model?: string) => {
     const providers = data.providers.map((provider) => {
       const integration = data.integrations.find((item) => item.id === provider.integrationID);
@@ -132,9 +155,10 @@ export const createOpencodeAuthentication = (deps: AuthenticationDeps) => {
     if (native.type !== "oauth" && native.type !== "command") throw new Error("Unsupported OpenCode sign-in method.");
     await connectAttempt(endpoint, native, answer, channel);
   };
-  const getAuthentication = async (input: { model?: string } = {}) => state(await catalog(), input.model);
+  const getAuthentication = async (input: { model?: string } = {}) =>
+    state(await catalog(input.model?.split("/")[0]), input.model);
   const authenticate = async (input: HarnessAuthenticationInput, channel: HarnessAuthenticationChannel) => {
-    const data = await catalog();
+    const data = await catalog(input.provider ?? input.model?.split("/")[0], channel.signal);
     channel.signal.throwIfAborted();
     const choice = await chooseHarnessAuthentication(state(data, input.model), input, channel);
     if (!choice) return;

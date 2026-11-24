@@ -199,6 +199,7 @@ export const createPlannerUi = (baseUrl: string) => {
   const files = createTicketFilesView();
   const properties = defineView({
     id: "ticket-properties",
+    icon: "sliders-horizontal",
     title: l10n("controls.ticketProperties.title", "Properties"),
     body: {
       kind: "controls",

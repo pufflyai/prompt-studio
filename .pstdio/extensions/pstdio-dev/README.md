@@ -29,7 +29,19 @@ The pages use your GitHub CLI login. Run `gh auth login` in this repository firs
 
 ## Release pipeline health
 
-Open **Release health** from the project navigation for chronological test history. The total-tests plot stacks end-to-end, component, backend, package, harness, performance, and quarantine categories in blue shades. Separate plots show failed tests and quarantined tests, each on its own count scale so small counts stay readable beside full test totals. A line plot tracks each completed run's total duration from start to finish. Pointer or keyboard tooltips show exact counts, duration, status, commit, and evidence coverage. **Overview** holds the plots; **Runs** lists every run in a data table with its duration and a GitHub link. Select a run to read failure links, evidence coverage, and skipped or unrun tests. Publication and verification have separate statuses; a published nightly can still fail verification.
+Open **Release health** from the project navigation. The **Range** and **Aggregation** controls apply to every chart in **Overview**. Choose the last 7, 30, or 90 days or all available history, grouped by day, week, or month in UTC; the last 7 days can also be grouped by hour. Weeks start on Monday. The range applies to the **Runs** table, where each run has its duration, GitHub link, and verification evidence.
+
+Dashed vertical lines mark GitHub publication dates for `pstdio@` releases. When several releases fall in the same bucket, the tooltip lists each tag and timestamp. The test charts sum recorded executions and average completed run durations. Dates outside the available workflow history have gaps in the test charts.
+
+Select a legend item in **PR merges** or **Total tests** to show that category. Select the same item again to restore the full stack.
+
+**PR merges** stacks GitHub pull request merges by **Bug**, **Feature**, and **Chore**. The tooltip shows the total and all three counts for each bar. A failed refresh keeps the last saved counts and shows a warning on **Overview**.
+
+Each PR has one category. The extension uses the project's saved GPT-6 Luna classifications for the historical backfill and uses title conventions for later PRs. The CLI exposes daily `pullRequestMerges` and weekly `pullRequestMergesWeekly` with counts under `categories`.
+
+**Velocity** multiplies the number of merged feature PRs by their average complexity in each day or week. It reads the Complexity rating of the Planner ticket in the PR title, one ticket at a time. Each refresh rereads tickets of features merged in the last 30 days and tickets it has not read yet; older ratings come from the saved timeline. The default scale gives Simple, Moderate, and Complex 1, 2, and 3 points. Features without a rating use the middle weight. The tooltip and CLI report how many feature PRs used that default.
+
+**Estimated bugs per feature** divides follow-up bug-fix PRs attributed to a feature by all feature PRs merged in the selected period. A fix counts toward the period when its originating feature merged. The saved Luna audit records the PR numbers, evidence, and confidence for explicit and inferred links, and identifies fixes with no reliable origin. The chart uses one merged fix PR as a proxy for one bug and includes fixes merged after their origin and through the review date. Recent features have had less time to receive fixes. The CLI exposes period counts under `bugOrigins` and review totals under `bugOriginCoverage`.
 
 The panel reads runner summaries, including quarantined cases, through your GitHub CLI login. It refreshes on opening, on demand, and daily; completed job counts are cached under this extension's project storage. Missing reports and unavailable logs remain explicit. A refresh preserves previous results if GitHub is unavailable. The initial history covers the latest ten release candidates among the latest 100 workflow runs, including main pushes that resume an unpublished release. Pushes that only update the version PR do not count toward that limit.
 
@@ -40,11 +52,13 @@ pst pstdio.dev release-health inspect
 pst pstdio.dev release-health inspect --run-id 43304493970
 ```
 
-All release-health data is available as CLI JSON. `sync` starts or reuses a background refresh. `history` returns the same cached results the page reads: test totals, category counts, quarantine counts, durations, publication status, evidence coverage, failed-job links, and collection errors. Its `sync` field contains the background run's ID, exact status, timestamps, result, and structured error; it is `null` before a refresh or after that automation record expires. `syncedAt` records the most recent saved run, so it can advance while `syncing` is still true.
+All release-health data is available as CLI JSON. `sync` starts or reuses a background refresh. `history` returns the cached PR merge counts, release runs, test evidence, and collection errors shown on the page. Its `sync` field contains the background run's ID, exact status, timestamps, result, and structured error. It is `null` before a refresh or after that automation record expires. `syncedAt` records the most recent saved run, so it can advance while `syncing` is still true.
 
 ```sh
 # Inspect refresh state without opening the page.
 pst pstdio.dev release-health history | jq '{syncedAt, syncing, error, sync}'
+# Read the daily merge counts and their refresh error, if any.
+pst pstdio.dev release-health history | jq '{pullRequestMerges, pullRequestMergesError}'
 # Read the newest cached run, including every chart value and failure detail.
 pst pstdio.dev release-health history | jq '.runs | reverse | .[0]'
 ```
@@ -55,15 +69,42 @@ pst pstdio.dev release-health history | jq '.runs | reverse | .[0]'
 
 Expand **Diagnostics** in the project navigation to open **Startup timeline** or **Storage**. Both read the files of the runtime they run in (`$PSTDIO_HOME`, by default `~/.pstdio`) and change nothing.
 
-**Startup timeline** groups the runtime's `runtime.startup.phase`, `runtime.setup.phase`, and shutdown log lines from `logs.jsonl` into launches, newest first. A chart shows each launch's time to a ready runtime and its slowest project setup. Select a launch to see its startup steps and every project setup as a waterfall, including nested steps, the wait between a ready runtime and the first setup, and setups cut short by quitting (`interrupted`) or by a failed step.
+**Startup timeline** groups the runtime's `runtime.startup.phase`, `runtime.setup.phase`, and shutdown log lines from `logs.jsonl` into launches, newest first. **Range** filters launches to the last 7, 30, or 90 days, or all available history. **Aggregation** groups the startup chart by day, week, or month in UTC; weeks start on Monday. The chart shows each period's average time to a ready runtime and average slowest project setup, and its tooltip adds the launch count and slowest ready time. Select a launch in the chart or the table to see its startup steps and every project setup as a waterfall, including nested steps, the wait between a ready runtime and the first setup, and setups cut short by quitting (`interrupted`) or by a failed step.
 
 **Storage** shows the latest report and measures a new one on demand in about 20 seconds as a background job. The database section reads the PGlite data directory without opening it: on-disk size per table split into rows, out-of-line large values (TOAST), and indexes, plus `storage_documents` bytes per owner and document kind, live versus dead. A warning appears when large values exceed a quarter of the database, because the database should hold references only ([0006.2.16](../../../documentation/guidance/0006-engineering.md#2-system-design)). The files section sizes every entry of the app data folder, each `storage/` area, and this project's extension storage folders. Worktrees under `workspaces/` are skipped.
+
+Select a known database table to inspect its definition in **Schema**, or search and filter the table list there. Table details include columns, primary keys, nullability, defaults, enum values, indexes, and foreign keys. Select a foreign key to open its referenced table. **Graph** shows the entire schema with primary and foreign key columns. Choose a table to show all columns in that table and its direct relationships. Use the shared diagram controls to zoom, pan, or open fullscreen.
+
+Definitions come from the newest checked-in PostgreSQL snapshot in `packages/pstdio-db/drizzle/meta`, read from the project's default workspace. They describe the declared schema and can differ from the running database. **Reload schema** reads the snapshot again without measuring files or opening the database.
 
 ```sh
 pst pstdio.dev diagnostics startup-timeline
 pst pstdio.dev diagnostics storage-refresh
 pst pstdio.dev diagnostics storage-report
+pst pstdio.dev diagnostics database-schema
 ```
+
+## Session insights
+
+Open **Session insights** in the project navigation to sort this project's agent sessions into successes and failure modes, then turn repeated failures into skills and documentation. A session's status says whether the run ended, not whether it worked, so the extension reads the conversations in two stages:
+
+1. **Scan** reads new or changed sessions and records signals: corrections, resume nudges, tool failures, errors and exits. It settles infrastructure failures and clean single-request successes and flags everything else for review. It makes no model calls.
+2. **Review** (**Review with agent** in the table) starts an agent session with the [Analyze agent sessions](skills/analyze-agent-sessions/SKILL.md) skill. The agent reads bounded transcripts, records a verdict with evidence and a lesson, and drafts skill and documentation proposals from the report. It does not edit repository guidance itself.
+
+Agent verdicts outrank heuristics. A later scan keeps them unless the session gains new turns, and then flags it for review again. The table starts on **Failures**, grouped by failure mode; other views show sessions that need review, successes, infrastructure failures and everything. Open a row to go to the session. Sessions from `*.fake` test harnesses, running sessions and the review agent's own sessions are skipped. The taxonomy and the usual fix for each mode live in [`src/insights/taxonomy.ts`](src/insights/taxonomy.ts).
+
+```sh
+pst pstdio.dev insights scan                          # --rescan re-reads unchanged sessions
+pst pstdio.dev insights list --needs-review           # what an agent should classify next
+pst pstdio.dev insights transcript --session-id <id>  # bounded digest of one session
+pst pstdio.dev insights classify --session-id <id> --outcome partial --failure-mode unwanted_action \
+  --evidence 'User: "..."' --lesson "..." --remediation-target AGENTS.md
+pst pstdio.dev insights report --agent-only           # Markdown grouped by mode, lessons and fix targets
+pst pstdio.dev insights taxonomy                      # outcomes and failure modes
+pst pstdio.dev insights review --limit 30             # start a review agent
+```
+
+Reports go to `.pstdio/extension-storage/pstdio.dev/reports/`.
 
 ## Merge queue repair
 
@@ -74,5 +115,7 @@ Every five minutes, it repairs pull requests that GitHub removed from the merge 
 [Patch release](skills/patch-release/SKILL.md) prepares and verifies fixes for the current stable release, then publishes them when requested. It keeps unrelated main changes out of the patch and uses the existing signing identity.
 
 [Discord release announcement](skills/discord-release-announcement/SKILL.md) helps agents draft, publish, and update Prompt Studio release announcements. It covers Discord formatting, release links, screenshots, blog GIFs, alt text, and publication checks. Publishing requires a user request to send or publish the announcement.
+
+[Analyze agent sessions](skills/analyze-agent-sessions/SKILL.md) classifies past agent sessions as successes or failure modes through the `pst pstdio.dev insights` commands, then drafts skill and documentation proposals from repeated failures.
 
 [Write a blog post](skills/write-blog-post/SKILL.md) helps agents write, illustrate, preview, and publish blog posts. It covers release post structure, benchmark charts, GIFs, screenshots, code examples, drafts, and publication checks. Its [bento chart script](skills/write-blog-post/scripts/bento-chart.ts) draws benchmark charts as paired light and dark SVGs.

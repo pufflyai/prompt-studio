@@ -8,6 +8,7 @@ export const FrameEditorVisible = createContext(true);
 export const FrameAnimationOutlet = createContext<{
   element: HTMLElement | null;
   open: boolean;
+  visible: boolean;
   setActiveFrame: Dispatch<SetStateAction<string | undefined>>;
   reportHeight: (height: number) => void;
   heightLimit?: number;

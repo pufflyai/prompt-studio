@@ -127,6 +127,7 @@ export const workbenchExtensionViewBodySchema = z.discriminatedUnion("kind", [
     kind: z.literal("chat"),
     draftKey: z.string().min(1),
     legacySessionDraft: z.boolean().optional(),
+    browserDraft: z.object({ acknowledgeRecoveryHandlerId: z.string().optional() }).optional(),
     initial: chatRendererSnapshotSchema.optional(),
     queryHandlerId: z.string(),
     actionHandlerId: z.string(),
@@ -150,6 +151,7 @@ export const workbenchExtensionViewBodySchema = z.discriminatedUnion("kind", [
 ]);
 
 export const workbenchExtensionViewRecordSchema = z.object({
+  header: z.object({ view: viewRefSchema }).optional(),
   id: z.string(),
   localId: z.string(),
   extensionId: z.string(),
@@ -192,7 +194,7 @@ const workbenchExtensionViewMenuRecordSchema = z.object({
   extensionId: z.string(),
   owner: viewRefSchema,
   view: viewRefSchema,
-  side: z.enum(["left", "right"]),
+  side: z.enum(["left", "right", "bottom"]),
   group: z.string().optional(),
   placement: z.enum(["first", "default", "last"]).optional(),
   hostTreeHeader: z.enum(["default", "none"]).optional(),

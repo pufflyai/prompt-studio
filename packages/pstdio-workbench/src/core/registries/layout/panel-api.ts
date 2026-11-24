@@ -40,6 +40,7 @@ export const toPanelInstance = (placement: WorkbenchWidgetPlacement): WorkbenchP
   pageContext: placement.pageContext,
   resourceKey: placement.resourceKey,
   ownerResourceKey: placement.ownerResourceKey,
+  menuOwnerWidgetId: placement.menuOwnerWidgetId,
   title: placement.title,
   pinned: placement.pinned,
   closable: placement.closable === true,

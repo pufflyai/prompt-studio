@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { makeCommandContext } from "../../commands/command-context.fixture";
 import { putTicket, ticketContext } from "../../data/ticket-context.fixture";
 import { initializePlanPlacements } from "./initialize-placements";
 import { movePlanPlacement, planPlacements, readPlanMetadata } from "./placement-store";
@@ -67,7 +68,7 @@ test("initial execution placement saves bounded batches instead of a transaction
         }
       : {}),
   });
-  await initializePlanPlacements(storage, ["done"]);
+  await initializePlanPlacements(makeCommandContext({ storage, params: {} }), ["done"]);
   expect((await storage.records.aggregate({ index: "timeline-placements" })).count).toBe(203);
 });
 
@@ -105,7 +106,7 @@ test("initial execution placement batches dependency chains without loading tick
       expect(request.limit).toBeLessThanOrEqual(100);
       return query(request);
     };
-    await initializePlanPlacements(storage, ["done"]);
+    await initializePlanPlacements(makeCommandContext({ storage, params: {} }), ["done"]);
     expect(commits).toBe(1);
     expect(queries).toBeLessThanOrEqual(5);
     const rows = await query({ index: "timeline-placements", fields: ["ticketId"], limit: 100 });

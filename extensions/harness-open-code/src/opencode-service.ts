@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import type { SessionMessageInfo, SessionMessagesResponse } from "@opencode/client";
 import type { HarnessAttachment, HarnessParams } from "@pstdio/sdk/extensions";
 import { createOpencodeAuthentication } from "./authentication";
+import { afterOpencodePlugins } from "./opencode-catalog-readiness";
 import { createCommandApi } from "./opencode-commands";
 import { buildHeaders, buildRequestUrl, type OpencodeFetcher, requestJson, requireResponseOk } from "./opencode-http";
 import { toOpencodeModel } from "./opencode-model";
@@ -79,6 +80,27 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
   };
 
   const { withServerUrl, dispose, cancelPendingStartup } = createServerConnection(deps);
+
+  const getModelCatalog = (signal?: AbortSignal) =>
+    withServerUrl(
+      (baseUrl) => {
+        const directory = process.cwd();
+        return afterOpencodePlugins({ fetcher: deps.fetcher, baseUrl, directory, signal }, async (readySignal) => {
+          const { response, text } = await requestJson(
+            deps.fetcher,
+            buildRequestUrl(baseUrl, "/api/model", directory),
+            {
+              method: "GET",
+              headers: buildHeaders(directory),
+              signal: readySignal,
+            },
+          );
+          requireResponseOk(response, "", "OpenCode model discovery failed");
+          return text;
+        });
+      },
+      { retry: true },
+    );
 
   const postSessionMessage = async (
     baseUrl: string,
@@ -270,6 +292,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
 
   return {
     getAuthentication: createOpencodeAuthentication({ fetcher: deps.fetcher, withServerUrl }).getAuthentication,
+    getModelCatalog,
     dispose,
     cancelPendingStartup,
     startSession,

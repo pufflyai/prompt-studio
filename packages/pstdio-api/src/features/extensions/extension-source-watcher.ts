@@ -132,7 +132,7 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
       changed(event.sourcePath, "edit");
     }
   });
-  const refreshOwner = createPreparationWatchRefresh(async (sourcePath, signal) => {
+  const refreshOwner = createPreparationWatchRefresh(async (refresh, signal) => {
     if (disposed) return;
     const rows = (await input.listInstalledSources()).map(({ install_name, source_path, source_hash }) => ({
       install_name,
@@ -149,7 +149,7 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
     for (const path of paths) if (!observedHashes.has(path)) observedHashes.set(path, undefined);
     await runExtensionPreparation(
       "watch.update",
-      { id, kind: "sources", rows, sourcePath },
+      { id, kind: "sources", rows, ...refresh },
       { priority: "background", signal },
     );
   });

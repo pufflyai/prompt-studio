@@ -51,9 +51,16 @@ const literalPrefixDir = (pattern: string) => {
   return slashIndex === -1 ? "" : literal.slice(0, slashIndex);
 };
 
+// Another caller can delete a folder or file after the walk has seen it. It is gone, so the listing skips it.
+const unlessGone = <T>(error: unknown, gone: T) => {
+  if ((error as NodeJS.ErrnoException).code === "ENOENT") return gone;
+  throw error;
+};
+
 const walkFiles = async (root: string, current: string, files: ArtifactFile[], signal?: AbortSignal) => {
   signal?.throwIfAborted();
-  for (const entry of await readdir(current, { withFileTypes: true })) {
+  const entries = await readdir(current, { withFileTypes: true }).catch((error: unknown) => unlessGone(error, []));
+  for (const entry of entries) {
     signal?.throwIfAborted();
     const absolutePath = join(current, entry.name);
     if (isExtensionIdentityBackup(absolutePath)) continue;
@@ -63,7 +70,8 @@ const walkFiles = async (root: string, current: string, files: ArtifactFile[], s
     }
     if (!entry.isFile()) continue;
 
-    const fileStats = await stat(absolutePath);
+    const fileStats = await stat(absolutePath).catch((error: unknown) => unlessGone(error, undefined));
+    if (!fileStats) continue;
     files.push({
       path: toPosixPath(absolutePath.slice(root.length)),
       size: fileStats.size,

@@ -2,6 +2,8 @@
 
 export { publishRequestChange } from "./data/review-request-service";
 export { plannerTicketsChanged } from "./events";
+export { AutoBuildControl } from "./timeline/view/auto-build-control";
+export { AutoBuildDialogContent } from "./timeline/view/auto-build-dialog-content";
 export { RelationshipWindow } from "./timeline/view/relation-links";
 export { RequestWindowControls } from "./timeline/view/request-window";
 export { useAutoBuild } from "./timeline/view/use-auto-build";

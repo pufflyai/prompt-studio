@@ -28,6 +28,7 @@ const createHarness = (input: {
   cancelActiveWork?: boolean;
   showQuitConfirmation?: () => Promise<void>;
   askToCancelActiveWork?: () => Promise<boolean>;
+  showLifecycle?: () => Promise<void>;
 }) => {
   let state: DesktopState = { kind: "workbench", runtime: runtime.descriptor };
   const calls: string[] = [];
@@ -47,7 +48,7 @@ const createHarness = (input: {
     setState: (next) => {
       state = next;
     },
-    showLifecycle: async () => {},
+    showLifecycle: async () => input.showLifecycle?.(),
     showQuitConfirmation: async () => {
       calls.push("showQuitConfirmation");
       await input.showQuitConfirmation?.();
@@ -68,6 +69,78 @@ const createHarness = (input: {
   };
   return { calls, flow, setState, state: () => state };
 };
+
+describe("desktop quit flow with a broken interface", () => {
+  test.each([
+    false,
+    true,
+  ])("a broken closing interface does not stop owned shutdown (confirmed: %s)", async (confirmed) => {
+    const requests: boolean[] = [];
+    const { flow, calls } = createHarness({
+      refreshRuntime: async () => runtime,
+      showLifecycle: async () => {
+        throw new Error("Preload failed");
+      },
+      requestShutdown: async (force) => {
+        requests.push(force);
+        return confirmed && !force
+          ? { state: "active", activity: { ...noActivity, sessions: [{ id: "s1", label: "Session" }] } }
+          : { state: "accepted" };
+      },
+    });
+    await flow.requestQuit();
+    if (confirmed) await flow.confirmQuit();
+    expect(requests).toEqual(confirmed ? [false, true] : [false]);
+    expect(calls).toContain("waitForExit");
+    expect(calls).toContain("quitApp");
+    expect(flow.isQuitAllowed()).toBe(true);
+  });
+
+  test.each([
+    false,
+    true,
+  ])("native confirmation preserves the active-work choice when preload fails (quit: %s)", async (quit) => {
+    const requests: boolean[] = [];
+    const { flow, calls, state } = createHarness({
+      refreshRuntime: async () => runtime,
+      showLifecycle: async () => {
+        throw new Error("Preload failed");
+      },
+      showQuitConfirmation: async () => {
+        throw new Error("Preload failed");
+      },
+      cancelActiveWork: quit,
+      requestShutdown: async (force) => {
+        requests.push(force);
+        return force
+          ? { state: "accepted" }
+          : { state: "active", activity: { ...noActivity, sessions: [{ id: "s1", label: "Session" }] } };
+      },
+    });
+    await flow.requestQuit();
+    expect(requests).toEqual(quit ? [false, true] : [false]);
+    expect(calls).toContain("askToCancelActiveWork");
+    expect(calls.includes("quitApp")).toBe(quit);
+    expect(state().kind).toBe(quit ? "closing" : "workbench");
+  });
+
+  test("a broken recovery interface leaves a failed quit available to retry", async () => {
+    let refreshes = 0;
+    const { flow, calls } = createHarness({
+      refreshRuntime: async () => {
+        if (++refreshes === 1) throw new Error("Runtime discovery failed");
+        return null;
+      },
+      showLifecycle: async () => {
+        throw new Error("Preload failed");
+      },
+    });
+    await flow.requestQuit();
+    expect(flow.isQuitting()).toBe(false);
+    await flow.requestQuit();
+    expect(calls).toContain("quitApp");
+  });
+});
 
 describe("desktop quit flow", () => {
   test.each([

@@ -21,14 +21,14 @@ import type { NextTicket, WaitingTicket } from "./next-ticket-types";
 import { nextDependencySnapshot } from "./next-work-snapshot";
 export const readNextTicketEvidence = async (ctx: CommandContext, ticket: Ticket, mode: AutoBuildMode) => {
   const closure = await readTicketDependencyClosure(ctx, ticket.id, ticket);
-  const [attempts, requests, assignment, resumption, selected] = await Promise.all([
-    readTicketAttempts(ctx.storage, [ticket.id]),
+  const attempts = await readTicketAttempts(ctx.storage, [ticket.id]);
+  const [requests, assignment, resumption, selected] = await Promise.all([
     readTicketInputStates(
       ctx.storage,
       closure.tickets.map(({ id }) => id),
     ),
     readAutoBuildAssignments(ctx, [ticket.id]),
-    readAutoBuildResumptions(ctx, [ticket.id]),
+    attempts.length ? readAutoBuildResumptions(ctx, [ticket.id]) : new Map<string, never>(),
     attemptSelectionsCollection(ctx.storage).get(ticket.id),
   ]);
   const events = attempts.length ? await readWorkspaceEvents(ctx.storage, attempts.map(attemptId)) : [];

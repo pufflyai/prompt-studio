@@ -1,4 +1,4 @@
-import type { ChatDraft, ChatRendererAction, ChatRendererSnapshot } from "@pstdio/sdk/extensions";
+import type { ChatDraft, ChatRendererAction, ChatRendererSnapshot, ControlValueMap } from "@pstdio/sdk/extensions";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import {
   chatRendererActionResultSchema,
@@ -30,13 +30,14 @@ export interface ChatSessionInput {
   onIdle?(): void;
   captureSaveDraft?(): (draft: ChatDraft) => Promise<unknown>;
   captureWork?(): <T>(run: () => Promise<T>) => Promise<T>;
-  query(signal: AbortSignal): Promise<unknown>;
+  query(signal: AbortSignal, values: ControlValueMap): Promise<unknown>;
   action(action: ChatRendererAction): Promise<unknown>;
   watch?(signal: AbortSignal): AsyncIterable<unknown> & { result?: Promise<unknown> };
   loadDraft?(): Promise<unknown>;
   saveDraft?(draft: ChatDraft): Promise<unknown>;
   /** Stage edits synchronously until the provider acknowledges the asynchronous save. */
   stageDraft?(draft: ChatDraft): void;
+  acknowledgeRecovery?(draft: ChatDraft): Promise<unknown>;
 }
 
 const executeChatAction = async (
@@ -211,6 +212,7 @@ export const createChatSession = (input: ChatSessionInput) => {
         ),
       );
       recoverableDraft = undefined;
+      void input.acknowledgeRecovery?.(recovered).catch(fail);
     },
   });
   const pin = () => (finite.query.isDisposed() ? () => {} : finite.query.subscribe(() => {}, { automatic: false }));
@@ -228,7 +230,7 @@ export const createChatSession = (input: ChatSessionInput) => {
   });
   const finite = createChatFiniteRead({
     context: input.queryContext,
-    read: input.query,
+    read: (signal) => input.query(signal, state.draft.values),
     issue: () => ++clock,
     merge,
     loaded: () => hasLoaded,
@@ -317,6 +319,7 @@ export const createChatSession = (input: ChatSessionInput) => {
       if (!retired) drafts.change(update);
     },
     ...createChatSubmissionHandoff(() => state.pending, publish),
+    storedDraft: drafts.storedDraft,
     ...createChatDraftRestoration({
       active: () => !retired,
       read: () => state,

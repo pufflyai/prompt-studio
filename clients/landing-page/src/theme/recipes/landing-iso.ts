@@ -1,4 +1,5 @@
 import { defineRecipe } from "@chakra-ui/react";
+import { homeToolStyles } from "./landing-iso-tools";
 
 // The iso engine renders plain DOM with `iso-*` (engine) and `g-*` (placeholder UI)
 // classes; this recipe styles them so every color still comes from the theme.
@@ -184,6 +185,7 @@ export const landingIsoRecipe = defineRecipe({
       background: "radial-gradient(circle, rgba(0,0,0,.5), transparent 70%)",
     },
     "& .iso-box": { position: "absolute", left: 0, top: 0, transition: "opacity 0.4s", touchAction: "none" },
+    "& .iso-box.iso-pan": { touchAction: "pan-y" },
     "& .iso-box.iso-fade, & .iso-box.iso-hidden, & .iso-plate.iso-fade": { opacity: 0 },
     "& .iso-pop": { animation: "iso-fade-in 0.45s ease-out" },
     "& .iso-island .iso-face:last-of-type": { boxShadow: `inset 0 0 0 1px ${greekStrong}`, borderRadius: "2px" },
@@ -316,7 +318,23 @@ export const landingIsoRecipe = defineRecipe({
     },
     "& .iso-fx i": { boxSize: "4px", borderRadius: "full", bg: greekStrong },
     "& .iso-fx b": { fontSize: inverse(9), fontWeight: "normal", color: "illustration.command" },
-    "& .iso-fx b.iso-clap": { fontSize: inverse(16), animation: "iso-rise 0.8s ease-out forwards" },
+    "& .iso-fx b.iso-clap": { fontSize: inverse(30), animation: "iso-rise 1.1s ease-out forwards" },
+    "& .iso-fx b.iso-spark": { fontSize: inverse(14), animation: "iso-puff 0.75s ease-out forwards" },
+    "& .iso-fx .iso-wave": {
+      position: "absolute",
+      boxSize: inverse(18),
+      borderRadius: "full",
+      border: "3px solid",
+      borderColor: "illustration.accent",
+      transform: "translate(-50%, -50%)",
+      animation: "iso-wave 0.65s ease-out forwards",
+    },
+    "& .iso-fx .iso-wave.iso-late": { borderColor: "illustration.skill", animationDelay: "0.12s", opacity: 0 },
+    // A held hand stays visible even if its agent turned to its terminal meanwhile.
+    "& .iso-agent.iso-grabbed": { zIndex: 6, opacity: 1, pointerEvents: "auto" },
+    "& .iso-agent.iso-grabbed .iso-icon": { animation: "iso-wiggle 0.28s ease-in-out infinite" },
+    "& .iso-agent.iso-grabbed .iso-bubble": { bottom: inverse(36) },
     ...greekStyles,
+    ...homeToolStyles,
   },
 });

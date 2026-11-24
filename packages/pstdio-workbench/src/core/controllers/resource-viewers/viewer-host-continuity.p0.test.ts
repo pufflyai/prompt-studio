@@ -34,3 +34,26 @@ test("replacement retains the current view while reopening its source creates in
   expect(viewerHostKey(w, w.pages.getContent()!.widgetId)).toBe(secondHost);
   expect(viewerHostKey(w, first.widgetId)).toBe(firstHost);
 });
+
+test("a page's menu guest and open state follow its portable tab identity", async () => {
+  const { w } = createResourceViewerFixture();
+  w.views.registerView({ id: "menu", title: "Tools", body: { kind: "react", render: () => null } });
+  w.viewMenus.registerViewMenu({ id: "tools", ownerViewId: "reader", viewId: "menu", side: "right" });
+  w.pages.registerPage({
+    id: "compose",
+    ref: viewerPage("compose"),
+    path: "compose",
+    modeId: "project",
+    main: { kind: "view", presentation: "page", cardinality: "one", view: { kind: "view", id: "reader" } },
+    slots: [],
+  });
+  await w.navigation.openPage({ page: viewerPage("compose") });
+  const source = w.layout.listPanelInstances("main-right-menu")[0]!;
+  const key = viewerHostKey(w, source.instanceId);
+  w.panelMenuState.setOpen(`panel-menu:${source.instanceId}`, false);
+  w.movePanel(w.pages.getContent()!.widgetId, "side");
+  const destination = w.layout.listPanelInstances("side-right-menu")[0]!;
+  expect(destination).toBeDefined();
+  expect(viewerHostKey(w, destination.instanceId)).toBe(key);
+  expect(w.panelMenuState.isOpen(`panel-menu:${destination.instanceId}`)).toBe(false);
+});

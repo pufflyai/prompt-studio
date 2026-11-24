@@ -7,7 +7,6 @@ import { type CollectionViewsSource, useCollectionViewStore, useCollectionViews 
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { PlannerReadError } from "../../views/planner-read-error";
-import { AutoBuildControl } from "./auto-build-control";
 import { BackgroundMenu } from "./background-menu";
 import { formatDay } from "./flags";
 import { PlanGraph } from "./plan-graph";
@@ -177,7 +176,6 @@ function PlanContent(props: PlanContentProps) {
         search={search}
         onSearchChange={setSearch}
         resultLabel={plan ? `${plan.page.filteredTotal} of ${plan.page.total}` : ""}
-        actions={<AutoBuildControl host={host} client={client} t={t} data={queryData} />}
       />
       {plan ? (
         <Flex flex="1" minH="0" minW="0">

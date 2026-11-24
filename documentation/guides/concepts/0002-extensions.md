@@ -37,8 +37,8 @@ For example, with Notes installed and enabled, run these commands from your proj
 
 ```sh
 pst pstdio.notes --help
-pst pstdio.notes notes create --help
-pst pstdio.notes notes create --title "Meeting notes"
+pst pstdio.notes create --help
+pst pstdio.notes create --title "Meeting notes"
 ```
 
 The last line runs Notes' **New note** command. The sidebar action and CLI command use the same handler; you can open the resulting note in the workbench.
@@ -89,4 +89,4 @@ Some limits still apply. A webview, which is a custom web page inside the dashbo
 - [Make actions CLI-ready](../extensions/0007-cli-ready-actions.md)
 - [Extension API reference](../../references/extensions/0001-api.md)
 
-*Updated at: 2026-11-12*
+*Updated at: 2026-11-22*

@@ -1,5 +1,6 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { readStatusDefinitions, readTagDefinitions } from "../data/definition-query";
+import { readTicketPage } from "../data/read-ticket-page";
 import { ticketCommandPage } from "../data/ticket-command-page";
 import { ticketTagIds } from "../data/ticket-tags";
 
@@ -19,23 +20,20 @@ export const listTicketsCommand = defineCommand({
     cursor: params.text(),
   },
   async run(ctx, input) {
-    const page = await ticketCommandPage(ctx, input).catch((error) => {
-      // A first page can restart after sync; continuations must keep their snapshot.
-      if (input.cursor || !(error instanceof Error) || error.message !== "Query revision is stale; restart the query")
-        throw error;
-      return ticketCommandPage(ctx, input);
+    return readTicketPage(ctx, input.cursor, async () => {
+      const page = await ticketCommandPage(ctx, input);
+      const [statuses, tags] = await Promise.all([readStatusDefinitions(ctx.storage), readTagDefinitions(ctx.storage)]);
+      const statusNames = new Map(statuses.map(({ id, name }) => [id, name]));
+      const optionNames = new Map(tags.flatMap(({ options }) => options).map(({ id, name }) => [id, name]));
+      return {
+        ...page,
+        tickets: page.tickets.map((ticket) => ({
+          shorthand: ticket.shorthand,
+          title: ticket.title,
+          status: statusNames.get(ticket.statusId ?? "") ?? "",
+          tags: ticketTagIds(ticket).map((id) => optionNames.get(id) ?? id),
+        })),
+      };
     });
-    const [statuses, tags] = await Promise.all([readStatusDefinitions(ctx.storage), readTagDefinitions(ctx.storage)]);
-    const statusNames = new Map(statuses.map(({ id, name }) => [id, name]));
-    const optionNames = new Map(tags.flatMap(({ options }) => options).map(({ id, name }) => [id, name]));
-    return {
-      ...page,
-      tickets: page.tickets.map((ticket) => ({
-        shorthand: ticket.shorthand,
-        title: ticket.title,
-        status: statusNames.get(ticket.statusId ?? "") ?? "",
-        tags: ticketTagIds(ticket).map((id) => optionNames.get(id) ?? id),
-      })),
-    };
   },
 });

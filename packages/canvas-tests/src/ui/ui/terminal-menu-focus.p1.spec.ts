@@ -24,3 +24,16 @@ test("closing the launching menu still focuses its newly opened terminal", async
   await preview.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
   await expect(preview.getByRole("textbox", { name: "Terminal input" })).toBeFocused();
 });
+
+test("a restored terminal keeps the panel header focused for its keyboard menu", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/terminal/terminal.canvas.tsx#LateMountPreservesPanelHeaderFocus",
+  );
+  const header = preview.getByLabel("Side panel header", { exact: true });
+  await header.focus();
+  await expect(preview.getByRole("textbox", { name: "Terminal input" })).toBeVisible();
+  await expect(header).toBeFocused();
+  await page.keyboard.press("Shift+F10");
+  await expect(preview.getByRole("menuitem", { name: "Move panel to right", exact: true })).toBeVisible();
+});
