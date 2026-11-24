@@ -220,7 +220,7 @@ await runScenario("B6", async (capture) => {
       capture.record("mounted", mounted);
       capture.record("writes", after.writes - before.writes);
       // Complete the journey before reporting scale failures; an unbounded scroll cannot qualify as paging.
-      capture.check("bounded-search-page", Boolean(initial?.page?.cursor && initial.request?.limit === 100));
+      capture.check("bounded-search-page", Boolean(initial?.page?.cursor && initial.request?.limit === 50));
       capture.check("cursor-continuation", Boolean(observedContinuation));
       capture.check(
         "bounded-query-responses",
