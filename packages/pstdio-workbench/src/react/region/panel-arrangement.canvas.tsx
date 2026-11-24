@@ -75,9 +75,12 @@ export const MovedSingleView: Story = {
   args: { workbench: movedPageWorkbench },
 };
 const floatingWorkbench = createArrangementWorkbench();
+floatingWorkbench.registerModule(createWorkbenchTerminalModule());
 floatingWorkbench.sidePanel.setMode("floating");
 export const DetachedSide: Story = {
   id: "pstdio-workbench-reference-core-api-panel-arrangement--detached-side",
+  description:
+    "Open the Add panel dropdown or a tab context menu to create a session without dragging the floating panel. Both Snap to alignment and Move freely preserve normal menu activation and existing drafts.",
   args: { workbench: floatingWorkbench },
 };
 const terminalWorkbench = createArrangementWorkbench();
