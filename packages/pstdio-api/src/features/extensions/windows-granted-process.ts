@@ -10,13 +10,14 @@ const launcherSource = `
   process.once("disconnect", () => {
     if (!launched) process.exit(1);
   });
-  process.once("message", async ({ argv, cwd, env, detached, windowsVerbatimArguments }) => {
+  process.once("message", async ({ argv, cwd, env, detached, stdin, windowsVerbatimArguments }) => {
     launched = true;
     let child;
     try {
       child = Bun.spawn(argv, {
         cwd, env, detached, windowsVerbatimArguments, windowsHide: true,
-        stdin: "ignore", stdout: detached ? "ignore" : "inherit", stderr: detached ? "ignore" : "inherit",
+        stdin: stdin === "pipe" ? "inherit" : "ignore",
+        stdout: detached ? "ignore" : "inherit", stderr: detached ? "ignore" : "inherit",
       });
     } catch {
       process.send({ failed: true }, () => process.exit(1));
@@ -33,6 +34,7 @@ type StartInput = {
   cwd?: string;
   env: NodeJS.ProcessEnv;
   detached: boolean;
+  stdin?: "pipe";
   stopTimeoutMs: number;
 };
 
@@ -50,7 +52,7 @@ export const startWindowsGrantedProcess = (input: StartInput) => {
   const started = Promise.withResolvers<number>();
   started.promise.catch(() => {});
   const output = input.detached ? "ignore" : "pipe";
-  const launchError = () => new Error("The granted Windows process could not start.");
+  const launchError = () => new Error("The Windows process could not start.");
   let child: ReturnType<typeof Bun.spawn> | undefined;
   try {
     child = input.spawner([process.execPath, "--no-env-file", "-e", launcherSource], {
@@ -59,7 +61,7 @@ export const startWindowsGrantedProcess = (input: StartInput) => {
         SystemRoot: process.env.SystemRoot,
         ...(isPackagedRuntime() ? { BUN_BE_BUN: "1" } : {}),
       },
-      stdin: "ignore",
+      stdin: input.stdin ?? "ignore",
       stdout: output,
       stderr: output,
       windowsHide: true,
@@ -78,6 +80,7 @@ export const startWindowsGrantedProcess = (input: StartInput) => {
       windowsVerbatimArguments: input.command.windowsVerbatimArguments,
       env: input.env,
       detached: input.detached,
+      stdin: input.stdin,
     });
   } catch (error) {
     // An unassigned launcher is waiting and has not received the command.
@@ -101,7 +104,7 @@ export const startWindowsGrantedProcess = (input: StartInput) => {
     async stop() {
       if (job.hasProcesses()) job.terminate();
       if (!(await exitedWithin(treeExited, input.stopTimeoutMs)))
-        throw new Error("The granted Windows process job did not exit after it was stopped.");
+        throw new Error("The Windows process job did not exit after it was stopped.");
     },
   };
 };

@@ -2,7 +2,7 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { AgentAvailabilityType } from "pstdio-api-contracts";
 import { type ExtensionConnectionsApi, isLocalizedString } from "pstdio-api-contracts/extension-kernel";
-import type { HarnessHandle, HarnessRegistry } from "pstdio-api-runtime-host";
+import type { HarnessContextFactory, HarnessHandle, HarnessRegistry } from "pstdio-api-runtime-host";
 import {
   createHarnessRegistry,
   createHarnessSessionResources,
@@ -24,7 +24,6 @@ import {
   ExtensionRuntimeProjectMissingError,
   resolveEnabledSourceForRecord,
 } from "../extensions/project-extension-runtime-snapshot";
-import { ExtensionRuntimeProjectMissingError } from "../extensions/project-extension-runtime-snapshot";
 import { createHarnessContextFactory } from "./harness-context";
 import { createHarnessRegistryLifecycle } from "./harness-registry-lifecycle";
 

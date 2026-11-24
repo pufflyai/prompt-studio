@@ -71,6 +71,7 @@ test("an early shutdown failure still closes extension workers before the databa
       },
     },
     extensionScheduler: { dispose: done },
+    extensionProcessOwners: { dispose: done },
     artifactMountWatch: { dispose: done },
     automationService: { close: done },
     terminalSupervisor: { dispose: done },

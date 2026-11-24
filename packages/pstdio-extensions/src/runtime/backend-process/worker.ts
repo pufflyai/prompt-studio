@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import type { ProcessHandle } from "pstdio-api-contracts/extension-kernel";
 import { readCommandRejection } from "../runner/command-rejection";
 import { createPendingCalls } from "./pending-calls";
-import type { ProcessHandle } from "pstdio-api-contracts/extension-kernel";
 import {
   BACKEND_PROTOCOL_VERSION,
   BACKEND_STOP_GRACE_MS,
