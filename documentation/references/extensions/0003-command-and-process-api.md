@@ -175,16 +175,19 @@ await ctx.diagnostics.capture({
   events and 512 KiB, with `dropped` counting the rest.
 - `checkpoint(data)` runs after each armed window and at the end, so evidence survives a host that
   stops mid-capture. One write runs at a time; a newer checkpoint replaces one still waiting, and
-  `data.skippedCheckpoints` counts them. A rejected checkpoint fails the capture.
+  `data.skippedCheckpoints` counts them. The host releases the profiler and operation subscription
+  when recording ends. A rejected checkpoint fails the capture. Final checkpoint writes have 30 seconds
+  to finish after recording ends, then the capture rejects with `diagnostics_checkpoint_timeout`.
 - Aborting `signal`, cancelling the invocation, or the invocation ending stops the profiler and
   rejects with the abort reason.
-- One capture runs per host at a time. Another rejects with `diagnostics_busy`. Invalid input or a
+- One recording uses the host profiler at a time. An overlapping recording rejects with `diagnostics_busy`. Invalid input or a
   duration above the limit rejects with `diagnostics_invalid_input`.
 - Only first-party extensions may capture: an id with the `pstdio.` publisher that is listed in
-  the packaged extension catalog, installed from that entry's Git origin, from the host's release
-  registry, or from the host's own source checkout of it. A folder, Git repository or registry
-  that only claims a catalog id is not first-party. Others reject with `diagnostics_forbidden`. Profiles contain host source paths, call stacks and runtime
-  identifiers, so keep them in extension-owned local storage.
+  the packaged extension catalog. It must run from the host's checkout or an adopted revision the installer
+  verified from the catalog's Git release, the host's release registry, or the host's checkout. Update or
+  reinstall a catalog extension whose current revision predates install verification before using this API.
+  Other sources reject with `diagnostics_forbidden`. Profiles contain host source paths, call stacks and
+  runtime identifiers, so keep them in extension-owned local storage.
 
 ## Host environment values
 

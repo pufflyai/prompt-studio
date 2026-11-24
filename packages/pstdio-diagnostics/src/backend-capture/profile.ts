@@ -8,8 +8,9 @@ import { frequentFunctions } from "./functions";
 import { post, wait, withProfiler } from "./inspector";
 import { collectOperationTrace } from "./operation-trace";
 
-export const captureProfile = (input: { kind: "cpu" | "coverage"; durationMs: number; signal?: AbortSignal }) =>
-  withProfiler(async (session) => {
+export const captureProfile = async (input: { kind: "cpu" | "coverage"; durationMs: number; signal?: AbortSignal }) => {
+  input.signal?.throwIfAborted();
+  return withProfiler(async (session) => {
     input.signal?.throwIfAborted();
     const trace = collectOperationTrace();
     try {
@@ -54,3 +55,4 @@ export const captureProfile = (input: { kind: "cpu" | "coverage"; durationMs: nu
       trace.close();
     }
   });
+};

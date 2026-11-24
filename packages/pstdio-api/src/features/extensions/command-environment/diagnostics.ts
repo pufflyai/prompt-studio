@@ -1,44 +1,35 @@
-import { realpathSync } from "node:fs";
+import { resolve } from "node:path";
 import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionDiagnosticsApi } from "pstdio-api-contracts/extension-kernel";
-import { captureBackendDiagnostic } from "pstdio-diagnostics";
-import type { InvocationScope } from "pstdio-extensions";
+import { prepareBackendDiagnosticCapture } from "pstdio-diagnostics";
+import { type InvocationScope, readAcceptedRevision } from "pstdio-extensions";
 import { parseRegistrySourceRef } from "pstdio-extensions/distribution";
 import { parseExtensionSourceRef } from "../../../services/extension-source-ref";
-import { hostCheckoutPath, packagedExtensionCatalog } from "../extension-catalog";
+import { hostCheckoutPath } from "../extension-catalog";
+import { firstPartyCatalogEntry, sameSourcePath } from "../verified-install-origin";
 
-export type DiagnosticsSource = { source_kind: string; source_path: string; source_ref: string | null };
+export type DiagnosticsSource = { sourcePath: string; revisionId?: string };
 
-const samePath = (left: string, right: string) => {
-  try {
-    return realpathSync(left) === realpathSync(right);
-  } catch {
+/** Trust the host checkout or a verified install of the revision providing the current handlers. */
+export const isFirstPartySource = async (extensionId: string, source?: DiagnosticsSource, releaseRegistry?: string) => {
+  const entry = firstPartyCatalogEntry(extensionId);
+  if (!entry || !source) return false;
+  if (sameSourcePath(source.sourcePath, hostCheckoutPath(entry))) return true;
+  if (!source.revisionId) return false;
+  const revision = await readAcceptedRevision(source.sourcePath);
+  if (revision?.id !== source.revisionId || canonicalExtensionId(revision.manifest.id) !== entry.extensionId)
     return false;
-  }
-};
-
-/**
- * A `pstdio.` extension from the packaged catalog, installed from that catalog's own source: its
- * Git origin, the host's release registry or this host's source checkout. The manifest id alone
- * proves nothing, because any folder can claim it.
- */
-export const isFirstPartySource = (extensionId: string, source: DiagnosticsSource, releaseRegistry?: string) => {
-  const id = canonicalExtensionId(extensionId);
-  const entry = packagedExtensionCatalog.extensions.find(
-    (candidate) => candidate.extensionId && canonicalExtensionId(candidate.extensionId) === id,
-  );
-  if (!entry || !id.startsWith("pstdio.")) return false;
-  if (source.source_kind === "git") {
-    const origin = parseExtensionSourceRef(source.source_ref);
-    return origin?.url === entry.origin.url && origin.path === entry.origin.path;
-  }
-  if (source.source_kind === "registry") {
-    const release = parseRegistrySourceRef(source.source_ref);
+  const install = revision.verifiedInstall;
+  if (!install || install.sourcePath !== resolve(source.sourcePath)) return false;
+  if (install.ref === null) return true;
+  const release = parseRegistrySourceRef(install.ref);
+  if (release) {
     // The registry client saves sources without a trailing slash; the host's setting may keep one.
     const registry = (value?: string) => value?.replace(/\/$/, "");
-    return release !== null && release.id === id && registry(release.registry) === registry(releaseRegistry);
+    return release.id === entry.extensionId && registry(release.registry) === registry(releaseRegistry);
   }
-  return source.source_kind === "local_path" && samePath(source.source_path, hostCheckoutPath(entry));
+  const git = parseExtensionSourceRef(install.ref);
+  return git?.url === entry.origin.url && git.path === entry.origin.path;
 };
 
 /**
@@ -46,19 +37,38 @@ export const isFirstPartySource = (extensionId: string, source: DiagnosticsSourc
  * only first-party extensions installed from their catalog source may capture.
  */
 export const createDiagnosticsApi = (
-  input: { extensionId: string; source: DiagnosticsSource; releaseRegistry?: string },
+  input: { extensionId: string; source?: DiagnosticsSource; releaseRegistry?: string },
   scope?: InvocationScope,
-) =>
-  ({
+) => {
+  const active = new Set<Promise<unknown>>();
+  let ended: AbortController | undefined;
+  const invocationSignal = () => {
+    if (!scope) return;
+    if (!ended) {
+      const lifetime = new AbortController();
+      ended = lifetime;
+      scope.register(async () => {
+        lifetime.abort(new Error("The invocation that started the capture ended."));
+        await Promise.allSettled(active);
+      });
+    }
+    return ended.signal;
+  };
+  return {
     capture: async (request) => {
-      if (!isFirstPartySource(input.extensionId, input.source, input.releaseRegistry))
+      if (!(await isFirstPartySource(input.extensionId, input.source, input.releaseRegistry)))
         throw Object.assign(new Error(`${input.extensionId} may not profile the Prompt Studio host.`), {
           code: "diagnostics_forbidden",
         });
-      // A capture ends with the invocation that started it, so a stopped worker cannot leave the profiler running.
-      const ended = new AbortController();
-      scope?.register(() => ended.abort(new Error("The invocation that started the capture ended.")));
-      const signals = [ended.signal, scope?.signal, request.signal].filter((signal) => signal !== undefined);
-      return captureBackendDiagnostic({ ...request, signal: AbortSignal.any(signals) });
+      const capture = prepareBackendDiagnosticCapture(request);
+      const signals = [scope?.signal, capture.signal, invocationSignal()].filter((signal) => signal !== undefined);
+      const recording = capture.run(AbortSignal.any(signals));
+      active.add(recording);
+      try {
+        return await recording;
+      } finally {
+        active.delete(recording);
+      }
     },
-  }) satisfies ExtensionDiagnosticsApi;
+  } satisfies ExtensionDiagnosticsApi;
+};

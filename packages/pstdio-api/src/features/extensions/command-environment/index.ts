@@ -182,7 +182,7 @@ export const createCommandEnvironment = (
       diagnostics: createDiagnosticsApi(
         {
           extensionId: input.extensionId,
-          source: enabledSource.installedSource,
+          source: enabledSource.adoptedSource,
           releaseRegistry: deps.extensionUpgradeService?.registry,
         },
         scope,

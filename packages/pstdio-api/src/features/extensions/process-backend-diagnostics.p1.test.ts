@@ -6,6 +6,7 @@ import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { closeBackendWorkers } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { packagedExtensionCatalog } from "./extension-catalog";
+import { installExtensionSource, toExtensionEnableInput } from "./install-extension-source";
 
 let root: string;
 let handle: Awaited<ReturnType<typeof createTestApp>>;
@@ -80,31 +81,23 @@ export default {
 const performanceOrigin = packagedExtensionCatalog.extensions.find(
   (entry) => entry.installName === "performance",
 )!.origin;
-// How a catalog install records its source: the catalog's Git origin at a commit.
-const catalogSource = {
-  sourceKind: "git" as const,
-  sourceRef: `${performanceOrigin.url}@${"a".repeat(40)}#${performanceOrigin.path}`,
-};
-
-const install = async (
-  project: string,
-  publisher: string,
-  name: string,
-  source: { sourceKind: "git" | "local_path"; sourceRef?: string } = { sourceKind: "local_path" },
-) => {
+const writeFixture = async (project: string, publisher: string, name: string) => {
   const folder = join(root, `${project}-${publisher}-${name}`);
   await mkdir(folder);
-  await writeFile(
-    join(folder, "package.json"),
-    JSON.stringify({
-      name,
-      version: "1.0.0",
-      publisher,
-      main: "./extension.ts",
-      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
-    }),
-  );
+  const manifest = {
+    name,
+    version: "1.0.0",
+    publisher,
+    main: "./extension.ts",
+    engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+  };
+  await writeFile(join(folder, "package.json"), JSON.stringify(manifest));
   await writeFile(join(folder, "extension.ts"), entry);
+  return { folder, manifest };
+};
+
+const install = async (project: string, publisher: string, name: string) => {
+  const { folder, manifest } = await writeFixture(project, publisher, name);
   await handle.deps.extensionService.enableInstalledSourceForProject({
     projectId: project,
     installName: name,
@@ -112,8 +105,29 @@ const install = async (
     name,
     displayName: name,
     sourcePath: folder,
-    ...source,
-    manifest: {},
+    sourceKind: "local_path",
+    manifest,
+  });
+};
+
+const installCatalogFixture = async (project: string) => {
+  const { folder } = await writeFixture(project, "pstdio", "performance");
+  const source = await installExtensionSource({
+    source: "performance",
+    hostReleaseRef: "fixture-release",
+    skipInstall: true,
+    retainBackup: true,
+    // Stand in for retrieval from the catalog origin. The real installer stages,
+    // verifies and adopts the package before the real extension worker can use it.
+    prepareNamedSource: async () => ({
+      path: folder,
+      ref: `${performanceOrigin.url}@${"a".repeat(40)}#${performanceOrigin.path}`,
+    }),
+  });
+  await handle.deps.extensionService.enableInstalledSourceForProject({
+    projectId: project,
+    installName: source.installName,
+    ...toExtensionEnableInput(source),
   });
 };
 
@@ -131,12 +145,12 @@ beforeAll(async () => {
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
   handle = await createTestApp({ databasePath: ":memory:", storageRoot: join(root, "storage") });
   projectId = await createProject("Diagnostics");
-  await install(projectId, "pstdio", "performance", catalogSource);
+  await installCatalogFixture(projectId);
   await install(projectId, "example", "profiler");
   // Any folder can claim a catalog id. Installed from a local folder, it stays third-party.
   folderProjectId = await createProject("Claimed");
   await install(folderProjectId, "pstdio", "performance");
-});
+}, 15_000);
 
 afterAll(async () => {
   await handle?.close();
