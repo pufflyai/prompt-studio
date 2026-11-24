@@ -8,6 +8,7 @@ import { createProcessOwner } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { remoteReadOnlyCapabilities } from "../workspaces/workspace-provider-identity";
 import { createProcessApi } from "./extension-process-api";
+import { createExtensionProcessOwners } from "./extension-process-owners";
 import { readTargetText, resolveProcessTarget } from "./extension-targets";
 
 let root: string;
@@ -391,6 +392,70 @@ test.each([
     delete context.__lateProvider;
   }
 });
+
+test("disposing a retired generation bounds a stuck provider stop and can retry it", async () => {
+  const source = {
+    extension_id: "example.spawner",
+    source_path: join(root, "spawner"),
+    source_hash: "fixture-source",
+    manifest_json: {},
+  };
+  const owners = createExtensionProcessOwners({ findEnabledSource: async () => source });
+  const entered = Promise.withResolvers<void>();
+  const reply = Promise.withResolvers<ProcessHandle>();
+  const stopStarted = Promise.withResolvers<void>();
+  const remoteExit = Promise.withResolvers<ProcessExit>();
+  const fixture = { entered: entered.resolve, reply: reply.promise, spawns: 0 };
+  const context = globalThis as typeof globalThis & { __lateProvider?: typeof fixture };
+  context.__lateProvider = fixture;
+  let stops = 0;
+  const remote: ProcessHandle = {
+    id: "late-stuck-child",
+    started: Promise.resolve(),
+    exited: remoteExit.promise,
+    write: async () => {},
+    end: async () => {},
+    async kill() {
+      if (++stops === 1) {
+        stopStarted.resolve();
+        return new Promise<void>(() => {});
+      }
+      remoteExit.resolve({ code: null, signal: "SIGKILL" });
+    },
+    events: async function* () {},
+  };
+  const child = createProcessApi({
+    extensionOwner: owners.capture(projects.main, "stalled-instance", source),
+    resolveTarget: (workspaceId, signal) =>
+      resolveProcessTarget(handle.deps, { projectId: projects.main, workspaceId }, signal),
+  }).spawn({ command: ["agent"], workspaceId: workspaces.late, lifetime: "extension" });
+  let confirmed = false;
+  const cleanup = child.treeExited!.then(() => {
+    confirmed = true;
+  });
+  try {
+    await entered.promise;
+    await owners.retireInstance("stalled-instance");
+    await expect(child.started).rejects.toMatchObject({ code: "process_owner_closed" });
+    reply.resolve(remote);
+    await stopStarted.promise;
+
+    const result = await Promise.race([owners.dispose().then(() => "disposed"), Bun.sleep(6_500).then(() => "hung")]);
+    expect(result).toBe("disposed");
+    expect(stops).toBe(1);
+    expect(confirmed).toBe(false);
+
+    await owners.dispose();
+    await cleanup;
+    expect(await remote.exited).toEqual({ code: null, signal: "SIGKILL" });
+    expect(stops).toBe(2);
+    expect(fixture.spawns).toBe(1);
+  } finally {
+    reply.resolve(remote);
+    remoteExit.resolve({ code: null, signal: null });
+    delete context.__lateProvider;
+  }
+}, 10_000);
 
 test("target files read local paths relative to the workspace or the home, and remote ones through the provider", async () => {
   const read = (workspaceId: string, path: string) =>
