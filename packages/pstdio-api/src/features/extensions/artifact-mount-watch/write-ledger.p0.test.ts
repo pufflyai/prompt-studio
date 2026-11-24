@@ -100,7 +100,20 @@ describe("artifact mount write ledger", () => {
     writeFileSync(join(outside, "q4.json"), "{}");
     utimesSync(outside, new Date(), new Date(Date.now() + 5_000));
     renameSync(outside, folder);
-    expect(ledger.dropEchoes([folder], options)).toEqual([folder]);
+    await mount.writeText("sales/q5.json", "{}");
+    expect(ledger.dropEchoes([folder, join(folder, "q5.json")], options)).toEqual([folder]);
+  });
+
+  test("a delayed directory echo still matches after another owned child is written", async () => {
+    const ledger = createArtifactMountWriteLedger();
+    const { mount, root } = createMount(ledger);
+    const folder = join(root, "sales");
+    const options = { keepMatchedWrites: true };
+    await mount.writeText("sales/first.json", "{}");
+    expect(ledger.dropEchoes([folder, join(folder, "first.json")], options)).toEqual([]);
+
+    await mount.writeText("sales/second.json", "[]");
+    expect(ledger.dropEchoes([folder, join(folder, "second.json")], options)).toEqual([]);
   });
 
   test("drops everything a mount delete removed", async () => {

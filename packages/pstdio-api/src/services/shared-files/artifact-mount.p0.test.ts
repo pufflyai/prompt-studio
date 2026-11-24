@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { mkdir, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { createArtifactMountWriteLedger } from "../../features/extensions/artifact-mount-watch/write-ledger";
 import { artifactFilesFixture } from "./artifact-files.fixture";
 import { createSharedArtifactMount } from "./artifact-mount";
 
@@ -143,19 +144,24 @@ test("write notifications keep the workspace path used by filesystem watchers", 
   await symlink(f.input.repoRoot, alias, "junction");
   const writes: string[] = [];
   const directories: string[] = [];
+  const ledger = createArtifactMountWriteLedger(() => 0);
+  const nested = join(alias, ".pstdio/extension-storage/example.documents/documents/nested");
   const mount = createSharedArtifactMount(f.deps, {
     ...f.input,
     repoRoot: alias,
-    onWrite: (path, created) => {
+    onWrite: (path, created, parentWrite) => {
       writes.push(path);
       directories.push(...(created?.keys() ?? []));
+      ledger.record(path, created, parentWrite);
     },
   });
   await mount.writeText("note.md", "saved through linked workspace");
   await mount.writeText("nested/first.md", "created the directory");
+  expect(ledger.dropEchoes([nested, join(nested, "first.md")], { keepMatchedWrites: true })).toEqual([]);
   await mount.writeText("nested/second.md", "used the existing directory");
+  expect(ledger.dropEchoes([nested, join(nested, "second.md")], { keepMatchedWrites: true })).toEqual([]);
   expect(writes).toContain(join(alias, ".pstdio/extension-storage/example.documents/documents/note.md"));
-  expect(directories).toEqual([join(alias, ".pstdio/extension-storage/example.documents/documents/nested")]);
+  expect(directories).toEqual([nested]);
 });
 
 test("a mount reports the full-ID folder that filesystem watchers must observe", async () => {

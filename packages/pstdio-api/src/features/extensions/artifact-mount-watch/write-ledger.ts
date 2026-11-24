@@ -1,29 +1,11 @@
-import { lstatSync } from "node:fs";
 import { sep } from "node:path";
-import { filesystemIdentity } from "pstdio-extensions";
+import { type ArtifactMountWriteObserver, readArtifactFileState } from "pstdio-extensions";
 
 // Long enough for a change burst to settle after a slow write. Short enough that an old entry
 // cannot hide a later direct edit.
 const ECHO_WINDOW_MS = 5_000;
 
-const readState = (path: string) => {
-  // lstat throws ENOTDIR when a parent folder was replaced by a file. Either way the path is gone.
-  try {
-    const stats = lstatSync(path, { bigint: true, throwIfNoEntry: false });
-    if (!stats) return null;
-    return {
-      identity: filesystemIdentity(stats),
-      size: stats.size,
-      mtime: stats.mtimeNs,
-      ctime: stats.ctimeNs,
-      directory: stats.isDirectory(),
-    };
-  } catch {
-    return null;
-  }
-};
-
-type FileState = ReturnType<typeof readState>;
+type FileState = ReturnType<typeof readArtifactFileState>;
 type LedgerEntry = {
   recordedAt: number;
   state: FileState;
@@ -49,7 +31,7 @@ export type ArtifactMountWriteLedger = ReturnType<typeof createArtifactMountWrit
  */
 export const createArtifactMountWriteLedger = (now: () => number = Date.now) => {
   const entries = new Map<string, LedgerEntry>();
-  const directories = new Map<string, { identity: string; recordedAt: number; observed?: FileState }>();
+  const directories = new Map<string, { recordedAt: number; observed: FileState }>();
 
   const forgetExpired = () => {
     for (const [path, entry] of entries) {
@@ -79,35 +61,43 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
   const matchesCreatedDirectory = (path: string, current: FileState, keepMatchedWrites: boolean) => {
     const recorded = directories.get(path);
     if (!recorded) return false;
-    const matches =
-      current?.directory &&
-      current.identity === recorded.identity &&
-      (!recorded.observed || sameState(recorded.observed, current));
-    if (matches && keepMatchedWrites) recorded.observed = current;
-    else directories.delete(path);
-    return matches === true;
+    const matches = sameState(recorded.observed, current);
+    if (!matches || !keepMatchedWrites) directories.delete(path);
+    return matches;
   };
 
   const isEcho = (path: string, consumed: Set<string>, keepMatchedWrites: boolean) => {
-    const current = readState(path);
+    const current = readArtifactFileState(path);
     if (keepMatchedWrites && current) rememberReappearance(path);
     const entry = entries.get(path);
     if (entry && sameState(entry.state, current) && !entry.reappeared?.has(path)) {
-      if (!keepMatchedWrites) consumed.add(path);
+      if (!keepMatchedWrites) {
+        consumed.add(path);
+        directories.delete(path);
+      }
       return true;
     }
     if (entry?.state && keepMatchedWrites) consumed.add(path);
     return matchesCreatedDirectory(path, current, keepMatchedWrites) || (!current && matchesAncestorDeletion(path));
   };
 
+  const record: ArtifactMountWriteObserver = (path, createdDirectories, parentWrite) => {
+    forgetExpired();
+    const recordedAt = now();
+    entries.set(path, { recordedAt, state: readArtifactFileState(path) });
+    for (const [folder, identity] of createdDirectories ?? []) {
+      const observed = readArtifactFileState(folder);
+      if (observed?.directory && observed.identity === identity) directories.set(folder, { observed, recordedAt });
+    }
+    if (parentWrite?.before && parentWrite.after?.identity === parentWrite.before.identity) {
+      const directory = directories.get(parentWrite.path);
+      if (directory && sameState(directory.observed, parentWrite.before)) directory.observed = parentWrite.after;
+    }
+  };
+
   return {
     /** Record the state a mount write, update, or delete left at `path`. */
-    record: (path: string, createdDirectories?: ReadonlyMap<string, string>) => {
-      forgetExpired();
-      const recordedAt = now();
-      entries.set(path, { recordedAt, state: readState(path) });
-      for (const [folder, identity] of createdDirectories ?? []) directories.set(folder, { identity, recordedAt });
-    },
+    record,
     /** Return external changes. Keep matched writes when independent watchers can still echo them. */
     dropEchoes: (paths: string[], { keepMatchedWrites = false } = {}) => {
       forgetExpired();

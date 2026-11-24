@@ -3,7 +3,12 @@ import { dirname, join, relative } from "node:path";
 import type { AssetOwner, AssetReference } from "pstdio-api-contracts";
 import { historicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
-import { type ArtifactMountWriteObserver, createSafeFileRoot, filesystemIdentity } from "pstdio-extensions";
+import {
+  type ArtifactMountWriteObserver,
+  createSafeFileRoot,
+  filesystemIdentity,
+  observeArtifactParentWrite,
+} from "pstdio-extensions";
 import type { createAssetTransferService } from "../asset-transfer-service";
 import { blobHash } from "./file-state";
 
@@ -67,10 +72,16 @@ export const createFileProjectionIO = (input: {
     }
     return true;
   };
-  const place = async (path: string, target: FileIdentity, temporary: string | undefined) => {
+  const place = async (
+    path: string,
+    target: FileIdentity,
+    temporary: string | undefined,
+    parentWrite?: ReturnType<typeof observeArtifactParentWrite>,
+  ) => {
     const scoped = boundary(path);
+    const requestedPath = join(input.root, path);
     if (!target.kind) {
-      input.onWrite?.(join(input.root, path));
+      input.onWrite?.(requestedPath, undefined, parentWrite?.());
       return;
     }
     const createdDirectories = input.onWrite ? new Map<string, string>() : undefined;
@@ -78,7 +89,11 @@ export const createFileProjectionIO = (input: {
       scoped.path,
       createdDirectories && ((folder, identity) => createdDirectories.set(folder, identity)),
     );
-    const changedPath = join(input.root, path, relative(destination.operationPath, destination.realPath));
+    const changedPath = join(requestedPath, relative(destination.operationPath, destination.realPath));
+    const observedParent =
+      input.onWrite && dirname(requestedPath) !== dirname(changedPath)
+        ? observeArtifactParentWrite(changedPath)
+        : parentWrite;
     if (target.kind === "directory") {
       const created = await mkdir(destination.operationPath, { recursive: true });
       if (created && createdDirectories) {
@@ -86,7 +101,7 @@ export const createFileProjectionIO = (input: {
         if (stats?.isDirectory()) createdDirectories.set(changedPath, filesystemIdentity(stats));
       }
     } else if (temporary) await rename(temporary, destination.realPath);
-    input.onWrite?.(changedPath, createdDirectories);
+    input.onWrite?.(changedPath, createdDirectories, observedParent?.());
   };
   const install = async (
     path: string,
@@ -107,8 +122,9 @@ export const createFileProjectionIO = (input: {
       // A download must not overwrite an editor save made while the transfer was in flight.
       await input.beforeWrite?.();
       if (!(await unchanged(path, expected))) return false;
+      const parentWrite = input.onWrite && observeArtifactParentWrite(join(input.root, path));
       if (!(await clearOldKind(path, target, expected))) return false;
-      await place(path, target, temporary?.operationPath);
+      await place(path, target, temporary?.operationPath, parentWrite);
       return true;
     } finally {
       if (temporary) await rm(temporary.operationPath, { force: true });

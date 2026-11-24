@@ -1,6 +1,6 @@
-import type { BigIntStats } from "node:fs";
+import { type BigIntStats, lstatSync } from "node:fs";
 import { mkdir, realpath, stat } from "node:fs/promises";
-import { isAbsolute, join, posix, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 import { isExtensionIdentityBackup } from "./extension-identity-backup";
 
 export const normalizeMountRelativePath = (path: string) => {
@@ -37,6 +37,35 @@ export interface SafeResolvedPath {
 
 export const filesystemIdentity = ({ dev, ino, birthtimeNs }: Pick<BigIntStats, "dev" | "ino" | "birthtimeNs">) =>
   `${dev}:${ino}:${birthtimeNs}`;
+
+export const readArtifactFileState = (path: string) => {
+  // An ancestor that was removed or replaced by a file makes this path absent.
+  try {
+    const stats = lstatSync(path, { bigint: true, throwIfNoEntry: false });
+    if (!stats) return null;
+    return {
+      identity: filesystemIdentity(stats),
+      size: stats.size,
+      mtime: stats.mtimeNs,
+      ctime: stats.ctimeNs,
+      directory: stats.isDirectory(),
+    };
+  } catch {
+    return null;
+  }
+};
+
+export type ArtifactParentWrite = {
+  path: string;
+  before: ReturnType<typeof readArtifactFileState>;
+  after: ReturnType<typeof readArtifactFileState>;
+};
+
+export const observeArtifactParentWrite = (path: string) => {
+  const parent = dirname(path);
+  const before = readArtifactFileState(parent);
+  return (): ArtifactParentWrite => ({ path: parent, before, after: readArtifactFileState(parent) });
+};
 
 type OnDirectoryCreated = (path: string, identity: string) => void;
 
