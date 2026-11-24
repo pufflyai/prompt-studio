@@ -3,4 +3,4 @@
 "pstdio": minor
 ---
 
-Let dashboard widgets render custom content and place editing controls in the page header.
+Add scatterplots, ring charts, custom dashboard content, and page-owned dashboard toolbars.

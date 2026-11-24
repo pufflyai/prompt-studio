@@ -25,6 +25,28 @@ export const initialWidgets: DashboardWidget[] = [
     source: "conversations",
     layout: { x: 0, y: 11, w: 12, h: 8 },
   },
+  {
+    id: "clusters",
+    title: "Conversation clusters",
+    kind: "scatter",
+    source: "clusters",
+    layout: { x: 0, y: 19, w: 6, h: 8 },
+  },
+  {
+    id: "cluster-share",
+    title: "Cluster share",
+    kind: "ring",
+    source: "clusters",
+    layout: { x: 6, y: 19, w: 6, h: 8 },
+  },
+];
+
+const clusterPoints = [
+  { label: "Support intake", x: 3, y: 4, group: "Short conversations" },
+  { label: "Feedback review", x: 5, y: 6, group: "Short conversations" },
+  { label: "Daily notes", x: 7, y: 3, group: "Short conversations" },
+  { label: "Release planning", x: 23, y: 19, group: "Long conversations" },
+  { label: "Research synthesis", x: 26, y: 16, group: "Long conversations" },
 ];
 
 const counts = [34, 42, 47, 39, 68, 94, 137];
@@ -129,5 +151,11 @@ export const exampleSources = (days: number): DashboardDataSource[] => [
       .slice(-days)
       .map((value, index) => ({ label: `Nov ${13 - Math.min(days, 7) + index}`, value })),
     table: { data: sourceTables.warnings, columnTypes: { Warnings: "number", Conversations: "number" } },
+  },
+  {
+    id: "clusters",
+    name: "Clusters",
+    scatter: { xLabel: "Duration (min)", yLabel: "Messages", points: clusterPoints },
+    series: clusterPoints.map(({ group }) => ({ label: group, value: 1 })),
   },
 ];

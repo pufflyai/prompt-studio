@@ -162,6 +162,13 @@ Grouped bars stack points by `label` and `group`. Source IDs are application-own
 strings. Updating sources refreshes content without discarding layout edits. Pass
 filters or refresh controls in `actions`; fetching and errors belong to the caller.
 
+Use a `"scatter"` widget with `source.scatter` to plot numeric X/Y points. Each
+point can have a label and a color group, such as an existing cluster assignment.
+Set `xLabel` and `yLabel` on the scatter source to name the axes. A `"ring"`
+widget sums positive series values by label and shows each label's share.
+Use the same set of cluster names in the scatter groups and ring series to
+match their colors.
+
 For charts with their own marks, legends, or interactions, set the widget's kind
 to `"custom"` and pass its component as `content` on the matching source. Only
 the source ID is saved in the dashboard definition. A blank widget title lets
