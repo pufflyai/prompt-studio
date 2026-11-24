@@ -84,14 +84,14 @@ describe("extensionInstancesService", () => {
     expect((await svc.get(discovered.id))?.enabled).toBe(false);
   });
 
-  test("creates and retrieves an instance with generic scope", async () => {
+  test("creates and retrieves a project extension configuration", async () => {
     const created = await svc.create({
       installed_extension_id: installedId,
-      scope_type: "user",
-      scope_id: "user-1",
+      scope_type: "project",
+      scope_id: projectId,
     });
 
-    const fetched = await svc.findByScopeInstalledSource("user", "user-1", installedId);
+    const fetched = await svc.findByScopeInstalledSource("project", projectId, installedId);
     expect(fetched?.id).toBe(created.id);
     expect(fetched?.enabled).toBe(true);
   });
@@ -148,8 +148,8 @@ describe("extensionInstancesService", () => {
   test("update toggles enabled and config", async () => {
     const created = await svc.create({
       installed_extension_id: installedId,
-      scope_type: "user",
-      scope_id: "user-1",
+      scope_type: "project",
+      scope_id: projectId,
     });
 
     const updated = await svc.update(created.id, { enabled: false, config_json: { key: "value" } });
@@ -182,6 +182,14 @@ test("activating a published source keeps the project instance and leaves other 
     scope_id: projectId,
     config_json: { keep: true },
   });
+  const otherProject = "other-workbench";
+  await db.insert(projects).values({
+    id: otherProject,
+    name: "Other",
+    shorthand: "O",
+    created_at: nowTimestamp(),
+    updated_at: nowTimestamp(),
+  });
   const other = await svc.create({
     installed_extension_id: installedId,
     scope_type: "project",
@@ -203,7 +211,8 @@ test("activating a published source keeps the project instance and leaves other 
       enabled: false,
     },
   ]);
-  expect(activated!.instance.id).toBe(first.id);
+  expect(activated!.instance.id).not.toBe(first.id);
+  expect(activated!.removed.map((row) => row.id)).toEqual([first.id]);
   expect(activated!.instance.config_json).toEqual({ keep: true });
   expect(activated!.instance.installed_extension_id).toBe(source.id);
   expect(activated!.instance.enabled).toBe(false);

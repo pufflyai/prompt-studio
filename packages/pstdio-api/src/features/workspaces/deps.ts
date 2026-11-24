@@ -23,6 +23,7 @@ export type WorkspacesRouteDeps = Pick<
   | "extensionService"
   | "extensionInstallations"
   | "extensionSettingsDBService"
+  | "preferencesDBService"
   | "extensionSettingsService"
   | "extensionStorageService"
   | "storagePositions"

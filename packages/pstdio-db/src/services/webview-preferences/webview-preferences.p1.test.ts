@@ -1,6 +1,26 @@
 import { expect, test } from "bun:test";
+import { eq } from "drizzle-orm";
 import { createDb } from "../../db/connection.pglite";
+import { projects } from "../../db/schemas.pg";
+import { createProjectsDBService } from "../projects/projects";
 import { createWebviewPreferencesDBService } from "./webview-preferences";
+
+test("project deletion removes project webview preferences and preserves personal preferences", async () => {
+  const { db, close } = await createDb({ path: ":memory:" });
+  try {
+    const project = await createProjectsDBService(db).create({ name: "Preferences project" });
+    const service = createWebviewPreferencesDBService(db);
+    const key = { extension_id: "example.preferences", name: "range", scope_type: "project", scope_id: project.id };
+    const user = { ...key, scope_type: "user", scope_id: "" };
+    await service.set({ ...key, value_json: "project choice" });
+    await service.set({ ...user, value_json: "personal choice" });
+    await db.delete(projects).where(eq(projects.id, project.id));
+    expect(await service.get(key)).toBeUndefined();
+    expect(await service.get(user)).toBe("personal choice");
+  } finally {
+    await close();
+  }
+});
 
 test("server preferences share values across clients and isolate owners and scopes", async () => {
   const { db, close } = await createDb({ path: ":memory:" });

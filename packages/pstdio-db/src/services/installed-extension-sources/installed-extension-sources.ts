@@ -41,7 +41,11 @@ export type UpdateRegistrationInput = Partial<
 > &
   UpdateLoadStateInput;
 
-export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
+export const createInstalledExtensionSourcesDBService = (
+  db: DbClient,
+  onRenamed?: (change: { from: string; to: string }) => Promise<void>,
+) => {
+  const migrateIdentity = (extensionId: string) => migrateExtensionIdentities(db, { extensionId, onRenamed });
   const list = async () =>
     db.select().from(installed_extension_sources).orderBy(installed_extension_sources.install_name);
 
@@ -84,7 +88,7 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
   };
 
   const register = async (input: RegisterInput) => {
-    await migrateExtensionIdentities(db, { extensionId: input.extension_id });
+    await migrateIdentity(input.extension_id);
     const extension_id = canonicalExtensionId(input.extension_id);
     if (historicalExtensionId(extension_id) !== extension_id)
       input = {
@@ -120,8 +124,7 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
 
   const updateLoadState = async (id: string, input: UpdateLoadStateInput) => {
     const current = await get(id);
-    if (current?.last_error_json?.code === "extension_identity_conflict")
-      await migrateExtensionIdentities(db, { extensionId: current.extension_id });
+    if (current?.last_error_json?.code === "extension_identity_conflict") await migrateIdentity(current.extension_id);
     const timestamp = nowTimestamp();
     const [updated] = await db
       .update(installed_extension_sources)
@@ -134,7 +137,7 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
   const updateRegistration = async (id: string, input: UpdateRegistrationInput) => {
     const current = await get(id);
     if (input.extension_id || current?.last_error_json?.code === "extension_identity_conflict")
-      await migrateExtensionIdentities(db, { extensionId: input.extension_id ?? current!.extension_id });
+      await migrateIdentity(input.extension_id ?? current!.extension_id);
     const owner = input.extension_id ?? current?.extension_id;
     if (owner) {
       const extension_id = canonicalExtensionId(owner);
@@ -161,8 +164,7 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
 
   const updateLoadStateIfUnchanged = async (id: string, updatedAt: string, input: UpdateLoadStateInput) => {
     const current = await get(id);
-    if (current?.last_error_json?.code === "extension_identity_conflict")
-      await migrateExtensionIdentities(db, { extensionId: current.extension_id });
+    if (current?.last_error_json?.code === "extension_identity_conflict") await migrateIdentity(current.extension_id);
     const [updated] = await db
       .update(installed_extension_sources)
       .set({ ...input, updated_at: nowTimestamp() })

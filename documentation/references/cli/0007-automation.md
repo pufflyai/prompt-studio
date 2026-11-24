@@ -21,18 +21,7 @@ pst auth tokens issue \
 
 The raw token is shown once. Store it in the calling service's secret store. Prompt Studio stores a slow hash, not the raw token.
 
-Each token acts as a principal, the identity that owns its runs. Idempotency keys are tracked per principal. To replace a token and keep its idempotency keys, issue the new token for the same principal:
-
-```sh
-pst auth tokens issue \
-  --name notion-ticket-trigger-rotated \
-  --project project-id \
-  --principal principal-id \
-  --command acme.remote.command.launch \
-  --expires-in 30d
-```
-
-The principal must belong to the same project. Revoke the old token after the caller has switched to the replacement.
+Each token owns its runs and idempotency keys independently. To replace a credential, issue a new token with the required project and command scopes, switch the caller, and revoke the old token. The new token starts its own idempotency history.
 
 Set the token for machine commands:
 

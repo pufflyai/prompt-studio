@@ -1,4 +1,4 @@
-import { boardDefaultSyncRow } from "pstdio-api-contracts";
+import { boardDefaultSyncRow, boardViewSyncRow } from "pstdio-api-contracts";
 import type {
   createExtensionInstancesDBService,
   createExtensionStorageDBService,
@@ -6,8 +6,8 @@ import type {
   createInstalledExtensionSourcesDBService,
 } from "pstdio-db";
 import { runExtensionPreparation } from "../features/extensions/extension-preparation";
-
 import type { EventBus } from "../features/sync/event-bus";
+import type { createFileService } from "./file-service";
 
 type UninstallProjectExtensionDeps = {
   extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
@@ -15,6 +15,7 @@ type UninstallProjectExtensionDeps = {
   extensionUserDataService: ReturnType<typeof createExtensionUserDataDBService>;
   recovery: Pick<ReturnType<typeof createExtensionStorageDBService>["recovery"], "exclusive">;
   eventBus?: EventBus;
+  fileService?: Pick<ReturnType<typeof createFileService>, "remove" | "recoverRemovals">;
   notifyInstalledSourcesChanged: (sourcePath?: string) => Promise<void>;
 };
 
@@ -24,14 +25,21 @@ type UninstallProjectExtensionInput = {
   deleteUserData?: boolean;
 };
 
-const deleteInstanceData = async (deps: UninstallProjectExtensionDeps, instance: { id: string; scope_id: string }) => {
+const deleteInstanceData = async (
+  deps: UninstallProjectExtensionDeps,
+  instance: { id: string; scope_id: string },
+  owner: string,
+) => {
   // A restore running at the same time would write the deleted records back.
-  const deleted = await deps.recovery.exclusive(instance.scope_id, () =>
-    deps.extensionUserDataService.deleteForInstance(instance.id),
-  );
-  for (const row of deleted.boardViews) deps.eventBus?.emit("board_views", "delete", row);
-  for (const row of deleted.boardDefaults)
-    deps.eventBus?.emit("board_default_views", "delete", boardDefaultSyncRow(row));
+  await deps.recovery.exclusive(instance.scope_id, async () => {
+    await deps.fileService?.recoverRemovals({ projectId: instance.scope_id, owner });
+    const deleted = await deps.extensionUserDataService.deleteForInstance(instance.id);
+    for (const row of deleted.boardViews) deps.eventBus?.emit("board_views", "delete", boardViewSyncRow(row));
+    for (const row of deleted.boardDefaults)
+      deps.eventBus?.emit("board_default_views", "delete", boardDefaultSyncRow(row));
+    if (deleted.files.length && !deps.fileService) throw new Error("Owned file cleanup service is unavailable.");
+    for (const file of deleted.files) await deps.fileService!.remove(file.id);
+  });
 };
 
 export const uninstallProjectExtension = async (
@@ -56,7 +64,7 @@ export const uninstallProjectExtension = async (
         installedSource.extension_id,
       );
     if (input.deleteUserData) {
-      await deleteInstanceData(deps, extensionInstance);
+      await deleteInstanceData(deps, extensionInstance, installedSource.extension_id);
     } else if (await deps.extensionUserDataService.hasUserData(extensionInstance.id)) {
       // Preserve user data: keep a disabled instance so a reinstall to the same path restores it.
       const disabled = await deps.extensionInstancesService.update(extensionInstance.id, { enabled: false });

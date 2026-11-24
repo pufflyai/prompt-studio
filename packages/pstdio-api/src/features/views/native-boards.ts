@@ -22,7 +22,7 @@ export const nativeWorkspaceBoard = (projectId: string) => {
     title: "Workspaces",
     kind: "dataTable" as const,
     extensionId: null,
-    scope: { project_id: projectId, extension_instance_id: null, board_id: WORKSPACES_COLLECTION_ID },
+    scope: { project_id: projectId, extension_id: null, board_id: WORKSPACES_COLLECTION_ID },
     body,
     settings,
     startingViews: views.map((view) => ({ ...view, boardId: WORKSPACES_COLLECTION_ID, title: String(view.title) })),

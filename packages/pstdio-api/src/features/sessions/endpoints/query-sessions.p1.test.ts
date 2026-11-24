@@ -148,12 +148,12 @@ test("SDK reads and command queries share camelCase session fields and legacy al
   expect(page.items).toEqual((await commands.query()).items);
 });
 
-test("session readers omit a linked workspace owned by another project", async () => {
+test("session writers reject a workspace owned by another project", async () => {
   const project = await handle.deps.projectService.create({ name: "Session owner" });
   const foreign = await handle.deps.projectService.create({ name: "Foreign workspace" });
   const workspace = await handle.deps.workspaceService.createStandalone({ project_id: foreign.id });
   const session = await handle.deps.sessionService.create({ project_id: project.id, title: "Mapped", agent: "worker" });
-  await handle.deps.workspaceSessionService.link(workspace.id, session.id);
+  await expect(handle.deps.workspaceSessionService.link(workspace.id, session.id)).rejects.toThrow("session project");
   const commands = createSessionsApi(handle.deps, { projectId: project.id, project: { ...project, shorthand: "P" } });
   expect(await commands.get(session.id)).toMatchObject({ workspaceId: null, workspace_id: null });
   expect(await client.sessions.get(session.id)).toMatchObject({ workspaceId: null, workspace_id: null });

@@ -23,7 +23,6 @@ describe("machine token issue command", () => {
     await handler({
       name: "notion-trigger",
       project: "project-1",
-      principal: "bdc12954-57dc-4010-acd1-fb2bc55194f5",
       command: ["pstdio.planner.command.start-attempt"],
       expiresIn: "30d",
     } as never);
@@ -31,7 +30,6 @@ describe("machine token issue command", () => {
     expect(issueToken).toHaveBeenCalledWith({
       name: "notion-trigger",
       projectId: "project-1",
-      principalId: "bdc12954-57dc-4010-acd1-fb2bc55194f5",
       commandScopes: ["pstdio.planner.command.start-attempt"],
       expiresInSeconds: 2_592_000,
     });

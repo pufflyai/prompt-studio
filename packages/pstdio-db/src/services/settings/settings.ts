@@ -1,38 +1,57 @@
-import { eq } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { settings } from "../../db/schemas.pg";
+import { preferences as table } from "../../db/schemas/preferences";
+import { createPreferencesDBService } from "../preferences/preferences";
 
-type SettingsRecord = typeof settings.$inferSelect;
-
-type UpdateInput = Partial<
-  Pick<SettingsRecord, "max_concurrent_sessions" | "notifications_enabled" | "machine_tokens_enabled">
->;
-
-const GLOBAL_SETTINGS_ID = "global";
-
-const nowTimestamp = () => new Date().toISOString();
+const owner = { scope: "global", scope_id: "global", extension_id: "" } as const;
+const defaults = {
+  notifications_enabled: false,
+  machine_tokens_enabled: false,
+  max_concurrent_sessions: null as number | null,
+};
+type Settings = typeof defaults;
 
 export const createSettingsDBService = (db: DbClient) => {
+  const preferences = createPreferencesDBService(db);
+  const getStored = async () => {
+    const rows = await preferences.list(owner);
+    const values = new Map(rows.map((row) => [row.key, row.value]));
+    if (!values.has("settings_created_at")) return null;
+    const created_at = values.get("settings_created_at") as string;
+    const timestamps = rows.filter((row) => row.key in defaults).map((row) => row.updated_at);
+    return {
+      id: "global",
+      created_at,
+      updated_at: timestamps.sort().at(-1) ?? created_at,
+      notifications_enabled: (values.get("notifications_enabled") ?? false) as boolean,
+      machine_tokens_enabled: (values.get("machine_tokens_enabled") ?? false) as boolean,
+      max_concurrent_sessions: (values.get("max_concurrent_sessions") ?? null) as number | null,
+    };
+  };
   const get = async () => {
-    const timestamp = nowTimestamp();
+    const stamp = new Date().toISOString();
+    // Creation time is part of the existing settings sync row and cannot be derived from later edits.
     await db
-      .insert(settings)
-      .values({ id: GLOBAL_SETTINGS_ID, max_concurrent_sessions: null, created_at: timestamp, updated_at: timestamp })
+      .insert(table)
+      .values({
+        ...owner,
+        key: "settings_created_at",
+        value: stamp,
+        sync: "device",
+        updated_at: stamp,
+      })
       .onConflictDoNothing();
-
-    const [row] = await db.select().from(settings).where(eq(settings.id, GLOBAL_SETTINGS_ID));
-    return row;
+    return (await getStored())!;
   };
-
-  const update = async (input: UpdateInput) => {
+  const update = async (input: Partial<Settings>) => {
     await get();
-    const [updated] = await db
-      .update(settings)
-      .set({ ...input, updated_at: nowTimestamp() })
-      .where(eq(settings.id, GLOBAL_SETTINGS_ID))
-      .returning();
-    return updated;
+    await db.transaction(async (tx) => {
+      const store = createPreferencesDBService(tx);
+      for (const key of Object.keys(defaults) as (keyof Settings)[]) {
+        if (input[key] === undefined) continue;
+        await store.set({ ...owner, key, value: input[key], sync: "device" });
+      }
+    });
+    return get();
   };
-
-  return { get, update };
+  return { get, getStored, update };
 };

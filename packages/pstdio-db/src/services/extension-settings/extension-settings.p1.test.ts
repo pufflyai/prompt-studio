@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { eq } from "drizzle-orm";
 import { createDb } from "../../db/connection.pglite";
 import { projects } from "../../db/schemas.pg";
 import { createExtensionInstancesDBService } from "../extension-instances/extension-instances";
@@ -10,17 +11,20 @@ let service: ReturnType<typeof createExtensionSettingsDBService>;
 let installedExtensionId: string;
 let instanceAId: string;
 let instanceBId: string;
+let db: Awaited<ReturnType<typeof createDb>>["db"];
+let projectAId: string;
 
 const nowTimestamp = () => new Date().toISOString();
 
 beforeEach(async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
+  db = result.db;
   service = createExtensionSettingsDBService(result.db);
   const sources = createInstalledExtensionSourcesDBService(result.db);
   const instances = createExtensionInstancesDBService(result.db);
   const timestamp = nowTimestamp();
-  const projectAId = crypto.randomUUID();
+  projectAId = crypto.randomUUID();
   const projectBId = crypto.randomUUID();
 
   await result.db.insert(projects).values([
@@ -62,6 +66,20 @@ afterEach(async () => {
 });
 
 describe("extension settings persistence", () => {
+  test("project deletion removes project settings and preserves global settings", async () => {
+    const project = {
+      owner_type: "extension_instance" as const,
+      owner_id: instanceAId,
+      extension_id: "pstdio.extension-lab",
+      key: "selected",
+    };
+    const global = { ...project, owner_type: "installed_extension" as const, owner_id: installedExtensionId };
+    await service.setValue({ ...project, value_json: "project choice" });
+    await service.setValue({ ...global, value_json: "global choice" });
+    await db.delete(projects).where(eq(projects.id, projectAId));
+    expect(await service.getValue(project)).toBeNull();
+    expect((await service.getValue(global))?.value_json).toBe("global choice");
+  });
   test("stores global values by installed source and project values by instance", async () => {
     await service.setValue({
       owner_type: "installed_extension",

@@ -38,7 +38,8 @@ export const workspaceColumns = {
   ...getTableColumns(workspaces),
   anchors_json: anchorProjection(workspaces, "workspace"),
 };
-export const sessionColumns = { ...getTableColumns(sessions), anchors_json: anchorProjection(sessions, "session") };
+const { workspace_id, ...sessionFields } = getTableColumns(sessions);
+export const sessionColumns = { ...sessionFields, anchors_json: anchorProjection(sessions, "session") };
 
 export const writeLegacyResourceLinks = (
   db: Parameters<typeof writeResourceLinks>[0],
