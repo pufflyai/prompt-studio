@@ -2,7 +2,12 @@ import { expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createPreparationScope, readAcceptedRevision, withBackgroundPreparation } from "pstdio-extensions";
+import {
+  createPreparationScope,
+  readAcceptedRevision,
+  withBackgroundPreparation,
+  withRequestedPreparation,
+} from "pstdio-extensions";
 import { runExtensionPreparation } from "./extension-preparation";
 import { loadExtensionSource } from "./extension-runtime";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
@@ -53,6 +58,37 @@ test("a foreground request lends urgency to every overlapping background webview
     release();
     expect(observed.map((scope) => scope.requested)).toEqual([false, false]);
     release = caller.request();
+    expect(observed.map((scope) => scope.requested)).toEqual([true, true]);
+    withRequestedPreparation(() => {
+      const edit = createPreparationScope();
+      const lendEdit = caller.request(edit);
+      try {
+        // The checks were already requested. Joining the edit still adds its continuation to both.
+        expect(edit.continuation).toBeDefined();
+        expect(observed.map((scope) => scope.continuation)).toEqual([edit.continuation, edit.continuation]);
+        withRequestedPreparation(() => {
+          const otherEdit = createPreparationScope();
+          const lendOtherEdit = caller.request(otherEdit);
+          try {
+            expect(caller.continuation).toBe(edit.continuation);
+            expect(otherEdit.continuation).toBeDefined();
+            for (const scope of observed) {
+              expect(scope.continuations).toHaveLength(2);
+              expect(scope.continuations.at(0)).toBe(edit.continuation);
+              expect(scope.continuations.at(1)).toBe(otherEdit.continuation);
+            }
+          } finally {
+            lendOtherEdit();
+            otherEdit.dispose();
+          }
+        });
+        expect(observed.map((scope) => scope.continuations.length)).toEqual([1, 1]);
+      } finally {
+        lendEdit();
+        edit.dispose();
+      }
+    });
+    expect(observed.map((scope) => scope.continuation)).toEqual([undefined, undefined]);
     expect(observed.map((scope) => scope.requested)).toEqual([true, true]);
     released[0]!.resolve();
     released[1]!.resolve();

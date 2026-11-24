@@ -5,6 +5,7 @@ interface PreparationPriority {
   jobs: Set<() => void>;
   continuing?: boolean;
   continuation?: PreparationPriority;
+  continuations?: readonly PreparationPriority[];
   /** Whether this scope's work belongs to `owner`, inherited or lent. `continuation` only names the most urgent one. */
   includes?: (owner: PreparationPriority) => boolean;
 }
@@ -12,6 +13,10 @@ interface PreparationPriority {
 /** Exact membership, independent of which continuation ranks first. */
 export const preparationIncludes = (scope: PreparationPriority | undefined, owner: PreparationPriority) =>
   scope?.includes ? scope.includes(owner) : scope?.continuation === owner;
+type ContinuationScope = Pick<PreparationPriority, "continuation" | "continuations">;
+const liveContinuations = (scope?: ContinuationScope) =>
+  scope?.continuations ?? (scope?.continuation?.continuing ? [scope.continuation] : []);
+
 export const preparationPriority = new AsyncLocalStorage<PreparationPriority>();
 // Background work inside a scope still belongs to everything that scope belongs to, including
 // continuations lent to it later, and is refreshed when those loans change.
@@ -22,6 +27,9 @@ export const withBackgroundPreparation = <T>(work: () => T) => {
     jobs: parent?.jobs ?? new Set(),
     get continuation() {
       return parent?.continuation;
+    },
+    get continuations() {
+      return liveContinuations(parent);
     },
     includes: (owner) => preparationIncludes(parent, owner),
   };
@@ -51,7 +59,7 @@ export const withRequestedPreparation = <T>(work: () => T) => withContinuingPrep
 // A foreground dependency lends urgency only while its queued caller still needs it.
 export const createPreparationScope = () => {
   const parent = preparationPriority.getStore();
-  let owners = 0;
+  let foregroundLoans = 0;
   const borrowed = new Map<PreparationPriority, number>();
   const ownerRank = (owner: PreparationPriority) => {
     if (owner.priority === "restoration") return 0;
@@ -63,8 +71,11 @@ export const createPreparationScope = () => {
         .filter((owner): owner is PreparationPriority => owner?.continuing === true)
         .sort((a, b) => ownerRank(a) - ownerRank(b))[0];
     },
+    get continuations() {
+      return [...new Set([...liveContinuations(parent), ...borrowed.keys()])].filter((owner) => owner.continuing);
+    },
     get priority() {
-      return (parent?.priority ?? "requested") === "requested" || owners ? "requested" : "background";
+      return (parent?.priority ?? "requested") === "requested" || foregroundLoans ? "requested" : "background";
     },
     includes: (owner) => (borrowed.has(owner) && owner.continuing === true) || preparationIncludes(parent, owner),
     jobs: new Set(),
@@ -82,6 +93,9 @@ export const createPreparationScope = () => {
     get continuation() {
       return scope.continuation;
     },
+    get continuations() {
+      return liveContinuations(scope);
+    },
     subscribe: (listener: () => void) => {
       scope.jobs.add(listener);
       return () => scope.jobs.delete(listener);
@@ -90,27 +104,29 @@ export const createPreparationScope = () => {
       return scope.priority === "requested";
     },
     run: <T>(work: () => T) => preparationPriority.run(scope, work),
-    request: (caller?: { requested: boolean; continuation?: PreparationPriority }) => {
-      const background = caller && !caller.requested;
-      const owner = background ? caller.continuation : undefined;
-      if (background && !owner?.continuing) return () => {};
-      if (owner) {
+    request: (caller?: { requested: boolean } & ContinuationScope) => {
+      const requested = caller?.requested ?? true;
+      const loaned = liveContinuations(caller).filter((owner) => owner.continuing);
+      if (!requested && !loaned.length) return () => {};
+      if (requested) foregroundLoans++;
+      for (const owner of loaned) {
         borrowed.set(owner, (borrowed.get(owner) ?? 0) + 1);
-        owner.jobs.add(changed);
-      } else owners++;
+        if (owner.jobs !== parent?.jobs) owner.jobs.add(changed);
+      }
       changed();
       let released = false;
       return () => {
         if (released) return;
         released = true;
-        if (owner) {
+        if (requested) foregroundLoans--;
+        for (const owner of loaned) {
           const remaining = (borrowed.get(owner) ?? 1) - 1;
           if (remaining) borrowed.set(owner, remaining);
           else {
             borrowed.delete(owner);
-            owner.jobs.delete(changed);
+            if (owner.jobs !== parent?.jobs) owner.jobs.delete(changed);
           }
-        } else owners--;
+        }
         changed();
       };
     },
