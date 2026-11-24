@@ -359,5 +359,7 @@ test(
       progress("cleanup complete");
     }
   },
-  PACKAGED_TEST_TIMEOUT,
+  // Two cold hosts install their tools before the online/offline assertions.
+  // Linux CI spent 29 seconds preparing them within the former 30-second limit.
+  Math.max(PACKAGED_TEST_TIMEOUT, 60_000),
 );
