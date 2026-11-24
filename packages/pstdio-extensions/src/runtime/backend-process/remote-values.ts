@@ -69,18 +69,24 @@ const isAsyncIterable = (value: object): value is AsyncIterable<unknown> => Symb
 const isBlobRef = (value: unknown): value is BlobRef =>
   isRecord(value) && isRecord(value[BLOB_MARKER]) && value[BLOB_MARKER].bytes instanceof Uint8Array;
 
-// Bun's IPC does not carry Blobs, and reading one is asynchronous, so their bytes are read first.
-const materializeBlobs = async (value: unknown, seen = new Set<object>()): Promise<unknown> => {
-  if (value instanceof Blob)
-    return { [BLOB_MARKER]: { type: value.type, bytes: new Uint8Array(await value.arrayBuffer()) } };
-  if (value === null || typeof value !== "object" || seen.has(value)) return value;
-  if (!Array.isArray(value) && !isPlainObject(value)) return value;
-  seen.add(value);
-  if (Array.isArray(value)) return Promise.all(value.map((entry) => materializeBlobs(entry, seen)));
-  const entries = await Promise.all(
-    Object.entries(value).map(async ([key, entry]) => [key, await materializeBlobs(entry, seen)] as const),
+// Read byte data without copying the object graph or invoking an iterable before export.
+const readBlobs = async (value: unknown) => {
+  const blobs = new Set<Blob>();
+  const seen = new Set<object>();
+  const visit = (entry: unknown) => {
+    if (entry instanceof Blob) {
+      blobs.add(entry);
+      return;
+    }
+    if (entry === null || typeof entry !== "object" || seen.has(entry) || isAsyncIterable(entry)) return;
+    if (!Array.isArray(entry) && !isPlainObject(entry)) return;
+    seen.add(entry);
+    for (const child of Object.values(entry)) visit(child);
+  };
+  visit(value);
+  return new Map(
+    await Promise.all([...blobs].map(async (blob) => [blob, new Uint8Array(await blob.arrayBuffer())] as const)),
   );
-  return Object.fromEntries(entries);
 };
 
 export const createFunctionTable = () => {
@@ -174,14 +180,13 @@ export const createFunctionTable = () => {
     return register(finish, true);
   };
 
-  const exportPlain = (value: object, seen: WeakMap<object, unknown>) => {
+  const exportPlain = (value: object, blobs: Map<Blob, Uint8Array>, seen: WeakMap<object, unknown>) => {
     if (Array.isArray(value)) {
       const copy: unknown[] = [];
       seen.set(value, copy);
-      for (const entry of value) copy.push(exportSync(entry, seen));
+      for (const entry of value) copy.push(exportSync(entry, blobs, seen));
       return copy;
     }
-    if (isBlobRef(value)) return value;
     if (MARKERS.some((marker) => marker in value))
       throw new TypeError(`Values sent to or from an extension backend cannot use the keys ${MARKERS.join(", ")}.`);
     const copy: Record<string, unknown> = {};
@@ -190,23 +195,30 @@ export const createFunctionTable = () => {
       const exported =
         key === "close" && typeof entry === "function"
           ? exportClose(value, entry as RemoteFunction)
-          : exportSync(entry, seen);
+          : exportSync(entry, blobs, seen);
       setData(copy, key, exported);
     }
     return copy;
   };
 
   /** Replaces this side's functions, iterables and signals with references. Other data is cloned. */
-  const exportSync = (value: unknown, seen = new WeakMap<object, unknown>()): unknown => {
+  const exportSync = (value: unknown, blobs: Map<Blob, Uint8Array>, seen = new WeakMap<object, unknown>()): unknown => {
     if (typeof value === "function") return register(value as RemoteFunction);
     if (value === null || typeof value !== "object") return value;
     if (value instanceof AbortSignal) return exportSignal(value);
     if (seen.has(value)) return seen.get(value);
+    if (value instanceof Blob) {
+      const bytes = blobs.get(value);
+      if (!bytes) throw new TypeError("Blob changed during extension backend export.");
+      const reference = { [BLOB_MARKER]: { type: value.type, bytes } } satisfies BlobRef;
+      seen.set(value, reference);
+      return reference;
+    }
     if (isAsyncIterable(value)) return exportIterable(value);
-    return Array.isArray(value) || isPlainObject(value) ? exportPlain(value, seen) : value;
+    return Array.isArray(value) || isPlainObject(value) ? exportPlain(value, blobs, seen) : value;
   };
 
-  const exportValue = async (value: unknown) => exportSync(await materializeBlobs(value));
+  const exportValue = async (value: unknown) => exportSync(value, await readBlobs(value));
 
   const call = async (id: string, args: () => unknown[], cleanupOnly = false) => {
     const entry = functions.get(id);
@@ -264,8 +276,11 @@ export const importValue = (
     });
   }
   if (isBlobRef(value)) {
+    if (seen.has(value)) return seen.get(value);
     const { type, bytes } = value[BLOB_MARKER];
-    return new Blob([bytes as Uint8Array<ArrayBuffer>], { type });
+    const blob = new Blob([bytes as Uint8Array<ArrayBuffer>], { type });
+    seen.set(value, blob);
+    return blob;
   }
   if (isSignalRef(value)) {
     const controller = new AbortController();
