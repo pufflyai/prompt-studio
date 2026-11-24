@@ -48,21 +48,21 @@ export const executeExtensionCommand = async (
 ): Promise<CommandOutcome> => {
   const owner = findCommand(state.runtime, input.commandId) ?? findPrivateHandler(state.runtime, input.commandId);
   const admitting = owner && !holdsAdmission(owner.extensionId) ? owner : undefined;
-  const release = admitting && admitInvocation(admitting.extensionId);
-  if (admitting && !release) return overloadedOutcome(admitting.extensionId);
+  const admission = admitting && admitInvocation(admitting.extensionId);
+  if (admitting && !admission) return overloadedOutcome(admitting.extensionId);
   const scope = createInvocationScope({ logger: state.logger, parent: input.signal });
   scope.collectionQuery = input.collectionQuery;
   // A cancelled handler that never settles must not hold the extension's allowance forever.
-  if (release) scope.signal.addEventListener("abort", release, { once: true });
+  if (admission) scope.signal.addEventListener("abort", admission.release, { once: true });
   try {
     const run = () =>
       withRuntimeOperationOrigin({ kind: "command", name: input.commandId, projectId: input.projectId }, () =>
         runExtensionCommand(state, input, scope),
       );
-    return await (admitting ? withAdmission(admitting.extensionId, run) : run());
+    return await (admission ? withAdmission(admission, run) : run());
   } finally {
     await scope.close();
-    release?.();
+    admission?.release();
   }
 };
 

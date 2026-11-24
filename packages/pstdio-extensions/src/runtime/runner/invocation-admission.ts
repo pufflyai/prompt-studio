@@ -11,25 +11,37 @@ export const MAX_CONCURRENT_INVOCATIONS_PER_EXTENSION = 256;
 const RETRY_AFTER_MS = 1000;
 
 const running = new Map<string, number>();
-// The extensions whose slot the current command holds. Being extension code is not proof of a slot.
-const held = new AsyncLocalStorage<ReadonlySet<string>>();
+interface InvocationAdmission {
+  readonly extensionId: string;
+  readonly active: boolean;
+  release(): void;
+}
 
-export const holdsAdmission = (extensionId: string) => held.getStore()?.has(extensionId) === true;
+// Deferred continuations can outlive an invocation. Share its slot only while it is active.
+const held = new AsyncLocalStorage<ReadonlyMap<string, InvocationAdmission>>();
 
-export const withAdmission = <T>(extensionId: string, run: () => T) =>
-  held.run(new Set([...(held.getStore() ?? []), extensionId]), run);
+export const holdsAdmission = (extensionId: string) => held.getStore()?.get(extensionId)?.active === true;
+
+export const withAdmission = <T>(admission: InvocationAdmission, run: () => T) =>
+  held.run(new Map(held.getStore()).set(admission.extensionId, admission), run);
 
 export const admitInvocation = (extensionId: string) => {
   const count = running.get(extensionId) ?? 0;
   if (count >= MAX_CONCURRENT_INVOCATIONS_PER_EXTENSION) return;
   running.set(extensionId, count + 1);
   let released = false;
-  return () => {
-    if (released) return;
-    released = true;
-    const remaining = (running.get(extensionId) ?? 1) - 1;
-    if (remaining === 0) running.delete(extensionId);
-    else running.set(extensionId, remaining);
+  return {
+    extensionId,
+    get active() {
+      return !released;
+    },
+    release() {
+      if (released) return;
+      released = true;
+      const remaining = (running.get(extensionId) ?? 1) - 1;
+      if (remaining === 0) running.delete(extensionId);
+      else running.set(extensionId, remaining);
+    },
   };
 };
 

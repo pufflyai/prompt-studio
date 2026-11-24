@@ -59,9 +59,9 @@ It keeps them responsive when an extension does a lot of work at once.
   during an extension's long burst. A single long statement or transaction is not split, so keep
   transactions short.
 - One extension can run at most 256 commands at once, across all projects. A command's nested
-  `ctx.commands.execute` calls to the same extension share its place. Every other caller needs a
-  place of its own, including a hook calling its extension's commands. A new command over the
-  limit returns
+  `ctx.commands.execute` calls to the same extension share its place while the original command
+  is active. Deferred work after the command finishes or is cancelled needs a new place, as do
+  hooks outside an active command of that extension. A new command over the limit returns
   `{ ok: false, status: "rejected", code: "extension_overloaded" }` before its handler starts, so it
   made no changes. Its diagnostic gives `metadata.retryAfterMs` as a hint for callers that retry. The
   host does not retry it for you. A cancelled command frees its place even if its handler ignores
