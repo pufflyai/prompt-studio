@@ -1,5 +1,5 @@
 import "@pstdio/ui/style.css";
-import { createWebviewClient, defineExtensionView, type GuestHost } from "@pstdio/sdk/extensions";
+import { createWebviewClient, defineExtensionView } from "@pstdio/sdk/extensions";
 import { useWebviewCommandQuery, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
@@ -11,13 +11,7 @@ import { PerformanceRoot } from "./components/performance-root";
 import { createPerformanceActions } from "./performance-actions";
 import { createSnapshotQuery } from "./snapshot-query";
 
-interface DetailsProps {
-  client: ReturnType<typeof createWebviewClient>;
-  host: GuestHost;
-}
-
-const Details = (props: DetailsProps) => {
-  const { client, host } = props;
+const Details = ({ client }: { client: ReturnType<typeof createWebviewClient> }) => {
   const { performance } = client;
   const visible = useWebviewVisibility();
   const [query] = useState(() => createSnapshotQuery(client));
@@ -25,7 +19,7 @@ const Details = (props: DetailsProps) => {
   const [actions] = useState(() =>
     createPerformanceActions({
       readOverlay: async () => (await performance.state()).renderOverlay,
-      writeOverlay: (enabled) => host.call("performance.control", { operation: "set-render-overlay", enabled }),
+      writeOverlay: performance.setRenderOverlayEnabled,
       async copy() {
         // Copy the latest reading, not the one this view last drew.
         const latest = await performance.snapshot();
@@ -35,7 +29,7 @@ const Details = (props: DetailsProps) => {
       },
       async setPaused(id, paused) {
         await (paused ? performance.pauseExtension(id) : performance.resumeExtension(id));
-        await query.refresh();
+        await query.refresh().catch(() => {});
       },
     }),
   );
@@ -61,6 +55,9 @@ const Details = (props: DetailsProps) => {
     setError(undefined);
     action.catch((cause) => setError({ message: String(cause), source }));
   };
+  const copy = async () => {
+    if (await actions.copy()) setCopied(true);
+  };
 
   return (
     <PerformancePopoverContent
@@ -75,13 +72,7 @@ const Details = (props: DetailsProps) => {
         onEnabledChange: (enabled) => run(actions.setOverlay(enabled), "render-overlay"),
       }}
       actionError={error}
-      onCopy={() =>
-        run(
-          actions.copy().then((accepted) => {
-            if (accepted) setCopied(true);
-          }),
-        )
-      }
+      onCopy={() => run(copy())}
       onDismissActionError={() => setError(undefined)}
       onPause={(installedExtensionId) => run(actions.setPaused(installedExtensionId, true))}
       onResume={(installedExtensionId) => run(actions.setPaused(installedExtensionId, false))}
@@ -95,7 +86,7 @@ export default defineExtensionView({
     const root = createRoot(context.mount);
     root.render(
       <PerformanceRoot context={context}>
-        <Details client={client} host={context.host} />
+        <Details client={client} />
       </PerformanceRoot>,
     );
     return () => {

@@ -25,7 +25,7 @@ const PerformanceActionFeedback = () => {
       </Button>
       <Box width="performance-popover" borderWidth="1px" borderColor="border" bg="bg">
         <PerformancePopoverContent
-          snapshot={smoothSnapshot}
+          snapshot={{ ...smoothSnapshot, pausedExtensionIds: ["installed-motion"] }}
           copying={copying}
           pendingExtensions={pendingExtensions}
           onCopy={() => setCopying(true)}

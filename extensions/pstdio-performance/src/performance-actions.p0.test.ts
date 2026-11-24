@@ -5,6 +5,7 @@ const overlayState = (enabled: boolean) => ({ supported: true, enabled, scope: "
 
 test("an older observation cannot replace a pending highlight choice or its confirmation", async () => {
   const oldRead = Promise.withResolvers<ReturnType<typeof overlayState>>();
+  const confirmation = Promise.withResolvers<ReturnType<typeof overlayState>>();
   const finish = Promise.withResolvers<void>();
   let reads = 0;
   let writes = 0;
@@ -12,7 +13,7 @@ test("an older observation cannot replace a pending highlight choice or its conf
     readOverlay: async () => {
       reads += 1;
       if (reads === 2) return oldRead.promise;
-      return overlayState(reads > 2);
+      return reads === 3 ? confirmation.promise : overlayState(false);
     },
     async writeOverlay() {
       writes += 1;
@@ -29,6 +30,9 @@ test("an older observation cannot replace a pending highlight choice or its conf
   expect(writes).toBe(1);
 
   finish.resolve();
+  await Bun.sleep(0);
+  expect(actions.snapshot()).toMatchObject({ renderOverlay: overlayState(true), overlayIntent: true });
+  confirmation.resolve(overlayState(true));
   await writing;
   expect(actions.snapshot()).toMatchObject({ renderOverlay: overlayState(true), overlayIntent: undefined });
   oldRead.resolve(overlayState(false));
