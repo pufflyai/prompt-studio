@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { activeRun, claimEnvironment } from "./environments";
+import { createRunStorage as createMemoryStorage } from "./run-storage-fixture";
 import { checkRun, type RunRecord } from "./runs";
 
 async function finishedRun(stopAfterRun: boolean) {

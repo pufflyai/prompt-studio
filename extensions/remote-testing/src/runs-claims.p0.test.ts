@@ -2,11 +2,11 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createMemoryStorage } from "@pstdio/sdk/testing";
 import type { Api } from "./connection";
 import { cleanupRunEnvironment } from "./environment-cleanup";
 import { activeRun, claimEnvironment } from "./environments";
 import { localProcess } from "./process-fixture";
+import { createRunStorage as createMemoryStorage } from "./run-storage-fixture";
 import { checkRun, listRuns, type RunDeps, startRun } from "./runs";
 
 let root: string;

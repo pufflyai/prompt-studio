@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test";
 import type { ExtensionAutomationApi } from "@pstdio/sdk/extensions";
-import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
+import { makeCommandContext } from "@pstdio/sdk/testing";
 import { startCollection } from "./collection";
 import { showRun } from "./commands";
+import { createRunStorage as createMemoryStorage } from "./run-storage-fixture";
 import type { RunRecord } from "./runs";
 import { runsView } from "./workbench";
 

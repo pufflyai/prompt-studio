@@ -1,6 +1,6 @@
 import { type CommandContext, defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
 import { runDeps } from "./context";
-import type { Claim } from "./environments";
+import { unfinishedRuns } from "./run-recovery";
 import { awaitRun, type RunRecord, readRun } from "./runs";
 
 export const collectRun = defineCommand({
@@ -84,10 +84,6 @@ export async function resumeCollection(
   }
 }
 
-export async function resumeClaimedCollection(ctx: Pick<ExtensionContextBase, "storage" | "automation" | "logger">) {
-  for (const claim of await ctx.storage.collection<Claim>("environment-claims").list()) {
-    if (claim.setup) continue;
-    const record = await ctx.storage.get<RunRecord>(`run:${claim.runId}`);
-    if (record) await resumeCollection(ctx, record);
-  }
+export async function resumeUnfinishedCollection(ctx: Pick<ExtensionContextBase, "storage" | "automation" | "logger">) {
+  for await (const record of unfinishedRuns(ctx.storage)) await resumeCollection(ctx, record);
 }

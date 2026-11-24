@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { activeRun, claimEnvironment, releaseEnvironment } from "./environments";
+import { createRunStorage as createMemoryStorage } from "./run-storage-fixture";
 
 test("only one concurrent run can claim the same environment", async () => {
   const store = createMemoryStorage();

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { ExtensionAutomationApi, ExtensionConnectionsApi } from "@pstdio/sdk/extensions";
-import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
+import { makeCommandContext } from "@pstdio/sdk/testing";
 import { PocketCoderError } from "./connection";
 import {
   cleanupEnvironmentCommand,
@@ -10,6 +10,7 @@ import {
   rememberEnvironmentCleanup,
 } from "./environment-cleanup";
 import { activeRun, claimEnvironment, releaseEnvironment } from "./environments";
+import { createRunStorage as createMemoryStorage } from "./run-storage-fixture";
 import { runsView } from "./workbench";
 
 test.each(["network", "server"])("failed-launch cleanup recovers a temporary stop failure (%s)", async (failure) => {
@@ -282,5 +283,51 @@ test("a record-backed claim recovers collection after acknowledgement but before
   expect(f.queued[0]?.command).toMatchObject({ id: "runs.collect" });
   expect(f.queued[0]?.input.params).toEqual({ runId: "owner" });
   expect(await activeRun(f.store, "env")).toBe("owner");
+  expect(f.stops()).toBe(0);
+});
+
+test("an unfinished durable run recovers after terminal-proof release but before summary persistence", async () => {
+  const f = await recoveryFixture();
+  await releaseEnvironment(f.store, "env", "owner");
+  await f.store.set("run:owner", {
+    runId: "owner",
+    environmentId: "env",
+    requestId: "request",
+    conversationId: "conversation",
+    root: "/",
+    command: "bun test",
+    startedAt: new Date().toISOString(),
+    timeoutSeconds: 60,
+    stopAfterRun: false,
+    submissionPending: false,
+  });
+  await recoverEnvironmentCleanup.run(f.ctx, {});
+  expect(f.queued).toHaveLength(1);
+  expect(f.queued[0]?.command).toMatchObject({ id: "runs.collect" });
+  expect(f.queued[0]?.input.params).toEqual({ runId: "owner" });
+  expect(f.stops()).toBe(0);
+});
+
+test("unfinished-run recovery visits later pages while collector admissions write new records", async () => {
+  const f = await recoveryFixture();
+  await releaseEnvironment(f.store, "env", "owner");
+  for (let index = 0; index < 101; index++) {
+    const runId = `run-${String(index).padStart(3, "0")}`;
+    await f.store.set(`run:${runId}`, {
+      runId,
+      environmentId: "env",
+      requestId: `request-${index}`,
+      conversationId: "conversation",
+      root: "/",
+      command: "bun test",
+      startedAt: new Date().toISOString(),
+      timeoutSeconds: 60,
+      stopAfterRun: false,
+      submissionPending: false,
+    });
+  }
+  await recoverEnvironmentCleanup.run(f.ctx, {});
+  expect(f.queued).toHaveLength(101);
+  expect(new Set(f.queued.map((job) => job.input.params?.runId)).size).toBe(101);
   expect(f.stops()).toBe(0);
 });

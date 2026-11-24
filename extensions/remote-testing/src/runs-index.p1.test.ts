@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { createRunStorage as createMemoryStorage } from "./run-storage-fixture";
 import { listRuns, type RunRecord } from "./runs";
 
 test("concurrent run records remain visible without a shared mutable index", async () => {

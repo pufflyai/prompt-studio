@@ -1,7 +1,7 @@
 import type { ExtensionProcessApi, ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import type { BranchKind, BranchSource, TemplateRef } from "./branch-templates";
 import { type Api, canRetryControllerRequest, waitForControllerPoll } from "./connection";
-import { type EnvironmentCleanupInput, rememberEnvironmentCleanup } from "./environment-cleanup";
+import type { EnvironmentCleanupInput } from "./environment-cleanup";
 import {
   claimEnvironment,
   createEnvironment,
@@ -11,10 +11,11 @@ import {
   stopEnvironment,
   waitUntilReady,
 } from "./environments";
+import { notifyRunChange } from "./events";
 import { readRunReceipt, runDeadline, TRANSFER_ALLOWANCE_SECONDS } from "./run-deadline";
-import { rememberRunLog } from "./run-log";
 import { type Receipt, receiptSummary, summarize, timeoutSummary } from "./run-result";
 import { saveSubmissionFailure } from "./run-submission";
+import { saveTimedOutRun } from "./run-timeout";
 import type { Settings } from "./settings";
 import { activateEnvironment } from "./setup-claims";
 import { withSourceArchive } from "./source";
@@ -71,11 +72,6 @@ export interface RunSummary {
 
 const sources = (runId: string) => `sources/${runId}.tar.gz`;
 const logs = (runId: string) => `logs/${runId}.log`;
-
-const notifyRunChange = (deps: Pick<RunDeps, "changed">) =>
-  Promise.resolve()
-    .then(() => deps.changed?.())
-    .catch(() => {});
 
 export async function startRun(
   deps: RunDeps,
@@ -249,42 +245,6 @@ async function stopCollectedEnvironment(
   }
 }
 
-async function saveTimedOutRun(
-  deps: RunCollectionDeps,
-  record: RunRecord,
-  summary: RunSummary,
-  finalized: boolean,
-  stop: boolean,
-) {
-  // Independent cleanup and log workers own remote retries. A network outage must
-  // not keep an overdue result looking like an active test run.
-  if (stop && (await ownsEnvironment(deps.store, record.environmentId, record.runId)))
-    await rememberEnvironmentCleanup(deps.store, {
-      environmentId: record.environmentId,
-      runId: record.runId,
-      stop: true,
-    });
-  await rememberRunLog(deps.store, record.runId, !finalized);
-  if (finalized && !stop) await releaseEnvironment(deps.store, record.environmentId, record.runId);
-  await deps.store.set(`run:${record.runId}`, { ...record, summary });
-  await notifyRunChange(deps);
-  await Promise.allSettled([
-    ...(stop
-      ? [
-          Promise.resolve().then(() =>
-            deps.cleanupEnvironment?.({
-              environmentId: record.environmentId,
-              runId: record.runId,
-              stop: true,
-            }),
-          ),
-        ]
-      : []),
-    Promise.resolve().then(() => deps.collectRunLog?.(record.runId)),
-  ]);
-  return summary;
-}
-
 // One look at a run: collects its result once the controller has finished it, so a run
 // whose caller went away still gets its summary and log.
 export async function checkRun(
@@ -293,15 +253,20 @@ export async function checkRun(
   signal?: AbortSignal,
   retryTransient = false,
 ) {
-  const saved = await deps.store.get<RunRecord>(`run:${record.runId}`);
-  if (saved?.summary) return saved.summary;
+  record = (await deps.store.get<RunRecord>(`run:${record.runId}`)) ?? record;
   if (record.summary) return record.summary;
-  const receipt = await readRunReceipt<Receipt>(deps.api, requestPath(record), record, signal, retryTransient);
+  let missingSubmission = false;
+  const receipt = await readRunReceipt<Receipt>(deps.api, requestPath(record), record, signal, retryTransient, () => {
+    missingSubmission = true;
+  });
+  // Admission can be acknowledged while a bounded receipt read is in flight.
+  record = (await deps.store.get<RunRecord>(`run:${record.runId}`)) ?? record;
+  if (record.summary) return record.summary;
   const terminal = receipt?.finalizedAt ? receiptSummary(record, receipt) : null;
   const expired = !receipt?.finalizedAt && Date.now() >= runDeadline(record);
   if (!receipt?.finalizedAt && !expired) return null;
   if (expired || terminal?.status === "timed_out") {
-    const stop = record.stopAfterRun === true || (expired && record.submissionPending === true && !receipt);
+    const stop = record.stopAfterRun === true || (expired && record.submissionPending === true && missingSubmission);
     if (expired && !stop && (await ownsEnvironment(deps.store, record.environmentId, record.runId))) {
       // Cancellation acknowledges intent. Keep a reusable workspace claimed until
       // a terminal receipt proves the old command can no longer write its files.

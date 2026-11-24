@@ -3,13 +3,14 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ExtensionAutomationApi, ExtensionConnectionsApi } from "@pstdio/sdk/extensions";
-import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
+import { makeCommandContext } from "@pstdio/sdk/testing";
 import { commands } from "./commands";
 import { type Api, PocketCoderError } from "./connection";
 import { runDeps } from "./context";
 import { cleanupRunEnvironment, enqueueEnvironmentCleanup } from "./environment-cleanup";
 import { activeRun, claimEnvironment } from "./environments";
 import { localProcess } from "./process-fixture";
+import { createRunStorage as createMemoryStorage } from "./run-storage-fixture";
 import { listRuns, startRun } from "./runs";
 
 let root: string;

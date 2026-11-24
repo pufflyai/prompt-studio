@@ -9,7 +9,6 @@ import {
   workbenchPages,
 } from "@pstdio/sdk/extensions";
 import { runPromptStudio } from "./branch-commands";
-import { resumeCollection } from "./collection";
 import {
   cancelRunCommand,
   createEnvironmentCommand,
@@ -99,12 +98,11 @@ export const runsView = defineView({
       await resumeEnvironmentCleanups(ctx);
       const records = await listRuns(ctx.storage);
       // Older runs may have been submitted before background collection was available.
-      const deps = await runDeps(ctx).catch(() => null);
+      const deps = await runDeps(ctx, { recover: false }).catch(() => null);
       const now = new Date();
       return {
         rows: await Promise.all(
           records.map(async (record) => {
-            await resumeCollection(ctx, record);
             const summary =
               deps && !record.summary && record.stopAfterRun === undefined
                 ? await checkRun(deps, record).catch(() => null)

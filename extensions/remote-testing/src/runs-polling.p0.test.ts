@@ -1,9 +1,10 @@
 import { expect, test } from "bun:test";
 import type { ExtensionConnectionsApi } from "@pstdio/sdk/extensions";
-import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
+import { makeCommandContext } from "@pstdio/sdk/testing";
 import { connectionApi } from "./connection";
 import { activeRun, claimEnvironment, releaseEnvironment } from "./environments";
 import { localProcess } from "./process-fixture";
+import { createRunStorage as createMemoryStorage } from "./run-storage-fixture";
 import { awaitRun, cancelRun, checkRun, type RunDeps, type RunRecord } from "./runs";
 
 function fixture(request: ExtensionConnectionsApi["request"]) {
@@ -537,4 +538,32 @@ test("a saved lifecycle outcome ends a collector holding a stale pending record"
   await deps.store.set("run:run", { ...record, summary });
   expect(await checkRun(deps, record)).toEqual(summary);
   expect(reads).toBe(0);
+});
+
+test.each([
+  "before",
+  "during",
+])("a kept run uses the saved acknowledgement before a stop decision (%s)", async (when) => {
+  const { deps, record } = fixture(async <TBody>() => {
+    if (when === "during") await deps.store.set("run:run", { ...record, submissionPending: false });
+    return { status: 503, headers: {}, body: {} as TBody };
+  });
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  record.stopAfterRun = false;
+  record.submissionPending = true;
+  await deps.store.set("run:run", { ...record, submissionPending: when !== "before" });
+  await claimEnvironment(deps.store, "env", "run");
+  expect(await checkRun(deps, record)).toBeNull();
+  expect(await activeRun(deps.store, "env")).toBe("run");
+  expect(await deps.store.collection("environment-cleanups").get("run:env")).toBeUndefined();
+});
+
+test("a kept uncertain submission is not stopped merely because the receipt service is unavailable", async () => {
+  const { deps, record } = fixture(async <TBody>() => ({ status: 503, headers: {}, body: {} as TBody }));
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  record.stopAfterRun = false;
+  record.submissionPending = true;
+  await claimEnvironment(deps.store, "env", "run");
+  expect(await checkRun(deps, record)).toBeNull();
+  expect(await activeRun(deps.store, "env")).toBe("run");
 });

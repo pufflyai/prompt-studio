@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
 import type { ExtensionAutomationApi } from "@pstdio/sdk/extensions";
-import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
+import { makeCommandContext } from "@pstdio/sdk/testing";
 import { collectSavedRunLog, enqueueRunLog, resumeRunLogs } from "./run-log";
+import { createRunStorage as createMemoryStorage } from "./run-storage-fixture";
 import type { RunRecord } from "./runs";
 
 async function fixture() {

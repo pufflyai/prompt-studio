@@ -32,10 +32,10 @@ export async function projectRoot(ctx: ExtensionContextBase) {
   return root;
 }
 
-export async function runDeps(ctx: ExtensionContextBase): Promise<RunDeps> {
+export async function runDeps(ctx: ExtensionContextBase, options: { recover?: boolean } = {}): Promise<RunDeps> {
   const { settings, problems } = readSettings(await ctx.settings.all());
   if (problems.length) throw new Error(`Remote testing is not configured. ${problems.join(" ")}`);
-  await resumeEnvironmentCleanups(ctx);
+  if (options.recover !== false) await resumeEnvironmentCleanups(ctx);
   return {
     projectId: ctx.projectId,
     api: connectionApi(ctx.connections),

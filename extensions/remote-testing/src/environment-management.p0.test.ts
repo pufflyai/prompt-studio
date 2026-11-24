@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test";
 import type { ExtensionConnectionsApi } from "@pstdio/sdk/extensions";
-import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
+import { makeCommandContext } from "@pstdio/sdk/testing";
 import { stopAllEnvironments, stopEnvironmentCommand } from "./commands";
 import type { Environment } from "./environments";
+import { createRunStorage as createMemoryStorage } from "./run-storage-fixture";
 import { environmentsView } from "./workbench";
 
 const environment = (id: string, purpose: string, project = "owned", state = "ready"): Environment => ({

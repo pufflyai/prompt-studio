@@ -17,13 +17,17 @@ function boundedSignal(timeout: number, signal?: AbortSignal) {
 const missingSubmission = (record: RunRecord, error: unknown) =>
   record.submissionPending && error && typeof error === "object" && "status" in error && error.status === 404;
 
-async function finalRead<T>(api: Api, path: string, record: RunRecord, signal?: AbortSignal) {
+async function finalRead<T>(api: Api, path: string, record: RunRecord, signal?: AbortSignal, onMissing?: () => void) {
   const { deadline, bounded } = boundedSignal(RECEIPT_READ_MS, signal);
   try {
     return await api<T>({ method: "GET", path, signal: bounded });
   } catch (error) {
     signal?.throwIfAborted();
-    if (deadline.aborted || canRetryControllerRequest(error) || missingSubmission(record, error)) return null;
+    if (missingSubmission(record, error)) {
+      onMissing?.();
+      return null;
+    }
+    if (deadline.aborted || canRetryControllerRequest(error)) return null;
     throw error;
   }
 }
@@ -34,10 +38,11 @@ export async function readRunReceipt<T>(
   record: RunRecord,
   signal: AbortSignal | undefined,
   retryTransient: boolean,
+  onMissing?: () => void,
 ) {
   const remaining = runDeadline(record) - Date.now();
   // A completed receipt wins over a local timeout, including at the boundary.
-  if (remaining <= 0) return finalRead<T>(api, path, record, signal);
+  if (remaining <= 0) return finalRead<T>(api, path, record, signal, onMissing);
   const { deadline, bounded } = boundedSignal(remaining, signal);
   try {
     return retryTransient
@@ -45,9 +50,12 @@ export async function readRunReceipt<T>(
       : await api<T>({ method: "GET", path, signal: bounded });
   } catch (error) {
     signal?.throwIfAborted();
-    if (missingSubmission(record, error)) return null;
+    if (missingSubmission(record, error)) {
+      onMissing?.();
+      return null;
+    }
     if (Date.now() >= runDeadline(record) && (deadline.aborted || canRetryControllerRequest(error)))
-      return finalRead<T>(api, path, record, signal);
+      return finalRead<T>(api, path, record, signal, onMissing);
     throw error;
   }
 }
