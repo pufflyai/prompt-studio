@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
@@ -45,15 +45,12 @@ export const readFileDocumentState = async (files: Files, projectId: string, row
   return files.read(projectId, row.id, "state", head.snapshot);
 };
 
-export const saveFileDocumentState = async (tx: Transaction, owner: StorageOwner, key: string, state: Uint8Array) => {
-  const files = documentFilesFor(tx);
-  const { row } = await ensureFileDocument(tx, files, { owner, key, kind: "local" });
-  trackDocumentFiles(tx, owner.workbenchId, row.id);
+const prepareFileDocumentState = async (files: Files, projectId: string, row: Row, state: Uint8Array) => {
   const revision = row.revision + 1;
   if (!Number.isSafeInteger(revision)) throw new Error("Document revision space is exhausted");
-  const snapshot = await files.put(owner.workbenchId, row.id, "state", state);
-  const previous = await readFileDocumentHead(files, owner.workbenchId, row);
-  const head = await files.writeHead(owner.workbenchId, row.id, {
+  const previous = await readFileDocumentHead(files, projectId, row);
+  const snapshot = await files.put(projectId, row.id, "state", state);
+  const head = await files.writeHead(projectId, row.id, {
     format: 1,
     revision,
     foldedRevision: revision,
@@ -61,11 +58,60 @@ export const saveFileDocumentState = async (tx: Transaction, owner: StorageOwner
     updates: [],
     ...(previous.operations && { operations: previous.operations }),
   });
-  await tx
-    .update(documents)
-    .set({ revision, folded_revision: revision, state_sha256: head.sha256, state_bytes: head.bytes })
-    .where(eq(documents.id, row.id));
+  return { revision, folded_revision: revision, state_sha256: head.sha256, state_bytes: head.bytes };
+};
+
+export const saveFileDocumentState = async (tx: Transaction, owner: StorageOwner, key: string, state: Uint8Array) => {
+  const files = documentFilesFor(tx);
+  const { row } = await ensureFileDocument(tx, files, { owner, key, kind: "local" });
+  trackDocumentFiles(tx, owner.workbenchId, row.id);
+  const values = await prepareFileDocumentState(files, owner.workbenchId, row, state);
+  await tx.update(documents).set(values).where(eq(documents.id, row.id));
   return row.id;
+};
+
+/** Publish a conversion page without creating and replacing empty document histories. */
+export const saveLocalFileDocumentStates = async (
+  tx: Transaction,
+  owner: StorageOwner,
+  states: Map<string, Uint8Array>,
+) => {
+  if (!states.size) return;
+  if (states.size > 100) throw new Error("Write at most 100 local markers per batch");
+  if ([...states.keys()].some((key) => key.startsWith('["editor-room",')))
+    throw new Error("Private editor rooms cannot be opened as local markers");
+  const files = documentFilesFor(tx);
+  const ownerId = await ensureStorageOwner(tx, owner);
+  const rows = await tx
+    .select()
+    .from(documents)
+    .where(and(eq(documents.owner_id, ownerId), inArray(documents.key, [...states.keys()])))
+    .for("update");
+  if (rows.some((row) => row.kind !== "local")) throw new Error("Only local documents can be saved as markers");
+
+  const replacements = await withDocumentFileBatch(
+    files,
+    rows.map((row) => async (writer) => {
+      trackDocumentFiles(tx, owner.workbenchId, row.id);
+      const values = await prepareFileDocumentState(writer, owner.workbenchId, row, states.get(row.key)!);
+      return sql`(${row.id}::bigint, ${values.revision}::bigint, ${values.state_sha256}::text, ${values.state_bytes}::bigint)`;
+    }),
+  );
+  if (replacements.length)
+    await tx.execute(sql`UPDATE documents AS document
+      SET revision = incoming.revision, folded_revision = incoming.revision,
+          state_sha256 = incoming.state_sha256, state_bytes = incoming.state_bytes
+      FROM (VALUES ${sql.join(replacements, sql`, `)}) AS incoming(id, revision, state_sha256, state_bytes)
+      WHERE document.id = incoming.id`);
+
+  const existing = new Set(rows.map((row) => row.key));
+  await insertFileDocuments(
+    tx,
+    files,
+    [...states].flatMap(([key, snapshot]) =>
+      existing.has(key) ? [] : [{ owner, ownerId, key, kind: "local", snapshot, revision: 1, foldedRevision: 1 }],
+    ),
+  );
 };
 
 /** Allocate the immutable file address before publishing any required SQL references. */

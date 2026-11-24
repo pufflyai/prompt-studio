@@ -8,6 +8,7 @@ import { storage_record_outbox, storage_record_sync } from "../../db/legacy-reco
 import { records as currentRecords, projects } from "../../db/schemas.pg";
 import { type SavedDocumentFixture, seedDocumentHistory } from "./document-history.fixture";
 import { createDocumentStorageDBService } from "./document-storage";
+import { canonicalRecordPredicate } from "./ordered-record-row";
 import { lockRecordOwner } from "./record-changes";
 import { resourceDocumentId } from "./resource-document-persistence";
 import { ensureStorageOwner, storageOwnerKey } from "./storage-owner-key";
@@ -84,7 +85,7 @@ if (import.meta.main) {
       return originalTransaction(run, config).finally(async () => {
         const elapsed = performance.now() - start;
         if (elapsed > 250)
-          console.log(
+          console.error(
             JSON.stringify({
               slowBatchMs: elapsed,
               cursor: await readConversion(connection.db, backlogOwner),
@@ -107,7 +108,7 @@ if (import.meta.main) {
       lastCpu = process.cpuUsage();
       const gap = now - last;
       if (gap > 250)
-        console.log(
+        console.error(
           JSON.stringify({
             timerGapMs: gap,
             cpuMs: (usage.user + usage.system) / 1000,
@@ -132,7 +133,7 @@ if (import.meta.main) {
         const cursor = await readConversion(connection.db, backlogOwner);
         if (mode !== "interrupt" && cursor?.phase !== phase) {
           phase = cursor?.phase;
-          console.log(JSON.stringify({ phase, cursor }));
+          console.error(JSON.stringify({ phase, cursor }));
         }
         if (mode === "interrupt" && cursor?.phase === "records" && cursor.after) {
           const row = await connection.db.execute(
@@ -160,7 +161,13 @@ if (import.meta.main) {
           firstVersion: row.rows[0]!.version,
           counts: (
             await connection.db.execute(
-              sql`SELECT (SELECT count(*) FROM records) AS records, (SELECT count(*) FROM operations) AS operations, (SELECT count(*) FROM storage_record_outbox) AS legacy, (SELECT count(*) FROM projects) AS projects, (SELECT count(*) FROM records) AS projected, (SELECT count(*) FROM records WHERE deleted) AS tombstones`,
+              sql`SELECT
+                (SELECT count(*) FROM records WHERE ${canonicalRecordPredicate(currentRecords)}) AS records,
+                (SELECT count(*) FROM operations) AS operations,
+                (SELECT count(*) FROM storage_record_outbox) AS legacy,
+                (SELECT count(*) FROM projects) AS projects,
+                (SELECT count(*) FROM records WHERE revision IS NOT NULL) AS projected,
+                (SELECT count(*) FROM records WHERE revision IS NOT NULL AND deleted) AS tombstones`,
             )
           ).rows[0],
         }),

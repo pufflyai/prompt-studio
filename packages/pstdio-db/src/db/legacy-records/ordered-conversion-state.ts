@@ -1,10 +1,11 @@
 import type { StorageOwner } from "pstdio-sync";
+import { saveLocalFileDocumentStates } from "../../services/extension-storage/document-file-persistence";
 import {
   readOrderedMarker,
   readOrderedMarkers,
   saveOrderedMarker,
 } from "../../services/extension-storage/ordered-native-metadata";
-import type { OrderedTransaction } from "../../services/extension-storage/ordered-sql";
+import { encodeOrderedJson, type OrderedTransaction } from "../../services/extension-storage/ordered-sql";
 export const conversionId = '["ordered-conversion"]';
 export const conversionFrameId = (sequence: number) => JSON.stringify(["ordered-conversion-frame", sequence]);
 export const conversionRecordId = (id: string) => JSON.stringify(["ordered-conversion-record", id]);
@@ -38,5 +39,9 @@ export const saveConversionValues = async (
   owner: StorageOwner,
   values: Map<string, unknown>,
 ) => {
-  for (const [id, value] of values) await saveOrderedMarker(tx, owner, id, value);
+  const entries = [...values];
+  for (let offset = 0; offset < entries.length; offset += 100) {
+    const states = new Map(entries.slice(offset, offset + 100).map(([id, value]) => [id, encodeOrderedJson(value)]));
+    await saveLocalFileDocumentStates(tx, owner, states);
+  }
 };
