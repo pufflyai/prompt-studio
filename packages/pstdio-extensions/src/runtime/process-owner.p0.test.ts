@@ -57,3 +57,33 @@ test("a write after end() is refused, as on the child's own handle", async () =>
   expect(refusal).toContain("closed");
   expect(written).toEqual(["a"]);
 });
+
+test("a provider that returns before starting keeps queued input inside the startup credit", async () => {
+  const ready = Promise.withResolvers<void>();
+  const accepted: number[] = [];
+  const provider: ProcessHandle = {
+    id: "remote",
+    started: ready.promise,
+    exited: Promise.resolve({ code: 0, signal: null }),
+    write: async (data) => void accepted.push(data.length),
+    end: async () => {},
+    kill: async () => {},
+    events: async function* () {},
+  };
+  const handle = createProcessHandleProxy(Promise.resolve(provider));
+  const bytes = new Uint8Array(5 * 1024 * 1024);
+  const first = handle.write(bytes);
+  await Bun.sleep(0);
+  const second = handle.write(bytes).then(
+    () => "accepted",
+    () => "over credit",
+  );
+  await Bun.sleep(0);
+  const beforeReady = accepted.slice();
+  const closed = handle.end();
+  ready.resolve();
+  await Promise.all([first, closed]);
+  expect(beforeReady).toEqual([]);
+  expect(await second).toBe("over credit");
+  expect(accepted).toEqual([bytes.length]);
+});

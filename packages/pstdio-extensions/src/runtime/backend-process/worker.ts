@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { readCommandRejection } from "../runner/command-rejection";
 import { createPendingCalls } from "./pending-calls";
+import type { ProcessHandle } from "pstdio-api-contracts/extension-kernel";
 import {
   BACKEND_PROTOCOL_VERSION,
   type BackendHandlerRef,
@@ -16,6 +17,17 @@ import { createFunctionTable, createImportTracker, discardValue, importValue } f
 import { createSurfaceFacade, type SurfaceStep } from "./surface";
 
 type Handler = (...args: unknown[]) => unknown;
+
+// Provider process handles have a defined public shape even when implemented by a class.
+const bindProcessHandle = (handle: ProcessHandle) => ({
+  id: handle.id,
+  started: handle.started,
+  exited: handle.exited,
+  write: handle.write.bind(handle),
+  end: handle.end.bind(handle),
+  kill: handle.kill.bind(handle),
+  events: handle.events.bind(handle),
+});
 
 /**
  * Replaces every function in the definition with a handler reference. Callback code stays in this
@@ -60,12 +72,18 @@ export const describeBackendDefinition = (definition: unknown) => {
     for (const [index, entry] of value.entries()) copy.push(describe(entry, `${path}[${index}]`));
     return copy;
   };
+  const registerHandler = (handler: Handler, path: string) => {
+    const id = `h${handlers.size}`;
+    handlers.set(
+      id,
+      /^default\.workspaceTypes\[\d+\]\.spawn$/.test(path)
+        ? async (...args) => bindProcessHandle((await handler(...args)) as ProcessHandle)
+        : handler,
+    );
+    return { [HANDLER_MARKER]: id } satisfies BackendHandlerRef;
+  };
   const describe = (value: unknown, path: string): unknown => {
-    if (typeof value === "function") {
-      const id = `h${handlers.size}`;
-      handlers.set(id, value as Handler);
-      return { [HANDLER_MARKER]: id } satisfies BackendHandlerRef;
-    }
+    if (typeof value === "function") return registerHandler(value as Handler, path);
     if (typeof value === "symbol" || typeof value === "bigint") throw unsupported(path);
     if (value === null || typeof value !== "object") return value;
     if (value instanceof Uint8Array || value instanceof Date || value instanceof RegExp) return value;
