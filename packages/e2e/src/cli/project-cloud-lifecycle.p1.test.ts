@@ -62,6 +62,7 @@ test(
       async fetch(request) {
         const path = new URL(request.url).pathname;
         if (path === "/v1/account") return Response.json({ features: { relay: true }, projectDeletion: true });
+        if (path === "/v1/teams" && request.method === "GET") return Response.json([]);
         if (path === "/v1/workbenches") return Response.json(projects());
         if (path === "/v1/project-deletions") return Response.json(deletions());
         if (path === "/v1/devices/presence") return Response.json({ ok: true });

@@ -1,13 +1,47 @@
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  foreignKey,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import type { Json } from "pstdio-sync-contracts";
 
 export const accounts = pgTable("manager_accounts", {
   id: text().primaryKey(),
-  ownerIssuer: text().notNull(),
-  ownerSubject: text().notNull(),
+  ownerIssuer: text(),
+  ownerSubject: text(),
   state: text({ enum: ["active", "disabled"] }).notNull(),
 });
+export const teams = pgTable("manager_teams", {
+  accountId: text()
+    .primaryKey()
+    .references(() => accounts.id),
+  name: text().notNull(),
+});
+// Personal account IDs identify people. Team accounts have no Google identity of their own.
+export const teamMembers = pgTable(
+  "manager_team_members",
+  {
+    accountId: text()
+      .notNull()
+      .references(() => teams.accountId),
+    userId: text()
+      .notNull()
+      .references(() => accounts.id),
+    role: text({ enum: ["owner", "member"] }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.accountId, table.userId] }),
+    uniqueIndex("manager_one_team_owner").on(table.accountId).where(sql`${table.role} = 'owner'`),
+    index("manager_teams_by_user").on(table.userId, table.accountId),
+  ],
+);
 export const accountFeatures = pgTable(
   "manager_account_features",
   {
@@ -32,6 +66,26 @@ export const workbenches = pgTable(
     id: text().notNull(),
   },
   (table) => [primaryKey({ columns: [table.accountId, table.id] })],
+);
+export const projectMembers = pgTable(
+  "manager_project_members",
+  {
+    accountId: text().notNull(),
+    workbenchId: text().notNull(),
+    userId: text().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.accountId, table.workbenchId, table.userId] }),
+    foreignKey({
+      columns: [table.accountId, table.workbenchId],
+      foreignColumns: [workbenches.accountId, workbenches.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.accountId, table.userId],
+      foreignColumns: [teamMembers.accountId, teamMembers.userId],
+    }).onDelete("cascade"),
+    index("manager_project_grants_by_user").on(table.accountId, table.userId, table.workbenchId),
+  ],
 );
 export const projectDeletions = pgTable(
   "manager_project_deletions",
@@ -63,10 +117,21 @@ export const spaceKeys = pgTable(
       .references(() => accounts.id),
     workbenchId: text().notNull(),
     space: text({ enum: ["project", "personal"] }).notNull(),
+    // An empty owner preserves the stored address of personal-account keys and identifies shared keys.
+    ownerId: text().notNull().default(""),
     generation: integer().notNull(),
     secret: text().notNull(),
   },
-  (table) => [primaryKey({ columns: [table.accountId, table.workbenchId, table.space, table.generation] })],
+  (table) => [
+    uniqueIndex("manager_space_key_generation").on(
+      table.accountId,
+      table.workbenchId,
+      table.space,
+      table.ownerId,
+      table.generation,
+    ),
+    index("manager_space_keys_by_user").on(table.ownerId, table.accountId),
+  ],
 );
 // A device is one client runtime; its environment ID is the device ID. Each login replaces the credential digest.
 export const devices = pgTable(

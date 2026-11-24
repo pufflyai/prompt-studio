@@ -7,13 +7,16 @@ export const describe = "Open one folder as a project";
 export const builder = (yargs: Argv) =>
   yargs
     .positional("name", { type: "string", describe: "Project name (defaults to folder name)" })
-    .option("path", { type: "string", describe: "Project folder (defaults to the exact current directory)" });
+    .option("path", { type: "string", describe: "Project folder (defaults to the exact current directory)" })
+    .option("team", { type: "string", describe: "Cloud team account ID for a new project folder" });
 const defaultDeps = { cwd: process.cwd, createAndInitProject };
 export const createHandler =
   (deps = defaultDeps) =>
-  async (argv: Arguments<{ name?: string; path?: string }>) => {
+  async (argv: Arguments<{ name?: string; path?: string; team?: string }>) => {
     const path = resolve(deps.cwd(), argv.path ?? ".");
-    const project = await deps.createAndInitProject(path, argv.name);
+    const project = (await argv.team)
+      ? await deps.createAndInitProject(path, argv.name, argv.team)
+      : await deps.createAndInitProject(path, argv.name);
     console.log(`Opened project "${project.name}" (${project.id}) at ${path}`);
     for (const warning of project.extension_warnings ?? [])
       console.warn(`Extension setup warning for ${warning.extension}: ${warning.message}`);

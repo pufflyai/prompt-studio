@@ -15,6 +15,7 @@ type Socket = Pick<ServerWebSocket, "send" | "close">;
 export interface LiveIdentity {
   projectKey: string;
   accountId: string;
+  userId?: string;
   deviceId: string;
   expiresAt: string;
 }
@@ -27,7 +28,7 @@ interface LiveConnection extends LiveIdentity {
   close(code?: number): void;
 }
 const canRead = (connection: LiveIdentity, spaceOwner: string | null) =>
-  spaceOwner === null || spaceOwner === connection.accountId;
+  spaceOwner === null || spaceOwner === (connection.userId ?? connection.accountId);
 
 const parse = (data: string | Buffer, limits: RelayLimits, identity: LiveIdentity) => {
   if (typeof data !== "string" || Buffer.byteLength(data) > limits.maxLiveMessageBytes * 2 + 4096) return 1009;

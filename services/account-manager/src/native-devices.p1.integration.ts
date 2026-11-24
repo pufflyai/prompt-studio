@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { createServer } from "node:net";
 import { resolve } from "node:path";
-import { createAuthorityFixture } from "./authority.fixture";
+import { createAuthorityFixture, deviceProfile } from "./authority.fixture";
 import * as implementation from "./index";
 import { createAuthenticationFixture } from "./manager-authentication.fixture";
 import { createOwnedTls } from "./owned-tls.fixture";
@@ -43,6 +43,7 @@ beforeAll(async () => {
   // Each login signs out the Google session it used, so every device login gets its own session.
   const subject = `native-a-${crypto.randomUUID()}`;
   const manager = fixture.owner();
+  let teamAccountId: string;
   try {
     const accountId = crypto.randomUUID();
     await manager.provision({
@@ -51,6 +52,11 @@ beforeAll(async () => {
       owner: { issuer: "https://accounts.google.com", subject },
     });
     await manager.setFeature({ accountId, feature: "relay", enabled: true });
+    const seed = await manager.registerDevice({ accountId, ...deviceProfile() });
+    const team = await auth.devices.createTeam(seed.token, "Cloud test team");
+    teamAccountId = team.accountId;
+    await manager.setFeature({ accountId: teamAccountId, feature: "relay", enabled: true });
+    await manager.removeDevice({ accountId, deviceId: seed.deviceId });
   } finally {
     await manager.close();
   }
@@ -72,6 +78,7 @@ beforeAll(async () => {
         ...process.env,
         NODE_EXTRA_CA_CERTS: tls.cert,
         OWNER_TEST_ORIGIN: origin,
+        OWNER_TEST_TEAM: teamAccountId,
         OWNER_TEST_COOKIE_A: a.headers.get("cookie")!,
         OWNER_TEST_COOKIE_A_AGAIN: again.headers.get("cookie")!,
         OWNER_TEST_COOKIE_B: b.headers.get("cookie")!,
