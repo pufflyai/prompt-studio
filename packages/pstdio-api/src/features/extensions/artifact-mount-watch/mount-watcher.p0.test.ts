@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, watch as fsWatch, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, watch as fsWatch, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createArtifactMount, resolveArtifactMountRoot, type WatchDirectory } from "pstdio-extensions";
@@ -28,7 +28,13 @@ const watchOneFolder: WatchDirectory = (path, listener, onError) => {
 };
 
 const startWatch = async (
-  options: { initialFolders?: string[]; maxFolders?: number; onFolderLimit?: () => void; watch?: WatchDirectory } = {},
+  options: {
+    initialFolders?: string[];
+    maxFolders?: number;
+    onFolderLimit?: () => void;
+    watch?: WatchDirectory;
+    watchRoot?: WatchDirectory;
+  } = {},
 ) => {
   const { initialFolders = [], ...watchOptions } = options;
   const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-mount-watch-"));
@@ -57,6 +63,14 @@ const startWatch = async (
 };
 
 describe("watchArtifactMount", () => {
+  test("reports replaced manifests when the tree watch delivers no notification", async () => {
+    const { changes, root } = await startWatch({ watch: () => ({ close: () => {} }), watchRoot: watchOneFolder });
+    writeFileSync(join(root, ".manifest.new"), "{}");
+    renameSync(join(root, ".manifest.new"), join(root, "manifest.json"));
+    await waitFor(() => changes.length > 0);
+    expect(changes[0]).toContain("manifest.json");
+  });
+
   test("reports one change with every path of a burst of direct edits", async () => {
     const { changes, root } = await startWatch();
 

@@ -1,4 +1,4 @@
-import { lstatSync, mkdirSync } from "node:fs";
+import { watch as fsWatch, lstatSync, mkdirSync } from "node:fs";
 import { isAbsolute, relative, sep } from "node:path";
 import { createDirectoryTreeWatcher, type WatchDirectory } from "pstdio-extensions";
 import type { ArtifactMountWriteLedger } from "./write-ledger";
@@ -24,6 +24,13 @@ export type ArtifactMountWatcherInput = {
   onFolderLimit: () => void;
   maxFolders?: number;
   watch?: WatchDirectory;
+  watchRoot?: WatchDirectory;
+};
+
+const watchFlatRoot: WatchDirectory = (path, listener, onError) => {
+  const watcher = fsWatch(path, { recursive: false }, listener);
+  watcher.on("error", onError);
+  return watcher;
 };
 
 const isFolder = (path: string) => {
@@ -103,12 +110,24 @@ export const watchArtifactMount = (input: ArtifactMountWatcherInput) => {
     },
     watch: input.watch,
   });
+  // macOS recursive notifications can miss an atomic file replacement in the mount root.
+  const watchRoot = input.watchRoot ?? (tree.recursive && process.platform === "darwin" ? watchFlatRoot : undefined);
+  const directRoot =
+    watchRoot &&
+    createDirectoryTreeWatcher({
+      root: input.root,
+      onEvent: handleEvent,
+      onError: input.onError,
+      skipDirectory: () => true,
+      watch: watchRoot,
+    });
 
   return {
     close: () => {
       if (timer) clearTimeout(timer);
       pending.clear();
       tree.close();
+      directRoot?.close();
     },
   };
 };
