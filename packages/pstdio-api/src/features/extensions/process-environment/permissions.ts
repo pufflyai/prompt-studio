@@ -62,8 +62,20 @@ export const createProcessEnvironmentPermissions = (input: {
     return loaded;
   };
   let writes = Promise.resolve();
-  const persist = (map: Map<string, ProcessEnvironmentGrant>) => {
-    const write = writes.then(() => writeGrantFile(input.path, map.values()));
+  // The change reaches the shared map only once the file holds it, so a failed save changes nothing.
+  const persist = (
+    map: Map<string, ProcessEnvironmentGrant>,
+    key: string,
+    next: ProcessEnvironmentGrant | undefined,
+  ) => {
+    const update = (target: Map<string, ProcessEnvironmentGrant>) =>
+      next ? target.set(key, next) : target.delete(key);
+    const write = writes.then(async () => {
+      const saved = new Map(map);
+      update(saved);
+      await writeGrantFile(input.path, saved.values());
+      update(map);
+    });
     writes = write.catch(() => {});
     return write;
   };
@@ -94,7 +106,7 @@ export const createProcessEnvironmentPermissions = (input: {
   };
 
   // Children started under the previous grant stop before the change takes effect. New children are
-  // refused until the grant is replaced, so none can start between the two steps.
+  // refused until the grant is replaced and saved, so none can start between the steps.
   const applyGrant = async (key: string, next: ProcessEnvironmentGrant | undefined, reason: unknown) => {
     const map = await grants();
     const previous = map.get(key);
@@ -110,12 +122,10 @@ export const createProcessEnvironmentPermissions = (input: {
             return lease.stop?.(reason);
           }),
         );
-      if (next) map.set(key, next);
-      else map.delete(key);
+      await persist(map, key, next);
     } finally {
       retiring.delete(key);
     }
-    await persist(map);
   };
 
   const replaceGrant = (key: string, next: ProcessEnvironmentGrant | undefined, reason: unknown) => {

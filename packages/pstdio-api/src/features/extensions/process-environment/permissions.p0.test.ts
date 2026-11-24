@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { createProcessEnvironmentPermissions, type ProcessEnvironmentSource } from "./permissions";
 
 const roots: string[] = [];
@@ -220,6 +220,35 @@ describe("process environment permissions", () => {
     await permissions.revoke("project-1", "acme.agent");
 
     expect(stopped).toBe(false);
+  });
+
+  test("a grant change that cannot be saved leaves the saved grant in effect", async () => {
+    const { permissions, path, create, source } = setup();
+    const { sourceIdentity } = await permissions.read("project-1", "acme.agent");
+    await permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity });
+    chmodSync(dirname(path), 0o500);
+    const failures: unknown[] = [];
+    try {
+      for (const change of [
+        () =>
+          permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN", "ANTHROPIC_API_KEY"], sourceIdentity }),
+        () => permissions.revoke("project-1", "acme.agent"),
+      ])
+        await change().catch((error: unknown) => failures.push(error));
+    } finally {
+      chmodSync(dirname(path), 0o700);
+    }
+
+    expect(failures).toHaveLength(2);
+    expect((await permissions.read("project-1", "acme.agent")).granted).toEqual(["GH_TOKEN"]);
+    expect((await create().read("project-1", "acme.agent")).granted).toEqual(["GH_TOKEN"]);
+    let refused: unknown;
+    try {
+      await permissions.authorize("project-1", source("hash-1"), ["ANTHROPIC_API_KEY"]);
+    } catch (error) {
+      refused = error;
+    }
+    expect(refused).toMatchObject({ code: "process_environment_not_granted" });
   });
 
   test("an unreadable grant file grants nothing instead of failing every read", async () => {
