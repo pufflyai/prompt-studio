@@ -35,6 +35,7 @@ export type TrackEditingCommand = (
 /** This is the ordered domain protocol. Query caches only contain accepted finite results. */
 export const createCommandEditingJournal = (input: {
   command: CommandEditingOpen["command"];
+  retainsFormDraft?: true;
   serialize: <T>(run: () => Promise<T>, signal?: AbortSignal) => Promise<T>;
   accepted(result: WebviewEditingCommandResult): void;
   changed(accepted?: { member: CommandEditingMember; sequence: number }): void;
@@ -47,6 +48,15 @@ export const createCommandEditingJournal = (input: {
   let previews = new Map<CommandEditingMember, WebviewEditingChange[]>();
   let retainedFormDraft: CommandEditingMember | undefined;
   const draftSequences = new WeakMap<CommandEditingMember, number>();
+  const formCommands = new WeakMap<
+    CommandEditingJob,
+    { member: CommandEditingMember; expectedRevision: string; savedRevision?: string }
+  >();
+  const formAcknowledgements = new WeakMap<CommandEditingMember, { expected: string; saved: string }>();
+  const ownDraftBase = (member: CommandEditingMember, revision: string) => {
+    const own = formAcknowledgements.get(member);
+    return own?.expected === revision ? own.saved : revision;
+  };
   let error: WebviewEditingSnapshot["error"];
   const validate = (result: WebviewEditingCommandResult) => {
     if (result.value === undefined) applyEditingChanges(baseline, result.changes);
@@ -55,6 +65,8 @@ export const createCommandEditingJournal = (input: {
   const writer = createCommandEditingWriter({
     run: (job, accepted) =>
       input.serialize(async () => {
+        const form = formCommands.get(job);
+        if (form) job.params.expectedRevision = ownDraftBase(form.member, form.expectedRevision);
         const write = async (signal?: AbortSignal) => {
           const response = await job.execute({ commandId: input.command.commandId, params: job.params }, signal);
           signal?.throwIfAborted();
@@ -74,6 +86,16 @@ export const createCommandEditingJournal = (input: {
       }),
     accepted: (job, result) => {
       savedRevision = job.revision;
+      const form = formCommands.get(job);
+      const acknowledged = result.value?.savedDraftRevision;
+      const expected = job.params.expectedRevision;
+      if (form && typeof acknowledged === "string" && typeof expected === "string") {
+        const member = form.member;
+        form.savedRevision = acknowledged;
+        formAcknowledgements.set(member, { expected, saved: acknowledged });
+        const previewBase = previews.get(member)?.find(({ path }) => path[0] === "draftBase");
+        if (previewBase && previewBase.value === expected) previewBase.value = acknowledged;
+      }
       error = undefined;
       input.accepted(result);
       accept(result);
@@ -126,7 +148,11 @@ export const createCommandEditingJournal = (input: {
         : false;
     const changes = structuredClone([...(ownPreview ? (previews.get(member) ?? []) : []), ...request.changes]);
     applyEditingChanges(committed(), changes);
-    const params = structuredClone({ ...input.command.params, ...request.params, operationId: crypto.randomUUID() });
+    const params: JsonObject = structuredClone({
+      ...input.command.params,
+      ...request.params,
+      operationId: crypto.randomUUID(),
+    });
     if (ownPreview) previews.delete(member);
     const job: CommandEditingJob = {
       params,
@@ -136,11 +162,15 @@ export const createCommandEditingJournal = (input: {
       workbench: member.workbench,
       channel: request.channel,
     };
+    const expectedRevision = params.expectedRevision;
+    if (input.retainsFormDraft && typeof request.params.draft === "string" && typeof expectedRevision === "string") {
+      formCommands.set(job, { member, expectedRevision });
+    }
     jobs.push(job);
     if (!writer.blocked()) error = undefined;
     previews = rebaseEditingChanges(committed(), previews).drafts;
     publish({ member, sequence: request.sequence });
-    return writer.wait([job]);
+    return writer.wait([job]).then(() => formCommands.get(job)?.savedRevision);
   };
   return {
     snapshot,
@@ -177,7 +207,10 @@ export const createCommandEditingJournal = (input: {
         ({ path, value }) =>
           path.length === 1 && (path[0] === "draft" || path[0] === "draftBase") && typeof value === "string",
       );
-      if (ownerFields.length) previews.set(member, structuredClone(ownerFields));
+      const next = structuredClone(ownerFields);
+      const draftBase = next.find(({ path }) => path[0] === "draftBase");
+      if (typeof draftBase?.value === "string") draftBase.value = ownDraftBase(member, draftBase.value);
+      if (next.length) previews.set(member, next);
       publish();
     },
     reopenFormDraft(member: CommandEditingMember) {

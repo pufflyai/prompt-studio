@@ -53,6 +53,7 @@ export const createCommandEditingDocument = (input: {
   };
   const journal = createCommandEditingJournal({
     command: input.open.command,
+    ...(retainsFormDraft ? { retainsFormDraft: true } : {}),
     serialize,
     track: recovery.track,
     changed: publish,
@@ -141,9 +142,11 @@ export const createCommandEditingDocument = (input: {
         case "cancel":
           journal.cancel(member, request.sequence);
           break;
-        case "execute":
-          await journal.execute(member, request);
+        case "execute": {
+          const savedDraftRevision = await journal.execute(member, request);
+          if (savedDraftRevision && !closed) return { ...snapshot(), savedDraftRevision };
           break;
+        }
         case "save":
           await journal.flush();
           if (!closed) await sources.retry();

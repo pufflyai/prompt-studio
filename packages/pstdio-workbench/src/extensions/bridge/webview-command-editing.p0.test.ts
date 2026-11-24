@@ -857,3 +857,93 @@ test("disconnecting a Requirement Book form commits its latest unblurred text th
     await core.dispose();
   }
 });
+
+test.each([
+  false,
+  true,
+])("a held Requirement Book save returns its own revision and preserves newer text (close while held: %s)", async (closeWhileHeld) => {
+  const extensionId = "pstdio.requirement-book";
+  const projectId = "project";
+  const read = { commandId: `${extensionId}.command.drafts.read-editing` };
+  const command = { commandId: `${extensionId}.command.drafts.save-editing` };
+  const core = createWorkbench();
+  const firstWrite = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const hostEvents = createHostEventPublisher();
+  const writes: { expectedRevision: string; draft: string }[] = [];
+  let revision = "original";
+  let saved = "{}";
+  core.pageLocations.setProject(projectId);
+  core.commands.registerCommand(
+    { id: read.commandId, label: "Read draft" },
+    {
+      execute: () => ({
+        value: { draft: saved, revision },
+        sources: [{ id: "authoring-draft", read, dependsOn: [] }],
+      }),
+    },
+  );
+  core.commands.registerCommand(
+    { id: command.commandId, label: "Save draft" },
+    {
+      execute: async (params) => {
+        const input = params as { expectedRevision: string; draft: string };
+        writes.push(input);
+        if (writes.length === 1) {
+          firstWrite.resolve();
+          await release.promise;
+        }
+        if (input.expectedRevision !== revision) throw new Error("stale draft");
+        revision = `save-${writes.length}`;
+        saved = input.draft;
+        return { value: { draft: saved, revision, savedDraftRevision: revision } };
+      },
+    },
+  );
+  const gate = createHostCapabilityGate({
+    capabilities: createWorkbenchWebviewHostCapabilities({ workbench: core, projectId, extensionId, hostEvents }),
+    declaredCapabilities: ["editing.session"],
+  });
+  const call = (params: object) => gate.call({ method: "editing.session", params: { sessionId: "form", ...params } });
+  const preview = (sequence: number, draft: string) =>
+    call({
+      operation: "preview",
+      retainFormDraft: true,
+      sequence,
+      changes: [
+        { path: ["draft"], value: draft },
+        { path: ["draftBase"], value: "original" },
+      ],
+    });
+  const first = '{"title":"First text"}';
+  const second = '{"title":"Text typed while the first save was held"}';
+  try {
+    await call({ operation: "open-command", key: "form", read, command, dependsOn: [] });
+    await preview(1, first);
+    const response = call({
+      operation: "execute",
+      sequence: 2,
+      params: { draft: first, expectedRevision: "original" },
+      changes: [{ path: ["draft"], value: first }],
+    });
+    await firstWrite.promise;
+    await preview(3, second);
+    if (closeWhileHeld) hostEvents.unbind();
+    release.resolve();
+    expect(await response).toMatchObject({
+      value: { draft: second },
+      savedDraftRevision: "save-1",
+    });
+    if (!closeWhileHeld) hostEvents.unbind();
+    await prepareWorkbenchEditingCommand(core, command.commandId);
+    expect(writes).toEqual([
+      expect.objectContaining({ draft: first, expectedRevision: "original" }),
+      expect.objectContaining({ draft: second, expectedRevision: "save-1" }),
+    ]);
+    expect(saved).toBe(second);
+  } finally {
+    release.resolve();
+    hostEvents.unbind();
+    await core.dispose();
+  }
+});
