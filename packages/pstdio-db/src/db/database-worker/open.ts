@@ -51,16 +51,29 @@ export const createDbInWorker = async (
   const opened = Promise.withResolvers<string>();
   let exited = false;
   let closeRequested = false;
+  let interruption: { reason: unknown } | undefined;
   // Opening counts as busy: startup migrations and maintenance write before the database is ready.
   let opening = true;
   const tracked = { busy: () => opening || remote.busy() };
   openWorkers.add(tracked);
 
+  const interrupt = (reason: unknown) => {
+    if (interruption) return;
+    interruption = { reason };
+    worker.postMessage({ type: "abort" });
+  };
+
   worker.onmessage = (event: MessageEvent<DatabaseWorkerMessage>) => {
     const message = event.data;
     if (remote.receive(message)) return;
-    if (message.type === "phase") onPhase?.(message.phase);
-    else if (message.type === "opened") opened.resolve(message.path);
+    if (message.type === "phase") {
+      if (interruption) return;
+      try {
+        onPhase?.(message.phase);
+      } catch (error) {
+        interrupt(error);
+      }
+    } else if (message.type === "opened") opened.resolve(message.path);
     else if (message.type === "open-failed") opened.reject(deserializeDatabaseError(message.error));
   };
   const stopped = (reason: string) => {
@@ -75,32 +88,22 @@ export const createDbInWorker = async (
   worker.onerror = (event) => stopped(event.message);
   worker.addEventListener("close", () => stopped("it exited"));
 
-  const abort = () => worker.postMessage({ type: "abort" });
+  const abort = () => interrupt(signal?.reason);
   signal?.addEventListener("abort", abort, { once: true });
   let path: string;
   try {
     worker.postMessage({ type: "open", options: open });
+    if (signal?.aborted) abort();
     path = await opened.promise;
   } catch (error) {
     closeRequested = true;
     openWorkers.delete(tracked);
     if (!exited) worker.terminate();
-    throw error;
+    throw interruption ? interruption.reason : error;
   } finally {
     opening = false;
     signal?.removeEventListener("abort", abort);
   }
-
-  // Diagnostics channels are per thread, so queries are observed here, where subscribers listen.
-  const pglite = observePgliteQueries(remote.pglite as unknown as PGlite);
-  const db = drizzle(pglite, { schema });
-  // Index nodes are files, so this thread reads the same folder the worker upgraded at startup.
-  attachIndexNodeFiles(
-    db,
-    path === ":memory:"
-      ? createMemoryIndexNodeFiles()
-      : createIndexNodeFiles(open.indexNodesPath ?? `${path}-index-nodes`),
-  );
 
   let closing: Promise<void> | undefined;
   const close = () => {
@@ -115,6 +118,23 @@ export const createDbInWorker = async (
     })();
     return closing;
   };
+
+  if (interruption) {
+    // Opening completed before the worker could cancel it. Close before rejecting with the original reason.
+    await close().catch(() => {});
+    throw interruption.reason;
+  }
+
+  // Diagnostics channels are per thread, so queries are observed here, where subscribers listen.
+  const pglite = observePgliteQueries(remote.pglite as unknown as PGlite);
+  const db = drizzle(pglite, { schema });
+  // Index nodes are files, so this thread reads the same folder the worker upgraded at startup.
+  attachIndexNodeFiles(
+    db,
+    path === ":memory:"
+      ? createMemoryIndexNodeFiles()
+      : createIndexNodeFiles(open.indexNodesPath ?? `${path}-index-nodes`),
+  );
 
   return {
     close,
