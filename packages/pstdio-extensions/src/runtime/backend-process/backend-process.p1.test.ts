@@ -211,10 +211,16 @@ export default {
     {
       id: "flood",
       title: "Flood",
-      async run(ctx, count) {
-        const results = await Promise.allSettled(
-          Array.from({ length: count }, () => ctx.storage.collection("items").get("never")),
-        );
+      async run(ctx, count, refusals = 0) {
+        const calls = Array.from({ length: count }, () => ctx.storage.collection("items").get("never"));
+        // Release the held calls only once the expected refusals arrived, whatever the runner's speed.
+        let refused = 0;
+        if (refusals)
+          await new Promise((resolve) =>
+            calls.forEach((call) => call.catch(() => ++refused === refusals && resolve())),
+          );
+        ctx.release?.();
+        const results = await Promise.allSettled(calls);
         return results.filter((result) => result.status === "rejected").map((result) => result.reason.code);
       },
     },
@@ -1555,14 +1561,22 @@ test("a worker that floods the host is refused past its in-flight limit and keep
     const gate = Promise.withResolvers<void>();
     const context = {
       storage: { collection: () => ({ get: () => gate.promise.then(() => null), put: async () => {} }) },
+      release: () => gate.resolve(),
     };
-    const flooding = worker.invoke({ handlerId: handlerOf(worker.definition, "flood"), context, surface, args: [8] });
-    await Bun.sleep(100);
-    gate.resolve();
-    const refused = (await flooding) as string[];
+    // A one-way call: it does not count against the limit the held calls fill.
+    const flood: BackendSurface = {
+      kind: "object",
+      members: { ...(surface as Extract<BackendSurface, { kind: "object" }>).members, release: { kind: "notify" } },
+    };
+    const refused = (await worker.invoke({
+      handlerId: handlerOf(worker.definition, "flood"),
+      context,
+      surface: flood,
+      args: [8, 3],
+    })) as string[];
     expect(refused).toEqual(["extension_overloaded", "extension_overloaded", "extension_overloaded"]);
     expect(
-      await worker.invoke({ handlerId: handlerOf(worker.definition, "flood"), context, surface, args: [3] }),
+      await worker.invoke({ handlerId: handlerOf(worker.definition, "flood"), context, surface: flood, args: [3] }),
     ).toEqual([]);
   } finally {
     HOST_CALL_LIMITS.inFlight = previous;
