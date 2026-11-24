@@ -3,6 +3,7 @@ import {
   defineCommand,
   defineExtension,
   defineKeybinding,
+  type ExtensionWorkspace,
   l10n,
   packageAsset,
   params,
@@ -12,6 +13,8 @@ import { pocketCoder } from "./pocketcoder";
 import { remoteWorkspace, workspaceParams } from "./workspace";
 
 const providerId = (ctx: CommandContext) => `${ctx.extensionId}.workspace-type.${remoteWorkspace.id}`;
+const workspaceShorthand = (workspace: ExtensionWorkspace) => workspace.shorthand ?? workspace.workspace_shorthand;
+const isReady = (workspace: ExtensionWorkspace) => (workspace.providerState ?? workspace.provider_state) === "ready";
 
 const prepareWorkspace = (ctx: CommandContext, workspaceInput: Record<string, string | undefined>) =>
   ctx.workspaces.create({
@@ -23,13 +26,9 @@ const prepareWorkspace = (ctx: CommandContext, workspaceInput: Record<string, st
     ),
   });
 
-const startSession = (
-  ctx: CommandContext,
-  workspace: { id: string; workspace_shorthand?: string | null },
-  prompt: string,
-) =>
+const startSession = (ctx: CommandContext, workspace: ExtensionWorkspace, prompt: string) =>
   ctx.sessions.create({
-    title: `PocketCoder: ${workspace.workspace_shorthand ?? workspace.id}`,
+    title: `PocketCoder: ${workspaceShorthand(workspace) ?? workspace.id}`,
     prompt,
     workspaceId: workspace.id,
     harness: { harnessId: `${ctx.extensionId}.harness.${remoteHarness.id}` },
@@ -44,11 +43,7 @@ export const prepareLaunchWorkspace = defineCommand({
   params: workspaceParams,
   async run(ctx, input) {
     const workspace = await prepareWorkspace(ctx, input);
-    return {
-      workspaceId: workspace.id,
-      shorthand: workspace.workspace_shorthand ?? undefined,
-      ready: workspace.provider_state === "ready",
-    };
+    return { workspaceId: workspace.id, shorthand: workspaceShorthand(workspace), ready: isReady(workspace) };
   },
 });
 
@@ -62,11 +57,11 @@ export const startLaunchSession = defineCommand({
   },
   async run(ctx, input) {
     const workspace = await ctx.workspaces.get(input.workspaceId);
-    if (workspace?.provider_id !== providerId(ctx) || workspace.provider_state !== "ready")
+    const owner = workspace?.providerId ?? workspace?.provider_id;
+    if (!workspace || owner !== providerId(ctx) || !isReady(workspace))
       throw new Error("This PocketCoder workspace is not ready.");
     ctx.signal.throwIfAborted();
-    const session = await startSession(ctx, workspace, input.prompt);
-    return { sessionId: session.id };
+    return { sessionId: (await startSession(ctx, workspace, input.prompt)).id };
   },
 });
 
@@ -84,7 +79,7 @@ const launch = defineCommand({
   async run(ctx, input) {
     const { prompt, ...workspaceInput } = input;
     const workspace = await prepareWorkspace(ctx, workspaceInput);
-    if (workspace.provider_state !== "ready")
+    if (!isReady(workspace))
       throw new Error("The PocketCoder workspace did not become ready. Check its workspace status.");
     const session = await startSession(ctx, workspace, prompt);
     return { workspaceId: workspace.id, sessionId: session.id };
