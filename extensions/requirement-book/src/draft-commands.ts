@@ -16,6 +16,14 @@ const draftTitle = l10n("book.draft.save", "Save an authoring draft");
 const draftId = (workspaceId: string, chapter: number) => `${workspaceId}-${chapter}`;
 const draftValues = z.record(z.string(), z.unknown());
 const editScope = { workspaceId: params.text({ required: true }), chapter: params.number({ required: true }) };
+// Command handlers can be reloaded while an earlier invocation is still running.
+const submittingKey = Symbol.for("pstdio.requirement-book.active-draft-submissions");
+const runtime = globalThis as typeof globalThis & { [submittingKey]?: Set<string> };
+runtime[submittingKey] ??= new Set<string>();
+const submitting = runtime[submittingKey];
+const submissionKey = (ctx: ExtensionContextBase, draft: Draft) =>
+  JSON.stringify([ctx.projectId, draft.workspaceId, draft.chapter, draft.submissionId]);
+
 const editingValue = (value: Draft | undefined, revision: string) => ({
   draft: JSON.stringify(value?.values ?? {}),
   revision,
@@ -130,13 +138,19 @@ export const draftCommands = {
       if (!draft || draft.submissionId !== submissionId) return { confirmed: false };
       if (draft.submissionStatus === "confirmed") return { confirmed: true };
       const proof = draft.submissionProof;
-      if (!proof) return { confirmed: false };
-      const saved = await readRecord<{ workspaceId: string }>(ctx.storage, proof.kind, proof.id);
-      const confirmed = saved.value?.workspaceId === workspace.id;
-      if (!confirmed) return { confirmed: false };
-      await saveRecord(ctx.storage, "draft", { ...draft, submissionStatus: "confirmed" }, current.record.revision);
-      await announce(ctx, workspace.id);
-      return { confirmed: true };
+      const saved = proof && (await readRecord<{ workspaceId: string }>(ctx.storage, proof.kind, proof.id));
+      const confirmed = saved?.value?.workspaceId === workspace.id;
+      const interrupted = draft.submissionStatus === "writing" && !submitting.has(submissionKey(ctx, draft));
+      if (confirmed || interrupted) {
+        await saveRecord(
+          ctx.storage,
+          "draft",
+          { ...draft, submissionStatus: confirmed ? "confirmed" : "unconfirmed" },
+          current.record.revision,
+        );
+        await announce(ctx, workspace.id);
+      }
+      return { confirmed };
     },
   }),
   "drafts.discard": defineCommand({
@@ -207,8 +221,6 @@ export const submitDraft = async (
     ...(input.invocationId ? { submissionInvocationId: input.invocationId } : {}),
     ...(input.proof ? { submissionProof: input.proof } : {}),
   };
-  await saveRecord(ctx.storage, "draft", draft, previous.record.revision);
-
   const finish = async (outcome: "confirmed" | "unconfirmed") => {
     const current = await readRecord<Draft>(ctx.storage, "draft", id);
     if (current.value?.submissionId !== submissionId) throw new Error("The submitted draft changed.");
@@ -217,12 +229,19 @@ export const submitDraft = async (
     await announce(ctx, input.workspaceId);
   };
 
+  const owner = submissionKey(ctx, draft);
+  submitting.add(owner);
   try {
-    await write();
-  } catch (error) {
-    await finish("unconfirmed");
-    throw error;
+    await saveRecord(ctx.storage, "draft", draft, previous.record.revision);
+    try {
+      await write();
+    } catch (error) {
+      await finish("unconfirmed");
+      throw error;
+    }
+    await finish("confirmed");
+    return { submissionId };
+  } finally {
+    submitting.delete(owner);
   }
-  await finish("confirmed");
-  return { submissionId };
 };

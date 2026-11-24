@@ -3,7 +3,15 @@ import { z } from "zod";
 import { draftCommands, submitDraft } from "./draft-commands";
 import { acceptanceConditions, draftChapterFor, splitRefs } from "./forms";
 import { bookCommands } from "./import";
-import { chapterSchema, createRuleReference, emptyBook, findRule, ruleSchema } from "./model";
+import {
+  chapterSchema,
+  createRuleReference,
+  emptyBook,
+  findRule,
+  type Operation,
+  operationIssues,
+  ruleSchema,
+} from "./model";
 import { readBook, requireBook } from "./read";
 import { announce } from "./records";
 import { git, readRepository, resolveWorkspace, writeRepository } from "./repository";
@@ -139,6 +147,9 @@ export const commands = {
         governing: [],
       });
       const reason = z.string().trim().min(1).parse(values.reason);
+      const operations: Operation[] = [{ type: "ADD", before: null, after: rule }];
+      const issues = operationIssues(book, operations);
+      if (issues.length) throw new Error(issues.join("\n"));
       const id = ctx.storage.ids.create();
       return submitDraft(ctx, { ...draft, proof: { kind: "suggestion", id } }, async () =>
         saveSuggestion(
@@ -147,7 +158,7 @@ export const commands = {
             workspaceId,
             title: `Add ${rule.title}`,
             reason,
-            operations: [{ type: "ADD", before: null, after: rule }],
+            operations,
           },
           id,
         ),

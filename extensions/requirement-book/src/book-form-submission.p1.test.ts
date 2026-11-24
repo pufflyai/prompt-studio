@@ -76,6 +76,10 @@ test("a lost creation response keeps the submitted draft reserved across reopene
   expect(writing.values).toEqual(values);
   expect(writing.submissionStatus).toBe("writing");
   await expect(
+    draftCommands["drafts.check-submission"].run(args(), { ...scope, submissionId: writing.submissionId! }),
+  ).resolves.toEqual({ confirmed: false });
+  expect((await readRecord<Draft>(storage, "draft", draftId)).value?.submissionStatus).toBe("writing");
+  await expect(
     draftCommands["drafts.discard"].run(args(), { ...scope, submissionId: writing.submissionId }),
   ).rejects.toThrow("still being written");
   const tryAgain = () =>
@@ -186,6 +190,36 @@ test("only the failed invocation can release an interrupted submission for inspe
   });
   await draftCommands["drafts.discard"].run(context, { ...scope, submissionId: pending.submissionId });
   expect((await readRecord<Draft>(storage, "draft", draftId)).value).toBeUndefined();
+});
+
+test("checking a reservation left by a stopped runtime preserves the unknown draft until explicit discard", async () => {
+  const storage = createMemoryStorage();
+  const workspaceId = "stopped-workspace";
+  const chapter = -3;
+  const id = `${workspaceId}-${chapter}`;
+  const scope = { workspaceId, chapter };
+  const ctx = draftContext(storage, workspaceId);
+  const draft: Draft = {
+    id,
+    ...scope,
+    values: { title: "Preserve submitted values" },
+    submissionId: "stopped",
+    submissionStatus: "writing",
+  };
+  await saveRecord(storage, "draft", draft);
+  await expect(draftCommands["drafts.check-submission"].run(ctx, { ...scope, submissionId: "other" })).resolves.toEqual(
+    { confirmed: false },
+  );
+  expect((await readRecord<Draft>(storage, "draft", id)).value).toEqual(draft);
+  await expect(
+    draftCommands["drafts.check-submission"].run(ctx, { ...scope, submissionId: "stopped" }),
+  ).resolves.toEqual({ confirmed: false });
+  expect((await readRecord<Draft>(storage, "draft", id)).value).toEqual({ ...draft, submissionStatus: "unconfirmed" });
+  await expect(draftCommands["drafts.save"].run(ctx, { ...scope, values: {} })).rejects.toThrow(
+    "still needs to be checked",
+  );
+  await draftCommands["drafts.discard"].run(ctx, { ...scope, submissionId: "stopped" });
+  expect((await readRecord<Draft>(storage, "draft", id)).value).toBeUndefined();
 });
 
 test("a peer edit between the final read and submission reservation refuses the older form", async () => {

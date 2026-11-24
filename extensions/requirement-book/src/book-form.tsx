@@ -14,6 +14,7 @@ interface FormProps {
   submissionStatus?: Draft["submissionStatus"];
   draftRevision?: string;
   draftError?: string;
+  onRetryDraft?: () => void;
   canDiscardSubmission: boolean;
   onSubmit: (values: Record<string, unknown>, expectedRevision: string) => Promise<void>;
   onClose: () => void;
@@ -37,6 +38,7 @@ export function BookForm(props: FormProps) {
     canDiscardSubmission,
     draftRevision,
     draftError,
+    onRetryDraft,
     onSubmit,
     onClose,
     onSaveDraft,
@@ -208,6 +210,11 @@ export function BookForm(props: FormProps) {
                       {error || draftError}
                     </Text>
                   )}
+                  {onRetryDraft ? (
+                    <Button variant="outline" onClick={onRetryDraft}>
+                      Retry opening draft
+                    </Button>
+                  ) : null}
                 </Stack>
               </Dialog.Body>
             </ScrollArea>

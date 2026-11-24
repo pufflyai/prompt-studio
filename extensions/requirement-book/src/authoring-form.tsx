@@ -37,12 +37,16 @@ export function AuthoringForm(props: Props) {
   const [restored, setRestored] = useState<Draft>();
   const [revision, setRevision] = useState<string>();
   const [draftError, setDraftError] = useState<string>();
+  const [openingFailed, setOpeningFailed] = useState(false);
+  const [openAttempt, retryOpening] = useState(0);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: an explicit retry opens the same draft again.
   useEffect(() => {
     let active = true;
     let unsubscribe: (() => void) | undefined;
     setRevision(undefined);
     setRestored(undefined);
     setDraftError(undefined);
+    setOpeningFailed(false);
     const opening = openDraftEditing(client, workspaceId, draftChapter);
     editing.current = opening;
     void opening
@@ -68,8 +72,11 @@ export function AuthoringForm(props: Props) {
         unsubscribe = session.subscribe(hydrate);
         hydrate();
       })
-      .catch(() => {
-        if (editing.current === opening) editing.current = undefined;
+      .catch((error: unknown) => {
+        if (!active || editing.current !== opening) return;
+        editing.current = undefined;
+        setDraftError(error instanceof Error ? error.message : String(error));
+        setOpeningFailed(true);
       });
     return () => {
       active = false;
@@ -79,7 +86,7 @@ export function AuthoringForm(props: Props) {
       editing.current = undefined;
       void previous?.then((session) => session.close()).catch(() => {});
     };
-  }, [client, workspaceId, draftChapter]);
+  }, [client, workspaceId, draftChapter, openAttempt]);
   const saveDraft = async (values: Record<string, unknown>, expectedRevision: string) => {
     editing.current ??= openDraftEditing(client, workspaceId, draftChapter);
     const opening = editing.current;
@@ -127,6 +134,7 @@ export function AuthoringForm(props: Props) {
       draft={draft?.submissionId ? draft : (restored ?? draft)}
       submissionStatus={draft?.submissionStatus}
       draftError={draftError}
+      onRetryDraft={openingFailed ? () => retryOpening((attempt) => attempt + 1) : undefined}
       draftRevision={
         revision === undefined ? undefined : ((draft?.submissionId ? draft : (restored ?? draft))?.revision ?? revision)
       }
@@ -142,7 +150,7 @@ export function AuthoringForm(props: Props) {
       }}
       onSaveDraft={saveDraft}
       onCheckSubmission={
-        draft?.submissionId && draft.submissionProof
+        draft?.submissionId
           ? async () => {
               const result = await client.commands["drafts.check-submission"]({
                 workspaceId,
