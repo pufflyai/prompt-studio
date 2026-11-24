@@ -20,14 +20,13 @@ export const PaletteParamsDialog = (props: PaletteParamsDialogProps) => {
   const confirmation = useWorkbenchStore(workbench.commandPalette.store, (state) => state.confirmation);
   const renderers = getWorkbenchRenderers(workbench);
   useWorkbenchStore(renderers.dataStore, (state) => state.renderers);
+  const sourceCommandId = request?.args === undefined ? request?.action?.sourceCommandId : undefined;
+  const commandId = sourceCommandId ?? request?.record.command.id;
   const creation =
-    request &&
+    commandId &&
     renderers
       .listKanbanRenderers()
-      .find(
-        (renderer) =>
-          renderer.createCommandId === request.record.command.id && renderer.createRow && renderer.onCreateRow,
-      );
+      .find((renderer) => renderer.createCommandId === commandId && renderer.createRow && renderer.onCreateRow);
   const resourceParam = singleResourceCommandParam(request);
   const closeParams = () => {
     if (workbench.commandPalette.getParamsRequest() === request) workbench.commandPalette.clearParams();

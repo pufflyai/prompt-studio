@@ -91,10 +91,12 @@ test("a delayed palette creation leaves the page selected after submission open"
   try {
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await page.goto(`/projects/${id}/`);
-    await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
-    await page.keyboard.press("Alt+Shift+Space");
-    await page.keyboard.press("c");
-    await page.keyboard.press("t");
+    const tickets = page.getByRole("option", { name: "Tickets", exact: true });
+    await expect(tickets).toBeVisible();
+    await page.keyboard.press("ControlOrMeta+KeyP");
+    const palette = page.getByRole("dialog", { name: "Command palette" });
+    await palette.getByRole("textbox").fill("> Create ticket");
+    await palette.getByText("Create ticket", { exact: true }).click();
     const form = page.getByRole("dialog", { name: "New ticket", exact: true });
     await form.locator('[contenteditable="true"]').first().fill(title);
     await page.route(createRoute, async (route) => {
@@ -106,7 +108,8 @@ test("a delayed palette creation leaves the page selected after submission open"
     await form.getByRole("button", { name: "Create ticket", exact: true }).click();
     await entered.promise;
     await expect(form).toBeHidden();
-    await page.getByRole("option", { name: "Tickets", exact: true }).click();
+    await tickets.click();
+    await expect(page).toHaveURL(/\/extensions\/pstdio\.planner\/tickets$/);
     const boardUrl = page.url();
     release.resolve();
     expect((await response).ok()).toBe(true);
