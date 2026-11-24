@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 
 // Isolate injection from all other database/filesystem tests in a Bun child.
 const actual = await import("../../db/pglite-home-recovery");
@@ -93,11 +93,11 @@ if (mode === "collection") {
   mock.module("node:fs/promises", () => ({
     ...fs,
     rm: async (path: string, options: Parameters<typeof rm>[1]) => {
-      if (active && path.startsWith(`${leaf}/`)) {
+      if (active && path.startsWith(`${leaf}${sep}`)) {
         failureObserved();
         throw new Error("interrupted document collection");
       }
-      if (active && path.startsWith(`${join(project, "2")}/`)) {
+      if (active && path.startsWith(`${join(project, "2")}${sep}`)) {
         entered();
         await released;
       }

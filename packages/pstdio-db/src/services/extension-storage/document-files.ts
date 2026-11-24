@@ -61,10 +61,13 @@ export const flushDocumentDirectories = async (pending: Set<string>, durable: Se
 const syncParents = async (directory: string, durable?: Set<string>) => {
   const created = await mkdir(directory, { recursive: true, mode: 0o700 });
   const levels = ancestryLevels(directory);
+  // Recursive mkdir may not report the created path on Windows. An untracked
+  // leaf can add an entry to its already-flushed parent in either case.
+  const leafParent = durable?.has(levels[0]!) ? undefined : levels[1];
+  const createdParent = created === undefined ? undefined : dirname(resolve(created));
   // A previous mkdir/rename may have stopped before flushing even existing ancestors.
   for (const level of levels.reverse()) {
-    // Creating a child changes its parent even if that parent was already flushed.
-    if (!durable?.has(level) || (created !== undefined && level === dirname(resolve(created)))) {
+    if (!durable?.has(level) || level === leafParent || level === createdParent) {
       await flushDirectory(level);
       durable?.add(level);
     }
@@ -261,16 +264,18 @@ export const createDocumentFiles = (root?: string) => {
         return;
       }
       const project = join(root, segment(projectId));
-      await retainFolder(join(project, String(id)), retained).catch((error) => {
+      const kept = await retainFolder(join(project, String(id)), retained).catch((error) => {
         if (!missing(error)) throw error;
       });
-      await rmdir(project).catch((error) => {
-        if (
-          !missing(error) &&
-          (error as NodeJS.ErrnoException).code !== "ENOTEMPTY" &&
-          (error as NodeJS.ErrnoException).code !== "EEXIST"
-        )
-          throw error;
+      if (kept) return;
+      await rmdir(project).catch(async (error) => {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (missing(error) || code === "ENOTEMPTY" || code === "EEXIST") return;
+        if (process.platform === "win32" && code === "EPERM") {
+          // Windows can report EPERM for a directory that still has siblings.
+          for await (const _entry of entries(project)) return;
+        }
+        throw error;
       });
     },
     async retain(projectId: string, retained: Map<number, Set<string> | null>) {
