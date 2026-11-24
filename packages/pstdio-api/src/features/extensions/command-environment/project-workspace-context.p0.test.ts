@@ -3,8 +3,8 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defaultLocalWorkspaceCapabilities } from "pstdio-db";
+import { createTestCommandEnvironment } from "../../../test-utils/create-test-command-environment";
 import { makeWorkspace } from "../../workspaces/workspace-provider.test-fixture";
-import { createCommandEnvironment } from "./index";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -32,7 +32,7 @@ const fixture = async () => {
     provider_capabilities_json: { ...defaultLocalWorkspaceCapabilities },
   };
   const workspaces = [home, selected];
-  const env = createCommandEnvironment(
+  const env = createTestCommandEnvironment(
     {
       workspaceService: {
         getDefault: async () => home,

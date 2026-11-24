@@ -6,8 +6,8 @@ import { type WorkspaceCapabilities, workspaceEvents } from "pstdio-api-contract
 import { createProjectsDBService, folderWorkspaceCapabilities } from "pstdio-db";
 import { apiLogger } from "../../../lib/logger";
 import { artifactFilesFixture } from "../../../services/shared-files/artifact-files.fixture";
+import { createTestCommandEnvironment } from "../../../test-utils/create-test-command-environment";
 import { createArtifactMountWriteLedger } from "../artifact-mount-watch/write-ledger";
-import { createCommandEnvironment } from "./index";
 
 let root: string;
 let shared: Awaited<ReturnType<typeof artifactFilesFixture>>;
@@ -50,7 +50,7 @@ afterEach(async () => {
 });
 
 const environment = (eventId?: string, home = () => workspace) =>
-  createCommandEnvironment(
+  createTestCommandEnvironment(
     {
       ...shared.deps,
       artifactMountWrites: createArtifactMountWriteLedger(),

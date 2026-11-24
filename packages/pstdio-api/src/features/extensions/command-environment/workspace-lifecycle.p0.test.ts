@@ -1,6 +1,6 @@
 import { expect, mock, test } from "bun:test";
 import { createWorkspaceMaintenance } from "../../../services/workspace-maintenance";
-import { createCommandEnvironment } from "./index";
+import { createTestCommandEnvironment } from "../../../test-utils/create-test-command-environment";
 
 const makeEnabledSources = () => [
   {
@@ -31,7 +31,7 @@ const makeStorageService = () => ({
 test("deletion archives the workspace's active sessions", async () => {
   const archivedWorkspaces: string[] = [];
   const archivedSessions: string[] = [];
-  const env = createCommandEnvironment(
+  const env = createTestCommandEnvironment(
     {
       extensionStorageService: makeStorageService(),
 
@@ -120,7 +120,7 @@ test("fires worktree.removed after extension-initiated deletion", async () => {
     execution_kind: "local",
     is_default: false,
   };
-  const env = createCommandEnvironment(
+  const env = createTestCommandEnvironment(
     {
       extensionStorageService: makeStorageService(),
       workspaceService: {
@@ -174,7 +174,7 @@ test("removes a worktree without deleting its workspace", async () => {
     execution_kind: "local",
   };
   const clearWorktree = mock(async () => ({ ...workspace, branch: null, root_path: null }));
-  const env = createCommandEnvironment(
+  const env = createTestCommandEnvironment(
     {
       extensionStorageService: makeStorageService(),
       workspaceService: {
@@ -226,7 +226,7 @@ test("does not expose or mutate a workspace owned by another project", async () 
     provider_state: "ready",
     execution_kind: "local",
   };
-  const env = createCommandEnvironment(
+  const env = createTestCommandEnvironment(
     {
       extensionStorageService: makeStorageService(),
       personalHistoryService: { getWorkspace: async () => null },
