@@ -33,7 +33,8 @@ const launcherSource = `
     }
     await new Promise((resolve, reject) => process.send({ pid: child.pid }, (error) => error ? reject(error) : resolve()));
     const exitCode = await child.exited;
-    process.send({ exitCode }, () => process.exit(0));
+    if (!process.connected) process.exit(exitCode);
+    process.send({ exitCode }, () => process.exit(exitCode));
   });
 `;
 
@@ -76,8 +77,8 @@ export const watchJobExit = (job: JobExit, launcherExited: Promise<unknown>, onF
  * Bun cannot attach a job at process creation. Assign a trusted, idle Bun launcher to the job
  * first, then admit the requested program. Windows puts its ordinary descendants in the same job.
  */
-export const startWindowsGrantedProcess = (input: StartInput) => {
-  const job = createWindowsProcessJob();
+export const startWindowsGrantedProcess = (input: StartInput, createJob = createWindowsProcessJob) => {
+  const job = createJob();
   const started = Promise.withResolvers<number>();
   const reportedExit = Promise.withResolvers<number | undefined>();
   started.promise.catch(() => {});
@@ -132,17 +133,10 @@ export const startWindowsGrantedProcess = (input: StartInput) => {
     throw error;
   }
 
-  let terminationRequested = false;
-  // The launcher reports natural status over IPC. Job termination uses launcher code 1, which
-  // a program can also exit with before the remaining members of its job are stopped.
-  const completion = Promise.all([started.promise, child.exited, reportedExit.promise]).then(
-    ([, launcherCode, reportedCode]) => ({
-      code: reportedCode ?? launcherCode,
-      terminated: reportedCode === undefined && terminationRequested && launcherCode === 1,
-    }),
+  // Keep the program's reported exit independent of the retained launcher's own exit.
+  const exited = Promise.all([started.promise, child.exited, reportedExit.promise]).then(
+    ([, launcherCode, reportedCode]) => reportedCode ?? launcherCode,
   );
-  const exited = completion.then(({ code }) => code);
-  const jobTerminated = completion.then(({ terminated }) => terminated, () => false);
   exited.catch(() => {});
   const { treeExited, check } = watchJobExit(job, child.exited, (error) => {
     apiLogger.warn(
@@ -154,13 +148,9 @@ export const startWindowsGrantedProcess = (input: StartInput) => {
     child,
     pid: started.promise,
     exited,
-    jobTerminated,
     treeExited,
     async stop() {
-      if (job.hasProcesses()) {
-        job.terminate();
-        terminationRequested = true;
-      }
+      if (job.hasProcesses()) job.terminate();
       if (!(await exitedWithin(check(), input.stopTimeoutMs)))
         throw new Error("The Windows process job did not exit after it was stopped.");
     },
