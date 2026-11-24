@@ -12,6 +12,7 @@ import { useTimelinePresentation } from "./timeline-presentation";
 import { useCanvasPan } from "./use-canvas-pan";
 import { useCanvasZoom } from "./use-canvas-zoom";
 import { useCardHeights } from "./use-card-heights";
+import { usePlanPaging } from "./use-plan-paging";
 import { useRevealCard } from "./use-reveal-card";
 import { useSize } from "./use-size";
 import { ZoomControls } from "./zoom-controls";
@@ -57,6 +58,7 @@ export function PlanGraph(props: PlanViewProps) {
   const collapsed = new Set(presentation.value.collapsedTracks);
   const toggle = (id: string) => presentation.toggle("collapsedTracks", id);
   const { box, trackAt, rows } = useGraphBox(sections, tracks, collapsed, ref);
+  const paging = usePlanPaging(ref, rows.map(({ id }) => id).join(","), props.paging, box.positions, zoom);
   const sourceTrackId = sections.flatMap(({ section }) => section.rows).find(({ id }) => id === props.dragId)?.trackId;
   const region = dropRegion(
     box,
@@ -87,6 +89,17 @@ export function PlanGraph(props: PlanViewProps) {
         aria-label="Project Timeline canvas"
         tabIndex={0}
         {...handlers}
+        onScroll={paging.capture}
+        onWheel={(event) => {
+          if (event.ctrlKey || event.metaKey || !event.currentTarget.contains(event.target as Node)) return;
+          paging.advance({ x: event.deltaX, y: event.deltaY });
+        }}
+        onPointerMoveCapture={(event) => {
+          paging.advance(handlers.onPointerMoveCapture(event));
+        }}
+        onKeyDown={(event) => {
+          paging.advance(handlers.onKeyDown(event));
+        }}
       >
         <Box style={{ zoom }} w={`${canvasWidth}px`}>
           <TrackHeader

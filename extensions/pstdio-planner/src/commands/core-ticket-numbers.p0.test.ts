@@ -79,7 +79,7 @@ test("read commands show every ticket matched by a shared alias", async () => {
     { id: first.id, shorthand: "T-1", files: [] },
     { id: second.id, shorthand: "T-2", files: [] },
   ]);
-  expect((await listTicketsCommand.run(ctx, { parent: "T-1" })).map(({ title }) => title)).toEqual([
+  expect((await listTicketsCommand.run(ctx, { parent: "T-1" })).tickets.map(({ title }) => title)).toEqual([
     "First child",
     "Second child",
   ]);
@@ -172,6 +172,6 @@ test("a synced ticket whose core number has not arrived yet stays hidden instead
   ctx.resources.identity = (input) => (input.id === waiting.id ? Promise.resolve(null) : identity(input));
   ctx.resources.identityMany = async (input) =>
     (await identityMany(input)).map((entry, index) => (input.ids[index] === waiting.id ? null : entry));
-  expect((await listTicketsCommand.run(ctx, {})).map(({ title }) => title)).toEqual([shown.title]);
+  expect((await listTicketsCommand.run(ctx, {})).tickets.map(({ title }) => title)).toEqual([shown.title]);
   expect(await getTicketCommand.run(ctx, { id: waiting.id })).toBeNull();
 });

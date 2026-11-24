@@ -16,6 +16,7 @@ import { createStreamObservation } from "./changes";
 import { diagnosticChatFrames } from "./chat-stream-diagnostics";
 import { conversationOperations } from "./controls";
 import { conversationState } from "./conversation-state";
+import { recoverSavedDraft } from "./draft-recovery";
 import { recoverNativeInputs } from "./native-recovery";
 import type { readQueue } from "./queue-snapshot";
 import { createRecoveryBackoff } from "./recovery-backoff";
@@ -82,14 +83,35 @@ const writeFrames = async (ctx: CommandContext, id: string, revision: number, ev
   }
 };
 
-export const watchConversation = async (ctx: CommandContext, resource?: ResourceRef) => {
+const recoverProviderDraft = async (ctx: CommandContext, id?: string, draftClientId?: string, draftKey?: string) => {
+  if (!draftClientId || !draftKey) return 0;
+  let recoverDraft: ChatDraft | undefined;
+  try {
+    recoverDraft = await recoverSavedDraft(ctx, draftKey);
+  } catch {
+    await writeFrames(ctx, id ?? draftKey, 0, {
+      snapshot: { notice: "Could not recover the saved draft. The original was kept." },
+    });
+    return 1;
+  }
+  if (!recoverDraft) return 0;
+  await writeFrames(ctx, id ?? draftKey, 0, { recoverDraft });
+  return 1;
+};
+
+export const watchConversation = async (
+  ctx: CommandContext,
+  resource?: ResourceRef,
+  draftClientId?: string,
+  draftKey?: string,
+) => {
   const id = sessionId(resource);
+  let revision = await recoverProviderDraft(ctx, id, draftClientId, draftKey);
   // A visible draft retains its shared watch until disposal, without reconnect churn.
   if (!id) return retainDraftWatch(ctx.signal);
   const hold = await ctx.sessions.retainResources(id);
   const subscriptionController = new AbortController();
   const subscriptionSignal = AbortSignal.any([ctx.signal, subscriptionController.signal]);
-  let revision = 0;
   let messages: SessionMessage[] = [];
   let queued: Awaited<ReturnType<typeof readQueue>> | undefined;
   let approvals: ApprovalRequest[] = [];
@@ -137,6 +159,7 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
   );
   const observation = () =>
     observe(metadata.query.getSnapshot().data?.session, hasTranscript ? messages : undefined, approvals[0]?.id);
+  const restore = (recoverDraft: ChatDraft) => writeEvent({ recoverDraft });
   const write = (snapshot: ChatRendererSnapshot) => {
     if (snapshot.messages) canonicalDisplay = matchesCanonicalMessages(messages, snapshot.messages);
     writeEvent({ snapshot });
@@ -261,8 +284,8 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
       delete snapshot.streamingStartedAt;
     }
     await write(snapshot);
-    if (result.sessionRead || result.marks.some(([field]) => field === "storage"))
-      await recoverNativeInputs(ctx, id, session, (recoverDraft) => writeEvent({ recoverDraft }), emittedRecovery);
+    if (draftClientId && (result.sessionRead || result.marks.some(([field]) => field === "storage")))
+      await recoverNativeInputs(ctx, id, session, restore, emittedRecovery, draftClientId);
   };
   try {
     stopMetadata = metadata.query.subscribe(changed);
@@ -305,6 +328,11 @@ export const watch = defineCommand({
   id: "watch",
   title: "Watch conversation",
   stream: streamOf<ChatRendererStreamEvent & JsonObject>(),
-  params: { renderer: params.json<{ resource?: ResourceRef }>() },
-  run: (ctx, input) => watchConversation(ctx, input.renderer?.resource ?? ctx.resource),
+  params: {
+    renderer: params.json<{ resource?: ResourceRef }>(),
+    draftClientId: params.text(),
+    draftKey: params.text(),
+  },
+  run: (ctx, input) =>
+    watchConversation(ctx, input.renderer?.resource ?? ctx.resource, input.draftClientId, input.draftKey),
 });

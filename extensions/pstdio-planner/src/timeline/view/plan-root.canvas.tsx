@@ -1,71 +1,47 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Button, Flex } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import type { GuestHost } from "@pstdio/sdk/extensions";
-import { buildPlan } from "../model/build-plan";
+import { useState, useSyncExternalStore } from "react";
 import { PlanRoot } from "./plan-root";
+import { createTimelineFixture } from "./plan-root.fixture";
 
-const backgroundFailure = "This workspace has no ready local process target.";
-const actionFailure = "Auto Build could not save its settings.";
-const plan = {
-  ...buildPlan({
-    tickets: [],
-    statuses: [],
-    tags: [],
-    today: "2026-10-15",
-    plan: { deadlines: [], order: [] },
-  }),
-  projectId: "timeline-error-story",
-  ticketRows: [],
-  ticketAttributes: [],
-  savedViews: { views: [], defaultViewId: null },
-};
-function TimelineStory(props: { failConfigure?: boolean; loading?: "tickets" | "preferences" }) {
-  const { failConfigure, loading } = props;
-  const respond = async (
-    method: string,
-    input?: {
-      commandId?: string;
-    },
-  ) => {
-    if (method === "preferences.get" && loading === "preferences") return new Promise(() => {});
-    if (method === "preferences.get") return undefined;
-    if (method === "preferences.set") return;
-    if (method !== "commands.execute") throw new Error(`Unexpected capability: ${method}`);
-    let value: unknown;
-    switch (input?.commandId?.split(".command.")[1]) {
-      case "timeline.plan.read":
-        if (loading === "tickets") return new Promise(() => {});
-        value = plan;
-        break;
-      case "auto-build.read":
-        value = {
-          enabled: false,
-          prompt: "Choose small independent tickets.",
-          eligible: { conjunction: "and", rules: [] },
-          requireMergedDependencies: false,
-          sessions: [],
-          capacity: { running: 0, limit: 2 },
-          error: backgroundFailure,
-        };
-        break;
-      case "auto-build.configure":
-        if (failConfigure) throw new Error(actionFailure);
-        value = {};
-        break;
-      default:
-        throw new Error(`Unexpected command: ${input?.commandId}`);
-    }
-    return { outcome: { ok: true, status: "success", value } };
-  };
-  const host: GuestHost = {
-    extensionId: "pstdio.planner",
-    call: respond as GuestHost["call"],
-    onEvent: () => () => {},
-  };
+function TimelineStory(props: { failConfigure?: boolean; loading?: "tickets" | "preferences"; windowed?: boolean }) {
+  const [fixture, setFixture] = useState(() => createTimelineFixture(props));
+  useSyncExternalStore(fixture.subscribe, fixture.getSnapshot);
   return (
-    <Box h="600px">
-      <PlanRoot host={host} t={(_key, fallback) => fallback ?? _key} />
-    </Box>
+    <Flex h="600px" w="full" minW="0" direction="column">
+      {props.windowed ? (
+        <Flex gap="2" wrap="wrap" p="2">
+          <Button size="xs" onClick={() => fixture.hold()}>
+            Hold next window
+          </Button>
+          <Button size="xs" onClick={() => fixture.release()}>
+            Release window
+          </Button>
+          <Button size="xs" onClick={() => fixture.release(true)}>
+            Fail window
+          </Button>
+          <Button size="xs" onClick={() => fixture.reset("parallel")}>
+            Parallel tickets
+          </Button>
+          <Button size="xs" onClick={() => fixture.reset("chain")}>
+            Dependency chain
+          </Button>
+          <Button size="xs" onClick={() => fixture.reset("layers")}>
+            Dependency layers
+          </Button>
+          <Button size="xs" onClick={() => fixture.reset()}>
+            Switch project
+          </Button>
+          <Button size="xs" onClick={() => setFixture(createTimelineFixture(props))}>
+            Replace host
+          </Button>
+          <output aria-label="Requested windows">{JSON.stringify(fixture.requests)}</output>
+        </Flex>
+      ) : null}
+      <Box flex="1" minH="0" minW="0">
+        <PlanRoot host={fixture.host} t={(_key, fallback) => fallback ?? _key} />
+      </Box>
+    </Flex>
   );
 }
 const meta: CanvasMeta<typeof TimelineStory> = {
@@ -89,4 +65,7 @@ export const SavedAutoBuildFailure: Story = {
 export const ConfigureFailure: Story = {
   id: "extensions-planner-timeline--configure-failure",
   args: { failConfigure: true },
+};
+export const WindowedPlan: Story = {
+  args: { windowed: true },
 };

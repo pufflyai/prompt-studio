@@ -1,4 +1,4 @@
-import { statusesCollection, tagsCollection } from "./collections";
+import { readStatusDefinitions, readTagDefinitions } from "./definition-query";
 import type { TicketContext } from "./ticket-identity";
 import { tagValueIds } from "./ticket-tags";
 import type { StoredTag, StoredTicket } from "./types";
@@ -33,8 +33,8 @@ export const publishTicketChanges = async (
   );
   if (!fields.length) return;
   const [statuses, storedTags] = await Promise.all([
-    statusesCollection(ctx.storage).list(),
-    tagsCollection(ctx.storage).list(),
+    readStatusDefinitions(ctx.storage),
+    readTagDefinitions(ctx.storage),
   ]);
   const tags = [...preservedTags, ...storedTags.filter((tag) => !preservedTags.some((old) => old.id === tag.id))];
   const display = async (field: keyof typeof labels, ticket: StoredTicket) => {

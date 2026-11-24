@@ -1,6 +1,7 @@
 import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
 import { linkedWorkspacePages } from "../data/linked-workspaces";
-import { readSessionHistory } from "../data/session-history";
+import { readSessionHistory } from "../data/session-history.fixture";
+import { plannerOwnerFor } from "../data/ticket-resource-hierarchy";
 import { type makeCommandArgs, makeCommandContext } from "./command-context.fixture";
 import { cleanupTicketWorkspacesCommand } from "./ticket-workspace-cleanup";
 
@@ -43,7 +44,7 @@ export const seedWorkspaceLinks = async (
       { type: "workspace", id: workspace.id, extensionId: "pstdio" },
       (workspace.anchors_json ?? []).map((ref) => ({
         ...ref,
-        extensionId: ref.extensionId ?? "pstdio.planner",
+        extensionId: ref.extensionId ?? plannerOwnerFor(ctx),
       })),
     );
 };

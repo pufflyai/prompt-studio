@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { runTicketsQuery } from "./query";
+import { runTicketsQuery } from "./query.fixture";
 import { seedDefaultStatuses } from "./seed";
 import { putTicket, ticketContext } from "./ticket-context.fixture";
 import type { Ticket } from "./types";

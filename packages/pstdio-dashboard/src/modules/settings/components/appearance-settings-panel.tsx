@@ -5,6 +5,7 @@ import type { WorkbenchCore } from "@pstdio/workbench";
 import { openRelatedResourcesPreference } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { SidePanelBubbleSettings } from "./side-panel-bubble-settings";
 
 // Lists every registered theme, light themes first, like the Change Theme picker.
 export const AppearanceSettingsPanel = (props: { workbench: WorkbenchCore }) => {
@@ -43,6 +44,7 @@ export const AppearanceSettingsPanel = (props: { workbench: WorkbenchCore }) => 
           if (typeof value === "string") setThemePreference(value);
         }}
       />
+      <SidePanelBubbleSettings workbench={workbench} />
       <ParamEditorRow
         fullWidth
         param={{

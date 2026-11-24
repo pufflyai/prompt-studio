@@ -97,10 +97,10 @@ export {
   resolveVisibility,
 } from "@/components/tree-list/tree-list-visibility-filter";
 export { TreeRowTags, type TreeRowTagsProps } from "@/components/tree-list/tree-row-tags";
-
 // Theme + utils.
 export type { MonacoThemeData, VsCodeColorTheme } from "@/theme";
 export { createMonacoThemeFromVsCodeTheme, createThemePreferenceFromVsCodeTheme, psTheme } from "@/theme";
+export { floatingPanelGeometry } from "@/theme/primitives/floating-panel";
 export {
   applyFileIconThemePreference,
   defaultFileIconThemePreferences,

@@ -1,9 +1,22 @@
 import { describe, expect, test } from "bun:test";
+import { projectSlots } from "@pstdio/sdk/extensions";
 import extension from "./extension";
 
 const launch = extension.commands![0]!;
 
 describe("PocketCoder launch", () => {
+  test("exposes launch through the palette and create shortcut with CLI and automation support", () => {
+    expect(launch).toMatchObject({ cli: true, automation: true, palette: [{ group: "PocketCoder" }] });
+    expect(launch.menus?.map(({ slot }) => slot) ?? []).not.toContainEqual(projectSlots.headerOverflow);
+    expect(extension.keybindings).toContainEqual(
+      expect.objectContaining({
+        layer: "create",
+        key: "S",
+        action: { kind: "command", target: { command: launch.ref } },
+      }),
+    );
+  });
+
   test("creates a workspace from a template and starts its remote agent", async () => {
     const workspaces: unknown[] = [];
     const sessions: unknown[] = [];

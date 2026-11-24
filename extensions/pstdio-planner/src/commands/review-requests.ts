@@ -2,9 +2,10 @@
 import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import type { AttemptState } from "../data/attempt-types";
 import { findTicket } from "../data/resolve";
+import { pendingReviewRequest } from "../data/review-query-indexes";
 import { type CreateReviewRequestInput, createReviewRequest } from "../data/review-request-create";
 import { answerReviewRequest, cancelReviewRequest, openReviewRequestSession } from "../data/review-request-service";
-import { listTicketReviewRequests, readReviewRequest } from "../data/review-request-storage";
+import { readReviewRequest, readReviewRequestPage } from "../data/review-request-storage";
 import type { ReviewRequestBody, ReviewRequestReason, ReviewResponse } from "../data/review-request-types";
 
 const reviewRequestReasons: ReviewRequestReason[] = [
@@ -99,12 +100,15 @@ export const listReviewRequestsCommand = defineCommand({
   id: "review-requests.list",
   title: "List review requests",
   cli: { description: "List a ticket's review requests and their history." },
-  params: { ticket: params.text({ required: true }), openOnly: params.boolean() },
-  async run(ctx, { ticket, openOnly }) {
+  params: { ticket: params.text({ required: true }), openOnly: params.boolean(), offset: params.number() },
+  async run(ctx, { ticket, openOnly, offset }) {
     const found = await findTicket(ctx, ticket);
     if (!found) throw new Error(`Unknown ticket "${ticket}"`);
-    const { requests, errors } = await listTicketReviewRequests(ctx.storage, found.id);
-    return { requests: openOnly ? requests.filter((request) => request.state === "open") : requests, errors };
+    return readReviewRequestPage(
+      ctx.storage,
+      { all: [{ field: "ticketId", op: "eq", value: found.id }, ...(openOnly ? [pendingReviewRequest] : [])] },
+      offset,
+    );
   },
 });
 
