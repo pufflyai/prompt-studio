@@ -85,3 +85,39 @@ test.each(
     w.dispose();
   }
 });
+
+test("reconnecting a session list only retires newly archived sessions", () => {
+  const w = createWorkbench();
+  const projectId = "archive-snapshot-project";
+  selectDashboardProject(w, { id: projectId, name: "Archive snapshot" });
+  const writer = getWriter("sessions")!;
+  const first = { id: "old-archive", project_id: projectId, archived: true };
+  const second = { id: "new-archive", project_id: projectId, archived: false };
+  const ref = (id: string) => ({ type: "session", id, projectId, extensionId: "pstdio" });
+  const stop = registerSessionResourceSync(w as WorkbenchModuleContext);
+  try {
+    writer.truncateAndWrite([first, second]);
+    expect(w.resources.wasRemovedSince(ref(first.id), 0)).toBe(true);
+    const version = w.resources.getRemovalVersion();
+    writer.truncateAndWrite([first, { ...second, archived: true }]);
+    expect(w.resources.wasRemovedSince(ref(first.id), version)).toBe(false);
+    expect(w.resources.wasRemovedSince(ref(second.id), version)).toBe(true);
+    writer.upsert({ ...first, archived: false });
+    const restored = w.resources.getRemovalVersion();
+    writer.upsert(first);
+    expect(w.resources.wasRemovedSince(ref(first.id), restored)).toBe(true);
+
+    writer.upsert({ ...first, archived: false });
+    const beforeSwitch = w.resources.getRemovalVersion();
+    selectDashboardProject(w, { id: "different-project", name: "Other" });
+    writer.upsert(first);
+    selectDashboardProject(w, { id: projectId, name: "Archive snapshot" });
+    writer.truncateAndWrite([first]);
+    expect(w.resources.wasRemovedSince(ref(first.id), beforeSwitch)).toBe(true);
+  } finally {
+    stop();
+    writer.remove(first.id);
+    writer.remove(second.id);
+    w.dispose();
+  }
+});

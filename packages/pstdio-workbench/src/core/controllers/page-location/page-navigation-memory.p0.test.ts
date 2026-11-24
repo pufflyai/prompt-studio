@@ -73,3 +73,26 @@ test("deletion removes remembered resource and ancestor references without reser
   memory.load("another-project");
   expect(memory.find(workspace("b"))).toBeUndefined();
 });
+
+test("an archive snapshot resolves saved navigation references once across unrelated removals", () => {
+  let historyReads = 0;
+  const resources = {
+    ...defaultPageResourceCodec,
+    toUri(resource: Parameters<typeof defaultPageResourceCodec.toUri>[0]) {
+      if (resource.type === "record") historyReads++;
+      return defaultPageResourceCodec.toUri(resource);
+    },
+  };
+  const memory = createPageNavigationMemory({ pages: () => pages, resources });
+  const parent = workspace("work");
+  const location = document("remembered", parent);
+  memory.load("project", [{ ...parent, location, modeId: "project" }]);
+  for (let i = 0; i < 50; i++) memory.forgetResource({ type: "session", id: String(i) });
+  expect(historyReads).toBeLessThanOrEqual(1);
+  expect(memory.find(parent)).toBe(location);
+  memory.forgetResource(location.resource!);
+  expect(memory.find(parent)).toBeUndefined();
+  memory.remember(location);
+  memory.forgetResource(parent.resource!);
+  expect(memory.find(parent)).toBeUndefined();
+});

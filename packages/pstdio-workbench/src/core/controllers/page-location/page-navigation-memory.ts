@@ -9,6 +9,29 @@ export const createPageNavigationMemory = (input: {
 }) => {
   let project: string | undefined;
   let entries: readonly RememberedWorkbenchPageLocation[] = [];
+  const key = (resource: ResourceRef) => input.resources.toUri(input.resources.normalize(resource));
+  // The entries array is replaced on navigation and project switches. Build the reverse
+  // lookup only when sync actually removes a resource from this navigation snapshot.
+  const references = new WeakMap<typeof entries, Map<string, Set<RememberedWorkbenchPageLocation>>>();
+  const indexReferences = () => {
+    const index = new Map<string, Set<RememberedWorkbenchPageLocation>>();
+    for (const entry of entries) {
+      for (const start of [entry, entry.location]) {
+        for (let location: PageLocation | undefined = start; location; location = location.parent) {
+          if (!location.resource) continue;
+          const uri = key(location.resource);
+          let matches = index.get(uri);
+          if (!matches) {
+            matches = new Set();
+            index.set(uri, matches);
+          }
+          matches.add(entry);
+        }
+      }
+    }
+    references.set(entries, index);
+    return index;
+  };
   const declaration = (context: Pick<PageLocation, "page">) =>
     input.pages().find((page) => workbenchPageRefKey(page.ref) === workbenchPageRefKey(context.page));
   const contextKey = (context: Pick<PageLocation, "page" | "parent" | "resource">) =>
@@ -57,13 +80,11 @@ export const createPageNavigationMemory = (input: {
       entries = entries.filter((entry) => locationKey(entry.location) !== key);
     },
     forgetResource(resource: ResourceRef) {
-      const removed = input.resources.toUri(input.resources.normalize(resource));
-      const references = (location: PageLocation): boolean =>
-        Boolean(
-          (location.resource && input.resources.toUri(input.resources.normalize(location.resource)) === removed) ||
-            (location.parent && references(location.parent)),
-        );
-      entries = entries.filter((entry) => !references(entry.location) && !references(entry));
+      const index = references.get(entries) ?? indexReferences();
+      const matches = index.get(key(resource));
+      if (!matches) return false;
+      entries = entries.filter((entry) => !matches.has(entry));
+      return true;
     },
   };
 };
