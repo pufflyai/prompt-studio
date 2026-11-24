@@ -6,6 +6,7 @@ import { join } from "node:path";
 import type { ProcessEvent, ProcessHandle, ProcessSpawnInput } from "pstdio-api-contracts/extension-kernel";
 import { createInvocationScope, createProcessOwner, processError } from "pstdio-extensions";
 import { createProcessApi } from "./extension-process-api";
+import { createExtensionProcessOwners } from "./extension-process-owners";
 import { createProcessEnvironmentPermissions, type ProcessEnvironmentSource } from "./process-environment/permissions";
 
 const TOKEN = "spawned-agent-credential";
@@ -29,6 +30,12 @@ process.stderr.write("done");`,
     `const grandchild = Bun.spawn([process.execPath, "-e", "setInterval(() => {}, 1000)"], { stdout: "inherit", stderr: "inherit" });
 await Bun.write(process.argv[2], JSON.stringify([process.pid, grandchild.pid]));
 setInterval(() => {}, 1000);`,
+  );
+  await writeFile(
+    join(root, "leader-exits.ts"),
+    `const child = Bun.spawn([process.execPath, "-e", "setInterval(() => {}, 1000)"], { stdout: "inherit", stderr: "inherit" });
+await Bun.write(process.argv[2], JSON.stringify([child.pid]));
+process.exit(0);`,
   );
 });
 
@@ -323,4 +330,56 @@ test("closing an owner does not wait for a target that is still opening, and a l
   await Bun.sleep(100);
   // The run above is the only child that ever started.
   expect(localSpawns).toBe(1);
+});
+
+test.skipIf(process.platform === "win32")(
+  "invocation cleanup stops the process group after its leader exited",
+  async () => {
+    const scope = createInvocationScope({ logger });
+    const marker = join(root, "natural-parent-exit");
+    const handle = createProcessApi({ scope }).spawn({ command: bun("leader-exits.ts", marker) });
+    const [pid] = await treeOf(marker);
+    try {
+      expect(await handle.exited).toEqual({ code: 0, signal: null });
+      expect(alive(pid!)).toBe(true);
+      await scope.close();
+      // The OS can briefly retain the terminated descendant's PID while reaping it.
+      expect(await waitFor(() => !alive(pid!), 1_000)).toBe(true);
+      expect(await collect(handle.events())).toEqual([{ type: "exit", exit: { code: 0, signal: null } }]);
+    } finally {
+      if (pid && alive(pid)) process.kill(pid, "SIGKILL");
+    }
+  },
+);
+
+test("a process from a retired source cannot open its target before eligibility is known", async () => {
+  const enabled = Promise.withResolvers<undefined>();
+  const owners = createExtensionProcessOwners({ findEnabledSource: () => enabled.promise });
+  const scope = createInvocationScope({ logger });
+  const source = { extension_id: "acme.stale", source_path: root, source_hash: "retired", manifest_json: {} };
+  let targetOpened = false;
+  const api = createProcessApi({
+    scope,
+    extensionOwner: () => owners.owner("retired-project", source),
+    resolveTarget: async () => {
+      targetOpened = true;
+      return { kind: "local", root };
+    },
+  });
+  try {
+    const child = api.spawn({ command: bun("echo.ts"), lifetime: "extension" });
+    await Bun.sleep(0);
+    enabled.resolve(undefined);
+    expect(
+      await child.started.then(
+        () => "started",
+        (error) => error.code,
+      ),
+    ).toBe("process_owner_closed");
+    expect(targetOpened).toBe(false);
+  } finally {
+    enabled.resolve(undefined);
+    await owners.dispose();
+    await scope.close();
+  }
 });
