@@ -3,16 +3,18 @@ import { existsSync, readFileSync } from "node:fs";
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join, relative } from "node:path";
-import { EXTENSION_API_VERSION, type ProcessHandle } from "pstdio-api-contracts/extension-kernel";
+import { EXTENSION_API_VERSION, type ProcessExit, type ProcessHandle } from "pstdio-api-contracts/extension-kernel";
+import { createProcessOwner } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { remoteReadOnlyCapabilities } from "../workspaces/workspace-provider-identity";
-import { readTargetText } from "./extension-targets";
+import { createProcessApi } from "./extension-process-api";
+import { readTargetText, resolveProcessTarget } from "./extension-targets";
 
 let root: string;
 let handle: Awaited<ReturnType<typeof createTestApp>>;
 let closed = false;
 const projects = { main: "", other: "" };
-const workspaces = { remote: "", bare: "", slow: "", other: "" };
+const workspaces = { remote: "", bare: "", slow: "", late: "", other: "" };
 let instanceId = "";
 const providerRef = { version: 1, data: { machine: "devbox-7" } };
 const previous = { home: process.env.PSTDIO_HOME, defaults: process.env.PSTDIO_DEFAULT_EXTENSIONS };
@@ -115,6 +117,19 @@ export default {
         return new Promise(() => {});
       },
     },
+    {
+      id: "late",
+      ref: { kind: "workspace-type", id: "late" },
+      label: "Late",
+      create: ready,
+      resolve: ready,
+      spawn() {
+        const fixture = globalThis.__lateProvider;
+        fixture.spawns++;
+        fixture.entered();
+        return fixture.reply;
+      },
+    },
   ],
 };
 `;
@@ -128,7 +143,7 @@ setInterval(() => {}, 1000);`,
   );
 };
 
-const addRemoteWorkspace = async (projectId: string, type: "remote" | "bare" | "slow") => {
+const addRemoteWorkspace = async (projectId: string, type: "remote" | "bare" | "slow" | "late") => {
   const workspace = await handle.deps.workspaceService.createStandalone({
     project_id: projectId,
     provider_id: `example.spawner.workspace-type.${type}`,
@@ -187,6 +202,7 @@ beforeAll(async () => {
   workspaces.remote = await addRemoteWorkspace(projects.main, "remote");
   workspaces.bare = await addRemoteWorkspace(projects.main, "bare");
   workspaces.slow = await addRemoteWorkspace(projects.main, "slow");
+  workspaces.late = await addRemoteWorkspace(projects.main, "late");
 });
 
 afterAll(async () => {
@@ -288,6 +304,74 @@ test("a command that leaves a spawn opening on an unresponsive provider still en
   expect(await Promise.race([helper.exited.then(() => "stopped"), Bun.sleep(3_000).then(() => "running")])).toBe(
     "stopped",
   );
+});
+
+test.each([
+  "handle",
+  "owner",
+] as const)("a late remote child keeps its failing cleanup available to the %s", async (retryThrough) => {
+  const owner = createProcessOwner();
+  const entered = Promise.withResolvers<void>();
+  const reply = Promise.withResolvers<ProcessHandle>();
+  const stopping = Promise.withResolvers<void>();
+  const rejectStop = Promise.withResolvers<void>();
+  const remoteExit = Promise.withResolvers<ProcessExit>();
+  const fixture = { entered: entered.resolve, reply: reply.promise, spawns: 0 };
+  const context = globalThis as typeof globalThis & { __lateProvider?: typeof fixture };
+  context.__lateProvider = fixture;
+  const failure = new Error("The fixture target is temporarily unreachable.");
+  let stops = 0;
+  const remote: ProcessHandle = {
+    id: "remote-fixture",
+    started: Promise.resolve(),
+    exited: remoteExit.promise,
+    write: async () => {},
+    end: async () => {},
+    async kill() {
+      if (++stops === 1) {
+        stopping.resolve();
+        await rejectStop.promise;
+        throw failure;
+      }
+      remoteExit.resolve({ code: null, signal: "SIGKILL" });
+    },
+    events: async function* () {},
+  };
+  const child = createProcessApi({
+    callOwner: owner,
+    resolveTarget: (workspaceId, signal) =>
+      resolveProcessTarget(handle.deps, { projectId: projects.main, workspaceId }, signal),
+  }).spawn({ command: ["agent"], workspaceId: workspaces.late });
+  try {
+    await entered.promise;
+    const firstClose = await Promise.race([owner.close().then(() => "closed"), Bun.sleep(300).then(() => "hung")]);
+    expect(firstClose).toBe("closed");
+    await expect(child.started).rejects.toMatchObject({ code: "process_owner_closed" });
+    expect(await child.exited).toEqual({ code: null, signal: null });
+    expect(stops).toBe(0);
+
+    reply.resolve(remote);
+    await stopping.promise;
+    const stopAgain = retryThrough === "handle" ? child.kill : owner.close;
+    const observed = stopAgain().then(
+      () => "silently closed",
+      (error: unknown) => error,
+    );
+    rejectStop.resolve();
+    expect(await observed).toEqual(
+      retryThrough === "handle" ? failure : expect.objectContaining({ errors: [failure] }),
+    );
+    await stopAgain();
+    await expect(remote.exited).resolves.toEqual({ code: null, signal: "SIGKILL" });
+    expect(fixture.spawns).toBe(1);
+    expect(stops).toBe(2);
+  } finally {
+    reply.resolve(remote);
+    rejectStop.resolve();
+    remoteExit.resolve({ code: null, signal: null });
+    await owner.close().catch(() => {});
+    delete context.__lateProvider;
+  }
 });
 
 test("target files read local paths relative to the workspace or the home, and remote ones through the provider", async () => {
