@@ -105,3 +105,13 @@ test("a capture ends with the invocation that started it", async () => {
   await scope.close();
   await expectRejection(capture).toThrow("The invocation that started the capture ended.");
 });
+
+test("a release registry configured with a trailing slash still trusts its own releases", () => {
+  expect(
+    isFirstPartySource(
+      "pstdio.performance",
+      registrySource(releaseRegistry, "pstdio.performance"),
+      `${releaseRegistry}/`,
+    ),
+  ).toBe(true);
+});
