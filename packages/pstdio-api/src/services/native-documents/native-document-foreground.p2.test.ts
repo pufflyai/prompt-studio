@@ -97,7 +97,9 @@ beforeAll(async () => {
     if (owner.workbenchId === projectId && owner.extensionId === extensionId) audit.getStore()?.push(record.recordId);
     originalRead(owner, record);
   };
-});
+  // Seeding 100,000 records: 10.7 s locally, 27.4 s on a Windows runner, where the whole hook
+  // passed the inherited 30 s. About twice the Windows need; the workload is unchanged.
+}, 60_000);
 
 afterAll(async () => {
   storageObserver.read = originalRead;
