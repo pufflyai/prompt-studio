@@ -298,6 +298,7 @@ const toHandle = (
         // A sign-in is aborted and its call's children stopped at once, but awaited only after
         // every child of the instance is stopped below: it may be waiting on one of them.
         const signingIn = Promise.resolve().then(() => authentication.dispose());
+        void signingIn.catch(() => {});
         const ownership = await Promise.allSettled([Promise.resolve().then(() => commandWatches.dispose())]);
         const admitted = await Promise.allSettled([Promise.resolve().then(() => retained.retire())]);
         const results = await Promise.allSettled(
@@ -309,8 +310,11 @@ const toHandle = (
           ),
         );
         // Extension-lifetime children end with the instance, after the provider's own cleanup.
-        await Promise.all([...owners.values()].map((owner) => owner.close()));
-        ownership.push(...(await Promise.allSettled([signingIn])));
+        const stopped = await Promise.allSettled([...owners.values()].map((owner) => owner.close()));
+        ownership.push(...stopped);
+        // A sign-in may still be waiting for a process whose stop failed.
+        if (stopped.every((result) => result.status === "fulfilled"))
+          ownership.push(...(await Promise.allSettled([signingIn])));
         const errors = [...ownership, ...admitted, ...results].flatMap((result) =>
           result.status === "rejected" ? [result.reason] : [],
         );

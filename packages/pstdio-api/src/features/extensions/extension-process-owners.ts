@@ -15,11 +15,30 @@ export const createExtensionProcessOwners = (input: {
   findEnabledSource: (projectId: string, extensionId: string) => Promise<ProcessEnvironmentSource | undefined>;
 }) => {
   const generations = new Map<string, Generation>();
+  const retiring = new Set<Generation>();
   let disposed = false;
+
+  const stop = async (generation: Generation) => {
+    try {
+      await generation.owner.close();
+      retiring.delete(generation);
+    } catch (error) {
+      apiLogger.warn(
+        {
+          err: error,
+          event: "extension.process_owner.stop_failed",
+          extension_id: generation.extensionId,
+          project_id: generation.projectId,
+        },
+        "Could not stop owned extension processes",
+      );
+    }
+  };
 
   const retire = (key: string, generation: Generation) => {
     if (generations.get(key) === generation) generations.delete(key);
-    return generation.owner.close();
+    retiring.add(generation);
+    return stop(generation);
   };
 
   const stillCurrent = async (generation: Generation, firstCheck: boolean) => {
@@ -78,7 +97,8 @@ export const createExtensionProcessOwners = (input: {
 
     async dispose() {
       disposed = true;
-      await Promise.all([...generations].map(([key, generation]) => retire(key, generation)));
+      const pending = [...retiring].map(stop);
+      await Promise.all([...pending, ...[...generations].map(([key, generation]) => retire(key, generation))]);
     },
   };
 };
