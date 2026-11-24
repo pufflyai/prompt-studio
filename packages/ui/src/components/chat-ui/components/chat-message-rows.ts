@@ -22,16 +22,23 @@ export const buildChatMessageRows = (leadingResponses: SessionMessage[], groups:
 
   const appendResponses = (responses: SessionMessage[], userIndex: number | null, isActiveTurn: boolean) => {
     const actionId = getAssistantMessageActionTargetId(responses, streaming && isActiveTurn);
-    const errors = new Map<string, ChatMessageRow>();
     for (const message of responses) {
       const part = singlePart(message);
-      const key = part?.type === "error" ? JSON.stringify([message.role, part.errorType, part.message]) : undefined;
-      const original = key && errors.get(key);
-      if (original) {
-        original.messageIds.push(message.id);
+      const previous = rows.at(-1);
+      const previousPart = previous && singlePart(previous.message);
+      if (
+        part?.type === "error" &&
+        previous?.type === "response" &&
+        previous.userIndex === userIndex &&
+        previous.message.role === message.role &&
+        previousPart?.type === "error" &&
+        previousPart.errorType === part.errorType &&
+        previousPart.message === part.message
+      ) {
+        previous.messageIds.push(message.id);
         continue;
       }
-      const row: ChatMessageRow = {
+      rows.push({
         type: "response",
         key: message.id,
         message,
@@ -39,10 +46,7 @@ export const buildChatMessageRows = (leadingResponses: SessionMessage[], groups:
         userIndex,
         showAssistantActions: message.id === actionId,
         isActiveTurn,
-      };
-      rows.push(row);
-      if (key) errors.set(key, row);
-      else errors.clear();
+      });
     }
   };
 
