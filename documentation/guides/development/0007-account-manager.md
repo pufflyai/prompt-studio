@@ -150,3 +150,5 @@ Snapshots keep team ownership, project grants and key history. Restoring an exis
 Invitations are bound to a verified Google email. The manager stores a digest and resolves the accepting person through their existing Google subject. The link carries the secret in the URL fragment. The landing page exchanges it in same-origin POST bodies after sign-in. Team membership operations take the team account lock, the same lock used before issuing scoped renewal and keys.
 
 Snapshots capture the current team members. Invitation links are excluded from backups, and a restore cancels outstanding invitations on the surviving manager. A historical snapshot leaves the current roster on surviving teams intact.
+
+The manager records the latest verified address from the Google sign-in claim separately from the cached auth profile. Older claims cannot overwrite it. People with older sessions may need to sign in again before accepting an invitation. Removing a member closes earlier invitations for that person, including links issued to a former address.

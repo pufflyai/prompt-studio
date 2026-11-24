@@ -17,19 +17,25 @@ test("invitation failure can be retried and terminal outcomes clear the link", a
   const identity = { textContent: "" };
   const nodes = { button, "#message": message, h1: title, "#identity": identity, "#handoff": { hidden: true } };
   const storage = new Map<string, string>();
+  const location = { pathname: page, hash: `#${secret}` };
+  let hashChanged: (() => Promise<void>) | undefined;
+  let inspection = Response.json({
+    state: "pending",
+    teamName: "Studio Team",
+    signedInEmail: "recipient@example.test",
+  });
+  let status = 503;
   const fetch = async (path: string) => {
     const replies = {
-      "/v1/team-invitation/inspect": () =>
-        Response.json({ state: "pending", teamName: "Studio Team", signedInEmail: "recipient@example.test" }),
-      "/v1/team-invitation/accept": () => new Response(null, { status: status }),
+      "/v1/team-invitation/inspect": () => inspection.clone(),
+      "/v1/team-invitation/accept": () => new Response(null, { status }),
     };
     return replies[path as keyof typeof replies]();
   };
-  let status = 503;
   await runInNewContext(script, {
-    location: { pathname: page, hash: `#${secret}` },
-    history: { replaceState() {} },
-    window: { addEventListener() {} },
+    location,
+    history: { replaceState: () => (location.hash = "") },
+    window: { addEventListener: (_event: string, listener: () => Promise<void>) => (hashChanged = listener) },
     document: { querySelector: (name: keyof typeof nodes) => nodes[name] },
     sessionStorage: {
       getItem: storage.get.bind(storage),
@@ -48,5 +54,20 @@ test("invitation failure can be retried and terminal outcomes clear the link", a
   await button.onclick?.();
   expect(message.textContent).toContain("You have joined the team.");
   expect(button.hidden).toBe(true);
+  expect(storage.has(page)).toBe(false);
+
+  inspection = new Response(null, { status: 401 });
+  location.hash = `#${"b".repeat(43)}`;
+  await hashChanged?.();
+  expect(button.textContent).toBe("Sign in with Google");
+  expect(title.textContent).toBe("Team invitation");
+  expect(identity.textContent).toBe("");
+  expect(location.hash).toBe("");
+
+  inspection = Response.json({ state: "expired" });
+  location.hash = `#${"c".repeat(43)}`;
+  await hashChanged?.();
+  expect(message.textContent).toBe("This invitation expired.");
+  expect(nodes["#handoff"].hidden).toBe(false);
   expect(storage.has(page)).toBe(false);
 });

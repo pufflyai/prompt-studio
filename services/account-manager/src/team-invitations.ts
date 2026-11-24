@@ -25,7 +25,8 @@ export const verifiedGoogleEmail = async (transaction: ManagerTransaction, userI
     .select({ email: googleIdentityClaims.verifiedEmail })
     .from(accounts)
     .innerJoin(googleIdentityClaims, eq(googleIdentityClaims.subject, accounts.ownerSubject))
-    .where(and(eq(accounts.id, userId), eq(accounts.ownerIssuer, google), eq(accounts.state, "active")));
+    .where(and(eq(accounts.id, userId), eq(accounts.ownerIssuer, google), eq(accounts.state, "active")))
+    .for("share", { of: googleIdentityClaims });
   return claim?.email ?? undefined;
 };
 
