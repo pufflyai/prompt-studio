@@ -208,15 +208,31 @@ const remove = defineCommand({
   },
 });
 
+type WriteCommand = {
+  id: string;
+  ref: { kind: "command"; id: string };
+  params?: Record<string, { type: "text" | "json"; required?: boolean }>;
+};
+
+const hasDeclaredFields = (input: unknown, fields: NonNullable<WriteCommand["params"]>) =>
+  typeof input === "object" &&
+  input !== null &&
+  !Array.isArray(input) &&
+  Object.entries(fields).every(([key, field]) => {
+    const value: unknown = Object.hasOwn(input, key) ? Reflect.get(input, key) : undefined;
+    return value === undefined ? !field.required : field.type === "json" || typeof value === "string";
+  });
+
 const validateWrite = <T extends FrameInput>(
-  command: { id: string; ref: { kind: "command"; id: string } },
+  command: WriteCommand,
   prepare: (ctx: CommandContext, input: T) => Promise<unknown>,
 ) =>
   defineMiddleware({
     id: `${command.id}.validate`,
     command: command.ref,
     async run(ctx, input: T) {
-      // Reuse the write's validation and leave its own reads and writes authoritative.
+      // The runtime reports malformed command arguments after middleware has run.
+      if (!command.params || !hasDeclaredFields(input, command.params)) return;
       try {
         await prepare(ctx, input);
       } catch (error) {
