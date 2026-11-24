@@ -32,10 +32,14 @@ export const createHarnessCallOwnership = (context: (options?: HarnessCallOption
   const open = async (options?: HarnessCallOptions, input?: CallInput) => {
     const owner = createProcessOwner();
     let signal: AbortSignal | undefined;
+    let logger: HarnessContext["logger"] | undefined;
     const close = () => {
       signal?.removeEventListener("abort", close);
       signal = undefined;
-      void owner.close();
+      if (owner.closed) return;
+      void owner.close().catch((error: unknown) => {
+        logger?.warn(error instanceof Error ? error.message : String(error));
+      });
     };
     const stopOnAbort = (next?: AbortSignal) => {
       signal?.removeEventListener("abort", close);
@@ -47,6 +51,7 @@ export const createHarnessCallOwnership = (context: (options?: HarnessCallOption
     try {
       input?.signal?.throwIfAborted();
       const instance = await context(options);
+      logger = instance.logger;
       input?.signal?.throwIfAborted();
       return { context: bindCall(instance, owner, input?.workspace?.workspaceId), close, stopOnAbort };
     } catch (error) {
