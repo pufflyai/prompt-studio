@@ -4,20 +4,20 @@ import { betterAuth } from "better-auth/minimal";
 import { bearer } from "better-auth/plugins/bearer";
 import { jwt } from "better-auth/plugins/jwt";
 import { oneTimeToken } from "better-auth/plugins/one-time-token";
-import { and, eq, sql } from "drizzle-orm";
-import { type AccountSignInProvider, identitySchema } from "pstdio-sync-contracts";
+import { and, eq, lte, sql } from "drizzle-orm";
+import { type AccountSignInProvider, identitySchema, teamInviteEmailSchema } from "pstdio-sync-contracts";
 import { type ManagerAuthConfig, parseManagerAuthConfig } from "./auth-config";
 import * as authSchema from "./auth-schema";
 import { digestCredential } from "./credential";
 import { connectManager } from "./database";
-import { createDeviceAccess, createDeviceLogin, createPersonalAccountAccess, createGoogleAccountAccess } from "./device-access";
+import { createDeviceAccess, createDeviceLogin, createPersonalAccountAccess } from "./device-access";
 import { findDeviceAccess } from "./devices";
 import { microsoftSignIn } from "./microsoft-provider";
 import { type NativeLoginAttempt, nativeApprovalId, nativeLoginApproval } from "./native-login-approval";
 import { acknowledgeProjectDeletion, listProjectDeletionJobs } from "./project-deletion";
 import { readProviderIdentity } from "./provider-identity";
 import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
-import { devices } from "./schema";
+import { devices, googleIdentityClaims } from "./schema";
 import { acceptTeamInvitation, inspectTeamInvitation } from "./team-invitations";
 import { canPublishForTeam, prepareTeamPublicationGrant, sameDeviceAccess } from "./team-publication-access";
 import { lockAccount, withAccountTransaction } from "./transactions";
@@ -31,7 +31,35 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
     secret: config.secret,
     database: drizzleAdapter(connection.db, { provider: "pg", schema: authSchema }),
     socialProviders: {
-      google: { clientId: config.googleClientId, clientSecret: config.googleClientSecret },
+      google: {
+        clientId: config.googleClientId,
+        clientSecret: config.googleClientSecret,
+        async mapProfileToUser(profile) {
+          const issuedAt = profile.iat;
+          if (!Number.isInteger(issuedAt) || !profile.sub) return {};
+          const email = teamInviteEmailSchema.safeParse(profile.email);
+          const verifiedEmail = profile.email_verified === true && email.success ? email.data : null;
+          // An older provider token cannot roll back the invitation identity. A conflict at the
+          // same provider timestamp requires fresh sign-in before either address can accept.
+          await connection.db
+            .insert(googleIdentityClaims)
+            .values({ subject: profile.sub, issuedAt, verifiedEmail })
+            .onConflictDoUpdate({
+              target: googleIdentityClaims.subject,
+              set: {
+                issuedAt,
+                verifiedEmail: sql`case
+                  when ${googleIdentityClaims.issuedAt} = ${issuedAt}
+                    and ${googleIdentityClaims.verifiedEmail} is distinct from ${verifiedEmail}
+                  then null
+                  else ${verifiedEmail}
+                end`,
+              },
+              setWhere: lte(googleIdentityClaims.issuedAt, issuedAt),
+            });
+          return {};
+        },
+      },
       microsoft: config.microsoft
         ? {
             ...config.microsoft,
@@ -59,7 +87,6 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
     ],
   });
   const readSession = (headers: Headers) => auth.api.getSession({ headers, query: { disableCookieCache: true } });
-  const withGoogleAccount = createGoogleAccountAccess(connection.db, readSession);
   const deviceLogin = createDeviceLogin(withGoogleAccount);
   const relayDigest = config.projectDeletionRelayToken
     ? Buffer.from(digestCredential(config.projectDeletionRelayToken), "hex")

@@ -18,6 +18,12 @@ export const accounts = pgTable("manager_accounts", {
   ownerSubject: text(),
   state: text({ enum: ["active", "disabled"] }).notNull(),
 });
+// Kept apart from the cached Better Auth user profile. Only verified Google sign-in updates this row.
+export const googleIdentityClaims = pgTable("manager_google_identity_claims", {
+  subject: text().primaryKey(),
+  issuedAt: integer().notNull(),
+  verifiedEmail: text(),
+});
 export const teams = pgTable("manager_teams", {
   accountId: text()
     .primaryKey()
@@ -42,6 +48,20 @@ export const teamMembers = pgTable(
     index("manager_teams_by_user").on(table.userId, table.accountId),
   ],
 );
+// Prevent an older link addressed to a former email from re-admitting a removed stable user.
+export const teamMemberRevocations = pgTable(
+  "manager_team_member_revocations",
+  {
+    accountId: text()
+      .notNull()
+      .references(() => teams.accountId),
+    userId: text()
+      .notNull()
+      .references(() => accounts.id),
+    revokedAt: timestamp({ withTimezone: true }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.accountId, table.userId] })],
+);
 export const teamInvitations = pgTable(
   "manager_team_invitations",
   {
@@ -51,6 +71,7 @@ export const teamInvitations = pgTable(
       .references(() => teams.accountId),
     email: text().notNull(),
     digest: text().notNull().unique(),
+    issuedAt: timestamp({ withTimezone: true }).notNull().default(sql`clock_timestamp()`),
     expiresAt: timestamp({ withTimezone: true }).notNull(),
     state: text({ enum: ["pending", "accepted", "canceled"] }).notNull(),
     acceptedBy: text().references(() => accounts.id),

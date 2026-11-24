@@ -13,13 +13,9 @@ const key = page;
 const button = document.querySelector("button");
 const message = document.querySelector("#message");
 const title = document.querySelector("h1");
-const fragment = location.hash.slice(1);
-if (fragment) {
-  history.replaceState(null, "", page);
-  if (/^[A-Za-z0-9_-]{43}$/.test(fragment)) sessionStorage.setItem(key, fragment);
-  else sessionStorage.removeItem(key);
-}
-const secret = sessionStorage.getItem(key);
+const identity = document.querySelector("#identity");
+const handoff = document.querySelector("#handoff");
+let secret;
 const post = (path, body) => fetch(base + path, {
   method: "POST",
   headers: { "content-type": "application/json" },
@@ -28,17 +24,21 @@ const post = (path, body) => fetch(base + path, {
 
 function action(label, execute) {
   button.hidden = false;
+  button.disabled = false;
   button.textContent = label;
-  button.onclick = async () => {
+  const invoke = async () => {
     button.disabled = true;
     try {
       await execute();
     } catch {
-      message.textContent = "The account service could not finish that action. Try again.";
+      if (button.onclick === invoke) {
+        message.textContent = "The account service could not finish that action. Try again.";
+      }
     } finally {
-      button.disabled = false;
+      if (button.onclick === invoke) button.disabled = false;
     }
   };
+  button.onclick = invoke;
 }
 
 async function signIn(changeAccount) {
@@ -55,24 +55,51 @@ async function signIn(changeAccount) {
 }
 
 const outcomes = {
-  joined: "You have joined the team. Open Cloud settings in Prompt Studio to see it.",
+  joined: "You have joined the team.",
   consumed: "This invitation has already been used.",
   canceled: "This invitation was canceled.",
   expired: "This invitation expired.",
   unknown: "This invitation is unavailable.",
 };
 
-async function readInvitation() {
-  const result = await post("/v1/team-invitation/inspect", { secret });
+function showOutcome(state) {
+  button.hidden = true;
+  button.onclick = null;
+  message.textContent = outcomes[state] ?? outcomes.unknown;
+  handoff.hidden = false;
+  sessionStorage.removeItem(key);
+  secret = null;
+}
+
+async function acceptInvitation() {
+  const invitation = secret;
+  const result = await post("/v1/team-invitation/accept", { secret: invitation }).catch(() => null);
+  if (invitation !== secret) return;
+  if (result?.ok) {
+    showOutcome("joined");
+    return;
+  }
+  // The server may have committed the join before the response was lost.
+  if (await readInvitation(invitation) === "pending") {
+    message.textContent = "The account service could not finish that action. Try again.";
+  }
+}
+
+async function readInvitation(invitation = secret) {
+  const result = await post("/v1/team-invitation/inspect", { secret: invitation });
+  if (invitation !== secret) return;
   if (result.status === 401) {
+    title.textContent = "Team invitation";
+    identity.textContent = "";
     message.textContent = "Sign in with Google to see the invitation.";
     action("Sign in with Google", () => signIn(false));
     return;
   }
   if (!result.ok) throw new Error();
   const view = await result.json();
-  if (view.teamName) title.textContent = "Join " + view.teamName;
-  document.querySelector("#identity").textContent = view.signedInEmail ? "Signed in as " + view.signedInEmail : "";
+  if (invitation !== secret) return;
+  title.textContent = view.teamName ? "Join " + view.teamName : "Team invitation";
+  identity.textContent = view.signedInEmail ? "Signed in as " + view.signedInEmail : "";
   if (view.state === "wrong-identity") {
     message.textContent = "This invitation was sent to a different verified Google account.";
     action("Switch Google account", () => signIn(true));
@@ -80,25 +107,40 @@ async function readInvitation() {
   }
   if (view.state === "pending") {
     message.textContent = "Joining gives you access to the team roster. Projects are shared separately.";
-    action("Join team", async () => {
-      await post("/v1/team-invitation/accept", { secret });
-      await readInvitation();
-    });
-    return;
+    action("Join team", acceptInvitation);
+    return view.state;
   }
-  button.hidden = true;
-  message.textContent = outcomes[view.state] ?? outcomes.unknown;
-  if (view.state === "joined") sessionStorage.removeItem(key);
+  showOutcome(view.state);
 }
 
-if (secret) {
-  readInvitation().catch(() => {
+function loadInvitation() {
+  const fragment = location.hash.slice(1);
+  if (fragment) {
+    history.replaceState(null, "", page);
+    if (/^[A-Za-z0-9_-]{43}$/.test(fragment)) sessionStorage.setItem(key, fragment);
+    else sessionStorage.removeItem(key);
+  }
+  secret = sessionStorage.getItem(key);
+  title.textContent = "Team invitation";
+  identity.textContent = "";
+  button.hidden = true;
+  button.onclick = null;
+  handoff.hidden = true;
+  if (!secret) {
+    message.textContent = "Open the invitation link that the team owner shared with you.";
+    return;
+  }
+  message.textContent = "Checking invitation…";
+  const invitation = secret;
+  return readInvitation(invitation).catch(() => {
+    if (invitation !== secret) return;
     message.textContent = "The invitation could not be loaded. Try again.";
-    action("Try again", readInvitation);
+    action("Try again", () => readInvitation(invitation));
   });
-} else {
-  message.textContent = "Open the invitation link that the team owner shared with you.";
 }
+
+window.addEventListener("hashchange", loadInvitation);
+loadInvitation();
 `;
 
 const scriptHash = new Bun.CryptoHasher("sha256").update(script).digest("base64");
@@ -112,6 +154,7 @@ const html = `<!doctype html>
   <p id="identity"></p>
   <p id="message" role="status">Checking invitation…</p>
   <button hidden type="button"></button>
+  <p id="handoff" hidden>Return to Prompt Studio and open Cloud settings.</p>
 </main>
 <script>${script}</script>
 </html>`;

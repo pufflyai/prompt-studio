@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, or, sql } from "drizzle-orm";
 import {
   type JoinedTeam,
   type TeamInvitationView,
@@ -8,7 +8,7 @@ import {
 import { account, user } from "./auth-schema";
 import { createCredential, digestCredential } from "./credential";
 import type { ManagerTransaction } from "./database";
-import { accounts, teamInvitations, teamMembers, teams } from "./schema";
+import { accounts, googleIdentityClaims, teamInvitations, teamMemberRevocations, teamMembers, teams } from "./schema";
 import { lockAccount } from "./transactions";
 
 const google = "https://accounts.google.com";
@@ -21,14 +21,12 @@ const googleAccount = and(eq(account.providerId, "google"), eq(account.accountId
 const verifiedUser = and(eq(user.id, account.userId), eq(user.emailVerified, true));
 
 export const verifiedGoogleEmail = async (transaction: ManagerTransaction, userId: string) => {
-  const matches = await transaction
-    .selectDistinct({ email: sql<string>`lower(${user.email})` })
+  const [claim] = await transaction
+    .select({ email: googleIdentityClaims.verifiedEmail })
     .from(accounts)
-    .innerJoin(account, googleAccount)
-    .innerJoin(user, verifiedUser)
+    .innerJoin(googleIdentityClaims, eq(googleIdentityClaims.subject, accounts.ownerSubject))
     .where(and(eq(accounts.id, userId), eq(accounts.ownerIssuer, google), eq(accounts.state, "active")));
-  const email = teamInviteEmailSchema.safeParse(matches[0]?.email);
-  return matches.length === 1 && email.success ? email.data : undefined;
+  return claim?.email ?? undefined;
 };
 
 export const listTeamMembers = (transaction: ManagerTransaction, accountId: string) =>
@@ -64,9 +62,14 @@ export const createTeamInvitation = async (transaction: ManagerTransaction, acco
     .select({ userId: teamMembers.userId })
     .from(teamMembers)
     .innerJoin(accounts, eq(accounts.id, teamMembers.userId))
-    .innerJoin(account, googleAccount)
-    .innerJoin(user, verifiedUser)
-    .where(and(eq(teamMembers.accountId, accountId), sql`lower(${user.email}) = ${email}`))
+    .innerJoin(googleIdentityClaims, eq(googleIdentityClaims.subject, accounts.ownerSubject))
+    .where(
+      and(
+        eq(teamMembers.accountId, accountId),
+        eq(accounts.ownerIssuer, google),
+        eq(googleIdentityClaims.verifiedEmail, email),
+      ),
+    )
     .limit(1);
   if (member) throw new TeamMembershipDenied("This person is already a team member");
 
@@ -102,6 +105,14 @@ export const removeTeamMember = async (transaction: ManagerTransaction, accountI
     .returning({ userId: teamMembers.userId });
   if (!removed) return;
 
+  const revokedAt = sql`clock_timestamp()`;
+  await transaction
+    .insert(teamMemberRevocations)
+    .values({ accountId, userId, revokedAt })
+    .onConflictDoUpdate({
+      target: [teamMemberRevocations.accountId, teamMemberRevocations.userId],
+      set: { revokedAt },
+    });
   const email = await verifiedGoogleEmail(transaction, userId);
   await transaction
     .update(teamInvitations)
@@ -143,7 +154,19 @@ const describeInvitation = async (
     return member ? "joined" : "consumed";
   }
   if (invitation.expiresAt.getTime() <= Date.now()) return "expired";
-  return invitation.email === signedInEmail ? "pending" : "wrong-identity";
+  if (invitation.email !== signedInEmail) return "wrong-identity";
+  const [revoked] = await transaction
+    .select({ userId: teamMemberRevocations.userId })
+    .from(teamMemberRevocations)
+    .innerJoin(teamInvitations, eq(teamInvitations.id, invitation.id))
+    .where(
+      and(
+        eq(teamMemberRevocations.accountId, invitation.accountId),
+        eq(teamMemberRevocations.userId, userId),
+        gte(teamMemberRevocations.revokedAt, teamInvitations.issuedAt),
+      ),
+    );
+  return revoked ? "canceled" : "pending";
 };
 
 export const inspectTeamInvitation = async (

@@ -1,5 +1,5 @@
 {
-  "id": "a4f02f20-48e8-4f9c-8db3-dde57b21cded",
+  "id": "0ed1c949-fcfc-44c5-872a-50e231dfc92b",
   "prevId": "e828d6e8-5cd6-4b74-b9eb-9caf1a633f3d",
   "version": "7",
   "dialect": "postgresql",
@@ -197,6 +197,37 @@
           ]
         }
       },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.manager_google_identity_claims": {
+      "name": "manager_google_identity_claims",
+      "schema": "",
+      "columns": {
+        "subject": {
+          "name": "subject",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "issuedAt": {
+          "name": "issuedAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verifiedEmail": {
+          "name": "verifiedEmail",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -640,6 +671,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "issuedAt": {
+          "name": "issuedAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "clock_timestamp()"
+        },
         "expiresAt": {
           "name": "expiresAt",
           "type": "timestamp with time zone",
@@ -720,6 +758,72 @@
           ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.manager_team_member_revocations": {
+      "name": "manager_team_member_revocations",
+      "schema": "",
+      "columns": {
+        "accountId": {
+          "name": "accountId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revokedAt": {
+          "name": "revokedAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "manager_team_member_revocations_accountId_manager_teams_accountId_fk": {
+          "name": "manager_team_member_revocations_accountId_manager_teams_accountId_fk",
+          "tableFrom": "manager_team_member_revocations",
+          "tableTo": "manager_teams",
+          "columnsFrom": [
+            "accountId"
+          ],
+          "columnsTo": [
+            "accountId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "manager_team_member_revocations_userId_manager_accounts_id_fk": {
+          "name": "manager_team_member_revocations_userId_manager_accounts_id_fk",
+          "tableFrom": "manager_team_member_revocations",
+          "tableTo": "manager_accounts",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "manager_team_member_revocations_accountId_userId_pk": {
+          "name": "manager_team_member_revocations_accountId_userId_pk",
+          "columns": [
+            "accountId",
+            "userId"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
