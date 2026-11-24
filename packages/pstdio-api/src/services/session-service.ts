@@ -189,7 +189,11 @@ export const createSessionService = (deps: SessionServiceDeps) => {
 
   const insertEntryForActive = async (input: Parameters<typeof raw.insertEntryForActive>[0]) => {
     const entry = await raw.insertEntryForActive(input);
-    if (entry) await update(input.id, {});
+    if (entry) {
+      await update(input.id, {});
+      // Delivery also takes the scheduling lock held by this insertion.
+      void deps.onIdleTurn?.(input.id);
+    }
     return entry;
   };
 
