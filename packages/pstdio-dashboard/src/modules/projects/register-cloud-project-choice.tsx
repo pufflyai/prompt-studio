@@ -20,15 +20,24 @@ export const registerCloudProjectChoice = (ctx: WorkbenchModuleContext) => {
 
   return async (id: string, cloudCopyChoice?: boolean, name?: string) => {
     if (!cloudCopyChoice && findDashboardProject(id)) return false;
-    const catalog = await getApiClient()
-      .account.projectsCatalog()
+    const client = getApiClient();
+    const status = await client.account.status().catch(() => undefined);
+    const accountId = status?.teamProjectOwners?.[id] ?? status?.teamProjects?.[id];
+    const catalog = await client.account
+      .projectsCatalog({ accountId, expectedDevice: status?.login ?? undefined })
       .catch(() => undefined);
     const choice = mergeCloudProjectCatalog([], catalog).find((project) => project.id === id);
     if (!choice && !cloudCopyChoice) return false;
     const title = choice?.name ?? name ?? "Cloud project";
     const resource =
       choice?.resource ?? createDashboardResource("project", id, title, standardResourceIcons.project, id);
-    ctx.overlays.openOverlay(choiceOverlay, { resource, title });
+    ctx.overlays.openOverlay(choiceOverlay, {
+      resource,
+      title,
+      ...(accountId && {
+        pageContext: { page: { kind: "page", extensionId: "pstdio", id: choiceOverlay }, params: { accountId } },
+      }),
+    });
     return true;
   };
 };

@@ -49,11 +49,18 @@ export const removeProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
     // Every device of the account gets every cloud project, so the next account refresh would bring it back.
     await deps.accountService.refresh();
     const account = await deps.accountService.status();
+    const teamAccountId = account.teamProjectOwners?.[id];
     if ((account.login === null && account.signInRequired) || (account.login && !account.cloudProjectsLoaded))
       return c.json({ error: "Connect to Cloud so this device can check which projects it syncs." }, 409);
-    if (account.cloudProjects.includes(id))
+    if (account.cloudProjects.includes(id) || account.teamProjects?.[id])
       return c.json(
         { error: "This project syncs with your Cloud account. Make it local in Cloud settings before deleting it." },
+        409,
+      );
+
+    if (teamAccountId && !(await deps.accountService.catalogProjects(teamAccountId)).membershipKnown)
+      return c.json(
+        { error: "Connect to the owning Cloud team to check this project's copy before deleting it." },
         409,
       );
 

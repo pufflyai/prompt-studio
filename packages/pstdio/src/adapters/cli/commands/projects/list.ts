@@ -17,7 +17,7 @@ const defaultDeps: Deps = {
 export const command = "list";
 export const describe = "List all projects";
 export const builder = (yargs: Argv) =>
-  yargs.option("cloud", {
+  yargs.option("team", { type: "string", describe: "List projects belonging to a Cloud team ID" }).option("cloud", {
     type: "boolean",
     default: false,
     describe: "Include Cloud projects, device presence, and outstanding Cloud deletions as JSON",
@@ -44,7 +44,11 @@ const formatTable = (projects: Awaited<ReturnType<typeof defaultListProjects>>) 
 
 export const createHandler =
   (deps: Deps = defaultDeps) =>
-  async (argv?: Arguments<{ cloud?: boolean }>) => {
+  async (argv?: Arguments<{ cloud?: boolean; team?: string }>) => {
+    if (argv?.team) {
+      deps.log(JSON.stringify(await (deps.listCloudProjects ?? listCloudProjects)(argv.team)));
+      return;
+    }
     if (argv?.cloud) {
       const [locals, catalog] = await Promise.all([
         deps.listProjects(),

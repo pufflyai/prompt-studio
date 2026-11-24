@@ -33,7 +33,7 @@ Every request sends `pstdio-sync-protocol: 1` and `Authorization: Bearer <access
 different version gets HTTP 426 with `error: "protocol-unsupported"`, the supported versions and
 a message that tells the person to update (R29). The token's workbench must be the project in
 the path. A path for private project data (a `personal` space in the code) must name the
-token's account. Blob ID lists hold at most 100,000 IDs.
+token's user. Previously issued personal-account tokens use the account ID as their private-space owner. Blob ID lists hold at most 100,000 IDs.
 
 | Route under `/sync/projects/~<project>[/spaces/~<owner>]` | Method | Result |
 | --- | --- | --- |
@@ -150,8 +150,7 @@ Over a size limit returns 413, over the quota 507 and over the rate 429.
 
 Project IDs are unique only within one account. The relay keys every project by a hash of the
 token's account and project IDs, so two accounts that use the same project ID never share
-documents, blobs or live traffic. Phase 1 has one user per account, so the owner of private
-project data is an account ID. Team accounts (PS-829) add a user claim to access tokens.
+documents, blobs or live traffic. A team project uses the team account ID for routing. Both HTTP and live requests use the signed user ID for private spaces inside that project.
 
 ## Live traffic
 

@@ -253,6 +253,11 @@ const schemas = {
     z.object({ op: z.literal("login"), managerOrigin: identifier.optional() }),
     z.object({ op: z.literal("cancelLogin"), id: identifier }),
     z.object({ op: z.literal("logout") }),
+    z.object({
+      op: z.literal("createTeam"),
+      name: z.string().trim().min(1).max(100),
+      expected: z.strictObject({ accountId: identifier, managerOrigin: identifier }).optional(),
+    }),
     z.object({ op: z.literal("renameDevice"), id: identifier, name: z.string() }),
     z.object({ op: z.literal("removeDevice"), id: identifier }),
     z.object({ op: z.literal("syncProject"), ...projectId }),

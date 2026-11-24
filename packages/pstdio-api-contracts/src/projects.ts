@@ -1,3 +1,4 @@
+import { identitySchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import { serializableJsonObjectSchema } from "./extensions/common";
 
@@ -30,6 +31,7 @@ export const projectSchema = z.object({
 export const createProjectInputSchema = z.object({
   name: z.string().trim().min(1).optional(),
   initial_workspace: initialWorkspaceSchema,
+  teamAccountId: identitySchema.optional(),
   agents: z.array(z.string().min(1)).min(1).optional(),
 });
 

@@ -9,6 +9,10 @@ const projectCopyAccountSchema = z.strictObject({
 });
 export type ProjectCopyAccount = z.infer<typeof projectCopyAccountSchema>;
 
+const projectCopyDeviceSchema = projectCopyAccountSchema.extend({ deviceId: identitySchema });
+/** An expectation for the signed-in device, independent of the project account. */
+export type ProjectCopyDevice = z.infer<typeof projectCopyDeviceSchema>;
+
 export const localRemovalPreflightSchema = z.strictObject({
   account: projectCopyAccountSchema.optional(),
   projectId: identitySchema,
@@ -30,6 +34,7 @@ export const localRemovalConflictSchema = z.strictObject({
 export const removeLocalProjectInputSchema = z.strictObject({
   discardUnsynced: z.boolean().default(false),
   expectedAccount: projectCopyAccountSchema.optional(),
+  expectedDevice: projectCopyDeviceSchema.optional(),
 });
 export const removeLocalProjectResultSchema = z.strictObject({
   projectId: identitySchema,
@@ -42,6 +47,7 @@ export const downloadCloudProjectResultSchema = z.strictObject({
 
 export const deleteCloudProjectInputSchema = startProjectDeletionSchema.extend({
   expectedAccount: projectCopyAccountSchema.optional(),
+  expectedDevice: projectCopyDeviceSchema.optional(),
 });
 export const cloudProjectDeletionSchema = projectDeletionStatusSchema.omit({ workbenchId: true }).extend({
   projectId: identitySchema,

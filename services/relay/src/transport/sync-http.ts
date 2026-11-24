@@ -88,12 +88,13 @@ export const handleSyncRequest = async (
   if (request.method !== method) return syncFailure(405, "method-not-allowed", { allow: method });
   const identity = await verifyBearer(owners, request, route.projectId);
   if (!identity) return syncFailure(401, "unauthorized", { "www-authenticate": 'Bearer realm="relay"' });
-  // Phase 1 has one user per account. Team accounts (phase 3) add a user claim for personal spaces.
+  // Previously issued personal-account tokens use the account ID as their private-space owner.
+  const userId = identity.userId ?? identity.accountId;
   if (
     route.kind !== "live" &&
     route.kind !== "capabilities" &&
     route.spaceOwner !== null &&
-    route.spaceOwner !== identity.accountId
+    route.spaceOwner !== userId
   )
     return syncFailure(403, "forbidden");
   if (!owners.allow(identity.environmentId)) return syncFailure(429, "rate-limited", { "retry-after": "1" });
@@ -103,7 +104,7 @@ export const handleSyncRequest = async (
     if (route.kind === "live") {
       await owners.sync.projectNotices.ready();
       return await owners.sync.projectAccess.response(key, request.signal, async () =>
-        upgradeLive(owners, upgrade, request, { ...caller, projectKey: key, expiresAt: identity.expiresAt }),
+        upgradeLive(owners, upgrade, request, { ...caller, userId, projectKey: key, expiresAt: identity.expiresAt }),
       );
     }
     const handle = () => handleSyncOperation(owners, route, caller, request);

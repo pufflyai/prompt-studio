@@ -1,14 +1,17 @@
-import type { CloudProjectDeletion, ProjectCopyAccount } from "@pstdio/sdk/client";
+import type { CloudProjectDeletion, ProjectCopyAccount, ProjectCopyDevice } from "@pstdio/sdk/client";
 import { classifyApiWrite, getWorkbenchOperations } from "@pstdio/workbench";
 import { useSyncExternalStore } from "react";
 import { getRuntimeApiClient } from "@/lib/api";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { createRuntimeState } from "@/lib/sync/runtime-state";
-import { dashboardCommandIds } from "@/shared/app/commands";
 
-import { cloudCopyBusy, cloudProjectCopySubject } from "./cloud-copy-download";
 import { cloudProjectDeletionKey } from "./project-catalog";
+import { cloudCopyBusy, cloudCopySourceCommand, cloudProjectCopySubject, requireProjectCopyScope } from "./project-copy-scope";
+
+export { cloudProjectDeletionKey } from "./project-catalog";
+
+const accountChanged = "The active Cloud account changed. Reopen this action to confirm again.";
 
 const confirmedReceipt = (id: string, receipt: CloudProjectDeletion) => {
   if (receipt.projectId !== id) throw new SyntaxError("The project deletion receipt does not match the request.");
@@ -21,10 +24,24 @@ const getCloudProjectDeletions = createRuntimeState((owner) => {
   const client = getDashboardQueryClient(owner);
   const api = getRuntimeApiClient(owner).account;
   const domain = "project.cloud-delete";
-  const read = async (id: string, expected: ProjectCopyAccount | undefined, signal: AbortSignal) =>
-    confirmedReceipt(id, await api.projectDeletionStatus(id, { signal, expected }));
-  const active = (id: string) =>
-    operations.getSnapshot().pending.find((entry) => entry.domain === domain && entry.intent === id);
+  const read = async (
+    id: string,
+    expected: ProjectCopyAccount | undefined,
+    expectedDevice: ProjectCopyDevice | undefined,
+    signal: AbortSignal,
+  ) => {
+    if (!expected) throw new Error(accountChanged);
+    const scope = requireProjectCopyScope(owner, id, expected, expectedDevice, accountChanged);
+    const receipt = await api.projectDeletionStatus(id, { signal, expected, expectedDevice });
+    signal.throwIfAborted();
+    scope.assertCurrent();
+    return confirmedReceipt(id, receipt);
+  };
+  const active = (id: string, account?: ProjectCopyAccount) => {
+    if (!account) return;
+    const subject = cloudProjectCopySubject(id, account);
+    return operations.getSnapshot().pending.find((entry) => entry.domain === domain && entry.subjects.includes(subject));
+  };
   return {
     active,
     snapshot: operations.getSnapshot,
@@ -32,32 +49,41 @@ const getCloudProjectDeletions = createRuntimeState((owner) => {
     discard: operations.discard,
     check: operations.check,
     read,
-    async start(id: string, name: string, expectedAccount: ProjectCopyAccount) {
-      const { accountId, accountOrigin } = queries.getScope();
-      if (accountId !== expectedAccount.accountId || accountOrigin !== expectedAccount.managerOrigin)
-        throw new Error("The active Cloud account changed. Reopen this action to confirm again.");
-      const subject = cloudProjectCopySubject(id);
-      if (cloudCopyBusy(operations, id)) throw new Error("This project already has a pending Cloud change.");
+    async start(id: string, name: string, expectedAccount: ProjectCopyAccount, expectedDevice: ProjectCopyDevice) {
+      const scope = requireProjectCopyScope(owner, id, expectedAccount, expectedDevice, accountChanged);
+      const subject = cloudProjectCopySubject(id, expectedAccount);
+      if (cloudCopyBusy(operations, id, expectedAccount))
+        throw new Error("This project already has a pending Cloud change.");
       return operations.submit({
+        projectId: id,
         domain,
         subjects: [subject],
         title: `Delete cloud project “${name}”`,
-        sourceCommand: { id: dashboardCommandIds.openProjects },
+        sourceCommand: cloudCopySourceCommand(scope.accountId),
         draft: { projectId: id, name },
         intent: id,
         classify: classifyApiWrite,
         releaseOnDiscard: true,
-        write: async (signal) =>
-          confirmedReceipt(id, await api.deleteCloudProject(id, { confirm: true, expectedAccount }, { signal })),
+        async write(signal) {
+          scope.assertCurrent();
+          return confirmedReceipt(
+            id,
+            await api.deleteCloudProject(id, { confirm: true, expectedAccount, expectedDevice }, { signal }),
+          );
+        },
         reconcile(receipt, signal) {
           signal.throwIfAborted();
-          const key = cloudProjectDeletionKey(id, expectedAccount);
+          scope.assertCurrent();
+          const key = cloudProjectDeletionKey(id, expectedAccount, scope.login);
           client.setQueryData(key, (previous: typeof receipt | undefined) =>
             previous?.state === "completed" ? previous : receipt,
           );
         },
         async check(signal) {
-          return { status: "confirmed", result: await read(id, expectedAccount, signal) };
+          scope.assertCurrent();
+          const result = await read(id, expectedAccount, expectedDevice, signal);
+          scope.assertCurrent();
+          return { status: "confirmed", result };
         },
       }).result;
     },

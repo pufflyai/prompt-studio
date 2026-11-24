@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { canonicalJson, identitySchema } from "pstdio-sync-contracts";
 import type { z } from "zod";
 import { setAccountFeatureInTransaction } from "./account-features";
@@ -17,7 +17,7 @@ import {
   type WorkbenchInput,
   workbenchSchema,
 } from "./contracts";
-import { connectManager } from "./database";
+import { connectManager, type ManagerTransaction } from "./database";
 import {
   addWorkbenchInTransaction,
   findDeviceAccess,
@@ -26,12 +26,36 @@ import {
   registerDeviceInTransaction,
   removeDeviceInTransaction,
   removeWorkbenchInTransaction,
+  rotateRemovedDeviceKeys,
 } from "./devices";
 import { captureManager, restoreManager } from "./recovery";
 import { executeRequest } from "./requests";
 import { accounts, devices } from "./schema";
-import { rotateSpaceKeysInTransaction } from "./space-keys";
+import { hasTeamIdentity } from "./teams";
 import { withAccountTransaction } from "./transactions";
+
+const reconcilePersonalAccount = async (
+  transaction: ManagerTransaction,
+  intent: ReconciliationInput,
+  account: typeof accounts.$inferSelect,
+) => {
+  if (!intent.owner) throw new Error("A personal account requires its verified owner");
+  const ownerChanged = account.ownerIssuer !== intent.owner.issuer || account.ownerSubject !== intent.owner.subject;
+  if (ownerChanged && (await hasTeamIdentity(transaction, intent.accountId)))
+    throw new Error("A person with team authority or private team keys must keep their verified Google identity");
+  const removed = await transaction
+    .update(devices)
+    .set({ removedAt: sql`clock_timestamp()` })
+    .where(and(eq(devices.accountId, intent.accountId), isNull(devices.removedAt)))
+    .returning({ id: devices.id });
+  if (removed.length) await rotateRemovedDeviceKeys(transaction, intent.accountId);
+  const rows = await transaction
+    .update(accounts)
+    .set({ ownerIssuer: intent.owner.issuer, ownerSubject: intent.owner.subject, state: intent.state })
+    .where(and(eq(accounts.id, intent.accountId), isNotNull(accounts.ownerIssuer)))
+    .returning({ id: accounts.id });
+  if (!rows.length) throw new Error("Unknown account");
+};
 
 export const createAccountManager = (databaseUrl: string) => {
   const connection = connectManager(databaseUrl);
@@ -100,18 +124,14 @@ export const createAccountManager = (databaseUrl: string) => {
     async reconcile(input: ReconciliationInput) {
       const intent = reconciliationSchema.parse(input);
       await executeRequest(connection.db, intent, "reconcile", intent, async (transaction) => {
-        const removed = await transaction
-          .update(devices)
-          .set({ removedAt: sql`clock_timestamp()` })
-          .where(and(eq(devices.accountId, intent.accountId), isNull(devices.removedAt)))
-          .returning({ id: devices.id });
-        if (removed.length) await rotateSpaceKeysInTransaction(transaction, intent.accountId);
-        const rows = await transaction
-          .update(accounts)
-          .set({ ownerIssuer: intent.owner.issuer, ownerSubject: intent.owner.subject, state: intent.state })
-          .where(eq(accounts.id, intent.accountId))
-          .returning({ id: accounts.id });
-        if (!rows.length) throw new Error("Unknown account");
+        const [account] = await transaction.select().from(accounts).where(eq(accounts.id, intent.accountId));
+        if (!account) throw new Error("Unknown account");
+        if (account.ownerIssuer === null) {
+          if (intent.owner) throw new Error("Team ownership is managed by its members");
+          await transaction.update(accounts).set({ state: intent.state }).where(eq(accounts.id, intent.accountId));
+          return { accountId: intent.accountId };
+        }
+        await reconcilePersonalAccount(transaction, intent, account);
         return { accountId: intent.accountId };
       });
     },
@@ -119,8 +139,12 @@ export const createAccountManager = (databaseUrl: string) => {
     restore: (requestId: string, input: unknown) => restoreManager(connection.db, requestId, input),
     devices: (accountId: string) => listDevices(connection.db, identitySchema.parse(accountId)),
     workbenches: (accountId: string) => listWorkbenches(connection.db, identitySchema.parse(accountId)),
-    authorize: (token: string, workbenchId: string) =>
-      findDeviceAccess(connection.db, token, identitySchema.parse(workbenchId)),
+    async authorize(token: string, workbenchId: string) {
+      const access = await findDeviceAccess(connection.db, token, identitySchema.parse(workbenchId));
+      if (!access) return null;
+      const { userId: _userId, ...personal } = access;
+      return personal;
+    },
     close: connection.close,
   };
 };
