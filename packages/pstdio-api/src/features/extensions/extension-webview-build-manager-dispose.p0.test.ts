@@ -5,8 +5,11 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 
+// Reaching the first build starts a preparation worker and evaluates the extension twice. That took
+// 1.2 s on a loaded Windows runner, so the wait allows 5 s for the build to start.
 const waitFor = async (predicate: () => boolean, message: string) => {
-  for (let attempt = 0; attempt < 200; attempt++) {
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
     if (predicate()) return;
     await Bun.sleep(5);
   }
