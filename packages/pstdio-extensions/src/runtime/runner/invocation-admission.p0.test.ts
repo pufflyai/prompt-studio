@@ -108,3 +108,59 @@ test("a hook needs its own slot to start a command of its extension", async () =
     await Promise.all(running);
   }
 });
+
+test.each(["settles", "is cancelled"])("deferred hook work needs a fresh slot after its command %s", async (end) => {
+  const dispatch = Promise.withResolvers<void>();
+  const finishCommand = Promise.withResolvers<void>();
+  const deferred = Promise.withResolvers<{ work: Promise<unknown> }>();
+  const release = Promise.withResolvers<void>();
+  const controller = new AbortController();
+  const outcomes: unknown[] = [];
+  const runner = makeRunner({
+    commands: [
+      {
+        id: "outer",
+        ref: { kind: "command", id: "outer" },
+        title: "Outer",
+        async run(ctx) {
+          deferred.resolve({ work: dispatch.promise.then(() => ctx.events.emit("workspace.provision", {})) });
+          if (end === "is cancelled") await finishCommand.promise;
+        },
+      },
+      {
+        id: "wait",
+        ref: { kind: "command", id: "wait" },
+        title: "Wait",
+        run: () => release.promise,
+      },
+      { id: "probe", ref: { kind: "command", id: "probe" }, title: "Probe", run: () => "started" },
+    ],
+    hooks: [
+      {
+        id: "on-ping",
+        ref: { kind: "hook", id: "on-ping" },
+        event: workspaceEvents.provision,
+        run: async (ctx) => {
+          outcomes.push(await ctx.commands.execute({ kind: "command", id: "probe" }, { params: {} }));
+        },
+      },
+    ],
+  });
+  const execute = (id: string) =>
+    runner.execute({ commandId: `pstdio.lab.command.${id}`, projectId: "p1", source: "cli" });
+  const outer = runner.execute({ commandId: "pstdio.lab.command.outer", projectId: "p1", signal: controller.signal });
+  const deferredWork = await Promise.race([deferred.promise, outer.then(() => undefined)]);
+  if (end === "is cancelled") controller.abort();
+  else await outer;
+
+  const running = Array.from({ length: MAX_CONCURRENT_INVOCATIONS_PER_EXTENSION }, () => execute("wait"));
+  try {
+    dispatch.resolve();
+    await deferredWork?.work;
+    expect(outcomes).toMatchObject([{ code: "extension_overloaded" }]);
+  } finally {
+    finishCommand.resolve();
+    release.resolve();
+    await Promise.all([outer, ...running]);
+  }
+});
