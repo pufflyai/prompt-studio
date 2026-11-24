@@ -100,13 +100,14 @@ test("an open request blocks the ticket and prerequisites without a stored tag",
   ]);
 });
 
-test("an unreadable outcome keeps a concrete error and pending input", async () => {
+test.each(["implementation", "merge"])("unreadable %s outcomes block implementation", async (affectedAction) => {
   const { storage, ctx, ticket } = await setup();
   const request = await requestReviewCommand.run(ctx, {
     ticket: ticket.id,
     title: "Check the preview",
     instructions: "Confirm the layout.",
     request: { kind: "task" },
+    affectedAction,
   } as never);
   await reviewOutcomesCollection(storage).put(request.id, {
     requestId: request.id,
