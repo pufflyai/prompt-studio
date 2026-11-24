@@ -19,6 +19,7 @@ import {
   ITERATOR_MARKER,
   type IteratorRef,
   isAsyncIterable,
+  isCleanupFunction,
   isPlainObject,
   MARKERS,
   PROMISE_MARKER,
@@ -66,7 +67,7 @@ const closeSafely = (close: () => unknown) => {
 };
 
 export const createFunctionTable = () => {
-  const functions = new Map<string, { fn: RemoteFunction; cleanup: boolean }>();
+  const functions = new Map<string, { fn: RemoteFunction; cleanup: boolean; reserve: boolean }>();
   const pinned = new Set<string>();
   const disposers = new Map<() => unknown, Set<string>>();
   const handles = new WeakMap<object, RemoteFunction>();
@@ -75,7 +76,7 @@ export const createFunctionTable = () => {
 
   const register = (state: ExportState, fn: RemoteFunction, cleanup = false): FunctionRef => {
     const id = `f${next++}`;
-    functions.set(id, { fn, cleanup });
+    functions.set(id, { fn, cleanup, reserve: cleanup || isCleanupFunction(fn) });
     state.refs.add(id);
     return { [FUNCTION_MARKER]: id };
   };
@@ -264,6 +265,8 @@ export const createFunctionTable = () => {
     exportResult,
     exportPinned,
     isPinned: (id: string) => pinned.has(id),
+    // Capacity for cleanups does not change which references a cancelled invocation can use.
+    usesCleanupReserve: (id: string) => functions.get(id)?.reserve === true,
     call,
     dispose,
     release,
