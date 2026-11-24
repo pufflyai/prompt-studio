@@ -3,8 +3,8 @@ import { type CloudProjectDeletion, type ProjectCopyAccount, PstdioApiError } fr
 import { AlertMessage, DeleteConfirmationModal } from "@pstdio/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { cloudProjectDeletionKey, useCloudProjectDeletions } from "../data/cloud-project-deletion-operations";
-import { cloudProjectCatalogKey } from "../data/project-catalog";
+import { useCloudProjectDeletions } from "../data/cloud-project-deletion-operations";
+import { cloudProjectCatalogKey, cloudProjectDeletionKey } from "../data/project-catalog";
 
 interface DeletionProps {
   id: string;

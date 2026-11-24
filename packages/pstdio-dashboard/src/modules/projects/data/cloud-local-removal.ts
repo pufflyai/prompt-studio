@@ -1,16 +1,24 @@
-import type { ProjectCopyAccount, RemoveLocalProjectResult } from "@pstdio/sdk/client";
+import type { CloudProjectCatalog, ProjectCopyAccount, RemoveLocalProjectResult } from "@pstdio/sdk/client";
 import { classifyApiWrite, getWorkbenchOperations } from "@pstdio/workbench";
 import { useSyncExternalStore } from "react";
 import { getRuntimeApiClient } from "@/lib/api";
-import { getDashboardScopedQueries } from "@/lib/scoped-queries";
+import { getDashboardQueryClient } from "@/lib/query-client";
+import { getDashboardAccountStatusQuery, getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { createRuntimeState } from "@/lib/sync/runtime-state";
 import { dashboardCommandIds } from "@/shared/app/commands";
-import { cloudProjectCopySubject } from "./cloud-copy-download";
+import {
+  cloudCopyScopeFor,
+  cloudCopySyncKey,
+  cloudProjectCopySubject,
+  getCloudCopyDownloads,
+} from "./cloud-copy-download";
+import { cloudCatalogKeyFor, cloudCatalogScopeFor } from "./project-catalog";
 
 const getCloudLocalRemoval = createRuntimeState((owner) => {
   const queries = getDashboardScopedQueries(owner);
   const operations = getWorkbenchOperations(queries);
   const api = getRuntimeApiClient(owner).account;
+  const client = getDashboardQueryClient(owner);
   const active = (id: string) =>
     operations.getSnapshot().pending.some((entry) => entry.subjects.includes(cloudProjectCopySubject(id)));
   return {
@@ -23,6 +31,10 @@ const getCloudLocalRemoval = createRuntimeState((owner) => {
       if (accountId !== expectedAccount.accountId || accountOrigin !== expectedAccount.managerOrigin)
         throw new Error("The active Cloud account changed. Reopen this action to confirm again.");
       if (active(id)) throw new Error("This project already has a pending Cloud change.");
+      const login = getDashboardAccountStatusQuery(owner).getSnapshot().data?.login;
+      const scope = cloudCopyScopeFor(id, cloudCatalogScopeFor(String(owner.id), login));
+      const catalogKey = cloudCatalogKeyFor(accountOrigin, accountId, login?.deviceId);
+      const syncKey = cloudCopySyncKey(scope);
       return operations.submit<RemoveLocalProjectResult>({
         domain: "project.remove-device-copy",
         subjects: [cloudProjectCopySubject(id)],
@@ -35,6 +47,35 @@ const getCloudLocalRemoval = createRuntimeState((owner) => {
           if (removed.projectId !== id || removed.presence !== "cloud-only")
             throw new SyntaxError("The local removal did not return a matching receipt.");
           return removed;
+        },
+        async reconcile(receipt, signal) {
+          const downloads = getCloudCopyDownloads(owner);
+          if (!downloads.isCurrent(id, scope)) return;
+          await Promise.all([
+            client.cancelQueries({ queryKey: catalogKey, exact: true }),
+            client.cancelQueries({ queryKey: syncKey, exact: true }),
+          ]);
+          signal.throwIfAborted();
+          if (!downloads.isCurrent(id, scope)) return;
+          // The receipt retires the local copy while the shared project action is still occupied.
+          client.getQueryCache().find({ queryKey: syncKey, exact: true })?.reset();
+          client.setQueryData<CloudProjectCatalog>(
+            catalogKey,
+            (previous) =>
+              previous && {
+                ...previous,
+                projects: previous.projects.map((entry) =>
+                  entry.id === id
+                    ? {
+                        ...entry,
+                        presence: receipt.presence,
+                        downloadError: undefined,
+                        actions: { ...entry.actions, removeLocal: false },
+                      }
+                    : entry,
+                ),
+              },
+          );
         },
         async check(signal) {
           const catalog = await api.projectsCatalog({ signal });
