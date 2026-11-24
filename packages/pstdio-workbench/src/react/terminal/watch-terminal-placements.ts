@@ -29,11 +29,11 @@ export const watchClosedTerminalPlacements = (
       );
   type TerminalPlacement = ReturnType<typeof placements>[number];
   const admissions = new WeakMap<object, Promise<void>>();
+  const captureStop = (id: string) =>
+    callbacks?.captureStop ? callbacks.captureStop() : captureTerminalBindingStop(ctx.terminal, id, ownerId);
   const close = ({ widgetId, resource, title }: TerminalPlacement, capturedProjectId?: string) => {
-    const stop = callbacks?.captureStop
-      ? callbacks.captureStop()
-      : captureTerminalBindingStop(ctx.terminal, widgetId, ownerId);
-    if (!stop) return Promise.resolve();
+    const stop = captureStop(widgetId);
+    if (!stop) return;
     const previous = admissions.get(stop);
     if (previous) return previous;
     const admitted = Promise.withResolvers<void>();
@@ -80,7 +80,12 @@ export const watchClosedTerminalPlacements = (
       if (!placement.placementIdentity || guards.has(placement.widgetId)) continue;
       guards.set(
         placement.widgetId,
-        registerPlacementCloseGuard(ctx, placement.placementIdentity, async () => close(placement, activeProject)),
+        registerPlacementCloseGuard(
+          ctx,
+          placement.placementIdentity,
+          async () => close(placement, activeProject),
+          () => Boolean(captureStop(placement.widgetId)),
+        ),
       );
     }
   };
@@ -119,9 +124,10 @@ export const watchClosedTerminalPlacements = (
       const { widgetId } = placement;
       if (hiddenMain.has(widgetId) || (scopeChanged && !closedPreviews.has(widgetId)) || currentIds.has(widgetId))
         continue;
-      void runUserAction(ctx, "Close terminal", async () => {
-        await close(placement, closedProjectId);
-        callbacks?.closePlacement?.(widgetId);
+      void runUserAction(ctx, "Close terminal", () => {
+        const pending = close(placement, closedProjectId);
+        const dispose = () => callbacks?.closePlacement?.(widgetId);
+        return pending ? pending.then(dispose) : dispose();
       });
     }
   });

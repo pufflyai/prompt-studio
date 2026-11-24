@@ -13,6 +13,7 @@ export const registerPlacementCloseGuard = (
   workbench: Pick<WorkbenchCore, "viewers">,
   identity: PlacementIdentity,
   prepare: () => Promise<void>,
+  hasWork?: () => boolean,
 ) => {
   let placements = owners.get(workbench.viewers);
   if (!placements) {
@@ -26,7 +27,7 @@ export const registerPlacementCloseGuard = (
     placements.set(key, guards);
   }
   const invocation = workbench.viewers.captureContext(identity);
-  const guard = { prepare, current: () => invocation.isViewerCurrent?.() !== false };
+  const guard = { prepare, current: () => invocation.isViewerCurrent?.() !== false && (hasWork?.() ?? true) };
   guards.add(guard);
   return () => {
     guards.delete(guard);
