@@ -248,7 +248,9 @@ The host watches each worker from outside:
   endless loop. Time the host itself was blocked does not count.
 - A worker that uses more than 2 GiB of memory is also stopped.
 
-A worker may have 4,096 calls to the host in flight; further calls fail with `extension_overloaded` until some finish.
+A worker may have 4,096 regular calls to the host in flight. Further regular calls fail with
+`extension_overloaded` until some finish. Cleanup calls such as closing a stream or stopping a process
+have a bounded reserve so they can release work at the limit.
 
 Its running calls fail with `backend_unavailable`. A worker that stops unexpectedly 3 times within a
 minute is not started again for 30 seconds; calls fail with `backend_unavailable` until then. These

@@ -249,6 +249,8 @@ export default {
       id: "flood",
       title: "Flood",
       async run(ctx, count, refusals = 0) {
+        const handle = ctx.open();
+        await handle.started;
         const calls = Array.from({ length: count }, () => ctx.storage.collection("items").get("never"));
         // Release the held calls only once the expected refusals arrived, whatever the runner's speed.
         let refused = 0;
@@ -256,9 +258,11 @@ export default {
           await new Promise((resolve) =>
             calls.forEach((call) => call.catch(() => ++refused === refusals && resolve())),
           );
+        const cleanup = await handle.kill().then(() => "killed", (error) => error.code);
         ctx.release?.();
         const results = await Promise.allSettled(calls);
-        return results.filter((result) => result.status === "rejected").map((result) => result.reason.code);
+        const refusedCodes = results.filter((result) => result.status === "rejected").map((result) => result.reason.code);
+        return { refusedCodes, cleanup };
       },
     },
     { id: "mark", title: "Mark", run: (ctx, path) => Bun.write(path, "ran") },
@@ -1707,31 +1711,53 @@ test("materialized workspace provider handles retain cleanup after the direct ch
   }
 });
 
-test("a worker that floods the host is refused past its in-flight limit and keeps working afterwards", async () => {
+test("the host-call limit refuses more work while letting a process handle close", async () => {
   const worker = await start();
   const previous = HOST_CALL_LIMITS.inFlight;
   HOST_CALL_LIMITS.inFlight = 5;
   try {
     const gate = Promise.withResolvers<void>();
     const context = {
+      open: () => {
+        const child = createProcessHandleProxy(
+          Promise.resolve({
+            id: "fixture-child",
+            started: Promise.resolve(),
+            exited: Promise.resolve({ code: 0, signal: null }),
+            write: async () => {},
+            end: async () => {},
+            kill: async () => {},
+            events: async function* () {},
+          }),
+        );
+        return { started: child.started, kill: child.kill };
+      },
       storage: { collection: () => ({ get: () => gate.promise.then(() => null), put: async () => {} }) },
       release: () => gate.resolve(),
     };
     // A one-way call: it does not count against the limit the held calls fill.
     const flood: BackendSurface = {
       kind: "object",
-      members: { ...(surface as Extract<BackendSurface, { kind: "object" }>).members, release: { kind: "notify" } },
+      members: {
+        ...(surface as Extract<BackendSurface, { kind: "object" }>).members,
+        open: { kind: "handle", members: { started: "promise", kill: "async" } },
+        release: { kind: "notify" },
+      },
     };
-    const refused = (await worker.invoke({
-      handlerId: handlerOf(worker.definition, "flood"),
-      context,
-      surface: flood,
-      args: [8, 3],
-    })) as string[];
-    expect(refused).toEqual(["extension_overloaded", "extension_overloaded", "extension_overloaded"]);
+    expect(
+      await worker.invoke({
+        handlerId: handlerOf(worker.definition, "flood"),
+        context,
+        surface: flood,
+        args: [8, 3],
+      }),
+    ).toEqual({
+      refusedCodes: ["extension_overloaded", "extension_overloaded", "extension_overloaded"],
+      cleanup: "killed",
+    });
     expect(
       await worker.invoke({ handlerId: handlerOf(worker.definition, "flood"), context, surface: flood, args: [3] }),
-    ).toEqual([]);
+    ).toEqual({ refusedCodes: [], cleanup: "killed" });
   } finally {
     HOST_CALL_LIMITS.inFlight = previous;
     await worker.stop();

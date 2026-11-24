@@ -34,7 +34,6 @@ const launchChild = (input: ChildInput) => {
     child,
     pid: Promise.resolve(child.pid),
     exited: child.exited,
-    jobTerminated: undefined,
     treeExited: input.trackTree ? processGroupExited(child) : undefined,
     async stop() {
       await signalProcessTree(child, "SIGKILL");
