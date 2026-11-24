@@ -16,6 +16,7 @@ interface AutoBuildActivityProps
     | "enabled"
     | "paused"
     | "reviewRequests"
+    | "requestPage"
     | "requestErrors"
     | "onPause"
     | "onResume"
@@ -98,6 +99,7 @@ export function AutoBuildActivityContent(props: Omit<AutoBuildActivityProps, "op
     onResume,
     reviewRequests = [],
     requestErrors = [],
+    requestPage,
     onOpenRequests,
     actionError,
     onDismissActionError,
@@ -113,7 +115,9 @@ export function AutoBuildActivityContent(props: Omit<AutoBuildActivityProps, "op
         <ScrollArea flex="1" minH="0" h="0" viewportProps={{ minH: "0", flex: "1" }}>
           <Stack gap="md" p="sm">
             <AutoBuildWarnings {...sessions} enabled={enabled} t={t} />
-            {reviewRequests.some(({ state }) => state === "open") || requestErrors.length ? (
+            {(requestPage?.total ?? 0) > 0 ||
+            reviewRequests.some(({ state }) => state === "open") ||
+            requestErrors.length ? (
               <AutoBuildRequests onOpen={onOpenRequests} t={t} />
             ) : null}
             <Stack gap="2xs">

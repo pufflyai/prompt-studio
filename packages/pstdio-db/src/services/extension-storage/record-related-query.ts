@@ -5,6 +5,7 @@ import { queryExpressionSql } from "./query-expression-sql";
 import { expressionArray, expressionComparable } from "./query-expression-values";
 import { predicateSql, recordEqualitySql, recordFieldSql, recordScopeSql } from "./record-query-sql";
 import { relatedScalarMembershipSql } from "./record-related-membership";
+import { relatedReferenceCandidatesSql } from "./record-related-reference-candidates";
 
 export const loadRelatedQueryIndexes = async (
   where: StoragePredicate | undefined,
@@ -86,9 +87,20 @@ export const relatedRecordPredicateSql = (
         const each = selection.every;
         const itemAlias = sql.identifier(`related_item_${statement}_${depth}`);
         const names = each ? new Map(variables).set(each.as, sql`${itemAlias}.value`) : variables;
+        const parents = [{ index: source, alias }, ...ancestors];
+        const candidates = relatedReferenceCandidatesSql(
+          owner,
+          outer,
+          target,
+          selection,
+          targetAlias,
+          parents,
+          indexFor,
+        );
         const selected = sql`SELECT 1 FROM records AS ${sql.identifier(targetAlias)}
           WHERE ${recordScopeSql(owner, target, targetAlias)} AND ${sql.join(joins, sql` AND `)}
-          AND ${compile(target, selection.where, targetAlias, depth + 1, [{ index: source, alias }, ...ancestors], names)}`;
+          AND ${candidates ?? sql`true`}
+          AND ${compile(target, selection.where, targetAlias, depth + 1, parents, names)}`;
         if (!each) return sql`EXISTS (${selected})`;
         const values = recordFieldSql(outer, each.field, alias, indexFor, owner);
         const matched =

@@ -189,6 +189,29 @@ interface Ticket {
   attachments?: Attachment[];
 }
 
+interface UpgradeTicketPage {
+  tickets: Ticket[];
+  cursor: string | null;
+}
+
+const readUpgradeTickets = async (read: (params?: { cursor: string }) => Promise<Ticket[] | UpgradeTicketPage>) => {
+  const first = await read();
+  if (Array.isArray(first)) return first;
+
+  const rows = [...first.tickets];
+  const seen = new Set<string>();
+  let cursor = first.cursor;
+  while (cursor !== null) {
+    assert(!seen.has(cursor), "Planner returned a repeated upgrade ticket cursor");
+    seen.add(cursor);
+    const page = await read({ cursor });
+    assert(!Array.isArray(page), "Planner changed the upgrade ticket response shape during pagination");
+    rows.push(...page.tickets);
+    cursor = page.cursor;
+  }
+  return rows;
+};
+
 interface Workspace {
   id: string;
   shorthand: string;
@@ -467,7 +490,7 @@ export const readUpgradeProject = async (api: StackApi, seed: Seed) => {
   const projects = await api.get<{ id: string; name: string }[]>("/projects");
   assert.equal(projects.find(({ id }) => id === seed.id)?.name, seed.name, "Original project is missing");
   const commands = await planner(api, seed.id);
-  const rows = await commands.execute<Ticket[]>("read-tickets");
+  const rows = await readUpgradeTickets((params) => commands.execute("read-tickets", params));
   if (seed.archivedId) {
     const archived = await commands.execute<Ticket>("get-ticket", { id: seed.archivedId });
     assert(archived.archived, "Archived ticket must stay archived");

@@ -226,6 +226,10 @@ export const AutoBuildSingleRequest: Story = {
   name: "Single request",
   render: () => <AutoBuildPreview requests={[proposalReview]} />,
 };
+export const AutoBuildEmptyLaterPage: Story = {
+  name: "Earlier request after the later page empties",
+  render: () => <AutoBuildPreview requests={[proposalReview]} initialRequestOffset={25} />,
+};
 export const AutoBuildSaveError: Story = {
   name: "Answer save error",
   render: () => <AutoBuildPreview requests={[proposalReview]} failSave />,

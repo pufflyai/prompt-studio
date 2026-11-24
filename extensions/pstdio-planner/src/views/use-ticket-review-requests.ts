@@ -15,8 +15,9 @@ const events = [plannerTicketsChanged];
 
 export const useTicketRequests = (client: TicketRequestsClient, resource: ResourceRef) => {
   const scope = useWebviewScope(client.queries);
+  const [offset, setOffset] = useState(0);
   const query = client.commands["review-requests.list"].query(
-    { ticket: resource.id },
+    { ticket: resource.id, offset },
     { resource, events, dependency: { resourceId: resource.id } },
   );
   const state = usePlannerQuery(client, query);
@@ -42,5 +43,5 @@ export const useTicketRequests = (client: TicketRequestsClient, resource: Resour
   const answer = (requestId: string, response: Parameters<TicketRequestsClient["commands"]["review"]>[0]["response"]) =>
     run(() => client.commands.review({ requestId, response }));
   const openChat = (requestId: string) => run(() => client.commands["review-requests.open"]({ requestId }));
-  return { ...state, answer, openChat };
+  return { ...state, answer, openChat, offset, setOffset };
 };

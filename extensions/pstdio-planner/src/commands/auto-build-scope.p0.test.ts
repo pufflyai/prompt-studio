@@ -64,3 +64,47 @@ test("a mode change during scope resolution cannot save a scope for the old prom
   await expect(autoBuildScopeCommand.run(ctx, { revision: "test", queries: [{}] })).rejects.toThrow("stopped");
   expect(await readAutoBuildSupervisor(ctx)).toEqual({ sessionId: "fixture-supervisor" });
 });
+
+test("a prerequisite change during evidence readback refreshes the dependency snapshot", async () => {
+  const { ctx, storage, ticket } = await fixture();
+  const parent = await ticket("Selected scope");
+  const prerequisite = await ticket("Outside prerequisite");
+  const child = await ticket("Waiting task", [prerequisite.id]);
+  await putTicket(storage, { ...child, parentId: parent.id });
+  await storage.collection("planner-review-requests").put("pending", {
+    id: "pending",
+    ticketId: prerequisite.id,
+    title: "Choose",
+    instructions: "Choose an implementation",
+    request: { kind: "task" },
+    requestedAt: "2026-01-01",
+    requestedBy: { type: "human", id: "user", displayName: "User" },
+    context: { reason: null, workspaceId: null, attemptRevision: null, sessionId: null, relatedSessionId: null },
+  });
+  await autoBuildScopeCommand.run(ctx, { revision: "test", queries: [{ parent: parent.id }] });
+  const mode = await readAutoBuildMode(ctx);
+  const sessions = ctx.sessions.query;
+  const query = storage.records.query.bind(storage.records);
+  let visiting = false;
+  let changed = false;
+  ctx.sessions.query = async (input) => {
+    if (input?.anchor?.id === child.id) visiting = true;
+    return sessions(input);
+  };
+  storage.records.query = async (input) => {
+    if (visiting && !changed && input.index === "ticket-view" && input.limit === 0 && input.fields?.length === 0) {
+      changed = true;
+      await putTicket(storage, { ...prerequisite, blockedReason: "Changed outside the selected scope" });
+    }
+    return query(input);
+  };
+  try {
+    const during = await readNextTickets(ctx, mode);
+    expect(changed).toBe(true);
+    const after = await readNextTickets(ctx, mode);
+    expect(during.snapshot).toBe(after.snapshot);
+  } finally {
+    storage.records.query = query;
+    ctx.sessions.query = sessions;
+  }
+});

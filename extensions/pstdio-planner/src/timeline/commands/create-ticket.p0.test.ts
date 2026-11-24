@@ -5,7 +5,7 @@ import { createTicketCommand as createPlannerTicket } from "../../commands/creat
 import { createTagOption, createTicketTag } from "../../data/tag-operations";
 import { ticketContext, ticketsCollection } from "../../data/ticket-context.fixture";
 import { createTicketCommand } from "./create-ticket";
-import { loadPlan } from "./plan-store";
+import { planPlacements } from "./placement-store";
 
 test("creates timeline tickets through Planner with body, properties, prerequisites, and milestone", async () => {
   const storage = createMemoryStorage();
@@ -28,9 +28,7 @@ test("creates timeline tickets through Planner with body, properties, prerequisi
   expect(new Set(result.ticket.tagIds)).toEqual(new Set([track.id, "default-priority-high"]));
   expect(result.ticket.dependsOn).toEqual([prerequisite.id]);
   expect(result.placementError).toBeNull();
-  expect((await loadPlan(ctx)).plan.order.find((entry) => entry.ticketId === result.ticket.id)?.deadlineId).toBe(
-    deadline.id,
-  );
+  expect((await planPlacements(storage).get(result.ticket.id))?.deadlineId).toBe(deadline.id);
 });
 
 test("refuses an unknown milestone before creating a ticket", async () => {

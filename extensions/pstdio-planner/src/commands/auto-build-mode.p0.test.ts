@@ -8,7 +8,40 @@ import { fixture } from "./auto-build.fixture";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 import { autoBuildScopeCommand } from "./auto-build-scope";
 import { runAttemptCommand } from "./run-attempt";
+import { sessionQuery } from "./session-query.fixture";
 import { sessionRecord } from "./session-record.fixture";
+
+test.each([
+  "session",
+  "workspace",
+] as const)("Auto Build finds %s-owned input behind 100 unrelated queued sessions", async (owner) => {
+  const { ctx, ticket } = await fixture();
+  const task = await ticket("Waiting for input");
+  const anchor = { type: "ticket", id: task.id };
+  const worker = sessionRecord({
+    id: "worker",
+    title: "Ticket worker",
+    status: "awaiting_input",
+    anchors_json: owner === "session" ? [anchor] : [],
+    workspaceId: owner === "workspace" ? "worker-workspace" : null,
+  });
+  const get = ctx.workspaces.get;
+  ctx.workspaces.get = async (id) => {
+    const workspace = await get(id);
+    return workspace ? { ...workspace, anchors_json: id === "worker-workspace" ? [anchor] : [] } : null;
+  };
+  ctx.sessions.query = sessionQuery(async () => [
+    worker,
+    ...Array.from({ length: 100 }, (_, i) =>
+      sessionRecord({ id: `unrelated-${i}`, title: "Unrelated", status: "queued" }),
+    ),
+  ]);
+
+  const mode = await readAutoBuildCommand.run(ctx, {});
+
+  expect(mode.sessions.map(({ id }) => id)).toEqual([worker.id]);
+  expect(mode.stuck).toBe(true);
+});
 
 const scope = async (ctx: Awaited<ReturnType<typeof fixture>>["ctx"]) => {
   const { revision } = await readAutoBuildCommand.run(ctx, {});

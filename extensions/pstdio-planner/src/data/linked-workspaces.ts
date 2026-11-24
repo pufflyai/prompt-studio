@@ -3,7 +3,7 @@ import { plannerOwnerFor } from "./ticket-resource-hierarchy";
 
 type Context = Pick<ExtensionContextBase, "resources" | "workspaces"> & { extensionId?: string; projectId?: string };
 /** Query the workspace provider so personal remote history remains part of the same bounded page. */
-export const linkedWorkspacePage = async (ctx: Context, tickets: { id: string }[], cursor?: string) => {
+export const linkedWorkspacePage = async (ctx: Context, tickets: { id: string }[], cursor?: string, limit = 100) => {
   const page = await ctx.workspaces.query({
     anchors: tickets.map(({ id }) => ({
       type: "ticket",
@@ -11,7 +11,7 @@ export const linkedWorkspacePage = async (ctx: Context, tickets: { id: string }[
       extensionId: plannerOwnerFor(ctx),
       projectId: ctx.projectId,
     })),
-    limit: 100,
+    limit,
     cursor,
   });
   return { items: page.items, nextCursor: page.nextCursor ?? undefined };

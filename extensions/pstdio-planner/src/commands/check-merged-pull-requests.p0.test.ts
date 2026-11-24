@@ -97,7 +97,7 @@ test("two tickets sharing a PR use one fresh lookup", async () => {
 
 test("submitted workspace branch discovery remains GitHub-owned", async () => {
   const f = await setup();
-  f.ctx.workspaces.list = async () => [{ id: f.variant.workspaceId, branch: "feature/work" }] as never;
+  f.ctx.workspaces.get = async () => ({ id: f.variant.workspaceId, branch: "feature/work" }) as never;
   await checkMergedPullRequestsCommand.run(f.ctx, {});
   expect((await ticketsCollection(f.ctx).get(f.task.id))?.statusId).toBe("done");
   expect(f.reads()).toBe(2);
@@ -106,7 +106,7 @@ test("submitted workspace branch discovery remains GitHub-owned", async () => {
 test("an explicit context PR cannot be reintroduced by workspace discovery", async () => {
   const f = await setup();
   await f.link("context");
-  f.ctx.workspaces.list = async () => [{ id: f.variant.workspaceId, branch: "feature/work" }] as never;
+  f.ctx.workspaces.get = async () => ({ id: f.variant.workspaceId, branch: "feature/work" }) as never;
   await checkMergedPullRequestsCommand.run(f.ctx, {});
   expect((await ticketsCollection(f.ctx).get(f.task.id))?.statusId).toBe(f.task.statusId);
 });
@@ -114,7 +114,7 @@ test("an explicit context PR cannot be reintroduced by workspace discovery", asy
 test("an unrelated context PR does not suppress submitted branch delivery", async () => {
   const f = await setup();
   await f.link("context", "https://github.com/acme/tools/pull/99");
-  f.ctx.workspaces.list = async () => [{ id: f.variant.workspaceId, branch: "feature/work" }] as never;
+  f.ctx.workspaces.get = async () => ({ id: f.variant.workspaceId, branch: "feature/work" }) as never;
   await checkMergedPullRequestsCommand.run(f.ctx, {});
   expect((await ticketsCollection(f.ctx).get(f.task.id))?.statusId).toBe("done");
 });
@@ -140,7 +140,7 @@ test("partial legacy migration cannot fall back to an older merged workspace PR"
       return { ok: false, reason: "unavailable" };
     return execute(ref, input);
   }) as typeof execute;
-  f.ctx.workspaces.list = async () => [{ id: f.variant.workspaceId, branch: "feature/work" }] as never;
+  f.ctx.workspaces.get = async () => ({ id: f.variant.workspaceId, branch: "feature/work" }) as never;
   await checkMergedPullRequestsCommand.run(f.ctx, {});
   expect((await ticketsCollection(f.ctx).get(f.task.id))?.statusId).toBe(f.task.statusId);
 });

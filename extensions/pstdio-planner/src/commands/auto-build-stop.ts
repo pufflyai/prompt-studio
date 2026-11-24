@@ -1,8 +1,9 @@
 import { type CommandContext, defineCommand, l10n } from "@pstdio/sdk/extensions";
-import { attemptEventsCollection, readAttempt } from "../data/attempt-storage";
-import { autoBuildDispatches } from "../data/auto-build-dispatches";
+import { workspaceEventSessionPages } from "../data/attempt-queries";
+import { readAttempt } from "../data/attempt-storage";
+import { autoBuildDispatchPages } from "../data/auto-build-dispatches";
 import { readAutoBuildMode, saveAutoBuildMode } from "../data/auto-build-mode";
-import { linkedAutoBuildRequests } from "../data/auto-build-ownership";
+import { linkedAutoBuildRequestPages } from "../data/auto-build-request-links";
 import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { withReviewRequestSession } from "../data/review-request-session";
 import { reviewRequestsCollection } from "../data/review-request-storage";
@@ -23,41 +24,40 @@ async function stopLinkedSessions(ctx: CommandContext, supervisorId: string | un
     }
   };
   await stop(supervisorId);
-  const dispatches = await autoBuildDispatches(ctx, supervisorId).list();
-  const attemptIds = new Set(dispatches.map(({ attemptId, workspaceId }) => attemptId ?? workspaceId));
-  for (const { attemptId, workspaceId } of dispatches) {
-    const id = attemptId ?? workspaceId;
-    const attempt = await readAttempt(ctx.storage, id);
-    await stop(attempt?.implementationSessionId);
-    // An implementation can have requested a review just before it acknowledged cancellation.
-    await withQueuedWriteGuard(ctx, `attempt:${id}`, async () => {
-      const latest = await readAttempt(ctx.storage, id);
-      const events = await attemptEventsCollection(ctx.storage).list();
-      for (const revision of latest?.revisions ?? []) {
-        for (const review of revision.reviews) await stop(review.sessionId);
-      }
-      for (const event of events.filter((event) => (event.attemptId ?? event.workspaceId) === id))
-        await stop(event.sessionId);
-    });
-  }
+  const attemptIds = new Set<string>();
+  for await (const dispatches of autoBuildDispatchPages(ctx, supervisorId))
+    for (const { attemptId } of dispatches) {
+      attemptIds.add(attemptId);
+      const attempt = await readAttempt(ctx.storage, attemptId);
+      await stop(attempt?.implementationSessionId);
+      // An implementation can have requested a review just before it acknowledged cancellation.
+      await withQueuedWriteGuard(ctx, `attempt:${attemptId}`, async () => {
+        const latest = await readAttempt(ctx.storage, attemptId);
+        for (const revision of latest?.revisions ?? []) {
+          for (const review of revision.reviews) await stop(review.sessionId);
+        }
+        for await (const ids of workspaceEventSessionPages(ctx.storage, [attemptId]))
+          for (const id of ids) await stop(id);
+      });
+    }
   // A supervisor or worker can ask for input before a workspace is attached to the request.
   const visited = new Set<string>();
   let found = true;
   while (found) {
     found = false;
-    const requests = linkedAutoBuildRequests(await reviewRequestsCollection(ctx.storage).list(), {
+    for await (const requests of linkedAutoBuildRequestPages(ctx.storage, {
       attemptIds,
       sessionIds: linked,
-    });
-    for (const request of requests) {
-      if (visited.has(request.id)) continue;
-      visited.add(request.id);
-      found = true;
-      await withReviewRequestSession(ctx, request.id, async () => {
-        const current = await reviewRequestsCollection(ctx.storage).get(request.id);
-        await stop(current?.context.sessionId);
-      });
-    }
+    }))
+      for (const request of requests) {
+        if (visited.has(request.id)) continue;
+        visited.add(request.id);
+        found = true;
+        await withReviewRequestSession(ctx, request.id, async () => {
+          const current = await reviewRequestsCollection(ctx.storage).get(request.id);
+          await stop(current?.context.sessionId);
+        });
+      }
   }
   if (failures.length) throw new Error(failures.map(String).join("\n"));
 }

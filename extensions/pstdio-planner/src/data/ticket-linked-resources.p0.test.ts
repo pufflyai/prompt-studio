@@ -25,6 +25,27 @@ const artifact: ResourceRef = {
   label: "Saved artifact",
 };
 
+test("unlinked ticket pages establish empty badges with bounded batch queries", async () => {
+  const ctx = makeCommandContext({ storage: createMemoryStorage(), params: {} });
+  const queryRelated = ctx.resources.queryRelated.bind(ctx.resources);
+  const reads: { size: number; limit?: number }[] = [];
+  ctx.resources.queryRelated = (query) => {
+    reads.push({ size: query.resources.length, limit: query.limit });
+    return queryRelated(query);
+  };
+  const lookup = await loadTicketLinkedResources(
+    ctx.resources,
+    Array.from({ length: 205 }, (_, index) => ticket(String(index))),
+  );
+  expect(lookup.size).toBe(205);
+  expect([...lookup.values()].every((badges) => badges.length === 0)).toBe(true);
+  expect(reads).toEqual([
+    { size: 100, limit: 1 },
+    { size: 100, limit: 1 },
+    { size: 5, limit: 1 },
+  ]);
+});
+
 test("one resource list deduplicates incoming and outgoing links while keeping owner identities distinct", async () => {
   const ctx = makeCommandContext({
     storage: createMemoryStorage(),
@@ -106,7 +127,7 @@ test("resources without a saved or resolved label are hidden instead of showing 
   expect(lookup.get("one")).toEqual([]);
 });
 
-test("relationships include every page and owner resolution uses bounded batches across cards", async () => {
+test("overview relationships use a bounded preview with a continuation to the ticket", async () => {
   const ctx = makeCommandContext({
     storage: createMemoryStorage(),
     params: {},
@@ -120,8 +141,9 @@ test("relationships include every page and owner resolution uses bounded batches
     return [];
   };
   const lookup = await loadTicketLinkedResources(ctx.resources, [ticket("one")]);
-  expect(lookup.get("one")).toHaveLength(105);
-  expect(sizes).toEqual([100, 5]);
+  expect(lookup.get("one")).toHaveLength(9);
+  expect(lookup.get("one")!.at(-1)?.action).toMatchObject({ kind: "page", resource: ticket("one") });
+  expect(sizes).toEqual([8]);
 });
 
 test("unavailable labeled notes remain visible but disabled in the sidepanel", async () => {

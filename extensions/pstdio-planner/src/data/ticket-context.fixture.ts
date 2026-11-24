@@ -1,7 +1,14 @@
 import type { ExtensionStorageApi, ResourceIdentity } from "@pstdio/sdk/extensions";
-import { createMemoryStorage, type MemoryStorageOptions, makeCommandContext } from "@pstdio/sdk/testing";
+import {
+  connectMemoryQueryResources,
+  createMemoryStorage,
+  type MemoryStorageOptions,
+  makeCommandContext,
+} from "@pstdio/sdk/testing";
 import { ticketsCollection as collection, putTicket as put } from "./collections";
+import { withTicketIdentities } from "./ticket-identity";
 import { TICKET_KEY_PREFIX, TICKETS_COLLECTION } from "./ticket-record-address";
+import { readTicketTags, type StoredTicketRecord } from "./ticket-tag-storage";
 import type { Ticket } from "./types";
 
 const seeded = new WeakMap<ExtensionStorageApi, Map<string, ResourceIdentity>>();
@@ -50,6 +57,7 @@ export const ticketContext = (storage: ExtensionStorageApi) => {
       ...(await core.findByShorthand(input)).filter(({ id }) => !identitiesFor(storage).has(id)),
     ],
   };
+  connectMemoryQueryResources(storage, ctx.resources);
   return { storage, resources: ctx.resources };
 };
 
@@ -62,6 +70,8 @@ export const ticketsCollection = (storage: ExtensionStorageApi) => {
   const records = collection(ctx);
   return {
     ...records,
+    list: async () =>
+      withTicketIdentities(ctx, (await storage.collection<StoredTicketRecord>("tickets").list()).map(readTicketTags)),
     put: async (id: string, ticket: Ticket) => {
       seedTicketIdentity(storage, ticket);
       await records.put(id, ticket);

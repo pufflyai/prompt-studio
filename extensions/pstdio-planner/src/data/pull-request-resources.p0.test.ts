@@ -139,24 +139,3 @@ test("a canonical context choice remains authoritative when legacy data arrives"
   expect(await linkedPullRequests(ctx, task)).toEqual([]);
   expect((await ticketsCollection(ctx).get(task.id))?.reviewLinks).toEqual([]);
 });
-
-test("listing tickets with legacy links checks a missing GitHub provider once and keeps every link", async () => {
-  const { readMigratedTickets } = await import("./read-migrated-tickets");
-  const { ctx, ticket } = await fixture();
-  const tasks = [await ticket("First"), await ticket("Second")];
-  for (const task of tasks) {
-    await ticketsCollection(ctx).update(task.id, {
-      ...task,
-      reviewLinks: [legacy("https://github.com/acme/tools/pull/12", "old")],
-    });
-  }
-  let calls = 0;
-  ctx.commands.execute = async () => {
-    calls++;
-    return { ok: false, status: "error", code: "command_not_found", reason: "not registered" } as never;
-  };
-  const result = await readMigratedTickets(ctx);
-  expect(calls).toBe(1);
-  expect(result.filter(({ reviewLinks }) => reviewLinks?.length)).toHaveLength(2);
-  for (const task of tasks) expect((await ticketsCollection(ctx).get(task.id))?.reviewLinks).toHaveLength(1);
-});
