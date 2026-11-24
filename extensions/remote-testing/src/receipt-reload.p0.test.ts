@@ -131,3 +131,15 @@ test.each([
     download.mockRestore();
   }
 });
+
+test("collecting an unknown run returns its original error before caller cancellation", async () => {
+  const parent = new AbortController();
+  const ctx = makeCommandContext({ storage: createRunStorage(), params: {}, overrides: { signal: parent.signal } });
+  const timer = setTimeout(() => parent.abort(new Error("Missing-run probe reached cancellation")), 150);
+  try {
+    await expect(Promise.resolve(collectRun.run(ctx, { runId: "missing" }))).rejects.toThrow("Unknown run missing");
+    expect(parent.signal.aborted).toBe(false);
+  } finally {
+    clearTimeout(timer);
+  }
+});

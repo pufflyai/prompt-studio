@@ -11,8 +11,16 @@ export async function listRuns(store: ExtensionStorageApi) {
   return runs.sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, 50);
 }
 
+export class UnknownRunError extends Error {
+  override name = "UnknownRunError";
+
+  constructor(runId: string) {
+    super(`Unknown run ${runId}. List runs with: pst pocketcoder.remote-testing runs list`);
+  }
+}
+
 export async function readRun(store: ExtensionStorageApi, runId: string) {
   const record = await store.get<RunRecord>(`run:${runId}`);
-  if (!record) throw new Error(`Unknown run ${runId}. List runs with: pst pocketcoder.remote-testing runs list`);
+  if (!record) throw new UnknownRunError(runId);
   return record;
 }

@@ -1,6 +1,7 @@
 import { waitForControllerPoll } from "./connection";
 import { releaseEnvironment } from "./environments";
 import { notifyRunChange } from "./events";
+import { UnknownRunError } from "./run-store";
 import type { RunCollectionDeps, RunRecord, RunSummary } from "./runs";
 
 type ResultDeps = Pick<RunCollectionDeps, "store" | "changed" | "readSavedLog">;
@@ -12,7 +13,7 @@ export async function prepareResultStorage<T>(operation: () => Promise<T>, signa
       return await operation();
     } catch (error) {
       signal?.throwIfAborted();
-      if (error instanceof TypeError || error instanceof SyntaxError) throw error;
+      if (error instanceof TypeError || error instanceof SyntaxError || error instanceof UnknownRunError) throw error;
       // No marker is durable yet: retain ownership and retry only local storage.
       await waitForControllerPoll(signal);
     }
