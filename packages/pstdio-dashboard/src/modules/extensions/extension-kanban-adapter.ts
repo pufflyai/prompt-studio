@@ -1,14 +1,20 @@
-import type { KanbanRendererResourceRef } from "@pstdio/sdk/extensions";
+import { PstdioApiError, PstdioConnectionError } from "@pstdio/sdk/client";
+import { type KanbanRendererResourceRef, unwrapCommandOutcome } from "@pstdio/sdk/extensions";
+import { UnresolvedSubmissionError } from "@pstdio/ui";
 import type { KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
 import {
+  classifyApiWrite,
+  getWorkbenchOperations,
   type MenuPath,
+  operationSubject,
   type ResourceRef,
   resourceContextMenuPath,
   standardResourceIcons,
   type WorkbenchModuleContext,
 } from "@pstdio/workbench";
 import type { WorkbenchExtensionKanbanRendererAdapter } from "@pstdio/workbench/extensions";
-import { getApiClient } from "@/lib/api";
+import { getRuntimeApiClient } from "@/lib/api";
+import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
@@ -83,16 +89,26 @@ const matchingRowAction = (registrations: MenuRegistration[], record: KanbanReco
       registration.menuItems.some((item) => sameMenuPath(item.menuPath, path)),
   );
 };
+class AttachmentResultUnconfirmed extends Error {}
+
+const classifyAttachmentWrite = (error: unknown) =>
+  error instanceof AttachmentResultUnconfirmed ||
+  error instanceof PstdioConnectionError ||
+  (error instanceof PstdioApiError && (error.status === 408 || error.status >= 500))
+    ? "unknown"
+    : classifyApiWrite(error);
+
 const uploadCreatedFile = async (input: {
   extensionInstanceId: string;
   file: File;
   projectId: string;
   resourceId: string;
   signal?: AbortSignal;
+  api: ReturnType<typeof getRuntimeApiClient>;
 }) => {
   const data = await input.file.arrayBuffer();
   input.signal?.throwIfAborted();
-  return getApiClient().extensions.files.upload(input.projectId, input.extensionInstanceId, {
+  return input.api.extensions.files.upload(input.projectId, input.extensionInstanceId, {
     name: input.file.name,
     data,
     mimeType: input.file.type || undefined,
@@ -107,6 +123,8 @@ const attachCreatedFiles = async (input: {
   record: KanbanRecord;
   extensionInstanceId: string | undefined;
   signal?: AbortSignal;
+  api: ReturnType<typeof getRuntimeApiClient>;
+  saved(file: File): void;
 }) => {
   const attachment = input.record.createRow?.attachments;
   const resourceId = (
@@ -126,9 +144,10 @@ const attachCreatedFiles = async (input: {
       projectId: input.projectId,
       resourceId,
       signal: input.signal,
+      api: input.api,
     });
     input.signal?.throwIfAborted();
-    await input.executeCommand(
+    const attached = await input.executeCommand(
       input.projectId,
       attachment.commandId,
       {
@@ -136,6 +155,10 @@ const attachCreatedFiles = async (input: {
       },
       input.signal,
     );
+    if (!attached.outcome.ok && attached.outcome.status !== "rejected")
+      throw new AttachmentResultUnconfirmed(attached.outcome.reason);
+    unwrapCommandOutcome(attached);
+    input.saved(file);
   }
 };
 export const createDashboardKanbanAdapter = (input: {
@@ -168,22 +191,87 @@ export const createDashboardKanbanAdapter = (input: {
       return ctx.commands.executeCommand(command.command.id, args, context).then(() => undefined);
     },
     onAfterCreate: async ({ record, created, submission, signal }) => {
-      const reportError = ctx.notifications.captureActionError("Attach files");
+      const { files, onAttachmentSaved, onDiscard } = submission;
+      const id = (created as { id?: unknown } | undefined)?.id;
+      if (!files.length || !record.createRow?.attachments || typeof id !== "string") return;
+      signal?.throwIfAborted();
+      const operations = getWorkbenchOperations(getDashboardScopedQueries(owner));
+      const remaining = new Set(files);
+      const details = { resourceId: id, filenames: files.map(({ name }) => name) };
+      const extensionInstanceId = metadata.extensions.find(
+        (extension) => extension.id === record.extensionId,
+      )?.extensionInstanceId;
+      const api = getRuntimeApiClient(owner);
+      // A confirmed create owns a separate attachment recovery. The ticket is never created again.
+      let attempt: { id: symbol; result: Promise<void> } | undefined;
       try {
-        const extensionInstanceId = metadata.extensions.find(
-          (extension) => extension.id === record.extensionId,
-        )?.extensionInstanceId;
-        await attachCreatedFiles({
-          created,
-          executeCommand,
-          files: submission.files,
+        attempt = operations.submit({
+          domain: "resource.attachments",
           projectId,
-          record,
-          extensionInstanceId,
-          signal,
+          subjects: [operationSubject("resource.attachments", projectId, record.extensionId, id)],
+          source: record.resourceKind
+            ? { type: record.resourceKind, id, projectId, extensionId: record.extensionId }
+            : undefined,
+          title: "Attach files to the created item",
+          draft: details,
+          onDiscard,
+          classify: classifyAttachmentWrite,
+          releaseOnDiscard: true,
+          showPending: true,
+          describeRecovery: () => "The item was created. Inspect its attachments before adding any files again.",
+          write: (attachmentSignal) =>
+            attachCreatedFiles({
+              created,
+              executeCommand,
+              files,
+              projectId,
+              record,
+              extensionInstanceId,
+              api,
+              signal: signal ? AbortSignal.any([signal, attachmentSignal]) : attachmentSignal,
+              saved: (file) => {
+                remaining.delete(file);
+                details.filenames = [...remaining].map(({ name }) => name);
+                onAttachmentSaved?.(file);
+              },
+            }),
         });
+        await attempt.result;
       } catch (error) {
-        if (!signal?.aborted) reportError(error);
+        let fallbackRetained = true;
+        const attemptId = attempt?.id;
+        if (attemptId === undefined) {
+          ctx.notifications.show({
+            id: `create-attachments.${projectId}.${id}`,
+            level: "error",
+            title: "Files still need attention",
+            message: "The item was created. Its file draft is still available on the board.",
+          });
+        }
+        const retained = () =>
+          attemptId === undefined
+            ? fallbackRetained
+            : operations.getSnapshot().recovery.some((entry) => entry.id === attemptId);
+        throw new UnresolvedSubmissionError(
+          {
+            copyDraft: async () => {
+              if (!retained()) throw new Error("The file draft is no longer available.");
+              await navigator.clipboard.writeText(JSON.stringify(details));
+            },
+            dismiss: () => {
+              if (attemptId !== undefined) operations.dismiss(attemptId);
+            },
+            discard: () => {
+              if (attemptId === undefined) {
+                fallbackRetained = false;
+                onDiscard?.();
+              } else operations.discard(attemptId);
+            },
+            isRetained: retained,
+          },
+          error,
+          "The item was created. Some files still need attention.",
+        );
       }
     },
   };

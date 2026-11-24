@@ -187,6 +187,7 @@ export interface KanbanRendererCreateSubmission {
   /** Called when the owner has accepted the submission and can retain it after the form closes. */
   onAdmitted?(): void;
   onDiscard?(): void;
+  onAttachmentSaved?(file: File): void;
   columnId: string;
   columnAttributeId?: string;
   /** Declared field values, excluding `files` fields — those arrive as `files`. */

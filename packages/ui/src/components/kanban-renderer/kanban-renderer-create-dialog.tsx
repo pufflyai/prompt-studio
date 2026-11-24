@@ -41,6 +41,14 @@ const emptyValue = (field: KanbanRendererCreateField) => {
 const initialFieldValues = (fields: KanbanRendererCreateField[]) =>
   Object.fromEntries(fields.map((field) => [field.id, field.defaultValue ?? emptyValue(field)]));
 
+const dropSavedFile = (values: Record<string, unknown>, file: File) =>
+  Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [
+      key,
+      Array.isArray(value) ? value.filter((entry) => entry !== file) : value,
+    ]),
+  );
+
 const splitCreateFields = (fields: KanbanRendererCreateRowConfig["fields"], values: Record<string, unknown>) => {
   const fileFieldIds = new Set(fields.filter((field) => field.type === "files").map((field) => field.id));
   return {
@@ -204,6 +212,11 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
           onClose();
         },
         onDiscard: () => updateSubmittedDraft(() => null),
+        onAttachmentSaved: (file: File) =>
+          updateSubmittedDraft((current) => ({
+            ...current,
+            values: dropSavedFile(current.values, file),
+          })),
       };
     };
     try {

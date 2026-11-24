@@ -4,10 +4,7 @@ import { kanbanBuiltInViews, type WorkbenchExtensionKanbanRendererRecord } from 
 import { text } from "pstdio-extensions/workbench";
 import { createElement } from "react";
 import type { Disposable, ResourceRef } from "../../core";
-import type {
-  KanbanRendererCreateRequest,
-  KanbanRendererPlacementBinding,
-} from "../../core/registries/renderers/kanban-renderer-registry";
+import type { KanbanRendererPlacementBinding } from "../../core/registries/renderers/kanban-renderer-registry";
 import { acceptRendererPage } from "../../core/registries/renderers/renderer-page";
 import { runUserAction } from "../../core/shared/run-user-action";
 import { WorkbenchIcon } from "../../react";
@@ -25,12 +22,11 @@ import {
   executeKanbanRendererCommand,
   type KanbanRendererRow,
   type Localizer,
-  mergeParams,
-  prepareKanbanCreationFeedback,
   registerRowActionCommands,
   runDefaultRowAction,
   toCreateFields,
 } from "./kanban-renderer-contribution-helpers";
+import { toCreateRowHandler } from "./kanban-renderer-creation";
 import { createKanbanRendererQuery } from "./kanban-renderer-query";
 import { createKanbanQueryPresentation } from "./kanban-renderer-query-result";
 import { mapViewToolbarActions } from "./view-toolbar-actions";
@@ -81,49 +77,6 @@ const toRowClick = (
   }
   if (!adapter.onRowClick) return undefined;
   return (row: KanbanRendererRow) => adapter.onRowClick?.({ record, row, resource: resolveRowResource(record, row) });
-};
-
-const toCreateRowHandler = (
-  record: WorkbenchExtensionKanbanRendererRecord,
-  adapter: WorkbenchExtensionKanbanRendererAdapter,
-  runMutation: (
-    record: WorkbenchExtensionKanbanRendererRecord,
-    commandId: string,
-    params: Record<string, unknown>,
-    feedback?: CreateOperationFeedback,
-  ) => Promise<unknown>,
-  activateCreatedRow: ((row: KanbanRendererRow) => Promise<void> | void) | undefined,
-) => {
-  const contribution = record.createRow;
-  if (!contribution) return undefined;
-  return async (submission: KanbanRendererCreateRequest) => {
-    const params = mergeParams(
-      submission.values,
-      contribution.columnParam && submission.columnId ? { [contribution.columnParam]: submission.columnId } : undefined,
-      contribution.attributesParam ? { [contribution.attributesParam]: submission.attributeValues } : undefined,
-    );
-    let attaching: Promise<void> | undefined;
-    const onCreated = (created: unknown, signal?: AbortSignal) => {
-      attaching ??= Promise.resolve().then(() => adapter.onAfterCreate?.({ record, created, submission, signal }));
-      return attaching;
-    };
-    const created = await runMutation(record, contribution.commandId, params, {
-      ...prepareKanbanCreationFeedback(submission),
-      onCreated,
-    });
-    await onCreated(created);
-    if (
-      submission.openCreatedRow === false ||
-      submission.canOpenCreatedRow?.() === false ||
-      !activateCreatedRow ||
-      typeof created !== "object" ||
-      created === null
-    )
-      return;
-    const row = created as Partial<KanbanRendererRow>;
-    if (typeof row.id !== "string" || typeof row.title !== "string") return;
-    await activateCreatedRow({ ...row, id: row.id, title: row.title, attributes: row.attributes ?? {} });
-  };
 };
 
 const toRowContextMenuActions = (
