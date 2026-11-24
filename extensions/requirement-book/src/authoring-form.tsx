@@ -15,9 +15,11 @@ interface Props {
   onSaved: () => void;
   onDraftSaved: (draft: Draft) => void;
 }
+type DraftSnapshot = { draft: string; revision: string; draftBase?: string };
+
 const openDraftEditing = (client: BookClient, workspaceId: string, chapter: number) => {
   const params = { workspaceId, chapter };
-  return client.editing.openCommand<{ draft: string; revision: string }>({
+  return client.editing.openCommand<DraftSnapshot>({
     key: JSON.stringify(["authoring-draft", workspaceId, chapter]),
     read: { commandId: `${changed.extensionId}.command.drafts.read-editing`, params },
     command: { commandId: `${changed.extensionId}.command.drafts.save-editing`, params },
@@ -30,12 +32,8 @@ export function AuthoringForm(props: Props) {
   const draftChapter = draftChapterFor(mode, chapter);
   const { workspaceId } = data;
   const draft = data.drafts.find((item) => item.chapter === draftChapter);
-  const editing = useRef<Promise<WebviewCommandEditingSession<{ draft: string; revision: string }>> | undefined>(
-    undefined,
-  );
-  const activeEditing = useRef<WebviewCommandEditingSession<{ draft: string; revision: string }> | undefined>(
-    undefined,
-  );
+  const editing = useRef<Promise<WebviewCommandEditingSession<DraftSnapshot>> | undefined>(undefined);
+  const activeEditing = useRef<WebviewCommandEditingSession<DraftSnapshot> | undefined>(undefined);
   const [restored, setRestored] = useState<Draft>();
   const [revision, setRevision] = useState<string>();
   useEffect(() => {
@@ -54,7 +52,7 @@ export function AuthoringForm(props: Props) {
             workspaceId,
             chapter: draftChapter,
             values: JSON.parse(snapshot.value.draft),
-            revision: snapshot.value.revision,
+            revision: snapshot.value.draftBase ?? snapshot.value.revision,
           });
       })
       .catch(() => {
@@ -124,17 +122,18 @@ export function AuthoringForm(props: Props) {
       submitLabel={mode === "rule" ? "Create suggestion" : "Create"}
       draft={draft?.submissionId ? draft : (restored ?? draft)}
       submissionStatus={draft?.submissionStatus}
-      draftRevision={(draft?.submissionId ? draft : (restored ?? draft))?.revision ?? revision}
+      draftRevision={
+        revision === undefined ? undefined : ((draft?.submissionId ? draft : (restored ?? draft))?.revision ?? revision)
+      }
       canDiscardSubmission={draft?.submissionStatus !== "writing" && Boolean(draft?.revision ?? revision)}
       onSubmit={submit}
       onClose={onClose}
       onPreviewDraft={(values, expectedRevision) => {
-        void activeEditing.current
-          ?.preview([
-            { path: ["draft"], value: JSON.stringify(values) },
-            { path: ["draftBase"], value: expectedRevision },
-          ])
-          .catch(() => {});
+        const session = activeEditing.current;
+        if (session)
+          void client
+            .retainDraft(session.id, { text: JSON.stringify(values), baseRevision: expectedRevision })
+            .catch(() => {});
       }}
       onSaveDraft={saveDraft}
       onCheckSubmission={
@@ -150,7 +149,8 @@ export function AuthoringForm(props: Props) {
           : undefined
       }
       onDiscard={async (expectedRevision) => {
-        await activeEditing.current?.cancel();
+        const session = activeEditing.current;
+        if (session) await client.retainDraft(session.id, null);
         await client.commands["drafts.discard"]({
           workspaceId,
           chapter: draftChapter,

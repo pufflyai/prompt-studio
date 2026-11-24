@@ -30,7 +30,10 @@ export interface ReadRecord {
   id: string;
   digest: string;
 }
-export type SubmissionProof = { kind: "book"; digest: string } | { kind: "finding" | "suggestion"; id: string };
+export interface SubmissionProof {
+  kind: "finding" | "suggestion";
+  id: string;
+}
 
 export interface Draft {
   id: string;
@@ -38,6 +41,7 @@ export interface Draft {
   chapter: number;
   values: Record<string, unknown>;
   submissionId?: string;
+  submissionInvocationId?: string;
   submissionStatus?: "writing" | "confirmed" | "unconfirmed";
   submissionProof?: SubmissionProof;
   revision?: string;

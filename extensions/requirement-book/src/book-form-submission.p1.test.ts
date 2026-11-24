@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandArgs } from "@pstdio/sdk/testing";
 import { submitBookForm } from "./book-form-submission";
-import { draftCommands, submitDraft } from "./draft-commands";
+import { draftCommands, settleFailedDraft, submitDraft } from "./draft-commands";
 import { type Draft, readRecord, saveRecord } from "./records";
 
 const draftContext = (storage: ReturnType<typeof createMemoryStorage>, workspaceId: string) =>
@@ -148,4 +148,42 @@ test("a reopened form can confirm its exact stored result after disconnect witho
   ).resolves.toEqual({ confirmed: true });
   expect((await readRecord<Draft>(storage, "draft", `${workspaceId}--2`)).value?.submissionStatus).toBe("confirmed");
   expect(writes).toBe(1);
+});
+
+test("only the failed invocation can release an interrupted submission for inspection", async () => {
+  const storage = createMemoryStorage();
+  const workspaceId = "book-workspace";
+  const context = draftContext(storage, workspaceId);
+  const scope = { workspaceId, chapter: -3 };
+  let disconnected = false;
+  const transport = {
+    ...context,
+    storage: {
+      ...storage,
+      records: {
+        ...storage.records,
+        read: async (id: Parameters<typeof storage.records.read>[0]) => {
+          if (disconnected) throw new Error("The caller disconnected");
+          return storage.records.read(id);
+        },
+      },
+    },
+  };
+  await expect(
+    submitDraft(transport, { ...scope, values: { title: "Retained" }, invocationId: "owner-invocation" }, async () => {
+      disconnected = true;
+      throw new Error("The write was interrupted");
+    }),
+  ).rejects.toThrow("disconnected");
+  const draftId = `${workspaceId}--3`;
+  const pending = (await readRecord<Draft>(storage, "draft", draftId)).value!;
+  await settleFailedDraft(context, { ...scope, invocationId: "unrelated" });
+  expect((await readRecord<Draft>(storage, "draft", draftId)).value?.submissionStatus).toBe("writing");
+  await settleFailedDraft(context, { ...scope, invocationId: "owner-invocation" });
+  expect((await readRecord<Draft>(storage, "draft", draftId)).value).toMatchObject({
+    submissionStatus: "unconfirmed",
+    values: { title: "Retained" },
+  });
+  await draftCommands["drafts.discard"].run(context, { ...scope, submissionId: pending.submissionId });
+  expect((await readRecord<Draft>(storage, "draft", draftId)).value).toBeUndefined();
 });

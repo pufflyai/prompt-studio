@@ -10,7 +10,7 @@ import {
   type SubmissionProof,
   saveRecord,
 } from "./records";
-import { readRepository, resolveWorkspace } from "./repository";
+import { resolveWorkspace } from "./repository";
 
 const draftTitle = l10n("book.draft.save", "Save an authoring draft");
 const draftId = (workspaceId: string, chapter: number) => `${workspaceId}-${chapter}`;
@@ -125,11 +125,8 @@ export const draftCommands = {
       if (draft.submissionStatus === "confirmed") return { confirmed: true };
       const proof = draft.submissionProof;
       if (!proof) return { confirmed: false };
-      const confirmed =
-        proof.kind === "book"
-          ? (await readRepository(ctx, workspace.id)).digest === proof.digest
-          : (await readRecord<{ workspaceId: string }>(ctx.storage, proof.kind, proof.id)).value?.workspaceId ===
-            workspace.id;
+      const saved = await readRecord<{ workspaceId: string }>(ctx.storage, proof.kind, proof.id);
+      const confirmed = saved.value?.workspaceId === workspace.id;
       if (!confirmed) return { confirmed: false };
       await saveRecord(ctx.storage, "draft", { ...draft, submissionStatus: "confirmed" }, current.record.revision);
       await announce(ctx, workspace.id);
@@ -164,6 +161,18 @@ export const draftCommands = {
   }),
 };
 
+export const settleFailedDraft = async (
+  ctx: ExtensionContextBase,
+  input: { workspaceId: string; chapter: number; invocationId: string },
+) => {
+  const { workspace } = await resolveWorkspace(ctx, input.workspaceId);
+  const current = await readRecord<Draft>(ctx.storage, "draft", draftId(workspace.id, input.chapter));
+  const draft = current.value;
+  if (draft?.submissionStatus !== "writing" || draft.submissionInvocationId !== input.invocationId) return;
+  await saveRecord(ctx.storage, "draft", { ...draft, submissionStatus: "unconfirmed" }, current.record.revision);
+  await announce(ctx, workspace.id);
+};
+
 export const submitDraft = async (
   ctx: ExtensionContextBase,
   input: {
@@ -172,6 +181,7 @@ export const submitDraft = async (
     values: Record<string, unknown>;
     expectedRevision?: string;
     proof?: SubmissionProof;
+    invocationId?: string;
   },
   write: () => Promise<unknown>,
 ) => {
@@ -188,6 +198,7 @@ export const submitDraft = async (
     values: input.values,
     submissionId,
     submissionStatus: "writing",
+    ...(input.invocationId ? { submissionInvocationId: input.invocationId } : {}),
     ...(input.proof ? { submissionProof: input.proof } : {}),
   };
   await saveRecord(ctx.storage, "draft", draft, previous.record.revision);

@@ -3,9 +3,9 @@ import { z } from "zod";
 import { draftCommands, submitDraft } from "./draft-commands";
 import { acceptanceConditions, draftChapterFor, splitRefs } from "./forms";
 import { bookCommands } from "./import";
-import { chapterSchema, createRuleReference, emptyBook, findRule, ruleSchema, serializeBook } from "./model";
+import { chapterSchema, createRuleReference, emptyBook, findRule, ruleSchema } from "./model";
 import { readBook, requireBook } from "./read";
-import { announce, digest } from "./records";
+import { announce } from "./records";
 import { git, readRepository, resolveWorkspace, writeRepository } from "./repository";
 import { reviewCommands, saveFinding } from "./review-commands";
 import { saveSuggestion, suggestionCommands } from "./suggestions";
@@ -102,14 +102,11 @@ export const commands = {
         chapter: draftChapterFor(mode, chapter),
         values,
         expectedRevision: input.expectedRevision,
+        invocationId: ctx.invocationId,
       };
       if (mode === "chapter") {
-        const id = Math.max(0, ...book.chapters.map((item) => item.id)) + 1;
-        const entry = chapterSchema.parse({ id, title: values.title, group: values.group });
-        const next = { ...book, chapters: [...book.chapters, entry] };
-        return submitDraft(ctx, { ...draft, proof: { kind: "book", digest: digest(serializeBook(next)) } }, async () =>
-          writeRepository(ctx, workspaceId, snapshot.content, next),
-        );
+        const { title, group } = chapterSchema.omit({ id: true }).parse(values);
+        return submitDraft(ctx, draft, async () => createChapter.run(ctx, { workspaceId, title, group }));
       }
       if (mode === "finding") {
         const finding = z
