@@ -1,6 +1,6 @@
 import { rememberEnvironmentCleanup } from "./environment-cleanup";
-import { ownsEnvironment, releaseEnvironment } from "./environments";
-import { notifyRunChange } from "./events";
+import { ownsEnvironment } from "./environments";
+import { persistResult } from "./result-persistence";
 import { rememberRunLog } from "./run-log";
 import type { RunCollectionDeps, RunRecord, RunSummary } from "./runs";
 
@@ -10,6 +10,7 @@ export async function saveTimedOutRun(
   summary: RunSummary,
   finalized: boolean,
   stop: boolean,
+  signal?: AbortSignal,
 ) {
   // Independent cleanup and log workers own remote retries. A network outage must
   // not keep an overdue result looking like an active test run.
@@ -20,9 +21,7 @@ export async function saveTimedOutRun(
       stop: true,
     });
   await rememberRunLog(deps.store, record.runId, !finalized);
-  if (finalized && !stop) await releaseEnvironment(deps.store, record.environmentId, record.runId);
-  await deps.store.set(`run:${record.runId}`, { ...record, summary });
-  await notifyRunChange(deps);
+  summary = await persistResult(deps, record, summary, finalized && !stop, signal);
   await Promise.allSettled([
     ...(stop
       ? [

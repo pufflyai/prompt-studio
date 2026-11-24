@@ -7,8 +7,10 @@ import {
 } from "@pstdio/sdk/extensions";
 import { resumeUnfinishedCollection } from "./collection";
 import { type Api, canRetryControllerRequest, connectionApi, waitForControllerPoll } from "./connection";
-import { ownsEnvironment, releaseEnvironment, stopEnvironment } from "./environments";
+import { ownsEnvironment, readEnvironment, releaseEnvironment, stopEnvironment } from "./environments";
 import { changed } from "./events";
+import { handoffLegacyRun, recoverLegacyClaims } from "./legacy-claims";
+import { budgetedRecovery, RecoveryBudgetExhausted } from "./recovery-budget";
 import { resumeRunLogs } from "./run-log";
 import { recoverSetupClaims } from "./setup-claims";
 
@@ -16,6 +18,7 @@ export interface EnvironmentCleanupInput {
   environmentId: string;
   runId: string;
   stop: boolean;
+  orphan?: boolean;
 }
 type CleanupIntent = EnvironmentCleanupInput & { jobId?: string };
 const cleanupId = (input: EnvironmentCleanupInput) => `${input.runId}:${input.environmentId}`;
@@ -40,9 +43,20 @@ export async function cleanupRunEnvironment(
   while (true) {
     signal?.throwIfAborted();
     if (!(await ownsEnvironment(deps.store, input.environmentId, input.runId))) return { stopped: false };
+    if (input.orphan && (await handoffLegacyRun(deps.store, input.environmentId, input.runId)))
+      return { stopped: false };
     if (!input.stop) break;
     try {
-      await stopEnvironment(deps.api, input.environmentId, signal);
+      const environment = await readEnvironment(deps.api, input.environmentId, signal);
+      if (!(await ownsEnvironment(deps.store, input.environmentId, input.runId))) return { stopped: false };
+      if (input.orphan && (await handoffLegacyRun(deps.store, input.environmentId, input.runId)))
+        return { stopped: false };
+      if (
+        !["terminating", "preserving", "succeeded", "failed", "canceled", "expired", "preserved"].includes(
+          environment.state,
+        )
+      )
+        await stopEnvironment(deps.api, input.environmentId, signal);
       break;
     } catch (error) {
       signal?.throwIfAborted();
@@ -62,6 +76,10 @@ export const cleanupEnvironmentCommand = defineCommand({
   params: {
     environmentId: params.text({ label: l10n("remote-testing.environment-id", "Environment ID"), required: true }),
     runId: params.text({ label: l10n("remote-testing.run-id", "Run ID"), required: true }),
+    orphan: params.boolean({
+      label: l10n("remote-testing.recover-interrupted-setup", "Recover interrupted setup"),
+      default: false,
+    }),
     stop: params.boolean({
       label: l10n("remote-testing.stop-test-environment", "Stop test environment"),
       default: false,
@@ -73,6 +91,7 @@ export const cleanupEnvironmentCommand = defineCommand({
       {
         ...input,
         stop: input.stop === true,
+        ...(input.orphan ? { orphan: true } : {}),
       },
       ctx.signal,
     );
@@ -116,9 +135,7 @@ function reportCleanupQueueError(
 }
 
 type CleanupJob = NonNullable<Awaited<ReturnType<ExtensionContextBase["automation"]["get"]>>>;
-const resumableCleanup = (job: CleanupJob) =>
-  ["failed", "cancelled", "rejected"].includes(job.status) &&
-  (job.status === "cancelled" || job.error?.code === "host_restarted" || job.error?.retryable === true);
+const resumableCleanup = (job: CleanupJob) => !["queued", "running"].includes(job.status);
 const keepCleanupJob = (job: CleanupJob | undefined) => job && !resumableCleanup(job);
 
 async function resumeCleanup(ctx: Pick<ExtensionContextBase, "automation" | "storage">, id: string) {
@@ -126,7 +143,7 @@ async function resumeCleanup(ctx: Pick<ExtensionContextBase, "automation" | "sto
   while (true) {
     const current = await intents.read(id);
     if (!current) return;
-    const { environmentId, runId, stop, jobId: priorId } = current.value;
+    const { environmentId, runId, stop, orphan, jobId: priorId } = current.value;
     const claim = await ctx.storage.collection<{ runId: string }>("environment-claims").get(environmentId);
     if (claim?.runId !== runId) {
       await intents.deleteIfValue(id, current.value);
@@ -136,7 +153,7 @@ async function resumeCleanup(ctx: Pick<ExtensionContextBase, "automation" | "sto
     if (keepCleanupJob(prior)) return;
     const job = await ctx.automation.enqueue({
       command: cleanupEnvironmentCommand.ref,
-      input: { params: { environmentId, runId, stop } },
+      input: { params: { environmentId, runId, stop, ...(orphan ? { orphan: true } : {}) } },
       key: `remote-tests:cleanup:${runId}:${environmentId}:${priorId ?? "first"}`,
     });
     const saved = await intents.updateIfUnchanged(id, current.revision, { ...current.value, jobId: job.id });
@@ -145,13 +162,24 @@ async function resumeCleanup(ctx: Pick<ExtensionContextBase, "automation" | "sto
   }
 }
 
-export async function resumeEnvironmentCleanups(ctx: Pick<ExtensionContextBase, "automation" | "logger" | "storage">) {
+export async function resumeEnvironmentCleanups(
+  ctx: Pick<ExtensionContextBase, "automation" | "logger" | "storage"> &
+    Partial<Pick<ExtensionContextBase, "connections" | "projectId">>,
+) {
+  await recoverLegacyClaims(ctx).catch((error) =>
+    ctx.logger.warn(`Could not reconcile legacy workspace claims: ${String(error)}`),
+  );
   await recoverSetupClaims(ctx);
-  await resumeUnfinishedCollection(ctx);
-  await resumeRunLogs(ctx);
   for (const intent of await cleanupIntents(ctx.storage).list()) {
-    await resumeCleanup(ctx, cleanupId(intent)).catch((error) => reportCleanupQueueError(ctx, intent, error));
+    try {
+      await resumeCleanup(budgetedRecovery(ctx, "cleanup"), cleanupId(intent));
+    } catch (error) {
+      if (error instanceof RecoveryBudgetExhausted) break;
+      reportCleanupQueueError(ctx, intent, error);
+    }
   }
+  await resumeRunLogs(budgetedRecovery(ctx, "log"));
+  await resumeUnfinishedCollection(budgetedRecovery(ctx, "collector"));
 }
 
 export const recoverEnvironmentCleanup = defineCommand({

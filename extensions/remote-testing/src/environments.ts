@@ -94,7 +94,15 @@ export async function stopEnvironment(api: Api, id: string, signal?: AbortSignal
   return api<Environment>({ method: "POST", path: `${path(id)}/cancel`, signal });
 }
 
-export type Claim = { runId: string; setup?: { until: number; stop: boolean; environmentId: string } };
+export type Claim = {
+  runId: string;
+  until?: number;
+  setup?: { until: number; stop: boolean; environmentId: string };
+  legacy?: { environmentId: string };
+};
+
+// Older readers use until to decide reuse. Keep them from expiring new ownership.
+export const durableClaim = (runId: string) => ({ runId, until: Number.MAX_SAFE_INTEGER });
 
 // Ownership ends through collection or cleanup, never through elapsed wall time.
 export async function claimEnvironment(
@@ -106,7 +114,10 @@ export async function claimEnvironment(
   const claims = store.collection<Claim>("environment-claims");
   const current = await claims.get(id);
   if (current) return current.runId === runId;
-  return claims.createIfAbsent(id, { runId, ...(setup ? { setup: { ...setup, environmentId: id } } : {}) });
+  return claims.createIfAbsent(id, {
+    ...durableClaim(runId),
+    ...(setup ? { setup: { ...setup, environmentId: id } } : {}),
+  });
 }
 
 export async function releaseEnvironment(store: ExtensionStorageApi, id: string, runId: string) {

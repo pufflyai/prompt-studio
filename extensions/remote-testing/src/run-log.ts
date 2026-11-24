@@ -8,6 +8,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { runDeps } from "./context";
 import { changed } from "./events";
+import { RecoveryBudgetExhausted } from "./recovery-budget";
 import { collectLog } from "./run-result";
 import { readRun } from "./run-store";
 import type { RunCollectionDeps, RunRecord } from "./runs";
@@ -69,9 +70,7 @@ export const collectRunLog = defineCommand({
 
 type LogContext = Pick<ExtensionContextBase, "automation" | "storage" | "logger">;
 type Job = NonNullable<Awaited<ReturnType<LogContext["automation"]["get"]>>>;
-const resumable = (job: Job) =>
-  ["failed", "cancelled", "rejected"].includes(job.status) &&
-  (job.status === "cancelled" || job.error?.code === "host_restarted" || job.error?.retryable === true);
+const incomplete = (job: Job) => !["queued", "running"].includes(job.status);
 
 export async function enqueueRunLog(ctx: LogContext, runId: string) {
   await rememberRunLog(ctx.storage, runId);
@@ -81,7 +80,7 @@ export async function enqueueRunLog(ctx: LogContext, runId: string) {
     if (!current || !(await readRun(ctx.storage, runId)).summary) return;
     const priorId = current.value.jobId;
     const prior = priorId ? await ctx.automation.get(priorId) : undefined;
-    if (prior && !resumable(prior)) return;
+    if (prior && !incomplete(prior)) return;
     const job = await ctx.automation.enqueue({
       command: collectRunLog.ref,
       input: { params: { runId } },
@@ -89,7 +88,7 @@ export async function enqueueRunLog(ctx: LogContext, runId: string) {
     });
     if (
       !(await pending.updateIfUnchanged(runId, current.revision, { ...current.value, jobId: job.id })) ||
-      resumable(job)
+      incomplete(job)
     )
       continue;
     return;
@@ -98,8 +97,11 @@ export async function enqueueRunLog(ctx: LogContext, runId: string) {
 
 export async function resumeRunLogs(ctx: LogContext) {
   for (const intent of await intents(ctx.storage).list()) {
-    await enqueueRunLog(ctx, intent.runId).catch((error) => {
+    try {
+      await enqueueRunLog(ctx, intent.runId);
+    } catch (error) {
+      if (error instanceof RecoveryBudgetExhausted) break;
       ctx.logger.error(`Could not collect log for run ${intent.runId}: ${String(error)}`);
-    });
+    }
   }
 }

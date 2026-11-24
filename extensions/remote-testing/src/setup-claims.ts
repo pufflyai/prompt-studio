@@ -1,6 +1,6 @@
 import type { ExtensionContextBase, ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { rememberEnvironmentCleanup } from "./environment-cleanup";
-import type { Claim } from "./environments";
+import { type Claim, durableClaim } from "./environments";
 import type { RunRecord } from "./runs";
 
 export async function activateEnvironment(store: ExtensionStorageApi, environmentId: string, runId: string) {
@@ -10,7 +10,7 @@ export async function activateEnvironment(store: ExtensionStorageApi, environmen
     current?.value.runId !== runId ||
     !current.value.setup ||
     current.value.setup.until <= Date.now() ||
-    !(await claims.updateIfUnchanged(environmentId, current.revision, { runId }))
+    !(await claims.updateIfUnchanged(environmentId, current.revision, durableClaim(runId)))
   )
     throw new Error("Environment setup expired or was recovered before submission.");
 }

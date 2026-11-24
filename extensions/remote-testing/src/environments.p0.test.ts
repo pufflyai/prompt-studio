@@ -64,3 +64,11 @@ test("an elapsed setup lease never makes an unfinished run available for reuse",
   expect(await claimEnvironment(store, "environment", "new")).toBe(false);
   expect(await activeRun(store, "environment")).toBe("old");
 });
+
+test("durable claims remain fenced for readers of the legacy until field", async () => {
+  const store = createMemoryStorage();
+  await claimEnvironment(store, "new", "owner");
+  const claim = await store.collection<{ runId: string; until: number }>("environment-claims").get("new");
+  expect(claim?.until).toBe(Number.MAX_SAFE_INTEGER);
+  expect(claim!.until > Date.now()).toBe(true);
+});

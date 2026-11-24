@@ -32,6 +32,11 @@ export async function projectRoot(ctx: ExtensionContextBase) {
   return root;
 }
 
+export async function readSavedLog(ctx: ExtensionContextBase, runId: string) {
+  if (!ctx.extensionFiles) throw new Error("This project has no folder for run logs.");
+  return ctx.extensionFiles.readText(`runs/${runId}.log`);
+}
+
 export async function runDeps(ctx: ExtensionContextBase, options: { recover?: boolean } = {}): Promise<RunDeps> {
   const { settings, problems } = readSettings(await ctx.settings.all());
   if (problems.length) throw new Error(`Remote testing is not configured. ${problems.join(" ")}`);
@@ -69,6 +74,7 @@ export async function runDeps(ctx: ExtensionContextBase, options: { recover?: bo
       // The host keeps extension files under the extension ID.
       return root ? join(root, ".pstdio/extension-storage", ctx.extensionId, path) : path;
     },
+    readSavedLog: (runId) => readSavedLog(ctx, runId),
     changed: () => ctx.events.emit(changed, {}),
   };
 }

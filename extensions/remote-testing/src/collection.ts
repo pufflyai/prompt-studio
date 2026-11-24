@@ -1,5 +1,10 @@
 import { type CommandContext, defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
-import { runDeps } from "./context";
+import { readSavedLog, runDeps } from "./context";
+import { resumeEnvironmentCleanups } from "./environment-cleanup";
+import type { Claim } from "./environments";
+import { changed } from "./events";
+import { RecoveryBudgetExhausted } from "./recovery-budget";
+import { finishPendingResult } from "./result-persistence";
 import { unfinishedRuns } from "./run-recovery";
 import { awaitRun, type RunRecord, readRun } from "./runs";
 
@@ -9,7 +14,24 @@ export const collectRun = defineCommand({
   automation: true,
   params: { runId: params.text({ label: l10n("remote-testing.run-id", "Run ID"), required: true }) },
   async run(ctx, { runId }) {
-    await awaitRun(await runDeps(ctx), await readRun(ctx.storage, runId), ctx.signal);
+    const record = await readRun(ctx.storage, runId);
+    if (record.pendingResult) {
+      await finishPendingResult(
+        {
+          store: ctx.storage,
+          readSavedLog: (id) => readSavedLog(ctx, id),
+          changed: () => ctx.events.emit(changed, {}),
+        },
+        record,
+      );
+      await resumeEnvironmentCleanups(ctx).catch((error) =>
+        Promise.resolve()
+          .then(() =>
+            ctx.logger.warn(`Result saved; background recovery admission failed for ${runId}: ${String(error)}`),
+          )
+          .catch(() => {}),
+      );
+    } else await awaitRun(await runDeps(ctx), record, ctx.signal);
     return { runId };
   },
 });
@@ -19,10 +41,18 @@ const resumable = (job: CollectorJob) =>
   ["failed", "cancelled", "rejected"].includes(job.status) &&
   (job.status === "cancelled" || job.error?.code === "host_restarted" || job.error?.retryable === true);
 
+function keepCollector(job: CollectorJob | undefined, resumeInterrupted: boolean, recoverSavedResult: boolean) {
+  if (!job) return false;
+  if (["queued", "running"].includes(job.status)) return true;
+  if (!recoverSavedResult && job.status === "succeeded") return true;
+  return resumeInterrupted && !resumable(job);
+}
+
 export async function startCollection(
   ctx: Pick<ExtensionContextBase, "storage" | "automation">,
   runId: string,
   resumeInterrupted = false,
+  recoverSavedResult = false,
 ) {
   const links = ctx.storage.collection<{ jobId: string }>("run-collectors");
   while (true) {
@@ -30,11 +60,7 @@ export async function startCollection(
     // Existing projects used a plain KV link; migrate it when a new job is admitted.
     const priorId = current?.value.jobId ?? (await ctx.storage.get<string>(`collector:${runId}`));
     const prior = priorId ? await ctx.automation.get(priorId) : undefined;
-    if (
-      prior &&
-      (["queued", "running", "succeeded"].includes(prior.status) || (resumeInterrupted && !resumable(prior)))
-    )
-      return prior.id;
+    if (keepCollector(prior, resumeInterrupted, recoverSavedResult)) return prior!.id;
     const job = await ctx.automation.enqueue({
       command: collectRun.ref,
       input: { params: { runId } },
@@ -44,7 +70,8 @@ export async function startCollection(
       ? await links.updateIfUnchanged(runId, current.revision, { jobId: job.id })
       : await links.createIfAbsent(runId, { jobId: job.id });
     // New admissions return queued; terminal replies replay an earlier admission.
-    const replay = ["failed", "cancelled", "rejected"].includes(job.status);
+    const replay =
+      ["failed", "cancelled", "rejected"].includes(job.status) || (recoverSavedResult && job.status === "succeeded");
     if (!saved || (resumeInterrupted ? resumable(job) : replay)) continue;
     return job.id;
   }
@@ -70,10 +97,13 @@ export async function resumeCollection(
   ctx: Pick<ExtensionContextBase, "storage" | "automation" | "logger">,
   record: RunRecord,
 ) {
-  if (record.summary || record.stopAfterRun === undefined) return;
+  if (!record.pendingResult && (record.summary || record.stopAfterRun === undefined)) return true;
+  const claim = await ctx.storage.collection<Claim>("environment-claims").get(record.environmentId);
+  if (claim?.runId === record.runId && claim.setup) return true;
   try {
-    await startCollection(ctx, record.runId, true);
+    await startCollection(ctx, record.runId, !record.pendingResult, Boolean(record.pendingResult));
   } catch (error) {
+    if (error instanceof RecoveryBudgetExhausted) return false;
     await Promise.resolve()
       .then(() =>
         ctx.logger.warn(
@@ -82,8 +112,9 @@ export async function resumeCollection(
       )
       .catch(() => {});
   }
+  return true;
 }
 
 export async function resumeUnfinishedCollection(ctx: Pick<ExtensionContextBase, "storage" | "automation" | "logger">) {
-  for await (const record of unfinishedRuns(ctx.storage)) await resumeCollection(ctx, record);
+  for await (const record of unfinishedRuns(ctx.storage)) if (!(await resumeCollection(ctx, record))) break;
 }

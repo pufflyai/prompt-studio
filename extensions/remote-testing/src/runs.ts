@@ -7,11 +7,11 @@ import {
   createEnvironment,
   ownsEnvironment,
   readEnvironment,
-  releaseEnvironment,
   stopEnvironment,
   waitUntilReady,
 } from "./environments";
 import { notifyRunChange } from "./events";
+import { completedResult, persistResult } from "./result-persistence";
 import { readRunReceipt, runDeadline, TRANSFER_ALLOWANCE_SECONDS } from "./run-deadline";
 import { type Receipt, receiptSummary, summarize, timeoutSummary } from "./run-result";
 import { saveSubmissionFailure } from "./run-submission";
@@ -33,12 +33,13 @@ export interface RunDeps {
   process: ExtensionProcessApi;
   settings: Settings;
   saveLog(runId: string, text: string): Promise<string>;
+  readSavedLog?(runId: string): Promise<string>;
   /** Tells open views that a run or environment changed. */
   changed?(): Promise<unknown>;
 }
 
 export type RunCollectionDeps = Pick<RunDeps, "api" | "store" | "saveLog" | "changed"> &
-  Partial<Pick<RunDeps, "cleanupEnvironment" | "collectRunLog">> & {
+  Partial<Pick<RunDeps, "cleanupEnvironment" | "collectRunLog" | "readSavedLog">> & {
     storage: Pick<RunStorage, "download">;
   };
 
@@ -55,6 +56,7 @@ export interface RunRecord {
   /** The Prompt Studio session whose agent started the run, when one did. */
   sessionId?: string;
   summary?: RunSummary;
+  pendingResult?: { id: string; summary: Omit<RunSummary, "tail">; release: boolean };
   submissionPending?: boolean;
   template?: TemplateRef;
 }
@@ -254,14 +256,16 @@ export async function checkRun(
   retryTransient = false,
 ) {
   record = (await deps.store.get<RunRecord>(`run:${record.runId}`)) ?? record;
-  if (record.summary) return record.summary;
+  const previous = await completedResult(deps, record);
+  if (previous) return previous;
   let missingSubmission = false;
   const receipt = await readRunReceipt<Receipt>(deps.api, requestPath(record), record, signal, retryTransient, () => {
     missingSubmission = true;
   });
   // Admission can be acknowledged while a bounded receipt read is in flight.
   record = (await deps.store.get<RunRecord>(`run:${record.runId}`)) ?? record;
-  if (record.summary) return record.summary;
+  const latest = await completedResult(deps, record);
+  if (latest) return latest;
   const terminal = receipt?.finalizedAt ? receiptSummary(record, receipt) : null;
   const expired = !receipt?.finalizedAt && Date.now() >= runDeadline(record);
   if (!receipt?.finalizedAt && !expired) return null;
@@ -273,15 +277,12 @@ export async function checkRun(
       if (receipt) await cancelOverdueRequest(deps.api, record, receipt, signal);
       return null;
     }
-    return saveTimedOutRun(deps, record, terminal ?? timeoutSummary(record), terminal !== null, stop);
+    return saveTimedOutRun(deps, record, terminal ?? timeoutSummary(record), terminal !== null, stop, signal);
   }
   // The runner uploads its log before the controller finalizes the request.
   if (record.stopAfterRun) await stopCollectedEnvironment(deps, record, signal, retryTransient);
   const summary = await summarize(deps, record, receipt!, signal, retryTransient);
-  await releaseEnvironment(deps.store, record.environmentId, record.runId);
-  await deps.store.set(`run:${record.runId}`, { ...record, summary });
-  await notifyRunChange(deps);
-  return summary;
+  return persistResult(deps, record, summary, true, signal);
 }
 
 export async function cancelRun(deps: RunDeps, record: RunRecord) {

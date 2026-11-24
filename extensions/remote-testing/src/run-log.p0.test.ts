@@ -171,3 +171,48 @@ test("expired missing-log recovery makes one final read and retains the timeout"
   expect(await f.store.collection("pending-run-logs").get("run")).toBeUndefined();
   expect((await f.store.get<RunRecord>("run:run"))?.summary).toEqual(f.record.summary);
 });
+
+test.each([
+  "saveLog",
+  "CAS",
+])("durable log recovery advances a non-retryable local write failure (%s)", async (stage) => {
+  const f = await fixture();
+  await enqueueRunLog(f.ctx, "run");
+  const commit = f.store.records.commitIfCurrent;
+  let unavailable = true;
+  f.store.records.commitIfCurrent = async (group) => {
+    if (unavailable && stage === "CAS" && group.edits.some((edit) => edit.set?.["/summary/logPath"]))
+      throw new Error("Local log metadata unavailable");
+    return commit(group);
+  };
+  const deps = {
+    store: f.store,
+    api: async () => {
+      throw new Error("No remote mutation is permitted");
+    },
+    storage: { download: async () => new TextEncoder().encode("retained log") },
+    saveLog: async () => {
+      if (unavailable && stage === "saveLog") throw new Error("Local log file unavailable");
+      return "run.log";
+    },
+  };
+  await expect(collectSavedRunLog(deps, "run")).rejects.toThrow("unavailable");
+  f.jobs.get("job-0")!.status = "failed";
+  f.jobs.get("job-0")!.error = {
+    code: "command_execution_failed",
+    message: "Local log write unavailable",
+    retryable: false,
+  };
+  unavailable = false;
+  await resumeRunLogs(f.ctx);
+  expect(f.queued).toHaveLength(2);
+  expect(f.queued[1]?.key).toBe("remote-tests:log:run:job-0");
+  await collectSavedRunLog(deps, "run");
+  expect((await f.store.get<RunRecord>("run:run"))?.summary).toMatchObject({
+    status: "timed_out",
+    durationMs: 60000,
+    logPath: "run.log",
+    tail: "retained log",
+  });
+  expect(await f.store.collection("pending-run-logs").get("run")).toBeUndefined();
+});

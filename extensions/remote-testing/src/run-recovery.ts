@@ -7,6 +7,7 @@ export const runRecoveryIndex = {
     runId: { path: ["runId"], type: "string" },
     requestId: { path: ["requestId"], type: "string" },
     status: { path: ["summary", "status"], type: "string" },
+    pendingId: { path: ["pendingResult", "id"], type: "string" },
   },
   orderBy: [{ field: "runId", direction: "asc" }],
 } satisfies StorageRecordIndex;
@@ -22,7 +23,12 @@ export async function* unfinishedRuns(store: ExtensionStorageApi) {
         all: [
           { field: "runId", op: "exists" },
           { field: "requestId", op: "exists" },
-          { field: "status", op: "missing" },
+          {
+            any: [
+              { field: "status", op: "missing" },
+              { field: "pendingId", op: "exists" },
+            ],
+          },
           ...(after ? [{ field: "runId", op: "gt" as const, value: after }] : []),
         ],
       },
@@ -32,7 +38,7 @@ export async function* unfinishedRuns(store: ExtensionStorageApi) {
     );
     for (const row of await store.records.readMany(addresses)) {
       const record = row.value as unknown as RunRecord;
-      if (row.exists && !row.deleted && record && !record.summary) yield record;
+      if (row.exists && !row.deleted && record && (!record.summary || record.pendingResult)) yield record;
     }
     // Run IDs are immutable UUIDs. Seek pagination permits collector admissions
     // and completed summaries to change the owner revision between pages.
