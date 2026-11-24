@@ -60,17 +60,20 @@ for await (const event of child.events()) {
 - `started` settles when the child runs. It rejects with a coded error when the child cannot start.
 - `exited` reports the direct child's `{ code, signal }` and never rejects. A child that never
   started reports `{ code: null, signal: null }`. `kill` and lifetime teardown own descendants
-  after the direct child exits. Host-created handles also report `treeExited`, which settles
-  when the host confirms cleanup of the child and its descendants.
+  after the direct child exits.
+- `treeExited` confirms that the child and its descendants have exited and that output capture
+  has finished. Unread output can keep this promise pending after `exited` when the stream hits
+  its buffering limit. Read `events()` concurrently, or call `kill()` to discard unread output.
 - `write(data)` writes to stdin in call order and waits for the pipe to accept the data. `end()`
   closes stdin after earlier writes; later writes reject.
 - `kill(signal?)` stops the child and everything it started. On Unix the default is `SIGTERM`
   followed by forced cleanup after 500 ms. On Windows the host terminates the retained Job and
-  reports the native exit code with a null signal. For an admitted child, `kill` resolves after
-  confirmed cleanup. A kill while a target is still opening resolves at once: `started` rejects
-  with `process_owner_closed`. The host attempts to stop a child that still arrives. If that
-  stop fails, calling `kill` again retries cleanup. A retired extension keeps its unconfirmed
-  handles available for a later lifecycle cleanup attempt.
+  reports the native exit code with a null signal. Once the host holds the target handle, `kill`
+  resolves after confirmed cleanup. A remote stop attempt that has no confirmation after five
+  seconds rejects. Call `kill` again on the same handle to retry. While a target is still opening,
+  `kill` resolves at once, `started` rejects with `process_owner_closed`, and the host attempts to
+  stop a late child in the background. A retired extension keeps its unconfirmed handles available
+  for a later lifecycle cleanup attempt.
 - `events()` yields `stdout` and `stderr` chunks as `Uint8Array` and always ends with one `exit`
   event. It has one consumer. Order is kept within each stream, but not between the two streams.
 - `id` identifies the handle to your code. It is not an OS pid, and no host API accepts it. In the
@@ -124,8 +127,9 @@ A workspace type whose workspaces run elsewhere can add two optional methods:
 - `spawn(ctx, { projectId, workspaceId, providerRef, process })` returns a process handle with the
   same contract. `ctx` is the provider's own context. The host owns the returned handle: it kills it
   when the caller's lifetime ends. Resolve the optional `treeExited` promise when the target
-  confirms the child and its descendants have all exited. The provider's call and its local
-  helpers stay open until that confirmation, a successful stop, or cancellation.
+  confirms the child and its descendants have exited and output capture has finished or discarded
+  the remaining data. The provider's call and its local helpers stay open until that confirmation,
+  a successful stop, or cancellation.
 - `readText(ctx, { projectId, workspaceId, providerRef, path })` reads a UTF-8 text file on the
   target for `targetFiles.readText`. Expand `~` on the target.
 

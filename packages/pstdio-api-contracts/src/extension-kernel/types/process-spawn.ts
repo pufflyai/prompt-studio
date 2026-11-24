@@ -46,13 +46,21 @@ export interface ProcessHandle {
   started: Promise<void>;
   /** Reports the direct child’s exit status, or null code and signal when startup fails. */
   exited: Promise<ProcessExit>;
-  /** Confirms that the child and all descendants are gone. Provided by host-created handles. */
+  /**
+   * Confirms that the child and its descendants are gone and that output capture has finished.
+   * Read events concurrently if unread output is blocking capture, or stop to discard what remains.
+   * Host-created handles always provide this promise.
+   */
   treeExited?: Promise<void>;
   /** Writes to stdin in call order, waiting for the pipe to accept the data. */
   write(data: string | Uint8Array): Promise<void>;
   /** Closes stdin after earlier writes. Idempotent; later writes reject. */
   end(): Promise<void>;
-  /** Stops the child and its descendants. Idempotent; resolves once cleanup is done. */
+  /**
+   * Stops the child and its descendants. Idempotent. Before the target opens, resolves promptly
+   * and attempts any late cleanup in the background. Once the host holds the target handle,
+   * resolves after confirmed cleanup. Retry `kill` on the same handle if a remote attempt times out.
+   */
   kill(signal?: "SIGTERM" | "SIGINT" | "SIGKILL"): Promise<void>;
   /** Single-consumer output. `exit` is always the last event. */
   events(): AsyncIterable<ProcessEvent>;
