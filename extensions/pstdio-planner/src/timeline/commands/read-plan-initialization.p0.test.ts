@@ -63,7 +63,10 @@ test("the first Timeline page initializes its execution prefix and continues wit
   const last = await readPlanCommand.run(ctx, { page: page(400) });
   expect(last.ticketRows.map(({ id }) => id)).toEqual(ids.slice(400));
   expect(last.sections[0].globalCounts?.total).toBe(403);
-});
+  // The complete 403-ticket case reached 6.925s in Linux package CI and 11.616s
+  // in published-extension CI.
+  // Keep every row, page and assertion; this is the whole functional-case allowance.
+}, 15_000);
 
 test("a cursor continuation that initializes the tail rejects its earlier revision", async () => {
   const storage = createMemoryStorage();
