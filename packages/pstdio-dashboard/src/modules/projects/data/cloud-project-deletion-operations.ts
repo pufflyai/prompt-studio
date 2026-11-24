@@ -8,9 +8,7 @@ import { createRuntimeState } from "@/lib/sync/runtime-state";
 import { dashboardCommandIds } from "@/shared/app/commands";
 
 import { cloudProjectCopySubject } from "./cloud-copy-download";
-
-export const cloudProjectDeletionKey = (id: string, account?: ProjectCopyAccount) =>
-  ["project-cloud-deletion", account?.managerOrigin, account?.accountId, id] as const;
+import { cloudProjectDeletionKey } from "./project-catalog";
 
 const confirmedReceipt = (id: string, receipt: CloudProjectDeletion) => {
   if (receipt.projectId !== id) throw new SyntaxError("The project deletion receipt does not match the request.");

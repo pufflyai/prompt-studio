@@ -67,12 +67,23 @@ const useCloudCopyDownload = (
   }, [downloadScope, scope, resetDownload]);
 
   useEffect(() => {
-    if (!requested || entry?.presence !== "downloaded" || !localName || deleting) return;
+    if (!requested || entry?.presence !== "downloaded" || !localName || deleting || !operations.isCurrent(id, scope))
+      return;
     input.workbench.overlays.closeOverlay(input.instance.instanceId);
     void input.workbench.commands.executeCommand(dashboardCommandIds.selectProject, {
       project: { id, name: localName },
     });
-  }, [entry?.presence, id, input.instance.instanceId, input.workbench, requested, localName, deleting]);
+  }, [
+    entry?.presence,
+    id,
+    input.instance.instanceId,
+    input.workbench,
+    requested,
+    localName,
+    deleting,
+    operations,
+    scope,
+  ]);
 
   const checkedDownload = useRef<symbol>(undefined);
   const statusObserved =
@@ -83,7 +94,7 @@ const useCloudCopyDownload = (
     void operations.check(unresolved.id);
   }, [statusObserved, operations, unresolved?.id, unresolved?.canCheck]);
 
-  const action = cloudCopyDownloadAction(entry, sync.data?.state);
+  const action = cloudCopyDownloadAction(entry, sync.data);
   const requestDownload = () => {
     const current = operations.state(id);
     if (action && !current.active && !current.failure) {
@@ -91,11 +102,17 @@ const useCloudCopyDownload = (
     }
   };
   const checkDownload = async () => {
-    if (unresolved?.canCheck && operations.state(id).failure?.id === unresolved.id)
+    if (unresolved?.canCheck && operations.isCurrent(id, scope) && operations.state(id).failure?.id === unresolved.id)
       await operations.check(unresolved.id);
   };
   const discardDownload = () => {
-    if (!unresolved || entry?.presence !== "cloud-only" || operations.state(id).failure?.id !== unresolved.id) return;
+    if (
+      !unresolved ||
+      entry?.presence !== "cloud-only" ||
+      !operations.isCurrent(id, scope) ||
+      operations.state(id).failure?.id !== unresolved.id
+    )
+      return;
     operations.discard(id, unresolved.id);
     download.reset();
     clearIntent();
