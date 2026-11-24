@@ -57,24 +57,27 @@ async function readGateLaunch(ctx: CommandContext, ticket: string, attempt: stri
   return items[0];
 }
 
-function openGateReview(ctx: CommandContext, session: { id: string; title: string }) {
+function openGateReview<T extends { id: string; title: string }>(ctx: CommandContext, session: T) {
   ctx.navigation.open({
     kind: "panel",
     panel: sessionBrowser.panels.conversation,
     open: "preview",
     resource: { type: "session", id: session.id, extensionId: "pstdio", label: session.title },
   });
+  return { ...session, type: "session" as const };
 }
 
-async function recoverCompetingLaunch(ctx: CommandContext, ticketId: string, ownerId?: string, attemptId?: string) {
-  if (!attemptId || attemptId === ownerId) throw new GateLaunchUnconfirmed();
-  const earlier = await readGateLaunch(ctx, ticketId, attemptId).catch(() => {
+async function readEarlierGateLaunch(ctx: CommandContext, ticketId: string, ownerId?: string, attemptId?: string) {
+  if (!attemptId || attemptId === ownerId) return undefined;
+  return readGateLaunch(ctx, ticketId, attemptId).catch(() => {
     throw new GateLaunchUnconfirmed();
   });
-  if (!earlier) throw new GateLaunchRefused("Another review changed the gate before this launch started.");
-  openGateReview(ctx, earlier);
-  return { ...earlier, type: "session" as const };
 }
+
+const gateReservationError = (ownerId?: string, attemptId?: string) =>
+  attemptId && attemptId !== ownerId
+    ? new GateLaunchRefused("Another review changed the gate before this launch started.")
+    : new GateLaunchUnconfirmed();
 
 async function requireOpenGate(ctx: CommandContext, ticket: string) {
   const row = await findTicket(ctx, ticket);
@@ -116,17 +119,12 @@ export const launchGateCommand = defineCommand({
     const launches = gateLaunches(ctx);
     const current = await launches.read(row.id);
     if (current) {
+      const prior = await readEarlierGateLaunch(ctx, row.id, current.value.launchId, attemptId);
+      if (prior) return openGateReview(ctx, prior);
       const session = await readGateLaunch(ctx, row.id, current.value.launchId).catch(() => undefined);
-      if (!session) return recoverCompetingLaunch(ctx, row.id, current.value.launchId, attemptId);
-      if (after !== session.id || isLiveSession(session) || attemptId === current.value.launchId) {
-        openGateReview(ctx, session);
-        return { ...session, type: "session" as const };
-      }
-      const prior = attemptId && (await readGateLaunch(ctx, row.id, attemptId));
-      if (prior) {
-        openGateReview(ctx, prior);
-        return { ...prior, type: "session" as const };
-      }
+      if (!session) throw gateReservationError(current.value.launchId, attemptId);
+      if (after !== session.id || isLiveSession(session) || attemptId === current.value.launchId)
+        return openGateReview(ctx, session);
     } else if (after) {
       throw new GateLaunchRefused("The preceding gate review could not be found.");
     }
@@ -143,7 +141,9 @@ export const launchGateCommand = defineCommand({
       const owner = await launches.get(row.id).catch(() => {
         throw new GateLaunchUnconfirmed();
       });
-      return recoverCompetingLaunch(ctx, row.id, owner?.launchId, launch.launchId);
+      const prior = await readEarlierGateLaunch(ctx, row.id, owner?.launchId, launch.launchId);
+      if (prior) return openGateReview(ctx, prior);
+      throw gateReservationError(owner?.launchId, launch.launchId);
     }
     try {
       const session = await ctx.sessions.create({

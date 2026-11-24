@@ -142,8 +142,12 @@ test("checks an unconfirmed review by its exact anchor and only replaces an expl
   await expect(launchGateCommand.run(ctx, { ticket, attemptId: result.launchAttemptId })).resolves.toMatchObject({
     id: "review-1",
   });
+  failReplacementRead = false;
+  await expect(launchGateCommand.run(ctx, { ticket, attemptId: result.launchAttemptId })).resolves.toMatchObject({
+    id: "review-1",
+  });
   expect(creates).toBe(2);
-  expect(opened).toEqual(["review-1", "review-1", "review-1", "review-2", "review-1"]);
+  expect(opened).toEqual(["review-1", "review-1", "review-1", "review-2", "review-1", "review-1"]);
 });
 
 test("releases a definitively refused launch and preserves a prior completed review when replacement is refused", async () => {
