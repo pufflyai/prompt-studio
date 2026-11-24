@@ -22,7 +22,7 @@ const ACTIVE = ["queued", "provisioning", "connected", "ready"];
 const ENDED = ["succeeded", "failed", "canceled", "expired", "preserved"];
 const path = (id: string) => `/v1/workspaces/${encodeURIComponent(id)}`;
 
-export async function listEnvironments(api: Api, projectId: string) {
+export async function listEnvironments(api: Api, projectId: string, includeEnded = false) {
   const environments: Environment[] = [];
   let cursor: string | null = null;
   do {
@@ -35,7 +35,7 @@ export async function listEnvironments(api: Api, projectId: string) {
     environments.push(
       ...page.items.filter(
         (item) =>
-          ACTIVE.includes(item.state) &&
+          (includeEnded || ACTIVE.includes(item.state)) &&
           MANAGED_PURPOSES.includes(item.metadata?.purpose ?? "") &&
           item.metadata.pstdio_project_id === projectId,
       ),

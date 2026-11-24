@@ -41,7 +41,7 @@ export async function recoverLegacyClaims(ctx: LegacyContext) {
   }
   if (!orphans.size || !ctx.connections || !ctx.projectId) return;
   // Inventory supplies keys without interpreting the storage's opaque addresses.
-  const inventory = await listEnvironments(connectionApi(ctx.connections), ctx.projectId);
+  const inventory = await listEnvironments(connectionApi(ctx.connections), ctx.projectId, true);
   for (const environment of inventory) {
     const current = await claims.read(environment.id);
     if (

@@ -20,18 +20,38 @@ export interface EnvironmentCleanupInput {
   stop: boolean;
   orphan?: boolean;
 }
-type CleanupIntent = EnvironmentCleanupInput & { jobId?: string };
+type CleanupIntent = EnvironmentCleanupInput & { jobId?: string; afterTimeout?: boolean };
 const cleanupId = (input: EnvironmentCleanupInput) => `${input.runId}:${input.environmentId}`;
 const cleanupIntents = (store: ExtensionStorageApi) => store.collection<CleanupIntent>("environment-cleanups");
 
-export async function rememberEnvironmentCleanup(store: ExtensionStorageApi, input: EnvironmentCleanupInput) {
-  await cleanupIntents(store).createIfAbsent(cleanupId(input), { ...input });
+export async function rememberEnvironmentCleanup(
+  store: ExtensionStorageApi,
+  input: EnvironmentCleanupInput,
+  afterTimeout = false,
+) {
+  await cleanupIntents(store).createIfAbsent(cleanupId(input), {
+    ...input,
+    ...(afterTimeout ? { afterTimeout: true } : {}),
+  });
+}
+
+async function cleanupResultState(store: ExtensionStorageApi, input: EnvironmentCleanupInput) {
+  const intent = await cleanupIntents(store).get(cleanupId(input));
+  if (!intent?.afterTimeout) return "ready";
+  const run = await store.get<{ summary?: { status: string } }>(`run:${input.runId}`);
+  if (!run?.summary) return "wait";
+  return run.summary.status === "timed_out" ? "ready" : "skip";
 }
 
 async function forgetCleanup(store: ExtensionStorageApi, input: EnvironmentCleanupInput) {
   const intents = cleanupIntents(store);
   const current = await intents.get(cleanupId(input));
   if (current) await intents.deleteIfValue(cleanupId(input), current);
+}
+
+async function stillOwnsCleanup(store: ExtensionStorageApi, input: EnvironmentCleanupInput) {
+  if (!(await ownsEnvironment(store, input.environmentId, input.runId))) return false;
+  return !input.orphan || !(await handoffLegacyRun(store, input.environmentId, input.runId));
 }
 
 export async function cleanupRunEnvironment(
@@ -42,15 +62,14 @@ export async function cleanupRunEnvironment(
   // Keep ownership through the remote stop, including delayed or resumed cleanup.
   while (true) {
     signal?.throwIfAborted();
-    if (!(await ownsEnvironment(deps.store, input.environmentId, input.runId))) return { stopped: false };
-    if (input.orphan && (await handoffLegacyRun(deps.store, input.environmentId, input.runId)))
-      return { stopped: false };
+    if (!(await stillOwnsCleanup(deps.store, input))) return { stopped: false };
+    const resultState = await cleanupResultState(deps.store, input);
+    if (resultState === "wait") return { stopped: false, deferred: true };
+    if (resultState === "skip") return { stopped: false };
     if (!input.stop) break;
     try {
       const environment = await readEnvironment(deps.api, input.environmentId, signal);
-      if (!(await ownsEnvironment(deps.store, input.environmentId, input.runId))) return { stopped: false };
-      if (input.orphan && (await handoffLegacyRun(deps.store, input.environmentId, input.runId)))
-        return { stopped: false };
+      if (!(await stillOwnsCleanup(deps.store, input))) return { stopped: false };
       if (
         !["terminating", "preserving", "succeeded", "failed", "canceled", "expired", "preserved"].includes(
           environment.state,
@@ -95,7 +114,7 @@ export const cleanupEnvironmentCommand = defineCommand({
       },
       ctx.signal,
     );
-    await forgetCleanup(ctx.storage, { ...input, stop: input.stop === true });
+    if (!result.deferred) await forgetCleanup(ctx.storage, { ...input, stop: input.stop === true });
     await Promise.resolve()
       .then(() => ctx.events.emit(changed, {}))
       .catch(() => {});
@@ -146,6 +165,12 @@ async function resumeCleanup(ctx: Pick<ExtensionContextBase, "automation" | "sto
     const { environmentId, runId, stop, orphan, jobId: priorId } = current.value;
     const claim = await ctx.storage.collection<{ runId: string }>("environment-claims").get(environmentId);
     if (claim?.runId !== runId) {
+      await intents.deleteIfValue(id, current.value);
+      return;
+    }
+    const resultState = await cleanupResultState(ctx.storage, current.value);
+    if (resultState === "wait") return;
+    if (resultState === "skip") {
       await intents.deleteIfValue(id, current.value);
       return;
     }

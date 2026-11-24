@@ -39,10 +39,15 @@ export async function readRunReceipt<T>(
   signal: AbortSignal | undefined,
   retryTransient: boolean,
   onMissing?: () => void,
+  onFinalRead?: () => void,
 ) {
+  const readFinal = () => {
+    onFinalRead?.();
+    return finalRead<T>(api, path, record, signal, onMissing);
+  };
   const remaining = runDeadline(record) - Date.now();
   // A completed receipt wins over a local timeout, including at the boundary.
-  if (remaining <= 0) return finalRead<T>(api, path, record, signal, onMissing);
+  if (remaining <= 0) return readFinal();
   const { deadline, bounded } = boundedSignal(remaining, signal);
   try {
     return retryTransient
@@ -54,8 +59,7 @@ export async function readRunReceipt<T>(
       onMissing?.();
       return null;
     }
-    if (Date.now() >= runDeadline(record) && (deadline.aborted || canRetryControllerRequest(error)))
-      return finalRead<T>(api, path, record, signal, onMissing);
+    if (Date.now() >= runDeadline(record) && (deadline.aborted || canRetryControllerRequest(error))) return readFinal();
     throw error;
   }
 }

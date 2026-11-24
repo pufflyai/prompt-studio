@@ -20,7 +20,8 @@ command there, stops the environment when the run finishes, and saves the full l
   and log-collection allowance, then
   queues independent workspace cleanup and log collection, with the existing once-per-minute
   recovery schedule as a fallback. Confirmed runner timeouts also save their actual result
-  before shutdown or log-service retries. Uploaded logs are backfilled without changing the
+  before shutdown or log-service retries. Cleanup admission and workers both require the
+  durable timeout summary, including after a restart between intent and result writes. Uploaded logs are backfilled without changing the
   saved outcome or duration. A durable result checkpoint survives summary-write or ownership-release
   failures; recovery completes it even when the host labels the failed worker non-retryable.
   Incomplete cleanup and log intents also recover from those failures, preserving the original
@@ -28,7 +29,9 @@ command there, stops the environment when the run finishes, and saves the full l
   upload grace period, including a final read after restart. Setup claims carry a finite
   recovery window; the next launch,
   Runs access, or assigned recovery schedule fences submission before cleaning an interrupted
-  setup. Without an assigned schedule, recovery starts on the next launch or Runs access;
+  setup. Explicit `runs show` and collector entry also wait for setup activation or recover
+  its expiry; they preserve the setup's keep policy without requiring an assigned schedule.
+  Without an assigned schedule, other recovery starts on the next launch or Runs access;
   reuse stays blocked until its asynchronous cleanup finishes. Workspace ownership
   remains held until cleanup accepts the stop; elapsed time never makes it reusable.
   Expired claims saved by older versions without a run record are reconciled against this

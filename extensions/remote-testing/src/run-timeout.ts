@@ -16,11 +16,15 @@ export async function saveTimedOutRun(
   // not keep an overdue result looking like an active test run.
   await prepareResultStorage(async () => {
     if (stop && (await ownsEnvironment(deps.store, record.environmentId, record.runId)))
-      await rememberEnvironmentCleanup(deps.store, {
-        environmentId: record.environmentId,
-        runId: record.runId,
-        stop: true,
-      });
+      await rememberEnvironmentCleanup(
+        deps.store,
+        {
+          environmentId: record.environmentId,
+          runId: record.runId,
+          stop: true,
+        },
+        true,
+      );
     await rememberRunLog(deps.store, record.runId, !finalized);
   }, signal);
   summary = await persistResult(deps, record, summary, finalized && !stop, signal);

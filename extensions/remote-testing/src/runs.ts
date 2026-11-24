@@ -11,8 +11,9 @@ import {
   waitUntilReady,
 } from "./environments";
 import { notifyRunChange } from "./events";
-import { completedResult, persistResult } from "./result-persistence";
-import { readRunReceipt, runDeadline, TRANSFER_ALLOWANCE_SECONDS } from "./run-deadline";
+import { persistResult } from "./result-persistence";
+import { readCollectionReceipt, readCollectionState } from "./run-collection-state";
+import { TRANSFER_ALLOWANCE_SECONDS } from "./run-deadline";
 import { type Receipt, receiptSummary, summarize, timeoutSummary } from "./run-result";
 import { saveSubmissionFailure } from "./run-submission";
 import { saveTimedOutRun } from "./run-timeout";
@@ -255,19 +256,14 @@ export async function checkRun(
   signal?: AbortSignal,
   retryTransient = false,
 ) {
-  record = (await deps.store.get<RunRecord>(`run:${record.runId}`)) ?? record;
-  const previous = await completedResult(deps, record);
-  if (previous) return previous;
-  let missingSubmission = false;
-  const receipt = await readRunReceipt<Receipt>(deps.api, requestPath(record), record, signal, retryTransient, () => {
-    missingSubmission = true;
-  });
-  // Admission can be acknowledged while a bounded receipt read is in flight.
-  record = (await deps.store.get<RunRecord>(`run:${record.runId}`)) ?? record;
-  const latest = await completedResult(deps, record);
-  if (latest) return latest;
+  const initial = await readCollectionState(deps, record);
+  if (initial.summary || initial.setup) return initial.summary;
+  const observed = await readCollectionReceipt(deps, initial.record, signal, retryTransient);
+  record = observed.record;
+  if (observed.summary || observed.setup) return observed.summary;
+  const { receipt, missingSubmission } = observed;
   const terminal = receipt?.finalizedAt ? receiptSummary(record, receipt) : null;
-  const expired = !receipt?.finalizedAt && Date.now() >= runDeadline(record);
+  const expired = !receipt?.finalizedAt && observed.finalRead;
   if (!receipt?.finalizedAt && !expired) return null;
   if (expired || terminal?.status === "timed_out") {
     const stop = record.stopAfterRun === true || (expired && record.submissionPending === true && missingSubmission);

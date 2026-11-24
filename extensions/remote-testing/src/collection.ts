@@ -1,12 +1,12 @@
 import { type CommandContext, defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
 import { readSavedLog, runDeps } from "./context";
 import { resumeEnvironmentCleanups } from "./environment-cleanup";
-import type { Claim } from "./environments";
 import { changed } from "./events";
 import { RecoveryBudgetExhausted, recoveryCursor } from "./recovery-budget";
 import { finishPendingResult } from "./result-persistence";
 import { unfinishedRuns } from "./run-recovery";
 import { awaitRun, type RunRecord, readRun } from "./runs";
+import { readRunSetup, waitForRunSetup } from "./setup-claims";
 
 export const collectRun = defineCommand({
   id: "runs.collect",
@@ -14,7 +14,7 @@ export const collectRun = defineCommand({
   automation: true,
   params: { runId: params.text({ label: l10n("remote-testing.run-id", "Run ID"), required: true }) },
   async run(ctx, { runId }) {
-    const record = await readRun(ctx.storage, runId);
+    const record = await waitForRunSetup(ctx, runId, ctx.signal);
     if (record.pendingResult) {
       await finishPendingResult(
         {
@@ -31,7 +31,7 @@ export const collectRun = defineCommand({
           )
           .catch(() => {}),
       );
-    } else await awaitRun(await runDeps(ctx), record, ctx.signal);
+    } else if (!record.summary) await awaitRun(await runDeps(ctx), record, ctx.signal);
     return { runId };
   },
 });
@@ -56,6 +56,9 @@ export async function startCollection(
 ) {
   const links = ctx.storage.collection<{ jobId: string }>("run-collectors");
   while (true) {
+    const record = await readRun(ctx.storage, runId);
+    if (!record.summary && !record.pendingResult && (await readRunSetup(ctx.storage, record)))
+      throw new Error("Run setup is still in progress. Wait with runs show before collecting it.");
     const current = await links.read(runId);
     // Existing projects used a plain KV link; migrate it when a new job is admitted.
     const priorId = current?.value.jobId ?? (await ctx.storage.get<string>(`collector:${runId}`));
@@ -98,8 +101,7 @@ export async function resumeCollection(
   record: RunRecord,
 ) {
   if (!record.pendingResult && (record.summary || record.stopAfterRun === undefined)) return true;
-  const claim = await ctx.storage.collection<Claim>("environment-claims").get(record.environmentId);
-  if (claim?.runId === record.runId && claim.setup) return true;
+  if (await readRunSetup(ctx.storage, record)) return true;
   try {
     await startCollection(ctx, record.runId, !record.pendingResult, Boolean(record.pendingResult));
   } catch (error) {
