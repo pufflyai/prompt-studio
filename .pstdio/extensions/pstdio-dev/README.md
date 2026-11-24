@@ -29,7 +29,11 @@ The pages use your GitHub CLI login. Run `gh auth login` in this repository firs
 
 ## Release pipeline health
 
-Open **Release health** from the project navigation. The **Range** and **Aggregation** controls apply to every chart in **Overview**. Choose the last 7, 30, or 90 days or all available history, grouped by day, week, or month in UTC; the last 7 days can also be grouped by hour. Weeks start on Monday. The range applies to the **Runs** table, where each run has its duration, GitHub link, and verification evidence.
+Open **Release health** from the project navigation. **Overview** puts the release charts and run evidence on one dashboard. Use **Edit dashboard** in the page toolbar to arrange widgets for the open page.
+
+**Range** and **Aggregation** apply to the dashboard charts. Choose the last 7, 30, or 90 days or all available history, grouped by day, week, or month in UTC. The last 7 days can also be grouped by hour. Weeks start on Monday. The range also applies to the **Release runs** widget, where each run has its duration, GitHub link, and verification evidence.
+
+This repository-local extension consumes the workspace build of `@pstdio/ui`. From the repository root, run `bun install --frozen-lockfile` and `bunx lerna run build --scope @pstdio/ui --include-dependencies` before opening the extension from a fresh checkout.
 
 Dashed vertical lines mark GitHub publication dates for `pstdio@` releases. When several releases fall in the same bucket, the tooltip lists each tag and timestamp. The test charts sum recorded executions and average completed run durations. Dates outside the available workflow history have gaps in the test charts.
 

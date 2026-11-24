@@ -1,5 +1,5 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import { AlertMessage, psTheme } from "@pstdio/ui";
+import { AlertMessage, EmptyState, psTheme } from "@pstdio/ui";
 import { barY, defineChart, dot, lineY, stack } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
@@ -48,7 +48,7 @@ interface TimelinePlotProps {
   aggregation: Aggregation;
 }
 
-const VelocityPlot = ({ buckets, aggregation }: TimelinePlotProps) => {
+export const VelocityPlot = ({ buckets, aggregation }: TimelinePlotProps) => {
   // Once velocity history starts, a period without merges is a real zero. Earlier periods have no velocity data.
   const start = buckets.findIndex(({ merges }) => merges?.velocity);
   const points =
@@ -59,7 +59,7 @@ const VelocityPlot = ({ buckets, aggregation }: TimelinePlotProps) => {
           if (!merges.velocity) return [];
           return [{ date, features: merges.categories?.feature ?? 0, ...merges.velocity }];
         });
-  if (!points.length) return null;
+  if (!points.length) return <EmptyState title="No velocity data in this range" />;
 
   const stroke = color("feature");
   const values = scaleLinear()
@@ -124,7 +124,7 @@ export const PullRequestMergesPlot = ({ buckets, aggregation, error }: TimelineP
       {merges.length ? `Showing cached counts. ${error}` : error}
     </AlertMessage>
   ) : null;
-  if (!merges.length) return warning;
+  if (!merges.length) return warning ?? <EmptyState title="No PR merge data in this range" />;
 
   const categorized = merges.some((bucket) => bucket.categories);
   const selected = categorized ? selection : undefined;
@@ -203,7 +203,6 @@ export const PullRequestMergesPlot = ({ buckets, aggregation, error }: TimelineP
           />
         </Box>
       </Stack>
-      <VelocityPlot buckets={buckets} aggregation={aggregation} />
     </Stack>
   );
 };

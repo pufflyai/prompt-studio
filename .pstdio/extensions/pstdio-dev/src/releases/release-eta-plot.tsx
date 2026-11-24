@@ -1,5 +1,5 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import { psTheme } from "@pstdio/ui";
+import { EmptyState, psTheme } from "@pstdio/ui";
 import { defineChart, dot, lineY } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react";
 import { scaleBand } from "@tanstack/charts/scales/band";
@@ -31,7 +31,7 @@ interface ReleaseEtaPlotProps {
 // ETA to release: failing tests that block a release × agentic hours to fix each, per category.
 export const ReleaseEtaPlot = ({ runs, grouping, onChoose }: ReleaseEtaPlotProps) => {
   const points = etaSeries(runs, grouping);
-  if (!points.length) return null;
+  if (!points.length) return <EmptyState title="No release ETA in this range" />;
 
   const latest = points.at(-1)!.latest;
   const stroke = psTheme.token.var("colors.vis.categorical.4");

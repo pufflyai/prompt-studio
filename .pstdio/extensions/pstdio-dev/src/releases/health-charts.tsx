@@ -1,5 +1,5 @@
 import { Box, HStack, Stack, Text } from "@chakra-ui/react";
-import { psTheme } from "@pstdio/ui";
+import { EmptyState, psTheme } from "@pstdio/ui";
 import { barY, defineChart, dot, lineY, stack } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
@@ -62,7 +62,7 @@ export const CategoryBreakdown = ({ run }: { run: ReleaseHealth }) => {
   );
 };
 
-const bucketMetrics = (bucket: HealthBucket) => {
+export const bucketMetrics = (bucket: HealthBucket) => {
   const measured = bucket.runs.filter(({ counts }) => counts.reports > 0);
   const timed = bucket.runs.filter(({ runDurationSeconds }) => runDurationSeconds !== undefined);
   const passed = measured.reduce((sum, run) => sum + run.counts.passed, 0);
@@ -116,8 +116,9 @@ const testSegments = (bucket: RunBucket, selected?: TestSeries) => {
   return [{ date: bucket.date, category: selected, count }];
 };
 
-const TotalTestsPlot = ({ buckets, aggregation, onChoose }: RunPlotProps) => {
+export const TotalTestsPlot = ({ buckets, aggregation, onChoose }: RunPlotProps) => {
   const [selection, setSelection] = useState<TestSeries>();
+  if (!buckets.some((bucket) => bucket.measured.length)) return <EmptyState title="No test summaries in this range" />;
   const byDate = new Map(buckets.map((bucket) => [bucket.date, bucket]));
   const uncategorized = buckets.some(({ segments }) => segments.some(({ category }) => category === "pending"));
   const legend = uncategorized ? categoryLegend : categoryLegend.filter(({ id }) => id !== "pending");
@@ -193,7 +194,7 @@ const metricConfig = {
   duration: { title: "Average run duration", fill: "vis.categorical.1" },
 } as const;
 
-const RunMetricPlot = ({
+export const RunMetricPlot = ({
   buckets,
   aggregation,
   onChoose,
@@ -206,7 +207,7 @@ const RunMetricPlot = ({
     if (value === undefined || (!duration && !bucket.measured.length)) return [];
     return [{ date: bucket.date, value }];
   });
-  if (!points.length) return null;
+  if (!points.length) return <EmptyState title={`No data for ${title.toLowerCase()} in this range`} />;
   const byDate = new Map(buckets.map((bucket) => [bucket.date, bucket]));
   const marks = duration
     ? [
@@ -263,26 +264,5 @@ const RunMetricPlot = ({
         />
       </Box>
     </Stack>
-  );
-};
-
-export const ReleaseRunPlots = ({
-  buckets,
-  aggregation,
-  onChoose,
-}: {
-  buckets: HealthBucket[];
-  aggregation: Aggregation;
-  onChoose: (id: number) => void;
-}) => {
-  const metrics = buckets.map(bucketMetrics);
-  const measured = metrics.some((bucket) => bucket.measured.length);
-  return (
-    <>
-      {measured ? <TotalTestsPlot buckets={metrics} aggregation={aggregation} onChoose={onChoose} /> : null}
-      <RunMetricPlot buckets={metrics} aggregation={aggregation} onChoose={onChoose} metric="failed" />
-      <RunMetricPlot buckets={metrics} aggregation={aggregation} onChoose={onChoose} metric="quarantined" />
-      <RunMetricPlot buckets={metrics} aggregation={aggregation} onChoose={onChoose} metric="duration" />
-    </>
   );
 };

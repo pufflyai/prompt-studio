@@ -64,14 +64,19 @@ const publications = [
   { tag: "pstdio@0.48.0-nightly.20261118071355", publishedAt: "2026-11-18T07:29:26Z" },
 ];
 
-export default { title: "Extensions/Prompt Studio Dev/Release pipeline health", fullscreen: true };
+export default {
+  title: "Extensions/Prompt Studio Dev/Release health dashboard",
+  fullscreen: true,
+};
 export const ReleaseHealth = () => {
   const [state, setState] = useState("history");
+  const refreshing = state === "refreshing";
+  const hasHistory = state !== "empty" && !refreshing;
   const merges = state === "totals only" ? mergeTotals : pullRequestMerges;
   return (
     <Box h="100dvh" display="flex" flexDirection="column" minH="0">
       <HStack p="sm">
-        {["history", "merges only", "totals only", "empty", "error"].map((value) => (
+        {["history", "merges only", "totals only", "empty", "refreshing", "error"].map((value) => (
           <Button key={value} size="xs" onClick={() => setState(value)}>
             {value}
           </Button>
@@ -80,10 +85,10 @@ export const ReleaseHealth = () => {
       <Box flex="1" minH="0">
         <HealthView
           today="2026-11-18"
-          runs={state === "empty" || state === "merges only" ? [] : runs}
-          pullRequestMergesDaily={state === "empty" ? undefined : merges}
+          runs={hasHistory && state !== "merges only" ? runs : []}
+          pullRequestMergesDaily={hasHistory ? merges : undefined}
           bugOriginCoverage={
-            state === "empty" || state === "totals only"
+            !hasHistory || state === "totals only"
               ? undefined
               : {
                   reviewedThrough: "2026-11-18T13:00:00Z",
@@ -95,9 +100,9 @@ export const ReleaseHealth = () => {
                   unlinked: 75,
                 }
           }
-          publications={state === "empty" ? undefined : publications}
+          publications={hasHistory ? publications : undefined}
           pullRequestMergesError={state === "error" ? "GitHub is unreachable." : undefined}
-          refreshing={false}
+          refreshing={refreshing}
           error={state === "error" ? "GitHub is unreachable; cached results are shown." : undefined}
           onRefresh={() => {}}
           onOpen={() => {}}
