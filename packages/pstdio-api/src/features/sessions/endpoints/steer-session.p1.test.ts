@@ -101,6 +101,20 @@ test.each([
       [{ id: delivery.deliveryId, role: "user", parts: [{ type: "text", text: "Focus on tests" }] }],
       fixture.handle.deps,
     );
+    const queue = fixture.handle.deps.sessionQueueEntriesService;
+    const [intent] = await queue.listSteeringDeliveries(fixture.session.id);
+    const update = fixture.handle.deps.fileService.update;
+    fixture.handle.deps.fileService.update = async () => {
+      throw new Error("Sender checkpoint unavailable");
+    };
+    try {
+      await expect(reconcileQueuedSteering(fixture.handle.deps, fixture.session.id)).rejects.toThrow(
+        "Sender checkpoint unavailable",
+      );
+      expect(await queue.get(intent.queue_position)).toEqual(intent);
+    } finally {
+      fixture.handle.deps.fileService.update = update;
+    }
     await reconcileQueuedSteering(fixture.handle.deps, fixture.session.id);
     const { getSessionHistory } = await import("../session-history");
     expect((await getSessionHistory(fixture.session.id, fixture.handle.deps))[0].sender).toMatchObject({

@@ -5,4 +5,4 @@
 "@pstdio/workbench": minor
 ---
 
-Navigate conversation turns, identify attributed messages by sender, and copy a saved session’s nickname from its menu.
+Navigate conversation turns and identify attributed messages by sender.

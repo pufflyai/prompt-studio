@@ -70,6 +70,7 @@ test.each([false, true])("records a session sender in delivered and saved histor
     expect(await app.deps.sessionQueueEntriesService.listDispatchStarted()).toContainEqual(
       expect.objectContaining({ session_id: target.id, sender_json: expect.objectContaining(sender) }),
     );
+    expect(app.deps.sessionService.store.get(target.id)?.conversation?.getMessages()[0].sender).toMatchObject(sender);
     finished.resolve({ status: "completed" });
     for (let i = 0; i < 100 && (await app.deps.sessionService.get(target.id))?.status !== "completed"; i++)
       await Bun.sleep(10);
@@ -81,6 +82,41 @@ test.each([false, true])("records a session sender in delivered and saved histor
     expect(((await Bun.file(file!.storage_path).json()) as SessionMessage[])[0].sender).toMatchObject(sender);
   } finally {
     finished.resolve({ status: "completed" });
+    await app.close();
+  }
+});
+
+test("queued attribution stores a bounded Unicode display name and the exact source identity", async () => {
+  const app = await createTestApp({
+    harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("sender")]),
+  });
+  try {
+    const project = await app.deps.projectService.create({ name: "Bounded sender labels" });
+    const title = "😀".repeat(4096);
+    const source = await app.deps.sessionService.create({
+      project_id: project.id,
+      title,
+      agent: testHarnessId("sender"),
+    });
+    const target = await app.deps.sessionService.create({
+      project_id: project.id,
+      title: "Receiver",
+      agent: testHarnessId("sender"),
+      status: "in_progress",
+    });
+    const response = await app.app.request(`/v1/sessions/${target.id}/follow-up`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt: "Inspect this", sourceSessionId: source.id }),
+    });
+    expect(response.status).toBe(200);
+    const [entry] = await app.deps.sessionQueueEntriesService.listPendingBySession(target.id);
+    expect(entry.sender_json).toMatchObject({ type: "session", id: source.id });
+    expect(Buffer.byteLength(entry.sender_json!.name)).toBeLessThanOrEqual(1024);
+    expect(title.startsWith(entry.sender_json!.name)).toBe(true);
+    expect(entry.sender_json!.name).not.toContain("\uFFFD");
+    expect((await app.deps.sessionService.get(source.id))!.title).toBe(title);
+  } finally {
     await app.close();
   }
 });
