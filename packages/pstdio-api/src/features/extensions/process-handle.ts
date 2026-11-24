@@ -183,6 +183,7 @@ export const spawnProcessHandle = (
     const groupClosed = lifetime.treeExited!.then(() => {
       groupFinished = true;
     });
+    // An owner must be able to discard backpressured output even after the process group exits.
     cleanup = Promise.all([outputClosed, groupClosed]);
   }
 
