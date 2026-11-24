@@ -69,7 +69,8 @@ for await (const event of child.events()) {
   reports the native exit code with a null signal. For an admitted child, `kill` resolves after
   confirmed cleanup. A kill while a target is still opening resolves at once: `started` rejects
   with `process_owner_closed`. The host attempts to stop a child that still arrives. If that
-  stop fails, calling `kill` again retries cleanup.
+  stop fails, calling `kill` again retries cleanup. A retired extension keeps its unconfirmed
+  handles available for a later lifecycle cleanup attempt.
 - `events()` yields `stdout` and `stderr` chunks as `Uint8Array` and always ends with one `exit`
   event. It has one consumer. Order is kept within each stream, but not between the two streams.
 - `id` identifies the handle to your code. It is not an OS pid, and no host API accepts it. In the
