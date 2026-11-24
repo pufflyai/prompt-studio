@@ -184,6 +184,7 @@ const expectAutoBuildFilter = async (page: Page) => {
     .click();
   const dialog = page.getByRole("dialog", { name: "Auto Build", exact: true });
   const autoBuild = dialog.frameLocator('iframe[title="Auto Build"]');
+  await expect(autoBuild.getByRole("textbox")).toBeVisible({ timeout: 30_000 });
   // The lazy editor's initial autofocus must finish before opening another control.
   await expect(autoBuild.getByRole("textbox")).toBeFocused();
   await expect(autoBuild.locator(".katex")).toHaveCSS("font-family", /KaTeX_Main/);

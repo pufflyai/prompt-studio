@@ -126,7 +126,6 @@ const pageRow = async (
     parent = parent.parentId ? parents.get(parent.parentId) : undefined;
   }
   const gate = typeof fields.gate === "string";
-  const instructions = gate ? ((await ticketRecords(ctx.storage).get(ticket.id))?.content ?? "") : "";
   const status = statuses.get(ticket.statusId ?? "");
   const target = view.result.rows.find(({ id }) => id === ticket.id)!.target!;
   return {
@@ -144,7 +143,7 @@ const pageRow = async (
     requestErrors: [],
     reviewCounts: reviews,
     relationsPaged: true,
-    instructions,
+    instructions: gate ? ((await ticketRecords(ctx.storage).get(ticket.id))?.content ?? "") : "",
     done,
     step,
     ancestors,
