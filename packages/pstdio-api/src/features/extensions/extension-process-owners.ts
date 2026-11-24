@@ -22,7 +22,7 @@ export const createExtensionProcessOwners = (input: {
     return generation.owner.close();
   };
 
-  const stillCurrent = async (generation: Generation) => {
+  const stillCurrent = async (generation: Generation, firstCheck: boolean) => {
     try {
       const source = await input.findEnabledSource(generation.projectId, generation.extensionId);
       return source !== undefined && sourceIdentity(source) === generation.identity;
@@ -32,8 +32,16 @@ export const createExtensionProcessOwners = (input: {
         { err: error, event: "extension.process_owner.check_failed", extension_id: generation.extensionId },
         "Could not check whether extension processes still belong to an enabled source",
       );
-      return true;
+      return !firstCheck;
     }
+  };
+
+  const verify = (key: string, generation: Generation, firstCheck = false) => {
+    const ready = stillCurrent(generation, firstCheck).then(async (current) => {
+      if (!current) await retire(key, generation);
+    });
+    generation.owner.ready = ready;
+    return ready;
   };
 
   return {
@@ -52,11 +60,8 @@ export const createExtensionProcessOwners = (input: {
         if (disposed) void created.owner.close();
         else {
           generations.set(key, created);
-          // A call that was already running when its source was disabled or replaced must not
-          // revive a retired generation; no later invalidation would stop it.
-          void stillCurrent(created).then((current) => {
-            if (!current) return retire(key, created);
-          });
+          // The first check must finish before a stale call can open a target.
+          void verify(key, created, true);
         }
       }
       return generation.owner;
@@ -65,11 +70,7 @@ export const createExtensionProcessOwners = (input: {
     /** Stops the children of generations that are no longer the enabled source. Omit projectId to check all. */
     async reconcile(projectId?: string) {
       const checks = [...generations].filter(([, generation]) => !projectId || generation.projectId === projectId);
-      await Promise.all(
-        checks.map(async ([key, generation]) => {
-          if (!(await stillCurrent(generation))) await retire(key, generation);
-        }),
-      );
+      await Promise.all(checks.map(([key, generation]) => verify(key, generation)));
     },
 
     async dispose() {
