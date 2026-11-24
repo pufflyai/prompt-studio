@@ -2,7 +2,10 @@ import { expect, test } from "bun:test";
 import type { HarnessContext } from "@pstdio/sdk/extensions";
 import { createOpencodeHarness } from "./harness";
 import { ctx } from "./harness.test-helpers";
-import { acceptedPrompt, emptyMessages } from "./native-api.test-helpers";
+import { acceptedPrompt, emptyMessages, readyPluginInventory } from "./native-api.test-helpers";
+
+const discoveryResponse = async (input: RequestInfo | URL) =>
+  new URL(String(input)).pathname === "/api/plugin" ? readyPluginInventory() : emptyMessages();
 
 test("project disposal waits for a native abort already started by cancellation", async () => {
   const abortEntered = Promise.withResolvers<void>();
@@ -96,7 +99,7 @@ test("concurrent discovery shares startup across project contexts", async () => 
       },
       pingServer: async (url) => healthy.has(url),
       isPortOpen: async ({ port }) => listening.has(port),
-      fetcher: async () => emptyMessages(),
+      fetcher: discoveryResponse,
     },
   );
   const first: HarnessContext = { ...ctx, projectId: "first" };
@@ -127,7 +130,7 @@ test("disabling the last project stops its worker and preserves other projects u
       }),
       pingServer: async () => false,
       isPortOpen: async () => false,
-      fetcher: async () => emptyMessages(),
+      fetcher: discoveryResponse,
     },
   );
   const first: HarnessContext = { ...ctx, projectId: "first" };
@@ -151,7 +154,7 @@ test("disabling a project leaves an externally started OpenCode server running",
       },
       pingServer: async () => true,
       isPortOpen: async () => true,
-      fetcher: async () => emptyMessages(),
+      fetcher: discoveryResponse,
     },
   );
   await harness.getCommandState!(ctx, { cwd: "/project" });
@@ -177,7 +180,7 @@ test("disabling a project while discovery starts releases the worker before clea
       },
       pingServer: async () => false,
       isPortOpen: async () => false,
-      fetcher: async () => emptyMessages(),
+      fetcher: discoveryResponse,
     },
   );
   const discovery = harness.getCommandState!(ctx, { cwd: "/project" });

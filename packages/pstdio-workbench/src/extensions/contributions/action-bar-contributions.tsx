@@ -1,4 +1,5 @@
 import type { RendererContext } from "@pstdio/sdk/extensions";
+import { contributionRefId } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import { WorkbenchActionBar } from "../../react/action-bar/action-bar";
 import { executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
@@ -26,6 +27,7 @@ export const registerWorkbenchExtensionActionBars = (input: RegisterWorkbenchExt
         id: view.id,
         title: text(view.title, view.id),
         icon: view.icon,
+        header: view.header ? { viewId: contributionRefId(view.header.view) } : undefined,
         body: {
           kind: "react",
           render: (render) => (

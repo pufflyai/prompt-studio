@@ -8,8 +8,9 @@ export const recoverNativeInputs = async (
   session: { status: string; lastRequestStarted: string | null },
   emit: (draft: ChatDraft) => Promise<void>,
   emitted = new Set<string>(),
+  draftClientId?: string,
 ) => {
-  const pending = await readNativeSubmissions(ctx, id, true);
+  const pending = await readNativeSubmissions(ctx, id, true, draftClientId);
   for (const input of pending) {
     const recovering = input.value.state === "recovering";
     if (
@@ -34,9 +35,14 @@ export const recoverNativeInputs = async (
 const draftContent = (draft: ChatDraft) =>
   JSON.stringify({ text: draft.text, attachments: draft.attachments, values: draft.values });
 /** A stream write is not a durable acknowledgement. Retire recovery only after the host saves the recovered body. */
-export const acknowledgeNativeInputs = async (ctx: ExtensionContextBase, id: string, draft: ChatDraft) => {
+export const acknowledgeNativeInputs = async (
+  ctx: ExtensionContextBase,
+  id: string,
+  draft: ChatDraft,
+  draftClientId?: string,
+) => {
   const saved = new Set([draftContent(draft), ...(draft.recovered ?? []).map(draftContent)]);
-  for (const input of await readNativeSubmissions(ctx, id, true)) {
+  for (const input of await readNativeSubmissions(ctx, id, true, draftClientId)) {
     if (input.value.state === "recovering" && saved.has(draftContent(input.body.draft)))
       await updateNativeSubmission(ctx, input.recordId, { state: "recovered" });
   }

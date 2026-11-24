@@ -9,6 +9,7 @@ import {
   dashboardNavigationSections,
   registerDashboardNavigationContribution,
 } from "@/shared/workbench/dashboard-navigation-contribution";
+import { ExtensionsPageHeader } from "./components/extensions-page-header";
 import { ExtensionsPanel } from "./components/extensions-panel";
 
 const ExtensionsPage = (props: { input: WorkbenchPanelRenderInput }) => {
@@ -48,10 +49,16 @@ export const registerExtensionsPage = (ctx: WorkbenchModuleContext) => {
   ctx.views.registerView({
     id: dashboardWidgetIds.extensions,
     title: "Extensions",
+    header: { viewId: `${dashboardWidgetIds.extensions}.header` },
     body: {
       kind: "react",
       render: (input) => <ExtensionsPage input={input} />,
     },
+  });
+  ctx.views.registerView({
+    id: `${dashboardWidgetIds.extensions}.header`,
+    title: "Extensions controls",
+    body: { kind: "react", render: (input) => <ExtensionsPageHeader input={input} /> },
   });
   ctx.pages.registerPage({
     id: "extensions",
@@ -68,6 +75,11 @@ export const registerExtensionsPage = (ctx: WorkbenchModuleContext) => {
     },
     slots: [],
   });
+  ctx.views.registerView({
+    id: `${dashboardWidgetIds.extensions}.detail`,
+    title: "Extension",
+    body: { kind: "react", render: (input) => <ExtensionsPage input={input} /> },
+  });
   ctx.pages.registerPage({
     id: "extension-detail",
     ref: dashboardExtensionDetailPage,
@@ -80,7 +92,7 @@ export const registerExtensionsPage = (ctx: WorkbenchModuleContext) => {
       kind: "view",
       cardinality: "one",
       presentation: "page",
-      view: { kind: "view", id: dashboardWidgetIds.extensions },
+      view: { kind: "view", id: `${dashboardWidgetIds.extensions}.detail` },
     },
     slots: [],
   });

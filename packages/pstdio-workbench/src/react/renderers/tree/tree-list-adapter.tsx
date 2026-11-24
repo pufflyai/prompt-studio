@@ -1,4 +1,4 @@
-import { Box, Spinner } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
 import {
   resolveFileIconElement,
   Tooltip,
@@ -26,6 +26,7 @@ import { ActivityDot } from "../../resource-changes/activity-dot";
 import { resourceChangesFor } from "../../resource-changes/change-store";
 import { WorkbenchIcon } from "../../shared/icon";
 import { createTreeActionItems, createTreeContextMenuItems, type TreeActionParamsRequest } from "./tree-actions";
+import { TreeViewSkeleton } from "./tree-view-skeleton";
 
 interface TreeNodeRenderContext {
   workbench: WorkbenchCore;
@@ -114,14 +115,6 @@ const resolveTreeNodeEndContent = (node: TreeNode, resource: ResourceRef | undef
   return <DiffBubble additions={additions} deletions={deletions} variant="ghost" size="small" />;
 };
 const toTreeListSectionEmptyNode = (section: TreeViewSection): TreeListNode | undefined => {
-  if (section.loading && section.nodes.length === 0)
-    return {
-      id: `${section.id}:loading`,
-      label: "Loading…",
-      icon: <Spinner size="xs" />,
-      disabled: true,
-      rowVariant: "empty-state",
-    };
   if (!section.emptyState || section.nodes.length > 0) return undefined;
   return {
     id: `${section.id}:empty`,
@@ -262,9 +255,12 @@ export const toTreeListSection = (
     onRequestParams: (request: TreeActionParamsRequest) =>
       context.onRequestParams?.({ ...request, sectionId: section.id }),
   };
-  const emptyNode = toTreeListSectionEmptyNode(section);
+  const loading = section.loading && section.nodes.length === 0;
+  const emptyNode = loading ? undefined : toTreeListSectionEmptyNode(section);
   return {
     id: section.id,
+    // A known section whose entries are still loading keeps its place with skeleton rows.
+    ...(loading ? { emptyState: <TreeViewSkeleton rows={3} label="Loading" /> } : {}),
     pagination: section.pagination,
     moveScope: section.moveScope,
     label: section.label,

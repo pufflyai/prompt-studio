@@ -119,6 +119,7 @@ export const createPlannerUi = (baseUrl: string) => {
     body: {
       kind: "kanban",
       queryMode: "paged",
+      initialPageSize: 50,
       attributes: buildTicketAttributes([]),
       query: queryTicketRenderer,
       schemaRefreshEvents: [plannerSchemaChanged],
@@ -198,6 +199,7 @@ export const createPlannerUi = (baseUrl: string) => {
   const files = createTicketFilesView();
   const properties = defineView({
     id: "ticket-properties",
+    icon: "sliders-horizontal",
     title: l10n("controls.ticketProperties.title", "Properties"),
     body: {
       kind: "controls",

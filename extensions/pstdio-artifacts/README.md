@@ -39,6 +39,12 @@ The result also contains the artifact ID, the version ID, the title, and a link 
 
 The command reads the file from the agent's current workspace. Without one, it reads from the project's default folder.
 
+## Links in artifacts
+
+Use fragment links such as `<a href="#details">Details</a>` to jump to a section with `id="details"`. These links work in the dashboard preview and in exported HTML.
+
+The preview blocks navigation to other pages, including Prompt Studio pages and links that request a new tab. Show the full destination URL as selectable text with a descriptive label so readers can paste it into their browser. When sharing the artifact in a conversation, include important destinations as clickable links in your message too.
+
 ## Browse artifacts
 
 Open **Artifacts** in the project navigation. The library shows a grid of page previews with their names and edit dates. Select a card to open the artifact. Cards also work with the keyboard.

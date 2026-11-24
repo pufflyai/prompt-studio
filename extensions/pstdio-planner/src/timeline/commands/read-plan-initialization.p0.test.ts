@@ -37,17 +37,19 @@ test("the first Timeline page initializes its execution prefix and continues wit
   expect(first.sections[0].globalCounts?.total).toBe(203);
   expect(first.sections[0].rows[0].flags).toContain("out-of-order");
   expect((await storage.records.aggregate({ index: "timeline-placements" })).count).toBe(103);
-  await expect(
-    readPlanCommand.run(ctx, {
-      page: { ...page(0), limit: 100, cursor: first.page.cursor ?? undefined, revision: first.page.revision },
-    }),
-  ).rejects.toThrow("stale");
+
 
   const selected = await readPlanCommand.run(ctx, { ticketId: ids[20] });
   expect(selected.sections[0].rows[0]).toMatchObject({ id: ids[20], step: 21 });
   expect((await storage.records.aggregate({ index: "timeline-placements" })).count).toBe(103);
   await moveTicketInPlan(ctx, { ticket: ids[30], before: ids[31] });
   expect((await storage.records.aggregate({ index: "timeline-placements" })).count).toBe(103);
+
+  await expect(
+    readPlanCommand.run(ctx, {
+      page: { ...page(0), limit: 100, cursor: first.page.cursor ?? undefined, revision: first.page.revision },
+    }),
+  ).rejects.toThrow("stale");
 
   // The existing continuation contract rejects a revision changed by initialization.
   // The renderer restarts the same offset once without its old cursor/revision.

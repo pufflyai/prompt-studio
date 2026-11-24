@@ -1,6 +1,11 @@
 import type { PageLocation, ViewLocation } from "@pstdio/sdk/extensions";
 import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
-import type { WorkbenchLayout, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
+import {
+  createDefaultWorkbenchLayout,
+  type WorkbenchLayout,
+  type WorkbenchWidgetPlacement,
+  workbenchRegions,
+} from "../../registries/layout/layout-types";
 import { canonicalResourceRef } from "../../shared/contributions/resource-identity";
 
 const pageContext = (context: ViewLocation["pageContext"]): ViewLocation["pageContext"] => {
@@ -59,8 +64,10 @@ const placement = (value: WorkbenchWidgetPlacement, canonicalId: (id: string) =>
 
 /** Decode typed persisted references while keeping widget, instance and resource IDs opaque. */
 export const canonicalLayout = (layout: WorkbenchLayout, canonicalId: (id: string) => string): WorkbenchLayout => {
-  let changed = false;
-  const regions = { ...layout.regions };
+  // Accepted v5 snapshots can predate regions introduced by later releases.
+  const missingRegions = workbenchRegions.some((id) => !layout.regions[id]);
+  const regions = { ...(missingRegions ? createDefaultWorkbenchLayout().regions : undefined), ...layout.regions };
+  let changed = missingRegions;
   for (const id of Object.keys(regions) as (keyof typeof regions)[]) {
     const region = regions[id];
     const widgets = region.widgets.map((widget) => placement(widget, canonicalId));

@@ -24,19 +24,19 @@ const fixture = () => {
 };
 
 test.each([
-  { paths: ["a", "b"], expected: undefined },
-  { paths: [undefined, "a"], expected: undefined },
-  { paths: ["a", "a"], expected: "a" },
-])("pending registrations merge paths without narrowing a full refresh: %j", async ({ paths, expected }) => {
+  { paths: ["a", "b"], expected: { sourcePaths: ["a", "b"], reconcileAll: false } },
+  { paths: [undefined, "a"], expected: { sourcePaths: ["a"], reconcileAll: true } },
+  { paths: ["a", "a"], expected: { sourcePaths: ["a"], reconcileAll: false } },
+])("pending registrations retain each named source and any full refresh: %j", async ({ paths, expected }) => {
   const { client, entered, release } = fixture();
-  const observed: (string | undefined)[] = [];
-  const owner = createPreparationWatchRefresh(async (path, signal) => {
-    observed.push(path);
+  const observed: unknown[] = [];
+  const owner = createPreparationWatchRefresh(async (request, signal) => {
+    observed.push(request);
     if (observed.length === 1) {
       entered.resolve();
       await release.promise;
     }
-    await client.run("value", { name: path }, { priority: "background", signal });
+    await client.run("value", {}, { priority: "background", signal });
   });
   owners.push(owner);
   const first = owner.refresh("initial");
@@ -44,13 +44,13 @@ test.each([
   const pending = paths.map((path) => owner.refresh(path));
   release.resolve();
   await Promise.all([first, ...pending]);
-  expect(observed).toEqual(["initial", expected]);
+  expect(observed).toEqual([{ sourcePaths: ["initial"], reconcileAll: false }, expected]);
 });
 
 test("restoration lends its continuation across the running host gap and pending registration", async () => {
   const { client, entered, release } = fixture();
   const observed: string[] = [];
-  const owner = createPreparationWatchRefresh(async (path, signal) => {
+  const owner = createPreparationWatchRefresh(async ({ sourcePaths: [path] }, signal) => {
     if (path === "initial") {
       entered.resolve();
       await release.promise;
@@ -73,7 +73,7 @@ test("restoration lends its continuation across the running host gap and pending
 test("a failed registration settles its callers and still drains an already requested pending generation", async () => {
   const { client, entered, release } = fixture();
   const observed: (string | undefined)[] = [];
-  const owner = createPreparationWatchRefresh(async (path, signal) => {
+  const owner = createPreparationWatchRefresh(async ({ sourcePaths: [path] }, signal) => {
     observed.push(path);
     if (path === "old") {
       entered.resolve();
@@ -97,7 +97,7 @@ test("a completed generation settles its caller while a later registration remai
   const later = Promise.withResolvers<void>();
   const releaseLater = Promise.withResolvers<void>();
   gates.push(releaseLater.resolve);
-  const owner = createPreparationWatchRefresh(async (path, signal) => {
+  const owner = createPreparationWatchRefresh(async ({ sourcePaths: [path] }, signal) => {
     if (path === "first") {
       entered.resolve();
       await release.promise;
@@ -121,7 +121,7 @@ test("a completed generation settles its caller while a later registration remai
 test("disposal closes pending registration and awaits the running owner without a late update", async () => {
   const { client, entered, release } = fixture();
   const observed: (string | undefined)[] = [];
-  const owner = createPreparationWatchRefresh(async (path, signal) => {
+  const owner = createPreparationWatchRefresh(async ({ sourcePaths: [path] }, signal) => {
     observed.push(path);
     entered.resolve();
     await release.promise;

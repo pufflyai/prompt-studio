@@ -45,6 +45,7 @@ export const validStoredRequestExpression = all(
   ...["id", "ticketId", "title", "instructions", "requestedAt"].map((key) => operation("nonblank", get(root, key))),
   actor(get(root, "requestedBy")),
   operation("isObject", context),
+  any(operation("missing", get(context, "attemptId")), operation("nonblank", get(context, "attemptId"))),
   ...["reason", "workspaceId", "sessionId", "relatedSessionId"].map((key) => nullable(get(context, key))),
   any(eq(get(context, "attemptRevision"), null), operation("isInteger", get(context, "attemptRevision"))),
   any(

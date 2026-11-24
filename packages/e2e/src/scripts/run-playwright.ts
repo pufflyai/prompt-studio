@@ -41,6 +41,7 @@ export const getPlaywrightCommand = (args: string[], priority = process.env.CI_P
     if (args[index]?.startsWith("--max-failures=")) continue;
     selected.push(args[index]!);
   }
+  const standaloneRemoteSession = selected.length === 1 && selected[0] === "src/ui/remote-session-controls.p1.spec.ts";
   return {
     cmd: process.execPath,
     args: [
@@ -48,6 +49,7 @@ export const getPlaywrightCommand = (args: string[], priority = process.env.CI_P
       "--no-install",
       "playwright",
       "test",
+      ...(standaloneRemoteSession ? ["--config=playwright.remote-session.config.ts"] : []),
       ...selected,
       `--max-failures=${priority === "P1" && process.env.CI_PROFILE !== "production" ? 1 : 0}`,
     ],

@@ -133,6 +133,7 @@ test.each(["authentication", "history"])("cleanup preserves an in-flight %s read
     fetch: async (req) => {
       const path = new URL(req.url).pathname;
       if (path === "/api/integration") return Response.json({ data: [] });
+      if (path === "/api/plugin") return Response.json({ data: [{ id: "native-provider" }] });
       requested.resolve();
       await reply.promise;
       return Response.json({ data: [], cursor: {} });

@@ -317,3 +317,24 @@ test("automatic openings reveal their trays while retaining source focus", async
   expect(s.workbench.layout.getLayout().activeWidgetId).toBe(active);
   s.controller.dispose();
 });
+
+test("an owned resource menu cannot become the related viewer's selection", async () => {
+  const s = setup([opening("related")]);
+  s.workbench.views.registerView({ id: "resources", title: "Resources", body: { kind: "react", render: () => null } });
+  s.workbench.viewMenus.registerViewMenu({
+    id: "resources",
+    ownerViewId: "document",
+    viewId: "resources",
+    side: "left",
+  });
+  await s.controller.open(s.source);
+  const layout = s.workbench.layout.getLayout();
+  const viewer = layout.regions.side.widgets.find((widget) => widget.resource?.id === "related")!;
+  expect(layout.regions["side-left-menu"].widgets.some((menu) => menu.menuOwnerWidgetId === viewer.widgetId)).toBe(
+    true,
+  );
+  expect(layout.regions.side.activeWidgetId).toBe(viewer.widgetId);
+  expect(s.workbench.layout.getActivePanel("side")?.resource?.id).toBe("related");
+  expect(s.workbench.shell.getRegionState("side").open).toBe(true);
+  s.controller.dispose();
+});

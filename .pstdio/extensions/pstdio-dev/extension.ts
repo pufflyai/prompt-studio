@@ -11,6 +11,8 @@ import {
 import { repairRemovedCommand, repairRemovedSchedule } from "./merge-queue-repair";
 import { benchmarkCommands, syncCommandRef } from "./src/benchmarks/commands";
 import { diagnosticsCommands } from "./src/diagnostics/commands";
+import { commands as insightsCommands } from "./src/insights/commands";
+import { analysisIndex } from "./src/insights/store";
 import { navigationTrees, pages, viewMenus, views } from "./src/pages";
 import { healthSync, releaseCommands } from "./src/releases/commands";
 
@@ -168,10 +170,12 @@ export default defineExtension({
     ...Object.values(benchmarkCommands),
     ...Object.values(releaseCommands),
     ...Object.values(diagnosticsCommands),
+    ...insightsCommands,
     repairRemovedCommand,
   ],
   views,
   pages,
+  storageIndexes: [analysisIndex],
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
   navigationTrees,
   viewMenus,
@@ -213,6 +217,11 @@ export default defineExtension({
       id: "write-blog-post",
       title: "Write a blog post",
       source: packageAsset("./skills/write-blog-post", import.meta.url),
+    }),
+    defineSkill({
+      id: "analyze-agent-sessions",
+      title: "Analyze agent sessions",
+      source: packageAsset("./skills/analyze-agent-sessions", import.meta.url),
     }),
     defineSkill({
       id: "restore-repository",

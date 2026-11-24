@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import { createMemoryActivity } from "@pstdio/sdk/testing";
 import { createWorkbench, getWorkbenchRenderers, type WorkbenchModuleContribution } from "../../core";
+import { resolvePanelMenuRegionState } from "../../react/panel-menu/panel-menu-placements";
 import { buildSettingsTreeBody } from "../../react/settings/settings-tree";
 import { registerWorkbenchExtensionContributions } from "./workbench-extension-host";
 
@@ -400,4 +402,119 @@ describe("registerWorkbenchExtensionContributions workbench surfaces", () => {
     expect(workbench.layout.getWidget(statusViewId)).toBeUndefined();
     expect(workbench.layout.listPanelInstances().some((panel) => panel.panelId === statusViewId)).toBe(false);
   });
+});
+
+test.each([
+  "review",
+  "alternate",
+  "root",
+])("projects only the shared view tab’s own navigation: %s", async (selected) => {
+  const workbench = createWorkbench();
+  workbench.pageLocations.setProject("resource-menus");
+  const resource = { type: "artifact", id: "ticket-a", extensionId, projectId: "resource-menus" };
+  const source: WorkbenchExtensionMetadata = {
+    ...metadata,
+    pages: [
+      { ...metadata.pages[0]!, id: `${extensionId}.page.root`, localId: "root", path: "root" },
+      ...metadata.pages.flatMap((page) =>
+        ["aaa-unlisted", "review", "alternate"].map((id) => ({
+          ...page,
+          id: `${extensionId}.page.${id}`,
+          localId: id,
+          path: id,
+          parent: { kind: "page" as const, extensionId, id: "root" },
+          resource: { kinds: [{ kind: "resource-kind" as const, extensionId, id: "artifact" }] },
+        })),
+      ),
+    ],
+    modes: metadata.modes.map((mode) => ({ ...mode, regions: ["main", "side"] })),
+    placements: [
+      ...metadata.placements,
+      {
+        id: `${extensionId}.placement.resource-reader`,
+        localId: "resource-reader",
+        extensionId,
+        mode: { kind: "mode", extensionId, id: "review" },
+        item: {
+          kind: "binding",
+          binding: {
+            kinds: [{ kind: "resource-kind", extensionId, id: "artifact" }],
+            cardinality: "many",
+            view: { kind: "view", extensionId, id: "filters" },
+          },
+        },
+        region: "side",
+      },
+    ],
+    navigationTrees: ["review", "alternate"].map((id) => ({
+      id: `${extensionId}.navigation-tree.${id}`,
+      extensionId,
+      owner: { kind: "page", extensionId, id },
+      slot: "content",
+      view: { kind: "view", extensionId, id: "outline" },
+    })),
+  };
+  const registration = registerWorkbenchExtensionContributions({
+    workbench,
+    projectId: "resource-menus",
+    metadata: source,
+    executeCommand: (_command, body) => [
+      { id: "files", nodes: [{ id: "file", label: body.resource?.id ?? "unbound" }] },
+    ],
+  });
+  try {
+    const menu = workbench.viewMenus.listViewMenus(controlsViewId).find((entry) => entry.purpose === "resources");
+    expect(menu).toMatchObject({ side: "right", ownerViewId: controlsViewId });
+    workbench.modes.setActiveMode(modeId);
+    const reader = workbench.layout.listWidgets().find((widget) => widget.id.endsWith(".resource-reader"));
+    expect(reader?.ownedPanelMenuIds?.some((id) => id.includes("resources"))).toBe(true);
+    const routed = workbench.pages.store.getState().location;
+    const sections = await getWorkbenchRenderers(workbench).getBody(menu!.viewId, { resource });
+    expect(sections.flatMap((section) => section.nodes).map((node) => node.label)).toEqual(["ticket-a"]);
+    expect(workbench.pages.store.getState().location).toBe(routed);
+    workbench.layout.openWidget(reader!.id, {
+      resource,
+      pageContext: { page: { kind: "page", extensionId, id: selected } },
+    });
+    const visible = resolvePanelMenuRegionState(workbench, "side-right-menu").widgets.map((entry) => entry.viewId);
+    if (selected === "root") expect(visible).toHaveLength(1);
+    else expect(visible).toEqual([`${extensionId}.page.${selected}:resources`]);
+  } finally {
+    registration.dispose();
+    await workbench.dispose();
+  }
+});
+
+test("a page exposes Activity for a resource kind owned by another extension", () => {
+  const workbench = createWorkbench();
+  workbench.resources.registerKind({
+    kind: "record",
+    label: "Record",
+    extensionId: "foreign",
+    activity: { api: createMemoryActivity(), capabilities: { comments: true }, watch: async () => {} },
+  });
+  const source: WorkbenchExtensionMetadata = {
+    ...metadata,
+    pages: [
+      { ...metadata.pages[0]!, id: `${extensionId}.page.root`, localId: "root", path: "root" },
+      ...metadata.pages.map((page) => ({
+        ...page,
+        parent: { kind: "page" as const, extensionId, id: "root" },
+        resource: { kinds: [{ kind: "resource-kind" as const, extensionId: "foreign", id: "record" }] },
+      })),
+    ],
+  };
+  const registration = registerWorkbenchExtensionContributions({
+    workbench,
+    projectId: "resource-menus",
+    metadata: source,
+    executeCommand: () => undefined,
+  });
+  try {
+    expect(workbench.viewMenus.listViewMenus(controlsViewId).find((menu) => menu.purpose === "activity")).toMatchObject(
+      { side: "right", ownerViewId: controlsViewId },
+    );
+  } finally {
+    registration.dispose();
+  }
 });

@@ -28,7 +28,7 @@ export const planReadWindow = (
   const offset = input.page?.offset ?? 0;
   if (!Number.isSafeInteger(offset) || offset < 0) throw new Error("Query offset must be a nonnegative safe integer");
   const executionOffset =
-    !input.ticketId && !hasRules(input.filter) && !input.page?.search.trim() && !hidden ? offset : undefined;
+    !input.ticketId && !hasRules(input.filter) && !input.page?.search.trim() && !hidden && !input.page?.cursor ? offset : undefined;
   const bounded =
     executionOffset !== undefined &&
     !input.page?.collapsedGroups?.length &&

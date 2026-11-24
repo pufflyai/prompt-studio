@@ -29,6 +29,7 @@ test.each([
         presentationInput={{
           workbench,
           panel: { id: "note", title: "Note", region: "main", rendererId: "notes.file" },
+          viewId: "acme.notes.view.file",
           instance: { instanceId: "note-1", panelId: "note", resource, closable: true },
           refresh: () => {},
           visible: false,
@@ -51,5 +52,6 @@ test.each([
   );
   expect(markup.includes("Editor ready")).toBe(true);
   expect(received?.visible).toBe(false);
+  expect(received?.viewId).toBe("acme.editor.view.editor");
   expect(received?.textTarget).toEqual({ fileRendererId: "notes.file", resource, pageParams: { noteId: "note-1" } });
 });

@@ -11,6 +11,7 @@ import { useState } from "react";
 import { ProjectStoryFixture } from "../data/project-story-fixture";
 import { DesktopProjectTabsController } from "../desktop-project-tabs-controller";
 import { createProjectsModule } from "../module";
+import { BrowserAppHeader } from "./browser-app-header";
 import { DesktopProjectTabs } from "./desktop-project-tabs";
 
 const ProjectSelectionStory = (props: { platform?: string }) => {
@@ -48,9 +49,13 @@ const ProjectSelectionStory = (props: { platform?: string }) => {
         <Box h="100dvh">
           <Workbench
             workbench={workbench}
-            panelControlsPlacement={platform ? "host" : "nav"}
+            panelControlsPlacement="host"
             titleBar={
-              platform && <DesktopProjectTabs workbench={workbench} controller={controller} platform={platform} />
+              platform ? (
+                <DesktopProjectTabs workbench={workbench} controller={controller} platform={platform} />
+              ) : (
+                <BrowserAppHeader workbench={workbench} />
+              )
             }
           />
         </Box>

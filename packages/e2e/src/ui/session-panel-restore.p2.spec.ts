@@ -2,7 +2,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, executePlannerCommand, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { type APIRequestContext, expect, type Page, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
-import { openProjectHome } from "./helpers/sidenav-navigation";
+import { leaveSidenavLevel } from "./helpers/sidenav-navigation";
 
 const deleteAllProjects = async (request: APIRequestContext) => {
   const response = await request.get(`${apiBase}/v1/projects`);
@@ -96,7 +96,7 @@ test("reuses a dashboard session tab selected again from a planner ticket", asyn
   await expect(sessionTabs).toHaveCount(2);
   await expect(sessionTab).toHaveAttribute("aria-selected", "true");
 
-  await openProjectHome(page, "PS-8 Session Tab Reuse");
+  await leaveSidenavLevel(page);
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
   await openTicketCard(page, "Reuse session A across resource surfaces");
   await sessionRow.click();
