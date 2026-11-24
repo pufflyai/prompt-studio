@@ -19,6 +19,7 @@ import {
   requests,
   restoreRequests,
   spaceKeys,
+  teamInvitations,
   teamMembers,
   teams,
   workbenches,
@@ -284,6 +285,8 @@ export const restoreManager = async (db: ManagerDatabase, requestId: string, inp
     await transaction.delete(session);
     // Restored devices log in again, so no device credential survives a restore.
     await transaction.delete(devices);
+    // Pending invitation secrets are deliberately excluded from snapshots. Restore also invalidates outstanding links.
+    await transaction.update(teamInvitations).set({ state: "canceled" }).where(eq(teamInvitations.state, "pending"));
     await transaction.update(accounts).set({ state: "disabled" });
     // Existing teams retain their current authority. Historical snapshots can restore missing teams only.
     const existingAccounts = new Set(

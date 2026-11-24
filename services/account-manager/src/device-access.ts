@@ -1,5 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
-import { accountSignInProviderSchema, identitySchema } from "pstdio-sync-contracts";
+import { type AccountSignInProvider, accountSignInProviderSchema, identitySchema } from "pstdio-sync-contracts";
 import { readAccountFeatures, requireRelay } from "./account-features";
 import { deviceNameSchema, deviceProfileSchema } from "./contracts";
 import { digestCredential } from "./credential";
@@ -20,20 +20,31 @@ import {
 import { listOutstandingProjectDeletions, readProjectDeletion, startProjectDeletion } from "./project-deletion";
 import { readProviderIdentity } from "./provider-identity";
 import { DeviceAccessDenied } from "./renewal-errors";
-import { accounts, projectMembers } from "./schema";
+import { accounts, projectMembers, teams } from "./schema";
 import { spaceKeysInTransaction } from "./space-keys";
+import {
+  acceptTeamInvitation,
+  cancelTeamInvitation,
+  createTeamInvitation,
+  inspectTeamInvitation,
+  listTeamInvitations,
+  listTeamMembers,
+  removeTeamMember,
+  TeamMembershipDenied,
+} from "./team-invitations";
 import { createTeam, listTeams, requireTeamMember } from "./teams";
 import { lockAccount, withAccountTransaction } from "./transactions";
 
 type SessionReader = (headers: Headers) => Promise<{ user: { id: string } } | null>;
 type Device = { accountId: string; deviceId: string };
 
-// Logging in finds or creates the account owned by the provider identity.
-export const createDeviceLogin =
-  (db: ManagerDatabase, readSession: SessionReader) => async (headers: Headers, input: unknown) => {
-    const { provider, ...profile } = deviceProfileSchema
-      .extend({ provider: accountSignInProviderSchema.optional() })
-      .parse(input);
+export const createPersonalAccountAccess =
+  (db: ManagerDatabase, readSession: SessionReader) =>
+  async <T>(
+    headers: Headers,
+    action: (transaction: ManagerTransaction, userId: string) => Promise<T>,
+    provider?: AccountSignInProvider,
+  ) => {
     const session = await readSession(headers);
     if (!session) throw new DeviceAccessDenied();
     const identity = await readProviderIdentity(db, session.user.id);
@@ -52,12 +63,19 @@ export const createDeviceLogin =
         .values({ id: accountId, ownerIssuer: issuer, ownerSubject: subject, state: "active" })
         .onConflictDoNothing();
       const [saved] = await transaction.select().from(accounts).where(eq(accounts.id, accountId));
-      if (saved.ownerIssuer !== issuer || saved.ownerSubject !== subject) throw new DeviceAccessDenied();
-      return registerDeviceInTransaction(transaction, { accountId, ...profile });
+      if (saved.ownerIssuer !== issuer || saved.ownerSubject !== subject || saved.state !== "active")
+        throw new DeviceAccessDenied();
+      return action(transaction, accountId);
     });
   };
 
-// Every other request carries the device credential. Devices of one account manage each other.
+export const createDeviceLogin =
+  (withAccount: ReturnType<typeof createPersonalAccountAccess>) => (headers: Headers, input: unknown) => {
+    const { provider, ...profile } = deviceProfileSchema.extend({ provider: accountSignInProviderSchema.optional() }).parse(input);
+    return withAccount(headers, (transaction, accountId) => registerDeviceInTransaction(transaction, { accountId, ...profile }), provider);
+  };
+
+// Every other native request carries the device credential. Devices of one account manage each other.
 export const createDeviceAccess = (db: ManagerDatabase) => {
   const apply = async <T>(token: string, action: (transaction: ManagerTransaction, device: Device) => Promise<T>) => {
     const accountId = await accountOfCredential(db, token);
@@ -82,7 +100,62 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
       return action(transaction, accountId, userId, member.role === "owner");
     });
 
+  const team = <T>(
+    token: string,
+    intent: string,
+    action: (
+      transaction: ManagerTransaction,
+      accountId: string,
+      userId: string,
+      role: "owner" | "member",
+    ) => Promise<T>,
+  ) =>
+    apply(token, async (transaction, { accountId: userId }) => {
+      const accountId = identitySchema.parse(intent);
+      const [known] = await transaction
+        .select({ accountId: teams.accountId })
+        .from(teams)
+        .where(eq(teams.accountId, accountId));
+      if (!known) throw new DeviceAccessDenied();
+      await lockAccount(transaction, accountId);
+      const { role } = await requireTeamMember(transaction, accountId, userId);
+      return action(transaction, accountId, userId, role);
+    });
+
+  const owner = <T>(
+    token: string,
+    intent: string,
+    action: (transaction: ManagerTransaction, accountId: string, userId: string) => Promise<T>,
+  ) =>
+    team(token, intent, (transaction, accountId, userId, role) => {
+      if (role !== "owner") throw new TeamMembershipDenied("Only the team owner can manage members");
+      return action(transaction, accountId, userId);
+    });
+
   return {
+    members: (token: string, id: string) => team(token, id, listTeamMembers),
+    invitations: (token: string, id: string) => owner(token, id, listTeamInvitations),
+    invite: (token: string, id: string, email: unknown) =>
+      owner(token, id, (transaction, accountId) => createTeamInvitation(transaction, accountId, email)),
+    cancelInvitation: (token: string, id: string, inviteId: string) =>
+      owner(token, id, (transaction, accountId) =>
+        cancelTeamInvitation(transaction, accountId, identitySchema.parse(inviteId)),
+      ),
+    removeMember: (token: string, id: string, target: string) =>
+      owner(token, id, (transaction, accountId, userId) => {
+        const memberId = identitySchema.parse(target);
+        if (memberId === userId) throw new TeamMembershipDenied("Transfer ownership before leaving the team");
+        return removeTeamMember(transaction, accountId, memberId);
+      }),
+    leave: (token: string, id: string) =>
+      team(token, id, (transaction, accountId, userId, role) => {
+        if (role === "owner") throw new TeamMembershipDenied("Transfer ownership before leaving the team");
+        return removeTeamMember(transaction, accountId, userId);
+      }),
+    inspectInvitation: (token: string, secret: unknown) =>
+      apply(token, (transaction, { accountId }) => inspectTeamInvitation(transaction, accountId, secret)),
+    acceptInvitation: (token: string, secret: unknown) =>
+      apply(token, (transaction, { accountId }) => acceptTeamInvitation(transaction, accountId, secret)),
     teams: (token: string) => apply(token, (transaction, { accountId }) => listTeams(transaction, accountId)),
     createTeam: (token: string, name: unknown) =>
       apply(token, (transaction, { accountId }) => createTeam(transaction, accountId, name)),

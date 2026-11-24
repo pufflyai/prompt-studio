@@ -24,5 +24,6 @@ export type {
   StorageLogPage,
   StorageLogRead,
 } from "./storage-logs";
+export * from "./team-membership";
 export { formatViewDate, type ViewDateFormat, validateViewDateFormat } from "./view-date";
 export * from "./wire";

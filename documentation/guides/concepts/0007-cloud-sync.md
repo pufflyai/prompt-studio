@@ -87,3 +87,11 @@ After signing in, create a team through `pst teams create "Studio Team"`. When C
 The first team release supports one owner. Invitations, project sharing and ownership transfer follow in later releases.
 
 *Updated at: 2026-11-24*
+
+## Team invitations
+
+A team owner can create a link for a verified Google email address. Send the link to that person privately. The link expires after seven days and the owner can cancel it while it is pending. Joining lets the recipient see the team roster. The owner shares projects separately.
+
+Open the link, check the signed-in address and team name, and select **Join team**. When you use another Google account, the invitation lets you switch accounts. If the join response is interrupted, opening the same link again shows whether that signed-in person already joined.
+
+An owner can remove a member, and a member can leave. The sole owner needs to transfer ownership before leaving. A removed member needs a fresh invitation to rejoin.

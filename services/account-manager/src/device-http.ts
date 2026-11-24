@@ -1,9 +1,10 @@
-import { startProjectDeletionSchema } from "pstdio-sync-contracts";
+import { startProjectDeletionSchema, teamInviteSecretSchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import { AccountFeatureDenied } from "./account-features";
 import type { createManagerAuthentication } from "./manager-authentication";
 import { ProjectRetired } from "./project-deletion";
 import { DeviceAccessDenied } from "./renewal-errors";
+import { TeamMembershipDenied } from "./team-invitations";
 
 type Authentication = ReturnType<typeof createManagerAuthentication>;
 const json = (value: unknown, status = 200) =>
@@ -99,6 +100,46 @@ const teamRoute = async (devices: Authentication["devices"], request: Request) =
   return null;
 };
 
+const teamMembershipRoute = async (
+  devices: Authentication["devices"],
+  address: string,
+  request: Request,
+  path: string,
+) => {
+  const operation = /^\/v1\/teams\/([^/]+)\/(invitations|members|leave)(?:\/([^/]+)\/(cancel|remove))?$/.exec(path);
+  if (!operation) return null;
+  const token = bearer(request);
+  const [, encodedId, section, encodedTarget, action] = operation;
+  const id = decodeURIComponent(encodedId);
+  const target = encodedTarget && decodeURIComponent(encodedTarget);
+  if (request.method === "GET" && !target) {
+    if (section === "members") return json(await devices.members(token, id));
+    if (section === "invitations") return json(await devices.invitations(token, id));
+  }
+  if (request.method !== "POST") return null;
+  if (section === "invitations" && !target) {
+    const { email } = z.strictObject({ email: z.string() }).parse(await request.json());
+    const { secret, ...invitation } = await devices.invite(token, id, email);
+    return json({ ...invitation, url: `${address}/v1/team-invitation#${secret}` }, 201);
+  }
+  if (section === "invitations" && target && action === "cancel")
+    return ok(devices.cancelInvitation(token, id, target));
+  if (section === "members" && target && action === "remove") return ok(devices.removeMember(token, id, target));
+  return section === "leave" && !target ? ok(devices.leave(token, id)) : null;
+};
+
+const teamInvitationRoute = async (devices: Authentication["devices"], request: Request, path: string) => {
+  const operation = /^\/v1\/team-invitations\/(inspect|accept)$/.exec(path);
+  if (!operation || request.method !== "POST") return null;
+  const token = bearer(request);
+  const { secret } = z.strictObject({ secret: teamInviteSecretSchema }).parse(await request.json());
+  return json(
+    await (operation[1] === "inspect"
+      ? devices.inspectInvitation(token, secret)
+      : devices.acceptInvitation(token, secret)),
+  );
+};
+
 const route = async (auth: Authentication, origin: string, request: Request, path: string, accountId?: string) => {
   const { method } = request;
   if (path === "/v1/device-login" && method === "POST") {
@@ -124,25 +165,29 @@ const route = async (auth: Authentication, origin: string, request: Request, pat
   return path.startsWith("/v1/workbenches/") ? workbenchRoute(devices, request, path, accountId) : null;
 };
 
-export const deviceHttp = async (auth: Authentication, origin: string, request: Request) => {
+export const deviceHttp = async (auth: Authentication, address: string, request: Request) => {
   const { pathname: path, searchParams } = new URL(request.url);
   const accountId = searchParams.get("accountId") ?? undefined;
   if (
-    !["/v1/device-login", "/v1/account", "/v1/project-deletions", "/v1/teams"].includes(path) &&
-    !/^\/v1\/(devices|workbenches)(\/|$)/.test(path)
+    !["/v1/device-login", "/v1/account", "/v1/project-deletions"].includes(path) &&
+    !/^\/v1\/(devices|workbenches|teams|team-invitations)(\/|$)/.test(path)
   )
     return null;
   try {
     return (
       (path === "/v1/teams" ? await teamRoute(auth.devices, request) : null) ??
+      (await teamMembershipRoute(auth.devices, address, request, path)) ??
+      (await teamInvitationRoute(auth.devices, request, path)) ??
       (await deletionRoute(auth, request, path, accountId)) ??
-      (await route(auth, origin, request, path, accountId)) ??
+      (await route(auth, new URL(address).origin, request, path, accountId)) ??
       json({ error: "Method not allowed" }, 405)
     );
   } catch (error) {
     if (error instanceof ProjectRetired) return json({ error: error.message }, 410);
+    if (error instanceof TeamMembershipDenied) return json({ error: error.message }, 403);
     if (error instanceof AccountFeatureDenied) return json({ error: error.message }, 403);
-    if (error instanceof z.ZodError || error instanceof SyntaxError) return json({ error: "Invalid request" }, 400);
+    if (error instanceof z.ZodError || error instanceof SyntaxError || error instanceof URIError)
+      return json({ error: "Invalid request" }, 400);
     if (error instanceof DeviceAccessDenied) return json({ error: "Authentication unavailable" }, 401);
     throw error;
   }

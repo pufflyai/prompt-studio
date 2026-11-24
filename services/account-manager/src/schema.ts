@@ -42,6 +42,21 @@ export const teamMembers = pgTable(
     index("manager_teams_by_user").on(table.userId, table.accountId),
   ],
 );
+export const teamInvitations = pgTable(
+  "manager_team_invitations",
+  {
+    id: text().primaryKey(),
+    accountId: text()
+      .notNull()
+      .references(() => teams.accountId),
+    email: text().notNull(),
+    digest: text().notNull().unique(),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    state: text({ enum: ["pending", "accepted", "canceled"] }).notNull(),
+    acceptedBy: text().references(() => accounts.id),
+  },
+  (table) => [index("manager_team_invitations_by_team").on(table.accountId, table.email)],
+);
 export const accountFeatures = pgTable(
   "manager_account_features",
   {

@@ -144,3 +144,9 @@ A personal account ID remains the stable user ID for existing devices and privat
 A team starts with early access disabled. Grant or revoke Cloud relay access for a specific team with `account-feature grant --account-id <team-account-id> --feature relay` or the matching `revoke` command. Email lookup continues to target a verified personal account.
 
 Snapshots keep team ownership, project grants and key history. Restoring an existing team preserves its current membership. Restored accounts remain disabled until operator reconciliation. For a team, reconcile its state without supplying a Google owner.
+
+## Team invitations and member authority
+
+Invitations are bound to a verified Google email. The manager stores a digest and resolves the accepting person through their existing Google subject. The link carries the secret in the URL fragment. The landing page exchanges it in same-origin POST bodies after sign-in. Team membership operations take the team account lock, the same lock used before issuing scoped renewal and keys.
+
+Snapshots capture the current team members. Invitation links are excluded from backups, and a restore cancels outstanding invitations on the surviving manager. A historical snapshot leaves the current roster on surviving teams intact.

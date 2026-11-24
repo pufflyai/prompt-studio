@@ -6,6 +6,7 @@ import type { createManagerAuthentication } from "./manager-authentication";
 import { nativeLogin } from "./native-login";
 import { projectDeletionServiceHttp } from "./project-deletion-http";
 import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
+import { teamInvitationWeb } from "./team-invitation-web";
 
 type Authentication = ReturnType<typeof createManagerAuthentication>;
 const renewal = z.strictObject({ workbenchId: identitySchema, accountId: identitySchema.optional() });
@@ -68,9 +69,11 @@ export const createManagerHandler = (
       if (path.startsWith("/api/auth/")) return await betterAuth(auth, basePath, request, report);
       if (["/v1/native-login", "/v1/native-callback", "/v1/native-error"].includes(path))
         return await nativeLogin(auth, `${canonicalOrigin}${basePath}`, request);
+      if (path === "/v1/team-invitation" || path.startsWith("/v1/team-invitation/"))
+        return await teamInvitationWeb(auth, canonicalOrigin, request, path);
       const projectDeletionResponse = await projectDeletionServiceHttp(auth, request, path);
       if (projectDeletionResponse) return projectDeletionResponse;
-      const deviceResponse = await deviceHttp(auth, canonicalOrigin, request);
+      const deviceResponse = await deviceHttp(auth, `${canonicalOrigin}${basePath}`, request);
       if (deviceResponse) return deviceResponse;
       if (path === "/v1/sign-in-providers" && request.method === "GET")
         return json({ microsoft: auth.supportsSignIn("microsoft") });

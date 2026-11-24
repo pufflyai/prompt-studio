@@ -585,6 +585,8 @@ API 0.5.1 also permits `viewMenus.side: "bottom"`. Menu sides define an initial 
 
 `ctx.account.createTeam(name)` creates a team for the signed-in person. Webviews use the same method through `account.manage`. Account status includes `teamAccounts` and a mapping from visible team project IDs to their owning account IDs. Account selection changes the management view and project catalog. Pass the displayed sign-in identity as the second argument to reject a request if the sign-in changed.
 
+`ctx.account.readTeamMembership(request, expected)` reads the roster, pending invitations or the state of an incoming link. `ctx.account.writeTeamMembership(request, expected)` creates and cancels invitations, removes members, leaves a team or accepts an invitation. Webviews use `account.read` and `account.manage` respectively. Keep the returned invitation URL private.
+
 Extensions adopting these fields or commands require `^0.5.1` and a supporting published SDK.
 
 *Updated at: 2026-11-24*

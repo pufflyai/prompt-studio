@@ -10,7 +10,7 @@ import { type ManagerAuthConfig, parseManagerAuthConfig } from "./auth-config";
 import * as authSchema from "./auth-schema";
 import { digestCredential } from "./credential";
 import { connectManager } from "./database";
-import { createDeviceAccess, createDeviceLogin } from "./device-access";
+import { createDeviceAccess, createDeviceLogin, createPersonalAccountAccess, createGoogleAccountAccess } from "./device-access";
 import { findDeviceAccess } from "./devices";
 import { microsoftSignIn } from "./microsoft-provider";
 import { type NativeLoginAttempt, nativeApprovalId, nativeLoginApproval } from "./native-login-approval";
@@ -18,6 +18,7 @@ import { acknowledgeProjectDeletion, listProjectDeletionJobs } from "./project-d
 import { readProviderIdentity } from "./provider-identity";
 import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
 import { devices } from "./schema";
+import { acceptTeamInvitation, inspectTeamInvitation } from "./team-invitations";
 import { canPublishForTeam, prepareTeamPublicationGrant, sameDeviceAccess } from "./team-publication-access";
 import { lockAccount, withAccountTransaction } from "./transactions";
 
@@ -58,7 +59,8 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
     ],
   });
   const readSession = (headers: Headers) => auth.api.getSession({ headers, query: { disableCookieCache: true } });
-  const deviceLogin = createDeviceLogin(connection.db, readSession);
+  const withGoogleAccount = createGoogleAccountAccess(connection.db, readSession);
+  const deviceLogin = createDeviceLogin(withGoogleAccount);
   const relayDigest = config.projectDeletionRelayToken
     ? Buffer.from(digestCredential(config.projectDeletionRelayToken), "hex")
     : null;
@@ -78,6 +80,12 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
       relayOrigin: config.audience,
     }),
     devices: createDeviceAccess(connection.db),
+    teamInvitation: {
+      inspect: (headers: Headers, secret: string) =>
+        withPersonalAccount(headers, (transaction, userId) => inspectTeamInvitation(transaction, userId, secret)),
+      accept: (headers: Headers, secret: string) =>
+        withPersonalAccount(headers, (transaction, userId) => acceptTeamInvitation(transaction, userId, secret)),
+    },
     supportsSignIn: (provider: AccountSignInProvider) => provider === "google" || !!config.microsoft,
     nativeLogin: (provider: AccountSignInProvider, callbackURL: string, errorCallbackURL: string) =>
       auth.api.signInSocial({ body: { provider, callbackURL, errorCallbackURL }, asResponse: true }),

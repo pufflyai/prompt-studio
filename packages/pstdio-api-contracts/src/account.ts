@@ -5,6 +5,17 @@ export {
   type AccountSignInProvider,
   accountSignInProviderSchema,
   type TeamAccount,
+  type CreatedTeamInvitation,
+  type JoinedTeam,
+  type TeamInvitation,
+  type TeamInvitationView,
+  type TeamMember,
+  type TeamMembershipRead,
+  type TeamMembershipReadResult,
+  type TeamMembershipWrite,
+  type TeamMembershipWriteResult,
+  teamMembershipReadSchema,
+  teamMembershipWriteSchema,
 } from "pstdio-sync-contracts";
 
 /** This device's cloud login. The device credential stays in the native host. */

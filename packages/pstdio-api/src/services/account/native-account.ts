@@ -31,6 +31,7 @@ import {
   createNativeProjectSyncReader,
 } from "./native-project-sync-read";
 import { createNativeStore, type DeviceLogin } from "./native-store";
+import { createNativeTeamMembership } from "./native-team-membership";
 import { createNativeTeams } from "./native-teams";
 import { createProjectCloudCatalog } from "./project-cloud-catalog";
 import { createProjectCopyStore } from "./project-copy-store";
@@ -265,12 +266,15 @@ export const createNativeAccount = (input: {
     },
   });
   const refresh = refreshes.refresh;
+  const membership = createNativeTeamMembership({ current, call, refresh });
   const logout = createNativeLogout({ logins, readLogin, store, refresh });
 
   return {
     ...catalog,
     listTeams: teams.list,
     createTeam: teams.create,
+    readTeamMembership: membership.read,
+    writeTeamMembership: membership.write,
     prepareTeamProject: teams.prepareProject,
     canPublishProjectExtensions: canPublishProjectExtensions({ copies, readLogin, call }),
     ...createDeviceIdentity({ current, store, call }),
