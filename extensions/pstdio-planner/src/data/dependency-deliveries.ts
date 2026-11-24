@@ -17,12 +17,13 @@ export type DependencyDeliveryReads = Map<string, Promise<(DependencyDelivery & 
 type DeliveryTicket = Pick<Ticket, "id" | "shorthand" | "statusId" | "dependsOn" | "reviewLinks">;
 
 type Context = Pick<ExtensionContextBase, "commands" | "extensionId" | "projectId" | "resources" | "storage">;
+type DeliveryHistory = { attempts: AttemptRecord[]; selections: TicketAttemptSelection[]; retired: Set<string> };
 const unavailable = () => ({ headSha: null, mergeSha: null });
 const readDelivery = async (
   ctx: Context,
   dependency: DeliveryTicket,
   links: ResourceRef[],
-  history: { attempts: AttemptRecord[]; selections: TicketAttemptSelection[]; retired: Set<string> },
+  history: DeliveryHistory,
   reads: DependencyDeliveryReads,
 ) => {
   const { attempts, selections, retired } = history;
@@ -96,15 +97,21 @@ export async function readDependencyDeliveries(
   const seen = new Set([target.id]);
   const pending = [target];
   const deliveries = new Map<string, DependencyDelivery>();
-  const [attempts, selected] = await Promise.all([
-    readTicketAttempts(
-      ctx.storage,
-      tickets.map(({ id }) => id),
-    ),
-    Promise.all(tickets.map(({ id }) => attemptSelectionsCollection(ctx.storage).get(id))),
-  ]);
-  const selections = selected.filter((value) => value !== undefined);
-  const retired = await readRetiredWorkspaceIds(ctx.storage, attempts.map(attemptId));
+  let history: DeliveryHistory | undefined;
+  const readHistory = async () => {
+    const [attempts, selected] = await Promise.all([
+      readTicketAttempts(
+        ctx.storage,
+        tickets.map(({ id }) => id),
+      ),
+      Promise.all(tickets.map(({ id }) => attemptSelectionsCollection(ctx.storage).get(id))),
+    ]);
+    return {
+      attempts,
+      selections: selected.filter((value) => value !== undefined),
+      retired: await readRetiredWorkspaceIds(ctx.storage, attempts.map(attemptId)),
+    };
+  };
   for (const ticket of pending) {
     for (const ref of normalizeTicketDependencies(ticket.dependsOn)) {
       const dependency = byRef.get(ref);
@@ -118,10 +125,9 @@ export async function readDependencyDeliveries(
         continue;
       }
       if (!links.length) continue;
-      deliveries.set(
-        dependency.id,
-        await readDelivery(ctx, dependency, links, { attempts, selections, retired }, reads),
-      );
+      // Attempt evidence is only used to disambiguate a completed dependency's PR links.
+      history ??= await readHistory();
+      deliveries.set(dependency.id, await readDelivery(ctx, dependency, links, history, reads));
     }
   }
   return deliveries;

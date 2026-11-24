@@ -26,7 +26,18 @@ interface Tag {
 }
 
 async function seedPlannerStress(execute: Execute, progress: (count: number) => void) {
-  const tickets = stressTicketsInOrder(await execute<Ticket[]>("read-tickets"));
+  const existing: Ticket[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await execute<{ tickets: { shorthand: string; title: string }[]; cursor: string | null }>(
+      "list-tickets",
+      { limit: 100, cursor },
+    );
+    // Public list rows expose shorthands, which create-ticket accepts as dependency references.
+    existing.push(...page.tickets.map(({ shorthand, title }) => ({ id: shorthand, title })));
+    cursor = page.cursor ?? undefined;
+  } while (cursor);
+  const tickets = stressTicketsInOrder(existing);
   const { tags } = await execute<{ tags: Tag[] }>("ticket-tag.read");
   const tracks: string[] = [];
   for (const name of trackNames) {

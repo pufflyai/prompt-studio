@@ -41,12 +41,22 @@
     }
   },
   "appearance": {
+    "showSidePanelBubble": "显示侧边面板气泡",
     "title": "外观",
     "description": "选择 Prompt Studio 的外观。也可以按 Alt+Shift+T 更改主题。",
     "theme": "主题",
     "themeHelper": "适用于所有项目。",
     "openRelatedResources": "打开相关资源",
-    "openRelatedResourcesHelper": "自动以未固定的预览打开每种类型的最近相关资源。"
+    "openRelatedResourcesHelper": "自动以未固定的预览打开每种类型的最近相关资源。",
+    "defaultSidePanel": "默认侧边面板",
+    "defaultSidePanelHelper": "点击气泡时打开。",
+    "defaultPanel": "默认（{{panel}}）",
+    "newSession": "新建会话",
+    "sidePanel": "侧边面板",
+    "unavailableSidePanel": "面板不可用",
+    "floatingPanelMovement": "浮动面板移动",
+    "snapToAlignment": "对齐吸附",
+    "moveFreely": "自由移动"
   },
   "updates": {
     "title": "更新渠道",

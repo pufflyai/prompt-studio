@@ -29,6 +29,37 @@ const seedColumn = async (count: number) => {
   return { storage, tickets, workspaces, columnId: tickets[0].statusId! };
 };
 
+test("bounded archive writes progress while the preceding page discovers workspace cleanup", async () => {
+  const { storage, tickets, columnId } = await seedColumn(101);
+  const entered = deferred();
+  const release = deferred();
+  let queries = 0;
+  const ctx = makeCommandContext({
+    storage,
+    params: {},
+    overrides: {
+      workspaces: {
+        query: async () => {
+          if (++queries === 1) {
+            entered.resolve();
+            await release.promise;
+          }
+          return { items: [], nextCursor: null };
+        },
+      },
+    },
+  });
+  const command = archiveTicketColumnAction(ctx, { columnId, actionId: "archive_all" });
+  try {
+    await entered.promise;
+    for (let turn = 0; turn < 10; turn++) await new Promise<void>((resolve) => setImmediate(resolve));
+    expect((await ticketsCollection(storage).get(tickets[100].id))?.archived).toBe(true);
+  } finally {
+    release.resolve();
+    await command;
+  }
+});
+
 test("bulk archives 28 tickets before host workspace cleanup completes", async () => {
   const { storage, tickets, workspaces, columnId } = await seedColumn(28);
   const cleanupStarted = deferred();

@@ -39,10 +39,10 @@ describe("pstdio pstdio.planner archive-ticket", () => {
 
       run(`pstdio.planner archive-ticket --id ${shorthand}`, repo);
 
-      const byDefault = JSON.parse(run("pstdio.planner list-tickets", repo));
+      const byDefault = JSON.parse(run("pstdio.planner list-tickets", repo)).tickets;
       expect(byDefault.map((ticket: { title: string }) => ticket.title)).not.toContain("Visible archived");
 
-      const tickets = JSON.parse(run("pstdio.planner list-tickets --archived", repo));
+      const tickets = JSON.parse(run("pstdio.planner list-tickets --archived", repo)).tickets;
       expect(tickets.map((ticket: { title: string }) => ticket.title)).toContain("Visible archived");
     },
     TEST_TIMEOUT,
@@ -57,7 +57,7 @@ describe("pstdio pstdio.planner archive-ticket", () => {
       const { shorthand } = JSON.parse(run('pstdio.planner create-ticket --content "Archived ticket"', repo));
       run(`pstdio.planner archive-ticket --id ${shorthand}`, repo);
 
-      const archivedOnly = JSON.parse(run("pstdio.planner list-tickets --archived", repo));
+      const archivedOnly = JSON.parse(run("pstdio.planner list-tickets --archived", repo)).tickets;
       expect(archivedOnly.map((ticket: { title: string }) => ticket.title)).toEqual(["Archived ticket"]);
     },
     TEST_TIMEOUT,
@@ -104,7 +104,7 @@ describe("pstdio pstdio.planner unarchive-ticket", () => {
       expect(restored.shorthand).toBe(shorthand);
       expect(restored.archived).toBe(false);
 
-      const byDefault = JSON.parse(run("pstdio.planner list-tickets", repo));
+      const byDefault = JSON.parse(run("pstdio.planner list-tickets", repo)).tickets;
       expect(byDefault.map((ticket: { shorthand: string }) => ticket.shorthand)).toEqual([shorthand]);
     },
     TEST_TIMEOUT,

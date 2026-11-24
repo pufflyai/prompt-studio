@@ -1,12 +1,41 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "../../commands/command-context.fixture";
+import { createTicketCommand } from "../../commands/create-ticket";
 import { sessionRecord } from "../../commands/session-record.fixture";
 import { ticketsCollection } from "../../data/ticket-context.fixture";
 
 import { createGateCommand } from "./gate-commands";
 import { gates } from "./gate-store";
 import { launchGateCommand } from "./launch-gate";
+
+test.each(["id", "shorthand"] as const)("archived tickets cannot launch a gate review by %s", async (identity) => {
+  const storage = createMemoryStorage();
+  const effects: string[] = [];
+  const [ctx] = makeCommandArgs({
+    storage,
+    params: {},
+    overrides: {
+      sessions: {
+        create: async () => {
+          effects.push("session");
+          return sessionRecord({ id: "unexpected", title: "Review", status: "in_progress" });
+        },
+      },
+      navigation: {
+        open: () => {
+          effects.push("navigation");
+        },
+      },
+    },
+  });
+  const ticket = await createTicketCommand.run(ctx, { title: "Archived unfinished work" });
+  await ticketsCollection(storage).put(ticket.id, { ...ticket, archived: true });
+
+  await expect(launchGateCommand.run(ctx, { ticket: ticket[identity] })).rejects.toThrow("Unknown ticket");
+  expect(await gates(ctx).get(ticket.id)).toBeUndefined();
+  expect(effects).toEqual([]);
+});
 
 test("preserves a gate ticket after failed registration and registers it on review retry", async () => {
   const storage = createMemoryStorage();
