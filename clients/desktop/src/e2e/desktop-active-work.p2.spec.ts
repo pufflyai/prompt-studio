@@ -203,7 +203,11 @@ test("keeps startup render failures in the existing recovery screen after the da
     }),
   );
   await expect(lifecycle.getByRole("alert")).toBeVisible();
-  await lifecycle.getByRole("button", { name: "Retry", exact: true }).press("Enter");
+  // Retry replaces the failed page, which keeps the runtime origin until it closes.
+  await Promise.all([
+    window.waitForEvent("close"),
+    lifecycle.getByRole("button", { name: "Retry", exact: true }).press("Enter"),
+  ]);
   await expect
     .poll(async () => ({ requests: runtime.dashboardRequests(), state: await startupState(lifecycle) }))
     .toMatchObject({ requests: 2 });
@@ -273,7 +277,15 @@ test("keeps recovery visible when the quit confirmation replacement fails during
     ),
   ).toBe(false);
   await expect.poll(() => startupState(lifecycle)).toMatchObject({ kind: "recovery" });
-  await lifecycle.getByRole("button", { name: "Retry", exact: true }).press("Enter");
+  // Retry replaces the failed confirmation page, which keeps the runtime origin until it closes.
+  const failedPages = electronApp
+    .context()
+    .pages()
+    .filter((page) => URL.parse(page.url())?.origin === runtime.descriptor.origin);
+  await Promise.all([
+    ...failedPages.map((page) => page.waitForEvent("close")),
+    lifecycle.getByRole("button", { name: "Retry", exact: true }).press("Enter"),
+  ]);
   const reopened = await waitForWorkbenchPage(lifecycle, runtime.descriptor.origin);
   await expect.poll(() => startupState(reopened)).toMatchObject({ kind: "workbench" });
   expect(runtime.shutdownForces).toEqual([false]);
