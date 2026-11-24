@@ -27,6 +27,7 @@ export interface Waiter {
   preserveActiveContinuation?: boolean;
   scope?: ReturnType<typeof preparationPriority.getStore>;
 }
+type Continuation = NonNullable<Waiter["scope"]>;
 export interface Job {
   resources?: readonly string[];
   id: number;
@@ -36,6 +37,8 @@ export interface Job {
   home: string;
   env: NodeJS.ProcessEnv;
   waiters: Set<Waiter>;
+  /** Live continuations this job's worker was retired for. */
+  yielded?: Set<Continuation>;
 }
 export const createJob = (
   id: number,
@@ -83,6 +86,27 @@ export const preparationQueuePriority =
       ),
     );
 
+// Retiring a worker for a continuation's job resumes the interrupted job after that
+// continuation, not in its next database gap, where its next job would retire it again.
+export const yieldPreparation = (job: Job, next: Job) => {
+  for (const waiter of next.waiters) {
+    const owner = waiter.scope?.continuation;
+    if (!owner?.continuing) continue;
+    job.yielded ??= new Set();
+    job.yielded.add(owner);
+  }
+  return job;
+};
+const awaitsYield = (job: Job) => {
+  if (!job.yielded) return false;
+  for (const owner of job.yielded) if (!owner.continuing) job.yielded.delete(owner);
+  // A continuation that now waits on the interrupted job itself needs it to run.
+  return (
+    job.yielded.size > 0 &&
+    ![...job.waiters].some((waiter) => waiter.scope?.continuation && job.yielded!.has(waiter.scope.continuation))
+  );
+};
+
 export const orderPreparationQueue = (
   queued: Job[],
   priority: (job: Job) => number,
@@ -95,6 +119,7 @@ export const orderPreparationQueue = (
     const dependency = queued.findIndex(
       (job) =>
         Number.isFinite(priority(job)) &&
+        !awaitsYield(job) &&
         [...job.waiters].some(
           (waiter) =>
             waiter.scope?.continuation?.continuing &&

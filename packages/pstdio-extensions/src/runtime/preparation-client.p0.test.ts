@@ -777,3 +777,45 @@ test("cancelling an interrupted owner keeps its idle replacement worker", async 
     await first;
   }
 });
+
+test("an edit's host gaps do not readmit the attachment check it interrupted", async () => {
+  const client = fixture();
+  const blocked = gate();
+  const attach = () =>
+    client.withContinuation(
+      () => withBackgroundPreparation(() => client.run("wait", { name: "attachment", url: blocked.url })),
+      { priority: "background" },
+    );
+  const work: Promise<unknown>[] = [attach()];
+  let lost = 0;
+  // Like the source watcher, every lost worker restores its watch and reconciles attachments.
+  const unsubscribe = client.subscribe((event) => {
+    if (event.kind !== "worker-lost") return;
+    lost++;
+    const restored = client.withContinuation(
+      () => client.run("value", { name: "restore" }, { priority: "background" }),
+      { priority: "restoration" },
+    );
+    work.push(restored, restored.then(attach));
+  });
+  await blocked.entered.promise;
+  const edit = client.withContinuation(() =>
+    withBackgroundPreparation(async () => {
+      for (let step = 0; step < 5; step++) {
+        await client.run("value", { name: `edit-${step}` });
+        // A database round trip between the edit's preparation steps.
+        await Bun.sleep(1);
+      }
+    }),
+  );
+  try {
+    await edit;
+    expect(lost).toBe(1);
+    blocked.release.resolve();
+    await Promise.all(work);
+  } finally {
+    unsubscribe();
+    blocked.release.resolve();
+    await Promise.allSettled([edit, ...work]);
+  }
+});

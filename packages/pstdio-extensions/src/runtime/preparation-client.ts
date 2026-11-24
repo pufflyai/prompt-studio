@@ -20,6 +20,7 @@ import {
   preparationResourcesOverlap,
   settlePreparationJob,
   waitForPreparation,
+  yieldPreparation,
 } from "./preparation-queue";
 
 export { createPreparationScope, withBackgroundPreparation, withRequestedPreparation } from "./preparation-priority";
@@ -224,7 +225,7 @@ export const createPreparationClient = (
           .slice(0, 1);
     for (const slot of targets)
       if (queuedPriority(next) < activePreparationPriority(slot.active!, queuedPriority))
-        pool.replace(slot, slot.active);
+        pool.replace(slot, yieldPreparation(slot.active!, next));
   };
   return {
     withContinuation: continuePreparation(continuations),
