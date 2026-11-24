@@ -18,8 +18,9 @@ Tools bring their own editors. Notes, for example, opens each note in a Markdown
 
 For a native editor, declare a view with `defineView` and a body of `kind: "file"`:
 
-- `load` returns the content and a `fileName` or `mimeType`. Images open in an image preview. Files ending in `.md`, `.markdown`, or `.txt` open in the document editor; other named files open in the code editor, with plain-text highlighting for unknown formats. Unnamed documents use the document editor.
-- `save` receives the edited content. Leave it out to make the editor read-only.
+- `load` returns the content and a `fileName` or `mimeType`. Images open in an image preview. By default, `.md`, `.markdown`, `.txt`, and unnamed documents open in the document editor. Other named files open in the code editor, with plain-text highlighting for unknown formats. Set `textRenderer: "monaco"` to open non-image text in the code editor regardless of filename.
+- An unknown-format file with a `textDocument` or legacy `documentSource` binding uses the shared document editor when it omits `content` or depends on the source for saving. Known code formats keep their code-editor routing.
+- `save` receives edited inline content. Leave it out to make an ordinary inline editor read-only. Shared text sources determine their own editability and saving.
 - `saveMode` is `"auto"` by default. Set `"manual"` to save only when the person chooses Save.
 
 When several views show the same Markdown text, a text source declared with `defineTextSource` lets them share one document.
