@@ -14,9 +14,10 @@ import {
   type WorkerToHostMessage,
 } from "./protocol";
 import { createFunctionTable } from "./remote-values";
-import { type BackendSurface, collectSurfaceValues, resolveSurfaceCall } from "./surface";
+import { type BackendSurface, collectSurfaceValues } from "./surface";
 
 const STOP_GRACE_MS = 2_000;
+const DRAIN_DEADLINE_MS = 30_000;
 // Dependencies are prepared before a worker starts, so loading only evaluates the entry.
 const LOAD_DEADLINE_MS = 60_000;
 // Codes the host itself reports. A worker error claiming one would read as a host decision.
@@ -57,6 +58,7 @@ export interface BackendWorkerOptions {
 
 type Running = HostInvocation & {
   settle: ReturnType<typeof Promise.withResolvers<unknown>>;
+  drain?: ReturnType<typeof setTimeout>;
 };
 
 export const startBackendWorker = async (options: BackendWorkerOptions): Promise<BackendWorker> => {
@@ -73,12 +75,10 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     closed.resolve();
     ready.reject(error);
     loaded.reject(error);
-    for (const running of invocations.values()) {
+    for (const [id, running] of invocations) {
+      closeInvocation(id, running, error);
       running.settle.reject(error);
-      running.table.clear();
     }
-    invocations.clear();
-    hostCalls.rejectAll(error);
   };
 
   /** Returns false when the message could not be sent; the caller then has nothing to wait for. */
@@ -92,26 +92,21 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     }
   };
 
-  const hostCalls = createHostCalls(send, (invocationId) => invocations.get(invocationId));
+  const hostCalls = createHostCalls(send, (invocationId) => invocations.get(invocationId), workerError);
+
+  const closeInvocation = (id: string, running: Running, error: unknown) => {
+    invocations.delete(id);
+    clearTimeout(running.drain);
+    hostCalls.reject(id, error);
+    running.table.clear();
+  };
 
   const settle = (message: Extract<WorkerToHostMessage, { type: "result" }>) => {
     const running = invocations.get(message.invocationId);
-    invocations.delete(message.invocationId);
-    running?.table.clear();
-    if (message.ok) running?.settle.resolve(message.value);
-    else running?.settle.reject(workerError(message.error));
-  };
-
-  const relay = (message: Extract<WorkerToHostMessage, { type: "notify" }>) => {
-    const running = invocations.get(message.invocationId);
     if (!running) return;
-    // A one-way call has nobody to answer, so a rejected or failing call is simply not acted on.
-    try {
-      const { context, surface, enter } = running;
-      Promise.resolve(enter(resolveSurfaceCall, context, surface, message.path, message.args, "notify")).catch(
-        () => {},
-      );
-    } catch {}
+    closeInvocation(message.invocationId, running, new BackendUnavailableError("The invocation has finished."));
+    if (message.ok) running.settle.resolve(message.value);
+    else running.settle.reject(workerError(message.error));
   };
 
   const receive = (raw: unknown) => {
@@ -121,7 +116,6 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
       if (message.ok) loaded.resolve(message.value);
       else loaded.reject(workerError(message.error));
     } else if (message?.type === "result") settle(message);
-    else if (message?.type === "notify") relay(message);
     else if (message) hostCalls.handle(message);
   };
 
@@ -178,13 +172,14 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     // A getter may abort while collecting context values.
     if (signal?.aborted) return Promise.reject(signal.reason);
     const settle = Promise.withResolvers<unknown>();
-    invocations.set(invocationId, {
+    const running: Running = {
       settle,
       context,
       surface,
-      enter: AsyncLocalStorage.snapshot(),
       table: createFunctionTable(),
-    });
+      enter: AsyncLocalStorage.snapshot(),
+    };
+    invocations.set(invocationId, running);
     const sent = send({
       v: BACKEND_PROTOCOL_VERSION,
       type: "invoke",
@@ -201,11 +196,15 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
       );
     }
     const cancel = () => {
-      invocations.get(invocationId)?.table.clear();
-      if (!invocations.delete(invocationId)) return;
-      settle.reject(signal?.reason);
-      const reason = serializeBackendError(signal?.reason);
-      send({ v: BACKEND_PROTOCOL_VERSION, type: "cancel", invocationId, reason });
+      if (!invocations.has(invocationId) || running.cancelled) return;
+      const error = signal?.reason;
+      running.cancelled = true;
+      hostCalls.reject(invocationId, error);
+      running.table.dispose();
+      running.drain = setTimeout(() => closeInvocation(invocationId, running, error), DRAIN_DEADLINE_MS);
+      running.drain.unref?.();
+      settle.reject(error);
+      send({ v: BACKEND_PROTOCOL_VERSION, type: "cancel", invocationId, reason: serializeBackendError(error) });
     };
     signal?.addEventListener("abort", cancel, { once: true });
     // IPC serialization can also run getters. Send cancellation after the invocation message.
