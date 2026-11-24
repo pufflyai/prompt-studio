@@ -2,7 +2,7 @@ import { createProcessOwner, type ProcessOwner } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { type ProcessEnvironmentSource, processEnvironmentSourceIdentity as sourceIdentity } from "./process-environment/permissions";
 
-type Generation = { projectId: string; extensionId: string; identity: string; owner: ProcessOwner };
+type Generation = { projectId: string; extensionId: string; instanceId: string; identity: string; owner: ProcessOwner };
 
 /**
  * Owns children started with `lifetime: "extension"` by commands, hooks and schedules. One owner
@@ -45,26 +45,29 @@ export const createExtensionProcessOwners = (input: {
   };
 
   return {
-    owner(projectId: string, source: ProcessEnvironmentSource) {
+    capture(projectId: string, instanceId: string, source: ProcessEnvironmentSource) {
       const identity = sourceIdentity(source);
-      const key = JSON.stringify([projectId, source.extension_id, identity]);
+      const key = JSON.stringify([projectId, instanceId, identity]);
       let generation = generations.get(key);
       if (!generation) {
-        const created: Generation = {
-          projectId,
-          extensionId: source.extension_id,
-          identity,
-          owner: createProcessOwner(),
-        };
-        generation = created;
-        if (disposed) void created.owner.close();
-        else {
-          generations.set(key, created);
-          // The first check must finish before a stale call can open a target.
-          void verify(key, created, true);
-        }
+        generation = { projectId, extensionId: source.extension_id, instanceId, identity, owner: createProcessOwner() };
+        if (disposed) void generation.owner.close();
+        else generations.set(key, generation);
       }
-      return generation.owner;
+      const captured = generation;
+      return () => {
+        // A command keeps its generation even if the same source is later re-enabled.
+        if (!captured.owner.closed && !captured.owner.ready) void verify(key, captured, true);
+        return captured.owner;
+      };
+    },
+
+    retireInstance(instanceId: string) {
+      return Promise.all(
+        [...generations]
+          .filter(([, generation]) => generation.instanceId === instanceId)
+          .map(([key, generation]) => retire(key, generation)),
+      );
     },
 
     /** Stops the children of generations that are no longer the enabled source. Omit projectId to check all. */
