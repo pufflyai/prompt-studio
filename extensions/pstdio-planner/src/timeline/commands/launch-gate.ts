@@ -1,10 +1,17 @@
 // Launch a gate review that checks project dependencies and updates the saved plan.
-import { defineCommand, params, sessionBrowser } from "@pstdio/sdk/extensions";
+import {
+  type CommandContext,
+  defineCommand,
+  params,
+  type ResourceAnchor,
+  sessionBrowser,
+} from "@pstdio/sdk/extensions";
+import { isLiveSession } from "../../commands/auto-build-sessions";
 import { findTicket } from "../../data/resolve";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../../data/workflow-statuses";
 import type { PlanRow } from "../contracts";
 import { plannerExtensionId } from "../planner";
-import { registerGate } from "./gate-store";
+import { gateLaunches, registerGate } from "./gate-store";
 
 function reviewPrompt(row: Pick<PlanRow, "id" | "shorthand" | "title" | "instructions">) {
   return [
@@ -19,13 +26,61 @@ function reviewPrompt(row: Pick<PlanRow, "id" | "shorthand" | "title" | "instruc
   ].join("\n\n");
 }
 
+export class GateLaunchUnconfirmed extends Error {
+  constructor() {
+    super("The review launch is unconfirmed. Check for its session before launching again.");
+  }
+}
+
+const launchAnchor = (ctx: CommandContext, id: string): ResourceAnchor => ({
+  type: "planner-gate-launch",
+  id,
+  extensionId: plannerExtensionId,
+  projectId: ctx.projectId,
+  role: "context",
+});
+
+async function readGateLaunch(ctx: CommandContext, id: string) {
+  const { items } = await ctx.sessions.query({ anchor: launchAnchor(ctx, id), includeArchived: true, limit: 1 });
+  return items[0];
+}
+
+function openGateReview(ctx: CommandContext, session: { id: string; title: string }) {
+  ctx.navigation.open({
+    kind: "panel",
+    panel: sessionBrowser.panels.conversation,
+    open: "preview",
+    resource: { type: "session", id: session.id, extensionId: "pstdio", label: session.title },
+  });
+}
+
+export const checkGateLaunchCommand = defineCommand({
+  id: "timeline.gate.check-launch",
+  title: "Check gate review launch",
+  cli: { description: "Check whether an agent gate already launched its review session." },
+  params: { ticket: params.text({ required: true }) },
+  async run(ctx, { ticket }) {
+    const row = await findTicket(ctx, ticket);
+    if (!row || row.archived) throw new Error("Unknown ticket.");
+    const launch = await gateLaunches(ctx).get(row.id);
+    if (!launch) return { status: "ready" as const };
+    const session = await readGateLaunch(ctx, launch.launchId);
+    if (!session) return { status: "unconfirmed" as const };
+    openGateReview(ctx, session);
+    return { status: "confirmed" as const, session };
+  },
+});
+
 export const launchGateCommand = defineCommand({
   id: "timeline.gate.launch",
   title: "Review agent gate",
   cli: { description: "Mark a ticket as an agent gate and launch its planning review." },
   mutating: true,
-  params: { ticket: params.text({ required: true }) },
-  async run(ctx, { ticket }) {
+  params: {
+    ticket: params.text({ required: true }),
+    after: params.text({ description: "Confirmed session ID to replace after its review has ended." }),
+  },
+  async run(ctx, { ticket, after }) {
     const row = await findTicket(ctx, ticket);
     if (!row || row.archived) {
       throw new Error("Unknown ticket.");
@@ -34,28 +89,49 @@ export const launchGateCommand = defineCommand({
     if (workflow.completedStatusIds.includes(row.statusId ?? "")) {
       throw new Error("This gate is complete.");
     }
+    const launches = gateLaunches(ctx);
+    const current = await launches.read(row.id);
+    if (current) {
+      const session = await readGateLaunch(ctx, current.value.launchId).catch(() => {
+        throw new GateLaunchUnconfirmed();
+      });
+      if (!session) throw new GateLaunchUnconfirmed();
+      if (after !== session.id || isLiveSession(session)) {
+        openGateReview(ctx, session);
+        return { ...session, type: "session" as const };
+      }
+    } else if (after) {
+      throw new Error("The preceding gate review could not be found.");
+    }
+    if (!(await ctx.workspaces.getDefault())) throw new Error("Attach a workspace before starting a session.");
     await registerGate(ctx, row.id);
-    const session = await ctx.sessions.create({
-      title: `Review gate: ${row.shorthand}`,
-      prompt: reviewPrompt({ ...row, instructions: row.content }),
-      anchors: [
-        {
-          type: "ticket",
-          id: row.id,
-          extensionId: plannerExtensionId,
-          projectId: ctx.projectId,
-          shorthand: row.shorthand,
-          label: `${row.shorthand} ${row.title}`,
-          role: "primary",
-        },
-      ],
-    });
-    ctx.navigation.open({
-      kind: "panel",
-      panel: sessionBrowser.panels.conversation,
-      open: "preview",
-      resource: { type: "session", id: session.id, extensionId: "pstdio", label: session.title },
-    });
-    return session;
+    const launch = { launchId: ctx.storage.ids.create() };
+    const reserved = current
+      ? await launches.updateIfUnchanged(row.id, current.revision, launch)
+      : await launches.createIfAbsent(row.id, launch);
+    if (!reserved) throw new GateLaunchUnconfirmed();
+    try {
+      const session = await ctx.sessions.create({
+        title: `Review gate: ${row.shorthand}`,
+        prompt: reviewPrompt({ ...row, instructions: row.content }),
+        anchors: [
+          {
+            type: "ticket",
+            id: row.id,
+            extensionId: plannerExtensionId,
+            projectId: ctx.projectId,
+            shorthand: row.shorthand,
+            label: `${row.shorthand} ${row.title}`,
+            role: "primary",
+          },
+          launchAnchor(ctx, launch.launchId),
+        ],
+      });
+      openGateReview(ctx, session);
+      return session;
+    } catch (error) {
+      ctx.logger.warn("Gate review launch could not be confirmed", { ticketId: row.id, error: String(error) });
+      throw new GateLaunchUnconfirmed();
+    }
   },
 });

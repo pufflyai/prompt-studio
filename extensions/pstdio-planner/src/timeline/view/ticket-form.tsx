@@ -27,7 +27,7 @@ interface TicketFormProps {
 
 export function TicketForm(props: TicketFormProps) {
   const { client, host, plan, context, kind, onDone, t } = props;
-  const [created, setCreated] = useState<{ id: string; pending: "placement" | "launch" }>();
+  const [created, setCreated] = useState<{ id: string; pending: "placement" | "launch" | "check-launch" }>();
   const shared = createTicketFormConfig(t);
   const milestoneOptions = [
     { value: "none", label: "Unscheduled", icon: "calendar-off" },
@@ -73,22 +73,34 @@ export function TicketForm(props: TicketFormProps) {
     ],
   };
   if (created) {
-    config.title =
-      created.pending === "placement" ? "Ticket created. Retry placement." : "Gate created. Retry review launch.";
-    config.submitLabel = created.pending === "placement" ? "Retry placement" : "Launch review";
+    const recovery = {
+      placement: { title: "Ticket created. Retry placement.", submitLabel: "Retry placement" },
+      launch: { title: "Gate created. Retry review launch.", submitLabel: "Launch review" },
+      "check-launch": { title: "Gate created. Check its review launch.", submitLabel: "Check review launch" },
+    }[created.pending];
+    Object.assign(config, recovery);
   }
-  const submit = async (submission: KanbanRendererCreateSubmission) => {
-    const deadline = String(submission.values.deadline ?? (submission.attributeValues.milestone || "none"));
-    if (created) {
-      if (created.pending === "placement")
-        await client.commands["timeline.plan.move"]({ ticket: created.id, deadline });
-      if (kind === "gate") {
-        setCreated({ id: created.id, pending: "launch" });
-        await client.commands["timeline.gate.launch"]({ ticket: created.id });
+  const retryCreated = async ({ id, pending }: NonNullable<typeof created>, deadline: string) => {
+    if (pending === "check-launch") {
+      const result = await client.commands["timeline.gate.check-launch"]({ ticket: id });
+      if (result.status === "ready") {
+        setCreated({ id, pending: "launch" });
+        return;
       }
-      onDone(created.id);
+      if (result.status === "unconfirmed") throw new Error("No review session has been confirmed yet.");
+      onDone(id);
       return;
     }
+    if (pending === "placement") await client.commands["timeline.plan.move"]({ ticket: id, deadline });
+    if (kind === "gate") {
+      setCreated({ id, pending: "check-launch" });
+      await client.commands["timeline.gate.launch"]({ ticket: id });
+    }
+    onDone(id);
+  };
+  const submit = async (submission: KanbanRendererCreateSubmission) => {
+    const deadline = String(submission.values.deadline ?? (submission.attributeValues.milestone || "none"));
+    if (created) return retryCreated(created, deadline);
     const attachments = await Promise.all(
       submission.files.map(async (file) =>
         host
@@ -113,13 +125,13 @@ export function TicketForm(props: TicketFormProps) {
     const result =
       kind === "gate"
         ? await client.commands["timeline.gate.create"](input)
-        : { ...(await client.commands["timeline.ticket.create"](input)), launchError: null };
+        : { ...(await client.commands["timeline.ticket.create"](input)), launchError: null, launchStatus: null };
     if (result.placementError) {
       setCreated({ id: result.ticket.id, pending: "placement" });
       throw new Error(`Ticket created. Could not save its milestone: ${result.placementError}`);
     }
     if (result.launchError) {
-      setCreated({ id: result.ticket.id, pending: "launch" });
+      setCreated({ id: result.ticket.id, pending: result.launchStatus === "unconfirmed" ? "check-launch" : "launch" });
       throw new Error(`Gate created. Could not launch its review: ${result.launchError}`);
     }
     onDone(result.ticket.id);
@@ -136,15 +148,18 @@ export function TicketForm(props: TicketFormProps) {
         created
           ? {
               ...config,
-              fields: [
-                {
-                  id: "deadline",
-                  label: "Milestone",
-                  type: "select",
-                  defaultValue: context.deadlineId ?? "none",
-                  options: milestoneOptions,
-                },
-              ],
+              fields:
+                created.pending === "placement"
+                  ? [
+                      {
+                        id: "deadline",
+                        label: "Milestone",
+                        type: "select",
+                        defaultValue: context.deadlineId ?? "none",
+                        options: milestoneOptions,
+                      },
+                    ]
+                  : [],
             }
           : config
       }
