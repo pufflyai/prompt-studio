@@ -304,6 +304,10 @@ const pauseWindowsStartup = () => {
     Bun.spawn(argv, {
       ...options,
       ipc: (message, launcher) => {
+        if (typeof message?.exitCode === "number") {
+          if (typeof options.ipc === "function") options.ipc(message, launcher);
+          return;
+        }
         if (typeof message?.pid !== "number") {
           ready.reject(new Error("The test launcher did not report a target PID."));
           return;
