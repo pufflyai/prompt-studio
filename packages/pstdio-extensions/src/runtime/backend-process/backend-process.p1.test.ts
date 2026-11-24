@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, expect, spyOn, test } from "bun:test";
+import { afterAll, beforeAll, expect, mock, spyOn, test } from "bun:test";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -124,6 +124,29 @@ export default {
     {
       id: "prepared-operation",
       run: () => ({ invoke(input) { return input.events.getMessages().map((message) => message.id); } }),
+    },
+    {
+      id: "prepared-question",
+      run: () => ({
+        invoke(input) {
+          const done = input.questions.ask().then((answers) => {
+            input.events.push({ op: "add", path: "/messages/0", value: { id: "answered", role: "assistant", parts: [] } });
+            return answers;
+          });
+          return { done };
+        },
+      }),
+    },
+    {
+      id: "short-lived-scope",
+      async run(ctx, input) {
+        let after;
+        await ctx.scope.run(() => {
+          after = input.wait().then(() => ctx.scope.read().catch((error) => error.message));
+        });
+        await input.scopedCallbackFinished();
+        return await after;
+      },
     },
     {
       id: "drain-cancel",
@@ -1150,6 +1173,63 @@ test("a prepared harness operation receives a synchronous event sink", async () 
       args: [],
     })) as { invoke(input: { events: { getMessages(): { id: string }[]; push(): void } }): Promise<unknown> };
     expect(await operation.invoke({ events: { getMessages: () => [{ id: "m1" }], push: () => {} } })).toEqual(["m1"]);
+  } finally {
+    await worker.stop();
+  }
+});
+
+test.each<[string, string[][]]>([
+  ["answer", [["Blue"]]],
+  ["skip", []],
+])("a prepared harness session publishes a question %s after invoke returns", async (_kind, answers) => {
+  const worker = await start();
+  const answer = Promise.withResolvers<string[][]>();
+  const pushed = spyOn({ push: (_patch: unknown) => {} }, "push");
+  try {
+    const operation = (await worker.invoke({
+      handlerId: handlerOf(worker.definition, "prepared-question"),
+      context: {},
+      surface,
+      args: [],
+    })) as {
+      invoke(input: {
+        events: { getMessages(): unknown[]; push(patch: unknown): void };
+        questions: { ask(): Promise<string[][]> };
+      }): Promise<{ done: Promise<string[][]> }>;
+    };
+    const ask = spyOn({ ask: () => answer.promise }, "ask");
+    const session = await operation.invoke({ events: { getMessages: () => [], push: pushed }, questions: { ask } });
+    expect(ask).toHaveBeenCalledTimes(1);
+    answer.resolve(answers);
+    expect(await session.done).toEqual(answers);
+    for (let attempt = 0; !pushed.mock.calls.length && attempt < 50; attempt++) await Bun.sleep(10);
+    expect(pushed.mock.calls).toEqual([
+      [{ op: "add", path: "/messages/0", value: { id: "answered", role: "assistant", parts: [] } }],
+    ]);
+  } finally {
+    await worker.stop();
+  }
+});
+
+test("work from a scoped callback still ends when that callback returns", async () => {
+  const worker = await start();
+  const wait = Promise.withResolvers<void>();
+  const finished = Promise.withResolvers<void>();
+  const read = mock(() => "scope");
+  try {
+    const result = worker.invoke({
+      handlerId: handlerOf(worker.definition, "short-lived-scope"),
+      context: { scope: { run: (callback: () => Promise<unknown>) => callback(), read } },
+      surface: {
+        kind: "object",
+        members: { scope: { kind: "object", members: { run: { kind: "async" }, read: { kind: "async" } } } },
+      },
+      args: [{ wait: () => wait.promise, scopedCallbackFinished: () => finished.resolve() }],
+    });
+    await finished.promise;
+    wait.resolve();
+    expect(await result).toBe("The invocation's callback has finished.");
+    expect(read).not.toHaveBeenCalled();
   } finally {
     await worker.stop();
   }
