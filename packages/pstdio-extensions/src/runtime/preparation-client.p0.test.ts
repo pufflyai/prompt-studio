@@ -823,6 +823,8 @@ test("an edit's host gaps do not readmit the attachment check it interrupted", a
 test.each([
   "same-job",
   "lent-to-restoration",
+  // Without a loan the hold cannot see the dependency. It only delays the job until the hold lapses.
+  "unlent-await",
 ] as const)("a continuation that waits on the job it interrupted lets it run (%s)", async (mode) => {
   const client = fixture();
   const blocked = gate();
@@ -851,6 +853,10 @@ test.each([
       await client.run("wait", input, { priority: "background" });
       return;
     }
+    if (mode === "unlent-await") {
+      await original;
+      return;
+    }
     // The edit lends itself to the predecessor it now waits for, through the supported request API.
     await withBackgroundPreparation(async () => {
       const caller = createPreparationScope();
@@ -864,7 +870,7 @@ test.each([
     });
   });
   try {
-    expect(await Promise.race([edit.then(() => "completed"), Bun.sleep(2_000).then(() => "stalled")])).toBe(
+    expect(await Promise.race([edit.then(() => "completed"), Bun.sleep(3_000).then(() => "stalled")])).toBe(
       "completed",
     );
     expect(lost).toBe(1);
