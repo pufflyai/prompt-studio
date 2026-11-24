@@ -44,7 +44,7 @@ export const capturePersonalIndex = async (
 ) => {
   const devices = await deviceNames(deps, config);
   const device = {
-    ownerId: config.accountId,
+    ownerId: config.userId ?? config.accountId,
     id: config.environmentId,
     name: devices.find((device) => device.id === config.environmentId)?.name ?? hostname(),
   };
@@ -73,7 +73,7 @@ export const personalLiveReceiver =
 export const createPersonalContext = (config: RelayWorkbench, deps: ExtensionsRouteDeps) => {
   const history = createPersonalHistoryStore({
     projectId: config.workbenchId,
-    accountId: config.accountId,
+    accountId: config.userId ?? config.accountId,
     managerOrigin: config.managerOrigin,
     documents: deps.extensionStorageService.documents,
     files: deps.personalHistoryService.logs,
@@ -86,7 +86,7 @@ export const createPersonalContext = (config: RelayWorkbench, deps: ExtensionsRo
   );
   const namespace = historyNamespace({
     managerOrigin: config.managerOrigin,
-    accountId: config.accountId,
+    accountId: config.userId ?? config.accountId,
     projectId: config.workbenchId,
   });
   const streams = createPersonalLogStreams({

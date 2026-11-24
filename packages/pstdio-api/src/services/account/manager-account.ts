@@ -1,9 +1,9 @@
-import { identitySchema, projectDeletionStatusSchema } from "pstdio-sync-contracts";
+import { accountScopedPath, identitySchema, projectDeletionStatusSchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import { apiLogger } from "../../lib/logger";
 import { ManagerRequestDenied, managerRequest } from "./manager-client";
 import { matchesDeviceAccount } from "./native-device-read";
-import type { DeviceLogin } from "./native-store";
+import { type DeviceLogin, type ScopedDeviceLogin, scopedAccountId, signedInIdentity } from "./native-store";
 
 const workbenchesSchema = z.array(z.object({ workbenchId: identitySchema }));
 const accountSchema = z.object({
@@ -13,28 +13,31 @@ const accountSchema = z.object({
 
 const deletionsSchema = z.array(projectDeletionStatusSchema);
 
-type ManagerIdentity = Pick<DeviceLogin, "managerOrigin" | "accountId" | "deviceId"> & { credential: string };
+type ManagerIdentity = Pick<ScopedDeviceLogin, "managerOrigin" | "accountId" | "deviceId" | "userId"> & {
+  credential: string;
+};
 export const matchesManagerLogin = (snapshot: ManagerIdentity | undefined, login: DeviceLogin | null) =>
   Boolean(
     snapshot &&
       login &&
       snapshot.credential === login.token &&
       snapshot.deviceId === login.deviceId &&
-      matchesDeviceAccount(snapshot, login),
+      matchesDeviceAccount(signedInIdentity(snapshot), login),
   );
 
-export const readManagerAccount = async (login: DeviceLogin, signal?: AbortSignal) => {
+export const readManagerAccount = async (login: ScopedDeviceLogin, signal?: AbortSignal) => {
+  const path = (route: string) => accountScopedPath(route, scopedAccountId(login));
   const [account, projects] = await Promise.all([
-    managerRequest(login.managerOrigin, "/v1/account", login.token, undefined, signal).then((data) =>
+    managerRequest(login.managerOrigin, path("/v1/account"), login.token, undefined, signal).then((data) =>
       accountSchema.parse(data),
     ),
-    managerRequest(login.managerOrigin, "/v1/workbenches", login.token, undefined, signal).then((data) =>
+    managerRequest(login.managerOrigin, path("/v1/workbenches"), login.token, undefined, signal).then((data) =>
       workbenchesSchema.parse(data),
     ),
   ]);
   const deletions =
     account.projectDeletion !== undefined
-      ? await managerRequest(login.managerOrigin, "/v1/project-deletions", login.token, undefined, signal)
+      ? await managerRequest(login.managerOrigin, path("/v1/project-deletions"), login.token, undefined, signal)
           .then((data) => deletionsSchema.parse(data))
           .catch((error) => {
             if (signal?.aborted || (error instanceof ManagerRequestDenied && [401, 403].includes(error.status)))
@@ -46,6 +49,7 @@ export const readManagerAccount = async (login: DeviceLogin, signal?: AbortSigna
   return {
     managerOrigin: login.managerOrigin,
     accountId: login.accountId,
+    ...(login.userId && { userId: login.userId }),
     deviceId: login.deviceId,
     credential: login.token,
     ids: projects.map((row) => row.workbenchId),

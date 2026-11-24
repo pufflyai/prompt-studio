@@ -1,15 +1,22 @@
 import { Button, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
-import { type CloudProjectDeletion, type ProjectCopyAccount, PstdioApiError } from "@pstdio/sdk/client";
+import {
+  type CloudProjectDeletion,
+  type DeviceLogin,
+  type ProjectCopyAccount,
+  PstdioApiError,
+} from "@pstdio/sdk/client";
 import { AlertMessage, DeleteConfirmationModal } from "@pstdio/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { useCloudProjectDeletions } from "../data/cloud-project-deletion-operations";
-import { cloudProjectCatalogKey, cloudProjectDeletionKey } from "../data/project-catalog";
+import { cloudProjectDeletionKey, useCloudProjectDeletions } from "../data/cloud-project-deletion-operations";
+import { cloudProjectCatalogKey } from "../data/project-catalog";
+import { sameProjectCopyDevice } from "../data/project-copy-scope";
 
 interface DeletionProps {
   id: string;
   name: string;
   account?: ProjectCopyAccount;
+  login?: DeviceLogin;
   receipt?: CloudProjectDeletion;
   canDelete: boolean;
   cloudOnly?: boolean;
@@ -68,13 +75,13 @@ const useDeletionCompletion = (completed: boolean, onCompleted?: () => void) => 
   }, [completed, onCompleted]);
 };
 
-const useCloudDeletion = ({ id, name, account, receipt, onSubmitted, onCompleted }: DeletionProps) => {
+const useCloudDeletion = ({ id, name, account, login, receipt, onSubmitted, onCompleted }: DeletionProps) => {
   const observed = useObservedDeletion(account, receipt);
   const [submittedAccount, setSubmittedAccount] = useState<ProjectCopyAccount>();
   const [started, setStarted] = useState<CloudProjectDeletion>();
   const [uncertain, setUncertain] = useState(false);
   const deletions = useCloudProjectDeletions();
-  const active = deletions.active(id);
+  const active = deletions.active(id, account);
   const checking = active?.status === "unknown" || active?.status === "unconfirmed";
   const writing = Boolean(active && !checking);
   const checked = useRef<symbol>(undefined);
@@ -88,9 +95,10 @@ const useCloudDeletion = ({ id, name, account, receipt, onSubmitted, onCompleted
     expected && account?.managerOrigin === expected.managerOrigin && account.accountId === expected.accountId,
   );
   const operation = useQuery({
-    queryKey: cloudProjectDeletionKey(id, expected),
-    queryFn: ({ signal }) => deletions.read(id, expected, signal),
-    enabled: accountMatches && Boolean(started || receipt || observed?.receipt || uncertain || checking),
+    queryKey: cloudProjectDeletionKey(id, expected, login),
+    queryFn: ({ signal }) => deletions.read(id, expected, login, signal),
+    enabled:
+      Boolean(login) && accountMatches && Boolean(started || receipt || observed?.receipt || uncertain || checking),
     retry: false,
     refetchInterval: ({ state }) => (state.data?.state === "completed" ? false : 2000),
   });
@@ -103,12 +111,12 @@ const useCloudDeletion = ({ id, name, account, receipt, onSubmitted, onCompleted
     void deletions.check(active.id);
   }, [active, checking, current, deletions]);
 
-  const submit = async (expectedAccount: ProjectCopyAccount) => {
+  const submit = async (expectedAccount: ProjectCopyAccount, expectedDevice: DeviceLogin) => {
     setSubmittedAccount(expectedAccount);
     setError(undefined);
     onSubmitted?.();
     try {
-      const result = await deletions.start(id, name, expectedAccount);
+      const result = await deletions.start(id, name, expectedAccount, expectedDevice);
       setStarted(result);
       setUncertain(false);
       if (operation.data && operation.data.state !== result.state) await operation.refetch();
@@ -121,12 +129,12 @@ const useCloudDeletion = ({ id, name, account, receipt, onSubmitted, onCompleted
   };
 
   const retry = async () => {
-    if (!expected || writing) return;
+    if (!expected || !login || writing) return;
     // The caller has a definitive status response for this project. The server resumes by project ID.
     if (active) deletions.discard(active.id);
     setRetrying(true);
     try {
-      await submit(expected);
+      await submit(expected, login);
     } finally {
       setRetrying(false);
     }
@@ -172,15 +180,17 @@ export const CloudProjectDeletionAction = ({
   id,
   name,
   account,
+  login,
   receipt,
   canDelete,
   cloudOnly,
   onSubmitted,
   onCompleted,
 }: DeletionProps) => {
-  const [confirmation, setConfirmation] = useState<ProjectCopyAccount>();
+  const [confirmation, setConfirmation] = useState<{ account: ProjectCopyAccount; login: DeviceLogin }>();
+  const canConfirm = Boolean(canDelete && account && login);
   const { current, uncertain, writing, error, retrying, operation, accountMatches, retryStatus, retry, submit } =
-    useCloudDeletion({ id, name, account, receipt, canDelete, cloudOnly, onSubmitted, onCompleted });
+    useCloudDeletion({ id, name, account, login, receipt, canDelete, cloudOnly, onSubmitted, onCompleted });
 
   if (accountMatches && (current || uncertain || writing)) {
     const state = current?.state;
@@ -206,16 +216,16 @@ export const CloudProjectDeletionAction = ({
       <Button
         size="sm"
         variant="destructive"
-        disabled={!canDelete || !account}
-        onClick={() => setConfirmation(account)}
+        disabled={!canConfirm}
+        onClick={() => account && login && setConfirmation({ account, login })}
       >
         Delete cloud project
       </Button>
       <DeleteConfirmationModal
         open={Boolean(confirmation)}
         onClose={() => setConfirmation(undefined)}
-        onDelete={() => confirmation && submit(confirmation)}
-        confirmDisabled={!canDelete || !account}
+        onDelete={() => confirmation && submit(confirmation.account, confirmation.login)}
+        confirmDisabled={!canConfirm || !sameProjectCopyDevice(login, confirmation?.login)}
         headline={`Delete cloud project “${name}”?`}
         notificationText="Cloud data, files, history, recovery data, and project encryption keys will be permanently deleted. Downloaded copies stay as local projects, including unsynced work. Offline devices stop syncing when they reconnect. User-selected source folders stay on disk."
         buttonText="Delete cloud project"

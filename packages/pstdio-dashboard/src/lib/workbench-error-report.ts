@@ -12,7 +12,7 @@ type ErrorReportingBridge = { reportWorkbenchError?: (report: WorkbenchErrorRepo
 export const reportWorkbenchError = (error: unknown, projectId?: string, componentStack?: string | null) => {
   const writeToConsole = () => console.error("Prompt Studio workbench failed", error, componentStack);
   try {
-    const bridge = window.promptStudioDesktop as ErrorReportingBridge | undefined;
+    const bridge = (window as Window & { promptStudioDesktop?: ErrorReportingBridge }).promptStudioDesktop;
     if (!bridge?.reportWorkbenchError) {
       writeToConsole();
       return;

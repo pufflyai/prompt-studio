@@ -1,4 +1,4 @@
-import { Box, Button, Icon, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { EmptyState, ListRow, SearchModalContent } from "@pstdio/ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore, WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
@@ -77,10 +77,19 @@ export const ProjectPickerRows = (props: ProjectPickerRowsProps) => {
   );
 };
 
+const useProjectPickerAccount = (opening: WorkbenchPanelRenderInput["instance"]["pageContext"]) => {
+  const configured = opening?.params?.teamAccountId;
+  const [picked, setPicked] = useState<{ opening: typeof opening; accountId?: string }>();
+  const initialAccountId = typeof configured === "string" ? configured : undefined;
+  const accountId = picked?.opening === opening ? picked?.accountId : initialAccountId;
+  return [accountId, (selection?: string) => setPicked({ opening, accountId: selection })] as const;
+};
+
 export const ProjectPickerWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const { t } = useTranslation("projects");
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTeamId, setSelectedTeamId] = useProjectPickerAccount(input.instance.pageContext);
   const selectedProjectIdValue = useWorkbenchStore(
     input.workbench.context.store,
     (state) => state.values[dashboardSelectedProjectIdContextKey],
@@ -89,16 +98,27 @@ export const ProjectPickerWidget = (props: { input: WorkbenchPanelRenderInput })
   const dashboardDataVersion = useCollectionSelection({ tables: ["projects", "workspaces"] });
 
   const selectedProjectId = typeof selectedProjectIdValue === "string" ? selectedProjectIdValue : undefined;
-  const catalog = useCloudProjectCatalog();
-  const localProjects = createDashboardProjects();
+  const catalog = useCloudProjectCatalog(selectedTeamId);
+  const team = catalog.teamAccounts.find(({ accountId }) => accountId === selectedTeamId);
+  const teamUnavailable = Boolean(selectedTeamId && !team);
+  const canCreateProject = !selectedTeamId || (team?.role === "owner" && team.features.relay);
+  const teamIds = new Set(catalog.teamAccounts.map(({ accountId }) => accountId));
+  const localProjects = teamUnavailable
+    ? []
+    : createDashboardProjects().filter(({ id }) => {
+        const accountId = catalog.teamProjectOwners[id] ?? catalog.teamProjects[id];
+        if (selectedTeamId) return accountId === selectedTeamId;
+        return !accountId || !teamIds.has(accountId);
+      });
+  const visibleCatalog = teamUnavailable ? undefined : catalog.data;
   const deletion = useLocalProjectDeletion();
-  const allProjects = mergeCloudProjectCatalog(localProjects, catalog.data).filter(({ id }) => !deletion.hidden(id));
+  const allProjects = mergeCloudProjectCatalog(localProjects, visibleCatalog).filter(({ id }) => !deletion.hidden(id));
   const showSearch = allProjects.length >= 8;
   const activeSearchTerm = showSearch ? searchTerm : "";
   const projects = filterProjects(allProjects, activeSearchTerm, dashboardDataVersion);
   const cloudState = useCloudProjectStates(
     localProjects.map((project) => project.id),
-    catalog.data,
+    visibleCatalog,
   );
 
   const handleSelectProject = (project: DashboardProject) => {
@@ -110,7 +130,10 @@ export const ProjectPickerWidget = (props: { input: WorkbenchPanelRenderInput })
   };
 
   const handleCreateProject = () => {
-    void input.workbench.commands.executeCommand(dashboardCommandIds.createProject);
+    void input.workbench.commands.executeCommand(
+      dashboardCommandIds.createProject,
+      selectedTeamId && { teamAccountId: selectedTeamId },
+    );
   };
 
   return (
@@ -134,7 +157,7 @@ export const ProjectPickerWidget = (props: { input: WorkbenchPanelRenderInput })
         ) : undefined
       }
       footerEnd={
-        <Button variant="outline" size="sm" onClick={handleCreateProject}>
+        <Button variant="outline" size="sm" onClick={handleCreateProject} disabled={!canCreateProject}>
           <Icon as={Plus} />
           {t("list.createProject")}
         </Button>
@@ -142,13 +165,37 @@ export const ProjectPickerWidget = (props: { input: WorkbenchPanelRenderInput })
       scrollAreaProps={{ maxH: "24rem", viewportProps: { overscrollBehavior: "contain" }, p: "0", gap: "0" }}
       onSearchChange={setSearchTerm}
     >
-      <ProjectPickerRows
-        projects={projects}
-        selectedProjectId={selectedProjectId}
-        searchTerm={activeSearchTerm}
-        cloudState={cloudState}
-        onSelectProject={handleSelectProject}
-      />
+      {(catalog.teamAccounts.length > 0 || selectedTeamId !== undefined) && (
+        <HStack gap="xs" px="sm" py="xs" aria-label="Cloud account" role="group" flexWrap="wrap">
+          <Button size="xs" variant="ghost" aria-pressed={!selectedTeamId} onClick={() => setSelectedTeamId(undefined)}>
+            Personal
+          </Button>
+          {catalog.teamAccounts.map(({ accountId, name }) => (
+            <Button
+              key={accountId}
+              size="xs"
+              variant="ghost"
+              aria-pressed={selectedTeamId === accountId}
+              onClick={() => setSelectedTeamId(accountId)}
+            >
+              {name}
+            </Button>
+          ))}
+        </HStack>
+      )}
+      {teamUnavailable ? (
+        <Text role="status" px="sm" py="md" textStyle="paragraph/S/regular" color="fg.muted">
+          This team is unavailable.
+        </Text>
+      ) : (
+        <ProjectPickerRows
+          projects={projects}
+          selectedProjectId={selectedProjectId}
+          searchTerm={activeSearchTerm}
+          cloudState={cloudState}
+          onSelectProject={handleSelectProject}
+        />
+      )}
     </SearchModalContent>
   );
 };

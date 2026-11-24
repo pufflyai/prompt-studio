@@ -24,6 +24,7 @@ const claims = z
   .object({
     tokenType: z.literal("pstdio-environment-access"),
     accountId: identitySchema,
+    userId: identitySchema.optional(),
     workbenchId: identitySchema,
     environmentId: identitySchema,
     sub: identitySchema,
@@ -53,6 +54,7 @@ export const createEnvironmentAccessVerifier = (input: EnvironmentAccessTrust) =
       const access = claims.parse(payload);
       return {
         accountId: access.accountId,
+        ...(access.userId ? { userId: access.userId } : {}),
         workbenchId: access.workbenchId,
         environmentId: access.environmentId,
         expiresAt: new Date(access.exp * 1000).toISOString(),

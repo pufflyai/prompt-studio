@@ -5,6 +5,7 @@ import { getApiClient } from "@/lib/api";
 // Webview account calls use the runtime's account routes, the same owner as `ctx.account`.
 export const createAccountAdapter = (projectId: string, client: Pick<PstdioClient, "account"> = getApiClient()) =>
   ({
+    createTeam: (name, expected) => client.account.createTeam(name, expected),
     status: () => client.account.status(),
     login: (managerOrigin) => client.account.login(managerOrigin),
     loginStatus: async (id) => (await client.account.loginStatus(id)).status,
