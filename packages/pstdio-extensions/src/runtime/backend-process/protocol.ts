@@ -124,6 +124,14 @@ const isPath = (value: unknown) =>
     (step) => isRecord(step) && typeof step.name === "string" && (step.args === undefined || Array.isArray(step.args)),
   );
 
+const parseInvocationResult = (message: Record<string, unknown>) => {
+  if (typeof message.invocationId !== "string" || !isSettled(message)) return;
+  return {
+    ...message,
+    rejection: message.ok === false ? transferableCommandRejection(message.rejection) : undefined,
+  } as Extract<WorkerToHostMessage, { type: "result" }>;
+};
+
 /** Validates what the worker sends. The host never trusts its shape or its claimed identity. */
 export const parseWorkerMessage = (message: unknown): WorkerToHostMessage | undefined => {
   if (!isRecord(message) || message.v !== BACKEND_PROTOCOL_VERSION) return;
@@ -133,11 +141,7 @@ export const parseWorkerMessage = (message: unknown): WorkerToHostMessage | unde
     case "loaded":
       return isSettled(message) ? (message as WorkerToHostMessage) : undefined;
     case "result":
-      if (typeof message.invocationId !== "string" || !isSettled(message)) return;
-      return {
-        ...message,
-        rejection: message.ok === false ? transferableCommandRejection(message.rejection) : undefined,
-      } as WorkerToHostMessage;
+      return parseInvocationResult(message);
     case "call":
       return typeof message.invocationId === "string" &&
         typeof message.requestId === "string" &&
