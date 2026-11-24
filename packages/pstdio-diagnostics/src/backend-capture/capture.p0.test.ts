@@ -73,3 +73,44 @@ test("an armed capture writes checkpoints through its callback and returns the f
   expect(result.data.reason).toBe("expired");
   expect(result.summary.unit).toBe("samples");
 });
+
+test("terminal checkpoint I/O does not keep recording resources", async () => {
+  const entered = Promise.withResolvers<boolean>();
+  const checkpoint = Promise.withResolvers<void>();
+  const finish = captureBackendDiagnostic({
+    kind: "armed",
+    cpuPercent: 10_000,
+    durationMs: 20,
+    checkpoint: (data) => {
+      entered.resolve(data.complete);
+      return checkpoint.promise;
+    },
+  });
+  try {
+    expect(await entered.promise).toBe(true);
+    expect(channel(runtimeOperationChannel).hasSubscribers).toBe(false);
+    expect((await captureBackendDiagnostic({ kind: "cpu", durationMs: 10 })).data.profile).toBeDefined();
+  } finally {
+    checkpoint.resolve();
+    await finish;
+  }
+});
+
+test("an unsettled terminal checkpoint fails within its allowance", async () => {
+  const gate = Promise.withResolvers<void>();
+  try {
+    const capture = captureBackendDiagnostic(
+      {
+        kind: "armed",
+        cpuPercent: 10_000,
+        durationMs: 20,
+        checkpoint: () => gate.promise,
+      },
+      { checkpointTimeoutMs: 20 },
+    );
+    expect(await rejectionOf(capture)).toMatchObject({ code: "diagnostics_checkpoint_timeout" });
+    expect(channel(runtimeOperationChannel).hasSubscribers).toBe(false);
+  } finally {
+    gate.resolve();
+  }
+});

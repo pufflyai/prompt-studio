@@ -1,5 +1,5 @@
 /** One write is active at a time. Under backpressure, the newest bounded snapshot replaces the pending one. */
-export const createCheckpointWriter = <T extends object>(
+export const createCheckpointWriter = <T extends { skippedCheckpoints: number }>(
   write: (value: T) => Promise<void>,
   onError: (error: unknown) => void,
 ) => {
@@ -32,11 +32,11 @@ export const createCheckpointWriter = <T extends object>(
   return {
     queue(value: T) {
       if (failure) throw failure.error;
-      if (stopped) return skipped;
+      if (stopped) return;
       if (pending) skipped++;
+      value.skippedCheckpoints = skipped;
       pending = value;
       start();
-      return skipped;
     },
     async flush(signal: AbortSignal) {
       signal.throwIfAborted();

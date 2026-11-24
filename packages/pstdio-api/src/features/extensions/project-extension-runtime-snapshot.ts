@@ -1,10 +1,12 @@
-import type { ExtensionRuntime } from "pstdio-extensions";
+import type { ExtensionRuntime, LoadedExtensionSource } from "pstdio-extensions";
 import type { createExtensionService } from "../../services/extension-service";
 import { ProjectNotFoundError } from "../../services/extension-service";
+import { canonicalSourcePath } from "./project-extension-runtime-sources";
+import { firstPartyCatalogEntry } from "./verified-install-origin";
 
 export type EnabledExtensionSource = Awaited<
   ReturnType<ReturnType<typeof createExtensionService>["listEnabledSourcesForProject"]>
->[number];
+>[number] & { adoptedSource?: { sourcePath: string; revisionId?: string } };
 
 export type RuntimeInvalidationReason =
   | "source_changed"
@@ -99,4 +101,25 @@ export const resolveEnabledSourceForRecord = (
   }
 
   return match;
+};
+
+// Authorization follows the adopted package, independently of how the registered source describes itself.
+export const bindAdoptedSourceRevisions = (
+  enabledSources: EnabledExtensionSource[],
+  runtime: ExtensionRuntime,
+  cachedSources: readonly { source: LoadedExtensionSource }[],
+) => {
+  const revisions = new Map(cachedSources.map(({ source }) => [source.sourcePath, source.preparedRevision?.id]));
+  const adoptedSources = new Map<string, ExtensionRuntime["extensions"][number] | null>();
+  for (const extension of runtime.extensions) {
+    adoptedSources.set(extension.id, adoptedSources.has(extension.id) ? null : extension);
+  }
+  return enabledSources.map((source) => {
+    const { extension_id: id, source_path: path } = source.installedSource;
+    if (!firstPartyCatalogEntry(id)) return source;
+    const adopted = adoptedSources.get(id);
+    const sourcePath = adopted?.originalPackagePath;
+    if (!sourcePath || canonicalSourcePath(sourcePath) !== canonicalSourcePath(path)) return source;
+    return { ...source, adoptedSource: { sourcePath, revisionId: revisions.get(adopted.sourcePath) } };
+  });
 };
