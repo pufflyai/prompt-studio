@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts";
 import { createCommandRunner, normalizeExtensionSources } from "pstdio-extensions";
-import { createCommandEnvironment } from "./index";
+import { createTestCommandEnvironment } from "../../../test-utils/create-test-command-environment";
 import { createResourcesApi } from "./resources";
 import { createSessionsApi } from "./sessions";
 import { createWorkspacesApi } from "./workspaces";
@@ -115,7 +115,7 @@ test("a cancelled real command invocation cannot continue into later host reader
   ]);
   const runner = createCommandRunner(runtime, {
     buildEnvironment: () =>
-      createCommandEnvironment(
+      createTestCommandEnvironment(
         deps,
         [
           {
