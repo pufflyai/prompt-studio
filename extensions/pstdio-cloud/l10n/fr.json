@@ -157,5 +157,15 @@
   "sharing.grantNamed": "Accorder l’accès à {{name}}",
   "sharing.revoke": "Retirer l’accès",
   "sharing.revokeNamed": "Retirer l’accès à {{name}}",
-  "sharing.revokeEffect": "Les nouvelles modifications ne seront plus synchronisées pour cette personne après l’expiration de son accès. Elle conserve ses copies téléchargées."
+  "sharing.revokeEffect": "Les nouvelles modifications ne seront plus synchronisées pour cette personne après l’expiration de son accès. Elle conserve ses copies téléchargées.",
+  "ownership.pending": "En attente de l’acceptation de {{name}}.",
+  "ownership.cancel": "Annuler l’offre de transfert",
+  "ownership.incoming": "{{name}} vous propose de prendre la responsabilité de {{team}}.",
+  "ownership.projectAccess": "Vos accès aux projets restent les mêmes.",
+  "ownership.accept": "Accepter le transfert",
+  "ownership.decline": "Refuser",
+  "ownership.title": "Transférer la responsabilité",
+  "ownership.recipient": "Nouveau responsable",
+  "ownership.choose": "Choisir un membre",
+  "ownership.offer": "Proposer le transfert"
 }

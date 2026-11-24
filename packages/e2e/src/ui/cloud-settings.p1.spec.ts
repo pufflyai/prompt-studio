@@ -226,3 +226,62 @@ test("project access changes apply only to the selected team project and member"
   await confirmation.getByRole("button", { name: "Revoke access", exact: true }).click();
   await expect(settings.getByRole("button", { name: "Grant access to Morgan" })).toBeVisible();
 });
+
+test("a team member can accept an ownership offer through Cloud settings", async ({ page, request }) => {
+  const createdProject = await request.post(`${uiOrigin}/v1/projects`, {
+    data: folderProjectInput({ name: "Ownership settings" }),
+  });
+  expect(createdProject.ok()).toBe(true);
+  const { id } = await createdProject.json();
+  const expected = { accountId: "morgan", managerOrigin: "https://accounts.example.test" };
+  const team = { accountId: "studio", name: "Studio Team", role: "member", features: { relay: true } };
+  const offer = { id: "ownership-offer", ownerUserId: "alex", recipientUserId: "morgan" };
+  await page.route("**/v1/account", (route) =>
+    route.fulfill({
+      json: {
+        login: { ...expected, deviceId: "fixture-device", relayOrigin: "https://relay.example.test" },
+        cloudProjects: [],
+        cloudProjectsLoaded: true,
+        features: { relay: true },
+        teamAccounts: [team],
+        teamProjectOwners: {},
+      },
+    }),
+  );
+  await page.route(`**/v1/account/projects/${id}/sync*`, (route) =>
+    route.fulfill({ json: { state: "local", offlineReady: false } }),
+  );
+  await page.route("**/v1/account/devices*", (route) => route.fulfill({ json: [] }));
+  await page.route("**/v1/account/team-membership/read", (route) => {
+    const operation = route.request().postDataJSON().request.op;
+    if (operation === "invitations") return route.fulfill({ json: [] });
+    if (operation === "ownershipOffer") return route.fulfill({ json: team.role === "owner" ? null : offer });
+    return route.fulfill({
+      json: [
+        { userId: "alex", name: "Alex", role: team.role === "owner" ? "member" : "owner" },
+        { userId: "morgan", name: "Morgan", role: team.role },
+      ],
+    });
+  });
+  await page.route("**/v1/account/team-membership/write", (route) => {
+    expect(route.request().postDataJSON()).toEqual({
+      request: { op: "answerOwnership", accountId: team.accountId, offerId: offer.id, decision: "accept" },
+      expected,
+    });
+    team.role = "owner";
+    return route.fulfill({ json: { ok: true } });
+  });
+
+  await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+  await page.goto(`/projects/${id}/`);
+  await page.locator("footer").getByRole("button", { name: "Prompt Studio Cloud", exact: true }).click();
+  await page.frameLocator('iframe[title="Cloud details"]').getByRole("button", { name: "Cloud settings" }).click();
+  const settings = page.frameLocator('iframe[title="Cloud"]');
+  await settings.getByRole("button", { name: "Studio Team" }).click();
+  await settings.getByRole("button", { name: "Team members" }).click();
+  await expect(settings.getByText("Alex offered you ownership of Studio Team.")).toBeVisible();
+  await expect(settings.getByRole("button", { name: "Project access" })).toHaveCount(0);
+  await settings.getByRole("button", { name: "Accept ownership" }).click();
+  await expect(settings.getByRole("button", { name: "Project access" })).toBeVisible();
+  await expect(settings.getByText("Morgan · Owner")).toBeVisible();
+});

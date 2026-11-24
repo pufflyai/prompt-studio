@@ -1,10 +1,18 @@
 import { Field, HStack, Input, Stack, Text } from "@chakra-ui/react";
-import type { DeviceLogin, TeamAccount, TeamInvitation, TeamMember, TeamMembershipWrite } from "@pstdio/sdk/extensions";
+import type {
+  DeviceLogin,
+  TeamAccount,
+  TeamInvitation,
+  TeamMember,
+  TeamMembershipWrite,
+  TeamOwnershipOffer,
+} from "@pstdio/sdk/extensions";
 import { DeleteConfirmationModal } from "@pstdio/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "./button";
 import { useCloudContext } from "./cloud-context";
 import { CloudError } from "./cloud-error";
+import { TeamOwnership } from "./team-ownership";
 
 type Confirmation = { request: TeamMembershipWrite; member?: string };
 
@@ -14,6 +22,7 @@ export const TeamMembers = (props: { team: TeamAccount; login: DeviceLogin; refr
   const { client, t } = useCloudContext();
   const [roster, setRoster] = useState<TeamMember[]>();
   const [invitations, setInvitations] = useState<TeamInvitation[]>([]);
+  const [offer, setOffer] = useState<TeamOwnershipOffer | null>();
   const inFlight = useRef<AbortController>(undefined);
   const [provider, setProvider] = useState<"google" | "microsoft">("google");
   const [email, setEmail] = useState("");
@@ -34,17 +43,20 @@ export const TeamMembers = (props: { team: TeamAccount; login: DeviceLogin; refr
         ? client.account.readTeamMembership({ op: "invitations", accountId: teamId }, expected)
         : Promise.resolve([]);
     try {
-      const [members, outstanding] = await Promise.all([
+      const [members, outstanding, ownership] = await Promise.all([
         client.account.readTeamMembership({ op: "members", accountId: teamId }, expected),
         pending,
+        client.account.readTeamMembership({ op: "ownershipOffer", accountId: teamId }, expected),
       ]);
       if (controller.signal.aborted) return;
       setRoster(members);
       setInvitations(outstanding);
+      setOffer(ownership);
     } catch (cause) {
       if (controller.signal.aborted) return;
       setRoster(undefined);
       setInvitations([]);
+      setOffer(undefined);
       setError(String(cause));
     }
   }, [accountId, managerOrigin, client, role, teamId]);
@@ -240,6 +252,9 @@ export const TeamMembers = (props: { team: TeamAccount; login: DeviceLogin; refr
         </Button>
       )}
       {error && <CloudError message={error} onClose={() => setError(undefined)} />}
+      {roster && offer !== undefined && (
+        <TeamOwnership team={props.team} userId={accountId} roster={roster} offer={offer} busy={busy} mutate={mutate} />
+      )}
       {confirm && (
         <DeleteConfirmationModal
           open
