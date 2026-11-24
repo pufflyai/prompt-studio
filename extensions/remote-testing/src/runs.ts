@@ -12,8 +12,11 @@ import {
   waitUntilReady,
 } from "./environments";
 import { readRunReceipt, runDeadline, TRANSFER_ALLOWANCE_SECONDS } from "./run-deadline";
-import { type Receipt, summarize, timeoutSummary } from "./run-result";
+import { rememberRunLog } from "./run-log";
+import { type Receipt, receiptSummary, summarize, timeoutSummary } from "./run-result";
+import { saveSubmissionFailure } from "./run-submission";
 import type { Settings } from "./settings";
+import { activateEnvironment } from "./setup-claims";
 import { withSourceArchive } from "./source";
 import type { RunStorage } from "./storage";
 
@@ -21,6 +24,7 @@ export interface RunDeps {
   projectId: string;
   api: Api;
   cleanupEnvironment(input: EnvironmentCleanupInput): Promise<void>;
+  collectRunLog?(runId: string): Promise<void>;
   publishTemplate?(kind: BranchKind, source: BranchSource, signal?: AbortSignal): Promise<TemplateRef>;
   storage: RunStorage;
   store: ExtensionStorageApi;
@@ -31,9 +35,10 @@ export interface RunDeps {
   changed?(): Promise<unknown>;
 }
 
-export type RunCollectionDeps = Pick<RunDeps, "api" | "store" | "saveLog" | "changed"> & {
-  storage: Pick<RunStorage, "download">;
-};
+export type RunCollectionDeps = Pick<RunDeps, "api" | "store" | "saveLog" | "changed"> &
+  Partial<Pick<RunDeps, "cleanupEnvironment" | "collectRunLog">> & {
+    storage: Pick<RunStorage, "download">;
+  };
 
 export interface RunRecord {
   runId: string;
@@ -48,6 +53,7 @@ export interface RunRecord {
   /** The Prompt Studio session whose agent started the run, when one did. */
   sessionId?: string;
   summary?: RunSummary;
+  submissionPending?: boolean;
   template?: TemplateRef;
 }
 
@@ -69,21 +75,6 @@ const notifyRunChange = (deps: Pick<RunDeps, "changed">) =>
   Promise.resolve()
     .then(() => deps.changed?.())
     .catch(() => {});
-
-async function saveSubmissionFailure(deps: RunDeps, record: RunRecord | undefined, error: unknown) {
-  if (!record) return;
-  const summary: RunSummary = {
-    runId: record.runId,
-    environmentId: record.environmentId,
-    status: "error",
-    exitCode: null,
-    durationMs: Math.max(0, Date.now() - Date.parse(record.startedAt)),
-    logPath: null,
-    tail: "",
-    error: error instanceof Error ? error.message : String(error),
-  };
-  await deps.store.set(`run:${record.runId}`, { ...record, summary });
-}
 
 export async function startRun(
   deps: RunDeps,
@@ -124,6 +115,7 @@ export async function startRun(
     },
   );
 
+  const setup = { until: Date.now() + TRANSFER_ALLOWANCE_SECONDS * 1000, stop: !input.environmentId };
   const environment = template
     ? await createEnvironment(
         deps.api,
@@ -136,14 +128,12 @@ export async function startRun(
           source_sha256: sha256,
         },
       )
-    : await pickEnvironment(deps, runId, input.environmentId, signal);
-  let ownsEnvironment = !template;
+    : await pickEnvironment(deps, input.environmentId, signal);
+  let ownsEnvironment = false;
   let record: RunRecord | undefined;
   try {
-    if (template) {
-      ownsEnvironment = await claimEnvironment(deps.store, environment.id, runId);
-      if (!ownsEnvironment) throw new Error(`Environment ${environment.id} is running another test run.`);
-    }
+    ownsEnvironment = await claimEnvironment(deps.store, environment.id, runId, setup);
+    if (!ownsEnvironment) throw new Error(`Environment ${environment.id} is running another test run.`);
     const ready = await waitUntilReady(deps.api, environment, signal);
     // The source URL must outlive a cold start; the log URL must outlive the run.
     const message = JSON.stringify({
@@ -164,15 +154,22 @@ export async function startRun(
       startedAt: new Date().toISOString(),
       timeoutSeconds,
       stopAfterRun: !input.keepEnvironment,
+      submissionPending: true,
       ...(template ? { template } : {}),
       ...(input.sessionId ? { sessionId: input.sessionId } : {}),
     };
     await deps.store.set(`run:${runId}`, record);
+    await activateEnvironment(deps.store, environment.id, runId);
     await deps.api({
       method: "POST",
       path: `/v1/workspaces/${ready.id}/requests`,
       body: { requestId: record.requestId, conversationId: record.conversationId, message, files: [] },
       signal,
+    });
+    record = { ...record, submissionPending: false };
+    await deps.store.records.commit({
+      operationId: crypto.randomUUID(),
+      edits: [{ recordId: deps.store.records.id(`run:${runId}`), set: { "/submissionPending": false } }],
     });
     await notifyRunChange(deps);
     return { record, files, bytes };
@@ -192,22 +189,17 @@ export async function startRun(
   }
 }
 
-async function pickEnvironment(deps: RunDeps, runId: string, requested: string | undefined, signal?: AbortSignal) {
+async function pickEnvironment(deps: RunDeps, requested: string | undefined, signal?: AbortSignal) {
   // Ownership covers provisioning as well as execution.
   if (requested) {
     const selected = await readEnvironment(deps.api, requested, signal);
     if (selected.metadata.pstdio_project_id !== deps.projectId)
       throw new Error("Select an environment created by this project.");
-    if (!(await claimEnvironment(deps.store, requested, runId)))
-      throw new Error(`Environment ${requested} is running another test run.`);
     return selected;
   }
   // Claims live in one project's storage, while the controller lists all projects.
   // Start isolated unless the caller explicitly selects a workspace to reuse.
-  const created = await createEnvironment(deps.api, deps.settings, signal, { pstdio_project_id: deps.projectId });
-  if (!(await claimEnvironment(deps.store, created.id, runId)))
-    throw new Error(`Environment ${created.id} is running another test run.`);
-  return created;
+  return createEnvironment(deps.api, deps.settings, signal, { pstdio_project_id: deps.projectId });
 }
 
 const requestPath = (record: RunRecord) =>
@@ -243,6 +235,36 @@ async function stopCollectedEnvironment(
   }
 }
 
+async function saveTimedOutRun(deps: RunCollectionDeps, record: RunRecord, summary: RunSummary, finalized: boolean) {
+  // Independent cleanup and log workers own remote retries. A network outage must
+  // not keep an overdue result looking like an active test run.
+  if (record.stopAfterRun && (await ownsEnvironment(deps.store, record.environmentId, record.runId)))
+    await rememberEnvironmentCleanup(deps.store, {
+      environmentId: record.environmentId,
+      runId: record.runId,
+      stop: true,
+    });
+  await rememberRunLog(deps.store, record.runId);
+  await deps.store.set(`run:${record.runId}`, { ...record, summary });
+  if (finalized && !record.stopAfterRun) await releaseEnvironment(deps.store, record.environmentId, record.runId);
+  await notifyRunChange(deps);
+  await Promise.allSettled([
+    ...(record.stopAfterRun
+      ? [
+          Promise.resolve().then(() =>
+            deps.cleanupEnvironment?.({
+              environmentId: record.environmentId,
+              runId: record.runId,
+              stop: true,
+            }),
+          ),
+        ]
+      : []),
+    Promise.resolve().then(() => deps.collectRunLog?.(record.runId)),
+  ]);
+  return summary;
+}
+
 // One look at a run: collects its result once the controller has finished it, so a run
 // whose caller went away still gets its summary and log.
 export async function checkRun(
@@ -253,27 +275,17 @@ export async function checkRun(
 ) {
   if (record.summary) return record.summary;
   const receipt = await readRunReceipt<Receipt>(deps.api, requestPath(record), record, signal, retryTransient);
+  const terminal = receipt?.finalizedAt ? receiptSummary(record, receipt) : null;
   const expired = !receipt?.finalizedAt && Date.now() >= runDeadline(record);
   if (!receipt?.finalizedAt && !expired) return null;
-  if (expired) {
-    if (!record.stopAfterRun && (await ownsEnvironment(deps.store, record.environmentId, record.runId))) {
+  if (expired || terminal?.status === "timed_out") {
+    if (expired && !record.stopAfterRun && (await ownsEnvironment(deps.store, record.environmentId, record.runId))) {
       // Cancellation acknowledges intent. Keep a reusable workspace claimed until
       // a terminal receipt proves the old command can no longer write its files.
       if (receipt) await cancelOverdueRequest(deps.api, record, receipt, signal);
       return null;
     }
-    // The scheduled cleanup worker owns remote retries. A network outage must
-    // not keep an overdue result looking like an active test run.
-    if (record.stopAfterRun && (await ownsEnvironment(deps.store, record.environmentId, record.runId)))
-      await rememberEnvironmentCleanup(deps.store, {
-        environmentId: record.environmentId,
-        runId: record.runId,
-        stop: true,
-      });
-    const summary = timeoutSummary(record);
-    await deps.store.set(`run:${record.runId}`, { ...record, summary });
-    await notifyRunChange(deps);
-    return summary;
+    return saveTimedOutRun(deps, record, terminal ?? timeoutSummary(record), terminal !== null);
   }
   // The runner uploads its log before the controller finalizes the request.
   if (record.stopAfterRun) await stopCollectedEnvironment(deps, record, signal, retryTransient);
@@ -311,18 +323,4 @@ async function cancelRequest(api: Api, record: RunRecord, receipt: Receipt, sign
   });
 }
 
-export async function listRuns(store: ExtensionStorageApi) {
-  const runs = (await store.records.list()).flatMap(({ recordId, value, deleted }) => {
-    if (deleted || !value || typeof value !== "object" || Array.isArray(value) || typeof value.runId !== "string")
-      return [];
-    if (recordId !== store.records.id(`run:${value.runId}`)) return [];
-    return [value as unknown as RunRecord];
-  });
-  return runs.sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, 50);
-}
-
-export async function readRun(store: ExtensionStorageApi, runId: string) {
-  const record = await store.get<RunRecord>(`run:${runId}`);
-  if (!record) throw new Error(`Unknown run ${runId}. List runs with: pst pocketcoder.remote-testing runs list`);
-  return record;
-}
+export { listRuns, readRun } from "./run-store";

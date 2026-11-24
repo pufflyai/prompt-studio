@@ -94,14 +94,19 @@ export async function stopEnvironment(api: Api, id: string, signal?: AbortSignal
   return api<Environment>({ method: "POST", path: `${path(id)}/cancel`, signal });
 }
 
-type Claim = { runId: string };
+export type Claim = { runId: string; setup?: { until: number; stop: boolean; environmentId: string } };
 
 // Ownership ends through collection or cleanup, never through elapsed wall time.
-export async function claimEnvironment(store: ExtensionStorageApi, id: string, runId: string) {
+export async function claimEnvironment(
+  store: ExtensionStorageApi,
+  id: string,
+  runId: string,
+  setup?: Omit<NonNullable<Claim["setup"]>, "environmentId">,
+) {
   const claims = store.collection<Claim>("environment-claims");
   const current = await claims.get(id);
   if (current) return current.runId === runId;
-  return claims.createIfAbsent(id, { runId });
+  return claims.createIfAbsent(id, { runId, ...(setup ? { setup: { ...setup, environmentId: id } } : {}) });
 }
 
 export async function releaseEnvironment(store: ExtensionStorageApi, id: string, runId: string) {

@@ -6,6 +6,7 @@ import {
   cleanupEnvironmentCommand,
   cleanupRunEnvironment,
   enqueueEnvironmentCleanup,
+  recoverEnvironmentCleanup,
   rememberEnvironmentCleanup,
 } from "./environment-cleanup";
 import { activeRun, claimEnvironment, releaseEnvironment } from "./environments";
@@ -245,4 +246,19 @@ test("opening a saved timeout resumes its independent workspace cleanup", async 
   expect(f.stops()).toBe(1);
   expect(await activeRun(f.store, "env")).toBeNull();
   expect(await f.store.get("run:owner")).toMatchObject({ summary: { status: "timed_out" } });
+});
+
+test("an expired setup claim is recoverable without a run or cleanup record", async () => {
+  const f = await recoveryFixture();
+  await f.store.collection("environment-claims").put("env", {
+    runId: "owner",
+    setup: { until: Date.now() - 1, stop: false, environmentId: "env" },
+  });
+  await recoverEnvironmentCleanup.run(f.ctx, {});
+  expect(f.queued).toHaveLength(1);
+  expect(f.queued[0]?.input.params).toEqual({ environmentId: "env", runId: "owner", stop: false });
+  expect(await activeRun(f.store, "env")).toBe("owner");
+  await cleanupEnvironmentCommand.run(f.ctx, { environmentId: "env", runId: "owner", stop: false });
+  expect(f.stops()).toBe(0);
+  expect(await activeRun(f.store, "env")).toBeNull();
 });

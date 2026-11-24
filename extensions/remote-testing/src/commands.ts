@@ -4,6 +4,7 @@ import { connectionApi } from "./connection";
 import { changed, googleToken, projectRoot, runDeps } from "./context";
 import { cleanupEnvironmentCommand, recoverEnvironmentCleanup } from "./environment-cleanup";
 import { createEnvironment, isBusy, listEnvironments, stopEnvironment } from "./environments";
+import { collectRunLog } from "./run-log";
 import { awaitRun, cancelRun, listRuns, readRun, startRun } from "./runs";
 import { sessionResource } from "./session-link";
 import { readSettings } from "./settings";
@@ -293,6 +294,7 @@ export const commands = [
   run,
   showRun,
   collectRun,
+  collectRunLog,
   listRunsCommand,
   cancelRunCommand,
   openSession,

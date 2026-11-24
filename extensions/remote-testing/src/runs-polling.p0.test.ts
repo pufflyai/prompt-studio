@@ -415,3 +415,90 @@ test.each(["stop", "log"])("an overdue result is saved independently of an unava
     stop: true,
   });
 });
+
+test.each([
+  "stop",
+  "log",
+])("a finalized timeout is saved independently of an unavailable %s service", async (service) => {
+  const { deps, record } = fixture(
+    async <TBody>(_id: string, input: Parameters<ExtensionConnectionsApi["request"]>[1]) => {
+      if (input.method === "POST" && service === "stop") return { status: 503, headers: {}, body: {} as TBody };
+      return {
+        status: 200,
+        headers: {},
+        body: {
+          ...receipt,
+          outcome: {
+            finalResponse: 'REMOTE_TEST_RESULT {"exitCode":null,"durationMs":60000,"timedOut":true}',
+          },
+        } as TBody,
+      };
+    },
+  );
+  deps.storage.download = async (_object, options) => {
+    if (service === "log") {
+      await new Promise<void>((_, reject) => {
+        options?.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true });
+      });
+    }
+    return null;
+  };
+  await claimEnvironment(deps.store, "env", "run");
+  const summary = await checkRun(deps, record, AbortSignal.timeout(300), true);
+  expect(summary).toMatchObject({ status: "timed_out", exitCode: null, durationMs: 60000 });
+  expect(summary?.error).toBeUndefined();
+  expect(await deps.store.get("run:run")).toMatchObject({ summary });
+  expect(await activeRun(deps.store, "env")).toBe("run");
+  expect(await deps.store.collection("environment-cleanups").get("run:env")).toMatchObject({
+    runId: "run",
+    environmentId: "env",
+    stop: true,
+  });
+});
+
+test("a timeout queues cleanup immediately after saving its result", async () => {
+  const { deps, record } = fixture(async <TBody>() => ({
+    status: 200,
+    headers: {},
+    body: { finalizedAt: null, acceptance: { execution: {} } } as TBody,
+  }));
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  await claimEnvironment(deps.store, "env", "run");
+  let admissions = 0;
+  deps.cleanupEnvironment = async (input) => {
+    expect(input).toEqual({ runId: "run", environmentId: "env", stop: true });
+    expect(await deps.store.get("run:run")).toMatchObject({ summary: { status: "timed_out" } });
+    admissions++;
+  };
+  expect((await checkRun(deps, record))?.status).toBe("timed_out");
+  expect(admissions).toBe(1);
+});
+
+test("a saved timeout retains independent log recovery after workspace cleanup", async () => {
+  const { deps, record } = fixture(async <TBody>() => ({
+    status: 200,
+    headers: {},
+    body: { finalizedAt: null, acceptance: { execution: {} } } as TBody,
+  }));
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  await claimEnvironment(deps.store, "env", "run");
+  await checkRun(deps, record);
+  await releaseEnvironment(deps.store, "env", "run");
+  expect(await deps.store.collection("pending-run-logs").get("run")).toMatchObject({ runId: "run" });
+});
+
+test("a finalized timeout in a kept workspace preserves its duration and releases terminal ownership", async () => {
+  const { deps, record } = fixture(async <TBody>() => ({
+    status: 200,
+    headers: {},
+    body: {
+      ...receipt,
+      outcome: { finalResponse: 'REMOTE_TEST_RESULT {"exitCode":null,"durationMs":60000,"timedOut":true}' },
+    } as TBody,
+  }));
+  record.stopAfterRun = false;
+  await claimEnvironment(deps.store, "env", "run");
+  expect(await checkRun(deps, record)).toMatchObject({ status: "timed_out", durationMs: 60000 });
+  expect(await activeRun(deps.store, "env")).toBeNull();
+  expect(await deps.store.collection("environment-cleanups").get("run:env")).toBeUndefined();
+});

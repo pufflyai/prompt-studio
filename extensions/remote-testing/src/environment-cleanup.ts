@@ -8,6 +8,8 @@ import {
 import { type Api, canRetryControllerRequest, connectionApi, waitForControllerPoll } from "./connection";
 import { ownsEnvironment, releaseEnvironment, stopEnvironment } from "./environments";
 import { changed } from "./events";
+import { resumeRunLogs } from "./run-log";
+import { recoverSetupClaims } from "./setup-claims";
 
 export interface EnvironmentCleanupInput {
   environmentId: string;
@@ -143,6 +145,8 @@ async function resumeCleanup(ctx: Pick<ExtensionContextBase, "automation" | "sto
 }
 
 export async function resumeEnvironmentCleanups(ctx: Pick<ExtensionContextBase, "automation" | "logger" | "storage">) {
+  await recoverSetupClaims(ctx);
+  await resumeRunLogs(ctx);
   for (const intent of await cleanupIntents(ctx.storage).list()) {
     await resumeCleanup(ctx, cleanupId(intent)).catch((error) => reportCleanupQueueError(ctx, intent, error));
   }

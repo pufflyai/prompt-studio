@@ -18,8 +18,13 @@ command there, stops the environment when the run finishes, and saves the full l
   after the CLI returns. If a runner disappears without a final receipt, collection marks
   the run timed out after its command duration and the existing 30-minute source-transfer
   and log-collection allowance, then
-  records independent workspace cleanup for the existing once-per-minute recovery schedule.
-  The timeout result does not wait for shutdown or log-service retries. Workspace ownership
+  queues independent workspace cleanup and log collection, with the existing once-per-minute
+  recovery schedule as a fallback. Confirmed runner timeouts also save their actual result
+  before shutdown or log-service retries. Uploaded logs are backfilled without changing the
+  saved outcome or duration. Setup claims carry a finite recovery window; the next launch,
+  Runs access, or assigned recovery schedule fences submission before cleaning an interrupted
+  setup. Without an assigned schedule, recovery starts on the next launch or Runs access;
+  reuse stays blocked until its asynchronous cleanup finishes. Workspace ownership
   remains held until cleanup accepts the stop; elapsed time never makes it reusable.
   An explicitly kept environment stays open; collection
   cancels its overdue request when the controller can return its receipt and retains the

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import type { Api } from "./connection";
+import { PocketCoderError } from "./connection";
 import { readRunReceipt } from "./run-deadline";
 import type { RunRecord } from "./runs";
 
@@ -32,4 +33,27 @@ test("a receipt read interrupted at the deadline gets a fresh final read", async
   } finally {
     await server.stop(true);
   }
+});
+
+test("a saved submission still being admitted can temporarily have no receipt", async () => {
+  const record: RunRecord = {
+    runId: "run",
+    environmentId: "env",
+    requestId: "request",
+    conversationId: "conversation",
+    root: "/",
+    command: "bun test",
+    timeoutSeconds: 60,
+    startedAt: new Date().toISOString(),
+    stopAfterRun: true,
+    submissionPending: true,
+  };
+  const api: Api = async () => {
+    throw new PocketCoderError(404, "Request not found");
+  };
+  expect(await readRunReceipt(api, "/receipt", record, undefined, true)).toBeNull();
+  record.startedAt = new Date(Date.now() - 2_000_000).toISOString();
+  expect(await readRunReceipt(api, "/receipt", record, undefined, true)).toBeNull();
+  record.submissionPending = false;
+  await expect(readRunReceipt(api, "/receipt", record, undefined, true)).rejects.toThrow("HTTP 404");
 });

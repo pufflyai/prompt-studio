@@ -14,13 +14,16 @@ function boundedSignal(timeout: number, signal?: AbortSignal) {
   return { deadline, bounded: signal ? AbortSignal.any([signal, deadline]) : deadline };
 }
 
-async function finalRead<T>(api: Api, path: string, signal?: AbortSignal) {
+const missingSubmission = (record: RunRecord, error: unknown) =>
+  record.submissionPending && error && typeof error === "object" && "status" in error && error.status === 404;
+
+async function finalRead<T>(api: Api, path: string, record: RunRecord, signal?: AbortSignal) {
   const { deadline, bounded } = boundedSignal(RECEIPT_READ_MS, signal);
   try {
     return await api<T>({ method: "GET", path, signal: bounded });
   } catch (error) {
     signal?.throwIfAborted();
-    if (deadline.aborted || canRetryControllerRequest(error)) return null;
+    if (deadline.aborted || canRetryControllerRequest(error) || missingSubmission(record, error)) return null;
     throw error;
   }
 }
@@ -34,7 +37,7 @@ export async function readRunReceipt<T>(
 ) {
   const remaining = runDeadline(record) - Date.now();
   // A completed receipt wins over a local timeout, including at the boundary.
-  if (remaining <= 0) return finalRead<T>(api, path, signal);
+  if (remaining <= 0) return finalRead<T>(api, path, record, signal);
   const { deadline, bounded } = boundedSignal(remaining, signal);
   try {
     return retryTransient
@@ -42,8 +45,9 @@ export async function readRunReceipt<T>(
       : await api<T>({ method: "GET", path, signal: bounded });
   } catch (error) {
     signal?.throwIfAborted();
+    if (missingSubmission(record, error)) return null;
     if (Date.now() >= runDeadline(record) && (deadline.aborted || canRetryControllerRequest(error)))
-      return finalRead<T>(api, path, signal);
+      return finalRead<T>(api, path, record, signal);
     throw error;
   }
 }

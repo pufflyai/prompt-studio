@@ -2,8 +2,9 @@ import { join } from "node:path";
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { publishBranchTemplate } from "./branch-templates";
 import { connectionApi } from "./connection";
-import { enqueueEnvironmentCleanup } from "./environment-cleanup";
+import { enqueueEnvironmentCleanup, resumeEnvironmentCleanups } from "./environment-cleanup";
 import { changed } from "./events";
+import { enqueueRunLog } from "./run-log";
 import type { RunDeps } from "./runs";
 import { readSettings } from "./settings";
 import { gcsStorage } from "./storage";
@@ -33,10 +34,12 @@ export async function projectRoot(ctx: ExtensionContextBase) {
 export async function runDeps(ctx: ExtensionContextBase): Promise<RunDeps> {
   const { settings, problems } = readSettings(await ctx.settings.all());
   if (problems.length) throw new Error(`Remote testing is not configured. ${problems.join(" ")}`);
+  await resumeEnvironmentCleanups(ctx);
   return {
     projectId: ctx.projectId,
     api: connectionApi(ctx.connections),
     cleanupEnvironment: (input) => enqueueEnvironmentCleanup(ctx, input),
+    collectRunLog: (runId) => enqueueRunLog(ctx, runId),
     publishTemplate: (kind, source, signal) => publishBranchTemplate(ctx, kind, source, signal),
     storage: gcsStorage({
       bucket: settings.storageBucket,

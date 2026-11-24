@@ -192,3 +192,94 @@ test.each(["synchronous", "asynchronous"])("an accepted run survives notificatio
   expect(requests.filter((request) => request.endsWith("/requests"))).toHaveLength(1);
   expect(requests).not.toContain("POST /v1/workspaces/accepted-env/cancel");
 });
+
+test("a recovered setup cannot submit after its original caller resumes", async () => {
+  const store = createMemoryStorage();
+  const entered = Promise.withResolvers<void>();
+  const ready = Promise.withResolvers<void>();
+  let submissions = 0;
+  const environment = {
+    id: "env",
+    state: "provisioning",
+    change_cursor: 0,
+    metadata: { pstdio_project_id: "project" },
+  };
+  const api: Api = async ({ path }) => {
+    if (path.includes("/changes?")) {
+      entered.resolve();
+      await ready.promise;
+      return { workspace: { ...environment, state: "ready" } } as never;
+    }
+    if (path.endsWith("/requests")) submissions++;
+    return environment as never;
+  };
+  const deps = runDeps(api, store);
+  const pending = startRun(deps, { root, environmentId: "env" });
+  await entered.promise;
+  const claims = store.collection<{ runId: string; setup?: { until: number; stop: boolean } }>("environment-claims");
+  const claim = await claims.get("env");
+  expect(claim?.setup?.until).toBeGreaterThan(Date.now());
+  await claims.put("env", { runId: claim!.runId, setup: { until: 0, stop: false } });
+  ready.resolve();
+  await expect(pending).rejects.toThrow("setup");
+  expect(submissions).toBe(0);
+  expect((await listRuns(store))[0]?.summary?.status).toBe("error");
+});
+
+test("submission acknowledgement preserves a concurrently collected result", async () => {
+  const store = createMemoryStorage();
+  const api: Api = async ({ path }) => {
+    if (path.endsWith("/requests")) {
+      const record = (await listRuns(store))[0]!;
+      await store.set(`run:${record.runId}`, {
+        ...record,
+        summary: {
+          runId: record.runId,
+          environmentId: "env",
+          status: "passed",
+          exitCode: 0,
+          durationMs: 10,
+          logPath: "run.log",
+          tail: "finished",
+        },
+      });
+    }
+    return { id: "env", state: "ready", metadata: { pstdio_project_id: "project" } } as never;
+  };
+  const { record } = await startRun(runDeps(api, store), { root });
+  expect((await listRuns(store))[0]).toMatchObject({
+    runId: record.runId,
+    submissionPending: false,
+    summary: { status: "passed", logPath: "run.log" },
+  });
+});
+
+test("a lost submission reply preserves a concurrently saved timeout", async () => {
+  const store = createMemoryStorage();
+  const api: Api = async ({ path }) => {
+    if (path.endsWith("/requests")) {
+      const record = (await listRuns(store))[0]!;
+      await store.set(`run:${record.runId}`, {
+        ...record,
+        summary: {
+          runId: record.runId,
+          environmentId: "env",
+          status: "timed_out",
+          exitCode: null,
+          durationMs: 60000,
+          logPath: "run.log",
+          tail: "timed out",
+        },
+      });
+      throw new Error("Lost submission reply");
+    }
+    return { id: "env", state: "ready", metadata: { pstdio_project_id: "project" } } as never;
+  };
+  await expect(startRun(runDeps(api, store), { root })).rejects.toThrow("Lost submission reply");
+  expect((await listRuns(store))[0]?.summary).toMatchObject({
+    status: "timed_out",
+    durationMs: 60000,
+    logPath: "run.log",
+    tail: "timed out",
+  });
+});
