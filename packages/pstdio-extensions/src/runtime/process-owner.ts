@@ -9,17 +9,7 @@ import type {
 export const processError = (code: ProcessSpawnErrorCode | TargetFileErrorCode, message: string, cause?: unknown) =>
   Object.assign(new Error(message), { code, ...(cause === undefined ? {} : { cause }) });
 
-type Stoppable = Pick<ProcessHandle, "exited" | "kill">;
-
-const cleanupByHandle = new WeakMap<Pick<Stoppable, "exited">, Promise<unknown>>();
-
-export const trackProcessCleanup = <T extends Pick<Stoppable, "exited">>(handle: T, cleanup: Promise<unknown>) => {
-  cleanupByHandle.set(handle, cleanup);
-  void cleanup.catch(() => {});
-  return handle;
-};
-
-export const processCleanup = (handle: Pick<Stoppable, "exited">) => cleanupByHandle.get(handle) ?? handle.exited;
+type Stoppable = Pick<ProcessHandle, "exited" | "kill" | "treeExited">;
 
 /**
  * Owns the children one lifetime started, such as a command invocation, a native agent operation or
@@ -50,7 +40,7 @@ export const createProcessOwner = () => {
         return;
       }
       running.add(handle);
-      void processCleanup(handle).then(
+      void (handle.treeExited ?? handle.exited).then(
         () => running.delete(handle),
         () => {},
       );
@@ -62,16 +52,18 @@ export const createProcessOwner = () => {
           const results = await Promise.allSettled(
             [...running].map(async (handle) => {
               await handle.kill();
-              running.delete(handle);
+              // A proxy can acknowledge cancellation before an opening child is available.
+              if (!handle.treeExited) running.delete(handle);
             }),
           );
           const failures = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
           if (failures.length) throw new AggregateError(failures, "Owned process cleanup failed.");
         });
-        // A later close can retry only failed children. Admission stays closed.
-        void closing.catch(() => {
+        // A later close can retry failed stops and stop a child that has since arrived.
+        const allowRetry = () => {
           closing = undefined;
-        });
+        };
+        void closing.then(allowRetry, allowRetry);
       }
       return closing;
     },
@@ -143,20 +135,51 @@ const byteLength = (data: string | Uint8Array) =>
  */
 export const createProcessHandleProxy = (
   open: Promise<OpenedHandle>,
-  cancel = new AbortController(),
-  admittedLocal?: () => OpenedHandle | undefined,
+  {
+    cancel = new AbortController(),
+    admittedLocal,
+    onLateStopFailure,
+  }: {
+    cancel?: AbortController;
+    admittedLocal?: () => OpenedHandle | undefined;
+    onLateStopFailure?: (error: unknown) => void;
+  } = {},
 ) => {
-  open.catch(() => {});
-  let opened = false;
-  void open.then(
-    () => {
-      opened = true;
+  let opened: OpenedHandle | undefined;
+  let killing: Promise<void> | undefined;
+  const cleanup = Promise.withResolvers<void>();
+  const stop = (target: OpenedHandle, signal?: Parameters<ProcessHandle["kill"]>[0]) => {
+    if (!killing) {
+      killing = Promise.resolve()
+        .then(() => target.kill(signal))
+        .then(cleanup.resolve);
+      void killing.catch(() => {
+        killing = undefined;
+      });
+    }
+    return killing;
+  };
+
+  // Observe the real open independently of the cancellable public view. A late child remains
+  // owned until we can stop it, including when the automatic stop needs an explicit retry.
+  const opening = open.then(
+    (target) => {
+      opened = target;
+      void target.treeExited?.then(cleanup.resolve, () => {});
+      if (cancel.signal.aborted) {
+        void stop(target, "SIGKILL").catch((error: unknown) => onLateStopFailure?.(error));
+        throw cancel.signal.reason;
+      }
+      return target;
     },
-    () => {},
+    (error: unknown) => {
+      cleanup.resolve();
+      throw error;
+    },
   );
   const stopped = Promise.withResolvers<never>();
   stopped.promise.catch(() => {});
-  const gate = Promise.race([open, stopped.promise]);
+  const gate = Promise.race([opening, stopped.promise]);
   gate.catch(() => {});
   const ready = gate.then(async (handle) => {
     await handle.started;
@@ -168,15 +191,8 @@ export const createProcessHandleProxy = (
     (handle) => handle.exited.catch(() => NO_EXIT),
     () => NO_EXIT,
   );
-  const cleanup = gate.then(processCleanup, () => {});
-  void cleanup.catch(() => {});
-  let settled = false;
-  void exited.then(() => {
-    settled = true;
-  });
   let queued = 0;
   let stopping = false;
-  let killing: Promise<void> | undefined;
   let claimed = false;
 
   // end() closes input after every write made before it, even ones nobody awaited.
@@ -209,18 +225,11 @@ export const createProcessHandleProxy = (
     return processEvents(gate);
   };
 
-  const stopWhileOpening = () => {
-    const reason = processError("process_owner_closed", "The process was stopped before it started.");
-    cancel.abort(reason);
-    stopped.reject(reason);
-    void open.then((handle) => handle.kill("SIGKILL")).catch(() => {});
-    return Promise.resolve();
-  };
-
-  const handle: ProcessHandle = {
+  return {
     id: crypto.randomUUID(),
     started,
     exited,
+    treeExited: cleanup.promise,
     write,
     end: () => {
       ending ??= writes
@@ -231,30 +240,18 @@ export const createProcessHandleProxy = (
         );
       return ending;
     },
-    kill: (signal) => {
+    kill: (signal?: Parameters<ProcessHandle["kill"]>[0]) => {
       stopping = true;
-      if (!killing) {
-        // Local admission can start a child before the async target result reaches this proxy.
-        // Keep its cleanup gate live if stopping fails instead of taking the unopened-target path.
-        const local = admittedLocal?.();
-        const target = local ?? (opened ? open : undefined);
-        killing = target
-          ? Promise.resolve(target).then(
-              (handle) => {
-                if (!settled || cleanupByHandle.has(handle)) return handle.kill(signal);
-              },
-              () => {},
-            )
-          : stopWhileOpening();
-        void killing.catch(() => {
-          killing = undefined;
-        });
-      }
-      return killing;
+      // Local admission can start a child before the async target result reaches this proxy.
+      const target = admittedLocal?.() ?? opened;
+      if (target) return stop(target, signal);
+      const reason = processError("process_owner_closed", "The process was stopped before it started.");
+      cancel.abort(reason);
+      stopped.reject(reason);
+      return Promise.resolve();
     },
     events,
-  };
-  return trackProcessCleanup(handle, cleanup);
+  } satisfies ProcessHandle;
 };
 
 /** A handle for a child that never started. */

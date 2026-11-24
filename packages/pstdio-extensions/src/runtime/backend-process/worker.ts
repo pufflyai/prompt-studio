@@ -23,6 +23,7 @@ const bindProcessHandle = (handle: ProcessHandle) => ({
   id: handle.id,
   started: handle.started,
   exited: handle.exited,
+  treeExited: handle.treeExited,
   write: handle.write.bind(handle),
   end: handle.end.bind(handle),
   kill: handle.kill.bind(handle),

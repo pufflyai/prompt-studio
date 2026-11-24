@@ -46,6 +46,8 @@ export interface ProcessHandle {
   started: Promise<void>;
   /** Reports the direct child’s exit status, or null code and signal when startup fails. */
   exited: Promise<ProcessExit>;
+  /** Confirms that the child and all descendants are gone. Provided by host-created handles. */
+  treeExited?: Promise<void>;
   /** Writes to stdin in call order, waiting for the pipe to accept the data. */
   write(data: string | Uint8Array): Promise<void>;
   /** Closes stdin after earlier writes. Idempotent; later writes reject. */

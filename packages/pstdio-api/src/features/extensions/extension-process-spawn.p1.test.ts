@@ -202,6 +202,66 @@ test("a remote target receives the request and an explicit cwd never starts a lo
   expect(requests).toHaveLength(1);
 });
 
+test("remote admission retains credit until tree cleanup or a failed open is confirmed", async () => {
+  const owner = createProcessOwner();
+  const pending = Promise.withResolvers<ProcessHandle>();
+  const natural = Promise.withResolvers<void>();
+  let opens = 0;
+  const api = createProcessApi({
+    callOwner: owner,
+    resolveTarget: async () => ({
+      kind: "remote",
+      async spawn({ command }) {
+        opens++;
+        if (command[0] === "pending") return pending.promise;
+        return {
+          id: `provider-${opens}`,
+          started: Promise.resolve(),
+          exited: Promise.resolve({ code: 0, signal: null }),
+          treeExited: command[0] === "verified" ? natural.promise : undefined,
+          write: async () => {},
+          end: async () => {},
+          kill: async () => {},
+          events: async function* () {},
+        };
+      },
+    }),
+  });
+  const cancelled = api.spawn({ command: ["pending"] });
+  const verified = api.spawn({ command: ["verified"] });
+  const plain = Array.from({ length: 254 }, () => api.spawn({ command: ["plain"] }));
+  try {
+    await Promise.all([verified.started, ...plain.map((child) => child.started)]);
+    await cancelled.kill();
+    await expect(cancelled.started).rejects.toMatchObject({ code: "process_owner_closed" });
+    expect(await plain[0]!.exited).toEqual({ code: 0, signal: null });
+    const blocked = api.spawn({ command: ["blocked"] });
+    await expect(blocked.started).rejects.toMatchObject({
+      code: "process_target_unavailable",
+      message: expect.stringContaining("Stop an earlier process"),
+    });
+    expect(opens).toBe(256);
+
+    natural.resolve();
+    await verified.treeExited;
+    await api.spawn({ command: ["after-natural-exit"] }).started;
+    expect(opens).toBe(257);
+
+    await plain[0]!.kill();
+    await api.spawn({ command: ["after-confirmed-stop"] }).started;
+    expect(opens).toBe(258);
+
+    pending.reject(new Error("The provider did not start a child."));
+    await cancelled.treeExited;
+    await api.spawn({ command: ["after-no-child-started"] }).started;
+    expect(opens).toBe(259);
+  } finally {
+    pending.reject(new Error("Fixture closed."));
+    natural.resolve();
+    await owner.close();
+  }
+});
+
 test("an unsupported target fails clearly before anything starts", async () => {
   let localSpawns = 0;
   const api = createProcessApi({
