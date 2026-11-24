@@ -34,6 +34,6 @@ export const resolveMessageSender = async (
   return {
     type: "user",
     id: status.login?.accountId ?? "local",
-    name: senderDisplayName(status.login?.email ?? "Local user"),
+    name: senderDisplayName(status.login?.email || "Local user"),
   } satisfies SessionMessageSender;
 };
