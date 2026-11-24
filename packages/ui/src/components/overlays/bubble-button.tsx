@@ -18,6 +18,7 @@ export const BubbleButton = forwardRef<HTMLButtonElement, BubbleButtonProps>(fun
       ref={ref}
       rounded="full"
       size="lg"
+      layerStyle="bubbleButton"
       borderWidth="1px"
       borderColor="border"
       _hover={{

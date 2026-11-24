@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
 import { existsSync, realpathSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { e2eExtensions } from "../default-extensions";
+import { waitForDefaultExtensions } from "../scripts/default-extensions-readiness";
 import { cleanupDirs, createProjectViaApi, createTempDir, runPstdioAsync } from "./helpers";
 import { waitFor } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
@@ -10,7 +11,8 @@ import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 let api: ApiInstance;
 const dirs: string[] = [];
 beforeAll(async () => {
-  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner", "workbench-fixture") } });
+  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture") } });
+  await waitForDefaultExtensions(api.process, api.logPath);
 }, SETUP_TIMEOUT);
 afterAll(async () => {
   await api?.stop();
@@ -49,6 +51,16 @@ test(
         root_path: string;
       }[];
     const [home] = await workspaces();
+    const boardPath = `${api.url}/v1/projects/${project.id}/boards/pstdio.planner.view.tickets`;
+    const fields = await fetch(boardPath);
+    expect(fields.status).toBe(200);
+    expect((await fields.json()).fields.some((field: { id: string }) => field.id === "status")).toBe(true);
+    const saved = await fetch(`${boardPath}/views`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title: "Saved ticket view", filter: { conjunction: "and", rules: [] } }),
+    });
+    expect(saved.status).toBe(201);
     type Started = {
       variant: { id: string; workspaceId: string; base: null };
       session: { id: string };

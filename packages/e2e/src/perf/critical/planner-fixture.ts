@@ -1,7 +1,8 @@
 import { strict as assert } from "node:assert";
-import { spawnSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import { folderProjectInput } from "../../helpers/folder-project";
 import { PACKAGED_BINARY_PATH } from "../../packaged/packaged-helpers";
 import { preparePlannerSource } from "../../packaged/packaged-planner-source";
@@ -76,12 +77,16 @@ const installPlanner = async (
 ) => {
   const source = await preparePlannerSource(join(home, "fixtures"), { sourcePath: plannerSource });
   const env = { ...process.env, HOME: home, PSTDIO_HOME: home };
-  const added = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "add", source, "--name", "pstdio-planner", "--force"], {
-    cwd: join(home, "project"),
-    env: { ...env, PSTDIO_API_URL: runtime.baseUrl, PSTDIO_API_TOKEN: runtime.descriptor.token },
-    stdio: ["ignore", "ignore", "inherit"],
-  });
-  if (added.status !== 0) throw new Error("Installing Planner failed.");
+  const added = await promisify(execFile)(
+    PACKAGED_BINARY_PATH,
+    ["extensions", "add", source, "--name", "pstdio-planner", "--force"],
+    {
+      cwd: join(home, "project"),
+      env: { ...env, PSTDIO_API_URL: runtime.baseUrl, PSTDIO_API_TOKEN: runtime.descriptor.token },
+      maxBuffer: 16 * 1024 * 1024,
+    },
+  );
+  process.stderr.write(added.stderr);
 };
 
 const editedContent = (title: string, edit: number) =>
@@ -116,19 +121,31 @@ export const seedHome = async (home: string) => {
       connection,
       JSON.stringify({ apiPort: port, apiToken: runtime.descriptor.token, dashboardUrl: runtime.baseUrl }),
     );
-    const seeded = spawnSync("bun", [join(repoRoot, "scripts/dev/seed-planner-stress.ts"), connection], {
-      env: { ...process.env, PSTDIO_PLANNER_STRESS_TICKETS: "1000" },
-      stdio: ["ignore", "pipe", "inherit"],
-      encoding: "utf8",
-    });
-    if (seeded.status !== 0) throw new Error("Seeding tickets failed.");
+    // Keep draining the already-running host's output while setup issues commands.
+    // A synchronous child blocks those listeners and can fill the native pipe.
+    const seeded = await promisify(execFile)(
+      "bun",
+      [join(repoRoot, "scripts/dev/seed-planner-stress.ts"), connection],
+      {
+        env: { ...process.env, PSTDIO_PLANNER_STRESS_TICKETS: "1000" },
+        maxBuffer: 16 * 1024 * 1024,
+      },
+    );
+    process.stderr.write(seeded.stderr);
     const fixture = JSON.parse(seeded.stdout.trim()) as Fixture;
     await saveFilteredView(runtime, fixture.projectId);
-    const tickets = await runtime.execute<{ id: string; title: string; content: string }[]>(
-      fixture.projectId,
-      "read-tickets",
-      {},
-    );
+    const tickets: { id: string; title: string; content: string }[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await runtime.execute<{ tickets: typeof tickets; cursor: string | null }>(
+        fixture.projectId,
+        "read-tickets",
+        { limit: 100, cursor },
+      );
+      tickets.push(...page.tickets);
+      cursor = page.cursor ?? undefined;
+    } while (cursor);
+    assert.equal(tickets.length, fixture.tickets, "Every frozen ticket must receive its complete edit history");
     for (const [index, ticket] of tickets.entries()) {
       const completed =
         Array.from({ length: 3 }, (_, index) => index + 1).findLast(

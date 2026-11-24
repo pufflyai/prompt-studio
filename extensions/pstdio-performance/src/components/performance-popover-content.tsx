@@ -64,13 +64,14 @@ const FrameRateSection = (props: FrameRateSectionProps) => {
 export interface PerformancePopoverContentProps extends CpuSectionProps {
   renderOverlay?: ReactRenderControlProps;
   copied?: boolean;
+  copying?: boolean;
   actionError?: { message: string; source: "metrics" | "render-overlay" };
   onCopy: () => void;
   onDismissActionError: () => void;
 }
 
 export const PerformancePopoverContent = (props: PerformancePopoverContentProps) => {
-  const { copied, actionError, onCopy, onDismissActionError, renderOverlay, ...cpu } = props;
+  const { copied, copying, actionError, onCopy, onDismissActionError, renderOverlay, ...cpu } = props;
   const { snapshot } = cpu;
   const { t } = useTranslations();
   const buckets = snapshot?.frameRate ?? [];
@@ -98,7 +99,7 @@ export const PerformancePopoverContent = (props: PerformancePopoverContentProps)
         flexShrink="0"
         actions={
           <Tooltip content={copyLabel}>
-            <IconButton size="2xs" variant="ghost" aria-label={copyLabel} onClick={onCopy}>
+            <IconButton size="2xs" variant="ghost" aria-label={copyLabel} loading={copying} onClick={onCopy}>
               {copied ? <Check /> : <Copy />}
             </IconButton>
           </Tooltip>

@@ -1,7 +1,7 @@
 // Own the request and outcome collections and join them into one read model with derived state.
 
 import { readCollectionRecords } from "@pstdio/sdk/data";
-import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
+import type { ExtensionStorageApi, StoragePredicate } from "@pstdio/sdk/extensions";
 import { prepareNavigationQueries } from "./navigation-queries";
 import type {
   ReviewOutcome,
@@ -58,66 +58,44 @@ export const readReviewRequest = async (storage: ExtensionStorageApi, requestId:
   return toView(request, outcome === undefined ? null : parseStoredOutcome(request, outcome));
 };
 
-export const readTicketReviewRequests = async (storage: ExtensionStorageApi) => {
-  const [requests, outcomes] = await Promise.all([
-    reviewRequestsCollection(storage).list(),
-    reviewOutcomesCollection(storage).list(),
-  ]);
-  const outcomesById = new Map(outcomes.map((outcome) => [outcome.requestId, outcome]));
-  const result = new Map<string, TicketReviewRequests>();
-  for (const stored of requests) {
-    const ticketId = String((stored as Partial<ReviewRequest>).ticketId);
-    const group = result.get(ticketId) ?? { requests: [], errors: [] };
-    result.set(ticketId, group);
+/** Read one request window. Overview rows use aggregate counts instead of these bodies. */
+export const readReviewRequestPage = async (
+  storage: ExtensionStorageApi,
+  where: StoragePredicate,
+  offset = 0,
+  limit = 25,
+) => {
+  await prepareNavigationQueries(storage);
+  const total = await storage.records.aggregate({ index: "review-request-state", where });
+  const page = await storage.records.query({
+    index: "review-request-state",
+    where,
+    fields: [],
+    offset,
+    limit,
+    orderBy: [
+      { field: "requestedAt", direction: "asc" },
+      { field: "id", direction: "asc" },
+    ],
+    revision: total.revision,
+  });
+  const result: TicketReviewRequests = { requests: [], errors: [] };
+  const values = await readCollectionRecords<ReviewRequest>(
+    storage,
+    page.records.map(({ recordId }) => recordId),
+  );
+  for (const stored of values) {
+    if (!stored) continue;
     try {
       const request = parseStoredRequest(stored);
-      const outcome = outcomesById.get(request.id);
-      group.requests.push(toView(request, outcome ? parseStoredOutcome(request, outcome) : null));
+      const outcome = await reviewOutcomesCollection(storage).get(request.id);
+      result.requests.push(toView(request, outcome === undefined ? null : parseStoredOutcome(request, outcome)));
     } catch (reason) {
-      group.errors.push(`Request ${String((stored as Partial<ReviewRequest>).id)}: ${String(reason)}`);
+      result.errors.push(`Request ${String(stored.id)}: ${String(reason)}`);
     }
   }
-  for (const group of result.values()) group.requests.sort((a, b) => a.requestedAt.localeCompare(b.requestedAt));
-  return result;
-};
-
-export const listTicketReviewRequests = async (storage: ExtensionStorageApi, ticketId: string) => {
-  await prepareNavigationQueries(storage);
-  const result: TicketReviewRequests = { requests: [], errors: [] };
-  let cursor: string | undefined;
-  do {
-    const page = await storage.records.query({
-      index: "ticket-review-requests",
-      where: { field: "ticketId", op: "eq", value: ticketId },
-      fields: [],
-      limit: 100,
-      cursor,
-    });
-    const values = await readCollectionRecords<ReviewRequest>(
-      storage,
-      page.records.map(({ recordId }) => recordId),
-    );
-    for (const stored of values) {
-      if (stored === undefined) continue;
-      const id = String(stored.id);
-      let request: ReviewRequest;
-      try {
-        request = parseStoredRequest(stored);
-      } catch (reason) {
-        result.errors.push(`Request ${id}: ${String(reason)}`);
-        continue;
-      }
-      const outcome = await reviewOutcomesCollection(storage).get(request.id);
-      try {
-        result.requests.push(toView(request, outcome === undefined ? null : parseStoredOutcome(request, outcome)));
-      } catch (reason) {
-        result.errors.push(`Request ${id}: ${String(reason)}`);
-      }
-    }
-    cursor = page.cursor ?? undefined;
-  } while (cursor);
-  result.requests.sort((a, b) => a.requestedAt.localeCompare(b.requestedAt));
-  return result;
+  await storage.records.query({ index: "review-request-state", where, fields: [], limit: 1, revision: total.revision });
+  return { ...result, total: total.count, hasNext: Boolean(page.cursor), offset };
 };
 
 // Pending input comes from every open request; answers to other requests never hide it.

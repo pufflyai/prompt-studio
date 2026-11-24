@@ -63,6 +63,8 @@ export default meta;
 type Story = CanvasFrame<typeof meta>;
 export const Interactive: Story = {
   id: "pstdio-workbench-reference-core-api-whole-panel-placement--interactive",
+  description:
+    "Move the tabs to Bottom to close Side, then drag the Bottom panel header to a left or right insertion target, or use its Move panel action. The complete trays swap: Bottom opens attached in Side, and the former Side tray stays closed in Bottom. Keep every tab, active selection and live draft. An open Side panel is never replaced.",
 };
 export const Dark: Story = {
   id: "pstdio-workbench-reference-core-api-whole-panel-placement--dark",

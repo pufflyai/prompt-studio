@@ -188,6 +188,8 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     layout,
     sidePanel,
     getPolicy: (region) => workbenchPanelPolicy(core, region),
+    getPanelDestinations: (instanceId) => core.getPanelDestinations(instanceId),
+    onMoveSecondaryToSide: () => core.focus.setActiveRegion("side"),
   });
 
   const pages = createLiveWorkbenchPageRegistry({

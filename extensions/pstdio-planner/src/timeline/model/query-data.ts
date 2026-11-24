@@ -7,7 +7,7 @@ import type { readPlanCommand } from "../commands/read-plan";
 export type TimelineTicketRow = KanbanRendererRow & { resource?: ResourceRef };
 
 export function timelineQueryData(
-  plan: Awaited<ReturnType<typeof readPlanCommand.run>>,
+  plan: Pick<Awaited<ReturnType<typeof readPlanCommand.run>>, "ticketAttributes" | "ticketRows" | "projectId">,
   t: (key: string, fallback?: string) => string,
   open?: (target: NavigationTarget) => void,
 ) {

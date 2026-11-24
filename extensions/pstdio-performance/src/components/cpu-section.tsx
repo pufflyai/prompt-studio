@@ -28,12 +28,13 @@ interface CpuRowProps {
   cpuPercent: number | null;
   icon: "workbench" | "extension" | "shared";
   paused?: boolean;
+  pending?: boolean;
   onPause?: () => void;
   onResume?: () => void;
 }
 
 const CpuRow = (props: CpuRowProps) => {
-  const { rowKey, name, detail, cpuPercent, icon, paused, onPause, onResume } = props;
+  const { rowKey, name, detail, cpuPercent, icon, paused, pending, onPause, onResume } = props;
   const { t } = useTranslations();
   const busy = cpuPercent !== null && cpuPercent >= BUSY_CPU_PERCENT;
   return (
@@ -68,6 +69,7 @@ const CpuRow = (props: CpuRowProps) => {
         <Button
           size="2xs"
           variant="outline"
+          loading={pending}
           aria-label={t("popover.resumeLabel", "Resume {{name}}", { name })}
           onClick={onResume}
         >
@@ -80,6 +82,7 @@ const CpuRow = (props: CpuRowProps) => {
           <IconButton
             size="2xs"
             variant="ghost"
+            loading={pending}
             aria-label={t("popover.pause", "Pause {{name}}", { name })}
             onClick={onPause}
           >
@@ -95,12 +98,13 @@ const CpuRow = (props: CpuRowProps) => {
 export interface CpuSectionProps {
   snapshot?: PerformanceSnapshot | null;
   error?: string;
+  pendingExtensions?: ReadonlySet<string>;
   onPause: (installedExtensionId: string) => void;
   onResume: (installedExtensionId: string) => void;
 }
 
 export const CpuSection = (props: CpuSectionProps) => {
-  const { snapshot, error, onPause, onResume } = props;
+  const { snapshot, error, pendingExtensions, onPause, onResume } = props;
   const { t, plural } = useTranslations();
   const [expanded, setExpanded] = useState(false);
   const processMetrics = snapshot?.capabilities.processMetrics === true;
@@ -173,6 +177,7 @@ export const CpuSection = (props: CpuSectionProps) => {
             cpuPercent={source.paused ? null : source.cpuPercent}
             icon={source.kind === "shared" ? "shared" : "extension"}
             paused={source.paused}
+            pending={installedExtensionId ? pendingExtensions?.has(installedExtensionId) : undefined}
             onPause={installedExtensionId ? () => onPause(installedExtensionId) : undefined}
             onResume={installedExtensionId ? () => onResume(installedExtensionId) : undefined}
           />
