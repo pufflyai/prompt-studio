@@ -41,6 +41,13 @@ const reviewReadinessReasons = new Set<ReviewRequestReason>([
   "dependency-missing",
 ]);
 
+class AttemptLaunchRefused extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AttemptLaunchRefused";
+  }
+}
+
 const runAttemptParams = {
   ...ticketActionParams,
   newVariant: params.boolean({
@@ -69,7 +76,7 @@ const reuseAttempt = async (
     ? variants.filter((attempt) => attemptId(attempt) === selectedAttemptId(selection))
     : variants;
   if (variants.length && chosen.length !== 1)
-    throw new Error("Select the implementation variant to resume, or explicitly request a new variant.");
+    throw new AttemptLaunchRefused("Select the implementation variant to resume, or explicitly request a new variant.");
   const existing = chosen[0];
   if (existing) {
     await options.beforeDispatch?.();
@@ -98,7 +105,7 @@ const reuseAttempt = async (
       (!["queued", "in_progress", "awaiting_input"].includes(session.status ?? "") &&
         capacity.running >= capacity.limit)
     )
-      throw new Error("No implementation capacity is available to resume this owner.");
+      throw new AttemptLaunchRefused("No implementation capacity is available to resume this owner.");
     await repairAttempt(ctx, {
       workspaceId: attemptId(existing),
       expectedHeadSha: headSha,
@@ -173,7 +180,7 @@ async function launchAttempt(
         }),
       );
     }
-    throw new Error(message);
+    throw new AttemptLaunchRefused(message);
   }
   const dependencyBase = readiness.mode === "folder" ? null : await prepareDependencyBase(ctx, readiness);
   const startingHead = options.recovery?.headSha ?? dependencyBase?.headSha ?? null;
@@ -267,6 +274,7 @@ async function launchAttempt(
 export const runAttemptCommand = defineCommand({
   id: "run-attempt",
   title: "Run attempt",
+  mutating: true,
   cli: { examples: ["pst pstdio.planner run-attempt --ticket PS-1"] },
   menus: [
     {
@@ -278,6 +286,13 @@ export const runAttemptCommand = defineCommand({
   params: runAttemptParams,
   async run(ctx, commandParams) {
     const manualResume = !["automation", "schedule", "event"].includes(ctx.source ?? "");
-    return withWriteGuard(ctx, "attempt-launch", () => startAttempt(ctx, commandParams, { manualResume }));
+    return withWriteGuard(
+      ctx,
+      "attempt-launch",
+      () => startAttempt(ctx, commandParams, { manualResume }),
+      () => {
+        throw new AttemptLaunchRefused("Another Planner write is running. Retry when it finishes.");
+      },
+    );
   },
 });

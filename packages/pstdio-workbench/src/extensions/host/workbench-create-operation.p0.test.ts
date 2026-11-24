@@ -325,3 +325,61 @@ test("retiring a board read after a create acknowledgement does not fence new cr
     queries.dispose();
   }
 });
+
+test.each(["AttemptLaunchRefused", "Error"])("classifies a Planner attempt report from %s", async (name) => {
+  const queries = createScopedQueryClient({ runtimeId: "desktop", extensionId: "pstdio" });
+  const operations = getWorkbenchOperations(queries);
+  const workbench = createWorkbench({ queries });
+  const command = {
+    id: "pstdio.planner.command.run-attempt",
+    extensionId: "pstdio.planner",
+    title: "Run attempt",
+    mutating: true,
+  };
+  const response = Promise.withResolvers<unknown>();
+  const ticket = { type: "ticket", id: "ticket-1", projectId: "project", extensionId: "pstdio.planner" };
+  const draft = {
+    ticket: "PS-289",
+    newVariant: true,
+    agent: { harnessId: "codex", model: "model" },
+    workspace: { providerId: "pstdio.worktree", params: { base: "main" } },
+  };
+  let admitted = false;
+  const run = () =>
+    executeWorkbenchExtensionCommand(
+      {
+        workbench,
+        projectId: "project",
+        operations,
+        metadata: { commands: [command] },
+        executeCommand: () => response.promise,
+      },
+      command.id,
+      {
+        resource: ticket,
+        foreground: true,
+        params: { ...draft, agent: { ...draft.agent, params: { token: "private" } } },
+        onAdmitted: () => {
+          admitted = true;
+        },
+      },
+    );
+  try {
+    const pending = run();
+    expect(admitted).toBe(true);
+    expect(operations.getSnapshot().pending[0]).toMatchObject({ title: "Run attempt", showPending: true });
+    response.resolve({
+      outcome: { ok: false, status: "error", reason: "Could not run", error: { name, message: "Could not run" } },
+    });
+    await expect(pending).rejects.toThrow("Could not run");
+    expect(operations.getSnapshot().recovery[0]).toMatchObject({
+      status: name === "AttemptLaunchRefused" ? "rejected" : "unknown",
+      source: ticket,
+      draft: { commandId: command.id, ...draft },
+    });
+    expect(operations.getSnapshot().recovery[0]?.draft).toEqual({ commandId: command.id, ...draft });
+  } finally {
+    await workbench.dispose();
+    queries.dispose();
+  }
+});

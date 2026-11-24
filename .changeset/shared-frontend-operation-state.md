@@ -1,6 +1,7 @@
 ---
 "pstdio": minor
 "notes": patch
+"planner": patch
 "@pstdio/sdk": minor
 "@pstdio/ui": minor
 "@pstdio/workbench": minor
