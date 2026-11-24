@@ -81,3 +81,52 @@ test("restores an uncertain removal until a peer observes the exact resource rem
   await Bun.sleep(0);
   expect(operations.getSnapshot().recovery).toEqual([]);
 });
+
+test("keeps a later rename editable until a bounded read confirms the previous change", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
+  const operations = getWorkbenchOperations(queries);
+  const preview = createResourcePreview(operations);
+  let writes = 0;
+  let canonical = false;
+  try {
+    await expect(
+      preview.submit(
+        resource,
+        async () => {
+          writes++;
+          throw new PstdioConnectionError(new Error("Response lost"));
+        },
+        { label: "First" },
+        "Rename note",
+        async () => canonical,
+      ),
+    ).rejects.toThrow();
+    const entry = operations.getSnapshot().recovery[0]!;
+    expect(entry).toMatchObject({ status: "unknown", canCheck: true, draft: "First" });
+    expect(() =>
+      preview.submit(
+        resource,
+        async () => {
+          writes++;
+        },
+        { label: "Second" },
+      ),
+    ).toThrow("needs attention");
+    await operations.check(entry.id);
+    expect(operations.getSnapshot().recovery).toHaveLength(1);
+    expect(writes).toBe(1);
+    canonical = true;
+    await operations.check(entry.id);
+    expect(operations.getSnapshot().recovery).toEqual([]);
+    await preview.submit(
+      resource,
+      async () => {
+        writes++;
+      },
+      { label: "Second" },
+    );
+    expect(writes).toBe(2);
+  } finally {
+    queries.dispose();
+  }
+});

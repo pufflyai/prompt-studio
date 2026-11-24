@@ -57,15 +57,25 @@ const createPreview = (operations: WorkbenchOperations) => {
   const refresh = async (resource: ResourceRef) => {
     await Promise.all([...refreshers].map((read) => read(resource)));
   };
+  const assertCanRename = (subject: string) => {
+    const blocked = operations
+      .getSnapshot()
+      .pending.some(
+        (entry) => (entry.status === "unknown" || entry.status === "unconfirmed") && entry.subjects.includes(subject),
+      );
+    if (blocked) throw new Error("A previous change needs attention in System activity.");
+  };
   const submit = <T>(
     resource: ResourceRef,
     save: (signal: AbortSignal) => Promise<T>,
     change?: ResourceChange,
     title?: string,
+    verifyRename?: (signal: AbortSignal) => Promise<boolean>,
   ) => {
     const subject = resourceOperationSubject(resource);
     const removal = change && "removed" in change ? { subject, observed: false, uncertain: false } : undefined;
     const label = change && "label" in change ? change.label : undefined;
+    if (label !== undefined) assertCanRename(subject);
     const draft = removal ? { id: resource.id, type: resource.type, label: resource.label } : label;
     const attempt = operations.submit({
       domain,
@@ -79,8 +89,12 @@ const createPreview = (operations: WorkbenchOperations) => {
       reconcile: change ? () => refresh(resource) : undefined,
       classify: classifyApiWrite,
       check:
-        removal &&
-        (async () => (removal.observed ? { status: "confirmed", result: undefined as T } : { status: "unknown" })),
+        removal || verifyRename
+          ? async (signal) => {
+              const confirmed = removal ? removal.observed : await verifyRename?.(signal);
+              return confirmed ? { status: "confirmed", result: undefined as T } : { status: "unknown" };
+            }
+          : undefined,
     });
     if (removal) {
       removals.set(attempt.id, removal);

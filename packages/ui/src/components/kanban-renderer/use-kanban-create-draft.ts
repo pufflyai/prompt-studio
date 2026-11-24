@@ -8,6 +8,8 @@ interface CreateDraft {
   values: Record<string, unknown>;
   attributeValues: Record<string, unknown>;
   unresolved?: UnresolvedSubmissionError;
+  submission?: symbol;
+  pending?: boolean;
 }
 
 interface CreateDraftState {

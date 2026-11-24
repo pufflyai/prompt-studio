@@ -76,6 +76,7 @@ export const executeTreeActionCommand = async (
   commandId: string,
   params: Record<string, unknown> | undefined,
   resource: ExtensionTreeResource | undefined,
+  onAdmitted?: () => void,
 ) => {
   const modeId = input.workbench.modes.getActiveModeId();
   const rendererParams = {
@@ -92,6 +93,7 @@ export const executeTreeActionCommand = async (
     params: rendererParams,
     resource,
     foreground: true,
+    onAdmitted,
     slot: slotContext({ modeId, projectId: input.projectId, resource, treeId: record.id }),
     metadata: { treeId: record.id },
   });

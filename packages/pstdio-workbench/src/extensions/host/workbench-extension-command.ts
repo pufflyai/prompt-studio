@@ -14,7 +14,7 @@ import { unwrapCommandValue } from "./command-response";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 import { remoteWorkspaceLaunchCommand, runRemoteWorkspaceLaunch } from "./remote-workspace-launch";
 import { runWorkbenchCommandOperation } from "./workbench-command-operation";
-import { runCreateOperation } from "./workbench-create-operation";
+import { type CreateOperationFeedback, runCreateOperation } from "./workbench-create-operation";
 import { runResourceMutation } from "./workbench-resource-mutation";
 export interface WorkbenchExtensionCommandContext {
   metadata?: Pick<WorkbenchExtensionMetadata, "commands">;
@@ -32,6 +32,8 @@ export interface WorkbenchExtensionCommandContext {
 }
 export interface ExecuteWorkbenchExtensionCommandInput {
   onViewerReplace?(resource: ResourceRef): void;
+  onAdmitted?(): void;
+  createFeedback?: CreateOperationFeedback;
   removalVersion?: number;
   isViewerCurrent?(): boolean;
   placement?: PlacementIdentity;
@@ -167,13 +169,13 @@ export const executeWorkbenchExtensionCommand = async (
       projectId: context.projectId,
       command,
       source: input.resource,
+      params,
+      onAdmitted: input.onAdmitted,
       write: send,
     });
   const persist =
     operations && command && create
-      ? () => runCreateOperation(operations, context.projectId, command, resolved, send)
+      ? () => runCreateOperation(operations, context.projectId, command, resolved, send, input.createFeedback)
       : send;
-  return command
-    ? runResourceMutation(context, command, params, { resource: input.resource, signal: input.signal }, persist)
-    : persist();
+  return command ? runResourceMutation(context, command, params, input, persist) : persist();
 };

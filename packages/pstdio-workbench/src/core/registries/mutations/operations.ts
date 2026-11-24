@@ -27,7 +27,7 @@ export const operationSubject = (kind: string, ...identity: readonly (string | u
 export const resourceOperationSubject = (resource: ResourceRef) =>
   operationSubject("resource", resourceKey(resource), resource.device?.ownerId, resource.device?.id);
 
-const authorityKey = (scope: Readonly<QueryScope>) =>
+export const operationAuthorityKey = (scope: Readonly<QueryScope>) =>
   JSON.stringify([scope.runtimeId, scope.accountOrigin ?? null, scope.accountId ?? null]);
 
 const refreshOperationReads = (
@@ -76,7 +76,7 @@ const discardEntry = (entry: Entry, clearDraft: (entry: Entry) => void) => {
 
 const createWorkbenchOperations = (queries: ScopedQueryClient) => {
   let scope = queries.getScope();
-  let owner = authorityKey(scope);
+  let owner = operationAuthorityKey(scope);
   let snapshot = emptySnapshot;
   const listeners = new Set<() => void>();
   const entries = new Map<symbol, Entry>();
@@ -122,7 +122,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
 
   queries.subscribeScopeRetirement((retired) => {
     scope = queries.getScope();
-    owner = authorityKey(scope);
+    owner = operationAuthorityKey(scope);
     for (const entry of entries.values()) {
       if (entry.controller.signal.aborted) continue;
       if (!Object.entries(retired).every(([key, value]) => entry.scope[key as keyof QueryScope] === value)) continue;

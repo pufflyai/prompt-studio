@@ -88,10 +88,13 @@ const uploadCreatedFile = async (input: {
   file: File;
   projectId: string;
   resourceId: string;
+  signal?: AbortSignal;
 }) => {
+  const data = await input.file.arrayBuffer();
+  input.signal?.throwIfAborted();
   return getApiClient().extensions.files.upload(input.projectId, input.extensionInstanceId, {
     name: input.file.name,
-    data: await input.file.arrayBuffer(),
+    data,
     mimeType: input.file.type || undefined,
     scope: { type: "resource", id: input.resourceId },
   });
@@ -103,6 +106,7 @@ const attachCreatedFiles = async (input: {
   projectId: string;
   record: KanbanRecord;
   extensionInstanceId: string | undefined;
+  signal?: AbortSignal;
 }) => {
   const attachment = input.record.createRow?.attachments;
   const resourceId = (
@@ -115,15 +119,23 @@ const attachCreatedFiles = async (input: {
   if (!attachment || input.files.length === 0 || typeof resourceId !== "string") return;
   if (!input.extensionInstanceId) throw new Error(`Extension instance missing: ${input.record.id}`);
   for (const file of input.files) {
+    input.signal?.throwIfAborted();
     const ref = await uploadCreatedFile({
       extensionInstanceId: input.extensionInstanceId,
       file,
       projectId: input.projectId,
       resourceId,
+      signal: input.signal,
     });
-    await input.executeCommand(input.projectId, attachment.commandId, {
-      params: { [attachment.resourceParam]: resourceId, [attachment.fileParam]: ref },
-    });
+    input.signal?.throwIfAborted();
+    await input.executeCommand(
+      input.projectId,
+      attachment.commandId,
+      {
+        params: { [attachment.resourceParam]: resourceId, [attachment.fileParam]: ref },
+      },
+      input.signal,
+    );
   }
 };
 export const createDashboardKanbanAdapter = (input: {
@@ -155,7 +167,7 @@ export const createDashboardKanbanAdapter = (input: {
       }
       return ctx.commands.executeCommand(command.command.id, args, context).then(() => undefined);
     },
-    onAfterCreate: async ({ record, created, submission }) => {
+    onAfterCreate: async ({ record, created, submission, signal }) => {
       const reportError = ctx.notifications.captureActionError("Attach files");
       try {
         const extensionInstanceId = metadata.extensions.find(
@@ -168,9 +180,10 @@ export const createDashboardKanbanAdapter = (input: {
           projectId,
           record,
           extensionInstanceId,
+          signal,
         });
       } catch (error) {
-        reportError(error);
+        if (!signal?.aborted) reportError(error);
       }
     },
   };

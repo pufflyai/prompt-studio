@@ -39,6 +39,7 @@ export const PaletteParamsDialog = (props: PaletteParamsDialogProps) => {
         <RendererCreateDialog
           key={creation.id}
           contribution={creation}
+          workbench={workbench}
           resource={request?.context?.resource}
           onClose={closeParams}
         />

@@ -17,10 +17,13 @@ import type {
 } from "../../../core";
 import { rendererReadKey } from "../../../core";
 import { bindKanbanRendererContribution } from "../../../core/registries/renderers/kanban-renderer-binding";
+import type { KanbanRendererCreateRequest } from "../../../core/registries/renderers/kanban-renderer-registry";
 import { rendererResourceDependency } from "../../../core/registries/renderers/renderer-refresh-key";
 import { reportUserActionError, runUserAction } from "../../../core/shared/run-user-action";
+import type { BoardCreationIntent } from "../../../extensions/host/workbench-create-operation";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
+import { useOperationAuthority } from "../../shared/use-operation-authority";
 import { projectBoardRows } from "../collection-operation-projection";
 import { kanbanPageFields, kanbanSearchFields, rendererPagePresentation } from "../renderer-page-fields";
 import { rendererQueryKey } from "../renderer-query-key";
@@ -105,14 +108,21 @@ const hasKanbanRowTarget = (row: KanbanRendererRow): boolean =>
   Boolean(row.target || row.children?.some(hasKanbanRowTarget));
 
 const createRowWithRefreshHold = (
-  createRow: KanbanRendererProps["onCreateRow"],
+  createRow: RegisteredKanbanRendererContribution["onCreateRow"],
   holdRefresh: () => (() => void) | undefined,
+  context: Pick<KanbanRendererCreateRequest, "originatingRead"> & {
+    canOpenCreatedRow(): KanbanRendererCreateRequest["canOpenCreatedRow"];
+  },
 ): KanbanRendererProps["onCreateRow"] => {
   if (!createRow) return undefined;
   return async (submission) => {
     const release = submission.openCreatedRow === false ? undefined : holdRefresh();
     try {
-      await createRow(submission);
+      await createRow({
+        ...submission,
+        originatingRead: context.originatingRead,
+        canOpenCreatedRow: context.canOpenCreatedRow(),
+      });
     } finally {
       release?.();
     }
@@ -121,6 +131,7 @@ const createRowWithRefreshHold = (
 
 export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const { workbench, placement, Renderer = KanbanRenderer } = props;
+  const createDraftAuthority = useOperationAuthority(workbench);
   const pageParams = usePageParams(workbench, placement);
   // Queries, writes and metadata belong to this placement's resource, not to the page routed in Main.
   const contribution = bindKanbanRendererContribution(props.contribution as ReactRegisteredKanbanRendererContribution, {
@@ -203,6 +214,13 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const acceptedRows = read.acceptedValue?.rows ?? emptyRows;
   const mutations = useCollectionOperations(workbench, query, acceptedRows);
   const rows = projectBoardRows(acceptedRows, mutations.pending, contribution.id, query.queryScope?.projectId);
+  const pendingCreations = mutations.pending.flatMap((entry) => {
+    if (entry.domain !== "resource.create" || !entry.intent || entry.projectId !== query.queryScope?.projectId)
+      return [];
+    const intent = entry.intent as BoardCreationIntent;
+    if (intent.viewKey !== mutations.originatingRead.key || rows.some(({ id }) => id === intent.confirmedId)) return [];
+    return [{ key: entry.id, columnId: intent.columnId, title: intent.title, unconfirmed: entry.status === "unknown" }];
+  });
   const presentation = resolveKanbanQueryPresentation(contribution, read.value, declaredAttributes);
   pageAttributes.accept(read.value?.attributes, paged);
   // Use the read's and pages' own functions, not the `read` and `pages` objects, which change on
@@ -294,7 +312,12 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
             : undefined
         }
         createRow={contribution.createRow}
-        onCreateRow={createRowWithRefreshHold(contribution.onCreateRow, holdRefresh)}
+        createDraftAuthority={createDraftAuthority}
+        pendingCreations={pendingCreations}
+        onCreateRow={createRowWithRefreshHold(contribution.onCreateRow, holdRefresh, {
+          originatingRead: mutations.originatingRead,
+          canOpenCreatedRow: () => workbench.viewers.captureContext(placement.placementIdentity).isViewerCurrent,
+        })}
         onColumnAction={
           contribution.onColumnAction
             ? (...args) =>

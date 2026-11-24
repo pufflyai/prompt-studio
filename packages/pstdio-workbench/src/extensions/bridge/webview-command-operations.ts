@@ -40,6 +40,7 @@ export const runWorkbenchWebviewCommandOperation = async (input: {
         projectId,
         command,
         source: input.resource,
+        params: request.params,
         async write(signal) {
           const result = await execute(signal);
           unwrapCommandValue(result);

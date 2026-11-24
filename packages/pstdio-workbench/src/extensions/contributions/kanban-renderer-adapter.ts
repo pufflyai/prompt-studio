@@ -56,6 +56,7 @@ export interface WorkbenchExtensionKanbanRendererAdapter {
     record: WorkbenchExtensionKanbanRendererRecord;
     created: unknown;
     submission: KanbanRendererCreateSubmission;
+    signal?: AbortSignal;
   }) => void | Promise<void>;
   /**
    * Called after any mutation (attribute change, reorder, column action, default

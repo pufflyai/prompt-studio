@@ -22,6 +22,8 @@ export type WorkbenchCommandExecutionErrorListener = (event: WorkbenchCommandExe
 
 export interface WorkbenchCommandExecutionContext {
   projectId?: string;
+  /** Called after a tracked write takes ownership of the submitted draft. */
+  onAdmitted?(): void;
   removalVersion?: number;
   /** Host-owned guard retained while a command or its parameter dialog is pending. */
   isViewerCurrent?(): boolean;

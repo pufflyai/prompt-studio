@@ -45,16 +45,18 @@ test("removes the declared subject when an extension acts on a host-owned resour
 test("renames immediately, then restores the previous label on command failure", async () => {
   const context = setup();
   let reject!: (error: Error) => void;
+  const projectedTitles: (string | undefined)[] = [];
   const pending = runResourceMutation(
     context,
     command,
     { noteId: "one", title: "New" },
-    undefined,
+    { onAdmitted: () => projectedTitles.push(context.workbench.resources.preview.resolve(resource)?.label) },
     () =>
       new Promise((_, fail) => {
         reject = fail;
       }),
   );
+  expect(projectedTitles).toEqual(["New"]);
   expect(context.workbench.resources.preview.resolve(resource)?.label).toBe("New");
   await Promise.resolve();
   await Promise.resolve();

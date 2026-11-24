@@ -8,8 +8,33 @@ import { operationSubject, type WorkbenchOperations } from "../../core/registrie
 
 type CreateOperation<T> = Pick<
   OperationInput<T>,
-  "projectId" | "subjects" | "title" | "source" | "draft" | "write" | "classify" | "onDiscard"
->;
+  | "projectId"
+  | "subjects"
+  | "title"
+  | "source"
+  | "draft"
+  | "write"
+  | "classify"
+  | "onDiscard"
+  | "intent"
+  | "showPending"
+  | "originatingRead"
+> & { onAdmitted?(): void };
+
+export interface BoardCreationIntent {
+  viewKey: string;
+  columnId: string;
+  title: string;
+  confirmedId?: string;
+}
+
+export interface CreateOperationFeedback {
+  board?: BoardCreationIntent;
+  onAdmitted?(): void;
+  onDiscard?(): void;
+  onCreated?(created: unknown, signal: AbortSignal): void | Promise<void>;
+  originatingRead?: OperationInput<unknown>["originatingRead"];
+}
 type RecoveryMessage = string | ((draft: unknown) => string);
 
 const unresolved = (operations: WorkbenchOperations, id: symbol, error: unknown) => {
@@ -49,11 +74,14 @@ export const runTrackedCreate = async <T>(
     classify,
     releaseOnDiscard: true,
   });
+  input.onAdmitted?.();
   try {
     return await attempted.result;
   } catch (error) {
-    if (classify(error) !== "unknown") throw error;
-    throw unresolved(operations, attempted.id, error);
+    const recovery = operations.getSnapshot().recovery.find((entry) => entry.id === attempted.id);
+    if (recovery?.status === "unknown" || recovery?.status === "unconfirmed")
+      throw unresolved(operations, attempted.id, error);
+    throw error;
   }
 };
 
@@ -79,14 +107,46 @@ export const runCreateOperation = async <T>(
   command: WorkbenchExtensionMetadata["commands"][number],
   draft: Record<string, unknown> | undefined,
   write: (signal: AbortSignal) => Promise<T>,
+  feedback?: CreateOperationFeedback,
 ) => {
   const subject = operationSubject("create", projectId, command.id);
   const { pending } = operations.getSnapshot();
-  if (pending.some((entry) => entry.status !== "unknown" && entry.subjects.includes(subject)))
+  const board = feedback?.board;
+  if (
+    pending.some(
+      (entry) =>
+        (entry.status === "queued" || entry.status === "writing" || entry.status === "reconciling") &&
+        entry.subjects.includes(subject),
+    )
+  )
     throw new Error("This creation is already in progress.");
+  const findPrevious = (entries: readonly OperationRecovery[]) =>
+    entries.find((entry) => entry.status !== "rejected" && entry.subjects.includes(subject));
+  if (feedback?.onAdmitted && findPrevious(operations.getSnapshot().recovery))
+    throw new Error("A previous creation needs attention in System activity.");
   return runTrackedCreate(
     operations,
-    { projectId, subjects: [subject], title: text(command.title, "Create resource"), draft, write },
-    (entries) => entries.find((entry) => entry.status === "unknown" && entry.subjects.includes(subject)),
+    {
+      projectId,
+      subjects: [subject],
+      title: text(command.title, "Create resource"),
+      draft,
+      intent: board,
+      onAdmitted: feedback?.onAdmitted,
+      onDiscard: feedback?.onDiscard,
+      originatingRead: feedback?.originatingRead,
+      showPending: feedback?.onAdmitted ? true : undefined,
+      write: feedback
+        ? async (signal) => {
+            const result = await write(signal);
+            const row = result as { id?: unknown } | undefined;
+            if (board && typeof row?.id === "string") board.confirmedId = row.id;
+            signal.throwIfAborted();
+            await feedback.onCreated?.(result, signal);
+            return result;
+          }
+        : write,
+    },
+    findPrevious,
   );
 };

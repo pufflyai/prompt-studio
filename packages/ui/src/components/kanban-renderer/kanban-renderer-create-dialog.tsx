@@ -41,6 +41,14 @@ const emptyValue = (field: KanbanRendererCreateField) => {
 const initialFieldValues = (fields: KanbanRendererCreateField[]) =>
   Object.fromEntries(fields.map((field) => [field.id, field.defaultValue ?? emptyValue(field)]));
 
+const splitCreateFields = (fields: KanbanRendererCreateRowConfig["fields"], values: Record<string, unknown>) => {
+  const fileFieldIds = new Set(fields.filter((field) => field.type === "files").map((field) => field.id));
+  return {
+    files: [...fileFieldIds].flatMap((id) => (Array.isArray(values[id]) ? (values[id] as File[]) : [])),
+    values: Object.fromEntries(Object.entries(values).filter(([id]) => !fileFieldIds.has(id))),
+  };
+};
+
 const isFilled = (field: KanbanRendererCreateField, value: unknown) => {
   if (!field.required) return true;
   if (Array.isArray(value)) return value.length > 0;
@@ -95,6 +103,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
   const values = draft?.values ?? {};
   const attributeValues = draft?.attributeValues ?? {};
   const [submitting, setSubmitting] = useState(false);
+  const waiting = submitting || Boolean(draft?.pending);
   const [error, setError] = useState("");
   const editableAttributes = editableCreateAttributes(attributes);
 
@@ -162,44 +171,53 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
   };
 
   const discard = () => {
-    if (submitting) return;
+    if (waiting) return;
     clearDraft();
     onClose();
   };
 
   const valid = config.fields.every((field) => isFilled(field, values[field.id]));
 
+  if (!draft) return null;
+  const canSubmit = valid && !waiting && !unresolved;
+  const shouldOpen = config.labels.submitWithoutOpening ? openCreatedRow : true;
   const submit = async () => {
-    if (!valid || submitting || unresolved) return;
+    if (!canSubmit) return;
     setSubmitting(true);
     setError("");
-    try {
-      const fileFieldIds = new Set(config.fields.filter((field) => field.type === "files").map((field) => field.id));
-      const files = [...fileFieldIds].flatMap((id) => (Array.isArray(values[id]) ? (values[id] as File[]) : []));
-      const declaredValues = Object.fromEntries(Object.entries(values).filter(([id]) => !fileFieldIds.has(id)));
-
-      await onSubmit({
+    let admitted = false;
+    const pending = Symbol("create row");
+    const updateSubmittedDraft = (result: (current: NonNullable<typeof draft>) => NonNullable<typeof draft> | null) =>
+      setDraft((current) =>
+        current && (current === draft || current.submission === pending) ? result(current) : current,
+      );
+    const submission = () => {
+      return {
         columnId,
         columnAttributeId,
-        values: declaredValues,
+        ...splitCreateFields(config.fields, values),
         attributeValues,
-        files,
-        openCreatedRow: config.labels.submitWithoutOpening ? openCreatedRow : true,
-      });
-      clearDraft();
-      onClose();
+        openCreatedRow: shouldOpen,
+        onAdmitted: () => {
+          admitted = true;
+          updateSubmittedDraft((current) => ({ ...current, pending: true, submission: pending }));
+          onClose();
+        },
+        onDiscard: () => updateSubmittedDraft(() => null),
+      };
+    };
+    try {
+      await onSubmit(submission());
+      updateSubmittedDraft(() => null);
+      if (!admitted) onClose();
     } catch (caught) {
-      if (caught instanceof UnresolvedSubmissionError) {
-        setDraft((current) => current && { ...current, unresolved: caught });
-      } else {
-        setError(caught instanceof Error ? caught.message : config.labels.submitError);
-      }
+      const unresolved = caught instanceof UnresolvedSubmissionError ? caught : undefined;
+      updateSubmittedDraft((current) => ({ ...current, pending: false, unresolved }));
+      if (!unresolved && !admitted) setError(caught instanceof Error ? caught.message : config.labels.submitError);
     } finally {
-      setSubmitting(false);
+      if (!admitted) setSubmitting(false);
     }
   };
-
-  if (!draft) return null;
 
   return (
     <Dialog.Root
@@ -212,15 +230,11 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
     >
       <Dialog.Backdrop />
       <Dialog.Positioner>
-        <Dialog.Content
-          onKeyDownCapture={(event) =>
-            handleDialogAcceptShortcut(event, () => void submit(), valid && !submitting && !unresolved)
-          }
-        >
+        <Dialog.Content onKeyDownCapture={(event) => handleDialogAcceptShortcut(event, () => void submit(), canSubmit)}>
           <Dialog.Header>
             <Dialog.Title>{config.title}</Dialog.Title>
             <Dialog.CloseTrigger asChild>
-              <CloseButton size="sm" disabled={submitting} onClick={unresolved ? close : discard} />
+              <CloseButton size="sm" disabled={waiting} onClick={unresolved ? close : discard} />
             </Dialog.CloseTrigger>
           </Dialog.Header>
           <ScrollArea flex="1" minH="0" height="auto">
@@ -232,7 +246,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
                     field={field}
                     removeLabel={config.labels.removeFile}
                     value={values[field.id]}
-                    disabled={submitting || Boolean(unresolved)}
+                    disabled={waiting || Boolean(unresolved)}
                     onChange={(value) =>
                       setDraft((current) => current && { ...current, values: { ...current.values, [field.id]: value } })
                     }
@@ -247,7 +261,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
                         attributeToParam(attribute, attribute.id === columnAttributeId),
                       )}
                       defaultValues={attributeValues as ParamValueMap}
-                      readOnly={submitting || Boolean(unresolved)}
+                      readOnly={waiting || Boolean(unresolved)}
                       onChange={(attributeId, value) =>
                         setDraft(
                           (current) =>
@@ -283,7 +297,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
                 onChoose={setOpenCreatedRow}
                 onSubmit={() => void submit()}
                 disabled={!valid || Boolean(unresolved)}
-                submitting={submitting}
+                submitting={waiting}
               />
             </HStack>
           </Dialog.Footer>

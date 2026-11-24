@@ -151,6 +151,8 @@ export interface KanbanRendererCreateRowConfig {
 }
 
 export interface KanbanRendererCreateSubmission {
+  onAdmitted?(): void;
+  onDiscard?(): void;
   columnId: string;
   columnAttributeId?: string;
   /** Declared field values, excluding `files` fields — those arrive as `files`. */

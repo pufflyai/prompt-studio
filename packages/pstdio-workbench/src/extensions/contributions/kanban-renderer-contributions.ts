@@ -3,13 +3,17 @@ import { renderBadgeListDisplay } from "@pstdio/ui/kanban-renderer";
 import { kanbanBuiltInViews, type WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
 import { text } from "pstdio-extensions/workbench";
 import { createElement } from "react";
-import type { Disposable, KanbanRendererCreateSubmission, ResourceRef } from "../../core";
-import type { KanbanRendererPlacementBinding } from "../../core/registries/renderers/kanban-renderer-registry";
+import type { Disposable, ResourceRef } from "../../core";
+import type {
+  KanbanRendererCreateRequest,
+  KanbanRendererPlacementBinding,
+} from "../../core/registries/renderers/kanban-renderer-registry";
 import { acceptRendererPage } from "../../core/registries/renderers/renderer-page";
 import { runUserAction } from "../../core/shared/run-user-action";
 import { WorkbenchIcon } from "../../react";
 import type { ReactAttributeDescriptor as AttributeDescriptor } from "../../react/renderers/kanban/kanban-presentation";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
+import type { CreateOperationFeedback } from "../host/workbench-create-operation";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import { collectionBadgeTarget } from "./collection-badge-navigation";
 import type { WorkbenchExtensionKanbanRendererAdapter } from "./kanban-renderer-adapter";
@@ -22,6 +26,7 @@ import {
   type KanbanRendererRow,
   type Localizer,
   mergeParams,
+  prepareKanbanCreationFeedback,
   registerRowActionCommands,
   runDefaultRowAction,
   toCreateFields,
@@ -85,20 +90,35 @@ const toCreateRowHandler = (
     record: WorkbenchExtensionKanbanRendererRecord,
     commandId: string,
     params: Record<string, unknown>,
+    feedback?: CreateOperationFeedback,
   ) => Promise<unknown>,
   activateCreatedRow: ((row: KanbanRendererRow) => Promise<void> | void) | undefined,
 ) => {
   const contribution = record.createRow;
   if (!contribution) return undefined;
-  return async (submission: KanbanRendererCreateSubmission) => {
+  return async (submission: KanbanRendererCreateRequest) => {
     const params = mergeParams(
       submission.values,
       contribution.columnParam && submission.columnId ? { [contribution.columnParam]: submission.columnId } : undefined,
       contribution.attributesParam ? { [contribution.attributesParam]: submission.attributeValues } : undefined,
     );
-    const created = await runMutation(record, contribution.commandId, params);
-    await adapter.onAfterCreate?.({ record, created, submission });
-    if (submission.openCreatedRow === false || !activateCreatedRow || typeof created !== "object" || created === null)
+    let attaching: Promise<void> | undefined;
+    const onCreated = (created: unknown, signal?: AbortSignal) => {
+      attaching ??= Promise.resolve().then(() => adapter.onAfterCreate?.({ record, created, submission, signal }));
+      return attaching;
+    };
+    const created = await runMutation(record, contribution.commandId, params, {
+      ...prepareKanbanCreationFeedback(submission),
+      onCreated,
+    });
+    await onCreated(created);
+    if (
+      submission.openCreatedRow === false ||
+      submission.canOpenCreatedRow?.() === false ||
+      !activateCreatedRow ||
+      typeof created !== "object" ||
+      created === null
+    )
       return;
     const row = created as Partial<KanbanRendererRow>;
     if (typeof row.id !== "string" || typeof row.title !== "string") return;
@@ -177,11 +197,14 @@ export const registerWorkbenchExtensionKanbanRenderers = (
     commandId: string,
     params: Record<string, unknown>,
     resource?: ResourceRef,
+    feedback?: CreateOperationFeedback,
   ) =>
-    executeKanbanRendererCommand(context, record, commandId, params, resource).then((result) => {
-      afterMutation(record);
-      return result;
-    });
+    executeKanbanRendererCommand(context, record, commandId, params, resource, undefined, undefined, feedback).then(
+      (result) => {
+        afterMutation(record);
+        return result;
+      },
+    );
 
   for (const record of records) {
     const reportUnknownDisplay = (attributeId: string, kind: string) =>
@@ -231,7 +254,8 @@ export const registerWorkbenchExtensionKanbanRenderers = (
         target: WorkbenchExtensionKanbanRendererRecord,
         commandId: string,
         params: Record<string, unknown>,
-      ) => runMutation(target, commandId, params, resource);
+        feedback?: CreateOperationFeedback,
+      ) => runMutation(target, commandId, params, resource, feedback);
       const onRowActivate = toRowClick(context, record, adapter, resolveRowResource, query.original);
       return {
         attributes: attributes.source,

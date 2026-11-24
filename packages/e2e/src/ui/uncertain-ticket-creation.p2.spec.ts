@@ -25,10 +25,14 @@ test("keeps a submitted ticket unresolved if the server commits and its response
     const form = page.getByRole("dialog", { name: "New ticket", exact: true });
     await form.locator('[contenteditable="true"]').first().fill(content);
     const matchingRequests = "**/extensions/commands/pstdio.planner.command.create-ticket/execute";
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
     const committed = Promise.withResolvers<void>();
     let writes = 0;
     await page.route(matchingRequests, async (route) => {
       writes++;
+      entered.resolve();
+      await release.promise;
       try {
         const response = await route.fetch();
         expect(response.ok()).toBe(true);
@@ -42,21 +46,26 @@ test("keeps a submitted ticket unresolved if the server commits and its response
     });
     const submit = form.getByRole("button", { name: "Create ticket", exact: true });
     const unresolved = form.getByText("Creation could not be confirmed.", { exact: true });
-    await submit.click();
+    const pending = page.getByTestId("pending-board-creation");
+    try {
+      await submit.click();
+      await entered.promise;
+      await expect(form).toBeHidden();
+      await expect(pending.getByText(title, { exact: true })).toBeVisible();
+      await expect(pending.locator('[draggable="true"], [role="button"], a, button')).toHaveCount(0);
+    } finally {
+      release.resolve();
+    }
     await committed.promise;
-    await expect(unresolved).toBeVisible();
-    await expect(submit).toBeDisabled();
-    await expect(form.getByRole("button", { name: "Check again" })).toHaveCount(0);
-    await expect(form.getByRole("button", { name: "Copy draft" })).toBeEnabled();
+    await expect(pending.getByText("Creation unconfirmed", { exact: true })).toBeVisible();
     expect((await listPlannerTickets(request, uiOrigin, id)).filter((ticket) => ticket.title === title)).toHaveLength(
       2,
     );
     await expect(page).toHaveURL(boardUrl);
-    await form.getByRole("button", { name: "Inspect resources" }).click();
-    await expect(form).toBeHidden();
     await page.locator('[data-status-bar-item="workbench.system-activity"]').click();
     await expect(page.getByRole("button", { name: "Inspect resources", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Copy draft", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Check again" })).toHaveCount(0);
     await page.keyboard.press("Escape");
     await add.click();
     await expect(unresolved).toBeVisible();

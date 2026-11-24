@@ -31,8 +31,8 @@ export const TreeParamsDialog = (props: TreeParamsDialogProps) => {
           : Promise.resolve(input.args)
       }
       onClose={onClose}
-      onRun={async ({ args }) => {
-        await request?.run(args);
+      onRun={async ({ args, context }) => {
+        await request?.run(args, context?.onAdmitted);
       }}
     />
   );

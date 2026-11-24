@@ -57,6 +57,7 @@ export const useCollectionOperations = (
   );
   return {
     pending,
+    originatingRead: observedRead(workbench, read),
     submit: async (
       move: KanbanRendererMove,
       write: () => void | Promise<void>,

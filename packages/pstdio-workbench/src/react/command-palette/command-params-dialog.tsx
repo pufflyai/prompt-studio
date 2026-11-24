@@ -121,13 +121,12 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
   const run = async () => {
     if (submitting || unresolved) return;
     const invalid = options.validate(values);
-    for (const [key, error] of Object.entries(customFieldErrors)) {
-      if (error) invalid[key] = error;
-    }
+    Object.assign(invalid, Object.fromEntries(Object.entries(customFieldErrors).filter(([, error]) => error)));
     setFieldErrors(invalid);
     if (Object.keys(invalid).length > 0) return;
     setSubmitting(true);
     setError(undefined);
+    let accepted = false;
     try {
       const params = normalizeCommandParamValues(request.record.command.params, values);
       const args = mergeCommandParamArgs(request.args, { ...resolved, ...params }, request.record.command.params);
@@ -150,15 +149,22 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
       const submission = {
         commandId: request.record.command.id,
         args: preparedArgs,
-        context: request.context,
+        context: {
+          ...request.context,
+          onAdmitted: () => {
+            accepted = true;
+            onClose();
+          },
+        },
         label: request.label,
       };
       await onRun(submission);
-      onClose();
+      if (!accepted) onClose();
     } catch (caught) {
-      failSubmission(caught);
+      // After admission the operation owns both the failure and the submitted draft.
+      if (!accepted) failSubmission(caught);
     } finally {
-      setSubmitting(false);
+      if (!accepted) setSubmitting(false);
     }
   };
 

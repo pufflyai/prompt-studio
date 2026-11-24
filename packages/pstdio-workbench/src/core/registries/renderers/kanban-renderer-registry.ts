@@ -10,6 +10,7 @@ import type { ContributionMetadata, RegisteredContributionMetadata } from "../..
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+import type { OperationInput } from "../mutations/operation-types";
 import type { ResourceRef } from "../resources/resource-registry";
 import type {
   AttributeDescriptor,
@@ -25,6 +26,11 @@ import type {
 } from "./kanban-renderer-contracts";
 import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./renderer-registry";
 import type { ViewToolbarAction } from "./view-toolbar-action";
+
+export interface KanbanRendererCreateRequest extends KanbanRendererCreateSubmission {
+  originatingRead?: OperationInput<unknown>["originatingRead"];
+  canOpenCreatedRow?(): boolean;
+}
 
 export interface KanbanRendererQueryState {
   page?: CollectionPageRequest;
@@ -137,7 +143,7 @@ export interface KanbanRendererContribution<
   /** The command whose interactive input uses this renderer's creation form. */
   createCommandId?: string;
   createRow?: KanbanRendererCreateRowConfig;
-  onCreateRow?: (submission: KanbanRendererCreateSubmission) => Promise<void> | void;
+  onCreateRow?: (submission: KanbanRendererCreateRequest) => Promise<void> | void;
   onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;
 }
 

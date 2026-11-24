@@ -176,7 +176,17 @@ export interface KanbanRendererCreateRowConfig {
   labels: KanbanRendererCreateLabels;
 }
 
+export interface KanbanRendererPendingCreation {
+  key: symbol;
+  columnId: string;
+  title: string;
+  unconfirmed: boolean;
+}
+
 export interface KanbanRendererCreateSubmission {
+  /** Called when the owner has accepted the submission and can retain it after the form closes. */
+  onAdmitted?(): void;
+  onDiscard?(): void;
   columnId: string;
   columnAttributeId?: string;
   /** Declared field values, excluding `files` fields — those arrive as `files`. */

@@ -1,8 +1,9 @@
-import { Button } from "@chakra-ui/react";
+import { Box, Button } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { HostStorageProvider } from "../../utils/host-storage";
 import { UnresolvedSubmissionError } from "../primitives/unresolved-submission";
+import { KanbanRendererCard } from "./kanban-renderer-card";
 import { KanbanRendererCreateDialog } from "./kanban-renderer-create-dialog";
 import type { AttributeDescriptor, KanbanRendererCreateRowConfig, KanbanRendererCreateSubmission } from "./types";
 
@@ -73,6 +74,7 @@ export default meta;
 type Story = CanvasFrame<typeof meta>;
 const Harness = (props: {
   config: KanbanRendererCreateRowConfig;
+  children?: ReactNode;
   onSubmit?: (submission: KanbanRendererCreateSubmission) => Promise<void> | void;
 }) => {
   const { config, onSubmit } = props;
@@ -89,6 +91,7 @@ const Harness = (props: {
   return (
     <HostStorageProvider storage={storage}>
       <Button onClick={() => setOpen(true)}>New ticket</Button>
+      {props.children}
       <KanbanRendererCreateDialog
         open={open}
         columnId="ready"
@@ -195,4 +198,40 @@ export const InspectOrRecover: Story = {
       }}
     />
   ),
+};
+
+const PendingCreationFrame = () => {
+  const [title, setTitle] = useState("");
+  const [confirm, setConfirm] = useState<(() => void) | undefined>();
+  return (
+    <Harness
+      config={{ ...config, fields: [{ ...config.fields[0], defaultValue: "Review project setup" }, config.fields[1]] }}
+      onSubmit={({ values, onAdmitted }) => {
+        setTitle(String(values.content));
+        onAdmitted?.();
+        return new Promise<void>((resolve) => setConfirm(() => resolve));
+      }}
+    >
+      {title ? (
+        <Box maxW="300px" p="xs" role="status">
+          <KanbanRendererCard title={title} eyebrow={confirm ? "Creating…" : undefined} />
+        </Box>
+      ) : null}
+      {confirm ? (
+        <Button
+          onClick={() => {
+            confirm();
+            setConfirm(undefined);
+          }}
+        >
+          Confirm creation
+        </Button>
+      ) : null}
+    </Harness>
+  );
+};
+
+export const PendingBoardCreation: Story = {
+  args: {} as never,
+  render: () => <PendingCreationFrame />,
 };

@@ -1,7 +1,7 @@
 import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { notesFileAccess } from "./file-access";
 import { moveNote, requireFolder } from "./folders";
-import { createNote, deleteNote, noteExists, readNoteTitle, renameNote } from "./notes";
+import { createNote, deleteNote, hasSavedNoteTitle, noteExists, readNoteTitle, renameNote } from "./notes";
 import { noteResource, notesChanged, notesMount, noteTarget } from "./pages";
 import { noteActionsSlot } from "./resource-kinds";
 
@@ -98,6 +98,19 @@ export const renameNoteCommand = defineCommand({
     const note = await renameNote(notesMount(ctx), commandParams.noteId, commandParams.title);
     await ctx.events.emit(notesChanged, { noteId: note.id });
     return note;
+  },
+});
+
+export const checkNoteTitleCommand = defineCommand({
+  id: "notes.check-title",
+  title: l10n("commands.checkNoteTitle", "Check saved note title"),
+  params: {
+    noteId: params.text({ required: true, resolvedFrom: "resource" }),
+    title: params.text({ required: true }),
+  },
+  async run(ctx, { noteId, title }) {
+    if (!(await notesFileAccess(ctx)).readable) return { confirmed: false };
+    return { confirmed: await hasSavedNoteTitle(notesMount(ctx), noteId, title.trim()) };
   },
 });
 
