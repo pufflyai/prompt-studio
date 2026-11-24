@@ -73,11 +73,12 @@ export const createHostCalls = (
     try {
       const running = invocation(invocationId);
       if (!running) throw new BackendUnavailableError("The invocation is no longer running.");
-      await enterFor(
-        running,
-        invocationId,
-        message.within,
-      )(async () => {
+      // Cancellation ends callback scopes. The table still permits calls to existing cleanup references.
+      const enter =
+        running.cancelled && message.type === "fn-call"
+          ? running.enter
+          : enterFor(running, invocationId, message.within);
+      await enter(async () => {
         const result = await hostCallOwner.run(invocationId, () => runCall(running, message));
         if (invocation(invocationId) !== running || (running.cancelled && message.type === "call")) {
           discardValue(result);
