@@ -25,9 +25,17 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - uses: ./.github/actions/setup-ci-cache
-        with:
-          install-strategy: native
+      - name: Materialize a private source checkout for the candidate
+        run: |
+          review_dir="$(mktemp -d /tmp/pstdio-local-review-XXXXXX)"
+          git clone --shared --no-checkout --quiet "$GITHUB_WORKSPACE" "$review_dir/source"
+          git -C "$review_dir/source" checkout --detach 8224b0031f6e6e18fd052bab7b16fa3a79675e81
+          echo "REVIEW_SOURCE=$review_dir/source" >> "$GITHUB_ENV"
+          echo "BUN_INSTALL_CACHE_DIR=$review_dir/bun-cache" >> "$GITHUB_ENV"
+      - name: Install native dependencies in the private review source
+        run: |
+          cd "$REVIEW_SOURCE"
+          bun scripts/ci/install-native-dependencies.ts
       - name: Download the original failed review plan
         uses: actions/download-artifact@v4
         with:
@@ -39,6 +47,7 @@ jobs:
         shell: python
         run: |
           import json, os, pathlib, subprocess
+          os.chdir(os.environ["REVIEW_SOURCE"])
           path = pathlib.Path(os.environ["RUNNER_TEMP"]) / "original-review"
           report = json.loads(next(path.rglob("pstdio-local-review-lEsK62.json")).read_text())
           plan = report["plan"]["testPlan"]
@@ -53,23 +62,31 @@ jobs:
           print("Original plan", plan["digest"], "selected desktop groups", selected)
       - name: Build desktop and prepare both Chromium sandbox helpers
         run: |
+          cd "$REVIEW_SOURCE"
           bun run build -- --scope @pstdio/desktop --include-dependencies
-          bun scripts/ci/prepare-test-desktop.ts
+          bun run --cwd clients/desktop package
+          bun clients/desktop/scripts/verify-test-package.ts
+          bun scripts/ci/configure-linux-desktop-sandboxes.ts
+          printf 'review_source=%s\nhead=%s\n' "$(pwd -P)" "$(git rev-parse HEAD)" > test-results/ci/sandbox-mode.txt
           for helper in clients/desktop/out/prompt-studio-linux-x64/chrome-sandbox clients/desktop/node_modules/electron/dist/chrome-sandbox; do
-            stat -Lc '%U %a %n' "$helper" | tee -a test-results/ci/sandbox-mode.txt
-            test "$(stat -Lc '%u %a' "$helper")" = "0 4755"
+            helper_path="$(realpath "$helper")"
+            case "$helper_path" in "$REVIEW_SOURCE"/*) ;; *) exit 1 ;; esac
+            stat -Lc '%u %U %a %n' "$helper_path" | tee -a test-results/ci/sandbox-mode.txt
+            test "$(stat -Lc '%u %a' "$helper_path")" = "0 4755"
           done
       - name: Run both complete owning desktop groups from the original plan
-        run: bun scripts/test.ts --plan test-results/ci/original-plan.json --job desktop-linux-x64-1/1 --prebuilt
+        run: |
+          cd "$REVIEW_SOURCE"
+          bun scripts/test.ts --plan test-results/ci/original-plan.json --job desktop-linux-x64-1/1 --prebuilt
       - name: Preserve the repaired group evidence and native case results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ps-1324-affected-desktop
           path: |
-            test-results/ci/original-plan.json
-            test-results/ci/sandbox-mode.txt
-            test-results/ci/planned
-            clients/desktop/test-results
+            ${{ env.REVIEW_SOURCE }}/test-results/ci/original-plan.json
+            ${{ env.REVIEW_SOURCE }}/test-results/ci/sandbox-mode.txt
+            ${{ env.REVIEW_SOURCE }}/test-results/ci/planned
+            ${{ env.REVIEW_SOURCE }}/clients/desktop/test-results
           retention-days: 7
           if-no-files-found: error
