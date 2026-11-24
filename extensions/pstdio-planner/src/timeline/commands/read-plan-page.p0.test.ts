@@ -189,14 +189,15 @@ test("the default active filter retains global steps on later pages and narrower
   for (const [i, id] of ["first", "archived", "second", "last"].entries())
     await planPlacements(storage).put(id, { ticketId: id, deadlineId: null, position: String(i) });
   const active = { attributeId: "archived", condition: "is-any-of", value: ["active"] } as const;
-  const read = (filter: unknown, offset: number) =>
+  const read = (filter: unknown, offset: number, cursor?: string) =>
     readPlanCommand.run(makeCommandContext({ storage, params: {} }), {
       filter,
-      page: { limit: 1, offset, fields: ["id"], search: "" },
+      page: { limit: 1, offset, cursor, fields: ["id"], search: "" },
     } as never);
   const steps = (value: Awaited<ReturnType<typeof read>>) =>
     value.sections.flatMap(({ rows }) => rows.map(({ id, step }) => ({ id, step })));
   expect(steps(await read({ conjunction: "and", rules: [active] }, 1))).toEqual([{ id: "second", step: 2 }]);
+  expect(steps(await read(undefined, 9, (await read(undefined, 0)).page.cursor!))).toEqual([{ id: "second", step: 2 }]);
   const last = { attributeId: "title", condition: "is", value: "last" };
   expect(
     steps(await read({ conjunction: "and", rules: [active], groups: [{ conjunction: "or", rules: [last] }] }, 0)),
