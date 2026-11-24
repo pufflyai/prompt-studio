@@ -227,13 +227,18 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
       workspaceService: deps.workspaceService,
     }).catch((error) => {
       // A project removed while startup ran has nothing left to sync.
-      if (!(error instanceof ProjectNotFoundError)) throw error;
+      if (!(error instanceof ProjectNotFoundError) || error.projectId !== project.id) throw error;
     });
   }
   registerBackgroundTask(
     defaultExtensionPreparation.then(async (installed) => {
-      await adoptExtractedDefaultTools(deps, projectIds, signal, ["pstdio-terminal"]);
-      for (const projectId of projectIds)
+      if (signal?.aborted || projectIds.length === 0) return;
+      const startupProjects = new Set(projectIds);
+      const remainingProjectIds = (await deps.projectService.list())
+        .map(({ id }) => id)
+        .filter((id) => startupProjects.has(id));
+      await adoptExtractedDefaultTools(deps, remainingProjectIds, signal, ["pstdio-terminal"]);
+      for (const projectId of remainingProjectIds)
         await recoverProjectWorkspaces(projectId, signal, () =>
           adoptWorkspacesTool(
             deps,
@@ -241,10 +246,13 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
             installed.map(({ targetPath, sourceHash }) => ({ path: targetPath, hash: sourceHash })),
           ),
         );
-      await provisionRecoveredWorkspaces(deps, projectIds, signal);
-      for (const projectId of projectIds) {
+      await provisionRecoveredWorkspaces(deps, remainingProjectIds, signal);
+      for (const projectId of remainingProjectIds) {
         signal?.throwIfAborted();
-        await deps.extensionRuntimeCatalog.activate(projectId);
+        if (!(await deps.projectService.get(projectId))) continue;
+        await deps.extensionRuntimeCatalog.activate(projectId).catch((error) => {
+          if (!(error instanceof ProjectNotFoundError) || error.projectId !== projectId) throw error;
+        });
       }
     }),
     options,
