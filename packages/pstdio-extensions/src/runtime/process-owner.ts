@@ -94,7 +94,10 @@ export const createProcessHandleProxy = (open: Promise<OpenedHandle>, cancel = n
 
   // end() closes input after every write made before it, even ones nobody awaited.
   let writes: Promise<unknown> = Promise.resolve();
+  let ended = false;
   const write = (data: string | Uint8Array) => {
+    // Input closes when end() is called, though the child's input closes only after earlier writes.
+    if (ended) return Promise.reject(new Error("The process input is closed."));
     const next = queueWrite(data);
     writes = next.catch(() => {});
     return next;
@@ -146,13 +149,15 @@ export const createProcessHandleProxy = (open: Promise<OpenedHandle>, cancel = n
     started,
     exited,
     write,
-    end: () =>
-      writes
+    end: () => {
+      ended = true;
+      return writes
         .then(() => gate)
         .then(
           (handle) => handle.end(),
           () => {},
-        ),
+        );
+    },
     kill: (signal) => {
       // An exited child's process group may already belong to another process.
       if (settled) return Promise.resolve();
