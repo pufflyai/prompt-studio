@@ -34,7 +34,9 @@ export const isFirstPartySource = (extensionId: string, source: DiagnosticsSourc
   }
   if (source.source_kind === "registry") {
     const release = parseRegistrySourceRef(source.source_ref);
-    return release !== null && release.id === id && release.registry === releaseRegistry;
+    // The registry client saves sources without a trailing slash; the host's setting may keep one.
+    const registry = (value?: string) => value?.replace(/\/$/, "");
+    return release !== null && release.id === id && registry(release.registry) === registry(releaseRegistry);
   }
   return source.source_kind === "local_path" && samePath(source.source_path, hostCheckoutPath(entry));
 };
