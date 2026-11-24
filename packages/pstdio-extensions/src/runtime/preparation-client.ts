@@ -142,9 +142,9 @@ export const createPreparationClient = (
         !job.resources!.some((key) => other.resources!.some((otherKey) => preparationResourcesOverlap(key, otherKey))),
     );
   };
-  // A held job's preemptor is busy while any of its jobs is queued or running on a worker.
+  // A held job's preemptor is busy only while one of its jobs runs on a worker. Queued work may be barred.
   const clock = createYieldClock(
-    () => [...queued, ...pool.slots.map((slot) => slot.active)],
+    () => pool.slots.map((slot) => (slot.dispatched ? slot.active : undefined)),
     () => schedule(),
   );
   const candidates = () => [
