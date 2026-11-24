@@ -83,6 +83,7 @@ const spawnThroughProvider = (
   const scope = createInvocationScope({ logger: providerLogger, parent: signal });
   const pending = (async () => {
     const context = handle.contextForScope ? await handle.contextForScope(scope) : handle.context;
+    scope.signal.throwIfAborted();
     return handle.provider.spawn(context, { ...providerInput(workspace), process });
   })();
   void pending.then(

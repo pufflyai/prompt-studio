@@ -45,7 +45,7 @@ export const createHarnessOperationPreparation =
   async (command: HarnessCommandContext, operation: HarnessOperation, options?: HarnessCallOptions) => {
     const { provider, calls, retained, ensureActive } = input;
     if (!provider.prepareOperation) throw new Error("This harness does not support native commands.");
-    const call = await calls.open(options);
+    const call = await calls.open(options, command);
     const { context } = call;
     let prepared: PreparedHarnessOperation;
     try {
@@ -74,6 +74,8 @@ export const createHarnessOperationPreparation =
         invoked = true;
         try {
           ensureActive();
+          call.stopOnAbort(invocation.signal);
+          invocation.signal?.throwIfAborted();
           const result = await retained.invoke(
             command,
             options,
