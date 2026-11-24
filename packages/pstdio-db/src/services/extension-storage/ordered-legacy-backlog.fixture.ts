@@ -6,7 +6,8 @@ import { readConversion } from "../../db/legacy-records/ordered-conversion-state
 import { createUnadmittedLegacyFixture } from "../../db/legacy-records/unadmitted.fixture";
 import { storage_record_outbox, storage_record_sync } from "../../db/legacy-records-schema";
 import { records as currentRecords, projects } from "../../db/schemas.pg";
-import { type SavedDocumentFixture, seedDocumentHistory } from "./document-history.fixture";
+import { type FileDocumentInput, insertFileDocuments } from "./document-file-persistence";
+import { documentFilesFor } from "./document-files";
 import { createDocumentStorageDBService } from "./document-storage";
 import { canonicalRecordPredicate } from "./ordered-record-row";
 import { lockRecordOwner } from "./record-changes";
@@ -29,7 +30,7 @@ export const seedLegacyBacklog = async (
   const ownerId = await ensureStorageOwner(db, backlogOwner);
   const clean = count / 3;
   for (let offset = 0; offset < count; offset += 100) {
-    const documents: SavedDocumentFixture[] = [];
+    const documents: FileDocumentInput[] = [];
     const records: (typeof currentRecords.$inferInsert)[] = [];
     const frames: (typeof storage_record_outbox.$inferInsert)[] = [];
     for (let index = offset; index < Math.min(count, offset + 100); index++) {
@@ -47,9 +48,12 @@ export const seedLegacyBacklog = async (
       }
       const address = { workbench_id: backlogOwner.workbenchId, extension_id: backlogOwner.extensionId };
       documents.push({
-        owner_id: ownerId,
-        document_id: resourceDocumentId(id),
-        state: Y.encodeStateAsUpdate(document),
+        owner: backlogOwner,
+        ownerId,
+        key: resourceDocumentId(id),
+        kind: "local",
+        snapshot: Y.encodeStateAsUpdate(document),
+        imported: true,
       });
       records.push({
         owner_id: ownerId,
@@ -64,7 +68,7 @@ export const seedLegacyBacklog = async (
       document.destroy();
     }
     await db.transaction(async (tx) => {
-      await seedDocumentHistory(tx, documents);
+      await insertFileDocuments(tx, documentFilesFor(tx), documents);
       await tx.insert(currentRecords).values(records);
       if (frames.length) await tx.insert(storage_record_outbox).values(frames);
     });
