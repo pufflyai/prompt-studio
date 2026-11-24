@@ -31,12 +31,16 @@ export const createTerminalSessionCapability = (input: CreateTerminalSessionCapa
     hostEvents.emit({ scope: TERMINAL_SESSION_EVENT_SCOPE, payload });
   };
 
-  const open = async (request: Extract<TerminalSessionOperation, { operation: "open" }>["request"]) => {
-    if (closing) throw new Error("Terminal owner is closing");
-    const bindingId = crypto.randomUUID();
+  const pruneBindings = () => {
     for (const binding of bindings) {
       if (!captureTerminalBindingStop(terminal, binding, ownerId)) bindings.delete(binding);
     }
+  };
+
+  const open = async (request: Extract<TerminalSessionOperation, { operation: "open" }>["request"]) => {
+    if (closing) throw new Error("Terminal owner is closing");
+    const bindingId = crypto.randomUUID();
+    pruneBindings();
     bindings.add(bindingId);
     try {
       const { sessionId } = await terminal.open({ ownerId, bindingId, transientBinding: true, request });
@@ -94,8 +98,9 @@ export const createTerminalSessionCapability = (input: CreateTerminalSessionCapa
   };
   return Object.assign(capability, {
     captureStop() {
-      if (captured) return captured;
+      pruneBindings();
       if (!bindings.size) return;
+      if (captured) return captured;
       captured = {
         id: ownerId,
         async stop() {

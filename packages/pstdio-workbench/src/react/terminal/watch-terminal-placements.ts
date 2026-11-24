@@ -125,9 +125,15 @@ export const watchClosedTerminalPlacements = (
       if (hiddenMain.has(widgetId) || (scopeChanged && !closedPreviews.has(widgetId)) || currentIds.has(widgetId))
         continue;
       void runUserAction(ctx, "Close terminal", () => {
-        const pending = close(placement, closedProjectId);
         const dispose = () => callbacks?.closePlacement?.(widgetId);
-        return pending ? pending.then(dispose) : dispose();
+        let pending: Promise<void> | undefined;
+        try {
+          pending = close(placement, closedProjectId);
+        } finally {
+          // Navigation has already removed this placement. Always retire its owner.
+          if (!pending) dispose();
+        }
+        return pending?.finally(dispose);
       });
     }
   });

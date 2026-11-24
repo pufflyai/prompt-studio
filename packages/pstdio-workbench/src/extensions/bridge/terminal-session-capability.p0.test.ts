@@ -360,7 +360,11 @@ test("reused webview placement identities have separate project owners", async (
   }
 });
 
-test("a raw webview tab reserves its terminal stop before removing the tab and retains an unconfirmed stop", async () => {
+test.each([
+  "guarded close",
+  "already stopped",
+  "layout departure",
+] as const)("a raw webview at operation capacity handles %s", async (caseName) => {
   const { getBridgeWebviewHostEventPublisher } = await import("./bridge-webview-renderer");
   const { workbench, scripted } = setupTerminal();
   const stop = Promise.withResolvers<void>();
@@ -371,7 +375,7 @@ test("a raw webview tab reserves its terminal stop before removing the tab and r
     return {
       ...scripted.adapter,
       kill() {
-        if (++kills === 1) return stop.promise;
+        if (++kills === 1 && caseName === "guarded close") return stop.promise;
       },
     };
   });
@@ -406,6 +410,21 @@ test("a raw webview tab reserves its terminal stop before removing the tab and r
   );
   try {
     await capability({ operation: "open", request: { cols: 80, rows: 24 } });
+    if (caseName === "already stopped") {
+      await capability({ operation: "kill", sessionId: scripted.adapter.id });
+      await workbench.closePlacement(identity);
+    }
+    if (caseName === "layout departure") workbench.shellPlacements.closePlacement(identity);
+    if (caseName !== "guarded close") {
+      expect(workbench.layout.listPanelInstances().some((panel) => panel.instanceId === instance.instanceId)).toBe(
+        false,
+      );
+      await expect(capability({ operation: "write", sessionId: scripted.adapter.id, data: "retired" })).rejects.toThrow(
+        "disposed",
+      );
+      expect(kills).toBe(1);
+      return;
+    }
     await expect(workbench.closePlacement(identity)).rejects.toThrow("limit");
     expect(kills).toBe(0);
     expect(workbench.layout.listPanelInstances().some((panel) => panel.instanceId === instance.instanceId)).toBe(true);
@@ -423,6 +442,7 @@ test("a raw webview tab reserves its terminal stop before removing the tab and r
   } finally {
     stop.resolve();
     release.resolve();
+    await Promise.all(retained);
     await workbench.dispose();
   }
 });
