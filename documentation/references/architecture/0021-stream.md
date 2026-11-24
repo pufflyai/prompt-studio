@@ -48,7 +48,7 @@ Created once in `app.ts` and passed through `RouteDeps` to every endpoint that p
 
 `GET /v1/sync/stream?since=<seq>` — replays missed events from the ring buffer, then switches to live streaming. Heartbeat every 8-seconds.
 
-A client that reads too slowly gets a new `init` snapshot instead of a growing queue. Once more than 5,000 events or 8 MiB wait unread on its connection, the host drops them and sends current state; rows are replaceable, so the snapshot carries what the dropped events would have. Later events follow with higher sequence numbers.
+When more than 5,000 events or 8 MiB of UTF-8 event data wait unread, the host replaces queued rows with a fresh `init` snapshot. Notifications the snapshot cannot cover stay in order, and the resume cursor advances only past state and notifications the stream has sent. If the retained notifications alone exceed the limit, the host closes the stream so the client can reconnect. Heartbeats report the cursor already sent.
 
 ### Cascade deletes
 

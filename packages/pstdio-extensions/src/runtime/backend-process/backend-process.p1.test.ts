@@ -1376,7 +1376,7 @@ const stopsWithin = async (pid: number) => {
   return !isAlive(pid);
 };
 
-posixOnlyTest("processes extension code starts stop with its worker, whether it is stopped or crashes", async () => {
+test("processes extension code starts stop with its worker", async () => {
   const stopped = await start();
   const left = (await stopped.invoke({
     handlerId: handlerOf(stopped.definition, "orphan"),
@@ -1386,7 +1386,9 @@ posixOnlyTest("processes extension code starts stop with its worker, whether it 
   })) as number;
   await stopped.stop();
   expect(await stopsWithin(left)).toBe(true);
+});
 
+posixOnlyTest("processes extension code starts stop when its worker crashes", async () => {
   const crashing = await start();
   const orphan = (await crashing.invoke({
     handlerId: handlerOf(crashing.definition, "orphan"),
@@ -1398,7 +1400,7 @@ posixOnlyTest("processes extension code starts stop with its worker, whether it 
   expect(await stopsWithin(orphan)).toBe(true);
 });
 
-test("each worker life is recorded with its exit code and peak memory", async () => {
+test("a worker stopped before its first heartbeat records its resident memory", async () => {
   const records: Array<Record<string, unknown>> = [];
   const listener = (message: unknown) => records.push(message as Record<string, unknown>);
   subscribe(runtimeOperationChannel, listener);
@@ -1407,11 +1409,10 @@ test("each worker life is recorded with its exit code and peak memory", async ()
       command: backendWorkerCommand(),
       env: createExtensionProcessEnvironment(),
       entryPath,
-      watchdog: { heartbeatMs: 20 },
     });
-    await Bun.sleep(150);
     await worker.stop();
     const life = records.find((record) => record.kind === "extension.backend.worker");
+    expect(life?.lastRssBytes).toBeGreaterThan(0);
     expect(life?.peakRssBytes).toBeGreaterThan(0);
     expect(life).toHaveProperty("exitCode");
   } finally {
