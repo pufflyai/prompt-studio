@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createExtensionSourceWatcher } from "./extension-source-watcher";
 
+const nativeEventDeadlineMs = 3_000;
+
 test("ignores package directory metadata changes from recursive watchers", async () => {
   const source = mkdtempSync(join(tmpdir(), "extension-dependency-events-"));
   mkdirSync(join(source, "node_modules", "@scope", "package"), { recursive: true });
@@ -48,13 +50,13 @@ test.each([true, false])("refreshes scoped package availability with an existing
   const expectChange = async (operation: () => void) => {
     const before = changes;
     operation();
-    const deadline = Date.now() + 1000;
+    const deadline = Date.now() + nativeEventDeadlineMs;
     while (changes === before && Date.now() < deadline) await Bun.sleep(10);
     expect(changes).toBeGreaterThan(before);
   };
   try {
     // Wait for native events before testing dependency changes; watch registration is asynchronous on macOS.
-    const readyDeadline = Date.now() + 1000;
+    const readyDeadline = Date.now() + nativeEventDeadlineMs;
     while (changes === 0 && Date.now() < readyDeadline) {
       writeFileSync(join(source, "watch-ready.ts"), String(Date.now()));
       await Bun.sleep(10);
@@ -68,7 +70,7 @@ test.each([true, false])("refreshes scoped package availability with an existing
     watcher.dispose();
     rmSync(source, { recursive: true, force: true });
   }
-});
+}, 12_000);
 
 test("observes a package installed immediately after its new scope is detected", async () => {
   const source = mkdtempSync(join(tmpdir(), "extension-scope-registration-"));
@@ -88,16 +90,49 @@ test("observes a package installed immediately after its new scope is detected",
     },
   });
   try {
-    const readyDeadline = Date.now() + 1000;
+    const readyDeadline = Date.now() + nativeEventDeadlineMs;
     while (!ready && Date.now() < readyDeadline) {
       writeFileSync(join(source, "watch-ready.ts"), String(Date.now()));
       await Bun.sleep(10);
     }
     expect(ready).toBe(true);
     mkdirSync(scope);
-    const deadline = Date.now() + 1000;
+    const deadline = Date.now() + nativeEventDeadlineMs;
     while (!packageObserved && Date.now() < deadline) await Bun.sleep(10);
     expect(packageObserved).toBe(true);
+  } finally {
+    watcher.dispose();
+    rmSync(source, { recursive: true, force: true });
+  }
+}, 12_000);
+
+test("a queued dependency notification cannot reopen closed watches", async () => {
+  const source = mkdtempSync(join(tmpdir(), "extension-disposed-dependency-watcher-"));
+  const dependencyRoot = join(source, "node_modules");
+  mkdirSync(dependencyRoot, { recursive: true });
+  const listeners = new Map<string, (type: string, filename: string | null) => void>();
+  let changes = 0;
+  const watcher = await createExtensionSourceWatcher({
+    listInstalledSources: async () => [{ install_name: "source", source_path: source }],
+    onSourceChanged: async () => {
+      changes++;
+    },
+    watch: (path, listener) => {
+      listeners.set(path, listener);
+      return {
+        close: () => {
+          listeners.delete(path);
+        },
+      };
+    },
+  });
+  try {
+    const delayed = listeners.get(dependencyRoot)!;
+    watcher.dispose();
+    mkdirSync(join(dependencyRoot, "@later"));
+    delayed("rename", "@later");
+    expect(listeners.size).toBe(0);
+    expect(changes).toBe(0);
   } finally {
     watcher.dispose();
     rmSync(source, { recursive: true, force: true });
