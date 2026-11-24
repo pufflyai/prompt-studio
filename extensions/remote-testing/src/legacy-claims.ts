@@ -35,8 +35,9 @@ function expiredLease(claim: Claim) {
 
 async function reconcileTerminalClaim(store: ExtensionStorageApi, claim: Claim, run: RunRecord) {
   const summary = run.summary;
-  // A historical final receipt proves completion; an admission failure or a
-  // synthetic deadline result does not prove that accepted work has stopped.
+  // The old collector persisted logs only after a finalized receipt. Logged
+  // errors therefore prove completion; launch errors (no log) and synthetic
+  // deadlines still cannot prove that accepted work has stopped.
   if (
     run.runId !== claim.runId ||
     run.pendingResult ||
@@ -44,7 +45,8 @@ async function reconcileTerminalClaim(store: ExtensionStorageApi, claim: Claim, 
     !summary ||
     summary.runId !== run.runId ||
     summary.environmentId !== run.environmentId ||
-    !["passed", "failed", "canceled", "timed_out"].includes(summary.status) ||
+    (!["passed", "failed", "canceled", "timed_out"].includes(summary.status) &&
+      !(summary.status === "error" && summary.logPath)) ||
     (summary.status === "timed_out" && summary.error)
   )
     return;

@@ -82,6 +82,57 @@ test.each([
   expect((await f.store.get<RunRecord>("run:old"))?.summary).toEqual(f.record.summary);
 });
 
+// Immutable pre-upgrade collector 739a3aa saves these only after a finalized
+// receipt and successful log persistence. Its launch-error path has no logPath.
+const loggedLegacyErrors = [
+  { kind: "runner marker error", error: "Runner failed", durationMs: 37 },
+  { kind: "controller response without marker", error: "Controller failed", durationMs: 43 },
+  { kind: "missing response outcome", error: "null", durationMs: 47 },
+];
+
+test.each(loggedLegacyErrors)("recovery releases a kept legacy finalized error with a saved log ($kind)", async ({
+  error,
+  durationMs,
+}) => {
+  const f = await fixture("error");
+  const summary = { ...f.record.summary!, error, durationMs, logPath: "runs/old.log", tail: "retained error log" };
+  await f.store.set("run:old", { ...f.record, summary });
+  await recoverEnvironmentCleanup.run(f.ctx, {});
+  expect(await activeRun(f.store, "env")).toBeNull();
+  expect(await claimEnvironment(f.store, "env", "replacement")).toBe(true);
+  expect(f.requests).toEqual([]);
+  expect(f.queued).toEqual([]);
+  expect((await f.store.get<RunRecord>("run:old"))?.summary).toEqual(summary);
+});
+
+test.each([
+  "identity mismatch",
+  "live setup",
+  "pending admission",
+  "synthetic timeout",
+])("a saved log cannot bypass the legacy safety fence (%s)", async (kind) => {
+  const f = await fixture("error");
+  const record: RunRecord = {
+    ...f.record,
+    summary: { ...f.record.summary!, error: "Runner failed", logPath: "runs/old.log" },
+  };
+  if (kind === "identity mismatch") record.summary!.environmentId = "another-environment";
+  if (kind === "live setup")
+    await f.store.collection<Claim>("environment-claims").put("env", {
+      runId: "old",
+      until: Date.now() - 1,
+      setup: { until: Date.now() + 3600_000, stop: false, environmentId: "env" },
+    });
+  if (kind === "pending admission") record.submissionPending = true;
+  if (kind === "synthetic timeout") record.summary!.status = "timed_out";
+  await f.store.set("run:old", record);
+  await recoverEnvironmentCleanup.run(f.ctx, {});
+  expect(await activeRun(f.store, "env")).toBe("old");
+  expect(await claimEnvironment(f.store, "env", "replacement")).toBe(false);
+  expect(f.requests).toEqual([]);
+  expect(f.queued).toEqual([]);
+});
+
 test.each([
   "existing stop intent",
   "stop after run",
@@ -143,8 +194,16 @@ test.each([
   expect(f.requests).toEqual([]);
 });
 
-test("legacy terminal release cannot delete a claim replaced by live setup during reconciliation", async () => {
-  const f = await fixture();
+test.each([
+  "passed",
+  "error",
+] as const)("legacy terminal release preserves a replaced live setup (%s)", async (status) => {
+  const f = await fixture(status);
+  if (status === "error")
+    await f.store.set("run:old", {
+      ...f.record,
+      summary: { ...f.record.summary!, error: "Runner failed", logPath: "runs/old.log" },
+    });
   const collection = f.store.collection.bind(f.store);
   let raced = false;
   const replacement: Claim = {
