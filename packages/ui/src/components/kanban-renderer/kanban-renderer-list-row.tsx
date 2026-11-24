@@ -14,7 +14,7 @@ const getDropTargetIndicatorProps = (isDropTarget: boolean, isGroup: boolean) =>
     _before: {
       content: '""',
       position: "absolute",
-      bg: "border.accent",
+      bg: "bg.drop",
       left: "0",
       top: "0",
       width: isGroup ? "3px" : "100%",
@@ -215,7 +215,8 @@ export const KanbanRendererListRow = (props: KanbanRendererListRowProps) => {
       position="relative"
       borderBottomWidth="1px"
       borderBottomColor="border.subtle"
-      bg={isDropTarget ? "bg.subtle" : "transparent"}
+      bg={isDropTarget ? undefined : "transparent"}
+      layerStyle={isDropTarget ? "dropTarget" : undefined}
       draggable={item.draggable}
       transition="background 120ms ease"
       {...getDropTargetIndicatorProps(isDropTarget, canExpand)}

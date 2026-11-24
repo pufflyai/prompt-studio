@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
 import { existsSync, realpathSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { e2eExtensions } from "../default-extensions";
+import { waitForDefaultExtensions } from "../scripts/default-extensions-readiness";
 import { cleanupDirs, createProjectViaApi, createTempDir, runPstdioAsync } from "./helpers";
 import { waitFor } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
@@ -11,6 +12,7 @@ let api: ApiInstance;
 const dirs: string[] = [];
 beforeAll(async () => {
   api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture") } });
+  await waitForDefaultExtensions(api.process, api.logPath);
 }, SETUP_TIMEOUT);
 afterAll(async () => {
   await api?.stop();

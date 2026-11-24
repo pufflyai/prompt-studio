@@ -41,12 +41,22 @@
     }
   },
   "appearance": {
+    "showSidePanelBubble": "Mostrar burbuja del panel lateral",
     "title": "Apariencia",
     "description": "Elige cómo se ve Prompt Studio. También puedes cambiar el tema con Alt+Shift+T.",
     "theme": "Tema",
     "themeHelper": "Se aplica a todos los proyectos.",
     "openRelatedResources": "Abrir recursos relacionados",
-    "openRelatedResourcesHelper": "Abrir automáticamente un recurso relacionado reciente de cada tipo como vista previa sin fijar."
+    "openRelatedResourcesHelper": "Abrir automáticamente un recurso relacionado reciente de cada tipo como vista previa sin fijar.",
+    "defaultSidePanel": "Panel lateral predeterminado",
+    "defaultSidePanelHelper": "Se abre al hacer clic en la burbuja.",
+    "defaultPanel": "Predeterminado ({{panel}})",
+    "newSession": "Nueva sesión",
+    "sidePanel": "Panel lateral",
+    "unavailableSidePanel": "Panel no disponible",
+    "floatingPanelMovement": "Movimiento del panel flotante",
+    "snapToAlignment": "Ajustar a la alineación",
+    "moveFreely": "Mover libremente"
   },
   "updates": {
     "title": "Canal de actualización",

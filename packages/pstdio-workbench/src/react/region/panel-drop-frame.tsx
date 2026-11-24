@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useShallow } from "zustand/react/shallow";
 import type { WorkbenchCore } from "../../core";
 import {
+  panelPositions,
   resolveArrangement,
   resolvePanelPosition,
   type WorkbenchPanelPosition,
@@ -34,6 +35,9 @@ const PanelInsertionTarget = (props: PanelInsertionTargetProps) => {
   });
   const highlighted = panel ? panelDrop === edge : drop?.region === region && drop.panelPosition === edge;
   const vertical = edge === "left" || edge === "right";
+  const footprint = vertical
+    ? { w: "3", h: "full", "data-orientation": "vertical" }
+    : { w: "full", h: "3", "data-orientation": "horizontal" };
   const targetId = panel ? `panel-${edge}` : region;
   return (
     <>
@@ -44,8 +48,7 @@ const PanelInsertionTarget = (props: PanelInsertionTargetProps) => {
           data-workbench-edge-position={edge}
           position="absolute"
           {...tabEdgeAnchors[edge]}
-          w={vertical ? "12" : "full"}
-          h={vertical ? "full" : "12"}
+          {...footprint}
           zIndex="overlay"
         />
       ) : null}
@@ -57,8 +60,7 @@ const PanelInsertionTarget = (props: PanelInsertionTargetProps) => {
           data-drop-active={highlighted || undefined}
           position="relative"
           flexShrink={0}
-          w={vertical ? "12" : "full"}
-          h={vertical ? "full" : "12"}
+          {...footprint}
           layerStyle="panelDropZone"
         />
       ) : null}
@@ -89,7 +91,10 @@ export const WorkbenchPanelDropFrame = (props: WorkbenchPanelDropFrameProps) => 
         const open = workbench.shell.getPanelPolicy(region).open;
         const widgets = state.layout.regions[region].widgets;
         const lastTab = widgets.length === 1 && widgets[0]?.widgetId === activeId;
-        const positions = workbench.shell.getPanelPositions(region);
+        // Cross-region swaps belong to whole-panel drags; a tab keeps its destination region.
+        const positions = workbench.shell
+          .getPanelPositions(region)
+          .filter((edge) => panelPositions[region].some((position) => position === edge));
         if (!open) return positions.length ? positions : [arrangement[region]];
         if (lastTab) return positions.filter((edge) => edge !== current);
       }
