@@ -8,7 +8,11 @@ import {
 import { redactSensitiveText } from "pstdio-logging";
 import { apiLogger } from "../../lib/logger";
 import { resolveProcessEnvironmentCommand } from "./process-command";
-import { type ProcessEnvironmentLease, ProcessEnvironmentPermissionError } from "./process-environment/permissions";
+import {
+  type ProcessEnvironmentLease,
+  ProcessEnvironmentPermissionError,
+  type ProcessEnvironmentPermissions,
+} from "./process-environment/permissions";
 import { processGroupExited, signalProcessTree } from "./process-group";
 
 type ProcessSpawner = typeof Bun.spawn;
@@ -105,11 +109,32 @@ export interface ProcessApiOptions {
    * cannot receive host values; host-level probes have no extension grant to use.
    */
   hostEnvironment?: (names: string[]) => Promise<ProcessEnvironmentLease>;
+  /**
+   * The names the user allowed for a process the host starts for an extension, such as a harness's
+   * or a workspace provider's. Such a process gets them without asking, through `hostEnvironment`.
+   */
+  grantedNames?: () => Promise<string[]>;
   /** Invocation that owns the spawned children. Absent for host-level probes. */
   scope?: InvocationScope;
   resolveCwd?: (input: ProcessRunInput) => Promise<string>;
   spawner?: ProcessSpawner;
 }
+
+/**
+ * Grant options for a process the host starts for an extension in a project. Outside a project,
+ * such as harness detection at startup, there is no grant to use.
+ */
+export const hostStartedGrants = (
+  permissions: Pick<ProcessEnvironmentPermissions, "grantedNames" | "authorizeCurrent"> | undefined,
+  projectId: string | undefined,
+  extensionId: string,
+): Pick<ProcessApiOptions, "grantedNames" | "hostEnvironment"> =>
+  permissions && projectId
+    ? {
+        grantedNames: () => permissions.grantedNames(projectId, extensionId),
+        hostEnvironment: (names) => permissions.authorizeCurrent(projectId, extensionId, names),
+      }
+    : {};
 
 export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunnerEnvironment["process"] => {
   const spawner = options.spawner ?? Bun.spawn;
@@ -138,7 +163,9 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
   // Granted values go into the child's environment only. A child that echoes one does not hand
   // it back to the extension through the result.
   const prepareEnvironment = async (input: ProcessRunInput) => {
-    const names = input.envFromHost ?? [];
+    // A granted name the host has no value for is skipped rather than failing a host-started process.
+    const names =
+      input.envFromHost ?? (await options.grantedNames?.())?.filter((name) => process.env[name] !== undefined) ?? [];
     if (names.length === 0)
       return {
         env: createExtensionProcessEnvironment(process.env, input.env, process.platform),
@@ -147,7 +174,7 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
     if (!options.hostEnvironment)
       throw new ProcessEnvironmentPermissionError(
         "process_environment_not_granted",
-        "envFromHost is only available to extension commands, hooks and schedules.",
+        "envFromHost is only available in a project, to extension commands, hooks, schedules, harnesses and workspace providers.",
       );
     const lease = await options.hostEnvironment(names);
     try {

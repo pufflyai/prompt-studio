@@ -268,3 +268,38 @@ describe("process environment permissions", () => {
     });
   });
 });
+
+// Awaited before matching: the outcome is read without an expect(promise) matcher.
+const refusal = async (work: Promise<unknown>) => {
+  try {
+    await work;
+    return "allowed";
+  } catch (error) {
+    return String(error);
+  }
+};
+
+describe("process environment grants for host-started processes", () => {
+  test("host-started processes get the names granted for the extension's current source in the project", async () => {
+    const { permissions, sources, source } = setup();
+    const { sourceIdentity } = await permissions.read("project-1", "acme.agent");
+    expect(await permissions.grantedNames("project-1", "acme.agent")).toEqual([]);
+    await permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity });
+
+    expect(await permissions.grantedNames("project-1", "acme.agent")).toEqual(["GH_TOKEN"]);
+    expect(await permissions.grantedNames("project-2", "acme.agent")).toEqual([]);
+    expect(await permissions.grantedNames("project-1", "other.agent")).toEqual([]);
+    const lease = await permissions.authorizeCurrent("project-1", "acme.agent", ["GH_TOKEN"]);
+    lease.release();
+
+    // Changed source content needs a new grant before its processes get the name again.
+    sources.set("project-1", source("hash-2"));
+    expect(await permissions.grantedNames("project-1", "acme.agent")).toEqual([]);
+    expect(await refusal(permissions.authorizeCurrent("project-1", "acme.agent", ["GH_TOKEN"]))).toContain(
+      "not granted",
+    );
+    expect(await refusal(permissions.authorizeCurrent("project-1", "other.agent", ["GH_TOKEN"]))).toContain(
+      "not enabled",
+    );
+  });
+});
