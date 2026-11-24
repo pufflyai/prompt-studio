@@ -284,3 +284,51 @@ describe("stream bootstrap race condition", () => {
     }
   });
 });
+
+describe("stream queue limits", () => {
+  test("the queue counts multibyte payloads in UTF-8 bytes", async () => {
+    const eventBus = new EventBus();
+    const row = { id: "漢".repeat(30) };
+    let snapshots = 0;
+    const syncService = {
+      getFullState: async () => ({ sessions: ++snapshots === 1 ? [] : [row] }),
+    };
+    const app = new Hono().get("/stream", streamHandler({ eventBus, syncService }, { events: 10, bytes: 96 }));
+    const sse = createSSEReader(await app.request("/stream"));
+    try {
+      await sse.readEvents(1);
+      eventBus.emit("sessions", "set", row);
+      expect(await sse.readEvents(1)).toEqual([{ event: "init", data: { tables: { sessions: [row] }, seq: 1 } }]);
+    } finally {
+      await sse.close();
+    }
+  });
+
+  test("notification overflow closes a stream while its initial snapshot is pending", async () => {
+    const snapshot = Promise.withResolvers<Record<string, unknown[]>>();
+    let subscriptions = 0;
+    const eventBus = new (class extends EventBus {
+      override subscribe(cb: Parameters<EventBus["subscribe"]>[0]) {
+        subscriptions++;
+        const unsubscribe = super.subscribe(cb);
+        return () => {
+          subscriptions--;
+          unsubscribe();
+        };
+      }
+    })();
+    const syncService = { getFullState: () => snapshot.promise };
+    const app = new Hono().get("/stream", streamHandler({ eventBus, syncService }, { events: 1, bytes: 4096 }));
+    const response = await app.request("/stream");
+    try {
+      expect(subscriptions).toBe(1);
+      eventBus.emit("extension_events", "set", { id: "first" });
+      eventBus.emit("extension_events", "set", { id: "second" });
+      expect(subscriptions).toBe(0);
+      expect(await response.text()).toBe("");
+    } finally {
+      snapshot.resolve({ sessions: [] });
+      if (!response.bodyUsed) await response.body?.cancel();
+    }
+  });
+});

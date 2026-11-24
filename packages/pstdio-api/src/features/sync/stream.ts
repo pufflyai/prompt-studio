@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import type { Context } from "hono";
 import { streamSSE } from "hono/streaming";
 import { apiLogger } from "../../lib/logger";
@@ -27,131 +28,148 @@ const formatSSE = (event: SyncEvent) => ({
   id: String(event.seq),
 });
 
-export const streamHandler = (deps: StreamDeps, limits = SYNC_STREAM_LIMITS) => {
+type QueuedEvent = {
+  seq: number;
+  notice: boolean;
+  bytes: number;
+  message: ReturnType<typeof formatSSE>;
+};
+
+export const streamHandler = (deps: StreamDeps, limits = SYNC_STREAM_LIMITS, heartbeatMs = 8_000) => {
   return (c: Context<AppBindings>) => {
     const sinceParam = c.req.query("since");
     const since = sinceParam ? Number(sinceParam) : null;
 
     return streamSSE(c, async (stream) => {
-      // Subscribe BEFORE the snapshot so events emitted during bootstrap are queued, not lost.
-      // The same bounded queue then serves the live stream.
-      // `kept` marks notifications a replacement snapshot skipped over; they are sent after it.
-      const queue: { seq: number; table: string; kept: boolean; message: ReturnType<typeof formatSSE> }[] = [];
+      const queue: QueuedEvent[] = [];
       let queuedBytes = 0;
       let resnapshot = false;
       let live = false;
       let draining = false;
-      let snapshotSeq = 0;
-      // Ending the stream makes the client reconnect and start over from current state.
+      let coveredRowsSeq = 0;
+      let replayedSeq = 0;
+      let deliveredSeq = since ?? 0;
+      let heartbeat: ReturnType<typeof setTimeout>;
       const ending = Promise.withResolvers<void>();
       let ended = false;
-      const end = (error: unknown) => {
+
+      const end = (error?: unknown) => {
         if (ended) return;
         ended = true;
+        cleanup();
+        clearTimeout(heartbeat);
         queue.length = 0;
         queuedBytes = 0;
-        apiLogger.warn({ err: error, event: "sync_stream_ended" }, "Sync stream ended so the client reconnects");
+        stream.abort();
         ending.resolve();
+        if (error !== undefined)
+          apiLogger.warn({ err: error, event: "sync_stream_ended" }, "Sync stream ended so the client reconnects");
+      };
+
+      const write = async (message: Parameters<typeof stream.writeSSE>[0], seq: number) => {
+        if (ended) return;
+        await stream.writeSSE(message);
+        deliveredSeq = Math.max(deliveredSeq, seq);
       };
 
       const writeSnapshot = async () => {
-        // Capture seq before reading so events emitted during the read are replayed
-        snapshotSeq = deps.eventBus.seq;
+        const seq = deps.eventBus.seq;
         const tables = await deps.syncService.getFullState();
-        await stream.writeSSE({
-          data: JSON.stringify({ tables, seq: snapshotSeq }),
-          event: "init",
-        });
+        if (ended) return;
+        coveredRowsSeq = seq;
+        // A snapshot covers rows, but reconnect must still replay any older notices we have not sent.
+        const firstNotice = queue.find((event) => event.notice && event.seq > replayedSeq);
+        const resumeSeq = firstNotice ? Math.min(seq, firstNotice.seq - 1) : seq;
+        await write({ data: JSON.stringify({ tables, seq: resumeSeq }), event: "init" }, resumeSeq);
       };
 
+      const hasPending = () => resnapshot || queue.length > 0;
+      const needsSnapshot = () => resnapshot && (queue[0]?.seq ?? Infinity) > coveredRowsSeq;
       const writeQueued = async () => {
-        while (resnapshot || queue.length > 0) {
-          if (resnapshot) {
+        while (!ended && hasPending()) {
+          // Finish sending notices already covered by the last snapshot before starting another.
+          if (needsSnapshot()) {
             resnapshot = false;
             await writeSnapshot();
             continue;
           }
-          const { seq, kept, message } = queue.shift()!;
-          queuedBytes -= message.data.length;
-          if (kept || seq > snapshotSeq) await stream.writeSSE(message);
+          const event = queue.shift()!;
+          queuedBytes -= event.bytes;
+          const covered = event.notice ? replayedSeq : coveredRowsSeq;
+          if (event.seq > covered) await write(event.message, event.seq);
         }
       };
 
-      const drain = async () => {
+      const drain = () => {
         if (draining || !live || ended) return;
         draining = true;
-        try {
-          await writeQueued();
+        void writeQueued().then(() => {
           draining = false;
+          if (hasPending()) drain();
+        }, end);
+      };
+
+      const overLimit = () => queue.length > limits.events || queuedBytes > limits.bytes;
+      const enqueue = (event: SyncEvent) => {
+        const notice = !snapshotTables.has(event.table);
+        if (resnapshot && !notice) return;
+        const message = formatSSE(event);
+        const bytes = Buffer.byteLength(message.data);
+        queue.push({ seq: event.seq, notice, bytes, message });
+        queuedBytes += bytes;
+        if (!overLimit()) return;
+
+        const notices = queue.filter((entry) => entry.notice);
+        queue.splice(0, queue.length, ...notices);
+        queuedBytes = notices.reduce((total, entry) => total + entry.bytes, 0);
+        resnapshot = true;
+        if (overLimit()) end(new Error("Notifications a sync client has not read passed the stream's limit."));
+      };
+
+      // Subscribe before the initial snapshot or replay to retain events that arrive during either.
+      const cleanup = deps.eventBus.subscribe((event) => {
+        if (ended) return;
+        try {
+          enqueue(event);
+          drain();
+        } catch (error) {
+          end(error);
+        }
+      });
+      stream.onAbort(() => end());
+
+      const writeInitialEvents = async () => {
+        const minSeq = deps.eventBus.minSeq();
+        if (since === null || minSeq === null || since < minSeq - 1) {
+          await writeSnapshot();
+          return;
+        }
+        const missed = deps.eventBus.getSince(since);
+        replayedSeq = missed.at(-1)?.seq ?? since;
+        coveredRowsSeq = replayedSeq;
+        for (const event of missed) {
+          if (ended) return;
+          await write(formatSSE(event), event.seq);
+        }
+      };
+
+      const sendHeartbeat = async () => {
+        try {
+          // Keep the connection alive without acknowledging a snapshot or events still in flight.
+          const seq = deliveredSeq;
+          await write({ data: JSON.stringify({ seq }), event: "heartbeat" }, seq);
+          if (!ended) heartbeat = setTimeout(sendHeartbeat, heartbeatMs);
         } catch (error) {
           end(error);
         }
       };
 
-      const overLimit = () => queue.length > limits.events || queuedBytes > limits.bytes;
-      const cleanup = deps.eventBus.subscribe((event) => {
-        if (ended) return;
-        const notice = !snapshotTables.has(event.table);
-        // A pending replacement snapshot carries every row, but no notifications.
-        if (!resnapshot || notice) {
-          const message = formatSSE(event);
-          queue.push({ seq: event.seq, table: event.table, kept: resnapshot, message });
-          queuedBytes += message.data.length;
-          if (overLimit()) {
-            // The client fell behind: drop the rows it has not read and send current state instead.
-            const notices = queue.filter((entry) => !snapshotTables.has(entry.table));
-            queue.splice(0, queue.length, ...notices.map((entry) => ({ ...entry, kept: true })));
-            queuedBytes = notices.reduce((total, entry) => total + entry.message.data.length, 0);
-            resnapshot = true;
-            if (overLimit()) end(new Error("Notifications a sync client has not read passed the stream's limit."));
-          }
-        }
-        void drain();
-      });
-
-      stream.onAbort(() => {
-        cleanup();
-      });
-
-      const writeMissedEvents = async (sinceSeq: number) => {
-        const missed = deps.eventBus.getSince(sinceSeq);
-        snapshotSeq = missed.length > 0 ? missed[missed.length - 1].seq : sinceSeq;
-        for (const event of missed) {
-          await stream.writeSSE(formatSSE(event));
-        }
-      };
-
-      const writeInitialEvents = async () => {
-        if (since === null) {
-          await writeSnapshot();
-          return;
-        }
-
-        const minSeq = deps.eventBus.minSeq();
-        const gapDetected = minSeq === null || since < minSeq;
-
-        if (gapDetected) {
-          await writeSnapshot();
-          return;
-        }
-
-        await writeMissedEvents(since);
-      };
-
-      try {
-        await writeInitialEvents();
+      heartbeat = setTimeout(sendHeartbeat, heartbeatMs);
+      void writeInitialEvents().then(() => {
         live = true;
-        await drain();
-
-        while (!ended) {
-          await Promise.race([stream.sleep(8_000), ending.promise]);
-          if (ended) break;
-          const seq = deps.eventBus.seq;
-          await stream.writeSSE({ data: JSON.stringify({ seq }), event: "heartbeat" });
-        }
-      } finally {
-        cleanup();
-      }
+        drain();
+      }, end);
+      await ending.promise;
     });
   };
 };
