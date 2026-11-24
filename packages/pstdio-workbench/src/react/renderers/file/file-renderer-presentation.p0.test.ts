@@ -2,6 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { resolveFileRendererPresentation } from "./file-renderer-presentation";
 
 describe("resolveFileRendererPresentation", () => {
+  test("opens log files in the code editor with plain-text highlighting", () => {
+    expect(
+      resolveFileRendererPresentation({ fileName: "test.log", mimeType: "text/plain", content: "# raw log" }, true),
+    ).toEqual({ kind: "code", isEditable: true, language: "plaintext" });
+  });
+
   test("uses Monaco for explicitly requested workspace text", () => {
     expect(
       resolveFileRendererPresentation(

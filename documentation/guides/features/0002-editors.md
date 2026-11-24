@@ -18,7 +18,7 @@ Tools bring their own editors. Notes, for example, opens each note in a Markdown
 
 For a native editor, declare a view with `defineView` and a body of `kind: "file"`:
 
-- `load` returns the content and a `fileName` or `mimeType`. The host uses them to choose a Markdown editor, a code editor, or an image preview.
+- `load` returns the content and a `fileName` or `mimeType`. Images open in an image preview. Files ending in `.md`, `.markdown`, or `.txt` open in the document editor; other named files open in the code editor, with plain-text highlighting for unknown formats. Unnamed documents use the document editor.
 - `save` receives the edited content. Leave it out to make the editor read-only.
 - `saveMode` is `"auto"` by default. Set `"manual"` to save only when the person chooses Save.
 
