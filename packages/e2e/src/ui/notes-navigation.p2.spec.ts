@@ -180,16 +180,24 @@ test("keeps note titles independent of the body and renames them through the con
     const renameRoute = "**/extensions/commands/pstdio.notes.command.notes.rename/execute";
     const releaseRename = Promise.withResolvers<void>();
     const heldRename = Promise.withResolvers<void>();
+    const committedRename = Promise.withResolvers<void>();
     await page.route(
       renameRoute,
       async (route) => {
         heldRename.resolve();
         await releaseRename.promise;
-        await route.continue();
+        try {
+          const saved = await route.fetch();
+          expect((await saved.json()).outcome.ok).toBe(true);
+          committedRename.resolve();
+        } catch (error) {
+          committedRename.reject(error);
+        } finally {
+          await route.abort();
+        }
       },
       { times: 1 },
     );
-    const saved = page.waitForResponse(renameRoute);
     const renamed = sidebar.getByRole("option", { name: "Renamed title", exact: true });
     try {
       await dialog.getByRole("button", { name: "Run", exact: true }).click();
@@ -200,7 +208,15 @@ test("keeps note titles independent of the body and renames them through the con
     } finally {
       releaseRename.resolve();
     }
-    expect((await (await saved).json()).outcome.ok).toBe(true);
+    await committedRename.promise;
+    const activity = page.locator('[data-status-bar-item="workbench.system-activity"]');
+    await activity.click();
+    const check = page.getByRole("button", { name: "Check again", exact: true });
+    await expect(check).toBeVisible();
+    const readBack = page.waitForResponse("**/extensions/commands/pstdio.notes.command.notes.check-title/execute");
+    await check.click();
+    expect((await (await readBack).json()).outcome).toMatchObject({ ok: true, value: { confirmed: true } });
+    await expect(check).toHaveCount(0);
     await expect(editor).toHaveText(body);
     expect(await mountedEditor!.evaluate((node) => node.isConnected)).toBe(true);
     expect(documentReads).toEqual([]);

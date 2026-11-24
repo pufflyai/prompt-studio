@@ -86,6 +86,7 @@ test("checks an unconfirmed review by its exact anchor and only replaces an expl
   const opened: string[] = [];
   let creates = 0;
   let showCreatedSession = false;
+  let failReplacementRead = false;
   const [ctx] = makeCommandArgs({
     storage,
     params: {},
@@ -105,6 +106,7 @@ test("checks an unconfirmed review by its exact anchor and only replaces an expl
             includeArchived: true,
             limit: 1,
           });
+          if (failReplacementRead && query?.anchor?.id.endsWith(":replacement")) throw new Error("Pending read");
           const session = linked.get(query?.anchor?.id ?? "");
           return { items: showCreatedSession && session ? [session] : [], nextCursor: null };
         },
@@ -133,9 +135,15 @@ test("checks an unconfirmed review by its exact anchor and only replaces an expl
   await expect(launchGateCommand.run(ctx, { ticket, after: "another-session" })).resolves.toMatchObject({
     id: "review-1",
   });
-  await expect(launchGateCommand.run(ctx, { ticket, after: "review-1" })).resolves.toMatchObject({ id: "review-2" });
+  await expect(
+    launchGateCommand.run(ctx, { ticket, after: "review-1", attemptId: "replacement" }),
+  ).resolves.toMatchObject({ id: "review-2" });
+  failReplacementRead = true;
+  await expect(launchGateCommand.run(ctx, { ticket, attemptId: result.launchAttemptId })).resolves.toMatchObject({
+    id: "review-1",
+  });
   expect(creates).toBe(2);
-  expect(opened).toEqual(["review-1", "review-1", "review-1", "review-2"]);
+  expect(opened).toEqual(["review-1", "review-1", "review-1", "review-2", "review-1"]);
 });
 
 test("releases a definitively refused launch and preserves a prior completed review when replacement is refused", async () => {

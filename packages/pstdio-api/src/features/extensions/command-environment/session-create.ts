@@ -18,8 +18,8 @@ import { createRemoteSession } from "./session-remote";
 
 // The local session scheduler has not been called when this error is raised.
 class SessionCreateRefused extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(reason: unknown) {
+    super(reason instanceof Error ? reason.message : String(reason), { cause: reason });
     this.name = "SessionCreateRefused";
   }
 }
@@ -70,6 +70,9 @@ export const createScopedSession = async (
 
   const model = await resolveCreateSessionModel(harness.model, project, agentId, deps.harnessRegistry, {
     requestAgentWasOmitted: !harness.agent,
+  }).catch((error: unknown) => {
+    input.signal?.throwIfAborted();
+    throw new SessionCreateRefused(error);
   });
   // Same resolution as REST sessions: harness defaults, project defaults, then the extension's choice.
   const params = await resolveHarnessRunParams(deps, {

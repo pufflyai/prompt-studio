@@ -2,6 +2,7 @@
 import {
   type CommandContext,
   defineCommand,
+  l10n,
   params,
   type ResourceAnchor,
   sessionBrowser,
@@ -39,11 +40,6 @@ class GateLaunchRefused extends Error {
   }
 }
 
-const gateReservationError = (ownerId?: string, attemptId?: string) =>
-  attemptId && attemptId !== ownerId
-    ? new GateLaunchRefused("Another review changed the gate before this launch started.")
-    : new GateLaunchUnconfirmed();
-
 const launchAnchor = (ctx: CommandContext, ticket: string, attempt: string): ResourceAnchor => ({
   type: "planner-gate-launch",
   id: `${ticket}:${attempt}`,
@@ -70,6 +66,16 @@ function openGateReview(ctx: CommandContext, session: { id: string; title: strin
   });
 }
 
+async function recoverCompetingLaunch(ctx: CommandContext, ticketId: string, ownerId?: string, attemptId?: string) {
+  if (!attemptId || attemptId === ownerId) throw new GateLaunchUnconfirmed();
+  const earlier = await readGateLaunch(ctx, ticketId, attemptId).catch(() => {
+    throw new GateLaunchUnconfirmed();
+  });
+  if (!earlier) throw new GateLaunchRefused("Another review changed the gate before this launch started.");
+  openGateReview(ctx, earlier);
+  return { ...earlier, type: "session" as const };
+}
+
 async function requireOpenGate(ctx: CommandContext, ticket: string) {
   const row = await findTicket(ctx, ticket);
   if (!row || row.archived) throw new GateLaunchRefused("Unknown ticket.");
@@ -80,7 +86,7 @@ async function requireOpenGate(ctx: CommandContext, ticket: string) {
 
 export const checkGateLaunchCommand = defineCommand({
   id: "timeline.gate.check-launch",
-  title: "Check gate review launch",
+  title: l10n("timeline.gate.checkLaunch.title", "Check gate review launch"),
   cli: { description: "Check whether an agent gate already launched its review session." },
   params: { ticket: params.text({ required: true }), attemptId: params.text() },
   async run(ctx, { ticket, attemptId }) {
@@ -111,7 +117,7 @@ export const launchGateCommand = defineCommand({
     const current = await launches.read(row.id);
     if (current) {
       const session = await readGateLaunch(ctx, row.id, current.value.launchId).catch(() => undefined);
-      if (!session) throw gateReservationError(current.value.launchId, attemptId);
+      if (!session) return recoverCompetingLaunch(ctx, row.id, current.value.launchId, attemptId);
       if (after !== session.id || isLiveSession(session) || attemptId === current.value.launchId) {
         openGateReview(ctx, session);
         return { ...session, type: "session" as const };
@@ -133,7 +139,12 @@ export const launchGateCommand = defineCommand({
     const reserved = current
       ? await launches.updateIfUnchanged(row.id, current.revision, launch)
       : await launches.createIfAbsent(row.id, launch);
-    if (!reserved) throw gateReservationError((await launches.get(row.id))?.launchId, launch.launchId);
+    if (!reserved) {
+      const owner = await launches.get(row.id).catch(() => {
+        throw new GateLaunchUnconfirmed();
+      });
+      return recoverCompetingLaunch(ctx, row.id, owner?.launchId, launch.launchId);
+    }
     try {
       const session = await ctx.sessions.create({
         title: `Review gate: ${row.shorthand}`,

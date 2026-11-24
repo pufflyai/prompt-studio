@@ -55,4 +55,27 @@ describe("runAttemptCommand review requests", () => {
 
     await expect(run).rejects.toThrow(`${ticket.shorthand} can't start`);
   });
+
+  test("a missing Git base refuses before workspace or session creation", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ready" } }));
+    const launch = runAttemptCommand.run(
+      ...makeCommandArgs({
+        storage,
+        params: { ticket: ticket.shorthand, workspace: { providerId: "pstdio.worktree", params: { base: "removed" } } },
+        overrides: {
+          process: { run: async () => ({ exitCode: 128, stdout: "", stderr: "Unknown revision" }) },
+          sessions: {
+            create: async () => {
+              throw new Error("Unexpected session write");
+            },
+          },
+        },
+      }),
+    );
+    await expect(launch).rejects.toMatchObject({
+      name: "AttemptLaunchRefused",
+      message: "The selected Git base is unavailable.",
+    });
+  });
 });

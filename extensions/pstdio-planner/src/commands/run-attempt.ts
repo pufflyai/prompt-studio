@@ -158,6 +158,8 @@ async function launchAttempt(
   const { readiness, capacity } = await loadAttemptReadiness(ctx, ticketRef, {
     base: typeof chosenBase === "string" ? chosenBase : undefined,
     requireMergedDependencies: options.requireMergedDependencies,
+  }).catch((error: unknown) => {
+    throw new AttemptLaunchRefused(error instanceof Error ? error.message : String(error));
   });
   if (readiness.decision === "wait") {
     const message = attemptWaitMessage(ticketIdentity.shorthand, readiness, capacity);
