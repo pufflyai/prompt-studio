@@ -122,7 +122,8 @@ const traceShutdownPhase = async <T>(phase: string, close: () => Promise<T>) => 
   }
 };
 
-const createAppCloser = (input: {
+export const createAppCloser = (input: {
+  closeBackendWorkers: () => Promise<void>;
   startupAbort: AbortController;
   startupDone: Promise<void>;
   getStartupBackgroundDone: () => Promise<void>;
@@ -144,6 +145,9 @@ const createAppCloser = (input: {
   textEditing: Pick<RouteDeps["textEditing"], "dispose">;
 }) => {
   let closePromise: Promise<void> | null = null;
+  let backendsStopped: Promise<void> | undefined;
+  const stopBackendWorkers = () =>
+    (backendsStopped ??= traceShutdownPhase("extension_backends", input.closeBackendWorkers));
   return async () => {
     closePromise ??= (async () => {
       // A vacuum holds PGlite's only thread, so database cleanup stops before any other part waits on it.
@@ -179,7 +183,7 @@ const createAppCloser = (input: {
         await traceShutdownPhase("artifact_mounts", () => input.artifactMountWatch.dispose());
         await traceShutdownPhase("extension_scheduler", () => input.extensionScheduler.dispose());
         // Workers call back into host storage, so they stop before the database closes.
-        await traceShutdownPhase("extension_backends", closeBackendWorkers);
+        await stopBackendWorkers();
         await traceShutdownPhase("automation", () => input.automationService.close());
         await traceShutdownPhase("terminals", () => input.terminalSupervisor.dispose());
         await harnessesStopped;
@@ -195,6 +199,7 @@ const createAppCloser = (input: {
             try {
               await deadRowCleanupStopped;
             } finally {
+              await stopBackendWorkers().catch(() => {});
               await traceShutdownPhase("database", () => input.closeDb());
             }
           }
@@ -273,6 +278,7 @@ export const startAppLifecycle = async (input: {
   input.deps.extensionInstallations.start();
   return createAppCloser({
     ...input,
+    closeBackendWorkers,
     // Imports stop while their session and file dependencies are still available.
     closeSessionHooks: async () => {
       const stopped = await Promise.allSettled([input.closeSessionHooks(), input.deps.sessionImports.close()]);

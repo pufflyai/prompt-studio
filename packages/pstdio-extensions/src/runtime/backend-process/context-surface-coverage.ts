@@ -30,8 +30,15 @@ const visitFunction = (
   let created: unknown;
   try {
     created = member.apply(owner, factoryArgs[path.at(-1)!] ?? []);
-  } catch {
-    // A factory may refuse the representative arguments, such as an undeclared artifact mount.
+  } catch (error) {
+    const key = path.join(".");
+    if (
+      key !== "artifacts.mount" ||
+      !(error instanceof Error) ||
+      error.message !== `Artifact mount not found: ${factoryArgs.mount?.[0]}`
+    ) {
+      state.found.push(key);
+    }
     return;
   }
   state.walked.add(described.returns);
@@ -54,6 +61,6 @@ const walk = (value: unknown, surface: BackendSurface | undefined, path: string[
 /** Paths of ctx functions that are neither in the process-mode surface nor knowingly unsupported. */
 export const uncoveredContextFunctions = (context: { projectId: string }) => {
   const found: string[] = [];
-  walk(context, extensionContextSurface(context.projectId), [], { found, walked: new Set() });
+  walk(context, extensionContextSurface(context), [], { found, walked: new Set() });
   return found;
 };

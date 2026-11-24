@@ -35,6 +35,21 @@ export default {
   ],
   commands: [
     {
+      id: "workspace-files",
+      ref: { kind: "command", id: "workspace-files" },
+      title: "Workspace files",
+      run: (ctx) => ctx.workspaceFiles ? "present" : "absent",
+    },
+    {
+      id: "navigate",
+      ref: { kind: "command", id: "navigate" },
+      title: "Navigate",
+      run(ctx) {
+        ctx.navigation.open({ kind: "invalid" });
+        return "ignored";
+      },
+    },
+    {
       id: "save",
       ref: { kind: "command", id: "save" },
       title: "Save",
@@ -138,10 +153,10 @@ afterAll(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-const execute = async (command: string, params: Record<string, unknown> = {}) => {
+const execute = async (command: string, params: Record<string, unknown> = {}, source?: string) => {
   const response = await handle.app.request(
     `/v1/projects/${projectId}/extensions/commands/example.isolated.command.${command}/execute`,
-    { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ params }) },
+    { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ params, source }) },
   );
   return (await response.json()) as { outcome: { ok: boolean; value: unknown } };
 };
@@ -204,4 +219,16 @@ test("host services answer a process-mode command", async () => {
   const { outcome } = await execute("port");
   expect(outcome.ok).toBe(true);
   expect(outcome.value).toBeGreaterThan(0);
+});
+
+test("process-mode leaves workspace files absent when the invocation has no workspace", async () => {
+  expect((await execute("workspace-files")).outcome).toMatchObject({ ok: true, value: "absent" });
+});
+
+test("process-mode navigation checks invalid targets only for scoped invocations", async () => {
+  expect((await execute("navigate", {}, "dashboard")).outcome).toMatchObject({
+    ok: false,
+    reason: "Invalid navigation target.",
+  });
+  expect((await execute("navigate")).outcome).toMatchObject({ ok: true, value: "ignored" });
 });

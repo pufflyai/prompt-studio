@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -431,4 +432,28 @@ test("closing an empty pool allows subsequent workers to be started and closed",
   } finally {
     await running.stop();
   }
+});
+
+test("host calls and notifications resume in the invocation's async scope", async () => {
+  const worker = await start();
+  const scope = new AsyncLocalStorage<string>();
+  const seen: Array<string | undefined> = [];
+  const capture = () => seen.push(scope.getStore());
+  try {
+    await scope.run("active invocation", () =>
+      worker.invoke({
+        handlerId: handlerOf(worker.definition, "save"),
+        context: {
+          projectId: "p1",
+          logger: { info: capture },
+          storage: { collection: () => ({ put: async () => capture(), get: async () => capture() }) },
+        },
+        surface,
+        args: [{ id: "a", bytes: new Uint8Array([1]) }],
+      }),
+    );
+  } finally {
+    await worker.stop();
+  }
+  expect(seen).toEqual(["active invocation", "active invocation", "active invocation"]);
 });

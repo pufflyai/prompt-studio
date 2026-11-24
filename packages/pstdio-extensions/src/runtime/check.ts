@@ -44,6 +44,7 @@ export const checkExtensions = async (input: CheckExtensionsInput = {}): Promise
 
   const runtime = await loadExtensionRuntime({
     includeUserRoot: false,
+    definitionOnly: true,
     extensionRoots: [
       ...(input.extensionRoots ?? []),
       ...(extensionsRootExists && !input.extensionPackages
