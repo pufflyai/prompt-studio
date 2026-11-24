@@ -22,9 +22,13 @@ const removeDispatchStartedEntriesForSession = async (deps: Deps, sessionId: str
   }
 };
 
-const getDispatchStartedEntryForSession = async (deps: Deps, sessionId: string) => {
+const getDispatchStartedEntryForSession = async (deps: Deps, session: OrphanedSession) => {
   const entries = await deps.sessionQueueEntriesService.listDispatchStarted();
-  return entries.find((entry) => entry.session_id === sessionId);
+  return entries.find(
+    (entry) =>
+      entry.session_id === session.id &&
+      (!entry.sender_json || entry.sender_json.runStartedAt === session.last_request_started),
+  );
 };
 
 type OrphanedSession = Awaited<ReturnType<Deps["sessionService"]["listActive"]>>[number];
@@ -66,7 +70,7 @@ const reattachOrphanedSession = async (deps: Deps, session: OrphanedSession, sig
   while (!signal?.aborted) {
     let owner: ActiveSession | null = null;
     try {
-      const dispatchEntry = await getDispatchStartedEntryForSession(deps, session.id).catch((error) => {
+      const dispatchEntry = await getDispatchStartedEntryForSession(deps, session).catch((error) => {
         throw new RetryableSessionReattachError(error);
       });
       const current = await deps.sessionService.get(session.id);

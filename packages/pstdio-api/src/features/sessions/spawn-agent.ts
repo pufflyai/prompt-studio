@@ -269,8 +269,15 @@ export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps
     "reattach",
   );
   const conversation = await entry.conversationReady;
-  if (input.prompt !== undefined)
-    await prepareSubmittedSender(conversation, { ...input, prompt: input.prompt }, deps.sessionQueueEntriesService);
+  if (input.prompt !== undefined) {
+    const current = await deps.sessionService.get(input.sessionId);
+    await prepareSubmittedSender(
+      conversation,
+      { ...input, prompt: input.prompt },
+      deps.sessionQueueEntriesService,
+      current?.last_request_started ?? null,
+    );
+  }
   input.signal?.throwIfAborted();
 
   if (!harness.supportsReattach) throw new Error(`Harness does not support reattach: ${input.agentId}`);

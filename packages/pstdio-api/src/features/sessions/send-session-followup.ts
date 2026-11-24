@@ -72,7 +72,13 @@ export const sendSessionFollowUp = async (
     return createSessionScheduler(deps).startOrQueueExisting({
       session,
       prompt,
-      sender: await read(() => resolveMessageSender(deps, session.project_id!, input.source)),
+      sender: await read(() =>
+        resolveMessageSender(
+          deps,
+          session.project_id!,
+          input.source ?? (input.sourceSessionId ? { type: "session", id: input.sourceSessionId } : undefined),
+        ),
+      ),
       cwd: session.cwd ?? undefined,
       agentId: input.agent,
       model: input.model?.trim() || undefined,

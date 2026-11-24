@@ -4,7 +4,11 @@ import { sessionMessageSourceSchema } from "./session-messages";
 export const sessionSteeringInputSchema = z
   .object({
     source: sessionMessageSourceSchema.optional(),
-    sourceSessionId: z.string().min(1).optional(),
+    sourceSessionId: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("Session sender alias; source takes precedence when both are supplied."),
     expectedRunStartedAt: z.string().min(1),
     prompt: z.string().min(1).optional(),
     summaryFromSessionId: z.string().optional(),

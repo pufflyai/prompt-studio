@@ -1,3 +1,4 @@
+import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
 import { recoverDispatchSender } from "./recover-dispatch-sender";
 import { createSessionQueueDrain } from "./session-queue-drain";
@@ -12,7 +13,20 @@ export const prepareQueuedSessionRecovery = async (deps: SessionsRouteDeps) => {
     for (const entry of claimedEntries) {
       const session = await deps.sessionService.get(entry.session_id);
       if (session?.status === "in_progress" && !deps.sessionService.store.get(session.id)) {
-        if (await recoverDispatchSender(deps, session, entry)) continue;
+        try {
+          if (await recoverDispatchSender(deps, session, entry)) continue;
+        } catch (err) {
+          sessionLogger.error(
+            {
+              err,
+              event: "session.dispatch_recovery.failed",
+              session_id: session.id,
+              queue_position: entry.queue_position,
+            },
+            "Failed to checkpoint a recovered request; retaining its dispatch guard",
+          );
+          continue;
+        }
         await deps.sessionService.recoverQueuedDispatchClaim(
           session.id,
           entry.queue_position,

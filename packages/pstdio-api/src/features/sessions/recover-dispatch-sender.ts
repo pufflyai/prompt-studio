@@ -28,7 +28,10 @@ export const recoverDispatchSender = async (
       saved.revision !== entry.revision
     )
       return true;
-    if (await persistSessionMessages(session.id, messages, deps))
+    const attachmentsSaved = (entry.attachments_json ?? []).every(({ file_id }) =>
+      messages.some((message) => message.parts.some((part) => part.type === "file" && part.fileId === file_id)),
+    );
+    if ((await persistSessionMessages(session.id, messages, deps)) && attachmentsSaved)
       await deps.sessionQueueEntriesService.remove(entry.queue_position);
     return true;
   });

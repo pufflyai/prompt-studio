@@ -1,5 +1,5 @@
 import { Box, chakra, Stack, Text, useRecipe } from "@chakra-ui/react";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { type KeyboardEvent, useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { Tooltip } from "@/components/primitives/tooltip";
@@ -49,6 +49,30 @@ export const ChatOutline = ({ host, rows, active, onJump }: ChatOutlineProps) =>
     estimateSize: () => 16,
     overscan: 4,
   });
+  const pendingFocus = useRef<number | null>(null);
+  const focusEntry = (index: number) => {
+    const button = viewport.current?.querySelector<HTMLButtonElement>(`[data-outline-entry="${index}"]`);
+    if (!button) return;
+    button.focus({ preventScroll: true });
+    pendingFocus.current = null;
+  };
+  useLayoutEffect(() => {
+    if (pendingFocus.current !== null) focusEntry(pendingFocus.current);
+  });
+  const moveFocus = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    let next: number;
+    if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = entries.length - 1;
+    else if (event.key === "ArrowUp" || (event.key === "Tab" && event.shiftKey)) next = index - 1;
+    else if (event.key === "ArrowDown" || event.key === "Tab") next = index + 1;
+    else return;
+    if (next < 0 || next >= entries.length) return;
+    event.preventDefault();
+    pendingFocus.current = next;
+    virtualizer.scrollToIndex(next, { align: "auto" });
+    focusEntry(next);
+  };
   const activeEntry = entries.findIndex((entry) => entry.index === active);
   useEffect(() => {
     const scroller = viewport.current;
@@ -57,8 +81,8 @@ export const ChatOutline = ({ host, rows, active, onJump }: ChatOutlineProps) =>
   }, [activeEntry, virtualizer]);
 
   return createPortal(
-    <Box as="nav" aria-label="Conversation outline" w="full" maxH="full" display="flex" pointerEvents="auto">
-      <ScrollArea viewportRef={viewport} w="full" maxH="full" showHorizontalScrollbar={false}>
+    <Box as="nav" aria-label="Conversation outline" w="full" h="full" maxH="full" display="flex" pointerEvents="auto">
+      <ScrollArea viewportRef={viewport} w="full" h="full" minH="0" showHorizontalScrollbar={false}>
         <Box position="relative" style={{ height: totalSize }}>
           {virtualItems.map((item) => {
             const entry = entries[item.index];
@@ -82,6 +106,8 @@ export const ChatOutline = ({ host, rows, active, onJump }: ChatOutlineProps) =>
                 >
                   <chakra.button
                     type="button"
+                    data-outline-entry={item.index}
+                    onKeyDown={(event) => moveFocus(event, item.index)}
                     aria-label={entry.prompt}
                     aria-current={active === entry.index ? "location" : undefined}
                     onClick={() => onJump(entry.index)}

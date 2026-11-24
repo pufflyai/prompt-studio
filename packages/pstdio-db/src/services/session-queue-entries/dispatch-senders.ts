@@ -1,6 +1,6 @@
 import { and, eq, isNotNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { session_queue_entries } from "../../db/schemas.pg";
+import { session_queue_entries, sessions } from "../../db/schemas.pg";
 
 export const setDispatchSenderBoundary = (db: DbClient, position: number, afterTurn: number) =>
   db.transaction(async (tx) => {
@@ -13,9 +13,14 @@ export const setDispatchSenderBoundary = (db: DbClient, position: number, afterT
       .for("update");
     if (!entry?.sender_json) return null;
     if (entry.sender_json.afterTurn !== undefined) return entry;
+    const [session] = await tx
+      .select({ started: sessions.last_request_started })
+      .from(sessions)
+      .where(eq(sessions.id, entry.session_id));
+    if (!session?.started) return null;
     const [updated] = await tx
       .update(session_queue_entries)
-      .set({ sender_json: { ...entry.sender_json, afterTurn } })
+      .set({ sender_json: { ...entry.sender_json, afterTurn, runStartedAt: session.started } })
       .where(eq(session_queue_entries.queue_position, position))
       .returning();
     return updated ?? null;

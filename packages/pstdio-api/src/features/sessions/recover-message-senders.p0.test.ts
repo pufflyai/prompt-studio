@@ -19,17 +19,17 @@ const prompt = (id: string, createdAt?: number): SessionMessage => ({
   parts: [{ type: "text", text: "Check" }],
 });
 
-test("recovered native prompts use their request's sender without attributing an older identical prompt", () => {
+test("native text and timestamp matches leave uncertain senders unattributed", () => {
   const old = prompt("old", 10);
   const delivered = prompt("delivered", 100);
-  expect(recoverMessageSenders([old, delivered], [request])).toEqual([old, { ...delivered, sender: attributed }]);
+  expect(recoverMessageSenders([old, delivered], [request])).toEqual([old, delivered]);
   expect(recoverMessageSenders([old], [request])).toEqual([old]);
 });
 
-test("a saved dispatch boundary restores attribution when native timestamps are absent", () => {
+test("a saved turn boundary alone cannot restore a sender", () => {
   const old = prompt("old");
   const delivered = prompt("delivered");
-  expect(recoverMessageSenders([old, delivered], [request])).toEqual([old, { ...delivered, sender: attributed }]);
+  expect(recoverMessageSenders([old, delivered], [request])).toEqual([old, delivered]);
   expect(recoverMessageSenders([old], [request])).toEqual([old]);
 });
 
@@ -38,4 +38,9 @@ test("uncertain steering restores attribution only for its confirmed delivery id
   const delivered = prompt("delivery");
   const held = { ...request, steering_delivery_json: { id: "delivery", runStartedAt: new Date(50).toISOString() } };
   expect(recoverMessageSenders([old, delivered], [held])).toEqual([old, { ...delivered, sender: attributed }]);
+});
+
+test("a later identical prompt is not proof that an old handoff was delivered", () => {
+  const later = prompt("another-request");
+  expect(recoverMessageSenders([prompt("old"), later], [request])).toEqual([prompt("old"), later]);
 });
