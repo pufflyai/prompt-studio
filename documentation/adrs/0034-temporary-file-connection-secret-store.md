@@ -24,7 +24,7 @@ The local host uses a file-backed secret store under its private storage root (`
 
 The file store keeps credentials out of repositories, workspaces, extension settings, extension child processes, logs, and database rows. It does not provide the account-backed protection of an operating-system keychain. Anyone who can read the Prompt Studio host account's private storage can read the credentials. That includes every process the user runs, backups of the storage folder, and other tools that run as the same user.
 
-It also does not keep secrets away from extensions. Extension backends run inside the API process (ADR 0058). Any extension, or any npm dependency of one, can read these files, read the environment, and send the values out. A keychain alone does not fix this either, because code in the same process can call the same keychain API. Until ADR 0058 ships, installing an extension gives it the access of the user's account, and the docs say so.
+It also does not keep secrets away from extensions. Extension backends run in their own worker processes (ADR 0058), but as the user's account. Any extension, or any npm dependency of one, can read these files, read its environment, and send the values out. A keychain alone does not fix this either, because code running as the same user can call the same keychain API. Until ADR 0058's OS sandboxes ship, installing an extension gives it the access of the user's account, and the docs say so.
 
 ## Isolation
 

@@ -26,6 +26,7 @@ export interface PerformanceRuntimeReading {
     subscribers: number;
     queuedEvents: number;
     queuedBytes: number;
+    /** Times a worker evaluated an extension entry to read its definition. Cached definitions do not count. */
     extensionImports: number;
   };
 }

@@ -37,9 +37,9 @@ for (const membership of ["local", "cloud", "unknown"] as const) {
     deps.accountService = account as never;
     const clock = createTestCronDriver();
     const calls: unknown[] = [];
-    (globalThis as Record<string, unknown>).__deviceAutomationRun = async () => {
+    fixture.onRun(async () => {
       calls.push(true);
-    };
+    });
     const scheduler = createExtensionScheduler({
       deps,
       listProjectIds: async () => [fixture.projectId],

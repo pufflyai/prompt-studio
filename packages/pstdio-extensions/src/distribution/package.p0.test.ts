@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { packageMetadata, packExtension, readExtensionPackage, unpackExtension } from "./package";
 
 const roots: string[] = [];
@@ -88,7 +89,7 @@ test("requires declared SVG icons in the published files and preserves their byt
   const path = join(root, "package.json");
   const manifest = JSON.parse(await readFile(path, "utf8"));
   await writeFile(path, JSON.stringify({ ...manifest, icon: "./assets/icon.svg", files: ["extension.ts"] }));
-  await expect(packExtension(root)).rejects.toThrow("icon");
+  await expectRejection(packExtension(root)).toThrow("icon");
   await writeFile(path, JSON.stringify({ ...manifest, icon: "./assets/icon.svg" }));
   const packed = await packExtension(root);
   const contents = await readExtensionPackage(packed.bytes);
@@ -99,20 +100,20 @@ test("refuses modified packages and mismatched identities before writing files",
   const packed = await packExtension(await fixture());
   const target = await mkdtemp(join(tmpdir(), "refused-extension-"));
   roots.push(target);
-  await expect(
+  await expectRejection(
     unpackExtension(packed.bytes, target, {
       id: "bob.notes",
       version: "0.45.1",
       sha256: packed.sha256,
     }),
-  ).rejects.toThrow("identity");
-  await expect(
+  ).toThrow("identity");
+  await expectRejection(
     unpackExtension(packed.bytes, target, {
       id: "alice.notes",
       version: "0.45.1",
       sha256: "0".repeat(64),
     }),
-  ).rejects.toThrow("SHA-256");
+  ).toThrow("SHA-256");
 });
 
 test("unchanged extension contents keep their package hash across clock and filesystem timestamp changes", async () => {
@@ -134,7 +135,7 @@ test("refuses unsafe archive paths", async () => {
       { compress: "gzip" },
     ).bytes(),
   );
-  await expect(readExtensionPackage(bytes)).rejects.toThrow();
+  await expectRejection(readExtensionPackage(bytes)).toThrow();
 });
 
 test("uses a portable package filename for an accepted Windows device publisher", async () => {
@@ -153,7 +154,7 @@ test("rejects an oversized declared SVG before publishing an archive", async () 
   const manifest = JSON.parse(await readFile(path, "utf8"));
   await writeFile(path, JSON.stringify({ ...manifest, icon: "./assets/icon.svg" }));
   await writeFile(join(root, "assets/icon.svg"), " ".repeat(256 * 1024 + 1));
-  await expect(packExtension(root)).rejects.toThrow("256 KiB");
+  await expectRejection(packExtension(root)).toThrow("256 KiB");
 });
 
 test("a historical first-party archive retains its authored release identity", async () => {
@@ -172,7 +173,7 @@ test("a historical first-party archive retains its authored release identity", a
       })
     ).id,
   ).toBe("pstdio.pstdio-notes");
-  await expect(
+  await expectRejection(
     unpackExtension(packed.bytes, target, { id: "pstdio.notes", version: raw.version, sha256: packed.sha256 }),
-  ).rejects.toThrow("identity does not match");
+  ).toThrow("identity does not match");
 });

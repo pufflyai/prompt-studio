@@ -224,7 +224,10 @@ export const createInstalledExtensionRuntime = (input: {
     await webviewSourceInspection.reconcile();
     if (sourcePath) {
       // A single changed source invalidates only the projects that use it.
-      input.projectRuntimeCatalog.invalidate({ sourcePath, reason: "source_changed" });
+      input.projectRuntimeCatalog.invalidate({
+        sourcePath,
+        reason: validatedSource ? "source_reloaded" : "source_changed",
+      });
       // Watch setup is background reconciliation, independent of publishing a
       // prepared tool. A suspended watcher must not hold adoption or its caller.
       void sourceWatcher.then((watcher) => watcher.refresh(sourcePath)).catch(reportError);

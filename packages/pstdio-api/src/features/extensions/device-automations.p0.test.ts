@@ -70,10 +70,10 @@ test("replicated automation runs only on its assigned device and a disable lets 
   await replicateRecords(catalogs[0]!, catalogs[1]!);
   const gate = Promise.withResolvers<void>();
   const calls: unknown[] = [];
-  (globalThis as Record<string, unknown>).__deviceAutomationRun = async (meta: unknown) => {
+  fixture.onRun(async (meta: unknown) => {
     calls.push(meta);
     await gate.promise;
-  };
+  });
   const clocks = [createTestCronDriver(), createTestCronDriver()];
   const schedulers = [a, b].map((app, index) =>
     createExtensionScheduler({
@@ -123,9 +123,9 @@ test("offline device misses are recorded without catch-up and duplicate delivery
   await replicateRecords(catalog, replica);
   await replicateRecords(catalog, replica);
   const calls: unknown[] = [];
-  (globalThis as Record<string, unknown>).__deviceAutomationRun = async (meta: unknown) => {
+  fixture.onRun(async (meta: unknown) => {
     calls.push(meta);
-  };
+  });
   let now = new Date("2026-10-22T09:03:30Z");
   const start = async (app: typeof a, name: string) => {
     const clock = createTestCronDriver();
@@ -180,9 +180,9 @@ test("a disable during workspace preparation prevents final command dispatch", a
     return getDefault(id);
   };
   const calls: unknown[] = [];
-  (globalThis as Record<string, unknown>).__deviceAutomationRun = async () => {
+  fixture.onRun(async () => {
     calls.push(true);
-  };
+  });
   const clock = createTestCronDriver();
   const scheduler = createExtensionScheduler({
     deps: a.deps,
@@ -231,9 +231,9 @@ test("local schedules keep running when workspace startup finishes during prepar
   const { deps } = await fixture.device();
   deps.accountService.projectSyncStatus = async () => ({ state: "local", offlineReady: false });
   const calls: unknown[] = [];
-  (globalThis as Record<string, unknown>).__deviceAutomationRun = async () => {
+  fixture.onRun(async () => {
     calls.push(true);
-  };
+  });
   const cron = createTestCronDriver();
   const scheduler = createExtensionScheduler({
     deps,
@@ -258,9 +258,9 @@ test("a local run cannot use stale admission after becoming assigned during prep
   const { deps } = await fixture.device();
   deps.accountService.projectSyncStatus = async () => ({ state: "local", offlineReady: false });
   const calls: unknown[] = [];
-  (globalThis as Record<string, unknown>).__deviceAutomationRun = async () => {
+  fixture.onRun(async () => {
     calls.push(true);
-  };
+  });
   const cron = createTestCronDriver();
   const scheduler = createExtensionScheduler({
     deps,

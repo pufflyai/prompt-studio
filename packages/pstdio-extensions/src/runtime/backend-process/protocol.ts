@@ -19,7 +19,33 @@ export interface SerializedBackendError {
   message: string;
   code?: string;
   stack?: string;
+  /** Primitive flags and fields used by callers, such as questionRejected or status. */
+  data?: Record<string, ErrorDataValue>;
 }
+
+type ErrorDataValue = string | number | boolean | null;
+
+const RESERVED_ERROR_KEYS = new Set([
+  "name",
+  "message",
+  "stack",
+  "code",
+  "cause",
+  "__proto__",
+  "constructor",
+  "prototype",
+]);
+
+const isErrorDataValue = (value: unknown): value is ErrorDataValue =>
+  value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean";
+
+// Callers branch on flags an error carries, such as a harness's `questionRejected`, so they cross too.
+const errorData = (error: object) => {
+  const entries = Object.entries(error).filter(
+    ([key, value]) => !RESERVED_ERROR_KEYS.has(key) && isErrorDataValue(value),
+  );
+  return entries.length ? { data: Object.fromEntries(entries) } : {};
+};
 
 type Settled = { ok: true; value: unknown } | { ok: false; error: SerializedBackendError };
 type InvocationResult = Settled & { rejection?: CommandFailureDetails };
@@ -89,6 +115,7 @@ export const serializeBackendError = (error: unknown): SerializedBackendError =>
       message: typeof message === "string" ? message : describeErrorValue(message),
       ...(typeof stack === "string" ? { stack } : {}),
       ...(typeof code === "string" ? { code } : {}),
+      ...errorData(error),
     };
   } catch {
     return { name: "Error", message: "The extension backend threw a value that could not be read." };
@@ -100,6 +127,9 @@ export const deserializeBackendError = (serialized: SerializedBackendError) => {
   error.name = serialized.name;
   if (serialized.stack) error.stack = serialized.stack;
   if (serialized.code) error.code = serialized.code;
+  for (const [key, value] of Object.entries(serialized.data ?? {}))
+    if (!RESERVED_ERROR_KEYS.has(key) && isErrorDataValue(value))
+      Object.defineProperty(error, key, { value, enumerable: true, writable: true, configurable: true });
   return error;
 };
 
@@ -126,7 +156,8 @@ const isError = (value: unknown) =>
   typeof value.name === "string" &&
   typeof value.message === "string" &&
   optionalString(value.code) &&
-  optionalString(value.stack);
+  optionalString(value.stack) &&
+  (value.data === undefined || (isRecord(value.data) && Object.values(value.data).every(isErrorDataValue)));
 
 const isSettled = (message: Record<string, unknown>) =>
   message.ok === true || (message.ok === false && isError(message.error));

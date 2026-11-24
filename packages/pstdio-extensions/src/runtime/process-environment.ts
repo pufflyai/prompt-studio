@@ -129,3 +129,31 @@ export const createExtensionInstallEnvironment = (
   hostEnv: NodeJS.ProcessEnv = process.env,
   platform: NodeJS.Platform = process.platform,
 ) => createEnvironment(hostEnv, {}, isInstallHostVariable, platform);
+
+// The packaged CLI would run as plain Bun with this set and never reach its worker entry.
+const RUNTIME_LAUNCH_NAMES = ["BUN_BE_BUN"];
+
+// Prompt Studio's own credentials, such as PSTDIO_API_TOKEN. Other PSTDIO_ names are settings
+// extensions read, such as PSTDIO_HOME, PSTDIO_SESSION_ID and PSTDIO_TEST_MODE.
+const PSTDIO_CREDENTIAL = /^PSTDIO_.*(TOKEN|SECRET|KEY|PASSWORD|CREDENTIAL)/;
+
+const isWorkerExcluded = (name: string) => {
+  const upper = name.toUpperCase();
+  if (upper.startsWith("PSTDIO_")) return PSTDIO_CREDENTIAL.test(upper);
+  return isReservedProcessEnvironmentName(name);
+};
+
+/**
+ * The environment of an extension backend worker: the host's environment without Prompt Studio's
+ * credentials and the registry credentials. Provider keys, proxies, CA settings and Prompt Studio
+ * settings such as PSTDIO_HOME stay, as they did when backends ran in the host.
+ */
+export const createBackendWorkerEnvironment = (hostEnv: NodeJS.ProcessEnv = process.env) => {
+  const env: NodeJS.ProcessEnv = {};
+  for (const [name, value] of Object.entries(hostEnv)) {
+    if (value === undefined || isWorkerExcluded(name)) continue;
+    if (RUNTIME_LAUNCH_NAMES.includes(name.toUpperCase())) continue;
+    env[name] = value;
+  }
+  return env;
+};

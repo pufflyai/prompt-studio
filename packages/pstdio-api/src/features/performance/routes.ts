@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { readRuntimeImportCount } from "pstdio-extensions";
+import { readBackendDefinitionReadCount } from "pstdio-extensions";
 import type { AppBindings } from "../../types";
 import type { RouteDeps } from "../deps";
 
@@ -14,7 +14,7 @@ export const createPerformanceRoutes = (deps: Pick<RouteDeps, "sessionService">)
       pid: process.pid,
       heapUsedBytes: memory.heapUsed,
       externalBytes: memory.external,
-      counters: { ...sessions, extensionImports: readRuntimeImportCount() },
+      counters: { ...sessions, extensionImports: readBackendDefinitionReadCount() },
     });
   });
   return routes;
