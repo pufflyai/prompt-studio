@@ -143,14 +143,25 @@ test("exited settles when the child exits even if nobody reads its output", asyn
   const handle = spawnProcessHandle(bun("flood.ts", marker), { creditBytes: 16 * 1024 });
   await handle.kill("SIGKILL");
   expect(await handle.exited).toMatchObject({ code: null });
-  const quiet = spawnProcessHandle(
-    { argv: [process.execPath, "-e", "process.stdout.write('x'.repeat(65536))"], env },
-    {
-      creditBytes: 1024,
-    },
-  );
-  expect(await quiet.exited).toEqual({ code: 0, signal: null });
-  expect(text(await collect(quiet.events()), "stdout")).toHaveLength(65536);
+  for (const finish of ["read", "discard"] as const) {
+    const quiet = spawnProcessHandle(
+      { argv: [process.execPath, "-e", "process.stdout.write('x'.repeat(65536))"], env },
+      { creditBytes: 1024 },
+    );
+    try {
+      expect(await quiet.exited).toEqual({ code: 0, signal: null });
+      const confirmed = quiet.treeExited!.then(() => "confirmed");
+      expect(await Promise.race([confirmed, Bun.sleep(100).then(() => "backpressured")])).toBe("backpressured");
+      if (finish === "read") expect(text(await collect(quiet.events()), "stdout")).toHaveLength(65536);
+      else {
+        await quiet.kill();
+        expect(await collect(quiet.events())).toEqual([{ type: "exit", exit: { code: 0, signal: null } }]);
+      }
+      expect(await confirmed).toBe("confirmed");
+    } finally {
+      await quiet.kill();
+    }
+  }
 });
 
 test("a command that cannot start rejects started with a code and still reports an exit", async () => {
