@@ -73,10 +73,12 @@ const syncParents = async (directory: string, durable?: Set<string>) => {
     }
   }
 };
-async function* entries(path: string) {
-  const directory = await opendir(path).catch((error) => {
+const openDirectory = (path: string) =>
+  opendir(path).catch((error) => {
     if (!missing(error)) throw error;
   });
+async function* entries(path: string) {
+  const directory = await openDirectory(path);
   if (directory) for await (const entry of directory) yield entry;
 }
 const headValid = (head: DocumentFileHead) => {
@@ -272,8 +274,14 @@ export const createDocumentFiles = (root?: string) => {
         const code = (error as NodeJS.ErrnoException).code;
         if (missing(error) || code === "ENOTEMPTY" || code === "EEXIST") return;
         if (process.platform === "win32" && code === "EPERM") {
-          // Windows can report EPERM for a directory that still has siblings.
-          for await (const _entry of entries(project)) return;
+          // Windows can report EPERM when the directory is gone or still has siblings.
+          const directory = await openDirectory(project);
+          if (!directory) return;
+          try {
+            if (await directory.read()) return;
+          } finally {
+            await directory.close();
+          }
         }
         throw error;
       });
