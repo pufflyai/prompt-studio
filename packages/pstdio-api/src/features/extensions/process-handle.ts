@@ -40,7 +40,11 @@ const stopChildTree = async (child: Child, signal: NodeJS.Signals) => {
  */
 export const spawnProcessHandle = (
   input: SpawnProcessHandleInput,
-  { spawner = Bun.spawn as typeof Bun.spawn, creditBytes = PROCESS_OUTPUT_CREDIT_BYTES } = {},
+  {
+    spawner = Bun.spawn as typeof Bun.spawn,
+    creditBytes = PROCESS_OUTPUT_CREDIT_BYTES,
+    onSpawn = (_child: { pid: number; exited: Promise<unknown> }) => {},
+  } = {},
 ): ProcessHandle => {
   const started = Promise.withResolvers<void>();
   const exited = Promise.withResolvers<ProcessExit>();
@@ -80,6 +84,7 @@ export const spawnProcessHandle = (
       windowsHide: true,
       windowsVerbatimArguments: input.windowsVerbatimArguments,
     }) as Child;
+    onSpawn(child);
     started.resolve();
   } catch (error) {
     started.reject(spawnError(error));
