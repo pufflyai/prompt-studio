@@ -225,7 +225,11 @@ describe("artifact mount deletions and expiry", () => {
     expect(ledger.dropEchoes([newPath, oldPath], options)).toEqual([newPath]);
   });
 
-  test("reports later child deletions when an external directory returns with only a folder notification", async () => {
+  test.each([
+    "folder",
+    "child",
+    "deletion",
+  ] as const)("reports an external directory's child deletion with a %s hint", async (hint) => {
     const ledger = createArtifactMountWriteLedger();
     const { mount, root } = createMount(ledger);
     const folder = join(root, "sales");
@@ -237,8 +241,12 @@ describe("artifact mount deletions and expiry", () => {
 
     mkdirSync(outside);
     writeFileSync(join(outside, "new.json"), "{}");
+    writeFileSync(join(outside, "other.json"), "[]");
     renameSync(outside, folder);
-    expect(ledger.dropEchoes([folder], options)).toEqual([folder]);
+    if (hint !== "deletion") {
+      const notified = hint === "folder" ? folder : join(folder, "other.json");
+      expect(ledger.dropEchoes([notified], options)).toEqual([notified]);
+    }
 
     const removed = join(folder, "new.json");
     rmSync(removed);

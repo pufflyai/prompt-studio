@@ -6,6 +6,7 @@ import { type ArtifactMountWriteObserver, readArtifactFileState } from "pstdio-e
 const ECHO_WINDOW_MS = 5_000;
 
 type FileState = ReturnType<typeof readArtifactFileState>;
+type PathObservation = readonly [string, FileState];
 type LedgerEntry = {
   recordedAt: number;
   state: FileState;
@@ -42,16 +43,33 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     }
   };
 
-  const rememberReappearance = (path: string, current: NonNullable<FileState>) => {
-    // An independently returned folder can contain children that had no separate creation event.
-    if (entries.get(path)?.state === null && !sameState(directories.get(path)?.observed ?? null, current)) {
-      entries.delete(path);
-    }
-    for (const [recordedPath, entry] of entries) {
-      if (entry.state === null && (path === recordedPath || isInside(path, recordedPath))) {
+  const markReappearedPaths = (entry: LedgerEntry, observations: readonly PathObservation[]) => {
+    for (const [path, state] of observations) {
+      if (state) {
         entry.reappeared ??= new Set();
         entry.reappeared.add(path);
       }
+    }
+  };
+
+  const reconcileDeletions = (observations: readonly PathObservation[]) => {
+    const byPath = new Map(observations);
+    for (const [recordedPath, entry] of entries) {
+      if (entry.state !== null) continue;
+      const related = observations.filter(([path]) => path === recordedPath || isInside(path, recordedPath));
+      if (related.length === 0) continue;
+
+      // A recursive watcher may report only a child when an external folder returns.
+      const observed = byPath.get(recordedPath);
+      const current = observed === undefined ? readArtifactFileState(recordedPath) : observed;
+      const owned = directories.get(recordedPath)?.observed ?? null;
+      const returnedByMount =
+        observed === undefined ? owned?.identity === current?.identity : sameState(owned, current);
+      if (current && !returnedByMount) {
+        entries.delete(recordedPath);
+        continue;
+      }
+      markReappearedPaths(entry, related);
     }
   };
 
@@ -107,12 +125,8 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     /** Return external changes. Keep matched writes when independent watchers can still echo them. */
     dropEchoes: (paths: string[], { keepMatchedWrites = false } = {}) => {
       forgetExpired();
-      const observations = paths.map((path) => [path, readArtifactFileState(path)] as const);
-      if (keepMatchedWrites) {
-        for (const [path, current] of observations) {
-          if (current) rememberReappearance(path, current);
-        }
-      }
+      const observations: PathObservation[] = paths.map((path) => [path, readArtifactFileState(path)]);
+      if (keepMatchedWrites) reconcileDeletions(observations);
       const consumed = new Set<string>();
       const kept = observations
         .filter(([path, current]) => !isEcho(path, current, consumed, keepMatchedWrites))
