@@ -55,7 +55,7 @@ interface WorkbenchProps {
   /** Icon shown in the closed Side Panel's bubble launcher. */
   sidePanelBubbleIcon?: ReactNode;
   /** Host action for opening the closed Side Panel from its bubble launcher. */
-  onOpenSidePanel?: () => void;
+  onOpenSidePanel?: () => void | Promise<void>;
   /** Host storage for the chosen theme. Defaults to browser storage. */
   themeStorage?: ThemePreferenceStorage;
 }

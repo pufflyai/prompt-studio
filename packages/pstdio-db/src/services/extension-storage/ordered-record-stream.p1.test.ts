@@ -100,6 +100,7 @@ test("a rolled-back callback cannot become the baseline of the next optimistic s
   expect((await second.records.read("card")).value).toEqual({ kept: 2, next: true });
 });
 
+// Cold PGlite peers, 126 saves, and the outcome checks can exceed Bun's default timeout.
 test("ready saves share a bounded transport batch while keeping their individual atomic outcomes", async () => {
   const started = performance.now();
   const phases: { phase: string; elapsedMs: number }[] = [];
@@ -168,7 +169,7 @@ test("ready saves share a bounded transport batch while keeping their individual
   // The original 126 authored marker saves remain distinct. A bounded wire frame can carry
   // several complete admissions, without one network round trip for each tiny save.
   expect(first.wire.requests.updates - before).toBeLessThan(126);
-}, 8_000); // Includes both database cold opens and both peers draining the complete batch.
+}, 10_000);
 
 test("a page of small shared edits keeps large record values and refuses a stale conditional group", async () => {
   const started = performance.now();

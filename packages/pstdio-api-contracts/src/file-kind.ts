@@ -1,15 +1,12 @@
-// Generic file-type dispatch for the file renderer. Markdown is the default so
-// `.md` / `.txt` / extension-less files open in the prose editor; recognised code
-// extensions open in Monaco; images render read-only. This is deliberately
-// domain-agnostic — it knows about file types, not about tickets.
+// Unnamed documents and Markdown/plain-text files use the prose editor.
+// Other named files use Monaco unless they are images.
 
 export type FileKind = "markdown" | "code" | "image";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "avif", "bmp", "ico"]);
 const PROSE_EXTENSIONS = new Set(["md", "markdown", "txt"]);
 
-// Extension → Monaco language id. Markdown/plain text intentionally absent so
-// they fall through to the prose editor.
+// Extension → Monaco language id, including prose when Monaco is requested explicitly.
 const CODE_LANGUAGE_BY_EXTENSION: Record<string, string> = {
   ts: "typescript",
   tsx: "typescript",
@@ -68,9 +65,8 @@ const isImage = (fileName: string | undefined, mimeType: string | undefined) => 
 
 export const pickFileKind = (fileName: string | undefined, mimeType: string | undefined): FileKind => {
   if (isImage(fileName, mimeType)) return "image";
-  const extension = extensionOf(fileName);
-  if (!PROSE_EXTENSIONS.has(extension) && extension in CODE_LANGUAGE_BY_EXTENSION) return "code";
-  return "markdown";
+  if (!fileName || PROSE_EXTENSIONS.has(extensionOf(fileName))) return "markdown";
+  return "code";
 };
 
 // Monaco language for a code file; falls back to plaintext for unknown extensions.

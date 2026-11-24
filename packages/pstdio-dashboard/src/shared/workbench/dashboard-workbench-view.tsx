@@ -1,5 +1,6 @@
+import { contributionRefId, sessionBrowser } from "@pstdio/sdk/extensions";
 import type { WorkbenchCore } from "@pstdio/workbench";
-import { Workbench, WorkbenchIcon } from "@pstdio/workbench/react";
+import { useWorkbenchStore, Workbench, WorkbenchIcon } from "@pstdio/workbench/react";
 import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import type { ReactNode } from "react";
 import { openDashboardSidePanel } from "@/modules/sessions/bubble/open-side-panel";
@@ -15,6 +16,9 @@ interface DashboardWorkbenchViewProps {
 
 export const DashboardWorkbenchView = (props: DashboardWorkbenchViewProps) => {
   const { workbench, storage, titleBar, panelControlsPlacement } = props;
+  const sessionsAvailable = useWorkbenchStore(workbench.views.store, (state) =>
+    Boolean(state.views[contributionRefId(sessionBrowser.views.conversation)]),
+  );
   return (
     <Workbench
       panelControlsPlacement={panelControlsPlacement}
@@ -29,7 +33,7 @@ export const DashboardWorkbenchView = (props: DashboardWorkbenchViewProps) => {
       }
       renderParamField={createDashboardParamFieldRenderer(workbench)}
       sidePanelBubbleIcon={<WorkbenchIcon name="message-circle" size={20} />}
-      onOpenSidePanel={() => void openDashboardSidePanel(workbench)}
+      onOpenSidePanel={sessionsAvailable ? () => openDashboardSidePanel(workbench) : undefined}
     />
   );
 };

@@ -1,31 +1,41 @@
 import "@pstdio/ui/style.css";
-import {
-  createWebviewClient,
-  defineExtensionView,
-  type GuestHost,
-  type PerformanceMonitoringState,
-} from "@pstdio/sdk/extensions";
+import { createWebviewClient, defineExtensionView } from "@pstdio/sdk/extensions";
 import { useWebviewCommandQuery, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import {
   PerformancePopoverContent,
   type PerformancePopoverContentProps,
 } from "./components/performance-popover-content";
 import { PerformanceRoot } from "./components/performance-root";
+import { createPerformanceActions } from "./performance-actions";
 import { createSnapshotQuery } from "./snapshot-query";
 
-interface DetailsProps {
-  client: ReturnType<typeof createWebviewClient>;
-  host: GuestHost;
-}
-
-const Details = (props: DetailsProps) => {
-  const { client, host } = props;
+const Details = ({ client }: { client: ReturnType<typeof createWebviewClient> }) => {
   const { performance } = client;
-  const { data: snapshot, error: readError } = useWebviewCommandQuery(
-    createSnapshotQuery(client),
-    useWebviewVisibility(),
+  const visible = useWebviewVisibility();
+  const [query] = useState(() => createSnapshotQuery(client));
+  const { data: snapshot, error: readError } = useWebviewCommandQuery(query, visible);
+  const [actions] = useState(() =>
+    createPerformanceActions({
+      readOverlay: async () => (await performance.state()).renderOverlay,
+      writeOverlay: performance.setRenderOverlayEnabled,
+      async copy() {
+        // Copy the latest reading, not the one this view last drew.
+        const latest = await performance.snapshot();
+        if (!latest) return false;
+        await navigator.clipboard.writeText(JSON.stringify(latest, null, 2));
+        return true;
+      },
+      async setPaused(id, paused) {
+        await (paused ? performance.pauseExtension(id) : performance.resumeExtension(id));
+        await query.refresh().catch(() => {});
+      },
+    }),
+  );
+  const { renderOverlay, overlayIntent, copying, pendingExtensions } = useSyncExternalStore(
+    actions.subscribe,
+    actions.snapshot,
   );
   const [copied, setCopied] = useState(false);
   // The check mark confirms one copy, then the button offers to copy again.
@@ -35,43 +45,18 @@ const Details = (props: DetailsProps) => {
     return () => clearTimeout(timer);
   }, [copied]);
   const [error, setError] = useState<PerformancePopoverContentProps["actionError"]>();
-  const [renderOverlay, setRenderOverlay] = useState<PerformanceMonitoringState["renderOverlay"]>();
-  const [changingOverlay, setChangingOverlay] = useState(false);
-  const visible = useWebviewVisibility();
   useEffect(() => {
     if (!visible || snapshot === undefined) return;
-    let active = true;
-    void performance.state().then(
-      (state) => {
-        if (active) setRenderOverlay(state.renderOverlay);
-      },
-      () => {
-        if (active) setRenderOverlay(undefined);
-      },
-    );
-    return () => {
-      active = false;
-    };
-  }, [performance, visible, snapshot]);
-  const changeOverlay = async (enabled: boolean) => {
-    setChangingOverlay(true);
-    try {
-      await host.call("performance.control", { operation: "set-render-overlay", enabled });
-      setRenderOverlay((await performance.state()).renderOverlay);
-    } finally {
-      setChangingOverlay(false);
-    }
-  };
+    const controller = new AbortController();
+    void actions.refreshOverlay(controller.signal);
+    return () => controller.abort();
+  }, [actions, visible, snapshot]);
   const run = (action: Promise<unknown>, source: NonNullable<typeof error>["source"] = "metrics") => {
     setError(undefined);
     action.catch((cause) => setError({ message: String(cause), source }));
   };
   const copy = async () => {
-    // Copy the latest reading, not the one this view last drew.
-    const latest = await performance.snapshot();
-    if (!latest) return;
-    await navigator.clipboard.writeText(JSON.stringify(latest, null, 2));
-    setCopied(true);
+    if (await actions.copy()) setCopied(true);
   };
 
   return (
@@ -79,16 +64,18 @@ const Details = (props: DetailsProps) => {
       snapshot={snapshot}
       error={readError?.message}
       copied={copied}
+      copying={copying}
+      pendingExtensions={pendingExtensions}
       renderOverlay={{
-        state: renderOverlay,
-        pending: changingOverlay,
-        onEnabledChange: (enabled) => run(changeOverlay(enabled), "render-overlay"),
+        state: renderOverlay && { ...renderOverlay, enabled: overlayIntent ?? renderOverlay.enabled },
+        pending: overlayIntent !== undefined,
+        onEnabledChange: (enabled) => run(actions.setOverlay(enabled), "render-overlay"),
       }}
       actionError={error}
       onCopy={() => run(copy())}
       onDismissActionError={() => setError(undefined)}
-      onPause={(installedExtensionId) => run(performance.pauseExtension(installedExtensionId))}
-      onResume={(installedExtensionId) => run(performance.resumeExtension(installedExtensionId))}
+      onPause={(installedExtensionId) => run(actions.setPaused(installedExtensionId, true))}
+      onResume={(installedExtensionId) => run(actions.setPaused(installedExtensionId, false))}
     />
   );
 };
@@ -99,7 +86,7 @@ export default defineExtensionView({
     const root = createRoot(context.mount);
     root.render(
       <PerformanceRoot context={context}>
-        <Details client={client} host={context.host} />
+        <Details client={client} />
       </PerformanceRoot>,
     );
     return () => {

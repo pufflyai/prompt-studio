@@ -52,7 +52,8 @@ export const SortableHost = (props: SortableHostProps) => {
       minW="0"
       borderRadius="xs"
       opacity={sortable.isDragging ? 0.5 : 1}
-      bg={highlighted ? "bg.accent-subtle" : lifted}
+      bg={highlighted ? undefined : lifted}
+      layerStyle={highlighted ? "dropTarget" : undefined}
       data-tree-list-drop-group={highlighted ? "" : undefined}
       onPointerDownCapture={
         handle === "self"

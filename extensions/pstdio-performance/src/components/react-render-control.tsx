@@ -17,6 +17,7 @@ export const ReactRenderControl = (props: ReactRenderControlProps) => {
         size="sm"
         checked={state?.enabled ?? false}
         disabled={!state?.supported || pending}
+        aria-busy={pending}
         onCheckedChange={({ checked }) => onEnabledChange(checked)}
       >
         {t("reactScan.highlight", "Highlight React renders")}
