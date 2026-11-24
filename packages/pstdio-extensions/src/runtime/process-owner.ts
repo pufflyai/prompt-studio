@@ -15,6 +15,7 @@ const cleanupByHandle = new WeakMap<Pick<Stoppable, "exited">, Promise<unknown>>
 
 export const trackProcessCleanup = <T extends Pick<Stoppable, "exited">>(handle: T, cleanup: Promise<unknown>) => {
   cleanupByHandle.set(handle, cleanup);
+  void cleanup.catch(() => {});
   return handle;
 };
 
@@ -49,9 +50,10 @@ export const createProcessOwner = () => {
         return;
       }
       running.add(handle);
-      void processCleanup(handle)
-        .finally(() => running.delete(handle))
-        .catch(() => {});
+      void processCleanup(handle).then(
+        () => running.delete(handle),
+        () => {},
+      );
     },
     close() {
       closed = true;

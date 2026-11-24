@@ -100,7 +100,7 @@ test("closing the invocation stops a call-owned child and its descendants", asyn
   const pids = await treeOf(marker);
   expect(pids.every(alive)).toBe(true);
   await scope.close();
-  expect(await handle.exited).toMatchObject({ code: null });
+  expect(await handle.exited).toMatchObject({ code: process.platform === "win32" ? 1 : null });
   expect(await waitFor(() => !pids.some(alive))).toBe(true);
 });
 
@@ -138,7 +138,7 @@ test("an extension-owned child outlives its call and stops when the extension li
   await Bun.sleep(100);
   expect(pids.every(alive)).toBe(true);
   await extensionOwner.close();
-  expect(await handle.exited).toMatchObject({ code: null });
+  expect(await handle.exited).toMatchObject({ code: process.platform === "win32" ? 1 : null });
   expect(await waitFor(() => !pids.some(alive))).toBe(true);
 });
 
@@ -270,7 +270,7 @@ test("revoking a grant stops a spawned child that received it", async () => {
   const handle = api.spawn({ command: bun("tree.ts", marker), envFromHost: ["SPAWN_AGENT_TOKEN"] });
   const pids = await treeOf(marker);
   await permissions.revoke("project-1", "acme.agent");
-  expect(await handle.exited).toMatchObject({ code: null });
+  expect(await handle.exited).toMatchObject({ code: process.platform === "win32" ? 1 : null });
   expect(await waitFor(() => !pids.some(alive))).toBe(true);
 });
 
