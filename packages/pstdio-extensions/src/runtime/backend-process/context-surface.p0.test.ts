@@ -19,3 +19,16 @@ test("the process-mode ctx surface accounts for every ctx function", async () =>
   await runner.execute({ commandId: "pstdio.lab.command.capture", projectId: "p1", source: "cli" });
   expect(uncoveredContextFunctions(captured!)).toEqual([]);
 });
+
+test("surface coverage reports an unexpectedly failed factory and an undescribed member", () => {
+  const ctx = {
+    projectId: "p1",
+    storage: {
+      collection: () => {
+        throw new Error("Unexpected factory failure");
+      },
+      extra: () => {},
+    },
+  };
+  expect(uncoveredContextFunctions(ctx)).toEqual(["storage.collection", "storage.extra"]);
+});
