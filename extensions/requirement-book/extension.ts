@@ -6,6 +6,7 @@ import {
   packageAsset,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
+import { authoringDraftFailed } from "./src/authoring-draft-hook";
 import { commands } from "./src/commands";
 import { navigationTree, navigationView, openCommand, page, view } from "./src/navigation";
 import { resourceContributions } from "./src/resources";
@@ -28,6 +29,7 @@ export default defineExtension({
     },
   },
   defaultLocale: "en",
+  hooks: [authoringDraftFailed],
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
   commands: [...Object.values(commands), openCommand, ...resourceContributions.map((item) => item.resolve)],
   resourceKinds: resourceContributions.map((item) => item.kind),
