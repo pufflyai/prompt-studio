@@ -15,7 +15,7 @@ import { persistResult } from "./result-persistence";
 import { readCollectionReceipt, readCollectionState } from "./run-collection-state";
 import { TRANSFER_ALLOWANCE_SECONDS } from "./run-deadline";
 import { type Receipt, receiptSummary, summarize, timeoutSummary } from "./run-result";
-import { saveSubmissionFailure } from "./run-submission";
+import { isDefinitiveSubmissionRejection, saveSubmissionFailure } from "./run-submission";
 import { saveTimedOutRun } from "./run-timeout";
 import type { Settings } from "./settings";
 import { activateEnvironment } from "./setup-claims";
@@ -178,7 +178,7 @@ export async function startRun(
     await notifyRunChange(deps);
     return { record, files, bytes };
   } catch (error) {
-    if (submissionAttempted && record) {
+    if (submissionAttempted && record && !isDefinitiveSubmissionRejection(error)) {
       // An unacknowledged POST may already be executing. Its saved identity and
       // claim must survive transport failure and caller cancellation.
       await Promise.resolve()
@@ -256,7 +256,7 @@ export async function checkRun(
   signal?: AbortSignal,
   retryTransient = false,
 ) {
-  const initial = await readCollectionState(deps, record);
+  const initial = await readCollectionState(deps, record, signal, retryTransient);
   if (initial.summary || initial.setup) return initial.summary;
   const observed = await readCollectionReceipt(deps, initial.record, signal, retryTransient);
   record = observed.record;

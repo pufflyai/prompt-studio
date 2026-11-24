@@ -3,7 +3,7 @@ import { readSavedLog, runDeps } from "./context";
 import { resumeEnvironmentCleanups } from "./environment-cleanup";
 import { changed } from "./events";
 import { RecoveryBudgetExhausted, recoveryCursor } from "./recovery-budget";
-import { finishPendingResult } from "./result-persistence";
+import { finishPendingResult, prepareResultStorage } from "./result-persistence";
 import { unfinishedRuns } from "./run-recovery";
 import { awaitRun, type RunRecord, readRun } from "./runs";
 import { readRunSetup, waitForRunSetup } from "./setup-claims";
@@ -14,7 +14,7 @@ export const collectRun = defineCommand({
   automation: true,
   params: { runId: params.text({ label: l10n("remote-testing.run-id", "Run ID"), required: true }) },
   async run(ctx, { runId }) {
-    const record = await waitForRunSetup(ctx, runId, ctx.signal);
+    const record = await prepareResultStorage(() => waitForRunSetup(ctx, runId, ctx.signal), ctx.signal);
     if (record.pendingResult) {
       await finishPendingResult(
         {

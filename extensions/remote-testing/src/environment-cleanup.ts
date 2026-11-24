@@ -137,7 +137,7 @@ export async function enqueueEnvironmentCleanup(
     });
     // First admission precedes cancellation-sensitive reads. A terminal replay
     // follows the same bounded generation recovery as the scheduled sweep.
-    if (resumableCleanup(first)) await resumeCleanup(budgetedRecovery(ctx, "cleanup"), cleanupId(input));
+    if (resumableCleanup(first)) await resumeCleanup(budgetedRecovery(ctx, "cleanup"), cleanupId(input), first);
   } catch (error) {
     if (error instanceof RecoveryBudgetExhausted) return;
     reportCleanupQueueError(ctx, input, error);
@@ -161,12 +161,26 @@ type CleanupJob = NonNullable<Awaited<ReturnType<ExtensionContextBase["automatio
 const resumableCleanup = (job: CleanupJob) => !["queued", "running"].includes(job.status);
 const keepCleanupJob = (job: CleanupJob | undefined) => job && !resumableCleanup(job);
 
-async function resumeCleanup(ctx: Pick<ExtensionContextBase, "automation" | "storage">, id: string) {
+async function priorCleanupJob(
+  ctx: Pick<ExtensionContextBase, "automation">,
+  priorId?: string,
+  knownFirst?: CleanupJob,
+) {
+  if (priorId === knownFirst?.id) return knownFirst;
+  return priorId ? ctx.automation.get(priorId) : undefined;
+}
+
+async function resumeCleanup(
+  ctx: Pick<ExtensionContextBase, "automation" | "storage">,
+  id: string,
+  knownFirst?: CleanupJob,
+) {
   const intents = cleanupIntents(ctx.storage);
   while (true) {
     const current = await intents.read(id);
     if (!current) return;
-    const { environmentId, runId, stop, orphan, jobId: priorId } = current.value;
+    const { environmentId, runId, stop, orphan, jobId } = current.value;
+    const priorId = jobId ?? knownFirst?.id;
     const claim = await ctx.storage.collection<{ runId: string }>("environment-claims").get(environmentId);
     if (claim?.runId !== runId) {
       await intents.deleteIfValue(id, current.value);
@@ -178,7 +192,7 @@ async function resumeCleanup(ctx: Pick<ExtensionContextBase, "automation" | "sto
       await intents.deleteIfValue(id, current.value);
       return;
     }
-    const prior = priorId ? await ctx.automation.get(priorId) : undefined;
+    const prior = await priorCleanupJob(ctx, priorId, knownFirst);
     if (keepCleanupJob(prior)) return;
     const job = await ctx.automation.enqueue({
       command: cleanupEnvironmentCommand.ref,

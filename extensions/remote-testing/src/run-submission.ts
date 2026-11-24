@@ -1,4 +1,11 @@
+import { PocketCoderError } from "./connection";
 import type { RunDeps, RunRecord, RunSummary } from "./runs";
+
+// The controller validates this registration before executions.accept. Other
+// conflicts and transport failures do not establish that submission was rejected.
+export function isDefinitiveSubmissionRejection(error: unknown) {
+  return error instanceof PocketCoderError && error.status === 409 && error.code === "attachment.unsupported";
+}
 
 export async function saveSubmissionFailure(deps: RunDeps, record: RunRecord | undefined, error: unknown) {
   if (!record) return;

@@ -6,6 +6,7 @@ import { showRun } from "./commands";
 import { PocketCoderError } from "./connection";
 import { cleanupEnvironmentCommand } from "./environment-cleanup";
 import { activeRun, claimEnvironment } from "./environments";
+import { reserveRecoveryAdmission } from "./recovery-budget";
 import { createRunStorage } from "./run-storage-fixture";
 import { checkRun, type RunRecord } from "./runs";
 import { activateEnvironment } from "./setup-claims";
@@ -252,4 +253,35 @@ test("explicit show retries a failed first setup cleanup without an assigned sch
   expect(await activeRun(f.store, "env")).toBeNull();
   expect(f.reads()).toBe(0);
   expect(f.stops()).toBe(0);
+});
+
+test("explicit cleanup uses the last admission slot without replaying a known failed first job", async () => {
+  const f = await fixture(false, -1, true);
+  const first = await showRun.run(f.ctx, { runId: "run" });
+  f.jobs.get("job-0")!.status = "failed";
+  f.jobs.get("job-0")!.error = { code: "command_failed", message: "Storage unavailable", retryable: false };
+  for (let index = 0; index < 7; index++) expect(await reserveRecoveryAdmission(f.store, "cleanup")).toBe(true);
+  expect(await showRun.run(f.ctx, { runId: "run" })).toEqual(first);
+  expect(f.queued).toHaveLength(2);
+  expect(f.queued[1]?.key).toBe("remote-tests:cleanup:run:env:job-0");
+  const budget = await f.store.collection<{ admissions: unknown[] }>("recovery-admissions").get("rolling");
+  expect(budget?.admissions).toHaveLength(8);
+});
+
+test("a known first cleanup cannot overwrite a newer active generation link", async () => {
+  const f = await fixture(false, -1, true);
+  const first = await showRun.run(f.ctx, { runId: "run" });
+  const prior = f.jobs.get("job-0")!;
+  prior.status = "failed";
+  prior.error = { code: "command_failed", message: "Storage unavailable", retryable: false };
+  f.jobs.set("newer", { ...prior, id: "newer", status: "running", error: null });
+  const intents = f.store.collection<{ environmentId: string; runId: string; stop: boolean; jobId?: string }>(
+    "environment-cleanups",
+  );
+  const current = await intents.read("run:env");
+  await intents.updateIfUnchanged("run:env", current!.revision, { ...current!.value, jobId: "newer" });
+  expect(await showRun.run(f.ctx, { runId: "run" })).toEqual(first);
+  expect(f.queued).toHaveLength(1);
+  expect((await intents.get("run:env"))?.jobId).toBe("newer");
+  expect(await f.store.collection("recovery-admissions").get("rolling")).toBeUndefined();
 });

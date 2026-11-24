@@ -43,7 +43,10 @@ command there, stops the environment when the run finishes, and saves the full l
   cancels its overdue request when the controller can return its receipt and retains the
   workspace claim until a terminal receipt confirms cancellation. If an unacknowledged
   submission still has no receipt at the deadline, collection stops even a kept workspace
-  before releasing ownership, because admission may still be in flight. A receipt that
+  before releasing ownership, because admission may still be in flight. A documented
+  `attachment.unsupported` registration rejection precedes admission: it preserves the
+  original error and releases a reused workspace without stopping it. Ambiguous responses
+  and lost replies retain request identity and ownership for reconciliation. A receipt that
   already finished retains its actual result. Double-click a run, or use its menu, to
   open its session. The menu also cancels a running run.
 - **Environments**: running test environments, whether each is free or which run holds it,
