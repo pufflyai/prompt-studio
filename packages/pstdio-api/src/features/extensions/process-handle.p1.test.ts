@@ -170,7 +170,13 @@ test("a command that cannot start rejects started with a code and still reports 
   process.on("unhandledRejection", onUnhandled);
   try {
     const handle = spawnProcessHandle({ argv: [join(root, "missing-command")], env });
-    await expect(handle.started).rejects.toMatchObject({ code: "process_command_not_found" });
+    // The Windows launcher reports this failure over IPC. Await that reply before matching it.
+    expect(
+      await handle.started.then(
+        () => "started",
+        (error: unknown) => error,
+      ),
+    ).toMatchObject({ code: "process_command_not_found" });
     expect(await handle.exited).toEqual({ code: null, signal: null });
     expect(await collect(handle.events())).toEqual([{ type: "exit", exit: { code: null, signal: null } }]);
     await expect(handle.write("x")).rejects.toThrow();
