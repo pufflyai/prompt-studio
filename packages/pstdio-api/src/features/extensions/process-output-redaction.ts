@@ -19,41 +19,50 @@ const startsWith = (secret: Uint8Array, bytes: Uint8Array, from: number) => {
 };
 
 /**
- * Extends a match over every secret that overlaps it, so `abc` and `bcdefg` in `abcdefg` hide the
- * whole run rather than leave `defg`. Returns undefined when an overlapping secret may continue
- * past the bytes seen so far, unless the stream has ended.
+ * Extends a run over every secret that overlaps it, so `abc` and `bcdefg` in `abcdefg` hide the
+ * whole run rather than leave `defg`. The covered end only grows, so one forward sweep checks
+ * each position once.
  */
-const coveredEnd = (bytes: Uint8Array, secrets: Uint8Array[], start: number, end: number, final: boolean) => {
+const coveredEnd = (bytes: Uint8Array, secrets: Uint8Array[], start: number, end: number) => {
   let covered = end;
-  for (let changed = true; changed; ) {
-    changed = false;
-    for (const secret of secrets) {
-      // Only starts inside the run can overlap it, so the search stays within the run.
-      for (let at = start; at < covered && at + secret.length <= bytes.length; at++)
-        if (at + secret.length > covered && startsWith(secret, bytes, at)) {
-          covered = at + secret.length;
-          changed = true;
-        }
-    }
-  }
-  if (final) return covered;
   for (let at = start; at < covered; at++)
-    if (secrets.some((secret) => secret.length > bytes.length - at && startsWith(secret, bytes, at))) return undefined;
+    for (const secret of secrets)
+      if (at + secret.length > covered && at + secret.length <= bytes.length && startsWith(secret, bytes, at))
+        covered = at + secret.length;
   return covered;
+};
+
+// The first position in the run whose rest may still grow into a longer secret, if any.
+const unfinishedIn = (bytes: Uint8Array, secrets: Uint8Array[], start: number, covered: number, keep: number) => {
+  for (let at = Math.max(start, bytes.length - keep); at < covered; at++)
+    if (secrets.some((secret) => secret.length > bytes.length - at && startsWith(secret, bytes, at))) return at;
+  return undefined;
 };
 
 /**
  * Replaces secrets that start before `limit` and returns the redacted bytes with the raw rest.
- * Each secret's next position is searched once and moved forward only when passed, so many
- * matches of one value do not rescan the buffer for the others.
+ * `forced` bytes at the start belong to a run already being hidden. A run that may still grow
+ * past the bytes seen so far is hidden up to its unfinished part, and only that part, shorter
+ * than the longest secret, is held with the count of its bytes that must still be hidden.
  */
-const redactUpTo = (bytes: Uint8Array, secrets: Uint8Array[], limit: number, final = false) => {
+const redactUpTo = (
+  bytes: Uint8Array,
+  secrets: Uint8Array[],
+  limit: number,
+  final = false,
+  forced = 0,
+  marked = false,
+) => {
   const next = secrets.map((secret) => indexOf(bytes, secret, 0));
+  const keep = Math.max(...secrets.map((secret) => secret.length));
   const parts: Uint8Array[] = [];
   let position = 0;
+  let held = 0;
+  let heldMarked = false;
   while (position < limit) {
     // The leftmost secret at or after `position`, the longest one when several start there.
-    let match: { start: number; length: number } | undefined;
+    let match: { start: number; length: number } | undefined =
+      position === 0 && forced > 0 ? { start: 0, length: Math.min(forced, bytes.length) } : undefined;
     for (const [index, secret] of secrets.entries()) {
       if (next[index]! >= 0 && next[index]! < position) next[index] = indexOf(bytes, secret, position);
       const start = next[index]!;
@@ -65,15 +74,28 @@ const redactUpTo = (bytes: Uint8Array, secrets: Uint8Array[], limit: number, fin
       position = limit;
       break;
     }
-    const end = coveredEnd(bytes, secrets, match.start, match.start + match.length, final);
+    const covered = coveredEnd(bytes, secrets, match.start, match.start + match.length);
     parts.push(bytes.subarray(position, match.start));
-    position = match.start;
-    // An overlapping secret may still be arriving: hold the whole run for the next chunk.
-    if (end === undefined) break;
-    parts.push(REDACTED);
-    position = end;
+    // A run carried over from the last chunk already has its marker when that chunk emitted one.
+    const continues = match.start === 0 && forced > 0 && marked;
+    const unfinished = final ? undefined : unfinishedIn(bytes, secrets, match.start, covered, keep);
+    if (unfinished === undefined) {
+      if (!continues) parts.push(REDACTED);
+      position = covered;
+      continue;
+    }
+    if (unfinished > match.start && !continues) parts.push(REDACTED);
+    position = unfinished;
+    held = covered - unfinished;
+    heldMarked = continues || unfinished > match.start;
+    break;
   }
-  return { emitted: Buffer.concat(parts), rest: bytes.subarray(position) };
+  // Nothing processed: the bytes still owed to a run stay owed.
+  if (position === 0 && held === 0) {
+    held = forced;
+    heldMarked = marked;
+  }
+  return { emitted: Buffer.concat(parts), rest: bytes.subarray(position), forced: held, marked: heldMarked };
 };
 
 /** Hides granted values in collected output, overlapping ones included. */
@@ -108,18 +130,25 @@ export const redactProcessOutput = (handle: ProcessHandle, values: string[]) => 
 
   const redacted = async function* (source: AsyncIterable<ProcessEvent>) {
     const held: Record<"stdout" | "stderr", Uint8Array> = { stdout: new Uint8Array(), stderr: new Uint8Array() };
+    // Held bytes that belong to a run already being hidden, and whether its marker was sent.
+    const owed: Record<"stdout" | "stderr", number> = { stdout: 0, stderr: 0 };
+    const marked: Record<"stdout" | "stderr", boolean> = { stdout: false, stderr: false };
     for await (const event of source) {
       if (event.type === "exit") {
         for (const type of ["stdout", "stderr"] as const) {
-          const { emitted } = redactUpTo(held[type], secrets, held[type].length, true);
+          const { emitted } = redactUpTo(held[type], secrets, held[type].length, true, owed[type], marked[type]);
           if (emitted.length) yield { type, data: emitted } satisfies ProcessEvent;
         }
         yield event;
         return;
       }
       const bytes = Buffer.concat([held[event.type], event.data]);
-      const { emitted, rest } = redactUpTo(bytes, secrets, pendingFrom(bytes, secrets, keep));
+      const limit = Math.max(pendingFrom(bytes, secrets, keep), Math.min(owed[event.type], bytes.length));
+      const result = redactUpTo(bytes, secrets, limit, false, owed[event.type], marked[event.type]);
+      const { emitted, rest } = result;
       held[event.type] = rest;
+      owed[event.type] = result.forced;
+      marked[event.type] = result.marked;
       if (emitted.length) yield { type: event.type, data: emitted } satisfies ProcessEvent;
     }
   };

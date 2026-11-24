@@ -62,3 +62,32 @@ test("overlapping granted values are hidden whole, in streams and in collected o
   expect(await stdout(redactProcessOutput(streamed("x abcd", "efg y"), ["abc", "bcdefg"]))).toBe("x [Redacted] y");
   expect(redactText("x abcdefg y", ["abc", "bcdefg"])).toBe("x [Redacted] y");
 });
+
+test("overlapping values hold back at most the longest value and redact in linear time", async () => {
+  // Each copy of the value overlaps the next by one byte, so the run never ends.
+  const value = "tok9Zt";
+  const chunks = Array.from({ length: 4_000 }, () => "tok9Z");
+  const seen: string[] = [];
+  const started = performance.now();
+  const handle = redactProcessOutput(
+    {
+      events: async function* () {
+        for (const chunk of chunks) yield { type: "stdout", data: new TextEncoder().encode(chunk) } as ProcessEvent;
+        yield { type: "exit", exit: { code: 0, signal: null } } as ProcessEvent;
+      },
+    } as unknown as ProcessHandle,
+    [value],
+  );
+  let emittedBeforeExit = 0;
+  for await (const event of handle.events()) {
+    if (event.type === "stdout") seen.push(new TextDecoder().decode(event.data));
+    if (event.type !== "exit") emittedBeforeExit = seen.length;
+  }
+  expect(emittedBeforeExit).toBeGreaterThan(1);
+  expect(seen.join("")).not.toContain("tok9Zt");
+  expect(performance.now() - started).toBeLessThan(2_000);
+  const mutual = "xyz".repeat(100_000);
+  const collected = performance.now();
+  expect(redactText(mutual, ["xy", "yzx"])).not.toContain("xy");
+  expect(performance.now() - collected).toBeLessThan(2_000);
+});
