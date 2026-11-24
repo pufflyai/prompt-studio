@@ -884,12 +884,20 @@ test.each([
 test.each([
   "same-job",
   "lent-to-restoration",
+  "foreground-loan",
+  "released-foreground-loan",
   // Without a loan the hold cannot see the dependency. It only delays the job until the hold lapses.
   "unlent-await",
 ] as const)("a continuation that waits on the job it interrupted lets it run (%s)", async (mode) => {
   const client = fixture({ workers: 2 });
   const blocked = gate();
   const busy = gate();
+  const competingStep = mode === "released-foreground-loan" ? gate() : undefined;
+  const work: Promise<unknown>[] = [];
+  const track = <T>(promise: Promise<T>) => {
+    work.push(promise.catch(() => undefined));
+    return promise;
+  };
   let lost = 0;
   const unsubscribe = client.subscribe((event) => {
     if (event.kind === "worker-lost") lost++;
@@ -899,42 +907,60 @@ test.each([
   const restart = restartOf(client, input.name);
   let predecessor: ReturnType<typeof createPreparationScope> | undefined;
   // A restoration continuation owns the predecessor, so it ranks before the edit that interrupts it.
-  const original = client.withContinuation(
-    () =>
-      withBackgroundPreparation(() => {
-        const scope = createPreparationScope();
-        predecessor = scope;
-        return scope.run(() => client.run("wait", input, options)).finally(scope.dispose);
-      }),
-    { priority: "restoration" },
+  const original = track(
+    client.withContinuation(
+      () =>
+        withBackgroundPreparation(() => {
+          const scope = createPreparationScope();
+          predecessor = scope;
+          return scope.run(() => client.run("wait", input, options)).finally(scope.dispose);
+        }),
+      { priority: "restoration" },
+    ),
   );
   await blocked.entered.promise;
-  const edit = client.withContinuation(async () => {
-    await client.run("value", { name: "urgent-step" }, { resources: ["/same"] });
-    expect(lost).toBe(1);
-    // A disjoint step keeps the edit busy on the second worker while it waits for the predecessor.
-    const running = client.run("wait", { name: "busy-step", url: busy.url }, { resources: ["/busy"] });
-    await busy.entered.promise;
-    blocked.release.resolve();
-    if (mode === "same-job") await client.run("wait", input, options);
-    else if (mode === "unlent-await") await original;
-    // The edit lends itself to the predecessor it now waits for, through the supported request API.
-    else
-      await withBackgroundPreparation(async () => {
-        const caller = createPreparationScope();
-        const release = predecessor!.request(caller);
-        try {
-          await original;
-        } finally {
-          release();
-          caller.dispose();
-        }
-      });
-    await running;
-  });
+  const edit = track(
+    client.withContinuation(async () => {
+      await client.run("value", { name: "urgent-step" }, { resources: ["/same"] });
+      expect(lost).toBe(1);
+      // A disjoint step keeps the edit busy on the second worker while it waits for the predecessor.
+      const running = track(client.run("wait", { name: "busy-step", url: busy.url }, { resources: ["/busy"] }));
+      await busy.entered.promise;
+      if (mode === "same-job") await client.run("wait", input, options);
+      else if (mode === "unlent-await") await original;
+      // The edit lends itself to the predecessor it now waits for, through the supported request API.
+      else {
+        const join = async () => {
+          const caller = createPreparationScope();
+          // Keep the resource occupied until the foreground loan has been released.
+          const competing = competingStep
+            ? track(client.run("wait", { name: "competing-step", url: competingStep.url }, { resources: ["/same"] }))
+            : undefined;
+          await competingStep?.entered.promise;
+          const release = predecessor!.request(caller);
+          try {
+            if (competingStep) {
+              release();
+              competingStep.release.resolve();
+              await competing;
+            }
+            await original;
+          } finally {
+            release();
+            caller.dispose();
+          }
+        };
+        if (mode === "lent-to-restoration") await withBackgroundPreparation(join);
+        else await join();
+      }
+      await running;
+    }),
+  );
   try {
-    expect(await restartWhileBusy(restart.restarted)).toBe(mode === "unlent-await" ? "held" : "restarted");
+    const shouldHold = mode === "unlent-await" || mode === "released-foreground-loan";
+    expect(await restartWhileBusy(restart.restarted)).toBe(shouldHold ? "held" : "restarted");
     busy.release.resolve();
+    blocked.release.resolve();
     expect(await Promise.race([edit.then(() => "completed"), Bun.sleep(3_000).then(() => "stalled")])).toBe(
       "completed",
     );
@@ -944,9 +970,10 @@ test.each([
     restart.unsubscribe();
     busy.release.resolve();
     blocked.release.resolve();
+    competingStep?.release.resolve();
     // A stalled job never settles on its own; stopping rejects it so the assertion is reported.
     await client.stop();
-    await Promise.allSettled([edit, original]);
+    await Promise.allSettled(work);
   }
 });
 
@@ -1506,7 +1533,7 @@ test("a reserved queue head does not stop a later request from retiring its own 
 });
 
 test.each([
-  // One worker: the edit is reserved on its ready replacement, then a restoration also waits on the held job.
+  // One worker: the restoration waiter lets the held job run before the reserved edit.
   ["single", 1_550],
   // Control: only the restoration's waiter is cancelled, so the edit runs first.
   ["single-cancel", 1_550],
@@ -1535,18 +1562,15 @@ test.each([
     return promise;
   };
   const wait = (name: string, url: string, resource: string, options = {}) =>
-    client.run("wait", { name, url }, { resources: [resource], ...options });
+    client.run<{ sequence: number }>("wait", { name, url }, { resources: [resource], ...options });
   const background = <T>(work: () => Promise<T>) =>
     client.withContinuation(() => withBackgroundPreparation(work), { priority: "background" });
   const edit = <T>(work: () => Promise<T>) => client.withContinuation(() => withBackgroundPreparation(work));
   const restore = <T>(work: () => Promise<T>) => client.withContinuation(work, { priority: "restoration" });
   const prior = () => wait("R", held.url, "/r");
   let lost = 0;
-  const ready = Promise.withResolvers<void>();
   const restart = restartOf(client, "R");
-  let workers = 0;
   const unsubscribe = client.subscribe((event) => {
-    if (event.kind === "worker-ready" && ++workers === 2) ready.resolve();
     if (event.kind !== "worker-lost") return;
     lost++;
     if (!single && !head && lost === 1) track(restore(() => wait("Z", occupant.url, "/z")));
@@ -1557,15 +1581,21 @@ test.each([
     if (single) {
       const original = track(background(prior));
       await held.entered.promise;
-      const request = track(edit(() => client.run("value", { name: "J" }, { resources: ["/r"] })));
+      const request = track(
+        edit(() => client.run<{ sequence: number }>("value", { name: "J" }, { resources: ["/r"] })),
+      );
       await startup.entered.promise;
       const cancel = new AbortController();
       const restoring = track(restore(() => wait("R", held.url, "/r", { signal: cancel.signal })));
+      const cancelled = mode === "single-cancel";
+      if (cancelled) cancel.abort(new Error("restoration waiter cancelled"));
+      const waited = cancelled ? expect(restoring).rejects.toBe(cancel.signal.reason) : restoring;
       held.release.resolve();
       startup.release.resolve();
-      await ready.promise;
-      if (mode === "single-cancel") cancel.abort();
-      expect(await settled(Promise.all([original, request, restoring.catch(() => undefined)]))).toBe("dispatched");
+      expect(await settled(Promise.all([original, request, waited]))).toBe("dispatched");
+      expect((await request).sequence).toBe(cancelled ? 1 : 2);
+      expect((await original).sequence).toBe(cancelled ? 2 : 1);
+      expect(lost).toBe(1);
     } else if (head) {
       track(background(() => wait("G", overflow.url, "/g")));
       await overflow.entered.promise;

@@ -10,18 +10,24 @@ export const joinPreparationDependencies = <T>(
 ) => {
   const leases = new Map<
     CheckOwner,
-    { source: "requested" | NonNullable<typeof caller.continuation>; release: () => void }
+    { requested: boolean; continuations: typeof caller.continuations; release: () => void }
   >();
   const refresh = () => {
-    const source = caller.requested ? "requested" : caller.continuation;
+    const source = { requested: caller.requested, continuations: caller.continuations };
     for (const owner of owners) {
       const current = leases.get(owner);
-      if (current && (owner.settled || !source || current.source !== source)) {
-        current.release();
+      if (owner.settled || (!source.requested && !source.continuations.length)) {
         leases.delete(owner);
+        current?.release();
+      } else if (
+        current?.requested !== source.requested ||
+        current.continuations.length !== source.continuations.length ||
+        current.continuations.some((continuation, index) => continuation !== source.continuations[index])
+      ) {
+        // Several continuations can wait through the same caller. Keep urgency through a lease transfer.
+        leases.set(owner, { ...source, release: owner.scope.request(source) });
+        current?.release();
       }
-      if (source && !owner.settled && !leases.has(owner))
-        leases.set(owner, { source, release: owner.scope.request(caller) });
     }
   };
   const unsubscribe = caller.subscribe(refresh);
