@@ -5,7 +5,7 @@ import { backendWorkerCommand, createBackendWorkerPool } from "./pool";
 import { BackendUnavailableError, type BackendWorker, startBackendWorker } from "./supervisor";
 
 type Revision = { entryPath: string; id: string };
-type Generation = { key: string; definition: Promise<unknown>; verified?: BackendWorker };
+type Generation = { key: string; order: number; definition: Promise<unknown>; verified?: BackendWorker };
 type Source = { active?: Generation; candidate?: Generation };
 
 const entryOf = (key: string) => key.slice(0, key.lastIndexOf("#"));
@@ -15,6 +15,7 @@ const reading = new Map<string, Promise<unknown>>();
 let updates = Promise.resolve();
 let closing: Promise<void> | undefined;
 let epoch = 0;
+let generationOrder = 0;
 
 const readDefinition = async (revision: Revision) => {
   const worker = await startBackendWorker({
@@ -43,9 +44,10 @@ const retired = () => new BackendUnavailableError("This extension backend genera
 const adopt = (source: Source, generation: Generation, loadedIn: number) => {
   const update = updates.then(async () => {
     if (loadedIn !== epoch || closing) throw shutDown();
-    if (source.active === generation) return;
-    if (source.candidate !== generation) throw retired();
     const previous = source.active;
+    if (previous === generation) return;
+    // Inspecting a candidate does not supersede a published definition, even before its first call.
+    if (previous && previous.order > generation.order) throw retired();
     source.active = generation;
     if (previous && ![...sources.values()].some((current) => current.active?.key === previous.key)) {
       await pool.retire(previous.key);
@@ -69,14 +71,17 @@ export const acquireBackendWorker = async (packagePath: string, revision: Revisi
   const source = sources.get(packagePath) ?? {};
   sources.set(packagePath, source);
   const existing = [source.active, source.candidate].find((generation) => generation?.key === key);
-  const generation: Generation = existing ?? { key, definition: readSharedDefinition(key, revision) };
+  const generation: Generation = existing ?? {
+    key,
+    order: ++generationOrder,
+    definition: readSharedDefinition(key, revision),
+  };
   source.candidate = generation;
   let definition: unknown;
   try {
     definition = await generation.definition;
   } catch (error) {
     if (source.candidate === generation) source.candidate = undefined;
-    if (sources.get(packagePath) === source && !source.active && !source.candidate) sources.delete(packagePath);
     throw error;
   }
   if (loadedIn !== epoch || closing) throw shutDown();
