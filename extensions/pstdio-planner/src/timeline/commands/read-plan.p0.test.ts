@@ -17,6 +17,7 @@ import { createDeadlineCommand } from "./deadline-commands";
 import { registerGate } from "./gate-store";
 import { moveTicketCommand } from "./move-ticket";
 import { readPlanCommand } from "./read-plan";
+import { requestPageCommand } from "./request-page";
 
 test("an invalid Track stops the snapshot before saved views can be initialized", async () => {
   const storage = createMemoryStorage();
@@ -77,7 +78,7 @@ test("the timeline carries gate instructions without copying ordinary ticket doc
   expect(rows.find(({ id }) => id === gate.id)?.instructions).toBe(gate.content);
 });
 
-test("the plan reads one ticket snapshot without loading workspace session histories", async () => {
+test("the plan reads ticket projections without loading workspace session histories", async () => {
   const storage = createMemoryStorage();
   const [ctx] = makeCommandArgs({ storage, params: {} });
   const ticket = await createTicketCommand.run(ctx, { title: "Visible work", statusId: "ready" });
@@ -123,7 +124,7 @@ test("the plan reads one ticket snapshot without loading workspace session histo
   expect(plan.sections.flatMap(({ rows }) => rows).find(({ id }) => id === ticket.id)?.target.resource).toEqual(
     plan.ticketRows.find(({ id }) => id === ticket.id)?.resource,
   );
-  expect(ticketReads).toBe(1);
+  expect(ticketReads).toBe(0);
   expect(sessionReads).toBe(0);
 });
 
@@ -285,6 +286,63 @@ test("waiting for prerequisites is distinct from a blocker on otherwise availabl
   });
 });
 
+test("legacy dependency links resolve before global blocker flags and counts", async () => {
+  const storage = createMemoryStorage();
+  const [ctx] = makeCommandArgs({ storage, params: {} });
+  const first = await createTicketCommand.run(ctx, { content: "# First prerequisite", statusId: "done" });
+  const second = await createTicketCommand.run(ctx, { content: "# Second prerequisite", statusId: "done" });
+  const archived = await createTicketCommand.run(ctx, { content: "# Archived prerequisite", statusId: "done" });
+  for (const ticket of [first, second])
+    await ticketsCollection(storage).put(ticket.id, { ...ticket, aliases: ["OLD-1"] });
+  await ticketsCollection(storage).put(archived.id, { ...archived, archived: true });
+  const cases = [
+    { links: [first.id], refs: first.shorthand, blocked: false },
+    { links: [` ${first.shorthand.toLowerCase()} `], refs: first.shorthand, blocked: false },
+    {
+      links: [first.id.toUpperCase(), second.shorthand.toLowerCase()],
+      refs: `${first.shorthand} and ${second.shorthand}`,
+      blocked: false,
+    },
+    { links: [first.id, first.shorthand], refs: "OLD-1", blocked: false },
+    { links: [first.shorthand], refs: "OLD-1", blocked: false },
+    { links: [first.id, second.shorthand], refs: "OLD-1", blocked: true },
+    { links: ["OLD-1"], refs: first.shorthand, blocked: true },
+    { links: ["missing"], refs: first.shorthand, blocked: true },
+    { links: [archived.shorthand], refs: archived.shorthand, blocked: true },
+  ];
+  const children: { id: string; blocked: boolean }[] = [];
+  for (const [index, { links, refs, blocked }] of cases.entries()) {
+    const ticket = await createTicketCommand.run(ctx, {
+      content: `# ${blocked ? "Independent" : "Resolved"} legacy dependency ${index}`,
+      statusId: "ready",
+    });
+    // Persist old agents' stored data without the writer clearing dependency-only prose.
+    await ticketsCollection(storage).put(ticket.id, {
+      ...ticket,
+      dependsOn: links,
+      blockedReason: `Complete ${refs} before implementing this dependent contract.`,
+    });
+    children.push({ id: ticket.id, blocked });
+  }
+  const independent = await createTicketCommand.run(ctx, { content: "# External blocker", statusId: "ready" });
+  await ticketsCollection(storage).put(independent.id, { ...independent, blockedReason: "Missing credentials" });
+
+  const plan = await readPlanCommand.run(ctx, {});
+  const rows = plan.sections.flatMap(({ rows }) => rows);
+  for (const { id, blocked } of children)
+    expect(rows.find((row) => row.id === id)?.flags.includes("blocked")).toBe(blocked);
+  expect(rows.find((row) => row.id === independent.id)?.flags).toContain("blocked");
+  expect(plan.sections[0]!.counts.blocked).toBe(5);
+  const firstPage = await readPlanCommand.run(ctx, {
+    page: { limit: 1, offset: 0, fields: ["title"], search: "" },
+  });
+  expect(firstPage.sections[0]!.counts.blocked).toBe(5);
+  const resolved = await readPlanCommand.run(ctx, {
+    filter: { conjunction: "and", rules: [{ attributeId: "title", condition: "contains", value: "Resolved" }] },
+  });
+  expect(resolved.sections[0]!.counts.blocked).toBe(0);
+});
+
 test("answering one request keeps another open request awaiting input", async () => {
   const storage = createMemoryStorage();
   const sessions = { create: async () => ({ type: "session", id: "chat", title: "Chat", status: "in_progress" }) };
@@ -315,13 +373,16 @@ test("answering one request keeps another open request awaiting input", async ()
   const plan = await readPlanCommand.run(ctx, {});
   const row = plan.sections.flatMap((section) => section.rows).find((entry) => entry.id === ticket.id);
   expect(row).toMatchObject({ state: "await-input", flags: expect.arrayContaining(["review-needed"]) });
-  expect(row?.requests.map((request) => request.state).sort()).toEqual(["answered", "open"]);
+  expect(row?.reviewCounts).toEqual({ total: 2, pending: 1, answered: 1 });
+  expect(row?.requests).toEqual([]);
+  const requestPage = await requestPageCommand.run(ctx, { scope: { ticketId: ticket.id } });
+  expect(requestPage.requests.map((request) => request.state).sort()).toEqual(["answered", "open"]);
   expect(row?.target.page.id).toBe("ticket");
   expect(selectedDocumentFromResource(row?.target.resource)).toBe(TICKET_BODY_DOCUMENT);
   expect(await reviewState()).toBe("requested");
   expect(plan.sections.find((section) => section.rows.includes(row!))?.counts.reviewNeeded).toBe(1);
 
-  const handoffId = row?.requests.find((request) => request.state === "open")?.id as string;
+  const handoffId = requestPage.requests.find((request) => request.state === "open")!.id;
   await reviewCommand.run(ctx, { requestId: handoffId, response: { answers: { result: "Merged A1." } } });
   expect(await reviewState()).toBe("answered");
   const stateWith = async (statusId: string) => {

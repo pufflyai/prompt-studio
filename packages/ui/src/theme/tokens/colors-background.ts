@@ -156,7 +156,13 @@ export const bg = {
     },
   },
 
-  // A drop target the dragged item joins, such as a group in the Sidenav.
+  // Shared drag feedback follows the floating-panel indicator palette in every theme.
+  drop: {
+    DEFAULT: { value: "{colors.bg.accent-primary.default}" },
+    muted: { value: "{colors.fg.muted}" },
+  },
+
+  // Retained for existing theme consumers; drag targets use bg.drop.
   "accent-subtle": {
     value: {
       _light: "#EEF0FB",

@@ -1,5 +1,38 @@
 import { defineLayerStyles } from "@chakra-ui/react";
 
+const dropDot = {
+  _after: {
+    content: '""',
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    width: "1.5",
+    height: "1.5",
+    borderRadius: "full",
+    bg: "bg.drop.muted/40",
+    transform: "translate(-50%, -50%)",
+    pointerEvents: "none",
+  },
+  "&[data-drop-active]::after": { bg: "bg.drop" },
+} as const;
+
+const compactDropZone = {
+  _after: {
+    content: '""',
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    width: "12",
+    height: "1.5",
+    transform: "translate(-50%, -50%)",
+    borderRadius: "pill",
+    bg: "bg.drop.muted/40",
+    pointerEvents: "none",
+  },
+  "&[data-orientation=vertical]::after": { width: "1.5", height: "12" },
+  "&[data-drop-active]::after": { bg: "bg.drop" },
+} as const;
+
 export const layerStyles = defineLayerStyles({
   documentContent: { value: { width: "full", minWidth: "0", maxWidth: "document-content", marginInline: "auto" } },
   resourceActivityNotice: {
@@ -63,7 +96,7 @@ export const layerStyles = defineLayerStyles({
       position: "absolute",
       zIndex: "1",
       borderRadius: "2xs",
-      bg: "bg.accent-primary.default",
+      bg: "bg.drop",
       pointerEvents: "none",
     },
   },
@@ -74,24 +107,95 @@ export const layerStyles = defineLayerStyles({
         position: "absolute",
         inset: "3xs",
         borderWidth: "1px",
-        borderColor: "bg.accent-primary.default",
+        borderColor: "bg.drop",
         borderRadius: "compact",
         pointerEvents: "none",
       },
     },
   },
-  panelDropZone: {
+  panelDropZone: { value: compactDropZone },
+  widgetDropIndicator: { value: dropDot },
+  bubbleButton: { value: { aspectRatio: "square" } },
+  dropTarget: {
     value: {
-      _after: {
+      bg: "bg.drop/20",
+      _hover: { bg: "bg.drop/20" },
+      _focusVisible: { bg: "bg.drop/20" },
+      // List rows and section headers must let their active drop surface show through.
+      "& .group": {
+        bg: "transparent",
+        _hover: { bg: "transparent" },
+        _active: { bg: "transparent" },
+        _focusVisible: { bg: "transparent" },
+      },
+    },
+  },
+  panelSnapIndicator: {
+    value: {
+      width: "12",
+      height: "1.5",
+      borderRadius: "pill",
+      bg: "bg.drop.muted/40",
+      boxShadow: "sm",
+      "&[data-drop-active]:not([data-drop-surface=bubble])": { bg: "bg.drop" },
+      "&[data-drop-surface=bubble]": {
+        ...dropDot,
+        position: "relative",
+        height: "12",
+        borderRadius: "full",
+        bg: "transparent",
+        boxShadow: "none",
+      },
+    },
+  },
+  floatingPanelResizeHandle: {
+    value: {
+      position: "absolute",
+      zIndex: "2",
+      padding: "0",
+      border: "0",
+      bg: "transparent",
+      color: "fg.muted",
+      top: "0",
+      left: "0",
+      width: "3",
+      height: "3",
+      cursor: "nwse-resize",
+      _before: {
         content: '""',
         position: "absolute",
-        inset: "3xs",
-        borderWidth: "1px",
-        borderColor: "bg.accent-primary.default",
-        borderRadius: "compact",
+        top: "0.5",
+        left: "0.5",
+        width: "2",
+        height: "2",
+        borderTopWidth: "2px",
+        borderLeftWidth: "2px",
+        borderTopLeftRadius: "xs",
+        borderColor: "currentColor",
         pointerEvents: "none",
+        opacity: "0",
       },
-      "&[data-drop-active]::after": { bg: "bg.accent-primary.default/20" },
+      "&[data-resize-direction=ne]": {
+        left: "auto",
+        right: "0",
+        cursor: "nesw-resize",
+        _before: {
+          left: "auto",
+          right: "0.5",
+          borderLeftWidth: "0",
+          borderRightWidth: "2px",
+          borderTopLeftRadius: "0",
+          borderTopRightRadius: "xs",
+        },
+      },
+      _hover: { _before: { opacity: "1" } },
+      _active: { _before: { opacity: "1" } },
+      _focusVisible: {
+        outline: "1px solid",
+        outlineColor: "fg.muted",
+        outlineOffset: "-1px",
+        _before: { opacity: "1" },
+      },
     },
   },
   panelDragSurface: {
@@ -165,8 +269,8 @@ export const layerStyles = defineLayerStyles({
         borderRadius: "sm",
         borderWidth: "1px",
         borderStyle: "dashed",
-        borderColor: "border.accent",
-        bg: "bg.subtle",
+        borderColor: "bg.drop",
+        bg: "bg.drop/20",
       },
     },
   },

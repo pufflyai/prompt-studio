@@ -1,6 +1,5 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { dependencyBlockerRefs, withIndependentBlockers } from "./dependency-blockers";
-import { readTicketReviewRequests } from "./review-request-storage";
 import { publishTicketChanges } from "./ticket-activity";
 import { normalizeTicketDependencies } from "./ticket-dependencies";
 import { deleteTicketBlobs, deleteTicketFileContent, deleteTicketScopedBlobs } from "./ticket-file-content";
@@ -49,7 +48,6 @@ export const ticketsCollection = (ctx: TicketContext) => {
       const byId = new Map(tickets.map((ticket) => [ticket.id, ticket]));
       return ids.map((id) => byId.get(id));
     },
-    list: async () => withTicketIdentities(ctx, await records.list()),
     put: (id: string, ticket: StoredTicket) =>
       queueTicketWrite(id, async () => {
         if (await records.createIfAbsent(id, ticketRecord(ticket))) return;
@@ -143,20 +141,6 @@ export const putTag = async (storage: ExtensionStorageApi, tag: StoredTag) => {
   await tagsCollection(storage).put(tag.id, tag);
   return tag;
 };
-
-export const readTicketSnapshot = async (ctx: TicketContext, snapshot?: Ticket[]) => {
-  const [tickets, requests] = await Promise.all([
-    snapshot ?? ticketsCollection(ctx).list(),
-    readTicketReviewRequests(ctx.storage),
-  ]);
-  return {
-    tickets: withIndependentBlockers(tickets),
-    requests,
-  };
-};
-
-export const readTicketsWithReviewState = async (ctx: TicketContext, snapshot?: Ticket[]) =>
-  (await readTicketSnapshot(ctx, snapshot)).tickets;
 
 export const withDerivedTicketState = async (ctx: TicketContext, ticket: Ticket) => withIndependentBlocker(ctx, ticket);
 

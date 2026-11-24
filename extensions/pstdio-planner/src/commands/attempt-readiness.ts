@@ -11,10 +11,9 @@ import { attemptSelectionsCollection } from "../data/attempt-storage";
 import type { TicketAttemptSelection } from "../data/attempt-types";
 import { upgradeAttemptStorage } from "../data/attempt-upgrade";
 import { type DependencyDeliveryReads, readDependencyDeliveries } from "../data/dependency-deliveries";
-import { listTicketReviewRequests } from "../data/review-request-storage";
-import type { TicketReviewRequests } from "../data/review-request-types";
 import { preparePlannerIndexes } from "../data/storage-indexes";
 import { readTicketDependencyClosure } from "../data/ticket-dependency-reads";
+import { readTicketInputStates } from "../data/ticket-input-state";
 import { inBatches } from "../data/ticket-selection";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
 import { isLiveSession } from "./auto-build-sessions";
@@ -97,14 +96,13 @@ const loadDependencyInput = async (
     storedTickets.map(({ id }) => id),
   );
   const selections: TicketAttemptSelection[] = [];
-  const requests = new Map<string, TicketReviewRequests>();
+  const requests = await readTicketInputStates(
+    ctx.storage,
+    storedTickets.map(({ id }) => id),
+  );
   await inBatches(storedTickets, async ({ id }) => {
-    const [selection, group] = await Promise.all([
-      attemptSelectionsCollection(ctx.storage).get(id),
-      listTicketReviewRequests(ctx.storage, id),
-    ]);
+    const selection = await attemptSelectionsCollection(ctx.storage).get(id);
     if (selection) selections.push(selection);
-    requests.set(id, group);
   });
   const workspaceIds = attempts.map(attemptId);
   const events = await readWorkspaceEvents(ctx.storage, workspaceIds, "attempt_merged");

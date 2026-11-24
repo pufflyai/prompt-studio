@@ -19,6 +19,7 @@ test("the production Auto Build control preserves the session navigation promise
   const transport = createRetainedExtensionQueryFixture({
     extensionId: "pstdio.planner",
     execute: async () => ({
+      requestPage: { offset: 0, total: 26, hasNext: true },
       revision: "run",
       enabled: true,
       state: "running",
@@ -43,6 +44,11 @@ test("the production Auto Build control preserves the session navigation promise
   const frame = transport.frame();
   const client = createWebviewClient(frame.host) as PlanClient;
   let tree: ReactTestRenderer | undefined;
+  const click = (label: string) =>
+    tree!.root
+      .findAllByType("button")
+      .find((node) => node.props.children === label)!
+      .props.onClick();
   try {
     Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", { configurable: true, value: true });
     Object.defineProperty(globalThis, "document", {
@@ -84,6 +90,14 @@ test("the production Auto Build control preserves the session navigation promise
     await act(async () => {
       tree = create(<ChakraProvider value={psTheme}>{createElement(AutoBuildControl, controlProps)}</ChakraProvider>);
     });
+    await act(async () =>
+      tree!.root
+        .findAllByType("button")
+        .find((node) => node.props.children?.[1] === "Needs attention")!
+        .props.onClick(),
+    );
+    await act(async () => click("Next"));
+    await act(async () => click("Back"));
     await act(async () => {
       const row = tree!.root
         .findAllByProps({ role: "button", id: "supervisor" })

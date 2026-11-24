@@ -115,7 +115,7 @@ export async function expectPackagedPlannerTimeline(input: {
   );
   expect(available.find((row: { id: string }) => row.id === waiting.ticket.id).flags).not.toContain("waiting");
   const tickets = await execute("read-tickets", {});
-  expect(tickets).toContainEqual(expect.objectContaining({ id: result.ticket.id }));
+  expect(tickets.tickets).toContainEqual(expect.objectContaining({ id: result.ticket.id }));
   await expectSharedMilestoneProperties(execute, result.ticket.id, deadline.id);
   await expectReviewRequests(execute, deadline.id);
   await expectPackagedPlannerMoves(input);

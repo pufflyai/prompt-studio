@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { basename, join } from "node:path";
+import { e2eExtensions } from "../default-extensions";
 import { waitForDefaultExtensions } from "../scripts/default-extensions-readiness";
 import { stopPendingTestProcesses, TestProcessStoppedError } from "../scripts/pending-test-processes";
 import { cleanupDirs, createGitRepo, createTempDir, runPstdio, runPstdioAsync, runPstdioSafe } from "./helpers";
@@ -11,7 +12,9 @@ import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 let api: ApiInstance;
 
 beforeAll(async () => {
-  api = await startApi();
+  api = await startApi({
+    env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner", "pstdio-skills") },
+  });
   await waitForDefaultExtensions(api.process, api.logPath);
 }, SETUP_TIMEOUT);
 

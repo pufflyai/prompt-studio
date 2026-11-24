@@ -3,6 +3,23 @@ import { openCanvasPreview } from "../preview";
 
 const canvas = "extensions/pstdio-planner/src/timeline/view/requests-panel.canvas.tsx";
 
+// Critical: an emptied later page must not hide earlier unanswered decisions.
+test("Auto Build reopens earlier requests after its later page empties", async ({ page }) => {
+  const preview = await openCanvasPreview(page, `${canvas}#AutoBuildEmptyLaterPage`);
+  const trigger = preview.getByRole("button", { name: "Auto Build", exact: true });
+  await trigger.press("Enter");
+  const attention = preview.getByRole("button", { name: "Needs attention", exact: true });
+  await expect(attention).toBeVisible();
+  await attention.press("Enter");
+  const modal = preview.getByRole("dialog", { name: "Needs attention", exact: true });
+  await modal.getByRole("button", { name: "Previous", exact: true }).click();
+  await expect(modal.getByRole("radio", { name: /Several tags at once/ })).toBeVisible();
+  await modal.press("Escape");
+  await trigger.press("Enter");
+  await attention.press("Enter");
+  await expect(modal.getByRole("radio", { name: /Several tags at once/ })).toBeVisible();
+});
+
 // Critical: people must be able to answer a card decision and return to the same keyboard control.
 test("card decisions preserve drafts across navigation and restore focus after submission", async ({ page }) => {
   const preview = await openCanvasPreview(page, `${canvas}#CardModal`);
