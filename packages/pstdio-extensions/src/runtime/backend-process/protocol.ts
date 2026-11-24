@@ -41,17 +41,28 @@ export type BackendHandlerRef = { [HANDLER_MARKER]: string };
 export const isBackendHandlerRef = (value: unknown): value is BackendHandlerRef =>
   typeof value === "object" && value !== null && typeof (value as Record<string, unknown>)[HANDLER_MARKER] === "string";
 
+const describeErrorValue = (value: unknown) => {
+  try {
+    return String(value);
+  } catch {
+    return "The extension backend threw a value that has no text.";
+  }
+};
+
+// A result the other side cannot parse leaves its caller waiting, so only send valid error fields.
 export const serializeBackendError = (error: unknown): SerializedBackendError => {
-  if (error instanceof Error) {
-    const code = (error as { code?: unknown }).code;
+  try {
+    if (!(error instanceof Error)) return { name: "Error", message: describeErrorValue(error) };
+    const { name, message, stack, code } = error as Error & { code?: unknown };
     return {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
+      name: typeof name === "string" ? name : "Error",
+      message: typeof message === "string" ? message : describeErrorValue(message),
+      ...(typeof stack === "string" ? { stack } : {}),
       ...(typeof code === "string" ? { code } : {}),
     };
+  } catch {
+    return { name: "Error", message: "The extension backend threw a value that could not be read." };
   }
-  return { name: "Error", message: String(error) };
 };
 
 export const deserializeBackendError = (serialized: SerializedBackendError) => {

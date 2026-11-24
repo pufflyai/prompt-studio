@@ -43,3 +43,18 @@ test("the host runs only calls its surface allows", async () => {
 test("only declared values are copied to the worker", () => {
   expect(collectSurfaceValues(host, surface)).toEqual({ '["projectId"]': "p1" });
 });
+
+test("a surface path must be valid before a host factory runs", () => {
+  let opened = 0;
+  const source = {
+    storage: {
+      collection: (name: string) => {
+        opened += 1;
+        return host.storage.collection(name);
+      },
+    },
+  };
+  const path = [{ name: "storage" }, { name: "collection", args: ["t"] }, { name: "get" }];
+  expect(() => resolveSurfaceCall(source, surface, path, ["a"], "notify")).toThrow(SurfaceCallRejectedError);
+  expect(opened).toBe(0);
+});

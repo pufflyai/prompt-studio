@@ -13,7 +13,7 @@ export type BackendSurface =
   /** A one-way host method, such as logging. The worker does not wait for it. */
   | { kind: "notify" }
   | { kind: "object"; members: Record<string, BackendSurface> }
-  /** A synchronous method that returns another surface, such as `storage.collection(name)`. */
+  /** A synchronous scope selection, such as `storage.collection(name)`, evaluated for each host call. */
   | { kind: "factory"; returns: BackendSurface };
 
 /** One step from the context root: a property, or a factory call with its arguments. */
@@ -36,7 +36,20 @@ const methodOf = (target: unknown, name: string, path: SurfaceStep[]) => {
   return method as (...args: unknown[]) => unknown;
 };
 
-/** Runs one worker call on the host object. Only a member of the expected async or notify kind can run. */
+const allowsCall = (surface: BackendSurface, path: SurfaceStep[], kind: "async" | "notify") => {
+  let current = surface;
+  for (const [index, step] of path.entries()) {
+    const member = memberOf(current, step.name);
+    if (!member) return false;
+    if (index === path.length - 1) return member.kind === kind && !step.args;
+    if (member.kind === "object" && !step.args) current = member;
+    else if (member.kind === "factory" && step.args) current = member.returns;
+    else return false;
+  }
+  return false;
+};
+
+/** Validates the complete path before evaluating any host factory or target method. */
 export const resolveSurfaceCall = (
   root: unknown,
   surface: BackendSurface,
@@ -44,26 +57,14 @@ export const resolveSurfaceCall = (
   args: unknown[],
   kind: "async" | "notify",
 ) => {
-  if (path.length === 0) throw new SurfaceCallRejectedError(path);
+  if (!allowsCall(surface, path, kind)) throw new SurfaceCallRejectedError(path);
   let target = root;
-  let current = surface;
-  for (const [index, step] of path.entries()) {
-    const member = memberOf(current, step.name);
-    const last = index === path.length - 1;
-    if (!member) throw new SurfaceCallRejectedError(path);
-    if (last) {
-      if (member.kind !== kind || step.args) throw new SurfaceCallRejectedError(path);
-      return methodOf(target, step.name, path).apply(target, args);
-    }
-    if (member.kind === "object" && !step.args) {
-      target = (target as Record<string, unknown>)[step.name];
-      current = member;
-    } else if (member.kind === "factory" && step.args) {
-      target = methodOf(target, step.name, path).apply(target, step.args);
-      current = member.returns;
-    } else throw new SurfaceCallRejectedError(path);
-  }
-  throw new SurfaceCallRejectedError(path);
+  for (const step of path.slice(0, -1))
+    target = step.args
+      ? methodOf(target, step.name, path).apply(target, step.args)
+      : (target as Record<string, unknown>)[step.name];
+  const last = path.at(-1)!;
+  return methodOf(target, last.name, path).apply(target, args);
 };
 
 const valueKey = (path: string[]) => JSON.stringify(path);
