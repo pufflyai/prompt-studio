@@ -65,6 +65,7 @@ export const createManagerHandler = (
   return async (request: Request) => {
     try {
       const path = new URL(request.url).pathname;
+      if (path === "/api/auth/one-time-token/verify") return json({ error: "Fixture exchange unavailable" }, 503);
       if (path.startsWith("/api/auth/")) return await betterAuth(auth, basePath, request, report);
       if (["/v1/native-login", "/v1/native-callback", "/v1/native-error"].includes(path))
         return await nativeLogin(auth, `${canonicalOrigin}${basePath}`, request);
