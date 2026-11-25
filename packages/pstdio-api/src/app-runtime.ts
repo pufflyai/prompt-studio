@@ -1,7 +1,9 @@
 import { join } from "node:path";
 import { projectEvents } from "pstdio-api-contracts/extension-kernel";
+import { startDeadRowCleanup } from "pstdio-db";
 import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
 import { withBackgroundPreparation } from "pstdio-extensions";
+import type { openAppDatabase } from "./app-database";
 import type { RouteDeps } from "./features/deps";
 import { createArtifactMountWatchService } from "./features/extensions/artifact-mount-watch/watch-service";
 import { fireExtensionEvent } from "./features/extensions/extension-event-runtime";
@@ -107,6 +109,20 @@ export const startAppArtifactMountWatch = (deps: RouteDeps, projectService: Retu
     deps,
     listProjectIds: async () => (await projectService.list()).map((project) => project.id),
   });
+
+export const startAppDeadRowCleanup = (
+  database: Pick<Awaited<ReturnType<typeof openAppDatabase>>, "path" | "pglite" | "cleanupRetiredRows">,
+  isQuiet: () => boolean,
+) => {
+  if (database.path === ":memory:") return async () => {};
+  return startDeadRowCleanup(
+    database.pglite,
+    database.cleanupRetiredRows,
+    (err, table) =>
+      apiLogger.warn({ err, table, event: "db.dead_row_cleanup.error" }, "Database cleanup failed; it will retry"),
+    isQuiet,
+  );
+};
 
 const traceShutdownPhase = async <T>(phase: string, close: () => Promise<T>) => {
   const startedAt = performance.now();

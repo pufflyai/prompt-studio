@@ -1,6 +1,7 @@
 import { type BoardDefault, getBoardDefault, setBoardDefault } from "../services/board-views/board-defaults";
 import { releasedBoardExtension } from "./board-owners-upgrade";
 import type { DbClient } from "./connection.pglite";
+import { timestampSortKey } from "./schemas/iso-timestamp";
 import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
 
 export const prepareBoardDefaultsUpgrade = (db: DbClient, path: string) =>
@@ -19,7 +20,7 @@ export const prepareBoardDefaultsUpgrade = (db: DbClient, path: string) =>
       const scope = { project_id: row.project_id, extension_id: row.extension_id, board_id: row.board_id };
       await db.transaction(async (tx) => {
         const previous = await getBoardDefault(tx, scope);
-        if (previous && previous.updated_at > row.updated_at) return;
+        if (previous && timestampSortKey(previous.updated_at) > timestampSortKey(row.updated_at)) return;
         await setBoardDefault(tx, scope, row.default_view_id, row.updated_at);
       });
     },

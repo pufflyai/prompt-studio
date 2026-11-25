@@ -12,9 +12,9 @@ import {
   encodeLogPayload,
   type LogTransaction,
   lockLogStream,
-  logAddress,
   logAddressKey,
   logCutoff,
+  logEntryAddress,
   logWhere,
   type OrderedLogAddress,
 } from "./ordered-log-sql";
@@ -87,7 +87,7 @@ export const createOrderedLogStore = (db: DbClient, input: OrderedLogAddress) =>
       return 0;
     }
     await tx.insert(entries).values({
-      ...logAddress(input),
+      ...logEntryAddress(input),
       entry_id: entry.id,
       writer_id: entry.writerId,
       created_at: Date.parse(entry.createdAt),

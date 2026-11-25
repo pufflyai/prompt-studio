@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { websocket } from "hono/bun";
 import { createStoragePositions } from "pstdio-api-contracts";
-import { startDeadRowCleanup } from "pstdio-db";
 import { ensureStorageRoot } from "pstdio-storage";
 import type { AppDependencies, CreateAppInput } from "./app-contracts";
 import { createAppDatabaseServices, openAppDatabase, upgradeAppStorage } from "./app-database";
@@ -15,6 +14,7 @@ import {
   createAppTerminalSupervisor,
   createRuntimeRouteDeps,
   startAppArtifactMountWatch,
+  startAppDeadRowCleanup,
   startAppExtensionScheduler,
   startAppLifecycle,
   startNotificationWakeTimer,
@@ -31,8 +31,8 @@ import type { RuntimeRouteDeps } from "./features/runtime/routes";
 import { deliverIdleFollowUp } from "./features/sessions/idle-turn";
 import { createSessionImportService } from "./features/sessions/imports/service";
 import { EventBus } from "./features/sync/event-bus";
-import { apiLogger } from "./lib/logger";
 import { logStartupPhase } from "./lib/startup-phase";
+import { createRequestQuietPeriod } from "./request-quiet-period";
 import { createAppAccount } from "./services/account/app-account";
 import { createNativeDocumentService } from "./services/native-documents/documents";
 import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./services/native-documents/file-source";
@@ -155,6 +155,8 @@ const buildApp = async (
   const { db, close: closeDb } = database;
   const runtimeHost = input.host.kind === "runtime" ? input.host.runtime : undefined;
   const app = new OpenAPIHono<AppBindings>();
+  const requestQuietPeriod = createRequestQuietPeriod();
+  app.use("*", requestQuietPeriod.observe);
   app.use("*", runtimeOperationOrigin);
 
   const storageRoot = input.config.storage.root;
@@ -351,11 +353,7 @@ const buildApp = async (
       closeDb: () => closeAppDatabase(deps, closeDb),
     });
     const connected = await account.connectAccountRelay({ app, close, deps, eventBus });
-    if (database.path !== ":memory:") {
-      stopDeadRowCleanup = startDeadRowCleanup(database.pglite, database.cleanupRetiredRows, (err, table) =>
-        apiLogger.warn({ err, table, event: "db.dead_row_cleanup.error" }, "Database cleanup failed; it will retry"),
-      );
-    }
+    stopDeadRowCleanup = startAppDeadRowCleanup(database, requestQuietPeriod.isQuiet);
     return { ...connected, extensionsReady: extensionStartup };
   } catch (error) {
     // createApp closes the database on a failed startup; the cleanup must not outlive it.

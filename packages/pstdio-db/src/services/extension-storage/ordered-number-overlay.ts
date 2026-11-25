@@ -6,6 +6,7 @@ import { pendingOrderedNumberPeers } from "./ordered-number-pending-peers";
 import { repairOptimisticNumbers } from "./ordered-number-projection";
 import { OrderedNumberRangeError } from "./ordered-number-repair";
 import { pendingOrderedOperations } from "./ordered-pending";
+import { withOrderedRecordSavepoint } from "./ordered-record-publication";
 import type { OrderedTransaction } from "./ordered-sql";
 import type { NumberChange } from "./resource-number-repair";
 
@@ -50,7 +51,7 @@ export const projectWithOrderedNumberPolicy = async (
       continue;
     }
     try {
-      const repaired = await tx.transaction((nested) =>
+      const repaired = await withOrderedRecordSavepoint(tx, (nested) =>
         repairOptimisticNumbers(
           createOrderedJournal(nested, owner),
           nested,

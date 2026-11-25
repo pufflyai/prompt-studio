@@ -2,11 +2,13 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { fingerprint, formatViewDate, type Json, type StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_current_records as current, storage_record_indexes as indexes } from "../../db/schemas.pg";
+import { records as current } from "../../db/schemas.pg";
 import { formatCacheFields, formatCachePrefix, formatCacheSource, formatDatabasePrefix } from "./record-format-key";
+import { deleteRecordIndexRows, recordIndexRows as indexes, saveRecordIndexRow } from "./record-index-rows";
 import { decodeProjectionValue, encodeProjectionValue, projectionKey } from "./record-projection-codec";
 import { recordFieldSql, recordScopeSql } from "./record-query-sql";
 import type { StorageDiagnostics } from "./storage-diagnostics";
+import { ensureStorageOwner, storageOwnerKey } from "./storage-owner-key";
 
 export const retainDateFormatIndexes = async (installed: StorageRecordIndex[], desired: StorageRecordIndex[]) => {
   const signatures = new Map(
@@ -19,14 +21,13 @@ export const retainDateFormatIndexes = async (installed: StorageRecordIndex[], d
 };
 
 export const installDateFormatIndex = async (
-  tx: Pick<DbClient, "insert">,
+  tx: Pick<DbClient, "insert" | "select" | "execute">,
   owner: StorageOwner,
   index: StorageRecordIndex,
 ) => {
   const digest = await fingerprint(index.name);
-  await tx.insert(indexes).values({
-    workbench_id: owner.workbenchId,
-    extension_id: owner.extensionId,
+  await saveRecordIndexRow(tx, {
+    owner_id: await ensureStorageOwner(tx, owner),
     name: index.name,
     database_name: `${formatDatabasePrefix}${digest.slice(0, 32)}`,
     definition: encodeProjectionValue(index as unknown as Json) as unknown as StorageRecordIndex,
@@ -38,7 +39,7 @@ const findFormatSlot = async (
   owner: StorageOwner,
   identity: [string, string, string],
 ) => {
-  const ownerWhere = and(eq(indexes.workbench_id, owner.workbenchId), eq(indexes.extension_id, owner.extensionId));
+  const ownerWhere = and(eq(indexes.owner_id, storageOwnerKey(owner)));
   for (let slot = 0; ; slot++) {
     const name = formatCachePrefix + JSON.stringify(slot ? [...identity, slot] : identity);
     const [row] = await tx
@@ -92,9 +93,9 @@ export const prepareDateFormatIndexes = async (
           formatViewDate(decodeProjectionValue((row.source as Json) ?? null), format) ?? null,
         ),
       }));
-      await tx.execute(sql`UPDATE storage_current_records AS target SET query_values = target.query_values || jsonb_build_object(${projectionKey(name)}::text, jsonb_build_object('value', input.formatted))
+      await tx.execute(sql`UPDATE records AS target SET query_values = target.query_values || jsonb_build_object(${projectionKey(name)}::text, jsonb_build_object('value', input.formatted))
         FROM jsonb_to_recordset(${JSON.stringify(input)}::jsonb) AS input(record_id text, formatted jsonb)
-        WHERE target.workbench_id = ${owner.workbenchId} AND target.extension_id = ${owner.extensionId} AND target.record_id = input.record_id`);
+        WHERE target.owner_id = ${storageOwnerKey(owner)} AND target.record_id = input.record_id`);
       after = rows.at(-1)!.recordId;
     }
     const definition: StorageRecordIndex = {
@@ -131,7 +132,7 @@ export const pruneDateFormatIndexes = async (
     ),
   );
   if (!pinned.size) return;
-  const ownerWhere = and(eq(indexes.workbench_id, owner.workbenchId), eq(indexes.extension_id, owner.extensionId));
+  const ownerWhere = and(eq(indexes.owner_id, storageOwnerKey(owner)));
   const cached = await tx
     .select({ name: indexes.name })
     .from(indexes)
@@ -142,12 +143,12 @@ export const pruneDateFormatIndexes = async (
     .slice(0, Math.max(0, cached.length - 128))
     .map(({ name }) => name);
   if (evicted.length) {
-    await tx.delete(indexes).where(and(ownerWhere, inArray(indexes.name, evicted)));
+    await deleteRecordIndexRows(tx, and(ownerWhere, inArray(indexes.name, evicted))!);
     await tx.execute(
-      sql`UPDATE storage_current_records SET query_values = query_values - ARRAY[${sql.join(
+      sql`UPDATE records SET query_values = query_values - ARRAY[${sql.join(
         evicted.map((key) => sql`${projectionKey(key)}`),
         sql`, `,
-      )}]::text[] WHERE workbench_id = ${owner.workbenchId} AND extension_id = ${owner.extensionId}`,
+      )}]::text[] WHERE owner_id = ${storageOwnerKey(owner)}`,
     );
   }
 };

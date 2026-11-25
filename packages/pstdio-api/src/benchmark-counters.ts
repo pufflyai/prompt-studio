@@ -14,9 +14,9 @@ export const registerBenchmarkCounters = (app: OpenAPIHono<AppBindings>, db: DbC
     await db.execute(sql`select pg_stat_force_next_flush()`);
     const table = await db.execute<{ scanned: string; returned: string; writes: string }>(sql`
       select seq_tup_read as scanned, idx_tup_fetch as returned, n_tup_ins+n_tup_upd+n_tup_del as writes
-      from pg_stat_user_tables where relname='storage_current_records'`);
+      from pg_stat_user_tables where relname='records'`);
     const index = await db.execute<{ scanned: string }>(sql`
-      select coalesce(sum(idx_tup_read),0) as scanned from pg_stat_user_indexes where relname='storage_current_records'`);
+      select coalesce(sum(idx_tup_read),0) as scanned from pg_stat_user_indexes where relname='records'`);
     if (table.rows.length !== 1) throw new Error("Missing record projection counters");
     c.header("cache-control", "no-store");
     return c.json({

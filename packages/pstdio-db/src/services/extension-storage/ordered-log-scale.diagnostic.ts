@@ -5,7 +5,7 @@ import { createLogStreamSync } from "pstdio-sync/logs";
 import { fingerprint, type Json, type StateInfo, type StorageLogEntry } from "pstdio-sync-contracts";
 import { createDb } from "../../db/connection.pglite";
 import { storage_log_entries as entries, projects, storage_log_streams as streams } from "../../db/schemas.pg";
-import { encodeLogValue, logAddress } from "./ordered-log-sql";
+import { encodeLogValue, lockLogStream, logEntryAddress, logWhere } from "./ordered-log-sql";
 import { orderedLogStatistics } from "./ordered-log-statistics";
 import { createOrderedLogStore } from "./ordered-log-store";
 import { createRelay } from "./record-stream-relay.fixture";
@@ -28,7 +28,8 @@ const qualify = async (count: number) => {
       writerId: "laptop",
     };
     const head = Math.ceil(count / 100);
-    await source.db.insert(streams).values({ ...logAddress(address), head, complete_through: head });
+    await source.db.transaction((tx) => lockLogStream(tx, address));
+    await source.db.update(streams).set({ head, complete_through: head }).where(logWhere(streams, address));
     // Fixture setup supplies a full retained canonical copy; the production loss/founding path builds its archive.
     for (let offset = 0; offset < count; offset += 1000) {
       const rows = await Promise.all(
@@ -41,7 +42,7 @@ const qualify = async (count: number) => {
             value: { run: number, output: "x".repeat(64) },
           };
           return {
-            ...logAddress(address),
+            ...logEntryAddress(address),
             entry_id: entry.id,
             writer_id: entry.writerId,
             created_at: Date.parse(now),

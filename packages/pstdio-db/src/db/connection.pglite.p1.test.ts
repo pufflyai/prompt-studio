@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-
+import { createEnvironmentDBService } from "../services/environment/environment";
 import { createDb, resolvePgliteOptions } from "./connection.pglite";
 
 const originalDbPath = process.env.PSTDIO_DB_PATH;
@@ -25,6 +25,48 @@ afterEach(() => {
 
   process.env.PSTDIO_DB_PATH = originalDbPath;
 });
+
+for (const storage of ["memory", "disk"])
+  it(
+    `creates the final 30-table schema in a fresh ${storage} database`,
+    async () => {
+      const { dbPath, tempRoot } = createTempDbPath();
+      let client: Awaited<ReturnType<typeof createDb>> | undefined;
+      try {
+        client = await createDb({ path: storage === "memory" ? ":memory:" : dbPath });
+        const { rows } = await client.pglite.query<{ count: number }>(
+          "SELECT count(*)::int AS count FROM pg_tables WHERE schemaname='public'",
+        );
+        expect(rows).toEqual([{ count: 30 }]);
+      } finally {
+        await client?.close();
+        fs.rmSync(tempRoot, { recursive: true, force: true });
+      }
+    },
+    windowsDiskLimit,
+  );
+
+it(
+  "restores durable upgrade input when the active database needs a fresh image",
+  async () => {
+    const { dbPath, tempRoot } = createTempDbPath();
+    const snapshot = `${dbPath}-app-preferences-upgrade.json`;
+    fs.writeFileSync(snapshot, JSON.stringify({ environmentId: "retained-device" }));
+    let client: Awaited<ReturnType<typeof createDb>> | undefined;
+    try {
+      client = await createDb({ path: dbPath });
+      expect(await createEnvironmentDBService(client.db).get()).toEqual({ environmentId: "retained-device" });
+      expect(fs.existsSync(snapshot)).toBe(false);
+      await client.close();
+      client = await createDb({ path: dbPath });
+      expect(await createEnvironmentDBService(client.db).get()).toEqual({ environmentId: "retained-device" });
+    } finally {
+      await client?.close();
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  },
+  windowsDiskLimit,
+);
 
 describe("createDb", () => {
   // Sequential lock checks leave database contents unchanged. Sharing the directory

@@ -53,7 +53,7 @@ const removeCheckpoint = async (
     exists(select 1 from sessions where session_file_id = ${file.id} or original_session_id = ${session.id})
     or exists(select 1 from workspaces where startup_log_file_id = ${file.id})
     or exists(select 1 from session_queue_entries where attachments_json @> ${JSON.stringify([{ file_id: file.id }])}::jsonb)
-    or exists(select 1 from resource_anchors where
+    or exists(select 1 from resource_links where
       (source_kind = 'file' and source_id = ${file.id}) or (target_kind = 'file' and target_id = ${file.id})) as used`);
   if (references.rows[0]?.used) return;
   await prepare(file);

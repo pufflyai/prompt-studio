@@ -33,8 +33,10 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
     await route.fulfill({ json: { ...inventory, upgradeConcurrency: 2, extensions: targets } });
   });
   await page.route(`**/v1/projects/${project.id}/extensions/*/upgrade`, async (route) => {
-    const id = new URL(route.request().url()).pathname.split("/").at(-2);
-    waiting.push({ route, extension: targets.find((extension) => extension.id === id)! });
+    const id = decodeURIComponent(new URL(route.request().url()).pathname.split("/").at(-2)!);
+    const extension = targets.find((target) => target.id === id);
+    if (!extension) throw new Error(`Unexpected extension upgrade request for ${id}`);
+    waiting.push({ route, extension });
   });
   await page.addInitScript((projectId) => {
     localStorage.setItem("onboarding-complete", "true");

@@ -1,16 +1,14 @@
 import { expect, test } from "bun:test";
 import { eq, sql } from "drizzle-orm";
 import type { StorageRecordIndex } from "pstdio-sync-contracts";
-import {
-  storage_current_records,
-  storage_documents,
-  storage_record_indexes,
-  storage_record_projections,
-} from "../../db/schemas.pg";
+import { owners as recordOwners, records } from "../../db/schemas.pg";
 import { migrateExtensionIdentities } from "../extension-identity-migration";
+import { seedDocumentHistory } from "./document-history.fixture";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 import { installRecordIndex } from "./record-index-lifecycle";
+import { recordIndexRows as storage_record_indexes } from "./record-index-rows";
+import { ensureStorageOwner } from "./storage-owner-key";
 
 test("reinstalling unchanged indexes after an owner rename restores the current owner's partial indexes", async () => {
   const fixture = await createExtensionStorageFixture();
@@ -44,8 +42,7 @@ test("reinstalling unchanged indexes after an owner rename restores the current 
     const definition = await fixture.db.execute<{ indexdef: string }>(
       sql`SELECT indexdef FROM pg_indexes WHERE indexname = ${after.database_name}`,
     );
-    expect(definition.rows[0].indexdef).toContain("pstdio.planner");
-    expect(definition.rows[0].indexdef).not.toContain("pstdio.pstdio-planner");
+    expect(definition.rows[0].indexdef).toContain(`owner_id = ${after.owner_id}`);
     await renamed.commit({
       operationId: "seed",
       edits: [{ recordId: "things/a", replace: { id: "a", position: "a" } }],
@@ -69,15 +66,18 @@ test("renamed owners keep their group counts before and after reinstalling index
   const fixture = await createExtensionStorageFixture();
   try {
     const owner = { workbenchId: fixture.projectAId, extensionId: "pstdio.pstdio-planner" };
-    const legacy = { workbench_id: owner.workbenchId, extension_id: owner.extensionId };
+    const legacy = { owner_id: await ensureStorageOwner(fixture.db, owner) };
     const index: StorageRecordIndex = {
       name: "things",
       fields: { state: { type: "string", path: ["state"], derive: { kind: "string" } } },
       countBy: ["state"],
     };
-    await fixture.db.insert(storage_documents).values({ ...legacy, document_id: "records", state: new Uint8Array() });
-    await fixture.db.insert(storage_record_projections).values({ ...legacy, revision: 1, live_count: 1 });
-    await fixture.db.insert(storage_current_records).values({
+    await seedDocumentHistory(fixture.db, { ...legacy, document_id: "records", state: new Uint8Array() });
+    await fixture.db
+      .update(recordOwners)
+      .set({ revision: 1, live_count: 1 })
+      .where(eq(recordOwners.id, legacy.owner_id));
+    await fixture.db.insert(records).values({
       ...legacy,
       record_id: "one",
       deleted: false,

@@ -1,8 +1,7 @@
-import { and, eq } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_personal_history_positions as positions } from "../../db/schemas.pg";
+import { owners } from "../../db/schemas.pg";
 import { createPersonalIndexCache } from "./personal-history-index-cache";
 import { applyPersonalIndexRows } from "./personal-history-index-rows";
 import { applyPendingPersonalIndex } from "./personal-history-pending";
@@ -13,6 +12,7 @@ import {
   personalSourcePage,
   readPersonalSourcePosition,
 } from "./personal-history-source";
+import { ensureStorageOwner, storageOwnerWhere } from "./storage-owner-key";
 
 export interface PersonalIndexDelta {
   deviceId: string;
@@ -27,12 +27,15 @@ export interface PersonalIndexAccepted {
   index: number;
   delta: PersonalIndexDelta;
 }
-const address = (owner: StorageOwner) => ({ workbench_id: owner.workbenchId, extension_id: owner.extensionId });
-const positionWhere = (owner: StorageOwner) =>
-  and(eq(positions.workbench_id, owner.workbenchId), eq(positions.extension_id, owner.extensionId));
 export const createPersonalHistoryIndex = (db: DbClient) => {
   const cache = createPersonalIndexCache(db);
-  const state = async (owner: StorageOwner) => (await db.select().from(positions).where(positionWhere(owner)))[0];
+  const state = async (owner: StorageOwner) =>
+    (
+      await db
+        .select({ cursor: owners.history_cursor, migrated: owners.history_migrated })
+        .from(owners)
+        .where(storageOwnerWhere(owner))
+    )[0];
   const apply = async (
     owner: StorageOwner,
     cursor: string | null,
@@ -41,10 +44,10 @@ export const createPersonalHistoryIndex = (db: DbClient) => {
     const owned = structuredClone(changes);
     const current = await cache(owner);
     const applied = await db.transaction(async (tx) => {
-      await tx.insert(positions).values(address(owner)).onConflictDoNothing();
-      await tx.select().from(positions).where(positionWhere(owner)).for("update");
+      await ensureStorageOwner(tx, owner);
+      await tx.select({ id: owners.id }).from(owners).where(storageOwnerWhere(owner)).for("update");
       const changed = await applyPersonalIndexRows(tx, owner, owned);
-      if (cursor !== null) await tx.update(positions).set({ cursor }).where(positionWhere(owner));
+      if (cursor !== null) await tx.update(owners).set({ history_cursor: cursor }).where(storageOwnerWhere(owner));
       return changed;
     });
     current.apply(applied);
@@ -96,13 +99,10 @@ export const createPersonalHistoryIndex = (db: DbClient) => {
     cursor: async (owner: StorageOwner) => (await state(owner))?.cursor ?? null,
     migrated: async (owner: StorageOwner) => (await state(owner))?.migrated ?? false,
     async markMigrated(owner: StorageOwner) {
-      await db
-        .insert(positions)
-        .values({ ...address(owner), migrated: true })
-        .onConflictDoUpdate({
-          target: [positions.workbench_id, positions.extension_id],
-          set: { migrated: true },
-        });
+      await db.transaction(async (tx) => {
+        await ensureStorageOwner(tx, owner);
+        await tx.update(owners).set({ history_migrated: true }).where(storageOwnerWhere(owner));
+      });
     },
   };
 };

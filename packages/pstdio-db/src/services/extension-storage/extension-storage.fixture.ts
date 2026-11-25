@@ -4,8 +4,10 @@ import { createExtensionInstancesDBService } from "../extension-instances/extens
 import { createInstalledExtensionSourcesDBService } from "../installed-extension-sources/installed-extension-sources";
 import { createExtensionStorageDBService } from "./extension-storage";
 
-export const createExtensionStorageFixture = async (path = ":memory:") => {
-  const { db, close } = await createDb({ path });
+export const populateExtensionStorageFixture = async ({
+  db,
+  close,
+}: Pick<Awaited<ReturnType<typeof createDb>>, "db" | "close">) => {
   const svc = createExtensionStorageDBService(db);
   const sources = createInstalledExtensionSourcesDBService(db);
   const instances = createExtensionInstancesDBService(db);
@@ -35,3 +37,6 @@ export const createExtensionStorageFixture = async (path = ":memory:") => {
   });
   return { db, close, svc, projectAId, projectBId, instanceAId: a.id, instanceBId: b.id };
 };
+
+export const createExtensionStorageFixture = async (path = ":memory:") =>
+  populateExtensionStorageFixture(await createDb({ path }));

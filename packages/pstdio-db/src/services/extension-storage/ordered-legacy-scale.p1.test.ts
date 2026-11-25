@@ -27,8 +27,8 @@ for (const overlapping of [false, true])
         operationId: `later-${index}`,
         edits: [{ recordId: `card-${index}`, replace: { title: "batch", body } }],
       });
-    const a = first.upgrade();
-    const b = second.upgrade();
+    const a = await first.upgrade();
+    const b = await second.upgrade();
     await a.sync.synchronize();
     await b.sync.synchronize();
     await a.sync.synchronize();

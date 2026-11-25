@@ -79,7 +79,14 @@ test("a moved item keeps its text history and its open editor keeps saving to it
   await f.move();
 
   expect((await records.read(f.moved("ticket:a"))).value).toEqual({ title: "A", content: "first edit" });
-  expect(await editor.read()).toBe("first edit");
+  const reopened = createDocumentStorageDBService(f.db).openNativeTextDocument({ owner: f.owner, fileId: documentKey });
+  expect(await reopened.read()).toBe("first edit");
+  await reopened.save("first edit from reopened editor");
+  expect((await records.read(f.moved("ticket:a"))).value).toEqual({
+    title: "A",
+    content: "first edit from reopened editor",
+  });
+  expect(await editor.read()).toBe("first edit from reopened editor");
   await editor.save("first edit, after the move");
   expect((await records.read(f.moved("ticket:a"))).value).toEqual({
     title: "A",

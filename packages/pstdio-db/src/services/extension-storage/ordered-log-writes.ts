@@ -1,11 +1,12 @@
 import { and, inArray } from "drizzle-orm";
+import type { PgInsertValue } from "drizzle-orm/pg-core";
 import { canonicalJson, fingerprint, type Json, type StorageLogEntry } from "pstdio-sync-contracts";
 import { storage_log_entries as entries } from "../../db/schemas.pg";
 import {
   decodeLogPayload,
   encodeLogPayload,
   type LogTransaction,
-  logAddress,
+  logEntryAddress,
   logWhere,
   type OrderedLogAddress,
 } from "./ordered-log-sql";
@@ -17,7 +18,7 @@ export const validateEntry = (entry: StorageLogEntry) => {
   canonicalJson(entry.value);
 };
 
-const insertRows = async (tx: LogTransaction, rows: (typeof entries.$inferInsert)[]) => {
+const insertRows = async (tx: LogTransaction, rows: PgInsertValue<typeof entries>[]) => {
   let offset = 0;
   while (offset < rows.length) {
     const page: typeof rows = [];
@@ -60,7 +61,7 @@ export const appendOrderedLogEntries = async (
     ),
   );
   const appended: StorageLogEntry[] = [];
-  const pending: (typeof entries.$inferInsert)[] = [];
+  const pending: PgInsertValue<typeof entries>[] = [];
   for (const item of owned) {
     const id = item.id;
     const entry = known.get(id);
@@ -78,7 +79,7 @@ export const appendOrderedLogEntries = async (
     };
     validateEntry(created);
     pending.push({
-      ...logAddress(input),
+      ...logEntryAddress(input),
       entry_id: id,
       writer_id: input.writerId,
       created_at: Date.parse(created.createdAt),

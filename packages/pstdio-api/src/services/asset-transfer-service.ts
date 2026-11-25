@@ -52,6 +52,9 @@ export const createAssetTransferService = (deps: AssetTransferServiceDeps) => {
   const begin = async (owner: AssetOwner, operationId: string, expected: AssetReference, signal?: AbortSignal) => {
     assetOwnerSchema.parse(owner);
     assetReferenceSchema.parse(expected);
+    // A cleared owner can reuse an operation ID. Its orphaned upload prefix belongs
+    // to the removed identity; a retained metadata row alone permits resuming it.
+    if (!(await deps.transfers.get(owner, operationId))) await deps.bytes.removeTransfer(owner, operationId);
     const record = await deps.transfers.begin(owner, operationId, expected);
     if (!sameReference(record.expected, expected)) throw new AssetTransferError("ASSET_OPERATION_CONFLICT");
     return (await get(owner, operationId, signal))!;
@@ -179,7 +182,9 @@ export const createAssetTransferService = (deps: AssetTransferServiceDeps) => {
   return {
     removeProjectBytes: deps.bytes.removeProject,
     begin: (owner: AssetOwner, id: string, asset: AssetReference, signal?: AbortSignal) =>
-      scoped(owner, signal, (active) => begin(owner, id, asset, active)),
+      scoped(owner, signal, (active) =>
+        operations.run(owner, id, (current) => begin(owner, id, asset, current), active),
+      ),
     append: (owner: AssetOwner, id: string, offset: number, source: ReadableStream<Uint8Array>, signal?: AbortSignal) =>
       scoped(owner, signal, (active) => append(owner, id, offset, source, active)),
     complete: (owner: AssetOwner, id: string, signal?: AbortSignal) =>
