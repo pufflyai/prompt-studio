@@ -25,7 +25,7 @@ export const prepareHistoryOwnerUpgrade = async (db: DbClient, path: string) => 
     projectKey: "workbench_id",
     conflict: "Private history restoration conflict",
     keys: ["kind", "device_id", "record_id"],
-    historyFields: ["device_id", "kind", "record_id", "value", "seed_id", "pending_id"],
+    fields: ["device_id", "kind", "record_id", "value", "seed_id", "pending_id"],
   });
   const restoreSources = await prepareOwnedRowUpgrade(db, path, {
     source: {
@@ -37,17 +37,7 @@ export const prepareHistoryOwnerUpgrade = async (db: DbClient, path: string) => 
     projectKey: "workbench_id",
     conflict: "Private history restoration conflict",
     keys: ["source_id", "kind", "device_id", "record_id"],
-    historyFields: [
-      "source_id",
-      "kind",
-      "device_id",
-      "record_id",
-      "value",
-      "seed_id",
-      "entry_id",
-      "sequence",
-      "entry_index",
-    ],
+    fields: ["source_id", "kind", "device_id", "record_id", "value", "seed_id", "entry_id", "sequence", "entry_index"],
   });
   const restorePositions = await prepareUpgradeSnapshot(
     db,

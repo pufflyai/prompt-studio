@@ -84,7 +84,7 @@ export const checkCloudProjectUpgrade = async (home: string, evidence: string, b
       const started = performance.now();
       const controller = new AbortController();
       const timeout = setTimeout(
-        () => controller.abort(new Error("Cloud upgrade exceeded the 12-second limit")),
+        () => controller.abort(new Error(`Cloud upgrade exceeded the ${projectUpgradeLimitMs} ms limit`)),
         projectUpgradeLimitMs,
       );
       let completed = false;

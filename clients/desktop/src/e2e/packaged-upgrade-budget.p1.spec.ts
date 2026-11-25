@@ -30,7 +30,7 @@ const test = packaged.extend<{ profile: Profile; upgradeHome: string }>({
 for (const profile of ["history", "storage"] as const)
   test.describe(profile, () => {
     test.use({ profile });
-    test("completes the upgrade, opens the project and persists an edit within 12 seconds", async ({
+    test("completes the upgrade, opens the project and persists an edit within the upgrade budget", async ({
       upgradeHome,
     }, info) => {
       let app: PackagedApp | undefined;

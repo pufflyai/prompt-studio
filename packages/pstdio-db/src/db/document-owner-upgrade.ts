@@ -208,10 +208,16 @@ export const prepareDocumentOwnerUpgrade = async (db: DbClient, path: string, re
         )
           return;
         const bytes = Buffer.byteLength(JSON.stringify(row));
-        if (pending.length && pendingBytes + bytes > 4 * 1024 * 1024) await flush();
+        const last = pending.at(-1);
+        // Consecutive retries for one document rewrite the same map. Keep them together up to the byte limit.
+        const sameRetryMap =
+          source.table === storage_document_operations &&
+          last?.workbench_id === row.workbench_id &&
+          last?.extension_id === row.extension_id &&
+          last?.document_id === row.document_id;
+        if (last && (pendingBytes + bytes > 4 * 1024 * 1024 || (pending.length >= 200 && !sameRetryMap))) await flush();
         pending.push(row);
         pendingBytes += bytes;
-        if (pending.length === 200) await flush();
       },
       async (input) => {
         const row = { ...input };
@@ -234,10 +240,11 @@ export const prepareDocumentOwnerUpgrade = async (db: DbClient, path: string, re
     }
     if (restore) restorations.push({ restore, flush });
   }
-  // All document inputs and the separately captured owner positions must be durable before document deletion cascades to derived identities.
-  // Drop generated query triggers while their released columns still exist.
+  // Every table in this foreign-key group has a durable snapshot before its pages are released.
   if (columns!.legacy) {
-    await db.delete(storage_documents);
+    await db.execute(sql`TRUNCATE storage_documents, storage_document_updates, storage_document_operations,
+      storage_current_records, storage_record_projections, storage_resource_projections,
+      storage_resource_identities, storage_resource_aliases`);
   }
   if (!restorations.length) return;
   return async () => {

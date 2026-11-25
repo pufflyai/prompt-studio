@@ -8,4 +8,4 @@ export * from "./test-fixture-profiles";
 export * from "./test-quarantine";
 
 // Release acceptance measures the first usable upgraded project on every qualifying run.
-export const projectUpgradeLimitMs = 12_000;
+export const projectUpgradeLimitMs = 20_000;

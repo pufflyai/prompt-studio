@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -12,7 +12,7 @@ import { prepareOwnerIndexUpgrade } from "./owner-index-upgrade";
 import { prepareOwnerProjectionUpgrade } from "./owner-projection-upgrade";
 import { releasedDocumentRows } from "./released-document-rows.fixture";
 
-test("retry history upgrades across batches without retaining obsolete operation maps", async () => {
+test("retry history coalesces small saves, bounds large batches and keeps only the committed map", async () => {
   const root = await mkdtemp(join(tmpdir(), "document-retry-upgrade-"));
   const previous = await createTextLogOwnerFixture(root);
   let previousClosed = false;
@@ -24,16 +24,23 @@ test("retry history upgrades across batches without retaining obsolete operation
         VALUES ('project','example.documents','document',decode('0000','hex'));
       INSERT INTO storage_document_operations
         SELECT 'project','example.documents','document','operation-' || n,'fingerprint-' || n
-        FROM generate_series(1,401) n;`);
+        FROM generate_series(1,401) n;
+      INSERT INTO storage_document_operations VALUES ('project','example.documents','document','z-large',repeat('x',4194304));`);
     await prepareOrderedOwnerUpgrade(previous.db, previous.path);
     await prepareOwnerIndexUpgrade(previous.db, previous.path);
     await prepareOwnerProjectionUpgrade(previous.db, previous.path);
     const finish = await prepareDocumentOwnerUpgrade(previous.db, previous.path);
     await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
-    await finish!();
+    const files = documentFilesFor(previous.db);
+    const writes = spyOn(files, "put");
+    try {
+      await finish!();
+      expect(writes.mock.calls.filter(([, , kind]) => kind === "operations")).toHaveLength(2);
+    } finally {
+      writes.mockRestore();
+    }
 
     // Inspect before startup's final collection can hide upgrade amplification.
-    const files = documentFilesFor(previous.db);
     const ids = [];
     for await (const id of files.documents("project")) ids.push(id);
     expect(ids).toHaveLength(1);
@@ -48,6 +55,13 @@ test("retry history upgrades across batches without retaining obsolete operation
       operation_id: `operation-${index + 1}`,
       fingerprint: `fingerprint-${index + 1}`,
     }));
+    expected.push({
+      workbench_id: "project",
+      extension_id: "example.documents",
+      document_id: "document",
+      operation_id: "z-large",
+      fingerprint: "x".repeat(4 * 1024 * 1024),
+    });
     const restored = (await releasedDocumentRows(previous)).storage_document_operations!;
     expect(restored).toHaveLength(expected.length);
     expect(restored).toEqual(expect.arrayContaining(expected));

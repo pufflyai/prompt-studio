@@ -207,7 +207,9 @@ export const prepareOrderedOwnerUpgrade = async (db: DbClient, path: string, rec
   }
   // Retain the text-addressed parent as the conversion completion marker. Only
   // clear children after every input is fsynced; generated DDL rewires their FKs.
-  if (columns!.legacy) for (const source of sources.slice(1).reverse()) await db.delete(source.table);
+  if (columns!.legacy)
+    await db.execute(sql`TRUNCATE storage_ordered_records, storage_ordered_operations,
+      storage_ordered_receipts, storage_ordered_touches`);
   if (!restorations.length && !restoreSequence) return;
   return async () => {
     for (const { restore, flush } of restorations) {

@@ -13,7 +13,8 @@ export const prepareOwnedRowUpgrade = async (
     projectKey: "project_id" | "workbench_id";
     conflict: string;
     keys: string[];
-    historyFields?: string[];
+    fields: string[];
+    timestamps?: string[];
     normalize?: (row: Record<string, unknown>) => Record<string, unknown>;
   },
 ) => {
@@ -68,33 +69,36 @@ export const prepareOwnedRowUpgrade = async (
   );
   if (!restore) return;
   // The durable snapshot survives a process restart. On the uninterrupted path
-  // the same database connection can copy history directly across generated DDL.
+  // the same database connection can copy rows directly across generated DDL.
   const staged = sql.identifier(`upgrade_${target}`);
-  let stagedFields = restore.captured && config.historyFields;
-  if (stagedFields) await db.execute(sql`CREATE TEMP TABLE ${staged} AS TABLE ${sql.identifier(source.table)}`);
+  let stagedInput = restore.captured;
+  if (stagedInput) await db.execute(sql`CREATE TEMP TABLE ${staged} AS TABLE ${sql.identifier(source.table)}`);
   return {
     async resume() {
-      if (stagedFields) {
-        const fields = stagedFields.map((field) => sql.identifier(field));
+      if (stagedInput) {
+        const fields = config.fields.map((field) => sql.identifier(field));
+        const ownerProject = sql.identifier(projectKey);
+        const selected = config.fields.map((field) =>
+          config.timestamps?.includes(field)
+            ? sql`s.${sql.identifier(field)}::timestamptz`
+            : sql`s.${sql.identifier(field)}`,
+        );
         const existing = await db.execute(sql`SELECT 1 FROM ${table} LIMIT 1`);
         // A partial restore must check every saved row against its retained input.
         if (!existing.rows.length) {
           await db.transaction(async (tx) => {
             await tx.execute(sql`INSERT INTO owners(project_id,extension_id)
-              SELECT DISTINCT workbench_id,extension_id FROM ${staged} ON CONFLICT DO NOTHING`);
+              SELECT DISTINCT ${ownerProject},extension_id FROM ${staged} ON CONFLICT DO NOTHING`);
             await tx.execute(sql`INSERT INTO ${table}(owner_id,${sql.join(fields, sql`, `)})
-              SELECT o.id,${sql.join(
-                fields.map((field) => sql`s.${field}`),
-                sql`, `,
-              )}
-              FROM ${staged} s JOIN owners o ON (o.project_id,o.extension_id)=(s.workbench_id,s.extension_id)`);
+              SELECT o.id,${sql.join(selected, sql`, `)}
+              FROM ${staged} s JOIN owners o ON (o.project_id,o.extension_id)=(s.${ownerProject},s.extension_id)`);
           });
           await db.execute(sql`DROP TABLE ${staged}`);
-          stagedFields = false;
+          stagedInput = false;
           return;
         }
         await db.execute(sql`DROP TABLE ${staged}`);
-        stagedFields = false;
+        stagedInput = false;
       }
       // Each retry starts at the beginning of its retained snapshot.
       batch = [];
