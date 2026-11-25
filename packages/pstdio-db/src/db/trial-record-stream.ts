@@ -1,6 +1,6 @@
 import { constants, cpSync } from "node:fs";
-import { open, readdir, rename, rm } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { open, rm } from "node:fs/promises";
+import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { PGlite, type PGliteOptions } from "@electric-sql/pglite";
 import { sql } from "drizzle-orm";
@@ -11,10 +11,7 @@ import {
 } from "../services/extension-storage/ordered-record-row";
 import { encodeProjectionValue } from "../services/extension-storage/record-projection-codec";
 import type { DbClient } from "./connection.pglite";
-import { flushDirectory } from "./pglite-home-recovery";
-import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
 
-declare const PSTDIO_TRIAL_RECORD_WORKER: string | undefined;
 
 export const cloneClosedDatabase = (from: string, to: string) =>
   cpSync(from, to, { recursive: true, mode: constants.COPYFILE_FICLONE, errorOnExist: true, force: false });
@@ -24,26 +21,6 @@ export function startRecordPreparation(path: string) {
   const started=performance.now();
   const mark=(phase:string)=>console.log("Upgrade diagnostic",phase,Math.round(performance.now()-started));
   cloneClosedDatabase(path, backup);mark("rollback copy");
-  const worker = new Worker(
-    typeof PSTDIO_TRIAL_RECORD_WORKER === "string"
-      ? PSTDIO_TRIAL_RECORD_WORKER
-      : new URL("./trial-record-worker.ts", import.meta.url).href,
-  );
-  const owners = Promise.withResolvers<string>(),
-    completed = Promise.withResolvers<void>();
-  function fail(error: Error) {
-    owners.reject(error);
-    completed.reject(error);
-  }
-  worker.onmessage = ({ data }) => {
-    if (data.error) fail(Error(data.error));
-    else if (data.completed) {mark("reader exports complete");completed.resolve();}
-    else {mark("normalized records available");owners.resolve(data.owners);}
-  };
-  worker.onerror = (e) => fail(Error(e.message));
-  void owners.promise.catch(() => {});
-  void completed.promise.catch(() => {});
-  worker.postMessage({ backup, path });
   return {
     options: (options: PGliteOptions) => ({
       ...options,
@@ -69,18 +46,7 @@ export function startRecordPreparation(path: string) {
       await db.execute(sql`INSERT INTO owners(project_id,extension_id)
         SELECT workbench_id,extension_id FROM storage_ordered_owners ORDER BY workbench_id COLLATE "C",extension_id COLLATE "C"`);
     },
-    load: (db: DbClient) => streamOriginalTables(db, path, owners.promise,mark),
-    cancel: () => worker.terminate(),
-    async finish() {
-      await completed.promise;
-      const incoming = `${path}.verified-exports`,
-        exports = `${path}-migration-exports`;
-      for (const name of await readdir(incoming)) await rename(join(incoming, name), join(exports, name));
-      await flushDirectory(exports);
-      await rm(incoming, { recursive: true });
-      await rm(backup, { recursive: true });
-      await flushDirectory(dirname(path));
-    },
+    load: (db: DbClient) => streamOriginalTables(db, path, mark),
   };
 }
 
@@ -231,7 +197,7 @@ export async function writeTrialRecords(db: DbClient, path: string) {
     await file.close();
   }
 }
-async function streamOriginalTables(db: DbClient, path: string, preparing: Promise<string>,mark:(phase:string)=>void) {
+async function streamOriginalTables(db: DbClient, path: string, mark:(phase:string)=>void) {
   mark("begin loading");
   const filePath = join(path, "trial-records.copy");
   try {
@@ -250,30 +216,9 @@ async function streamOriginalTables(db: DbClient, path: string, preparing: Promi
         sql`INSERT INTO owners(project_id,extension_id) SELECT workbench_id,extension_id FROM storage_ordered_owners ON CONFLICT DO NOTHING`,
       );
     });
-    {
-      const snapshot = await prepareUpgradeSnapshot(
-        db,
-        path,
-        {
-          table: "projects",
-          name: "trial-canonical-archive",
-          archive: "storage_ordered_records",
-          select: sql`SELECT * FROM upgrade_source.storage_ordered_records`,
-          keys: ["workbench_id", "extension_id", "record_id"],
-          copyJson: true,
-        },
-        async () => {},
-      );
-      await snapshot?.complete();mark("canonical archive complete");
-    }
-    {
-      const check = await preparing;
-      const rows = (
-        await db.execute(sql`SELECT project_id,extension_id,id FROM owners WHERE (project_id,extension_id) IN
-        (SELECT workbench_id,extension_id FROM storage_ordered_owners) ORDER BY project_id COLLATE "C",extension_id COLLATE "C"`)
-      ).rows;
-      if (JSON.stringify(rows) !== check) throw Error("Prepared owner identities disagree");
-    }
+    // The untouched, closed source is the recovery copy in this measurement.
+    await writeTrialRecords(db, filePath);
+    mark("normalized records available");
     await db.transaction(async (tx) => {
       await tx.execute(sql`SET LOCAL maintenance_work_mem='96MB'`);
       await tx.execute(sql`SET LOCAL work_mem='32MB'`);

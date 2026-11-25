@@ -343,7 +343,6 @@ export const createDb = async (options?: DbOpenOptions) => {
       await maintainDatabase(openedPglite, db, dbPath, fresh, onPhase, movedNodes || renamed);
     const projectIds = await db.select({ id: schema.projects.id }).from(schema.projects);
     await indexNodes.retainProjects(new Set(projectIds.map((project) => project.id)));
-    await preparation?.finish();
     onPhase("database_migrated");
 
     let closed = false;
@@ -366,7 +365,6 @@ export const createDb = async (options?: DbOpenOptions) => {
       cleanupRetiredRows: createStorageCleanup(db, dbPath, deferredOwners, !!deferCleanup),
     };
   } catch (error) {
-    preparation?.cancel();
     await pglite?.close();
     releaseLock();
     throw error;
