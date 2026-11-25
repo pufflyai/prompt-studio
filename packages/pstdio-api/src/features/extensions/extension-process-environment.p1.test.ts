@@ -271,6 +271,7 @@ describe("envFromHost", () => {
       revoked = true;
 
       expect(alive(backgroundPid)).toBe(false);
+      expect((await permissions.read("project-1", "acme.agent")).granted).toEqual([]);
     } finally {
       if (!revoked) await permissions.revoke("project-1", "acme.agent").catch(() => {});
       if (backgroundPid && alive(backgroundPid)) process.kill(backgroundPid, "SIGKILL");
