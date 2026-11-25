@@ -34,6 +34,8 @@ export type ObserverConfig = z.infer<typeof observerConfigSchema>;
 export const createObserver = (config: ObserverConfig) => {
   const connection = connectRelay(config.databaseUrl);
   const metrics = createMetricRegistry("pstdio_relay", { environment: config.environment });
+  for (const account of config.accounts)
+    metrics.set("account_quota_bytes", account.quotaBytes, { account: account.alias });
   const collect = async (signal: AbortSignal) => {
     metrics.set("backup_configured", config.backup ? 1 : 0);
     metrics.set("provider_configured", config.provider ? 1 : 0);
@@ -41,7 +43,6 @@ export const createObserver = (config: ObserverConfig) => {
     let successful = true;
     for (const account of config.accounts) {
       const labels = { account: account.alias };
-      metrics.set("account_quota_bytes", account.quotaBytes, labels);
       try {
         const report = await connection.run(
           (db) =>

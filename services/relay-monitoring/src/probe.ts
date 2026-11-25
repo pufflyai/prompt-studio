@@ -121,6 +121,10 @@ export const createProbe = async (config: ProbeConfig) => {
       await observe("sync", () => syncRound(input));
       if (blobDue || state.pendingBlob) await observe("blobs", () => blobRound(input, multipart));
     } else unavailable(metrics, ["sync", "blobs"]);
+    if (signal.aborted) {
+      unavailable(metrics, ["live"]);
+      return;
+    }
     await observe("live", async () => {
       const sockets = access.map((get) =>
         createLiveConnection({ origin: config.relayOrigin, projectId: config.workbenchId, access: get, signal }),

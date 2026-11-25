@@ -213,6 +213,7 @@ export const readSnapshot = async (ctx: CommandContext, raw: unknown): Promise<S
           (["ok", "unknown", "warning", "critical"] as const)[Number(value)] ?? "unknown",
         ]),
     );
+    // The Prometheus range sample summarizes the bin ending at its timestamp.
     for (let time = start; time < end; time += step)
       snapshot.health.push({
         check,
@@ -225,7 +226,7 @@ export const readSnapshot = async (ctx: CommandContext, raw: unknown): Promise<S
           unknown: "Unknown",
           "not-configured": "Unknown",
           unsupported: "Unknown",
-        }[points.get(time) ?? "unknown"],
+        }[points.get(time + step) ?? "unknown"],
       });
   }
   return snapshot;

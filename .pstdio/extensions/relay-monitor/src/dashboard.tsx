@@ -3,7 +3,7 @@ import { Chip, ScrollArea, SegmentedControl, SimpleCard, SimpleCardBody } from "
 import { DataTable } from "@pstdio/ui/data-table";
 import { useState } from "react";
 import { HealthTimeline, SeriesChart } from "./charts";
-import type { Section, Snapshot, WindowRange } from "./model";
+import type { FailureRow, Section, Snapshot, WindowRange } from "./model";
 
 export interface DashboardProps {
   snapshot?: Snapshot;
@@ -14,7 +14,7 @@ export interface DashboardProps {
   onRange: (value: WindowRange) => void;
   onSection: (value: Section) => void;
   onRefresh: () => void;
-  failures?: { timestamp: string; code: string }[];
+  failures?: FailureRow[];
   onFailures?: () => void;
   onOlder?: () => void;
   failuresNote?: string;
@@ -165,13 +165,13 @@ export const Dashboard = (props: DashboardProps) => {
                   </SimpleCardBody>
                 </SimpleCard>
               )}
-              {section === "Failures" && <FailureDetails {...props} />}
               <Text textStyle="label/XS/regular" color="fg.muted">
                 Gaps mean missing observations. Latency curves show the maximum of recorded p50/p95/p99 in each bin.
-                Storage covers explicitly configured account aliases.
+                Storage and cleanup totals require fresh observations from every configured account.
               </Text>
             </>
           )}
+          {section === "Failures" && <FailureDetails {...props} />}
         </Stack>
       </ScrollArea>
     </Flex>
@@ -221,7 +221,9 @@ const FailureDetails = (props: DashboardProps) => (
             data={props.failures.map((failure, index) => ({
               id: String(index),
               observedAt: observed(Number(BigInt(failure.timestamp) / 1_000_000_000n)),
+              service: failure.service,
               code: failure.code,
+              cause: failure.cause ?? "Not reported",
             }))}
             hiddenColumns={["id"]}
             getRowId={(row) => String(row.id)}

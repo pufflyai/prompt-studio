@@ -29,6 +29,12 @@ export interface Check {
   state: State;
   observedAt: number | null;
 }
+export interface FailureRow {
+  timestamp: string;
+  service: "relay" | "manager";
+  code: string;
+  cause?: string;
+}
 export interface Snapshot {
   range: WindowRange;
   section: Section;

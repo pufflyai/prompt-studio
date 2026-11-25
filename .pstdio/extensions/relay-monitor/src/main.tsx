@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { commands } from "./commands";
 import { Dashboard } from "./dashboard";
-import type { Section, Snapshot, WindowRange } from "./model";
+import type { FailureRow, Section, Snapshot, WindowRange } from "./model";
 
 export default defineExtensionView({
   render({ mount, host }) {
@@ -18,7 +18,7 @@ export default defineExtensionView({
       const [error, setError] = useState<string>();
       const [loading, setLoading] = useState(false);
       const refresh = useRef(() => {});
-      const [failures, setFailures] = useState<{ timestamp: string; code: string }[]>();
+      const [failures, setFailures] = useState<FailureRow[]>();
       const [failureCursor, setFailureCursor] = useState<string | null>(null);
       const [failureNote, setFailureNote] = useState<string>();
       const selection = useRef(0);
@@ -56,7 +56,7 @@ export default defineExtensionView({
             );
           }
         } catch {
-          setError("Failure query unavailable");
+          if (selected === selection.current) setFailureNote("Failure query unavailable");
         }
       };
       return (

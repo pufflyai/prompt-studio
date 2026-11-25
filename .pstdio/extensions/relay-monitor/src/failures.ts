@@ -11,15 +11,22 @@ const cursorSchema = z.object({
 });
 const fixedCode =
   /^(request_exception|renewal_(database|signing|service)_failed|sync_(initialize|snapshot|replay|submit|recover|subscription|document|cleanup)_failed|project_deletion_handoff_failed|asset_operation_failed)$/;
-const failureCode = (line: string) => {
+const causePart = "[A-Za-z0-9_.-]{1,48}(?::[A-Za-z0-9_.-]{1,48}){0,2}";
+const redactedCause = new RegExp(`^${causePart}(?:<-${causePart})?$`);
+const describeFailure = (line: string) => {
   let code = line;
+  let cause: unknown;
   try {
-    const body = JSON.parse(line).body;
-    if (typeof body === "string") code = body;
+    const entry = JSON.parse(line) as { body?: unknown; attributes?: { cause?: unknown } } | null;
+    if (typeof entry?.body === "string") {
+      code = entry.body;
+      cause = entry.attributes?.cause;
+    }
   } catch {
     /* Raw Loki encoding is also supported. */
   }
-  return fixedCode.test(code) ? code : "service_operation_failed";
+  if (!fixedCode.test(code)) return { code: "service_operation_failed" };
+  return typeof cause === "string" && redactedCause.test(cause) ? { code, cause } : { code };
 };
 export const readFailures = async (ctx: CommandContext, range: WindowRange, before?: string) => {
   await checkConnection(ctx);
@@ -69,7 +76,7 @@ export const readFailures = async (ctx: CommandContext, range: WindowRange, befo
       stream.values.map(([timestamp, line]) => ({
         timestamp,
         service: stream.stream.service,
-        code: failureCode(line),
+        ...describeFailure(line),
       })),
     )
     .sort(
