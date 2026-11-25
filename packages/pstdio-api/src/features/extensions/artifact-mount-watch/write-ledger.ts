@@ -1,5 +1,6 @@
-import { dirname, sep } from "node:path";
-import { type ArtifactMountWriteObserver, readArtifactFileState } from "pstdio-extensions";
+import { readdirSync } from "node:fs";
+import { basename, dirname, join, sep } from "node:path";
+import { type ArtifactMountWriteObserver, type ArtifactParentWrite, readArtifactFileState } from "pstdio-extensions";
 
 // Long enough for a change burst to settle after a slow write. Short enough that an old entry
 // cannot hide a later direct edit.
@@ -15,6 +16,12 @@ type LedgerEntry = {
   returnedSubtrees?: Set<string>;
 };
 
+type OwnedDirectory = {
+  recordedAt: number;
+  observed: NonNullable<FileState>;
+  children: Map<string, NonNullable<FileState>>;
+};
+
 const sameState = (recorded: FileState, current: FileState) =>
   recorded === null || current === null
     ? recorded === current
@@ -24,6 +31,30 @@ const sameState = (recorded: FileState, current: FileState) =>
       recorded.ctime === current.ctime;
 
 const isInside = (path: string, folder: string) => path.startsWith(folder + sep);
+
+const matchesOwnedChildren = (
+  path: string,
+  expected: OwnedDirectory["children"],
+  observed: ReadonlyMap<string, FileState>,
+) => {
+  try {
+    const names = readdirSync(path);
+    return (
+      names.length === expected.size &&
+      names.every((name) => {
+        const recorded = expected.get(name);
+        if (!recorded) return false;
+        const childPath = join(path, name);
+        const childHint = observed.get(childPath);
+        // The changed child already accounts for an independent hint in this batch.
+        if (childHint !== undefined && !sameState(recorded, childHint)) return true;
+        return sameState(recorded, readArtifactFileState(childPath));
+      })
+    );
+  } catch {
+    return false;
+  }
+};
 
 function* pathAndAncestors(path: string) {
   for (let ancestor = path; ancestor !== dirname(ancestor); ancestor = dirname(ancestor)) yield ancestor;
@@ -42,7 +73,7 @@ export type ArtifactMountWriteLedger = ReturnType<typeof createArtifactMountWrit
 export const createArtifactMountWriteLedger = (now: () => number = Date.now) => {
   const entries = new Map<string, LedgerEntry>();
   let writeOrder = 0;
-  const directories = new Map<string, { recordedAt: number; observed: NonNullable<FileState> }>();
+  const directories = new Map<string, OwnedDirectory>();
 
   const forgetExpired = () => {
     for (const [path, entry] of entries) {
@@ -113,8 +144,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     }
   };
 
-  const reconcileDeletions = (observations: readonly PathObservation[]) => {
-    const byPath = new Map(observations);
+  const reconcileDeletions = (observations: readonly PathObservation[], byPath: ReadonlyMap<string, FileState>) => {
     const retired = new Map<string, number>();
     // Exact folder hints can retire old children before their individual states are read.
     for (const [path, current] of observations) {
@@ -157,18 +187,20 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     return false;
   };
 
-  const matchesCreatedDirectory = (path: string, current: FileState, keepMatchedWrites: boolean) => {
-    const recorded = directories.get(path);
-    if (!recorded) return false;
-    const matches = sameState(recorded.observed, current);
-    // A changed snapshot reports the folder, while the same inode still proves an owned restore.
-    if (!keepMatchedWrites || recorded.observed.identity !== current?.identity) directories.delete(path);
-    return matches;
-  };
-
-  const isEcho = (path: string, current: FileState, consumed: Set<string>, keepMatchedWrites: boolean) => {
+  const isEcho = (
+    path: string,
+    current: FileState,
+    observed: ReadonlyMap<string, FileState>,
+    consumed: Set<string>,
+    keepMatchedWrites: boolean,
+  ) => {
     const entry = entries.get(path);
-    if (entry && sameState(entry.state, current) && !entry.reappeared?.has(path)) {
+    const directory = directories.get(path);
+    // An outside writer can add a sibling while an owned mutation is changing the same timestamps.
+    const matchesDirectory =
+      directory && sameState(directory.observed, current) && matchesOwnedChildren(path, directory.children, observed);
+    const matchesEntry = entry && sameState(entry.state, current) && !entry.reappeared?.has(path);
+    if (matchesEntry && (!directory || matchesDirectory)) {
       if (!keepMatchedWrites) {
         consumed.add(path);
         directories.delete(path);
@@ -176,16 +208,37 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
       return true;
     }
     if (entry?.state && keepMatchedWrites) consumed.add(path);
-    return (
-      matchesCreatedDirectory(path, current, keepMatchedWrites) ||
-      (!current && matchesAncestorDeletion(path, entry?.order))
-    );
+    // A changed snapshot reports the folder, while the same inode still proves an owned restore.
+    if (directory && (!keepMatchedWrites || directory.observed.identity !== current?.identity)) {
+      directories.delete(path);
+    }
+    return matchesDirectory || (!current && matchesAncestorDeletion(path, entry?.order));
+  };
+
+  const recordChild = (path: string, state: FileState) => {
+    const parent = directories.get(dirname(path));
+    if (!parent) return;
+    const name = basename(path);
+    if (state) parent.children.set(name, state);
+    else parent.children.delete(name);
+  };
+
+  const advanceParentWrite = ({ path, before, after }: ArtifactParentWrite) => {
+    if (!before || after?.identity !== before.identity) return;
+    const directory = directories.get(path);
+    if (directory && sameState(directory.observed, before)) directory.observed = after;
+
+    const children = directories.get(dirname(path))?.children;
+    const name = basename(path);
+    const child = children?.get(name);
+    if (child && sameState(child, before)) children?.set(name, after);
   };
 
   const recordCreatedDirectory = (folder: string, identity: string, recordedAt: number) => {
     const observed = readArtifactFileState(folder);
     if (!observed?.directory || observed.identity !== identity) return;
-    directories.set(folder, { observed, recordedAt });
+    directories.set(folder, { observed, recordedAt, children: new Map() });
+    recordChild(folder, observed);
     // Creation proves reappearance even if the watcher arrives only after an outside removal.
     rememberReappearance(folder, observed);
   };
@@ -199,12 +252,8 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     if (state) rememberReappearance(path, state);
     if (!state) directories.delete(path);
     for (const [folder, identity] of createdDirectories ?? []) recordCreatedDirectory(folder, identity, recordedAt);
-    for (const { path: parentPath, before, after } of parentWrites ?? []) {
-      const directory = directories.get(parentPath);
-      if (directory && before && after?.identity === before.identity && sameState(directory.observed, before)) {
-        directory.observed = after;
-      }
-    }
+    recordChild(path, state);
+    for (const write of parentWrites ?? []) advanceParentWrite(write);
   };
 
   return {
@@ -214,10 +263,11 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     dropEchoes: (paths: string[], { keepMatchedWrites = false } = {}) => {
       forgetExpired();
       const observations: PathObservation[] = paths.map((path) => [path, readArtifactFileState(path)]);
-      if (keepMatchedWrites) reconcileDeletions(observations);
+      const byPath = new Map(observations);
+      reconcileDeletions(observations, byPath);
       const consumed = new Set<string>();
       const kept = observations
-        .filter(([path, current]) => !isEcho(path, current, consumed, keepMatchedWrites))
+        .filter(([path, current]) => !isEcho(path, current, byPath, consumed, keepMatchedWrites))
         .map(([path]) => path);
       // A write can explain a folder notification elsewhere in the same batch.
       for (const path of consumed) entries.delete(path);

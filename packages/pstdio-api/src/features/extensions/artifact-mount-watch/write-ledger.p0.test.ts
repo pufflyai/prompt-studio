@@ -277,6 +277,58 @@ describe("artifact mount deletions and expiry", () => {
   });
 });
 
+describe("artifact mount folder-only notifications", () => {
+  test("retires external folder returns on a single watch before the old echo is observed", async () => {
+    const ledger = createArtifactMountWriteLedger(() => 0);
+    const { mount, root } = createMount(ledger);
+    const folder = join(root, "sales");
+    const child = join(folder, "old.json");
+    await mount.writeText("sales/old.json", "{}");
+    await mount.delete("sales");
+
+    mkdirSync(folder);
+    writeFileSync(child, "[]");
+    expect(ledger.dropEchoes([folder])).toEqual([folder]);
+    rmSync(child);
+    expect(ledger.dropEchoes([child])).toEqual([child]);
+  });
+
+  test.each([
+    "new",
+    "replacement",
+  ])("reports a folder-only hint when an outside %s sibling arrives inside an owned create", async (kind) => {
+    const ledger = createArtifactMountWriteLedger(() => 0);
+    const { mount, root } = createMount(ledger);
+    const folder = join(root, "sales");
+    const child = join(folder, "owned.json");
+    const outside = kind === "new" ? join(folder, "outside.json") : join(folder, "first.json");
+    const replacement = join(dirname(root), "replacement.json");
+    const options = { keepMatchedWrites: true };
+    await mount.writeText("sales/first.json", "{}");
+    expect(ledger.dropEchoes([folder], options)).toEqual([]);
+
+    const writeFile = fsPromises.writeFile;
+    const physicalChild = join(await fsPromises.realpath(folder), "owned.json");
+    let edited = false;
+    const editDuringWrite = async (...args: Parameters<typeof writeFile>) => {
+      if (args[0] === physicalChild) {
+        edited = true;
+        writeFileSync(replacement, "[]");
+        renameSync(replacement, outside);
+      }
+      return Reflect.apply(writeFile, fsPromises, args);
+    };
+    const write = spyOn(fsPromises, "writeFile").mockImplementation(editDuringWrite as typeof writeFile);
+    try {
+      await mount.writeText("sales/owned.json", "{}");
+    } finally {
+      write.mockRestore();
+    }
+    expect(edited).toBe(true);
+    expect(ledger.dropEchoes([folder, child], options)).toEqual([folder]);
+  });
+});
+
 describe("artifact mount restored folder batches", () => {
   test("reports removals in an externally returned subtree under an API-owned folder", async () => {
     const ledger = createArtifactMountWriteLedger(() => 0);
