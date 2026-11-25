@@ -155,6 +155,7 @@ test.each([
     () => client.run("wait", { name: "shared-build-restoration", url: restoration.url }, { resources: ["/shared"] }),
     { priority: "restoration" },
   );
+  void restore.catch(() => undefined);
   const edit = (started: typeof startedFirst, afterBuild: () => Promise<unknown> | undefined) =>
     client.withContinuation(async () => {
       const caller = createPreparationScope();
@@ -206,6 +207,8 @@ test.each([
     else expect(await second).toMatchObject({ sequence: 2 });
     await restart.restarted;
     expect(workerLosses).toBe(1);
+    restoration.release.resolve();
+    expect(await restore).toMatchObject({ sequence: mode === "cancels" ? 2 : 3 });
   } finally {
     shared.reject(cancelled);
     gap.resolve();
