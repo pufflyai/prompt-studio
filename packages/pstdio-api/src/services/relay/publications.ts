@@ -47,6 +47,10 @@ export const startPublishedExtensions = (input: {
   // Retrying on every reconnect would repeat package checks, installs and webview builds each time.
   let failed: { key: string; delay: number; waiting: boolean } | undefined;
   let retry: ReturnType<typeof setTimeout> | undefined;
+  const admitRetry = () => {
+    if (failed) failed.waiting = false;
+    clearTimeout(retry);
+  };
   const connection = createDocumentRelayConnection({
     live: input.live,
     origin: config.relayOrigin,
@@ -61,6 +65,7 @@ export const startPublishedExtensions = (input: {
       const selected = await catalog.list();
       const key = canonicalJson(selected.map(({ recordId, value, asset }) => ({ recordId, value, asset })));
       if (failed?.key === key && failed.waiting) return;
+      admitRetry();
       try {
         const entries = publishedEntries(selected);
         await activatePublishedSet(deps, config.workbenchId, entries, attemptSignal, false, async () => {
@@ -97,14 +102,23 @@ export const startPublishedExtensions = (input: {
   return {
     owner,
     restart() {
-      if (failed) failed.waiting = false;
-      clearTimeout(retry);
+      admitRetry();
       return connection.restart();
     },
     retry() {
-      if (failed) failed.waiting = false;
-      clearTimeout(retry);
-      connection.retry();
+      admitRetry();
+      return connection.retry();
+    },
+    prepareRetry() {
+      const activation = failed;
+      const retry = connection.prepareRetry({ beforeRetry: admitRetry });
+      return () => {
+        // A document-only reconnect cannot heal a failed activation held in backoff.
+        if (activation && failed === activation && activation.waiting) {
+          return connection.resume(admitRetry);
+        }
+        return retry();
+      };
     },
     wake: connection.wake,
     done: connection.done.finally(() => {

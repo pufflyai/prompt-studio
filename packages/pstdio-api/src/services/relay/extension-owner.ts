@@ -314,6 +314,7 @@ export const startRelayExtension = async (input: {
       resumeArtifactWatches,
       wakeDocument,
       retry: connection.retry,
+      prepareRetry: connection.prepareRetry,
       restart: connection.restart,
       done: connection.done.finally(async () => {
         stopProjection();

@@ -10,6 +10,7 @@ import { identitySchema } from "pstdio-sync-contracts";
 import type { RouteDeps } from "../../features/deps";
 import { apiLogger } from "../../lib/logger";
 import type { startFolderRecovery } from "../relay/folder-recovery";
+import type { ProjectSyncRetry } from "../relay/project-sync-retry";
 import type { RelayWorkbench } from "../relay/runtime";
 import { createAccountRefresh } from "./account-refresh";
 import { readAccountStatus } from "./account-status";
@@ -99,13 +100,22 @@ const retryProjectSync = async (
   projectId: string,
   projects: Pick<RouteDeps["projectService"], "get">,
   refresh: () => Promise<void>,
-  retry: (projectId: string, sourceId?: string) => Promise<void>,
+  retry: ProjectSyncRetry,
   sourceId?: string,
 ) => {
   if (!(await projects.get(projectId))) throw new AccountRequestError("Unknown project");
   await refresh();
   await retry(projectId, sourceId);
   return { ok: true };
+};
+
+const retryFailedProjectSync = async (
+  projectId: string,
+  retry: ProjectSyncRetry,
+  requireCurrent?: () => Promise<void>,
+) => {
+  const scheduled = await retry(projectId, { failedOnly: true }, requireCurrent);
+  await scheduled?.settled;
 };
 
 const readManagerOrigin = (managerOrigin?: string) => {
@@ -145,7 +155,7 @@ export const createNativeAccount = (input: {
   const projectsFor = (login: DeviceLogin | null) =>
     matchesManagerLogin(cloudProjects, login) ? cloudProjects?.ids : undefined;
   let update: (connections: RelayWorkbench[]) => Promise<void> = async () => {};
-  let retryProject: (projectId: string, sourceId?: string) => Promise<void> = async () => {};
+  let retryProject: ProjectSyncRetry = async () => {};
   let folders: FolderRecoveryOwners = () => undefined;
   const away = createNativeCloudReturn();
   const commands = createDeviceCommandSender();
@@ -192,7 +202,7 @@ export const createNativeAccount = (input: {
     returnedUploadState: away.removalState,
     call,
     refresh: () => refresh(),
-    retry: (id) => retryProject(id),
+    retry: (id, requireCurrent) => retryFailedProjectSync(id, retryProject, requireCurrent),
     withdraw: (id) => missing.withdraw(id).then(() => refreshes.changed()),
     changed: changes.notify,
   });
@@ -301,7 +311,7 @@ export const createNativeAccount = (input: {
     projectSyncStatus: createNativeProjectSyncReader({
       login: readLogin,
       exists: (id) => input.projects.get(id),
-      read: async (id, login) => catalog.fenceLocalStatus(id, login, await readProjectStatus(id, login)),
+      read: (id, login) => catalog.fenceLocalStatus(id, login, () => readProjectStatus(id, login)),
       away: (id) => away.status(id),
       changed: () => new AccountRequestError("The account changed before the project sync read completed"),
       unknown: () => new AccountRequestError("Unknown project"),
