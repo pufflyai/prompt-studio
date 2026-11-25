@@ -9,6 +9,13 @@ export const fixtureMicrosoftClient = {
 };
 const microsoft = "https://login.microsoftonline.com";
 const googleIssuer = "https://accounts.google.com";
+
+export const oauthBrowserCookie = (response: Response) =>
+  response.headers
+    .getSetCookie()
+    .map((cookie) => cookie.split(";")[0])
+    .join("; ");
+
 const fixtures = {
   microsoft: {
     authorize: `${microsoft}/common/oauth2/v2.0/authorize`,

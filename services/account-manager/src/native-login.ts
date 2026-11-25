@@ -2,8 +2,7 @@ import { type AccountSignInError, accountSignInProviderSchema } from "pstdio-syn
 import type { createManagerAuthentication } from "./manager-authentication";
 
 // Only the native process listening on IPv4 loopback receives the short-lived, single-use code.
-const callback = (request: Request) => {
-  const input = new URL(request.url).searchParams;
+export const readNativeCallback = (input: URLSearchParams) => {
   const url = new URL(input.get("callback") ?? "");
   const state = input.get("state");
   if (
@@ -37,13 +36,14 @@ export const nativeLogin = async (
 ) => {
   if (request.method !== "GET") return new Response(null, { status: 405 });
   try {
-    const { url, state, provider } = callback(request);
+    const incoming = new URL(request.url);
+    const attempt = readNativeCallback(incoming.searchParams);
+    const { url, state, provider } = attempt;
     const fail = (error: AccountSignInError) => {
       url.searchParams.set("error", error);
       url.searchParams.set("state", state);
       return redirect(url);
     };
-    const incoming = new URL(request.url);
     if (incoming.pathname === "/v1/native-error") {
       return fail(incoming.searchParams.get("error") === "access_denied" ? "provider-denied" : "provider-failed");
     }
@@ -60,7 +60,7 @@ export const nativeLogin = async (
       const result = (await response.json()) as { url: string };
       return redirect(new URL(result.url), new Headers(response.headers));
     }
-    const code = await auth.nativeCode(request.headers, provider);
+    const code = await auth.nativeCode(request.headers, attempt);
     url.searchParams.set("code", code.token);
     url.searchParams.set("state", state);
     return redirect(url);

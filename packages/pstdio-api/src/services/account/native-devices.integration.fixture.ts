@@ -33,12 +33,20 @@ const renew = async (credential: string, workbenchId: string) =>
       body: JSON.stringify({ workbenchId }),
     })
   ).status;
-// Completes the browser step with a Google session cookie, then lets the loopback callback finish the login.
-const login = async (host: Host, cookie: string) => {
+// The fixture provider completes Google OAuth for this subject before the browser follows the manager's redirect.
+const login = async (host: Host, subject: string) => {
   const started = await call<{ id: string; url: string }>(host, "/account/login", "POST", { managerOrigin: origin });
   assert.equal(started.status, 200);
-  const url = new URL(started.body.url);
-  url.pathname = "/v1/native-callback";
+  const browser = await fetch(started.body.url, {
+    headers: { "x-fixture-google-subject": subject },
+    redirect: "manual",
+  });
+  assert.equal(browser.status, 302);
+  const url = new URL(browser.headers.get("location")!);
+  const cookie = browser.headers
+    .getSetCookie()
+    .map((value) => value.split(";")[0])
+    .join("; ");
   const completed = await fetch(url, { headers: { cookie }, redirect: "manual" });
   assert.equal(completed.status, 302);
   const invalid = new URL(completed.headers.get("location")!);
@@ -73,7 +81,7 @@ try {
   const offlineBefore = await offline.records.list();
 
   assert.equal((await call<{ error: string }>(laptop, "/account/devices")).body.error, "Log in first with pst login");
-  const laptopLogin = await login(laptop, process.env.OWNER_TEST_COOKIE_A!);
+  const laptopLogin = await login(laptop, process.env.OWNER_TEST_SUBJECT_A!);
   assert.equal(laptopLogin.deviceId, (await laptop.deps.environmentService.get()).environmentId);
   assert.equal((await call(laptop, `/account/projects/${project.id}`, "PUT")).status, 200);
   assert.deepEqual(
@@ -83,7 +91,7 @@ try {
 
   // The second device binds the same project and logs in. No per-project step connects it.
   await desktop.projects.create({ id: project.id, name: "Shared notes" });
-  const desktopLogin = await login(desktop, process.env.OWNER_TEST_COOKIE_A_AGAIN!);
+  const desktopLogin = await login(desktop, process.env.OWNER_TEST_SUBJECT_A!);
   assert.equal(desktopLogin.accountId, laptopLogin.accountId);
   assert.notEqual(desktopLogin.deviceId, laptopLogin.deviceId);
   assert.deepEqual((await call<Status>(desktop, "/account")).body.cloudProjects, [project.id]);
@@ -135,7 +143,7 @@ try {
   assert.equal(await token(desktop), undefined);
 
   // Another Google user on the same client gets their own account and sees only their own devices.
-  const otherLogin = await login(laptop, process.env.OWNER_TEST_COOKIE_B!);
+  const otherLogin = await login(laptop, process.env.OWNER_TEST_SUBJECT_B!);
   assert.notEqual(otherLogin.accountId, laptopLogin.accountId);
   assert.deepEqual(
     (await devices(laptop)).map((device) => device.id),

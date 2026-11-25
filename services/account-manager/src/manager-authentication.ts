@@ -13,6 +13,7 @@ import { connectManager } from "./database";
 import { createDeviceAccess, createDeviceLogin } from "./device-access";
 import { findDeviceAccess } from "./devices";
 import { microsoftSignIn } from "./microsoft-provider";
+import { type NativeLoginAttempt, nativeApprovalId, nativeLoginApproval } from "./native-login-approval";
 import { acknowledgeProjectDeletion, listProjectDeletionJobs } from "./project-deletion";
 import { readProviderIdentity } from "./provider-identity";
 import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
@@ -46,6 +47,7 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
     plugins: [
       ...(config.microsoft ? [microsoftSignIn(config.microsoft.clientId)] : []),
       bearer(),
+      nativeLoginApproval,
       oneTimeToken({ storeToken: "hashed", disableClientRequest: true }),
       jwt({
         disableSettingJwtHeader: true,
@@ -78,10 +80,14 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
     supportsSignIn: (provider: AccountSignInProvider) => provider === "google" || !!config.microsoft,
     nativeLogin: (provider: AccountSignInProvider, callbackURL: string, errorCallbackURL: string) =>
       auth.api.signInSocial({ body: { provider, callbackURL, errorCallbackURL }, asResponse: true }),
-    async nativeCode(headers: Headers, provider: AccountSignInProvider) {
+    async nativeCode(headers: Headers, attempt: NativeLoginAttempt) {
       const session = await readSession(headers);
-      const identity = session && (await readProviderIdentity(connection.db, session.user.id));
-      if (!identity || identity.provider !== provider) throw new Error("Sign-in provider did not match");
+      if (!session) throw new Error("Sign-in session unavailable");
+      const identity = await readProviderIdentity(connection.db, session.user.id);
+      if (identity?.provider !== attempt.provider) throw new Error("Sign-in provider did not match");
+      const { internalAdapter } = await auth.$context;
+      const approval = await internalAdapter.consumeVerificationValue(nativeApprovalId(session.session.id, attempt));
+      if (!approval) throw new Error("Native sign-in approval unavailable");
       return auth.api.generateOneTimeToken({ headers });
     },
     jwks: () => auth.api.getJwks(),

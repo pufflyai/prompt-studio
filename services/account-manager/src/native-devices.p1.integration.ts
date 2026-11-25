@@ -3,7 +3,8 @@ import { createServer } from "node:net";
 import { resolve } from "node:path";
 import { createAuthorityFixture } from "./authority.fixture";
 import * as implementation from "./index";
-import { createAuthenticationFixture } from "./manager-authentication.fixture";
+import { authenticationConfig } from "./manager-authentication.fixture";
+import { createOAuthCodeFixture, oauthBrowserCookie } from "./oauth-code.fixture";
 import { createOwnedTls } from "./owned-tls.fixture";
 
 const fixture = createAuthorityFixture(implementation);
@@ -13,7 +14,6 @@ let output: Promise<void>;
 beforeAll(() => fixture.initialize());
 beforeAll(async () => {
   const tls = await createOwnedTls();
-  const authentication = createAuthenticationFixture(fixture.databaseUrl);
   const port = await new Promise<number>((done) => {
     const server = createServer();
     server.listen(0, "127.0.0.1", () => {
@@ -22,13 +22,26 @@ beforeAll(async () => {
     });
   });
   const origin = `https://127.0.0.1:${port}`;
-  const auth = implementation.createManagerAuthentication({ ...authentication.config, origin });
+  const auth = implementation.createManagerAuthentication(
+    authenticationConfig(fixture.databaseUrl, { origin, audience: "https://relay.fixture.test" }),
+  );
+  const oauth = await createOAuthCodeFixture();
   const handler = implementation.createManagerHandler(auth, origin);
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port,
     tls: { cert: Bun.file(tls.cert), key: Bun.file(tls.key) },
-    fetch: handler,
+    async fetch(request) {
+      const response = await handler(request);
+      const subject = request.headers.get("x-fixture-google-subject");
+      if (new URL(request.url).pathname !== "/v1/native-login" || !subject || response.status !== 302) return response;
+
+      const provider = new URL(response.headers.get("location")!);
+      const callback = await oauth.complete("google", provider, {
+        claims: { sub: subject, email: `${subject}@fixture.test` },
+      });
+      return handler(new Request(callback, { headers: { cookie: oauthBrowserCookie(response) } }));
+    },
   });
   cleanup = async () => {
     if (child && child.exitCode === null) {
@@ -36,11 +49,11 @@ beforeAll(async () => {
       await child.exited;
     }
     await server.stop(true);
-    await Promise.all([auth.close(), authentication.close()]);
+    oauth.close();
+    await auth.close();
     await tls.close();
     await fixture.close();
   };
-  // Each login signs out the Google session it used, so every device login gets its own session.
   const subject = `native-a-${crypto.randomUUID()}`;
   const manager = fixture.owner();
   try {
@@ -54,11 +67,6 @@ beforeAll(async () => {
   } finally {
     await manager.close();
   }
-  const [a, again, b] = [
-    await authentication.login(subject),
-    await authentication.login(subject),
-    await authentication.login(`native-b-${crypto.randomUUID()}`),
-  ];
   child = Bun.spawn(
     [
       process.execPath,
@@ -72,9 +80,8 @@ beforeAll(async () => {
         ...process.env,
         NODE_EXTRA_CA_CERTS: tls.cert,
         OWNER_TEST_ORIGIN: origin,
-        OWNER_TEST_COOKIE_A: a.headers.get("cookie")!,
-        OWNER_TEST_COOKIE_A_AGAIN: again.headers.get("cookie")!,
-        OWNER_TEST_COOKIE_B: b.headers.get("cookie")!,
+        OWNER_TEST_SUBJECT_A: subject,
+        OWNER_TEST_SUBJECT_B: `native-b-${crypto.randomUUID()}`,
         PSTDIO_DEFAULT_EXTENSIONS: "[]",
       },
       stdin: "pipe",
