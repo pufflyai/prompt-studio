@@ -186,7 +186,11 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
     getCommandState: (_ctx, input) => claudeCommandState(input),
     // This catalog is static; mode changes come from committed session params.
     watchCommandState: () => () => {},
-    prepareOperation: (ctx, input, operation) => prepareClaudeOperation(input, operation, ctx.projectId),
+    prepareOperation: (ctx, input, operation) =>
+      prepareClaudeOperation(input, operation, {
+        projectId: ctx.projectId,
+        requireCommand: (signal) => requireSupportedClaude(ctx, signal),
+      }),
 
     // Hosts from PS-1197 on pass approvals on start too. Drop the widened type once a released SDK
     // declares `approvals` on HarnessStartInput.

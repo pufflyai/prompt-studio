@@ -28,8 +28,8 @@ export const detectClaude = async (ctx: HarnessContext, command?: string) => {
         ctx,
         "`claude --version` did not print a version. Check the Claude Code installation on the runtime PATH.",
       );
-    const number = version.match(/\d+\.\d+\.\d+/)?.[0] ?? version;
-    if (!Bun.semver.satisfies(number, `>=${MINIMUM_VERSION}`))
+    const number = version.split(/\s+/, 1)[0];
+    if (Bun.semver.order(number, MINIMUM_VERSION) < 0)
       return unavailable(ctx, `Requires Claude Code ${MINIMUM_VERSION} or newer. Found ${number}.`, version);
     return { available: true, version };
   } catch {

@@ -283,7 +283,7 @@ test("start passes the host's cancel signal to the Claude session", async () => 
   expect(signals[0]).toBe(controller.signal);
 });
 
-test("refuses to start or resume a session with an outdated Claude Code executable", async () => {
+test("refuses to launch an outdated Claude Code executable", async () => {
   const harness = createClaudeCodeHarness({
     startSession: async () => {
       throw new Error("The session tried to start");
@@ -300,4 +300,10 @@ test("refuses to start or resume a session with an outdated Claude Code executab
   const error = "Requires Claude Code 2.1.251 or newer. Found 2.1.250.";
   await expect(harness.start(outdated, input)).rejects.toThrow(error);
   await expect(harness.resume(outdated, { ...input, agentSessionId: "native" })).rejects.toThrow(error);
+  const prepared = await harness.prepareOperation!(
+    outdated,
+    { sessionId: "host", cwd: "/workspace/project" },
+    { kind: "command", text: "/plan Add a greeting" },
+  );
+  await expect(prepared.invoke({ events: input.events, signal: new AbortController().signal })).rejects.toThrow(error);
 });

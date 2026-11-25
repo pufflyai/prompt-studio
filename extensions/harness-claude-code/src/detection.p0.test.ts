@@ -59,11 +59,12 @@ test("accepts Claude Code 2.1.251 and every newer release", async () => {
 });
 
 test("rejects Claude Code releases older than 2.1.251 and names both versions", async () => {
-  const result = await probe("2.1.250 (Claude Code)");
-  // The reason names the version found and the version required.
-  expect(result).toMatchObject({
-    available: false,
-    version: "2.1.250 (Claude Code)",
-    reason: expect.stringMatching(/^(?=.*2\.1\.250)(?=.*2\.1\.251)/),
-  });
+  for (const version of ["2.1.250", "2.1.251-rc.1"]) {
+    const result = await probe(`${version} (Claude Code)`);
+    expect(result).toMatchObject({
+      available: false,
+      version: `${version} (Claude Code)`,
+      reason: `Requires Claude Code 2.1.251 or newer. Found ${version}.`,
+    });
+  }
 });
