@@ -223,8 +223,8 @@ test("dismisses custom widget popovers when removal or a preview hides their own
   }
 });
 
-// Critical: saving before the caller publishes value must preserve the applied widget's controls.
-test("keeps an applied custom preview across a delayed controlled refresh", async ({ page }) => {
+// Critical: each successful save must show the latest widget controls while the caller refreshes its definition.
+test("keeps the latest applied custom preview across delayed controlled refreshes", async ({ page }) => {
   const preview = await openCanvasPreview(
     page,
     "packages/ui/src/components/dashboard-renderer/dashboard.canvas.tsx#DelayedDashboardSave",
@@ -232,22 +232,43 @@ test("keeps an applied custom preview across a delayed controlled refresh", asyn
   const widget = preview.locator('[data-widget-id="releases"]');
   const toolbar = preview.getByRole("toolbar", { name: "Build history controls" });
   const edit = toolbar.getByRole("button", { name: "Edit dashboard", exact: true });
-  await edit.click();
-  await widget.hover();
-  await widget.getByRole("button", { name: "Configure Build history", exact: true }).click();
-  const settings = preview.getByRole("dialog", { name: "Widget settings" });
-  await settings.getByRole("button", { name: "Data Build history", exact: true }).click();
-  await preview.getByRole("menuitem", { name: "Deployment history", exact: true }).click();
-  await page.keyboard.press("Escape");
-  const marker = widget.getByRole("button", { name: "Deployment marker", exact: true });
-  await marker.click();
-  await expect(marker).toHaveAttribute("aria-pressed", "false");
+  const apply = toolbar.getByRole("button", { name: "Apply", exact: true });
+  const refresh = toolbar.getByRole("button", { name: "Refresh saved dashboard", exact: true });
+  const releaseMarker = widget.getByRole("button", { name: "Release marker", exact: true });
+  const deploymentMarker = widget.getByRole("button", { name: "Deployment marker", exact: true });
+  const selectSource = async (current: string, next: string) => {
+    await edit.click();
+    await widget.hover();
+    await widget.getByRole("button", { name: `Configure ${current}`, exact: true }).click();
+    const settings = preview.getByRole("dialog", { name: "Widget settings" });
+    await settings.getByRole("button", { name: `Data ${current}`, exact: true }).click();
+    await preview.getByRole("menuitem", { name: next, exact: true }).click();
+    await page.keyboard.press("Escape");
+  };
 
-  await toolbar.getByRole("button", { name: "Apply", exact: true }).click();
+  await selectSource("Build history", "Deployment history");
+  await deploymentMarker.click();
+  await expect(deploymentMarker).toHaveAttribute("aria-pressed", "false");
+  await apply.click();
   await expect(edit).toBeFocused();
-  await expect(marker).toHaveAttribute("aria-pressed", "false");
-  await toolbar.getByRole("button", { name: "Refresh saved dashboard", exact: true }).click();
-  await expect(marker).toHaveAttribute("aria-pressed", "false");
+  await expect(deploymentMarker).toHaveAttribute("aria-pressed", "false");
+
+  await selectSource("Deployment history", "Build history");
+  await releaseMarker.click();
+  await expect(releaseMarker).toHaveAttribute("aria-pressed", "false");
+  await apply.click();
+  await expect(edit).toBeFocused();
+  await expect(releaseMarker).toHaveAttribute("aria-pressed", "false");
+  await expect(deploymentMarker).toHaveCount(0);
+
+  await refresh.click();
+  await expect(releaseMarker).toHaveAttribute("aria-pressed", "false");
+  await selectSource("Build history", "Deployment history");
+  await deploymentMarker.click();
+  await apply.click();
+  await expect(edit).toBeFocused();
+  await refresh.click();
+  await expect(deploymentMarker).toHaveAttribute("aria-pressed", "false");
   await expect(widget.getByRole("button", { name: "Release marker", exact: true, includeHidden: true })).toHaveCount(0);
 });
 

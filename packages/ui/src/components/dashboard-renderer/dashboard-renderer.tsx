@@ -47,7 +47,7 @@ function useAppliedDashboard(value: DashboardDefinition, editable: boolean) {
   return {
     saved: awaitingRefresh ? applied.definition : value,
     markApplied: (definition: DashboardDefinition) => {
-      if (!sameDefinition(definition, value)) setApplied({ definition, previousValue: value });
+      setApplied(sameDefinition(definition, value) ? null : { definition, previousValue: value });
     },
   };
 }
