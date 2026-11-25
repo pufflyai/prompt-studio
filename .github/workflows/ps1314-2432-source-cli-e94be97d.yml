@@ -1,0 +1,233 @@
+name: PS-1314 exact source CLI review
+
+on:
+  push:
+    branches:
+      - chore/ps1314-2432-source-cli-e94be97d
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  source_cli:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PS1314_HEAD: 8085b187a109a503e39fef3fa5d5e24c95d1f2da
+      PS1314_PRODUCT: e94be97dc127c20264d6bb8727a83f7a76378d9e
+      PS1314_NORMAL_RUN: "45573292204"
+      PS1314_NORMAL_ARTIFACT: "15002748723"
+      PS1314_NORMAL_PLAN: 0bba3e10452731f412798429edb315f1eb88035694737fefc5541eec089e3347
+      PS1314_TREE: bfc4f3083fac2371f27db30f445cd169056cc0c1
+      PS1314_BASE: b901e66a3b7f22f7cca16b497ee116ff1fc69709
+      PS1314_POLICY: eeda44a3cdb1ac1ca43bda7a351ba8ed43d09409cd8b1cc4c373fa2bfd6a2348
+      PS1314_CLI_GROUP: 72480638f874d13d0838a290
+      PS1314_CLI_FILES_SHA256: 58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a
+      PS1314_OUTPUT: test-results/ps1314-2432-source-cli
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.PS1314_HEAD }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+
+      - name: Read the immutable ordinary-CI plan
+        uses: ./.github/actions/download-artifact-by-id
+        with:
+          artifact-ids: ${{ env.PS1314_NORMAL_ARTIFACT }}
+          run-id: ${{ env.PS1314_NORMAL_RUN }}
+          path: ${{ env.PS1314_OUTPUT }}/ordinary-plan
+          merge-multiple: true
+
+      - name: Verify the source and sealed Linux plan
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = refs/heads/chore/ps1314-2432-source-cli-e94be97d
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$PS1314_HEAD"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" =             "$(printf 'A\t.github/workflows/ps1314-2432-source-cli-e94be97d.yml')"
+          test "$(git rev-parse HEAD)" = "$PS1314_HEAD"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$PS1314_TREE"
+          git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main             refs/heads/bugfix/cloud-copy-download-admission:refs/remotes/origin/bugfix/cloud-copy-download-admission
+          test "$(git rev-parse origin/bugfix/cloud-copy-download-admission)" = "$PS1314_PRODUCT"
+          test "$(git show -s --format=%P "$PS1314_HEAD")" = "$PS1314_BASE $PS1314_PRODUCT"
+          test "$(git rev-parse "$PS1314_PRODUCT^{tree}")" = "fe91076b31bfad162fc9801ce401026601c08db8"
+          test "$(git diff --name-only "$PS1314_PRODUCT" HEAD | sha256sum | cut -d ' ' -f 1)" = "ade33a5e420cca703fa3c6e7747e5f926449e991ee4ce2d1d4426302f2f32850"
+          main="$(git rev-parse origin/main)"
+          test "$(git merge-base HEAD "$main")" = "$PS1314_BASE"
+          incoming="$(git rev-list --count "HEAD..$main")"
+          test "$incoming" -le 10
+          prospective="$(git merge-tree --write-tree --no-messages HEAD "$main")"
+          test "$(git cat-file -t "$prospective")" = tree
+          test -z "$(git status --porcelain)"
+          test "$(bun --version)" = "1.4.4"
+          test "$(node --version)" = "v26.7.0"
+          test "$(jq -r .packageManager package.json)" = "bun@1.4.4"
+          mkdir -p "$PS1314_OUTPUT"
+          bun run test:review --base origin/main --list \
+            --test packages/pstdio-dashboard/src/modules/projects/components/cloud-project-choice.p0.test.tsx > "$PS1314_OUTPUT/selected-plan.json"
+          jq -e --arg sha "$PS1314_HEAD" --arg tree "$PS1314_TREE" --arg base "$PS1314_BASE"             --arg policy "$PS1314_POLICY" --arg group "$PS1314_CLI_GROUP" '
+              .head == $sha and .mergeBase == $base and .testPlan.version == 1
+              and (.testPlan.digest | test("^[0-9a-f]{64}$"))
+              and .testPlan.source == {sha:$sha,tree:$tree,policy:$policy,dirty:false}
+              and (.testPlan.runs | length) > 0 and (.selected | length) > 0
+              and all(.testPlan.runs[]; .target == {platform:"linux",arch:"x64"})
+              and ([.testPlan.runs[] | select(.job == "local-additions") | .id] == [$group])
+              and any(.testPlan.runs[]; .id == $group and .owner == "e2e" and .cwd == "packages/e2e"
+                and .runner == "cli" and .priority == "P1" and .lane == "stable" and .artifact == "source"
+                and .requires == ["build-e5b1f54fca1c52cd"] and (.files | length) == 10)
+              and any(.testPlan.setup[]; .id == "build-e5b1f54fca1c52cd" and .owners == ["e2e"]
+                and .kind == "build" and .requires == [])
+            ' "$PS1314_OUTPUT/selected-plan.json"
+          bun --no-orphans - <<'BUN'
+          import { validateTestPlan } from "./scripts/ci/test-plan";
+          import { testPlanSource } from "./scripts/ci/test-plan-source";
+          const review = await Bun.file(process.env.PS1314_OUTPUT + "/selected-plan.json").json();
+          validateTestPlan(review.testPlan, testPlanSource(process.cwd()));
+          const ordinary = await Bun.file(process.env.PS1314_OUTPUT + "/ordinary-plan/plan.json").json();
+          validateTestPlan(ordinary, testPlanSource(process.cwd()));
+          if (ordinary.digest !== process.env.PS1314_NORMAL_PLAN)
+            throw new Error("The ordinary-CI plan does not match the immutable receipt");
+          await Bun.write(process.env.PS1314_OUTPUT + "/ordinary-plan-binding.json", JSON.stringify({
+            productSha: process.env.PS1314_PRODUCT,
+            normalRun: process.env.PS1314_NORMAL_RUN,
+            normalArtifact: process.env.PS1314_NORMAL_ARTIFACT,
+            normalPlanDigest: ordinary.digest,
+            source: ordinary.source,
+            nativePlanDigest: review.testPlan.digest,
+          }, null, 2));
+          BUN
+          plan="$(jq -er .testPlan.digest "$PS1314_OUTPUT/selected-plan.json")"
+          printf 'PS1314_PLAN=%s\n' "$plan" >> "$GITHUB_ENV"
+          jq '{plannedGroups:(.testPlan.runs | length), selectedFiles:(.selected | length),
+              queueFiles:(.queueFiles | length), packageChecks:(.packageChecks | length),
+              staticChecks:[.staticChecks[].id]}' "$PS1314_OUTPUT/selected-plan.json" > "$PS1314_OUTPUT/workload.json"
+          jq -c --arg group "$PS1314_CLI_GROUP" '.testPlan.runs[] | select(.id == $group) | .files'             "$PS1314_OUTPUT/selected-plan.json" > "$PS1314_OUTPUT/assigned-files.json"
+          printf '%s  %s\n' "$PS1314_CLI_FILES_SHA256" "$PS1314_OUTPUT/assigned-files.json" | sha256sum -c -
+          jq -n --arg product "$PS1314_PRODUCT" --arg normalRun "$PS1314_NORMAL_RUN" \
+            --arg normalArtifact "$PS1314_NORMAL_ARTIFACT" --arg normalPlan "$PS1314_NORMAL_PLAN" \
+            --arg sha "$PS1314_HEAD" --arg tree "$PS1314_TREE" --arg main "$main" --arg base "$PS1314_BASE" \
+            --arg prospective "$prospective" --arg plan "$plan" --arg workflow "$GITHUB_WORKFLOW_SHA" \
+            --argjson incoming "$incoming" \
+            '{productSha:$product,normalRun:$normalRun,normalArtifact:$normalArtifact,normalPlanDigest:$normalPlan,
+              sha:$sha,tree:$tree,main:$main,mergeBase:$base,mergeTree:$prospective,incoming:$incoming,
+              planDigest:$plan,diagnosticCommit:$workflow}' > "$PS1314_OUTPUT/identity.json"
+
+      - name: Open an owned private temporary directory
+        shell: bash
+        run: |
+          scratch="$(mktemp -d /tmp/ps1314.XXXXXX)"
+          printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$scratch/owner"
+          {
+            echo "PS1314_CLI_TMP=$scratch"
+            echo "TMPDIR=$scratch"
+            echo "TMP=$scratch"
+            echo "TEMP=$scratch"
+            echo "PS1314_NATIVE_BUN=$(command -v bun)"
+          } >> "$GITHUB_ENV"
+          { node --version; bun --version; docker version; df -h /tmp "$GITHUB_WORKSPACE"; }             > "$PS1314_OUTPUT/toolchain.log"
+
+      - name: Install locked dependencies and prepare Firefox
+        shell: bash
+        run: |
+          bun install --frozen-lockfile --concurrent-scripts 1
+          bun run --cwd packages/ui typegen:tokens
+          (cd packages/e2e && bun x --no-install playwright install --with-deps firefox) 2>&1             | tee "$PS1314_OUTPUT/browser-setup.log"
+          test -z "$(git status --porcelain)"
+
+      - name: Execute only the ten-file source CLI group
+        shell: bash
+        run: |
+          test "$(command -v bun)" = "$PS1314_NATIVE_BUN"
+          bun --no-orphans - <<'BUN' 2>&1 | tee "$PS1314_OUTPUT/console.log"
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+          import { executePlan } from "./scripts/ci/run-test-plan";
+
+          const root = process.cwd();
+          const { PS1314_CLI_TMP: scratch, PS1314_OUTPUT: relative, PS1314_CLI_GROUP: group } = process.env;
+          if (!scratch || !/^\/tmp\/ps1314\.[A-Za-z0-9]{6}$/.test(scratch) || !relative || !group)
+            throw new Error("Unexpected native review assignment");
+          const executionId = process.env.GITHUB_RUN_ID + "/" + process.env.GITHUB_RUN_ATTEMPT;
+          const output = resolve(root, relative);
+          for (const [key, value] of Object.entries(localReviewEnvironment(scratch))) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+          process.env.CI_PLAN_OUTPUT_DIR = relative + "/native";
+          const { testPlan } = await Bun.file(resolve(output, "selected-plan.json")).json();
+          let passed = false;
+          try {
+            const result = await executePlan(testPlan, {
+              root, runIds: [group], prebuilt: false, executionId,
+              env: { CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+            });
+            passed = result.complete && result.outcome === "success";
+          } finally {
+            const cleanup = await cleanupReviewCompose(scratch);
+            await Bun.write(resolve(output, "compose-cleanup.json"), JSON.stringify(cleanup, null, 2));
+            passed &&= cleanup.every(entry => entry.outcome === "success");
+            process.exitCode = passed ? 0 : 1;
+          }
+          BUN
+
+      - name: Verify exact native execution and file coverage
+        shell: bash
+        run: |
+          jq -e --arg group "$PS1314_CLI_GROUP" --arg digest "$PS1314_PLAN"             --slurpfile expected "$PS1314_OUTPUT/assigned-files.json"             --slurpfile sealed "$PS1314_OUTPUT/selected-plan.json" '
+              .source == $sealed[0].testPlan.source and .planDigest == $digest
+              and .complete and .outcome == "success" and .errors == [] and .runIds == [$group]
+              and (.results | length) == 1
+              and all(.results[]; .runId == $group and .complete and .outcome == "success"
+                and .exitCode == 0 and .nativeFailure != true and (.reportedFiles | sort) == ($expected[0] | sort))
+              and [.phases[] | select(.kind == "build") | [.id,.outcome]] == [["build-e5b1f54fca1c52cd","success"]]
+              and any(.phases[]; .kind == "cleanup" and .outcome == "success")
+            ' "$PS1314_OUTPUT/native/execution.json"
+          case_policy="$(sha256sum scripts/ci/test-policy.ts | cut -d ' ' -f 1)"
+          jq -e --arg sha "$PS1314_HEAD" --arg group "$PS1314_CLI_GROUP" \
+            --arg digest "$PS1314_PLAN" --arg policy "$case_policy" \
+            --arg execution "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" \
+            --slurpfile expected "$PS1314_OUTPUT/assigned-files.json" '
+              .sourceSha == $sha and .planDigest == $digest and .policyDigest == $policy and .runId == $group
+              and .executionId == $execution and .complete and .exitCode == 0 and .unreportedSelectedCases == 0
+              and .platform == "linux" and .arch == "x64" and .bun == "1.4.4"
+              and (.reportedFiles | sort) == ($expected[0] | sort)
+              and .executedCases > 0 and (.cases | length) == .executedCases
+              and all(.cases[]; .outcome == "success")
+            ' "$PS1314_OUTPUT/native/$PS1314_CLI_GROUP/cases.json"
+          jq -e 'all(.[]; .outcome == "success")' "$PS1314_OUTPUT/compose-cleanup.json"
+          git diff --exit-code
+
+      - name: Retain and clean this invocation's temporary files
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$PS1314_OUTPUT"
+          if [[ -n "${PS1314_CLI_TMP:-}" ]]; then
+            [[ "$PS1314_CLI_TMP" =~ ^/tmp/ps1314\.[A-Za-z0-9]{6}$ ]]
+            test "$(cat "$PS1314_CLI_TMP/owner")" = "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+            if [[ -f "$PS1314_CLI_TMP/compose-projects.jsonl" ]]; then
+              cp "$PS1314_CLI_TMP/compose-projects.jsonl" "$PS1314_OUTPUT/"
+            fi
+            rm -rf -- "$PS1314_CLI_TMP"
+            test ! -e "$PS1314_CLI_TMP"
+            printf '%s\n' 'Owned temporary directory removed' > "$PS1314_OUTPUT/scratch-cleanup.txt"
+          fi
+
+      - name: Upload the fixture and native receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps1314-2432-source-cli-c9188ad1-attempt-${{ github.run_attempt }}
+          path: ${{ env.PS1314_OUTPUT }}
+          if-no-files-found: error
