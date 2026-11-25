@@ -22,9 +22,11 @@ A connection contribution declares its allowed HTTP methods, path prefixes, auth
 
 To revoke a global sign-in or one shared by project connections, send a DELETE to the connection endpoint with
 `credentialScope=all-projects` and `origin` set to the server origin. This works after a project configuration
-is removed or the extension is disabled or uninstalled. The server returns HTTP 400 if the origin matches both
-types of sign-in or if the only candidate is a global sign-in at a different origin. Origin-based revocation
-preserves connection configurations and their project-specific credentials.
+is removed or the extension is disabled or uninstalled. Set `signInScope=global` or `signInScope=shared` to
+select one saved sign-in. The server returns HTTP 400 when both types match the origin and the request omits
+the sign-in scope. A global sign-in can only be revoked at its own origin. Origin-based revocation preserves
+connection configurations and their project-specific credentials. The SDK accepts the same options in the
+fourth argument to `extensions.deleteConnection`.
 
 With an enabled extension, a DELETE without an origin disconnects the declared connection. For a project
 connection with `credentialScope=all-projects`, the server revokes the shared sign-in using the project

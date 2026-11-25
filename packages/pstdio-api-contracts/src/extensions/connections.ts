@@ -36,10 +36,27 @@ export const configureExtensionConnectionSchema = z.object({
   credentialScope: z.enum(["all-projects", "project"]).optional(),
 });
 
+const extensionConnectionSignInScopeSchema = z.enum(["global", "shared"]);
+
+export const deleteExtensionConnectionSchema = z
+  .object({
+    credentialScope: z.enum(["all-projects", "project"]).optional(),
+    origin: z
+      .url()
+      .optional()
+      .describe("Server origin for revoking a saved sign-in, even if its extension is unavailable."),
+    signInScope: extensionConnectionSignInScopeSchema
+      .optional()
+      .describe("Saved sign-in to revoke at the given origin. Requires all-projects revocation."),
+  })
+  .strict();
+
 export const listExtensionConnectionsResponseSchema = z.object({
   connections: z.array(extensionConnectionRecordSchema),
 });
 
 export type ExtensionConnectionRecord = z.infer<typeof extensionConnectionRecordSchema>;
 export type ConfigureExtensionConnectionInput = z.infer<typeof configureExtensionConnectionSchema>;
+export type DeleteExtensionConnectionInput = z.infer<typeof deleteExtensionConnectionSchema>;
+export type ExtensionConnectionSignInScope = z.infer<typeof extensionConnectionSignInScopeSchema>;
 export type ListExtensionConnectionsResponse = z.infer<typeof listExtensionConnectionsResponseSchema>;

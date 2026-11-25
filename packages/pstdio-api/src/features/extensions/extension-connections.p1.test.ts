@@ -111,6 +111,71 @@ const setupConnectionRoutes = async (scope: "project" | "global" = "project") =>
   return { created, projectId, instanceId, connectionPath, runtimeRequest, secrets };
 };
 
+test.each([
+  "disabled",
+  "uninstalled",
+] as const)("selects one same-origin sign-in after an extension is %s", async (lifecycle) => {
+  const { created, connectionPath, instanceId, projectId, runtimeRequest, secrets } =
+    await setupConnectionRoutes("global");
+  const origin = "https://control.example.test";
+  const instancePath = `/v1/projects/${projectId}/extensions/${instanceId}`;
+  const configure = (secret: string, credentialScope?: "project") =>
+    runtimeRequest(connectionPath, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ baseUrl: origin, secret, credentialScope }),
+    });
+  const revokePath = (parameters: Record<string, string>) =>
+    `${connectionPath}?${new URLSearchParams({ credentialScope: "all-projects", ...parameters })}`;
+  const revoke = (parameters: Record<string, string>) => runtimeRequest(revokePath(parameters), { method: "DELETE" });
+  const saved = async () => (await Promise.all((await secrets.listRefs()).map(secrets.get))).sort();
+
+  const global = await configure("global-canary");
+  expect(await global.json()).toMatchObject({ scope: "global", configured: true });
+  writeConnectionExtension(tempRoot, "project");
+  expect((await runtimeRequest(`${instancePath}/reload`, { method: "POST" })).status).toBe(200);
+  const shared = await configure("shared-canary");
+  const sharedRecord = await shared.json();
+  expect(sharedRecord).toMatchObject({ configured: true });
+  expect(sharedRecord.scope).toBeUndefined();
+  expect((await configure("private-canary", "project")).status).toBe(200);
+  expect(await saved()).toEqual(["global-canary", "private-canary", "shared-canary"]);
+
+  if (lifecycle === "disabled") {
+    const changed = await runtimeRequest(instancePath, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ enabled: false }),
+    });
+    expect(changed.status).toBe(200);
+  } else {
+    const removed = await runtimeRequest(`${instancePath}?deleteUserData=true`, { method: "DELETE" });
+    expect(removed.status).toBe(204);
+  }
+  const before =
+    lifecycle === "disabled"
+      ? ["global-canary", "private-canary", "shared-canary"]
+      : ["global-canary", "shared-canary"];
+  const signInScope = lifecycle === "disabled" ? "shared" : "global";
+  expect(await saved()).toEqual(before);
+  expect((await revoke({ origin })).status).toBe(400);
+  expect((await revoke({ signInScope })).status).toBe(400);
+  expect((await revoke({ origin, signInScope, credentialScope: "project" })).status).toBe(400);
+  expect((await revoke({ origin: `${origin}/api`, signInScope })).status).toBe(400);
+  expect((await created.app.request(revokePath({ origin, signInScope }), { method: "DELETE" })).status).toBe(401);
+  const wrongOrigin = await revoke({ origin: "https://other.example.test", signInScope });
+  expect(await saved()).toEqual(before);
+
+  const selected = await revoke({ origin: origin.toUpperCase(), signInScope });
+  expect({ wrongOrigin: wrongOrigin.status, selected: selected.status, saved: await saved() }).toEqual({
+    wrongOrigin: signInScope === "global" ? 400 : 204,
+    selected: 204,
+    saved: before.filter((secret) => secret !== `${signInScope}-canary`),
+  });
+  expect((await revoke({ origin, signInScope })).status).toBe(204);
+  expect(await saved()).toEqual(before.filter((secret) => secret !== `${signInScope}-canary`));
+});
+
 describe("extension connection routes", () => {
   test("revokes a global sign-in only at its own origin", async () => {
     const received: (string | null)[] = [];

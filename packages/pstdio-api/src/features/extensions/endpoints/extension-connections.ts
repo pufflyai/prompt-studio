@@ -1,6 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import {
   configureExtensionConnectionSchema,
+  deleteExtensionConnectionSchema,
   extensionConnectionRecordSchema,
   listExtensionConnectionsResponseSchema,
 } from "pstdio-api-contracts";
@@ -49,14 +50,7 @@ export const deleteExtensionConnectionRoute = createRoute({
   tags: ["Extensions"],
   request: {
     params: connectionParams,
-    query: z
-      .object({
-        credentialScope: z.enum(["all-projects", "project"]).optional(),
-        origin: z.url().optional().openapi({
-          description: "Server origin for revoking a global or shared sign-in, including for unavailable extensions.",
-        }),
-      })
-      .strict(),
+    query: deleteExtensionConnectionSchema,
   },
   responses: {
     204: { description: "Revoked the requested connection or shared sign-in, or it was already absent." },

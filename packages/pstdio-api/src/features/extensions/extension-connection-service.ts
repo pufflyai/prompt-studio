@@ -1,4 +1,4 @@
-import type { ConfigureExtensionConnectionInput } from "pstdio-api-contracts";
+import type { ConfigureExtensionConnectionInput, DeleteExtensionConnectionInput } from "pstdio-api-contracts";
 import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionConnectionsApi } from "pstdio-api-contracts/extension-kernel";
 import type { ConnectionSecretStore } from "./connection-secret-store";
@@ -254,14 +254,17 @@ const revokeSharedSignIn = async (
   return true;
 };
 
-const revokeSignInAtOrigin = async (deps: ExtensionConnectionServiceDeps, input: ConnectionKey, origin: string) => {
+type ConnectionRemoval = ConnectionKey & DeleteExtensionConnectionInput;
+
+const revokeSignInAtOrigin = async (deps: ExtensionConnectionServiceDeps, input: ConnectionRemoval, origin: string) => {
   // Explicit revocation uses saved credential ownership even when the extension is unavailable.
   const result = await deps.connectionsDBService.removeCredentialAtOrigin(
     connectionKey(input),
     validateSharedOrigin(origin),
+    input.signInScope,
   );
   if (result.status === "ambiguous")
-    throw new ConnectionInputError("This server origin matches more than one saved sign-in.");
+    throw new ConnectionInputError("This origin matches more than one saved sign-in. Set signInScope.");
   if (result.status === "wrong-origin")
     throw new ConnectionInputError("The global sign-in belongs to a different server origin.");
   if (result.status !== "removed") return false;
@@ -306,11 +309,11 @@ export const createExtensionConnectionService = (input: ExtensionConnectionServi
     );
     return visible.filter((row) => row !== null);
   };
-  const remove = (input: ConnectionKey & { credentialScope?: "all-projects" | "project"; origin?: string }) =>
+  const remove = (input: ConnectionRemoval) =>
     mutate(async () => {
-      if (input.origin !== undefined) {
-        if (input.credentialScope !== "all-projects")
-          throw new ConnectionInputError("A server origin requires all-projects revocation.");
+      if (input.origin !== undefined || input.signInScope !== undefined) {
+        if (input.credentialScope !== "all-projects" || input.origin === undefined)
+          throw new ConnectionInputError("Specify a server origin with all-projects revocation.");
         return revokeSignInAtOrigin(deps, input, input.origin);
       }
       const contribution = await deps.getContribution(input);

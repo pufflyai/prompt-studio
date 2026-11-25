@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
+import type { ExtensionConnectionSignInScope } from "pstdio-api-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import type { ExtensionConnectionCheck } from "../../db/schemas/credentials";
 import { preferences } from "../../db/schemas/preferences";
@@ -54,6 +55,25 @@ const wherePreference = (key: ReturnType<typeof connectionPreference>) =>
   );
 const whereKey = (key: ConnectionKey) => wherePreference(connectionPreference(key));
 const connectionRows = sql`starts_with(${preferences.key}, 'connection:') AND ${preferences.scope} IN ('project', 'global')`;
+
+const selectRevocationCredential = async (
+  store: ReturnType<typeof createExtensionCredentialsDBService>,
+  input: ConnectionKey,
+  origin: string,
+  signInScope?: ExtensionConnectionSignInScope,
+) => {
+  const sharedKey = sharedCredentialKey(input, origin);
+  const globalKey = configuredCredentialKey({ ...input, projectId: null });
+  const [shared, global] = await Promise.all([
+    signInScope === "global" ? null : store.get(sharedKey),
+    signInScope === "shared" ? null : store.get(globalKey),
+  ]);
+  const sharedMatches = shared?.provider === origin;
+  const globalMatches = global?.provider === origin;
+  if (sharedMatches && globalMatches) return { status: "ambiguous" } as const;
+  if (!sharedMatches && !globalMatches) return { status: global ? "wrong-origin" : "absent" } as const;
+  return { status: "exact", key: sharedMatches ? sharedKey : globalKey } as const;
+};
 
 export const createExtensionConnectionsDBService = (db: DbClient) => {
   const credentialStore = createExtensionCredentialsDBService(db);
@@ -155,17 +175,12 @@ export const createExtensionConnectionsDBService = (db: DbClient) => {
       const removed = await credentialStore.remove(sharedCredentialKey(input, origin));
       return removed?.secret_ref;
     },
-    async removeCredentialAtOrigin(input: ConnectionKey, origin: string) {
+    async removeCredentialAtOrigin(input: ConnectionKey, origin: string, signInScope?: ExtensionConnectionSignInScope) {
       return db.transaction(async (tx) => {
         const store = createExtensionCredentialsDBService(tx);
-        const sharedKey = sharedCredentialKey(input, origin);
-        const globalKey = configuredCredentialKey({ ...input, projectId: null });
-        const [shared, global] = await Promise.all([store.get(sharedKey), store.get(globalKey)]);
-        const sharedMatches = shared?.provider === origin;
-        const globalMatches = global?.provider === origin;
-        if (sharedMatches && globalMatches) return { status: "ambiguous" } as const;
-        if (!sharedMatches && !globalMatches) return { status: global ? "wrong-origin" : "absent" } as const;
-        const removed = await store.remove(sharedMatches ? sharedKey : globalKey);
+        const candidate = await selectRevocationCredential(store, input, origin, signInScope);
+        if (candidate.status !== "exact") return candidate;
+        const removed = await store.remove(candidate.key);
         return removed
           ? ({ status: "removed", secretRef: removed.secret_ref } as const)
           : ({ status: "absent" } as const);
