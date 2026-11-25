@@ -46,6 +46,29 @@ const metadata = {
   ],
 } satisfies WorkbenchExtensionMetadata;
 describe("extension page registration", () => {
+  test("keeps the introductory view available when the main view's provider is disabled", () => {
+    const workbench = createWorkbench();
+    const main = {
+      ...metadata.pages[0].main,
+      view: { extensionId: "pstdio.optional-provider", kind: "view", id: "preview" },
+      intro: metadata.pages[0].main.view,
+      presentation: "page",
+    } as const;
+    const registration = registerWorkbenchExtensionContributions({
+      executeCommand: () => undefined,
+      metadata: { ...metadata, pages: [{ ...metadata.pages[0], main }] },
+      projectId: "project-1",
+      workbench,
+    });
+    workbench.pageLocations.setProject("project-1");
+    expect(
+      workbench.pageLocations.navigate({ kind: "page", page: { extensionId, kind: "page", id: "review" } }).ok,
+    ).toBe(true);
+    expect(workbench.pages.getContent()?.viewId).toBe(viewId);
+    registration.dispose();
+    workbench.dispose();
+  });
+
   test("opens an extension group's child once and keeps its parent label", () => {
     const workbench = createWorkbench();
     const group = { extensionId, kind: "page", id: "messages" } as const;

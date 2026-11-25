@@ -16,6 +16,6 @@ Home pins the published SDK and UI nightly `0.47.0-nightly.20261104030253` and i
 
 ## Start a session
 
-Type in the composer below **Recently Used**. The text stays in a draft until you send it. Sending opens the new conversation with its first message. Find provider usage under **Sessions → Quotas**.
+Type in the composer below **Recently Used**. The text stays in a draft until you send it. Sending opens the new conversation with its first message. Find provider usage under **Sessions → Quotas**. Recently Used stays available when the Sessions extension is disabled.
 
 *Updated at: 2026-11-25*

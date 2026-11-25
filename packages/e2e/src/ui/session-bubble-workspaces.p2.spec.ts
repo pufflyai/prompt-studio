@@ -1,6 +1,6 @@
 import { rmSync } from "node:fs";
 import { folderProjectInput } from "../helpers/folder-project";
-import { homeFrame } from "../helpers/home-loading";
+import { homePage } from "../helpers/home-loading";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
@@ -53,7 +53,7 @@ const verifyMovableSidePanel = async (
 ) => {
   await bypassOnboarding(page, projectId);
   await page.goto(`/projects/${projectId}`);
-  await expect(homeFrame(page).getByText("Movable Side Panel", { exact: true })).toBeVisible();
+  await expect(homePage(page)).toBeVisible();
   const bubble = page.getByRole("button", { name: "Open Side Panel", exact: true });
   const targets = page.locator("[data-side-panel-drop-slot]");
   await expect(targets).toHaveCount(0);
@@ -160,7 +160,7 @@ const verifyMovableSidePanel = async (
   await side.getByRole("button", { name: "Close Side Panel", exact: true }).click();
   await expect.poll(() => centerX(bubble)).toBeCloseTo(viewport.width / 2, 0);
   await page.reload();
-  await expect(homeFrame(page).getByText("Movable Side Panel", { exact: true })).toBeVisible();
+  await expect(homePage(page)).toBeVisible();
   await expect.poll(() => centerX(bubble)).toBeCloseTo(viewport.width / 2, 0);
 };
 
@@ -235,7 +235,7 @@ test.describe("Session bubble workspace selection", () => {
     projectId = (await createProjectViaApi(request, "Free floating Side Panel")).id;
     await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}`);
-    await expect(homeFrame(page).getByText("Free floating Side Panel", { exact: true })).toBeVisible();
+    await expect(homePage(page)).toBeVisible();
     await verifyFreeFloatingSidePanel(page, info);
   });
 
@@ -244,7 +244,7 @@ test.describe("Session bubble workspace selection", () => {
     projectId = (await createProjectViaApi(request, "Side Panel defaults")).id;
     await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}`);
-    await expect(homeFrame(page).getByText("Side Panel defaults", { exact: true })).toBeVisible();
+    await expect(homePage(page)).toBeVisible();
     const bubble = page.getByRole("button", { name: "Open Side Panel", exact: true });
     const side = page.getByTestId("workbench-side-panel-floating");
     await bubble.click();
@@ -277,7 +277,7 @@ test.describe("Session bubble workspace selection", () => {
     projectId = (await createProjectViaApi(request, "Custom Side Panel bubble")).id;
     await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}`);
-    await expect(homeFrame(page).getByText("Custom Side Panel bubble", { exact: true })).toBeVisible();
+    await expect(homePage(page)).toBeVisible();
     const bubble = page.getByRole("button", { name: "Open Side Panel", exact: true });
     await expect(bubble).toBeVisible();
     await bubble.click({ button: "right" });
@@ -296,7 +296,7 @@ test.describe("Session bubble workspace selection", () => {
     await page.getByRole("menuitemradio", { name: "Side Panel", exact: true }).click();
     await page.keyboard.press("Escape");
     await page.reload();
-    await expect(homeFrame(page).getByText("Custom Side Panel bubble", { exact: true })).toBeVisible();
+    await expect(homePage(page)).toBeVisible();
     await expect(bubble).toHaveAttribute("data-side-panel-bubble-alignment", "left");
     await bubble.click();
     const side = page.getByTestId("workbench-side-panel-floating");
