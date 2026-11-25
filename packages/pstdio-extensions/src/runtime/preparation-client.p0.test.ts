@@ -71,14 +71,17 @@ const gate = () => {
   gates.push(server);
   return { entered, release, url: server.url.href };
 };
-// When an interrupted job starts again after its preemptor retired it.
+// Wait for the first worker event as well as the HTTP gate. Retirement can discard late events.
 const restartOf = (client: ReturnType<typeof createPreparationClient>, name: string) => {
   let entries = 0;
+  const entered = Promise.withResolvers<void>();
   const restarted = Promise.withResolvers<number>();
   const unsubscribe = client.subscribe((event) => {
-    if (event.entered === name && ++entries === 2) restarted.resolve(performance.now());
+    if (event.entered !== name) return;
+    if (++entries === 1) entered.resolve();
+    else if (entries === 2) restarted.resolve(performance.now());
   });
-  return { restarted: restarted.promise, unsubscribe };
+  return { entered: entered.promise, restarted: restarted.promise, unsubscribe };
 };
 // Within the window the preemptor keeps a job running on its second worker, so the hold cannot lapse.
 // Only a loan or a direct wait can restart the interrupted job; without one it must stay held.
@@ -172,7 +175,7 @@ test.each([
   let first: ReturnType<typeof edit> | undefined;
   let second: Promise<unknown> | undefined;
   try {
-    await restoration.entered.promise;
+    await Promise.all([restoration.entered.promise, restart.entered]);
     first = edit(startedFirst, () => undefined);
     void first.catch(() => undefined);
     await startedFirst.promise;
@@ -269,7 +272,7 @@ test.each([
         { priority: "restoration" },
       ),
     );
-    await watcher.entered.promise;
+    await Promise.all([watcher.entered.promise, restart.entered]);
     const edit = track(
       client.withContinuation(async () => {
         const caller = createPreparationScope();
@@ -1087,7 +1090,7 @@ test.each([
       { priority: "restoration" },
     ),
   );
-  await blocked.entered.promise;
+  await Promise.all([blocked.entered.promise, restart.entered]);
   const edit = track(
     client.withContinuation(async () => {
       await client.run("value", { name: "urgent-step" }, { resources: ["/same"] });
@@ -1150,18 +1153,16 @@ test("a long step of the preemptor does not spend the interrupted job's hold", a
   const client = fixture();
   const background = gate();
   const firstStep = gate();
+  const restart = restartOf(client, "background-check");
   let lost = 0;
-  let backgroundEntries = 0;
-  const resumed = Promise.withResolvers<void>();
   const unsubscribe = client.subscribe((event) => {
     if (event.kind === "worker-lost") lost++;
-    if (event.entered === "background-check" && ++backgroundEntries === 2) resumed.resolve();
   });
   const check = client.withContinuation(
     () => withBackgroundPreparation(() => client.run("wait", { name: "background-check", url: background.url })),
     { priority: "background" },
   );
-  await background.entered.promise;
+  await Promise.all([background.entered.promise, restart.entered]);
   const edit = client.withContinuation(() =>
     withBackgroundPreparation(async () => {
       const first = client.run("wait", { name: "edit-step-1", url: firstStep.url });
@@ -1170,7 +1171,7 @@ test("a long step of the preemptor does not spend the interrupted job's hold", a
       await Bun.sleep(1_150);
       firstStep.release.resolve();
       await first;
-      const readmitted = await Promise.race([resumed.promise.then(() => true), Bun.sleep(175).then(() => false)]);
+      const readmitted = await Promise.race([restart.restarted.then(() => true), Bun.sleep(175).then(() => false)]);
       await client.run("value", { name: "edit-step-2" });
       return readmitted;
     }),
@@ -1180,6 +1181,7 @@ test("a long step of the preemptor does not spend the interrupted job's hold", a
     expect(lost).toBe(1);
   } finally {
     unsubscribe();
+    restart.unsubscribe();
     firstStep.release.resolve();
     background.release.resolve();
     await Promise.allSettled([edit, check]);
@@ -1217,7 +1219,7 @@ test.each([
       }),
     { priority: "restoration" },
   );
-  await blocked.entered.promise;
+  await Promise.all([blocked.entered.promise, restart.entered]);
   const edit = client.withContinuation(async () => {
     await client.run("value", { name: "urgent-step" }, { resources: ["/same"] });
     expect(lost).toBe(1);
@@ -1264,13 +1266,11 @@ test("an unrelated worker's slow startup does not hold the job a preemptor inter
   const client = fixture({ workers: 2, startupUrl: (worker) => (worker === 2 ? unrelatedStartup.url : undefined) });
   const warm = gate();
   const restoration = gate();
-  const restorationStarted = Promise.withResolvers<void>();
   const step = gate();
   let lost = 0;
   const restart = restartOf(client, "restoration");
   const unsubscribe = client.subscribe((event) => {
     if (event.kind === "worker-lost") lost++;
-    if (event.entered === "restoration") restorationStarted.resolve();
   });
   const work: Promise<unknown>[] = [];
   // Held work is rejected when the client stops; observe it from the start.
@@ -1302,8 +1302,7 @@ test("an unrelated worker's slow startup does not hold the job a preemptor inter
       { priority: "restoration" },
     );
     track(original);
-    // The HTTP request can arrive before the worker event. Count the first entry before retiring it.
-    await Promise.all([restoration.entered.promise, restorationStarted.promise]);
+    await Promise.all([restoration.entered.promise, restart.entered]);
     edit = client.withContinuation(async () => {
       await client.run("wait", { name: "foreground", url: step.url }, { resources: ["/same"] });
       // Live restoration bars this peer, and no worker it needs is starting for the edit.
@@ -1407,7 +1406,7 @@ test("a preemptor step dispatched behind unrelated work restarts the interrupted
   try {
     const restoration = client.withContinuation(() => run("prior", prior.url), { priority: "restoration" });
     track(restoration);
-    await prior.entered.promise;
+    await Promise.all([prior.entered.promise, restart.entered]);
     const edit = client.withContinuation(async () => {
       await run("step1", step1.url);
       gap.resolve();
@@ -1470,7 +1469,7 @@ test("cancelling the step a slot was retired for ends its startup credit", async
         priority: "restoration",
       }),
     );
-    await prior.entered.promise;
+    await Promise.all([prior.entered.promise, restart.entered]);
     const edit = track(
       client.withContinuation(async () => {
         // The first step retires the restoration and waits for a replacement worker that never starts.
@@ -1779,7 +1778,7 @@ test.each([
       expect(lost).toBe(1);
     } else {
       track(background(prior));
-      await held.entered.promise;
+      await Promise.all([held.entered.promise, restart.entered]);
       const peer = track(background(() => wait("G", overflow.url, "/g")));
       await overflow.entered.promise;
       // Keep the occupant's scheduling from retiring the overflow job while the primary still retires.
@@ -1907,7 +1906,7 @@ test("restoration uses ready overflow when it blocks a reserved edit still start
     await warm;
 
     track(client.withContinuation(() => withBackgroundPreparation(held), { priority: "background" }));
-    await prior.entered.promise;
+    await Promise.all([prior.entered.promise, restart.entered]);
     const occupied = track(wait("peer", peer.url, "/peer"));
     await peer.entered.promise;
     track(
