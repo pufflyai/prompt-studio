@@ -162,10 +162,31 @@ Grouped bars stack points by `label` and `group`. Source IDs are application-own
 strings. Updating sources refreshes content without discarding layout edits. Pass
 filters or refresh controls in `actions`; fetching and errors belong to the caller.
 
+Use a `"scatter"` widget with `source.scatter` to plot numeric X/Y points. Each
+point can have a label and a color group, such as an existing cluster assignment.
+Set `xLabel` and `yLabel` on the scatter source to name the axes. A `"ring"`
+widget sums positive series values by label and shows each label's share.
+Use the same set of cluster names in the scatter groups and ring series to
+match their colors.
+
+For charts with their own marks, legends, or interactions, set the widget's kind
+to `"custom"` and pass its component as `content` on the matching source. Only
+the source ID is saved in the dashboard definition. A blank widget title lets
+the content supply its heading and uses the source name for the card's
+accessible label. The card scrolls when the component is taller than the widget.
+Use the shared `Portal` with `ScopedPopover`, `ScopedMenu`, or `ScopedDialog` from
+`@pstdio/ui` so an overlay closes when its widget is hidden during editing.
+
+Pass `renderToolbar={(controls) => <PageToolbar>{controls}</PageToolbar>}` to put
+the same Edit, Apply, and Cancel controls in an existing page toolbar. The callback
+replaces the renderer's default header.
+
 Omit `onChange` for read-only use. With it, Edit dashboard opens a draft; Apply emits
 the complete definition and Cancel emits nothing. The caller owns the saved value,
 persistence, permissions, and undo. An async `onChange` can reject to retain the
-draft and display its error with Retry. Use stable unique widget IDs. Titles may
+draft and display its error with Retry. A successful save stays visible while the
+caller still publishes the previous definition. The next changed `value` takes
+precedence. Use stable unique widget IDs. Titles may
 be empty. Layout coordinates use a 12-column grid with widths from 3 to 12 and
 heights of at least 3 rows. Narrow presentation preserves those saved widths.
 Modes are `vertical` (Compact up), `horizontal` (Compact left), and `free`.

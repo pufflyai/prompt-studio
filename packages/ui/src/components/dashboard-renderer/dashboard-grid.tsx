@@ -28,6 +28,8 @@ import { useDashboardResize } from "./use-dashboard-resize";
 
 interface GridProps {
   widgets: DashboardWidget[];
+  hiddenWidgets: DashboardWidget[];
+  originalCustomSources: ReadonlyMap<string, string> | null;
   editing: boolean;
   mode: DashboardLayoutMode;
   selectedId: string | null;
@@ -50,12 +52,13 @@ interface GridSurfaceProps {
   grid: RefObject<HTMLDivElement | null>;
   columns: number;
   rowCount: number;
+  hidden: boolean;
   editing: boolean;
   onEscape: () => void;
   children: ReactNode;
 }
 function GridSurface(props: GridSurfaceProps) {
-  const { grid, columns, rowCount, editing, onEscape, children } = props;
+  const { grid, columns, rowCount, hidden, editing, onEscape, children } = props;
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
   const { setNodeRef } = useDroppable({ id: "dashboard-grid", disabled: !editing });
   return (
@@ -65,6 +68,7 @@ function GridSurface(props: GridSurfaceProps) {
         setNodeRef(element);
       }}
       css={styles.grid}
+      hidden={hidden}
       data-dashboard-grid=""
       data-columns={columns}
       data-editing={editing}
@@ -86,7 +90,7 @@ function GridSurface(props: GridSurfaceProps) {
 }
 
 export function DashboardGrid(props: GridProps) {
-  const { widgets, editing, mode, onChange, onGestureStart } = props;
+  const { widgets, hiddenWidgets, originalCustomSources, editing, mode, onChange, onRemove, onGestureStart } = props;
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
   const grid = useRef<HTMLDivElement>(null);
   const [columns, setColumns] = useState(12);
@@ -118,10 +122,13 @@ export function DashboardGrid(props: GridProps) {
     ? resizeWidget(preview, resizing.resize.id, resizing.resize.size, columns, mode, resizing.resize.handle)
     : preview;
   const visible = projectWidgets(move?.type === "row" ? widgets : sized, columns);
+  // Keep removed cards in the same keyed list so Cancel restores their content state.
+  const cards = [...visible, ...hiddenWidgets];
   useEffect(() => {
     if (!grid.current) return;
     const element = grid.current;
     const observer = new ResizeObserver(([entry]) => {
+      if (!entry.contentRect.width) return;
       const nextColumns = dashboardColumns(entry.contentRect.width);
       setColumns(nextColumns);
       const next = measureGrid(element, nextColumns);
@@ -159,6 +166,11 @@ export function DashboardGrid(props: GridProps) {
   const active = widgets.find((widget) => widget.id === drag?.id);
   const rowCount =
     Math.max(1, ...visible.map((widget) => widget.layout.y + widget.layout.h)) + (editing && mode === "free" ? 3 : 0);
+  const remove = (id: string) => {
+    setDrag(null);
+    resizing.cancel();
+    onRemove(id);
+  };
   return (
     <DndContext
       sensors={sensors}
@@ -196,20 +208,34 @@ export function DashboardGrid(props: GridProps) {
       }}
       onDragCancel={() => setDrag(null)}
     >
-      <GridSurface grid={grid} columns={columns} rowCount={rowCount} editing={editing} onEscape={resizing.cancel}>
-        {visible.map((widget) => (
-          <GridWidget
-            key={widget.id}
-            {...props}
-            widget={widget}
-            moving={drag?.id === widget.id}
-            showDropPreview={move?.type === "widget" && drag?.id === widget.id}
-            resizing={resizing.resize?.id === widget.id}
-            resizeController={resizing}
-            columns={columns}
-            metrics={metrics}
-          />
-        ))}
+      <GridSurface
+        grid={grid}
+        columns={columns}
+        rowCount={rowCount}
+        hidden={!visible.length}
+        editing={editing && visible.length > 0}
+        onEscape={resizing.cancel}
+      >
+        {cards.map((widget, index) => {
+          const hidden = index >= visible.length;
+          return (
+            <GridWidget
+              key={widget.id}
+              {...props}
+              widget={widget}
+              originalCustomSourceId={originalCustomSources?.get(widget.id)}
+              hidden={hidden}
+              editing={editing && !hidden}
+              moving={drag?.id === widget.id}
+              showDropPreview={move?.type === "widget" && drag?.id === widget.id}
+              resizing={resizing.resize?.id === widget.id}
+              resizeController={resizing}
+              columns={columns}
+              metrics={metrics}
+              onRemove={remove}
+            />
+          );
+        })}
         {drag && move?.type === "row" && (
           <Box
             aria-hidden
@@ -229,7 +255,9 @@ export function DashboardGrid(props: GridProps) {
         {active && (
           <HStack layerStyle="floatingBar" pointerEvents="none" data-dashboard-drag-bubble="">
             <WidgetIcon kind={active.kind} />
-            <Text textStyle="label/S/medium">{widgetLabel(active)}</Text>
+            <Text textStyle="label/S/medium">
+              {widgetLabel(active, props.sources.find(({ id }) => id === active.source)?.name)}
+            </Text>
           </HStack>
         )}
       </DragOverlay>

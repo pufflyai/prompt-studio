@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { DataTableProps } from "../data-table/types";
 
-export type DashboardWidgetKind = "metric" | "line" | "bar" | "table";
+export type DashboardWidgetKind = "metric" | "line" | "bar" | "scatter" | "ring" | "table" | "custom";
 export type DashboardLayoutMode = "vertical" | "horizontal" | "free";
 export type DashboardResizeHandle = "w" | "e" | "s" | "sw" | "se";
 
@@ -34,13 +34,24 @@ export interface DashboardSeriesPoint {
   group?: string;
 }
 
+export interface DashboardScatterPoint {
+  x: number;
+  y: number;
+  label?: string;
+  /** Color group, such as a cluster assignment. */
+  group?: string;
+}
+
 /** Live data stays separate from the serializable dashboard definition. */
 export interface DashboardDataSource {
   id: string;
   name: string;
   metric?: { value: string | number; description?: string };
   series?: DashboardSeriesPoint[];
+  scatter?: { points: DashboardScatterPoint[]; xLabel?: string; yLabel?: string };
   table?: Pick<DataTableProps, "data" | "columnTypes">;
+  /** Caller-owned widget body, such as an interactive chart with its own marks and controls. */
+  content?: ReactNode;
 }
 
 export interface DashboardRendererProps {
@@ -52,6 +63,8 @@ export interface DashboardRendererProps {
   title?: string;
   /** Caller-owned filters or refresh controls, kept above the scroll area. */
   actions?: ReactNode;
+  /** Replace the built-in header and place the dashboard controls in a caller-owned toolbar. */
+  renderToolbar?: (controls: ReactNode) => ReactNode;
 }
 
 export const layoutModes = [
@@ -59,11 +72,29 @@ export const layoutModes = [
   { id: "horizontal", name: "Compact left" },
   { id: "free", name: "Free placement" },
 ];
-export const widgetKinds = [
+export const widgetKinds: { id: DashboardWidgetKind; name: string }[] = [
   { id: "metric", name: "Metric" },
   { id: "line", name: "Line chart" },
   { id: "bar", name: "Bar chart" },
+  { id: "scatter", name: "Scatterplot" },
+  { id: "ring", name: "Ring chart" },
   { id: "table", name: "Table" },
+  { id: "custom", name: "Custom" },
 ];
-export const widgetLabel = (widget: DashboardWidget) =>
-  widget.title.trim() || widgetKinds.find(({ id }) => id === widget.kind)?.name || "Widget";
+
+export const sourcesForKind = (sources: DashboardDataSource[], kind: DashboardWidgetKind) =>
+  sources.filter((source) => {
+    if (kind === "custom") return source.content !== undefined;
+    if (kind === "scatter") return source.scatter !== undefined;
+    if (kind === "ring") return source.series !== undefined;
+    if (source.content === undefined && source.scatter === undefined) return true;
+    if (kind === "metric") return source.metric !== undefined;
+    if (kind === "table") return source.table !== undefined;
+    return source.series !== undefined;
+  });
+
+export const widgetLabel = (widget: DashboardWidget, sourceName?: string) =>
+  widget.title.trim() ||
+  (widget.kind === "custom" ? sourceName : undefined) ||
+  widgetKinds.find(({ id }) => id === widget.kind)?.name ||
+  "Widget";

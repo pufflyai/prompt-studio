@@ -8,7 +8,13 @@ import { Tooltip } from "@/components/primitives/tooltip";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
 import { ScopedPopover as Popover } from "@/utils/scoped-overlays";
 import { Portal } from "@/utils/ui-scope";
-import { type DashboardDataSource, type DashboardWidget, widgetKinds, widgetLabel } from "./dashboard-types";
+import {
+  type DashboardDataSource,
+  type DashboardWidget,
+  sourcesForKind,
+  widgetKinds,
+  widgetLabel,
+} from "./dashboard-types";
 
 interface WidgetSettingsProps {
   widget: DashboardWidget;
@@ -24,6 +30,8 @@ export function WidgetSettings(props: WidgetSettingsProps) {
   const titleId = useId();
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
   const input = useRef<HTMLInputElement>(null);
+  const source = sources.find(({ id }) => id === widget.source);
+  const availableSources = sourcesForKind(sources, widget.kind);
   return (
     <Popover.Root
       open={open}
@@ -36,7 +44,7 @@ export function WidgetSettings(props: WidgetSettingsProps) {
       <Tooltip content="Widget settings">
         <Popover.Trigger asChild>
           <IconButton
-            aria-label={`Configure ${widgetLabel(widget)}`}
+            aria-label={`Configure ${widgetLabel(widget, source?.name)}`}
             data-configure-widget={widget.id}
             size="2xs"
             variant="ghost"
@@ -66,14 +74,21 @@ export function WidgetSettings(props: WidgetSettingsProps) {
                   <DisplayMenuSelect
                     label="Type"
                     value={widget.kind}
-                    options={widgetKinds.map(({ id, name }) => ({ value: id, label: name }))}
-                    onSelect={(kind) => onChange({ ...widget, kind: kind as DashboardWidget["kind"] })}
+                    options={widgetKinds
+                      .filter(({ id }) => id === widget.kind || sourcesForKind(sources, id).length > 0)
+                      .map(({ id, name }) => ({ value: id, label: name }))}
+                    onSelect={(value) => {
+                      const kind = value as DashboardWidget["kind"];
+                      const options = sourcesForKind(sources, kind);
+                      const next = options.find(({ id }) => id === widget.source) ?? options[0];
+                      if (next) onChange({ ...widget, kind, source: next.id });
+                    }}
                   />
                   <DisplayMenuSelect
                     label="Data"
                     value={widget.source}
-                    options={sources.map(({ id, name }) => ({ value: id, label: name }))}
-                    onSelect={(source) => onChange({ ...widget, source: source as DashboardWidget["source"] })}
+                    options={availableSources.map(({ id, name }) => ({ value: id, label: name }))}
+                    onSelect={(source) => onChange({ ...widget, source })}
                   />
                 </Stack>
               </Stack>
