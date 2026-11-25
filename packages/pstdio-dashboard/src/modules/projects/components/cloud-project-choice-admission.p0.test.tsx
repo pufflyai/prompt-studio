@@ -574,9 +574,13 @@ test.each(copyStates)("two views check the current device state before downloadi
       await act(async () => {
         device.presence = "cloud-only";
         device.catalogUnavailable = true;
+        owner.getWriter("projects")!.remove(id);
+        expect(fixture.removal.active(id, account, fixture.choice.login)).toBe(true);
+        await expect(fixture.deletions.start(id, "Recovered notes", account, fixture.choice.login!)).rejects.toThrow(
+          "This project already has a pending Cloud change.",
+        );
         releaseRemoval.resolve();
         await result!;
-        owner.getWriter("projects")!.remove(id);
         await until(
           () =>
             fixture.choice.entry?.presence === "cloud-only" &&
