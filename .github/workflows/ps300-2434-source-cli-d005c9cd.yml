@@ -1,0 +1,197 @@
+name: Dashboard widgets exact source CLI review
+
+on:
+  push:
+    branches:
+      - chore/ps300-2434-source-cli-d005c9cd
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  source_cli:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PS300_PR_HEAD: d005c9cd98ae50296cb7532f68dfa9c84843b639
+      PS300_HEAD: 89717ae55a95d665d53ff5d2033d053974656dca
+      PS300_TREE: 898e57631f1edf8be180b7b80ae98119daa95be4
+      PS300_BASE: 2ae8f11c55991c6894e9252ac4db28a1e542fbea
+      PS300_POLICY: 1d37252415354d6950950000391e5cb9630af747c63180d85fb1479770c289a8
+      PS300_EXPECTED_PLAN: 293779d823ee69f06e57a9eaf2f259846fa1f4fe93cd819e50aca517d071d781
+      PS300_CLI_GROUP: 72480638f874d13d0838a290
+      PS300_CLI_FILES_SHA256: 58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a
+      PS300_OUTPUT: test-results/ps300-2434-source-cli
+      PS300_ORDINARY_RUN: "45542653669"
+      PS300_ORDINARY_SOURCE: 89717ae55a95d665d53ff5d2033d053974656dca
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.PS300_HEAD }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+
+      - name: Verify the source and sealed Linux plan
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$GITHUB_REF" = refs/heads/chore/ps300-2434-source-cli-d005c9cd
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$PS300_PR_HEAD"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" =             "$(printf 'A\t.github/workflows/ps300-2434-source-cli-d005c9cd.yml')"
+          test "$(git rev-parse HEAD)" = "$PS300_HEAD"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$PS300_TREE"
+          git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main             refs/heads/feature/dashboard-custom-content:refs/remotes/origin/feature/dashboard-custom-content
+          test "$(git rev-parse origin/feature/dashboard-custom-content)" = "$PS300_PR_HEAD"
+          test "$(git show -s --format=%P "$PS300_HEAD")" = "$PS300_BASE $PS300_PR_HEAD"
+          test "$(git merge-tree --write-tree "$PS300_PR_HEAD" "$PS300_BASE")" = "$PS300_TREE"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PS300_ORDINARY_RUN" |
+            jq -e --arg prHead "$PS300_PR_HEAD" --arg merged "$PS300_HEAD" '
+              .head_sha == $prHead and .event == "pull_request" and .path == ".github/workflows/test-and-build.yml"
+              and (.referenced_workflows | length > 0) and all(.referenced_workflows[]; .sha == $merged)
+            '
+          main="$(git rev-parse origin/main)"
+          test "$(git merge-base HEAD "$main")" = "$PS300_BASE"
+          incoming="$(git rev-list --count "HEAD..$main")"
+          test "$incoming" -le 10
+          prospective="$(git merge-tree --write-tree --no-messages HEAD "$main")"
+          test "$(git cat-file -t "$prospective")" = tree
+          test -z "$(git status --porcelain)"
+          test "$(bun --version)" = "1.4.4"
+          test "$(node --version)" = "v26.7.0"
+          test "$(jq -r .packageManager package.json)" = "bun@1.4.4"
+          mkdir -p "$PS300_OUTPUT"
+          bun run test:review --base "$PS300_BASE" --list > "$PS300_OUTPUT/selected-plan.json"
+          jq -e --arg sha "$PS300_HEAD" --arg tree "$PS300_TREE" --arg base "$PS300_BASE"             --arg policy "$PS300_POLICY" --arg digest "$PS300_EXPECTED_PLAN" --arg group "$PS300_CLI_GROUP" '
+              .head == $sha and .mergeBase == $base and .testPlan.digest == $digest
+              and .testPlan.source == {sha:$sha,tree:$tree,policy:$policy,dirty:false}
+              and any(.selected[]; .file == "packages/ui/src/components/dashboard-renderer/dashboard-renderer.p0.test.tsx")
+              and any(.selected[]; .file == "packages/canvas-tests/src/ui/ui/dashboard-renderer.p1.spec.ts")
+              and (.testPlan.runs | length) == 84 and (.selected | length) == 2696
+              and all(.testPlan.runs[]; .target == {platform:"linux",arch:"x64"})
+              and ([.testPlan.runs[] | select(.job == "local-additions") | .id] == [$group])
+              and any(.testPlan.runs[]; .id == $group and .owner == "e2e" and .cwd == "packages/e2e"
+                and .runner == "cli" and .priority == "P1" and .lane == "stable" and .artifact == "source"
+                and .requires == ["build-e5b1f54fca1c52cd"] and (.files | length) == 10)
+              and any(.testPlan.setup[]; .id == "build-e5b1f54fca1c52cd" and .owners == ["e2e"]
+                and .kind == "build" and .requires == [])
+            ' "$PS300_OUTPUT/selected-plan.json"
+          bun -e '
+            import { validateTestPlan } from "./scripts/ci/test-plan";
+            const { testPlan } = await Bun.file(process.env.PS300_OUTPUT + "/selected-plan.json").json();
+            validateTestPlan(testPlan);
+          '
+          sealed_digest="$(jq -er '.testPlan.digest' "$PS300_OUTPUT/selected-plan.json")"
+          echo "PS300_PLAN=$sealed_digest" >> "$GITHUB_ENV"
+          jq -c --arg group "$PS300_CLI_GROUP" '.testPlan.runs[] | select(.id == $group) | .files'             "$PS300_OUTPUT/selected-plan.json" > "$PS300_OUTPUT/assigned-files.json"
+          printf '%s  %s\n' "$PS300_CLI_FILES_SHA256" "$PS300_OUTPUT/assigned-files.json" | sha256sum -c -
+          jq -n --arg sha "$PS300_HEAD" --arg prHead "$PS300_PR_HEAD" --arg tree "$PS300_TREE" --arg main "$main" --arg base "$PS300_BASE"             --arg prospective "$prospective" --arg plan "$sealed_digest" --arg workflow "$GITHUB_WORKFLOW_SHA"             --argjson incoming "$incoming" --arg ordinary "$PS300_ORDINARY_RUN"             --arg ordinarySource "$PS300_ORDINARY_SOURCE"             '{sha:$sha,prHead:$prHead,tree:$tree,main:$main,mergeBase:$base,mergeTree:$prospective,incoming:$incoming,
+              planDigest:$plan,diagnosticCommit:$workflow,ordinaryCiRun:$ordinary,ordinaryCiSha:$ordinarySource}'             > "$PS300_OUTPUT/identity.json"
+
+      - name: Open an owned private temporary directory
+        shell: bash
+        run: |
+          scratch="$(mktemp -d /tmp/ps300.XXXXXX)"
+          printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$scratch/owner"
+          {
+            echo "PS300_CLI_TMP=$scratch"
+            echo "TMPDIR=$scratch"
+            echo "TMP=$scratch"
+            echo "TEMP=$scratch"
+            echo "PS300_NATIVE_BUN=$(command -v bun)"
+          } >> "$GITHUB_ENV"
+          { node --version; bun --version; docker version; df -h /tmp "$GITHUB_WORKSPACE"; }             > "$PS300_OUTPUT/toolchain.log"
+
+      - name: Install locked dependencies and prepare Firefox
+        shell: bash
+        run: |
+          bun install --frozen-lockfile --concurrent-scripts 1
+          bun run --cwd packages/ui typegen:tokens
+          (cd packages/e2e && bun x --no-install playwright install --with-deps firefox) 2>&1             | tee "$PS300_OUTPUT/browser-setup.log"
+          test -z "$(git status --porcelain)"
+
+      - name: Execute only the ten-file source CLI group
+        shell: bash
+        run: |
+          test "$(command -v bun)" = "$PS300_NATIVE_BUN"
+          bun --no-orphans - <<'BUN' 2>&1 | tee "$PS300_OUTPUT/console.log"
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+          import { executePlan } from "./scripts/ci/run-test-plan";
+
+          const root = process.cwd();
+          const { PS300_CLI_TMP: scratch, PS300_OUTPUT: relative, PS300_CLI_GROUP: group } = process.env;
+          if (!scratch || !/^\/tmp\/ps300\.[A-Za-z0-9]{6}$/.test(scratch) || !relative || !group)
+            throw new Error("Unexpected native review assignment");
+          const executionId = process.env.GITHUB_RUN_ID + "/" + process.env.GITHUB_RUN_ATTEMPT;
+          const output = resolve(root, relative);
+          for (const [key, value] of Object.entries(localReviewEnvironment(scratch))) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+          process.env.CI_PLAN_OUTPUT_DIR = relative + "/native";
+          const { testPlan } = await Bun.file(resolve(output, "selected-plan.json")).json();
+          let passed = false;
+          try {
+            const result = await executePlan(testPlan, {
+              root, runIds: [group], prebuilt: false, executionId,
+              env: { CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+            });
+            passed = result.complete && result.outcome === "success";
+          } finally {
+            const cleanup = await cleanupReviewCompose(scratch);
+            await Bun.write(resolve(output, "compose-cleanup.json"), JSON.stringify(cleanup, null, 2));
+            passed &&= cleanup.every(entry => entry.outcome === "success");
+            process.exitCode = passed ? 0 : 1;
+          }
+          BUN
+
+      - name: Verify exact native execution and file coverage
+        shell: bash
+        run: |
+          jq -e --arg group "$PS300_CLI_GROUP" --arg digest "$PS300_PLAN"             --slurpfile expected "$PS300_OUTPUT/assigned-files.json"             --slurpfile sealed "$PS300_OUTPUT/selected-plan.json" '
+              .source == $sealed[0].testPlan.source and .planDigest == $digest
+              and .complete and .outcome == "success" and .errors == [] and .runIds == [$group]
+              and (.results | length) == 1
+              and all(.results[]; .runId == $group and .complete and .outcome == "success"
+                and .exitCode == 0 and .nativeFailure != true and (.reportedFiles | sort) == ($expected[0] | sort))
+              and [.phases[] | select(.kind == "build") | [.id,.outcome]] == [["build-e5b1f54fca1c52cd","success"]]
+              and any(.phases[]; .kind == "cleanup" and .outcome == "success")
+            ' "$PS300_OUTPUT/native/execution.json"
+          jq -e 'all(.[]; .outcome == "success")' "$PS300_OUTPUT/compose-cleanup.json"
+          git diff --exit-code
+
+      - name: Retain and clean this invocation's temporary files
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$PS300_OUTPUT"
+          if [[ -n "${PS300_CLI_TMP:-}" ]]; then
+            [[ "$PS300_CLI_TMP" =~ ^/tmp/ps300\.[A-Za-z0-9]{6}$ ]]
+            test "$(cat "$PS300_CLI_TMP/owner")" = "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+            if [[ -f "$PS300_CLI_TMP/compose-projects.jsonl" ]]; then
+              cp "$PS300_CLI_TMP/compose-projects.jsonl" "$PS300_OUTPUT/"
+            fi
+            rm -rf -- "$PS300_CLI_TMP"
+            test ! -e "$PS300_CLI_TMP"
+            printf '%s\n' 'Owned temporary directory removed' > "$PS300_OUTPUT/scratch-cleanup.txt"
+          fi
+
+      - name: Upload the fixture and native receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps300-2434-source-cli-d005c9cd-attempt-${{ github.run_attempt }}
+          path: ${{ env.PS300_OUTPUT }}
+          if-no-files-found: error
