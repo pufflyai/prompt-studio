@@ -1,0 +1,187 @@
+name: PS-1335 exact source residual review
+
+on:
+  push:
+    branches:
+      - chore/ps1335-residual-bb31c293
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  residual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PS1335_PR_HEAD: bb31c2933e8b64d40f8d8e3b77528aa45b73edfa
+      PS1335_HEAD: 5253d587560d94cb90359eed410de7688407f72d
+      PS1335_TREE: 631b681036fea18e985962cde7abbd09f2f3b8fb
+      PS1335_BASE: 088e5eb0d6099f5377d778914f5527471aa1dc31
+      PS1335_POLICY: eeda44a3cdb1ac1ca43bda7a351ba8ed43d09409cd8b1cc4c373fa2bfd6a2348
+      PS1335_DIGEST: bcc3e21a9f7591663883721ff204634ad4696b7faf2ea4c06db4e86a752a9589
+      PS1335_APP_GROUP: 38646ce9662fac3120b21fb6
+      PS1335_CLI_GROUP: 72480638f874d13d0838a290
+      PS1335_ASSIGNMENT_SHA: 68ceb6fbe996c87124b5da42d67f4a0966124cd5a96daf2c7d9010a2794e86dc
+      PS1335_ORDINARY_RUN: '45567487149'
+      PS1335_OUTPUT: test-results/ps1335-residual
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.PS1335_HEAD }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '26.7.0'
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.4'
+
+      - name: Verify the merge source and selected Linux groups
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$GITHUB_REF" = refs/heads/chore/ps1335-residual-bb31c293
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$PS1335_PR_HEAD"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" = "$(printf 'A\t.github/workflows/ps1335-residual.yml')"
+          test "$(git rev-parse HEAD)" = "$PS1335_HEAD"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$PS1335_TREE"
+          test "$(git show -s --format=%P HEAD)" = "$PS1335_BASE $PS1335_PR_HEAD"
+          test "$(git merge-tree --write-tree "$PS1335_PR_HEAD" "$PS1335_BASE")" = "$PS1335_TREE"
+          gh api "repos/$GITHUB_REPOSITORY/pulls/2444" | jq -e --arg head "$PS1335_PR_HEAD" '
+            .head.sha == $head and .base.ref == "main" and .state == "open" and .draft'
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PS1335_ORDINARY_RUN" |
+            jq -e --arg pr "$PS1335_PR_HEAD" --arg merge "$PS1335_HEAD" '
+              .head_sha == $pr and .event == "pull_request" and .path == ".github/workflows/test-and-build.yml"
+              and (.referenced_workflows | length > 0) and all(.referenced_workflows[]; .sha == $merge)'
+          test -z "$(git status --porcelain)"
+          test "$(bun --version)" = "1.4.4"
+          test "$(node --version)" = "v26.7.0"
+          mkdir -p "$PS1335_OUTPUT"
+          bun run test:review --base "$PS1335_BASE" --list \
+            --test packages/canvas-tests/src/ui/ui/modal-view-overlays.p1.spec.ts \
+            --test packages/canvas-tests/src/ui/ui/overlay-trigger-toggle.p1.spec.ts \
+            --test packages/canvas-tests/src/ui/pstdio-workbench/overlay-navigation.p1.spec.ts \
+            --test packages/e2e/src/ui/overlay-navigation.p1.spec.ts \
+            > "$PS1335_OUTPUT/plan.json"
+          jq -e --arg sha "$PS1335_HEAD" --arg tree "$PS1335_TREE" --arg base "$PS1335_BASE" \
+            --arg policy "$PS1335_POLICY" --arg digest "$PS1335_DIGEST" \
+            --arg app "$PS1335_APP_GROUP" --arg cli "$PS1335_CLI_GROUP" '
+              .head == $sha and .mergeBase == $base and .testPlan.digest == $digest
+              and .testPlan.source == {sha:$sha,tree:$tree,policy:$policy,dirty:false}
+              and (.testPlan.runs | length) == 86 and (.selected | length) == 2704
+              and all(.testPlan.runs[]; .target == {platform:"linux",arch:"x64"})
+              and ([.testPlan.runs[] | select(.job == "local-additions") | .id] | sort) == ([$app,$cli] | sort)
+              and any(.testPlan.runs[]; .id == $app and .runner == "app" and .owner == "e2e" and .lane == "stable"
+                and .priority == "P1" and .artifact == "source" and .files == ["packages/e2e/src/ui/overlay-navigation.p1.spec.ts"])
+              and any(.testPlan.runs[]; .id == $cli and .runner == "cli" and .owner == "e2e" and .lane == "stable"
+                and .priority == "P1" and .artifact == "source" and (.files | length) == 10)
+            ' "$PS1335_OUTPUT/plan.json"
+          bun -e 'import { validateTestPlan } from "./scripts/ci/test-plan"; const { testPlan } = await Bun.file(process.env.PS1335_OUTPUT + "/plan.json").json(); validateTestPlan(testPlan);'
+          jq -c '[.testPlan.runs[] | select(.job == "local-additions") | {id,files}]' \
+            "$PS1335_OUTPUT/plan.json" > "$PS1335_OUTPUT/assigned-files.json"
+          printf '%s  %s\n' "$PS1335_ASSIGNMENT_SHA" "$PS1335_OUTPUT/assigned-files.json" | sha256sum -c -
+          jq -n --arg head "$PS1335_HEAD" --arg tree "$PS1335_TREE" --arg base "$PS1335_BASE" \
+            --arg pr "$PS1335_PR_HEAD" --arg workflow "$GITHUB_WORKFLOW_SHA" --arg ordinary "$PS1335_ORDINARY_RUN" \
+            '{head:$head,tree:$tree,base:$base,prHead:$pr,workflow:$workflow,ordinaryRun:$ordinary}' \
+            > "$PS1335_OUTPUT/identity.json"
+
+      - name: Open owned temporary storage
+        run: |
+          scratch="$(mktemp -d /tmp/ps1335.XXXXXX)"
+          printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$scratch/owner"
+          {
+            echo "PS1335_TEMP=$scratch"
+            echo "TMPDIR=$scratch"
+            echo "TMP=$scratch"
+            echo "TEMP=$scratch"
+          } >> "$GITHUB_ENV"
+          { node --version; bun --version; docker version; df -h /tmp "$GITHUB_WORKSPACE"; } > "$PS1335_OUTPUT/toolchain.log"
+
+      - name: Install locked dependencies and the source test browsers
+        run: |
+          bun install --frozen-lockfile --concurrent-scripts 1
+          bun run --cwd packages/ui typegen:tokens
+          (cd packages/e2e && bun x --no-install playwright install --with-deps chromium firefox) 2>&1 | tee "$PS1335_OUTPUT/browser-setup.log"
+          test -z "$(git status --porcelain)"
+
+      - name: Run the canonical app journey and source CLI group
+        run: |
+          bun --no-orphans - <<'BUN' 2>&1 | tee "$PS1335_OUTPUT/console.log"
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+          import { executePlan } from "./scripts/ci/run-test-plan";
+          const root = process.cwd();
+          const { PS1335_TEMP: scratch, PS1335_OUTPUT: relative, PS1335_APP_GROUP: app, PS1335_CLI_GROUP: cli } = process.env;
+          if (!scratch || !/^\/tmp\/ps1335\.[A-Za-z0-9]{6}$/.test(scratch) || !relative || !app || !cli)
+            throw new Error("Invalid residual assignment");
+          const executionId = process.env.GITHUB_RUN_ID + "/" + process.env.GITHUB_RUN_ATTEMPT;
+          const output = resolve(root, relative);
+          for (const [key, value] of Object.entries(localReviewEnvironment(scratch))) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+          process.env.CI_PLAN_OUTPUT_DIR = relative + "/native";
+          const { testPlan } = await Bun.file(resolve(output, "plan.json")).json();
+          const runIds = testPlan.runs.map(({ id }) => id).filter(id => id === app || id === cli);
+          let passed = false;
+          try {
+            const result = await executePlan(testPlan, {
+              root, runIds, prebuilt: false, executionId,
+              env: { CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+            });
+            passed = result.complete && result.outcome === "success";
+          } finally {
+            const cleanup = await cleanupReviewCompose(scratch);
+            await Bun.write(resolve(output, "compose-cleanup.json"), JSON.stringify(cleanup, null, 2));
+            passed &&= cleanup.every(entry => entry.outcome === "success");
+            process.exitCode = passed ? 0 : 1;
+          }
+          BUN
+
+      - name: Reconcile both exact file receipts
+        run: |
+          jq -e --slurpfile selected "$PS1335_OUTPUT/plan.json" --slurpfile assigned "$PS1335_OUTPUT/assigned-files.json" '
+            .source == $selected[0].testPlan.source and .planDigest == $selected[0].testPlan.digest
+            and .complete and .outcome == "success" and .errors == []
+            and (.runIds | sort) == ([$assigned[0][].id] | sort)
+            and (.results | length) == ($assigned[0] | length)
+            and all(.results[]; . as $result | .complete and .outcome == "success" and .exitCode == 0
+              and .nativeFailure != true and (.reportedFiles | sort) == ([$assigned[0][] | select(.id == $result.runId) | .files[]] | sort))
+            and all(.phases[]; .outcome == "success") and any(.phases[]; .kind == "cleanup")
+            ' "$PS1335_OUTPUT/native/execution.json"
+          jq -e 'all(.[]; .outcome == "success")' "$PS1335_OUTPUT/compose-cleanup.json"
+          git diff --exit-code
+
+      - name: Preserve and remove this run's scratch directory
+        if: always()
+        run: |
+          mkdir -p "$PS1335_OUTPUT"
+          if [[ -n "${PS1335_TEMP:-}" ]]; then
+            [[ "$PS1335_TEMP" =~ ^/tmp/ps1335\.[A-Za-z0-9]{6}$ ]]
+            test "$(cat "$PS1335_TEMP/owner")" = "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+            if [[ -f "$PS1335_TEMP/compose-projects.jsonl" ]]; then
+              cp "$PS1335_TEMP/compose-projects.jsonl" "$PS1335_OUTPUT/"
+            fi
+            rm -rf -- "$PS1335_TEMP"
+            test ! -e "$PS1335_TEMP"
+            printf '%s\n' 'Owned temporary directory removed' > "$PS1335_OUTPUT/scratch-cleanup.txt"
+          fi
+
+      - name: Upload the residual review receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps1335-residual-bb31c293-attempt-${{ github.run_attempt }}
+          path: ${{ env.PS1335_OUTPUT }}
+          if-no-files-found: error
