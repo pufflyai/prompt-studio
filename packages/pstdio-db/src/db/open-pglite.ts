@@ -1,5 +1,6 @@
 import { readdirSync, renameSync, rmdirSync, rmSync } from "node:fs";
 import { PGlite, type PGliteOptions, types } from "@electric-sql/pglite";
+import { admitPgliteWork } from "./database-admission";
 import { observePgliteQueries } from "./query-diagnostics";
 
 const serializeBytes = (value: unknown) => {
@@ -28,11 +29,12 @@ export const openPglite = async (dataDir: string, options: PGliteOptions = {}, o
     },
     serializers: { [types.BYTEA]: serializeBytes, ...serializers },
   };
-  if (dataDir === ":memory:") return observePgliteQueries(new PGlite({ ...runtimeOptions, loadDataDir }));
+  if (dataDir === ":memory:")
+    return admitPgliteWork(observePgliteQueries(new PGlite({ ...runtimeOptions, loadDataDir })));
   // A nonempty directory may contain a damaged database. Never replace its files during startup.
   if (loadDataDir && readdirSync(dataDir).length === 0) {
     await restoreInitialDatabase(dataDir, loadDataDir);
     onImageRestored();
   }
-  return observePgliteQueries(new PGlite(dataDir, runtimeOptions));
+  return admitPgliteWork(observePgliteQueries(new PGlite(dataDir, runtimeOptions)));
 };
