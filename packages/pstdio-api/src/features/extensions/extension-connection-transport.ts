@@ -155,6 +155,21 @@ export const validateBaseUrl = (value: string) => {
   return url.toString();
 };
 
+export class ConnectionRemovalInputError extends Error {}
+
+export const validateSharedOrigin = (value: string) => {
+  try {
+    const origin = new URL(value);
+    validateBaseUrl(value);
+    if (origin.pathname === "/" && !origin.search && !origin.hash) return origin.origin;
+  } catch {
+    // Report one actionable error for malformed or unauthorized origin forms.
+  }
+  throw new ConnectionRemovalInputError(
+    "Use an HTTPS or loopback HTTP server origin without a path, query, or fragment.",
+  );
+};
+
 export const resolveRequestUrl = (
   contribution: ExtensionConnectionContribution,
   baseUrl: string,

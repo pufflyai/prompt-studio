@@ -8,6 +8,7 @@ import {
   type ConnectionConfiguration,
   configuredCredentialKey,
   connectionCheckPreference,
+  connectionCheckValue,
   connectionPreference,
 } from "../services/extension-connections/extension-connections";
 import type { DbClient } from "./connection.pglite";
@@ -122,12 +123,12 @@ export const prepareConnectionCredentialsUpgrade = async (db: DbClient, path: st
             updated_at,
           })
           .onConflictDoNothing();
-        if (last_check_json)
+        if (last_check_json && secret_ref)
           await tx
             .insert(preferences)
             .values({
               ...connectionCheckPreference(key),
-              value: last_check_json,
+              value: connectionCheckValue(last_check_json, secret_ref),
               updated_at: last_check_json.checkedAt,
             })
             .onConflictDoNothing();

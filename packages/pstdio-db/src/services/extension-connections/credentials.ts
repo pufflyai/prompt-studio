@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, isNotNull, isNull, or } from "drizzle-orm";
+import { and, asc, eq, gt, isNotNull, isNull, or, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { credentials } from "../../db/schemas/credentials";
 export interface CredentialKey {
@@ -14,16 +14,33 @@ const where = (key: CredentialKey) =>
     key.projectId === null ? isNull(credentials.project_id) : eq(credentials.project_id, key.projectId),
   );
 export const credentialProvider = (baseUrl: string) => new URL(baseUrl).origin;
+const sharedCredentialPrefix = (key: CredentialKey) => `shared:${key.contributionId}:`;
 export const sharedCredentialKey = (key: CredentialKey, provider: string) => ({
   ...key,
   projectId: null,
-  contributionId: `shared:${key.contributionId}:${provider}`,
+  contributionId: sharedCredentialPrefix(key) + provider,
 });
 export const createExtensionCredentialsDBService = (db: Client) => {
   const get = async (key: CredentialKey) => (await db.select().from(credentials).where(where(key)))[0] ?? null;
   return {
     get,
     getShared: (key: CredentialKey, provider: string) => get(sharedCredentialKey(key, provider)),
+    // Two distinct slots suffice to tell callers they must name the origin.
+    async sharedOriginCandidates(key: CredentialKey) {
+      return (
+        await db
+          .select({ provider: credentials.provider })
+          .from(credentials)
+          .where(
+            and(
+              eq(credentials.extension_id, key.extensionId),
+              isNull(credentials.project_id),
+              eq(credentials.contribution_id, sql`${sharedCredentialPrefix(key)} || ${credentials.provider}`),
+            ),
+          )
+          .limit(2)
+      ).map(({ provider }) => provider);
+    },
     async resolve(key: CredentialKey, provider: string) {
       const row = (await get(key)) ?? (key.projectId === null ? null : await get(sharedCredentialKey(key, provider)));
       if (!row || row.provider !== provider || (row.expires_at && Date.parse(row.expires_at) <= Date.now()))

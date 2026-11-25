@@ -71,11 +71,12 @@ describe("extension connection routes", () => {
       return Response.json({ id: "remote-1" });
     });
     globalThis.fetch = remoteFetch as unknown as typeof fetch;
+    const secrets = createMemoryConnectionSecretStore();
     const created = await createTestApp({
       databasePath: ":memory:",
       storageRoot: join(tempRoot, "storage"),
       host: { kind: "standalone", token: RUNTIME_TOKEN },
-      connectionSecretStore: createMemoryConnectionSecretStore(),
+      connectionSecretStore: secrets,
     });
     closeApp = created.close;
     const runtimeRequest = (path: string, init: RequestInit = {}) =>
@@ -142,5 +143,46 @@ describe("extension connection routes", () => {
     expect(await checked.json()).toMatchObject({
       connections: [{ lastCheck: { ok: true, status: 200, error: null } }],
     });
+
+    const firstOrigin = "https://control.example.test";
+    const otherOrigin = "https://other.example.test";
+    const configure = (baseUrl: string, secret?: string) =>
+      runtimeRequest(connectionPath, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ baseUrl, secret }),
+      });
+    const revoke = (origin?: string) => {
+      const params = new URLSearchParams({ credentialScope: "all-projects" });
+      if (origin) params.set("origin", origin);
+      return runtimeRequest(`${connectionPath}?${params}`, { method: "DELETE" });
+    };
+    expect((await configure(otherOrigin, "other-credential")).status).toBe(200);
+    expect((await runtimeRequest(connectionPath, { method: "DELETE" })).status).toBe(204);
+    expect(await secrets.listRefs()).toHaveLength(2);
+    const ambiguous = await revoke();
+    const explicit = await revoke(firstOrigin.toUpperCase());
+    expect({
+      ambiguous: ambiguous.status,
+      explicit: explicit.status,
+      remaining: (await secrets.listRefs()).length,
+    }).toEqual({
+      ambiguous: 400,
+      explicit: 204,
+      remaining: 1,
+    });
+
+    expect((await configure(firstOrigin)).status).toBe(400);
+    expect((await configure(otherOrigin)).status).toBe(200);
+    expect((await revoke(`${otherOrigin}/api`)).status).toBe(400);
+    expect((await revoke(firstOrigin)).status).toBe(204);
+    const stillConfigured = await runtimeRequest(`/v1/projects/${projectId}/extension-connections`);
+    expect(await stillConfigured.json()).toMatchObject({
+      connections: [{ baseUrl: `${otherOrigin}/`, configured: true }],
+    });
+    expect((await runtimeRequest(connectionPath, { method: "DELETE" })).status).toBe(204);
+    expect((await revoke()).status).toBe(204);
+    expect(await secrets.listRefs()).toEqual([]);
+    expect((await revoke()).status).toBe(204);
   });
 });
