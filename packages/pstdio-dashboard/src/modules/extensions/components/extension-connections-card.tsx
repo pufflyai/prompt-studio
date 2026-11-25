@@ -116,6 +116,20 @@ const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
             {t("projectSettings.extensionsPanel.connections.check")}
           </Button>
         )}
+        {configured?.configured && definition.scope !== "global" && (
+          <Button
+            size="2xs"
+            variant="outline"
+            loading={connection.phase === "disconnect"}
+            disabled={connection.busy}
+            onClick={() => {
+              clearError();
+              void connection.run({ action: "disconnect" }).catch(notifyError);
+            }}
+          >
+            {t("projectSettings.extensionsPanel.connections.disconnectProject")}
+          </Button>
+        )}
         {configured?.configured && (
           <Button
             size="2xs"
@@ -124,10 +138,12 @@ const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
             disabled={connection.busy}
             onClick={() => {
               clearError();
-              void connection.run({ action: "revoke" }).catch(notifyError);
+              void connection.run({ action: "revoke", baseUrl: configured.baseUrl }).catch(notifyError);
             }}
           >
-            {t("projectSettings.extensionsPanel.connections.revoke")}
+            {definition.scope === "global"
+              ? t("projectSettings.extensionsPanel.connections.revokeSignIn")
+              : t("projectSettings.extensionsPanel.connections.revokeSharedSignIn")}
           </Button>
         )}
       </HStack>

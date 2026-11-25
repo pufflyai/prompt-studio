@@ -10,7 +10,10 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 
 export type ConnectionDefinition = NonNullable<WorkbenchExtensionMetadata["connections"]>[number];
 type ConnectionTarget = Pick<ConnectionDefinition, "extensionId" | "localId" | "scope">;
-type ConnectionChange = { action: "configure"; baseUrl: string; secret?: string } | { action: "revoke" | "check" };
+type ConnectionChange =
+  | { action: "configure"; baseUrl: string; secret?: string }
+  | { action: "revoke"; baseUrl: string }
+  | { action: "disconnect" | "check" };
 
 const connectionsKey = (authority: string) => ["extension-connections", authority] as const;
 const connectionSubject = (projectId: string, target: ConnectionTarget) =>
@@ -22,10 +25,25 @@ const connectionSubject = (projectId: string, target: ConnectionTarget) =>
   );
 const titles = {
   configure: "Configure extension connection",
-  revoke: "Revoke extension connection",
+  disconnect: "Disconnect project connection",
+  revoke: "Revoke saved extension sign-in",
   check: "Check extension connection",
 };
 const endpoint = (value: string) => (URL.canParse(value) ? new URL(value).origin : undefined);
+const connectionRemoval = (
+  action: ConnectionChange["action"],
+  scope: ConnectionTarget["scope"],
+  origin: string | undefined,
+) => {
+  if (action === "disconnect") return { credentialScope: "project" as const };
+  if (action !== "revoke") return undefined;
+  if (!origin) throw new Error("The saved sign-in has no valid server origin.");
+  return {
+    credentialScope: "all-projects" as const,
+    origin,
+    signInScope: scope === "global" ? ("global" as const) : ("shared" as const),
+  };
+};
 
 export const getExtensionConnectionOperations = createRuntimeState((owner) => {
   const queries = getDashboardScopedQueries(owner);
@@ -52,14 +70,15 @@ export const getExtensionConnectionOperations = createRuntimeState((owner) => {
       const address = [projectId, extensionId, localId] as const;
       let configuration =
         requested.action === "configure" ? { baseUrl: requested.baseUrl, secret: requested.secret } : undefined;
-      const origin = configuration && endpoint(configuration.baseUrl);
-      const verifyRevocation = async (signal: AbortSignal) => {
+      const origin = "baseUrl" in requested ? endpoint(requested.baseUrl) : undefined;
+      const removal = connectionRemoval(action, scope, origin);
+      const verifyRemoval = async (signal: AbortSignal) => {
         signal.throwIfAborted();
         const { connections } = await api.listConnections(projectId);
         const record = connections.find((item) => item.extensionId === extensionId && item.connectionId === localId);
-        return record?.configured === false
-          ? { status: "confirmed" as const, result: undefined }
-          : { status: "unknown" as const };
+        const confirmed =
+          action === "disconnect" ? !record : record?.configured === false && endpoint(record.baseUrl) === origin;
+        return confirmed ? { status: "confirmed" as const, result: undefined } : { status: "unknown" as const };
       };
       return operations.submit<void>({
         domain: "extension.connection",
@@ -75,14 +94,14 @@ export const getExtensionConnectionOperations = createRuntimeState((owner) => {
           const input = configuration;
           configuration = undefined;
           if (input) await api.configureConnection(...address, input);
-          else if (action === "revoke") await api.deleteConnection(...address);
+          else if (removal) await api.deleteConnection(...address, removal);
           else await api.checkConnection(...address);
         },
         async reconcile(_result, signal) {
           signal.throwIfAborted();
           await client.invalidateQueries({ queryKey: connectionsKey(expected) });
         },
-        check: action === "revoke" ? verifyRevocation : undefined,
+        check: removal ? verifyRemoval : undefined,
       }).result;
     },
   };

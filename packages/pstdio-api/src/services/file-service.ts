@@ -20,6 +20,17 @@ export const createFileService = (deps: FileServiceDeps) => {
   const db = deps.filesDBService;
   const storage = deps.filesStorageService;
   const removals = storage.fileRemovals(db.authority);
+  const commitRemoval = async (fileId: string, staged?: Awaited<ReturnType<typeof removals.stage>>) => {
+    deps.eventBus.emit("files", "delete", { id: fileId });
+    try {
+      await staged?.commit();
+    } catch (error) {
+      apiLogger.warn(
+        { err: error, fileId, event: "file.removal.cleanup" },
+        "File deletion committed with byte cleanup pending",
+      );
+    }
+  };
   const recoverRemovals = async (filter?: { fileId?: string; projectId?: string; owner?: string }) => {
     const failures = await removals.recover(
       db.get,
@@ -148,8 +159,7 @@ export const createFileService = (deps: FileServiceDeps) => {
         }
         throw error;
       }
-      deps.eventBus.emit("files", "delete", { id: fileId });
-      await staged?.commit();
+      await commitRemoval(fileId, staged);
       return true;
     });
   };
@@ -161,10 +171,7 @@ export const createFileService = (deps: FileServiceDeps) => {
       const staged = await removals.stage({ ...file, owner: file.owner ?? "pstdio" });
       return {
         rollback: staged.rollback,
-        commit: async () => {
-          deps.eventBus.emit("files", "delete", { id: file.id });
-          await staged.commit();
-        },
+        commit: () => commitRemoval(file.id, staged),
       };
     },
     recoverRemovals,

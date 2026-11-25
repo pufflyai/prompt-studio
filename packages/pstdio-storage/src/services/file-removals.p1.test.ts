@@ -52,3 +52,50 @@ test("retains conflicting file paths and retries after the owning row is repaire
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test.each([
+  "missing",
+  "conflicting",
+] as const)("concurrent recovery shares one replay with a %s source", async (source) => {
+  const root = await mkdtemp(join(tmpdir(), "file-removal-concurrent-"));
+  const release = Promise.withResolvers<void>();
+  try {
+    const file = { id: "file", project_id: "project", owner: null, storage_path: join(root, "bytes") };
+    await writeFile(file.storage_path, "original");
+    await createFileRemovals(root, "database:one").stage(file);
+    const restarted = createFileRemovals(root, "database:one");
+    if (source === "conflicting") await writeFile(file.storage_path, "conflicting contents");
+    const entered = Promise.withResolvers<void>();
+    const matched = Promise.withResolvers<void>();
+    let lookups = 0;
+    const get = async () => {
+      lookups++;
+      entered.resolve();
+      await release.promise;
+      return file;
+    };
+    const first = restarted.recover(get);
+    await entered.promise;
+    const second = restarted.recover(get, () => {
+      matched.resolve();
+      return true;
+    });
+    await matched.promise;
+    release.resolve();
+    const results = await Promise.all([first, second]);
+    if (source === "missing") {
+      expect(results).toEqual([[], []]);
+      expect(await readFile(file.storage_path, "utf8")).toBe("original");
+    } else {
+      expect(results.map((failures) => failures.length)).toEqual([1, 1]);
+      expect(await readFile(file.storage_path, "utf8")).toBe("conflicting contents");
+      await rm(file.storage_path);
+      expect(await restarted.recover(async () => file)).toEqual([]);
+      expect(await readFile(file.storage_path, "utf8")).toBe("original");
+    }
+    expect(lookups).toBe(1);
+  } finally {
+    release.resolve();
+    await rm(root, { recursive: true, force: true });
+  }
+});

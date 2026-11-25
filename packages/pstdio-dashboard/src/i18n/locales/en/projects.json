@@ -109,7 +109,9 @@
         "connect": "Connect",
         "reconnect": "Reconnect",
         "check": "Check",
-        "revoke": "Revoke",
+        "disconnectProject": "Disconnect project",
+        "revokeSignIn": "Revoke sign-in",
+        "revokeSharedSignIn": "Revoke shared sign-in",
         "saved": "Connection saved",
         "actionFailed": "Connection action failed"
       },

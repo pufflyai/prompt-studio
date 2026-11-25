@@ -67,6 +67,7 @@ const decode = (value: unknown, authority: string, filename: string) => {
 export const createFileRemovals = (storageRoot: string, authority: string) => {
   const root = resolve(storageRoot, "file-removals", createHash("sha256").update(authority).digest("hex"));
   const active = new Set<string>();
+  const replays = new Map<string, Promise<void>>();
   const prepareRoot = async () => {
     await mkdir(root, { recursive: true, mode: 0o700 });
     // Setup or another database may just have created an ancestor. Persist the
@@ -185,18 +186,44 @@ export const createFileRemovals = (storageRoot: string, authority: string) => {
       },
     };
   };
-  const replay = async (
-    name: string,
+  const readReceipt = async (name: string) => {
+    let contents: string;
+    try {
+      contents = await readFile(join(root, name), "utf8");
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+      throw error;
+    }
+    return decode(JSON.parse(contents), authority, name);
+  };
+  const settle = async (
+    receipt: Receipt,
     get: (id: string) => Promise<{ storage_path: string; project_id: string } | null>,
-    matches: (file: File) => boolean,
   ) => {
-    const receipt = decode(JSON.parse(await readFile(join(root, name), "utf8")), authority, name);
-    if (active.has(receipt.operation) || !matches(receipt.file)) return;
+    // A prior replay may have completed while the concurrent read was pending.
+    if (!(await stat(journal(receipt)))) return;
     const file = await get(receipt.file.id);
     if (file && (resolve(file.storage_path) !== receipt.source || file.project_id !== receipt.file.project_id))
       throw new Error(`File removal receipt does not match its row: ${receipt.file.id}`);
     if (file) await rollback(receipt);
     else await commit(receipt);
+  };
+  const replay = async (
+    name: string,
+    get: (id: string) => Promise<{ storage_path: string; project_id: string } | null>,
+    matches: (file: File) => boolean,
+  ) => {
+    const receipt = await readReceipt(name);
+    if (!receipt || active.has(receipt.operation) || !matches(receipt.file)) return;
+    const current = replays.get(receipt.operation);
+    if (current) return current;
+    const claimed = settle(receipt, get);
+    replays.set(receipt.operation, claimed);
+    try {
+      await claimed;
+    } finally {
+      replays.delete(receipt.operation);
+    }
   };
   const recover = async (
     get: (id: string) => Promise<{ storage_path: string; project_id: string } | null>,

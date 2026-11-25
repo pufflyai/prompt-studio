@@ -107,7 +107,9 @@
         "connect": "连接",
         "reconnect": "重新连接",
         "check": "检查",
-        "revoke": "撤销",
+        "disconnectProject": "断开项目连接",
+        "revokeSignIn": "撤销登录",
+        "revokeSharedSignIn": "撤销共享登录",
         "saved": "连接已保存",
         "actionFailed": "连接操作失败"
       },
