@@ -39,3 +39,7 @@ export const unadmittedExtensionProjects = (db: object, extensionId: string) =>
 
 export const unadmittedStorageOwners = (db: object) =>
   [...(unavailable.get(db)?.values() ?? [])].map(({ owner }) => owner);
+
+/** Startup decisions are also needed by the API handle when PGlite owns the database in a worker. */
+export const unadmittedStorageOwnerFailures = (db: object) =>
+  [...(unavailable.get(db)?.values() ?? [])].map(({ owner, error }) => ({ owner, cause: error.cause }));

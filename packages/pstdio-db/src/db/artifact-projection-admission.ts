@@ -12,6 +12,18 @@ import { file_projections } from "./schemas/file-projections";
 // user-data purge removes initialized markers; it must not undo successful admission.
 // Ordinary requests cannot invent an owner or erase unresolved migration evidence.
 const unavailable = new WeakMap<object, { archive: string; keys: Set<string> }>();
+
+export type ArtifactProjectionRefusals = { archive: string; keys: string[] };
+
+export const artifactProjectionRefusals = (db: object): ArtifactProjectionRefusals | undefined => {
+  const retained = unavailable.get(db);
+  if (retained?.keys.size) return { archive: retained.archive, keys: [...retained.keys] };
+};
+
+export const attachArtifactProjectionRefusals = (db: object, refusals: ArtifactProjectionRefusals) => {
+  unavailable.set(db, { archive: refusals.archive, keys: new Set(refusals.keys) });
+};
+
 const root = (key: string) => JSON.stringify(["artifact", key]);
 export const assertArtifactProjectionAdmitted = (db: object, key: string) => {
   const retained = unavailable.get(db);
