@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { openCanvasPreview } from "../preview";
 
 // Critical: cluster membership and share must be visible inside the dashboard widgets.
@@ -79,6 +79,11 @@ test("edits custom widgets from the page toolbar", async ({ page }) => {
   await expect(marker).toHaveAttribute("aria-pressed", "false");
   await toolbar.getByRole("button", { name: "Edit dashboard", exact: true }).click();
   await expect(marker).toHaveAttribute("aria-pressed", "false");
+  const dragPreview = preview.locator("[data-dashboard-drag-bubble]");
+  await widget.getByRole("button", { name: "Drag Build history", exact: true }).press("Space");
+  await expect(dragPreview).toHaveText("Build history");
+  await page.keyboard.press("Escape");
+  await expect(dragPreview).toBeHidden();
   await toolbar.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(marker).toHaveAttribute("aria-pressed", "false");
   await toolbar.getByRole("button", { name: "Edit dashboard", exact: true }).click();
@@ -223,8 +228,7 @@ test("dismisses custom widget popovers when removal or a preview hides their own
   }
 });
 
-// Critical: each successful save must show the latest widget controls while the caller refreshes its definition.
-test("keeps the latest applied custom preview across delayed controlled refreshes", async ({ page }) => {
+async function openDelayedDashboardSave(page: Page) {
   const preview = await openCanvasPreview(
     page,
     "packages/ui/src/components/dashboard-renderer/dashboard.canvas.tsx#DelayedDashboardSave",
@@ -233,31 +237,41 @@ test("keeps the latest applied custom preview across delayed controlled refreshe
   const toolbar = preview.getByRole("toolbar", { name: "Build history controls" });
   const edit = toolbar.getByRole("button", { name: "Edit dashboard", exact: true });
   const apply = toolbar.getByRole("button", { name: "Apply", exact: true });
+  const complete = toolbar.getByRole("button", { name: "Complete save", exact: true });
   const refresh = toolbar.getByRole("button", { name: "Refresh saved dashboard", exact: true });
   const releaseMarker = widget.getByRole("button", { name: "Release marker", exact: true });
   const deploymentMarker = widget.getByRole("button", { name: "Deployment marker", exact: true });
-  const selectSource = async (current: string, next: string) => {
+  const selectSource = async (current: string, next: string, title?: string) => {
     await edit.click();
     await widget.hover();
     await widget.getByRole("button", { name: `Configure ${current}`, exact: true }).click();
     const settings = preview.getByRole("dialog", { name: "Widget settings" });
+    if (title) await settings.getByRole("textbox", { name: "Title", exact: true }).fill(title);
     await settings.getByRole("button", { name: `Data ${current}`, exact: true }).click();
     await preview.getByRole("menuitem", { name: next, exact: true }).click();
     await page.keyboard.press("Escape");
   };
+  const save = async () => {
+    await apply.click();
+    await complete.click();
+    await expect(edit).toBeFocused();
+  };
+  return { widget, edit, apply, complete, refresh, releaseMarker, deploymentMarker, selectSource, save };
+}
 
+// Critical: each successful save must show the latest widget controls while the caller refreshes its definition.
+test("keeps the latest applied custom preview across delayed controlled refreshes", async ({ page }) => {
+  const { widget, refresh, releaseMarker, deploymentMarker, selectSource, save } = await openDelayedDashboardSave(page);
   await selectSource("Build history", "Deployment history");
   await deploymentMarker.click();
   await expect(deploymentMarker).toHaveAttribute("aria-pressed", "false");
-  await apply.click();
-  await expect(edit).toBeFocused();
+  await save();
   await expect(deploymentMarker).toHaveAttribute("aria-pressed", "false");
 
   await selectSource("Deployment history", "Build history");
   await releaseMarker.click();
   await expect(releaseMarker).toHaveAttribute("aria-pressed", "false");
-  await apply.click();
-  await expect(edit).toBeFocused();
+  await save();
   await expect(releaseMarker).toHaveAttribute("aria-pressed", "false");
   await expect(deploymentMarker).toHaveCount(0);
 
@@ -265,11 +279,37 @@ test("keeps the latest applied custom preview across delayed controlled refreshe
   await expect(releaseMarker).toHaveAttribute("aria-pressed", "false");
   await selectSource("Build history", "Deployment history");
   await deploymentMarker.click();
-  await apply.click();
-  await expect(edit).toBeFocused();
+  await save();
   await refresh.click();
   await expect(deploymentMarker).toHaveAttribute("aria-pressed", "false");
   await expect(widget.getByRole("button", { name: "Release marker", exact: true, includeHidden: true })).toHaveCount(0);
+});
+
+// Critical: refreshing a previous save while Apply is pending must preserve the newer widget's controls.
+test("keeps the later applied widget when a previous save refreshes during Apply", async ({ page }) => {
+  const { widget, edit, apply, complete, refresh, releaseMarker, deploymentMarker, selectSource, save } =
+    await openDelayedDashboardSave(page);
+  await selectSource("Build history", "Deployment history");
+  await save();
+  await expect(deploymentMarker).toBeVisible();
+
+  const recentBuilds = widget.getByRole("article", { name: "Recent builds", exact: true });
+  await selectSource("Deployment history", "Build history", "Recent builds");
+  await releaseMarker.click();
+  await apply.click();
+  await expect(complete).toBeVisible();
+  await refresh.click();
+  await expect(refresh).toBeHidden();
+  await expect(releaseMarker).toHaveAttribute("aria-pressed", "false");
+
+  await complete.click();
+  await expect(edit).toBeFocused();
+  await expect(releaseMarker).toHaveAttribute("aria-pressed", "false");
+  await expect(recentBuilds).toBeVisible();
+  await expect(deploymentMarker).toHaveCount(0);
+  await refresh.click();
+  await expect(releaseMarker).toHaveAttribute("aria-pressed", "false");
+  await expect(recentBuilds).toBeVisible();
 });
 
 // Critical: controlled layout edits must survive live data refresh and failed saves, and Cancel must not publish them.

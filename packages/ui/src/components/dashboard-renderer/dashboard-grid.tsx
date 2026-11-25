@@ -255,7 +255,9 @@ export function DashboardGrid(props: GridProps) {
         {active && (
           <HStack layerStyle="floatingBar" pointerEvents="none" data-dashboard-drag-bubble="">
             <WidgetIcon kind={active.kind} />
-            <Text textStyle="label/S/medium">{widgetLabel(active)}</Text>
+            <Text textStyle="label/S/medium">
+              {widgetLabel(active, props.sources.find(({ id }) => id === active.source)?.name)}
+            </Text>
           </HStack>
         )}
       </DragOverlay>

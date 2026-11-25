@@ -1,6 +1,6 @@
 import { Box, Button, HStack, Text, useSlotRecipe, VisuallyHidden } from "@chakra-ui/react";
 import { LayoutDashboard, Pencil, Plus } from "lucide-react";
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { SelectionMenu } from "@/components/param-editor/inputs/selection-menu";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
@@ -41,13 +41,19 @@ function sameDefinition(first: DashboardDefinition, second: DashboardDefinition)
 
 function useAppliedDashboard(value: DashboardDefinition, editable: boolean) {
   const [applied, setApplied] = useState<AppliedDashboard | null>(null);
+  // The caller can publish an earlier save while the current Apply is waiting.
+  const committedValue = useRef(value);
+  useLayoutEffect(() => {
+    committedValue.current = value;
+  }, [value]);
   // Saving can finish before the caller publishes the updated definition.
   const awaitingRefresh = applied && editable && sameDefinition(applied.previousValue, value);
   if (applied && !awaitingRefresh) setApplied(null);
   return {
     saved: awaitingRefresh ? applied.definition : value,
     markApplied: (definition: DashboardDefinition) => {
-      setApplied(sameDefinition(definition, value) ? null : { definition, previousValue: value });
+      const previousValue = committedValue.current;
+      setApplied(sameDefinition(definition, previousValue) ? null : { definition, previousValue });
     },
   };
 }

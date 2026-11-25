@@ -66,14 +66,17 @@ export function DashboardEmbeddedExample(props: { deferRefresh?: boolean }) {
   const { deferRefresh = false } = props;
   const [value, setValue] = useState(initial);
   const [saved, setSaved] = useState<DashboardDefinition | null>(null);
+  const [completeSave, setCompleteSave] = useState<(() => void) | null>(null);
   return (
     <DashboardRenderer
       value={value}
       onChange={async (next) => {
         if (deferRefresh) {
+          await new Promise<void>((resolve) => setCompleteSave(() => resolve));
+          setCompleteSave(null);
           setSaved(next);
           // The caller can republish its previous layout before the saved change is available.
-          setValue({ ...value, widgets: [...value.widgets] });
+          setValue((current) => ({ ...current, widgets: [...current.widgets] }));
         } else {
           setValue(next);
         }
@@ -105,6 +108,7 @@ export function DashboardEmbeddedExample(props: { deferRefresh?: boolean }) {
             Build history
           </Text>
           {controls}
+          {completeSave && <Button onClick={() => completeSave()}>Complete save</Button>}
           {saved && (
             <Button
               onClick={() => {
