@@ -231,9 +231,12 @@ worker with the same results as the host. `Blob` arguments and `ReadableStream` 
 `storage.assets.stage` and `read`, work across the boundary.
 
 A worker that has run nothing for 10 minutes stops, including the worker of an extension that was
-disabled. The next call starts it again. Processes that extension code starts itself, for example
-with `Bun.spawn`, stop with their worker when it stops, crashes or is stopped by the host. Children
-started through `ctx.process` and `ctx.terminal` belong to the call or extension that started them.
+disabled. The next authorized call starts it again. By default, children started directly by
+extension code, such as with `Bun.spawn`, share the worker's process group on POSIX or its Job
+Object on Windows. The host uses these groups for cleanup and tracks POSIX descendants it observes
+before they reparent. An independently detached POSIX child can reparent before the host observes
+it and survive an immediate hard crash. Use `ctx.process` or `ctx.terminal` for host-managed process
+lifetimes tied to the call or extension.
 
 The host watches each worker from outside:
 - A worker whose event loop does not answer for 60 seconds is stopped, for example one stuck in an

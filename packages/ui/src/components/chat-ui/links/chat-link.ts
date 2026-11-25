@@ -15,6 +15,8 @@ export interface ChatLinkHandler {
   resolveIcon?(href: string): Promise<string | null>;
   describe?(candidate: ChatLinkCandidate): string;
   open(candidate: ChatLinkCandidate): void | Promise<void>;
+  /** Open the conversation that sent an attributed message. */
+  openSession?(sessionId: string): void | Promise<void>;
 }
 
 export interface ChatLinkProps {

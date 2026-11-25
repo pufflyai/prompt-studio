@@ -83,6 +83,7 @@ test.each([
   "write access returns",
   "initially read-only",
 ])("documents sync while an artifact watch is unavailable (%s)", async (mode) => {
+  const checkoutMissing = mode === "checkout missing";
   const root = await mkdtemp(join(tmpdir(), "relay-watch-failure-"));
   const app = await createTestApp({ storageRoot: join(root, "home") });
   let peerReads = 0;
@@ -91,7 +92,7 @@ test.each([
   let relay: Awaited<ReturnType<typeof startRelayExtension>> | undefined;
   const nativeWatch = fs.watch;
   const watchMount = mountWatcher.watchArtifactMount;
-  let failing = true;
+  let failing = !checkoutMissing;
   let attempts = 0;
   const handles = new Set<fs.FSWatcher>();
   let registration: ReturnType<typeof spyOn<typeof fs, "watch">> | undefined;
@@ -108,13 +109,20 @@ test.each([
   try {
     const project = await app.deps.projectService.create({ name: "Independent watch recovery" });
     const folder = join(root, "checkout");
-    await mkdir(folder);
-    const workspace = await initializeProjectWorkspace(
-      app.deps,
-      project.id,
-      { provider_id: "pstdio.root", params: { path: folder } },
-      async () => [],
-    );
+    if (!checkoutMissing) await mkdir(folder);
+    // The registered checkout is on an unavailable volume when relay starts.
+    const workspace = checkoutMissing
+      ? await app.deps.workspaceService.ensureDefault({
+          project_id: project.id,
+          root_path: folder,
+          name: "Project folder",
+        })
+      : await initializeProjectWorkspace(
+          app.deps,
+          project.id,
+          { provider_id: "pstdio.root", params: { path: folder } },
+          async () => [],
+        );
     const path = createTestExtensionSource({ root, installName: "notes", name: "notes", displayName: "Notes" });
     await writeFile(
       join(path, "extension.ts"),
@@ -206,11 +214,17 @@ test.each([
       });
       return;
     }
-    await waitFor(() => attempts > 0);
     const workspaceSetup = mode === "workspace setup";
-    const checkoutMissing = mode === "checkout missing";
-    if (workspaceSetup || checkoutMissing) {
-      const parked = join(root, "parked-checkout");
+    if (checkoutMissing) {
+      // Let the first scheduled retry pass while the registered path is absent.
+      await Bun.sleep(1_200);
+      expect(attempts).toBe(0);
+      expect(handles.size).toBe(0);
+      expect(fs.existsSync(folder)).toBe(false);
+      await mkdir(folder);
+      await waitFor(() => handles.size === 4);
+    } else {
+      await waitFor(() => attempts > 0);
       if (workspaceSetup) {
         try {
           await app.deps.workspaceService.setInitializing(workspace.id, true);
@@ -219,23 +233,13 @@ test.each([
         } finally {
           await app.deps.workspaceService.setInitializing(workspace.id, false);
         }
-      }
-      if (checkoutMissing) {
-        fs.renameSync(folder, parked);
         failing = false;
-        relay.wake();
-        // Let the first scheduled retry pass while the registered path is absent.
-        await Bun.sleep(1_200);
-        expect(attempts).toBe(1);
-        expect(fs.existsSync(folder)).toBe(false);
-        fs.renameSync(parked, folder);
+        await waitFor(() => handles.size === 4);
+      } else {
+        await waitFor(() => attempts >= 2);
+        expect(failing).toBe(true);
+        await waitFor(() => handles.size === 2);
       }
-      failing = false;
-      await waitFor(() => handles.size === 4);
-    } else {
-      await waitFor(() => attempts >= 2);
-      expect(failing).toBe(true);
-      await waitFor(() => handles.size === 2);
     }
     expect((await relay.status()).error).toBeUndefined();
     await records.commit({ operationId: "while-failing", edits: [{ recordId: "note", replace: "Still syncing" }] });

@@ -22,6 +22,7 @@ const DashboardChatHost = ({
   children,
   linkHandler,
   sourceRegion,
+  sourcePlacement,
 }: DashboardChatHostProps) => {
   const {
     conversation,
@@ -34,7 +35,10 @@ const DashboardChatHost = ({
       attachments.flatMap(({ url }) => (url && nativeChatFileAllowed(url, projectId, extensionId) ? [url] : [])),
     ),
   ]);
-  const links = useSessionLinks(workbench, projectId, conversation.workspaceId, linkHandler, sourceRegion);
+  const links = useSessionLinks(workbench, projectId, conversation.workspaceId, linkHandler, {
+    sourceRegion,
+    sourcePlacement,
+  });
   const account = useNativeHarnessAccount({
     workbench,
     projectId,

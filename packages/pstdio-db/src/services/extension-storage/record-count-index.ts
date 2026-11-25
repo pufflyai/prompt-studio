@@ -165,9 +165,18 @@ export const installCountIndex = async (
   }
 };
 
-export const dropCountIndex = async (tx: Writer, index: StorageRecordIndex, name: string) => {
+export const dropCountIndex = async (
+  tx: Writer,
+  index: StorageRecordIndex,
+  name: string,
+  layout: "released" | "current",
+) => {
   if (!index.countBy?.length) return;
-  for (const table of ["records", ...(index.identity ? ["resource_numbers"] : [])])
+  const [records, identities] =
+    layout === "released"
+      ? ["storage_current_records", "storage_resource_identities"]
+      : ["records", "resource_numbers"];
+  for (const table of [records, ...(index.identity ? [identities] : [])])
     for (const verb of ["insert", "delete", "update"])
       await tx.execute(sql.raw(`DROP TRIGGER IF EXISTS ${name}_tr_${verb} ON ${table}`));
   await tx.execute(

@@ -1,7 +1,15 @@
 import { expect, test } from "@playwright/test";
-import type { CloudProjectCatalog, CloudProjectDeletion } from "@pstdio/sdk/client";
+import type { CloudProjectCatalog, CloudProjectDeletion, ProjectCopyDevice } from "@pstdio/sdk/client";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
+
+const routePath = (path: string) => (url: URL) => url.pathname === path;
+
+const expectScopedDevice = (url: URL, device: ProjectCopyDevice) => {
+  expect(url.searchParams.get("deviceAccountId")).toBe(device.accountId);
+  expect(url.searchParams.get("deviceManagerOrigin")).toBe(device.managerOrigin);
+  expect(url.searchParams.get("deviceId")).toBe(device.deviceId);
+};
 
 for (const loseDownloadResponse of [false, true]) {
   test(
@@ -16,6 +24,7 @@ for (const loseDownloadResponse of [false, true]) {
       const { id } = await project.json();
       const { environmentId } = await (await request.get(`${uiOrigin}/v1/environment`)).json();
       const account = { accountId: "project-copy-test", managerOrigin: "https://accounts.example.test" };
+      const device = { ...account, deviceId: environmentId };
       const endpoint = `/v1/account/projects/${id}`;
       let presence: "downloaded" | "cloud-only" = "downloaded";
       let downloadCalls = 0;
@@ -49,14 +58,15 @@ for (const loseDownloadResponse of [false, true]) {
       await page.route("**/v1/account", (route) =>
         route.fulfill({
           json: {
-            login: { ...account, deviceId: environmentId, relayOrigin: "https://relay.example.test" },
+            login: { ...device, relayOrigin: "https://relay.example.test" },
             cloudProjects: [id],
             cloudProjectsLoaded: true,
             features: { relay: true },
           },
         }),
       );
-      await page.route("**/v1/account/projects", async (route) => {
+      await page.route(routePath("/v1/account/projects"), async (route) => {
+        expectScopedDevice(new URL(route.request().url()), device);
         await route.fulfill({ json: catalog() });
         if (admissionPending) {
           admissionPending = false;
@@ -66,8 +76,9 @@ for (const loseDownloadResponse of [false, true]) {
       await page.route(`**${endpoint}/sync*`, (route) =>
         route.fulfill({ json: { state: "synced", offlineReady: true } }),
       );
-      await page.route(`**${endpoint}/local-removal`, (route) =>
-        route.fulfill({
+      await page.route(routePath(`${endpoint}/local-removal`), (route) => {
+        expectScopedDevice(new URL(route.request().url()), device);
+        return route.fulfill({
           json: {
             account,
             projectId: id,
@@ -77,12 +88,16 @@ for (const loseDownloadResponse of [false, true]) {
             removesManagedFolder: false,
             providerWorkspaceCount: 0,
           },
-        }),
-      );
+        });
+      });
       const removing = Promise.withResolvers<void>();
       const finishRemoval = Promise.withResolvers<void>();
       await page.route(`**${endpoint}/remove-local`, async (route) => {
-        expect(route.request().postDataJSON()).toEqual({ discardUnsynced: true, expectedAccount: account });
+        expect(route.request().postDataJSON()).toEqual({
+          discardUnsynced: true,
+          expectedAccount: account,
+          expectedDevice: device,
+        });
         removing.resolve();
         await finishRemoval.promise;
         presence = "cloud-only";
@@ -98,6 +113,7 @@ for (const loseDownloadResponse of [false, true]) {
         const url = new URL(route.request().url());
         expect(url.searchParams.get("accountId")).toBe(account.accountId);
         expect(url.searchParams.get("managerOrigin")).toBe(account.managerOrigin);
+        expectScopedDevice(url, device);
         downloadCalls += 1;
         if (loseDownloadResponse) {
           admissionPending = true;
@@ -112,7 +128,9 @@ for (const loseDownloadResponse of [false, true]) {
       await page.getByRole("option", { name: "Settings", exact: true }).click();
       await page.getByText("Danger zone", { exact: true }).click();
       const danger = page.getByTestId("project-danger-zone-card");
-      await danger.getByRole("button", { name: "Delete local version", exact: true }).click();
+      const removeLocal = danger.getByRole("button", { name: "Delete local version", exact: true });
+      await expect(removeLocal).toBeVisible();
+      await removeLocal.click();
       const local = page.getByRole("dialog", { name: /Delete local version of/ });
       const submit = local.getByRole("button", { name: "Delete local version", exact: true });
       const discard = local.getByRole("checkbox", { name: "Discard unsynced changes" });
@@ -167,6 +185,7 @@ test("Cloud deletion recovers from a lost request and resumes the same operation
   const name = "Interrupted cloud deletion";
   const { environmentId } = await (await request.get(`${uiOrigin}/v1/environment`)).json();
   const account = { accountId: "cloud-deletion-test", managerOrigin: "https://accounts.example.test" };
+  const device = { ...account, deviceId: environmentId };
   const endpoint = `/v1/account/projects/${id}`;
   let online = true;
   let posts = 0;
@@ -176,14 +195,15 @@ test("Cloud deletion recovers from a lost request and resumes the same operation
   await page.route("**/v1/account", (route) =>
     route.fulfill({
       json: {
-        login: { ...account, deviceId: environmentId, relayOrigin: "https://relay.example.test" },
+        login: { ...device, relayOrigin: "https://relay.example.test" },
         cloudProjects: receipt ? [] : [id],
         cloudProjectsLoaded: true,
         features: { relay: true },
       },
     }),
   );
-  await page.route("**/v1/account/projects", (route) => {
+  await page.route(routePath("/v1/account/projects"), (route) => {
+    expectScopedDevice(new URL(route.request().url()), device);
     const result: CloudProjectCatalog = {
       account,
       projects: receipt
@@ -202,13 +222,14 @@ test("Cloud deletion recovers from a lost request and resumes the same operation
     return route.fulfill({ json: result });
   });
   await page.route(`**${endpoint}/deletion?*`, (route) => {
+    expectScopedDevice(new URL(route.request().url()), device);
     if (!online) return route.fulfill({ status: 503, json: { error: "Connect to Cloud to check deletion" } });
     return receipt
       ? route.fulfill({ json: receipt })
       : route.fulfill({ status: 404, json: { error: "No deletion for this cloud project" } });
   });
   await page.route(`**${endpoint}/delete-cloud`, async (route) => {
-    expect(route.request().postDataJSON()).toEqual({ confirm: true, expectedAccount: account });
+    expect(route.request().postDataJSON()).toEqual({ confirm: true, expectedAccount: account, expectedDevice: device });
     posts += 1;
     if (posts === 1) {
       await releaseFirst.promise;
@@ -231,6 +252,7 @@ test("Cloud deletion recovers from a lost request and resumes the same operation
   await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
   await page.goto(`/projects/${id}/`);
   const choice = page.getByRole("dialog", { name, exact: true });
+  await expect(choice).toBeVisible();
   await choice.getByRole("button", { name: "Delete cloud project", exact: true }).click();
   const confirmation = page.getByRole("dialog", { name: /Delete cloud project/ });
   await confirmation.getByRole("button", { name: "Delete cloud project", exact: true }).click();

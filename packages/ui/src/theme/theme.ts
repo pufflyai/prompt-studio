@@ -8,6 +8,8 @@ import { alertSlotRecipe } from "./recipes/alert";
 import { badgeRecipe } from "./recipes/badge";
 import { buttonRecipe } from "./recipes/button";
 import { chartRecipe } from "./recipes/chart";
+import { chatMessageSenderRecipe } from "./recipes/chat-message-sender";
+import { chatOutlineRecipe } from "./recipes/chat-outline";
 import { chatQuestionBubbleRecipe } from "./recipes/chat-question-bubble";
 import { checkboxSlotRecipe } from "./recipes/checkbox";
 import { colorPickerSlotRecipe } from "./recipes/color-picker";
@@ -83,6 +85,8 @@ const config = defineConfig({
       streamingText: streamingTextRecipe,
       treeChevron: treeChevronRecipe,
       treeReveal: treeRevealRecipe,
+      chatMessageSender: chatMessageSenderRecipe,
+      chatOutline: chatOutlineRecipe,
       chatQuestionBubble: chatQuestionBubbleRecipe,
       badge: badgeRecipe,
       button: buttonRecipe,

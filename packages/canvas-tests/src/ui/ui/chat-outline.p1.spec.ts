@@ -8,7 +8,8 @@ test("jump to an earlier turn, then resize the conversation panel", async ({ pag
     "packages/ui/src/components/chat-ui/components/chat-panel-width.canvas.tsx#ConversationOutline",
   );
   const rail = preview.getByRole("navigation", { name: "Conversation outline" });
-  await expect(preview.getByRole("img", { name: "Message from Alex", exact: true })).toBeVisible();
+  const tray = preview.locator("[data-chat-message-action-panel]");
+  await expect(tray.getByRole("img", { name: "Message from Alex", exact: true })).toBeVisible();
   const first = rail.getByRole("button", { name: "Check build 1", exact: true });
   await expect(preview.locator('[data-chat-message-id="q-0"]')).toHaveCount(0);
   const last = rail.getByRole("button", { name: "Check build 240", exact: true });
@@ -33,12 +34,14 @@ test("jump to an earlier turn, then resize the conversation panel", async ({ pag
   await expect(preview.getByRole("tooltip", { name: "Check build 1 Build 1 passed.", exact: true })).toBeVisible();
   await first.press("Enter");
   await expect(preview.locator('[data-chat-message-id="q-0"]')).toBeInViewport();
-  const sender = preview.getByRole("img", { name: "Message from Release checks", exact: true });
+  const sender = tray.getByRole("button", { name: "Open session Release checks", exact: true });
   await expect(sender).toBeVisible();
   await sender.focus();
   const senderTooltip = preview.getByRole("tooltip", { name: "Release checks", exact: true });
   await expect(senderTooltip).toBeVisible();
   await expect(senderTooltip).toHaveText("Release checks");
+  await sender.press("Enter");
+  await expect(preview.getByLabel("Opened session")).toHaveText("release-checks");
   await expect(first).toHaveAttribute("aria-current", "location");
   await first.press("End");
   await expect(last).toBeFocused();

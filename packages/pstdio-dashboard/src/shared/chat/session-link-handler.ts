@@ -1,4 +1,5 @@
 import { PstdioApiError } from "@pstdio/sdk/client";
+import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import { type ChatLinkCandidate, type ChatLinkHandler, isGuessedChatLink, parseChatLink } from "@pstdio/ui/chat-ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
@@ -11,6 +12,7 @@ import { executeExtensionCommand } from "@/shared/extensions/api";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { beginDashboardNavigation } from "@/shared/workbench/navigation-request";
 import { openProjectPageUrl } from "@/shared/workbench/open-project-page-url";
+import { resolveDashboardResourceOpening } from "@/shared/workbench/resource-openers";
 import { workspaceFileQueryOptions, workspaceFolderQueryOptions } from "@/shared/workspaces/workspace-file-query";
 import { workspaceFileResource } from "@/shared/workspaces/workspace-file-resource";
 import { workspaceLinkPath } from "@/shared/workspaces/workspace-link-path";
@@ -27,6 +29,7 @@ interface SessionLinkHandlerInput {
   origin: string;
   /** The panel showing the conversation; its links preview beside it. */
   sourceRegion?: () => ResourceLinkSource["region"];
+  sourcePlacement?: PlacementIdentity;
   onError(message: string): void;
 }
 
@@ -155,6 +158,38 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
     if (owned) return { kind: "navigation" as const, target: owned.target, href: null };
     return resolve(candidate) ?? (await resolveFile(candidate, signal));
   };
+  const openDestination = async (
+    label: string,
+    destinationFor: (signal: AbortSignal) => ReturnType<typeof resolveDestination>,
+    invocation?: ReturnType<WorkbenchCore["viewers"]["captureContext"]>,
+  ) => {
+    if (!input.projectId || getDashboardSelectedProjectId(input.workbench) !== input.projectId) return;
+    if (invocation?.isViewerCurrent?.() === false) return;
+    const request = beginDashboardNavigation(input.workbench, input.projectId);
+    const isCurrent = () => request.isCurrent() && invocation?.isViewerCurrent?.() !== false;
+    try {
+      const destination = await destinationFor(request.signal);
+      if (!isCurrent() || !destination) return;
+      if (destination.kind === "project") {
+        await openProjectPageUrl({
+          workbench: input.workbench,
+          href: destination.href,
+          projectId: destination.projectId,
+          sourceProjectId: input.projectId!,
+        });
+        return;
+      }
+      await input.workbench.navigation.openTarget(
+        toWorkbenchNavigationTarget(resourceLinkTarget(destination.target, { region: input.sourceRegion?.() })),
+        invocation,
+      );
+    } catch (error) {
+      if (!isCurrent()) return;
+      input.onError(`${label}: ${error instanceof Error ? error.message : "Could not open this link."}`);
+    } finally {
+      request.dispose();
+    }
+  };
   return {
     async resolveResource(candidate) {
       try {
@@ -219,30 +254,21 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
         return null;
       }
     },
-    async open(candidate) {
-      if (!input.projectId || getDashboardSelectedProjectId(input.workbench) !== input.projectId) return;
-      const request = beginDashboardNavigation(input.workbench, input.projectId);
-      try {
-        const destination = await resolveDestination(candidate, request.signal);
-        if (!request.isCurrent() || !destination) return;
-        if (destination.kind === "project") {
-          await openProjectPageUrl({
-            workbench: input.workbench,
-            href: destination.href,
-            projectId: destination.projectId,
-            sourceProjectId: input.projectId!,
-          });
-          return;
-        }
-        await input.workbench.navigation.openTarget(
-          toWorkbenchNavigationTarget(resourceLinkTarget(destination.target, { region: input.sourceRegion?.() })),
-        );
-      } catch (error) {
-        if (!request.isCurrent()) return;
-        input.onError(`${candidate.source}: ${error instanceof Error ? error.message : "Could not open this link."}`);
-      } finally {
-        request.dispose();
-      }
+    open: (candidate) => openDestination(candidate.source, (signal) => resolveDestination(candidate, signal)),
+    openSession: (sessionId) => {
+      const invocation = input.workbench.viewers.captureContext(input.sourcePlacement);
+      return openDestination(
+        "Sending session",
+        async (signal) => {
+          const opening = await resolveDashboardResourceOpening(
+            input.workbench,
+            { type: "session", extensionId: "pstdio", id: sessionId, projectId: input.projectId },
+            signal,
+          );
+          return { kind: "navigation", target: opening.target!, href: null };
+        },
+        invocation,
+      );
     },
   };
 };

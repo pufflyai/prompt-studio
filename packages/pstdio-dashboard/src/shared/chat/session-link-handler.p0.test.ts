@@ -1,9 +1,10 @@
 import { expect, test } from "bun:test";
-import type { ResourceRef } from "@pstdio/sdk/extensions";
+import { type ResourceRef, sessionBrowser } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { createWorkbench } from "@pstdio/workbench";
 import { parsePageUrl } from "pstdio-api-contracts";
 import { getDashboardQueryClient } from "@/lib/query-client";
+import { registerSessionProvider } from "@/modules/sessions/session-provider.fixture";
 import { createWorkspacesModule } from "@/modules/workspaces/module";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { openDashboardResource } from "@/shared/workbench/resource-openers";
@@ -91,6 +92,55 @@ test("a pending chat file opening yields to a newer resource opening", async () 
   } finally {
     release.resolve();
     await first;
+    workbench.dispose();
+    runtime.__PSTDIO_CONFIG__ = previous;
+    await server.stop(true);
+  }
+});
+
+test("a pending sender click cannot open a session after its source tab closes", async () => {
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const workbench = projectWorkbench();
+  registerSessionProvider(workbench, { projectId });
+  const session = (id: string) => ({ type: "session", extensionId: "pstdio", projectId, id });
+  const senderPage = { kind: "page" as const, page: sessionBrowser.pages.session, resource: session("sender") };
+  expect(workbench.pageLocations.navigate({ ...senderPage, resource: session("main") }).ok).toBe(true);
+  await workbench.navigation.openTarget({ ...senderPage, resource: session("receiver"), region: "side", open: "pin" });
+  const source = workbench.layout.getActivePanel("side")!;
+  expect(source.placementIdentity).toBeDefined();
+
+  const server = Bun.serve({
+    port: 0,
+    async fetch() {
+      entered.resolve();
+      await release.promise;
+      return Response.json([{ resource: senderPage.resource, target: senderPage }]);
+    },
+  });
+  const runtime = globalThis as typeof globalThis & { __PSTDIO_CONFIG__?: { apiBaseUrl?: string } };
+  const previous = runtime.__PSTDIO_CONFIG__;
+  runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: server.url.origin };
+  const errors: string[] = [];
+  const handler = createSessionLinkHandler({
+    workbench,
+    projectId,
+    origin: "http://local",
+    sourceRegion: () => (workbench.layout.getActivePanel("side") ? "side" : undefined),
+    sourcePlacement: source.placementIdentity,
+    onError: (error) => errors.push(error),
+  });
+  const opening = handler.openSession!("sender");
+  try {
+    await entered.promise;
+    await workbench.closePlacement(source.placementIdentity!);
+    release.resolve();
+    await opening;
+    expect(workbench.layout.getActivePanel("side")).toBeUndefined();
+    expect(errors).toEqual([]);
+  } finally {
+    release.resolve();
+    await opening;
     workbench.dispose();
     runtime.__PSTDIO_CONFIG__ = previous;
     await server.stop(true);

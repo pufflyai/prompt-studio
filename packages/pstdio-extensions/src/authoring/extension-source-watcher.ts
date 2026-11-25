@@ -1,4 +1,4 @@
-import { watch as fsWatch, lstatSync, readdirSync } from "node:fs";
+import { lstatSync } from "node:fs";
 import { basename, join, relative, sep } from "node:path";
 import {
   createDirectoryTreeWatcher,
@@ -8,17 +8,12 @@ import {
   type WatchDirectory,
   watchDirectory,
 } from "../fs-watch/directory-tree-watcher";
+import { readDependencyScopePaths, watchDependencyMembership } from "./extension-dependency-membership";
 import { createExtensionIgnoreMatcher, type ExtensionIgnoreMatcher } from "./extension-ignore";
 
 type InstalledSourceRegistration = {
   install_name: string;
   source_path: string;
-};
-
-const watchFlatDependencyDirectory: WatchDirectory = (path, listener, onError) => {
-  const watcher = fsWatch(path, { recursive: false }, listener);
-  watcher.on("error", onError);
-  return watcher;
 };
 
 const defaultDebounceMs = 100;
@@ -39,6 +34,7 @@ const skippedDirectoryNames = new Set(["node_modules", ".git"]);
 
 type WatchedRegistration = {
   dependencyHandles: Map<string, DirectoryWatchHandle>;
+  dependencyMembership?: ReturnType<typeof watchDependencyMembership>;
   identity: string;
   matcher: ExtensionIgnoreMatcher;
   lastDependencyChange?: { path: string; identity: string };
@@ -82,11 +78,9 @@ const dependencyWatchDirectories = (dependencyRoot: string, onError: (error: unk
   const directories = new Set<string>();
   try {
     if (!lstatSync(dependencyRoot, { throwIfNoEntry: false })?.isDirectory()) return directories;
-    const entries = readdirSync(dependencyRoot, { withFileTypes: true });
+    const scopes = readDependencyScopePaths(dependencyRoot);
     directories.add(dependencyRoot);
-    for (const entry of entries) {
-      if (entry.name.startsWith("@") && entry.isDirectory()) directories.add(join(dependencyRoot, entry.name));
-    }
+    for (const scope of scopes) directories.add(scope);
   } catch (error) {
     // A package manager can remove or replace node_modules between the stat and read.
     const { code } = error as NodeJS.ErrnoException;
@@ -111,17 +105,16 @@ export const createExtensionSourceWatcher = async (
 ): Promise<ExtensionSourceWatcher> => {
   const debounceMs = input.debounceMs ?? defaultDebounceMs;
   const registrations = new Map<string, WatchedRegistration>();
-  const watchDirectDependencies = process.platform === "darwin" && !input.watch;
-  // FSEvents can omit scoped directory changes. A flat watch gets the immediate
-  // membership change without subscribing to files inside each package.
-  const watch = input.watch ?? (watchDirectDependencies ? watchFlatDependencyDirectory : watchDirectory);
+  const watch = input.watch ?? watchDirectory;
   const reportError = (error: unknown) => input.onError?.(error);
   const watchDependencies = input.watchDependencies ?? true;
+  const reconcileDependencies = watchDependencies && process.platform === "darwin" && !input.watch;
   let disposed = false;
 
   const disposeRegistration = (registration: WatchedRegistration) => {
     registration.queued = false;
     if (registration.timer) clearTimeout(registration.timer);
+    registration.dependencyMembership?.close();
     registration.tree.close();
     for (const handle of registration.dependencyHandles.values()) handle.close();
     registration.dependencyHandles.clear();
@@ -160,7 +153,7 @@ export const createExtensionSourceWatcher = async (
   };
 
   const watchDependencyRoot = (registration: WatchedRegistration) => {
-    if (registration.tree.recursive && !watchDirectDependencies) return;
+    if (registration.tree.recursive) return;
     const dependencyRoot = join(registration.sourcePath, "node_modules");
     const directories = dependencyWatchDirectories(dependencyRoot, reportError);
     if (!directories) return;
@@ -207,12 +200,14 @@ export const createExtensionSourceWatcher = async (
     // Windows also reports parent directory metadata when package contents change.
     if (!watchDependencies || eventType !== "rename" || segments.length > packageDepth) return;
     const root = join(registration.sourcePath, "node_modules");
-    if (segments.length < packageDepth || !registration.dependencyHandles.has(root)) watchDependencyRoot(registration);
-    if (watchDirectDependencies) {
+    if (registration.dependencyMembership) {
       const identity = dependencyEventIdentity(eventPath);
       const previous = registration.lastDependencyChange;
       if (previous?.path === eventPath && previous.identity === identity) return;
       registration.lastDependencyChange = { path: eventPath, identity };
+      registration.dependencyMembership.observe(segments.length === 3 ? join(root, segments[1]!) : root);
+    } else if (segments.length < packageDepth || !registration.dependencyHandles.has(root)) {
+      watchDependencyRoot(registration);
     }
     scheduleReload(registration, "source");
   };
@@ -257,7 +252,13 @@ export const createExtensionSourceWatcher = async (
     };
 
     registrations.set(row.source_path, registration);
-    if (watchDependencies) watchDependencyRoot(registration);
+    if (reconcileDependencies) {
+      registration.dependencyMembership = watchDependencyMembership(
+        join(registration.sourcePath, "node_modules"),
+        () => scheduleReload(registration, "source"),
+        reportError,
+      );
+    } else if (watchDependencies) watchDependencyRoot(registration);
   };
 
   const refreshRegistration = async (

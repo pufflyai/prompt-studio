@@ -365,7 +365,8 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await page.keyboard.press("t");
   const ticketForm = page.getByRole("dialog").last();
   await expect(ticketForm.getByText("New ticket", { exact: true })).toBeVisible();
-  await expect(ticketForm.getByRole("button", { name: "Attach files", exact: true })).toBeVisible();
+  // The dialog title appears before Planner finishes loading the form's properties.
+  await expect(ticketForm.getByRole("button", { name: "Attach files", exact: true })).toBeVisible({ timeout: 30_000 });
   await expect(ticketForm.getByText("Properties", { exact: true })).toBeVisible();
   await ticketForm.locator('[contenteditable="true"]').first().fill("# Shortcut ticket");
   await ticketForm.getByRole("button", { name: "Create ticket", exact: true }).click();
