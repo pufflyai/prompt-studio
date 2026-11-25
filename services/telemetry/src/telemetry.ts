@@ -1,22 +1,12 @@
+import { serviceFailures as failures, type ServiceFailure } from "./failures";
+
+export type { ServiceFailure } from "./failures";
+export { createMetricRegistry } from "./metric-registry";
+export { createServiceMonitoring, type ServiceMonitoring } from "./monitoring";
+
 const projectToken = "phc_CWtFFzVtjHocyACrXxJ3och8zJsJA3JjeqdViTWMN94H";
-const failures = {
-  request_exception: "$exception",
-  renewal_database_failed: "service_operation_failed",
-  renewal_signing_failed: "service_operation_failed",
-  renewal_service_failed: "service_operation_failed",
-  sync_initialize_failed: "service_operation_failed",
-  sync_snapshot_failed: "service_operation_failed",
-  sync_replay_failed: "service_operation_failed",
-  sync_submit_failed: "service_operation_failed",
-  sync_recover_failed: "service_operation_failed",
-  sync_subscription_failed: "service_operation_failed",
-  sync_document_failed: "service_operation_failed",
-  project_deletion_handoff_failed: "service_operation_failed",
-  sync_cleanup_failed: "service_operation_failed",
-  asset_operation_failed: "service_operation_failed",
-} as const;
-export type ServiceFailure = keyof typeof failures;
-export type ReportFailure = (failure: ServiceFailure) => void;
+/** `error` only reaches monitoring logs as its class and code; product telemetry ignores it. */
+export type ReportFailure = (failure: ServiceFailure, error?: unknown) => void;
 
 interface TelemetryOptions {
   /** Owned loopback receivers are for tests only. Production always uses the selected EU destination. */

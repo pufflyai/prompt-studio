@@ -16,6 +16,7 @@ const seconds = z
 const schema = z
   .strictObject({
     databaseUrl: z.string().min(1),
+    databasePoolMax: z.number().int().min(1).max(100).optional(),
     origin,
     audience: origin,
     secret: z.string().min(32),

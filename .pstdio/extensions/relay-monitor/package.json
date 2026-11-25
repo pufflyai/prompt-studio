@@ -1,0 +1,36 @@
+{
+  "name": "relay-monitor",
+  "publisher": "pstdio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "displayName": "Relay monitoring",
+  "description": "Local visual monitoring for the Prompt Studio relay.",
+  "main": "./extension.ts",
+  "icon": "Activity",
+  "engines": {
+    "pstdio": "^0.5.0"
+  },
+  "pstdio": {
+    "scope": "repo"
+  },
+  "scripts": {
+    "typecheck": "bun check"
+  },
+  "dependencies": {
+    "@pstdio/sdk": "0.48.0",
+    "@pstdio/ui": "0.48.0",
+    "@chakra-ui/react": "3.32.0",
+    "@emotion/react": "11.14.0",
+    "@tanstack/charts": "1.2.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "typescript": "6.0.2"
+  }
+}

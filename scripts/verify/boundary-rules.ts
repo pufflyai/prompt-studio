@@ -5,6 +5,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "@pstdio/canvas": [],
   canvas: ["@pstdio/sdk", "@pstdio/ui", "@pstdio/canvas"],
   "social-radar": ["@pstdio/sdk", "@pstdio/ui", "@pstdio/canvas"],
+  "relay-monitor": ["@pstdio/sdk", "@pstdio/ui"],
   "pstdio-service-telemetry": [],
   // The benchmark result writer is a dependency-free leaf. Packages declare it only as a development
   // dependency for their benchmark files.
@@ -12,6 +13,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-account-manager": ["pstdio-sync-contracts", "pstdio-service-telemetry"],
   "pstdio-psx": ["pstdio-extensions"],
   "pstdio-relay": ["pstdio-account-manager", "pstdio-sync", "pstdio-sync-contracts", "pstdio-service-telemetry"],
+  "pstdio-relay-monitoring": ["pstdio-relay", "pstdio-service-telemetry", "pstdio-sync", "pstdio-sync-contracts"],
   "pstdio-api-contracts": ["pstdio-sync-contracts"],
   "pstdio-diagnostics": ["pstdio-api-contracts"],
   "pstdio-sync-contracts": [],

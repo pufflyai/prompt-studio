@@ -22,7 +22,7 @@ import { withAccountTransaction } from "./transactions";
 
 export const createManagerAuthentication = (input: ManagerAuthConfig) => {
   const config = parseManagerAuthConfig(input);
-  const connection = connectManager(config.databaseUrl);
+  const connection = connectManager(config.databaseUrl, config.databasePoolMax);
   const auth = betterAuth({
     // Better Auth adds /api/auth only to a bare origin, so name the full path for addresses with a path.
     baseURL: `${config.origin}/api/auth`,
