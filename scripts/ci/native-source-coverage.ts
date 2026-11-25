@@ -5,6 +5,8 @@ import { priorityFromFile, testRunner } from "./test-discovery";
 export const nativeSourceGroups = ["process-security", "filesystem-storage-1", "filesystem-storage-2"] as const;
 export const windowsSourceContract = (file: string, root = resolve(import.meta.dir, "../..")) => {
   if (file.startsWith("packages/e2e/") || file.startsWith("scripts/")) return;
+  // The Relay container supervisor uses POSIX process signals and executable scripts.
+  if (file === "infra/relay/collector-process.p0.test.ts") return;
   if (!priorityFromFile(file) || priorityFromFile(file) === "P3" || !["bun", "api"].includes(testRunner(file))) return;
   if (/pglite-(lock|current-home)|rename-pglite-home|file-watch|watcher|symlink/.test(file))
     return { group: "filesystem-storage", reason: "Native filesystem watching, locking, rename and cleanup" };
