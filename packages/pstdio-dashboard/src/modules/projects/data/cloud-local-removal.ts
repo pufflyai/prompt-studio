@@ -46,7 +46,8 @@ const getCloudLocalRemoval = createRuntimeState((owner) => {
       const catalogKey = cloudCatalogKeyFor(accountOrigin, accountId, login?.deviceId);
       const syncKey = cloudCopySyncKey(scope);
       return operations.submit<RemoveLocalProjectResult>({
-        projectId: id,
+        // The local row can disappear before its receipt; the account owns this operation.
+        intent: id,
         domain: cloudCopyRemovalDomain,
         subjects: [cloudProjectCopySubject(id, scope)],
         title: `Delete local version of “${name}”`,
