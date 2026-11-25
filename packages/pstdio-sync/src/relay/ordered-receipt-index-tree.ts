@@ -95,9 +95,25 @@ export const createReceiptTreeWriter = (nodes: {
       },
     ];
     while (tasks.length) {
-      const task = tasks.pop()!;
-      if (task.type === "visit") await visit(tasks, task);
-      else await finish(task);
+      const next = tasks.at(-1)!;
+      if (next.type === "finish") {
+        tasks.pop();
+        await finish(next);
+        continue;
+      }
+      // Sibling pages are independent. Their finish task stays below every child,
+      // so parents are published only after all admitted child writes complete.
+      const siblings: Visit[] = [];
+      while (siblings.length < 4) {
+        const sibling = tasks.at(-1);
+        if (sibling?.type !== "visit") break;
+        tasks.pop();
+        siblings.push(sibling);
+      }
+      const results = await Promise.allSettled(siblings.map((task) => visit(tasks, task)));
+      const failures = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+      if (failures.length === 1) throw failures[0];
+      if (failures.length) throw new AggregateError(failures, "Receipt page writes failed");
     }
     return result!;
   };
