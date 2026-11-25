@@ -2,6 +2,93 @@ import { expect, test } from "bun:test";
 import { createDocumentRelayConnection } from "./document-connection";
 import { documentConnectionFixture } from "./document-connection.test-fixture";
 
+test("selective retry keeps a completed admitted pass instead of replaying its stale failure", async () => {
+  const fixture = documentConnectionFixture();
+  const ready = Promise.withResolvers<void>();
+  const held = Promise.withResolvers<void>();
+  let restarted = false;
+  const connection = createDocumentRelayConnection({
+    ...fixture,
+    projectId: "project",
+    signal: fixture.controller.signal,
+    synchronize: async () => {
+      ready.resolve();
+    },
+  });
+  try {
+    await ready.promise;
+    const deadline = Date.now() + 2000;
+    while (connection.status().busy && Date.now() < deadline) await Bun.sleep(5);
+    expect(connection.status().busy).toBe(false);
+    const pending = connection.admit(() => held.promise);
+    const retry = connection.prepareRetry({
+      beforeRetry: () => {
+        restarted = true;
+      },
+    });
+    held.resolve();
+    await pending;
+    const completed = Date.now() + 2000;
+    while (connection.status().busy && Date.now() < completed) await Bun.sleep(5);
+    expect(connection.status().busy).toBe(false);
+    await retry();
+    expect(restarted).toBe(false);
+  } finally {
+    held.resolve();
+    fixture.controller.abort();
+    await connection.done;
+    await fixture.close();
+  }
+});
+
+test("selective retry nudges a disconnected queued owner and retains its completion barrier", async () => {
+  let accesses = 0;
+  const renewal = Promise.withResolvers<{ token: string; expiresAt: string }>();
+  const token = () => ({ token: "fixture", expiresAt: new Date(Date.now() + 60_000).toISOString() });
+  const fixture = documentConnectionFixture({
+    access: () => (++accesses === 1 ? Promise.resolve(token()) : renewal.promise),
+  });
+  const ready = Promise.withResolvers<void>();
+  let admitted = false;
+  const connection = createDocumentRelayConnection({
+    ...fixture,
+    projectId: "project",
+    signal: fixture.controller.signal,
+    synchronize: async () => {
+      ready.resolve();
+    },
+  });
+  try {
+    await ready.promise;
+    fixture.live.reconnect();
+    const deadline = Date.now() + 2000;
+    while (accesses < 2 && Date.now() < deadline) await Bun.sleep(5);
+    expect(accesses).toBe(2);
+    expect(connection.status().connected).toBe(false);
+    await connection.restart();
+    const completion = connection.prepareRetry({
+      beforeRetry: () => {
+        admitted = true;
+      },
+    })();
+    expect(admitted).toBe(true);
+    let complete = false;
+    const finished = completion.then(() => {
+      complete = true;
+    });
+    await Promise.resolve();
+    expect(complete).toBe(false);
+    renewal.resolve(token());
+    await finished;
+    expect(connection.status().connected).toBe(true);
+  } finally {
+    renewal.resolve(token());
+    fixture.controller.abort();
+    await connection.done;
+    await fixture.close();
+  }
+});
+
 const documentId = "native_document_0123456789";
 const directoryId = "owner_directory_0123456789";
 

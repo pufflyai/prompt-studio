@@ -1,4 +1,5 @@
 import type { LiveServerMessage } from "pstdio-sync-contracts";
+import { trackDocumentRetry } from "./document-retry";
 import { createLiveConnection, type LiveConnection, type LiveTopic, type SubscribeDocument } from "./live";
 
 type Change = Extract<LiveServerMessage, { type: "changed" | "discovered" }>;
@@ -72,30 +73,6 @@ const retainDocumentTopics = (live: LiveConnection, signal: AbortSignal) => {
   };
 };
 
-const trackDocumentRetry = (live: LiveConnection, restart: () => Promise<void>, stopped: () => boolean) => {
-  let pending: ReturnType<typeof Promise.withResolvers<void>> | undefined;
-  const complete = (completion: typeof pending) => {
-    if (!completion || pending !== completion) return;
-    pending = undefined;
-    completion.resolve();
-  };
-  return {
-    current: () => pending,
-    complete,
-    cancel: () => complete(pending),
-    start() {
-      if (pending) return pending.promise;
-      if (stopped() || live.signal.aborted) return Promise.resolve();
-      // A disconnected owner cannot run its new pass until the project socket is ready.
-      const completion = Promise.withResolvers<void>();
-      pending = completion;
-      live.retry();
-      void restart();
-      return completion.promise;
-    },
-  };
-};
-
 export const createDocumentRelayConnection = (input: DocumentRelayConnectionInput) => {
   const live = documentLiveConnection(input);
   const topics = retainDocumentTopics(live, input.signal);
@@ -131,6 +108,11 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
     );
     manualRetry.complete(completion);
   };
+  const completeTarget = (pending: Promise<unknown>, current: AbortController) => {
+    targeted.delete(pending);
+    if (current === attempt && !current.signal.aborted) manualRetry.advance();
+    input.onStatusChange?.();
+  };
   const target = (work: (signal: AbortSignal) => Promise<boolean>) => {
     if (stopped || restarting) return;
     if (!live.status().connected || attempt.signal.aborted) {
@@ -138,6 +120,7 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
       return;
     }
     const current = attempt;
+    manualRetry.advance();
     const pending = work(attemptSignal);
     if (targeted.has(pending)) return;
     targeted.add(pending);
@@ -148,23 +131,16 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
         },
         (error) => failed(current, error),
       )
-      .finally(() => {
-        targeted.delete(pending);
-        input.onStatusChange?.();
-      });
+      .finally(() => completeTarget(pending, current));
     input.onStatusChange?.();
   };
   const admit = <T>(work: () => Promise<T>) => {
     if (stopped || restarting || attempt.signal.aborted) return Promise.reject(new Error("Cloud source is restarting"));
     const current = attempt;
+    manualRetry.advance();
     const pending = work();
     targeted.add(pending);
-    void pending
-      .catch((error) => failed(current, error))
-      .finally(() => {
-        targeted.delete(pending);
-        input.onStatusChange?.();
-      });
+    void pending.catch((error) => failed(current, error)).finally(() => completeTarget(pending, current));
     input.onStatusChange?.();
     return pending;
   };
@@ -183,6 +159,7 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
         if (current.signal.aborted) break;
         failures = 0;
         errorMessage = undefined;
+        manualRetry.advance();
         manualRetry.complete(completion);
       }
     } catch (error) {
@@ -195,11 +172,14 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
   };
   const wake = () => {
     dirty = true;
-    if (!running && !restarting && !stopped && live.status().connected && !attempt.signal.aborted)
+    if (!running && !restarting && !stopped && live.status().connected && !attempt.signal.aborted) {
+      manualRetry.advance();
       running = Promise.resolve().then(drain);
+    }
   };
   const restart = () => {
     if (restarting) return restarting;
+    manualRetry.advance();
     clearTimeout(retry);
     attempt.abort();
     restarting = Promise.allSettled([running, ...targeted]).then(() => {
@@ -214,7 +194,8 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
     input.onStatusChange?.();
     return restarting;
   };
-  const manualRetry = trackDocumentRetry(live, restart, () => stopped);
+  const currentWork = () => ({ attempt, dirty, running, restarting, targeted });
+  const manualRetry = trackDocumentRetry(live, restart, () => stopped, currentWork);
   const ready = () => {
     topics.replay(renewing);
     if (restarting) return;
@@ -293,6 +274,7 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
     wakeDocument: (name: string) =>
       input.synchronizeDocument ? target((signal) => input.synchronizeDocument!(name, signal)) : wake(),
     retry: manualRetry.start,
+    prepareRetry: manualRetry.prepare,
     done: done.promise.finally(() => input.signal.removeEventListener("abort", close)),
     status: () => ({
       connected: live.status().connected,

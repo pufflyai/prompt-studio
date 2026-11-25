@@ -25,7 +25,7 @@ for (const [stored, failedState] of [
 ] as const)
   test(`Download retries a failed source without restarting healthy work (stored: ${stored}, state: ${failedState})`, async () => {
     const root = await mkdtemp(join(tmpdir(), "native-download-retry-"));
-    const host = await createAccountHostFixture(root);
+    const host = await createAccountHostFixture(root, ":memory:");
     const id = crypto.randomUUID();
     const controller = new AbortController();
     const firstResponse = Promise.withResolvers<Response>();
@@ -117,6 +117,14 @@ for (const [stored, failedState] of [
           core: {
             get: () => ({
               status: source!.status,
+              prepareRetry() {
+                const retry = source!.prepareRetry();
+                return () => {
+                  manualRetries++;
+                  allowLive = true;
+                  return retry();
+                };
+              },
               restart: source!.restart,
               retry() {
                 manualRetries++;

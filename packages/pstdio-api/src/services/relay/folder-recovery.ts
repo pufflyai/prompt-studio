@@ -199,6 +199,10 @@ export const startFolderRecovery = (input: {
   return {
     wake: connection.wake,
     retry: connection.retry,
+    prepareRetry: () =>
+      connection.prepareRetry({
+        current: () => Boolean(connection.status().error || publishFailed || local.needsAttention()),
+      }),
     /** A person's "Back up now": a full scan of a folder with a `.pstignore`, then publication when the relay is reachable. */
     capture: () => local.request("explicit"),
     sources: operations.sources,
@@ -208,7 +212,13 @@ export const startFolderRecovery = (input: {
     cancel: operations.cancel,
     /** Capture, download and restore progress for the project's derived sync status. */
     async folder(): Promise<ProjectFolderRecoveryStatus> {
-      const own = await local.status();
+      const own = await local.status().catch((error: unknown) => ({
+        folder: null,
+        pending: false,
+        capturing: false,
+        needsAttention: true,
+        error,
+      }));
       let state: ProjectFolderRecoveryStatus["capture"]["state"] = "idle";
       if (own.needsAttention || publishFailed) state = "needs-attention";
       else if (own.capturing) state = "running";

@@ -3,6 +3,7 @@ import { AccountRequestError } from "../account/native-account";
 interface Source {
   retry(): void | Promise<void>;
   restart(): Promise<void>;
+  prepareRetry(): () => void | Promise<void>;
   status(): { error?: string; needsAttention?: boolean } | Promise<{ error?: string; needsAttention?: boolean }>;
 }
 export type ProjectSyncRetry = (
@@ -11,11 +12,31 @@ export type ProjectSyncRetry = (
   requireCurrent?: () => Promise<void>,
 ) => Promise<{ settled: Promise<void> } | void>;
 
+const retryFailedSources = async (
+  owners: Pick<Source, "status" | "prepareRetry">[],
+  requireCurrent?: () => Promise<void>,
+) => {
+  const attempts = await Promise.allSettled(
+    owners.map(async (owner) => {
+      const retry = owner.prepareRetry();
+      return { retry, status: await owner.status() };
+    }),
+  );
+  await requireCurrent?.();
+  const retries: (void | Promise<void>)[] = [];
+  for (const attempt of attempts) {
+    if (attempt.status !== "fulfilled") continue;
+    const { status, retry } = attempt.value;
+    if (status.error || status.needsAttention) retries.push(retry());
+  }
+  return { settled: Promise.allSettled(retries).then(() => {}) };
+};
+
 export const createProjectSyncRetry =
   (input: {
     refresh(): Promise<void>;
     owners: Record<string, { get(id: string): Source | undefined }>;
-    folders: { get(id: string): Pick<Source, "retry" | "status"> | undefined };
+    folders: { get(id: string): Pick<Source, "retry" | "status" | "prepareRetry"> | undefined };
     extensions: Map<string, Source & { owner: { workbenchId: string; extensionId: string } }>;
   }) =>
   async (projectId: string, sourceId?: string | { failedOnly: true }, requireCurrent?: () => Promise<void>) => {
@@ -34,13 +55,7 @@ export const createProjectSyncRetry =
         input.folders.get(projectId),
         ...[...input.extensions.values()].filter((owner) => owner.owner.workbenchId === projectId),
       ].filter((owner) => owner !== undefined);
-      const statuses = await Promise.all(owners.map((owner) => owner.status()));
-      await requireCurrent?.();
-      // Download repairs current failures without replacing another owner's healthy pass.
-      const retries = owners
-        .filter((_owner, index) => statuses[index]?.error || statuses[index]?.needsAttention)
-        .map((owner) => owner.retry());
-      return { settled: Promise.allSettled(retries).then(() => {}) };
+      return retryFailedSources(owners, requireCurrent);
     }
     const retries = [
       ...Object.values(input.owners).map((owners) => owners.get(projectId)?.retry()),

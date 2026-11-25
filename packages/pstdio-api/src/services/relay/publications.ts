@@ -47,6 +47,10 @@ export const startPublishedExtensions = (input: {
   // Retrying on every reconnect would repeat package checks, installs and webview builds each time.
   let failed: { key: string; delay: number; waiting: boolean } | undefined;
   let retry: ReturnType<typeof setTimeout> | undefined;
+  const admitRetry = () => {
+    if (failed) failed.waiting = false;
+    clearTimeout(retry);
+  };
   const connection = createDocumentRelayConnection({
     live: input.live,
     origin: config.relayOrigin,
@@ -97,15 +101,14 @@ export const startPublishedExtensions = (input: {
   return {
     owner,
     restart() {
-      if (failed) failed.waiting = false;
-      clearTimeout(retry);
+      admitRetry();
       return connection.restart();
     },
     retry() {
-      if (failed) failed.waiting = false;
-      clearTimeout(retry);
+      admitRetry();
       return connection.retry();
     },
+    prepareRetry: () => connection.prepareRetry({ beforeRetry: admitRetry }),
     wake: connection.wake,
     done: connection.done.finally(() => {
       clearTimeout(retry);

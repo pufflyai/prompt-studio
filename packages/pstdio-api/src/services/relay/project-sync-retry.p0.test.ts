@@ -8,6 +8,9 @@ test("an empty selected source is rejected without retrying the project; omissio
     retry: () => {
       calls.push(`${name}:retry`);
     },
+    prepareRetry: () => () => {
+      calls.push(`${name}:retry`);
+    },
     restart: async () => {
       calls.push(`${name}:restart`);
     },
@@ -41,6 +44,7 @@ test("project retry acknowledges scheduling and exposes completion of the owned 
       core: {
         get: () => ({
           status: async () => ({}),
+          prepareRetry: () => () => {},
           retry() {
             attempts++;
             return pass.promise;
