@@ -29,8 +29,10 @@ export default {
       stop: async () => { await ctx.process.run(probe); },
     };
   },
-  settled: async (ctx, input) => {
+  settled: async (ctx, input, stream) => {
     await start(ctx, input);
+    await ctx.process.spawn({ command: stream.command }).started;
+    while (!(await Bun.file(stream.marker).exists())) await Bun.sleep(10);
     return { available: true };
   },
   probe: async (ctx, input, method) => {
@@ -65,7 +67,16 @@ const invoke = (
     context,
     surface: {
       kind: "object",
-      members: { process: { kind: "object", members: { run: { kind: "async" }, runOrThrow: { kind: "async" } } } },
+      members: {
+        process: {
+          kind: "object",
+          members: {
+            run: { kind: "async" },
+            runOrThrow: { kind: "async" },
+            spawn: { kind: "handle", members: { id: "id", started: "promise" } },
+          },
+        },
+      },
     },
     args,
   });
@@ -108,6 +119,7 @@ test("harness worker calls own their host processes across settlement and watchd
   await writeFile(entryPath, fixture);
   const liveInput = childInput(root, release, "live");
   const settledInput = childInput(root, release, "settled");
+  const streamInput = childInput(root, release, "stream");
   const stuckInput = childInput(root, release, "stuck");
   const probe = join(root, "probe");
   const readPid = (marker: string) =>
@@ -132,7 +144,8 @@ test("harness worker calls own their host processes across settlement and watchd
               command: [process.execPath, "-e", `await Bun.write(${JSON.stringify(probe)}, "alive");`],
             },
           ])) as HarnessSession,
-        detect: async (context) => (await invoke(active, "settled", context, [settledInput])) as HarnessDetectionResult,
+        detect: async (context) =>
+          (await invoke(active, "settled", context, [settledInput, streamInput])) as HarnessDetectionResult,
         capabilities: async (context) => {
           await invoke(active, "stuck", context, [stuckInput]);
           return [];
@@ -154,6 +167,8 @@ test("harness worker calls own their host processes across settlement and watchd
     expect(await harness.detect(options)).toEqual({ available: true });
     const settledPid = await readPid(settledInput.marker);
     await waitFor("the process from the settled call to exit", () => !isProcessAlive(settledPid));
+    const streamPid = await readPid(streamInput.marker);
+    await waitFor("the streaming process from the settled call to exit", () => !isProcessAlive(streamPid));
 
     expect(isProcessAlive(livePid)).toBe(true);
     await live.stop();
@@ -172,7 +187,7 @@ test("harness worker calls own their host processes across settlement and watchd
     try {
       await worker?.stop();
       await service?.dispose();
-      for (const { marker } of [liveInput, settledInput, stuckInput]) {
+      for (const { marker } of [liveInput, settledInput, streamInput, stuckInput]) {
         const pid = Number(await readFile(marker, "utf8").catch(() => ""));
         if (pid) await waitFor("fixture child cleanup", () => !isProcessAlive(pid));
       }

@@ -44,7 +44,10 @@ export interface ProcessHandle {
   id: string;
   /** Settles once the child runs; rejects with a coded error when it cannot start. */
   started: Promise<void>;
-  /** Reports the direct child’s exit status, or null code and signal when startup fails. */
+  /**
+   * Reports the direct child's exit status even while output remains unread.
+   * Startup failure reports null code and signal.
+   */
   exited: Promise<ProcessExit>;
   /**
    * Confirms that the child and its descendants are gone and that output capture has finished.

@@ -51,13 +51,21 @@ test("a blocked shutdown records its entered phase when ordinary request logs ar
   }
 });
 
-test("an early shutdown failure still closes extension workers before the database", async () => {
+test.each([
+  ["cleanup succeeds", false, false],
+  ["process and worker cleanup fail", true, false],
+  ["process, worker, and database cleanup fail", true, true],
+] as const)("an early shutdown failure still closes extension processes when %s", async (_, stopFails, dbFails) => {
+  const runtimeFailure = new Error("extension runtime did not stop");
+  const processFailure = new Error("process cleanup failed");
+  const workerFailure = new Error("worker cleanup failed");
+  const databaseFailure = new Error("database cleanup failed");
   const order: string[] = [];
   const done = async () => {};
   const close = createAppCloser({
     closeBackendWorkers: async () => {
       order.push("workers");
-      throw new Error("worker cleanup failed");
+      if (stopFails) throw workerFailure;
     },
     startupAbort: new AbortController(),
     startupDone: Promise.resolve(),
@@ -67,14 +75,14 @@ test("an early shutdown failure still closes extension workers before the databa
     unsubscribeExtensionEvents: () => {},
     extensionRuntime: {
       dispose: async () => {
-        throw new Error("extension runtime did not stop");
+        throw runtimeFailure;
       },
     },
     extensionScheduler: { dispose: done },
     extensionProcessOwners: {
       dispose: async () => {
         order.push("processes");
-        throw new Error("process cleanup failed");
+        if (stopFails) throw processFailure;
       },
     },
     artifactMountWatch: { dispose: done },
@@ -82,6 +90,7 @@ test("an early shutdown failure still closes extension workers before the databa
     terminalSupervisor: { dispose: done },
     closeDb: async () => {
       order.push("database");
+      if (dbFails) throw databaseFailure;
     },
     closeSessionHooks: done,
     stopQueueReadiness: done,
@@ -92,6 +101,15 @@ test("an early shutdown failure still closes extension workers before the databa
     textEditing: { dispose: done },
   });
   const failure = await close().catch((error) => error);
-  expect(String(failure)).toContain("extension runtime did not stop");
   expect(order).toEqual(["processes", "workers", "database"]);
+  if (stopFails) {
+    expect(failure).toBeInstanceOf(AggregateError);
+    expect(failure.cause).toBe(runtimeFailure);
+    expect(failure.errors).toEqual([
+      runtimeFailure,
+      processFailure,
+      workerFailure,
+      ...(dbFails ? [databaseFailure] : []),
+    ]);
+  } else expect(failure).toBe(runtimeFailure);
 });

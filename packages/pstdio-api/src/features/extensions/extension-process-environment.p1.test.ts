@@ -53,6 +53,17 @@ const reporter = (marker: string, extra = "") => [
   `require("node:fs").writeFileSync(${JSON.stringify(marker)}, process.env.EXTENSION_AGENT_TOKEN ?? "absent"); ${extra}`,
 ];
 
+const expectPendingTreeExit = async (
+  execution: ReturnType<ReturnType<typeof createProcessApi>["run" | "spawnDetached" | "spawn"]>,
+) => {
+  if (!("exited" in execution)) return;
+  expect(await Array.fromAsync(execution.events())).toEqual([{ type: "exit", exit: { code: 0, signal: null } }]);
+  expect(await Promise.race([execution.treeExited!.then(() => "exited"), Bun.sleep(20).then(() => "pending")])).toBe(
+    "pending",
+  );
+  return execution;
+};
+
 describe("process environment preparation", () => {
   test.each([
     "run",
@@ -275,12 +286,14 @@ describe("envFromHost", () => {
       else expect(result.pid).toBe(launcherPid);
       await waitFor(() => !alive(launcherPid), "the launcher to exit");
       expect(alive(backgroundPid)).toBe(true);
+      const stream = await expectPendingTreeExit(execution);
 
       if (stop === "revoke") {
         await permissions.revoke("project-1", "acme.agent");
         revoked = true;
       } else await scope.close();
 
+      await stream?.treeExited;
       expect(alive(backgroundPid)).toBe(false);
       expect((await permissions.read("project-1", "acme.agent")).granted).toEqual([]);
     } finally {

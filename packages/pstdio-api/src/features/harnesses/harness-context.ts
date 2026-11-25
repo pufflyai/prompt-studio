@@ -2,7 +2,12 @@ import type { ExtensionConnectionsApi } from "pstdio-api-contracts/extension-ker
 import type { HarnessContextFactory } from "pstdio-api-runtime-host";
 import { createInvocationScope, markHostContext, processError } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
-import { createProcessApi, findFreePort, hostStartedGrants } from "../extensions/extension-process-api";
+import {
+  createProcessApi,
+  findFreePort,
+  hostStartedGrants,
+  type ProcessApiOptions,
+} from "../extensions/extension-process-api";
 import type { ExtensionTargets } from "../extensions/extension-targets";
 import type {
   ProcessEnvironmentPermissions,
@@ -40,37 +45,47 @@ export const createHarnessContextFactory = (input: {
   };
   // Marked so a process-mode harness reaches this context through its worker's allowlist.
   return (record, options, owner) => {
-    // run and runOrThrow children end with the harness instance, like its spawned ones, so a
-    // retirement never waits on one, such as a sign-in's login command.
-    const runs = createInvocationScope({ logger: harnessLogger(record.extensionId) });
+    const logger = harnessLogger(record.extensionId);
+    // In-process run commands still belong to the instance, including sign-in work.
+    const runs = createInvocationScope({ logger });
     owner.adopt({ exited: new Promise(() => {}), kill: () => runs.close() });
-    return markHostContext({
-      projectId: options?.projectId,
+    const processOptions = {
       extensionId: record.extensionId,
-      name: record.name,
-      process: createProcessApi({
-        extensionId: record.extensionId,
-        ...hostStartedGrants(input.processEnvironment, options?.projectId, input.sourceForRecord?.(record)),
-        scope: runs,
-        callOwner: owner,
-        extensionOwner: () => owner,
-        // Detection and model calls pass no workspace and run on this device.
-        resolveTarget: async (workspaceId, signal) => {
-          if (!workspaceId) return undefined;
-          const { projectId, targets } = projectOf(options?.projectId, "process_target_unavailable");
-          return targets.process({ projectId, workspaceId }, signal);
-        },
-      }),
-      targetFiles: {
-        readText: async ({ workspaceId, path }) => {
-          const { projectId, targets } = projectOf(options?.projectId, "target_file_unavailable");
-          return targets.readText({ projectId, workspaceId, path });
-        },
+      ...hostStartedGrants(input.processEnvironment, options?.projectId, input.sourceForRecord?.(record)),
+      callOwner: owner,
+      extensionOwner: () => owner,
+      // Detection and model calls pass no workspace and run on this device.
+      resolveTarget: async (workspaceId, signal) => {
+        if (!workspaceId) return undefined;
+        const { projectId, targets } = projectOf(options?.projectId, "process_target_unavailable");
+        return targets.process({ projectId, workspaceId }, signal);
       },
-      net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
-      connections: input.connections(options?.projectId, record.extensionId),
-      logger: harnessLogger(record.extensionId),
-      state: createHarnessStateApi(record.extensionId),
-    });
+    } satisfies ProcessApiOptions;
+    const processApi = createProcessApi({ ...processOptions, scope: runs });
+    return markHostContext(
+      {
+        projectId: options?.projectId,
+        extensionId: record.extensionId,
+        name: record.name,
+        process: processApi,
+        targetFiles: {
+          readText: async ({ workspaceId, path }) => {
+            const { projectId, targets } = projectOf(options?.projectId, "target_file_unavailable");
+            return targets.readText({ projectId, workspaceId, path });
+          },
+        },
+        net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
+        connections: input.connections(options?.projectId, record.extensionId),
+        logger,
+        state: createHarnessStateApi(record.extensionId),
+      },
+      {
+        logger,
+        withScope: (scope) => ({
+          // Streaming children follow the harness call or instance, which can outlive the worker invocation.
+          process: { ...createProcessApi({ ...processOptions, scope }), spawn: processApi.spawn },
+        }),
+      },
+    );
   };
 };

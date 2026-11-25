@@ -181,6 +181,11 @@ export const createAppCloser = (input: {
       const nativeDocumentsStopped = traceShutdownPhase("text_editing", () => input.textEditing.dispose()).finally(() =>
         traceShutdownPhase("native_documents", () => input.nativeDocuments.dispose()),
       );
+      // Some phases are also joined in the finalizer, so record each failure once.
+      const failures = new Set<unknown>();
+      const recordFailure = (error: unknown) => {
+        failures.add(error);
+      };
       try {
         input.startupAbort.abort();
         const preparationStopped = input.extensionRuntime.stopPreparation?.() ?? Promise.resolve();
@@ -209,24 +214,23 @@ export const createAppCloser = (input: {
         await traceShutdownPhase("terminals", () => input.terminalSupervisor.dispose());
         await harnessesStopped;
         await preparationStopped;
+      } catch (error) {
+        recordFailure(error);
       } finally {
         // A part that fails to stop must not leave PGlite open (lessons 0002 and 0014).
-        try {
-          await Promise.all([hooksStopped, installationsStopped]);
-        } finally {
-          try {
-            await nativeDocumentsStopped;
-          } finally {
-            try {
-              await deadRowCleanupStopped;
-            } finally {
-              await stopExtensionProcesses().catch(() => {});
-              await stopBackendWorkers().catch(() => {});
-              await traceShutdownPhase("database", () => input.closeDb());
-            }
-          }
+        for (const result of await Promise.allSettled([hooksStopped, installationsStopped])) {
+          if (result.status === "rejected") recordFailure(result.reason);
         }
+        await nativeDocumentsStopped.catch(recordFailure);
+        await deadRowCleanupStopped.catch(recordFailure);
+        await stopExtensionProcesses().catch(recordFailure);
+        await stopBackendWorkers().catch(recordFailure);
+        await traceShutdownPhase("database", () => input.closeDb()).catch(recordFailure);
       }
+      const [firstFailure] = failures;
+      if (failures.size > 1)
+        throw new AggregateError(failures, `Shutdown failed: ${String(firstFailure)}`, { cause: firstFailure });
+      if (failures.size === 1) throw firstFailure;
     })();
     await closePromise;
   };

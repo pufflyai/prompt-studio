@@ -1,28 +1,35 @@
 import type { HarnessContext, MaybePromise, ProcessSpawnInput } from "pstdio-api-contracts/extension-kernel";
-import { createProcessOwner, failedProcessHandle, type ProcessOwner, processError } from "pstdio-extensions";
+import {
+  createProcessOwner,
+  failedProcessHandle,
+  mapHostContext,
+  type ProcessOwner,
+  processError,
+} from "pstdio-extensions";
 import type { HarnessCallOptions } from "./harness-registry";
 
 type CallInput = { workspace?: { workspaceId: string }; signal?: AbortSignal };
 
 // A context for one provider call. Its `call` children also stay owned by the harness instance,
 // so disposal stops any that outlive a call the host never settled.
-const bindCall = (context: HarnessContext, owner: ProcessOwner, workspaceId?: string): HarnessContext => ({
-  ...context,
-  process: {
-    ...context.process,
-    spawn: (input: ProcessSpawnInput) => {
-      const target = workspaceId && input.workspaceId === undefined ? { ...input, workspaceId } : input;
-      if ((input.lifetime ?? "call") !== "call") return context.process.spawn(target);
-      if (owner.closed)
-        return failedProcessHandle(
-          processError("process_owner_closed", "The harness call that would own this process has ended."),
-        );
-      const handle = context.process.spawn(target);
-      owner.adopt(handle);
-      return handle;
+const bindCall = (context: HarnessContext, owner: ProcessOwner, workspaceId?: string) =>
+  mapHostContext(context, (bound) => ({
+    ...bound,
+    process: {
+      ...bound.process,
+      spawn: (input: ProcessSpawnInput) => {
+        const target = workspaceId && input.workspaceId === undefined ? { ...input, workspaceId } : input;
+        if ((input.lifetime ?? "call") !== "call") return bound.process.spawn(target);
+        if (owner.closed)
+          return failedProcessHandle(
+            processError("process_owner_closed", "The harness call that would own this process has ended."),
+          );
+        const handle = bound.process.spawn(target);
+        owner.adopt(handle);
+        return handle;
+      },
     },
-  },
-});
+  }));
 
 /**
  * Gives each provider call its own owner for `call` children. Most calls end when their promise
