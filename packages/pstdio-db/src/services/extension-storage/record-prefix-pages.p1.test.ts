@@ -5,6 +5,7 @@ import { requestedRecordIndex } from "pstdio-sync/records";
 import type { StorageRecordIndex, StorageRecordQuery } from "pstdio-sync-contracts";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { readQueryOwner } from "./record-query-owner";
 import { predicateSql, recordPageSql, recordScopeSql } from "./record-query-sql";
 
 const index: StorageRecordIndex = {
@@ -45,7 +46,7 @@ test("short string ordered pages read a bounded candidate set even when the lead
         },
       })),
     });
-    await f.db.execute(sql`ANALYZE storage_current_records`);
+    await f.db.execute(sql`ANALYZE records`);
     const computed: NonNullable<StorageRecordQuery["computed"]> = {
       priority: {
         type: "string",
@@ -80,11 +81,11 @@ test("short string ordered pages read a bounded candidate set even when the lead
       (await records.query({ index: index.name, computed, orderBy, where, limit: 10 })).records.map((r) => r.recordId),
     ).toEqual(Array.from({ length: 10 }, (_, n) => `row-${n}`));
     const result = await f.db.execute<{ "QUERY PLAN": { Plan: Record<string, unknown> }[] }>(
-      sql`EXPLAIN (ANALYZE, FORMAT JSON) ${recordPageSql(prepared, ["position"], sql`${recordScopeSql(owner, prepared)} AND ${predicateSql(prepared, where)}`, 11, 0, undefined, owner)}`,
+      sql`EXPLAIN (ANALYZE, FORMAT JSON) ${recordPageSql(prepared, ["position"], sql`${recordScopeSql(await readQueryOwner(f.db, owner), prepared)} AND ${predicateSql(prepared, where)}`, 11, 0, undefined, await readQueryOwner(f.db, owner))}`,
     );
     const scans: number[] = [];
     const visit = (node: Record<string, unknown>) => {
-      if (String(node["Node Type"]).includes("Scan") && node["Relation Name"] === "storage_current_records")
+      if (String(node["Node Type"]).includes("Scan") && node["Relation Name"] === "records")
         scans.push(
           (Number(node["Actual Rows"]) + Number(node["Rows Removed by Filter"] ?? 0)) * Number(node["Actual Loops"]),
         );

@@ -2,6 +2,7 @@ import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { session_queue_entries } from "../../db/schemas.pg";
 import { combinePending } from "./combine-pending";
+import { setDispatchSenderBoundary } from "./dispatch-senders";
 import { movePending } from "./move-pending";
 import { createSteeringDeliveryOperations } from "./steering-deliveries";
 
@@ -11,13 +12,26 @@ type CreateInput = Pick<QueueEntryRecord, "session_id" | "prompt" | "request_kin
   Partial<
     Pick<
       QueueEntryRecord,
-      "model" | "attachments_json" | "question_response_json" | "params_json" | "created_at" | "dispatch_started_at"
+      | "model"
+      | "attachments_json"
+      | "question_response_json"
+      | "params_json"
+      | "created_at"
+      | "dispatch_started_at"
+      | "sender_json"
     >
   >;
 type UpdateInput = Partial<
   Pick<
     QueueEntryRecord,
-    "prompt" | "request_kind" | "model" | "attachments_json" | "question_response_json" | "params_json" | "created_at"
+    | "prompt"
+    | "request_kind"
+    | "model"
+    | "attachments_json"
+    | "question_response_json"
+    | "params_json"
+    | "created_at"
+    | "sender_json"
   >
 >;
 
@@ -50,6 +64,7 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
         model: input.model ?? null,
         revision: crypto.randomUUID(),
         prompt: input.prompt,
+        sender_json: input.sender_json ?? null,
         request_kind: input.request_kind,
         question_response_json: input.question_response_json ?? null,
         attachments_json: input.attachments_json ?? null,
@@ -216,6 +231,8 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
   };
 
   return {
+    setDispatchSenderBoundary: (position: number, afterTurn: number, runStartedAt: string) =>
+      setDispatchSenderBoundary(db, position, afterTurn, runStartedAt),
     hasEntries,
     get,
     movePending: (input: Parameters<typeof movePending>[1]) => movePending(db, input),

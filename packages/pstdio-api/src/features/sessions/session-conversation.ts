@@ -1,5 +1,6 @@
 import type { EventStore, JsonPatch, SessionMessage } from "pstdio-api-contracts";
 import { applyConversationPatch, normalizeConversationPatch, normalizeMessageResults } from "pstdio-api-contracts";
+import { createPromptSenders } from "./session-prompt-senders";
 
 // The bounded delivery log is deliberately not used to reconstruct conversation state.
 export const createSessionConversation = (
@@ -8,14 +9,17 @@ export const createSessionConversation = (
   changed?: (patch: JsonPatch) => void,
 ) => {
   let messages = initialMessages.map(normalizeMessageResults);
+  const senders = createPromptSenders();
   let closed = false;
   return {
+    attributePrompt: (prompt: string, sender: SessionMessage["sender"], deliveryId?: string, afterTurn?: number) =>
+      senders.attributePrompt(messages, prompt, sender, deliveryId, afterTurn),
     get closed() {
       return closed;
     },
     push(patch: JsonPatch) {
       if (closed) throw new Error("Conversation is closed");
-      patch = normalizeConversationPatch(patch);
+      patch = senders.apply(messages, normalizeConversationPatch(patch));
       messages = applyConversationPatch(messages, patch);
       events.push(patch);
       changed?.(patch);

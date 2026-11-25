@@ -50,6 +50,7 @@ export const movePending = (db: DbClient, input: MovePendingInput) =>
         .update(session_queue_entries)
         .set({
           prompt: entry.prompt,
+          sender_json: entry.sender_json,
           request_kind: entry.request_kind,
           model: entry.model,
           params_json: entry.params_json,

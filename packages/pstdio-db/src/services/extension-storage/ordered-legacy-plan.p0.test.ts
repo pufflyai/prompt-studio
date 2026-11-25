@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { encodeRecordFrame } from "pstdio-sync/relay";
-import { decodeLegacyPendingFrame, LegacyPendingMask } from "./ordered-legacy-plan";
+import { decodeLegacyPendingFrame, LegacyPendingMask } from "../../db/legacy-records/ordered-legacy-plan";
 
 test("reverse legacy planning omits only later-covered fields while retaining each frame's other intent", () => {
   const mask = new LegacyPendingMask();

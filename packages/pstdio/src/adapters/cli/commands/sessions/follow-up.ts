@@ -56,7 +56,11 @@ type Deps = {
 };
 
 const defaultDeps: Deps = {
-  steerSession: (sessionId, input) => apiClient().sessions.steer(sessionId, input),
+  steerSession: (sessionId, input) =>
+    apiClient().sessions.steer(sessionId, {
+      ...input,
+      source: process.env.PSTDIO_SESSION_ID ? { type: "session", id: process.env.PSTDIO_SESSION_ID } : { type: "user" },
+    }),
   getSteeringState: (sessionId) => apiClient().sessions.getQueuedFollowUps(sessionId),
   setExitCode: (code) => {
     process.exitCode = code;

@@ -13,6 +13,7 @@ export const initialWidgets: DashboardWidget[] = [
   {
     id: "volume",
     title: "Conversation volume",
+    description: "Conversation counts by agent",
     kind: "bar",
     source: "conversations",
     layout: { x: 0, y: 3, w: 6, h: 8 },

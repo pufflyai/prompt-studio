@@ -12,6 +12,7 @@ interface Input {
   changed: string[];
   additionalTests?: string[];
   source?: SourceIdentity;
+  desktopInCi?: boolean;
 }
 
 const documentation = (file: string) =>
@@ -35,6 +36,12 @@ const deferredEvidence = (edited: boolean, priority: string | undefined) => {
   if (priority === "P3") return "nightly/release benchmarks; exceptional diagnostics only";
   if (edited) return "edited_tests";
   return "nightly/release coverage; exceptional diagnostics only";
+};
+
+const selectDesktopCiFiles = (enabled: boolean, queueFiles: string[], tests: string[], requestedFiles: string[]) => {
+  if (!enabled) return new Set<string>();
+  const requested = new Set(requestedFiles);
+  return new Set([...queueFiles, ...tests.filter((file) => requested.has(file) && testRunner(file) === "desktop")]);
 };
 
 const selectTests = (
@@ -67,14 +74,25 @@ const selectTests = (
   return { selected, deferred };
 };
 
-export const createLocalReviewPlan = ({ packages, tests, changed, additionalTests = [], source }: Input) => {
+export const createLocalReviewPlan = ({
+  packages,
+  tests,
+  changed,
+  additionalTests = [],
+  source,
+  desktopInCi = false,
+}: Input) => {
   for (const file of additionalTests) if (!tests.includes(file)) throw new Error(`Unknown test: ${file}`);
-  const queue = queueReviewPlan(packages, tests, changed, source);
+  const queue = queueReviewPlan(packages, tests, changed, source, desktopInCi);
+  const desktopCiFiles = selectDesktopCiFiles(desktopInCi, queue.desktopCiFiles, tests, [
+    ...changed,
+    ...additionalTests,
+  ]);
   const code = changed.filter((file) => !documentation(file));
   const shared = code.some((file) => sharedInput(file, packages));
   const affectedOwners = shared ? packages.map((pkg) => pkg.name) : affectedPackages(packages, code);
   const { selected, deferred } = selectTests(
-    { packages, tests, changed, additionalTests },
+    { packages, tests: tests.filter((file) => !desktopCiFiles.has(file)), changed, additionalTests },
     shared,
     affectedOwners,
     new Set([...queue.files, ...queue.smokeFiles]),
@@ -159,6 +177,7 @@ export const createLocalReviewPlan = ({ packages, tests, changed, additionalTest
     changed,
     selected,
     deferred,
+    desktopCiFiles: [...desktopCiFiles].sort(),
     setup,
     packageChecks,
     staticChecks,

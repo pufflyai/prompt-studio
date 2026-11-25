@@ -1,12 +1,15 @@
-import { and, eq, inArray, like, sql } from "drizzle-orm";
+import { and, eq, like, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { type OrderedIndexReference, readOrderedIndexReference } from "pstdio-sync/relay";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_documents as documents, storage_ordered_owners as owners } from "../../db/schemas.pg";
+import { documents } from "../../db/schemas/documents";
+import { owners } from "../../db/schemas.pg";
 import { type IndexNodeFiles, sortIndexChildren } from "./index-node-files";
+import { readOrderedMarkers } from "./ordered-native-metadata";
 import { orderedIndexBlobDocumentId } from "./ordered-receipts-blobs";
 import { receiptRoots } from "./ordered-receipts-state";
-import { decodeOrderedJson } from "./ordered-sql";
+import { orderedOwnerWhere } from "./ordered-sql";
+import { storageOwnerKey } from "./storage-owner-key";
 
 interface StoredNode {
   version: 1;
@@ -25,20 +28,8 @@ export interface IndexNodeUpgradeProgress {
 }
 
 const readRows = async (db: DbClient, owner: StorageOwner, ids: string[]) => {
-  const rows = await db
-    .select({ id: documents.document_id, state: documents.state })
-    .from(documents)
-    .where(
-      and(
-        eq(documents.workbench_id, owner.workbenchId),
-        eq(documents.extension_id, owner.extensionId),
-        inArray(documents.document_id, ids.map(orderedIndexBlobDocumentId)),
-      ),
-    );
-  return rows.map((row) => ({
-    id: (JSON.parse(row.id) as [string, string])[1],
-    node: decodeOrderedJson<StoredNode | null>(row.state),
-  }));
+  const rows = await readOrderedMarkers<StoredNode | null>(db, owner, ids.map(orderedIndexBlobDocumentId));
+  return [...rows].map(([key, { value }]) => ({ id: (JSON.parse(key) as [string, string])[1], node: value }));
 };
 
 /**
@@ -69,7 +60,7 @@ const copyOwnerReceipts = async (db: DbClient, files: IndexNodeFiles, owner: Sto
   const [row] = await db
     .select({ receipt_root: owners.receipt_root })
     .from(owners)
-    .where(and(eq(owners.workbench_id, owner.workbenchId), eq(owners.extension_id, owner.extensionId)));
+    .where(orderedOwnerWhere(owners, owner));
   const roots = row ? receiptRoots(row.receipt_root) : { root: null, published: null };
   const seen = new Set<string>();
   let pending = [roots.root, roots.published].filter((root) => !!root).map((root) => root!.blobId);
@@ -87,14 +78,8 @@ const copyOwnerReceipts = async (db: DbClient, files: IndexNodeFiles, owner: Sto
 const deleteOwnerNodes = async (db: DbClient, owner: StorageOwner) => {
   const removed = await db
     .delete(documents)
-    .where(
-      and(
-        eq(documents.workbench_id, owner.workbenchId),
-        eq(documents.extension_id, owner.extensionId),
-        like(documents.document_id, legacyNodeRows),
-      ),
-    )
-    .returning({ id: documents.document_id });
+    .where(and(eq(documents.owner_id, storageOwnerKey(owner)), like(documents.key, legacyNodeRows)))
+    .returning({ id: documents.key });
   return removed.length;
 };
 
@@ -113,8 +98,8 @@ export const upgradeIndexNodesToFiles = async (
   deferDeletion?: (owner: StorageOwner) => boolean,
 ) => {
   const result = await db.execute(
-    sql`SELECT DISTINCT workbench_id, extension_id FROM ${documents} WHERE document_id LIKE ${legacyNodeRows}
-      ORDER BY workbench_id, extension_id`,
+    sql`SELECT DISTINCT o.project_id AS workbench_id, o.extension_id FROM ${documents} d JOIN owners o ON d.owner_id=o.id WHERE d.key LIKE ${legacyNodeRows}
+      ORDER BY o.project_id, o.extension_id`,
   );
   let removed = false;
   if (result.rows.length) await beforeChange();

@@ -56,6 +56,11 @@ export const combinePending = (db: DbClient, input: CombinePendingInput) =>
           .filter(Boolean)
           .join("\n\n"),
         attachments_json: attachments,
+        // A combined request can represent several people; never attribute all its text to just one.
+        sender_json:
+          source.sender_json?.type === target.sender_json?.type && source.sender_json?.id === target.sender_json?.id
+            ? target.sender_json
+            : null,
         revision: crypto.randomUUID(),
         updated_at: new Date().toISOString(),
       })

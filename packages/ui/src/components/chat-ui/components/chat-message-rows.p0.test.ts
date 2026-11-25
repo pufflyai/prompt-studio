@@ -83,6 +83,37 @@ test("counts repeated polling prompts and errors until the conversation moves on
   expect(rows[6]).toMatchObject({ userIndex: 5, isActiveTurn: true });
 });
 
+test("groups repeat prompts only when they display the same sender", () => {
+  const poll = (id: string, sender?: SessionMessage["sender"]): SessionMessage => ({
+    ...message("Check for work", "user"),
+    id,
+    sender: sender && { ...sender, requestId: id },
+  });
+  const agent = { type: "session", id: "watcher-1", name: "Watcher" } as const;
+  const otherAgent = { ...agent, id: "watcher-2" };
+  const user = { ...otherAgent, type: "user" } as const;
+  const renamed = { ...user, name: "Another name" };
+  const prompts = [
+    poll("first", agent),
+    poll("retry", agent),
+    poll("second", otherAgent),
+    poll("user", user),
+    poll("renamed", renamed),
+    poll("legacy"),
+  ];
+  const rows = buildChatMessageRows(
+    [],
+    prompts.map((userMessage) => ({ userMessage, responses: [] })),
+  );
+  expect(rows.map((row) => row.messageIds)).toEqual([
+    ["first", "retry"],
+    ["second"],
+    ["user"],
+    ["renamed"],
+    ["legacy"],
+  ]);
+});
+
 test("keeps a recurring error separate when another error intervenes", () => {
   const rows = buildChatMessageRows(
     [error("first"), error("duplicate"), error("changed", "Reset time changed"), error("latest")],

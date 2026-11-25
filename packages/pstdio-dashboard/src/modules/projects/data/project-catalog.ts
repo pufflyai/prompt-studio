@@ -1,4 +1,4 @@
-import type { CloudProjectCatalog } from "@pstdio/sdk/client";
+import type { AccountStatus, CloudProjectCatalog, ProjectCopyAccount } from "@pstdio/sdk/client";
 import { accountEvents } from "@pstdio/sdk/extensions";
 import { useScopedQuery } from "@pstdio/sdk/extensions/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,9 +13,16 @@ export const cloudProjectCatalogKey = ["cloud-project-catalog"] as const;
 export const cloudCatalogKeyFor = (managerOrigin?: string, accountId?: string, deviceId?: string) =>
   [...cloudProjectCatalogKey, managerOrigin, accountId, deviceId] as const;
 
+export const cloudProjectDeletionKey = (id: string, account?: ProjectCopyAccount) =>
+  ["project-cloud-deletion", account?.managerOrigin, account?.accountId, id] as const;
+
+export const cloudCatalogScopeFor = (runtimeId: string, login?: AccountStatus["login"]) =>
+  JSON.stringify([runtimeId, login?.managerOrigin, login?.accountId, login?.deviceId]);
+
 export const useCloudProjectCatalog = () => {
   const runtime = getRuntimeCollections();
-  const status = useScopedQuery(getDashboardAccountStatusQuery(runtime)).data;
+  const account = getDashboardAccountStatusQuery(runtime);
+  const { data: status, fetching } = useScopedQuery(account);
   const login = status?.login;
   const queryClient = useQueryClient();
   const signedIn = Boolean(login);
@@ -53,8 +60,9 @@ export const useCloudProjectCatalog = () => {
     ...catalog,
     signedIn,
     signInRequired: Boolean(status?.signInRequired),
-    scope: JSON.stringify([String(runtime.id), login?.managerOrigin, login?.accountId, login?.deviceId]),
+    scope: cloudCatalogScopeFor(String(runtime.id), login),
     accountKnown: Boolean(status),
+    accountUnconfirmed: fetching || Boolean(account.getSnapshot().error),
     membershipKnown: catalog.data?.membershipKnown ?? status?.cloudProjectsLoaded,
   };
 };

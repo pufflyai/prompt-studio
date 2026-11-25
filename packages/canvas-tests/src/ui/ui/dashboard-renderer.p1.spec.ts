@@ -1,6 +1,101 @@
 import { expect, type Page, test } from "@playwright/test";
 import { openCanvasPreview } from "../preview";
 
+test("edits widget descriptions and chooses colors for individual chart series", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/dashboard-renderer/dashboard.canvas.tsx#Dashboard",
+  );
+  await preview.getByRole("button", { name: "Edit dashboard", exact: true }).click();
+  const metric = preview.getByRole("article", { name: "Agent conversations", exact: true });
+  await metric.hover();
+  await metric.getByRole("button", { name: "Configure Agent conversations", exact: true }).click();
+  const settings = preview.getByRole("dialog", { name: "Widget settings" });
+  await settings.getByRole("textbox", { name: "Description", exact: true }).fill("Activity in the selected period");
+  await settings.getByRole("button", { name: /^Sparkline color:/ }).click();
+  await preview.getByRole("menuitemradio", { name: "Purple", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(metric.getByText("Activity in the selected period", { exact: true })).toBeVisible();
+  const volume = preview.getByRole("article", { name: "Conversation volume", exact: true });
+  await volume.hover();
+  await volume.getByRole("button", { name: "Configure Conversation volume", exact: true }).click();
+  await settings.getByRole("button", { name: "Series Notebook", exact: true }).click();
+  await settings.getByRole("menuitem", { name: "Threads", exact: true }).click();
+  await settings.getByRole("button", { name: /^Series color:/ }).click();
+  await preview.getByRole("menuitemradio", { name: "Teal", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await preview.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(volume.locator('svg [fill="var(--chakra-colors-teal-500)"]').first()).toBeAttached();
+  await expect(metric.locator('svg [stroke="var(--chakra-colors-purple-500)"]').first()).toBeAttached();
+  await expect(metric.getByText("Activity in the selected period", { exact: true })).toBeVisible();
+  await preview.getByRole("button", { name: "Edit dashboard", exact: true }).click();
+  await metric.hover();
+  await metric.getByRole("button", { name: "Configure Agent conversations", exact: true }).click();
+  await settings.getByRole("button", { name: /^Sparkline color:/ }).click();
+  await preview.getByRole("menuitemradio", { name: "Default", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(metric.locator('svg [stroke="var(--chakra-colors-purple-500)"]')).toHaveCount(0);
+  await preview.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(metric.locator('svg [stroke="var(--chakra-colors-purple-500)"]').first()).toBeAttached();
+});
+
+// Critical: two distinct groups must have independently editable chart marks.
+test("chooses independent stacked bar colors for named and ungrouped values", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/dashboard-renderer/dashboard.canvas.tsx#GroupedBarColors",
+  );
+  const widget = preview.getByRole("article", { name: "Grouped bars", exact: true });
+  await expect(widget).toBeVisible();
+  await preview.getByRole("button", { name: "Edit dashboard", exact: true }).click();
+  await widget.hover();
+  await widget.getByRole("button", { name: "Configure Grouped bars", exact: true }).click();
+  const settings = preview.getByRole("dialog", { name: "Widget settings" });
+  await settings.getByRole("button", { name: "Series Unassigned", exact: true }).click();
+  await settings.getByRole("menuitem", { name: "Unassigned (3)", exact: true }).click();
+  await settings.getByRole("button", { name: /^Series color:/ }).click();
+  await preview.getByRole("menuitemradio", { name: "Purple", exact: true }).click();
+  await settings.getByRole("button", { name: "Series Unassigned (3)", exact: true }).click();
+  await settings.getByRole("menuitem", { name: "Unassigned", exact: true }).click();
+  await settings.getByRole("button", { name: /^Series color:/ }).click();
+  await preview.getByRole("menuitemradio", { name: "Teal", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await preview.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(widget.locator('svg [fill="var(--chakra-colors-purple-500)"]').first()).toBeAttached();
+  await expect(widget.locator('svg [fill="var(--chakra-colors-teal-500)"]').first()).toBeAttached();
+  await preview.getByRole("button", { name: "Add named group", exact: true }).click();
+  await preview.getByRole("button", { name: "Edit dashboard", exact: true }).click();
+  await widget.hover();
+  await widget.getByRole("button", { name: "Configure Grouped bars", exact: true }).click();
+  await settings.getByRole("button", { name: "Series Unassigned", exact: true }).click();
+  await settings.getByRole("menuitem", { name: "Unassigned (4)", exact: true }).click();
+  await expect(settings.getByRole("button", { name: "Series color: Purple", exact: true })).toBeVisible();
+});
+
+test("offers the sole Data option only when it would replace the current source", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/dashboard-renderer/dashboard.canvas.tsx#WidgetSourceChoices",
+  );
+  const selected = preview.getByRole("article", { name: "Selected source", exact: true });
+  const missing = preview.getByRole("article", { name: "Missing source", exact: true });
+  const settings = preview.getByRole("dialog", { name: "Widget settings" });
+  await preview.getByRole("button", { name: "Edit dashboard", exact: true }).click();
+  await selected.hover();
+  await selected.getByRole("button", { name: "Configure Selected source", exact: true }).click();
+  await expect(settings.getByRole("button", { name: "Data Build status", exact: true })).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(settings).toBeHidden();
+  await missing.hover();
+  await missing.getByRole("button", { name: "Configure Missing source", exact: true }).click();
+  await settings.getByRole("button", { name: /^Data / }).click();
+  await settings.getByRole("menuitem", { name: "Build status", exact: true }).click();
+  await expect(settings.getByRole("button", { name: "Data Build status", exact: true })).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await preview.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(missing.getByText("Build passed", { exact: true })).toBeVisible();
+});
+
 // Critical: cluster membership and share must be visible inside the dashboard widgets.
 test("shows grouped scatter points and ring shares on the dashboard", async ({ page }) => {
   const preview = await openCanvasPreview(
@@ -89,15 +184,33 @@ test("edits custom widgets from the page toolbar", async ({ page }) => {
   await toolbar.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(marker).toHaveAttribute("aria-pressed", "false");
   await toolbar.getByRole("button", { name: "Edit dashboard", exact: true }).click();
+  const controls = toolbar.getByRole("group", { name: "Dashboard controls" }).getByRole("button");
+  await expect(controls.nth(-2)).toHaveAccessibleName("Cancel");
+  await expect(controls.last()).toHaveAccessibleName("Apply");
   await toolbar.getByRole("button", { name: "Add widget", exact: true }).click();
   await preview.getByRole("menuitemradio", { name: "Custom", exact: true }).click();
   const settings = preview.getByRole("dialog", { name: "Widget settings" });
-  await settings.getByRole("textbox", { name: "Title" }).fill("Additional build history");
+  const title = settings.getByRole("textbox", { name: "Title", exact: true });
+  const description = settings.getByRole("textbox", { name: "Description", exact: true });
+  await expect(title).toHaveValue("Build history");
+  await expect(description).toHaveValue("Builds per day");
+  await settings.getByRole("button", { name: "Data Build history", exact: true }).click();
+  await preview.getByRole("menuitem", { name: "Release builds", exact: true }).click();
+  await expect(title).toHaveValue("Release builds");
+  await expect(description).toHaveValue("Builds per release");
+  await title.fill("Additional build history");
+  await description.fill("Additional description");
+  await settings.getByRole("button", { name: "Data Release builds", exact: true }).click();
+  await preview.getByRole("menuitem", { name: "Build history", exact: true }).click();
+  await expect(title).toHaveValue("Additional build history");
+  await expect(description).toHaveValue("Additional description");
   await page.keyboard.press("Escape");
   await toolbar.getByRole("button", { name: "Apply", exact: true }).click();
   await expect(toolbar.getByRole("button", { name: "Edit dashboard", exact: true })).toBeFocused();
   await expect(marker).toHaveAttribute("aria-pressed", "false");
-  await expect(preview.getByRole("article", { name: "Additional build history", exact: true })).toBeVisible();
+  const added = preview.getByRole("article", { name: "Additional build history", exact: true });
+  await expect(added.getByRole("heading", { name: "Additional build history", exact: true })).toBeVisible();
+  await expect(added.getByText("Additional description", { exact: true })).toBeVisible();
 });
 
 // Critical: removing a card from a draft must preserve its controls if the edit is canceled.
@@ -263,6 +376,7 @@ async function openDelayedDashboardSave(page: Page) {
     await expect(edit).toBeFocused();
   };
   return {
+    preview,
     widget,
     edit,
     apply,
@@ -371,6 +485,21 @@ test("keeps the latest custom widget through a chain of delayed saves", async ({
   await refresh.click();
   await expect(latest).toBeVisible();
   await expect(releaseMarker).toHaveAttribute("aria-pressed", "false");
+});
+
+// Critical: description-only saves must remain visible while the caller refreshes.
+test("keeps an applied widget description across a delayed controlled refresh", async ({ page }) => {
+  const { preview, widget, edit, refresh, save } = await openDelayedDashboardSave(page);
+  await edit.click();
+  await widget.hover();
+  await widget.getByRole("button", { name: "Configure Build history", exact: true }).click();
+  await preview.getByRole("textbox", { name: "Description", exact: true }).fill("Builds and release markers");
+  await page.keyboard.press("Escape");
+  const description = widget.getByText("Builds and release markers", { exact: true });
+  await save();
+  await expect(description).toBeVisible();
+  await refresh.click();
+  await expect(description).toBeVisible();
 });
 
 // Critical: Apply must display a caller-corrected layout and use it as the starting point for the next edit.

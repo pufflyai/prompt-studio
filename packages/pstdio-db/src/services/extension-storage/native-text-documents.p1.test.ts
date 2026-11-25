@@ -3,7 +3,9 @@ import { eq, ne } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { readTextDocumentSeed, saveTextDocument, seedTextDocument } from "pstdio-sync/text";
 import * as Y from "yjs";
-import { storage_document_updates, storage_documents } from "../../db/schemas.pg";
+import { documents as storage_documents } from "../../db/schemas.pg";
+import { readFileDocumentHead } from "./document-file-persistence";
+import { documentFilesFor } from "./document-files";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 
@@ -14,10 +16,7 @@ afterEach(async () => {
 const nativeId = '["native-markdown","file-view-key"]';
 // The first durable write also registers the document in the owner's encrypted sync directory.
 const ownDocuments = (db: Awaited<ReturnType<typeof createExtensionStorageFixture>>["db"]) =>
-  db
-    .select({ id: storage_documents.document_id })
-    .from(storage_documents)
-    .where(ne(storage_documents.document_id, "records"));
+  db.select({ id: storage_documents.key }).from(storage_documents).where(ne(storage_documents.key, "records"));
 const fixture = async () => {
   const f = await createExtensionStorageFixture();
   cleanup.push(f.close);
@@ -83,10 +82,11 @@ test("native text adopts atomically and invalidates previously cached copies", a
   remote.destroy();
   expect(await second.text.read()).toBe("FIRST\nLAST");
   expect(await cached.read()).toBe("FIRST\nLAST");
-  expect(
-    await second.db.select().from(storage_document_updates).where(eq(storage_document_updates.document_id, nativeId)),
-  ).toHaveLength(0);
-  const [row] = await second.db.select().from(storage_documents).where(eq(storage_documents.document_id, nativeId));
+  const [row] = await second.db.select().from(storage_documents).where(eq(storage_documents.key, nativeId));
+  const head = await second.db.transaction((tx) =>
+    readFileDocumentHead(documentFilesFor(tx), second.owner.workbenchId, row!),
+  );
+  expect(head.updates).toHaveLength(0);
   expect(row!.revision).toBe(row!.folded_revision);
   const reopened = createDocumentStorageDBService(second.db).openNativeTextDocument({
     owner: second.owner,

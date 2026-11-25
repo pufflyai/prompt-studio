@@ -1,27 +1,26 @@
-import { and, eq } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId, type OrderedRecord } from "pstdio-sync/records";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_ordered_owners as owners, storage_record_projections as projections } from "../../db/schemas.pg";
+import { owners } from "../../db/schemas.pg";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 
 type Entry = { owner: string; version: string; ids: Set<string>; views: Map<string, OrderedRecord> };
 // One group per database, shared by command-scoped facades; no per-record/owner accumulation.
 const contexts = new WeakMap<DbClient, Entry>();
 
+export const orderedCommitVersionColumns = {
+  ownerId: owners.id,
+  revision: owners.revision,
+  epoch: owners.epoch,
+  after: owners.after,
+};
+
 /** Retain only the last authored group's computed view. The SQL projection revision
  * and relay cursor invalidate it after another writer, admission, restore or reset. */
 export const createOrderedCommitCache = (db: DbClient, owner: StorageOwner) => {
   const address = JSON.stringify([owner.workbenchId, owner.extensionId]);
   const version = async (tx: OrderedTransaction) => {
-    const [row] = await tx
-      .select({ revision: projections.revision, epoch: owners.epoch, after: owners.after })
-      .from(projections)
-      .innerJoin(
-        owners,
-        and(eq(owners.workbench_id, projections.workbench_id), eq(owners.extension_id, projections.extension_id)),
-      )
-      .where(orderedOwnerWhere(projections, owner));
+    const [row] = await tx.select(orderedCommitVersionColumns).from(owners).where(orderedOwnerWhere(owners, owner));
     return row ? JSON.stringify(row) : undefined;
   };
   return {
@@ -39,7 +38,7 @@ export const createOrderedCommitCache = (db: DbClient, owner: StorageOwner) => {
       ids: string[],
       before: ReadonlyMap<string, OrderedRecord>,
       projected: OrderedRecord[],
-      saved: { views?: ReadonlyMap<string, OrderedRecord>; records: unknown[] },
+      saved: { views?: ReadonlyMap<string, OrderedRecord>; records: unknown[]; version?: string },
     ) {
       if (owner.extensionId === coreOwnerId) return;
       const views =
@@ -47,7 +46,7 @@ export const createOrderedCommitCache = (db: DbClient, owner: StorageOwner) => {
       const selected = new Map(ids.flatMap((id) => (views.has(id) ? [[id, views.get(id)!] as const] : [])));
       // Native causal state has its own lifecycle. Keep it on the full replay path.
       if ([...selected.values()].some((record) => Object.keys(record.texts ?? {}).length)) return;
-      const current = await version(tx);
+      const current = saved.version ?? (await version(tx));
       return current ? { owner: address, version: current, ids: new Set(ids), views: selected } : undefined;
     },
     // Publish only after the owning SQL transaction commits, including callback batches.

@@ -1,5 +1,6 @@
 import { Box, Button } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { useState } from "react";
 import { ChatPanel } from "./chat-panel";
 import { ChatSkeleton } from "./chat-skeleton";
 import type { SessionMessage } from "./message-types";
@@ -71,4 +72,65 @@ export const EmptyWidePane: Story = {
 export const LoadingWidePane: Story = {
   ...WidePane,
   args: { messages: [], queuedFollowUps: [], loading: true, loaderComponent: <ChatSkeleton /> },
+};
+
+const outlineMessages: SessionMessage[] = Array.from({ length: 240 }, (_, index) => [
+  {
+    id: `q-${index}`,
+    role: "user" as const,
+    ...(index === 0 ? { sender: { type: "session" as const, id: "release-checks", name: "Release checks" } } : {}),
+    ...(index === 239 ? { sender: { type: "user" as const, id: "alex", name: "Alex" } } : {}),
+    parts: [{ type: "text" as const, text: `Check build ${index + 1}` }],
+  },
+  {
+    id: `a-${index}`,
+    role: "assistant" as const,
+    parts: [{ type: "text" as const, text: `Build ${index + 1} passed.` }],
+  },
+]).flat();
+
+const pollingMessages = Array.from({ length: 2 }, (_, index): SessionMessage[] => [
+  {
+    id: `poll-${index}`,
+    role: "user",
+    sender: { type: "session", id: "release-checks", name: "Release checks", requestId: `request-${index}` },
+    parts: [{ type: "text", text: "Check for available work." }],
+  },
+  {
+    id: `error-${index}`,
+    role: "system",
+    parts: [{ type: "error", errorType: "other", message: "Usage limit reached." }],
+  },
+]).flat();
+
+export const ConversationOutline: Story = {
+  description:
+    "A wide transcript exposes each turn in its outline. Attributed prompts show a sender avatar and name; older prompts without recorded attribution keep their appearance. Arrow keys, Home, End and Tab move focus across virtualized turns; Enter selects a turn, and narrowing the panel hides the gutter.",
+  render: (args) => {
+    const [wide, setWide] = useState(true);
+    const [polling, setPolling] = useState(false);
+    const [visibleIds, setVisibleIds] = useState<string[]>([]);
+    return (
+      <Box w={wide ? "60rem" : "30rem"} h="30rem">
+        <Button size="xs" onClick={() => setWide(!wide)}>
+          Resize conversation
+        </Button>
+        <Button size="xs" onClick={() => setPolling(!polling)}>
+          {polling ? "Show build checks" : "Show repeated prompts"}
+        </Button>
+        {polling && (
+          <output hidden data-testid="visible-message-ids">
+            {visibleIds.join(" ")}
+          </output>
+        )}
+        <ChatPanel
+          {...args}
+          conversationKey={polling ? "polls" : "builds"}
+          messages={polling ? pollingMessages : outlineMessages}
+          onVisibleMessageIdsChange={polling ? setVisibleIds : undefined}
+          hideComposer
+        />
+      </Box>
+    );
+  },
 };

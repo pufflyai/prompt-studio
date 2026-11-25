@@ -1,4 +1,5 @@
 import { index, jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { isoTimestamp } from "./iso-timestamp";
 import { projects } from "./projects";
 import type { JsonObject } from "./types";
 
@@ -17,10 +18,10 @@ export const automation_tokens = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     command_scopes_json: jsonb("command_scopes_json").$type<string[]>().notNull(),
-    expires_at: text("expires_at").notNull(),
-    last_used_at: text("last_used_at"),
-    revoked_at: text("revoked_at"),
-    created_at: text("created_at").notNull(),
+    expires_at: isoTimestamp("expires_at").notNull(),
+    last_used_at: isoTimestamp("last_used_at"),
+    revoked_at: isoTimestamp("revoked_at"),
+    created_at: isoTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("automation_tokens_prefix_idx").on(table.token_prefix),
@@ -44,9 +45,9 @@ export const automation_runs = pgTable(
     status: text("status").$type<AutomationRunStatus>().notNull(),
     result_json: jsonb("result_json").$type<unknown>(),
     error_json: jsonb("error_json").$type<AutomationRunError>(),
-    created_at: text("created_at").notNull(),
-    started_at: text("started_at"),
-    finished_at: text("finished_at"),
+    created_at: isoTimestamp("created_at").notNull(),
+    started_at: isoTimestamp("started_at"),
+    finished_at: isoTimestamp("finished_at"),
   },
   (table) => [
     index("automation_runs_project_status_idx").on(table.project_id, table.status),

@@ -7,7 +7,7 @@ import {
 import { createWorkbenchWebviewHostCapabilities } from "../../extensions/bridge/webview-host-capabilities";
 import { createResourceActionSource } from "./resource-action-source";
 
-test("native action snapshots include a later guest registration and remove it on disconnect", async () => {
+test("native action snapshots follow guest registration, completion, and disconnect", async () => {
   const f = createResourceViewerFixture({ tabs: true });
   await f.openMain("x");
   const placement = f.w.layout.getActivePanel("main")!;
@@ -37,12 +37,29 @@ test("native action snapshots include a later guest registration and remove it o
       resource: viewerResource("x"),
       label: "Export SVG",
     });
+    await capabilities["resources.actions.register"]({
+      operation: "register",
+      registrationId: crypto.randomUUID(),
+      resource: viewerResource("x"),
+      label: "Inspect source",
+    });
+    const labels = () => source.getSnapshot().map((action) => action.label);
     expect(changes).toBeGreaterThan(0);
-    expect(source.getSnapshot().map((action) => action.label)).toEqual(["Export SVG"]);
+    expect(labels()).toEqual(["Export SVG", "Inspect source"]);
     source.getSnapshot()[0].onClick?.();
     const event = messages.at(-1) as { type: string; requestId: string };
     expect(event.type).toBe("execute");
+
+    // Observe the busy action after a context change while the guest is still running.
+    f.w.context.set("workbench.resource.type", "viewer");
+    expect(labels()).toEqual(["Export SVG", "Inspect source"]);
+    expect(source.getSnapshot()[0].isDisabled).toBe(true);
+    const changesDuringAction = changes;
     await capabilities["resources.actions.register"]({ operation: "complete", requestId: event.requestId });
+    expect(labels()).toEqual(["Export SVG", "Inspect source"]);
+    expect(source.getSnapshot()[0].isDisabled).toBe(false);
+    expect(changes).toBeGreaterThan(changesDuringAction);
+
     events.unbind();
     expect(source.getSnapshot()).toEqual([]);
   } finally {

@@ -169,13 +169,24 @@ widget sums positive series values by label and shows each label's share.
 Use the same set of cluster names in the scatter groups and ring series to
 match their colors.
 
+Widget settings let readers edit the title and description, choose an accent
+for a line, bar, or sparkline, and pick a color for each series, cluster, or
+ring slice. Choosing **Default** restores the chart's palette. Widgets without
+a graph show text settings.
+
 For charts with their own marks, legends, or interactions, set the widget's kind
 to `"custom"` and pass its component as `content` on the matching source. Only
 the source ID is saved in the dashboard definition. A blank widget title lets
 the content supply its heading and uses the source name for the card's
-accessible label. The card scrolls when the component is taller than the widget.
+accessible label. To put a custom chart's heading and description in the widget
+editor, set them on the widget definition. Set `customWidgetDefaults` on a
+source to prefill those fields when adding a custom widget. The card scrolls
+when the component is taller than the widget.
 Use the shared `Portal` with `ScopedPopover`, `ScopedMenu`, or `ScopedDialog` from
 `@pstdio/ui` so an overlay closes when its widget is hidden during editing.
+To make a custom chart's colors editable, pass a `content` callback and a
+`colorSettings` label with optional series keys. The callback receives the
+resolved CSS colors plus the edited title and description.
 
 Pass `renderToolbar={(controls) => <PageToolbar>{controls}</PageToolbar>}` to put
 the same Edit, Apply, and Cancel controls in an existing page toolbar. The callback
@@ -185,10 +196,13 @@ Omit `onChange` for read-only use. With it, Edit dashboard opens a draft; Apply 
 the complete definition and Cancel emits nothing. The caller owns the saved value,
 persistence, permissions, and undo. An async `onChange` can reject to retain the
 draft and display its error with Retry. A successful save stays visible while the
-caller still publishes the previous definition. The next changed `value` takes
-precedence. Use stable unique widget IDs. Titles may
-be empty. Layout coordinates use a 12-column grid with widths from 3 to 12 and
-heights of at least 3 rows. Narrow presentation preserves those saved widths.
+caller publishes a previous definition or an earlier pending save. Once the caller
+publishes the applied definition or a distinct correction, `value` is authoritative
+again. Callers discard older async results before publishing them as `value`.
+
+Use stable unique widget IDs. Titles may be empty. Layout coordinates use a
+12-column grid with widths from 3 to 12 and heights of at least 3 rows. Narrow
+presentation preserves those saved widths.
 Modes are `vertical` (Compact up), `horizontal` (Compact left), and `free`.
 
 See **Design system/Components/Data display/Dashboard**, frame **Editable dashboard**. It replaces

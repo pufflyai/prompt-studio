@@ -1,7 +1,7 @@
 import { AlertMessage } from "@pstdio/ui";
 import { type ReactNode, useState } from "react";
 
-export const CloudError = (props: { message: string; action?: ReactNode; onClose?: () => void }) => {
+export const CloudError = (props: { message: string; action?: ReactNode; onClose?: () => void; inline?: boolean }) => {
   const { message, action, onClose } = props;
   const [dismissed, setDismissed] = useState<string>();
   if (message === dismissed) return null;
@@ -10,10 +10,7 @@ export const CloudError = (props: { message: string; action?: ReactNode; onClose
       size="sm"
       status="error"
       role="alert"
-      position="absolute"
-      bottom="xs"
-      insetInline="xs"
-      zIndex="docked"
+      {...(!props.inline && { position: "absolute", bottom: "xs", insetInline: "xs", zIndex: "docked" })}
       title={message}
       onClose={onClose ?? (() => setDismissed(message))}
       endElement={action}

@@ -2,12 +2,15 @@ import { readFile } from "node:fs/promises";
 import { observeEventConnectionBudget } from "../helpers/event-connection-budget";
 import { getPlannerTicket } from "../helpers/planner-api";
 import { createResourceStreamFixture } from "../helpers/resource-stream-fixture";
-import { expect, test } from "../scripts/session-test";
+import { expect, test } from "../scripts/playwright-test";
 import { prepareDashboard } from "./helpers/workspace-files";
 
 let fixture: Awaited<ReturnType<typeof createResourceStreamFixture>>;
 // Provision the given resources once; each case still opens its own browser connections from scratch.
 test.beforeAll(async ({ request, baseURL }) => {
+  // The two cold projects and their extension installs took 87 s on release CI
+  // before tickets, files, and the live session could be provisioned.
+  test.setTimeout(180_000);
   fixture = await createResourceStreamFixture(request, baseURL!);
 });
 test.afterAll(async ({ request }) => {

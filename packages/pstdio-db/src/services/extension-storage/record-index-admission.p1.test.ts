@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { drizzle } from "drizzle-orm/pglite";
 import * as schema from "../../db/schemas.pg";
+import { attachDocumentFiles, documentFilesFor } from "./document-files";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 
@@ -14,10 +15,11 @@ test("unchanged index admission checks catalog identities without reloading ever
       logger: {
         logQuery: (query) => {
           if (/^analyze/i.test(query)) maintenance.push(query);
-          if (query.startsWith("select") && query.includes('from "storage_record_indexes"')) catalog.push(query);
+          if (query.startsWith("select") && query.includes('"record_index_rows"')) catalog.push(query);
         },
       },
     });
+    attachDocumentFiles(db, documentFilesFor(f.db));
     const records = createDocumentStorageDBService(db).open({
       owner: { workbenchId: f.projectAId, extensionId: "ext.example" },
     }).records;
@@ -35,7 +37,7 @@ test("unchanged index admission checks catalog identities without reloading ever
     catalog.length = 0;
     await records.defineIndexes([definition]);
     expect(catalog).toHaveLength(1);
-    expect(catalog[0]).not.toContain('"definition"');
+    expect(catalog[0].split(" from ")[0]).not.toContain('"definition"');
     expect((await records.query({ index: "items" })).records.map(({ recordId }) => recordId)).toEqual(["first/item"]);
     await records.defineIndexes([{ ...definition, prefix: "second/" }]);
     expect((await records.query({ index: "items" })).records.map(({ recordId }) => recordId)).toEqual(["second/item"]);

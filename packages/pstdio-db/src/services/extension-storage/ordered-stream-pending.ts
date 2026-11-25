@@ -1,36 +1,31 @@
-import { and, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
-import { storage_ordered_owners as owners } from "../../db/schemas.pg";
-import { conversionId } from "./ordered-conversion-state";
+import { owners } from "../../db/schemas.pg";
+import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
+import { canonicalRecordPredicate } from "./ordered-record-row";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import { retainedPageKey } from "./retained-page-format";
+import { storageOwnerKey } from "./storage-owner-key";
 
 /** Progress polls must not contend with synchronization for the project write lock. */
 export const readOrderedPending = async (db: Pick<OrderedTransaction, "select">, owner: StorageOwner) => {
+  assertStorageOwnerAdmitted(db, owner);
   const [row] = await db
     .select({
       pending: sql<boolean>`
-    EXISTS (SELECT 1 FROM storage_ordered_operations p
-      WHERE p.workbench_id = ${owner.workbenchId} AND p.extension_id = ${owner.extensionId}
+    EXISTS (SELECT 1 FROM operations p
+      WHERE p.owner_id = ${storageOwnerKey(owner)}
       AND p.envelope IS NOT NULL AND p.settled_epoch IS NULL)
     OR (
       NOT (${owners.joined} OR (${owners.epoch} IS NOT NULL AND ${owners.epoch} <> '' AND ${owners.epoch} NOT LIKE 'local:%'))
-      AND NOT EXISTS (SELECT 1 FROM storage_record_sync l
-        WHERE l.workbench_id = ${owner.workbenchId} AND l.extension_id = ${owner.extensionId} AND l.joined)
-      AND EXISTS (SELECT 1 FROM storage_ordered_records c
-        WHERE c.workbench_id = ${owner.workbenchId} AND c.extension_id = ${owner.extensionId})
+      AND (EXISTS (SELECT 1 FROM records c
+        WHERE c.owner_id = ${storageOwnerKey(owner)} AND ${canonicalRecordPredicate({ meta: sql`c.meta`, base: sql`c.base` })})
+        OR EXISTS (SELECT 1 FROM documents d WHERE d.owner_id=${storageOwnerKey(owner)}
+          AND d.key=${retainedPageKey("tombstones", "")}))
     )
   `,
     })
     .from(owners)
-    .where(
-      and(
-        orderedOwnerWhere(owners, owner),
-        sql`NOT EXISTS (
-      SELECT 1 FROM storage_documents conversion
-      WHERE conversion.workbench_id = ${owner.workbenchId} AND conversion.extension_id = ${owner.extensionId}
-        AND conversion.document_id = ${conversionId}
-    )`,
-      ),
-    );
+    .where(orderedOwnerWhere(owners, owner));
   return row?.pending;
 };

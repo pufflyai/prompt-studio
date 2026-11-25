@@ -2,33 +2,26 @@ import { and, eq, inArray, or, sql } from "drizzle-orm";
 import type { ResourceIdentity } from "pstdio-api-contracts/extension-kernel";
 import { coreOwnerId } from "pstdio-sync/records";
 import type { DbClient } from "../db/connection.pglite";
-import {
-  storage_resource_aliases as aliases,
-  storage_resource_identities as identities,
-  storage_resource_projections as projections,
-  storage_record_projections,
-} from "../db/schemas.pg";
+import { resource_numbers as aliases, resource_numbers as identities, owners as recordOwners } from "../db/schemas.pg";
+import { assertStorageOwnerAdmitted } from "../db/storage-admission";
+import { storageOwnerKey } from "./extension-storage/storage-owner-key";
 
-export const createResourceIdentityIndex = (db: DbClient, ready: () => Promise<void>) => {
+export const createResourceIdentityIndex = (db: DbClient) => {
   type Address = { projectId: string; extensionId: string; kind: string };
   type Connection = Pick<DbClient, "select">;
   const ownerWhere = (input: Address) =>
     and(
-      eq(identities.workbench_id, input.projectId),
+      eq(identities.project_id, input.projectId),
+      eq(identities.current, true),
       eq(identities.extension_id, input.extensionId),
       eq(identities.kind, input.kind),
     );
   const assertCurrent = async (connection: Connection, projectId: string) => {
+    assertStorageOwnerAdmitted(db, { workbenchId: projectId, extensionId: coreOwnerId });
     const [row] = await connection
-      .select({ current: storage_record_projections.revision, projected: projections.revision })
-      .from(storage_record_projections)
-      .leftJoin(projections, eq(projections.workbench_id, storage_record_projections.workbench_id))
-      .where(
-        and(
-          eq(storage_record_projections.workbench_id, projectId),
-          eq(storage_record_projections.extension_id, coreOwnerId),
-        ),
-      );
+      .select({ current: recordOwners.revision, projected: recordOwners.numbers_revision })
+      .from(recordOwners)
+      .where(and(eq(recordOwners.id, storageOwnerKey({ workbenchId: projectId, extensionId: coreOwnerId }))));
     if (row && row.current !== (row.projected ?? 0))
       throw new Error("Resource identity projection is stale; upgrade before reading");
   };
@@ -39,7 +32,8 @@ export const createResourceIdentityIndex = (db: DbClient, ready: () => Promise<v
       .from(aliases)
       .where(
         and(
-          eq(aliases.workbench_id, input.projectId),
+          eq(aliases.project_id, input.projectId),
+          eq(aliases.alias, true),
           inArray(
             aliases.resource_id,
             rows.map((row) => row.resource_id),
@@ -61,7 +55,6 @@ export const createResourceIdentityIndex = (db: DbClient, ready: () => Promise<v
     })) satisfies ResourceIdentity[];
   };
   const identityMany = async (input: Address & { ids: string[] }) => {
-    await ready();
     if (input.ids.length > 100) throw new Error("An identity batch can read at most 100 resources");
     if (!input.ids.length) return [];
     return db.transaction(async (tx) => {
@@ -78,13 +71,18 @@ export const createResourceIdentityIndex = (db: DbClient, ready: () => Promise<v
     identityMany,
     identity: async (input: Address & { id: string }) => (await identityMany({ ...input, ids: [input.id] }))[0] ?? null,
     findByShorthand: async (input: Address & { shorthand: string }) => {
-      await ready();
       return db.transaction(async (tx) => {
         await assertCurrent(tx, input.projectId);
         const aliasesForNumber = tx
           .select({ id: aliases.resource_id })
           .from(aliases)
-          .where(and(eq(aliases.workbench_id, input.projectId), eq(aliases.shorthand, input.shorthand)));
+          .where(
+            and(
+              eq(aliases.project_id, input.projectId),
+              eq(aliases.alias, true),
+              eq(aliases.shorthand, input.shorthand),
+            ),
+          );
         const rows = await tx
           .select()
           .from(identities)

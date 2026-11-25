@@ -8,9 +8,12 @@ import { runCiChecks } from "./run-ci-checks";
 
 const localReviewTargetMs = 15 * 60 * 1000;
 
-export const runLocalReview = async (root: string, base: string, additionalTests: string[], list = false) => {
+export const runLocalReview = async (
+  root: string,
+  { base, tests, list, desktopInCi }: ReturnType<typeof reviewOptions>,
+) => {
   const started = Date.now();
-  const source = readReviewSource(root, base, additionalTests);
+  const source = readReviewSource(root, base, tests, desktopInCi);
   if (source.dirty)
     throw new Error(
       "Commit the candidate before test:review. Use focused package tests during development; no dirty source is certified.",
@@ -91,6 +94,10 @@ export const runLocalReview = async (root: string, base: string, additionalTests
       )}\n`,
     );
   console.log(`Local review ${source.head}\nReport: ${reportPath}\nDisposable checkout: ${checkout}`);
+  if (source.plan.desktopCiFiles.length)
+    console.log(
+      `GitHub CI evidence required for ${source.plan.desktopCiFiles.length} desktop test files listed in the plan.`,
+    );
   try {
     await save();
     // This scratch clone is not an implementation workspace and runs no workspace hooks.
@@ -108,7 +115,8 @@ export const runLocalReview = async (root: string, base: string, additionalTests
         "--base",
         source.mergeBase,
         ...(buildCache.server ? ["--build-cache", buildCache.server.url.origin] : []),
-        ...additionalTests.flatMap((file) => ["--test", file]),
+        ...tests.flatMap((file) => ["--test", file]),
+        ...(desktopInCi ? ["--desktop-in-ci"] : []),
         "--report",
         join(directory, "checks.json"),
       ],
@@ -145,6 +153,7 @@ export const runLocalReview = async (root: string, base: string, additionalTests
 export const reviewOptions = (args: string[]) => {
   let base = "origin/main";
   let list = false;
+  let desktopInCi = false;
   const tests: string[] = [];
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
@@ -153,24 +162,22 @@ export const reviewOptions = (args: string[]) => {
       list = true;
       continue;
     }
+    if (arg === "--desktop-in-ci") {
+      desktopInCi = true;
+      continue;
+    }
     if (arg !== "--base" && arg !== "--test") throw new Error(`Unknown option: ${arg}`);
     const value = args[++index];
     if (!value || value.startsWith("--")) throw new Error(`Missing value for ${arg}`);
     if (arg === "--base") base = value;
     else tests.push(value);
   }
-  return { base, list, tests };
+  return { base, list, tests, desktopInCi };
 };
 
 if (import.meta.main) {
   try {
-    const options = reviewOptions(process.argv.slice(2));
-    process.exitCode = await runLocalReview(
-      resolve(import.meta.dir, "../.."),
-      options.base,
-      options.tests,
-      options.list,
-    );
+    process.exitCode = await runLocalReview(resolve(import.meta.dir, "../.."), reviewOptions(process.argv.slice(2)));
   } catch (error) {
     console.error(String(error));
     process.exitCode = 1;

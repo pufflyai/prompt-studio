@@ -37,8 +37,9 @@ export const executeLocalReview = async (
   tests: string[],
   report: string,
   buildCache?: string,
+  desktopInCi = false,
 ) => {
-  const { head, plan } = readReviewSource(root, base, tests);
+  const { head, plan } = readReviewSource(root, base, tests, desktopInCi);
   const controller = new AbortController();
   const stop = () => controller.abort();
   process.on("SIGINT", stop);
@@ -119,5 +120,12 @@ if (import.meta.main) {
   const tests = args.flatMap((arg, index) => (arg === "--test" ? [args[index + 1]!] : []));
   if (!base || !report) throw new Error("Local review worker requires --base and --report");
   const buildCache = args.includes("--build-cache") ? args[args.indexOf("--build-cache") + 1] : undefined;
-  process.exitCode = await executeLocalReview(resolve(import.meta.dir, "../.."), base, tests, report, buildCache);
+  process.exitCode = await executeLocalReview(
+    resolve(import.meta.dir, "../.."),
+    base,
+    tests,
+    report,
+    buildCache,
+    args.includes("--desktop-in-ci"),
+  );
 }

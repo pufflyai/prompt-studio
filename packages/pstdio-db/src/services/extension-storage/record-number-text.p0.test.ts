@@ -69,8 +69,8 @@ test("record projections retain the exact JSON decimal before scalar text matchi
       })),
     });
     const result = await f.db.execute(sql`
-      SELECT value ->> 'value' AS decimal FROM storage_current_records
-      WHERE workbench_id = ${f.projectAId} ORDER BY record_id
+      SELECT value ->> 'value' AS decimal FROM records
+      WHERE owner_id IN (SELECT id FROM owners WHERE project_id=${f.projectAId}) ORDER BY record_id
     `);
     expect(result.rows.map((row) => row.decimal)).toEqual([
       "100000000000000000000000",

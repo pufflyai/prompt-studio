@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { boolean, index, integer, jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
 import type { BoardViewSettings } from "pstdio-api-contracts";
 import type { ViewFilterGroup, ViewSort } from "pstdio-api-contracts/extension-kernel";
+import { isoTimestamp } from "./iso-timestamp";
 import { projects } from "./projects";
 
 const boardScope = () => ({
@@ -23,8 +24,8 @@ export const board_views = pgTable(
     filter: jsonb("filter").$type<ViewFilterGroup>().notNull(),
     sorts: jsonb("sorts").$type<ViewSort[]>().notNull().default([]),
     sort_order: integer("sort_order").notNull(),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
+    created_at: isoTimestamp("created_at").notNull(),
+    updated_at: isoTimestamp("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("board_views_default_scope_idx")

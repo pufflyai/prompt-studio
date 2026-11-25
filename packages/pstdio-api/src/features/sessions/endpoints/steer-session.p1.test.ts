@@ -73,6 +73,62 @@ test("steers a new prompt into the captured active run without making it dispatc
 });
 
 test.each([
+  "source",
+  "sourceSessionId",
+])("reconciled uncertain delivery checkpoints the %s sender before removing its intent", async (field) => {
+  const fixture = await setup(async () => ({ status: "uncertain", reason: "connection lost" }));
+  try {
+    const source = await fixture.handle.deps.sessionService.create({
+      project_id: fixture.project.id,
+      title: "Source",
+      agent: "fake",
+      status: "completed",
+    });
+    const response = await fixture.send(
+      field === "source"
+        ? {
+            prompt: "Focus on tests <session-attachments>pasted context",
+            source: { type: "session", id: source.id },
+            sourceSessionId: "ignored",
+          }
+        : { prompt: "Focus on tests <session-attachments>pasted context", sourceSessionId: source.id },
+    );
+    const delivery = await response.json();
+    expect(delivery.status).toBe("uncertain");
+    fixture.handle.deps.sessionService.store.remove(fixture.session.id, fixture.owner);
+    await persistSessionMessages(
+      fixture.session.id,
+      [{ id: delivery.deliveryId, role: "user", parts: [{ type: "text", text: "Focus on tests" }] }],
+      fixture.handle.deps,
+    );
+    const queue = fixture.handle.deps.sessionQueueEntriesService;
+    const [intent] = await queue.listSteeringDeliveries(fixture.session.id);
+    const update = fixture.handle.deps.fileService.update;
+    fixture.handle.deps.fileService.update = async () => {
+      throw new Error("Sender checkpoint unavailable");
+    };
+    try {
+      await expect(reconcileQueuedSteering(fixture.handle.deps, fixture.session.id)).rejects.toThrow(
+        "Sender checkpoint unavailable",
+      );
+      expect(await queue.get(intent.queue_position)).toEqual(intent);
+    } finally {
+      fixture.handle.deps.fileService.update = update;
+    }
+    await reconcileQueuedSteering(fixture.handle.deps, fixture.session.id);
+    const { getSessionHistory } = await import("../session-history");
+    expect((await getSessionHistory(fixture.session.id, fixture.handle.deps))[0].sender).toMatchObject({
+      type: "session",
+      id: source.id,
+      name: source.title,
+    });
+    expect(await fixture.handle.deps.sessionQueueEntriesService.listSteeringDeliveries()).toEqual([]);
+  } finally {
+    await fixture.handle.close();
+  }
+});
+
+test.each([
   "inactive",
   "unsupported",
   "stale_run",
@@ -140,7 +196,10 @@ test.each([
     await created.promise;
     expect(fixture.owner.controlInvocations.size).toBe(1);
     if (change === "cancelled") fixture.owner.cancellationRequested = true;
-    else await fixture.handle.deps.sessionService.update(fixture.session.id, { last_request_started: "new-run" });
+    else
+      await fixture.handle.deps.sessionService.update(fixture.session.id, {
+        last_request_started: "2099-01-01T00:00:00.000Z",
+      });
     release.resolve();
     expect(await (await response).json()).toMatchObject({
       status: "rejected",

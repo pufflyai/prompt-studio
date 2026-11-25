@@ -12,11 +12,8 @@ import {
   readOrderedPath,
 } from "pstdio-sync/records";
 import { canonicalJson, type Json } from "pstdio-sync-contracts";
-import {
-  storage_documents as documents,
-  storage_ordered_operations as operations,
-  storage_ordered_touches as touches,
-} from "../../db/schemas.pg";
+import { documents } from "../../db/schemas/documents";
+import { storage_ordered_operations as operations, owners } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
 import { readOrderedMarker, saveOrderedMarker } from "./ordered-native-metadata";
@@ -71,15 +68,15 @@ const pendingWhere = (owner: StorageOwner) =>
   );
 
 /** Counts only saves that are not already folded, so a large folded return never refolds on every save. */
-const overFoldLimit = async (tx: OrderedTransaction, owner: StorageOwner) => {
-  const rows = await tx
+const unfoldedPastLimit = (tx: OrderedTransaction, owner: StorageOwner) =>
+  tx
     .select({ id: operations.operation_id })
     .from(operations)
     .where(and(pendingWhere(owner), eq(operations.delivered, false), unfolded))
     .offset(orderedReturnLimits.fold)
     .limit(1);
-  return rows.length > 0;
-};
+const overFoldLimit = async (tx: OrderedTransaction, owner: StorageOwner) =>
+  (await unfoldedPastLimit(tx, owner)).length > 0;
 
 export const setOrderedReturnState = async (
   tx: OrderedTransaction,
@@ -88,8 +85,7 @@ export const setOrderedReturnState = async (
   options: Omit<OrderedReturnMarker, "state"> = {},
 ) => {
   if (state) await saveOrderedMarker(tx, owner, returnMarker, { state, ...options } satisfies OrderedReturnMarker);
-  else
-    await tx.delete(documents).where(and(orderedOwnerWhere(documents, owner), eq(documents.document_id, returnMarker)));
+  else await tx.delete(documents).where(and(orderedOwnerWhere(documents, owner), eq(documents.key, returnMarker)));
 };
 
 export const editRecords = (local: Local) => local.operation.edits.map((edit) => edit.recordId);
@@ -250,9 +246,8 @@ export const dropPending = async (tx: OrderedTransaction, owner: StorageOwner, i
     const page = ids.slice(offset, offset + 1_000);
     await tx
       .update(operations)
-      .set({ envelope: null, admission: null, admission_epoch: null, admission_fingerprint: null })
+      .set({ envelope: null, admission: null, admission_epoch: null, admission_fingerprint: null, touches: [] })
       .where(and(orderedOwnerWhere(operations, owner), inArray(operations.operation_id, page)));
-    await tx.delete(touches).where(and(orderedOwnerWhere(touches, owner), inArray(touches.operation_id, page)));
   }
 };
 
@@ -300,16 +295,8 @@ const foldScope = async (journal: OrderedJournal, tx: OrderedTransaction, owner:
 
 const unfoldedRecords = async (tx: Pick<OrderedTransaction, "selectDistinct">, owner: StorageOwner) => {
   const rows = await tx
-    .selectDistinct({ recordId: touches.record_id })
-    .from(touches)
-    .innerJoin(
-      operations,
-      and(
-        eq(operations.workbench_id, touches.workbench_id),
-        eq(operations.extension_id, touches.extension_id),
-        eq(operations.operation_id, touches.operation_id),
-      ),
-    )
+    .selectDistinct({ recordId: sql<string>`unnest(${operations.touches})` })
+    .from(operations)
     .where(and(pendingWhere(owner), eq(operations.delivered, false), unfolded));
   return rows.map((row) => row.recordId);
 };
@@ -359,14 +346,30 @@ export const foldOrderedSaves = async (
   if (owner.extensionId === coreOwnerId) return [];
   if (!(await readOrderedReturnState(tx, owner))) {
     const row = await readOrderedOwner(tx, owner);
-    if (!(await orderedOwnerJoinedCloud(tx, owner, row)) || !(await overFoldLimit(tx, owner))) return [];
+    if (!(await orderedOwnerJoinedCloud(row)) || !(await overFoldLimit(tx, owner))) return [];
     await setOrderedReturnState(tx, owner, "folded");
     return foldAllOrderedSaves(journal, tx, owner);
   }
   return changed.length ? foldScope(journal, tx, owner, changed) : [];
 };
 
-/** Whether a save must take the full rebase path so it can fold. */
-export const orderedSavesFold = async (tx: OrderedTransaction, owner: StorageOwner) =>
-  owner.extensionId !== coreOwnerId &&
-  (!!(await readOrderedReturnState(tx, owner)) || (await overFoldLimit(tx, owner)));
+/** Check whether the joined owner can append a save without a full rebase. */
+export const canAppendOrderedProjection = async (tx: OrderedTransaction, owner: StorageOwner) => {
+  const markers = tx
+    .select({ id: documents.id })
+    .from(documents)
+    .where(and(eq(documents.owner_id, owners.id), eq(documents.key, returnMarker)));
+  const [row] = await tx
+    .select({
+      joined: owners.joined,
+      epoch: owners.epoch,
+      hasMarker: sql<boolean>`EXISTS (${markers})`,
+      overLimit: sql<boolean>`EXISTS (${unfoldedPastLimit(tx, owner)})`,
+    })
+    .from(owners)
+    .where(orderedOwnerWhere(owners, owner));
+  if (!row) throw new Error("Ordered owner has not been initialized");
+  if (!orderedOwnerJoinedCloud(row)) return false;
+  if (row.hasMarker && (await readOrderedReturnState(tx, owner))) return false;
+  return !row.overLimit;
+};

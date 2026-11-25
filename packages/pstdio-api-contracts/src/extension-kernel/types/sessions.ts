@@ -7,6 +7,7 @@ import type {
   SteerQueuedFollowUpInput,
   UpdateQueuedFollowUpInput,
 } from "../../queued-follow-ups";
+import type { SessionMessageSource } from "../../session-messages";
 import type { SessionAttachmentRef, SessionDetails, SessionFollowUpRequest, SessionStatus } from "../../sessions";
 import type { ResourceAnchor, ResourceRef } from "./resources";
 import type { ExtensionSessionControlsApi } from "./session-controls";
@@ -173,6 +174,7 @@ export interface ExtensionSessionsApi extends ExtensionSessionControlsApi {
     anchors?: ResourceAnchor[];
     attachments?: SessionAttachmentRef[];
     originalSessionId?: string;
+    source?: SessionMessageSource;
     operation?: HarnessOperation;
   }): Promise<
     ExtensionSession &
@@ -182,6 +184,7 @@ export interface ExtensionSessionsApi extends ExtensionSessionControlsApi {
 
   followup(input: {
     sessionId: string;
+    source?: SessionMessageSource;
     prompt?: string;
     attachments?: SessionAttachmentRef[];
     harness?: ExtensionHarnessInput;

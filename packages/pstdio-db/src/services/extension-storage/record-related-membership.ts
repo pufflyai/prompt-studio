@@ -47,7 +47,7 @@ export const relatedScalarMembershipSql = (
   const right = recordFieldSql(target, join.relatedField, targetAlias, resolve, owner);
   // Exclude SQL and JSON nulls exactly as the correlated relationship predicate does.
   return sql`(${left} IS NOT NULL AND ${left} <> 'null'::jsonb AND ${left} IN (
-    SELECT ${right} FROM storage_current_records AS ${sql.identifier(targetAlias)}
+    SELECT ${right} FROM records AS ${sql.identifier(targetAlias)}
     WHERE ${recordScopeSql(owner, target, targetAlias)}
       AND ${right} IS NOT NULL AND ${right} <> 'null'::jsonb
   ))`;

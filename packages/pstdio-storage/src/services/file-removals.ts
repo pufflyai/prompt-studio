@@ -150,7 +150,8 @@ export const createFileRemovals = (storageRoot: string, authority: string) => {
         }
       }
       if (linked) {
-        const bytes = await open(receipt.staged, "r");
+        // Windows requires write access to flush an existing file handle.
+        const bytes = await open(receipt.staged, process.platform === "win32" ? "r+" : "r");
         try {
           await bytes.sync();
         } finally {

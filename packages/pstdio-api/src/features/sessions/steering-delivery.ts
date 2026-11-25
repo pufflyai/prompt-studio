@@ -7,6 +7,7 @@ import { publishSessionContent } from "./session-content-publications";
 import { persistSessionMessages } from "./session-messages";
 import { withSchedulingLock } from "./session-scheduler-internals";
 import type { ActiveSession } from "./session-store";
+import { submittedMessageSender } from "./submitted-message-identity";
 
 export type SteeringQueueEntry = NonNullable<
   Awaited<ReturnType<SessionsRouteDeps["sessionQueueEntriesService"]["get"]>>
@@ -97,8 +98,16 @@ export const deliverSteering = async (
       await target.reject(entry, deliveryId);
       return gate;
     }
+    const conversation = await owner.conversationReady;
+    const sender = submittedMessageSender({
+      sessionId,
+      submittedQueuePosition: entry.queue_position,
+      sender: entry.sender_json ?? undefined,
+    });
+    const cancelAttribution = conversation.attributePrompt(entry.prompt, sender, deliveryId);
     const result = await steer({ deliveryId, prompt: entry.prompt, attachments, signal: control.abort.signal });
     if (result.status === "rejected") {
+      cancelAttribution();
       await target.reject(entry, deliveryId);
       return rejected("delivery_failed", result.reason);
     }

@@ -9,6 +9,8 @@ import { Portal } from "@/utils/ui-scope";
 import { DashboardRenderer } from "./dashboard-renderer";
 import type { DashboardDefinition } from "./dashboard-types";
 
+const buildHistory = { title: "Build history", description: "Builds per day" };
+
 const initial: DashboardDefinition = {
   mode: "vertical",
   widgets: [{ id: "releases", title: "", kind: "custom", source: "releases", layout: { x: 0, y: 0, w: 12, h: 8 } }],
@@ -103,7 +105,8 @@ export function DashboardEmbeddedExample(props: { deferRefresh?: boolean }) {
       sources={[
         {
           id: "releases",
-          name: "Build history",
+          name: buildHistory.title,
+          customWidgetDefaults: deferRefresh ? undefined : buildHistory,
           metric: { value: 7 },
           content: <BuildHistory />,
         },
@@ -111,6 +114,12 @@ export function DashboardEmbeddedExample(props: { deferRefresh?: boolean }) {
           id: "deployments",
           name: "Deployment history",
           content: <BuildHistory markerLabel="Deployment marker" />,
+        },
+        {
+          id: "release-builds",
+          name: "Release builds",
+          customWidgetDefaults: { title: "Release builds", description: "Builds per release" },
+          content: <BuildHistory markerLabel="Build marker" />,
         },
       ]}
       renderToolbar={(controls) => (

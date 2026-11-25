@@ -159,7 +159,7 @@ test("only the exact admitted decision settles a save; a late old receipt cannot
   const input = await operation();
   const request = await fingerprint({ request: "original" });
   await f.run(async (journal) => {
-    await journal.queue(input, request);
+    expect((await journal.queueWithStatus(input, request)).enqueued).toBe(true);
     const admission = { epoch: "new", operation: input, dependencies: [] };
     await journal.admit(admission);
     await journal.recordDecision(decision(input.fingerprint, "old"), "old-wrapper");
@@ -170,8 +170,39 @@ test("only the exact admitted decision settles a save; a late old receipt cannot
     expect(await journal.pending()).toEqual([]);
     expect(await journal.pendingFor(["setting", "audit"])).toEqual([]);
     expect(await journal.outcome(input.operationId)).toEqual(exact);
-    expect((await journal.localOperation(input.operationId))?.operation).toEqual(input);
+    expect(await journal.localOperation(input.operationId)).toBeUndefined();
+    expect(await journal.requestIdentity(input.operationId)).toBe(request);
+    expect(await journal.queueWithStatus(input, request)).toMatchObject({
+      enqueued: false,
+      save: { operation: input },
+    });
     expect(await journal.cachedDecision(input.operationId, "old")).toEqual(decision(input.fingerprint, "old"));
+  });
+});
+
+test("a fresh local admission settles with its exact receipt in the same journal update", async () => {
+  const f = await fixture();
+  const input = await operation();
+  const admission = { epoch: "local:first", operation: input, dependencies: [] };
+  const accepted = { ...decision(input.fingerprint, admission.epoch), state: "accepted" as const };
+  const identity = await fingerprint(admission as unknown as Json);
+  await f.run(async (journal) => {
+    await journal.queue(input, input.fingerprint);
+    await expect(journal.settleFreshLocalAdmission(admission, { ...accepted, epoch: "wrong" })).rejects.toThrow(
+      "admitted identity",
+    );
+    expect(await journal.pending()).toHaveLength(1);
+    expect(await journal.settleFreshLocalAdmission(admission, accepted)).toBe(true);
+    expect(await journal.pending()).toEqual([]);
+    expect(await journal.operationCoordinates(input.operationId)).toEqual({
+      admission: admission.epoch,
+      settled: admission.epoch,
+    });
+    expect(await journal.cachedReceipt(input.operationId, admission.epoch)).toEqual({
+      decision: accepted,
+      admissionFingerprint: identity,
+    });
+    expect(await journal.settleFreshLocalAdmission(admission, accepted)).toBe(false);
   });
 });
 
