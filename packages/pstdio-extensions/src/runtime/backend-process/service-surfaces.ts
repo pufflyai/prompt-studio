@@ -7,8 +7,9 @@ import type { BackendSurface } from "./surface";
  */
 type Members = Record<string, BackendSurface>;
 
-const object = (members: Members): BackendSurface => ({ kind: "object", members });
-const calls = (...names: string[]): Members => Object.fromEntries(names.map((name) => [name, { kind: "async" }]));
+const object = (members: Members) => ({ kind: "object", members }) satisfies BackendSurface;
+const calls = (...names: string[]) =>
+  Object.fromEntries<BackendSurface>(names.map((name) => [name, { kind: "async" }]));
 
 const mountCalls = [
   "exists",

@@ -4,11 +4,12 @@ import type { BackendSurface } from "./surface";
 
 type Members = Record<string, BackendSurface>;
 
-const object = (members: Members): BackendSurface => ({ kind: "object", members });
+const object = (members: Members) => ({ kind: "object", members }) satisfies BackendSurface;
 const value: BackendSurface = { kind: "value" };
 const notify: BackendSurface = { kind: "notify" };
-const calls = (...names: string[]): Members => Object.fromEntries(names.map((name) => [name, { kind: "async" }]));
-const values = (...names: string[]): Members => Object.fromEntries(names.map((name) => [name, value]));
+const calls = (...names: string[]) =>
+  Object.fromEntries<BackendSurface>(names.map((name) => [name, { kind: "async" }]));
+const values = (...names: string[]) => Object.fromEntries<BackendSurface>(names.map((name) => [name, value]));
 
 // blobs.urlFor is synchronous and needs host URL data; it joins the surface with the other local helpers.
 const blobs = object(calls("put", "update", "get", "getBytes", "list", "delete"));
@@ -48,22 +49,23 @@ const records = (namespace?: string[]) =>
     ...(namespace ? { id: { kind: "local", name: "recordId", namespace } } : {}),
   });
 
-const storageMembers = (namespace?: string[]): Members => ({
-  ...calls("get", "set", "delete", "canMigrate", "readLegacy"),
-  ids: object({ create: { kind: "local", name: "storageId" } }),
-  records: records(namespace),
-  files: blobs,
-  collection: { kind: "factory", returns: collection },
-});
+const storageMembers = (namespace?: string[]) =>
+  ({
+    ...calls("get", "set", "delete", "canMigrate", "readLegacy"),
+    ids: object({ create: { kind: "local", name: "storageId" } }),
+    records: records(namespace),
+    files: blobs,
+    collection: { kind: "factory", returns: collection },
+  }) satisfies Members;
 
 // A scope's record namespace is resolved by the host, so scoped storage does not offer records.id yet.
-const scopedStorage = { kind: "object", members: storageMembers() } satisfies BackendSurface;
+const scopedStorage: Extract<BackendSurface, { kind: "object" }> = { kind: "object", members: storageMembers() };
 scopedStorage.members.scope = { kind: "factory", returns: scopedStorage };
 
 type ContextData = { projectId: string; navigation?: unknown };
 
 /** Describes only supported services that are present on this invocation's host context. */
-export const extensionContextSurface = (context: ContextData): BackendSurface => {
+export const extensionContextSurface = (context: ContextData) => {
   const services: Members = {
     ...serviceSurfaces,
     logger: object({ info: notify, warn: notify, error: notify }),
