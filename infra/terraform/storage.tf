@@ -30,11 +30,27 @@ data "digitalocean_database_ca" "cloud" {
   cluster_id = digitalocean_database_cluster.cloud.id
 }
 
+variable "database_trusted_monitoring_ips" {
+  type    = set(string)
+  default = []
+  validation {
+    condition     = alltrue([for address in var.database_trusted_monitoring_ips : can(cidrhost("${address}/32", 0))])
+    error_message = "Monitoring sources must be explicit IPv4 addresses."
+  }
+}
+
 resource "digitalocean_database_firewall" "cloud" {
   cluster_id = digitalocean_database_cluster.cloud.id
   rule {
     type  = "app"
     value = digitalocean_app.cloud.id
+  }
+  dynamic "rule" {
+    for_each = var.database_trusted_monitoring_ips
+    content {
+      type  = "ip_addr"
+      value = rule.value
+    }
   }
 }
 

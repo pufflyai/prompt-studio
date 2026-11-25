@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+rule_files: [/etc/monitoring/rules.yaml]
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+scrape_configs:
+  - job_name: monitoring
+    static_configs:
+      - targets: ['prometheus:9090', 'loki:3100', 'alertmanager:9093']
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'up|process_resident_memory_bytes|prometheus_tsdb_storage_blocks_bytes|loki_discarded_samples_total|prometheus_rule_evaluation_failures_total|prometheus_remote_storage_samples_failed_total'
+        action: keep

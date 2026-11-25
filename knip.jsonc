@@ -74,6 +74,12 @@
       "project": ["*.ts", "src/**/*.ts", "scripts/**/*.ts"],
       "ignore": ["dist/**"]
     },
+    "services/relay-monitoring": {
+      // Containers launch these workers directly; the integration runner discovers tests by path.
+      "entry": ["src/*-main.ts", "src/**/*.test.ts", "src/**/*.integration.ts"],
+      "project": ["src/**/*.ts"],
+      "ignore": ["dist/**"]
+    },
     "scripts": {
       "entry": ["**/*.ts"],
       "project": ["**/*.ts"]

@@ -15,6 +15,11 @@ on:
         required: true
         type: string
   workflow_dispatch:
+    inputs:
+      monitoring_preview:
+        description: Build and publish immutable relay/manager preview images for a pre-merge monitoring trial
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -22,7 +27,7 @@ permissions:
 jobs:
   psx_delivery:
     # PR CI runs P0 only. Releases call this delivery smoke with their version.
-    if: github.event_name != 'pull_request' || inputs.version != ''
+    if: (github.event_name != 'pull_request' || inputs.version != '') && !inputs.monitoring_preview
     # Temporary: Playwright's Chromium does not install on Ubuntu 26.04 yet (ADR 0105).
     runs-on: ubuntu-24.04
     steps:
@@ -59,7 +64,7 @@ jobs:
         run: bun run --cwd packages/e2e test:packaged:browser -- packaged-independent-extensions.p2.spec.ts
   build:
     # A called release producer always supplies a version, even from a PR event.
-    if: github.event_name != 'pull_request' || inputs.version != ''
+    if: (github.event_name != 'pull_request' || inputs.version != '') && !inputs.monitoring_preview
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -159,7 +164,7 @@ jobs:
   portable_smoke:
     # Production validation consumes the exact archives in production-services.yml.
     # This source rebuild is an explicit manual deployment diagnostic only.
-    if: github.event_name == 'workflow_dispatch' && inputs.version == ''
+    if: github.event_name == 'workflow_dispatch' && inputs.version == '' && !inputs.monitoring_preview
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -169,3 +174,34 @@ jobs:
         with:
           bun-version-file: package.json
       - run: bun infra/relay/smoke-portable.ts
+
+  monitoring_preview:
+    if: github.event_name == 'workflow_dispatch' && inputs.monitoring_preview
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [relay, account-manager]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish the exact preview without changing release tags
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}/${{ matrix.service }}:monitoring-preview-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}

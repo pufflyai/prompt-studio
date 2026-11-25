@@ -1,4 +1,10 @@
-import type { createPreparationContinuations, preparationPriority } from "./preparation-priority";
+import {
+  type createPreparationContinuations,
+  liveContinuations,
+  preparationIncludes,
+  type preparationPriority,
+  preparationRequestedBy,
+} from "./preparation-priority";
 
 export interface PreparationOptions {
   /** Explicit disjoint resource paths allow parallel execution. Ancestors conflict; unknown work is exclusive. */
@@ -10,20 +16,22 @@ export interface PreparationOptions {
   /** Status inspection yields to live continuations but can interrupt unreserved speculation. */
   preserveActiveContinuation?: boolean;
 }
-export const priorityFor = (options: PreparationOptions, scope: ReturnType<typeof preparationPriority.getStore>) => {
+type Continuation = NonNullable<ReturnType<typeof preparationPriority.getStore>>;
+export const priorityFor = (options: PreparationOptions, scope?: Continuation, owner?: Continuation) => {
+  const continuation = owner ?? scope?.continuation;
   // A primary-worker loss must restore watches before an unrelated speculative
   // peer resumes. Ordinary background continuations still never gain this rank.
-  if (scope?.continuation?.continuing && scope.continuation.priority === "restoration") return 1;
+  if (continuation?.continuing && continuation.priority === "restoration") return 1;
   if (options.priority === "background") return 2;
-  const priority = options.priority ?? scope?.priority;
-  if (priority === undefined || priority === "requested") return 0;
-  return scope?.continuation?.continuing && scope.continuation.priority === "requested" ? 1 : 2;
+  const requested = owner ? preparationRequestedBy(scope, owner) : !scope || scope.priority === "requested";
+  if (options.priority === "requested" || requested) return 0;
+  return continuation?.continuing && continuation.priority === "requested" ? 1 : 2;
 };
 export interface Waiter {
   resolve: (value: unknown) => void;
   reject: (error: unknown) => void;
   removeAbort: () => void;
-  priority: () => number;
+  priority: (owner?: Continuation) => number;
   preserveActiveContinuation?: boolean;
   scope?: ReturnType<typeof preparationPriority.getStore>;
 }
@@ -36,6 +44,8 @@ export interface Job {
   home: string;
   env: NodeJS.ProcessEnv;
   waiters: Set<Waiter>;
+  /** Live continuations this job's worker was retired for, with when each owner went idle. */
+  yielded?: Map<Continuation, { idleSince?: number }>;
 }
 export const createJob = (
   id: number,
@@ -73,20 +83,114 @@ export const preparationJobMessage = (active: Job) => ({
   env: active.env,
 });
 
+const waiterPriority = (waiter: Waiter, owner?: Continuation) => {
+  if (!owner) return waiter.priority();
+  return preparationIncludes(waiter.scope, owner) ? Math.max(waiter.priority(), waiter.priority(owner)) : Infinity;
+};
+
 export const preparationQueuePriority =
-  (continuations: ReturnType<typeof createPreparationContinuations>) => (job: Job) =>
+  (continuations: ReturnType<typeof createPreparationContinuations>) => (job: Job, owner?: Continuation) =>
     Math.min(
       ...[...job.waiters].map((waiter) =>
         waiter.preserveActiveContinuation && continuations.hasUrgentOtherThan(waiter.scope?.continuation)
           ? Infinity
-          : waiter.priority(),
+          : waiterPriority(waiter, owner),
       ),
     );
+export type PreparationJobPriority = ReturnType<typeof preparationQueuePriority>;
+
+// Retiring a worker for a continuation's job resumes the interrupted job after that
+// continuation, not in its next database gap, where its next job would retire it again.
+/**
+ * How long an interrupted job stays out of its preemptor's gaps while that preemptor is idle. It is busy
+ * only while one of its jobs runs or is reserved on a starting worker, or while the job it retired a slot
+ * for still waits for that slot's capacity. Other queued work leaves the clock running, so a barred job
+ * cannot extend the hold.
+ * A long step of its own never spends the hold, and a waiter that reaches the job without a loan is
+ * delayed at most this long once the preemptor stops running work.
+ */
+export const PREPARATION_YIELD_HOLD_MS = 1_000;
+
+/** Tells the queue whether a continuation still has work, and when to look at a held job again. */
+export interface YieldClock {
+  busy: (owner: Continuation) => boolean;
+  now: () => number;
+  wake: (delay: number) => void;
+}
+
+export const createYieldClock = (jobs: () => Iterable<Job | undefined>, resume: () => void): YieldClock => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let wakeAt = Number.POSITIVE_INFINITY;
+  const now = () => performance.now();
+  return {
+    busy: (owner) =>
+      [...jobs()].some((job) => job && [...job.waiters].some((waiter) => preparationIncludes(waiter.scope, owner))),
+    now,
+    wake: (delay) => {
+      if (timer && now() + delay >= wakeAt) return;
+      clearTimeout(timer);
+      wakeAt = now() + delay;
+      timer = setTimeout(() => {
+        timer = undefined;
+        wakeAt = Number.POSITIVE_INFINITY;
+        resume();
+      }, delay + 1);
+      timer.unref?.();
+    },
+  };
+};
+
+export const yieldPreparation = (
+  job: Job,
+  next: Job,
+  queuedPriority: PreparationJobPriority,
+  preemptingPriority = queuedPriority,
+) => {
+  const interruptedPriority = activePreparationPriority(job, queuedPriority);
+  const owners = new Set([...next.waiters].flatMap(({ scope }) => liveContinuations(scope)));
+  // A shared job can borrow its rank from one caller without lending it to the others.
+  for (const owner of owners) {
+    if (!owner.continuing || preemptingPriority(next, owner) >= interruptedPriority) continue;
+    job.yielded ??= new Map();
+    job.yielded.set(owner, {});
+  }
+  return job;
+};
+const holds = (owner: Continuation, hold: { idleSince?: number }, clock: YieldClock) => {
+  if (clock.busy(owner)) {
+    hold.idleSince = undefined;
+    return true;
+  }
+  const now = clock.now();
+  hold.idleSince ??= now;
+  const left = hold.idleSince + PREPARATION_YIELD_HOLD_MS - now;
+  if (left > 0) clock.wake(left);
+  return left > 0;
+};
+const awaitsYield = (job: Job, clock?: YieldClock) => {
+  if (!job.yielded) return false;
+  for (const [owner, hold] of job.yielded)
+    if (!owner.continuing || (clock && !holds(owner, hold, clock))) job.yielded.delete(owner);
+  // A continuation that now waits on the interrupted job itself, directly or through a loan, needs it to run.
+  // Membership is exact: a lent continuation still counts when a more urgent one ranks first.
+  return (
+    job.yielded.size > 0 &&
+    ![...job.waiters].some((waiter) =>
+      [...job.yielded!.keys()].some((owner) => preparationIncludes(waiter.scope, owner)),
+    )
+  );
+};
+
+/** Re-reads every hold whenever work starts or ends, so idle time counts only between the owner's jobs. */
+export const refreshYieldHolds = (jobs: Iterable<Job>, clock: YieldClock) => {
+  for (const job of jobs) awaitsYield(job, clock);
+};
 
 export const orderPreparationQueue = (
   queued: Job[],
   priority: (job: Job) => number,
   continuations: ReturnType<typeof createPreparationContinuations>,
+  clock?: YieldClock,
 ) => {
   queued.sort((a, b) => priority(a) - priority(b) || a.id - b.id);
   if (queued[0] && !Number.isFinite(priority(queued[0]))) return false;
@@ -95,6 +199,7 @@ export const orderPreparationQueue = (
     const dependency = queued.findIndex(
       (job) =>
         Number.isFinite(priority(job)) &&
+        !awaitsYield(job, clock) &&
         [...job.waiters].some(
           (waiter) =>
             waiter.scope?.continuation?.continuing &&
@@ -109,9 +214,10 @@ export const orderPreparationQueue = (
 
 // Closing admission affects queued reads. An already running read keeps its
 // urgency until it replies, rather than becoming infinitely preemptible.
-export const activePreparationPriority = (job: Job, queuedPriority: (job: Job) => number) => {
+export const activePreparationPriority = (job: Job, queuedPriority: PreparationJobPriority, owner?: Continuation) => {
   const priority = queuedPriority(job);
-  return Number.isFinite(priority) ? priority : Math.min(...[...job.waiters].map((waiter) => waiter.priority()));
+  if (Number.isFinite(priority)) return owner ? queuedPriority(job, owner) : priority;
+  return Math.min(...[...job.waiters].map((waiter) => waiterPriority(waiter, owner)));
 };
 
 export const cancelQueuedPreparation = (jobs: Map<string, Job>, queued: Job[], job: Job) => {
@@ -148,7 +254,7 @@ export const waitForPreparation = (
       reject,
       scope,
       preserveActiveContinuation: options.preserveActiveContinuation,
-      priority: () => priorityFor(options, scope),
+      priority: (owner) => priorityFor(options, scope, owner),
       removeAbort: () => options.signal?.removeEventListener("abort", abort),
     };
     job.waiters.add(waiter);

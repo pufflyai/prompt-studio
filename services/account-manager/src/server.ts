@@ -1,11 +1,17 @@
-import { createServiceTelemetry } from "pstdio-service-telemetry";
+import { createServiceMonitoring, createServiceTelemetry, type ServiceFailure } from "pstdio-service-telemetry";
 import { createManagerAuthentication } from "./manager-authentication";
 import { createManagerHandler } from "./manager-http";
 
 const number = (name: string) => Number(process.env[name]);
 const telemetry = createServiceTelemetry(process.env, "manager");
+const monitoring = createServiceMonitoring(process.env, "manager");
+const report = (code: ServiceFailure) => {
+  telemetry.report(code);
+  monitoring.failure(code);
+};
 const auth = createManagerAuthentication({
   databaseUrl: process.env.DATABASE_URL ?? "",
+  databasePoolMax: process.env.DATABASE_POOL_MAX === undefined ? undefined : number("DATABASE_POOL_MAX"),
   origin: process.env.MANAGER_ORIGIN ?? "",
   audience: process.env.RELAY_AUDIENCE ?? "",
   secret: process.env.BETTER_AUTH_SECRET ?? "",
@@ -25,7 +31,7 @@ const server = Bun.serve({
   hostname: process.env.MANAGER_HOST ?? "127.0.0.1",
   port,
   ...(certificate && key ? { tls: { cert: Bun.file(certificate), key: Bun.file(key) } } : {}),
-  fetch: createManagerHandler(auth, process.env.MANAGER_ORIGIN!, undefined, telemetry.report),
+  fetch: monitoring.wrap(createManagerHandler(auth, process.env.MANAGER_ORIGIN!, undefined, report)),
 });
 let closing: Promise<void> | undefined;
 const close = () =>
@@ -35,6 +41,7 @@ const close = () =>
       await auth.close();
     } finally {
       telemetry.close();
+      await monitoring.close();
       console.log(JSON.stringify({ event: "telemetry.delivery", service: "manager", ...telemetry.counts() }));
     }
   })());

@@ -1,0 +1,7 @@
+{$MONITORING_HOST} {
+  request_body {
+    max_size 2MB
+  }
+  header -Server
+  reverse_proxy gateway:8080
+}

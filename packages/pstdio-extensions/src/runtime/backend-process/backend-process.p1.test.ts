@@ -1,4 +1,5 @@
-import { afterAll, beforeAll, expect, test } from "bun:test";
+import { afterAll, beforeAll, expect, spyOn, test } from "bun:test";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -62,6 +63,43 @@ export default {
     },
     { id: "observed-abort", title: "Observed abort", run: () => observedAbort },
     { id: "crash", title: "Crash", run: () => process.exit(7) },
+    {
+      id: "shape",
+      title: "Shape",
+      run(ctx) {
+        const item = { blob: new Blob(["asset bytes"]) };
+        const items = { async *[Symbol.asyncIterator]() { yield "entry"; } };
+        return ctx.inspect({ first: item, second: item, items });
+      },
+    },
+    { id: "finish", title: "Finish", run: (ctx) => ctx.finish() },
+    {
+      id: "edges",
+      title: "Edges",
+      async run(ctx) {
+        await ctx.live.listen(() => { throw new Error("listener failed"); });
+        const entity = await ctx.live.entity();
+        const controller = new AbortController();
+        const waiting = ctx.live.wait({ signal: controller.signal });
+        controller.abort();
+        const aborted = await waiting;
+        const follow = ctx.live.follow()[Symbol.asyncIterator]();
+        await follow.next();
+        return { entityKeys: Object.keys(entity), hasMethod: typeof entity.reveal, aborted };
+      },
+    },
+    {
+      id: "live",
+      title: "Live",
+      async run(ctx) {
+        const doubled = await ctx.live.apply(async (value) => value * 2, 21);
+        const handle = await ctx.live.open();
+        const closed = await handle.close();
+        const entries = [];
+        for await (const entry of ctx.live.follow()) entries.push(entry);
+        return { doubled, closed, entries };
+      },
+    },
     {
       id: "disconnect",
       title: "Disconnect",
@@ -430,5 +468,237 @@ test("closing an empty pool allows subsequent workers to be started and closed",
     expect(exited).toBe(true);
   } finally {
     await running.stop();
+  }
+});
+
+test("host calls and notifications resume in the invocation's async scope", async () => {
+  const worker = await start();
+  const scope = new AsyncLocalStorage<string>();
+  const seen: Array<string | undefined> = [];
+  const capture = () => seen.push(scope.getStore());
+  try {
+    await scope.run("active invocation", () =>
+      worker.invoke({
+        handlerId: handlerOf(worker.definition, "save"),
+        context: {
+          projectId: "p1",
+          logger: { info: capture },
+          storage: { collection: () => ({ put: async () => capture(), get: async () => capture() }) },
+        },
+        surface,
+        args: [{ id: "a", bytes: new Uint8Array([1]) }],
+      }),
+    );
+  } finally {
+    await worker.stop();
+  }
+  expect(seen).toEqual(["active invocation", "active invocation", "active invocation"]);
+});
+
+test("functions and iterables cross the boundary in both directions during an invocation", async () => {
+  const worker = await start();
+  try {
+    const liveSurface: BackendSurface = {
+      kind: "object",
+      members: {
+        live: {
+          kind: "object",
+          members: { apply: { kind: "async" }, open: { kind: "async" }, follow: { kind: "iterate" } },
+        },
+      },
+    };
+    const context = {
+      live: {
+        apply: async (fn: (value: number) => Promise<number>, value: number) => fn(value),
+        open: async () => ({ close: async () => "closed by host" }),
+        follow: async function* () {
+          yield "first";
+          yield "second";
+        },
+      },
+    };
+    expect(
+      await worker.invoke({ handlerId: handlerOf(worker.definition, "live"), context, surface: liveSurface, args: [] }),
+    ).toEqual({ doubled: 42, closed: "closed by host", entries: ["first", "second"] });
+  } finally {
+    await worker.stop();
+  }
+});
+
+test("listener failures, host objects, abort signals and abandoned iterators stay contained", async () => {
+  const worker = await start();
+  const unhandled: unknown[] = [];
+  const onUnhandled = (reason: unknown) => unhandled.push(reason);
+  process.on("unhandledRejection", onUnhandled);
+  let iteratorClosed = false;
+  class Entity {
+    name = "entity";
+    #secret = "host secret";
+    reveal() {
+      return this.#secret;
+    }
+  }
+  try {
+    const edgeSurface: BackendSurface = {
+      kind: "object",
+      members: {
+        live: {
+          kind: "object",
+          members: {
+            listen: { kind: "async" },
+            entity: { kind: "async" },
+            wait: { kind: "async" },
+            follow: { kind: "iterate" },
+          },
+        },
+      },
+    };
+    const context = {
+      live: {
+        listen: async (listener: () => void) => {
+          listener();
+        },
+        entity: async () => new Entity(),
+        wait: ({ signal }: { signal: AbortSignal }) =>
+          new Promise((resolve) => {
+            if (signal.aborted) resolve("aborted");
+            signal.addEventListener("abort", () => resolve("aborted"), { once: true });
+          }),
+        follow: async function* () {
+          try {
+            yield "first";
+            await new Promise(() => {});
+          } finally {
+            iteratorClosed = true;
+          }
+        },
+      },
+    };
+    expect(
+      await worker.invoke({
+        handlerId: handlerOf(worker.definition, "edges"),
+        context,
+        surface: edgeSurface,
+        args: [],
+      }),
+    ).toEqual({ entityKeys: ["name"], hasMethod: "undefined", aborted: "aborted" });
+    await Bun.sleep(50);
+    expect(iteratorClosed).toBe(true);
+    expect(unhandled).toEqual([]);
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
+    await worker.stop();
+  }
+});
+
+test("Blob conversion preserves shared records and plain async iterables over worker IPC", async () => {
+  const worker = await start();
+  try {
+    const context = {
+      async inspect(value: { first: { blob: Blob }; second: { blob: Blob }; items: AsyncIterable<string> }) {
+        return {
+          sameRecord: value.first === value.second,
+          first: value.first.blob instanceof Blob ? await value.first.blob.text() : undefined,
+          second: value.second.blob instanceof Blob ? await value.second.blob.text() : undefined,
+          items: await Array.fromAsync(value.items),
+        };
+      },
+    };
+    expect(
+      await worker.invoke({
+        handlerId: handlerOf(worker.definition, "shape"),
+        context,
+        surface: { kind: "object", members: { inspect: { kind: "async" } } },
+        args: [],
+      }),
+    ).toEqual({ sameRecord: true, first: "asset bytes", second: "asset bytes", items: ["entry"] });
+  } finally {
+    await worker.stop();
+  }
+});
+
+test("a normally completed long call gets a full idle window", async () => {
+  const interval = setInterval(() => {}, 60_000);
+  const schedule = spyOn(globalThis, "setInterval").mockReturnValue(interval);
+  const pool = createBackendWorkerPool(() => ({ env: createExtensionProcessEnvironment(), entryPath }), {
+    idleMs: 100,
+  });
+  try {
+    const worker = await pool.acquire("source@1");
+    const entered = Promise.withResolvers<void>();
+    const finish = Promise.withResolvers<string>();
+    const running = worker.invoke({
+      handlerId: handlerOf(worker.definition, "finish"),
+      context: {
+        finish: () => {
+          entered.resolve();
+          return finish.promise;
+        },
+      },
+      surface: { kind: "object", members: { finish: { kind: "async" } } },
+      args: [],
+    });
+    await entered.promise;
+    await Bun.sleep(125);
+    finish.resolve("settled");
+    expect(await running).toBe("settled");
+    const [sweep] = schedule.mock.calls[0]!;
+    if (typeof sweep !== "function") throw new Error("Expected to schedule the idle sweep");
+    await sweep();
+    await Promise.resolve();
+    expect(await pool.acquire("source@1")).toBe(worker);
+  } finally {
+    schedule.mockRestore();
+    clearInterval(interval);
+    await pool.close();
+  }
+});
+
+test("closing a reusable worker pool clears each owned idle timer", async () => {
+  const schedule = spyOn(globalThis, "setInterval");
+  const clear = spyOn(globalThis, "clearInterval");
+  const pool = createBackendWorkerPool(() => ({ env: createExtensionProcessEnvironment(), entryPath }));
+  try {
+    await pool.acquire("source@1");
+    const first = schedule.mock.results[0]?.value;
+    expect(first).toBeDefined();
+    await pool.close();
+    expect(clear).toHaveBeenCalledWith(first);
+    await pool.acquire("source@2");
+    const second = schedule.mock.results[1]?.value;
+    expect(second).toBeDefined();
+    await pool.close();
+    expect(clear).toHaveBeenCalledWith(second);
+  } finally {
+    await pool.close();
+    for (const { value } of schedule.mock.results) clearInterval(value as ReturnType<typeof setInterval>);
+    clear.mockRestore();
+    schedule.mockRestore();
+  }
+});
+
+test("an idle worker retires, and a running call keeps its worker alive", async () => {
+  const pool = createBackendWorkerPool(() => ({ env: createExtensionProcessEnvironment(), entryPath }), {
+    idleMs: 100,
+  });
+  try {
+    const busy = await pool.acquire("source@1");
+    const controller = new AbortController();
+    const waiting = busy.invoke({
+      handlerId: handlerOf(busy.definition, "wait"),
+      context: {},
+      surface,
+      args: [],
+      signal: controller.signal,
+    });
+    await Bun.sleep(400);
+    expect(await pool.acquire("source@1")).toBe(busy);
+    controller.abort(new Error("done"));
+    await waiting.catch(() => {});
+    await Bun.sleep(400);
+    expect(await busy.exited).not.toBeUndefined();
+    expect(await pool.acquire("source@1")).not.toBe(busy);
+  } finally {
+    await pool.close();
   }
 });

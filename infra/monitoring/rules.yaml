@@ -1,0 +1,87 @@
+groups:
+  - name: relay-monitoring
+    interval: 30s
+    rules:
+      - record: pstdio_relay:expected_check
+        expr: "label_replace((vector(1)), \"check\", \"http\", \"\", \"\") or label_replace((vector(1)), \"check\", \"dns_tls\", \"\", \"\") or label_replace((vector(1)), \"check\", \"access\", \"\", \"\") or label_replace((vector(1)), \"check\", \"sync\", \"\", \"\") or label_replace((vector(1)), \"check\", \"blobs\", \"\", \"\") or label_replace((vector(1)), \"check\", \"live\", \"\", \"\") or label_replace((vector(1)), \"check\", \"failures\", \"\", \"\") or label_replace((vector(1)), \"check\", \"storage\", \"\", \"\") or label_replace((vector(1)), \"check\", \"cleanup\", \"\", \"\") or label_replace((vector(1)), \"check\", \"database\", \"\", \"\") or label_replace((vector(1)), \"check\", \"infrastructure\", \"\", \"\") or label_replace((vector(1)), \"check\", \"backup\", \"\", \"\") or label_replace((vector(1)), \"check\", \"monitoring\", \"\", \"\")"
+        labels:
+          environment: __ENVIRONMENT__
+      - record: pstdio_relay:source_observed_timestamp_seconds
+        expr: "label_replace((min by(environment)(pstdio_relay_observation_timestamp_seconds{environment=\"__ENVIRONMENT__\"})), \"source\", \"relay\", \"\", \"\") or label_replace((pstdio_relay_observer_heartbeat_timestamp_seconds{environment=\"__ENVIRONMENT__\"}), \"source\", \"observer\", \"\", \"\") or label_replace((pstdio_relay_prober_heartbeat_timestamp_seconds{environment=\"__ENVIRONMENT__\"}), \"source\", \"prober\", \"\", \"\") or label_replace((timestamp(probe_success{environment=\"__ENVIRONMENT__\"})), \"source\", \"collector\", \"\", \"\")"
+        labels:
+          environment: __ENVIRONMENT__
+      - record: pstdio_relay:check_observed_timestamp_seconds
+        expr: "pstdio_relay_check_observed_timestamp_seconds{environment=\"__ENVIRONMENT__\"} or label_replace((timestamp(probe_success{environment=\"__ENVIRONMENT__\"})), \"check\", \"dns_tls\", \"\", \"\") or label_replace((min by(environment)(pstdio_relay_observation_timestamp_seconds{environment=\"__ENVIRONMENT__\"})), \"check\", \"failures\", \"\", \"\") or label_replace((min by(environment)(pstdio_relay_account_observed_timestamp_seconds{environment=\"__ENVIRONMENT__\"})), \"check\", \"storage\", \"\", \"\") or label_replace((min by(environment)(pstdio_relay_observation_timestamp_seconds{environment=\"__ENVIRONMENT__\"})), \"check\", \"cleanup\", \"\", \"\") or label_replace((pstdio_relay_database_observed_timestamp_seconds{environment=\"__ENVIRONMENT__\"}), \"check\", \"database\", \"\", \"\") or label_replace((pstdio_relay_provider_observed_timestamp_seconds{environment=\"__ENVIRONMENT__\"}), \"check\", \"infrastructure\", \"\", \"\") or label_replace((pstdio_relay_observer_heartbeat_timestamp_seconds{environment=\"__ENVIRONMENT__\"}), \"check\", \"backup\", \"\", \"\") or label_replace((min by(environment)(pstdio_relay:source_observed_timestamp_seconds{environment=\"__ENVIRONMENT__\"})), \"check\", \"monitoring\", \"\", \"\") or on(environment,check) label_replace((pstdio_relay_observer_heartbeat_timestamp_seconds{environment=\"__ENVIRONMENT__\"}), \"check\", \"infrastructure\", \"\", \"\")"
+        labels:
+          environment: __ENVIRONMENT__
+      - record: pstdio_relay:check_max_age_seconds
+        expr: "label_replace((vector(600)), \"check\", \"http\", \"\", \"\") or label_replace((vector(120)), \"check\", \"dns_tls\", \"\", \"\") or label_replace((vector(600)), \"check\", \"access\", \"\", \"\") or label_replace((vector(600)), \"check\", \"sync\", \"\", \"\") or label_replace((vector(1200)), \"check\", \"blobs\", \"\", \"\") or label_replace((vector(600)), \"check\", \"live\", \"\", \"\") or label_replace((vector(120)), \"check\", \"failures\", \"\", \"\") or label_replace((vector(1800)), \"check\", \"storage\", \"\", \"\") or label_replace((vector(120)), \"check\", \"cleanup\", \"\", \"\") or label_replace((vector(1800)), \"check\", \"database\", \"\", \"\") or label_replace((vector(1800)), \"check\", \"infrastructure\", \"\", \"\") or label_replace((vector(1800)), \"check\", \"backup\", \"\", \"\") or label_replace((vector(1200)), \"check\", \"monitoring\", \"\", \"\")"
+        labels:
+          environment: __ENVIRONMENT__
+      - record: pstdio_relay:raw_check_state
+        expr: "(((pstdio_relay_check_success{environment=\"__ENVIRONMENT__\"} or label_replace(((probe_success{environment=\"__ENVIRONMENT__\"} * (probe_ssl_earliest_cert_expiry{environment=\"__ENVIRONMENT__\"} - time() > bool 1209600)) or (probe_success{environment=\"__ENVIRONMENT__\"} == 0)), \"check\", \"dns_tls\", \"\", \"\") or label_replace((1 - clamp_max(sum by(environment)(increase(pstdio_relay_operation_failures_total{environment=\"__ENVIRONMENT__\"}[5m])), 1)), \"check\", \"failures\", \"\", \"\") or label_replace((1 + (max by(environment)(pstdio_relay_account_storage_bytes{environment=\"__ENVIRONMENT__\"} / pstdio_relay_account_quota_bytes{environment=\"__ENVIRONMENT__\"}) >= bool 0.8) - 2 * (max by(environment)(pstdio_relay_account_storage_bytes{environment=\"__ENVIRONMENT__\"} / pstdio_relay_account_quota_bytes{environment=\"__ENVIRONMENT__\"}) >= bool 0.95)), \"check\", \"storage\", \"\", \"\") or label_replace(((time() - pstdio_relay_cleanup_last_success_timestamp_seconds{environment=\"__ENVIRONMENT__\"} < bool 7200)), \"check\", \"cleanup\", \"\", \"\") or label_replace((pstdio_relay_database_query_success{environment=\"__ENVIRONMENT__\"}), \"check\", \"database\", \"\", \"\") or label_replace(((max by(environment)(pstdio_relay_resource_percent{environment=\"__ENVIRONMENT__\"}) < bool 90) * (pstdio_relay_instances_observed{environment=\"__ENVIRONMENT__\"} == bool pstdio_relay_instances_expected{environment=\"__ENVIRONMENT__\"})), \"check\", \"infrastructure\", \"\", \"\") or label_replace(((time() - pstdio_relay_backup_evidence_timestamp_seconds{environment=\"__ENVIRONMENT__\"} < bool 172800) * (time() - pstdio_relay_restore_evidence_timestamp_seconds{environment=\"__ENVIRONMENT__\"} < bool 7776000)), \"check\", \"backup\", \"\", \"\") or label_replace(((count by(environment)(pstdio_relay:source_observed_timestamp_seconds{environment=\"__ENVIRONMENT__\"}) == bool 4) * (max by(environment)(time() - pstdio_relay:source_observed_timestamp_seconds{environment=\"__ENVIRONMENT__\"}) < bool 1200)), \"check\", \"monitoring\", \"\", \"\")) unless on(environment,check) (label_replace((pstdio_relay_backup_configured{environment=\"__ENVIRONMENT__\"} == 0), \"check\", \"backup\", \"\", \"\") or label_replace((pstdio_relay_provider_configured{environment=\"__ENVIRONMENT__\"} == 0), \"check\", \"infrastructure\", \"\", \"\")) or label_replace(((pstdio_relay_backup_configured{environment=\"__ENVIRONMENT__\"} == 0) - 2), \"check\", \"backup\", \"\", \"\") or label_replace(((pstdio_relay_provider_configured{environment=\"__ENVIRONMENT__\"} == 0) - 2), \"check\", \"infrastructure\", \"\", \"\")) unless on(environment,check) label_replace((pstdio_relay_provider_collection_success{environment=\"__ENVIRONMENT__\"} == 0), \"check\", \"infrastructure\", \"\", \"\") or label_replace(((pstdio_relay_provider_collection_success{environment=\"__ENVIRONMENT__\"} == 0) - 1), \"check\", \"infrastructure\", \"\", \"\")) unless on(environment,check) label_replace((min by(environment)(pstdio_relay_account_observation_success{environment=\"__ENVIRONMENT__\"}) == 0), \"check\", \"storage\", \"\", \"\") or label_replace(((min by(environment)(pstdio_relay_account_observation_success{environment=\"__ENVIRONMENT__\"}) == 0) - 1), \"check\", \"storage\", \"\", \"\")"
+        labels:
+          environment: __ENVIRONMENT__
+      - record: pstdio_relay:check_state
+        expr: "(pstdio_relay:raw_check_state{environment=\"__ENVIRONMENT__\"} and on(environment,check) ((time() - pstdio_relay:check_observed_timestamp_seconds{environment=\"__ENVIRONMENT__\"}) < pstdio_relay:check_max_age_seconds{environment=\"__ENVIRONMENT__\"})) or on(environment,check) (pstdio_relay:expected_check{environment=\"__ENVIRONMENT__\"} * -1)"
+        labels:
+          environment: __ENVIRONMENT__
+      - record: pstdio_relay:check_severity
+        expr: "(pstdio_relay:check_state{environment=\"__ENVIRONMENT__\"} == bool 0) * 3 + (pstdio_relay:check_state{environment=\"__ENVIRONMENT__\"} == bool 2) * 2 + (pstdio_relay:check_state{environment=\"__ENVIRONMENT__\"} < bool 0)"
+        labels:
+          environment: __ENVIRONMENT__
+      - record: pstdio_relay:latency_quantile_seconds
+        expr: "histogram_quantile(0.5, sum by(le,environment)(rate(pstdio_relay_http_request_duration_seconds_bucket{environment=\"__ENVIRONMENT__\",operation!=\"health\"}[5m])))"
+        labels:
+          environment: __ENVIRONMENT__
+          quantile: "0.5"
+      - record: pstdio_relay:latency_quantile_seconds
+        expr: "histogram_quantile(0.95, sum by(le,environment)(rate(pstdio_relay_http_request_duration_seconds_bucket{environment=\"__ENVIRONMENT__\",operation!=\"health\"}[5m])))"
+        labels:
+          environment: __ENVIRONMENT__
+          quantile: "0.95"
+      - record: pstdio_relay:latency_quantile_seconds
+        expr: "histogram_quantile(0.99, sum by(le,environment)(rate(pstdio_relay_http_request_duration_seconds_bucket{environment=\"__ENVIRONMENT__\",operation!=\"health\"}[5m])))"
+        labels:
+          environment: __ENVIRONMENT__
+          quantile: "0.99"
+      - alert: RelayCheckFailed
+        expr: "pstdio_relay:check_state{environment=\"__ENVIRONMENT__\"} == 0"
+        for: 5m
+        labels:
+          environment: __ENVIRONMENT__
+          severity: "critical"
+        annotations:
+          summary: "Relay check failed: {{ $labels.check }}"
+          runbook_url: "https://github.com/pufflyai/prompt-studio/tree/main/infra/monitoring#responding-to-alerts"
+      - alert: RelayObservationMissing
+        expr: "pstdio_relay:check_state{environment=\"__ENVIRONMENT__\",check!=\"backup\"} == -1"
+        for: 10m
+        labels:
+          environment: __ENVIRONMENT__
+          severity: "warning"
+        annotations:
+          summary: "Relay observation missing: {{ $labels.check }}"
+      - alert: RelayCapacityWarning
+        expr: "pstdio_relay:check_state{environment=\"__ENVIRONMENT__\",check=\"storage\"} == 2"
+        for: 15m
+        labels:
+          environment: __ENVIRONMENT__
+          severity: "warning"
+        annotations:
+          summary: "Configured relay account exceeds 80% quota"
+      - alert: MonitoringDataLoss
+        expr: "sum(increase(loki_discarded_samples_total[5m])) > 0 or sum(increase(prometheus_rule_evaluation_failures_total[5m])) > 0"
+        for: 5m
+        labels:
+          environment: __ENVIRONMENT__
+          severity: "warning"
+        annotations:
+          summary: "Monitoring is discarding observations or failing rules"
+      - alert: MonitoringAlertingHeartbeat
+        expr: vector(1)
+        labels:
+          environment: __ENVIRONMENT__
+          severity: heartbeat
+        annotations:
+          summary: Alerting delivery heartbeat

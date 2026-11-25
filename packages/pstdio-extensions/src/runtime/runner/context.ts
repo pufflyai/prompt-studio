@@ -11,6 +11,7 @@ import type {
   ExtensionLoggerApi,
   ExtensionViewsApi,
   JsonObject,
+  NavigationTarget,
   Struct,
 } from "@pstdio/sdk/extensions";
 import { qualifyNavigationTarget, queryChangeEnvelopeSchema } from "pstdio-api-contracts";
@@ -20,6 +21,7 @@ import { canonicalNavigationOwners } from "../canonical-navigation-owners";
 import { boundedQueryAutomation, boundedQueryStorage, rejectUnboundedCollectionRead } from "./collection-query";
 import { createCommandRejection } from "./command-rejection";
 import { type EventDispatcher, refId } from "./dispatch";
+import { markHostContext, markNavigationScoped } from "./host-context";
 import type { NavigationScope } from "./navigation-scope";
 import type { InvocationScope } from "./scope";
 import type {
@@ -193,7 +195,7 @@ export const createContextFactory = (
       signal: scope?.signal,
     };
 
-    return {
+    return markHostContext({
       projectId: ids.projectId,
       workspaceId: env.workspaceId,
       project: env.project,
@@ -202,14 +204,14 @@ export const createContextFactory = (
       storage: scope?.collectionQuery ? boundedQueryStorage(hostApis.storage) : hostApis.storage,
       resources: hostApis.resources,
       views: env.views ?? unavailableViewsApi,
-      navigation: {
-        open: (target) => {
-          if (navigationScope)
-            navigationScope.open(
-              canonicalNavigationOwners(qualifyNavigationTarget(target, ids.extensionId, ids.projectId)),
-            );
-        },
-      },
+      navigation: navigationScope
+        ? markNavigationScoped({
+            open: (target: NavigationTarget) =>
+              navigationScope.open(
+                canonicalNavigationOwners(qualifyNavigationTarget(target, ids.extensionId, ids.projectId)),
+              ),
+          })
+        : { open: () => {} },
       artifacts: hostApis.artifacts,
       projectFiles: hostApis.projectFiles,
       workspaceFiles: hostApis.workspaceFiles,
@@ -234,7 +236,7 @@ export const createContextFactory = (
       logger: createLogger(ids.extensionId),
       settings: hostApis.settings,
       account: hostApis.account ?? unavailableAccount,
-    };
+    });
   },
 
   buildCommandContext(

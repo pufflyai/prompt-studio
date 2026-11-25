@@ -1,0 +1,10 @@
+[Unit]
+Description=Relay monitoring container resource budget
+
+[Slice]
+MemoryHigh=352M
+MemoryMax=384M
+CPUQuota=100%
+
+[Install]
+WantedBy=multi-user.target
