@@ -8,6 +8,7 @@ import type { MenuOption } from "./kanban-renderer-helpers";
 export interface DisplayMenuSelectProps {
   label: string;
   value: string;
+  disabled?: boolean;
   options: MenuOption[];
   onSelect: (value: string) => void;
 }
@@ -20,7 +21,7 @@ export const DisplayMenuSelect = (props: DisplayMenuSelectProps) => {
   return (
     <Menu.Root positioning={{ strategy: "fixed", hideWhenDetached: true }}>
       <Menu.Trigger asChild>
-        <Button size="xs" variant="ghost" width="full" justifyContent="flex-start" gap="xs">
+        <Button size="xs" variant="ghost" width="full" justifyContent="flex-start" gap="xs" disabled={props.disabled}>
           <Text textStyle="label/S/regular">{props.label}</Text>
           <HStack marginLeft="auto" minW="0" gap="2xs" color="fg.muted">
             <Text textStyle="label/S/regular" truncate>
