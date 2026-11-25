@@ -2,7 +2,12 @@ import { expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createPreparationScope, readAcceptedRevision, withBackgroundPreparation } from "pstdio-extensions";
+import {
+  createPreparationScope,
+  readAcceptedRevision,
+  withBackgroundPreparation,
+  withRequestedPreparation,
+} from "pstdio-extensions";
 import { runExtensionPreparation } from "./extension-preparation";
 import { loadExtensionSource } from "./extension-runtime";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
@@ -53,6 +58,50 @@ test("a foreground request lends urgency to every overlapping background webview
     release();
     expect(observed.map((scope) => scope.requested)).toEqual([false, false]);
     release = caller.request();
+    expect(observed.map((scope) => scope.requested)).toEqual([true, true]);
+    withRequestedPreparation(() => {
+      const edit = createPreparationScope();
+      const editOwner = edit.continuation!;
+      const lendEdit = caller.request(edit);
+      try {
+        // The checks were already requested. Joining the edit still adds its continuation to both.
+        expect(editOwner).toBeDefined();
+        expect(observed.map((scope) => scope.continuation)).toEqual([editOwner, editOwner]);
+        withRequestedPreparation(() => {
+          const otherEdit = createPreparationScope();
+          const otherOwner = otherEdit.continuation!;
+          const check = withBackgroundPreparation(createPreparationScope);
+          const lendCheck = caller.request(check);
+          try {
+            expect(caller.continuation).toBe(editOwner);
+            expect(otherOwner).toBeDefined();
+            for (const scope of observed) {
+              expect(scope.continuations).toHaveLength(2);
+              expect(scope.continuations.at(0)).toBe(editOwner);
+              expect(scope.continuations.at(1)).toBe(otherOwner);
+              expect(scope.requestedContinuations).toEqual([editOwner]);
+            }
+            // The same owner can gain or lose urgency without changing membership or the shared rank.
+            const lendOtherEdit = caller.request(otherEdit);
+            try {
+              for (const scope of observed) expect(scope.requestedContinuations).toEqual([editOwner, otherOwner]);
+            } finally {
+              lendOtherEdit();
+            }
+            for (const scope of observed) expect(scope.requestedContinuations).toEqual([editOwner]);
+          } finally {
+            lendCheck();
+            check.dispose();
+            otherEdit.dispose();
+          }
+        });
+        expect(observed.map((scope) => scope.continuations.length)).toEqual([1, 1]);
+      } finally {
+        lendEdit();
+        edit.dispose();
+      }
+    });
+    expect(observed.map((scope) => scope.continuation)).toEqual([undefined, undefined]);
     expect(observed.map((scope) => scope.requested)).toEqual([true, true]);
     released[0]!.resolve();
     released[1]!.resolve();

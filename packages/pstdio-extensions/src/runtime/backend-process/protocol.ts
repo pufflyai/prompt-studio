@@ -1,4 +1,15 @@
+import { validatedCommandOutcomeSchema } from "pstdio-api-contracts";
+import type { CommandFailureDetails } from "pstdio-api-contracts/extension-kernel";
 import type { BackendSurface, SurfaceStep } from "./surface";
+
+/** Raised to every caller waiting on a worker that exited or was retired. Never replayed. */
+export class BackendUnavailableError extends Error {
+  readonly code = "backend_unavailable";
+  constructor(message: string) {
+    super(message);
+    this.name = "BackendUnavailableError";
+  }
+}
 
 /** Both sides reject messages of another version instead of guessing their meaning. */
 export const BACKEND_PROTOCOL_VERSION = 1;
@@ -11,6 +22,7 @@ export interface SerializedBackendError {
 }
 
 type Settled = { ok: true; value: unknown } | { ok: false; error: SerializedBackendError };
+type InvocationResult = Settled & { rejection?: CommandFailureDetails };
 
 export type HostToWorkerMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
   | { type: "load"; entryPath: string }
@@ -23,15 +35,20 @@ export type HostToWorkerMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
       args: unknown[];
     }
   | { type: "cancel"; invocationId: string; reason: SerializedBackendError }
-  | ({ type: "reply"; requestId: string } & Settled)
+  | ({ type: "reply"; invocationId: string; requestId: string } & Settled)
+  /** Calls a function the worker passed to the host during this invocation. */
+  | { type: "fn-call"; invocationId: string; requestId: string; fnId: string; args: unknown[] }
 );
 
 export type WorkerToHostMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
   | { type: "ready" }
   | ({ type: "loaded" } & Settled)
-  | ({ type: "result"; invocationId: string } & Settled)
-  | { type: "call"; invocationId: string; requestId: string; path: SurfaceStep[]; args: unknown[] }
-  | { type: "notify"; invocationId: string; path: SurfaceStep[]; args: unknown[] }
+  | ({ type: "result"; invocationId: string } & InvocationResult)
+  | { type: "call"; invocationId: string; requestId: string; path: SurfaceStep[]; args: unknown[]; within?: string }
+  | { type: "notify"; invocationId: string; path: SurfaceStep[]; args: unknown[]; within?: string }
+  /** Calls a function the host passed to the worker during this invocation. */
+  | { type: "fn-call"; invocationId: string; requestId: string; fnId: string; args: unknown[]; within?: string }
+  | ({ type: "reply"; invocationId: string; requestId: string } & Settled)
 );
 
 /** Marks a function in the definition the worker reports. Only the worker can run it. */
@@ -76,6 +93,19 @@ export const deserializeBackendError = (serialized: SerializedBackendError) => {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+// Use the public outcome schema for transferable details and discard unrelated fields.
+export const transferableCommandRejection = (value: unknown) => {
+  if (!isRecord(value)) return;
+  try {
+    const outcome = validatedCommandOutcomeSchema.safeParse({ ...value, ok: false, status: "rejected" });
+    if (!outcome.success || outcome.data.status !== "rejected") return;
+    const { ok: _ok, status: _status, ...details } = outcome.data;
+    return details;
+  } catch {
+    // Malformed details must still settle the invocation as an ordinary error.
+  }
+};
+
 const optionalString = (value: unknown) => value === undefined || typeof value === "string";
 
 const isError = (value: unknown) =>
@@ -94,6 +124,14 @@ const isPath = (value: unknown) =>
     (step) => isRecord(step) && typeof step.name === "string" && (step.args === undefined || Array.isArray(step.args)),
   );
 
+const parseInvocationResult = (message: Record<string, unknown>) => {
+  if (typeof message.invocationId !== "string" || !isSettled(message)) return;
+  return {
+    ...message,
+    rejection: message.ok === false ? transferableCommandRejection(message.rejection) : undefined,
+  } as Extract<WorkerToHostMessage, { type: "result" }>;
+};
+
 /** Validates what the worker sends. The host never trusts its shape or its claimed identity. */
 export const parseWorkerMessage = (message: unknown): WorkerToHostMessage | undefined => {
   if (!isRecord(message) || message.v !== BACKEND_PROTOCOL_VERSION) return;
@@ -103,18 +141,32 @@ export const parseWorkerMessage = (message: unknown): WorkerToHostMessage | unde
     case "loaded":
       return isSettled(message) ? (message as WorkerToHostMessage) : undefined;
     case "result":
-      return typeof message.invocationId === "string" && isSettled(message)
-        ? (message as WorkerToHostMessage)
-        : undefined;
+      return parseInvocationResult(message);
     case "call":
       return typeof message.invocationId === "string" &&
         typeof message.requestId === "string" &&
         isPath(message.path) &&
-        Array.isArray(message.args)
+        Array.isArray(message.args) &&
+        optionalString(message.within)
+        ? (message as WorkerToHostMessage)
+        : undefined;
+    case "fn-call":
+      return typeof message.invocationId === "string" &&
+        typeof message.requestId === "string" &&
+        typeof message.fnId === "string" &&
+        Array.isArray(message.args) &&
+        optionalString(message.within)
+        ? (message as WorkerToHostMessage)
+        : undefined;
+    case "reply":
+      return typeof message.invocationId === "string" && typeof message.requestId === "string" && isSettled(message)
         ? (message as WorkerToHostMessage)
         : undefined;
     case "notify":
-      return typeof message.invocationId === "string" && isPath(message.path) && Array.isArray(message.args)
+      return typeof message.invocationId === "string" &&
+        isPath(message.path) &&
+        Array.isArray(message.args) &&
+        optionalString(message.within)
         ? (message as WorkerToHostMessage)
         : undefined;
   }

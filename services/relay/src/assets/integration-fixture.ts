@@ -14,7 +14,8 @@ export const createAssetFixture = () => {
     forcePathStyle: true,
     credentials: { accessKeyId: "conformance-access", secretAccessKey: "conformance-secret-only" },
   };
-  const config = { databaseUrl, bucket, s3 };
+  // These tests saturate and cancel a full upload pool, so they keep the size they were written for.
+  const config = { databaseUrl, bucket, s3, poolMax: 10 };
   const client = new S3Client({ ...s3, maxAttempts: 1 });
   return {
     config,

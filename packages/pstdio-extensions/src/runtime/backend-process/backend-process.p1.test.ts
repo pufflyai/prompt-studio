@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -62,6 +63,33 @@ export default {
     },
     { id: "observed-abort", title: "Observed abort", run: () => observedAbort },
     { id: "crash", title: "Crash", run: () => process.exit(7) },
+    {
+      id: "edges",
+      title: "Edges",
+      async run(ctx) {
+        await ctx.live.listen(() => { throw new Error("listener failed"); });
+        const entity = await ctx.live.entity();
+        const controller = new AbortController();
+        const waiting = ctx.live.wait({ signal: controller.signal });
+        controller.abort();
+        const aborted = await waiting;
+        const follow = ctx.live.follow()[Symbol.asyncIterator]();
+        await follow.next();
+        return { entityKeys: Object.keys(entity), hasMethod: typeof entity.reveal, aborted };
+      },
+    },
+    {
+      id: "live",
+      title: "Live",
+      async run(ctx) {
+        const doubled = await ctx.live.apply(async (value) => value * 2, 21);
+        const handle = await ctx.live.open();
+        const closed = await handle.close();
+        const entries = [];
+        for await (const entry of ctx.live.follow()) entries.push(entry);
+        return { doubled, closed, entries };
+      },
+    },
     {
       id: "disconnect",
       title: "Disconnect",
@@ -430,5 +458,122 @@ test("closing an empty pool allows subsequent workers to be started and closed",
     expect(exited).toBe(true);
   } finally {
     await running.stop();
+  }
+});
+
+test("host calls and notifications resume in the invocation's async scope", async () => {
+  const worker = await start();
+  const scope = new AsyncLocalStorage<string>();
+  const seen: Array<string | undefined> = [];
+  const capture = () => seen.push(scope.getStore());
+  try {
+    await scope.run("active invocation", () =>
+      worker.invoke({
+        handlerId: handlerOf(worker.definition, "save"),
+        context: {
+          projectId: "p1",
+          logger: { info: capture },
+          storage: { collection: () => ({ put: async () => capture(), get: async () => capture() }) },
+        },
+        surface,
+        args: [{ id: "a", bytes: new Uint8Array([1]) }],
+      }),
+    );
+  } finally {
+    await worker.stop();
+  }
+  expect(seen).toEqual(["active invocation", "active invocation", "active invocation"]);
+});
+
+test("functions and iterables cross the boundary in both directions during an invocation", async () => {
+  const worker = await start();
+  try {
+    const liveSurface: BackendSurface = {
+      kind: "object",
+      members: {
+        live: {
+          kind: "object",
+          members: { apply: { kind: "async" }, open: { kind: "async" }, follow: { kind: "iterate" } },
+        },
+      },
+    };
+    const context = {
+      live: {
+        apply: async (fn: (value: number) => Promise<number>, value: number) => fn(value),
+        open: async () => ({ close: async () => "closed by host" }),
+        follow: async function* () {
+          yield "first";
+          yield "second";
+        },
+      },
+    };
+    expect(
+      await worker.invoke({ handlerId: handlerOf(worker.definition, "live"), context, surface: liveSurface, args: [] }),
+    ).toEqual({ doubled: 42, closed: "closed by host", entries: ["first", "second"] });
+  } finally {
+    await worker.stop();
+  }
+});
+
+test("listener failures, host objects, abort signals and abandoned iterators stay contained", async () => {
+  const worker = await start();
+  const unhandled: unknown[] = [];
+  const onUnhandled = (reason: unknown) => unhandled.push(reason);
+  process.on("unhandledRejection", onUnhandled);
+  let iteratorClosed = false;
+  class Entity {
+    name = "entity";
+    #secret = "host secret";
+    reveal() {
+      return this.#secret;
+    }
+  }
+  try {
+    const edgeSurface: BackendSurface = {
+      kind: "object",
+      members: {
+        live: {
+          kind: "object",
+          members: {
+            listen: { kind: "async" },
+            entity: { kind: "async" },
+            wait: { kind: "async" },
+            follow: { kind: "iterate" },
+          },
+        },
+      },
+    };
+    const context = {
+      live: {
+        listen: async (listener: () => void) => {
+          listener();
+        },
+        entity: async () => new Entity(),
+        wait: ({ signal }: { signal: AbortSignal }) =>
+          new Promise((resolve) => signal.addEventListener("abort", () => resolve("aborted"), { once: true })),
+        follow: async function* () {
+          try {
+            yield "first";
+            await new Promise(() => {});
+          } finally {
+            iteratorClosed = true;
+          }
+        },
+      },
+    };
+    expect(
+      await worker.invoke({
+        handlerId: handlerOf(worker.definition, "edges"),
+        context,
+        surface: edgeSurface,
+        args: [],
+      }),
+    ).toEqual({ entityKeys: ["name"], hasMethod: "undefined", aborted: "aborted" });
+    await Bun.sleep(50);
+    expect(iteratorClosed).toBe(true);
+    expect(unhandled).toEqual([]);
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
+    await worker.stop();
   }
 });

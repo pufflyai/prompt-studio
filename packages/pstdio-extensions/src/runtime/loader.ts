@@ -1,7 +1,10 @@
 import { join } from "node:path";
 import type { ExtensionDefinition, ExtensionSourceKind } from "@pstdio/sdk/extensions";
+import { finishRuntimeOperation, startRuntimeOperation } from "pstdio-diagnostics";
 import { remapPackageAssets } from "../artifacts/remap-package-assets";
 import type { ExtensionDiagnostic } from "../types/runtime";
+import { acquireBackendWorker } from "./backend-process/backend-workers";
+import { hydrateBackendDefinition } from "./backend-process/hydrate";
 import { createDiagnostic } from "./diagnostics";
 import { discoverExtensionPackages } from "./discovery";
 import {
@@ -48,6 +51,7 @@ export type LoadExtensionSourcesOptions = {
   apiProvider?: ExtensionApiProvider;
   preparedRevision?: PreparedExtensionRevision;
   immutableAssets?: boolean;
+  definitionOnly?: boolean;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -70,6 +74,35 @@ const formatImportError = (error: unknown, fallback: string) => {
 // preserve the per-load identity without rebuilding immutable output (ADR 0151).
 const importWithCacheKey = (filePath: string) => import(`${filePath}?pstdio_cache=${process.pid}-${importCounter++}`);
 
+// Provider contracts return live handles (native sessions, streams), which cannot cross the boundary yet.
+const PROCESS_UNSUPPORTED = ["harnesses", "workspaceTypes", "textSources", "resourceHierarchyProviders"] as const;
+
+// The host never imports a process-mode entry; the worker reports data and handler references.
+const loadInWorker = async (
+  packagePath: string,
+  revision: PreparedExtensionRevision,
+  diagnostics: ExtensionDiagnostic[],
+  definitionOnly?: boolean,
+) => {
+  const started = startRuntimeOperation("extension.backend.start");
+  const { definition: reported, acquire } = await acquireBackendWorker(packagePath, revision, definitionOnly);
+  finishRuntimeOperation(started, { extensionId: revision.manifest.id });
+  const definition = hydrateBackendDefinition(reported, acquire) as Record<string, unknown>;
+  for (const key of PROCESS_UNSUPPORTED) {
+    if (definition[key] === undefined) continue;
+    delete definition[key];
+    diagnostics.push(
+      createDiagnostic({
+        code: "extension_process_runtime_unsupported",
+        message: `${key} are not available to extensions with pstdio.backendRuntime "process" yet. Remove the setting to keep using them.`,
+        sourcePath: revision.entryPath,
+        extensionId: revision.manifest.id,
+      }),
+    );
+  }
+  return { default: definition };
+};
+
 // Synchronous authoring API. The running host uses inspectExtensionLoadKey in its worker.
 export const extensionLoadKey = (packagePath: string) => {
   const unavailable = unavailableManifestLoadKey(packagePath);
@@ -88,6 +121,7 @@ export const loadExtensionPackage = async (
     apiProvider?: ExtensionApiProvider;
     preparedRevision?: PreparedExtensionRevision;
     immutableAssets?: boolean;
+    definitionOnly?: boolean;
   } = {},
 ): Promise<LoadedExtensionSource | null> => {
   const {
@@ -131,7 +165,10 @@ export const loadExtensionPackage = async (
       priority: "requested",
     });
     retainPreparedRevision(preparedRevision);
-    const imported = await importWithCacheKey(preparedRevision.entryPath);
+    const imported =
+      manifest.pstdio?.backendRuntime === "process"
+        ? await loadInWorker(pkg.path, preparedRevision, diagnostics, options.definitionOnly)
+        : await importWithCacheKey(preparedRevision.entryPath);
     const mod = (
       options.immutableAssets ? imported : remapPackageAssets(imported, preparedRevision.packagePath, pkg.path)
     ) as Record<string, unknown>;
@@ -187,6 +224,7 @@ export const loadExtensionSources = async (options: LoadExtensionSourcesOptions 
       apiProvider: options.apiProvider,
       preparedRevision: options.preparedRevision,
       immutableAssets: options.immutableAssets,
+      definitionOnly: options.definitionOnly,
     });
     if (loaded) sources.push(loaded);
   }

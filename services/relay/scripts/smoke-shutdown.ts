@@ -28,6 +28,8 @@ export const checkBuiltShutdown = async (manager: ReturnType<typeof createAccoun
       ...Object.fromEntries(keys.map((key) => [key, process.env[key]])),
       RELAY_HOST: "127.0.0.1",
       RELAY_PORT: "0",
+      // Shutdown must cancel many blocked queries, so the pools admit all 12 readers at once.
+      DATABASE_POOL_MAX: "12",
     },
     stdout: "pipe",
     stderr: "pipe",
