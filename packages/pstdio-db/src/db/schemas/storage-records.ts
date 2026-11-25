@@ -1,37 +1,17 @@
-import { sql } from "drizzle-orm";
-import { bigint, boolean, foreignKey, index, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 import type { NativeRecordSources } from "pstdio-sync/records";
-import type { StorageRecord, StorageRecordIndex } from "pstdio-sync-contracts";
-import { projects } from "./projects";
-import { storage_documents } from "./storage-documents";
+import type { Json, StorageRecord } from "pstdio-sync-contracts";
+import { owners } from "./owners";
+import { bytea } from "./types";
 
 const ownerColumns = () => ({
-  workbench_id: text("workbench_id")
+  owner_id: integer("owner_id")
     .notNull()
-    .references(() => projects.id, { onDelete: "cascade" }),
-  extension_id: text("extension_id").notNull(),
+    .references(() => owners.id, { onDelete: "cascade" }),
 });
 
-export const storage_record_projections = pgTable(
-  "storage_record_projections",
-  {
-    ...ownerColumns(),
-    document_id: text("document_id").notNull().default("records"),
-    revision: bigint("revision", { mode: "number" }).notNull(),
-    // Unfiltered totals read this instead of counting rows; commits keep it current.
-    live_count: bigint("live_count", { mode: "number" }).notNull().default(0),
-  },
-  (table) => [
-    primaryKey({ columns: [table.workbench_id, table.extension_id] }),
-    foreignKey({
-      columns: [table.workbench_id, table.extension_id, table.document_id],
-      foreignColumns: [storage_documents.workbench_id, storage_documents.extension_id, storage_documents.document_id],
-    }).onDelete("cascade"),
-  ],
-);
-
-export const storage_current_records = pgTable(
-  "storage_current_records",
+export const records = pgTable(
+  "records",
   {
     ...ownerColumns(),
     record_id: text("record_id").notNull(),
@@ -46,28 +26,16 @@ export const storage_current_records = pgTable(
     native_sources: jsonb("native_sources").$type<NativeRecordSources>().notNull().default({}),
     native_versions: jsonb("native_versions").$type<Record<string, string>>().notNull().default({}),
     record_lifetime: text("record_lifetime").notNull().default(""),
-    revision: text("revision").notNull(),
+    /** NULL means canonical-only state that has not been published to queries. */
+    revision: text("revision"),
+    meta: jsonb("meta").$type<Json>(),
+    /** Confirmed state only while pending operations touch this row. */
+    base: bytea("base"),
   },
   (table) => [
-    primaryKey({ columns: [table.workbench_id, table.extension_id, table.record_id] }),
-    index("storage_current_records_native_sources_idx").using("gin", table.native_sources),
-    index("storage_current_records_lifetime_upgrade_idx")
-      .on(table.workbench_id, table.extension_id, table.record_id)
-      .where(sql`${table.record_lifetime} = '' AND NOT ${table.deleted}`),
-    foreignKey({
-      columns: [table.workbench_id, table.extension_id],
-      foreignColumns: [storage_record_projections.workbench_id, storage_record_projections.extension_id],
-    }).onDelete("cascade"),
+    primaryKey({ columns: [table.owner_id, table.record_id] }),
+    index("records_native_sources_idx").using("gin", table.native_sources),
   ],
 );
 
-export const storage_record_indexes = pgTable(
-  "storage_record_indexes",
-  {
-    ...ownerColumns(),
-    name: text("name").notNull(),
-    definition: jsonb("definition").$type<StorageRecordIndex>().notNull(),
-    database_name: text("database_name").notNull(),
-  },
-  (table) => [primaryKey({ columns: [table.workbench_id, table.extension_id, table.name] })],
-);
+export { records as storage_current_records };

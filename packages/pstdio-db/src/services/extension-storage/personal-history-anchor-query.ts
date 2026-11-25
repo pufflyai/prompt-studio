@@ -3,6 +3,7 @@ import type { ResourceRef } from "pstdio-api-contracts/extension-kernel";
 import type { StorageOwner } from "pstdio-sync";
 import { legacyResourceOwner } from "../legacy-resource-links";
 import { workspaceAnchorCondition } from "../sessions/workspace-anchor-query";
+import { storageOwnerKey } from "./storage-owner-key";
 
 type Login = { accountId: string; deviceId: string };
 
@@ -31,14 +32,14 @@ export const personalWorkspaceSessionCondition = (
   anchor: ResourceRef,
   sessionId: SQL,
 ) =>
-  sql`${sessionId} in (select links.value->>'session_id' from storage_personal_history links
-    where links.workbench_id = ${owner.workbenchId} and links.extension_id = ${owner.extensionId}
+  sql`${sessionId} in (select links.value->>'session_id' from history_rows links
+    where links.owner_id = ${storageOwnerKey(owner)}
       and links.kind = 'workspace_sessions'
       and links.value->'device'->>'ownerId' = ${login.accountId}
       and links.value->'device'->>'id' <> ${login.deviceId}
       and links.value->>'workspace_id' in (
-        select w.value->>'id' from storage_personal_history w
-        where w.workbench_id = ${owner.workbenchId} and w.extension_id = ${owner.extensionId} and w.kind = 'workspaces'
+        select w.value->>'id' from history_rows w
+        where w.owner_id = ${storageOwnerKey(owner)} and w.kind = 'workspaces'
           and w.value->'device'->>'ownerId' = ${login.accountId}
           and w.value->'device'->>'id' <> ${login.deviceId}
           and w.value->>'project_id' = ${owner.workbenchId}

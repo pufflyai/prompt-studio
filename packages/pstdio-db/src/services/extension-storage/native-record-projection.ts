@@ -5,17 +5,12 @@ import { readTextDocumentSeed } from "pstdio-sync/text";
 import { fingerprint, type Json, type StorageRecord } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
-import {
-  projects,
-  storage_current_records,
-  storage_ordered_owners,
-  storage_record_projections,
-} from "../../db/schemas.pg";
+import { projects, owners as recordOwners, records } from "../../db/schemas.pg";
 import { orderedAssetRevision } from "./ordered-native-assets";
-import { orderedOwnerWhere } from "./ordered-sql";
 import { derivedQueryValues, readDerivedQueryIndexes } from "./record-derived-fields";
-import { decodeProjectionValue, encodeProjectionValue } from "./record-projection-codec";
+import { decodeProjectionValue, encodeProjectionValue, projectionKey } from "./record-projection-codec";
 import { loadResourceDocuments } from "./resource-document-persistence";
+import { storageOwnerKey } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 export type NativeProjectedRecord = StorageRecord & {
@@ -45,7 +40,7 @@ export const readNativeTextIn = async (tx: Transaction, owner: StorageOwner, key
   }
 };
 
-const materialized = async (record: NativeProjectedRecord, texts: Map<string, string>) => {
+export const materializeNativeRecord = async (record: NativeProjectedRecord, texts: Map<string, string>) => {
   if (!Object.keys(record.nativeSources ?? {}).length || record.deleted) return record;
   const value = structuredClone(record.value) as Record<string, Json>;
   const nativeVersions = { ...record.nativeVersions };
@@ -71,30 +66,26 @@ export const projectNativeRecordText = async (tx: Transaction, owner: StorageOwn
     const text = await readNativeTextIn(tx, owner, key);
     if (text !== undefined) texts.set(key, text);
   }
-  return materialized(record, texts);
+  return materializeNativeRecord(record, texts);
 };
 
 /** Only indexed bindings for this standalone text are refreshed; no record documents are loaded. */
 export const refreshNativeRecordText = async (tx: Transaction, owner: StorageOwner, key: string, content: string) => {
-  const [ordered] = await tx
-    .select({ id: storage_ordered_owners.workbench_id })
-    .from(storage_ordered_owners)
-    .where(orderedOwnerWhere(storage_ordered_owners, owner));
   const rows = await tx
     .select()
-    .from(storage_current_records)
+    .from(records)
     .where(
       and(
-        eq(storage_current_records.workbench_id, owner.workbenchId),
-        eq(storage_current_records.extension_id, owner.extensionId),
-        eq(storage_current_records.deleted, false),
-        sql`${storage_current_records.native_sources} ? ${key}`,
+        eq(records.owner_id, storageOwnerKey(owner)),
+        eq(records.deleted, false),
+        sql`${records.revision} IS NOT NULL`,
+        sql`${records.native_sources} ? ${projectionKey(key)}`,
       ),
     );
   let changed = 0;
   const derived = await readDerivedQueryIndexes(tx, owner);
   for (const row of rows) {
-    const record = await materialized(
+    const record = await materializeNativeRecord(
       {
         recordId: row.record_id,
         exists: true,
@@ -102,43 +93,30 @@ export const refreshNativeRecordText = async (tx: Transaction, owner: StorageOwn
         value: decodeProjectionValue(row.value),
         asset: decodeProjectionValue(row.asset) as StorageRecord["asset"],
         shared: decodeProjectionValue(row.shared) as StorageRecord["shared"],
-        revision: row.revision,
-        nativeSources: row.native_sources,
+        revision: row.revision!,
+        nativeSources: decodeProjectionValue(row.native_sources as never) as unknown as NativeRecordSources,
         nativeVersions: row.native_versions,
       },
       new Map([[key, content]]),
     );
-    if (ordered) {
-      if (!("asset" in row.native_sources[key]!)) throw new Error("An ordered field must use its record text owner");
-      record.revision = await orderedAssetRevision(row.revision, record.nativeVersions ?? {});
-    }
+    if (!("asset" in record.nativeSources![key]!)) throw new Error("An ordered field must use its record text owner");
+    record.revision = await orderedAssetRevision(row.revision!, record.nativeVersions ?? {});
     if (record.revision === row.revision) continue;
     await tx
-      .update(storage_current_records)
+      .update(records)
       .set({
         value: encodeProjectionValue(record.value),
         query_values: encodeProjectionValue(derivedQueryValues(derived, record)) as typeof row.query_values,
         revision: record.revision,
         native_versions: record.nativeVersions ?? {},
       })
-      .where(
-        and(
-          eq(storage_current_records.workbench_id, owner.workbenchId),
-          eq(storage_current_records.extension_id, owner.extensionId),
-          eq(storage_current_records.record_id, row.record_id),
-        ),
-      );
+      .where(and(eq(records.owner_id, storageOwnerKey(owner)), eq(records.record_id, row.record_id)));
     changed++;
   }
   if (changed)
     await tx
-      .update(storage_record_projections)
-      .set({ revision: sql`${storage_record_projections.revision} + 1` })
-      .where(
-        and(
-          eq(storage_record_projections.workbench_id, owner.workbenchId),
-          eq(storage_record_projections.extension_id, owner.extensionId),
-        ),
-      );
+      .update(recordOwners)
+      .set({ revision: sql`${recordOwners.revision} + 1` })
+      .where(and(eq(recordOwners.id, storageOwnerKey(owner))));
   return changed;
 };

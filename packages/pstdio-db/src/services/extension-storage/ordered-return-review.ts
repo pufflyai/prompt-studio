@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { jsonPointer, type OrderedOperation, type OrderedSkip } from "pstdio-sync/records";
-import { storage_current_records as current } from "../../db/schemas.pg";
+import { records as current } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
 import { saveOrderedMarker } from "./ordered-native-metadata";
 import { pendingOrderedOperations } from "./ordered-pending";
@@ -46,7 +46,7 @@ const liveCount = async (tx: OrderedTransaction, owner: StorageOwner) => {
   const [row] = await tx
     .select({ count: sql<number>`count(*)::int` })
     .from(current)
-    .where(and(orderedOwnerWhere(current, owner), eq(current.deleted, false)));
+    .where(and(orderedOwnerWhere(current, owner), eq(current.deleted, false), sql`${current.revision} IS NOT NULL`));
   return row?.count ?? 0;
 };
 
@@ -107,7 +107,7 @@ export const recordOrderedReplaced = async (
   skipped: OrderedSkip[],
 ) => {
   // Only this device's own saves become notices; other devices' skipped writes are not news here.
-  if (!skipped.length || !(await journal.localOperation(operation.operationId))) return;
+  if (!skipped.length || !(await journal.requestIdentity(operation.operationId))) return;
   const replacedAt = Date.now();
   for (const skip of skipped) {
     const edit = operation.edits.find((candidate) => candidate.recordId === skip.recordId);

@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { resource_anchors, sessions, workspaces } from "../../db/schemas.pg";
+import { resource_links, sessions, workspaces } from "../../db/schemas.pg";
+import { ensureStorageOwner } from "../extension-storage/storage-owner-key";
 import { sessionColumns, workspaceColumns } from "../legacy-resource-links";
 
 // The public link resource is a projection of the session's current workspace.
@@ -14,19 +15,19 @@ export const workspaceSessionLink = (session: { id: string; workspace_id: string
   session.workspace_id
     ? { id: session.id, session_id: session.id, workspace_id: session.workspace_id, created_at: session.created_at }
     : null;
-export const retainSessionWorkspaceContext = (
-  db: Pick<DbClient, "insert">,
+export const retainSessionWorkspaceContext = async (
+  db: Pick<DbClient, "insert" | "select">,
   session: { id: string; project_id: string | null; title: string },
   workspace: { id: string; project_id: string; name: string; workspace_shorthand: string },
-) =>
-  db
-    .insert(resource_anchors)
+) => {
+  const ownerId = await ensureStorageOwner(db, { workbenchId: workspace.project_id, extensionId: "pstdio" });
+  return db
+    .insert(resource_links)
     .values({
-      project_id: workspace.project_id,
-      source_owner: "pstdio",
+      source_owner: ownerId,
       source_kind: "session",
       source_id: session.id,
-      target_owner: "pstdio",
+      target_owner: ownerId,
       target_kind: "workspace",
       target_id: workspace.id,
       role: "context",
@@ -39,6 +40,7 @@ export const retainSessionWorkspaceContext = (
       },
     })
     .onConflictDoNothing();
+};
 
 export const createWorkspaceSessionsDBService = (db: DbClient) => {
   const link = (workspaceId: string, sessionId: string) =>

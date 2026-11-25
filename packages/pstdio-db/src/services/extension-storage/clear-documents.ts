@@ -1,83 +1,37 @@
-import { and, eq, like, not, or, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
+import { coreOwnerId } from "pstdio-sync/records";
+import type { Json, StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import {
-  recovery_point_owners,
-  storage_current_records,
-  storage_document_operations,
-  storage_document_updates,
-  storage_documents,
-  storage_log_streams,
-  storage_ordered_owners,
-  storage_record_projections,
-  storage_record_sync,
-} from "../../db/schemas.pg";
-import { orderedOwnerWhere } from "./ordered-sql";
-import { resourceDocumentId } from "./resource-document-persistence";
+import { owners, records } from "../../db/schemas.pg";
+import { formatDatabasePrefix } from "./record-format-key";
+import { dropRecordIndexObjects, installRecordIndex } from "./record-index-lifecycle";
+import { recordIndexRows as storage_record_indexes } from "./record-index-rows";
+import { decodeProjectionValue } from "./record-projection-codec";
+import { storageOwnerKey, storageOwnerWhere } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
 export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) => {
-  const ownerWhere = (
-    table:
-      | typeof storage_documents
-      | typeof storage_document_updates
-      | typeof storage_document_operations
-      | typeof storage_current_records
-      | typeof storage_record_projections,
-  ) => and(eq(table.workbench_id, owner.workbenchId), eq(table.extension_id, owner.extensionId));
-  // Record documents and ordered markers/caches are removed outright; update tails cascade with them.
-  // An emptied marker would no longer decode, and a cleared owner founds or joins its stream again.
-  const recordDocuments = or(
-    like(storage_documents.document_id, `${resourceDocumentId("").slice(0, -2)}%`),
-    like(storage_documents.document_id, '["ordered-%'),
-  )!;
-  await tx.delete(storage_documents).where(and(ownerWhere(storage_documents), recordDocuments));
-  const documents = await tx
-    .select({ id: storage_documents.document_id, revision: storage_documents.revision })
-    .from(storage_documents)
-    .where(and(ownerWhere(storage_documents), not(recordDocuments)))
-    .for("update");
-  for (const document of documents) {
-    const revision = document.revision + 1;
-    // Keep revisions monotonic so every running service drops its pre-purge cached document.
-    await tx
-      .update(storage_documents)
-      .set({
-        state: new Uint8Array([0, 0]),
-        revision,
-        folded_revision: revision,
-      })
-      .where(and(ownerWhere(storage_documents), eq(storage_documents.document_id, document.id)));
+  // Generated SQL objects have no FK lifetime; remove them while their declarations still exist.
+  const indexes = await tx
+    .select({ definition: storage_record_indexes.definition, database_name: storage_record_indexes.database_name })
+    .from(storage_record_indexes)
+    .where(eq(storage_record_indexes.owner_id, storageOwnerKey(owner)));
+  await dropRecordIndexObjects(tx, indexes);
+  await tx.delete(records).where(eq(records.owner_id, storageOwnerKey(owner)));
+  if (owner.extensionId === coreOwnerId) {
+    await tx.execute(sql`DELETE FROM resource_numbers WHERE project_id=${owner.workbenchId}`);
   }
-  await tx.delete(storage_document_updates).where(ownerWhere(storage_document_updates));
-  await tx.delete(storage_document_operations).where(ownerWhere(storage_document_operations));
-  await tx.delete(storage_current_records).where(ownerWhere(storage_current_records));
-  // Removing an extension's data also removes the copies kept for recovery.
-  await tx
-    .delete(recovery_point_owners)
-    .where(
-      and(
-        eq(recovery_point_owners.workbench_id, owner.workbenchId),
-        eq(recovery_point_owners.extension_id, owner.extensionId),
-      ),
-    );
-  // The device joins the record stream again, with its saves still waiting for upload dropped.
-  await tx
-    .delete(storage_record_sync)
-    .where(
-      and(
-        eq(storage_record_sync.workbench_id, owner.workbenchId),
-        eq(storage_record_sync.extension_id, owner.extensionId),
-      ),
-    );
-  // Canonical records, pending saves, retained receipts and logs cascade from their owner rows,
-  // so a cleared owner founds or joins again and may reuse its operation IDs.
-  await tx.delete(storage_ordered_owners).where(orderedOwnerWhere(storage_ordered_owners, owner));
-  await tx.delete(storage_log_streams).where(orderedOwnerWhere(storage_log_streams, owner));
-  // Advancing the owner revision rejects cursors issued before the purge.
-  await tx
-    .update(storage_record_projections)
-    .set({ revision: sql`${storage_record_projections.revision} + 1`, live_count: 0 })
-    .where(ownerWhere(storage_record_projections));
+  // Canonical records, stream state, pending saves and receipts share this owner lifetime.
+  await tx.delete(owners).where(storageOwnerWhere(owner));
+  // Deleting tool data keeps the installed tool's declared queries usable. Recreate
+  // their objects for the new owner generation; derived format caches rebuild on demand.
+  for (const index of indexes)
+    if (!index.database_name.startsWith(formatDatabasePrefix))
+      await installRecordIndex(
+        tx,
+        owner,
+        decodeProjectionValue(index.definition as unknown as Json) as unknown as StorageRecordIndex,
+      );
 };

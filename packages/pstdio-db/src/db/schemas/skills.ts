@@ -1,4 +1,5 @@
 import { pgTable, text } from "drizzle-orm/pg-core";
+import { isoTimestamp } from "./iso-timestamp";
 import { projects } from "./projects";
 
 export const skills = pgTable("skills", {
@@ -8,7 +9,7 @@ export const skills = pgTable("skills", {
     .references(() => projects.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description").notNull().default(""),
-  created_at: text("created_at").notNull(),
-  updated_at: text("updated_at").notNull(),
-  deleted_at: text("deleted_at"),
+  created_at: isoTimestamp("created_at").notNull(),
+  updated_at: isoTimestamp("updated_at").notNull(),
+  deleted_at: isoTimestamp("deleted_at"),
 });

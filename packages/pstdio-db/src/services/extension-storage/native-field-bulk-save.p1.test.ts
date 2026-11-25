@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { drizzle } from "drizzle-orm/pglite";
 import * as schema from "../../db/schemas.pg";
+import { attachDocumentFiles, documentFilesFor } from "./document-files";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 import { type OrderedFieldMarker, orderedFieldMarkerId, readOrderedMarker } from "./ordered-native-metadata";
@@ -22,6 +23,7 @@ test("bulk property saves preserve native text without a marker query per ticket
         },
       },
     });
+    attachDocumentFiles(db, documentFilesFor(f.db));
     const service = createDocumentStorageDBService(db);
     const owner = { workbenchId: f.projectAId, extensionId: "ext.example" };
     const records = service.open({ owner }).records;
@@ -96,6 +98,7 @@ test("publishing selected records reads only prior lifecycle metadata, not old t
         },
       },
     });
+    attachDocumentFiles(db, documentFilesFor(f.db));
     const owner = { workbenchId: f.projectAId, extensionId: "ext.example" };
     await createDocumentStorageDBService(db)
       .open({ owner })
@@ -108,9 +111,9 @@ test("publishing selected records reads only prior lifecycle metadata, not old t
       selects.length = 0;
       await publishOrderedProjection(tx, owner, records);
     });
-    const previous = selects.filter((query) => query.includes('from "storage_current_records"'));
+    const previous = selects.filter((query) => query.includes('from "records"'));
     expect(previous).toHaveLength(1);
-    expect(previous[0]).not.toMatch(/"(?:value|query_values|revision|asset|shared)"/);
+    expect(previous[0].split(" from ")[0]).not.toMatch(/"(?:value|query_values|revision|asset|shared)"/);
     expect(previous[0]).toContain('"native_sources"');
   } finally {
     await f.close();

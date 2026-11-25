@@ -5,54 +5,79 @@ import {
   type OrderedDecision,
   type OrderedOperation,
   validateOrderedNativeOperation,
-  verifyOrderedAdmission,
   verifyOrderedOperation,
 } from "pstdio-sync/records";
-import { fingerprint, type Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import {
-  storage_ordered_operations as operations,
-  storage_ordered_receipts as receipts,
-  storage_ordered_touches as touches,
-} from "../../db/schemas.pg";
+import { storage_ordered_operations as operations } from "../../db/schemas.pg";
+import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
+import { admitOrderedOperation, identifyOrderedAdmission } from "./ordered-admission";
 import {
   createOrderedAuthorship,
   orderedLocalOperation as local,
   retryOrderedLocalOperation,
 } from "./ordered-authorship";
 import { createOrderedCanonical } from "./ordered-canonical";
-import { ensureOrderedOwner } from "./ordered-conversion";
 import { createOrderedDependencyCache } from "./ordered-dependency-cache";
-import { isOrderedNativeRequest } from "./ordered-native-identity";
+import { isOrderedNativeRequest, orderedNativeRequestPrefix } from "./ordered-native-identity";
 import { fenceOrderedNativeText, forgetOrderedTextGeneration } from "./ordered-native-recovery";
+import { recordOperationReceipt } from "./ordered-receipt-values";
 import { createOrderedReceiptCache } from "./ordered-receipts-cache";
+import { finishOrderedRecordWrites } from "./ordered-record-publication";
+import { readOrderedSaveOutcome } from "./ordered-save-outcome";
 import {
   decodeOrderedJson as decode,
   encodeOrderedJson as encode,
+  orderedAddress,
   orderedOwnerWhere as ownerWhere,
   type OrderedTransaction as Transaction,
 } from "./ordered-sql";
 import { lockRecordOwner } from "./record-changes";
+import { hasRetainedOperations, type RetainedOperation, readRetainedOperation } from "./retained-operations";
+import { storageOwnerKey } from "./storage-owner-key";
 
 const identityError = () => new Error("Operation identity reused with changed payload");
 
-const bindOperationIdentity = async (tx: Transaction, owner: StorageOwner, id: string, identity: string) => {
-  const [row] = await tx
-    .insert(operations)
-    .values({
-      workbench_id: owner.workbenchId,
-      extension_id: owner.extensionId,
-      operation_id: id,
-      fingerprint: identity,
-    })
-    .onConflictDoUpdate({
-      target: [operations.workbench_id, operations.extension_id, operations.operation_id],
-      // Retain the original identity and payload while returning its locked row
-      // in this statement; every admission otherwise repeats a separate lookup.
-      set: { fingerprint: operations.fingerprint },
-    })
-    .returning();
+const bindOperationIdentity = async (
+  tx: Transaction,
+  owner: StorageOwner,
+  id: string,
+  identity: string,
+  retained: (id: string) => Promise<RetainedOperation | undefined>,
+) => {
+  const read = () =>
+    tx
+      .select()
+      .from(operations)
+      .where(and(ownerWhere(operations, owner), eq(operations.operation_id, id)));
+  // Most decisions bind an already authored operation. Read its current row
+  // without rewriting an immutable identity or consuming another queue sequence.
+  let [row] = await read();
+  if (!row)
+    [row] = await tx
+      .insert(operations)
+      .values({
+        ...orderedAddress(owner),
+        operation_id: id,
+        fingerprint: identity,
+      })
+      .onConflictDoNothing({ target: [operations.owner_id, operations.operation_id] })
+      .returning();
+  // A conflicting insertion can become visible only after the INSERT snapshot.
+  if (!row) [row] = await read();
+  if (!row) throw new Error("An ordered operation reservation is missing");
   if (row!.fingerprint !== identity) throw identityError();
+  if (!row!.request_fingerprint && !row!.envelope && !Object.keys(row!.receipt).length) {
+    const saved = await retained(id);
+    if (saved) {
+      if (saved.fingerprint !== identity) throw identityError();
+      const [restored] = await tx
+        .update(operations)
+        .set({ ...saved, owner_id: row!.owner_id })
+        .where(and(ownerWhere(operations, owner), eq(operations.operation_id, id)))
+        .returning();
+      return restored!;
+    }
+  }
   return row!;
 };
 
@@ -62,9 +87,14 @@ const queueOrderedOperation = async (
   input: OrderedOperation,
   requestFingerprint: string,
   operation: (id: string) => Promise<typeof operations.$inferSelect | undefined>,
+  retained: (id: string) => Promise<RetainedOperation | undefined>,
 ) => {
-  const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId };
   input = await verifyOrderedOperation(input);
+  if (await retained(input.operationId)) {
+    const previous = await bindOperationIdentity(tx, owner, input.operationId, input.fingerprint, retained);
+    if (previous.request_fingerprint)
+      return { save: retryOrderedLocalOperation(previous, input, requestFingerprint), enqueued: false };
+  }
   if (isOrderedNativeRequest(requestFingerprint)) {
     validateOrderedNativeOperation(input);
     const previous = await operation(input.operationId);
@@ -73,20 +103,22 @@ const queueOrderedOperation = async (
   const [saved] = await tx
     .insert(operations)
     .values({
-      ...address,
+      ...orderedAddress(owner),
       operation_id: input.operationId,
       fingerprint: input.fingerprint,
       envelope: encode(input),
       request_fingerprint: requestFingerprint,
+      touches: [...new Set(input.edits.map((edit) => edit.recordId))],
     })
     .onConflictDoUpdate({
-      target: [operations.workbench_id, operations.extension_id, operations.operation_id],
+      target: [operations.owner_id, operations.operation_id],
       // A receipt can reserve the identity before authorship. Only that empty,
       // matching reservation may acquire an envelope and a fresh queue position.
       set: {
         envelope: sql`excluded.envelope`,
         request_fingerprint: sql`excluded.request_fingerprint`,
         local_sequence: sql`excluded.local_sequence`,
+        touches: sql`excluded.touches`,
       },
       setWhere: and(
         eq(operations.fingerprint, input.fingerprint),
@@ -94,36 +126,49 @@ const queueOrderedOperation = async (
         isNull(operations.settled_epoch),
       ),
     })
-    .returning();
+    .returning({
+      sequence: operations.local_sequence,
+      admission: operations.admission,
+      delivered: operations.delivered,
+    });
   if (!saved) {
     const row = (await operation(input.operationId))!;
     if (row.fingerprint !== input.fingerprint) throw identityError();
-    return retryOrderedLocalOperation(row, input, requestFingerprint);
+    return { save: retryOrderedLocalOperation(row, input, requestFingerprint), enqueued: false };
   }
-  for (let offset = 0; offset < input.edits.length; offset += 1_000)
-    await tx
-      .insert(touches)
-      .values(
-        input.edits.slice(offset, offset + 1_000).map((edit) => ({
-          ...address,
-          operation_id: input.operationId,
-          record_id: edit.recordId,
-          local_sequence: saved!.local_sequence,
-        })),
-      )
-      .onConflictDoNothing();
-  return local(saved!)!;
+  return {
+    save: {
+      sequence: saved.sequence,
+      operation: input,
+      requestFingerprint,
+      admission: saved.admission ? decode<OrderedAdmission>(saved.admission) : null,
+      delivered: saved.delivered,
+    },
+    enqueued: true,
+  };
 };
 
 /** All calls run inside the same project/owner lock as their projection and relay cursor. */
 export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
-  const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId };
   const operationWhere = (id: string) => and(ownerWhere(operations, owner), eq(operations.operation_id, id));
+  const cold = new Map<string, Promise<RetainedOperation | undefined>>();
+  // Journal methods never write private authorship pages. Maintenance and backup
+  // restoration use a fresh journal, so absence stays valid only in this lifetime.
+  let retainedRoot: Promise<boolean> | undefined;
+  const readCold = async (id: string) => {
+    retainedRoot ??= hasRetainedOperations(tx, owner);
+    if (await retainedRoot) return readRetainedOperation(tx, owner, id);
+  };
+  const retained = (id: string) => {
+    if (!cold.has(id)) cold.set(id, readCold(id));
+    return cold.get(id)!;
+  };
+  const receipts = createOrderedReceiptCache(tx, owner, retained);
   const operation = async (id: string) => {
     const [row] = await tx.select().from(operations).where(operationWhere(id));
-    return row;
+    return row ?? retained(id);
   };
-  const bind = (id: string, identity: string) => bindOperationIdentity(tx, owner, id, identity);
+  const bind = (id: string, identity: string) => bindOperationIdentity(tx, owner, id, identity, retained);
   // Receipts are immutable, so a found receipt stays valid for this owner transaction.
   const held = new Map<string, Awaited<ReturnType<typeof readDecision>>>();
   const cachedDecision = async (id: string, epoch: string) => {
@@ -133,36 +178,22 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
     if (row) held.set(key, row);
     return row;
   };
-  const readDecision = async (id: string, epoch: string) => {
-    const [row] = await tx
-      .select({
-        operationId: receipts.operation_id,
-        epoch: receipts.epoch,
-        state: receipts.state,
-        fingerprint: operations.fingerprint,
-      })
-      .from(receipts)
-      .innerJoin(
-        operations,
-        and(
-          eq(operations.workbench_id, receipts.workbench_id),
-          eq(operations.extension_id, receipts.extension_id),
-          eq(operations.operation_id, receipts.operation_id),
-        ),
-      )
-      .where(and(ownerWhere(receipts, owner), eq(receipts.operation_id, id), eq(receipts.epoch, epoch)));
-    return row;
-  };
+  const readDecision = async (id: string, epoch: string) => (await receipts.cachedReceipt(id, epoch))?.decision;
   const pendingWhere = () =>
     and(ownerWhere(operations, owner), isNotNull(operations.envelope), isNull(operations.settled_epoch));
-  const dependencies = createOrderedDependencyCache(tx, owner, cachedDecision);
+  const dependencies = createOrderedDependencyCache(tx, owner, cachedDecision, retained);
+  const queueWithStatus = (input: OrderedOperation, requestFingerprint: string) =>
+    queueOrderedOperation(tx, owner, input, requestFingerprint, operation, retained);
   return {
+    authoredOutcome: (id: string) => readOrderedSaveOutcome(tx, owner, id),
     knownDependency: dependencies.known,
     cachedDecision,
     bindIdentity: bind,
-    ...createOrderedAuthorship(tx, owner, operation),
-    queue: (input: OrderedOperation, requestFingerprint: string) =>
-      queueOrderedOperation(tx, owner, input, requestFingerprint, operation),
+    ...createOrderedAuthorship(tx, owner, operation, retained),
+    queueWithStatus,
+    async queue(input: OrderedOperation, requestFingerprint: string) {
+      return (await queueWithStatus(input, requestFingerprint)).save;
+    },
     async pending(options: { after?: number; limit?: number } = {}) {
       const rows = await tx
         .select()
@@ -185,18 +216,13 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
       const limit = options.limit ?? 100;
       let selected = new Map<string, number>();
       for (let offset = 0; offset < recordIds.length; offset += 1_000) {
-        // Seek each record's membership index before deduplicating groups. Read payloads only
-        // after the global page is known, so a group touching many records is never copied per join row.
+        // The partial GIN index probes memberships without copying pending envelopes.
         const result = await tx.execute(sql`
-          SELECT DISTINCT picked.operation_id, picked.local_sequence
-          FROM jsonb_array_elements_text(${JSON.stringify(recordIds.slice(offset, offset + 1_000))}::jsonb) requested(record_id)
-          CROSS JOIN LATERAL (
-            SELECT membership.operation_id, membership.local_sequence FROM storage_ordered_touches membership
-            WHERE membership.workbench_id = ${owner.workbenchId} AND membership.extension_id = ${owner.extensionId}
-              AND membership.record_id = requested.record_id AND membership.local_sequence > ${options.after ?? 0}
-            ORDER BY membership.local_sequence LIMIT ${limit}
-          ) picked ORDER BY picked.local_sequence LIMIT ${limit}
-        `);
+          SELECT operation_id,local_sequence FROM operations
+          WHERE owner_id=${storageOwnerKey(owner)} AND envelope IS NOT NULL AND settled_epoch IS NULL
+            AND touches && ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(recordIds.slice(offset, offset + 1_000))}::jsonb))
+            AND local_sequence>${options.after ?? 0}
+          ORDER BY local_sequence LIMIT ${limit}`);
         for (const row of result.rows as { operation_id: string; local_sequence: number | string }[])
           selected.set(row.operation_id, Number(row.local_sequence));
         selected = new Map([...selected].sort((a, b) => a[1] - b[1]).slice(0, limit));
@@ -209,25 +235,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
         .orderBy(operations.local_sequence);
       return rows.map((row) => local(row)!);
     },
-    async admit(admission: OrderedAdmission) {
-      admission = await verifyOrderedAdmission(admission);
-      const row = await operation(admission.operation.operationId);
-      if (!row?.envelope || row.fingerprint !== admission.operation.fingerprint) throw identityError();
-      if (row.settled_epoch) throw new Error("A settled save cannot enter another order");
-      const identity = await fingerprint(admission as unknown as Json);
-      if (row.admission_epoch === admission.epoch && row.admission_fingerprint !== identity)
-        throw new Error("An admission is immutable within its order epoch");
-      if (row.admission_epoch === admission.epoch) return;
-      await tx
-        .update(operations)
-        .set({
-          admission_epoch: admission.epoch,
-          admission: encode(admission),
-          admission_fingerprint: identity,
-          delivered: false,
-        })
-        .where(operationWhere(row.operation_id));
-    },
+    admit: (admission: OrderedAdmission) => admitOrderedOperation(tx, owner, admission),
     async deliveredSequences(sequences: number[], epoch: string) {
       for (let offset = 0; offset < sequences.length; offset += 1_000)
         await tx
@@ -241,38 +249,66 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
             ),
           );
     },
+    /** A fresh local envelope has no prior admission. Publish the exact admission
+     * identity and its accepted receipt in one update under the owner lock. */
+    async settleFreshLocalAdmission(input: OrderedAdmission, decision: OrderedDecision) {
+      const { admission, identity } = await identifyOrderedAdmission(input);
+      const { operation, epoch } = admission;
+      if (
+        decision.epoch !== epoch ||
+        decision.operationId !== operation.operationId ||
+        decision.fingerprint !== operation.fingerprint ||
+        decision.state !== "accepted"
+      )
+        throw new Error("The decision does not match the admitted identity");
+      const [saved] = await tx
+        .update(operations)
+        .set({
+          ...recordOperationReceipt({}, decision, identity),
+          admission_epoch: epoch,
+          admission_fingerprint: identity,
+          settled_epoch: epoch,
+          delivered: false,
+          touches: [],
+          envelope: null,
+          admission: null,
+        })
+        .where(
+          and(
+            operationWhere(operation.operationId),
+            eq(operations.fingerprint, operation.fingerprint),
+            isNotNull(operations.envelope),
+            isNull(operations.settled_epoch),
+            isNull(operations.admission_epoch),
+            sql`coalesce(${operations.request_fingerprint} NOT LIKE ${`${orderedNativeRequestPrefix}%`}, true)`,
+            sql`${operations.receipt} = '{}'::jsonb`,
+          ),
+        )
+        .returning({ id: operations.operation_id });
+      if (!saved) return false;
+      await dependencies.remember(decision);
+      await forgetOrderedTextGeneration(tx, owner, decision.operationId);
+      return true;
+    },
     async recordDecision(decision: OrderedDecision, admissionFingerprint: string, options: { indexed?: boolean } = {}) {
       const row = await bind(decision.operationId, decision.fingerprint);
       if (isOrderedNativeRequest(row.request_fingerprint)) throw identityError();
       if (row.admission_epoch === decision.epoch && row.admission_fingerprint !== admissionFingerprint)
         throw new Error("The decision does not match the admitted identity");
-      const [retained] = await tx
-        .insert(receipts)
-        .values({
-          ...address,
-          epoch: decision.epoch,
-          operation_id: decision.operationId,
-          state: decision.state,
-          admission_fingerprint: admissionFingerprint,
-          indexed: options.indexed ?? false,
-        })
-        .onConflictDoUpdate({
-          target: [receipts.workbench_id, receipts.extension_id, receipts.epoch, receipts.operation_id],
-          // Return the retained decision without replacing its immutable contents.
-          set: { indexed: options.indexed ? true : receipts.indexed },
-        })
-        .returning({ state: receipts.state, admissionFingerprint: receipts.admission_fingerprint });
-      if (retained!.state !== decision.state || retained!.admissionFingerprint !== admissionFingerprint)
-        throw new Error("An ordered decision is immutable");
-      await dependencies.remember(decision);
+      const receipt = recordOperationReceipt(row.receipt, decision, admissionFingerprint, options.indexed);
       // Historical decisions remain queryable but never settle a wrapper admitted in another epoch.
-      if (row.envelope && row.admission_epoch === decision.epoch && !row.settled_epoch) {
-        if (decision.state === "refused")
-          await fenceOrderedNativeText(tx, owner, decode<OrderedOperation>(row.envelope));
-        await tx.update(operations).set({ settled_epoch: decision.epoch }).where(operationWhere(decision.operationId));
-        await tx.delete(touches).where(and(ownerWhere(touches, owner), eq(touches.operation_id, decision.operationId)));
-        await forgetOrderedTextGeneration(tx, owner, decision.operationId);
-      }
+      const envelope = row.admission_epoch === decision.epoch && !row.settled_epoch ? row.envelope : null;
+      if (envelope && decision.state === "refused")
+        await fenceOrderedNativeText(tx, owner, decode<OrderedOperation>(envelope));
+      await tx
+        .update(operations)
+        .set({
+          ...receipt,
+          ...(envelope ? { settled_epoch: decision.epoch, touches: [], envelope: null, admission: null } : {}),
+        })
+        .where(operationWhere(decision.operationId));
+      await dependencies.remember(decision);
+      if (envelope) await forgetOrderedTextGeneration(tx, owner, decision.operationId);
     },
     async outcome(id: string) {
       const row = await operation(id);
@@ -296,26 +332,32 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
       if (!known || known.fingerprint !== decision.fingerprint || known.state !== decision.state)
         throw new Error("Settlement requires the exact saved receipt");
       if (decision.state === "refused") await fenceOrderedNativeText(tx, owner, decode<OrderedOperation>(row.envelope));
-      await tx.update(operations).set({ settled_epoch: decision.epoch }).where(operationWhere(decision.operationId));
-      await tx.delete(touches).where(and(ownerWhere(touches, owner), eq(touches.operation_id, decision.operationId)));
+      await tx
+        .update(operations)
+        .set({ settled_epoch: decision.epoch, touches: [], envelope: null, admission: null })
+        .where(operationWhere(decision.operationId));
       await forgetOrderedTextGeneration(tx, owner, decision.operationId);
     },
     ...createOrderedCanonical(tx, owner),
-    ...createOrderedReceiptCache(tx, owner),
+    ...receipts,
   };
 };
 
 /** The journal exists before a connection does. Projection/cursor writes share this transaction. */
-export const withOrderedOwner = <T>(
+export const withOrderedOwner = async <T>(
   db: DbClient,
   owner: StorageOwner,
   run: (journal: OrderedJournal, tx: Transaction) => Promise<T>,
-) =>
-  ensureOrderedOwner(db, owner).then(() =>
-    db.transaction(async (tx) => {
-      await lockRecordOwner(tx, owner);
-      return run(createOrderedJournal(tx, owner), tx);
-    }),
-  );
+) => {
+  assertStorageOwnerAdmitted(db, owner);
+  return db.transaction(async (tx) => {
+    // The marker's ensure path creates the owner inside this project lock and
+    // transaction. A separate pre-transaction ensure repeats that same lookup.
+    await lockRecordOwner(tx, owner);
+    const result = await run(createOrderedJournal(tx, owner), tx);
+    await finishOrderedRecordWrites(tx, owner);
+    return result;
+  });
+};
 
 export type OrderedJournal = ReturnType<typeof createOrderedJournal>;

@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { RelatedResourceQuery, ResourceRef } from "pstdio-api-contracts/extension-kernel";
 import type { DbClient } from "../db/connection.pglite";
+import { resourceLinkRows } from "./resource-link-rows";
 
 type Input = RelatedResourceQuery & { resources: (ResourceRef & { extensionId: string; projectId: string })[] };
 export const queryRelatedResources = async (db: Pick<DbClient, "execute">, input: Input) => {
@@ -43,10 +44,10 @@ export const queryRelatedResources = async (db: Pick<DbClient, "execute">, input
   const queries = [];
   if (direction !== "incoming")
     queries.push(sql`select project_id, target_owner as owner, target_kind as kind, target_id as id,
-    details - 'sourceRef' - 'role' as presentation, 0 as priority from resource_anchors where (${match("source")}) ${role}`);
+    details - 'sourceRef' - 'role' as presentation, 0 as priority from ${resourceLinkRows} linked where (${match("source")}) ${role}`);
   if (direction !== "outgoing")
     queries.push(sql`select project_id, source_owner as owner, source_kind as kind, source_id as id,
-    coalesce(details->'sourceRef', '{}'::jsonb) as presentation, 1 as priority from resource_anchors where (${match("target")}) ${role}`);
+    coalesce(details->'sourceRef', '{}'::jsonb) as presentation, 1 as priority from ${resourceLinkRows} linked where (${match("target")}) ${role}`);
   const result = await db.execute<{
     project_id: string;
     owner: string;

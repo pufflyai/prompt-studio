@@ -3,6 +3,7 @@ import type { StorageRecordIndex } from "pstdio-sync-contracts";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 import { aggregateRecordQuery } from "./record-aggregate-query";
+import { readQueryOwner } from "./record-query-owner";
 import { recordScopeSql } from "./record-query-sql";
 
 test("grouped counts and numeric totals share one database selection", async () => {
@@ -43,7 +44,7 @@ test("grouped counts and numeric totals share one database selection", async () 
         },
       },
       "revision",
-      recordScopeSql(owner, index),
+      recordScopeSql(await readQueryOwner(f.db, owner), index),
       undefined,
       owner,
     );

@@ -1,25 +1,30 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { canonicalOwner } from "pstdio-api-contracts/extension-host";
 import { type AssetStore, hasDocumentUserData, type StorageObserver, type StorageOwner } from "pstdio-sync";
 import { createDocumentStorage } from "pstdio-sync/records";
 import { createTextDocumentStorage } from "pstdio-sync/text";
 import type { StorageTextDeclaration } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_current_records, storage_documents } from "../../db/schemas.pg";
+import { deleteStorageDocuments } from "../../db/delete-storage-documents";
+import { documents as storage_documents } from "../../db/schemas/documents";
+import { owners } from "../../db/schemas/owners";
+import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
 import { createEnvironmentDBService } from "../environment/environment";
 import { createDocumentCache } from "./document-cache";
 import { createDocumentDirectory } from "./document-directory";
+import { assertNotRetainedDocument } from "./document-kind";
 import { createDocumentTransactions } from "./document-transactions";
 import { createNativeDocumentStore, openNativeDocument } from "./native-document-storage";
 import { createOrderedCloudReturn } from "./ordered-cloud-return";
-import { convertLegacyOwners } from "./ordered-conversion";
 import { createOrderedLogs } from "./ordered-logs";
 import { createOrderedResourceRecords } from "./ordered-resource-records";
 import { createOrderedStreamStore } from "./ordered-stream-store";
 import { createProjectionStatistics } from "./projection-statistics";
 import { resourceDocumentId } from "./resource-document-persistence";
 import type { NumberChange } from "./resource-number-repair";
+import { retainedPageKey } from "./retained-page-format";
 import type { StorageDiagnostics } from "./storage-diagnostics";
+import { storageOwnerKey } from "./storage-owner-key";
 
 type NativeChange = { recordIds?: readonly string[] };
 type NativeListener = (change?: NativeChange) => void;
@@ -43,14 +48,15 @@ const notifyNumbers = (listeners: Set<(event: NumberChange) => void>, events: Nu
   for (const event of events) for (const listener of listeners) listener(event);
 };
 
-const hasProjectedRecords = async (db: DbClient, owner: StorageOwner) => {
+const hasRecordData = async (db: DbClient, owner: StorageOwner) => {
   const [record] = await db
-    .select({ id: storage_current_records.record_id })
-    .from(storage_current_records)
+    .select({ id: owners.id })
+    .from(owners)
     .where(
       and(
-        eq(storage_current_records.workbench_id, owner.workbenchId),
-        eq(storage_current_records.extension_id, owner.extensionId),
+        eq(owners.id, storageOwnerKey(owner)),
+        sql`(EXISTS(SELECT 1 FROM records r WHERE r.owner_id=${owners.id} AND r.revision IS NOT NULL)
+          OR EXISTS(SELECT 1 FROM documents d WHERE d.owner_id=${owners.id} AND d.key=${retainedPageKey("tombstones", "")}))`,
       ),
     )
     .limit(1);
@@ -59,16 +65,12 @@ const hasProjectedRecords = async (db: DbClient, owner: StorageOwner) => {
 export type StorageChange = StorageOwner & { documentId?: string; recordIds?: readonly string[] };
 
 const documentRevision = (db: DbClient, documentId: string) => async (owner: StorageOwner) => {
+  assertNotRetainedDocument(documentId);
+  assertStorageOwnerAdmitted(db, owner);
   const [row] = await db
     .select({ revision: storage_documents.revision })
     .from(storage_documents)
-    .where(
-      and(
-        eq(storage_documents.workbench_id, owner.workbenchId),
-        eq(storage_documents.extension_id, owner.extensionId),
-        eq(storage_documents.document_id, documentId),
-      ),
-    );
+    .where(and(eq(storage_documents.owner_id, storageOwnerKey(owner)), eq(storage_documents.key, documentId)));
   return row?.revision ?? 0;
 };
 
@@ -78,16 +80,13 @@ const discardDocument = async (
   owner: StorageOwner,
   documentId: string,
 ) => {
+  assertNotRetainedDocument(documentId);
+  assertStorageOwnerAdmitted(db, owner);
   const address = addressFor(owner, documentId);
-  await db
-    .delete(storage_documents)
-    .where(
-      and(
-        eq(storage_documents.workbench_id, owner.workbenchId),
-        eq(storage_documents.extension_id, owner.extensionId),
-        eq(storage_documents.document_id, documentId),
-      ),
-    );
+  await deleteStorageDocuments(
+    db,
+    and(eq(storage_documents.owner_id, storageOwnerKey(owner)), eq(storage_documents.key, documentId))!,
+  );
   cache.discard(JSON.stringify(address));
 };
 
@@ -130,8 +129,10 @@ export const createDocumentStorageDBService = (
   const transaction = transactionFor("records");
   const nativeStore = (id: string) => createNativeDocumentStore(db, id, transactionFor, documentRevision(db, id));
   const isResourceDocument = (id: string) =>
+    id.startsWith('["editor-room",') ||
     id.startsWith('["host-local-migration",') ||
     id.startsWith(resourceDocumentId("").slice(0, -2)) ||
+    id.startsWith('["ordered-retention",') ||
     id.startsWith('["ordered-conversion') ||
     id.startsWith('["ordered-index-blob",') ||
     id.startsWith('["ordered-native-field",') ||
@@ -161,8 +162,6 @@ export const createDocumentStorageDBService = (
   });
   return {
     transaction,
-    convertLegacyOwners: (options: Omit<Parameters<typeof convertLegacyOwners>[1], "withProjectWork">) =>
-      convertLegacyOwners(db, { ...options, withProjectWork }),
     logs,
     cloudReturn,
     observer,
@@ -197,16 +196,12 @@ export const createDocumentStorageDBService = (
     },
     async hasData(owner: StorageOwner) {
       owner = canonicalOwner(owner);
-      if (await hasProjectedRecords(db, owner)) return true;
+      assertStorageOwnerAdmitted(db, owner);
+      if (await hasRecordData(db, owner)) return true;
       const documents = await db
-        .select({ id: storage_documents.document_id })
+        .select({ id: storage_documents.key })
         .from(storage_documents)
-        .where(
-          and(
-            eq(storage_documents.workbench_id, owner.workbenchId),
-            eq(storage_documents.extension_id, owner.extensionId),
-          ),
-        );
+        .where(and(eq(storage_documents.owner_id, storageOwnerKey(owner)), eq(storage_documents.kind, "shared")));
       for (const { id } of documents) {
         if (isResourceDocument(id)) continue;
         if (await transactionFor(id)(owner, async ({ document }) => hasDocumentUserData(document))) return true;

@@ -12,16 +12,13 @@ import {
 import { fingerprint } from "pstdio-sync-contracts";
 import { createRow, owners, scaleStorageIndexes, seedOwner, type Workload, workload } from "storage-scale-fixture";
 import { createDb, type DbClient } from "../../db/connection.pglite";
-import {
-  projects,
-  storage_ordered_operations,
-  storage_ordered_receipts,
-  storage_record_projections,
-} from "../../db/schemas.pg";
+import { projects, owners as recordOwners, storage_ordered_operations } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createOrderedJournal } from "./ordered-journal";
+import { operationReceipt } from "./ordered-receipt-values";
 import { decodeOrderedJson, orderedOwnerWhere } from "./ordered-sql";
 import { readProjectedRecords } from "./record-queries";
+import { storageOwnerKey } from "./storage-owner-key";
 
 export const databaseFixtureOwner = { workbenchId: "00000000-0000-4000-8000-000000000903", extensionId: "scale.owner" };
 
@@ -55,11 +52,6 @@ const verifyReceipts = async (db: DbClient, kind: Workload, count: number, churn
     .from(storage_ordered_operations)
     .where(orderedOwnerWhere(storage_ordered_operations, databaseFixtureOwner));
   const actual = new Map(receipts.map((row) => [row.operation_id, row]));
-  const decisions = await db
-    .select()
-    .from(storage_ordered_receipts)
-    .where(orderedOwnerWhere(storage_ordered_receipts, databaseFixtureOwner));
-  const accepted = new Map(decisions.map((row) => [row.operation_id, row]));
   const views = new Map<string, OrderedRecord>();
   let seedCommits = 0;
   // The unchanged seed schedule supplies expected receipts without writing to storage.
@@ -80,11 +72,8 @@ const verifyReceipts = async (db: DbClient, kind: Workload, count: number, churn
         assert.equal(retained.fingerprint, operation.fingerprint, `Invalid envelope identity ${operationId}`);
         for (const record of projectOrderedOperation(views, operation)) views.set(record.recordId, record);
       } else {
-        const receipt = accepted.get(operationId);
-        assert(
-          saved.settled_epoch && receipt?.epoch === saved.settled_epoch && receipt.state === "accepted",
-          `Missing accepted history receipt ${operationId}`,
-        );
+        const receipt = saved.settled_epoch ? operationReceipt(saved.receipt, saved.settled_epoch) : undefined;
+        assert(saved.settled_epoch && receipt?.state === "accepted", `Missing accepted history receipt ${operationId}`);
         const applied = await applyBoundedOrderedOperation(views, operation, saved.settled_epoch);
         assert.equal(applied.decision.state, "accepted");
         for (const record of applied.records) views.set(record.recordId, record);
@@ -102,13 +91,8 @@ export const verifyDatabaseFixture = async (db: DbClient, kind: Workload, count:
   const seedCommits = await verifyReceipts(db, kind, count, churn);
   const [projection] = await db
     .select()
-    .from(storage_record_projections)
-    .where(
-      and(
-        eq(storage_record_projections.workbench_id, databaseFixtureOwner.workbenchId),
-        eq(storage_record_projections.extension_id, databaseFixtureOwner.extensionId),
-      ),
-    );
+    .from(recordOwners)
+    .where(and(eq(recordOwners.id, storageOwnerKey(databaseFixtureOwner))));
   assert.equal(projection?.revision, seedCommits, "Incomplete owner revision");
   assert.equal(projection.live_count, count, "Stored live count differs");
   for (const deleted of churn ? [false, true] : [false]) {

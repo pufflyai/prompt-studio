@@ -1,128 +1,76 @@
-import { and, eq } from "drizzle-orm";
 import { type DocumentState, documentHistory, type StorageOwner } from "pstdio-sync";
-import * as Y from "yjs";
+import type * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_document_operations, storage_document_updates, storage_documents } from "../../db/schemas.pg";
+import type { documents } from "../../db/schemas/documents";
 import { dataMigrationContext } from "./data-migration-context";
 import type { LoadedDocument } from "./document-cache";
+import {
+  ensureFileDocument,
+  loadFileDocument,
+  readFileDocumentHead,
+  saveFileDocument,
+} from "./document-file-persistence";
+import { documentFilesFor } from "./document-files";
+import { localDocumentKey } from "./document-kind";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
+type Files = ReturnType<typeof documentFilesFor>;
+type Row = typeof documents.$inferSelect;
 export interface DocumentAddress {
   workbench_id: string;
   extension_id: string;
   document_id: string;
 }
-const documentWhere = (address: DocumentAddress) =>
-  and(
-    eq(storage_documents.workbench_id, address.workbench_id),
-    eq(storage_documents.extension_id, address.extension_id),
-    eq(storage_documents.document_id, address.document_id),
-  );
-const updatesWhere = (address: DocumentAddress) =>
-  and(
-    eq(storage_document_updates.workbench_id, address.workbench_id),
-    eq(storage_document_updates.extension_id, address.extension_id),
-    eq(storage_document_updates.document_id, address.document_id),
-  );
-const foldEvery = 128;
-
 const loadDocument = async (
   tx: Transaction,
+  files: Files,
   address: DocumentAddress,
   owner: StorageOwner,
   cached?: LoadedDocument,
   diagnostics?: StorageDiagnostics,
 ) => {
-  const inserted = await tx
-    .insert(storage_documents)
-    .values({ ...address, state: new Uint8Array([0, 0]) })
-    .onConflictDoNothing()
-    .returning();
-  const [row] = await tx
-    .select({ revision: storage_documents.revision, folded_revision: storage_documents.folded_revision })
-    .from(storage_documents)
-    .where(documentWhere(address))
-    .for("update");
-  if (cached?.revision === row.revision) return { row, document: cached.document };
-  const [saved] = await tx
-    .select({ state: storage_documents.state })
-    .from(storage_documents)
-    .where(documentWhere(address));
-  const document = new Y.Doc();
-  Y.applyUpdate(document, saved.state);
-  const updates = await tx
-    .select()
-    .from(storage_document_updates)
-    .where(updatesWhere(address))
-    .orderBy(storage_document_updates.revision);
-  for (const update of updates) Y.applyUpdate(document, update.update);
-  diagnostics?.({
-    phase: "document-loaded",
+  const { row, initialize } = await ensureFileDocument(tx, files, {
     owner,
-    bytes: saved.state.length + updates.reduce((sum, update) => sum + update.update.length, 0),
+    key: address.document_id,
+    kind: localDocumentKey(address.document_id) ? "local" : "shared",
   });
-  return { row, document, initialize: inserted.length > 0 };
+  if (cached?.ownerId === row.owner_id && cached.revision === row.revision) return { row, document: cached.document };
+  const { document, bytes } = await loadFileDocument(files, owner.workbenchId, row);
+  diagnostics?.({ phase: "document-loaded", owner, bytes });
+  return { row, document, initialize };
 };
-
-const localOperations = (tx: Transaction, address: DocumentAddress) => {
+const localOperations = (files: Files, projectId: string, row: Row) => {
+  let known: Record<string, string> | undefined;
+  let changed = false;
+  const load = async () => {
+    if (known) return known;
+    const head = await readFileDocumentHead(files, projectId, row);
+    known = head.operations
+      ? JSON.parse(Buffer.from(await files.read(projectId, row.id, "operations", head.operations)).toString())
+      : {};
+    if (
+      !known ||
+      Array.isArray(known) ||
+      typeof known !== "object" ||
+      Object.values(known).some((value) => typeof value !== "string")
+    )
+      throw new Error("Invalid saved document retry facts");
+    return known;
+  };
   const pending = new Map<string, string>();
   return {
-    operation: async (id: string) => {
-      if (pending.has(id)) return pending.get(id);
-      const [row] = await tx
-        .select({ fingerprint: storage_document_operations.fingerprint })
-        .from(storage_document_operations)
-        .where(
-          and(
-            eq(storage_document_operations.workbench_id, address.workbench_id),
-            eq(storage_document_operations.extension_id, address.extension_id),
-            eq(storage_document_operations.document_id, address.document_id),
-            eq(storage_document_operations.operation_id, id),
-          ),
-        );
-      return row?.fingerprint;
-    },
-    remember: (id: string, fingerprint: string) => {
+    operation: async (id: string) =>
+      pending.get(id) ?? (Object.getOwnPropertyDescriptor(await load(), id)?.value as string | undefined),
+    remember(id: string, fingerprint: string) {
       pending.set(id, fingerprint);
+      changed = true;
     },
-    async persist() {
-      if (!pending.size) return;
-      await tx
-        .insert(storage_document_operations)
-        .values([...pending].map(([id, fingerprint]) => ({ ...address, operation_id: id, fingerprint })))
-        .onConflictDoNothing();
+    async saved() {
+      if (!changed) return undefined;
+      return Object.fromEntries([...pending, ...Object.entries(await load())]);
     },
   };
-};
-
-const appendUpdates = async (
-  tx: Transaction,
-  address: DocumentAddress,
-  row: Pick<typeof storage_documents.$inferSelect, "revision" | "folded_revision">,
-  document: Y.Doc,
-  updates: Uint8Array[],
-) => {
-  if (!updates.length) return row.revision;
-  const revision = row.revision + 1;
-  await tx.insert(storage_document_updates).values({ ...address, revision, update: Y.mergeUpdates(updates) });
-  const fold = revision - row.folded_revision >= foldEvery;
-  await tx
-    .update(storage_documents)
-    .set({ revision, ...(fold && { state: Y.encodeStateAsUpdate(document), folded_revision: revision }) })
-    .where(documentWhere(address));
-  if (fold) await tx.delete(storage_document_updates).where(updatesWhere(address));
-  return revision;
-};
-
-const replaceDocument = async (tx: Transaction, address: DocumentAddress, revision: number, document: Y.Doc) => {
-  const next = revision + 1;
-  await tx
-    .update(storage_documents)
-    .set({ state: Y.encodeStateAsUpdate(document), revision: next, folded_revision: next })
-    .where(documentWhere(address));
-  await tx.delete(storage_document_updates).where(updatesWhere(address));
-  return next;
 };
 
 export const runDocumentTransaction = async <T>(
@@ -137,9 +85,17 @@ export const runDocumentTransaction = async <T>(
   action: (state: DocumentState) => Promise<T>,
 ) => {
   const { address } = input;
-  const { document: previous, row } = await loadDocument(tx, address, input.owner, input.cached, input.diagnostics);
+  const files = documentFilesFor(tx);
+  const { document: previous, row } = await loadDocument(
+    tx,
+    files,
+    address,
+    input.owner,
+    input.cached,
+    input.diagnostics,
+  );
   let document = previous;
-  const operations = localOperations(tx, address);
+  const operations = localOperations(files, input.owner.workbenchId, row);
   const key = JSON.stringify(address);
   const migration = dataMigrationContext.getStore();
   if (migration && !migration.histories.has(key)) migration.histories.set(key, documentHistory(document));
@@ -163,12 +119,16 @@ export const runDocumentTransaction = async <T>(
       operation: operations.operation,
       remember: operations.remember,
     });
-    await operations.persist();
     const replaced = document !== previous;
-    const revision = replaced
-      ? await replaceDocument(tx, address, row.revision, document)
-      : await appendUpdates(tx, address, row, document, updates);
-    return { value, revision, document, changed: replaced || updates.length > 0 };
+    const revision = await saveFileDocument(tx, files, {
+      projectId: input.owner.workbenchId,
+      row,
+      document,
+      updates,
+      replace: replaced,
+      operations: await operations.saved(),
+    });
+    return { value, revision, document, ownerId: row.owner_id, changed: replaced || updates.length > 0 };
   } catch (error) {
     if (document !== input.cached?.document) document.destroy();
     throw error;
