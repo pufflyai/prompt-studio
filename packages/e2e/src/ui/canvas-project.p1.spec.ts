@@ -123,6 +123,11 @@ test("UI Canvas shows a project's own canvas and follows edits to its component 
       );
       expect(response.ok()).toBe(true);
     };
+    const malformed = await request.post(
+      `${baseURL}/v1/projects/${project.id}/extensions/commands/pstdio.canvas.command.parameters.select/execute`,
+      { data: { source: "api", params: { canvas: "src/button.canvas.tsx", frame: "Primary", file: 0 } } },
+    );
+    expect(await malformed.json()).toMatchObject({ outcome: { status: "rejected", code: "invalid_params" } });
     await selectVersion("default.json");
     await expect(frame.getByRole("button", { name: "Version 2: Save" })).toBeVisible();
     await selectVersion("alternate.json");

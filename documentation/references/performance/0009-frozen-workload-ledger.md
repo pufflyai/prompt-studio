@@ -69,4 +69,10 @@ There is also a real product limitation: `queryTickets` calls `readMigratedTicke
 
 A product repair must preserve native-title derivation, logical tag selections, ancestor labels and global milestone/attention/review state while applying complete filters/search/order before bounded page selection. Public indexed queries, same-revision aggregates, batched identity/link reads and the existing cursor-aware native renderer provide the transport; deriving those fields from only a page would silently change results. Keep this product work and the original failures visible rather than slicing a full response or weakening the scan guard.
 
+## Millisecond gates for Planner and storage — 2026-11-19
+
+The user explicitly instructed: “we should benchmark ms not read write counts”. B6 and B7 version2 retain their complete fixtures, actions, platforms, throttle and time limits. Elapsed milliseconds are their only benchmark metrics and performance gates. Read/write/scan counts and other supporting values remain diagnostic observations; the old count ceilings and count-based scan/write assertions are retired. Paging, ordering, persistence and maintenance correctness remain required. B5 memory and B4 share contracts retain their existing scope. Historical failed results stay failed under their original contract; this change does not qualify a release. Human review and merge remain required.
+
+The user then explicitly accepted B6 target failures for now and instructed that they must not block release. B6 version2 marks its six millisecond targets advisory. Completed measurements retain actual values, target values and every advisory miss in raw evidence and logs; missing measurements, action failures and failed correctness checks still fail benchmark qualification. The release publication policy continues to treat performance outcomes as advisory. This accepts B6 timing misses under the new contract without rewriting historical results.
+
 *Updated at: 2026-11-19*

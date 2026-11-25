@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { app, autoUpdater, clipboard, ipcMain, Menu, protocol, shell } from "electron";
+import { app, autoUpdater, clipboard, dialog, ipcMain, Menu, protocol, shell } from "electron";
 import { createLogger, resolveDefaultLogPath } from "pstdio-logging";
 import { resolvePstdioRuntimeDescriptorPath, resolvePstdioUpdateChannelPath } from "pstdio-paths";
 import { createMacOSCliSetup } from "./cli/macos-cli-setup";
@@ -7,6 +7,7 @@ import { runWindowsInstallerEvent, windowsInstallerEvent } from "./cli/windows-i
 import { formatDesktopDiagnostics } from "./diagnostics/diagnostics";
 import { workbenchErrorDetails } from "./diagnostics/workbench-error";
 import { registerDesktopIpc } from "./ipc/register-desktop-ipc";
+import { createDeviceFileSaver } from "./ipc/save-device-file";
 import {
   type DesktopRecoveryError,
   type DesktopState,
@@ -243,6 +244,7 @@ const bootstrap = async () => {
     void quitFlow.requestQuit();
   });
   registerDesktopIpc({
+    saveFile: createDeviceFileSaver((options) => dialog.showSaveDialog(window, options)),
     titleBarGeometrySource: window.webContents,
     isFullScreen: () => window.isFullScreen(),
     setTitleBarAppearance: async (appearance) => {

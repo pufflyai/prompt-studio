@@ -138,7 +138,8 @@ test("queues two follow-ups without stopping the active session and keeps a fail
         extensionId: "pstdio.session-browser",
         outcome: {
           ok: false,
-          status: "error",
+          status: "rejected",
+          code: "unavailable",
           reason: "Could not send",
           error: { message: "Could not send" },
           notices: [],

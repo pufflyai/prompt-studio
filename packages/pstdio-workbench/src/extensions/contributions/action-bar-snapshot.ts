@@ -17,7 +17,9 @@ const action = z.object({
   action: z.custom<import("@pstdio/sdk/extensions").NavigationTarget>(isNavigationTarget),
 });
 const snapshot = z.object({
-  items: z.array(z.union([action, z.object({ ...common, items: z.array(action) })])),
+  items: z.array(
+    z.union([action, z.object({ ...common, includeResourceActions: z.boolean().optional(), items: z.array(action) })]),
+  ),
 });
 
 /** Resolve local refs once against the contributing extension, including menu commands. */

@@ -4,6 +4,8 @@ import { ScopedDialog as Dialog, LoadingState } from "@pstdio/ui";
 import { KanbanRendererCreateDialog } from "@pstdio/ui/kanban-renderer";
 import { useEffect, useState } from "react";
 import type { RegisteredKanbanRendererContribution, ResourceRef, WorkbenchCore } from "../../core";
+import { workbenchPageLocationsEqual } from "../../core/controllers/page-location/page-location-normalization";
+import { getWorkbenchPageRegistryInternals } from "../../core/registries/pages/page-registry-internals";
 import { bindKanbanRendererContribution } from "../../core/registries/renderers/kanban-renderer-binding";
 import type { ReactRegisteredKanbanRendererContribution } from "../renderers/kanban/kanban-presentation";
 import { useKanbanAttributes } from "../renderers/kanban/use-kanban-attributes";
@@ -27,10 +29,11 @@ export const RendererCreateDialog = (props: RendererCreateDialogProps) => {
     const { location, activePageId, projectId } = workbench.pages.store.getState();
     const placement = props.placement ?? workbench.pages.getContent()?.placementIdentity;
     const viewer = workbench.viewers.captureContext(placement);
+    const { resources } = getWorkbenchPageRegistryInternals(workbench.pages);
     return () => {
       const current = workbench.pages.store.getState();
       return (
-        current.location === location &&
+        workbenchPageLocationsEqual(current.location, location, resources, workbench.pages.listPages()) &&
         current.activePageId === activePageId &&
         current.projectId === projectId &&
         viewer.isViewerCurrent?.() !== false

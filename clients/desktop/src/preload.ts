@@ -67,6 +67,8 @@ if (process.platform !== "darwin") {
 }
 
 const desktopApi: PromptStudioDesktopApi = Object.freeze({
+  saveFile: (input: Parameters<PromptStudioDesktopApi["saveFile"]>[0]) =>
+    ipcRenderer.invoke(DESKTOP_CHANNELS.saveFile, input),
   cancelQuit: () => ipcRenderer.invoke(DESKTOP_CHANNELS.cancelQuit),
   confirmQuit: () => ipcRenderer.invoke(DESKTOP_CHANNELS.confirmQuit),
   getAppInfo: () => ipcRenderer.invoke(DESKTOP_CHANNELS.appInfo),

@@ -54,6 +54,19 @@ export const VsCodeSolarizedLight: Story = {
   defaultTheme: "vscode-solarized-light",
 };
 
+export const RepeatedPolls: Story = {
+  args: {
+    messages: Array.from({ length: 3 }, (_, index): SessionMessage[] => [
+      { id: `poll-${index}`, role: "user", parts: [{ type: "text", text: "Check for available work." }] },
+      {
+        id: `error-${index}`,
+        role: "system",
+        parts: [{ type: "error", errorType: "other", message: "Usage limit reached." }],
+      },
+    ]).flat(),
+  },
+};
+
 export const LongUserMessage: Story = {
   args: {
     messages: [

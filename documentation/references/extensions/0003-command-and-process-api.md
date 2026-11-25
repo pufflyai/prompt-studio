@@ -43,6 +43,34 @@ owns their lifetime.
 command, and stays open when the command simply returns, so a command can hand it to work the host
 keeps running afterwards, such as a session started with `ctx.sessions.create()`.
 
+## Host load limits
+
+The host shares one database and one API process among the workbench, core and every extension.
+It keeps them responsive when an extension does a lot of work at once.
+
+- Database work started by your handler code belongs to your extension. That covers commands,
+  middleware, private handlers, hooks and workspace provider callbacks. Work the host does around
+  them, and calls from extension webviews to host routes, is core work. Core work goes ahead of
+  queued extension work. When both keep queuing, extensions still get one turn for every four core
+  turns. Extensions take turns with each other, so one extension's queue does not delay another's.
+  Your own calls keep their order, and a transaction runs as one unit.
+- Before extension work runs, the host lets the event loop take a turn once about 10 ms of
+  continuous database work has passed. Health checks, cancellation and other requests are answered
+  during an extension's long burst. A single long statement or transaction is not split, so keep
+  transactions short.
+- One extension can run at most 256 commands at once, across all projects. A command's nested
+  `ctx.commands.execute` calls to the same extension share its place while the original command
+  is active. Deferred work after the command finishes or is cancelled needs a new place, as do
+  hooks outside an active command of that extension. A new command over the limit returns
+  `{ ok: false, status: "rejected", code: "extension_overloaded" }` before its handler starts, so it
+  made no changes. Its diagnostic gives `metadata.retryAfterMs` as a hint for callers that retry. The
+  host does not retry it for you. A cancelled command frees its place even if its handler ignores
+  `ctx.signal`.
+
+These limits apply to database work. Extension code still runs in the API process, so synchronous
+CPU work, such as a long loop, still blocks the host until the backend process boundary in ADR 0058
+ships. Use bounded batches instead of `Promise.all` over hundreds of storage calls.
+
 ## Commands
 
 Commands are executable operations used by the CLI, dashboard menus, command palette, schedules, automations, and other commands.

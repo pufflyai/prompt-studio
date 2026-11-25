@@ -12,6 +12,7 @@ import { commandRefId } from "@pstdio/sdk/extensions";
 import { queryChangeEnvelopeSchema, resolveEventReferenceId } from "pstdio-api-contracts";
 import type { ExtensionRuntime, NormalizedExtension } from "../../types/runtime";
 import { canonicalRuntimeId } from "../contribution-aliases";
+import { asExtension } from "./invocation-admission";
 import { createInvocationScope, type InvocationScope } from "./scope";
 import type { BuildEnvironmentInput, CommandRunnerHostDeps } from "./types";
 
@@ -83,7 +84,7 @@ export const createEventDispatcher = (input: DispatcherDeps): EventDispatcher =>
           scope,
         );
 
-        await sub.handler(ctx, payload);
+        await asExtension(sub.extensionId, eventId, origin.projectId, () => sub.handler(ctx, payload), "event");
         delivered += 1;
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

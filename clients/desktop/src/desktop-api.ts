@@ -1,3 +1,4 @@
+import type { WebviewFilesDownloadParams, WebviewFilesSaveResult } from "pstdio-api-contracts/extension-kernel";
 import type { PerformanceRecordingExport, PerformanceSnapshot } from "pstdio-api-contracts/performance-diagnostics";
 import type { UpdateChannel } from "pstdio-paths";
 import type { DesktopState } from "./lifecycle/lifecycle-machine";
@@ -37,6 +38,7 @@ export type DesktopUpdateNotice =
   | { kind: "progress"; title?: string | null; outcome?: DesktopUpdateOutcome; installed?: DesktopUpdateOutcome };
 
 export interface PromptStudioDesktopApi {
+  saveFile: (input: WebviewFilesDownloadParams) => Promise<WebviewFilesSaveResult>;
   cancelQuit: () => Promise<void>;
   confirmQuit: () => Promise<void>;
   getAppInfo: () => Promise<DesktopAppInfo>;
@@ -73,6 +75,7 @@ export interface PromptStudioDesktopApi {
 }
 
 export const DESKTOP_CHANNELS = {
+  saveFile: "pstdio:desktop:save-file",
   command: "pstdio:desktop:command",
   isFullScreen: "pstdio:desktop:is-full-screen",
   fullScreenChanged: "pstdio:desktop:full-screen-changed",

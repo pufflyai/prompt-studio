@@ -3,6 +3,7 @@ import type {
   ParamObjectSchema,
   WorkspaceTypeProvider,
 } from "pstdio-api-contracts/extension-kernel";
+import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
 import {
   createCommandRunner,
   createInvocationScope,
@@ -30,6 +31,20 @@ export interface WorkspaceProviderRuntime {
     input: { projectId: string; providerId: string; workspaceId?: string; workspaceDir?: string },
   ): Promise<WorkspaceProviderHandle | undefined>;
 }
+
+// Provider callbacks are extension code, so their database work is scheduled as that extension's.
+const attributeProvider = (provider: WorkspaceTypeProvider, origin: { projectId: string; extensionId: string }) =>
+  Object.fromEntries(
+    Object.entries(provider).map(([key, value]) => [
+      key,
+      typeof value === "function"
+        ? (...args: unknown[]) =>
+            withRuntimeOperationOrigin({ kind: "command", name: `workspace-provider.${key}`, ...origin }, () =>
+              value.apply(provider, args),
+            )
+        : value,
+    ]),
+  ) as WorkspaceTypeProvider;
 
 const providerLogger = {
   info: (message: string, metadata?: Record<string, unknown>) =>
@@ -98,7 +113,7 @@ export const defaultWorkspaceProviderRuntime: WorkspaceProviderRuntime = {
     return {
       context: await buildContext(),
       contextForScope: buildContext,
-      provider: record.provider,
+      provider: attributeProvider(record.provider, { projectId: input.projectId, extensionId: record.extensionId }),
       normalizeParams: (schema) => {
         const diagnostics: ExtensionRuntime["diagnostics"] = [];
         const params = normalizeParamOptions(schema, record, {

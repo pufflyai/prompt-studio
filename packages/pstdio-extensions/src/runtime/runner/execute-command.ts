@@ -8,11 +8,13 @@ import type {
 import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
 import type { RuntimeCommandRecord, RuntimeMiddlewareRecord } from "../../types/runtime";
 import { validateCollectionQueryRequest, validateCollectionQueryResult } from "./collection-query";
+import { readCommandRejection } from "./command-rejection";
 import { createCommandStreamWriter } from "./command-stream";
 import type { RunnerState } from "./context";
 import { lifecycleEventId } from "./dispatch";
 import { createEnvironmentCache, environmentFailedOutcome, withNotices } from "./environment";
 import { findCommand, findPrivateHandler, middlewaresFor, serializeError } from "./internals";
+import { admitInvocation, asExtension, holdsAdmission, overloadedOutcome, withAdmission } from "./invocation-admission";
 import { type MiddlewareChainResult, runMiddlewareChain } from "./middleware";
 import { createInvocationScope, type InvocationScope } from "./scope";
 import type { CommandRunnerEnvironment, InternalExecuteInput } from "./types";
@@ -44,15 +46,23 @@ export const executeExtensionCommand = async (
   state: RunnerState,
   input: InternalExecuteInput,
 ): Promise<CommandOutcome> => {
+  const owner = findCommand(state.runtime, input.commandId) ?? findPrivateHandler(state.runtime, input.commandId);
+  const admitting = owner && !holdsAdmission(owner.extensionId) ? owner : undefined;
+  const admission = admitting && admitInvocation(admitting.extensionId);
+  if (admitting && !admission) return overloadedOutcome(admitting.extensionId);
   const scope = createInvocationScope({ logger: state.logger, parent: input.signal });
   scope.collectionQuery = input.collectionQuery;
+  // A cancelled handler that never settles must not hold the extension's allowance forever.
+  if (admission) scope.signal.addEventListener("abort", admission.release, { once: true });
   try {
-    return await withRuntimeOperationOrigin(
-      { kind: "command", name: input.commandId, projectId: input.projectId },
-      () => runExtensionCommand(state, input, scope),
-    );
+    const run = () =>
+      withRuntimeOperationOrigin({ kind: "command", name: input.commandId, projectId: input.projectId }, () =>
+        runExtensionCommand(state, input, scope),
+      );
+    return await (admission ? withAdmission(admission, run) : run());
   } finally {
     await scope.close();
+    admission?.release();
   }
 };
 
@@ -190,7 +200,10 @@ const runExtensionCommand = async (
   const start = Date.now();
   try {
     if (input.signal?.aborted) throw input.signal.reason;
-    const value = await record.run({ ...buildCommandCtx(finalInvocation), stream: writer }, finalInvocation.params);
+    const ctx = { ...buildCommandCtx(finalInvocation), stream: writer };
+    const value = await asExtension(record.extensionId, record.id, input.projectId, () =>
+      record.run(ctx, finalInvocation.params),
+    );
     if (streamCancelled(input, scope)) throw scope.signal.reason;
     const elapsedMs = Date.now() - start;
     await state.dispatcher.dispatch(
@@ -204,14 +217,23 @@ const runExtensionCommand = async (
     );
     return withNotices({ ok: true, status: "success", value }, notices);
   } catch (err) {
+    const rejection = readCommandRejection(err, scope.signal);
+    if (rejection) {
+      await state.dispatcher.dispatch(
+        lifecycleEventId("rejected", record.id),
+        { ...startedPayload, ...rejection },
+        input,
+      );
+      return withNotices({ ...rejection, ok: false, status: "rejected" }, notices);
+    }
     const elapsedMs = Date.now() - start;
-    const message = err instanceof Error ? err.message : String(err);
+    const error = serializeError(err);
     await state.dispatcher.dispatch(
       lifecycleEventId("failed", record.id),
       {
         ...startedPayload,
-        reason: message,
-        error: serializeError(err),
+        reason: error.message,
+        error: structuredClone(error),
         elapsedMs,
       },
       input,
@@ -221,8 +243,8 @@ const runExtensionCommand = async (
         ok: false,
         status: "error",
         code: streamCancelled(input, scope) ? "command_stream_cancelled" : "handler_threw",
-        reason: message,
-        error: serializeError(err),
+        reason: error.message,
+        error,
       },
       notices,
     );
@@ -280,7 +302,9 @@ const executePrivateHandler = async (
       input.navigationScope,
     );
     ctx.activity = env.activityForInvocation?.(input.source) ?? ctx.activity;
-    const value = await handler.handler(ctx, params);
+    const value = await asExtension(handler.extensionId, handler.id, input.projectId, () =>
+      handler.handler(ctx, params),
+    );
     validateCollectionQueryResult(handler.collectionQuery, params, value);
     const elapsedMs = Date.now() - start;
     await state.dispatcher.dispatch(

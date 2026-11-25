@@ -98,6 +98,7 @@ export {
   toSettingDefinitionRecord,
   validateCommandParams,
 } from "./runtime";
+export * from "./runtime/backend-process";
 export { canonicalNavigationOwners } from "./runtime/canonical-navigation-owners";
 export { canonicalRuntimeId, contributionAliases } from "./runtime/contribution-aliases";
 export { collectConventionDiagnostics } from "./runtime/conventions";

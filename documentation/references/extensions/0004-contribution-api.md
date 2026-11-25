@@ -429,6 +429,12 @@ related commands.
 Queries return actions with stable IDs, labels, icons, navigation targets and
 optional `selected` and `disabled` state. A menu has an `items` array of actions
 instead of an `action`. Return only actions available in the current context.
+Set a menu's `includeResourceActions: true` to append the current primary resource's
+actions, including live `registerWebviewResourceAction` callbacks. The host uses
+that resource's exact placement, project and lifecycle. It refreshes registered
+actions as they change, retains shared menu focus handling, and drops stale
+callbacks when their view disconnects. This requires the supporting host and SDK
+addition on `main`; publish both before independently releasing a consumer.
 The host resolves local command refs against the contributing extension and
 shows hints from the shared keybinding system. Bound command parameters stay
 the same for people and agents.
@@ -1026,4 +1032,4 @@ The old `workbenchPages.sessions`, `session`, `newSession`, `sessionComposer`, `
 
 Resource mutation commands can act on another provider's canonical resource. When the invoking resource matches the declared mutation type and resolved ID in the selected project, native optimistic previews and write serialization preserve that resource's identity. Without a matching subject, the command's own extension identity remains the default. This changes presentation ownership only; the command service still enforces its normal permissions and scope.
 
-*Updated at: 2026-11-17*
+*Updated at: 2026-11-22*

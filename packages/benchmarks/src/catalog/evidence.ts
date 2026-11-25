@@ -50,7 +50,7 @@ export const scenarioEvidence = (
       event.scenario !== id ||
       event.budgetComparison !== "strict-ms-bytes" ||
       event.catalogRevision !== catalogRevision ||
-      event.workloadVersion !== (scenario.id === "B5" ? scenario.workloadVersion : 1) ||
+      event.workloadVersion !== ("workloadVersion" in scenario ? scenario.workloadVersion : 1) ||
       (scenario.id === "B5" && event.memoryMetric !== scenario.memoryMetrics[expected.platform.split("-")[0]!]) ||
       event.fingerprint !== fingerprint ||
       event.dirty ||
@@ -69,15 +69,23 @@ export const scenarioEvidence = (
           (observed) =>
             observed.name === metric.id &&
             observed.unit === metric.unit &&
+            observed.kind === metric.kind &&
             Number.isFinite(observed.value) &&
             observed.budget === retainedLimit(id, metric.id, expected.platform.split("-")[0]!)?.value &&
-            (observed.budget === undefined || meetsLimit(observed.value, observed.budget, metric.unit)),
+            (metric.kind === "advisory" ||
+              observed.budget === undefined ||
+              meetsLimit(observed.value, observed.budget, metric.unit)),
         ),
     )
   )
     throw new Error(`${id}: missing, unexpected, invalid or over-budget measurement`);
   return {
-    nativeFailure: last.qualification !== "qualified" || last.missing.length > 0 || last.failed.length > 0,
+    nativeFailure:
+      last.qualification !== "qualified" ||
+      last.missing.length > 0 ||
+      last.failed.length > 0 ||
+      last.failedChecks.length > 0 ||
+      last.pending.length > 0,
     metrics,
   };
 };
