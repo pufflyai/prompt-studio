@@ -1,0 +1,197 @@
+name: PS-1281 exact source CLI review
+
+on:
+  push:
+    branches:
+      - chore/ps1281-2316-cli-ed8920a3
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  source_cli:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PS1281_HEAD: ed8920a3a9ed7dbbb211780bb6cc7d3f7efeffe3
+      PS1281_TREE: c37e81cef2647c9ab3288d6f6c79fdcdafdb4146
+      PS1281_BASE: 5f0cdebee14c9166fcf159b54a50091f43ffe843
+      PS1281_POLICY: 41716c3f0d6681a5fd1bb85d26290bbb2c5113fac046531ce906893761862949
+      PS1281_PLAN: 3d732645ce7e39c54b4f4d324053b44d9e5757af1b42ccce612c1f0fac284065
+      PS1281_CLI_GROUP: 72480638f874d13d0838a290
+      PS1281_CLI_FILES_SHA256: 58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a
+      PS1281_OUTPUT: test-results/ps1281-2316-cli
+      PS1281_ORDINARY_RUN: "45515225728"
+      PS1281_ORDINARY_SOURCE: 778d56f804e61c099bcb170d1c701178400e17c7
+      PS1281_ORDINARY_PLAN: 0ff34307d9070ebddcbea6250fb75b90625ea8f1757eace89e178607a5ef5211
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.PS1281_HEAD }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+
+      - name: Verify the source and sealed Linux plan
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = refs/heads/chore/ps1281-2316-cli-ed8920a3
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$PS1281_HEAD"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" =             "$(printf 'A\t.github/workflows/ps1281-2316-cli-ed8920a3.yml')"
+          test "$(git rev-parse HEAD)" = "$PS1281_HEAD"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$PS1281_TREE"
+          git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main             refs/heads/feature/ps-1281-relay-monitoring:refs/remotes/origin/feature/ps-1281-relay-monitoring
+          test "$(git rev-parse origin/feature/ps-1281-relay-monitoring)" = "$PS1281_HEAD"
+          main="$(git rev-parse origin/main)"
+          test "$(git merge-base HEAD "$main")" = "$PS1281_BASE"
+          incoming="$(git rev-list --count "HEAD..$main")"
+          test "$incoming" -le 10
+          prospective="$(git merge-tree --write-tree --no-messages HEAD "$main")"
+          test "$(git cat-file -t "$prospective")" = tree
+          test -z "$(git status --porcelain)"
+          test "$(bun --version)" = "1.4.4"
+          test "$(jq -r .packageManager package.json)" = "bun@1.4.4"
+          mkdir -p "$PS1281_OUTPUT"
+          bun run test:review --base origin/main --list > "$PS1281_OUTPUT/selected-plan.json"
+          jq -e --arg sha "$PS1281_HEAD" --arg tree "$PS1281_TREE" --arg base "$PS1281_BASE"             --arg policy "$PS1281_POLICY" --arg digest "$PS1281_PLAN" --arg group "$PS1281_CLI_GROUP" '
+              .head == $sha and .mergeBase == $base and .testPlan.digest == $digest
+              and .testPlan.source == {sha:$sha,tree:$tree,policy:$policy,dirty:false}
+              and (.testPlan.runs | length) == 97 and (.selected | length) == 2871
+              and all(.testPlan.runs[]; .target == {platform:"linux",arch:"x64"})
+              and ([.testPlan.runs[] | select(.job == "local-additions") | .id] == [$group])
+              and any(.testPlan.runs[]; .id == $group and .owner == "e2e" and .cwd == "packages/e2e"
+                and .runner == "cli" and .priority == "P1" and .lane == "stable" and .artifact == "source"
+                and .requires == ["build-e5b1f54fca1c52cd"] and (.files | length) == 10)
+              and any(.testPlan.setup[]; .id == "build-e5b1f54fca1c52cd" and .owners == ["e2e"]
+                and .kind == "build" and .requires == [])
+            ' "$PS1281_OUTPUT/selected-plan.json"
+          jq -c --arg group "$PS1281_CLI_GROUP" '.testPlan.runs[] | select(.id == $group) | .files'             "$PS1281_OUTPUT/selected-plan.json" > "$PS1281_OUTPUT/assigned-files.json"
+          printf '%s  %s\n' "$PS1281_CLI_FILES_SHA256" "$PS1281_OUTPUT/assigned-files.json" | sha256sum -c -
+          jq -n --arg sha "$PS1281_HEAD" --arg tree "$PS1281_TREE" --arg main "$main" --arg base "$PS1281_BASE"             --arg prospective "$prospective" --arg plan "$PS1281_PLAN" --arg workflow "$GITHUB_WORKFLOW_SHA"             --argjson incoming "$incoming" --arg ordinary "$PS1281_ORDINARY_RUN"             --arg ordinarySource "$PS1281_ORDINARY_SOURCE"             '{sha:$sha,tree:$tree,main:$main,mergeBase:$base,mergeTree:$prospective,incoming:$incoming,
+              planDigest:$plan,diagnosticCommit:$workflow,ordinaryCiRun:$ordinary,ordinaryCiSha:$ordinarySource}'             > "$PS1281_OUTPUT/identity.json"
+
+      - name: Retain the ordinary Linux receipts
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-validation-attempt-1
+          path: ${{ env.PS1281_OUTPUT }}/ordinary-ci
+          run-id: ${{ env.PS1281_ORDINARY_RUN }}
+          github-token: ${{ github.token }}
+
+      - name: Verify the retained Linux receipts and open a private temp directory
+        shell: bash
+        run: |
+          prior="$PS1281_OUTPUT/ordinary-ci"
+          jq -e --arg sha "$PS1281_HEAD" --arg tested "$PS1281_ORDINARY_SOURCE" --arg tree "$PS1281_TREE"             --arg run "$PS1281_ORDINARY_RUN" '
+              .sha == $sha and .runId == $run and .outcome == "failure" and .failures == ["published_extensions: failure"]
+              and .candidate.sha == $tested and .candidate.tree == $tree
+              and .candidate.platform == "linux" and .candidate.arch == "x64"
+            ' "$prior/gate-results.json"
+          jq -e --arg tested "$PS1281_ORDINARY_SOURCE" --arg tree "$PS1281_TREE"             --arg group "$PS1281_CLI_GROUP" --arg plan "$PS1281_ORDINARY_PLAN" '
+              .complete and .outcome == "success" and .errors == [] and (.results | length) == 96
+              and all(.results[]; .runId != $group and .complete and .outcome == "success"
+                and .planDigest == $plan and .source.sha == $tested and .source.tree == $tree)
+            ' "$prior/plan-verification.json"
+          scratch="$(mktemp -d /tmp/ps1281.XXXXXX)"
+          printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$scratch/owner"
+          {
+            echo "PS1281_CLI_TMP=$scratch"
+            echo "TMPDIR=$scratch"
+            echo "TMP=$scratch"
+            echo "TEMP=$scratch"
+            echo "PS1281_NATIVE_BUN=$(command -v bun)"
+          } >> "$GITHUB_ENV"
+          { node --version; bun --version; docker version; df -h /tmp "$GITHUB_WORKSPACE"; }             > "$PS1281_OUTPUT/toolchain.log"
+
+      - name: Install locked dependencies and prepare Firefox
+        shell: bash
+        run: |
+          bun install --frozen-lockfile --concurrent-scripts 1
+          bun run --cwd packages/ui typegen:tokens
+          (cd packages/e2e && bun x --no-install playwright install --with-deps firefox) 2>&1             | tee "$PS1281_OUTPUT/browser-setup.log"
+          test -z "$(git status --porcelain)"
+
+      - name: Execute only the ten-file source CLI group
+        shell: bash
+        run: |
+          test "$(command -v bun)" = "$PS1281_NATIVE_BUN"
+          bun --no-orphans - <<'BUN' 2>&1 | tee "$PS1281_OUTPUT/console.log"
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+          import { executePlan } from "./scripts/ci/run-test-plan";
+
+          const root = process.cwd();
+          const { PS1281_CLI_TMP: scratch, PS1281_OUTPUT: relative, PS1281_CLI_GROUP: group } = process.env;
+          if (!scratch || !/^\/tmp\/ps1281\.[A-Za-z0-9]{6}$/.test(scratch) || !relative || !group)
+            throw new Error("Unexpected native review assignment");
+          const executionId = process.env.GITHUB_RUN_ID + "/" + process.env.GITHUB_RUN_ATTEMPT;
+          const output = resolve(root, relative);
+          for (const [key, value] of Object.entries(localReviewEnvironment(scratch))) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+          process.env.CI_PLAN_OUTPUT_DIR = relative + "/native";
+          const { testPlan } = await Bun.file(resolve(output, "selected-plan.json")).json();
+          let passed = false;
+          try {
+            const result = await executePlan(testPlan, {
+              root, runIds: [group], prebuilt: false, executionId,
+              env: { CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+            });
+            passed = result.complete && result.outcome === "success";
+          } finally {
+            const cleanup = await cleanupReviewCompose(scratch);
+            await Bun.write(resolve(output, "compose-cleanup.json"), JSON.stringify(cleanup, null, 2));
+            passed &&= cleanup.every(entry => entry.outcome === "success");
+            process.exitCode = passed ? 0 : 1;
+          }
+          BUN
+
+      - name: Verify exact native execution and file coverage
+        shell: bash
+        run: |
+          jq -e --arg group "$PS1281_CLI_GROUP" --arg digest "$PS1281_PLAN"             --slurpfile expected "$PS1281_OUTPUT/assigned-files.json"             --slurpfile sealed "$PS1281_OUTPUT/selected-plan.json" '
+              .source == $sealed[0].testPlan.source and .planDigest == $digest
+              and .complete and .outcome == "success" and .errors == [] and .runIds == [$group]
+              and (.results | length) == 1
+              and all(.results[]; .runId == $group and .complete and .outcome == "success"
+                and .exitCode == 0 and .nativeFailure != true and (.reportedFiles | sort) == ($expected[0] | sort))
+              and [.phases[] | select(.kind == "build") | [.id,.outcome]] == [["build-e5b1f54fca1c52cd","success"]]
+              and any(.phases[]; .kind == "cleanup" and .outcome == "success")
+            ' "$PS1281_OUTPUT/native/execution.json"
+          jq -e 'all(.[]; .outcome == "success")' "$PS1281_OUTPUT/compose-cleanup.json"
+          git diff --exit-code
+
+      - name: Retain and clean this invocation's temporary files
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$PS1281_OUTPUT"
+          if [[ -n "${PS1281_CLI_TMP:-}" ]]; then
+            [[ "$PS1281_CLI_TMP" =~ ^/tmp/ps1281\.[A-Za-z0-9]{6}$ ]]
+            test "$(cat "$PS1281_CLI_TMP/owner")" = "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+            if [[ -f "$PS1281_CLI_TMP/compose-projects.jsonl" ]]; then
+              cp "$PS1281_CLI_TMP/compose-projects.jsonl" "$PS1281_OUTPUT/"
+            fi
+            rm -rf -- "$PS1281_CLI_TMP"
+            test ! -e "$PS1281_CLI_TMP"
+            printf '%s\n' 'Owned temporary directory removed' > "$PS1281_OUTPUT/scratch-cleanup.txt"
+          fi
+
+      - name: Upload the fixture and native receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps1281-2316-source-cli-ed8920a3-attempt-${{ github.run_attempt }}
+          path: ${{ env.PS1281_OUTPUT }}
+          if-no-files-found: error
