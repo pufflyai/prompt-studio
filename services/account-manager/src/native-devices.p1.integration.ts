@@ -26,8 +26,20 @@ beforeAll(async () => {
     authenticationConfig(fixture.databaseUrl, { origin, audience: "https://relay.fixture.test" }),
   );
   const oauth = await createOAuthCodeFixture();
+  let server: ReturnType<typeof Bun.serve> | undefined;
+  cleanup = async () => {
+    if (child && child.exitCode === null) {
+      child.kill();
+      await child.exited;
+    }
+    await server?.stop(true);
+    oauth.close();
+    await auth.close();
+    await tls.close();
+    await fixture.close();
+  };
   const handler = implementation.createManagerHandler(auth, origin);
-  const server = Bun.serve({
+  server = Bun.serve({
     hostname: "127.0.0.1",
     port,
     tls: { cert: Bun.file(tls.cert), key: Bun.file(tls.key) },
@@ -43,17 +55,6 @@ beforeAll(async () => {
       return handler(new Request(callback, { headers: { cookie: oauthBrowserCookie(response) } }));
     },
   });
-  cleanup = async () => {
-    if (child && child.exitCode === null) {
-      child.kill();
-      await child.exited;
-    }
-    await server.stop(true);
-    oauth.close();
-    await auth.close();
-    await tls.close();
-    await fixture.close();
-  };
   const subject = `native-a-${crypto.randomUUID()}`;
   const manager = fixture.owner();
   try {
