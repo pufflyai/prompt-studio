@@ -244,11 +244,14 @@ async function openDelayedDashboardSave(page: Page) {
   const publishCorrection = toolbar.getByRole("button", { name: "Publish corrected dashboard", exact: true });
   const releaseMarker = widget.getByRole("button", { name: "Release marker", exact: true });
   const deploymentMarker = widget.getByRole("button", { name: "Deployment marker", exact: true });
-  const selectSource = async (current: string, next: string, title?: string) => {
+  const configureWidget = async (current: string) => {
     await edit.click();
     await widget.hover();
     await widget.getByRole("button", { name: `Configure ${current}`, exact: true }).click();
-    const settings = preview.getByRole("dialog", { name: "Widget settings" });
+    return preview.getByRole("dialog", { name: "Widget settings" });
+  };
+  const selectSource = async (current: string, next: string, title?: string) => {
+    const settings = await configureWidget(current);
     if (title) await settings.getByRole("textbox", { name: "Title", exact: true }).fill(title);
     await settings.getByRole("button", { name: `Data ${current}`, exact: true }).click();
     await preview.getByRole("menuitem", { name: next, exact: true }).click();
@@ -268,8 +271,10 @@ async function openDelayedDashboardSave(page: Page) {
     publishCorrection,
     releaseMarker,
     deploymentMarker,
+    configureWidget,
     selectSource,
     save,
+    publishSave: (id: number) => toolbar.getByRole("button", { name: `Publish save ${id}`, exact: true }),
   };
 }
 
@@ -324,6 +329,48 @@ test("keeps the later applied widget when a previous save refreshes during Apply
   await refresh.click();
   await expect(releaseMarker).toHaveAttribute("aria-pressed", "false");
   await expect(recentBuilds).toBeVisible();
+});
+
+// Critical: a caller that publishes multiple saves late or out of order must keep the latest widget visible.
+test("keeps the latest custom widget through a chain of delayed saves", async ({ page }) => {
+  const { widget, edit, apply, complete, refresh, releaseMarker, selectSource, configureWidget, save, publishSave } =
+    await openDelayedDashboardSave(page);
+  const rename = async (current: string, next: string) => {
+    const settings = await configureWidget(current);
+    const title = settings.getByRole("textbox", { name: "Title", exact: true });
+    await title.fill(next);
+    await title.press("Escape");
+  };
+
+  await selectSource("Build history", "Deployment history");
+  await save();
+  await selectSource("Deployment history", "Build history", "Second build");
+  await save();
+
+  await rename("Second build", "Third build");
+  await releaseMarker.click();
+  await apply.click();
+  await expect(complete).toBeVisible();
+  await publishSave(1).click();
+  await expect(publishSave(1)).toBeHidden();
+  await expect(releaseMarker).toHaveAttribute("aria-pressed", "false");
+  await complete.click();
+  await expect(edit).toBeFocused();
+  await expect(widget.getByRole("article", { name: "Third build", exact: true })).toBeVisible();
+  await expect(releaseMarker).toHaveAttribute("aria-pressed", "false");
+
+  await rename("Third build", "Latest build");
+  await save();
+  const latest = widget.getByRole("article", { name: "Latest build", exact: true });
+  for (const id of [3, 2]) {
+    await publishSave(id).click();
+    await expect(publishSave(id)).toBeHidden();
+    await expect(latest).toBeVisible();
+    await expect(releaseMarker).toHaveAttribute("aria-pressed", "false");
+  }
+  await refresh.click();
+  await expect(latest).toBeVisible();
+  await expect(releaseMarker).toHaveAttribute("aria-pressed", "false");
 });
 
 // Critical: Apply must display a caller-corrected layout and use it as the starting point for the next edit.

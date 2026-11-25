@@ -18,7 +18,7 @@ import {
 
 interface AppliedDashboard {
   definition: DashboardDefinition;
-  previousValue: DashboardDefinition;
+  earlierDefinitions: readonly DashboardDefinition[];
 }
 
 function sameDefinition(first: DashboardDefinition, second: DashboardDefinition) {
@@ -46,18 +46,22 @@ function useAppliedDashboard(value: DashboardDefinition, editable: boolean) {
   useLayoutEffect(() => {
     committedValue.current = value;
   }, [value]);
-  // Saving can finish before the caller publishes the updated definition.
-  const awaitingRefresh = applied && editable && sameDefinition(applied.previousValue, value);
+  // The caller may publish any earlier save while the latest layout is still awaiting refresh.
+  const awaitingRefresh =
+    applied && editable && applied.earlierDefinitions.some((earlier) => sameDefinition(earlier, value));
   if (applied && !awaitingRefresh) setApplied(null);
   return {
     saved: awaitingRefresh ? applied.definition : value,
     markApplied: (definition: DashboardDefinition) => {
       const currentValue = committedValue.current;
-      const stillWaitingForValue =
-        sameDefinition(currentValue, value) || (awaitingRefresh && sameDefinition(currentValue, applied.definition));
+      const earlierDefinitions = awaitingRefresh ? [...applied.earlierDefinitions, applied.definition] : [value];
+      const stillWaitingForValue = earlierDefinitions.some((earlier) => sameDefinition(earlier, currentValue));
       setApplied(
         stillWaitingForValue && !sameDefinition(definition, currentValue)
-          ? { definition, previousValue: currentValue }
+          ? {
+              definition,
+              earlierDefinitions: earlierDefinitions.filter((earlier) => !sameDefinition(earlier, definition)),
+            }
           : null,
       );
     },

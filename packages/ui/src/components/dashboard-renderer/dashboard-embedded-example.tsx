@@ -2,7 +2,7 @@ import { Box, Button, HStack, Text } from "@chakra-ui/react";
 import { defineChart, lineY, ruleX } from "@tanstack/charts";
 import { decorative } from "@tanstack/charts/mark/decorative";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Chart, chartColor } from "@/components/charts/chart";
 import { ScopedPopover as Popover } from "@/utils/scoped-overlays";
 import { Portal } from "@/utils/ui-scope";
@@ -65,8 +65,14 @@ function BuildHistory({ markerLabel = "Release marker" }: { markerLabel?: string
 export function DashboardEmbeddedExample(props: { deferRefresh?: boolean }) {
   const { deferRefresh = false } = props;
   const [value, setValue] = useState(initial);
-  const [saved, setSaved] = useState<DashboardDefinition | null>(null);
+  const [saved, setSaved] = useState<{ id: number; definition: DashboardDefinition }[]>([]);
   const [pendingSave, setPendingSave] = useState<{ complete: () => void; publishCorrection: () => void } | null>(null);
+  const nextSaveId = useRef(1);
+  const latestSave = saved.at(-1);
+  const publishSave = (id: number, definition: DashboardDefinition) => {
+    setValue(definition);
+    setSaved((previous) => previous.filter((save) => save.id !== id));
+  };
   return (
     <DashboardRenderer
       value={value}
@@ -86,7 +92,8 @@ export function DashboardEmbeddedExample(props: { deferRefresh?: boolean }) {
             }),
           );
           setPendingSave(null);
-          setSaved(savedDefinition);
+          const id = nextSaveId.current++;
+          setSaved((previous) => [...previous, { id, definition: savedDefinition }]);
           // The caller can republish its previous layout before the saved change is available.
           setValue((current) => ({ ...current, widgets: [...current.widgets] }));
         } else {
@@ -126,15 +133,13 @@ export function DashboardEmbeddedExample(props: { deferRefresh?: boolean }) {
               <Button onClick={() => pendingSave.complete()}>Complete save</Button>
             </>
           )}
-          {saved && (
-            <Button
-              onClick={() => {
-                setValue(saved);
-                setSaved(null);
-              }}
-            >
-              Refresh saved dashboard
+          {saved.slice(0, -1).map(({ id, definition }) => (
+            <Button key={id} onClick={() => publishSave(id, definition)}>
+              Publish save {id}
             </Button>
+          ))}
+          {latestSave && (
+            <Button onClick={() => publishSave(latestSave.id, latestSave.definition)}>Refresh saved dashboard</Button>
           )}
         </HStack>
       )}
