@@ -17,6 +17,7 @@ import type { useDashboardResize } from "./use-dashboard-resize";
 
 interface GridWidgetProps {
   widget: DashboardWidget;
+  originalCustomSourceId?: string;
   hidden: boolean;
   editing: boolean;
   selectedId: string | null;
@@ -39,6 +40,7 @@ const verticalResizeHandles: DashboardResizeHandle[] = ["s"];
 export function GridWidget(props: GridWidgetProps) {
   const {
     widget,
+    originalCustomSourceId,
     hidden,
     editing,
     selectedId,
@@ -57,6 +59,7 @@ export function GridWidget(props: GridWidgetProps) {
   const draggable = useDraggable({ id: widget.id, disabled: !editing });
   const selected = selectedId === widget.id;
   const source = sources.find(({ id }) => id === widget.source);
+  const originalCustomSource = sources.find(({ id }) => id === originalCustomSourceId);
   const label = widgetLabel(widget, source?.name);
   const content = (
     <Box
@@ -75,6 +78,7 @@ export function GridWidget(props: GridWidgetProps) {
       <WidgetCard
         widget={widget}
         source={source}
+        originalCustomSource={originalCustomSource}
         controls={
           editing ? (
             <HStack css={styles.widgetToolbar} data-dashboard-controls="" aria-label={`${label} controls`}>

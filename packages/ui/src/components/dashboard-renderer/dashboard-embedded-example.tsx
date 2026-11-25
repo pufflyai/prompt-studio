@@ -12,7 +12,7 @@ const initial: DashboardDefinition = {
   widgets: [{ id: "releases", title: "", kind: "custom", source: "releases", layout: { x: 0, y: 0, w: 12, h: 8 } }],
 };
 
-function BuildHistory() {
+function BuildHistory({ markerLabel = "Release marker" }: { markerLabel?: string }) {
   const [showMarker, setShowMarker] = useState(true);
   const data = [
     { day: 1, builds: 4 },
@@ -31,11 +31,11 @@ function BuildHistory() {
   return (
     <Box>
       <Button size="xs" aria-pressed={showMarker} onClick={() => setShowMarker(!showMarker)}>
-        Release marker
+        {markerLabel}
       </Button>
       <Chart
         definition={chart}
-        ariaLabel={showMarker ? "Build count with a release marker" : "Build count"}
+        ariaLabel={showMarker ? `Build count with a ${markerLabel.toLowerCase()}` : "Build count"}
         height={220}
       />
     </Box>
@@ -52,7 +52,13 @@ export function DashboardEmbeddedExample() {
         {
           id: "releases",
           name: "Build history",
+          metric: { value: 7 },
           content: <BuildHistory />,
+        },
+        {
+          id: "deployments",
+          name: "Deployment history",
+          content: <BuildHistory markerLabel="Deployment marker" />,
         },
       ]}
       renderToolbar={(controls) => (

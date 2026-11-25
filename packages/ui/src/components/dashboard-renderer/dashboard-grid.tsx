@@ -29,6 +29,7 @@ import { useDashboardResize } from "./use-dashboard-resize";
 interface GridProps {
   widgets: DashboardWidget[];
   hiddenWidgets: DashboardWidget[];
+  originalCustomSources: ReadonlyMap<string, string> | null;
   editing: boolean;
   mode: DashboardLayoutMode;
   selectedId: string | null;
@@ -89,7 +90,7 @@ function GridSurface(props: GridSurfaceProps) {
 }
 
 export function DashboardGrid(props: GridProps) {
-  const { widgets, hiddenWidgets, editing, mode, onChange, onRemove, onGestureStart } = props;
+  const { widgets, hiddenWidgets, originalCustomSources, editing, mode, onChange, onRemove, onGestureStart } = props;
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
   const grid = useRef<HTMLDivElement>(null);
   const [columns, setColumns] = useState(12);
@@ -222,6 +223,7 @@ export function DashboardGrid(props: GridProps) {
               key={widget.id}
               {...props}
               widget={widget}
+              originalCustomSourceId={originalCustomSources?.get(widget.id)}
               hidden={hidden}
               editing={editing && !hidden}
               moving={drag?.id === widget.id}

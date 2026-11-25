@@ -23,6 +23,7 @@ export function DashboardRenderer(props: DashboardRendererProps) {
   const editButton = useRef<HTMLButtonElement>(null);
   const applyButton = useRef<HTMLButtonElement>(null);
   const [draft, setDraft] = useState<DashboardDefinition | null>(null);
+  const [originalCustomSources, setOriginalCustomSources] = useState<ReadonlyMap<string, string> | null>(null);
   const [removedCustomWidgets, setRemovedCustomWidgets] = useState<DashboardWidget[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
@@ -34,8 +35,15 @@ export function DashboardRenderer(props: DashboardRendererProps) {
   const hiddenWidgets = editing ? removedCustomWidgets : [];
   const widgetButton = (id: string) =>
     container.current?.querySelector<HTMLButtonElement>(`[data-configure-widget="${CSS.escape(id)}"]`);
+  const startEditing = () => {
+    setOriginalCustomSources(
+      new Map(value.widgets.filter(({ kind }) => kind === "custom").map(({ id, source }) => [id, source])),
+    );
+    setDraft(value);
+  };
   const finishEditing = () => {
     setDraft(null);
+    setOriginalCustomSources(null);
     setRemovedCustomWidgets([]);
     setSelectedId(null);
     setSaveError("");
@@ -79,7 +87,9 @@ export function DashboardRenderer(props: DashboardRendererProps) {
     const index = widgets.findIndex((widget) => widget.id === id);
     const removed = widgets[index];
     if (!removed) return;
-    if (removed.kind === "custom") setRemovedCustomWidgets((previous) => [...previous, removed]);
+    if (removed.kind === "custom" || originalCustomSources?.has(id)) {
+      setRemovedCustomWidgets((previous) => [...previous, removed]);
+    }
     const next = widgets[index + 1] ?? widgets[index - 1];
     setDraft({
       ...definition,
@@ -130,7 +140,7 @@ export function DashboardRenderer(props: DashboardRendererProps) {
         </>
       ) : (
         onChange && (
-          <Button ref={editButton} onClick={() => setDraft(value)}>
+          <Button ref={editButton} onClick={startEditing}>
             <Pencil />
             Edit dashboard
           </Button>
@@ -169,6 +179,7 @@ export function DashboardRenderer(props: DashboardRendererProps) {
             <DashboardGrid
               widgets={widgets}
               hiddenWidgets={hiddenWidgets}
+              originalCustomSources={editing ? originalCustomSources : null}
               sources={sources}
               editing={editing && !applying}
               mode={mode}

@@ -12,15 +12,22 @@ import { type DashboardDataSource, type DashboardWidget, widgetLabel } from "./d
 interface WidgetCardProps {
   widget: DashboardWidget;
   source?: DashboardDataSource;
+  originalCustomSource?: DashboardDataSource;
   controls?: ReactNode;
 }
 
 export function WidgetCard(props: WidgetCardProps) {
-  const { widget, source, controls } = props;
+  const { widget, source, originalCustomSource, controls } = props;
   const tableKey = useId();
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
 
   const titled = Boolean(widget.title.trim());
+  const activeCustomSourceId = widget.kind === "custom" ? widget.source : undefined;
+  const customSourceIds = activeCustomSourceId === undefined ? [] : [activeCustomSourceId];
+  // Keep the saved source mounted while the draft previews another source or type.
+  if (originalCustomSource && originalCustomSource.id !== activeCustomSourceId) {
+    customSourceIds.push(originalCustomSource.id);
+  }
   return (
     <SimpleCard
       as="article"
@@ -98,15 +105,15 @@ export function WidgetCard(props: WidgetCardProps) {
           )}
         </Box>
       )}
-      {widget.kind === "custom" && (
-        <ScrollArea css={styles.customContent} contentProps={{ p: "sm" }}>
-          {source?.content ?? (
+      {customSourceIds.map((id) => (
+        <ScrollArea key={id} hidden={id !== activeCustomSourceId} css={styles.customContent} contentProps={{ p: "sm" }}>
+          {(id === activeCustomSourceId ? source : originalCustomSource)?.content ?? (
             <Text color="fg.muted" textStyle="label/S/regular">
               No widget content
             </Text>
           )}
         </ScrollArea>
-      )}
+      ))}
     </SimpleCard>
   );
 }
