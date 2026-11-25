@@ -1,4 +1,4 @@
-import { type PageLocation, type PageRef, resourceKey } from "@pstdio/sdk/extensions";
+import { type PageLocation, type PageRef, type PageSlotRef, resourceKey } from "@pstdio/sdk/extensions";
 import {
   getWorkbenchSelectionResourceKeys,
   type NavigationTarget,
@@ -13,6 +13,7 @@ interface ResolveTreeListSelectionInput {
   activeNodeId?: string | null;
   activeLocation?: PageLocation;
   activeResource?: ResourceRef;
+  activeSlot?: Pick<PageSlotRef, "page" | "id">;
   selectedNodeId?: string;
   resourceReferenceKey?: (resource: ResourceRef) => string;
 }
@@ -25,13 +26,13 @@ const targetsContent = (target: NavigationTarget | undefined) => {
   const targets = target?.kind === "compound" ? target.targets : [target];
   return targets.some((item) => item?.kind === "page" || item?.kind === "panel");
 };
-const targetPanelResource = (target: NavigationTarget | undefined) => {
+const targetPanel = (target: NavigationTarget | undefined) => {
   if (!target) return undefined;
   const targets = target.kind === "compound" ? target.targets : [target];
-  return [...targets].reverse().find((candidate) => candidate.kind === "panel")?.resource;
+  return [...targets].reverse().find((candidate) => candidate.kind === "panel");
 };
 const resolveTreeNodeResourceKey = (node: TreeNode) => {
-  const resource = node.resource ?? targetPanelResource(node.target);
+  const resource = node.resource ?? targetPanel(node.target)?.resource;
   return resource ? resourceKey(resource) : undefined;
 };
 const listTreeNodes = (nodes: TreeNode[], childrenByNodeId: Record<string, TreeNode[]>): TreeNode[] =>
@@ -58,6 +59,10 @@ const resolveActiveResourceNodeIds = (
 const findSectionNode = (sections: TreeViewSection[], nodeId: string, childrenByNodeId: Record<string, TreeNode[]>) =>
   listSectionNodes(sections, childrenByNodeId).find((node) => node.id === nodeId);
 const pageRefsEqual = (left: PageRef, right: PageRef) => left.id === right.id && left.extensionId === right.extensionId;
+const targetMatchesSlot = (target: NavigationTarget | undefined, slot: ResolveTreeListSelectionInput["activeSlot"]) => {
+  const panel = targetPanel(target)?.panel;
+  return slot && panel?.kind === "page-slot" && panel.id === slot.id && pageRefsEqual(panel.page, slot.page);
+};
 const pageResourceMatches = (
   target: ResourceRef,
   active: ResourceRef,
@@ -77,8 +82,9 @@ const targetMatchesPage = (
   referenceKey: (resource: ResourceRef) => string = resourceKey,
   includeDocuments = false,
 ) => {
-  // A resource panel owns its selection; its containing page can host other open resources.
-  if (!target || targetPanelResource(target)) return false;
+  // A panel target can focus one tab among several on the containing page.
+  const panel = targetPanel(target);
+  if (!target || panel?.resource || panel?.panel.kind === "page-slot") return false;
   const targets = target.kind === "compound" ? target.targets : [target];
   return targets.some(
     (candidate) =>
@@ -112,7 +118,8 @@ const resolveActivePageNodeIds = (
   return undefined;
 };
 export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) => {
-  const { sections, childrenByNodeId, activeNodeId, activeLocation, activeResource, selectedNodeId } = input;
+  const { sections, childrenByNodeId, activeNodeId, activeLocation, activeResource, activeSlot, selectedNodeId } =
+    input;
   const referenceKey = input.resourceReferenceKey ?? resourceKey;
   if (activeNodeId) return activeNodeId;
   const activeResourceKeys = getWorkbenchSelectionResourceKeys(activeResource);
@@ -124,6 +131,7 @@ export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) =
         const nodeResourceKey = resolveTreeNodeResourceKey(node);
         if (!nodeResourceKey && !node.target) return true;
         if (nodeResourceKey && activeResourceKeys.includes(nodeResourceKey)) return true;
+        if (targetMatchesSlot(node.target, activeSlot)) return true;
         return activeLocation
           ? targetMatchesPage(node.target, activeLocation.page, activeResource, referenceKey)
           : !activeResource && !targetsContent(node.target);
@@ -140,6 +148,12 @@ export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) =
   }
   const activeResourceNodeId = resolveActiveResourceNodeIds(sections, childrenByNodeId, activeResourceKeys);
   if (activeResourceNodeId) return activeResourceNodeId;
+  if (activeSlot) {
+    const slotNodeId = listSectionNodes(sections, childrenByNodeId).find((node) =>
+      targetMatchesSlot(node.target, activeSlot),
+    )?.id;
+    if (slotNodeId) return slotNodeId;
+  }
   const activePageNodeId = resolveActivePageNodeIds(sections, childrenByNodeId, activeLocation, referenceKey);
   if (activePageNodeId) return activePageNodeId;
   if (!selectedNodeId) return undefined;
@@ -154,6 +168,7 @@ export const resolveTreeSelectionIntent = (input: ResolveTreeListSelectionInput)
   const key = resolveTreeNodeResourceKey(node);
   if (!key && !node.target) return node.id;
   if (key && getWorkbenchSelectionResourceKeys(input.activeResource).includes(key)) return node.id;
+  if (targetMatchesSlot(node.target, input.activeSlot)) return node.id;
   if (
     input.activeLocation &&
     targetMatchesPage(node.target, input.activeLocation.page, input.activeResource, input.resourceReferenceKey, true)

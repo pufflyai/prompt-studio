@@ -10,6 +10,7 @@ import {
 } from "../../../core";
 import { getResourceMenuPage } from "../../../core/controllers/panel-menus/resource-menu-page";
 import { findPlacementByWidgetId } from "../../../core/registries/layout/layout-operations";
+import { resolvePageActivePlacement } from "../../../core/registries/pages/page-active-placement";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { resolveTreeActiveResource } from "./tree-active-resource";
 
@@ -63,5 +64,15 @@ export const useTreeNavigationState = (workbench: WorkbenchCore, placement?: Wor
   const activeResource = useWorkbenchStore(workbench.layout.store, (state) =>
     resolveTreeActiveResource(state.layout, activePage, activeLocation?.resource, region),
   );
-  return { projectId, activeLocation, activeResource, hostRegion: region, owner };
+  const identity = useWorkbenchStore(
+    workbench.layout.store,
+    (state) => resolvePageActivePlacement(state.layout, activePage, undefined, region)?.placementIdentity,
+  );
+  const slot = identity?.kind === "page" && activePage?.slots.find((slot) => slot.id === identity.slotId);
+  // Collection slots select the exact resource row rather than the slot as a whole.
+  const activeSlot =
+    activePage && slot && (slot.item.kind === "view" || slot.item.binding.cardinality === "one")
+      ? { page: activePage.ref, id: slot.id }
+      : undefined;
+  return { projectId, activeLocation, activeResource, activeSlot, hostRegion: region, owner };
 };
