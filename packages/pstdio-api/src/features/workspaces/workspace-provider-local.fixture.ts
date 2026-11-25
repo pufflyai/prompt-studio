@@ -14,9 +14,8 @@ type LocalProviderState = ReturnType<typeof setupLocalProvider>;
 
 const providerId = "fixture.local-provider.workspace-type.local";
 
-const setupLocalProvider = (options: { backendRuntime?: "process" }) => {
+const setupLocalProvider = () => {
   const s = {
-    backendRuntime: options.backendRuntime,
     root: "",
     projectId: "",
     sourceFolder: "",
@@ -55,7 +54,6 @@ const setupLocalProvider = (options: { backendRuntime?: "process" }) => {
     version: "0.0.1",
     main: "extension.ts",
     engines: { pstdio: `^${EXTENSION_API_VERSION}` },
-    ...(options.backendRuntime ? { pstdio: { backendRuntime: options.backendRuntime } } : {}),
   };
   const fixtureSource = `
   const capabilities = { files: "write", diff: false, merge: false, rebase: false, delete: true };
@@ -235,9 +233,10 @@ const discoveryAndDirectoryTests = (s: LocalProviderState) => {
     expect(await readFile(join(outside, "keep.txt"), "utf8")).toBe("Retain this");
   });
 
-  test.each(
-    s.backendRuntime ? ["host", "worker"] : ["host"],
-  )("cancelling a provider operation stops its %s-launched child before the operation rejects", async (mode) => {
+  test.each([
+    "host",
+    "worker",
+  ])("cancelling a provider operation stops its %s-launched child before the operation rejects", async (mode) => {
     const processRoot = join(s.root, `process-root-${mode}`);
     await mkdir(processRoot);
     const workspace = await s.handle.deps.workspaceService.create({
@@ -499,9 +498,9 @@ const choiceAndRecoveryTests = (s: LocalProviderState) => {
   });
 };
 
-/** The installed local provider suite, run once in the API process and once in a backend worker. */
-export const localProviderSuite = (options: { backendRuntime?: "process" } = {}) => {
-  const s = setupLocalProvider(options);
+/** The installed local provider suite. Its backend runs in a worker process. */
+export const localProviderSuite = () => {
+  const s = setupLocalProvider();
   discoveryAndDirectoryTests(s);
   validationAndOwnershipTests(s);
   choiceAndRecoveryTests(s);

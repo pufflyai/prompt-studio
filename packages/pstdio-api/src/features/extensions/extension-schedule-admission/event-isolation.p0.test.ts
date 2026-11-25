@@ -27,9 +27,9 @@ for (const assigned of [false, true]) {
         deps.accountService.projectSyncStatus = async () => ({ state: "local", offlineReady: false });
       }
       const calls: unknown[] = [];
-      (globalThis as Record<string, unknown>).__deviceAutomationRun = async () => {
+      fixture.onRun(async () => {
         calls.push(true);
-      };
+      });
       const clock = createTestCronDriver();
       const scheduler = createExtensionScheduler({
         deps,
@@ -124,9 +124,9 @@ for (const change of [
       return result as never;
     };
     const calls: unknown[] = [];
-    (globalThis as Record<string, unknown>).__deviceAutomationRun = async () => {
+    fixture.onRun(async () => {
       calls.push(true);
-    };
+    });
     const clock = createTestCronDriver();
     const scheduler = createExtensionScheduler({
       deps,
@@ -149,7 +149,7 @@ for (const change of [
         if (change !== "source-noop") {
           const entry = join(extension.originalPackagePath!, relative(extension.packagePath!, extension.sourcePath!));
           const code = await Bun.file(entry).text();
-          await Bun.write(entry, code.replace("await globalThis", "await Promise.resolve(); await globalThis"));
+          await Bun.write(entry, `${code}\n// changed\n`);
           if (change === "source-adoption")
             await acceptPreparedRevision(
               extension.originalPackagePath!,

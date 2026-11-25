@@ -165,32 +165,40 @@ test("loading a newer version never removes a version that is still loading", as
     writeExtension(extensionDir);
     for (let round = 0; round < 5; round += 1) {
       const diagnostics: ExtensionDiagnostic[] = [];
-      const entered = Promise.withResolvers<boolean>();
-      const release = Promise.withResolvers<void>();
-      const gate = crypto.randomUUID();
+      // The entry runs in a worker process, so it signals and waits through files.
+      const gate = join(createTempDir(), "gate");
+      const entered = `${gate}.entered`;
+      const released = `${gate}.released`;
+      const release = () => writeFileSync(released, "");
       const entry = join(extensionDir, "extension.ts");
       const commandSource = (title: string) =>
         `export default { commands: [{ id: "check", ref: { kind: "command", id: "check" }, title: ${JSON.stringify(title)}, run() {} }] };`;
-      writeFileSync(entry, `await globalThis[${JSON.stringify(gate)}]?.(); ${commandSource(`a${round}`)}`);
-      Reflect.set(globalThis, gate, () => {
-        entered.resolve(true);
-        return release.promise;
-      });
+      writeFileSync(
+        entry,
+        `import { existsSync, writeFileSync } from "node:fs";
+         writeFileSync(${JSON.stringify(entered)}, "");
+         while (!existsSync(${JSON.stringify(released)})) await Bun.sleep(5);
+         ${commandSource(`a${round}`)}`,
+      );
       const first = loadExtensionPackage({ path: extensionDir }, diagnostics);
+      let settled = false;
+      void first.finally(() => {
+        settled = true;
+      });
       try {
         // Edit only after the first immutable entry reaches module evaluation.
-        expect(await Promise.race([entered.promise, first.then(() => false)])).toBe(true);
+        while (!existsSync(entered) && !settled) await Bun.sleep(5);
+        expect(existsSync(entered)).toBe(true);
         writeFileSync(entry, commandSource(`b${round}`));
         const second = await loadExtensionPackage({ path: extensionDir }, diagnostics);
-        release.resolve();
+        release();
         const older = await first;
         expect(older?.definition.commands?.[0]?.title).toBe(`a${round}`);
         expect(second?.definition.commands?.[0]?.title).toBe(`b${round}`);
         expect(existsSync(older!.preparedRevision!.entryPath)).toBe(true);
         expect(diagnostics).toEqual([]);
       } finally {
-        release.resolve();
-        Reflect.deleteProperty(globalThis, gate);
+        release();
         await first;
       }
     }

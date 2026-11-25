@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { migrateExtensionFiles } from "./extension-file-migration";
 
 test("interrupted file migration resumes using equal files and retains unsaved drafts and attachments", async () => {
@@ -34,12 +35,12 @@ test("conflicting files preserve both trees, and symlinks cannot escape the work
     await mkdir(next, { recursive: true });
     await writeFile(join(old, "ticket.md"), "old draft");
     await writeFile(join(next, "ticket.md"), "new draft");
-    await expect(migrateExtensionFiles(root)).rejects.toThrow(/conflict/i);
+    await expectRejection(migrateExtensionFiles(root)).toThrow(/conflict/i);
     expect(await readFile(join(old, "ticket.md"), "utf8")).toBe("old draft");
     expect(await readFile(join(next, "ticket.md"), "utf8")).toBe("new draft");
     await rm(next, { recursive: true });
     await symlink(tmpdir(), next, "dir");
-    await expect(migrateExtensionFiles(root)).rejects.toThrow(/symbolic/i);
+    await expectRejection(migrateExtensionFiles(root)).toThrow(/symbolic/i);
     expect(await readFile(join(old, "ticket.md"), "utf8")).toBe("old draft");
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -84,13 +85,13 @@ test("retained originals stay inside their owner and cannot appear as live artif
     expect(await readFile(join(target, ".extension-identity-original/note.md"), "utf8")).toBe("Original");
     const mount = createFileMount(target);
     expect((await mount.list()).map((file) => file.path)).toEqual(["note.md"]);
-    await expect(mount.writeText(".extension-identity-original/note.md", "Changed")).rejects.toThrow(/retained/);
+    await expectRejection(mount.writeText(".extension-identity-original/note.md", "Changed")).toThrow(/retained/);
     await symlink(join(target, ".extension-identity-original"), join(target, "alias"), "junction");
-    await expect(mount.readText("alias/note.md")).rejects.toThrow(/retained/);
-    await expect(mount.writeText("alias/new.md", "Changed")).rejects.toThrow(/retained/);
+    await expectRejection(mount.readText("alias/note.md")).toThrow(/retained/);
+    await expectRejection(mount.writeText("alias/new.md", "Changed")).toThrow(/retained/);
     await mkdir(source);
     await writeFile(join(source, "note.md"), "Different");
-    await expect(retainExtensionMigrationSource(source, target)).rejects.toThrow(/conflict/);
+    await expectRejection(retainExtensionMigrationSource(source, target)).toThrow(/conflict/);
     expect(await readFile(join(source, "note.md"), "utf8")).toBe("Different");
   } finally {
     await rm(root, { recursive: true, force: true });

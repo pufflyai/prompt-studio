@@ -40,11 +40,9 @@ Optional fields:
 - SVG images retain their own colors. For a monochrome `currentColor` SVG, define its color inside the asset. A `prefers-color-scheme` media rule follows the embedding app's light/dark `color-scheme`; it does not inherit the surrounding text color.
 - Catalogs may provide a Lucide name or a public SVG data URL. Repository catalog entries can use the same `./assets/icon.svg` declaration as the manifest: the host build embeds its bytes for discovery independently of source-archive inclusion. Embedded icons are keyed by the exact catalog package origin, full ID, install name, and declared asset path; an operator catalog cannot borrow a stock icon merely by reusing its install name. External catalogs must supply their own display metadata.
 - `pstdio.scope`: install/load scope, either `user` or `repo`. Defaults to `user`.
-- `pstdio.backendRuntime`: set to `"process"` to run the backend in its own worker process instead
-  of the API process. See [Process runtime](#process-runtime). Leave it out to keep the current
-  in-process behavior. The in-process runtime is deprecated: `pst extensions check <path>` warns
-  (`extension_in_process_runtime_deprecated`) when backend code would run in the API process, and
-  a later release makes the process runtime the only one.
+- `pstdio.backendRuntime`: no longer used. Every backend runs in its own worker process; see
+  [Process runtime](#process-runtime). Packages that still set it load unchanged, and the host
+  ignores the value.
 - `pstdio.processEnvironment`: names of host environment variables the extension may ask the host
   to pass to the children it starts, such as `["ANTHROPIC_API_KEY"]`. See
   [Host environment names](#host-environment-names).
@@ -201,17 +199,41 @@ value, and it does not check a signature on remote catalogs. PS-528 adds both.
 
 ## Trust
 
-An installed extension runs inside the API process with the access of the user's account. It can read
-files, the host environment, and stored connection secrets. The process isolation model is in
-[ADR 0058](../../adrs/0058-isolate-extension-backends.md).
+An installed extension's backend runs in its own worker process with the access of the user's
+account. It can read files, the environment described below, and stored connection secret files. The
+process isolation model is in [ADR 0058](../../adrs/0058-isolate-extension-backends.md).
 
 ### Process runtime
 
-With `"pstdio": { "backendRuntime": "process" }`, the host never imports the extension entry. A
-private worker process imports it instead, and one worker serves every project that enables the same
-content revision. Commands, middleware, private handlers and hooks run in the worker, so a slow or
-CPU-heavy handler no longer blocks the workbench. The worker gets an allowlisted environment, so
-provider keys and the runtime token are not in its `process.env`.
+The host never imports an extension entry. A private worker process evaluates it. Projects that
+enable the same source use the same worker, and identical sources can share a worker. Commands,
+middleware, private handlers, hooks, schedules, harnesses and providers run in the worker, so a slow
+or CPU-heavy handler no longer blocks the workbench. Module state belongs to the worker: the host
+never shares it, and a worker that stops or crashes starts again with fresh module state. After a
+reload, the next call for that source starts with fresh module state even if the source is unchanged.
+A worker serving another source keeps running.
+
+The host reads an entry's contributions once per prepared revision. A short-lived worker evaluates
+the entry, reports its definition and stops, and the host stores that definition with the revision.
+Later loads and later host starts use the stored definition, so a worker starts only when one of the
+extension's handlers first runs. Changed source is a new revision and is read again. Because the
+definition is read once, it must not depend on the time, the environment or other values that can
+change between evaluations; compute those in handlers. A worker whose entry reports a different
+definition than the stored one is refused with `backend_unavailable`, and the next load of the
+extension reads the entry again. Extensions without handlers, such as theme or template
+packages, never start a worker after that first read.
+
+The worker's `process.env` is the host's environment without Prompt Studio's credentials and the
+registry credentials: `PSTDIO_` names containing `TOKEN`, `SECRET`, `KEY`, `PASSWORD` or
+`CREDENTIAL` (such as `PSTDIO_API_TOKEN`), anything starting with `NPM_CONFIG_`, `NPM_TOKEN`,
+`NPM_AUTH_TOKEN`, `NODE_AUTH_TOKEN` and `BUN_AUTH_TOKEN`. Settings such as `PSTDIO_HOME` and
+`PSTDIO_SESSION_ID` stay. Provider keys,
+proxy and certificate settings in the environment that starts Prompt Studio are therefore visible to
+backend code, as they were when backends ran in the API process. Children started through
+`ctx.process` and `ctx.terminal` keep the narrower allowlisted environment, plus the
+[`envFromHost`](#host-environment-names) names a person allowed. `envFromHost` controls which values
+reach those children; it does not hide a host value from the worker. A value that no extension code
+may read must not be in the environment that starts Prompt Studio.
 
 It is not a sandbox. The worker still runs as your OS account and can read the same files as the
 host, including the Prompt Studio home folder.
@@ -258,20 +280,21 @@ limits are not yet calibrated on every supported device.
 
 An `AbortSignal` you pass to a host call, such as `sessions.stream(id, onEvent, { signal })`, still
 cancels it. When your handler returns, the host closes any stream or iterator it left open.
+Functions the host hands your handler, such as the `close()` that `storage.observe` returns, work
+until the handler returns. That includes cleanup that runs after the handler is cancelled, so close
+them in a `finally` block. An error your handler throws keeps its name, message, `code` and its
+other properties whose values are strings, numbers, booleans or `null`.
 
 Harnesses run in the worker too. A session handle that `start` or `resume` returns, with its `done`
 promise and methods, keeps working until the host releases it. The event sink's `getMessages()` stays
 synchronous. Workspace types, text sources and resource hierarchy providers run in the worker as well. Other arguments and results
 must be plain data: objects, arrays, strings, numbers, booleans, `Date` and bytes.
 
-The host inspects contributions in a short-lived worker. A runtime worker starts on the first
-handler call. A source check finishes after inspection. A candidate that fails validation leaves
-the active worker running. When a changed source first runs a handler, the old worker stops before
-the replacement starts, unless another folder with identical content still uses it.
-
-A worker that crashes rejects its running calls with `backend_unavailable`. The next call can
-start a fresh worker and proceeds only if its reported definition matches the one the host loaded.
-Calls that failed during the crash stay failed.
+A promise rejection your code leaves unhandled is logged and does not stop the worker. A worker that
+crashes rejects its running calls with `backend_unavailable`. The host does not
+retry them. The next call starts a new worker. When a changed source first runs a handler, the old worker
+stops before the new one starts, unless another folder with identical content still uses it. A
+changed source the host refuses leaves the old worker running.
 
 ### Host environment names
 
@@ -284,7 +307,7 @@ rejected. So are names reserved for Prompt Studio and package registries: anythi
 `extension_manifest_invalid_value` diagnostic.
 
 ```json
-{ "pstdio": { "backendRuntime": "process", "processEnvironment": ["ANTHROPIC_API_KEY"] } }
+{ "pstdio": { "processEnvironment": ["ANTHROPIC_API_KEY"] } }
 ```
 
 Declaring a name grants nothing. The user allows names per project in the extension's details

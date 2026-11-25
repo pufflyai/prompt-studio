@@ -6,11 +6,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ProcessHandle } from "pstdio-api-contracts/extension-kernel";
 import { runtimeOperationChannel } from "pstdio-diagnostics";
-import { createExtensionProcessEnvironment } from "../process-environment";
+import { expectRejection } from "../../test-utils/expect-rejection";
+import { createBackendWorkerEnvironment, createExtensionProcessEnvironment } from "../process-environment";
 import { createProcessHandleProxy, createProcessOwner, failedProcessHandle, processError } from "../process-owner";
 import { markHostContext } from "../runner/host-context";
 import { extensionContextSurface } from "./context-surface";
-import { expectRejection } from "./expect-rejection.test-utils";
 import { HOST_CALL_LIMITS } from "./host-calls";
 import { backendWorkerCommand, createBackendWorkerPool } from "./pool";
 import { HANDLER_MARKER } from "./protocol";
@@ -110,6 +110,14 @@ export default {
           resolve("aborted");
         });
       }),
+    },
+    {
+      id: "stray-rejection",
+      title: "Stray rejection",
+      run: () => {
+        Promise.reject(new Error("nobody handles this"));
+        return new Promise((resolve) => setTimeout(() => resolve(process.pid), 50));
+      },
     },
     { id: "waiting", title: "Waiting", run: () => waiting },
     { id: "observed-abort", title: "Observed abort", run: () => observedAbort },
@@ -532,14 +540,25 @@ test("a command runs in its own process and reaches only the host surface it was
   }
 });
 
-test("the worker environment carries no host secrets", async () => {
-  const hostEnv = { ...process.env, PSTDIO_API_TOKEN: "runtime-token", OPENAI_API_KEY: "provider-key" };
+test("the worker environment is the host's without the names Prompt Studio reserves", async () => {
+  const names = {
+    PSTDIO_API_TOKEN: "runtime-token",
+    NPM_CONFIG_REGISTRY: "https://registry.example",
+    NPM_TOKEN: "registry-token",
+    NODE_AUTH_TOKEN: "registry-token",
+    BUN_BE_BUN: "1",
+    OPENAI_API_KEY: "provider-key",
+    PSTDIO_AUTOMATION_TOKEN: "automation-token",
+    PSTDIO_TEST_MODE: "1",
+  };
+  const previous = Object.fromEntries(Object.keys(names).map((name) => [name, process.env[name]]));
   const previousCwd = process.cwd();
-  // Bun loads .env from a process's working directory; the worker must not start in the host's.
-  await writeFile(join(root, ".env"), "SECRET_FROM_DOTENV=leaked\n");
   try {
+    Object.assign(process.env, names);
+    // Bun loads .env from a process's working directory; the worker must not start in the host's.
+    await writeFile(join(root, ".env"), "SECRET_FROM_DOTENV=leaked\n");
     process.chdir(root);
-    const worker = await start(createExtensionProcessEnvironment(hostEnv));
+    const worker = await start(createBackendWorkerEnvironment());
     try {
       const env = (await worker.invoke({
         handlerId: handlerOf(worker.definition, "environment"),
@@ -547,15 +566,30 @@ test("the worker environment carries no host secrets", async () => {
         surface: { kind: "object", members: {} },
         args: [],
       })) as Record<string, string>;
-      expect(env.PSTDIO_API_TOKEN).toBeUndefined();
-      expect(env.OPENAI_API_KEY).toBeUndefined();
+      for (const name of [
+        "PSTDIO_API_TOKEN",
+        "PSTDIO_AUTOMATION_TOKEN",
+        "NPM_CONFIG_REGISTRY",
+        "NPM_TOKEN",
+        "NODE_AUTH_TOKEN",
+        "BUN_BE_BUN",
+      ])
+        expect(env[name]).toBeUndefined();
+      // Prompt Studio settings that are not credentials, such as its home and test mode, stay.
+      expect(env.PSTDIO_TEST_MODE).toBe("1");
       expect(env.SECRET_FROM_DOTENV).toBeUndefined();
-      expect(env.PATH).toBe(process.env.PATH!);
+      expect(env.OPENAI_API_KEY).toBe("provider-key");
+      // Windows names it Path; its environment lookups ignore case.
+      const pathName = Object.keys(env).find((name) => name.toUpperCase() === "PATH");
+      expect(pathName && env[pathName]).toBe(process.env.PATH!);
     } finally {
       await worker.stop();
     }
   } finally {
     process.chdir(previousCwd);
+    for (const [name, value] of Object.entries(previous))
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
   }
 });
 
@@ -1790,5 +1824,54 @@ test.each([
   } finally {
     HOST_CALL_LIMITS.inFlight = previous;
     await worker.stop();
+  }
+});
+
+test("a rejection extension code leaves unhandled does not stop the worker", async () => {
+  const worker = await start();
+  try {
+    const call = () =>
+      worker.invoke({ handlerId: handlerOf(worker.definition, "stray-rejection"), context: {}, surface, args: [] });
+    const first = await call();
+    expect(await call()).toBe(first);
+  } finally {
+    await worker.stop();
+  }
+});
+
+test("stopping a worker releases the deadline for its cancelled handler", async () => {
+  const drainDeadlineMs = 100_007;
+  const worker = await startBackendWorker({
+    command: backendWorkerCommand(),
+    env: createExtensionProcessEnvironment(),
+    entryPath,
+    drainDeadlineMs,
+  });
+  const schedule = spyOn(globalThis, "setTimeout");
+  const clear = spyOn(globalThis, "clearTimeout");
+  let stopping: Promise<void> | undefined;
+  try {
+    const controller = new AbortController();
+    const ready = Promise.withResolvers<void>();
+    const running = worker.invoke({
+      handlerId: handlerOf(worker.definition, "ignore-cancel"),
+      context: { live: { ready: () => ready.resolve() } },
+      surface: drainSurface,
+      args: [],
+      signal: controller.signal,
+    });
+    await ready.promise;
+    controller.abort(new Error("stop"));
+    await expectRejection(running).toThrow("stop");
+    const scheduled = schedule.mock.calls.findIndex(([, delay]) => delay === drainDeadlineMs);
+    expect(scheduled).toBeGreaterThanOrEqual(0);
+    const drainTimer = schedule.mock.results[scheduled]!.value;
+    stopping = worker.stop();
+    await stopping;
+    expect(clear.mock.calls.some(([timer]) => timer === drainTimer)).toBe(true);
+  } finally {
+    schedule.mockRestore();
+    clear.mockRestore();
+    await (stopping ?? worker.stop());
   }
 });

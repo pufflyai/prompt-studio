@@ -1,13 +1,42 @@
 import { randomUUID } from "node:crypto";
 import type { HarnessContext, HarnessProvider, ProcessRunInput } from "pstdio-api-contracts/extension-kernel";
-import { mapHostContext } from "pstdio-extensions";
+import { mapHostContext, prepareBackendHandler } from "pstdio-extensions";
 import { traceDetectionPhase } from "./harness-detection-phase";
 
 // Detection is a short availability probe, not a model request or a session.
 const DETECTION_TIMEOUT_MS = 3_000;
+// Starting the harness's extension worker, which a cold machine can take several seconds for.
+const WORKER_START_TIMEOUT_MS = 30_000;
+
+/** Starts the harness's worker outside the probe's deadline. False when it fails or takes too long. */
+const startHarnessWorker = async (provider: HarnessProvider) => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      prepareBackendHandler(provider.detect).then(
+        () => true,
+        () => false,
+      ),
+      new Promise<false>((resolve) => {
+        timer = setTimeout(() => resolve(false), WORKER_START_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+};
 
 export const detectHarness = async (provider: HarnessProvider, context: HarnessContext) => {
   if (!provider.detect) return { available: true };
+  // A worker that did not start is not probed: probing would only start it again.
+  if (!(await startHarnessWorker(provider))) {
+    context.logger.warn(`Harness ${provider.id} extension backend did not start.`, {
+      harness_id: provider.id,
+      event: "harness.detection.failed",
+      failure: "worker_start",
+    });
+    return { available: false, reason: "The extension backend did not start. Run pst logs for details." };
+  }
   const started = performance.now();
   const identity = { harness_id: provider.id, detection_id: randomUUID() };
   const deadline = Date.now() + DETECTION_TIMEOUT_MS;

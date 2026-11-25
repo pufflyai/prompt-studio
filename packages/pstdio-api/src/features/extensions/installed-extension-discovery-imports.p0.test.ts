@@ -5,7 +5,7 @@ import { join } from "node:path";
 import {
   acceptPreparedRevision,
   prepareExtensionRevision,
-  readRuntimeImportCount,
+  readExtensionLoadCount,
   stopExtensionPreparation,
 } from "pstdio-extensions";
 import { loadAcceptedExtensionSource } from "./accepted-extension-source";
@@ -46,20 +46,20 @@ afterEach(async () => {
 
 test("project discovery imports an accepted revision once and adopts a newly accepted revision", async () => {
   const { source, manifests, discover } = fixture();
-  const before = readRuntimeImportCount();
+  const before = readExtensionLoadCount();
   await Promise.all([discover(), discover("first-concurrent-project")]);
-  expect(readRuntimeImportCount() - before).toBe(1);
+  expect(readExtensionLoadCount() - before).toBe(1);
   await Promise.all([discover("project-2"), discover("project-3")]);
-  expect(readRuntimeImportCount() - before).toBe(1);
+  expect(readExtensionLoadCount() - before).toBe(1);
 
   writeFileSync(join(source, "extension.ts"), 'export default { commands: { updated: { title: "Updated" } } };');
   const revision = await prepareExtensionRevision(source);
   await acceptPreparedRevision(source, revision);
   await discover();
   expect(manifests.at(-1)?.commands).toEqual(["updated"]);
-  expect(readRuntimeImportCount() - before).toBe(2);
+  expect(readExtensionLoadCount() - before).toBe(2);
   await discover();
-  expect(readRuntimeImportCount() - before).toBe(2);
+  expect(readExtensionLoadCount() - before).toBe(2);
 });
 
 test("failed discovery evaluation can recover without changing the source", async () => {
@@ -92,7 +92,7 @@ test("discovery joins first admission after its accepted marker has been publish
   const { source, discover } = fixture();
   const adopted = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
-  const before = readRuntimeImportCount();
+  const before = readExtensionLoadCount();
   const first = loadAcceptedExtensionSource(source, async (_accepted, markAccepting) => {
     const loaded = await loadExtensionSource(source);
     markAccepting(loaded.preparedRevision!);
@@ -116,7 +116,7 @@ test("discovery joins first admission after its accepted marker has been publish
     release.resolve();
     await Promise.all([first, second]);
   }
-  expect(readRuntimeImportCount() - before).toBe(1);
+  expect(readExtensionLoadCount() - before).toBe(1);
 });
 
 test.each([

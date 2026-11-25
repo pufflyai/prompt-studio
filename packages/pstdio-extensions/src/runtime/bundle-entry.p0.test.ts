@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { Worker } from "node:worker_threads";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { isProcessAlive } from "pstdio-paths";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { bundleEntry, bundleLimits } from "./bundle-entry";
 import { createPreparationClient } from "./preparation-client";
 
@@ -61,7 +62,7 @@ test("reports the unresolved dependency when an extension cannot be bundled", as
   const entry = join(root, "extension.ts");
   writeFileSync(entry, 'export { default } from "missing-desktop-dependency";');
   try {
-    await expect(bundleEntry(entry, root, join(root, "out"))).rejects.toThrow("missing-desktop-dependency");
+    await expectRejection(bundleEntry(entry, root, join(root, "out"))).toThrow("missing-desktop-dependency");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -158,7 +159,7 @@ test("a macro that never finishes fails the build at the deadline, and a later b
   const previous = bundleLimits.deadlineMs;
   bundleLimits.deadlineMs = 1_000;
   try {
-    await expect(bundleEntry(entry, root, join(root, "out"))).rejects.toThrow("did not finish within 1 s");
+    await expectRejection(bundleEntry(entry, root, join(root, "out"))).toThrow("did not finish within 1 s");
     await expectMacroStopped(readMacroProcesses(report));
     writeFileSync(
       join(root, "macro.ts"),

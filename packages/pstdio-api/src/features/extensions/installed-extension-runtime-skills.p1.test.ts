@@ -304,7 +304,8 @@ test("offline runtime edits are inspected without replacing the accepted tool", 
     const entry = join(sourcePath, "extension.ts");
     writeFileSync(entry, `await fetch(${JSON.stringify(gate.url.href)});\n${readFileSync(entry, "utf8")}`);
     inspection = changed(sourcePath);
-    expect(await Promise.race([entered.promise.then(() => "inspected"), Bun.sleep(1000).then(() => "missing")])).toBe(
+    // The inspection evaluates the edited source in a child process: about 0.1 s locally, over 1 s once on CI.
+    expect(await Promise.race([entered.promise.then(() => "inspected"), Bun.sleep(5_000).then(() => "missing")])).toBe(
       "inspected",
     );
     expect((await readAcceptedRevision(sourcePath))?.id).toBe(loaded.preparedRevision!.id);

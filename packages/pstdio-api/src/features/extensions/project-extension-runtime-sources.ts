@@ -38,17 +38,19 @@ export const canonicalSourcePath = (sourcePath: string) => {
 // cache is the runtime's memory invariant. Harness workers also live as long as their
 // provider's import, so importing an unchanged source again would stop running agents.
 export const createExtensionSourceCache = (input: { loadSources?: typeof loadExtensionSources }) => {
-  const candidates = new Map<string, Promise<CachedSource | null>>();
+  const candidates = new Map<string, Map<string, Promise<CachedSource | null>>>();
   const inspectCandidate = (source: LoadableExtensionSource, revision: PreparedExtensionRevision) => {
-    const key = `${canonicalSourcePath(source.source_path)}:${revision.id}`;
-    let work = candidates.get(key);
+    const path = canonicalSourcePath(source.source_path);
+    const byRevision = candidates.get(path) ?? new Map<string, Promise<CachedSource | null>>();
+    candidates.set(path, byRevision);
+    let work = byRevision.get(revision.id);
     if (!work) {
       work = (input.loadSources ?? loadExtensionSources)({
         extensionPackages: [{ path: source.source_path, sourceKind: source.source_kind }],
         preparedRevision: revision,
         immutableAssets: true,
       }).then((loaded) => (loaded.sources[0] ? { diagnostics: loaded.diagnostics, source: loaded.sources[0] } : null));
-      candidates.set(key, work);
+      byRevision.set(revision.id, work);
     }
     return work;
   };
@@ -62,6 +64,35 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
   // them. An uninstalled source stops being enabled, so it is never retained.
   const lastHealthyByPath = new Map<string, CachedSource>();
 
+  const rememberLoaded = async (
+    key: string,
+    sourcePath: string,
+    accepted: PreparedExtensionRevision | null,
+    value: CachedSource,
+  ) => {
+    const current = sourcesByPath.get(key);
+    const revision = value.source.preparedRevision;
+    if (current && revision) current.loadKey = `${revision.loadKey}:${revision.id}`;
+    if (!value.diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
+      lastHealthyByPath.set(key, value);
+      if (!accepted && revision) await acceptPreparedRevision(sourcePath, revision, { expectedId: null });
+    }
+    return value;
+  };
+
+  const readSources = (source: LoadableExtensionSource, accepted: PreparedExtensionRevision | null) => {
+    if (accepted) {
+      return inspectCandidate(source, accepted).then((cached) => ({
+        sources: cached ? [cached.source] : [],
+        diagnostics: cached?.diagnostics ?? [],
+      }));
+    }
+    return (input.loadSources ?? loadExtensionSources)({
+      extensionPackages: [{ path: source.source_path, sourceKind: source.source_kind }],
+      immutableAssets: true,
+    });
+  };
+
   const inspections = new Map<string, Promise<CachedSource | null>>();
   const load = (installedSource: LoadableExtensionSource): Promise<CachedSource | null> => {
     // An ownership conflict is an activation gate, not a recoverable source-load failure.
@@ -72,7 +103,7 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
     uncheckedPaths.delete(key);
     const pending = inspections.get(key);
     if (pending) return pending;
-    const loading = (async () => {
+    const loading: Promise<CachedSource | null> = (async () => {
       const accepted = await readAcceptedRevision(installedSource.source_path);
       const inspect = input.loadSources ? hashExtensionSourceAsync : inspectExtensionLoadKey;
       // The default loader returns the input identity it computes during preparation.
@@ -80,35 +111,18 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
       let loadKey = accepted ? `${accepted.loadKey}:${accepted.id}` : null;
       if (!accepted && (cached || input.loadSources)) loadKey = await inspect(installedSource.source_path);
       if (cached?.loadKey === loadKey) return cached.loading;
-      const prepared = accepted
-        ? inspectCandidate(installedSource, accepted).then((cached) => ({
-            sources: cached ? [cached.source] : [],
-            diagnostics: cached?.diagnostics ?? [],
-          }))
-        : (input.loadSources ?? loadExtensionSources)({
-            extensionPackages: [{ path: installedSource.source_path, sourceKind: installedSource.source_kind }],
-            preparedRevision: accepted ?? undefined,
-            immutableAssets: true,
-          });
-      const imported = prepared.then(async (loaded) => {
+      const currentLoad = () => inspections.get(key) === loading;
+      if (!currentLoad()) return null;
+      const imported = readSources(installedSource, accepted).then(async (loaded) => {
         const source = loaded.sources[0];
-        if (!source) return null;
-        const current = sourcesByPath.get(key);
-        if (current && source.preparedRevision)
-          current.loadKey = `${source.preparedRevision.loadKey}:${source.preparedRevision.id}`;
-        const value = { diagnostics: loaded.diagnostics, source };
-        if (!loaded.diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
-          lastHealthyByPath.set(key, value);
-          if (!accepted && source.preparedRevision)
-            await acceptPreparedRevision(installedSource.source_path, source.preparedRevision, { expectedId: null });
-        }
-        return value;
+        if (!source || !currentLoad()) return null;
+        return rememberLoaded(key, installedSource.source_path, accepted, { diagnostics: loaded.diagnostics, source });
       });
       sourcesByPath.set(key, { loadKey, loading: imported });
       return imported;
     })()
       .catch((error) => {
-        sourcesByPath.delete(key);
+        if (inspections.get(key) === loading) sourcesByPath.delete(key);
         throw error;
       })
       .finally(() => {
@@ -133,6 +147,14 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
         loaded.map(({ source }) => source),
         loaded.flatMap(({ diagnostics }) => diagnostics),
       );
+    },
+    // A reload can recover a changed definition at the same prepared revision.
+    reload: (sourcePath: string) => {
+      const key = canonicalSourcePath(sourcePath);
+      candidates.delete(key);
+      sourcesByPath.delete(key);
+      inspections.delete(key);
+      uncheckedPaths.delete(key);
     },
     recheck: (sourcePath: string) => {
       const key = canonicalSourcePath(sourcePath);

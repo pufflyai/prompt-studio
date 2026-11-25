@@ -10,7 +10,7 @@ Installs and updates are meant to be explicit: source that appears in an extensi
 
 Repo extensions do not. `packages/pstdio-api/src/features/extensions/repo-extensions.ts` loads every folder under `<repo>/.pstdio/extensions` with a plain `import()` of its entry (`packages/pstdio-extensions/src/runtime/loader.ts`), then enables it. The entry's top-level code runs before the host decides whether the folder conflicts with another source or should be skipped. This happens when a project is created from a folder (`packages/pstdio-api/src/features/projects/project-folder.ts`), at every startup for every project (`packages/pstdio-api/src/startup/index.ts`), and when the repo-root watcher sees a new folder (`installed-extension-runtime.ts`).
 
-So a person who clones a third-party repository, or pulls a branch that adds `.pstdio/extensions/x/extension.ts`, runs that code as soon as the folder opens. An agent that may only write inside the project can add such a folder and get its code run outside its limits at the next startup. Because extension backends run inside the API process (ADR 0058), that code has the whole account. The audit in PS-497 (security finding 3) confirmed this.
+So a person who clones a third-party repository, or pulls a branch that adds `.pstdio/extensions/x/extension.ts`, runs that code as soon as the folder opens. An agent that may only write inside the project can add such a folder and get its code run outside its limits at the next startup. Extension backends run in worker processes (ADR 0058) but as the user's account, so that code has the whole account. The audit in PS-497 (security finding 3) confirmed this.
 
 ## Decision
 

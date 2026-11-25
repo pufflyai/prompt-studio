@@ -4,18 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { createExtensionProbe } from "../../../test-utils/extension-probe";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import { installExtensionSource } from "../../extensions/install-extension-source";
 
-type ListingProbe = {
-  detects: number;
-  detectEntered: () => void;
-  gate: Promise<void>;
-  released: string[];
-};
-
-const probe = {} as ListingProbe;
-(globalThis as { __agentListingProbe?: ListingProbe }).__agentListingProbe = probe;
+// The harness runs in its extension worker, so it reaches the test through a probe.
+const probe = createExtensionProbe();
 
 let tempRoot: string;
 let previousDefaultExtensions: string | undefined;
@@ -35,6 +29,7 @@ afterAll(() => {
   if (previousPstdioHome === undefined) delete process.env.PSTDIO_HOME;
   else process.env.PSTDIO_HOME = previousPstdioHome;
   rmSync(tempRoot, { recursive: true, force: true });
+  probe.stop();
 });
 
 const packageJson = (name: string) =>
@@ -54,8 +49,7 @@ const writeHarnessExtension = (root: string) => {
   writeFileSync(join(sourcePath, "package.json"), packageJson("listed-harness"));
   writeFileSync(
     join(sourcePath, "extension.ts"),
-    `const probe = globalThis.__agentListingProbe;
-const run = () => ({ done: Promise.resolve({ status: "completed" }), stop: () => {} });
+    `const run = () => ({ done: Promise.resolve({ status: "completed" }), stop: () => {} });
 export default {
   harnesses: [{
     id: "listed",
@@ -63,16 +57,12 @@ export default {
     label: "Listed",
     capabilities: () => [],
     detect: async () => {
-      probe.detects += 1;
-      if (probe.detects === 1) {
-        probe.detectEntered();
-        await probe.gate;
-      }
+      ${probe.call('{ kind: "detect" }')};
       return { available: true };
     },
     start: run,
     resume: run,
-    dispose: () => void probe.released.push("listed"),
+    dispose: () => void ${probe.request('{ kind: "dispose" }')},
   }],
 };
 `,
@@ -94,13 +84,21 @@ const uploadExtension = (name: string) => {
 test("lists an unchanged harness while another extension installs", async () => {
   await installExtensionSource({ source: writeHarnessExtension(join(tempRoot, "sources")), skipInstall: true });
   let releaseGate = () => {};
-  probe.detects = 0;
-  probe.released = [];
-  probe.gate = new Promise((resolve) => {
+  const gate = new Promise<void>((resolve) => {
     releaseGate = resolve;
   });
-  const detectEntered = new Promise<void>((resolve) => {
-    probe.detectEntered = resolve;
+  const entered = Promise.withResolvers<void>();
+  const detectEntered = entered.promise;
+  let detects = 0;
+  const released: string[] = [];
+  probe.answer(async (value) => {
+    const kind = (value as { kind?: string } | null)?.kind;
+    if (kind === "dispose") released.push("listed");
+    if (kind === "detect" && ++detects === 1) {
+      entered.resolve();
+      await gate;
+    }
+    return null;
   });
   const { app, close } = await createTestApp({ storageRoot: join(tempRoot, "storage") });
 
@@ -130,7 +128,7 @@ test("lists an unchanged harness while another extension installs", async () => 
       expect.objectContaining({ id: "pstdio.listed-harness.harness.listed", availability: { type: "INSTALLED" } }),
     ]);
     expect(response.status).toBe(200);
-    expect(probe.released).toEqual([]);
+    expect(released).toEqual([]);
   } finally {
     releaseGate();
     await close();
