@@ -299,11 +299,15 @@ test.each([
     });
     expect(peer!.showProgress).toBe(true);
     expect(peer!.canDownload).toBe(false);
+    const stalePeerAction = peer!.requestDownload;
     await act(async () => {
-      peer!.requestDownload();
+      stalePeerAction();
       release.resolve();
-      await until(() => Boolean(choice.failure) && Boolean(peer!.failure));
+      await until(
+        () => peer!.entry?.presence === "downloading" && !choice.downloadBlocking && !peer!.downloadBlocking,
+      );
     });
+    expect(downloads).toBe(1);
     if (folderError) {
       await act(async () => until(() => choice.canDownload && peer!.canDownload));
       expect(downloads).toBe(1);
@@ -313,7 +317,13 @@ test.each([
       });
     } else {
       expect(peer!.canDownload).toBe(false);
-      await act(async () => peer!.requestDownload());
+      await act(async () => {
+        stalePeerAction();
+        await until(
+          () => client.getMutationCache().getAll().every((mutation) => mutation.state.status !== "pending"),
+        );
+      });
+      expect(downloads).toBe(1);
     }
     if (!peerMounted) await act(async () => peerRenderer?.unmount());
     await act(async () => {
