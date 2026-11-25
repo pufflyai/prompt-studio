@@ -15,7 +15,9 @@ export const trackDocumentRetry = (
 ) => {
   let version = 0;
   type Completion = ReturnType<typeof Promise.withResolvers<void>>;
-  let pending: { completion: Completion; mode: "restart" | "resume" | "observe" } | undefined;
+  let pending:
+    | { completion: Completion; mode: "restart" | "resume" | "observe"; startedAttempt?: AbortController }
+    | undefined;
   const complete = (completion: Completion | undefined) => {
     if (!completion || pending?.completion !== completion) return;
     pending = undefined;
@@ -39,9 +41,27 @@ export const trackDocumentRetry = (
   };
   return {
     current: () => pending?.completion,
+    beginPass(attempt: AbortController) {
+      if (pending) pending.startedAttempt = attempt;
+      return pending?.completion;
+    },
     complete,
     cancel: () => complete(pending?.completion),
-    start: () => schedule("restart", restart),
+    start: () => {
+      const state = progress();
+      if (
+        pending?.mode === "restart" &&
+        pending.startedAttempt === state.attempt &&
+        !state.attempt.signal.aborted &&
+        !state.restarting &&
+        !stopped() &&
+        !live.signal.aborted
+      ) {
+        live.retry();
+        void restart();
+      }
+      return schedule("restart", restart);
+    },
     resume: (before?: () => void) =>
       schedule("resume", () => {
         before?.();

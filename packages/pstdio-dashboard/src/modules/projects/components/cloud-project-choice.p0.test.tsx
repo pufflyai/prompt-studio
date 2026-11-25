@@ -1216,3 +1216,114 @@ test("a lost account connection disables Download until the same device is confi
     await fixture.cleanup();
   }
 });
+
+test.each([
+  ["peer", "choice"],
+  ["peer", "peer"],
+  ["Workbench", "choice"],
+  ["Workbench", "peer"],
+] as const)("Discard from %s retires only its original intent before %s downloads again", async (from, next) => {
+  const fixture = await mountCopyChoices("sync error", true);
+  const operations = getWorkbenchOperations(getDashboardScopedQueries(fixture.owner));
+  try {
+    fixture.device.lostReply = "before-write";
+    fixture.release.resolve();
+    await fixture.clickAndSettle(fixture.choice.requestDownload);
+    await act(async () => until(() => Boolean(fixture.peer.discardDownload)));
+    const recovery = operations.getSnapshot().recovery[0]!;
+    const staleDiscard = fixture.peer.discardDownload!;
+    await act(async () => {
+      if (from === "peer") fixture.peer.discardDownload!();
+      else operations.discard(recovery.id);
+      await until(() => fixture.peer.canDownload);
+    });
+    await fixture.clickAndSettle(fixture[next].requestDownload);
+    await act(async () => {
+      staleDiscard();
+      fixture.device.presence = "downloaded";
+      await fixture.choice.refresh();
+      await until(() => fixture.opened.length > 0);
+    });
+    expect(fixture.opened).toHaveLength(1);
+    expect(fixture.closed).toBe(1);
+    expect(fixture.device.downloads).toBe(2);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test.each([
+  "retained",
+  "reset",
+] as const)("an acknowledged Download preserves its receipt through an unconfirmed account (%s cache)", async (cache) => {
+  const fixture = await mountCopyChoices("sync error", true);
+  const status = getDashboardAccountStatusQuery(fixture.owner);
+  const operations = getWorkbenchOperations(getDashboardScopedQueries(fixture.owner));
+  try {
+    await act(async () => {
+      fixture.choice.requestDownload();
+      await fixture.started.promise;
+      fixture.device.accountUnavailable = true;
+      if (cache === "reset") fixture.client.getQueryCache().find({ queryKey: status.key, exact: true })!.reset();
+      publishExtensionEvent({ id: accountEvents.changed.id }, fixture.owner);
+      await until(() => Boolean(status.getSnapshot().error) && !status.getSnapshot().fetching);
+      fixture.release.resolve();
+      await until(fixture.mutationsSettled);
+    });
+    const recovery = operations.getSnapshot().recovery[0];
+    expect(recovery?.status).toBe("unconfirmed");
+    expect(operations.getSnapshot().pending.some((entry) => entry.id === recovery?.id)).toBe(true);
+    expect(fixture.opened).toEqual([]);
+    await act(async () => {
+      await operations.check(recovery!.id);
+    });
+    expect(operations.getSnapshot().recovery[0]?.id).toBe(recovery!.id);
+    expect(fixture.device.downloads).toBe(1);
+    await act(async () => {
+      fixture.device.accountUnavailable = false;
+      await operations.check(recovery!.id);
+    });
+    expect(operations.getSnapshot().recovery).toEqual([]);
+    expect(fixture.device.downloads).toBe(1);
+    await act(async () => {
+      fixture.device.presence = "downloaded";
+      await fixture.choice.refresh();
+      await until(() => fixture.opened.length === 1);
+    });
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test.each([
+  "deviceId",
+  "accountId",
+  "managerOrigin",
+] as const)("acknowledged Download retires only after a confirmed %s change", async (changed) => {
+  const fixture = await mountCopyChoices("sync error", true);
+  const status = getDashboardAccountStatusQuery(fixture.owner);
+  const operations = getWorkbenchOperations(getDashboardScopedQueries(fixture.owner));
+  try {
+    await act(async () => {
+      fixture.choice.requestDownload();
+      await fixture.started.promise;
+      if (changed === "deviceId") fixture.device.id = "replacement-device";
+      else
+        fixture.account[changed] = changed === "accountId" ? "replacement-account" : "https://replacement.example.test";
+      publishExtensionEvent({ id: accountEvents.changed.id }, fixture.owner);
+      await until(
+        () =>
+          status.getSnapshot().data?.login?.[changed] ===
+          (changed === "deviceId" ? fixture.device.id : fixture.account[changed]),
+      );
+      fixture.release.resolve();
+      await until(fixture.mutationsSettled);
+    });
+    expect(fixture.opened).toEqual([]);
+    expect(fixture.device.downloads).toBe(1);
+    expect(operations.getSnapshot().pending).toEqual([]);
+    expect(operations.getSnapshot().recovery).toEqual([]);
+  } finally {
+    await fixture.cleanup();
+  }
+});

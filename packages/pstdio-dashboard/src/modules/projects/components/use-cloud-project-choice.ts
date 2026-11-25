@@ -20,6 +20,12 @@ import { findDashboardProject } from "../data/project-data";
 
 type DownloadOwner = { scope: string; requested: boolean };
 
+const pickerCopyScope = (id: string, cloud: { scope: string; accountKnown: boolean }, admitted?: string) =>
+  cloudCopyScopeFor(id, cloud.accountKnown ? cloud.scope : (admitted ?? cloud.scope));
+
+const clearDownloadIntent = (current: DownloadOwner, scope: string, admitted?: DownloadOwner) =>
+  (admitted ? current === admitted : current.scope === scope) ? { ...current, requested: false } : current;
+
 const useCloudCopyDownload = (
   input: WorkbenchPanelRenderInput,
   options: {
@@ -32,8 +38,8 @@ const useCloudCopyDownload = (
     entry?: CloudProjectCatalogEntry;
     account?: ProjectCopyAccount;
     owner: DownloadOwner;
-    rememberIntent: (owner: DownloadOwner) => void;
-    clearIntent: () => void;
+    rememberIntent: (previous: DownloadOwner, admitted: DownloadOwner) => void;
+    clearIntent: (admitted?: DownloadOwner) => void;
     scope: string;
   },
 ) => {
@@ -68,8 +74,14 @@ const useCloudCopyDownload = (
   });
   const refresh = () => queryClient.invalidateQueries({ queryKey: cloudProjectCatalogKey });
   const download = useMutation({
-    mutationFn: (request: { owner: DownloadOwner; admission: CloudCopyDownloadAdmission }) =>
-      operations.start(request.admission, () => rememberIntent(request.owner)),
+    mutationFn: (request: { owner: DownloadOwner; admission: CloudCopyDownloadAdmission }) => {
+      const admitted = { ...request.owner, requested: true };
+      return operations.start(
+        request.admission,
+        () => rememberIntent(request.owner, admitted),
+        () => clearIntent(admitted),
+      );
+    },
     onSettled(result, error) {
       if (result || error) void refresh();
     },
@@ -161,7 +173,6 @@ const useCloudCopyDownload = (
       return;
     if (!operations.discard(id, scope, unresolved.id)) return;
     download.reset();
-    clearIntent();
   };
   return {
     sync,
@@ -213,7 +224,7 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
   useEffect(() => {
     if (invalidated) input.workbench.overlays.closeOverlay(input.instance.instanceId);
   }, [invalidated, input.workbench, input.instance.instanceId]);
-  const scope = cloudCopyScopeFor(id, cloud.scope);
+  const scope = pickerCopyScope(id, cloud, admittedScope);
   const [owner, setOwner] = useState<DownloadOwner>({ scope, requested: false });
   if (owner.scope !== scope) setOwner({ scope, requested: false });
   const requested = owner.scope === scope && owner.requested;
@@ -241,9 +252,8 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
       entry,
       account,
       owner,
-      rememberIntent: (admitted) =>
-        setOwner((current) => (current === admitted ? { ...current, requested: true } : current)),
-      clearIntent: () => setOwner((current) => (current.scope === scope ? { ...current, requested: false } : current)),
+      rememberIntent: (previous, admitted) => setOwner((current) => (current === previous ? admitted : current)),
+      clearIntent: (admitted) => setOwner((current) => clearDownloadIntent(current, scope, admitted)),
       scope,
     });
   useCloudOnlyCatalogRefresh(cloud, entry, { requested, invalidated, deleting });

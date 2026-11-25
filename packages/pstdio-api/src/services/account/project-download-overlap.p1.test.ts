@@ -144,6 +144,7 @@ test.each([
       return new Response("ready");
     },
   });
+  await using _healthCleanup = { [Symbol.asyncDispose]: () => health.stop(true) };
   const fixture = await createDownloadSourcesFixture({
     publications: true,
     afterStatus: async () => {
@@ -245,6 +246,31 @@ test.each([
     release.resolve();
     activate.resolve();
     await fixture.close();
-    await health.stop(true);
+  }
+});
+
+test("whole-project HTTP Retry replaces a stalled restarted native Activity pass", async () => {
+  const fixture = await createDownloadSourcesFixture();
+  try {
+    await fixture.host.deps.accountService.refresh();
+    expect(await until(async () => Boolean((await fixture.activity.status()).error))).toBe(true);
+    fixture.traffic.activity.error = undefined;
+    const retry = () => fetch(`${fixture.api.url.origin}/v1/account/projects/${fixture.id}/retry`, { method: "POST" });
+    expect((await retry()).status).toBe(200);
+    expect(await until(() => fixture.traffic.activity.holding)).toBe(true);
+    const reads = fixture.traffic.activity.reads;
+    const cancelled = fixture.traffic.activity.cancelled;
+    expect((await retry()).status).toBe(200);
+    expect(await until(() => fixture.traffic.activity.reads > reads)).toBe(true);
+    expect(fixture.traffic.activity.cancelled).toBeGreaterThan(cancelled);
+    finish(fixture.traffic.activity);
+    finish(fixture.traffic.core);
+    finish(fixture.traffic.folder);
+    expect(
+      await until(async () => (await fixture.activity.status()).downloaded && !(await fixture.activity.status()).busy),
+    ).toBe(true);
+    expect(await fixture.activity.status()).toMatchObject({ error: undefined, downloaded: true });
+  } finally {
+    await fixture.close();
   }
 });

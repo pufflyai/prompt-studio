@@ -835,3 +835,119 @@ test("a selective observer follows an explicit Retry replacing the recovery it o
     await fixture.close();
   }
 });
+
+test.each([
+  "completion",
+  "failure",
+] as const)("a second explicit Retry replaces a started stalled pass and fences its late %s", async (outcome) => {
+  const fixture = documentConnectionFixture();
+  const entered = Promise.withResolvers<void>();
+  const started = Promise.withResolvers<AbortSignal>();
+  const late = Promise.withResolvers<void>();
+  const replacement = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let calls = 0;
+  const connection = createDocumentRelayConnection({
+    ...fixture,
+    projectId: "project",
+    signal: fixture.controller.signal,
+    async synchronize(signal) {
+      if (++calls === 1) {
+        entered.resolve();
+        await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+      } else if (calls === 2) {
+        started.resolve(signal);
+        await late.promise;
+        if (outcome === "failure") throw new Error("Superseded pass failed late");
+      } else {
+        replacement.resolve();
+        await release.promise;
+      }
+    },
+  });
+  try {
+    await entered.promise;
+    let settled = false;
+    const first = connection.retry();
+    const active = await started.promise;
+    const second = connection.retry().then(() => {
+      settled = true;
+    });
+    expect(active.aborted).toBe(true);
+    late.resolve();
+    await replacement.promise;
+    await Bun.sleep(5);
+    expect(settled).toBe(false);
+    expect(connection.status().error).toBeUndefined();
+    release.resolve();
+    await Promise.all([first, second]);
+    expect(calls).toBe(3);
+  } finally {
+    late.resolve();
+    release.resolve();
+    fixture.controller.abort();
+    await connection.done;
+    await fixture.close();
+  }
+});
+
+test.each([
+  "draining predecessor",
+  "offline before admission",
+] as const)("duplicate explicit Retry coalesces while %s and waits for its admitted pass", async (phase) => {
+  const grant = Promise.withResolvers<{ token: string; expiresAt: string }>();
+  const token = () => ({ token: "fixture", expiresAt: new Date(Date.now() + 60_000).toISOString() });
+  const fixture = documentConnectionFixture({
+    access: () => (phase === "offline before admission" ? grant.promise : Promise.resolve(token())),
+  });
+  const entered = Promise.withResolvers<void>();
+  const drain = Promise.withResolvers<void>();
+  const replacement = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let calls = 0;
+  let ready = 0;
+  const connection = createDocumentRelayConnection({
+    ...fixture,
+    projectId: "project",
+    signal: fixture.controller.signal,
+    onReady: () => {
+      ready++;
+    },
+    async synchronize() {
+      calls++;
+      if (phase === "draining predecessor" && calls === 1) {
+        entered.resolve();
+        await drain.promise;
+      } else {
+        replacement.resolve();
+        await release.promise;
+      }
+    },
+  });
+  try {
+    if (phase === "draining predecessor") await entered.promise;
+    let settled = false;
+    const first = connection.retry();
+    const second = connection.retry().then(() => {
+      settled = true;
+    });
+    await Bun.sleep(5);
+    expect(settled).toBe(false);
+    if (phase === "draining predecessor") drain.resolve();
+    else grant.resolve(token());
+    await replacement.promise;
+    expect(settled).toBe(false);
+    expect(calls).toBe(phase === "draining predecessor" ? 2 : 1);
+    // Restart readiness and protocol readiness are separate while initially offline.
+    expect(ready).toBe(2);
+    release.resolve();
+    await Promise.all([first, second]);
+  } finally {
+    grant.resolve(token());
+    drain.resolve();
+    release.resolve();
+    fixture.controller.abort();
+    await connection.done;
+    await fixture.close();
+  }
+});

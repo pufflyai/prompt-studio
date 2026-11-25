@@ -104,7 +104,7 @@ export const getCloudCopyDownloads = createRuntimeState((owner) => {
       operations.discard(attempt);
       return true;
     },
-    async start(admission: CloudCopyDownloadAdmission, onAdmitted: () => void) {
+    async start(admission: CloudCopyDownloadAdmission, onAdmitted: () => void, onDiscard: () => void) {
       const { id, account: expected, scope, action } = admission;
       if (!expected || !isCurrent(id, scope) || isCheckingAccount()) return;
       const authority = getDashboardScopedQueries(owner).getScope();
@@ -152,6 +152,30 @@ export const getCloudCopyDownloads = createRuntimeState((owner) => {
         if (isCheckingAccount()) await accountStatus.read(signal);
         return isCurrent(id, scope);
       };
+      const retiredScope = () => {
+        if (owner.isDisposed() || getRuntimeCollections() !== owner) return true;
+        const { data } = accountStatus.getSnapshot();
+        return Boolean(
+          data &&
+            (data.signInRequired ||
+              scope !== cloudCopyScopeFor(id, cloudCatalogScopeFor(String(owner.id), data.login))),
+        );
+      };
+      const confirmedScope = () => {
+        if (retiredScope()) return false;
+        const { data, error, fetching } = accountStatus.getSnapshot();
+        if (!data || error || fetching || accountStatus.inspect().stale)
+          throw new Error("Confirm the current Cloud device before reconciling Download.");
+        return true;
+      };
+      const confirmScope = async (signal: AbortSignal) => {
+        if (retiredScope()) return false;
+        const { data, error, fetching } = accountStatus.getSnapshot();
+        if (fetching) await accountStatus.read(signal);
+        else if (!data || error || accountStatus.inspect().stale) await accountStatus.refresh(signal);
+        signal.throwIfAborted();
+        return confirmedScope();
+      };
       const retired = new Error("The active Cloud device changed.");
       const operation = operations.submit({
         projectId: id,
@@ -162,22 +186,23 @@ export const getCloudCopyDownloads = createRuntimeState((owner) => {
         title: `Download ${name}`,
         draft: { projectId: id, name },
         releaseOnDiscard: true,
+        onDiscard,
         classify: (error) => (error === retired ? "rejected" : classifyApiWrite(error)),
         async write(signal) {
           if (!(await waitForCurrentDevice(signal))) throw retired;
           return api.downloadCloudProject(id, { signal, expected });
         },
         async reconcile(receipt, signal) {
-          if (!isCurrent(id, scope)) return;
+          if (!(await confirmScope(signal))) return;
           const { catalog, project } = await observe(signal);
-          if (!(await waitForCurrentDevice(signal))) return;
+          if (!(await confirmScope(signal))) return;
           const ready = project?.presence === "downloaded";
           const admitted = receipt.presence === "downloading" && project?.presence === "downloading";
           if (!ready && !admitted) throw new Error("The device catalog is still checking this copy.");
           if (retry) await client.cancelQueries({ queryKey: syncKey, exact: true });
           await client.cancelQueries({ queryKey, exact: true });
           signal.throwIfAborted();
-          if (!isCurrent(id, scope)) return;
+          if (!confirmedScope()) return;
           // A confirmed retry consumes its earlier failure observations.
           if (retry) clearRetriedFailure(project);
           client.setQueryData(queryKey, (previous: typeof catalog | undefined) => {
@@ -193,15 +218,15 @@ export const getCloudCopyDownloads = createRuntimeState((owner) => {
           });
         },
         async check(signal) {
-          if (!isCurrent(id, scope)) return { status: "unknown" };
+          if (!(await confirmScope(signal))) return { status: "unknown" };
           const { project } = await observe(signal);
-          if (!(await waitForCurrentDevice(signal))) return { status: "unknown" };
+          if (!(await confirmScope(signal))) return { status: "unknown" };
           if (project?.presence === "downloaded")
             return { status: "confirmed", result: { projectId: id, presence: project.presence } };
           if (project?.presence !== "downloading") return { status: "unknown" };
           if (retry && !(await progressedRetry(project, action, () => api.projectSyncStatus(id, { signal, expected }))))
             return { status: "unknown" };
-          if (!(await waitForCurrentDevice(signal))) return { status: "unknown" };
+          if (!(await confirmScope(signal))) return { status: "unknown" };
           return { status: "confirmed", result: { projectId: id, presence: project.presence } };
         },
       });

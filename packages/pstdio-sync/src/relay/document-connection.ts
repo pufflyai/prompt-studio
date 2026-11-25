@@ -161,7 +161,7 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
     let completion: typeof runningCompletion;
     try {
       while (dirty && live.status().connected && !stopped && current === attempt && !current.signal.aborted) {
-        completion = manualRetry.current();
+        completion = manualRetry.beginPass(current);
         runningCompletion = completion;
         dirty = false;
         await input.synchronize(attemptSignal, topics.subscribe);
