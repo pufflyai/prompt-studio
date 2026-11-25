@@ -3,6 +3,7 @@ import { isNavigationTarget } from "pstdio-api-contracts/extension-kernel";
 import { createCommandRejection } from "../runner/command-rejection";
 import { exportAssetStageInput, importAssetStageInput } from "./asset-source";
 import { openIterator } from "./iterator-lifetime";
+import { markCleanupFunction } from "./remote-markers";
 
 /**
  * The explicit allowlist of host capabilities a backend worker may reach. The host resolves every
@@ -30,7 +31,7 @@ export type BackendSurface =
    * `process.spawn`. The worker returns its own handle at once and forwards each member to the
    * host's handle once it opens.
    */
-  | { kind: "handle"; members: Record<string, HandleMember> }
+  | { kind: "handle"; members: Record<string, HandleMember>; cleanupReserve?: "kill" }
   /** A synchronous scope selection, such as `storage.collection(name)`, evaluated for each host call. */
   | {
       kind: "factory";
@@ -166,9 +167,15 @@ export const resolveSurfaceCall = (
   const method = methodOf(target, last.name, path);
   const supplied = typeof args === "function" ? args() : args;
   const input = member.kind === "asset-stage" ? [importAssetStageInput(supplied[0])] : supplied;
-  return member.kind === "iterate" && member.signalArg !== undefined
-    ? openIterator(method.bind(target), input, member.signalArg)
-    : method.apply(target, input);
+  if (member.kind === "iterate" && member.signalArg !== undefined)
+    return openIterator(method.bind(target), input, member.signalArg);
+  const result = method.apply(target, input);
+  if (member.kind === "handle" && member.cleanupReserve && result && typeof result === "object") {
+    // The host-declared stop can release work while regular calls fill the available capacity.
+    const teardown = Object.getOwnPropertyDescriptor(result, member.cleanupReserve)?.value;
+    if (typeof teardown === "function") markCleanupFunction(teardown);
+  }
+  return result;
 };
 
 /** The kind of member a path ends at, or undefined when the path is not part of the surface. */

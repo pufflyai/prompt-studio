@@ -63,7 +63,7 @@ test(
   async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-packaged-database-worker-"));
     const log = join(root, "startup.jsonl");
-    const env = { PSTDIO_DATABASE_WORKER: "1", PSTDIO_LOG_LEVEL: "info", PSTDIO_LOG_PATH: log };
+    const env = { PSTDIO_LOG_LEVEL: "info", PSTDIO_LOG_PATH: log };
     let child: ChildProcess | undefined;
     try {
       const started = await startPackagedServe(root, env);

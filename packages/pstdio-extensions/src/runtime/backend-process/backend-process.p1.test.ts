@@ -9,6 +9,7 @@ import { runtimeOperationChannel } from "pstdio-diagnostics";
 import { createExtensionProcessEnvironment } from "../process-environment";
 import { createProcessHandleProxy, createProcessOwner, failedProcessHandle, processError } from "../process-owner";
 import { markHostContext } from "../runner/host-context";
+import { extensionContextSurface } from "./context-surface";
 import { expectRejection } from "./expect-rejection.test-utils";
 import { HOST_CALL_LIMITS } from "./host-calls";
 import { backendWorkerCommand, createBackendWorkerPool } from "./pool";
@@ -248,9 +249,13 @@ export default {
     {
       id: "flood",
       title: "Flood",
-      async run(ctx, count, refusals = 0) {
-        const handle = ctx.open();
-        await handle.started;
+      async run(ctx, kind, count, refusals = 0) {
+        const handle = kind === "terminal" ? ctx.terminal.openSession({ cols: 80, rows: 24 }) : ctx.open();
+        if (kind === "terminal") {
+          const stream = handle.events()[Symbol.asyncIterator]();
+          await stream.next();
+          await stream.return();
+        } else await handle.started;
         const calls = Array.from({ length: count }, () => ctx.storage.collection("items").get("never"));
         // Release the held calls only once the expected refusals arrived, whatever the runner's speed.
         let refused = 0;
@@ -1711,13 +1716,18 @@ test("materialized workspace provider handles retain cleanup after the direct ch
   }
 });
 
-test("the host-call limit refuses more work while letting a process handle close", async () => {
+test.each([
+  "process",
+  "terminal",
+])("the host-call limit refuses more work while letting a %s handle close", async (kind) => {
   const worker = await start();
   const previous = HOST_CALL_LIMITS.inFlight;
   HOST_CALL_LIMITS.inFlight = 5;
   try {
     const gate = Promise.withResolvers<void>();
+    let terminalKills = 0;
     const context = {
+      projectId: "p1",
       open: () => {
         const child = createProcessHandleProxy(
           Promise.resolve({
@@ -1732,6 +1742,17 @@ test("the host-call limit refuses more work while letting a process handle close
         );
         return { started: child.started, kill: child.kill };
       },
+      terminal: {
+        openSession: () => ({
+          id: "fixture-terminal",
+          kill: async () => {
+            terminalKills += 1;
+          },
+          events: async function* () {
+            yield { kind: "title", title: "Fixture terminal" };
+          },
+        }),
+      },
       storage: { collection: () => ({ get: () => gate.promise.then(() => null), put: async () => {} }) },
       release: () => gate.resolve(),
     };
@@ -1741,6 +1762,7 @@ test("the host-call limit refuses more work while letting a process handle close
       members: {
         ...(surface as Extract<BackendSurface, { kind: "object" }>).members,
         open: { kind: "handle", members: { started: "promise", kill: "async" } },
+        terminal: extensionContextSurface(context).members.terminal!,
         release: { kind: "notify" },
       },
     };
@@ -1749,15 +1771,22 @@ test("the host-call limit refuses more work while letting a process handle close
         handlerId: handlerOf(worker.definition, "flood"),
         context,
         surface: flood,
-        args: [8, 3],
+        args: [kind, 8, 3],
       }),
     ).toEqual({
       refusedCodes: ["extension_overloaded", "extension_overloaded", "extension_overloaded"],
       cleanup: "killed",
     });
+    expect(terminalKills).toBe(kind === "terminal" ? 1 : 0);
     expect(
-      await worker.invoke({ handlerId: handlerOf(worker.definition, "flood"), context, surface: flood, args: [3] }),
+      await worker.invoke({
+        handlerId: handlerOf(worker.definition, "flood"),
+        context,
+        surface: flood,
+        args: [kind, 3],
+      }),
     ).toEqual({ refusedCodes: [], cleanup: "killed" });
+    expect(terminalKills).toBe(kind === "terminal" ? 2 : 0);
   } finally {
     HOST_CALL_LIMITS.inFlight = previous;
     await worker.stop();

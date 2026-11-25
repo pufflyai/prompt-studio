@@ -49,6 +49,7 @@ const pgliteRecoveryHint = (error: unknown, dbPath: string) => {
 // The database runs in its own thread (PS-525): PGlite executes and decodes statements synchronously,
 // so a long query or a burst of writes there leaves requests, health checks and cancellation free.
 export const openAppDatabase = async (path: string, lifecycle: AppLifecycle = {}) => {
+  apiLogger.info({ event: "db.open", thread: "worker" }, "Opening the database");
   try {
     return await createDbInWorker({
       path,
