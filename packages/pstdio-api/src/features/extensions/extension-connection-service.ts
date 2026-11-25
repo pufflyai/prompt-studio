@@ -11,7 +11,7 @@ import {
   type StoredConnection,
   toConnectionRecord,
 } from "./extension-connection-service-types";
-import { validateBaseUrl } from "./extension-connection-transport";
+import { ConnectionRemovalInputError, validateBaseUrl, validateSharedOrigin } from "./extension-connection-transport";
 
 const prepareProjectConnectionRemoval = async (deps: ExtensionConnectionServiceDeps, projectId: string) => {
   const secretRefs = await deps.connectionsDBService.credentials.projectRefs(projectId);
@@ -248,12 +248,20 @@ const configureConnection = async (
   return toConnectionRecord(stored);
 };
 
+const sharedOriginForRemoval = async (deps: ExtensionConnectionServiceDeps, key: ReturnType<typeof connectionKey>) => {
+  const existing = await deps.connectionsDBService.get(key);
+  if (existing) return new URL(existing.base_url).origin;
+  const origins = await deps.connectionsDBService.credentials.sharedOriginCandidates(key);
+  if (origins.length > 1) throw new ConnectionRemovalInputError("Choose the server origin of the sign-in to revoke.");
+  return origins[0];
+};
+
 const removeConnection = async (
   deps: ExtensionConnectionServiceDeps,
   key: ReturnType<typeof connectionKey>,
-  allProjects = false,
+  sharedOrigin?: string,
 ) => {
-  const removed = await deps.connectionsDBService.remove(key, allProjects);
+  const removed = await deps.connectionsDBService.remove(key, sharedOrigin);
   if (!removed) return false;
   for (const ref of new Set(removed)) await deleteSecret(deps, ref, "remove_connection_secret");
   return true;
@@ -296,13 +304,19 @@ export const createExtensionConnectionService = (input: ExtensionConnectionServi
     );
     return visible.filter((row) => row !== null);
   };
-  const remove = (input: ConnectionKey & { credentialScope?: "all-projects" | "project" }) =>
+  const remove = (input: ConnectionKey & { credentialScope?: "all-projects" | "project"; origin?: string }) =>
     mutate(async () => {
       const contribution = await deps.getContribution(input);
       if (!contribution) throw new Error(`Connection is not declared: ${input.connectionId}`);
       const key = connectionKey(input, contribution.scope);
       assertCredentialScope(key, input.credentialScope);
-      return removeConnection(deps, key, input.credentialScope === "all-projects");
+      const shared = input.credentialScope === "all-projects" && key.projectId !== null;
+      if (input.origin !== undefined && !shared)
+        throw new ConnectionRemovalInputError(
+          "A server origin requires all-projects revocation of a project connection.",
+        );
+      if (input.origin !== undefined) return removeConnection(deps, key, validateSharedOrigin(input.origin));
+      return removeConnection(deps, key, shared ? await sharedOriginForRemoval(deps, key) : undefined);
     });
   const reconcile = () => mutate(() => reconcileConnections(deps));
   const prepareProjectRemoval = async (projectId: string) => {

@@ -287,9 +287,18 @@ test("two shared sign-ins at different origins keep each project's credential", 
     expect(f.received).toEqual(["Bearer first-origin"]);
     expect(otherReceived).toEqual(["Bearer second-origin"]);
     expect(await f.secrets.listRefs()).toHaveLength(2);
-    await f.connections.remove({ ...f.key("second"), credentialScope: "all-projects" });
-    await f.request("first");
+    await f.connections.remove(f.key("first"));
+    await f.connections.remove({
+      ...f.key("first"),
+      credentialScope: "all-projects",
+      origin: f.server.url.origin,
+    });
+    await expect(f.configure("first")).rejects.toThrow("credential is required");
+    await f.request("second");
+    expect(otherReceived).toEqual(["Bearer second-origin", "Bearer second-origin"]);
     expect(await f.secrets.listRefs()).toHaveLength(1);
+    await f.connections.remove({ ...f.key("second"), credentialScope: "all-projects" });
+    expect(await f.secrets.listRefs()).toEqual([]);
   } finally {
     other.stop(true);
     await f.cleanup();
@@ -306,8 +315,44 @@ test("projects using a shared sign-in retain their own connection health", async
     await f.request("second");
     expect((await f.connections.list("first"))[0]?.lastCheck).toMatchObject({ ok: true, status: 200 });
     expect((await f.connections.list("second"))[0]?.lastCheck).toMatchObject({ ok: false, status: 403 });
+
+    f.setStatus(200);
+    await f.request("second");
+    expect((await f.connections.list("second"))[0]?.lastCheck).toMatchObject({ ok: true, status: 200 });
+    await f.configure("first", "rotated-credential");
+    expect((await f.connections.list("second"))[0]).toMatchObject({ configured: true, lastCheck: null });
+    await f.request("second");
+    expect(f.received.at(-1)).toBe("Bearer rotated-credential");
+    expect((await f.connections.list("second"))[0]?.lastCheck).toMatchObject({ ok: true, status: 200 });
     expect(await f.secrets.listRefs()).toHaveLength(1);
   } finally {
+    await f.cleanup();
+  }
+});
+
+test("a detached sign-in ignores another contribution with a longer matching ID", async () => {
+  const f = await setup();
+  const received: string[] = [];
+  const other = Bun.serve({
+    port: 0,
+    fetch: (request) => {
+      received.push(request.headers.get("authorization")!);
+      return Response.json({ ok: true });
+    },
+  });
+  try {
+    const primary = f.key("first");
+    const neighbor = { ...primary, connectionId: `${primary.connectionId}:neighbor%2Fescaped` };
+    await f.configure("first", "primary-credential");
+    await f.connections.configure({ ...neighbor, baseUrl: other.url.origin, secret: "neighbor-credential" });
+    await f.connections.remove(primary);
+    await f.connections.remove({ ...primary, credentialScope: "all-projects" });
+    await expect(f.configure("first")).rejects.toThrow("credential is required");
+    await f.connections.request({ ...neighbor, input: { method: "GET", path: "/v1/workspaces" } });
+    expect(received).toEqual(["Bearer neighbor-credential"]);
+    expect(await f.secrets.listRefs()).toHaveLength(1);
+  } finally {
+    other.stop(true);
     await f.cleanup();
   }
 });

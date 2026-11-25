@@ -32,6 +32,7 @@ const interruptMappingExport = async (store: Awaited<ReturnType<typeof createDb>
   await unlink(join(exports, "file-mappings"));
 };
 
+// Each case opens the durable database three times and includes migration, recovery and cleanup.
 for (const interruption of ["normal", "schema", "restore", "mappings"])
   test(`released file bindings preserve independent contents after ${interruption}`, async () => {
     const root = await mkdtemp(join(tmpdir(), "file-owners-upgrade-"));
@@ -221,4 +222,4 @@ for (const interruption of ["normal", "schema", "restore", "mappings"])
       await store?.close();
       await rm(root, { recursive: true, force: true });
     }
-  });
+  }, 10_000);

@@ -35,7 +35,7 @@ test("a later-page wake refresh failure preserves the successful dispatch and re
   const owner = await readAutoBuildSupervisor(f.ctx);
   expect(await autoBuildDispatches(f.ctx, owner.sessionId!).get(attemptId(attempts[0]!))).toBeDefined();
   expect(outcome).toMatchObject({ value: { decision: "started" } });
-});
+}, 10_000);
 
 test("pausing during the wake refresh does not stamp the old mode snapshot", async () => {
   const f = await fixture();

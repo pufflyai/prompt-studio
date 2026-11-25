@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import type { ExtensionConnectionCheck } from "../../db/schemas/credentials";
@@ -27,8 +28,7 @@ export const connectionPreference = ({ projectId, extensionId, contributionId }:
   key: `connection:${contributionId}`,
   sync: projectId === null ? ("device" as const) : ("team" as const),
 });
-// A declaration's global configuration and a user-selected shared credential
-// for project configurations can coexist. Local contribution IDs cannot contain ":".
+// Keep global configurations separate from shared credentials for project connections.
 export const configuredCredentialKey = (key: ConnectionKey, projectId = key.projectId) => ({
   ...key,
   projectId: key.projectId === null ? null : projectId,
@@ -39,6 +39,12 @@ export const connectionCheckPreference = (key: ConnectionKey) => ({
   key: `connection-check:${key.contributionId}`,
   sync: "device" as const,
 });
+const credentialVersion = (secretRef: string) => createHash("sha256").update(secretRef).digest("hex");
+export const connectionCheckValue = (check: ExtensionConnectionCheck, secretRef: string) => ({
+  credentialVersion: credentialVersion(secretRef),
+  check,
+});
+
 const wherePreference = (key: ReturnType<typeof connectionPreference>) =>
   and(
     eq(preferences.scope, key.scope),
@@ -65,13 +71,15 @@ export const createExtensionConnectionsDBService = (db: DbClient) => {
         .from(preferences)
         .where(wherePreference(connectionCheckPreference(key))),
     ]);
+    const recorded = check?.value as ReturnType<typeof connectionCheckValue> | undefined;
     return {
       ...config,
       project_id: key.projectId,
       extension_id: key.extensionId,
       contribution_id: key.contributionId,
       secret_ref: credential?.secret_ref ?? null,
-      last_check_json: credential ? ((check?.value as ExtensionConnectionCheck | undefined) ?? null) : null,
+      last_check_json:
+        credential && recorded?.credentialVersion === credentialVersion(credential.secret_ref) ? recorded.check : null,
       credential_project_id: credential?.project_id,
       updated_at: row.updated_at,
     };
@@ -143,19 +151,23 @@ export const createExtensionConnectionsDBService = (db: DbClient) => {
     listAll: () => list(),
     listByExtension: (projectId: string, extensionId: string) =>
       list(and(eq(preferences.project_id, projectId), eq(preferences.extension_id, extensionId))),
-    async remove(input: ConnectionKey, allProjects = false) {
-      const existing = await get(input);
-      if (!existing) return null;
+    async remove(input: ConnectionKey, sharedOrigin?: string) {
       return db.transaction(async (tx) => {
-        await tx.delete(preferences).where(whereKey(input));
-        await tx.delete(preferences).where(wherePreference(connectionCheckPreference(input)));
+        const [row] = await tx.select({ value: preferences.value }).from(preferences).where(whereKey(input));
+        const config = row?.value as ConnectionConfiguration | undefined;
+        const removeLocal = config && (!sharedOrigin || credentialProvider(config.base_url) === sharedOrigin);
+        if (!removeLocal && !sharedOrigin) return null;
+
         const store = createExtensionCredentialsDBService(tx);
-        const local = await store.remove(configuredCredentialKey(input));
-        const shared =
-          allProjects && input.projectId !== null
-            ? await store.remove(sharedCredentialKey(input, credentialProvider(existing.base_url)))
-            : null;
-        return [local, shared].flatMap((credential) => (credential ? [credential.secret_ref] : []));
+        const shared = sharedOrigin ? await store.remove(sharedCredentialKey(input, sharedOrigin)) : null;
+        const refs = shared ? [shared.secret_ref] : [];
+        if (removeLocal) {
+          await tx.delete(preferences).where(whereKey(input));
+          await tx.delete(preferences).where(wherePreference(connectionCheckPreference(input)));
+          const local = await store.remove(configuredCredentialKey(input));
+          if (local) refs.push(local.secret_ref);
+        }
+        return refs;
       });
     },
     async recordCheck(
@@ -172,12 +184,13 @@ export const createExtensionConnectionsDBService = (db: DbClient) => {
         const store = createExtensionCredentialsDBService(tx);
         const credential = await store.resolve(configuredCredentialKey(input), credentialProvider(config.base_url));
         if (credential?.secret_ref !== expected.secret_ref) return;
+        const value = connectionCheckValue(check, credential.secret_ref);
         await tx
           .insert(preferences)
-          .values({ ...connectionCheckPreference(input), value: check, updated_at: check.checkedAt })
+          .values({ ...connectionCheckPreference(input), value, updated_at: check.checkedAt })
           .onConflictDoUpdate({
             target: [preferences.scope, preferences.scope_id, preferences.extension_id, preferences.key],
-            set: { value: check, updated_at: check.checkedAt },
+            set: { value, updated_at: check.checkedAt },
           });
       });
     },

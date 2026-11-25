@@ -6,6 +6,7 @@ import {
 } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
+import { ConnectionRemovalInputError } from "../extension-connection-transport";
 
 const connectionParams = z
   .object({ projectId: z.string(), extensionId: z.string(), connectionId: z.string() })
@@ -48,10 +49,18 @@ export const deleteExtensionConnectionRoute = createRoute({
   tags: ["Extensions"],
   request: {
     params: connectionParams,
-    query: z.object({ credentialScope: z.enum(["all-projects", "project"]).optional() }).strict(),
+    query: z
+      .object({
+        credentialScope: z.enum(["all-projects", "project"]).optional(),
+        origin: z.url().optional().openapi({
+          description: "Server origin for all-projects revocation, including after project configuration is removed.",
+        }),
+      })
+      .strict(),
   },
   responses: {
-    204: { description: "Removed extension connection." },
+    204: { description: "Revoked the requested connection or shared sign-in, or it was already absent." },
+    400: { description: "Invalid or ambiguous revocation.", content: { "application/json": { schema: errorSchema } } },
   },
 });
 
@@ -91,8 +100,13 @@ export const configureExtensionConnectionHandler =
 export const deleteExtensionConnectionHandler =
   (deps: ExtensionsRouteDeps): AppRouteHandler<typeof deleteExtensionConnectionRoute> =>
   async (c) => {
-    await deps.extensionConnectionService.remove({ ...c.req.valid("param"), ...c.req.valid("query") });
-    return c.body(null, 204);
+    try {
+      await deps.extensionConnectionService.remove({ ...c.req.valid("param"), ...c.req.valid("query") });
+      return c.body(null, 204);
+    } catch (error) {
+      if (!(error instanceof ConnectionRemovalInputError)) throw error;
+      return c.json({ error: error.message }, 400);
+    }
   };
 
 export const checkExtensionConnectionHandler =

@@ -190,7 +190,12 @@ export const createTextEditingService = (deps: TextEditingDeps) => {
       for (const event of connection.buffered.values()) listener(event);
       if (connection.barrier && !bufferedBarrier) listener({ type: "prepareClose", barrierId: connection.barrier.id });
       connection.buffered.clear();
-      for (const member of connection.members.values()) observeTextMember(deps, connection, member);
+      for (const member of connection.members.values()) {
+        // A reconnecting client can listen before the server notices its old stream closed.
+        // An observation that is still running must send the new listener the current state.
+        member.refresh?.();
+        observeTextMember(deps, connection, member);
+      }
       return () => {
         connection.listeners.delete(listener);
         if (!connection.listeners.size) for (const member of connection.members.values()) member.stop?.();
