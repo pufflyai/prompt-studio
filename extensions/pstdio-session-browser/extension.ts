@@ -126,9 +126,8 @@ const quotasPage = definePage({
   id: "quotas",
   title: l10n("quotas.title", "Quotas"),
   icon: "gauge",
-  path: "conversations/quotas",
+  path: "quotas",
   mode: workbenchModes.project,
-  parent: sessions.ref,
   main: { kind: "view", view: quotasView.ref, cardinality: "one", presentation: "page" },
   slots: [],
 });
@@ -228,7 +227,7 @@ export default defineExtension({
   navigationItems: [
     defineNavigationItem({
       id: "quotas",
-      owner: sessions.ref,
+      owner: workbenchModes.project,
       label: l10n("quotas.title", "Quotas"),
       icon: "gauge",
       action: { kind: "page", page: quotasPage.ref },

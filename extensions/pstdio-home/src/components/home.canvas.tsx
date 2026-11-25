@@ -1,6 +1,8 @@
 import { Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { recentProjectResources } from "../recent-resources";
+import { HomePromptCarousel } from "./home-prompt-carousel";
+import { HomeWelcome } from "./home-welcome";
 import { ProjectSetupStatus } from "./project-setup-status";
 import { StartRecentList } from "./start-recent-list";
 
@@ -27,6 +29,7 @@ const StartPagePreview = (props: StartPagePreviewProps) => {
   return (
     <Stack w="full" maxW="52rem" pt="4xl" pb="3xl" gap="3xl" position="relative">
       {setupError && <ProjectSetupStatus error={setupError} onRetry={() => undefined} />}
+      <HomeWelcome />
       <StartRecentList
         resources={recentProjectResources(
           (empty ? [] : resources).map(({ id, title, icon, status }) => ({
@@ -42,6 +45,7 @@ const StartPagePreview = (props: StartPagePreviewProps) => {
         )}
         onOpen={() => undefined}
       />
+      <HomePromptCarousel />
     </Stack>
   );
 };

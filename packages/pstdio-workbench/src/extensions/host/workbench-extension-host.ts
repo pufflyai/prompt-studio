@@ -1,5 +1,5 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { contributionRefId, matchesResourceWhen } from "@pstdio/sdk/extensions";
+import { matchesResourceWhen } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type { Disposable, WorkbenchCommandExecutionContext } from "../../core";
 import { workbenchCommandPaletteMenuPath } from "../../core";
@@ -186,14 +186,7 @@ const registerStatusBarItems = (input: InternalRegisterWorkbenchExtensionContrib
     }),
   );
 const registerPages = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
-  input.metadata.pages.map((page) => {
-    const { pages, views } = input.workbench;
-    const { main } = page;
-    if (main.kind === "view" && main.intro && !views.getView(contributionRefId(main.view))) {
-      return pages.registerPage({ ...page, main: { ...main, view: main.intro, intro: undefined } });
-    }
-    return pages.registerPage(page);
-  });
+  input.metadata.pages.map((page) => input.workbench.pages.registerPage(page));
 const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
   input.metadata.modes.map((mode) =>
     input.workbench.modes.registerMode({

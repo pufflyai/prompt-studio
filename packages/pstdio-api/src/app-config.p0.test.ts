@@ -49,4 +49,16 @@ describe("resolveAppConfig", () => {
       }),
     ).toThrow("PSTDIO_EXTENSION_SOURCE_ROOT requires PSTDIO_EXTENSION_RELEASE_REF");
   });
+
+  test("uses the running source checkout for catalog operations unless a release is configured", () => {
+    const defaults = { defaultExtensionReleaseRef: "pstdio@0.48.0", defaultExtensionSourceRoot: "/workspace/repo" };
+    expect(resolveAppConfig({ ...defaults, env: {} }).extensions.release).toEqual({
+      source: "workspace",
+      root: "/workspace/repo",
+      ref: "pstdio@0.48.0",
+    });
+    expect(
+      resolveAppConfig({ ...defaults, env: { PSTDIO_EXTENSION_RELEASE_REF: "pstdio@0.49.0" } }).extensions.release,
+    ).toEqual({ source: "git", ref: "pstdio@0.49.0" });
+  });
 });

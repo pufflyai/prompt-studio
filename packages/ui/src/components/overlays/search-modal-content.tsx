@@ -57,35 +57,37 @@ export const SearchModalContent = (props: SearchModalContentProps) => {
 
   return (
     <>
-      <Dialog.Header px="0" py="0" minH="3rem" borderBottomWidth="1px" borderBottomColor="border.subtle">
-        {title && (
-          <Dialog.Title srOnly={showSearch} px="sm" py="sm">
-            {title}
-          </Dialog.Title>
-        )}
-        {showSearch && (
-          <InputGroup startElement={searchIcon} width="full">
-            <Input
-              ref={searchInputRef}
-              value={searchValue}
-              placeholder={searchPlaceholder}
-              aria-label={searchAriaLabel}
-              autoComplete="off"
-              autoFocus={searchAutoFocus}
-              mx="xs"
-              h="3rem"
-              variant="borderless"
-              onChange={(event) => onSearchChange(event.target.value)}
-              onKeyDown={onSearchKeyDown}
-            />
-          </InputGroup>
-        )}
-        {showCloseButton ? (
-          <Dialog.CloseTrigger asChild>
-            <CloseButton aria-label={closeButtonLabel} size="sm" mr="2" />
-          </Dialog.CloseTrigger>
-        ) : null}
-      </Dialog.Header>
+      {(title || showSearch || showCloseButton) && (
+        <Dialog.Header px="0" py="0" minH="3rem" borderBottomWidth="1px" borderBottomColor="border.subtle">
+          {title && (
+            <Dialog.Title srOnly={showSearch} px="sm" py="sm">
+              {title}
+            </Dialog.Title>
+          )}
+          {showSearch && (
+            <InputGroup startElement={searchIcon} width="full">
+              <Input
+                ref={searchInputRef}
+                value={searchValue}
+                placeholder={searchPlaceholder}
+                aria-label={searchAriaLabel}
+                autoComplete="off"
+                autoFocus={searchAutoFocus}
+                mx="xs"
+                h="3rem"
+                variant="borderless"
+                onChange={(event) => onSearchChange(event.target.value)}
+                onKeyDown={onSearchKeyDown}
+              />
+            </InputGroup>
+          )}
+          {showCloseButton ? (
+            <Dialog.CloseTrigger asChild>
+              <CloseButton aria-label={closeButtonLabel} size="sm" mr="2" />
+            </Dialog.CloseTrigger>
+          ) : null}
+        </Dialog.Header>
+      )}
       <Dialog.Body p="0">
         {bodyBefore}
         <ScrollArea maxH={maxH} showHorizontalScrollbar={showHorizontalScrollbar} {...restScrollAreaProps}>

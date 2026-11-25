@@ -1,5 +1,5 @@
 import { Box, Button, Grid, HStack, Stack, Text } from "@chakra-ui/react";
-import { ScopedMenu as Menu } from "@pstdio/ui";
+import { EmptyState, ScopedMenu as Menu } from "@pstdio/ui";
 import { useState } from "react";
 import { quotaSeries } from "../quota-history";
 import { quotaSelection } from "../quota-selection";
@@ -27,10 +27,23 @@ export const QuotaGraph = (props: QuotaGraphProps) => {
   const [selectedId, setSelectedId] = useState<string>();
   const { available, selected } = quotaSelection(providers, selectedId);
   if (!selected && !error) {
+    if (loading)
+      return (
+        <Text color="fg.muted" role="status">
+          Checking quotas…
+        </Text>
+      );
     return (
-      <Text color="fg.muted" role="status">
-        {loading ? "Checking quotas…" : "No agent quotas are available."}
-      </Text>
+      <EmptyState
+        role="status"
+        icon={<QuotaIcon name="gauge" />}
+        title="No agent quotas are available"
+        description={
+          providers.length > 0
+            ? "Your enabled harnesses haven’t reported quota data."
+            : "Enable a harness that reports account usage to see quotas here."
+        }
+      />
     );
   }
   const singleLimit = selected?.limits.length === 1 ? selected.limits[0] : undefined;

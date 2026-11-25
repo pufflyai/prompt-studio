@@ -1,4 +1,4 @@
-import { Box, Stack, Text } from "@chakra-ui/react";
+import { Stack, Text } from "@chakra-ui/react";
 import { ListRow, SessionIndicator } from "@pstdio/ui";
 import type { RecentProjectResource } from "../recent-resources";
 import { HomeIcon as WorkbenchIcon } from "./home-icon";
@@ -10,6 +10,7 @@ interface StartRecentListProps {
 
 export const StartRecentList = (props: StartRecentListProps) => {
   const { resources, onOpen } = props;
+  if (resources.length === 0) return null;
 
   return (
     <Stack gap="sm" minW="0">
@@ -35,13 +36,6 @@ export const StartRecentList = (props: StartRecentListProps) => {
             onActivate={() => onOpen(resource)}
           />
         ))}
-        {resources.length === 0 ? (
-          <Box px="sm" py="md">
-            <Text textStyle="label/S/regular" color="fg.muted">
-              Nothing opened yet
-            </Text>
-          </Box>
-        ) : null}
       </Stack>
     </Stack>
   );

@@ -17,7 +17,7 @@ const emptyMain = (page: Page) => {
     .or(main.getByText("No tabs available", { exact: true }));
 };
 
-test("Home reopens recent resources and only starts a session when a person sends", async ({ page, request }) => {
+test("Home shows project ideas and reopens recently used resources", async ({ page, request }) => {
   const harness = "pstdio.workbench-fixture.harness.fake";
   const response = await request.post("/v1/projects", {
     data: folderProjectInput({ name: "Home actions", agents: [harness] }),
@@ -40,7 +40,9 @@ test("Home reopens recent resources and only starts a session when a person send
   await page.goto(`/projects/${project.id}`);
   await expect(homePage(page)).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio.home/home$`));
-  await expect(homeFrame(page).getByText("Nothing opened yet", { exact: true })).toBeVisible();
+  await expect(homeFrame(page).getByText("Recently Used", { exact: true })).toHaveCount(0);
+  await homeFrame(page).getByRole("button", { name: "Next idea", exact: true }).click();
+  await expect(homeFrame(page).getByRole("heading", { name: "Release checklist", exact: true })).toBeInViewport();
   const session = sessions[6];
   await page.goto(
     `/projects/${project.id}/session?resource=${encodeURIComponent(`pstdio://extension-resource/session/${session.id}`)}`,
@@ -57,26 +59,9 @@ test("Home reopens recent resources and only starts a session when a person send
   await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(sessions[6].title);
   await page.getByRole("button", { name: "Back to project", exact: true }).click();
   await page.getByRole("option", { name: "Home", exact: true }).click();
-  const composer = page.locator('[data-workbench-panel="main"] [data-workbench-composer]:visible');
-  const editor = composer.locator('[data-testid="content-editable"][contenteditable="true"]');
-  const send = composer.getByTestId("send-message-button");
-  const prompt = "Start a session from Home";
-  await editor.fill(prompt);
-  await expect(homePage(page)).toBeVisible();
-  const sessionsInProject = async () =>
-    (await (await request.get(`/v1/projects/${project.id}/sessions`)).json()) as {
-      items: { title: string }[];
-    };
-  expect((await sessionsInProject()).items).toHaveLength(7);
-  await expect(send).toBeEnabled();
-  await send.click();
-  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(prompt);
-  await expect
-    .poll(async () => (await sessionsInProject()).items.filter((item) => item.title === prompt))
-    .toHaveLength(1);
-  await expect(page.getByRole("main").getByRole("log").getByText(prompt, { exact: true })).toBeVisible();
+  await expect(homeFrame(page).getByText("Recently Used", { exact: true })).toBeVisible();
   await page.getByRole("option", { name: "Quotas", exact: true }).click();
-  await expect(page).toHaveURL(/conversations\/quotas$/);
+  await expect(page).toHaveURL(/\/quotas$/);
   await expect(page.locator('iframe[title="Quotas"]')).toBeVisible();
 });
 

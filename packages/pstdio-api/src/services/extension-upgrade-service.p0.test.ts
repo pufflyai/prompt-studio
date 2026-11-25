@@ -61,6 +61,27 @@ const idleExtensionService = {
 
 const emptyWorkspaceService = { getDefault: async () => null };
 
+test("offers the source checkout for a Codex harness incompatible with the running host", async () => {
+  const releaseCommit = "d".repeat(40);
+  const resolveReleaseCommit = mock(async () => releaseCommit);
+  const service = createExtensionUpgradeService({
+    extensionService: idleExtensionService,
+    release: { source: "workspace", ref: "pstdio@0.48.0", root: "/workspace/repo" },
+    resolveReleaseCommit,
+    workspaceService: emptyWorkspaceService,
+  });
+
+  const codex = {
+    ...installedSource,
+    install_name: "harness-codex",
+    extension_id: "pstdio.harness-codex",
+    manifest_json: { name: "harness-codex", enginesPstdio: "^0.4.0 || ^0.5.0" },
+    source_ref: namedSourceRef(releaseCommit, "harness-codex"),
+  };
+  expect(await service.canUpgrade(codex)).toBe(true);
+  expect(resolveReleaseCommit).not.toHaveBeenCalled();
+});
+
 describe("extension upgrade service", () => {
   test("a host extension the release catalog no longer lists has no upgrade", async () => {
     const resolveReleaseCommit = mock(async () => "f".repeat(40));

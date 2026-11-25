@@ -36,7 +36,7 @@ Session history loads the next bounded page as the person scrolls toward its end
 
 ## Quotas
 
-Open **Quotas** in Sessions navigation to see supported provider windows, usage, forecast and reset times. The page refreshes automatically while open. Sessions also collects hourly samples and retains eight days of readings. It imports recent saved samples from Home when they are available.
+Open **Quotas** from the project navigation to see supported provider windows, usage, forecast and reset times. If no enabled harness reports quota data, Quotas shows an empty state. The page refreshes automatically while open. Sessions also collects hourly samples and retains eight days of readings. It imports recent saved samples from Home when they are available.
 
 ## Local development and release
 

@@ -5,9 +5,7 @@ import {
   definePage,
   defineView,
   l10n,
-  type PageMainView,
   packageAsset,
-  sessionBrowser,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { commands } from "./src/commands";
@@ -18,25 +16,16 @@ const view = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./src/view.tsx", import.meta.url),
-    capabilities: ["commands.query", "commands.execute", "navigation.open"],
+    capabilities: ["commands.query", "commands.execute", "navigation.open", "clipboard.write"],
   },
 });
-const withRecentResources = {
-  kind: "view",
-  view: sessionBrowser.views.conversation,
-  intro: view.ref,
-  cardinality: "one",
-  presentation: "page",
-} as const;
-// The published SDK accepts the standalone view shape. Newer hosts also render the intro.
-const mainView: PageMainView = withRecentResources;
 export const home = definePage({
   id: "home",
   title: l10n("home.title", "Home"),
   icon: "house",
   path: "home",
   mode: workbenchModes.project,
-  main: mainView,
+  main: { kind: "view", view: view.ref, cardinality: "one", presentation: "page" },
   slots: [],
 });
 const target = { kind: "page" as const, page: home.ref };

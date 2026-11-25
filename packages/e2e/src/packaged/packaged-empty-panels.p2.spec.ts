@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
-import { homeFrame, verifyPageHeaders } from "../helpers/home-loading";
+import { homePage, verifyPageHeaders } from "../helpers/home-loading";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { type Browser, chromium, expect, test } from "../scripts/playwright-test";
 import { verifyEmptyPanelAddition } from "./packaged-empty-panel-addition";
@@ -50,10 +50,10 @@ test("adding a tool keeps the other empty panel open", async () => {
     const page = await browser.newPage();
     phase("browser ready; sign in");
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-    await signInBrowser(page, started.descriptor);
+    await signInBrowser(page, started.descriptor, `/projects/${project.id}/`);
     phase("signed in; open project");
     await page.goto(`${started.baseUrl}/projects/${project.id}/`);
-    await expect(homeFrame(page).getByText("Recently Used", { exact: true })).toBeVisible();
+    await expect(homePage(page)).toBeVisible();
     await expect(
       page.locator('[data-workbench-panel="main"]').getByLabel("Available tabs", { exact: true }),
     ).toHaveCount(0);

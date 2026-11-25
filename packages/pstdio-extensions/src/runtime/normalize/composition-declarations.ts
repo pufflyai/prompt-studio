@@ -93,7 +93,6 @@ export const pageDeclarationSchema = z
         .object({
           kind: z.literal("view"),
           view: localRefSchema("view"),
-          intro: localRefSchema("view").optional(),
           cardinality: z.enum(["one", "many"]),
           presentation: z.enum(["page", "tabs"]).optional(),
           empty: empty.optional(),

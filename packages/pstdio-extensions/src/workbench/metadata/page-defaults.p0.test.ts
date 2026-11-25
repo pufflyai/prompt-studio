@@ -6,7 +6,7 @@ import type { LoadedExtensionSource } from "../../runtime/loader";
 import { normalizeExtensionSources } from "../../runtime/normalize";
 import { createWorkbenchExtensionMetadata } from "./workbench-extension-metadata";
 
-test("page header defaults, introductory views and empty views survive normalization and metadata serialization", () => {
+test("page header defaults and empty views survive normalization and metadata serialization", () => {
   const view = defineView({
     id: "editor",
     title: "Editor",
@@ -21,7 +21,6 @@ test("page header defaults, introductory views and empty views survive normaliza
     main: {
       kind: "view",
       view: view.ref,
-      intro: view.ref,
       cardinality: "one",
       empty: {
         view: view.ref,
@@ -61,7 +60,6 @@ test("page header defaults, introductory views and empty views survive normaliza
   );
   expect(metadata.pages[0].regionSettings).toEqual(page.regionSettings);
   const main = metadata.pages[0].main;
-  expect(main.kind === "view" && main.intro).toEqual({ extensionId: "example.lab", kind: "view", id: "editor" });
   expect(main.kind === "view" && main.empty).toMatchObject({
     view: { extensionId: "example.lab", kind: "view", id: "editor" },
     breadcrumb: {

@@ -121,7 +121,6 @@ const previewMain = (
     : {
         ...main,
         view: previewRef(main.view),
-        intro: main.intro ? previewRef(main.intro) : undefined,
         empty: previewEmpty(main.empty),
         tab: tab(`${pageId}.$main`, main.tab),
       };

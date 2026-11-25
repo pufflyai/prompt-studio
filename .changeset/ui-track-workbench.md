@@ -13,4 +13,4 @@
 "skills": patch
 ---
 
-Start chats from Home, preview linked resources in Side, use Markdown Find and passage comments, and read workbench context from an attached agent.
+Explore Home customization prompts, see quotas in project navigation, preview linked resources in Side, use Markdown Find and passage comments, and read workbench context from an attached agent.

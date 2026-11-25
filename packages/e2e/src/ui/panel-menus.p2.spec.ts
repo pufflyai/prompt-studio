@@ -1,5 +1,5 @@
 import { folderProjectInput } from "../helpers/folder-project";
-import { homeFrame } from "../helpers/home-loading";
+import { homePage } from "../helpers/home-loading";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { switchSession } from "../helpers/session-side-panel";
 import { verifyNativePublicTextEditor } from "../helpers/verify-public-text-editor";
@@ -70,7 +70,7 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
   }, project.id);
   await page.goto(`/projects/${project.id}/`);
   // Project boot can still apply its saved panel layout after the shell mounts.
-  await expect(homeFrame(page).getByText("Recently Used", { exact: true })).toBeVisible();
+  await expect(homePage(page)).toBeVisible();
   const { header: sideHeader, tabs: sessionTabs } = await openSideNewSession(page);
   await addSideNewSession(page);
 
@@ -137,7 +137,7 @@ test("switches a pinned Session tab in place from its menu", async ({ page, requ
   }, project.id);
   await page.goto(`/projects/${project.id}/`);
   // Project boot can still apply its saved panel layout after the shell mounts.
-  await expect(homeFrame(page).getByText("Recently Used", { exact: true })).toBeVisible();
+  await expect(homePage(page)).toBeVisible();
   const { header: sideHeader, tabs: sessionTabs } = await openSideNewSession(page);
   const previewId = await sessionTabs.first().getAttribute("id");
   // The + button opens a pinned tab; its menu must switch that tab and leave the preview alone.
@@ -172,7 +172,7 @@ test("updates a New session Sub Panel in place after the first message", async (
   }, project.id);
   await page.goto(`/projects/${project.id}/`);
   // Project boot can still apply its saved panel layout after the shell mounts.
-  await expect(homeFrame(page).getByText("Recently Used", { exact: true })).toBeVisible();
+  await expect(homePage(page)).toBeVisible();
   const { header: sideHeader, panel: sidePanel, tabs: sessionTabs } = await openSideNewSession(page);
   const added = await addSideNewSession(page);
   const activeTab = sideHeader.getByRole("tab", { selected: true });

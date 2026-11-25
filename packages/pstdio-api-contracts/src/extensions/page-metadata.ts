@@ -25,7 +25,6 @@ const mainSchema = z.discriminatedUnion("kind", [
     .extend({
       kind: z.literal("view"),
       view: viewRefSchema,
-      intro: viewRefSchema.optional(),
       cardinality: z.enum(["one", "many"]),
       presentation: z.enum(["page", "tabs"]).optional(),
       empty: emptySchema.optional(),

@@ -7,10 +7,12 @@ import {
   workbenchCommands,
 } from "@pstdio/sdk/extensions";
 import { useWebviewCommandQuery, useWebviewScope, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
-import { AlertMessage, ChakraProvider, psTheme } from "@pstdio/ui";
+import { AlertMessage, ChakraProvider, psTheme, ScrollArea } from "@pstdio/ui";
 import { Activity, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import type { commands } from "./commands";
+import { HomePromptCarousel } from "./components/home-prompt-carousel";
+import { HomeWelcome } from "./components/home-welcome";
 import { ProjectSetupStatus } from "./components/project-setup-status";
 import { StartRecentList } from "./components/start-recent-list";
 import { homeQueries } from "./home-queries";
@@ -94,6 +96,7 @@ export const HomeApp = (props: AppProps) => {
           }}
         />
       )}
+      <HomeWelcome />
       <StartRecentList
         resources={recentProjectResources(recent.data ?? [])}
         onOpen={(recent) => {
@@ -102,6 +105,7 @@ export const HomeApp = (props: AppProps) => {
             .catch((error) => setNavigationError(String(error)));
         }}
       />
+      <HomePromptCarousel />
     </Stack>
   );
 };
@@ -119,7 +123,9 @@ const View = (props: AppProps) => {
   return (
     <ChakraProvider value={psTheme}>
       <Activity mode={visible ? "visible" : "hidden"}>
-        <HomeApp key={hostProps.projectId} context={context} />
+        <ScrollArea h="full">
+          <HomeApp key={hostProps.projectId} context={context} />
+        </ScrollArea>
       </Activity>
     </ChakraProvider>
   );

@@ -1,6 +1,6 @@
 # Home
 
-The default project home page is provided by `pstdio.home`. It shows the five most recently opened resources, the standard Sessions composer and setup recovery. It reads project data through the public SDK without storing a second copy.
+The default project home page is provided by `pstdio.home`. It shows a welcome message, up to five recently opened resources, prompt ideas, and setup recovery. It reads project data through the public SDK without storing a second copy.
 
 Home contributes an ordinary `home` page and webview with a Go → H action. Prompt Studio configures this page directly as its project default. The shell owns project-root URLs, saved destinations and tool search. If Home is disabled or uninstalled, the dashboard uses its existing empty-panel UI. Sessions and workspaces remain available.
 
@@ -14,8 +14,8 @@ The Canvas baseline is `src/components/home.canvas.tsx`: `Default`, `SetupDidNot
 
 Home pins the published SDK and UI nightly `0.47.0-nightly.20261104030253` and includes a standalone `bun.lock`. Its public API prerequisite landed in [PR #1687](https://github.com/pufflyai/prompt-studio/pull/1687). Dependency updates must use real published versions and regenerate the extension lockfile through the [supported release workflow](../../documentation/guides/development/0014-sdk-ui-previews.md).
 
-## Start a session
+## Customize Home
 
-Type in the composer below **Recently Used**. The text stays in a draft until you send it. Sending opens the new conversation with its first message. Find provider usage under **Sessions → Quotas**. Recently Used stays available when the Sessions extension is disabled.
+Browse the ideas on Home and copy a prompt into an agent conversation to get started. Open a new conversation from **Sessions** or the chat bubble. Open **Quotas** from the main project navigation to check provider usage.
 
 *Updated at: 2026-11-25*
