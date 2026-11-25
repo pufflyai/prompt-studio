@@ -6,3 +6,6 @@ export { describeProductionPayload } from "./production-payload";
 export * from "./test-file-shards";
 export * from "./test-fixture-profiles";
 export * from "./test-quarantine";
+
+// Release acceptance measures the first usable upgraded project on every qualifying run.
+export const projectUpgradeLimitMs = 12_000;

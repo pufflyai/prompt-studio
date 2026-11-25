@@ -136,6 +136,7 @@ A red `main` usually means a startup smoke failure or a cache problem. Fix it be
 - It builds a nightly only if `main` changed since the last published nightly. If `main` did not change, it validates the last nightly's files again.
 - It versions the packages on a tag, never on `main`.
 - It builds and publishes the npm packages, containers, and signed desktop apps for Linux x64 and Apple Silicon. Before publishing, both platforms must pass the populated-project upgrade from the latest stable release and, when available, the preceding published nightly. The other production diagnostics run independently.
+- Each populated upgrade from stable or a previous nightly must finish and allow an edit to be saved and read back within 12 seconds of starting the candidate. The signed desktop also opens and edits a project from the released schema with 90,000 private history entries and 90,000 source rows. Each measurement must pass on its own. Fixture creation, verification after shutdown, and artifact uploads are outside the measurement.
 - **Production validation** runs on the same files:
   - P0, P1 and P2 on Linux, with up to twelve P2 app shards; native desktop and packaged CLI checks also run on Apple Silicon
   - P1 and P2 against the signed desktop apps. When the run validates signed release files, the source desktop jobs keep only the source Electron checks, so each packaged desktop case runs once.

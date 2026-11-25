@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { copyFile, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { migrate } from "drizzle-orm/pglite/migrator";
@@ -8,7 +8,7 @@ import { createDb } from "./connection.pglite";
 import { prepareHistoryOwnerUpgrade } from "./history-owner-upgrade";
 import { createTextLogOwnerFixture } from "./log-owner-upgrade.fixture";
 
-for (const interruption of ["normal", "schema", "restore"])
+for (const interruption of ["normal", "schema", "restore", "conflict"])
   test(`private history and its covered cursor survive ${interruption} ownership upgrade`, async () => {
     const root = await mkdtemp(join(tmpdir(), "history-owner-upgrade-"));
     const previous = await createTextLogOwnerFixture(root);
@@ -40,6 +40,21 @@ for (const interruption of ["normal", "schema", "restore"])
       if (interruption !== "normal") {
         const finish = await prepareHistoryOwnerUpgrade(previous.db, previous.path);
         await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        if (interruption === "conflict") {
+          await finish!();
+          // Replay a retained group beside a row edited by a different writer.
+          for (const [from, to] of [
+            ["history-rows", "history-row-owners"],
+            ["history-sources", "history-source-owners"],
+          ]) {
+            await copyFile(`${previous.path}-migration-exports/${from}.jsonl`, `${previous.path}-${to}-upgrade.jsonl`);
+          }
+          await previous.pglite.exec("UPDATE history_rows SET seed_id='different' WHERE record_id='session-100'");
+          const retry = await prepareHistoryOwnerUpgrade(previous.db, previous.path);
+          await expect(retry!()).rejects.toThrow("Private history restoration conflict");
+          expect(await Bun.file(`${previous.path}-history-row-owners-upgrade.jsonl`).exists()).toBe(true);
+          await previous.pglite.exec("UPDATE history_rows SET seed_id=NULL WHERE record_id='session-100'");
+        }
         if (interruption === "restore") {
           await previous.pglite.exec(`CREATE FUNCTION stop_history_restore() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN IF NEW.record_id='session-100' THEN RAISE EXCEPTION 'stop restoration'; END IF; RETURN NEW; END $$;

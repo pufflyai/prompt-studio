@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { isDeepStrictEqual, parseArgs } from "node:util";
 import { chromium, expect, type Page } from "@playwright/test";
-import { describeProductionPayload } from "pstdio-scripts/testing";
+import { describeProductionPayload, projectUpgradeLimitMs } from "pstdio-scripts/testing";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
@@ -159,6 +159,31 @@ const verifyRestart = async (
   compare(edited, restarted);
 };
 
+const verifyFirstProjectEdit = async (runtime: Runtime, fixture: Seed, start: number, evidence: string) => {
+  const api = upgradeApi(runtime.descriptor);
+  const path = `/projects/${fixture.id}`;
+  const rename = async (name: string) => {
+    const response = await api.raw(path, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    await response.json();
+  };
+  const edited = `${fixture.name} upgraded`;
+  assert.equal((await api.get<{ name: string }>(path)).name, fixture.name);
+  await rename(edited);
+  const saved = await api.get<{ name: string }>(path);
+  const elapsedMs = performance.now() - start;
+  assert.equal(saved.name, edited);
+  await record(evidence, "upgrade-to-usable-project", { elapsedMs, limitMs: projectUpgradeLimitMs });
+  assert(
+    elapsedMs <= projectUpgradeLimitMs,
+    `Upgrade and first saved project edit took ${elapsedMs.toFixed(0)} ms (limit ${projectUpgradeLimitMs} ms)`,
+  );
+  await rename(fixture.name);
+};
+
 const assertCurrentDatabase = async (home: string) => {
   const backups = new Bun.Glob("backups/pre-*-pstdio.db");
   assert.equal(
@@ -247,7 +272,9 @@ const run = async (
     await stopProcess(runtime.child);
     runtime = undefined;
     const home = await checkHomeHistory(input, state.fixture.id);
+    const start = performance.now();
     runtime = await launch(candidate, "upgrade");
+    await verifyFirstProjectEdit(runtime, state.fixture, start, input.evidence);
     await assertCurrentDatabase(input.home);
     const edited = await verify(runtime.descriptor, input.evidence, state, pair.expectedVersions);
     const routes = await workbenchRoutes(runtime.descriptor, state.fixture);
