@@ -52,8 +52,14 @@ function useAppliedDashboard(value: DashboardDefinition, editable: boolean) {
   return {
     saved: awaitingRefresh ? applied.definition : value,
     markApplied: (definition: DashboardDefinition) => {
-      const previousValue = committedValue.current;
-      setApplied(sameDefinition(definition, previousValue) ? null : { definition, previousValue });
+      const currentValue = committedValue.current;
+      const stillWaitingForValue =
+        sameDefinition(currentValue, value) || (awaitingRefresh && sameDefinition(currentValue, applied.definition));
+      setApplied(
+        stillWaitingForValue && !sameDefinition(definition, currentValue)
+          ? { definition, previousValue: currentValue }
+          : null,
+      );
     },
   };
 }

@@ -82,6 +82,8 @@ test("edits custom widgets from the page toolbar", async ({ page }) => {
   const dragPreview = preview.locator("[data-dashboard-drag-bubble]");
   await widget.getByRole("button", { name: "Drag Build history", exact: true }).press("Space");
   await expect(dragPreview).toHaveText("Build history");
+  // The keyboard sensor registers its document listener on the next browser task.
+  await dragPreview.evaluate(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
   await page.keyboard.press("Escape");
   await expect(dragPreview).toBeHidden();
   await toolbar.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -239,6 +241,7 @@ async function openDelayedDashboardSave(page: Page) {
   const apply = toolbar.getByRole("button", { name: "Apply", exact: true });
   const complete = toolbar.getByRole("button", { name: "Complete save", exact: true });
   const refresh = toolbar.getByRole("button", { name: "Refresh saved dashboard", exact: true });
+  const publishCorrection = toolbar.getByRole("button", { name: "Publish corrected dashboard", exact: true });
   const releaseMarker = widget.getByRole("button", { name: "Release marker", exact: true });
   const deploymentMarker = widget.getByRole("button", { name: "Deployment marker", exact: true });
   const selectSource = async (current: string, next: string, title?: string) => {
@@ -256,7 +259,18 @@ async function openDelayedDashboardSave(page: Page) {
     await complete.click();
     await expect(edit).toBeFocused();
   };
-  return { widget, edit, apply, complete, refresh, releaseMarker, deploymentMarker, selectSource, save };
+  return {
+    widget,
+    edit,
+    apply,
+    complete,
+    refresh,
+    publishCorrection,
+    releaseMarker,
+    deploymentMarker,
+    selectSource,
+    save,
+  };
 }
 
 // Critical: each successful save must show the latest widget controls while the caller refreshes its definition.
@@ -310,6 +324,30 @@ test("keeps the later applied widget when a previous save refreshes during Apply
   await refresh.click();
   await expect(releaseMarker).toHaveAttribute("aria-pressed", "false");
   await expect(recentBuilds).toBeVisible();
+});
+
+// Critical: Apply must display a caller-corrected layout and use it as the starting point for the next edit.
+test("uses the caller's corrected dashboard when it publishes before Apply completes", async ({ page }) => {
+  const { widget, edit, apply, complete, refresh, publishCorrection, deploymentMarker, selectSource } =
+    await openDelayedDashboardSave(page);
+  const corrected = widget.getByRole("article", { name: "RECENT DEPLOYMENTS", exact: true });
+  await selectSource("Build history", "Deployment history", "Recent deployments");
+  await deploymentMarker.click();
+
+  await apply.click();
+  await publishCorrection.click();
+  await expect(deploymentMarker).toHaveAttribute("aria-pressed", "false");
+  await complete.click();
+  await expect(edit).toBeFocused();
+  await expect(corrected).toBeVisible();
+  await expect(deploymentMarker).toHaveAttribute("aria-pressed", "false");
+
+  await refresh.click();
+  await expect(corrected).toBeVisible();
+  await edit.click();
+  await widget.hover();
+  await expect(widget.getByRole("button", { name: "Configure RECENT DEPLOYMENTS", exact: true })).toBeVisible();
+  await expect(deploymentMarker).toHaveAttribute("aria-pressed", "false");
 });
 
 // Critical: controlled layout edits must survive live data refresh and failed saves, and Cancel must not publish them.

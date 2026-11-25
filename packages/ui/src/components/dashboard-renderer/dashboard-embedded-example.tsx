@@ -66,15 +66,27 @@ export function DashboardEmbeddedExample(props: { deferRefresh?: boolean }) {
   const { deferRefresh = false } = props;
   const [value, setValue] = useState(initial);
   const [saved, setSaved] = useState<DashboardDefinition | null>(null);
-  const [completeSave, setCompleteSave] = useState<(() => void) | null>(null);
+  const [pendingSave, setPendingSave] = useState<{ complete: () => void; publishCorrection: () => void } | null>(null);
   return (
     <DashboardRenderer
       value={value}
       onChange={async (next) => {
         if (deferRefresh) {
-          await new Promise<void>((resolve) => setCompleteSave(() => resolve));
-          setCompleteSave(null);
-          setSaved(next);
+          let savedDefinition = next;
+          await new Promise<void>((complete) =>
+            setPendingSave({
+              complete,
+              publishCorrection: () => {
+                savedDefinition = {
+                  ...next,
+                  widgets: next.widgets.map((widget) => ({ ...widget, title: widget.title.toUpperCase() })),
+                };
+                setValue(savedDefinition);
+              },
+            }),
+          );
+          setPendingSave(null);
+          setSaved(savedDefinition);
           // The caller can republish its previous layout before the saved change is available.
           setValue((current) => ({ ...current, widgets: [...current.widgets] }));
         } else {
@@ -108,7 +120,12 @@ export function DashboardEmbeddedExample(props: { deferRefresh?: boolean }) {
             Build history
           </Text>
           {controls}
-          {completeSave && <Button onClick={() => completeSave()}>Complete save</Button>}
+          {pendingSave && (
+            <>
+              <Button onClick={() => pendingSave.publishCorrection()}>Publish corrected dashboard</Button>
+              <Button onClick={() => pendingSave.complete()}>Complete save</Button>
+            </>
+          )}
           {saved && (
             <Button
               onClick={() => {
