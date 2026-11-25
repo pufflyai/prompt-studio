@@ -315,3 +315,26 @@ test("disconnect completes member cleanup after native project withdrawal alread
   await f.text.dispose();
   expect(f.documents.sources.current({ workbenchId: "project-1", extensionId: "example.context" })).toEqual([]);
 });
+
+test("a listener that replaces one whose stream has not closed yet receives each open member's current snapshot", async () => {
+  const f = await setup();
+  const first: string[] = [];
+  const stopFirst = f.text.listen(f.address, (event) => {
+    if (event.type === "snapshot") first.push(event.handle);
+  });
+  cleanups.unshift(async () => stopFirst());
+  const { handle } = await f.open();
+  const until = async (condition: () => boolean) => {
+    const end = Date.now() + 1000;
+    while (!condition() && Date.now() < end) await Bun.sleep(1);
+    expect(condition()).toBe(true);
+  };
+  await until(() => first.includes(handle));
+  // A dropped client reconnects before the server notices that its old stream closed.
+  const replacement: string[] = [];
+  const stopReplacement = f.text.listen(f.address, (event) => {
+    if (event.type === "snapshot") replacement.push(event.handle);
+  });
+  cleanups.unshift(async () => stopReplacement());
+  await until(() => replacement.includes(handle));
+});
