@@ -1,4 +1,10 @@
-import { type DatabaseWorkerMessage, type DatabaseWorkerRequest, deserializeDatabaseError } from "./protocol";
+import { currentRuntimeOperationOrigin } from "pstdio-diagnostics";
+import {
+  type DatabaseWorkerMessage,
+  type DatabaseWorkerRequest,
+  deserializeDatabaseError,
+  readDatabaseWorkerOrigin,
+} from "./protocol";
 
 type Request = DatabaseWorkerRequest extends infer R ? (R extends { id: number } ? Omit<R, "id"> : never) : never;
 type QueryOptions = { rowMode?: "array" | "object"; parsers?: Record<number, unknown> };
@@ -48,17 +54,25 @@ export const createRemotePglite = (worker: Worker) => {
     ...(options?.parsers ? { rawTypes: Object.keys(options.parsers).map(Number) } : {}),
   });
 
+  const operationOrigin = () => readDatabaseWorkerOrigin(currentRuntimeOperationOrigin());
   const executor = (txId?: number) => ({
     query: <T>(sql: string, params?: unknown[], options?: QueryOptions) =>
-      call({ type: "query", sql, params, options: remoteOptions(options), txId }) as Promise<T>,
-    exec: <T>(sql: string) => call({ type: "exec", sql, txId }) as Promise<T>,
+      call({
+        type: "query",
+        sql,
+        params,
+        options: remoteOptions(options),
+        txId,
+        origin: operationOrigin(),
+      }) as Promise<T>,
+    exec: <T>(sql: string) => call({ type: "exec", sql, txId, origin: operationOrigin() }) as Promise<T>,
   });
 
   const pglite = {
     ...executor(),
     waitReady: Promise.resolve(),
     async transaction<T>(run: (tx: ReturnType<typeof executor>) => Promise<T>) {
-      const txId = (await call({ type: "begin" })) as number;
+      const txId = (await call({ type: "begin", origin: operationOrigin() })) as number;
       let result: T;
       try {
         result = await run(executor(txId));
