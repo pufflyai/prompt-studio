@@ -65,7 +65,9 @@ test("resuming a stale checkpoint preserves native middle turns in GET, SSE, and
     );
   const waitStatus = async (id: string, status: string) => {
     for (let attempt = 0; attempt < 100; attempt++) {
-      if ((await handle.deps.sessionService.get(id))?.status === status) return;
+      // The run has ended once its live entry is gone too; the status is saved just before that.
+      if ((await handle.deps.sessionService.get(id))?.status === status && !handle.deps.sessionService.store.get(id))
+        return;
       await Bun.sleep(10);
     }
     throw new Error(`Session did not reach ${status}`);
