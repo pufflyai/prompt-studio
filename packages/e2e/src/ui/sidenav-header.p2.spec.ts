@@ -165,31 +165,36 @@ test("customizes the Sidenav from any point and persists section visibility", as
   const visibilityDialog = page.getByRole("dialog", { name: "Hide/show items" });
   const hide = (name: string) => visibilityDialog.getByRole("button", { name: `Hide ${name}`, exact: true });
   const show = (name: string) => visibilityDialog.getByRole("button", { name: `Show ${name}`, exact: true });
+  const underlyingRow = (name: string) => sidenav.locator('[role="option"]').filter({ hasText: name });
   await expect(page.getByRole("textbox", { name: "Search navigation items" })).toBeFocused();
   await expect(hide("Search")).toBeVisible();
-  await expect(hide("Workspaces")).toBeVisible();
+  await expect(
+    visibilityDialog
+      .getByRole("list", { name: "Project Workspaces", exact: true })
+      .getByRole("button", { name: "Hide Workspaces", exact: true }),
+  ).toBeVisible();
   for (const name of ["Header", "Navigation", "Footer"]) {
     await expect(hide(name)).toBeVisible();
   }
   await hide("Workspaces").click();
-  await expect(row(sidenav, "Workspaces")).toHaveCount(0);
+  await expect(underlyingRow("Workspaces")).toHaveCount(0);
   await show("Workspaces").click();
-  await expect(row(sidenav, "Workspaces")).toBeVisible();
+  await expect(underlyingRow("Workspaces")).toHaveCount(1);
   await hide("Workspaces").click();
-  await expect(row(sidenav, "Workspaces")).toHaveCount(0);
+  await expect(underlyingRow("Workspaces")).toHaveCount(0);
   await hide("Search").click();
-  await expect(row(sidenav, "Search")).toHaveCount(0);
+  await expect(underlyingRow("Search")).toHaveCount(0);
   await show("Search").click();
-  await expect(row(sidenav, "Search")).toBeVisible();
+  await expect(underlyingRow("Search")).toHaveCount(1);
   await page.keyboard.press("Escape");
   await expect(visibilityDialog).toBeHidden();
 
   await row(sidenav, "Tickets").click({ button: "right" });
   await page.getByRole("menuitem", { name: "Hide/show items" }).click();
   await hide("Tickets").click();
-  await expect(row(sidenav, "Tickets")).toHaveCount(0);
+  await expect(underlyingRow("Tickets")).toHaveCount(0);
   await show("Tickets").click();
-  await expect(row(sidenav, "Tickets")).toBeVisible();
+  await expect(underlyingRow("Tickets")).toHaveCount(1);
   await page.keyboard.press("Escape");
 
   await page.reload();
@@ -206,9 +211,11 @@ test("customizes the Sidenav from any point and persists section visibility", as
   await expect(hide("Search")).toBeHidden();
   await query.clear();
   await hide("Search").click();
-  await expect(row(sidenav, "Search")).toHaveCount(0);
+  await expect(underlyingRow("Search")).toHaveCount(0);
   await page.getByRole("button", { name: "Reset to default", exact: true }).click();
-  await expect(row(sidenav, "Search")).toBeVisible();
+  await expect(underlyingRow("Search")).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await expect(visibilityDialog).toBeHidden();
   await expectSidenavSections(sidenav);
 
   const resetTopEdges = await Promise.all(

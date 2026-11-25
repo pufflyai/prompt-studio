@@ -133,7 +133,9 @@ const PanelViewPortal = (props: {
     if (!page && workbench.pages.getContent()?.widgetId === placement.widgetId)
       page = state.pages[state.activePageId ?? ""];
     const main = page?.main;
-    return main?.kind === "view" && main.intro ? contributionRefId(main.intro) : undefined;
+    return main?.kind === "view" && main.intro && contributionRefId(main.view) === placement.viewId
+      ? contributionRefId(main.intro)
+      : undefined;
   });
   const collection =
     view?.body.kind === "dataTable" || view?.body.kind === "kanban" || view?.body.kind === "resourceList";

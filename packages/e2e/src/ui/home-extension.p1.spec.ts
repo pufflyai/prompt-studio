@@ -54,7 +54,7 @@ test("Home reopens recent resources and only starts a session when a person send
   await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(sessions[6].title);
   await page.getByRole("button", { name: "Back to project", exact: true }).click();
   await page.getByRole("option", { name: "Home", exact: true }).click();
-  const composer = page.locator('[data-workbench-panel="main"] [data-workbench-composer]');
+  const composer = page.locator('[data-workbench-panel="main"] [data-workbench-composer]:visible');
   const editor = composer.locator('[data-testid="content-editable"][contenteditable="true"]');
   const send = composer.getByTestId("send-message-button");
   const prompt = "Start a session from Home";

@@ -24,25 +24,28 @@ export const captureMarkdownPassage = (editor: LexicalEditor, binding: MarkdownD
     !binding.text.doc
   )
     return;
-  return editor.getEditorState().read(() => {
-    const range = $createRangeSelectionFromDom(selection, editor);
-    if (!range || range.isCollapsed()) return;
-    const quote = selection.toString();
-    if (!quote.trim() || quote.length > 10000) return;
-    const text = binding.text;
-    const { body, frontmatter } = splitFrontmatter(text.toString());
-    const points = createMarkdownSourcePoints($getRoot(), body);
-    const anchor = frontmatter.length + points.toSource(range.anchor);
-    const focus = frontmatter.length + points.toSource(range.focus);
-    const first = Math.min(anchor, focus);
-    const last = Math.max(anchor, focus);
-    if (first === last) return;
-    return {
-      quote,
-      start: encode(Y.createRelativePositionFromTypeIndex(text, first, 0)),
-      end: encode(Y.createRelativePositionFromTypeIndex(text, last, -1)),
-    };
-  });
+  return editor.getEditorState().read(
+    () => {
+      const range = $createRangeSelectionFromDom(selection, editor);
+      if (!range || range.isCollapsed()) return;
+      const quote = selection.toString();
+      if (!quote.trim() || quote.length > 10000) return;
+      const text = binding.text;
+      const { body, frontmatter } = splitFrontmatter(text.toString());
+      const points = createMarkdownSourcePoints($getRoot(), body);
+      const anchor = frontmatter.length + points.toSource(range.anchor);
+      const focus = frontmatter.length + points.toSource(range.focus);
+      const first = Math.min(anchor, focus);
+      const last = Math.max(anchor, focus);
+      if (first === last) return;
+      return {
+        quote,
+        start: encode(Y.createRelativePositionFromTypeIndex(text, first, 0)),
+        end: encode(Y.createRelativePositionFromTypeIndex(text, last, -1)),
+      };
+    },
+    { editor },
+  );
 };
 
 export const resolveMarkdownPassage = (
@@ -58,17 +61,20 @@ export const resolveMarkdownPassage = (
     if (!start || !end || start.type !== text || end.type !== text || start.index >= end.index) return;
     const { frontmatter, body } = splitFrontmatter(text.toString());
     if (start.index < frontmatter.length) return;
-    return editor.getEditorState().read(() => {
-      const points = createMarkdownSourcePoints($getRoot(), body);
-      const from = points.toPoint(start.index - frontmatter.length);
-      const to = points.toPoint(end.index - frontmatter.length);
-      const first = $getNodeByKey(from.key);
-      const last = $getNodeByKey(to.key);
-      if (first && last) {
-        const range = createDOMRange(editor, first, from.offset, last, to.offset);
-        if (range && !range.collapsed) return range;
-      }
-    });
+    return editor.getEditorState().read(
+      () => {
+        const points = createMarkdownSourcePoints($getRoot(), body);
+        const from = points.toPoint(start.index - frontmatter.length);
+        const to = points.toPoint(end.index - frontmatter.length);
+        const first = $getNodeByKey(from.key);
+        const last = $getNodeByKey(to.key);
+        if (first && last) {
+          const range = createDOMRange(editor, first, from.offset, last, to.offset);
+          if (range && !range.collapsed) return range;
+        }
+      },
+      { editor },
+    );
   } catch {
     return;
   }

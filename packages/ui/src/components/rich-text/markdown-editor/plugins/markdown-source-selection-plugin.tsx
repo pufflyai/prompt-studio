@@ -22,19 +22,22 @@ export const MarkdownSourceSelectionPlugin = (props: {
     // Focus can move to the composer without dismissing the document subject.
     if (!root || !selection || !root.contains(selection.anchorNode) || !root.contains(selection.focusNode)) return;
     if (selection.isCollapsed) return onSelection(null);
-    editor.getEditorState().read(() => {
-      const range = $createRangeSelectionFromDom(selection, editor);
-      if (!range || range.isCollapsed()) return;
-      const body = source.exportFromLexical($getRoot());
-      const points = createMarkdownSourcePoints($getRoot(), body);
-      const first = points.toSource(range.anchor);
-      const last = points.toSource(range.focus);
-      const position = (offset: number) => {
-        const rows = (frontmatter + body.slice(0, offset)).split("\n");
-        return { line: rows.length, column: rows.at(-1)!.length + 1 };
-      };
-      onSelection({ start: position(Math.min(first, last)), end: position(Math.max(first, last)) });
-    });
+    editor.getEditorState().read(
+      () => {
+        const range = $createRangeSelectionFromDom(selection, editor);
+        if (!range || range.isCollapsed()) return;
+        const body = source.exportFromLexical($getRoot());
+        const points = createMarkdownSourcePoints($getRoot(), body);
+        const first = points.toSource(range.anchor);
+        const last = points.toSource(range.focus);
+        const position = (offset: number) => {
+          const rows = (frontmatter + body.slice(0, offset)).split("\n");
+          return { line: rows.length, column: rows.at(-1)!.length + 1 };
+        };
+        onSelection({ start: position(Math.min(first, last)), end: position(Math.max(first, last)) });
+      },
+      { editor },
+    );
   });
   useEffect(() => {
     const root = editor.getRootElement();

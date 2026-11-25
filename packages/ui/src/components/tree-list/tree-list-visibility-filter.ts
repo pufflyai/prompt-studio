@@ -99,6 +99,7 @@ export interface TreeVisibilityItem {
   key: string;
   label: string;
   section?: string;
+  parentKey?: string;
   icon?: ReactNode;
   visible: boolean;
   toggle(): void;
@@ -114,11 +115,14 @@ export const listTreeVisibilityItems = (
     sections.flatMap((section) => {
       const label = section.label ?? section.menuLabel;
       const entries: TreeVisibilityItem[] = [];
-      if (label && isCustomizable(section)) {
+      const sectionKey = `section:${section.id}`;
+      const parentKey = label && isCustomizable(section) ? sectionKey : undefined;
+      if (label && parentKey) {
         entries.push({
-          key: `section:${section.id}`,
+          key: parentKey,
           label,
           section: label,
+          icon: section.icon,
           visible: resolveVisibility(sectionOverrides[section.id], section.hiddenByDefault) === "shown",
           toggle: () => actions.onToggleSection(section.id, section.hiddenByDefault === true),
         });
@@ -129,6 +133,7 @@ export const listTreeVisibilityItems = (
           key: `node:${node.id}`,
           label: toStringLabel(node.label, node.id),
           section: label,
+          parentKey,
           icon: node.icon,
           visible: isNodeVisible(node, nodeOverrides),
           toggle: () => actions.onToggleNode(node.id, node.hiddenByDefault === true),
