@@ -1,5 +1,6 @@
 import { Carousel, Heading, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import { CopyButton } from "@pstdio/ui";
+import { useRef, useState } from "react";
 import { HomeIcon } from "./home-icon";
 
 const ideas = [
@@ -25,8 +26,47 @@ const ideas = [
   },
 ];
 
+const HomePromptIdea = (props: { title: string; prompt: string }) => {
+  const { title, prompt } = props;
+  const text = useRef<HTMLParagraphElement>(null);
+  const [selectedForCopy, setSelectedForCopy] = useState(false);
+  const selectPrompt = () => {
+    const element = text.current;
+    const selection = element?.ownerDocument.getSelection();
+    if (!element || !selection) return;
+    const range = element.ownerDocument.createRange();
+    range.selectNodeContents(element);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    setSelectedForCopy(true);
+  };
+  return (
+    <Stack gap="xs">
+      <HStack justify="space-between">
+        <Heading as="h3" textStyle="label/M/medium">
+          {title}
+        </Heading>
+        <CopyButton
+          text={prompt}
+          label="Copy prompt"
+          onCopy={() => setSelectedForCopy(false)}
+          onCopyError={selectPrompt}
+        />
+      </HStack>
+      <Text ref={text} textStyle="paragraph/S/regular" color="fg.muted" userSelect="text">
+        {prompt}
+      </Text>
+      {selectedForCopy && (
+        <Text role="status" textStyle="label/S/regular" color="fg.muted">
+          Prompt selected. Press Cmd+C or Ctrl+C to copy it.
+        </Text>
+      )}
+    </Stack>
+  );
+};
+
 export const HomePromptCarousel = () => (
-  <Carousel.Root aria-label="Ideas for your Home page" slideCount={ideas.length} loop allowMouseDrag>
+  <Carousel.Root aria-label="Ideas for your Home page" slideCount={ideas.length} loop>
     <Stack gap="sm" minW="0">
       <HStack justify="space-between">
         <Heading as="h2" textStyle="label/L/regular">
@@ -48,17 +88,7 @@ export const HomePromptCarousel = () => (
       <Carousel.ItemGroup rounded="sm" borderWidth="1px" borderColor="border.subtle" bg="bg.subtle">
         {ideas.map(({ title, prompt }, index) => (
           <Carousel.Item key={title} index={index} p="md">
-            <Stack gap="xs">
-              <HStack justify="space-between">
-                <Heading as="h3" textStyle="label/M/medium">
-                  {title}
-                </Heading>
-                <CopyButton text={prompt} label="Copy prompt" />
-              </HStack>
-              <Text textStyle="paragraph/S/regular" color="fg.muted">
-                {prompt}
-              </Text>
-            </Stack>
+            <HomePromptIdea title={title} prompt={prompt} />
           </Carousel.Item>
         ))}
       </Carousel.ItemGroup>

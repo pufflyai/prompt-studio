@@ -60,5 +60,6 @@ describe("resolveAppConfig", () => {
     expect(
       resolveAppConfig({ ...defaults, env: { PSTDIO_EXTENSION_RELEASE_REF: "pstdio@0.49.0" } }).extensions.release,
     ).toEqual({ source: "git", ref: "pstdio@0.49.0" });
+    expect(resolveAppConfig({ ...defaults, env: { PSTDIO_EXTENSION_RELEASE_REF: "" } }).extensions.release).toBeNull();
   });
 });

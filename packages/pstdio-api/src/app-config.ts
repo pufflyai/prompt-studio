@@ -49,7 +49,8 @@ const resolveRelease = (input: ResolveAppConfigInput): ExtensionRelease | null =
   const configuredRef = input.env.PSTDIO_EXTENSION_RELEASE_REF?.trim();
   const ref = (configuredRef ?? input.defaultExtensionReleaseRef)?.trim() || undefined;
   const root =
-    input.env.PSTDIO_EXTENSION_SOURCE_ROOT?.trim() || (configuredRef ? undefined : input.defaultExtensionSourceRoot);
+    input.env.PSTDIO_EXTENSION_SOURCE_ROOT?.trim() ||
+    (configuredRef === undefined ? input.defaultExtensionSourceRoot : undefined);
 
   if (root && !ref) {
     throw new Error("PSTDIO_EXTENSION_SOURCE_ROOT requires PSTDIO_EXTENSION_RELEASE_REF");
