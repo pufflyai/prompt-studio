@@ -57,7 +57,7 @@ const storageMembers = (projectId: string, namespace?: string[]) =>
     migrate: { kind: "migrate", projectId },
     observe: { kind: "subscribe" },
     text: { kind: "factory", returns: object(calls("edit")) },
-    log: { kind: "factory", returns: log },
+    log: { kind: "factory", returns: log, snapshotArguments: true },
     ids: object({ create: { kind: "local", name: "storageId" } }),
     records: records(namespace),
     files: blobs,
