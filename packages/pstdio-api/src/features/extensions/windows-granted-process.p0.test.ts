@@ -105,7 +105,10 @@ test("a job stop keeps the numeric launcher exit when there is no natural exit r
       [
         process.execPath,
         "-e",
-        'process.once("message", async () => { process.send({ pid: process.pid }); await Bun.stdin.text(); process.exit(1); });',
+        `process.once("message", () => {
+          process.once("message", () => process.exit(1));
+          process.send({ pid: process.pid });
+        });`,
       ],
       options,
     );
@@ -117,7 +120,6 @@ test("a job stop keeps the numeric launcher exit when there is no natural exit r
       command: { argv: [process.execPath, "--version"] },
       env: childEnvironment,
       detached: false,
-      stdin: "pipe",
       stopTimeoutMs: 5_000,
     },
     () => ({
@@ -125,7 +127,7 @@ test("a job stop keeps the numeric launcher exit when there is no natural exit r
       hasProcesses: () => remaining,
       terminate() {
         remaining = false;
-        if (launcher?.stdin && typeof launcher.stdin !== "number") launcher.stdin.end();
+        launcher?.send("stop");
       },
       close() {},
     }),
