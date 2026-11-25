@@ -18,7 +18,6 @@ type ReportedChild = {
   forWrite: RecordedChild;
   state: FileState;
   contents?: Map<string, PresentState>;
-  verifyContents?: boolean;
 };
 export type ReportedChildren = WeakMap<OwnedDirectory, Map<string, ReportedChild>>;
 
@@ -122,7 +121,6 @@ const advanceRecordedDirectoryChild = (
   for (const report of child.directoryReports ?? []) {
     if (!sameState(report.state, before)) continue;
     report.state = after;
-    report.verifyContents = true;
   }
 };
 
@@ -146,7 +144,10 @@ const matchesReportedContents = (path: string, contents: ReadonlyMap<string, Pre
     names.length === contents.size &&
     names.every((name) => {
       const expected = contents.get(name);
-      return expected !== undefined && sameState(expected, readArtifactFileState(join(path, name)));
+      // A nested file can change without changing any of its enclosing directory metadata.
+      return (
+        expected !== undefined && !expected.directory && sameState(expected, readArtifactFileState(join(path, name)))
+      );
     })
   );
 };
@@ -170,8 +171,8 @@ const matchesOwnedChildren = (
         // The changed child already accounts for an independent hint in this batch.
         if (childHint !== undefined && !sameState(recorded.state, childHint)) return true;
         if (!sameState(recorded.state, readArtifactFileState(childPath))) return false;
-        if ("forWrite" in recorded && recorded.verifyContents && recorded.contents) {
-          return matchesReportedContents(childPath, recorded.contents);
+        if ("forWrite" in recorded && recorded.state?.directory) {
+          return recorded.contents !== undefined && matchesReportedContents(childPath, recorded.contents);
         }
         if ("nestedDirectory" in recorded && recorded.nestedDirectory) {
           return matchesOwnedChildren(childPath, recorded.nestedDirectory, observed, reported);

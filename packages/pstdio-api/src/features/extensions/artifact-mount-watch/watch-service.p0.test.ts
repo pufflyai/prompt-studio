@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import * as fs from "node:fs";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -151,6 +152,44 @@ const createHarness = async (listProjectIds = async () => ["project-1"]) => {
     workspace,
   };
 };
+
+test.skipIf(process.platform !== "darwin").each(["registration fails", "root disappears"])(
+  "retries an incomplete flat watch on the next refresh when its %s",
+  async (mode) => {
+    const nativeWatch = fs.watch;
+    let flatStarts = 0;
+    let treeStarts = 0;
+    const failFirstFlatWatch = (...args: [fs.PathLike, unknown?, unknown?]) => {
+      const [path, options] = args;
+      const isTarget =
+        typeof path === "string" &&
+        path.endsWith(join("pstdio.dashboards", "boards")) &&
+        options &&
+        typeof options === "object" &&
+        "recursive" in options;
+      const flat = isTarget && options.recursive === false;
+      if (flat && ++flatStarts === 1 && mode === "registration fails") {
+        throw Object.assign(new Error("Cannot open native flat watch"), { code: "ENOSPC" });
+      }
+      const handle = Reflect.apply(nativeWatch, fs, args);
+      if (isTarget && options.recursive === true && ++treeStarts === 1 && mode === "root disappears") {
+        fs.renameSync(path, `${path}.parked`);
+      }
+      return handle;
+    };
+    const registration = spyOn(fs, "watch").mockImplementation(failFirstFlatWatch as typeof nativeWatch);
+    try {
+      const harness = await createHarness();
+      await harness.service.refresh();
+      const expectedFlatStarts = mode === "registration fails" ? 2 : 1;
+      expect({ treeStarts, flatStarts }).toEqual({ treeStarts: 2, flatStarts: expectedFlatStarts });
+      await harness.service.refresh();
+      expect({ treeStarts, flatStarts }).toEqual({ treeStarts: 2, flatStarts: expectedFlatStarts });
+    } finally {
+      registration.mockRestore();
+    }
+  },
+);
 
 describe("artifact mount watch service", () => {
   test("runs hooks and notifies views once per burst of direct edits to a watched mount", async () => {

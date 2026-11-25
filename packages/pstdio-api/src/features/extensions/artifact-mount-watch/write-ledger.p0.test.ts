@@ -316,6 +316,25 @@ describe("artifact mount deletions and expiry", () => {
 });
 
 describe("artifact mount folder-only notifications", () => {
+  test("keeps an ancestor hint when a reported directory has an unverified nested edit", async () => {
+    const ledger = createArtifactMountWriteLedger(() => 0);
+    const { mount, root } = createMount(ledger);
+    const folder = join(root, "sales");
+    const archive = join(folder, "archive");
+    const leaf = join(archive, "2026", "quarter.json");
+    const options = { keepMatchedWrites: true };
+    await mount.writeText("sales/archive/2026/quarter.json", "{}");
+    expect(ledger.dropEchoes([folder, archive], options)).toEqual([]);
+    writeFileSync(join(archive, "reported.json"), "{}");
+    expect(ledger.dropEchoes([archive], options)).toEqual([archive]);
+
+    writeFileSync(leaf, "[]");
+    utimesSync(leaf, new Date(), new Date(Date.now() + 5_000));
+    await mount.writeText("sales/archive/owned.json", "{}");
+
+    expect(ledger.dropEchoes([folder], options)).toEqual([folder]);
+  });
+
   test("an owned nested write advances only the watcher that reported the folder", async () => {
     const ledger = createArtifactMountWriteLedger(() => 0);
     const { mount, root } = createMount(ledger);

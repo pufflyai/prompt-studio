@@ -1,6 +1,11 @@
 import { watch as fsWatch, lstatSync, mkdirSync } from "node:fs";
 import { isAbsolute, relative, sep } from "node:path";
-import { createDirectoryTreeWatcher, type DirectoryTreeWatcher, type WatchDirectory } from "pstdio-extensions";
+import {
+  createDirectoryTreeWatcher,
+  type DirectoryTreeWatcher,
+  readArtifactFileState,
+  type WatchDirectory,
+} from "pstdio-extensions";
 import type { ArtifactMountWriteLedger } from "./write-ledger";
 
 // A burst ends this long after its last change, so one save that touches several files
@@ -99,43 +104,58 @@ export const watchArtifactMount = (input: ArtifactMountWatcherInput) => {
     scheduleFlush();
   };
 
-  mkdirSync(input.root, { recursive: true });
-  const tree = createDirectoryTreeWatcher({
-    root: input.root,
-    onEvent: handleEvent,
-    onError: input.onError,
-    maxDirectories: input.maxFolders ?? MAX_FOLDERS,
-    onDirectoryLimit: () => {
-      incomplete = true;
-      // Folder-only change events are ignored, but incomplete watches still need a full reload.
-      scheduleFlush();
-      input.onFolderLimit();
-    },
-    watch: input.watch,
-  });
   // macOS recursive notifications can miss an atomic file replacement in the mount root.
   const platform = input.platform ?? process.platform;
   const watchRoot = input.watchRoot ?? (!input.watch && platform === "darwin" ? watchFlatRoot : undefined);
+  let tree: DirectoryTreeWatcher | undefined;
+  let starting = true;
+  const onWatchError = (error: unknown) => {
+    // Paired watches have to acquire both handles before the service can keep the mount.
+    if (watchRoot && starting) throw error;
+    input.onError(error);
+  };
+
   const close = () => {
     if (timer) clearTimeout(timer);
     pending.clear();
-    tree.close();
+    tree?.close();
     directRoot?.close();
   };
 
+  mkdirSync(input.root, { recursive: true });
   try {
+    const initialIdentity = watchRoot && readArtifactFileState(input.root)?.identity;
+    tree = createDirectoryTreeWatcher({
+      root: input.root,
+      onEvent: handleEvent,
+      onError: onWatchError,
+      maxDirectories: input.maxFolders ?? MAX_FOLDERS,
+      onDirectoryLimit: () => {
+        incomplete = true;
+        // Folder-only change events are ignored, but incomplete watches still need a full reload.
+        scheduleFlush();
+        input.onFolderLimit();
+      },
+      watch: input.watch,
+      requireRoot: Boolean(watchRoot),
+    });
     if (watchRoot) {
       directRoot = createDirectoryTreeWatcher({
         root: input.root,
         onEvent: handleEvent,
-        onError: input.onError,
+        onError: onWatchError,
         skipDirectory: () => true,
         watch: watchRoot,
+        requireRoot: true,
       });
+      if (!initialIdentity || readArtifactFileState(input.root)?.identity !== initialIdentity) {
+        throw new Error(`Artifact mount directory changed during watch startup: ${input.root}`);
+      }
     }
   } catch (error) {
     close();
     throw error;
   }
+  starting = false;
   return { close };
 };

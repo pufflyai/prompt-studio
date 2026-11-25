@@ -53,6 +53,8 @@ export type DirectoryTreeWatcherInput = {
   onDirectoryLimit?: () => void;
   /** An injected watch always runs one handle per folder. */
   watch?: WatchDirectory;
+  /** Fail startup if no handle can be registered for the root. */
+  requireRoot?: boolean;
 };
 
 // Linux cannot watch a folder that does not exist, and nothing above the root is watched. A
@@ -206,6 +208,9 @@ export const createDirectoryTreeWatcher = (input: DirectoryTreeWatcherInput) => 
   try {
     if (recursive) addHandle(input.root);
     else watchFolders(input.root, false);
+    if (input.requireRoot && !folders.has(input.root)) {
+      throw new Error(`Cannot attach filesystem watch for ${input.root}`);
+    }
   } catch (error) {
     close();
     throw error;

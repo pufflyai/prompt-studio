@@ -126,9 +126,10 @@ test("one watcher cannot suppress another watcher's folder-only notification", a
 });
 
 test.each([
-  "opening",
-  "walking",
-])("closes all startup handles and cancels the pending refresh when %s the flat watch fails", async (stage) => {
+  ["opening", true],
+  ["walking", true],
+  ["opening", false],
+])("cleans up after a flat startup failure during %s (throwing observer: %s)", async (stage, throwing) => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-watch-startup-"));
   cleanups.push(() => rmSync(root, { recursive: true, force: true }));
   mkdirSync(join(root, "subfolder"));
@@ -149,7 +150,7 @@ test.each([
         ledger: createArtifactMountWriteLedger(),
         onChange: (paths) => changes.push(paths),
         onError: (error) => {
-          throw error;
+          if (throwing) throw error;
         },
         onFolderLimit: () => {
           limited = true;
@@ -157,7 +158,7 @@ test.each([
         maxFolders: 1,
         watch: () => ({ close: () => closed.push("tree") }),
         watchRoot: () => {
-          if (stage === "opening") throw failure;
+          if (stage !== "walking") throw failure;
           flatOpened = true;
           return { close: () => closed.push("flat") };
         },
@@ -167,7 +168,7 @@ test.each([
     read.mockRestore();
   }
   expect(limited).toBe(true);
-  expect(closed.sort()).toEqual(stage === "opening" ? ["tree"] : ["flat", "tree"]);
+  expect(closed.sort()).toEqual(stage === "walking" ? ["flat", "tree"] : ["tree"]);
   await Bun.sleep(250);
   expect(changes).toEqual([]);
 });
