@@ -64,7 +64,8 @@ test("provider deletion failures retain retry rows and exclusion while independe
   const heldStarted = Promise.withResolvers<void>();
   const releaseHeld = Promise.withResolvers<void>();
   const deleteFailed = Promise.withResolvers<void>();
-  let partial = true;
+  let failDelete = true;
+  let heldDeletes = 0;
   const proxy = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
@@ -72,12 +73,12 @@ test("provider deletion failures retain retry rows and exclusion while independe
       const url = new URL(request.url);
       if (request.method === "DELETE" && !url.searchParams.has("uploadId")) {
         if (url.pathname.endsWith(`/${held}`)) {
+          heldDeletes++;
           heldStarted.resolve();
           await releaseHeld.promise;
         }
-        if (url.pathname.endsWith(`/${failing}`) && partial) {
+        if (url.pathname.endsWith(`/${failing}`) && failDelete) {
           await Promise.race([heldStarted.promise, releaseHeld.promise]);
-          partial = false;
           return new Response(
             "<Error><Code>InternalError</Code><Message>Controlled partial deletion</Message></Error>",
             {
@@ -145,13 +146,19 @@ test("provider deletion failures retain retry rows and exclusion while independe
     releaseHeld.resolve();
 
     await expect(cleaning).rejects.toThrow("Controlled partial deletion");
-    expect((await pending()).map(({ objectKey }) => objectKey).sort()).toEqual([held, failing]);
+    const queuedAfterFailure = (await pending()).map(({ objectKey }) => objectKey);
     const incomplete = await fixture.objects();
     expect(incomplete.has(held)).toBe(false);
     expect(incomplete.has(healthy)).toBe(false);
     expect(incomplete.has(failing)).toBe(true);
     expect(incomplete.has(kept)).toBe(true);
 
+    await expect(cleanupPayloads(connection, payloads)).rejects.toThrow("Controlled partial deletion");
+    expect(heldDeletes).toBe(1);
+    expect(queuedAfterFailure).toEqual([failing]);
+    expect((await pending()).map(({ objectKey }) => objectKey)).toEqual([failing]);
+
+    failDelete = false;
     await cleanupPayloads(connection, payloads);
     expect(await pending()).toHaveLength(0);
     expect([...(await fixture.objects()).keys()]).toEqual([kept]);

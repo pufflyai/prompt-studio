@@ -6,18 +6,6 @@ import { tryLockProject } from "./project-access";
 
 const batchSize = 500;
 
-class PayloadDeletionFailure extends Error {
-  constructor(readonly reason: unknown) {
-    super("Payload cleanup failed", { cause: reason });
-  }
-}
-
-const deferredProviderFailure = (error: unknown, signal: AbortSignal | undefined) => {
-  signal?.throwIfAborted();
-  if (!(error instanceof PayloadDeletionFailure)) throw error;
-  return { error: error.reason };
-};
-
 const canReclaim = async (tx: RelayTransaction, projectKey: string | null) => {
   if (!projectKey) return true;
   // A live PUT holds shared access. A retired scope owns its own durable purge queue.
@@ -42,7 +30,7 @@ const removePayloads = async (
   const referenced = new Set(present.rows.map(({ objectKey }) => objectKey));
   const results = await Promise.allSettled(
     keys.map(async ({ objectKey, multipartId }) => {
-      if (referenced.has(objectKey)) return;
+      if (referenced.has(objectKey)) return objectKey;
       signal?.throwIfAborted();
       await payloads.discard(objectKey, multipartId, signal);
       signal?.throwIfAborted();
@@ -51,15 +39,23 @@ const removePayloads = async (
         signal?.throwIfAborted();
         await payloads.verifyRemoved(objectKey, signal);
       }
+      return objectKey;
     }),
   );
   signal?.throwIfAborted();
-  const failures = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
-  if (failures.length)
-    throw new PayloadDeletionFailure(
-      failures.length === 1 ? failures[0] : new AggregateError(failures, "Payload cleanup failed"),
-    );
-  await tx.delete(syncObjectDeletions).where(inArray(syncObjectDeletions.objectKey, objectKeys));
+  const completed: string[] = [];
+  const failures: unknown[] = [];
+  for (const result of results) {
+    if (result.status === "fulfilled") completed.push(result.value);
+    else failures.push(result.reason);
+  }
+  if (completed.length) {
+    await tx.delete(syncObjectDeletions).where(inArray(syncObjectDeletions.objectKey, completed));
+    signal?.throwIfAborted();
+  }
+  if (failures.length) {
+    return { error: failures.length === 1 ? failures[0] : new AggregateError(failures, "Payload cleanup failed") };
+  }
 };
 
 export const cleanupPayloads = async (
@@ -94,22 +90,24 @@ export const cleanupPayloads = async (
     }
     for (const [projectKey, entries] of projects) {
       for (let offset = 0; offset < entries.length; offset += 8) {
-        try {
-          await connection.run(
+        const failure = await connection
+          .run(
             (db) =>
               db.transaction(async (tx) => {
                 if (!(await canReclaim(tx, projectKey))) return;
                 // One exclusion protects these independent keys until every admitted
                 // removal drains. Small groups avoid holding it for an entire page.
-                await removePayloads(tx, payloads, entries.slice(offset, offset + 8), signal, legacyOnly);
+                return removePayloads(tx, payloads, entries.slice(offset, offset + 8), signal, legacyOnly);
               }),
             signal,
-          );
-        } catch (error) {
-          // Leave provider failures queued and let independent work finish. Database errors stop the sweep.
-          const failure = deferredProviderFailure(error, signal);
-          firstFailure ??= failure;
-        }
+          )
+          .catch((error) => {
+            signal?.throwIfAborted();
+            throw error;
+          });
+        signal?.throwIfAborted();
+        // The transaction commits completed rows before the provider failure is reported.
+        firstFailure ??= failure;
       }
     }
     if (keys.length < batchSize) break;
