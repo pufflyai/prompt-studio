@@ -16,7 +16,9 @@ import {
   createExtensionConnectionsApi,
 } from "./features/extensions/extension-connection-service";
 import { subscribeExtensionEnablementInvalidation } from "./features/extensions/extension-enablement-invalidation";
+import { createExtensionProcessOwners } from "./features/extensions/extension-process-owners";
 import type { LoadedExtensionSnapshot } from "./features/extensions/extension-runtime";
+import { createExtensionTargets } from "./features/extensions/extension-targets";
 import { installExtensionSource } from "./features/extensions/install-extension-source";
 import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
 import { createProcessEnvironmentPermissions } from "./features/extensions/process-environment/permissions";
@@ -25,6 +27,7 @@ import { createProjectExtensionRuntimeCatalog } from "./features/extensions/proj
 import { subscribeProjectWorkspaceExtensionRefresh } from "./features/extensions/project-workspace-extension-refresh";
 import { createHarnessRegistryService } from "./features/harnesses/harness-registry-service";
 import type { EventBus } from "./features/sync/event-bus";
+import type { WorkspacesRouteDeps } from "./features/workspaces/deps";
 import { apiLogger } from "./lib/logger";
 import { logStartupPhase } from "./lib/startup-phase";
 import { createExtensionInstallations } from "./services/extension-installations";
@@ -47,6 +50,8 @@ interface WireExtensionServicesInput {
   fileService: Pick<ReturnType<typeof createFileService>, "remove" | "recoverRemovals">;
   provisionWorkspacesUsingSource: (sourcePath: string) => Promise<void>;
   getProjectExtensionDeps: () => Parameters<typeof completeProjectExtensionInstallation>[0];
+  /** Resolves workspace targets for harness processes and target files once the app dependencies exist. */
+  getTargetDeps: () => WorkspacesRouteDeps;
   workspaceService: ReturnType<typeof createWorkspaceService>;
   storageRoot: string;
 }
@@ -162,6 +167,29 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
       }
     },
   });
+  const extensionProcessOwners = createExtensionProcessOwners({
+    findEnabledSource: async (projectId, extensionId) => {
+      try {
+        return (await extensionService.listEnabledSourcesForProject(projectId)).find(
+          ({ installedSource }) => installedSource.extension_id === extensionId,
+        )?.installedSource;
+      } catch (error) {
+        if (error instanceof ProjectNotFoundError) return undefined;
+        throw error;
+      }
+    },
+  });
+  // Disable, removal and changed source content all reach the catalog as invalidations.
+  const unsubscribeProcessOwners = extensionRuntimeCatalog.subscribeInvalidation((invalidation) => {
+    void extensionProcessOwners.reconcile(invalidation.sourcePath ? undefined : invalidation.projectId);
+  });
+  const unsubscribeProcessOwnerEvents = input.eventBus.subscribe((event) => {
+    const row = event.data as { id?: unknown; enabled?: unknown } | null;
+    if (typeof row?.id !== "string") return;
+    if (event.table === "projects") void extensionProcessOwners.reconcile(row.id);
+    if (event.table === "extension_instances" && (event.op === "delete" || row.enabled === false))
+      void extensionProcessOwners.retireInstance(row.id);
+  });
   if (process.env.PSTDIO_EXTENSION_PROCESS_ENV)
     apiLogger.warn(
       { event: "extensions.process_environment.legacy_variable" },
@@ -172,6 +200,7 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
     extensionRuntimeCatalog,
     createConnectionsApi: (scope) => createExtensionConnectionsApi(extensionConnectionService, scope),
     processEnvironment: extensionProcessEnvironment,
+    targets: createExtensionTargets(input.getTargetDeps),
   });
   const extensionRuntime = createInstalledExtensionRuntime({
     eventBus: input.eventBus,
@@ -218,12 +247,15 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
     extensionRuntimeCatalog,
     extensionConnectionService,
     extensionProcessEnvironment,
+    extensionProcessOwners,
     extensionService,
     extensionUpgradeService,
     harnessRegistry,
     unsubscribeExtensionEvents: () => {
       unsubscribeProjectWorkspaceRefresh();
       unsubscribeEnablementInvalidation();
+      unsubscribeProcessOwners();
+      unsubscribeProcessOwnerEvents();
     },
   };
 };

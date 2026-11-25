@@ -2,6 +2,7 @@ import { describe, expect, it, mock } from "bun:test";
 import type { HarnessSession, HarnessStartInput } from "pstdio-api-contracts";
 import type { HarnessContext, HarnessProvider } from "pstdio-api-contracts/extension-kernel";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
+import { failedProcessHandle } from "pstdio-extensions";
 import { createHarnessRegistry } from "./harness-registry";
 
 const session = (overrides?: Partial<HarnessSession>): HarnessSession => ({
@@ -18,6 +19,12 @@ const buildContext = (record: RuntimeHarnessRecord, options?: { projectId?: stri
     run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
     runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
     spawnDetached: async () => ({ pid: 1 }),
+    spawn: () => failedProcessHandle(new Error("No test process configured.")),
+  },
+  targetFiles: {
+    readText: async () => {
+      throw new Error("No test target files configured.");
+    },
   },
   net: { findFreePort: async () => 0 },
   connections: {
@@ -423,4 +430,186 @@ it("retirement rejects account startup while its awaited context is being delive
   expect(await result).toBe("retired");
   expect(authenticate).not.toHaveBeenCalled();
   await registry.dispose();
+});
+
+it("retirement stops a sign-in's own child before waiting for the sign-in to finish", async () => {
+  const exited = Promise.withResolvers<{ code: number | null; signal: string | null }>();
+  const child = {
+    id: "login-child",
+    started: Promise.resolve(),
+    exited: exited.promise,
+    write: async () => {},
+    end: async () => {},
+    kill: async () => exited.resolve({ code: null, signal: "SIGTERM" }),
+    events: () => ({ [Symbol.asyncIterator]: async function* () {} }),
+  };
+  const entered = Promise.withResolvers<void>();
+  const source = record({
+    authenticate: async (context) => {
+      const login = context.process.spawn({ command: ["login"] });
+      entered.resolve();
+      await login.exited;
+    },
+  });
+  const registry = createHarnessRegistry([source], (record, options) => ({
+    ...buildContext(record, options),
+    process: { ...buildContext(record, options).process, spawn: () => child as never },
+  }));
+  const handle = registry.get(source.id)!;
+  const signingIn = handle.authenticate!(
+    { action: "login" },
+    { signal: new AbortController().signal, emit: async () => {}, request: async () => "" },
+  ).catch(() => {});
+  await entered.promise;
+  const retired = await Promise.race([handle.dispose().then(() => "retired"), Bun.sleep(2_000).then(() => "stuck")]);
+  expect(retired).toBe("retired");
+  await signingIn;
+  await registry.dispose();
+});
+
+it("retirement does not wait for a sign-in until the instance's own children are stopped", async () => {
+  const exited = Promise.withResolvers<{ code: number | null; signal: string | null }>();
+  const entered = Promise.withResolvers<void>();
+  const source = record({
+    // The sign-in waits on a child that only the harness instance's owner stops.
+    authenticate: async () => {
+      entered.resolve();
+      await exited.promise;
+    },
+  });
+  const registry = createHarnessRegistry([source], (record, options, owner) => {
+    owner.adopt({ exited: exited.promise, kill: async () => exited.resolve({ code: null, signal: "SIGTERM" }) });
+    return buildContext(record, options);
+  });
+  const handle = registry.get(source.id)!;
+  const signingIn = handle.authenticate!(
+    { action: "login" },
+    { signal: new AbortController().signal, emit: async () => {}, request: async () => "" },
+  ).catch(() => {});
+  await entered.promise;
+  const retired = await Promise.race([handle.dispose().then(() => "retired"), Bun.sleep(2_000).then(() => "stuck")]);
+  expect(retired).toBe("retired");
+  await signingIn;
+  await registry.dispose();
+});
+
+it.each([
+  "dispose",
+  "watch",
+] as const)("retirement stops the owned child before waiting for provider %s", async (kind) => {
+  const exited = Promise.withResolvers<{ code: number | null; signal: string | null }>();
+  const entered = Promise.withResolvers<void>();
+  const stop = mock(async () => exited.resolve({ code: null, signal: "SIGTERM" }));
+  const source = record(
+    kind === "dispose"
+      ? {
+          dispose: async () => {
+            entered.resolve();
+            await exited.promise;
+          },
+        }
+      : {
+          watchCommandState: async () => {
+            entered.resolve();
+            await exited.promise;
+            return () => {};
+          },
+        },
+  );
+  const registry = createHarnessRegistry([source], (entry, options, owner) => {
+    owner.adopt({ exited: exited.promise, kill: stop });
+    return buildContext(entry, options);
+  });
+  const handle = registry.get(source.id)!;
+  let watching: Promise<unknown> | undefined;
+  if (kind === "watch") {
+    watching = handle.watchCommandState!({ sessionId: "session" }, () => {}).catch(() => {});
+    await entered.promise;
+  } else {
+    await handle.capabilities();
+  }
+  const retiring = handle.dispose();
+  try {
+    await entered.promise;
+    const outcome = await Promise.race([retiring.then(() => "retired"), Bun.sleep(1_000).then(() => "held")]);
+    expect(outcome).toBe("retired");
+    expect(stop).toHaveBeenCalledTimes(1);
+  } finally {
+    exited.resolve({ code: null, signal: null });
+    await retiring.catch(() => {});
+    await watching;
+  }
+});
+
+it("reports an instance stop failure while provider disposal still waits for its child", async () => {
+  const exited = Promise.withResolvers<{ code: number | null; signal: string | null }>();
+  const entered = Promise.withResolvers<void>();
+  const failure = new Error("The fixture child did not stop.");
+  const source = record({
+    dispose: async () => {
+      entered.resolve();
+      await exited.promise;
+    },
+  });
+  const registry = createHarnessRegistry([source], (entry, options, owner) => {
+    owner.adopt({
+      exited: exited.promise,
+      kill: async () => {
+        throw failure;
+      },
+    });
+    return buildContext(entry, options);
+  });
+  const handle = registry.get(source.id)!;
+  await handle.capabilities();
+  const retirement = handle.dispose().catch((error: unknown) => error);
+  try {
+    await entered.promise;
+    const outcome = await Promise.race([retirement, Bun.sleep(1_000).then(() => "held")]);
+    expect(outcome).toMatchObject({
+      message: `Harness cleanup failed: ${source.id}`,
+      errors: [{ message: "Owned process cleanup failed.", errors: [failure] }],
+    });
+  } finally {
+    exited.resolve({ code: null, signal: null });
+    await retirement;
+  }
+});
+
+it("reports a failed instance stop without waiting for a sign-in that still needs the child", async () => {
+  const exited = Promise.withResolvers<{ code: number | null; signal: string | null }>();
+  const entered = Promise.withResolvers<void>();
+  const failure = new Error("The fixture child did not stop.");
+  const source = record({
+    authenticate: async () => {
+      entered.resolve();
+      await exited.promise;
+    },
+  });
+  const registry = createHarnessRegistry([source], (record, options, owner) => {
+    owner.adopt({
+      exited: exited.promise,
+      async kill() {
+        throw failure;
+      },
+    });
+    return buildContext(record, options);
+  });
+  const handle = registry.get(source.id)!;
+  const signingIn = handle.authenticate!(
+    { action: "login" },
+    { signal: new AbortController().signal, emit: async () => {}, request: async () => "" },
+  );
+  await entered.promise;
+  const disposal = handle.dispose().catch((error: unknown) => error);
+  try {
+    expect(await Promise.race([disposal, Bun.sleep(100).then(() => "pending")])).toMatchObject({
+      message: `Harness cleanup failed: ${source.id}`,
+      errors: [{ message: "Owned process cleanup failed.", errors: [failure] }],
+    });
+  } finally {
+    exited.resolve({ code: null, signal: null });
+    await signingIn;
+    await disposal;
+  }
 });

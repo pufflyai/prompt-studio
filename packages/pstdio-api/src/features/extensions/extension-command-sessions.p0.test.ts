@@ -3,9 +3,9 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createProjectWork } from "../../services/project-work";
+import { createTestCommandEnvironment } from "../../test-utils/create-test-command-environment";
 import { createSessionQueueLifecycle } from "../sessions/session-queue-lifecycle";
 import { createTrackedSessionStore } from "../sessions/session-store.test-utils";
-import { createCommandEnvironment } from "./command-environment";
 
 const makeEnabledSources = () => [
   {
@@ -71,7 +71,7 @@ const createSessionEnvironment = (
     root_path: process.cwd(),
     provider_state: "ready",
   };
-  const environment = createCommandEnvironment(
+  const environment = createTestCommandEnvironment(
     {
       extensionStorageService: makeStorageService(),
       sessionQueueLifecycle: createSessionQueueLifecycle(),
@@ -252,7 +252,7 @@ describe("createCommandEnvironment sessions attachments", () => {
       cwd: "/repo",
       last_selected_model: null,
     };
-    const env = createCommandEnvironment(
+    const env = createTestCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
         preferencesDBService: { get: async () => null },

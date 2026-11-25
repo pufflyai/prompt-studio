@@ -1,8 +1,8 @@
+import { apiLogger } from "../../lib/logger";
 import type { ResolvedProcessCommand } from "./process-command";
-import { processGroupExited, signalProcessTree, treeExitedWithin } from "./process-group";
+import type { ProcessEnvironmentLease } from "./process-environment/permissions";
+import { PROCESS_STOP_TIMEOUT_MS, processGroupExited, signalProcessTree, treeExitedWithin } from "./process-group";
 import { startWindowsGrantedProcess } from "./windows-granted-process";
-
-const STOP_TIMEOUT_MS = 5_000;
 
 type ChildInput = {
   spawner: typeof Bun.spawn;
@@ -11,11 +11,12 @@ type ChildInput = {
   env: NodeJS.ProcessEnv;
   detached: boolean;
   trackTree: boolean;
+  stdin?: "pipe";
 };
 
 const launchChild = (input: ChildInput) => {
   if (process.platform === "win32" && input.trackTree)
-    return startWindowsGrantedProcess({ ...input, stopTimeoutMs: STOP_TIMEOUT_MS });
+    return startWindowsGrantedProcess({ ...input, stopTimeoutMs: PROCESS_STOP_TIMEOUT_MS });
 
   const output = input.detached ? "ignore" : "pipe";
   const child = input.spawner(input.command.argv, {
@@ -23,7 +24,7 @@ const launchChild = (input: ChildInput) => {
     // Windows detachment breaks captured output from commands inside npm shims.
     detached: input.detached || process.platform !== "win32",
     env: input.env,
-    stdin: "ignore",
+    stdin: input.stdin ?? "ignore",
     stderr: output,
     stdout: output,
     windowsHide: true,
@@ -36,7 +37,7 @@ const launchChild = (input: ChildInput) => {
     treeExited: input.trackTree ? processGroupExited(child) : undefined,
     async stop() {
       await signalProcessTree(child, "SIGKILL");
-      if (input.trackTree && !(await treeExitedWithin(child, STOP_TIMEOUT_MS)))
+      if (input.trackTree && !(await treeExitedWithin(child, PROCESS_STOP_TIMEOUT_MS)))
         throw new Error(`The granted process group ${child.pid} did not exit after being stopped.`);
       await child.exited;
     },
@@ -60,4 +61,14 @@ export const startProcessChild = (input: ChildInput) => {
       return stopping;
     },
   };
+};
+
+export const watchLease = (treeExited: Promise<void> | undefined, lease?: ProcessEnvironmentLease) => {
+  if (!treeExited || !lease) return;
+  void treeExited.then(lease.release, (error: unknown) => {
+    apiLogger.warn(
+      { err: error, event: "extension.process.grant_tracking_failed" },
+      "Could not verify granted process exit",
+    );
+  });
 };

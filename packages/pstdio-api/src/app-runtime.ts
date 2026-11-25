@@ -156,6 +156,7 @@ export const createAppCloser = (input: {
   stopQueueReadiness: () => Promise<void>;
   sessionQueueLifecycle: RouteDeps["sessionQueueLifecycle"];
   harnessRegistry: RouteDeps["harnessRegistry"];
+  extensionProcessOwners: Pick<RouteDeps["extensionProcessOwners"], "dispose">;
   extensionInstallations: RouteDeps["extensionInstallations"];
   nativeDocuments: Pick<RouteDeps["nativeDocuments"], "dispose">;
   textEditing: Pick<RouteDeps["textEditing"], "dispose">;
@@ -170,6 +171,9 @@ export const createAppCloser = (input: {
       const deadRowCleanupStopped = traceShutdownPhase("dead_row_cleanup", () => input.stopDeadRowCleanup());
       deadRowCleanupStopped.catch(() => {});
       const hooksStopped = traceShutdownPhase("session_hooks", () => input.closeSessionHooks());
+      // A session hook can wait for a child owned by its extension. Stop those children while hooks drain.
+      const processesStopped = traceShutdownPhase("extension_processes", () => input.extensionProcessOwners.dispose());
+      processesStopped.catch(() => {});
       const installationsStopped = traceShutdownPhase("extension_installations", () =>
         input.extensionInstallations.dispose(),
       );
@@ -177,6 +181,11 @@ export const createAppCloser = (input: {
       const nativeDocumentsStopped = traceShutdownPhase("text_editing", () => input.textEditing.dispose()).finally(() =>
         traceShutdownPhase("native_documents", () => input.nativeDocuments.dispose()),
       );
+      // Some phases are also joined in the finalizer, so record each failure once.
+      const failures = new Set<unknown>();
+      const recordFailure = (error: unknown) => {
+        failures.add(error);
+      };
       try {
         input.startupAbort.abort();
         const preparationStopped = input.extensionRuntime.stopPreparation?.() ?? Promise.resolve();
@@ -198,29 +207,30 @@ export const createAppCloser = (input: {
         await traceShutdownPhase("extension_runtime", () => input.extensionRuntime.dispose());
         await traceShutdownPhase("artifact_mounts", () => input.artifactMountWatch.dispose());
         await traceShutdownPhase("extension_scheduler", () => input.extensionScheduler.dispose());
+        await processesStopped;
         // Workers call back into host storage, so they stop before the database closes.
         await stopBackendWorkers();
         await traceShutdownPhase("automation", () => input.automationService.close());
         await traceShutdownPhase("terminals", () => input.terminalSupervisor.dispose());
         await harnessesStopped;
         await preparationStopped;
+      } catch (error) {
+        recordFailure(error);
       } finally {
         // A part that fails to stop must not leave PGlite open (lessons 0002 and 0014).
-        try {
-          await Promise.all([hooksStopped, installationsStopped]);
-        } finally {
-          try {
-            await nativeDocumentsStopped;
-          } finally {
-            try {
-              await deadRowCleanupStopped;
-            } finally {
-              await stopBackendWorkers().catch(() => {});
-              await traceShutdownPhase("database", () => input.closeDb());
-            }
-          }
+        for (const result of await Promise.allSettled([hooksStopped, installationsStopped])) {
+          if (result.status === "rejected") recordFailure(result.reason);
         }
+        await nativeDocumentsStopped.catch(recordFailure);
+        await deadRowCleanupStopped.catch(recordFailure);
+        await processesStopped.catch(recordFailure);
+        await stopBackendWorkers().catch(recordFailure);
+        await traceShutdownPhase("database", () => input.closeDb()).catch(recordFailure);
       }
+      const [firstFailure] = failures;
+      if (failures.size > 1)
+        throw new AggregateError(failures, `Shutdown failed: ${String(firstFailure)}`, { cause: firstFailure });
+      if (failures.size === 1) throw firstFailure;
     })();
     await closePromise;
   };
@@ -309,6 +319,7 @@ export const startAppLifecycle = async (input: {
     stopQueueReadiness,
     sessionQueueLifecycle: input.deps.sessionQueueLifecycle,
     harnessRegistry: input.deps.harnessRegistry,
+    extensionProcessOwners: input.deps.extensionProcessOwners,
     extensionInstallations: input.deps.extensionInstallations,
     nativeDocuments: input.deps.nativeDocuments,
     textEditing: input.deps.textEditing,

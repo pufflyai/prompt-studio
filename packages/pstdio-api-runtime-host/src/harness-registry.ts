@@ -8,7 +8,6 @@ import type {
   HarnessCommandContext,
   HarnessCommandDiscoveryContext,
   HarnessCommandState,
-  HarnessExit,
   HarnessMessagesInput,
   HarnessOperation,
   HarnessReattachInput,
@@ -32,11 +31,13 @@ import type {
   Localizable,
   MaybePromise,
 } from "pstdio-api-contracts/extension-kernel";
-import type { RuntimeHarnessRecord } from "pstdio-extensions";
+import { createProcessOwner, type ProcessOwner, type RuntimeHarnessRecord } from "pstdio-extensions";
 import { createHarnessAuthenticationLifetime } from "./harness-authentication";
 import { createHarnessCommandObservations } from "./harness-command-observation";
 import { detectHarness } from "./harness-detection";
 import { HarnessDisposedError } from "./harness-disposed-error";
+import { adaptSession, createHarnessOperationPreparation } from "./harness-prepared-operation";
+import { createHarnessCallOwnership } from "./harness-process-ownership";
 import { createHarnessSessionResources, type HarnessSessionResources } from "./harness-session-resources";
 import { createRetainedHarnessCalls } from "./harness-session-retention";
 
@@ -46,9 +47,14 @@ export type HarnessCallOptions = {
   model?: string;
 };
 
+/**
+ * `owner` is this harness instance's: one per project, or one for host-level calls. Its children
+ * with extension lifetime stop when the harness is disposed, on disable, source change or shutdown.
+ */
 export type HarnessContextFactory = (
   record: RuntimeHarnessRecord,
-  options?: HarnessCallOptions,
+  options: HarnessCallOptions | undefined,
+  owner: ProcessOwner,
 ) => MaybePromise<HarnessContext>;
 
 export type HarnessHandle = {
@@ -100,7 +106,7 @@ export type HarnessHandle = {
     input: HarnessCommandContext,
     operation: HarnessOperation,
     options?: HarnessCallOptions,
-  ): Promise<PreparedHarnessOperation>;
+  ): Promise<PreparedHarnessOperation & { release(): void }>;
   dispose(): Promise<void>;
 };
 
@@ -111,23 +117,6 @@ export type HarnessRegistry = {
   duplicates: string[];
   dispose(): Promise<void>;
 };
-
-const FAILED_EXIT: HarnessExit = { status: "failed" };
-
-const isHarnessExit = (value: unknown): value is HarnessExit => {
-  if (!value || typeof value !== "object") return false;
-  const status = (value as HarnessExit).status;
-  return status === "completed" || status === "failed" || status === "cancelled" || status === "disconnected";
-};
-
-// `done` must settle exactly once and never reject, so a misbehaving provider
-// still transitions the session to "failed" instead of wedging it.
-const adaptSession = (session: HarnessSession): HarnessSession => ({
-  ...session,
-  done: Promise.resolve(session.done)
-    .then((exit) => (isHarnessExit(exit) ? exit : FAILED_EXIT))
-    .catch(() => FAILED_EXIT),
-});
 
 const normalizeSkills = (skills: HarnessSkillsLayout | undefined) => {
   if (!skills || typeof skills.dir !== "string" || skills.dir.length === 0) return null;
@@ -140,6 +129,7 @@ const toHandle = (
   resources: HarnessSessionResources,
 ): HarnessHandle => {
   const contexts = new Map<string | undefined, Promise<HarnessContext>>();
+  const owners = new Map<string | undefined, ProcessOwner>();
   let closing: Promise<void> | undefined;
   let disposed = false;
   const ensureActive = () => {
@@ -150,7 +140,9 @@ const toHandle = (
     const key = options?.projectId;
     let value = contexts.get(key);
     if (!value) {
-      value = Promise.resolve().then(() => buildContext(record, options));
+      const owner = createProcessOwner();
+      owners.set(key, owner);
+      value = Promise.resolve().then(() => buildContext(record, options, owner));
       contexts.set(key, value);
     }
     const context = await value;
@@ -159,7 +151,8 @@ const toHandle = (
   };
   const provider = record.provider;
   const authentication = createHarnessAuthenticationLifetime();
-  const commandWatches = createHarnessCommandObservations(provider, ctx, () => disposed);
+  const calls = createHarnessCallOwnership(ctx);
+  const commandWatches = createHarnessCommandObservations(provider, calls.open, () => disposed);
   const retained = createRetainedHarnessCalls(provider, ctx, resources);
   if (provider.getMessages && !provider.recoverMessages) {
     throw new Error(`Harness with native history must provide recoverMessages: ${record.id}`);
@@ -172,7 +165,7 @@ const toHandle = (
       return;
     }
 
-    const models = await provider.listModels(await ctx(options));
+    const models = await calls.once(options, (context) => provider.listModels!(context));
     const model = findAgentModel(models, input.model);
     validateHarnessParams(resolveAgentModelParams(params, model), input.params);
   };
@@ -191,12 +184,12 @@ const toHandle = (
     supportsHistory: typeof provider.getMessages === "function",
     supportsFork: typeof provider.fork === "function",
     supportsModels: typeof provider.listModels === "function",
-    capabilities: async (options) => provider.capabilities(await ctx(options)),
-    detect: async (options) => detectHarness(provider, await ctx(options)),
+    capabilities: (options) => calls.once(options, (context) => provider.capabilities(context)),
+    detect: (options) => calls.once(options, (context) => detectHarness(provider, context)),
     ...(provider.getAuthentication
       ? {
-          getAuthentication: async (options?: HarnessCallOptions) =>
-            provider.getAuthentication!(await ctx(options), { model: options?.model }),
+          getAuthentication: (options?: HarnessCallOptions) =>
+            calls.once(options, (context) => provider.getAuthentication!(context, { model: options?.model })),
         }
       : {}),
     ...(provider.authenticate
@@ -207,20 +200,35 @@ const toHandle = (
             options?: HarnessCallOptions,
           ) => {
             ensureActive();
-            const context = await ctx(options);
-            await authentication.run(channel, async (channel) => {
-              await provider.authenticate!(context, input, channel);
-            });
+            const call = await calls.open(options, channel);
+            try {
+              await authentication.run(
+                channel,
+                async (channel) => {
+                  await provider.authenticate!(call.context, input, channel);
+                },
+                call.close,
+              );
+            } finally {
+              call.close();
+            }
           },
         }
       : {}),
-    listModels: async (options) => (provider.listModels ? provider.listModels(await ctx(options)) : []),
+    listModels: async (options) =>
+      provider.listModels ? calls.once(options, (context) => provider.listModels!(context)) : [],
     start: async (input, options) => {
       await validateInputParams(input, options);
       return retained.invoke(
         input,
         options,
-        async () => adaptSession(await provider.start(await ctx(options), input)),
+        () =>
+          calls.until(
+            options,
+            async (context) => adaptSession(await provider.start(context, input)),
+            (run) => run.done,
+            input,
+          ),
         (run) => run.done,
       );
     },
@@ -229,7 +237,13 @@ const toHandle = (
       return retained.invoke(
         input,
         options,
-        async () => adaptSession(await provider.resume(await ctx(options), input)),
+        () =>
+          calls.until(
+            options,
+            async (context) => adaptSession(await provider.resume(context, input)),
+            (run) => run.done,
+            input,
+          ),
         (run) => run.done,
       );
     },
@@ -238,83 +252,73 @@ const toHandle = (
       return retained.invoke(
         input,
         options,
-        async () => adaptSession(await provider.reattach!(await ctx(options), input)),
+        () =>
+          calls.until(
+            options,
+            async (context) => adaptSession(await provider.reattach!(context, input)),
+            (run) => run.done,
+            input,
+          ),
         (run) => run.done,
       );
     },
     fork: async (input, options) => {
       if (!provider.fork) throw new Error("This harness does not support forking conversations.");
-      return retained.invoke(input, options, async () => provider.fork!(await ctx(options), input));
+      return retained.invoke(input, options, () =>
+        calls.once(options, (context) => provider.fork!(context, input), input),
+      );
     },
     getMessages: async (input, options) =>
-      provider.getMessages ? provider.getMessages(await ctx(options), input) : [],
+      provider.getMessages ? calls.once(options, (context) => provider.getMessages!(context, input), input) : [],
     recoverMessages: async (input, options) =>
       provider.recoverMessages
-        ? provider.recoverMessages(await ctx(options), input)
+        ? calls.once(options, (context) => provider.recoverMessages!(context, input), input)
         : { kind: "recovered", messages: [...input.knownMessages] },
     supportsCommandState: Boolean(provider.getCommandState),
     watchCommandState: commandWatches.watch,
     getCommandState: async (input, options) =>
       retained.invoke(input, options, async () =>
         provider.getCommandState
-          ? provider.getCommandState(await ctx(options), input)
+          ? calls.once(options, (context) => provider.getCommandState!(context, input), input)
           : { commands: [], modes: [], slashCommands: false },
       ),
-    prepareOperation: async (input, operation, options) => {
-      if (!provider.prepareOperation) throw new Error("This harness does not support native commands.");
-      const context = await ctx(options);
-      const prepared = await retained.invoke(input, options, async () => {
-        if (operation.kind === "command" && provider.getCommandState) {
-          const state = await provider.getCommandState(context, input);
-          const name = /^\/\S+/.exec(operation.text)?.[0];
-          const command = state.commands.find((entry) => entry.name === name);
-          if (command?.disabledReason) throw new Error(command.disabledReason);
-        }
-        return provider.prepareOperation!(context, input, operation);
-      });
-      ensureActive();
-      return {
-        execution: prepared.execution,
-        invoke: async (invocation) => {
-          ensureActive();
-          const result = await retained.invoke(
-            input,
-            options,
-            async () => prepared.invoke(invocation),
-            (result) => (result.kind === "started" ? result.session.done : Promise.resolve()),
-          );
-          if (result.kind === "started") {
-            if (disposed) {
-              await result.session.stop();
-              throw new HarnessDisposedError(`Harness has been disposed: ${record.id}`);
-            }
-            return { ...result, session: adaptSession(result.session) };
-          }
-          return result;
-        },
-      };
-    },
+    prepareOperation: createHarnessOperationPreparation({
+      provider,
+      calls,
+      retained,
+      ensureActive,
+      disposed: () => disposed,
+      id: record.id,
+    }),
     dispose: () => {
       disposed = true;
       retained.closeAdmission();
       // Publish the shared settlement before any external cleanup can reenter.
       closing ??= Promise.resolve().then(async () => {
-        const ownership = await Promise.allSettled([
-          Promise.resolve().then(() => commandWatches.dispose()),
-          Promise.resolve().then(() => authentication.dispose()),
-        ]);
-        const admitted = await Promise.allSettled([Promise.resolve().then(() => retained.retire())]);
-        const results = await Promise.allSettled(
-          [...contexts.values()].map((context) =>
-            context.then(
-              (value) => provider.dispose?.(value),
-              () => undefined,
+        // In-flight work and provider cleanup may wait for a child owned by the instance.
+        const stopping = Promise.allSettled([...owners.values()].map((owner) => owner.close()));
+        const signingIn = Promise.allSettled([Promise.resolve().then(() => authentication.dispose())]);
+        const finishProvider = async () => {
+          const watches = await Promise.allSettled([Promise.resolve().then(() => commandWatches.dispose())]);
+          const admitted = await Promise.allSettled([Promise.resolve().then(() => retained.retire())]);
+          const disposed = await Promise.allSettled(
+            [...contexts.values()].map((context) =>
+              context.then(
+                (value) => provider.dispose?.(value),
+                () => undefined,
+              ),
             ),
-          ),
-        );
-        const errors = [...ownership, ...admitted, ...results].flatMap((result) =>
-          result.status === "rejected" ? [result.reason] : [],
-        );
+          );
+          return [...watches, ...admitted, ...disposed, ...(await signingIn)];
+        };
+        const finishing = finishProvider();
+        void finishing.catch(() => {});
+        const stopped = await stopping;
+        // Report a failed stop without waiting for work that still depends on that child.
+        const results = stopped.every((result) => result.status === "fulfilled")
+          ? [...stopped, ...(await finishing)]
+          : stopped;
+        const errors = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
         if (errors.length) throw new AggregateError(errors, `Harness cleanup failed: ${record.id}`);
       });
       return closing;

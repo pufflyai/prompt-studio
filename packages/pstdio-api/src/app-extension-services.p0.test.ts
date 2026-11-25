@@ -19,6 +19,9 @@ test("extension startup failure still drains another branch before disposal comp
     config: { buildWebviews: false, release: null },
     db: {} as never,
     eventBus: new EventBus(),
+    getTargetDeps: () => {
+      throw new Error("No workspace targets in this test.");
+    },
     dependencies: {
       createHarnessRegistry: () => ({ invalidate() {}, dispose: async () => {} }),
       connectionSecretStore: {

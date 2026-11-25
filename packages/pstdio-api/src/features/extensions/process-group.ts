@@ -1,6 +1,8 @@
 import { isProcessGroupAlive } from "pstdio-paths";
 import { stopWindowsProcessTree } from "./windows-process-tree";
 
+export const PROCESS_STOP_TIMEOUT_MS = 5_000;
+
 interface SignalableChild {
   pid: number;
   exited: Promise<unknown>;

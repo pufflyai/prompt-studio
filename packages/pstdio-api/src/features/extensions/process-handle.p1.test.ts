@@ -143,14 +143,25 @@ test("exited settles when the child exits even if nobody reads its output", asyn
   const handle = spawnProcessHandle(bun("flood.ts", marker), { creditBytes: 16 * 1024 });
   await handle.kill("SIGKILL");
   expect(await handle.exited).toMatchObject({ code: null });
-  const quiet = spawnProcessHandle(
-    { argv: [process.execPath, "-e", "process.stdout.write('x'.repeat(65536))"], env },
-    {
-      creditBytes: 1024,
-    },
-  );
-  expect(await quiet.exited).toEqual({ code: 0, signal: null });
-  expect(text(await collect(quiet.events()), "stdout")).toHaveLength(65536);
+  for (const finish of ["read", "discard"] as const) {
+    const quiet = spawnProcessHandle(
+      { argv: [process.execPath, "-e", "process.stdout.write('x'.repeat(65536))"], env },
+      { creditBytes: 1024 },
+    );
+    try {
+      expect(await quiet.exited).toEqual({ code: 0, signal: null });
+      const confirmed = quiet.treeExited!.then(() => "confirmed");
+      expect(await Promise.race([confirmed, Bun.sleep(100).then(() => "backpressured")])).toBe("backpressured");
+      if (finish === "read") expect(text(await collect(quiet.events()), "stdout")).toHaveLength(65536);
+      else {
+        await quiet.kill();
+        expect(await collect(quiet.events())).toEqual([{ type: "exit", exit: { code: 0, signal: null } }]);
+      }
+      expect(await confirmed).toBe("confirmed");
+    } finally {
+      await quiet.kill();
+    }
+  }
 });
 
 test("a command that cannot start rejects started with a code and still reports an exit", async () => {
@@ -159,7 +170,13 @@ test("a command that cannot start rejects started with a code and still reports 
   process.on("unhandledRejection", onUnhandled);
   try {
     const handle = spawnProcessHandle({ argv: [join(root, "missing-command")], env });
-    await expect(handle.started).rejects.toMatchObject({ code: "process_command_not_found" });
+    // The Windows launcher reports this failure over IPC. Await that reply before matching it.
+    expect(
+      await handle.started.then(
+        () => "started",
+        (error: unknown) => error,
+      ),
+    ).toMatchObject({ code: "process_command_not_found" });
     expect(await handle.exited).toEqual({ code: null, signal: null });
     expect(await collect(handle.events())).toEqual([{ type: "exit", exit: { code: null, signal: null } }]);
     await expect(handle.write("x")).rejects.toThrow();
@@ -186,3 +203,44 @@ test("return ends every pending output read without stopping a quiet child", asy
     await handle.kill("SIGKILL");
   }
 });
+
+test.skipIf(process.platform === "win32")(
+  "kill reports failure if it cannot confirm even the direct child stopped",
+  async () => {
+    const quiet = Bun.spawn([process.execPath, "-e", "setInterval(() => {}, 1000)"], {
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const handle = spawnProcessHandle(
+      { argv: ["owned-fixture"], env },
+      {
+        // Own a real fixture, but simulate a platform that cannot deliver the signal through its handle.
+        spawner: (() => ({
+          pid: quiet.pid,
+          stdin: quiet.stdin,
+          stdout: quiet.stdout,
+          stderr: quiet.stderr,
+          exited: quiet.exited,
+          get signalCode() {
+            return quiet.signalCode;
+          },
+          kill() {},
+        })) as unknown as typeof Bun.spawn,
+      },
+    );
+    const result = handle.kill("SIGKILL").then(
+      () => "stopped",
+      (error: Error) => error.message,
+    );
+    try {
+      expect(await Promise.race([result, Bun.sleep(1_000).then(() => "pending")])).toBe(
+        "The process tree did not stop.",
+      );
+    } finally {
+      quiet.kill("SIGKILL");
+      await quiet.exited;
+      await result;
+    }
+  },
+);

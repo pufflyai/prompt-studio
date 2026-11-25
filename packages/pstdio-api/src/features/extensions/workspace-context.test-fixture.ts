@@ -6,6 +6,7 @@ import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createMemoryDocumentStore, type StorageOwner } from "pstdio-sync";
 import { createDocumentStorage } from "pstdio-sync/records";
 import { createProjectWork } from "../../services/project-work";
+import { createTestExtensionProcessOwners } from "../../test-utils/create-test-extension-process-owners";
 import { makeWorkspace } from "../workspaces/workspace-provider.test-fixture";
 import type { ExtensionsRouteDeps } from "./deps";
 import type { ExtensionStorageIndexService } from "./extension-storage-indexes";
@@ -106,7 +107,7 @@ export const createWorkspaceContextFixture = async (identity = { name: "context"
       work: createProjectWork(),
       get: async () => ({ id: "project-1", name: "Project", shorthand: "P" }),
     },
-    extensionService: { listEnabledSourcesForProject: async () => [source] },
+    extensionService: { listEnabledSourcesForProject: async (_projectId: string) => [source] },
     extensionStorageService: {
       open,
       installIndexes,
@@ -117,6 +118,9 @@ export const createWorkspaceContextFixture = async (identity = { name: "context"
     },
     eventBus: { emit: () => {} },
   };
+  const extensionProcessOwners = createTestExtensionProcessOwners((projectId) =>
+    deps.extensionService.listEnabledSourcesForProject(projectId),
+  );
   return {
     root,
     workspace,
@@ -125,8 +129,12 @@ export const createWorkspaceContextFixture = async (identity = { name: "context"
     source,
     deps: {
       ...deps,
+      extensionProcessOwners,
       extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog(deps as never),
     } as unknown as ExtensionsRouteDeps,
-    cleanup: () => rm(root, { recursive: true, force: true }),
+    cleanup: async () => {
+      await extensionProcessOwners.dispose();
+      await rm(root, { recursive: true, force: true });
+    },
   };
 };

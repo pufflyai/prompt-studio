@@ -4,6 +4,7 @@ import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import cmdShim from "cmd-shim";
+import { createInvocationScope } from "pstdio-extensions";
 import { createProcessApi } from "./extension-process-api";
 import { resolveProcessCommand } from "./process-command";
 
@@ -154,6 +155,61 @@ test.skipIf(process.platform !== "win32")(
         `[PowerShell probe] elapsed=${Math.round(performance.now() - startedAt)}ms scriptStarted=${existsSync(started)}`,
       );
     }
+  },
+  45_000,
+);
+
+const stream = async (command: string[], env: Record<string, string>) => {
+  const scope = createInvocationScope({ logger: { info() {}, warn() {}, error() {} } });
+  const child = createProcessApi({ scope }).spawn({ command, env });
+  try {
+    await child.started;
+    const events = await Array.fromAsync(child.events());
+    const output = (type: "stdout" | "stderr") =>
+      Buffer.concat(events.flatMap((event) => (event.type === type ? [event.data] : [])))
+        .toString()
+        .trim();
+    const exit = await child.exited;
+    await child.treeExited;
+    expect(events.at(-1)).toEqual({ type: "exit", exit });
+    return { stdout: output("stdout"), stderr: output("stderr"), exit };
+  } finally {
+    await scope.close();
+  }
+};
+
+test.skipIf(process.platform !== "win32")(
+  "streams an npm command shim from a custom PATH with its arguments intact",
+  async () => {
+    const { prefix, script } = fixture("User Name & Tools", "stream-probe");
+    writeFileSync(
+      script,
+      "process.stdout.write(JSON.stringify(process.argv.slice(2))); process.stderr.write('command shim stderr');",
+    );
+    writeFileSync(join(prefix, "stream-probe.ps1"), 'throw "Use the sibling command shim"');
+    const args = ["a & b", "x|y", "(value)", "a^b", 'say "hello"', "C:\\folder with spaces\\"];
+    expect(await stream(["stream-probe", ...args], { PATH: prefix, PATHEXT: ".PS1;.CMD" })).toEqual({
+      stdout: JSON.stringify(args),
+      stderr: "command shim stderr",
+      exit: { code: 0, signal: null },
+    });
+  },
+);
+
+test.skipIf(process.platform !== "win32")(
+  "streams a standalone PowerShell script from a custom PATH",
+  async () => {
+    const { prefix } = fixture("PowerShell Å tools");
+    writeFileSync(
+      join(prefix, "stream-only.ps1"),
+      'Write-Output "1.2.3"\n[Console]::Error.WriteLine("PowerShell stderr")',
+    );
+    const env = { PATH: `${prefix};${process.env.PATH ?? ""}`, PATHEXT: ".PS1" };
+    expect(await stream(["stream-only"], env)).toEqual({
+      stdout: "1.2.3",
+      stderr: "PowerShell stderr",
+      exit: { code: 0, signal: null },
+    });
   },
   45_000,
 );

@@ -3,13 +3,15 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { isProcessAlive } from "pstdio-paths";
+import { exitedWithin } from "./features/extensions/process-group";
 import { createTestHarnessRegistry } from "./features/harnesses/test-harness-registry";
 import { createTestApp } from "./test-utils/create-test-app";
 
 let handle: Awaited<ReturnType<typeof createTestApp>>;
 let tempRoot: string;
 
-const writeSessionHookExtension = () => {
+const writeSessionHookExtension = (extraHook = "") => {
   const root = join(tempRoot, "session-hook-extension");
   mkdirSync(root, { recursive: true });
   writeFileSync(
@@ -105,6 +107,7 @@ const writeSessionHookExtension = () => {
               });
             },
           },
+          ${extraHook}
         ],
       };
     `,
@@ -140,7 +143,7 @@ afterEach(async () => {
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
-const enableSessionHookExtension = async (projectId: string) =>
+const enableSessionHookExtension = async (projectId: string, extraHook?: string) =>
   handle.deps.extensionService.enableInstalledSourceForProject({
     projectId,
     installName: "session-hook-extension",
@@ -149,7 +152,7 @@ const enableSessionHookExtension = async (projectId: string) =>
     displayName: "Session Hook Extension",
     version: "1.0.0",
     sourceKind: "local_path",
-    sourcePath: writeSessionHookExtension(),
+    sourcePath: writeSessionHookExtension(extraHook),
     manifest: { id: "pstdio.session-hook-extension" },
   });
 
@@ -228,4 +231,67 @@ describe("session lifecycle extension hooks", () => {
       sessionStatus: "completed",
     });
   });
+});
+
+test("shutdown stops an extension child before draining the session hook that is waiting for it", async () => {
+  const ready = join(tempRoot, "owned-child.pid");
+  const release = join(tempRoot, "release-child");
+  const drained = join(tempRoot, "hook-drained");
+  const script = `
+    await Bun.write(${JSON.stringify(ready)}, String(process.pid));
+    const timer = setInterval(async () => {
+      if (await Bun.file(${JSON.stringify(release)}).exists()) clearInterval(timer);
+    }, 20);
+  `;
+  const project = await handle.deps.projectService.create({ name: "Session hook shutdown" });
+  await handle.deps.workspaceService.ensureDefault({
+    project_id: project.id,
+    root_path: tempRoot,
+    name: "Session hook workspace",
+  });
+  await enableSessionHookExtension(
+    project.id,
+    `{
+    id: "wait-for-child",
+    ref: { kind: "hook", id: "wait-for-child" },
+    event: { extensionId: "pstdio", kind: "event", id: "session.started" },
+    async run(ctx) {
+      const child = ctx.process.spawn({
+        command: ${JSON.stringify([process.execPath, "-e", script])},
+        lifetime: "extension",
+      });
+      await child.started;
+      const exit = await child.exited;
+      await ctx.storage.set("shutdown-child-exit", exit);
+      await Bun.write(${JSON.stringify(drained)}, "done");
+    },
+  },`,
+  );
+
+  let closing: Promise<void> | undefined;
+  try {
+    await handle.deps.sessionService.create({
+      project_id: project.id,
+      title: "Session with an owned child",
+      agent: "test-agent",
+    });
+    let pid = 0;
+    for (let i = 0; i < 250 && !pid; i++) {
+      pid = Number(
+        await Bun.file(ready)
+          .text()
+          .catch(() => ""),
+      );
+      if (!pid) await Bun.sleep(20);
+    }
+    expect(pid).toBeGreaterThan(0);
+    expect(isProcessAlive(pid)).toBe(true);
+    closing = handle.close();
+    expect(await exitedWithin(closing, 3_000)).toBe(true);
+    expect(isProcessAlive(pid)).toBe(false);
+    expect(await Bun.file(drained).text()).toBe("done");
+  } finally {
+    await Bun.write(release, "");
+    await closing;
+  }
 });

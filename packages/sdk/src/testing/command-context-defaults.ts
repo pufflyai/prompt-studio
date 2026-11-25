@@ -171,7 +171,7 @@ export const createCommandContextDefaults = (input: {
       stopProjectSync: unavailable,
       resolveReturnedChanges: unavailable,
     },
-    process: { run: unavailable, runOrThrow: unavailable, spawnDetached: unavailable },
+    process: { run: unavailable, runOrThrow: unavailable, spawnDetached: unavailable, spawn: unavailable },
     net: { findFreePort: unavailable },
     connections: { request: unavailable, stream: unavailable },
     commands: {

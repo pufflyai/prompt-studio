@@ -3,11 +3,15 @@ import type { ProcessRunInput } from "pstdio-api-contracts/extension-kernel";
 import {
   type CommandRunnerEnvironment,
   createExtensionProcessEnvironment,
+  createProcessOwner,
   type InvocationScope,
+  type ProcessOwner,
 } from "pstdio-extensions";
 import { redactSensitiveText } from "pstdio-logging";
 import { apiLogger } from "../../lib/logger";
-import { startProcessChild } from "./extension-process-lifetime";
+import { startProcessChild, watchLease } from "./extension-process-lifetime";
+import { createProcessSpawn } from "./extension-process-spawn";
+import type { ProcessTarget } from "./extension-targets";
 import { resolveProcessEnvironmentCommand } from "./process-command";
 import {
   type ProcessEnvironmentLease,
@@ -104,16 +108,6 @@ const createStopGate = (kill: () => Promise<void>) => {
   };
 };
 
-const watchLease = (treeExited: Promise<void> | undefined, lease?: ProcessEnvironmentLease) => {
-  if (!treeExited || !lease) return;
-  void treeExited.then(lease.release, (error: unknown) => {
-    apiLogger.warn(
-      { err: error, event: "extension.process.grant_tracking_failed" },
-      "Could not verify granted process exit",
-    );
-  });
-};
-
 export interface ProcessApiOptions {
   extensionId?: string;
   /**
@@ -129,6 +123,15 @@ export interface ProcessApiOptions {
   /** Invocation that owns the spawned children. Absent for host-level probes. */
   scope?: InvocationScope;
   resolveCwd?: (input: ProcessRunInput) => Promise<string>;
+  /**
+   * Where `spawn` runs for a workspace id, or for the invocation's workspace when it is omitted.
+   * Absent for host-level probes, whose children run on this device with the cwd they pass.
+   */
+  resolveTarget?: (workspaceId: string | undefined, signal: AbortSignal) => Promise<ProcessTarget | undefined>;
+  /** Owns `spawn` children with call lifetime when there is no invocation scope, such as a harness operation. */
+  callOwner?: ProcessOwner;
+  /** Owns `spawn` children with extension lifetime, looked up on first use. Without it, extension lifetime is refused. */
+  extensionOwner?: () => ProcessOwner | undefined;
   spawner?: ProcessSpawner;
 }
 
@@ -166,16 +169,18 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
   // Children outliving the invocation that started them is the leak this owns. The scope
   // stops whatever is still running when the invocation ends, however it ended.
   const running = new Set<(reason: unknown) => Promise<void>>();
+  const scopeOwner = options.scope ? createProcessOwner() : undefined;
   options.scope?.register(async () => {
     closed = true;
-    await Promise.all(
-      [...running].map((stop) => stop(new Error("Invocation ended while the command was still running."))),
-    );
+    await Promise.all([
+      scopeOwner?.close(),
+      ...[...running].map((stop) => stop(new Error("Invocation ended while the command was still running."))),
+    ]);
   });
 
   // Granted values go into the child's environment only. A child that echoes one does not hand
   // it back to the extension through the result.
-  const prepareEnvironment = async (input: ProcessRunInput) => {
+  const prepareEnvironment = async (input: ProcessRunInput, active = ensureActive) => {
     // A granted name the host has no value for is skipped rather than failing a host-started process.
     const names =
       input.envFromHost ?? (await options.grantedNames?.())?.filter((name) => process.env[name] !== undefined) ?? [];
@@ -183,6 +188,7 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
       return {
         env: createExtensionProcessEnvironment(process.env, input.env, process.platform),
         hide: (text: string) => text,
+        granted: [] as string[],
       };
     if (!options.hostEnvironment)
       throw new ProcessEnvironmentPermissionError(
@@ -191,14 +197,14 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
       );
     const lease = await options.hostEnvironment(names);
     try {
-      ensureActive();
+      active();
       const env = createExtensionProcessEnvironment(process.env, input.env, process.platform, names);
       const requested = new Set(names.map((name) => name.toUpperCase()));
       const secrets = Object.entries(env).flatMap(([name, value]) =>
         requested.has(name.toUpperCase()) && value ? [value] : [],
       );
       const hide = (text: string) => redactText(text, secrets);
-      return { env, lease, hide };
+      return { env, lease, hide, granted: secrets };
     } catch (error) {
       lease.release();
       throw error;
@@ -298,6 +304,18 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
   };
 
   const api: CommandRunnerEnvironment["process"] = {
+    spawn: createProcessSpawn({
+      owner: (lifetime) => (lifetime === "extension" ? options.extensionOwner?.() : (scopeOwner ?? options.callOwner)),
+      ensureActive,
+      // Without workspace routing, such as in a provider callback, a child starts where `run` would.
+      resolveTarget:
+        options.resolveTarget ??
+        (options.resolveCwd
+          ? async () => ({ kind: "local", root: await options.resolveCwd!({ command: [] }) })
+          : undefined),
+      prepareEnvironment,
+      spawner,
+    }),
     run: runToCompletion,
     async runOrThrow(input) {
       const result = await runToCompletion(input);

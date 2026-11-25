@@ -4,13 +4,16 @@ import { subscribe, unsubscribe } from "node:diagnostics_channel";
 import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { ProcessHandle } from "pstdio-api-contracts/extension-kernel";
 import { runtimeOperationChannel } from "pstdio-diagnostics";
 import { createExtensionProcessEnvironment } from "../process-environment";
+import { createProcessHandleProxy, createProcessOwner, failedProcessHandle, processError } from "../process-owner";
 import { markHostContext } from "../runner/host-context";
 import { expectRejection } from "./expect-rejection.test-utils";
 import { backendWorkerCommand, createBackendWorkerPool } from "./pool";
 import { HANDLER_MARKER } from "./protocol";
 import { snapshotSink } from "./remote-values";
+import { serviceSurfaces } from "./service-surfaces";
 import { type BackendInvocation, BackendUnavailableError, startBackendWorker } from "./supervisor";
 import type { BackendSurface } from "./surface";
 
@@ -25,7 +28,43 @@ beforeAll(async () => {
     `
 let observedAbort = false;
 let waiting = false;
+class ProviderChild {
+  id = "provider-child";
+  started = Promise.resolve();
+  outcome = Promise.withResolvers();
+  exited = this.outcome.promise;
+  input = [];
+  async write(data) { this.input.push(data); }
+  async end() { this.outcome.resolve({ code: 0, signal: null }); }
+  async kill(signal) { this.outcome.resolve({ code: null, signal }); }
+  async *events() {
+    for (const data of this.input) yield { type: "stdout", data };
+    yield { type: "exit", exit: await this.exited };
+  }
+}
+class FinishedProviderLeader {
+  id = "provider-leader";
+  started = Promise.resolve();
+  exited = Promise.resolve({ code: 0, signal: null });
+  stops = 0;
+  async write() {}
+  async end() {}
+  async kill() { this.stops++; }
+  async *events() { yield { type: "stdout", data: new Uint8Array([this.stops]) }; }
+}
 export default {
+  workspaceTypes: [
+    { spawn: () => new ProviderChild() },
+    { spawn: () => {
+      const child = new ProviderChild();
+      return { ...child, write: child.write, end: child.end, kill: child.kill, events: child.events };
+    } },
+    { spawn: (_ctx, confirmed) => {
+      const child = new FinishedProviderLeader();
+      if (confirmed) child.treeExited = Promise.resolve();
+      return child;
+    } },
+  ],
   commands: [
     {
       id: "save",
@@ -319,6 +358,43 @@ export default {
         } catch (error) {
           return error.message;
         }
+      },
+    },
+    {
+      id: "spawn-stream",
+      title: "Spawn and stream",
+      async run(ctx) {
+        const handle = ctx.process.spawn({ command: ["agent"] });
+        const id = handle.id;
+        // The host never accepts this write; the kill after it must not wait for it.
+        const stuck = handle.write("stuck").then(() => "written", (error) => error.message);
+        await handle.started;
+        await handle.write("hello");
+        await handle.end();
+        const iterator = handle.events()[Symbol.asyncIterator]();
+        const first = (await iterator.next()).value;
+        await handle.kill();
+        const treeExitReported = handle.treeExited instanceof Promise;
+        await handle.treeExited;
+        const rest = [];
+        for (let next = await iterator.next(); !next.done; next = await iterator.next()) rest.push(next.value);
+        return {
+          id: typeof id,
+          first: { type: first.type, text: new TextDecoder().decode(first.data) },
+          rest,
+          exited: await handle.exited,
+          treeExitReported,
+          pending: await Promise.race([stuck, new Promise((resolve) => setTimeout(() => resolve("still waiting"), 50))]),
+        };
+      },
+    },
+    {
+      id: "spawn-fail",
+      title: "Failed spawn",
+      async run(ctx) {
+        const handle = ctx.process.spawn({ command: ["agent"], fail: true });
+        const code = await handle.started.then(() => "started", (error) => error.code);
+        return { code, exited: await handle.exited };
       },
     },
     { id: "log-and-fail", title: "Log", run: (ctx) => { ctx.logger.info("x"); throw Object.assign(new Error("boom"), { code: "backend_unavailable" }); } },
@@ -1492,5 +1568,124 @@ test("a worker stopped before its first heartbeat records its resident memory", 
     expect(life).toHaveProperty("exitCode");
   } finally {
     unsubscribe(runtimeOperationChannel, listener);
+  }
+});
+
+test("a spawned process handle opens at once, forwards its members and settles its promises", async () => {
+  const worker = await start();
+  const unhandled: unknown[] = [];
+  const onUnhandled = (reason: unknown) => unhandled.push(reason);
+  process.on("unhandledRejection", onUnhandled);
+  try {
+    const writes: string[] = [];
+    const exited = Promise.withResolvers<{ code: number | null; signal: string | null }>();
+    const context = {
+      process: {
+        spawn: (input: { fail?: boolean }) => {
+          if (input.fail) return failedProcessHandle(processError("process_target_unsupported", "no remote spawn"));
+          return {
+            id: "host-id",
+            started: Promise.resolve(),
+            exited: exited.promise,
+            treeExited: exited.promise.then(() => {}),
+            write: (data: string) => {
+              writes.push(data);
+              return data === "stuck" ? new Promise(() => {}) : Promise.resolve();
+            },
+            end: async () => void writes.push("<end>"),
+            kill: async () => exited.resolve({ code: null, signal: "SIGTERM" }),
+            events: async function* () {
+              yield { type: "stdout", data: new TextEncoder().encode("out") };
+              yield { type: "exit", exit: await exited.promise };
+            },
+          };
+        },
+      },
+    };
+    const processSurface: BackendSurface = { kind: "object", members: { process: serviceSurfaces.process! } };
+    const run = (id: string) =>
+      worker.invoke({ handlerId: handlerOf(worker.definition, id), context, surface: processSurface, args: [] });
+    expect(await run("spawn-stream")).toEqual({
+      id: "string",
+      first: { type: "stdout", text: "out" },
+      rest: [{ type: "exit", exit: { code: null, signal: "SIGTERM" } }],
+      exited: { code: null, signal: "SIGTERM" },
+      treeExitReported: true,
+      pending: "still waiting",
+    });
+    expect(writes).toEqual(["stuck", "hello", "<end>"]);
+    expect(await run("spawn-fail")).toEqual({
+      code: "process_target_unsupported",
+      exited: { code: null, signal: null },
+    });
+    await Bun.sleep(20);
+    expect(unhandled).toEqual([]);
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
+    await worker.stop();
+  }
+});
+
+test("worker workspace providers can return class and object process handles with bound methods", async () => {
+  const worker = await start();
+  try {
+    const workspaceTypes = (worker.definition as { workspaceTypes: { spawn: Record<string, string> }[] })
+      .workspaceTypes;
+    for (const [index, { spawn }] of workspaceTypes.slice(0, 2).entries()) {
+      const child = (await worker.invoke({
+        handlerId: spawn[HANDLER_MARKER]!,
+        context: {},
+        surface: { kind: "object", members: {} },
+        args: [],
+      })) as ProcessHandle;
+      await child.started;
+      await child.write(new Uint8Array([1, 2]));
+      await child.write(new Uint8Array([3, 4]));
+      if (index === 0) await child.end();
+      else await child.kill("SIGTERM");
+      const output = [];
+      for await (const event of await child.events()) output.push(event);
+      const exit = index === 0 ? { code: 0, signal: null } : { code: null, signal: "SIGTERM" };
+      expect(await child.exited).toEqual(exit);
+      expect(output).toEqual([
+        { type: "stdout", data: new Uint8Array([1, 2]) },
+        { type: "stdout", data: new Uint8Array([3, 4]) },
+        { type: "exit", exit },
+      ]);
+    }
+  } finally {
+    await worker.stop();
+  }
+});
+
+test("materialized workspace provider handles retain cleanup after the direct child exits", async () => {
+  const worker = await start();
+  try {
+    const workspaceTypes = (worker.definition as { workspaceTypes: { spawn: Record<string, string> }[] })
+      .workspaceTypes;
+    for (const cleanup of ["kill", "owner close", "confirmed exit"] as const) {
+      const confirmed = cleanup === "confirmed exit";
+      const materialized = (await worker.invoke({
+        handlerId: workspaceTypes[2]!.spawn[HANDLER_MARKER]!,
+        context: {},
+        surface: { kind: "object", members: {} },
+        args: [confirmed],
+      })) as ProcessHandle;
+      if (confirmed) expect(materialized.treeExited).toBeInstanceOf(Promise);
+      else expect(materialized.treeExited).toBeUndefined();
+      const owner = createProcessOwner();
+      const child = createProcessHandleProxy(Promise.resolve(materialized));
+      owner.adopt(child);
+      expect(await child.exited).toEqual({ code: 0, signal: null });
+      if (cleanup === "kill") await child.kill();
+      if (confirmed) await child.treeExited;
+      await owner.close();
+      await child.treeExited;
+      const output = [];
+      for await (const event of await materialized.events()) output.push(event);
+      expect(output).toEqual([{ type: "stdout", data: new Uint8Array([confirmed ? 0 : 1]) }]);
+    }
+  } finally {
+    await worker.stop();
   }
 });
