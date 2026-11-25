@@ -80,11 +80,58 @@ test("relay remains available when its optional collector exits", async () => {
 test("relay shutdown also stops and reaps its running collector", async () => {
   await exercise(
     true,
-    'process.once("SIGTERM",async()=>{await Bun.write(stopped,"stopped");process.exit(0)});setInterval(()=>{},1000);await Bun.write(marker,"started");',
+    `process.once("SIGTERM", async () => {
+      await Bun.sleep(100);
+      await Bun.write(stopped, "stopped");
+      process.exit(0);
+    });
+    setInterval(() => {}, 1000);
+    await Bun.write(marker, "started");`,
     async ({ url, directory, stop }) => {
       expect(await (await fetch(url)).text()).toBe("relay-ready");
       expect(await stop()).toBe(0);
       expect(await Bun.file(join(directory, "collector-stopped")).text()).toBe("stopped");
+    },
+  );
+});
+
+test("repeated relay shutdown requests let the collector finish cleanup", async () => {
+  await exercise(
+    true,
+    `process.once("SIGTERM", async () => {
+      await Bun.write(stopped + ".starting", "starting");
+      // A supervisor that exits early may never reap this fixture.
+      const deadline = Date.now() + 750;
+      while (!(await Bun.file(stopped + ".release").exists())) {
+        if (Date.now() >= deadline) process.exit(1);
+        await Bun.sleep(5);
+      }
+      await Bun.write(stopped, "stopped");
+      process.exit(0);
+    });
+    setInterval(() => {}, 1000);
+    await Bun.write(marker, "started");`,
+    async ({ directory, stop }) => {
+      const shutdownMarker = join(directory, "collector-stopped");
+      const cleanupStarted = Promise.withResolvers<void>();
+      const watcher = watch(directory, (_event, name) => {
+        if (name === "collector-stopped.starting") cleanupStarted.resolve();
+      });
+      try {
+        const exiting = stop();
+        await Promise.race([
+          cleanupStarted.promise,
+          exiting.then(() => {
+            throw new Error("Relay exited before collector cleanup started");
+          }),
+        ]);
+        const repeated = stop();
+        await Bun.write(`${shutdownMarker}.release`, "release");
+        expect(await repeated).toBe(0);
+        expect(await Bun.file(shutdownMarker).text()).toBe("stopped");
+      } finally {
+        watcher.close();
+      }
     },
   );
 });

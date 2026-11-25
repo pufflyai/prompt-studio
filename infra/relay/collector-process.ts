@@ -3,12 +3,13 @@ const server = Bun.spawn(process.argv.slice(2), { stdin: "inherit", stdout: "inh
 let collector: ReturnType<typeof Bun.spawn> | undefined;
 let stopping = false;
 const stop = () => {
+  if (stopping) return;
   stopping = true;
   server.kill("SIGTERM");
   collector?.kill("SIGTERM");
 };
-process.once("SIGTERM", stop);
-process.once("SIGINT", stop);
+process.on("SIGTERM", stop);
+process.on("SIGINT", stop);
 
 const collect = async () => {
   if (!process.env.METRICS_WRITE_URL || !process.env.LOGS_WRITE_URL) return;
@@ -52,9 +53,11 @@ const collection = collect();
 try {
   process.exitCode = await server.exited;
 } finally {
-  stopping = true;
   const active = collector;
-  active?.kill("SIGTERM");
+  if (!stopping) {
+    stopping = true;
+    active?.kill("SIGTERM");
+  }
   const kill = setTimeout(() => active?.kill("SIGKILL"), 1000);
   kill.unref();
   try {
