@@ -120,23 +120,45 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     return false;
   };
 
+  const externalSubtreeForHint = (
+    ancestor: string,
+    [path, observed]: PathObservation,
+    stateAt: (path: string) => FileState,
+    keepMatchedWrites: boolean,
+  ) => {
+    if (!isInside(path, ancestor)) return;
+    if (!keepMatchedWrites) return observed?.directory && isExternalReturn(path, observed) ? path : undefined;
+
+    // A recursive watcher can describe a returned folder using only a file within it.
+    let returned: string | undefined;
+    for (const candidate of pathAndAncestors(observed?.directory ? path : dirname(path))) {
+      if (!isInside(candidate, ancestor)) break;
+      const state = stateAt(candidate);
+      if (state?.directory && isExternalReturn(candidate, state)) returned = candidate;
+    }
+    return returned;
+  };
+
   const reconcileDeletion = (
     recordedPath: string,
     entry: LedgerEntry,
     current: FileState,
     related: readonly PathObservation[],
     retired: Map<string, number>,
+    returnedRoot: (ancestor: string, hint: PathObservation) => string | undefined,
   ) => {
     if (isExternalReturn(recordedPath, current)) {
       retireDeletion(retired, recordedPath, entry.order);
       return;
     }
     markReappearedPaths(entry, related);
-    for (const [path, state] of related) {
-      if (state?.directory && isInside(path, recordedPath) && isExternalReturn(path, state)) {
+    if (!current?.directory) return;
+    for (const hint of related) {
+      const returned = returnedRoot(recordedPath, hint);
+      if (returned) {
         entry.returnedSubtrees ??= new Set();
-        entry.returnedSubtrees.add(path);
-        retireDeletion(retired, path, entry.order);
+        entry.returnedSubtrees.add(returned);
+        retireDeletion(retired, returned, entry.order);
       }
     }
   };
@@ -165,7 +187,22 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     return { related, directories };
   };
 
-  const reconcileDeletions = (observations: readonly PathObservation[], byPath: ReadonlyMap<string, FileState>) => {
+  const reconcileDeletions = (
+    observations: readonly PathObservation[],
+    byPath: ReadonlyMap<string, FileState>,
+    keepMatchedWrites: boolean,
+  ) => {
+    const sampled = new Map(byPath);
+    const stateAt = (path: string) => {
+      const observed = sampled.get(path);
+      if (observed !== undefined) return observed;
+      const current = readArtifactFileState(path);
+      sampled.set(path, current);
+      return current;
+    };
+    const returnedRoot = (ancestor: string, hint: PathObservation) =>
+      externalSubtreeForHint(ancestor, hint, stateAt, keepMatchedWrites);
+
     const retired = new Map<string, number>();
     const hints = indexDeletionHints(observations);
     // Exact folder hints can retire old children before their individual states are read.
@@ -179,9 +216,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
       if (!related && !hasPathOrAncestor(recordedPath, hints.directories)) continue;
 
       // A recursive watcher may report only a child when an external folder returns.
-      const observed = byPath.get(recordedPath);
-      const current = observed === undefined ? readArtifactFileState(recordedPath) : observed;
-      reconcileDeletion(recordedPath, entry, current, related ?? [], retired);
+      reconcileDeletion(recordedPath, entry, stateAt(recordedPath), related ?? [], retired, returnedRoot);
     }
     dropRetiredDeletions(retired);
   };
@@ -278,7 +313,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
       forgetExpired();
       const observations: PathObservation[] = paths.map((path) => [path, readArtifactFileState(path)]);
       const byPath = new Map(observations);
-      reconcileDeletions(observations, byPath);
+      reconcileDeletions(observations, byPath, keepMatchedWrites);
       const consumed = new Set<string>();
       const kept = observations.filter(
         ([path, current]) => !isEcho(path, current, byPath, consumed, keepMatchedWrites),
