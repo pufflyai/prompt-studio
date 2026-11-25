@@ -30,11 +30,13 @@ import { checkCandidateSource } from "./extension-candidate";
 import { createExtensionInstallBatch } from "./extension-install-batch";
 import { loadExtensionSource } from "./extension-runtime";
 import { createExtensionWebviewAccess } from "./extension-webview-access";
+import { readWebviewBuildSignature } from "./extension-webview-build-cache";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { inspectManagedWebviewBuildInputs } from "./extension-webview-build-source";
 import { installExtensionSource } from "./install-extension-source";
 import { prepareWebviewArtifact, prepareWebviewArtifacts } from "./prepared-webview";
 import { createExtensionSourceCache } from "./project-extension-runtime-sources";
+import { createApp, webviewAccess } from "./test-utils/webview-asset-app";
 import { buildWorkbenchExtensionMetadata } from "./workbench-extension-metadata";
 
 const previousHome = process.env.PSTDIO_HOME;
@@ -169,6 +171,60 @@ test("serving repair corrects a stale publication marker even when the dist sign
     await manager.ensure("installed", viewId);
     expect(readPublishedWebviewRevision(dist)).toBe(expected);
     expect((await readAcceptedRevision(source))?.id).toBe(installed.preparedRevision!.id);
+  } finally {
+    manager.dispose();
+  }
+});
+
+test("publishes and serves release webview assets from the immutable revision", async () => {
+  const { root, source } = fixture();
+  const installed = await installExtensionSource({ source, skipInstall: true });
+  const prepared = installed.preparedRevision!;
+  const viewId = "test.prepared-install.view.page";
+  const row = { id: "installed", source_path: source, install_name: installed.installName, updated_at: "initial" };
+  const cacheRoot = join(root, "webviews");
+  const dist = join(cacheRoot, row.id, viewId, "dist");
+  const release = join(
+    process.env.PSTDIO_HOME!,
+    "cache",
+    "extension-revisions",
+    "revisions",
+    prepared.id,
+    "webviews",
+    "0",
+  );
+  mkdirSync(release, { recursive: true });
+  mkdirSync(dist, { recursive: true });
+  writeFileSync(join(dist, "module.js"), "// previous local build");
+  writeFileSync(join(dist, "build-signature.txt"), "local-publication");
+  writeFileSync(join(release, "module.js"), "// prepared release");
+  writeFileSync(join(release, "module.css"), "p { color: red; }");
+  recordPublishedWebviewRevision(dist, "local-publication");
+  const artifact = { ...prepared.webviews![viewId]!, distDir: release };
+  const manager = createExtensionWebviewBuildManager({
+    listInstalledSources: async () => [row],
+    reportBuildSuccess: async () => "reported",
+    reportBuildFailure: async () => "reported",
+    webviewCacheRoot: cacheRoot,
+  });
+  try {
+    await acceptPreparedRevision(source, { ...prepared, prebuiltRelease: true, webviews: { [viewId]: artifact } });
+    await manager.adopt(source);
+    expect(readFileSync(join(dist, "module.js"), "utf8")).toBe("// previous local build");
+    expect(existsSync(join(dist, "module.css"))).toBe(false);
+    expect(readWebviewBuildSignature(dist)).toBeNull();
+    const app = createApp({ cacheRoot, sourcePath: source, sources: [row] });
+    const scope = { installedExtensionId: row.id, webviewId: viewId };
+    const moduleUrl = webviewAccess.assetUrl(scope, "module.js");
+    expect(await (await app.request(moduleUrl)).text()).toBe("// prepared release");
+    const css = await app.request(webviewAccess.stylesheetUrl(scope));
+    const expectedRevision = `prepared:${artifact.id}`;
+    expect(css.status).toBe(307);
+    expect(css.headers.get("location")).toBe(webviewAccess.assetUrl(scope, "module.css", expectedRevision));
+    expect(await (await app.request(css.headers.get("location")!)).text()).toBe("p { color: red; }");
+    expect(readPublishedWebviewRevision(dist)).toBe(expectedRevision);
+    recordPublishedWebviewRevision(dist, "local-rebuild");
+    expect(await (await app.request(moduleUrl)).text()).toBe("// previous local build");
   } finally {
     manager.dispose();
   }
