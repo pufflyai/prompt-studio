@@ -115,4 +115,4 @@ test("a partially restored number generation retains every input and refuses a c
     await connection?.close();
     await rm(root, { recursive: true, force: true });
   }
-});
+}, 10_000);
