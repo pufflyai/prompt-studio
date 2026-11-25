@@ -9,6 +9,7 @@ import {
   TreeList,
   type TreeListNode,
 } from "@pstdio/ui";
+import { useRef } from "react";
 import { EditingError } from "../../editing-error";
 import { ExampleIcon } from "../../icon";
 import type { ExampleViewInput } from "../../view-context";
@@ -66,8 +67,12 @@ export const MarmaladeInspector = ({ input }: { input: ExampleViewInput }) => {
   return visible ? <MarmaladeInspectorContent input={input} /> : null;
 };
 
+const isResizeHandle = (target: EventTarget) => target instanceof Element && target.closest('[role="separator"]');
+
 const MarmaladeInspectorContent = ({ input }: { input: ExampleViewInput }) => {
   const layout = useMarmaladeInspectorSize(input);
+  const resizePointer = useRef<number | undefined>(undefined);
+  const keyboardResize = useRef(false);
   const state = useMarmalade((projection) => projection.state);
   const error = useMarmalade((projection) => projection.error);
   const buttonRecipe = useRecipe({ recipe: psTheme.getRecipe("button") });
@@ -101,7 +106,22 @@ const MarmaladeInspectorContent = ({ input }: { input: ExampleViewInput }) => {
         contentMinSizePx={160}
         collapsible={false}
         resizeLabel="Resize layers group"
-        onSizeChange={layout.save}
+        onPointerDownCapture={(event) => {
+          if (event.button === 0 && isResizeHandle(event.target)) resizePointer.current = event.pointerId;
+        }}
+        onPointerUpCapture={(event) => {
+          if (resizePointer.current === event.pointerId) resizePointer.current = undefined;
+        }}
+        onKeyDownCapture={(event) => {
+          keyboardResize.current = Boolean(isResizeHandle(event.target));
+        }}
+        onKeyDown={() => {
+          keyboardResize.current = false;
+        }}
+        onSizeChange={(size) => {
+          // The shared layout also reports sizes while cleaning up an interrupted pointer drag.
+          if (resizePointer.current === undefined || keyboardResize.current) layout.save(size);
+        }}
         contentPanel={
           <Stack h="full" minH="0" gap="0">
             <Text textStyle="label/S/medium" px="sm" py="sm" flexShrink="0">

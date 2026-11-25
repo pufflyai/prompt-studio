@@ -27,5 +27,10 @@ export const useMarmaladeInspectorSize = (input: ExampleViewInput) => {
   };
   const stored = preference.data?.value;
   const size = chosen ?? (typeof stored === "number" && Number.isFinite(stored) && stored >= 96 ? stored : 240);
-  return { size, save, error: error || preference.error?.message || "", retry: () => save(size) };
+  return {
+    size,
+    save,
+    error: error || preference.error?.message || "",
+    retry: error ? () => save(size) : preference.refresh,
+  };
 };

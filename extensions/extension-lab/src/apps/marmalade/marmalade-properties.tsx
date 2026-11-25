@@ -25,6 +25,7 @@ interface FieldProps {
 const Field = (props: FieldProps) => {
   const { label, value, numeric, disabled, min, max, required, action } = props;
   const id = `marmalade-${label.toLowerCase().replaceAll(" ", "-")}`;
+  // The shared input uses a zero step to accept decimals without quantizing them.
   return (
     <Stack gap="2xs" minW="0">
       <chakra.label htmlFor={id} color="fg.muted" textStyle="label/XS">
@@ -38,11 +39,11 @@ const Field = (props: FieldProps) => {
           defaultValue={Number(value)}
           min={min}
           max={max}
-          step={1}
+          step={0}
           size="xs"
           hideLabel
           fullWidth
-          hideSlider={label !== "Opacity"}
+          hideSlider
           disabled={disabled}
           onPreview={(next) => {
             const input = action(String(next));

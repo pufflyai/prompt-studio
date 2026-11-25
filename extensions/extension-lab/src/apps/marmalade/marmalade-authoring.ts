@@ -169,6 +169,7 @@ export const applyMarmaladeAuthoring = (state: MarmaladeState, action: Marmalade
           layer.opacity = action.changes.opacity;
         }
         if (action.changes.blendMode !== undefined) {
+          if (layer.kind === "group") throw new Error("Blend modes are available for individual layers only");
           if (!marmaladeBlendModes.some((mode) => mode.id === action.changes.blendMode))
             throw new Error("Unknown blend mode");
           layer.blendMode = action.changes.blendMode;
