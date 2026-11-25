@@ -1,0 +1,200 @@
+name: Shared splitter exact source CLI review
+
+on:
+  push:
+    branches:
+      - chore/pr2447-source-cli-5ed69be9
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  source_cli:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PR2447_PR_HEAD: 5ed69be94e5b10455fb880e8722fd425baa7f4ce
+      PR2447_HEAD: 5e6d54f2e4cb9028ae4804f92125055e3e6e0b12
+      PR2447_TREE: c3c3a3558c9100403b9430cd76a4b61e94760aa3
+      PR2447_BASE: b901e66a3b7f22f7cca16b497ee116ff1fc69709
+      PR2447_POLICY: eeda44a3cdb1ac1ca43bda7a351ba8ed43d09409cd8b1cc4c373fa2bfd6a2348
+      PR2447_EXPECTED_PLAN: 7d72a770267831baebcc8b32acb6e1c1c4e142059338a3e068740f010ca4b1ec
+      PR2447_CLI_GROUP: 72480638f874d13d0838a290
+      PR2447_CLI_FILES_SHA256: 58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a
+      PR2447_OUTPUT: test-results/pr2447-source-cli
+      PR2447_ORDINARY_RUN: "45571468899"
+      PR2447_ORDINARY_SOURCE: 5e6d54f2e4cb9028ae4804f92125055e3e6e0b12
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.PR2447_HEAD }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+
+      - name: Verify the source and sealed Linux plan
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$GITHUB_REF" = refs/heads/chore/pr2447-source-cli-5ed69be9
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$PR2447_PR_HEAD"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" =             "$(printf 'A\t.github/workflows/pr2447-source-cli-5ed69be9.yml')"
+          test "$(git rev-parse HEAD)" = "$PR2447_HEAD"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$PR2447_TREE"
+          git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main             refs/heads/bugfix/keep-splitter-touch-owner:refs/remotes/origin/bugfix/keep-splitter-touch-owner
+          test "$(git rev-parse origin/bugfix/keep-splitter-touch-owner)" = "$PR2447_PR_HEAD"
+          test "$(git show -s --format=%P "$PR2447_HEAD")" = "$PR2447_BASE $PR2447_PR_HEAD"
+          test "$(git merge-tree --write-tree "$PR2447_PR_HEAD" "$PR2447_BASE")" = "$PR2447_TREE"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PR2447_ORDINARY_RUN" |
+            jq -e --arg prHead "$PR2447_PR_HEAD" --arg merged "$PR2447_HEAD" '
+              .head_sha == $prHead and .event == "pull_request" and .path == ".github/workflows/test-and-build.yml"
+              and (.referenced_workflows | length > 0) and all(.referenced_workflows[]; .sha == $merged)
+            '
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PR2447_ORDINARY_RUN/jobs?per_page=100" |
+            jq -e '(.jobs | map(select(.name == "scope" or .name == "static_checks" or .name == "build_host"
+              or .name == "edited_tests (canvas-tests component source P1 1 ubuntu-24.04)"))) as $checks
+              | ($checks | length) == 4 and all($checks[]; .status == "completed" and .conclusion == "success")'
+          main="$(git rev-parse origin/main)"
+          test "$(git merge-base HEAD "$main")" = "$PR2447_BASE"
+          incoming="$(git rev-list --count "HEAD..$main")"
+          test "$incoming" -le 10
+          prospective="$(git merge-tree --write-tree --no-messages HEAD "$main")"
+          test "$(git cat-file -t "$prospective")" = tree
+          test -z "$(git status --porcelain)"
+          test "$(bun --version)" = "1.4.4"
+          test "$(node --version)" = "v26.7.0"
+          test "$(jq -r .packageManager package.json)" = "bun@1.4.4"
+          mkdir -p "$PR2447_OUTPUT"
+          bun run test:review --base "$PR2447_BASE" --list > "$PR2447_OUTPUT/selected-plan.json"
+          jq -e --arg sha "$PR2447_HEAD" --arg tree "$PR2447_TREE" --arg base "$PR2447_BASE"             --arg policy "$PR2447_POLICY" --arg digest "$PR2447_EXPECTED_PLAN" --arg group "$PR2447_CLI_GROUP" '
+              .head == $sha and .mergeBase == $base and .testPlan.digest == $digest
+              and .testPlan.source == {sha:$sha,tree:$tree,policy:$policy,dirty:false}
+              and any(.selected[]; .file == "packages/canvas-tests/src/ui/ui/resizable-split-layout.p1.spec.ts")
+              and (.testPlan.runs | length) == 85 and (.selected | length) == 2703
+              and all(.testPlan.runs[]; .target == {platform:"linux",arch:"x64"})
+              and ([.testPlan.runs[] | select(.job == "local-additions") | .id] == [$group])
+              and any(.testPlan.runs[]; .id == $group and .owner == "e2e" and .cwd == "packages/e2e"
+                and .runner == "cli" and .priority == "P1" and .lane == "stable" and .artifact == "source"
+                and .requires == ["build-e5b1f54fca1c52cd"] and (.files | length) == 10)
+              and any(.testPlan.setup[]; .id == "build-e5b1f54fca1c52cd" and .owners == ["e2e"]
+                and .kind == "build" and .requires == [])
+            ' "$PR2447_OUTPUT/selected-plan.json"
+          bun -e '
+            import { validateTestPlan } from "./scripts/ci/test-plan";
+            const { testPlan } = await Bun.file(process.env.PR2447_OUTPUT + "/selected-plan.json").json();
+            validateTestPlan(testPlan);
+          '
+          sealed_digest="$(jq -er '.testPlan.digest' "$PR2447_OUTPUT/selected-plan.json")"
+          echo "PR2447_PLAN=$sealed_digest" >> "$GITHUB_ENV"
+          jq -c --arg group "$PR2447_CLI_GROUP" '.testPlan.runs[] | select(.id == $group) | .files'             "$PR2447_OUTPUT/selected-plan.json" > "$PR2447_OUTPUT/assigned-files.json"
+          printf '%s  %s\n' "$PR2447_CLI_FILES_SHA256" "$PR2447_OUTPUT/assigned-files.json" | sha256sum -c -
+          jq -n --arg sha "$PR2447_HEAD" --arg prHead "$PR2447_PR_HEAD" --arg tree "$PR2447_TREE" --arg main "$main" --arg base "$PR2447_BASE"             --arg prospective "$prospective" --arg plan "$sealed_digest" --arg workflow "$GITHUB_WORKFLOW_SHA"             --argjson incoming "$incoming" --arg ordinary "$PR2447_ORDINARY_RUN"             --arg ordinarySource "$PR2447_ORDINARY_SOURCE"             '{sha:$sha,prHead:$prHead,tree:$tree,main:$main,mergeBase:$base,mergeTree:$prospective,incoming:$incoming,
+              planDigest:$plan,diagnosticCommit:$workflow,ordinaryCiRun:$ordinary,ordinaryCiSha:$ordinarySource}'             > "$PR2447_OUTPUT/identity.json"
+
+      - name: Open an owned private temporary directory
+        shell: bash
+        run: |
+          scratch="$(mktemp -d /tmp/pr2447.XXXXXX)"
+          printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$scratch/owner"
+          {
+            echo "PR2447_CLI_TMP=$scratch"
+            echo "TMPDIR=$scratch"
+            echo "TMP=$scratch"
+            echo "TEMP=$scratch"
+            echo "PR2447_NATIVE_BUN=$(command -v bun)"
+          } >> "$GITHUB_ENV"
+          { node --version; bun --version; docker version; df -h /tmp "$GITHUB_WORKSPACE"; }             > "$PR2447_OUTPUT/toolchain.log"
+
+      - name: Install locked dependencies and prepare Firefox
+        shell: bash
+        run: |
+          bun install --frozen-lockfile --concurrent-scripts 1
+          bun run --cwd packages/ui typegen:tokens
+          (cd packages/e2e && bun x --no-install playwright install --with-deps firefox) 2>&1             | tee "$PR2447_OUTPUT/browser-setup.log"
+          test -z "$(git status --porcelain)"
+
+      - name: Execute only the ten-file source CLI group
+        shell: bash
+        run: |
+          test "$(command -v bun)" = "$PR2447_NATIVE_BUN"
+          bun --no-orphans - <<'BUN' 2>&1 | tee "$PR2447_OUTPUT/console.log"
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+          import { executePlan } from "./scripts/ci/run-test-plan";
+
+          const root = process.cwd();
+          const { PR2447_CLI_TMP: scratch, PR2447_OUTPUT: relative, PR2447_CLI_GROUP: group } = process.env;
+          if (!scratch || !/^\/tmp\/pr2447\.[A-Za-z0-9]{6}$/.test(scratch) || !relative || !group)
+            throw new Error("Unexpected native review assignment");
+          const executionId = process.env.GITHUB_RUN_ID + "/" + process.env.GITHUB_RUN_ATTEMPT;
+          const output = resolve(root, relative);
+          for (const [key, value] of Object.entries(localReviewEnvironment(scratch))) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+          process.env.CI_PLAN_OUTPUT_DIR = relative + "/native";
+          const { testPlan } = await Bun.file(resolve(output, "selected-plan.json")).json();
+          let passed = false;
+          try {
+            const result = await executePlan(testPlan, {
+              root, runIds: [group], prebuilt: false, executionId,
+              env: { CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+            });
+            passed = result.complete && result.outcome === "success";
+          } finally {
+            const cleanup = await cleanupReviewCompose(scratch);
+            await Bun.write(resolve(output, "compose-cleanup.json"), JSON.stringify(cleanup, null, 2));
+            passed &&= cleanup.every(entry => entry.outcome === "success");
+            process.exitCode = passed ? 0 : 1;
+          }
+          BUN
+
+      - name: Verify exact native execution and file coverage
+        shell: bash
+        run: |
+          jq -e --arg group "$PR2447_CLI_GROUP" --arg digest "$PR2447_PLAN"             --slurpfile expected "$PR2447_OUTPUT/assigned-files.json"             --slurpfile sealed "$PR2447_OUTPUT/selected-plan.json" '
+              .source == $sealed[0].testPlan.source and .planDigest == $digest
+              and .complete and .outcome == "success" and .errors == [] and .runIds == [$group]
+              and (.results | length) == 1
+              and all(.results[]; .runId == $group and .complete and .outcome == "success"
+                and .exitCode == 0 and .nativeFailure != true and (.reportedFiles | sort) == ($expected[0] | sort))
+              and [.phases[] | select(.kind == "build") | [.id,.outcome]] == [["build-e5b1f54fca1c52cd","success"]]
+              and any(.phases[]; .kind == "cleanup" and .outcome == "success")
+            ' "$PR2447_OUTPUT/native/execution.json"
+          jq -e 'all(.[]; .outcome == "success")' "$PR2447_OUTPUT/compose-cleanup.json"
+          git diff --exit-code
+
+      - name: Retain and clean this invocation's temporary files
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$PR2447_OUTPUT"
+          if [[ -n "${PR2447_CLI_TMP:-}" ]]; then
+            [[ "$PR2447_CLI_TMP" =~ ^/tmp/pr2447\.[A-Za-z0-9]{6}$ ]]
+            test "$(cat "$PR2447_CLI_TMP/owner")" = "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+            if [[ -f "$PR2447_CLI_TMP/compose-projects.jsonl" ]]; then
+              cp "$PR2447_CLI_TMP/compose-projects.jsonl" "$PR2447_OUTPUT/"
+            fi
+            rm -rf -- "$PR2447_CLI_TMP"
+            test ! -e "$PR2447_CLI_TMP"
+            printf '%s\n' 'Owned temporary directory removed' > "$PR2447_OUTPUT/scratch-cleanup.txt"
+          fi
+
+      - name: Upload the fixture and native receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr2447-source-cli-5ed69be9-attempt-${{ github.run_attempt }}
+          path: ${{ env.PR2447_OUTPUT }}
+          if-no-files-found: error
