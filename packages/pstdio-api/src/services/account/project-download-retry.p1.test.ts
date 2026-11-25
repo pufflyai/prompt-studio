@@ -116,6 +116,7 @@ for (const [stored, failedState] of [
         owners: {
           core: {
             get: () => ({
+              status: source!.status,
               restart: source!.restart,
               retry() {
                 manualRetries++;

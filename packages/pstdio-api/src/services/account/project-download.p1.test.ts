@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { lstat, mkdir, mkdtemp, rm } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../test-utils/create-test-app";
@@ -221,6 +221,11 @@ test("only explicit Download restores a cloud-only copy and prepares its local f
 
     complete.resolve();
     await finished.promise;
+    await writeFile(folder, "A file blocks folder preparation");
+    await expect(host.account.prepareDownloadedProject(id)).rejects.toMatchObject({ code: "EEXIST" });
+    expect((await host.account.catalogProjects()).projects[0]?.downloadError).toBeDefined();
+    await rm(folder);
+    expect((await host.app.request(`${projectPath}/download?${expected}`, { method: "POST" })).status).toBe(202);
     await host.account.prepareDownloadedProject(id);
     expect(await host.account.catalogProjects()).toMatchObject({ projects: [{ id, presence: "downloaded" }] });
     expect((await lstat(folder)).isDirectory()).toBe(true);

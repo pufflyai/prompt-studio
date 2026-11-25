@@ -244,12 +244,15 @@ const copyDevice = (outcome: (typeof copyStates)[number], retry: boolean) => {
     catalogUnavailable?: boolean;
     downloadUnavailable?: boolean;
     removalReplyLost?: boolean;
+    accountUnavailable?: boolean;
+    removals: number;
   } = {
     presence: removingCopy || retry ? "downloading" : "cloud-only",
     id: "device",
     downloadError: retry && outcome === "folder error" ? folderError : undefined,
     syncFailed: removingCopy || (retry && outcome === "sync error"),
     downloads: 0,
+    removals: 0,
   };
   const started = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
@@ -288,6 +291,7 @@ const copyDevice = (outcome: (typeof copyStates)[number], retry: boolean) => {
     });
   };
   const removeLocal = async () => {
+    device.removals++;
     removalStarted.resolve();
     await releaseRemoval.promise;
     if (rejectedRemoval) return Response.json({ error: "Removal rejected before touching the copy" }, { status: 400 });
@@ -295,18 +299,21 @@ const copyDevice = (outcome: (typeof copyStates)[number], retry: boolean) => {
     if (device.removalReplyLost) return Response.json({ error: "Removal response lost" }, { status: 503 });
     return Response.json({ projectId: id, presence: "cloud-only" });
   };
+  const readAccount = () => {
+    if (device.accountUnavailable) return Response.json({ error: "Account read unavailable" }, { status: 503 });
+    return Response.json({
+      login: { ...account, deviceId: device.id },
+      features: { relay: true },
+      cloudProjects: [id],
+      cloudProjectsLoaded: true,
+      signInRequired: false,
+    });
+  };
   const server = Bun.serve({
     port: 0,
     fetch(request) {
       const url = new URL(request.url);
-      if (url.pathname === "/v1/account")
-        return Response.json({
-          login: { ...account, deviceId: device.id },
-          features: { relay: true },
-          cloudProjects: [id],
-          cloudProjectsLoaded: true,
-          signInRequired: false,
-        });
+      if (url.pathname === "/v1/account") return readAccount();
       if (url.pathname.endsWith("/download")) return download();
       if (url.pathname.endsWith("/delete-cloud")) return deleteCloud();
       if (url.pathname.endsWith("/remove-local")) return removeLocal();
@@ -710,6 +717,76 @@ test.each(copyStates)("two views check the current device state before downloadi
     expect(fixture.closed).toBe(1);
     expect(device.downloads).toBe(1 + Number(shouldRetry) + Number(hasRetryableFailure));
   } finally {
+    await fixture.cleanup();
+  }
+});
+
+test.each([
+  "retained",
+  "reset",
+] as const)("a successful removal keeps its receipt through an unconfirmed account read (%s cache)", async (cache) => {
+  const fixture = await mountCopyChoices("removal after retry");
+  const { id, account, device, owner, release, removalStarted, releaseRemoval } = fixture;
+  const operations = getWorkbenchOperations(getDashboardScopedQueries(owner));
+  const status = getDashboardAccountStatusQuery(owner);
+  let result: Promise<unknown> | undefined;
+  try {
+    await act(async () => {
+      release.resolve();
+      fixture.choice.requestDownload();
+      await until(() => device.downloads === 1 && fixture.mutationsSettled());
+    });
+    await act(async () => {
+      device.presence = "downloaded";
+      result = fixture.removal.remove(id, "Recovered notes", account, false);
+      void result.catch(() => {});
+      await removalStarted.promise;
+      device.accountUnavailable = true;
+      if (cache === "reset") fixture.client.getQueryCache().find({ queryKey: status.key, exact: true })!.reset();
+      publishExtensionEvent({ id: accountEvents.changed.id }, owner);
+      await until(() => Boolean(status.getSnapshot().error) && !status.getSnapshot().fetching);
+    });
+    if (cache === "reset") expect(status.getSnapshot().data).toBeUndefined();
+    else expect(status.getSnapshot().data?.login).toMatchObject({ ...account, deviceId: device.id });
+    await act(async () => {
+      owner.getWriter("projects")!.remove(id);
+      releaseRemoval.resolve();
+      await result!.catch(() => {});
+    });
+    expect(fixture.opened).toEqual([]);
+    const recovery = operations.getSnapshot().recovery.find((entry) => entry.domain === "project.remove-device-copy");
+    expect(recovery?.status).toBe("unconfirmed");
+    expect(operations.getSnapshot().pending.some((entry) => entry.id === recovery?.id)).toBe(true);
+    if (cache === "retained") expect(fixture.removal.active(id)).toBe(true);
+    await expect(fixture.deletions.start(id, "Recovered notes", account)).rejects.toThrow("pending Cloud change");
+    if (cache === "reset") {
+      await fixture.removal.remove(id, "Recovered notes", account, false).catch(() => {});
+      expect(device.removals).toBe(1);
+    }
+    await act(async () => {
+      device.accountUnavailable = false;
+      await operations.check(recovery!.id);
+      await until(() => fixture.choice.canDownload && fixture.peer.canDownload);
+    });
+    expect(fixture.choice.showProgress).toBe(false);
+    expect(device.removals).toBe(1);
+    await act(async () => {
+      fixture.peer.requestDownload();
+      await until(() => device.downloads === 2 && fixture.mutationsSettled());
+      device.presence = "downloaded";
+      fixture.addLocalProject();
+      publishExtensionEvent({ id: accountEvents.changed.id }, owner);
+      await until(() => fixture.opened.length === 1 && fixture.closed === 1);
+    });
+    expect({
+      downloads: device.downloads,
+      removals: device.removals,
+      opened: fixture.opened.length,
+      closed: fixture.closed,
+    }).toEqual({ downloads: 2, removals: 1, opened: 1, closed: 1 });
+  } finally {
+    releaseRemoval.resolve();
+    await result?.catch(() => {});
     await fixture.cleanup();
   }
 });

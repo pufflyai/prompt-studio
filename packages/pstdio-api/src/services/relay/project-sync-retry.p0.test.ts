@@ -4,6 +4,7 @@ import { createProjectSyncRetry } from "./project-sync-retry";
 test("an empty selected source is rejected without retrying the project; omission still retries all sources", async () => {
   const calls: string[] = [];
   const source = (name: string) => ({
+    status: async () => ({ needsAttention: name === "extension" }),
     retry: () => {
       calls.push(`${name}:retry`);
     },
@@ -24,6 +25,9 @@ test("an empty selected source is rejected without retrying the project; omissio
   await retry("project", "example.files");
   expect(calls).toEqual(["extension:restart"]);
   calls.length = 0;
+  await retry("project", { failedOnly: true });
+  expect(calls).toEqual(["extension:retry"]);
+  calls.length = 0;
   await retry("project");
   expect(calls).toEqual(["core:retry", "folders:retry", "extension:retry"]);
 });
@@ -36,6 +40,7 @@ test("project retry acknowledges scheduling and exposes completion of the owned 
     owners: {
       core: {
         get: () => ({
+          status: async () => ({}),
           retry() {
             attempts++;
             return pass.promise;

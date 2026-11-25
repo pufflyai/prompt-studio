@@ -185,7 +185,7 @@ export const createNativeAccount = (input: {
     call,
     refresh: () => refresh(),
     retry: async (id, requireCurrent) => {
-      const retry = await retryProject(id, undefined, requireCurrent);
+      const retry = await retryProject(id, { failedOnly: true }, requireCurrent);
       await retry?.settled;
     },
     withdraw: (id) => missing.withdraw(id).then(() => refreshes.changed()),

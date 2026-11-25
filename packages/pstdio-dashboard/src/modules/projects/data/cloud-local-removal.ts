@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import { getRuntimeApiClient } from "@/lib/api";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { getDashboardAccountStatusQuery, getDashboardScopedQueries } from "@/lib/scoped-queries";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import { createRuntimeState } from "@/lib/sync/runtime-state";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import {
@@ -41,10 +42,38 @@ const getCloudLocalRemoval = createRuntimeState((owner) => {
       if (accountId !== expectedAccount.accountId || accountOrigin !== expectedAccount.managerOrigin)
         throw new Error("The active Cloud account changed. Reopen this action to confirm again.");
       if (active(id)) throw new Error("This project already has a pending Cloud change.");
-      const login = accountStatus.getSnapshot().data?.login;
+      const { data, error, fetching } = accountStatus.getSnapshot();
+      if (!data?.login || data.signInRequired || error || fetching || accountStatus.inspect().stale)
+        throw new Error("Confirm the current Cloud device before removing its local copy.");
+      const login = data.login;
       const scope = cloudCopyScopeFor(id, cloudCatalogScopeFor(String(owner.id), login));
       const catalogKey = cloudCatalogKeyFor(accountOrigin, accountId, login?.deviceId);
       const syncKey = cloudCopySyncKey(scope);
+      const retiredScope = () => {
+        if (owner.isDisposed() || getRuntimeCollections() !== owner) return true;
+        const { data } = accountStatus.getSnapshot();
+        return Boolean(
+          data &&
+            (data.signInRequired ||
+              scope !== cloudCopyScopeFor(id, cloudCatalogScopeFor(String(owner.id), data.login))),
+        );
+      };
+      const confirmedScope = () => {
+        if (retiredScope()) return false;
+        const { data, error, fetching } = accountStatus.getSnapshot();
+        // Keep the acknowledged receipt recoverable until this device can be confirmed.
+        if (!data || error || fetching || accountStatus.inspect().stale)
+          throw new Error("Confirm the current Cloud device before reconciling local removal.");
+        return true;
+      };
+      const confirmScope = async (signal: AbortSignal) => {
+        if (retiredScope()) return false;
+        const { data, error, fetching } = accountStatus.getSnapshot();
+        if (fetching) await accountStatus.read(signal);
+        else if (!data || error || accountStatus.inspect().stale) await accountStatus.refresh(signal);
+        signal.throwIfAborted();
+        return confirmedScope();
+      };
       return operations.submit<RemoveLocalProjectResult>({
         // The local row can disappear before its receipt; the account owns this operation.
         intent: id,
@@ -62,13 +91,13 @@ const getCloudLocalRemoval = createRuntimeState((owner) => {
         },
         async reconcile(receipt, signal) {
           const downloads = getCloudCopyDownloads(owner);
-          if (!downloads.isCurrent(id, scope)) return;
+          if (!(await confirmScope(signal))) return;
           await Promise.all([
             client.cancelQueries({ queryKey: catalogKey, exact: true }),
             client.cancelQueries({ queryKey: syncKey, exact: true }),
           ]);
           signal.throwIfAborted();
-          if (!downloads.isCurrent(id, scope)) return;
+          if (!confirmedScope()) return;
           // The receipt retires the local copy while the shared project action is still occupied.
           downloads.localCopyRemoved(scope);
           client.getQueryCache().find({ queryKey: syncKey, exact: true })?.reset();
@@ -92,7 +121,9 @@ const getCloudLocalRemoval = createRuntimeState((owner) => {
           void client.invalidateQueries({ queryKey: catalogKey, exact: true }, { cancelRefetch: false });
         },
         async check(signal) {
+          if (!(await confirmScope(signal))) return { status: "unknown" };
           const catalog = await api.projectsCatalog({ signal });
+          if (!confirmedScope()) return { status: "unknown" };
           if (catalog.account?.accountId !== accountId || catalog.account?.managerOrigin !== accountOrigin)
             return { status: "unknown" };
           const copy = catalog.projects.find((entry) => entry.id === id);
