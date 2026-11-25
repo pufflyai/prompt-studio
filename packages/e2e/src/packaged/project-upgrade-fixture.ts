@@ -49,6 +49,7 @@ interface CommandInfo {
 interface ProjectExtension {
   id: string;
   extensionId: string;
+  installedExtensionId: string;
   status: string;
   enabled: boolean;
   version: string | null;
@@ -58,7 +59,13 @@ interface ProjectExtension {
 
 export const installedProjectTools = async (api: StackApi, project: string) => {
   const { extensions } = await api.get<{ extensions: ProjectExtension[] }>(`/projects/${project}/extensions`);
-  return extensions.map(({ id, extensionId, enabled, version }) => ({ id, extensionId, enabled, version }));
+  return extensions.map(({ id, extensionId, installedExtensionId, enabled, version }) => ({
+    id,
+    extensionId,
+    installedExtensionId,
+    enabled,
+    version,
+  }));
 };
 
 // Read candidate releases independently of the runtime's canUpgrade response.
@@ -78,9 +85,12 @@ export const assertProjectToolsRetained = async (
   before: Awaited<ReturnType<typeof installedProjectTools>>,
   expectedVersions?: Map<string, string>,
 ) => {
-  const current = new Map((await installedProjectTools(api, project)).map((tool) => [tool.id, tool]));
+  const tools = await installedProjectTools(api, project);
+  // Across schema versions, the instance handle can change while the installed source stays the same.
+  const current = new Map(tools.map((tool) => [tool.installedExtensionId, tool]));
+  assert.equal(current.size, tools.length, "Upgrade duplicated an installed source in the project");
   for (const previous of before) {
-    let tool = current.get(previous.id);
+    let tool = current.get(previous.installedExtensionId);
     if (!tool && canonicalExtensionId(previous.extensionId) === "pstdio.git-workspaces") {
       tool = [...current.values()].find(
         (candidate) => canonicalExtensionId(candidate.extensionId) === "pstdio.workspaces",
@@ -89,7 +99,8 @@ export const assertProjectToolsRetained = async (
       if (previous.enabled) assert(tool.enabled, "Migration disabled the Git workspace provider");
       continue;
     }
-    assert(tool, `Upgrade lost extension instance ${previous.id}`);
+    assert(tool, `Upgrade lost ${previous.extensionId} from installed source ${previous.installedExtensionId}`);
+    assert.equal(canonicalExtensionId(tool.extensionId), canonicalExtensionId(previous.extensionId));
     assert.equal(tool.enabled, previous.enabled, `Enablement changed for ${tool.id}`);
     if (previous.version && tool.version !== previous.version)
       assert(
