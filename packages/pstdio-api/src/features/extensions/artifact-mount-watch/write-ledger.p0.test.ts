@@ -76,6 +76,36 @@ describe("artifact mount write ledger", () => {
 });
 
 describe("artifact mount directory echoes", () => {
+  test.each([
+    [false, false],
+    [false, true],
+    [true, false],
+  ])("advances a reported folder across API writes (outside creation: %s, intervening edit: %s)", async (outsideCreation, outsideWrite) => {
+    const ledger = createArtifactMountWriteLedger(() => 0);
+    const { mount, root } = createMount(ledger);
+    const folder = join(root, "sales");
+    const archive = join(folder, "archive");
+    const options = { keepMatchedWrites: true };
+    const first = ledger.createEchoFilter();
+    const second = ledger.createEchoFilter();
+    await mount.writeText("sales/first.json", "{}");
+    if (outsideCreation) mkdirSync(archive);
+    else await mount.writeText("sales/archive/first.json", "{}");
+
+    writeFileSync(join(archive, "external.json"), "outside");
+    expect(first([archive], options)).toEqual([archive]);
+    if (outsideWrite) writeFileSync(join(archive, "another.json"), "another outside change");
+
+    await mount.writeText("sales/archive/second.json", "{}");
+    await mount.writeText("sales/archive/third.json", "{}");
+    expect(first([folder], options)).toEqual(outsideCreation || outsideWrite ? [folder] : []);
+    expect(second([folder], options)).toEqual([folder]);
+    if (!outsideCreation && !outsideWrite) {
+      await mount.delete("sales/archive/second.json");
+      expect(first([folder], options)).toEqual([]);
+    }
+  });
+
   test.each([true, false])("reports a replaced folder and missing child in either order (%s)", async (fileFirst) => {
     const ledger = createArtifactMountWriteLedger();
     const { mount, root } = createMount(ledger);
@@ -351,6 +381,27 @@ describe("artifact mount folder-only notifications", () => {
 });
 
 describe("artifact mount restored folder batches", () => {
+  test("reports removals after an originally owned subtree returns to a recreated parent", async () => {
+    const ledger = createArtifactMountWriteLedger(() => 0);
+    const { mount, root } = createMount(ledger);
+    const folder = join(root, "sales");
+    const nested = join(folder, "nested");
+    const parked = join(dirname(root), "parked-nested");
+    const removed = join(nested, "b.json");
+    const options = { keepMatchedWrites: true };
+    await mount.writeText("sales/nested/a.json", "{}");
+    await mount.writeText("sales/nested/b.json", "{}");
+    renameSync(nested, parked);
+    await mount.delete("sales");
+    expect(ledger.dropEchoes([folder], options)).toEqual([]);
+    await mount.writeText("sales/owned.json", "{}");
+
+    renameSync(parked, nested);
+    expect(ledger.dropEchoes([nested], options)).toEqual([nested]);
+    rmSync(removed);
+    expect(ledger.dropEchoes([removed], options)).toEqual([removed]);
+  });
+
   test.each([
     "folder",
     "child",

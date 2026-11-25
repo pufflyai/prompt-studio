@@ -170,6 +170,46 @@ test("a mount reports the full-ID folder that filesystem watchers must observe",
   expect(f.mount().root).toBe(f.pathFor("documents"));
 });
 
+test("shared API writes advance only the watcher that already reported the outside folder change", async () => {
+  const f = await fixture();
+  const ledger = createArtifactMountWriteLedger(() => 0);
+  const mount = createSharedArtifactMount(f.deps, { ...f.input, onWrite: ledger.record });
+  const folder = f.pathFor("documents/sales");
+  const archive = join(folder, "archive");
+  const options = { keepMatchedWrites: true };
+  const first = ledger.createEchoFilter();
+  const second = ledger.createEchoFilter();
+  await mount.writeText("sales/archive/first.json", "{}");
+  await writeFile(join(archive, "external.json"), "outside");
+  expect(first([archive], options)).toEqual([archive]);
+
+  await mount.writeText("sales/archive/second.json", "{}");
+  expect(first([folder], options)).toEqual([]);
+  expect(second([folder], options)).toEqual([folder]);
+});
+
+test("shared mount deletions retire ownership of a subtree moved away and returned", async () => {
+  const f = await fixture();
+  const ledger = createArtifactMountWriteLedger(() => 0);
+  const mount = createSharedArtifactMount(f.deps, { ...f.input, onWrite: ledger.record });
+  const folder = f.pathFor("documents/sales");
+  const nested = join(folder, "nested");
+  const parked = f.pathFor("parked-nested");
+  const removed = join(nested, "b.json");
+  const options = { keepMatchedWrites: true };
+  await mount.writeText("sales/nested/a.json", "{}");
+  await mount.writeText("sales/nested/b.json", "{}");
+  await rename(nested, parked);
+  await mount.delete("sales");
+  expect(ledger.dropEchoes([folder], options)).toEqual([]);
+  await mount.writeText("sales/owned.json", "{}");
+
+  await rename(parked, nested);
+  expect(ledger.dropEchoes([nested], options)).toEqual([nested]);
+  await rm(removed);
+  expect(ledger.dropEchoes([removed], options)).toEqual([removed]);
+});
+
 test("a folder return retires shared mount child deletions that were not individually observed", async () => {
   const f = await fixture();
   const ledger = createArtifactMountWriteLedger(() => 0);
