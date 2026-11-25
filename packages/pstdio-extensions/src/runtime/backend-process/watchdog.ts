@@ -18,7 +18,11 @@ export const createWatchdog = (
   terminate: (reason: string) => void,
   options: WatchdogOptions = {},
 ) => {
-  const { heartbeatMs, unresponsiveMs, memoryLimitBytes } = { ...WATCHDOG_DEFAULTS, ...options };
+  const {
+    heartbeatMs = WATCHDOG_DEFAULTS.heartbeatMs,
+    unresponsiveMs = WATCHDOG_DEFAULTS.unresponsiveMs,
+    memoryLimitBytes = WATCHDOG_DEFAULTS.memoryLimitBytes,
+  } = options;
   let seq = 0;
   let lastAnswer = performance.now();
   let lastTick = lastAnswer;

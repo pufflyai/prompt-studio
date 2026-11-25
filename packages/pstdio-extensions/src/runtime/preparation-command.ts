@@ -2,7 +2,13 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parentPort, type Worker } from "node:worker_threads";
-import { type BundleCommandInput, type BundleOutcome, captureBundleCommand } from "./preparation-bundle-command";
+import { createWindowsProcessJob } from "pstdio-paths/windows-process-job";
+import {
+  BUNDLE_START,
+  type BundleCommandInput,
+  type BundleOutcome,
+  captureBundleCommand,
+} from "./preparation-bundle-command";
 import { acquirePreparationBuildCommand, isPreparationBuildCommand } from "./preparation-command-slots";
 
 export { preparationBuildConcurrency, withPreparationBuildCommand } from "./preparation-command-slots";
@@ -44,6 +50,29 @@ const stopChild = async (child: Bun.Subprocess) => {
   await child.exited;
 };
 
+const stopWindowsBundle = async (
+  child: Bun.Subprocess,
+  job: ReturnType<typeof createWindowsProcessJob>,
+  attached: boolean,
+) => {
+  try {
+    if (!attached) {
+      // A bundler without a job never receives permission to start.
+      if (child.exitCode === null) child.kill("SIGKILL");
+    } else if (job.hasProcesses()) {
+      job.terminate();
+    }
+    const deadline = performance.now() + 1_000;
+    while (job.hasProcesses()) {
+      if (performance.now() >= deadline) throw new Error("The extension bundler's process job did not stop.");
+      await Bun.sleep(20);
+    }
+    await child.exited;
+  } finally {
+    job.close();
+  }
+};
+
 const spawnOwnedCommand = <
   In extends Bun.SpawnOptions.Writable,
   Out extends Bun.SpawnOptions.Readable,
@@ -51,10 +80,35 @@ const spawnOwnedCommand = <
 >(
   argv: string[],
   options: Bun.SpawnOptions.OptionsObject<In, Out, Err>,
+  kind?: "bundle",
 ) => {
-  const child = Bun.spawn(argv, { ...options, detached: process.platform !== "win32", windowsHide: true });
+  const job = process.platform === "win32" && kind === "bundle" ? createWindowsProcessJob() : undefined;
+  const spawn = () => {
+    try {
+      return Bun.spawn(argv, { ...options, detached: process.platform !== "win32", windowsHide: true });
+    } catch (error) {
+      job?.close();
+      throw error;
+    }
+  };
+  const child = spawn();
+  let attached = false;
+  let startFailure: { error: unknown } | undefined;
+  if (job) {
+    try {
+      job.attachLauncher(child.pid);
+      attached = true;
+      child.send(BUNDLE_START);
+    } catch (error) {
+      startFailure = { error };
+    }
+  }
   let stopping: Promise<void> | undefined;
-  return { child, stop: () => (stopping ??= stopChild(child)) };
+  return {
+    child,
+    stop: () => (stopping ??= job ? stopWindowsBundle(child, job, attached) : stopChild(child)),
+    startFailure,
+  };
 };
 
 export type SpawnOwnedCommand = typeof spawnOwnedCommand;
@@ -118,10 +172,10 @@ export const ownPreparationCommands = (
             buildState("finished");
           };
         }
-        const spawn: SpawnOwnedCommand = (argv, options) => {
+        const spawn: SpawnOwnedCommand = (argv, options, kind) => {
           if (stopped) throw new Error("Extension worker retired.");
           controller.signal.throwIfAborted();
-          const owned = spawnOwnedCommand(argv, options);
+          const owned = spawnOwnedCommand(argv, options, kind);
           children.set(message.id, owned.stop);
           return owned;
         };

@@ -1057,22 +1057,28 @@ test("an endless loop or a memory hog is stopped from outside the worker", async
       entryPath,
       watchdog,
     });
-  const looping = await watched({ heartbeatMs: 50, unresponsiveMs: 500 });
-  await expect(
-    looping.invoke({ handlerId: handlerOf(looping.definition, "endless"), context: {}, surface, args: [] }),
-  ).rejects.toThrow("did not respond");
-  await looping.exited;
-
-  const hogging = await watched({
-    heartbeatMs: 50,
-    // Well above an idle worker on every runner (about 55 MiB on Linux), well below the 256 MiB hog.
-    memoryLimitBytes: 160 * 1024 * 1024,
-  });
-  await expect(
-    hogging.invoke({ handlerId: handlerOf(hogging.definition, "hog"), context: {}, surface, args: [] }),
-  ).rejects.toThrow("memory limit");
-  await hogging.exited;
-});
+  const verify = async (handler: string, options: Parameters<typeof watched>[0], expected: string) => {
+    const worker = await watched(options);
+    const expiry = Promise.withResolvers<never>();
+    const timer = setTimeout(() => expiry.reject(new Error(`Watchdog fixture did not stop ${handler}`)), 4_000);
+    try {
+      const invoke = worker.invoke({
+        handlerId: handlerOf(worker.definition, handler),
+        context: {},
+        surface,
+        args: [],
+      });
+      await expect(Promise.race([invoke, expiry.promise])).rejects.toThrow(expected);
+      await Promise.race([worker.exited, expiry.promise]);
+    } finally {
+      clearTimeout(timer);
+      await worker.stop();
+    }
+  };
+  await verify("endless", { heartbeatMs: 50, unresponsiveMs: 500 }, "did not respond");
+  // Well above an idle worker on every runner (about 55 MiB on Linux), well below the 256 MiB hog.
+  await verify("hog", { heartbeatMs: 50, memoryLimitBytes: 160 * 1024 * 1024 }, "memory limit");
+}, 10_000);
 
 test("a worker that keeps failing waits out a cooldown instead of restarting in a loop", async () => {
   const pool = createBackendWorkerPool(() => ({ env: createExtensionProcessEnvironment(), entryPath }), {

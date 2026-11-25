@@ -1,8 +1,22 @@
+import type { ExtensionLoggerApi } from "@pstdio/sdk/extensions";
+import type { InvocationScope } from "./scope";
+
 // An enumerable symbol survives the object spreads the runner uses to extend a context.
 const HOST_CONTEXT = Symbol.for("pstdio.runner.hostContext");
 
-/** Marks a context the runner built, so a process-mode handler can tell it from ordinary arguments. */
-export const markHostContext = <T extends object>(context: T) => Object.assign(context, { [HOST_CONTEXT]: true });
+const BACKEND_SCOPE = Symbol.for("pstdio.runner.backendScope");
+
+type BackendScopeBinding<T extends object> = {
+  logger: ExtensionLoggerApi;
+  withScope: (scope: InvocationScope) => Partial<T>;
+};
+
+/** Marks a host-built context and optionally binds worker-only resources to an invocation. */
+export const markHostContext = <T extends object>(context: T, backendScope?: BackendScopeBinding<T>) =>
+  Object.assign(context, { [HOST_CONTEXT]: true, ...(backendScope && { [BACKEND_SCOPE]: backendScope }) });
+
+export const backendScopeFor = (context: unknown) =>
+  isHostContext(context) ? (context as { [BACKEND_SCOPE]?: BackendScopeBinding<object> })[BACKEND_SCOPE] : undefined;
 
 const NAVIGATION_SCOPED = Symbol.for("pstdio.runner.navigationScoped");
 

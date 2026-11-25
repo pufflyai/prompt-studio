@@ -94,20 +94,26 @@ export const createHarnessRegistryService = (input: {
     },
   };
   // Marked so a process-mode harness reaches this context through its worker's allowlist.
-  const buildContext: HarnessContextFactory = (record, options) =>
-    markHostContext({
-      projectId: options?.projectId,
-      extensionId: record.extensionId,
-      name: record.name,
-      process: createProcessApi({ extensionId: record.extensionId }),
-      net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
-      connections:
-        options?.projectId && input.createConnectionsApi
-          ? input.createConnectionsApi({ projectId: options.projectId, extensionId: record.extensionId })
-          : unavailableConnections,
-      logger: harnessLogger(record.extensionId),
-      state: createHarnessStateApi(record.extensionId),
-    });
+  const buildContext: HarnessContextFactory = (record, options) => {
+    const extensionId = record.extensionId;
+    const logger = harnessLogger(extensionId);
+    return markHostContext(
+      {
+        projectId: options?.projectId,
+        extensionId,
+        name: record.name,
+        process: createProcessApi({ extensionId }),
+        net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
+        connections:
+          options?.projectId && input.createConnectionsApi
+            ? input.createConnectionsApi({ projectId: options.projectId, extensionId })
+            : unavailableConnections,
+        logger,
+        state: createHarnessStateApi(extensionId),
+      },
+      { logger, withScope: (scope) => ({ process: createProcessApi({ extensionId, scope }) }) },
+    );
+  };
 
   // Sources registered in the DB only exist once a project synced them, but agents are
   // host-wide and must resolve before the first project: also scan the user extensions root.

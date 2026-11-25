@@ -76,7 +76,10 @@ export const isSignalRef = (value: unknown): value is SignalRef =>
     ? isRecord(value[SIGNAL_MARKER].reason)
     : value[SIGNAL_MARKER].aborted === false && isFunctionRef(value[SIGNAL_MARKER].onAbort));
 
-export const isAsyncIterable = (value: object): value is AsyncIterable<unknown> => Symbol.asyncIterator in value;
+export const isAsyncIterable = (value: unknown): value is AsyncIterable<unknown> =>
+  value !== null &&
+  (typeof value === "object" || typeof value === "function") &&
+  typeof (value as AsyncIterable<unknown>)[Symbol.asyncIterator] === "function";
 export const isPromiseRef = (value: unknown): value is PromiseRef =>
   isRecord(value) && isFunctionRef(value[PROMISE_MARKER]);
 export const isSinkRef = (value: unknown): value is SinkRef =>

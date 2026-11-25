@@ -11,6 +11,8 @@ export interface BundleCommandInput {
   deadlineMs: number;
 }
 
+export const BUNDLE_START = "bundle-start";
+
 export type BundleOutcome = { kind: "bundle-result"; ok: true } | { kind: "bundle-result"; ok: false; error: string };
 
 // Keep diagnostics bounded even if a macro floods a stream or leaves its pipe open.
@@ -50,16 +52,20 @@ export const captureBundleCommand = async (input: BundleCommandInput, spawn: Spa
   const cwd = await mkdtemp(join(tmpdir(), "pstdio-bundle-"));
   try {
     const reported = Promise.withResolvers<BundleOutcome>();
-    const { child, stop } = spawn(input.argv, {
-      cwd,
-      env: input.env,
-      stdin: new Blob([input.stdin]),
-      stdout: "pipe",
-      stderr: "pipe",
-      ipc(message: unknown) {
-        if (isBundleOutcome(message)) reported.resolve(message);
+    const { child, stop, startFailure } = spawn(
+      input.argv,
+      {
+        cwd,
+        env: input.env,
+        stdin: new Blob([input.stdin]),
+        stdout: "pipe",
+        stderr: "pipe",
+        ipc(message: unknown) {
+          if (isBundleOutcome(message)) reported.resolve(message);
+        },
       },
-    });
+      "bundle",
+    );
     const output = readTail(child.stdout);
     const errorOutput = readTail(child.stderr);
     let timedOut = false;
@@ -69,12 +75,18 @@ export const captureBundleCommand = async (input: BundleCommandInput, spawn: Spa
       expired.resolve(undefined);
     }, input.deadlineMs);
     try {
-      // Taskkill needs the live bundler PID to find its descendants on Windows.
+      if (startFailure) {
+        await stop();
+        throw startFailure.error;
+      }
       const outcome = await Promise.race([
         reported.promise,
         child.exited.then(() => undefined),
         expired.promise,
-      ]).finally(stop);
+      ]).finally(() => {
+        clearTimeout(deadline);
+        return stop();
+      });
       const cleanupDeadline = performance.now() + CLEANUP_GRACE_MS;
       while (process.platform !== "win32" && isProcessGroupAlive(child.pid)) {
         if (performance.now() >= cleanupDeadline)

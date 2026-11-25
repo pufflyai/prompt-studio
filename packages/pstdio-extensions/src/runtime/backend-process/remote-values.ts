@@ -57,6 +57,7 @@ type ExportState = {
   blobs: Map<Blob, Uint8Array>;
   seen: WeakMap<object, unknown>;
   refs: Set<string>;
+  exportedIterators: WeakSet<object>;
 };
 
 const closeSafely = (close: () => unknown) => {
@@ -68,12 +69,12 @@ const closeSafely = (close: () => unknown) => {
 export const createFunctionTable = () => {
   const functions = new Map<string, { fn: RemoteFunction; cleanup: boolean }>();
   const pinned = new Set<string>();
-  const resultIterators = new Set<string>();
+  const resultReferences = new Set<string>();
   const disposers = new Map<() => unknown, Set<string>>();
   const handles = new WeakMap<object, RemoteFunction>();
   let next = 0;
   let closed = false;
-  let resultKeepsIterators: boolean | undefined;
+  let resultKeepsReferences: boolean | undefined;
 
   const register = (state: ExportState, fn: RemoteFunction, cleanup = false): FunctionRef => {
     const id = `f${next++}`;
@@ -123,6 +124,7 @@ export const createFunctionTable = () => {
     });
     const end = register(state, close, true);
     own(close, advance, end);
+    state.exportedIterators.add(iterable);
     return { [ITERATOR_MARKER]: { stream: iterable instanceof ReadableStream, next: advance, return: end } };
   };
 
@@ -205,14 +207,14 @@ export const createFunctionTable = () => {
   };
 
   const exportSync = (value: unknown, state: ExportState): unknown => {
-    if (typeof value === "function") return register(state, value as RemoteFunction);
-    if (value === null || typeof value !== "object") return value;
+    if (value === null || (typeof value !== "object" && typeof value !== "function")) return value;
     if (state.seen.has(value)) return state.seen.get(value);
     const special = exportSpecial(value, state);
     if (special !== undefined) {
       state.seen.set(value, special);
       return special;
     }
+    if (typeof value === "function") return register(state, value as RemoteFunction);
     return Array.isArray(value) || isPlainObject(value) ? exportPlain(value, state) : value;
   };
 
@@ -220,32 +222,38 @@ export const createFunctionTable = () => {
     for (const id of ids) {
       functions.delete(id);
       pinned.delete(id);
-      resultIterators.delete(id);
+      resultReferences.delete(id);
     }
     disposeUnused();
   };
 
   const retainExport = (ids: ReadonlySet<string>, pin: boolean | "with-result") => {
-    if (!pin) return;
+    if (!pin || !ids.size) return;
     let retained = pinned;
     if (pin === "with-result") {
-      if (resultKeepsIterators === false) throw new Error("The invocation has finished.");
-      if (resultKeepsIterators === undefined) retained = resultIterators;
+      if (resultKeepsReferences === false) throw new Error("The invocation has finished.");
+      if (resultKeepsReferences === undefined) retained = resultReferences;
     }
     for (const id of ids) retained.add(id);
   };
 
-  const exportResult = async (value: unknown, pin: boolean | "with-result" = false) => {
-    if (closed) throw new Error("The invocation has finished.");
-    const blobs = await readBlobs(value);
-    if (closed) throw new Error("The invocation has finished.");
-    const kept = new Set<string>();
+  const exportResult = async (value: unknown, pin: boolean | "with-result" = false, discardOnFailure = false) => {
+    const state: ExportState = {
+      blobs: new Map(),
+      seen: new WeakMap(),
+      refs: new Set(),
+      exportedIterators: new WeakSet(),
+    };
     try {
-      const exported = exportSync(value, { blobs, seen: new WeakMap(), refs: kept });
-      retainExport(kept, pin);
-      return { value: exported, kept };
+      if (closed) throw new Error("The invocation has finished.");
+      state.blobs = await readBlobs(value);
+      if (closed) throw new Error("The invocation has finished.");
+      const exported = exportSync(value, state);
+      retainExport(state.refs, pin);
+      return { value: exported, kept: state.refs };
     } catch (error) {
-      release(kept);
+      release(state.refs);
+      if (discardOnFailure) discardValue(value, (owner) => handles.has(owner) || state.exportedIterators.has(owner));
       throw error;
     }
   };
@@ -260,10 +268,10 @@ export const createFunctionTable = () => {
     return entry.fn(...args());
   };
 
-  const seal = (kept: ReadonlySet<string> = new Set(), keepResultIterators = false) => {
-    resultKeepsIterators = keepResultIterators;
-    if (keepResultIterators) for (const id of resultIterators) pinned.add(id);
-    resultIterators.clear();
+  const seal = (kept: ReadonlySet<string> = new Set(), keepResultReferences = false) => {
+    resultKeepsReferences = keepResultReferences;
+    if (keepResultReferences) for (const id of resultReferences) pinned.add(id);
+    resultReferences.clear();
     for (const id of functions.keys()) if (!kept.has(id) && !pinned.has(id)) functions.delete(id);
     disposeUnused();
   };
@@ -272,7 +280,7 @@ export const createFunctionTable = () => {
     closed = true;
     functions.clear();
     pinned.clear();
-    resultIterators.clear();
+    resultReferences.clear();
     dispose();
   };
 
@@ -293,19 +301,27 @@ export const createFunctionTable = () => {
 };
 
 /** Close returned readers and handles when their invocation no longer has a caller. */
-export const discardValue = (value: unknown, seen = new WeakSet<object>()) => {
-  if (!value || typeof value !== "object" || seen.has(value)) return;
-  seen.add(value);
-  try {
-    if (isAsyncIterable(value)) {
-      const iterator = value[Symbol.asyncIterator]();
-      closeSafely(() => iterator.return?.());
-    } else if (Array.isArray(value) || isPlainObject(value)) {
-      const close = Object.getOwnPropertyDescriptor(value, "close")?.value;
-      if (typeof close === "function") closeSafely(() => close.call(value));
-      for (const child of Object.values(value)) discardValue(child, seen);
-    }
-  } catch {}
+export const discardValue = (value: unknown, alreadyManaged: (owner: object) => boolean = () => false) => {
+  const seen = new WeakSet<object>();
+  const visit = (entry: unknown) => {
+    if (!entry || (typeof entry !== "object" && typeof entry !== "function") || seen.has(entry)) return;
+    seen.add(entry);
+    try {
+      if (isAsyncIterable(entry)) {
+        if (alreadyManaged(entry)) return;
+        const iterator = entry[Symbol.asyncIterator]();
+        closeSafely(() => iterator.return?.());
+        return;
+      }
+      if (!Array.isArray(entry) && !isPlainObject(entry)) return;
+      const close = Object.getOwnPropertyDescriptor(entry, "close")?.value;
+      if (typeof close === "function" && !alreadyManaged(entry)) closeSafely(() => close.call(entry));
+      const properties = Object.values(Object.getOwnPropertyDescriptors(entry));
+      for (const property of properties.filter((property) => property.enumerable && "value" in property))
+        visit(property.value);
+    } catch {}
+  };
+  visit(value);
 };
 
 /**

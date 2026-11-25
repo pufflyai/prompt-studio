@@ -24,7 +24,10 @@ export interface ProcessHandle {
   id: string;
   /** Settles once the child runs; rejects with a coded error when it cannot start. */
   started: Promise<void>;
-  /** Settles after the child and its cleanup finish, including when it never started. */
+  /**
+   * Reports the direct child's exit status, including startup failure, even while output remains unread.
+   * Await `kill()` to confirm cleanup of the child and its descendants.
+   */
   exited: Promise<ProcessExit>;
   /** Writes to stdin in call order, waiting for the pipe to accept the data. */
   write(data: string | Uint8Array): Promise<void>;

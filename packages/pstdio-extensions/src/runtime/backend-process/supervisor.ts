@@ -1,9 +1,8 @@
-import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createCommandRejection } from "../runner/command-rejection";
-import { createHostCalls, type HostInvocation } from "./host-calls";
+import { createHostCalls } from "./host-calls";
 import {
   BACKEND_PROTOCOL_VERSION,
   BACKEND_STOP_GRACE_MS,
@@ -15,9 +14,10 @@ import {
   serializeBackendError,
   type WorkerToHostMessage,
 } from "./protocol";
-import { createFunctionTable, createImportTracker } from "./remote-values";
+import { createImportTracker } from "./remote-values";
 import { stopBackendWorkerTree } from "./stop-worker-tree";
-import { type BackendSurface, collectSurfaceValues, surfaceAllowsCommandRejection } from "./surface";
+import { type BackendInvocation, createInvoke, createScopeCleanup, type Running } from "./supervisor-invocation";
+import { surfaceAllowsCommandRejection } from "./surface";
 import { createWatchdog, type WatchdogOptions } from "./watchdog";
 
 const DRAIN_DEADLINE_MS = 30_000;
@@ -31,15 +31,6 @@ const workerError = (serialized: SerializedBackendError) => {
   if (error.code && HOST_ERROR_CODES.has(error.code)) delete error.code;
   return error;
 };
-
-export interface BackendInvocation {
-  handlerId: string;
-  /** The host object the surface describes. Worker calls run against it and nothing else. */
-  context: unknown;
-  surface: BackendSurface;
-  args: unknown[];
-  signal?: AbortSignal;
-}
 
 export interface BackendWorker {
   readonly definition: unknown;
@@ -65,100 +56,9 @@ export interface BackendWorkerOptions {
   drainDeadlineMs?: number;
 }
 
-type Running = HostInvocation & {
-  /** Cleared once settled, so a kept entry does not also keep the caller's result alive. */
-  settle?: ReturnType<typeof Promise.withResolvers<unknown>>;
-  drain?: ReturnType<typeof setTimeout>;
-};
-
-const createInvoke =
-  ({
-    invocations,
-    stopped,
-    send,
-    trackImports,
-    closeInvocation,
-    drainInvocation,
-  }: {
-    invocations: Map<string, Running>;
-    stopped: () => BackendUnavailableError | undefined;
-    send: (message: HostToWorkerMessage) => boolean;
-    trackImports: (id: string) => Running["tracker"];
-    closeInvocation: (id: string, running: Running, error?: unknown) => void;
-    drainInvocation: (id: string, running: Running, reason: unknown) => void;
-  }) =>
-  (input: BackendInvocation) => {
-    try {
-      const unavailable = stopped();
-      if (unavailable) throw unavailable;
-      const { context, surface, handlerId, args, signal } = input;
-      signal?.throwIfAborted();
-      const values = collectSurfaceValues(context, surface);
-      signal?.throwIfAborted();
-
-      const invocationId = crypto.randomUUID();
-      const table = createFunctionTable();
-      const settle = Promise.withResolvers<unknown>();
-      const running: Running = {
-        settle,
-        context,
-        surface,
-        table,
-        tracker: trackImports(invocationId),
-        enter: AsyncLocalStorage.snapshot(),
-      };
-      invocations.set(invocationId, running);
-
-      const cancelPreparation = () => {
-        closeInvocation(invocationId, running, signal?.reason);
-        settle.reject(signal?.reason);
-      };
-      const cancel = () => {
-        const current = invocations.get(invocationId);
-        if (!current?.settle) return;
-        current.settle = undefined;
-        settle.reject(signal?.reason);
-        drainInvocation(invocationId, current, signal?.reason);
-      };
-      signal?.addEventListener("abort", cancelPreparation, { once: true });
-
-      const deliver = async () => {
-        const exported = await table.exportPinned(args);
-        if (!invocations.has(invocationId)) return;
-        signal?.removeEventListener("abort", cancelPreparation);
-        if (
-          !send({
-            v: BACKEND_PROTOCOL_VERSION,
-            type: "invoke",
-            invocationId,
-            handlerId,
-            surface,
-            values,
-            args: exported as unknown[],
-          })
-        ) {
-          throw stopped() ?? new TypeError("The invocation arguments cannot be sent to the extension backend.");
-        }
-        // Register after sending, then catch an abort caused by a getter during IPC serialization.
-        signal?.addEventListener("abort", cancel, { once: true });
-        if (signal?.aborted) cancel();
-      };
-      void deliver().catch((error) => {
-        if (!invocations.has(invocationId)) return;
-        closeInvocation(invocationId, running, error);
-        settle.reject(error);
-      });
-      return settle.promise.finally(() => {
-        signal?.removeEventListener("abort", cancelPreparation);
-        signal?.removeEventListener("abort", cancel);
-      });
-    } catch (error) {
-      return Promise.reject(error);
-    }
-  };
-
 export const startBackendWorker = async (options: BackendWorkerOptions): Promise<BackendWorker> => {
   const invocations = new Map<string, Running>();
+  const { closeScope, scopeCleanups } = createScopeCleanup();
   let idleSince = performance.now();
   const ready = Promise.withResolvers<void>();
   const loaded = Promise.withResolvers<unknown>();
@@ -194,6 +94,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     if (!invocations.delete(id)) return;
     clearTimeout(running.drain);
     hostCalls.reject(id, error ?? new BackendUnavailableError("The invocation has finished."));
+    closeScope(running);
     running.table.clear();
     if (invocations.size === 0) idleSince = performance.now();
   };
@@ -224,6 +125,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
   const drainInvocation = (invocationId: string, running: Running, reason: unknown) => {
     // Revoke pending callback scopes and ordinary calls. Existing cleanup references can still finish.
     running.cancelled = true;
+    closeScope(running);
     hostCalls.reject(invocationId, reason);
     running.table.dispose();
     running.drain = setTimeout(() => discard(invocationId, running), options.drainDeadlineMs ?? DRAIN_DEADLINE_MS);
@@ -255,10 +157,13 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
         discard(invocationId, running);
         return;
       }
-      running.table.seal(undefined, running.tracker.live > previousImports);
+      const keepsReferences = running.tracker.live > previousImports;
+      running.table.seal(undefined, keepsReferences);
+      if (!keepsReferences) closeScope(running);
       resolvers.resolve(result);
     } else {
       running.table.seal();
+      closeScope(running);
       const error = workerError(message.error);
       if (message.rejection && surfaceAllowsCommandRejection(running.surface))
         error.cause = createCommandRejection(message.rejection);
@@ -339,7 +244,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     watchdog.stop();
     fail(new BackendUnavailableError(`The extension backend exited (${code}).`));
     try {
-      await stopping;
+      await Promise.all([stopping, ...scopeCleanups]);
       return code;
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -352,8 +257,12 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
 
   const stop = async (graceful: boolean) => {
     fail(new BackendUnavailableError("The extension backend was stopped."));
-    await stopTree(graceful);
-    await exited;
+    try {
+      await stopTree(graceful);
+      await exited;
+    } finally {
+      await Promise.all(scopeCleanups);
+    }
   };
 
   const invoke = createInvoke({
@@ -362,6 +271,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     send,
     trackImports,
     closeInvocation,
+    closeScope,
     drainInvocation,
   });
 
@@ -395,3 +305,4 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
 };
 
 export { BackendUnavailableError } from "./protocol";
+export type { BackendInvocation } from "./supervisor-invocation";

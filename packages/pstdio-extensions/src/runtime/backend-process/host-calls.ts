@@ -66,7 +66,11 @@ export const createHostCalls = (
     const running = invocation(invocationId);
     if (!running || running.cancelled) throw new BackendUnavailableError("The invocation is no longer running.");
     return track(invocationId, async () => {
-      const { value, kept } = await running.table.exportResult(args.map(withSnapshotSinks), keepAbortListener);
+      const { value, kept } = await running.table.exportResult(
+        args.map(withSnapshotSinks),
+        keepAbortListener || "with-result",
+      );
+      let sent = false;
       try {
         if (invocation(invocationId) !== running || running.cancelled)
           throw new BackendUnavailableError("The invocation is no longer running.");
@@ -88,9 +92,10 @@ export const createHostCalls = (
           pending.take(invocationId, requestId);
           throw new BackendUnavailableError("The extension backend is not available.");
         }
+        sent = true;
         return importFrom(invocationId, await reply.promise);
       } catch (error) {
-        if (keepAbortListener) running.table.release(kept);
+        if (!sent || keepAbortListener) running.table.release(kept);
         throw error;
       }
     });
@@ -132,13 +137,9 @@ export const createHostCalls = (
               ? running.table.isPinned(message.fnId)
               : surfaceMemberKind(running.surface, message.path) === "handle";
           // A returned live result can keep an invocation-owned iterator. Ordinary results end the read.
-          const keepIterator =
-            message.within === undefined && result !== null && typeof result === "object" && isAsyncIterable(result);
+          const keepIterator = message.within === undefined && isAsyncIterable(result);
           const pin = inherited || (keepIterator && "with-result");
-          const { value, kept } = await running.table.exportResult(result, pin).catch((error) => {
-            if (revoked()) discardValue(result);
-            throw error;
-          });
+          const { value, kept } = await running.table.exportResult(result, pin, true);
           if (revoked()) {
             running.table.release(kept);
             return;

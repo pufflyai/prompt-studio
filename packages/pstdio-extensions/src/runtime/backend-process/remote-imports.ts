@@ -27,6 +27,7 @@ type ImportTracker = ReturnType<typeof createImportTracker>;
 type Invoke = (id: string, args: unknown[], keepAbortListener?: boolean) => Promise<unknown>;
 
 const signalControllers = new WeakMap<AbortSignal, AbortController>();
+const pendingIterators = new WeakMap<Promise<unknown>, AsyncIterator<unknown>>();
 
 const abortImportedSignal = (target: WeakRef<AbortSignal>) => (reason: AbortReason) => {
   const signal = target.deref();
@@ -51,9 +52,17 @@ const importSink = (ref: SinkRef, invoke: Invoke, tracker?: ImportTracker) => {
 
 const importIterator = (ref: IteratorRef, invoke: Invoke, tracker?: ImportTracker) => {
   const { next, return: finish, stream } = ref[ITERATOR_MARKER];
+  const read = (id: string, args: unknown[]) => {
+    const pending = invoke(id, args) as Promise<IteratorResult<unknown>>;
+    // Retain the iterator for a pending read even when the caller drops the iterator itself.
+    pendingIterators.set(pending, iterator);
+    const complete = () => pendingIterators.delete(pending);
+    void pending.then(complete, complete);
+    return pending;
+  };
   const iterator: AsyncIterator<unknown> = {
-    next: () => invoke(next[FUNCTION_MARKER], []) as Promise<IteratorResult<unknown>>,
-    return: (result?: unknown) => invoke(finish[FUNCTION_MARKER], [result]) as Promise<IteratorResult<unknown>>,
+    next: () => read(next[FUNCTION_MARKER], []),
+    return: (result?: unknown) => read(finish[FUNCTION_MARKER], [result]),
   };
   const imported: object = stream
     ? new ReadableStream({

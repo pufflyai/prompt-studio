@@ -35,3 +35,18 @@ test("a worker that stops answering is stopped", async () => {
     watchdog.stop();
   }
 });
+
+test("an omitted limit keeps the default memory limit", () => {
+  const reasons: string[] = [];
+  const watchdog = createWatchdog(
+    () => {},
+    (reason) => reasons.push(reason),
+    { memoryLimitBytes: undefined },
+  );
+  try {
+    watchdog.answered(1);
+    expect(reasons).toEqual([]);
+  } finally {
+    watchdog.stop();
+  }
+});

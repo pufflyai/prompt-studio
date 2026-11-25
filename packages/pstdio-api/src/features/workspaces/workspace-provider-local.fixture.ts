@@ -15,6 +15,7 @@ const providerId = "fixture.local-provider.workspace-type.local";
 
 const setupLocalProvider = (options: { backendRuntime?: "process" }) => {
   const s = {
+    backendRuntime: options.backendRuntime,
     root: "",
     projectId: "",
     sourceFolder: "",
@@ -85,6 +86,10 @@ const setupLocalProvider = (options: { backendRuntime?: "process" }) => {
       return result(directory);
     },
     async validateParams(ctx, input) {
+      if (input.params.revision === "cancel-process") {
+        await ctx.process.runOrThrow({ command: input.params.command });
+        return;
+      }
       await ctx.projectFiles.readText("revision.txt");
       if (input.revision === "missing") throw new Error("Choose an existing revision.");
     },
@@ -197,6 +202,8 @@ const discoveryAndDirectoryTests = (s: LocalProviderState) => {
   });
 
   test("provider directory access protects default and foreign workspaces", async () => {
+    const revisionPath = join(s.sourceFolder, "revision.txt");
+    const revision = await readFile(revisionPath, "utf8");
     const home = await s.handle.deps.workspaceService.getDefault(s.projectId);
     await expect(s.providerDirectory(home!.id)).rejects.toThrow(/Default workspace/);
     const other = await s.handle.deps.projectService.create({ name: "Other project" });
@@ -207,7 +214,7 @@ const discoveryAndDirectoryTests = (s: LocalProviderState) => {
       provider_state: "provisioning",
     });
     await expect(s.providerDirectory(foreign.id)).rejects.toThrow(/does not own/);
-    expect(await readFile(join(s.sourceFolder, "revision.txt"), "utf8")).toBe("review");
+    expect(await readFile(revisionPath, "utf8")).toBe(revision);
   });
 
   test("provider directory access rejects a managed path linked to another directory", async () => {
@@ -227,8 +234,10 @@ const discoveryAndDirectoryTests = (s: LocalProviderState) => {
     expect(await readFile(join(outside, "keep.txt"), "utf8")).toBe("Retain this");
   });
 
-  test("cancelling a provider operation stops its child before the operation rejects", async () => {
-    const processRoot = join(s.root, "process-root");
+  test.each(
+    s.backendRuntime ? ["host", "worker"] : ["host"],
+  )("cancelling a provider operation stops its %s-launched child before the operation rejects", async (mode) => {
+    const processRoot = join(s.root, `process-root-${mode}`);
     await mkdir(processRoot);
     const workspace = await s.handle.deps.workspaceService.create({
       project_id: s.projectId,
@@ -242,25 +251,26 @@ const discoveryAndDirectoryTests = (s: LocalProviderState) => {
       providerId,
       workspaceId: workspace.id,
     });
-    const marker = join(s.root, "child.pid");
+    const marker = join(s.root, `child-${mode}.pid`);
+    const command = [
+      process.execPath,
+      "-e",
+      "const fs = require('fs'); const path = process.argv[1]; fs.writeFileSync(path + '.tmp', String(process.pid)); fs.renameSync(path + '.tmp', path); setTimeout(() => {}, 8000)",
+      marker,
+    ];
     const controller = new AbortController();
     const pending = runWorkspaceProviderOperation(
       runtime!,
       async (ctx) => {
-        void ctx.process
-          .runOrThrow({
-            command: [
-              process.execPath,
-              "-e",
-              "const fs = require('fs'); const path = process.argv[1]; fs.writeFileSync(path + '.tmp', String(process.pid)); fs.renameSync(path + '.tmp', path); setInterval(() => {}, 1000)",
-              marker,
-            ],
-          })
-          .catch(() => {});
-        await new Promise(() => {});
+        if (mode === "worker") {
+          await runtime!.provider.validateParams!(ctx, { params: { revision: "cancel-process", command } });
+          return;
+        }
+        await ctx.process.runOrThrow({ command });
       },
       { signal: controller.signal },
     );
+    void pending.catch(() => {});
     let pid: number | undefined;
     try {
       const deadline = Date.now() + 2000;

@@ -8,8 +8,13 @@ import { isProcessAlive } from "pstdio-paths";
 import { bundleEntry, bundleLimits } from "./bundle-entry";
 import { createPreparationClient } from "./preparation-client";
 
-const spawnMacroChild = (source: string, report: string, finish = false) => {
+const spawnMacroChild = (source: string, report: string, mode: "hang" | "finish" | "exit" = "hang") => {
   const entry = join(source, "extension.ts");
+  const finish = {
+    hang: "while (true);",
+    finish: 'child.unref(); return "completed";',
+    exit: "process.exit(31);",
+  }[mode];
   writeFileSync(
     join(source, "macro.ts"),
     `import { renameSync, writeFileSync } from "node:fs";
@@ -19,7 +24,7 @@ export const run = () => {
   const report = ${JSON.stringify(report)};
   writeFileSync(report + ".tmp", JSON.stringify({ bundler: process.pid, descendant: child.pid, cwd: process.cwd() }));
   renameSync(report + ".tmp", report);
-  ${finish ? 'child.unref(); return "completed";' : "while (true);"}
+  ${finish}
 };`,
   );
   writeFileSync(entry, 'import { run } from "./macro.ts" with { type: "macro" };\nexport default { value: run() };');
@@ -175,13 +180,26 @@ test("a completed build stops a macro child holding its output pipes open", asyn
   const root = mkdtempSync(join(tmpdir(), "extension-bundle-complete-"));
   const report = join(root, "macro-processes.json");
   try {
-    const entry = spawnMacroChild(root, report, true);
+    const entry = spawnMacroChild(root, report, "finish");
     const built = await bundleEntry(entry, root, join(root, "out"));
     expect(readFileSync(built, "utf8")).toContain("completed");
     const { bundler, descendant, cwd } = readMacroProcesses(report);
     expect(isProcessAlive(bundler)).toBe(false);
     expect(isProcessAlive(descendant)).toBe(false);
     expect(existsSync(cwd)).toBe(false);
+  } finally {
+    cleanMacro(report);
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test.skipIf(process.platform !== "win32")("an exited bundler still owns its macro child", async () => {
+  const root = mkdtempSync(join(tmpdir(), "extension-bundle-exit-"));
+  const report = join(root, "macro-processes.json");
+  try {
+    const entry = spawnMacroChild(root, report, "exit");
+    await expect(bundleEntry(entry, root, join(root, "out"))).rejects.toThrow("exited (31) without a result");
+    await expectMacroStopped(readMacroProcesses(report));
   } finally {
     cleanMacro(report);
     rmSync(root, { recursive: true, force: true });
