@@ -80,6 +80,7 @@ export default {
       },
     },
     { id: "finish", title: "Finish", run: (ctx) => ctx.finish() },
+    { id: "collect", run: () => Bun.gc(true) },
     {
       id: "endless",
       title: "Endless",
@@ -124,6 +125,14 @@ export default {
     {
       id: "prepared-operation",
       run: () => ({ invoke(input) { return input.events.getMessages().map((message) => message.id); } }),
+    },
+    {
+      id: "harness-host-stream",
+      async start(ctx) {
+        const stream = ctx.connections.stream("example")[Symbol.asyncIterator]();
+        const first = await stream.next();
+        return { first, next: () => stream.next(), stop: () => stream.return() };
+      },
     },
     {
       id: "prepared-question",
@@ -772,7 +781,10 @@ test("listener failures, host objects, abort signals and abandoned iterators sta
         args: [],
       }),
     ).toEqual({ entityKeys: ["name"], hasMethod: "undefined", aborted: "aborted" });
-    await Bun.sleep(50);
+    for (let attempt = 0; !iteratorClosed && attempt < 10; attempt++) {
+      await worker.invoke({ handlerId: handlerOf(worker.definition, "collect"), context: {}, surface, args: [] });
+      await Bun.sleep(10);
+    }
     expect(iteratorClosed).toBe(true);
     expect(unhandled).toEqual([]);
   } finally {
@@ -978,6 +990,42 @@ test("a harness keeps its event sink and approvals after start returns", async (
     const session = (await worker.invoke({ handlerId, context, surface, args: [input] })) as { done: Promise<unknown> };
     expect(await session.done).toEqual({ decision: "approved" });
     expect(pushed).toEqual(["late"]);
+  } finally {
+    await worker.stop();
+  }
+});
+
+test("a live harness continues reading and closes a host stream it opened during start", async () => {
+  const worker = await start();
+  try {
+    const closed = Promise.withResolvers<void>();
+    const handlerId = (
+      worker.definition as { commands: Array<{ id: string; start?: Record<string, string> }> }
+    ).commands.find((entry) => entry.id === "harness-host-stream")!.start![HANDLER_MARKER]!;
+    const session = (await worker.invoke({
+      handlerId,
+      context: {
+        connections: {
+          async *stream() {
+            try {
+              yield "first";
+              yield "second";
+            } finally {
+              closed.resolve();
+            }
+          },
+        },
+      },
+      surface: {
+        kind: "object",
+        members: { connections: { kind: "object", members: { stream: { kind: "iterate", signalArg: 1 } } } },
+      },
+      args: [],
+    })) as { first: IteratorResult<string>; next(): Promise<IteratorResult<string>>; stop(): Promise<unknown> };
+    expect(session.first).toEqual({ done: false, value: "first" });
+    expect(await session.next()).toEqual({ done: false, value: "second" });
+    await session.stop();
+    await closed.promise;
   } finally {
     await worker.stop();
   }

@@ -2,6 +2,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parentPort, type Worker } from "node:worker_threads";
+import { type BundleCommandInput, type BundleOutcome, captureBundleCommand } from "./preparation-bundle-command";
 import { acquirePreparationBuildCommand, isPreparationBuildCommand } from "./preparation-command-slots";
 
 export { preparationBuildConcurrency, withPreparationBuildCommand } from "./preparation-command-slots";
@@ -19,18 +20,18 @@ interface CommandResult {
   exitCode: number;
   stdout: string;
   stderr: string;
+  outcome?: BundleOutcome;
+  timedOut?: boolean;
 }
 const commandError = (error: unknown) => ({
   exitCode: 1,
   stdout: "",
   stderr: error instanceof Error ? error.message : String(error),
 });
-interface CommandMessage {
-  kind: "command" | "command-cancel";
-  id: string;
-  input: CommandInput;
-  build?: boolean;
-}
+type CommandMessage =
+  | { kind: "command"; id: string; input: CommandInput | BundleCommandInput; build: boolean }
+  | { kind: "command-cancel"; id: string };
+
 const stopChild = async (child: Bun.Subprocess) => {
   if (process.platform === "win32") return stopWindowsProcessTree(child);
   try {
@@ -42,21 +43,34 @@ const stopChild = async (child: Bun.Subprocess) => {
   }
   await child.exited;
 };
-const captureCommand = async (
-  input: CommandInput,
-  spawn: (options: Bun.SpawnOptions.OptionsObject<"ignore" | Uint8Array, Bun.BunFile, Bun.BunFile>) => Bun.Subprocess,
+
+const spawnOwnedCommand = <
+  In extends Bun.SpawnOptions.Writable,
+  Out extends Bun.SpawnOptions.Readable,
+  Err extends Bun.SpawnOptions.Readable,
+>(
+  argv: string[],
+  options: Bun.SpawnOptions.OptionsObject<In, Out, Err>,
 ) => {
+  const child = Bun.spawn(argv, { ...options, detached: process.platform !== "win32", windowsHide: true });
+  let stopping: Promise<void> | undefined;
+  return { child, stop: () => (stopping ??= stopChild(child)) };
+};
+
+export type SpawnOwnedCommand = typeof spawnOwnedCommand;
+
+const captureCommand = async (input: CommandInput, spawn: SpawnOwnedCommand) => {
   const root = await mkdtemp(join(tmpdir(), "pstdio-extension-command-"));
   try {
     const stdout = join(root, "stdout"),
       stderr = join(root, "stderr");
-    const child = spawn({
-      ...input,
+    const { child } = spawn(input.argv, {
+      cwd: input.cwd,
+      env: input.env,
+      windowsVerbatimArguments: input.windowsVerbatimArguments,
       stdin: input.stdin === undefined ? "ignore" : Buffer.from(input.stdin),
       stdout: Bun.file(stdout),
       stderr: Bun.file(stderr),
-      detached: process.platform !== "win32",
-      windowsHide: true,
     });
     return {
       exitCode: await child.exited,
@@ -73,7 +87,7 @@ export const ownPreparationCommands = (
   worker: Worker,
   buildState: (state: "waiting" | "admitted" | "started" | "finished") => void = () => {},
 ) => {
-  const children = new Map<string, Bun.Subprocess>();
+  const children = new Map<string, () => Promise<void>>();
   const operations = new Set<Promise<void>>();
   let stopped = false;
   const cancelled = new Set<string>();
@@ -82,8 +96,9 @@ export const ownPreparationCommands = (
     if (message.kind === "command-cancel") {
       cancelled.add(message.id);
       controllers.get(message.id)?.abort(new Error("Extension command cancelled."));
-      const child = children.get(message.id);
-      if (child) void stopChild(child);
+      void children
+        .get(message.id)?.()
+        .catch(() => {});
       return;
     }
     if (message.kind !== "command" || stopped) return;
@@ -103,13 +118,16 @@ export const ownPreparationCommands = (
             buildState("finished");
           };
         }
-        const result = await captureCommand(message.input, (options) => {
+        const spawn: SpawnOwnedCommand = (argv, options) => {
           if (stopped) throw new Error("Extension worker retired.");
           controller.signal.throwIfAborted();
-          const child = Bun.spawn(message.input.argv, options);
-          children.set(message.id, child);
-          return child;
-        });
+          const owned = spawnOwnedCommand(argv, options);
+          children.set(message.id, owned.stop);
+          return owned;
+        };
+        const result = await ("deadlineMs" in message.input
+          ? captureBundleCommand(message.input, spawn)
+          : captureCommand(message.input, spawn));
         if (!stopped) worker.postMessage({ kind: "command-result", id: message.id, result });
       } catch (error) {
         if (!stopped)
@@ -132,11 +150,15 @@ export const ownPreparationCommands = (
     stopped = true;
     worker.off("message", onMessage);
     for (const controller of controllers.values()) controller.abort(new Error("Extension worker retired."));
-    await Promise.all([...children.values()].map(stopChild));
+    await Promise.all([...children.values()].map((stop) => stop()));
     await Promise.all(operations);
   };
 };
-export const runPreparationCommand = (input: CommandInput, signal?: AbortSignal): Promise<CommandResult> => {
+const requestPreparationCommand = (
+  input: CommandInput | BundleCommandInput,
+  build: boolean,
+  signal?: AbortSignal,
+): Promise<CommandResult> => {
   signal?.throwIfAborted();
   const port = parentPort!;
   const id = crypto.randomUUID();
@@ -150,6 +172,13 @@ export const runPreparationCommand = (input: CommandInput, signal?: AbortSignal)
     };
     port.on("message", onMessage);
     signal?.addEventListener("abort", abort, { once: true });
-    port.postMessage({ kind: "command", id, input, build: isPreparationBuildCommand() });
+    port.postMessage({ kind: "command", id, input, build });
   });
 };
+
+export const runPreparationCommand = (input: CommandInput, signal?: AbortSignal) =>
+  requestPreparationCommand(input, isPreparationBuildCommand(), signal);
+
+// Revision bundling already occupies its preparation worker slot.
+export const runPreparationBundle = (input: BundleCommandInput): Promise<CommandResult> =>
+  parentPort ? requestPreparationCommand(input, false) : captureBundleCommand(input, spawnOwnedCommand);

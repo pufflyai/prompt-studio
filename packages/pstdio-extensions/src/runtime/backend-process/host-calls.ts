@@ -8,7 +8,7 @@ import {
   serializeBackendError,
   type WorkerToHostMessage,
 } from "./protocol";
-import { withSnapshotSinks } from "./remote-markers";
+import { isAsyncIterable, withSnapshotSinks } from "./remote-markers";
 import { type createFunctionTable, type createImportTracker, discardValue, importValue } from "./remote-values";
 import { type BackendSurface, resolveSurfaceCall, surfaceMemberKind } from "./surface";
 
@@ -127,10 +127,14 @@ export const createHostCalls = (
             discardValue(result);
             return;
           }
-          const pin =
+          const inherited =
             message.type === "fn-call"
               ? running.table.isPinned(message.fnId)
               : surfaceMemberKind(running.surface, message.path) === "handle";
+          // A live session can keep the iterator it opened before its handler returned.
+          const keepIterator =
+            message.within === undefined && result !== null && typeof result === "object" && isAsyncIterable(result);
+          const pin = inherited || keepIterator;
           const { value, kept } = await running.table.exportResult(result, pin).catch((error) => {
             if (revoked()) discardValue(result);
             throw error;

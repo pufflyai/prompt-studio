@@ -94,4 +94,4 @@ export {
   isFileMutationOwnerAlive,
   registerFileMutationWorker,
 } from "./file-mutation-worker";
-export { isProcessAlive } from "./process-liveness";
+export { isProcessAlive, isProcessGroupAlive } from "./process-liveness";
