@@ -34,6 +34,7 @@ import { readWebviewBuildSignature } from "./extension-webview-build-cache";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { inspectManagedWebviewBuildInputs } from "./extension-webview-build-source";
 import { installExtensionSource } from "./install-extension-source";
+import { exportPreparedReleaseBundle, importPreparedReleaseBundle } from "./prepared-release-bundle";
 import { prepareWebviewArtifact, prepareWebviewArtifacts } from "./prepared-webview";
 import { createExtensionSourceCache } from "./project-extension-runtime-sources";
 import { createApp, webviewAccess } from "./test-utils/webview-asset-app";
@@ -184,23 +185,23 @@ test("publishes and serves release webview assets from the immutable revision", 
   const row = { id: "installed", source_path: source, install_name: installed.installName, updated_at: "initial" };
   const cacheRoot = join(root, "webviews");
   const dist = join(cacheRoot, row.id, viewId, "dist");
-  const release = join(
-    process.env.PSTDIO_HOME!,
-    "cache",
-    "extension-revisions",
-    "revisions",
-    prepared.id,
-    "webviews",
-    "0",
+  const preparedOutput = prepared.webviews![viewId]!.distDir;
+  writeFileSync(join(preparedOutput, "module.js"), "// prepared release");
+  writeFileSync(join(preparedOutput, "module.css"), "p { color: red; }");
+  const sourceSha256 = installed.sourceHash;
+  const archive = await exportPreparedReleaseBundle(prepared, sourceSha256);
+  const path = join(root, "runtime.tgz");
+  await Bun.write(path, archive.bytes);
+  const release = await importPreparedReleaseBundle(
+    { path, descriptor: archive.descriptor, sourceSha256 },
+    source,
+    sourceSha256,
   );
-  mkdirSync(release, { recursive: true });
+  const artifact = release.webviews![viewId]!;
   mkdirSync(dist, { recursive: true });
   writeFileSync(join(dist, "module.js"), "// previous local build");
   writeFileSync(join(dist, "build-signature.txt"), "local-publication");
-  writeFileSync(join(release, "module.js"), "// prepared release");
-  writeFileSync(join(release, "module.css"), "p { color: red; }");
   recordPublishedWebviewRevision(dist, "local-publication");
-  const artifact = { ...prepared.webviews![viewId]!, distDir: release };
   const manager = createExtensionWebviewBuildManager({
     listInstalledSources: async () => [row],
     reportBuildSuccess: async () => "reported",
@@ -208,7 +209,7 @@ test("publishes and serves release webview assets from the immutable revision", 
     webviewCacheRoot: cacheRoot,
   });
   try {
-    await acceptPreparedRevision(source, { ...prepared, prebuiltRelease: true, webviews: { [viewId]: artifact } });
+    await acceptPreparedRevision(source, release);
     await manager.adopt(source);
     expect(readFileSync(join(dist, "module.js"), "utf8")).toBe("// previous local build");
     expect(existsSync(join(dist, "module.css"))).toBe(false);
@@ -225,6 +226,14 @@ test("publishes and serves release webview assets from the immutable revision", 
     expect(readPublishedWebviewRevision(dist)).toBe(expectedRevision);
     recordPublishedWebviewRevision(dist, "local-rebuild");
     expect(await (await app.request(moduleUrl)).text()).toBe("// previous local build");
+    await manager.refresh(source);
+    expect((await readAcceptedRevision(source))?.webviews?.[viewId]).toEqual(artifact);
+    expect(await (await app.request(moduleUrl)).text()).toBe("// prepared release");
+
+    writeFileSync(join(source, "main.ts"), 'console.log("edited release frontend");');
+    await manager.refresh(source);
+    expect((await readAcceptedRevision(source))?.webviews?.[viewId]?.distDir).not.toBe(artifact.distDir);
+    expect(await (await app.request(moduleUrl)).text()).toContain("edited release frontend");
   } finally {
     manager.dispose();
   }
