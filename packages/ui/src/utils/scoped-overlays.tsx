@@ -21,7 +21,7 @@ const DialogRoot = (props: Dialog.RootProps) => {
         <Dialog.Root
           {...useScopedOpen(props)}
           onEscapeKeyDown={(event) => {
-            // Zag still calls the dialog while the visible popover waits to join its layer stack. See ADR 0163.
+            // Zag still calls the dialog while the visible popover waits to join its layer stack. See ADR 0165.
             if ([...popovers].reverse().some((handleEscape) => handleEscape(event))) return;
             props.onEscapeKeyDown?.(event);
           }}
@@ -78,21 +78,23 @@ const PopoverContent = forwardRef<HTMLDivElement, Popover.ContentProps>((props, 
   const content = useRef<HTMLDivElement>(null);
   const handleEscape = useEffectEvent((event: KeyboardEvent) => {
     if (!content.current?.checkVisibility({ visibilityProperty: true })) return false;
-    escapeOptions?.onEscapeKeyDown?.(event);
-    if (!event.defaultPrevented && escapeOptions?.closeOnEscape !== false) popover.setOpen(false);
+    // A provider's connected API does not expose its Escape policy. Keep the dialog open and let Zag handle it.
+    if (escapeOptions) {
+      escapeOptions.onEscapeKeyDown?.(event);
+      if (!event.defaultPrevented && escapeOptions.closeOnEscape !== false) popover.setOpen(false);
+    }
     event.preventDefault();
     return true;
   });
   const active = (scope?.active ?? true) && activity.active;
-  const usesScopedRoot = escapeOptions !== null;
   useLayoutEffect(() => {
-    if (!owner || !popover.open || !active || !usesScopedRoot) return;
+    if (!owner || !popover.open || !active) return;
     const dismiss = (event: KeyboardEvent) => handleEscape(event);
     owner.add(dismiss);
     return () => {
       owner.delete(dismiss);
     };
-  }, [active, owner, popover.open, usesScopedRoot]);
+  }, [active, owner, popover.open]);
   return <Popover.Content {...props} ref={mergeRefs(ref, content)} />;
 });
 
