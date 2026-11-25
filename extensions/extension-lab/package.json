@@ -9,7 +9,7 @@
     "./contracts": "./src/contracts.ts"
   },
   "engines": {
-    "pstdio": "^0.5.0 || ^0.6.0"
+    "pstdio": "^0.6.0"
   },
   "private": true,
   "type": "module",
@@ -19,8 +19,8 @@
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "0.49.0-preview.sha-79b5149883896791d1097b8dcbac79bd44c43ea7",
-    "@pstdio/ui": "0.49.0-preview.sha-79b5149883896791d1097b8dcbac79bd44c43ea7",
+    "@pstdio/sdk": "0.49.0-preview.sha-0af682534b95e58e07d472ddf0df2c118901bede",
+    "@pstdio/ui": "0.49.0-preview.sha-0af682534b95e58e07d472ddf0df2c118901bede",
     "@tanstack/react-query": "^5.90.21",
     "lucide-react": "^0.556.0",
     "react": "19.2.4",
