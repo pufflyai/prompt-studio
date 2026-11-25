@@ -55,9 +55,28 @@ test.each([false, true])("reports an ancestor-only edit after one nested create 
   const folder = join(root, "sales");
   const archive = join(folder, "archive");
   const file = join(archive, "note.json");
-  await mount.writeText("sales/archive/note.json", "{}");
+  const mkdir = fsPromises.mkdir;
+  const initialTimestamp = new Date("2020-01-01T00:00:00Z");
+  const initialMtime = BigInt(initialTimestamp.getTime()) * 1_000_000n;
+  const timestampArchiveOnCreation = async (...args: Parameters<typeof mkdir>) => {
+    const created = await mkdir(...args);
+    if (typeof args[0] === "string" && basename(args[0]) === "archive") {
+      // Force the initial file creation to change the directory state on coarse filesystems.
+      utimesSync(archive, initialTimestamp, initialTimestamp);
+      expect(readArtifactFileState(archive)?.mtime).toBe(initialMtime);
+    }
+    return created;
+  };
+  const duringCreate = spyOn(fsPromises, "mkdir").mockImplementation(timestampArchiveOnCreation as typeof mkdir);
+  try {
+    await mount.writeText("sales/archive/note.json", "{}");
+  } finally {
+    duringCreate.mockRestore();
+  }
   const folderState = readArtifactFileState(folder);
   const archiveState = readArtifactFileState(archive);
+  expect(archiveState).toMatchObject({ directory: true });
+  expect(archiveState?.mtime).not.toBe(initialMtime);
   expect(ledger.dropEchoes([folder], { keepMatchedWrites: true })).toEqual([]);
 
   writeFileSync(file, "[]");
