@@ -126,9 +126,11 @@ test("one watcher cannot suppress another watcher's folder-only notification", a
 });
 
 test.each([
-  "opening",
-  "walking",
-])("closes all startup handles and cancels the pending refresh when %s the flat watch fails", async (stage) => {
+  ["opening", true],
+  ["walking", true],
+  ["opening", false],
+  ["walking", false],
+])("closes startup handles when %s fails (error callback throws: %s)", async (stage, rethrow) => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-watch-startup-"));
   cleanups.push(() => rmSync(root, { recursive: true, force: true }));
   mkdirSync(join(root, "subfolder"));
@@ -137,31 +139,34 @@ test.each([
   const closed: string[] = [];
   let limited = false;
   let flatOpened = false;
+  let watcher: ReturnType<typeof watchArtifactMount> | undefined;
+  cleanups.push(() => watcher?.close());
   const readDirectory = fs.readdirSync;
   const read = spyOn(fs, "readdirSync").mockImplementation((...args) => {
     if (flatOpened && args[0] === root) throw failure;
     return Reflect.apply(readDirectory, fs, args);
   });
   try {
-    expect(() =>
-      watchArtifactMount({
-        root,
-        ledger: createArtifactMountWriteLedger(),
-        onChange: (paths) => changes.push(paths),
-        onError: (error) => {
-          throw error;
-        },
-        onFolderLimit: () => {
-          limited = true;
-        },
-        maxFolders: 1,
-        watch: () => ({ close: () => closed.push("tree") }),
-        watchRoot: () => {
-          if (stage === "opening") throw failure;
-          flatOpened = true;
-          return { close: () => closed.push("flat") };
-        },
-      }),
+    expect(
+      () =>
+        (watcher = watchArtifactMount({
+          root,
+          ledger: createArtifactMountWriteLedger(),
+          onChange: (paths) => changes.push(paths),
+          onError: (error) => {
+            if (rethrow) throw error;
+          },
+          onFolderLimit: () => {
+            limited = true;
+          },
+          maxFolders: 1,
+          watch: () => ({ close: () => closed.push("tree") }),
+          watchRoot: () => {
+            if (stage === "opening") throw failure;
+            flatOpened = true;
+            return { close: () => closed.push("flat") };
+          },
+        })),
     ).toThrow(failure);
   } finally {
     read.mockRestore();

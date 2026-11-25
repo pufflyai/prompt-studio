@@ -95,17 +95,13 @@ export const createDirectoryTreeWatcher = (input: DirectoryTreeWatcherInput) => 
     const identity = folderIdentity(directoryPath);
     // A folder removed before its handle starts is reported by its parent.
     if (!identity) return true;
-    try {
-      const folder: WatchedFolder = { identity };
-      folder.handle = watch(
-        directoryPath,
-        (eventType, filename) => handleEvent(directoryPath, folder, eventType, filename),
-        input.onError,
-      );
-      folders.set(directoryPath, folder);
-    } catch (error) {
-      input.onError(error);
-    }
+    const folder: WatchedFolder = { identity };
+    folder.handle = watch(
+      directoryPath,
+      (eventType, filename) => handleEvent(directoryPath, folder, eventType, filename),
+      input.onError,
+    );
+    folders.set(directoryPath, folder);
     return true;
   };
 
@@ -128,6 +124,8 @@ export const createDirectoryTreeWatcher = (input: DirectoryTreeWatcherInput) => 
     try {
       visit(startPath);
     } catch (error) {
+      // Startup must fail even when the production error callback only logs.
+      if (!reportEntries) throw error;
       // A folder removed during the walk is reported by its own event.
       if (!isGone(error)) input.onError(error);
     }
