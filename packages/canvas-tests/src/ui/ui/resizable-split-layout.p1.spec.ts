@@ -72,6 +72,40 @@ for (const location of ["away from the divider", "on the divider"]) {
   });
 }
 
+test("settle a canceled touch resize and let the next touch resize again", async ({ page, context }) => {
+  const preview = await openCanvasPreview(page, BOTTOM_SPLIT);
+  const separator = preview.getByRole("separator", { name: "Resize secondary panel", exact: true });
+  const client = await context.newCDPSession(page);
+  await separator.evaluate((element) => {
+    element.addEventListener("pointercancel", (event) => {
+      if (event instanceof PointerEvent && event.isTrusted && event.pointerType === "touch" && event.isPrimary) {
+        element.setAttribute("data-primary-touch-canceled", "true");
+      }
+    });
+  });
+
+  const initial = Number(await separator.getAttribute("aria-valuenow"));
+  const first = { id: 11, ...(await pointOnDivider(separator, 0.5)) };
+  await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [first] });
+  await client.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ ...first, y: first.y - 24 }] });
+  await expect.poll(() => previewSize(separator)).toBeGreaterThan(initial);
+  const canceledSize = await previewSize(separator);
+  await expect(separator).toHaveAttribute("aria-valuenow", String(initial));
+  await client.send("Input.dispatchTouchEvent", { type: "touchCancel", touchPoints: [] });
+  await expect(separator).toHaveAttribute("data-primary-touch-canceled", "true");
+  await expect(separator).toHaveAttribute("aria-valuenow", String(Math.round(canceledSize)));
+  expect(await previewSize(separator)).toBe(canceledSize);
+
+  const second = { id: 22, ...(await pointOnDivider(separator, 0.5)) };
+  await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [second] });
+  await client.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ ...second, y: second.y - 24 }] });
+  await expect.poll(() => previewSize(separator)).toBeGreaterThan(canceledSize);
+  const final = await previewSize(separator);
+  await expect(separator).toHaveAttribute("aria-valuenow", String(Math.round(canceledSize)));
+  await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await expect(separator).toHaveAttribute("aria-valuenow", String(Math.round(final)));
+});
+
 test("resize the divider with the mouse and keyboard", async ({ page }) => {
   const preview = await openCanvasPreview(page, BOTTOM_SPLIT);
   const separator = preview.getByRole("separator", { name: "Resize secondary panel", exact: true });
