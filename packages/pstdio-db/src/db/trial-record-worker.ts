@@ -55,6 +55,7 @@ globalThis.onmessage = async ({ data }) => {
           receipts?.documents,
         ],
       ] as const) {
+        if (table === "storage_document_operations" && receipts?.expireDocumentRetries) continue;
         const snapshot = await prepareUpgradeSnapshot(
           client,
           source,
