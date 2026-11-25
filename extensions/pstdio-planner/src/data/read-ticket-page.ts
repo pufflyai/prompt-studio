@@ -7,6 +7,7 @@ const staleRevision = (error: unknown) =>
     error.message === "Collection query revision is stale; restart the query");
 
 export const readStableTicketPage = async <T>(pinned: boolean, read: () => Promise<T>, signal?: AbortSignal) => {
+  let canRestart = !pinned;
   while (true) {
     signal?.throwIfAborted();
     try {
@@ -15,7 +16,9 @@ export const readStableTicketPage = async <T>(pinned: boolean, read: () => Promi
       return page;
     } catch (error) {
       signal?.throwIfAborted();
-      if (pinned || !staleRevision(error)) throw error;
+      if (!canRestart || !staleRevision(error)) throw error;
+      // Renderers use cancellation-scoped storage reads. Without a command signal, restart once.
+      canRestart = signal !== undefined;
       // Sync can invalidate successive reads. Yield to writes and cancellation before starting fresh.
       await setImmediate(undefined, { signal });
     }

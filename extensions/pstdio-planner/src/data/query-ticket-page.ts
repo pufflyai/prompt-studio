@@ -105,8 +105,13 @@ export const readTicketViewPage = async (
   return { ...prepared, result, tickets, projections, reviews, parents };
 };
 
-export const queryTicketPage = (ctx: TicketQueryContext, input: Partial<KanbanRendererQueryParams>) =>
+export const queryTicketPage = (
+  ctx: TicketQueryContext,
+  input: Partial<KanbanRendererQueryParams>,
+  signal?: AbortSignal,
+) =>
   readStableTicketPage(
     input.page?.cursor !== undefined || input.page?.revision !== undefined,
     async () => (await readTicketViewPage(ctx, input, {}, input.page?.fields)).result,
+    signal,
   );

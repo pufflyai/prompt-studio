@@ -38,6 +38,24 @@ test("Board restarts an unpinned read when a ticket syncs and rejects a stale pi
   );
 });
 
+test("Board stops when its scoped storage read is cancelled", async () => {
+  const storage = createMemoryStorage();
+  const ctx = makeCommandContext({ storage, params: {} });
+  const query = storage.records.query.bind(storage.records);
+  const cancelled = new DOMException("The view closed", "AbortError");
+  let pageReads = 0;
+  storage.records.query = async (input) => {
+    if (input.index === "ticket-view" && input.revision !== undefined) {
+      pageReads++;
+      throw cancelled;
+    }
+    return query(input);
+  };
+
+  await expect(queryTickets(ctx, {})).rejects.toBe(cancelled);
+  expect(pageReads).toBe(1);
+});
+
 test("Board milestone date controls select active tickets with that date", async () => {
   const storage = createMemoryStorage();
   const ctx = makeCommandContext({ storage, params: {} });
