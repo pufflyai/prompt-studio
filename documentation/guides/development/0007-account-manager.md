@@ -6,7 +6,7 @@ The private account manager owns durable account and device authority separately
 
 `services/account-manager/` is a private Bun workspace. `createAccountManager(databaseUrl)` receives a separate manager PostgreSQL connection from the trusted manager process. Run `migrateAccountManager(databaseUrl, migrationsFolder)` with its generated migrations before opening authority operations. The manager and relay use separate databases and roles on the shared PostgreSQL server.
 
-The data owner's lifecycle methods remain internal. `createManagerAuthentication(config)` embeds Better Auth 1.7.10 for Google sign-in, persisted human sessions and signing keys. `createManagerHandler(auth, origin)` serves auth, device login and device management. Never expose private lifecycle methods directly to untrusted bodies or send the manager connection to extensions or native clients. A supplied Google subject or account ID is not permission.
+The data owner's lifecycle methods remain internal. `createManagerAuthentication(config)` embeds Better Auth 1.7.10 for Google and Microsoft sign-in, persisted human sessions and signing keys. `createManagerHandler(auth, origin)` serves auth, device login and device management. Never expose private lifecycle methods directly to untrusted bodies or send the manager connection to extensions or native clients. A supplied provider subject or account ID is not permission.
 
 The component implements part of PS-735. The relay verifies the manager's signed access tokens: `bun run --cwd services/relay test:integration` runs the relay against the actual manager with fixture keys and an owned HTTPS fixture. Live Google configuration, deployed role/network isolation, backups and production recovery remain separate proof. See [ADR 0124](../../adrs/0124-separate-account-authority-from-content.md).
 
@@ -34,6 +34,8 @@ bun run --cwd services/account-manager account-feature grant --email person@exam
 bun run --cwd services/account-manager account-feature revoke --email person@example.com --feature relay
 ```
 
+For Microsoft accounts, pass the stable ID to `--account`. Read `login.accountId` from the signed-in host’s `GET /v1/account` response or use the private manager inventory. Microsoft email claims are optional and can change. [Feature grant example](0011-device-login.md#login-flow)
+
 The production manager image includes the same command at `bun dist/account-feature.js`. An unknown, unverified or ambiguous email fails without creating an account. The command follows the stored Google subject to the product account; email itself is not the account identity. Repeating a grant keeps its original timestamp. Repeating a revoke succeeds.
 
 Without the feature, `GET /v1/workbenches` returns an empty list, adding a cloud project returns 403, key requests return 404 and access renewal returns 401. Revoking keeps project membership and keys so a later grant resumes access. It does not remove devices. Tokens already issued remain valid until their existing expiry. The relay continues to verify only the manager's tokens and never reads feature grants.
@@ -44,7 +46,7 @@ Without the feature, `GET /v1/workbenches` returns an empty list, adding a cloud
 
 | Method | Behavior |
 | --- | --- |
-| `provision(intent)` | Create a stable account with its current canonical Google issuer/subject owner. Reprovisioning cannot silently replace that owner or activate a disabled account. |
+| `provision(intent)` | Create a stable account with its current canonical issuer/subject owner. Reprovisioning cannot silently replace that owner or activate a disabled account. |
 | `registerDevice(input)` | Register or log in again a device of an active account. Returns `{ accountId, deviceId, token }`. The token is returned only here. |
 | `removeDevice(input)` | Remove a device. Its credential stops renewing access, and every key of the account gets a new generation. |
 | `addWorkbench(input)` / `removeWorkbench(input)` | Make a project a cloud project of the account, or stop syncing it. Removing keeps the project's keys. |
@@ -63,12 +65,12 @@ The manager uses current product authority for renewal. Ordinary relay requests 
 
 ## Better Auth and HTTP
 
-Better Auth owns `/api/auth/*`, including Google sign-in/callback, sessions, sign-out and public JWKS. The generic human `/token` route is disabled. Product access comes only from current device renewal authority. Account linking is disabled, so matching email cannot transfer a Google provider identity. Device login maps the stable Google subject to its account inside the login transaction.
+Better Auth owns `/api/auth/*`, including Google and Microsoft sign-in/callback, sessions, sign-out and public JWKS. The generic human `/token` route is disabled. Product access comes only from current device renewal authority. Account linking is disabled, so matching email cannot transfer provider identity. Device login maps the verified issuer and subject to its account. Microsoft uses its tenant-specific v2 issuer and application-scoped `sub`. Its internal Better Auth email value is scoped to that identity, so Google and Microsoft may hold separate accounts even if they report the same email.
 
 | Route | Caller and result |
 | --- | --- |
-| GET /v1/native-login, /v1/native-callback | Browser. Starts Google sign-in and returns a single-use code to the native loopback callback. |
-| POST /v1/device-login | Google session and the manager's exact Origin. Body `{ deviceId, name, platform }`. Finds or creates the user's account, registers the device, and returns its credential and the relay origin. |
+| GET /v1/native-login, /v1/native-callback | Browser. Starts the selected provider’s sign-in (Google by default) and returns a single-use code to the native loopback callback. |
+| POST /v1/device-login | Provider session and the manager's exact Origin. Body `{ deviceId, name, platform, provider? }`. If supplied, `provider` must match the session. Finds or creates the user's account, registers the device, and returns its credential and the relay origin. |
 | POST /v1/environment-access | Device credential plus JSON workbenchId; returns finite token and expiresAt. |
 | GET /v1/account | Device credential. Returns the account's feature grants. |
 | GET /v1/devices | Device credential. Returns this device's account and device IDs and the account's devices. |
@@ -77,13 +79,22 @@ Better Auth owns `/api/auth/*`, including Google sign-in/callback, sessions, sig
 | POST /v1/workbenches/:id, /v1/workbenches/:id/remove | Device credential. Make a project a cloud project, or stop syncing it. |
 | GET /v1/workbenches/:id/keys | Device credential. Returns `{ project, personal }`, each a list of `{ generation, secret }` from oldest to newest, and creates generation 1 on the first request. 404 when the account has no such cloud project. |
 
-The Google session is needed only to log in. Login uses the account the Google user already owns. Without one, it creates an account whose ID comes from the Google issuer and subject, so every login of one user finds the same account. Devices of one account manage each other. A device can never see or change the devices or cloud projects of another account. Operator lifecycle and recovery remain private. See [device login development](0011-device-login.md) for the supported browser and CLI flow. Errors discard sensitive causes and responses use no-store.
+The provider session is needed only to log in. Login uses the account that provider identity already owns. New accounts derive their ID from the verified issuer and subject. Continue using the same provider and, for Microsoft, the same account and application registration to return to that account. Devices of one account manage each other. A device can never see or change the devices or cloud projects of another account. Operator lifecycle and recovery remain private. See [device login development](0011-device-login.md) for the supported browser and CLI flow. Errors discard sensitive causes and responses use no-store.
 
 The Bun listener requires DATABASE_URL, MANAGER_ORIGIN, RELAY_AUDIENCE, BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SESSION_LIFETIME_SECONDS, SESSION_UPDATE_AGE_SECONDS and ACCESS_LIFETIME_SECONDS. Lifetimes are positive explicit policy, with update age below session lifetime. Origins use HTTPS. MANAGER_HOST/PORT select the listener; optional paired MANAGER_TLS_CERT/KEY paths supply TLS when it terminates in this process. A trusted HTTPS ingress can terminate TLS instead. Configure Google's callback as MANAGER_ORIGIN followed by /api/auth/callback/google.
 
-### Addresses with a path
+### Microsoft Web application registration
 
-MANAGER_ORIGIN and RELAY_AUDIENCE are HTTPS addresses and may include a path, so both services can share one host, for example `https://base.prompt.studio/accounts` and `https://base.prompt.studio/relay`. The proxy in front of each service removes that path before forwarding, so the services keep serving at `/`. The manager uses its full address for the Google callback, the native sign-in callback and the token issuer, and adds its path back before Better Auth handles a request. Browser `Origin` checks still compare the origin without the path. Clients join every request path under the address they were given.
+1. In Microsoft Entra **App registrations**, register a Web app for **Accounts in any organizational directory and personal Microsoft accounts**. Prompt Studio uses the public Microsoft cloud with the v2 `common` authority. Organization consent and Conditional Access policies still apply. [Microsoft OpenID Connect](https://learn.microsoft.com/en-us/entra/identity-platform/v2-protocols-oidc)
+2. Under **Authentication**, register the Web redirect URI `<MANAGER_ORIGIN>/api/auth/callback/microsoft`. Include the full HTTPS service path, for example `https://base.prompt.studio/accounts/api/auth/callback/microsoft`. Add a separate exact callback for any staging manager you intend to use. Keep the platform type Web and use standard Microsoft signing keys. App-specific claims-mapping signing keys are outside this registration.
+3. Set `MICROSOFT_CLIENT_ID` to the public Application (client) ID and put the client secret **value** in the account-manager secret store as `MICROSOFT_CLIENT_SECRET`. Configure both or leave both unset. The manager requests only `openid profile`; it needs neither Microsoft Graph permissions nor implicit flow. Device and relay renewal use Prompt Studio credentials.
+4. Deploy the updated manager before the Cloud UI and check both the existing Google path and Microsoft consent from a personal account and a work or school account using Cloud settings. Record the manager origin, callback, app client ID, account class and outcome. Keep secret values, tokens, and sign-in URLs out of evidence.
+
+The Application (client) ID forms part of the Microsoft subject’s stability. Rotate the secret on the existing registration to preserve ownership.
+
+## Addresses with a path
+
+MANAGER_ORIGIN and RELAY_AUDIENCE are HTTPS addresses and may include a path, so both services can share one host, for example `https://base.prompt.studio/accounts` and `https://base.prompt.studio/relay`. The proxy in front of each service removes that path before forwarding, so the services keep serving at `/`. The manager uses its full address for the provider callbacks, the native sign-in callback and the token issuer, and adds its path back before Better Auth handles a request. Browser `Origin` checks still compare the origin without the path. Clients join every request path under the address they were given.
 
 Build the production image with `docker build -f infra/account-manager/Dockerfile .`. Apply generated migrations through operator tooling first. The slim runtime needs no source mount or dependency install. Never put secrets in command arguments, URLs or logs.
 
@@ -95,7 +106,7 @@ Keep manager and content recovery separate. Restoring content must not call mana
 
 An owned manager restore uses a new immutable operator request ID. It first validates snapshot account/workbench relationships and receipt result ownership. It rejects a snapshot receipt whose fingerprint or result conflicts with a known request, and a snapshot key whose secret differs from a stored key. Its transaction imports missing account/workbench identities, encryption keys and receipts, retains all known history and current owner metadata, removes every device and disables every known or imported account. Historical identities are not permission. Even an account created after the snapshot stays disabled, and replaying its completed provision cannot create new authority.
 
-The operator then establishes current ownership/lifecycle with a new reconciliation intent. Every device then logs in again with Google. Owned restore preserves known completion history; it does not recover unknown history absent from an external backup.
+The operator then establishes current ownership/lifecycle with a new reconciliation intent. Every device then signs in again with its original provider. Owned restore preserves known completion history; it does not recover unknown history absent from an external backup.
 
 Feature grants are current operator access policy and are excluded from historical snapshots, like device credentials. A restore preserves surviving feature rows; restoring into an empty database grants no features. After recovery, the operator checks current early access and grants it again when needed. Full database backups include the feature table.
 

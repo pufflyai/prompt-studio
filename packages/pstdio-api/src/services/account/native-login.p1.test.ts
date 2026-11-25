@@ -120,3 +120,29 @@ test("native sign-in opens the account manager under its address path", () => {
     login.close();
   }
 });
+
+test("Microsoft sign-in sends the provider and reports a safe browser failure to the host", async () => {
+  const login = startNativeLogin(
+    "https://base.example.com/accounts",
+    async () => {
+      throw new Error("A provider error must never enroll the device");
+    },
+    undefined,
+    "microsoft",
+  );
+  try {
+    const start = new URL(login.url);
+    expect(start.searchParams.get("provider")).toBe("microsoft");
+    const callback = new URL(start.searchParams.get("callback")!);
+    callback.searchParams.set("error", "provider-denied");
+    callback.searchParams.set("state", "other-attempt");
+    expect((await fetch(callback)).status).toBe(400);
+    expect(login.status()).toBe("pending");
+    callback.searchParams.set("state", start.searchParams.get("state")!);
+    expect((await fetch(callback)).status).toBe(401);
+    expect(login.status()).toBe("failed");
+    expect(login.error()).toBe("provider-denied");
+  } finally {
+    await login.close();
+  }
+});

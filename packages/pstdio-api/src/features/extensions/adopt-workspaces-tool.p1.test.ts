@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { canRefreshWorkspacesTool, refreshingWorkspacesEntry } from "../../startup/workspaces-tool-upgrade";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { adoptWorkspacesTool, combinedWorkspacesSource } from "./adopt-workspaces-tool";
@@ -42,7 +43,7 @@ const source = async (name: string, installName = name) => {
     publisher: "pstdio",
     version: "0.1.0",
     main: "./extension.ts",
-    engines: { pstdio: "^0.5.0" },
+    engines: { pstdio: `^${EXTENSION_API_VERSION}` },
   };
   await writeFile(join(path, "package.json"), JSON.stringify(manifest));
   await writeFile(

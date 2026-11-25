@@ -5,8 +5,8 @@ import type { StorageOwner } from "pstdio-sync";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
 import {
-  extension_instances,
   installed_extension_sources,
+  project_extensions,
   recovery_point_owners,
   storage_document_updates,
   storage_documents,
@@ -62,11 +62,8 @@ export const dataOwners = async (db: Reader, projectId: string) =>
   (
     await db
       .selectDistinct({ id: installed_extension_sources.extension_id })
-      .from(extension_instances)
-      .innerJoin(
-        installed_extension_sources,
-        eq(extension_instances.installed_extension_id, installed_extension_sources.id),
-      )
+      .from(project_extensions)
+      .innerJoin(installed_extension_sources, eq(project_extensions.extension_ref, installed_extension_sources.id))
       .innerJoin(
         storage_documents,
         and(
@@ -74,7 +71,7 @@ export const dataOwners = async (db: Reader, projectId: string) =>
           eq(storage_documents.extension_id, installed_extension_sources.extension_id),
         ),
       )
-      .where(and(eq(extension_instances.scope_type, "project"), eq(extension_instances.scope_id, projectId)))
+      .where(eq(project_extensions.project_id, projectId))
   )
     .map((row) => row.id)
     .sort();

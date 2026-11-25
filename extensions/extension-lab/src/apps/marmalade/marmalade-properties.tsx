@@ -1,13 +1,15 @@
-import { Button, chakra, HStack, SimpleGrid, Stack, Text } from "@chakra-ui/react";
-import { ParamEditor } from "@pstdio/ui/param-editor";
+import { Button, chakra, HStack, SimpleGrid, Stack } from "@chakra-ui/react";
+import { NumberInput, ParamEditor } from "@pstdio/ui/param-editor";
 import type {
   MarmaladeProperties as LayerProperties,
   MarmaladeAction,
   MarmaladeLayer,
   MarmaladeState,
 } from "./marmalade.types";
+import { marmaladeLayerDimension } from "./marmalade-layer-properties";
 import { defaultAdjustments, marmaladeLocked } from "./marmalade-layers";
 import { MarmaladePropertyInput } from "./marmalade-property-input";
+import { MarmaladeSelectionProperties } from "./marmalade-selection-properties";
 import { marmaladeStore } from "./marmalade-store";
 
 interface FieldProps {
@@ -23,27 +25,51 @@ interface FieldProps {
 const Field = (props: FieldProps) => {
   const { label, value, numeric, disabled, min, max, required, action } = props;
   const id = `marmalade-${label.toLowerCase().replaceAll(" ", "-")}`;
+  // The shared input uses a zero step to accept decimals without quantizing them.
   return (
     <Stack gap="2xs" minW="0">
       <chakra.label htmlFor={id} color="fg.muted" textStyle="label/XS">
         {label}
       </chakra.label>
-      <MarmaladePropertyInput
-        id={id}
-        label={`Layer ${label === "X" || label === "Y" ? label : label.toLowerCase()}`}
-        type={numeric ? "number" : "text"}
-        value={value}
-        disabled={disabled}
-        min={min}
-        max={max}
-        required={required}
-        onPreview={(value) => {
-          const next = action(value);
-          if (next) return marmaladeStore.preview(next, "defocus");
-        }}
-        onEdit={() => marmaladeStore.commitPreview()}
-        onCancel={() => marmaladeStore.cancelPreview()}
-      />
+      {numeric ? (
+        <NumberInput
+          id={id}
+          name={`Layer ${label === "X" || label === "Y" ? label : label.toLowerCase()}`}
+          description=""
+          defaultValue={Number(value)}
+          min={min}
+          max={max}
+          step={0}
+          size="xs"
+          hideLabel
+          fullWidth
+          hideSlider
+          disabled={disabled}
+          onPreview={(next) => {
+            const input = action(String(next));
+            if (input) return marmaladeStore.preview(input, "defocus");
+          }}
+          onChange={() => marmaladeStore.commitPreview()}
+          onCancel={() => marmaladeStore.cancelPreview()}
+        />
+      ) : (
+        <MarmaladePropertyInput
+          id={id}
+          label={`Layer ${label === "X" || label === "Y" ? label : label.toLowerCase()}`}
+          type={numeric ? "number" : "text"}
+          value={value}
+          disabled={disabled}
+          min={min}
+          max={max}
+          required={required}
+          onPreview={(value) => {
+            const next = action(value);
+            if (next) return marmaladeStore.preview(next, "defocus");
+          }}
+          onEdit={() => marmaladeStore.commitPreview()}
+          onCancel={() => marmaladeStore.cancelPreview()}
+        />
+      )}
     </Stack>
   );
 };
@@ -62,7 +88,6 @@ export const MarmaladeProperties = (props: { state: MarmaladeState; layer: Marma
   const adjustment = { ...defaultAdjustments, ...layer.adjustments };
   return (
     <Stack gap="sm" p="sm" borderBottomWidth="1px" borderColor="border.subtle">
-      <Text textStyle="label/S/medium">Properties</Text>
       <Field label="Name" value={layer.name} disabled={disabled} required action={(name) => properties({ name })} />
       <SimpleGrid columns={2} gap="sm">
         {(["x", "y"] as const).map((axis) => (
@@ -81,7 +106,7 @@ export const MarmaladeProperties = (props: { state: MarmaladeState; layer: Marma
             label={key === "width" ? "Width" : "Height"}
             value={layer[key]}
             numeric
-            min={1}
+            {...marmaladeLayerDimension}
             disabled={disabled || layer.kind === "group"}
             action={(raw) => number(raw, (value) => properties({ [key]: value }))}
           />
@@ -95,16 +120,8 @@ export const MarmaladeProperties = (props: { state: MarmaladeState; layer: Marma
           disabled={disabled || layer.kind === "group"}
           action={(raw) => number(raw, (rotation) => properties({ rotation }))}
         />
-        <Field
-          label="Opacity"
-          value={Math.round(layer.opacity * 100)}
-          numeric
-          min={0}
-          max={100}
-          disabled={disabled}
-          action={(raw) => number(raw, (value) => ({ type: "opacity", id: layer.id, opacity: value / 100 }))}
-        />
       </SimpleGrid>
+      <MarmaladeSelectionProperties state={state} />
       {layer.kind === "text" ? (
         <>
           <Field

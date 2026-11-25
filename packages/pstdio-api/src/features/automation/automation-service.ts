@@ -139,13 +139,6 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
         400,
       );
     }
-    if (input.principalId && !(await deps.automationDBService.getPrincipal(input.projectId, input.principalId))) {
-      throw new AutomationRequestError(
-        "automation_principal_not_found",
-        "Automation principal not found for project.",
-        400,
-      );
-    }
 
     const tokenId = crypto.randomUUID();
     const secret = randomBytes(32).toString("base64url");
@@ -153,7 +146,6 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
     const stored = await deps.automationDBService.createToken({
       name: input.name,
       createdBy: "local-user",
-      principalId: input.principalId,
       tokenId,
       tokenPrefix: `${TOKEN_PREFIX}_${tokenId}`,
       tokenDigest: digestTokenSecret(secret, randomBytes(16).toString("base64url")),

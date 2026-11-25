@@ -52,6 +52,8 @@ no host ports. The relay cannot reach the manager database's private network, an
 manager has no object credentials. Containers share a host; this is not protection
 against a host administrator. For stronger isolation use separate hosts or accounts.
 
+For Microsoft sign-in, configure the two optional Microsoft Web application settings on the account manager. [Microsoft registration and callbacks](0007-account-manager.md#microsoft-web-application-registration)
+
 Register a Google OAuth web client for the manager origin. Its redirect URI is
 `https://<manager-domain>/api/auth/callback/google`. Keep the exact public origins in
 `MANAGER_DOMAIN`, `RELAY_DOMAIN` and the relay's trust document.

@@ -81,11 +81,12 @@ test(
       const active = (
         (await (await fetch(url, { headers })).json()) as { extensions: { id: string; sourcePath: string }[] }
       ).extensions[0]!;
-      expect(active.id).toBe(previous.id);
+      expect(active.id).not.toBe(previous.id);
+      expect(JSON.parse(active.id.slice("project-extension:".length))[0]).toBe(project.id);
       expect(active.sourcePath).not.toBe(source);
       run("extensions", "publication", "disable", "example.unrelated");
       expect(JSON.parse(run("extensions", "publication", "list"))[0].value.enabled).toBe(false);
-      expect((await fetch(`${url}/${active.id}`, { method: "DELETE", headers })).status).toBe(204);
+      expect((await fetch(`${url}/${encodeURIComponent(active.id)}`, { method: "DELETE", headers })).status).toBe(204);
       run("extensions", "add", source, "--name", "unrelated", "--skip-install", "--force");
       run("extensions", "publication", "publish", "unrelated");
       const republished = JSON.parse(run("extensions", "publication", "list"))[0];

@@ -284,9 +284,11 @@ test(
         offlineReady: false,
       });
 
-      peer.failReads(false);
-      peer.restart();
-      await picker.retry();
+      // Automatic sync can finish the download before Retry reads its state.
+      await picker.retry(() => {
+        peer.failReads(false);
+        peer.restart();
+      });
       phase("retry requested");
       await Promise.all([first.reach(project.id, "synced"), second.reach(project.id, "synced")]);
       // Relay sync can finish before background folder setup and its replacement owner's download.

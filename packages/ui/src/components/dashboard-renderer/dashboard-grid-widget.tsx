@@ -17,6 +17,8 @@ import type { useDashboardResize } from "./use-dashboard-resize";
 
 interface GridWidgetProps {
   widget: DashboardWidget;
+  originalCustomSourceId?: string;
+  hidden: boolean;
   editing: boolean;
   selectedId: string | null;
   sources: DashboardDataSource[];
@@ -33,10 +35,13 @@ interface GridWidgetProps {
 
 const handleNames = { w: "left", e: "right", s: "bottom", sw: "bottom left", se: "bottom right" };
 const resizeHandles: DashboardResizeHandle[] = ["w", "e", "sw", "s", "se"];
+const verticalResizeHandles: DashboardResizeHandle[] = ["s"];
 
 export function GridWidget(props: GridWidgetProps) {
   const {
     widget,
+    originalCustomSourceId,
+    hidden,
     editing,
     selectedId,
     sources,
@@ -53,11 +58,14 @@ export function GridWidget(props: GridWidgetProps) {
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
   const draggable = useDraggable({ id: widget.id, disabled: !editing });
   const selected = selectedId === widget.id;
-  const label = widgetLabel(widget);
+  const source = sources.find(({ id }) => id === widget.source);
+  const originalCustomSource = sources.find(({ id }) => id === originalCustomSourceId);
+  const label = widgetLabel(widget, source?.name);
   const content = (
     <Box
       ref={draggable.setNodeRef}
       css={styles.card}
+      hidden={hidden}
       style={placementStyle(widget.layout)}
       role={editing ? "group" : undefined}
       aria-label={editing ? `Edit ${label}` : undefined}
@@ -69,7 +77,9 @@ export function GridWidget(props: GridWidgetProps) {
     >
       <WidgetCard
         widget={widget}
-        source={sources.find(({ id }) => id === widget.source)}
+        hidden={hidden}
+        source={source}
+        originalCustomSource={originalCustomSource}
         controls={
           editing ? (
             <HStack css={styles.widgetToolbar} data-dashboard-controls="" aria-label={`${label} controls`}>
@@ -112,12 +122,15 @@ export function GridWidget(props: GridWidgetProps) {
       )}
     </Box>
   );
-  if (!editing || !metrics) return content;
+  const resizeProps = editing && metrics ? resizeController.resizableProps(widget, metrics) : null;
+  const axis = columns === 1 ? "y" : "both";
+  const handles = columns === 1 ? verticalResizeHandles : resizeHandles;
+  // Keep caller content mounted when editing starts or ends.
   return (
     <Resizable
-      {...resizeController.resizableProps(widget, metrics)}
-      axis={columns === 1 ? "y" : "both"}
-      resizeHandles={columns === 1 ? ["s"] : resizeHandles}
+      {...(resizeProps ?? { width: 0, height: 0 })}
+      axis={resizeProps ? axis : "none"}
+      resizeHandles={resizeProps ? handles : []}
       handle={(axis, ref) => (
         <IconButton
           ref={ref as Ref<HTMLButtonElement>}

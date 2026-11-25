@@ -1,7 +1,9 @@
 import {
   type AccountDevice,
   type AccountLogin,
+  type AccountLoginProgress,
   type AccountLoginStatus,
+  type AccountSignInProvider,
   type AccountStatus,
   type CloudProjectCatalog,
   type CloudProjectDeletion,
@@ -15,9 +17,10 @@ import {
   type RemoveLocalProjectInput,
   type RemoveLocalProjectResult,
 } from "pstdio-api-contracts";
+import { verifyAccountLogin } from "../internal/account-login";
 import { PstdioApiError, type RequestFn } from "./request";
 
-export type { AccountDevice, AccountStatus, DeviceLogin } from "pstdio-api-contracts";
+export type { AccountDevice, AccountSignInProvider, AccountStatus, DeviceLogin } from "pstdio-api-contracts";
 
 type Ok = { ok: boolean };
 export type AccountReadIdentity = { accountId: string; managerOrigin: string };
@@ -60,9 +63,14 @@ export const createAccountClient = (request: RequestFn) => {
         { method: "POST", body: command, signal },
       ),
     /** Uses the host's account service when no address is supplied. */
-    login: (managerOrigin?: string) =>
-      request<AccountLogin>("/v1/account/login", { method: "POST", body: { managerOrigin } }),
-    loginStatus: (id: string) => request<{ status: AccountLoginStatus }>(login(id)),
+    async login(managerOrigin?: string, provider?: AccountSignInProvider) {
+      const attempt = await request<AccountLogin>("/v1/account/login", {
+        method: "POST",
+        body: { managerOrigin, provider },
+      });
+      return verifyAccountLogin(attempt, provider, (id) => request(login(id), { method: "DELETE" }));
+    },
+    loginStatus: (id: string) => request<AccountLoginProgress>(login(id)),
     /** Cancels a pending sign-in. A sign-in that already completed stays complete. */
     cancelLogin: (id: string) =>
       request<Ok & { status: Exclude<AccountLoginStatus, "pending"> }>(login(id), { method: "DELETE" }),

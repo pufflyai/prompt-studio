@@ -36,9 +36,9 @@ const projectTables = [
   s.recovery_point_owners,
 ];
 const otherTables = [
-  s.extension_settings,
-  s.webview_preferences,
-  s.extension_connections,
+  s.board_views,
+  s.preferences,
+  s.credentials,
   s.assetTransfers,
   s.extension_resource_sequences,
   s.storage_resource_identities,
@@ -80,15 +80,20 @@ const assertNoConflicts = async (tx: Transaction, from: string, to: string) => {
     ) LIMIT 1`);
   if (scopes.rows[0]) throw new ExtensionIdentityConflictError(from, to, String(scopes.rows[0].scope));
   for (const [table, scope] of [
-    [s.extension_settings, sql`jsonb_build_array(owner_type, owner_id)`],
-    [s.webview_preferences, sql`jsonb_build_array(scope_type, scope_id)`],
-    [s.extension_connections, sql`to_jsonb(project_id)`],
+    [
+      s.preferences,
+      sql`jsonb_build_array(scope,
+      CASE WHEN scope = 'user' AND scope_id = ${from} AND starts_with(key, 'setting:')
+        THEN ${to} ELSE scope_id END)`,
+    ],
+    [s.credentials, sql`jsonb_build_array(project_id, contribution_id)`],
+    [s.board_views, sql`jsonb_build_array(project_id, board_id)`],
     [s.assetTransfers, sql`to_jsonb(project_id)`],
     [s.extension_resource_sequences, sql`to_jsonb(project_id)`],
     [s.storage_resource_identities, sql`to_jsonb(workbench_id)`],
   ] as const) {
     const result = await tx.execute(sql`SELECT ${scope} AS scope FROM ${table} WHERE ${ownerColumn} IN (${from}, ${to})
-      GROUP BY ${scope} HAVING count(DISTINCT extension_id) > 1 LIMIT 1`);
+      GROUP BY 1 HAVING count(DISTINCT extension_id) > 1 LIMIT 1`);
     if (result.rows[0]) throw new ExtensionIdentityConflictError(from, to, JSON.stringify(result.rows[0].scope));
   }
   const anchors = await tx.execute(sql`SELECT project_id AS scope FROM ${s.resource_anchors}
@@ -96,6 +101,10 @@ const assertNoConflicts = async (tx: Transaction, from: string, to: string) => {
     GROUP BY project_id HAVING bool_or(source_owner = ${from} OR target_owner = ${from})
       AND bool_or(source_owner = ${to} OR target_owner = ${to}) LIMIT 1`);
   if (anchors.rows[0]) throw new ExtensionIdentityConflictError(from, to, String(anchors.rows[0].scope));
+  const runs = await tx.execute(sql`SELECT project_id AS scope FROM ${s.automation_runs}
+    WHERE principal IN (${`extension:${from}`}, ${`extension:${to}`}) GROUP BY project_id
+    HAVING count(DISTINCT principal) > 1 LIMIT 1`);
+  if (runs.rows[0]) throw new ExtensionIdentityConflictError(from, to, String(runs.rows[0].scope));
 };
 
 const cloneParent = async (tx: Transaction, table: PgTable, from: string, to: string) => {
@@ -111,11 +120,12 @@ const cloneParent = async (tx: Transaction, table: PgTable, from: string, to: st
     FROM ${table} WHERE ${ownerColumn} = ${from}`);
 };
 
-/** Startup runs under the database lock, before any extension, writer, relay or projection cache can open. */
+/** Startup and runtime source recovery move each owner in one transaction. */
 export const migrateExtensionIdentities = async (
   db: DbClient,
   options: {
     extensionId?: string;
+    onRenamed?: (change: { from: string; to: string }) => Promise<void>;
     onConflict?: (error: ExtensionIdentityConflictError) => Promise<void>;
     /** Runs once before the first rename commits, so space reclamation is recorded as owed first. */
     beforeChange?: () => Promise<void>;
@@ -161,7 +171,13 @@ export const migrateExtensionIdentities = async (
         )})`,
         sql`SELECT source_owner AS extension_id FROM ${s.resource_anchors} WHERE source_owner IN (${oldOwners})
           UNION SELECT target_owner FROM ${s.resource_anchors} WHERE target_owner IN (${oldOwners})`,
-        sql`SELECT name AS extension_id FROM ${s.automation_principals} WHERE created_by = 'extension' AND name IN (${oldOwners})`,
+        sql`SELECT owner AS extension_id FROM ${s.files} WHERE owner IN (${oldOwners})`,
+        sql`SELECT name AS extension_id FROM ${s.automation_tokens} WHERE created_by = 'extension' AND name IN (${oldOwners})`,
+        sql`SELECT substring(principal from 11) AS extension_id FROM ${s.automation_runs}
+          WHERE principal IN (${sql.join(
+            oldIds.map((id) => sql`${`extension:${id}`}`),
+            sql`, `,
+          )})`,
       ],
       sql` UNION ALL `,
     )}) candidates`,
@@ -186,6 +202,10 @@ export const migrateExtensionIdentities = async (
           ...otherTables,
         ])
           await tx.execute(sql`UPDATE ${table} SET ${ownerColumn} = ${to} WHERE ${ownerColumn} = ${from}`);
+        await tx.execute(sql`UPDATE ${s.files} SET owner = ${to} WHERE owner = ${from}`);
+        // Device settings use the stable extension identity as their local owner key too.
+        await tx.execute(sql`UPDATE ${s.preferences} SET scope_id = ${to}
+          WHERE extension_id = ${to} AND scope = 'user' AND scope_id = ${from} AND starts_with(key, 'setting:')`);
         for (const table of [...parents].reverse())
           await tx.execute(sql`DELETE FROM ${table} WHERE ${ownerColumn} = ${from}`);
         await tx.execute(sql`UPDATE ${s.installed_extension_sources} SET extension_id = ${to},
@@ -198,14 +218,17 @@ export const migrateExtensionIdentities = async (
           await tx.execute(
             sql`UPDATE ${s.resource_anchors} SET ${sql.identifier(column)} = ${to} WHERE ${sql.identifier(column)} = ${from}`,
           );
-        // Extension-created principals use their owner as their name; user-created names are prose.
+        // Extension references follow the owner; user-created token names are prose.
+        await tx.execute(sql`UPDATE ${s.automation_runs} SET principal = ${`extension:${to}`}
+          WHERE principal = ${`extension:${from}`}`);
         await tx.execute(
-          sql`UPDATE ${s.automation_principals} SET name = ${to} WHERE created_by = 'extension' AND name = ${from}`,
+          sql`UPDATE ${s.automation_tokens} SET name = ${to} WHERE created_by = 'extension' AND name = ${from}`,
         );
         await tx.execute(sql`UPDATE ${s.installed_extension_sources} SET status = 'pending', last_error_json = NULL
         WHERE extension_id = ${to} AND last_error_json->>'code' = 'extension_identity_conflict'`);
       });
       renamed = true;
+      await options.onRenamed?.({ from, to });
     } catch (error) {
       if (!(error instanceof ExtensionIdentityConflictError) || !options.onConflict) throw error;
       conflicted = true;

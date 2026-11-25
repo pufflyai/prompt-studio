@@ -1,7 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
-import { extension_instances, installed_extension_sources, storage_documents } from "../../db/schemas.pg";
+import { installed_extension_sources, project_extensions, storage_documents } from "../../db/schemas.pg";
+import { projectExtensionRow } from "./project-extension-row";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 const receiptId = (extensionId: string) => JSON.stringify(["host-local-migration", "default-extension", extensionId]);
@@ -57,40 +58,30 @@ export const adoptProjectDefault = (
     if (!source) throw new Error("Default extension source is unavailable");
     if (!(await recordProjectDefaultChoice(tx, input.projectId, input.extensionId)).length) return null;
     const providers = await tx
-      .select({ instance: extension_instances })
-      .from(extension_instances)
-      .innerJoin(
-        installed_extension_sources,
-        eq(extension_instances.installed_extension_id, installed_extension_sources.id),
-      )
+      .select({ instance: project_extensions })
+      .from(project_extensions)
+      .innerJoin(installed_extension_sources, eq(project_extensions.extension_ref, installed_extension_sources.id))
       .where(
         and(
-          eq(extension_instances.scope_type, "project"),
-          eq(extension_instances.scope_id, input.projectId),
+          eq(project_extensions.project_id, input.projectId),
           eq(installed_extension_sources.extension_id, input.extensionId),
         ),
       );
     if (providers.some(({ instance }) => instance.enabled)) return null;
     const timestamp = new Date().toISOString();
     const [instance] = await tx
-      .insert(extension_instances)
+      .insert(project_extensions)
       .values({
-        id: crypto.randomUUID(),
-        installed_extension_id: source.id,
-        scope_type: "project",
-        scope_id: input.projectId,
+        extension_ref: source.id,
+        project_id: input.projectId,
         enabled: true,
         created_at: timestamp,
         updated_at: timestamp,
       })
       .onConflictDoUpdate({
-        target: [
-          extension_instances.scope_type,
-          extension_instances.scope_id,
-          extension_instances.installed_extension_id,
-        ],
+        target: [project_extensions.project_id, project_extensions.extension_ref],
         set: { enabled: true, updated_at: timestamp },
       })
       .returning();
-    return instance!;
+    return projectExtensionRow(instance!);
   });

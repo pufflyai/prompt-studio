@@ -2,8 +2,8 @@ import { and, eq, inArray, isNotNull, or, sql } from "drizzle-orm";
 import type { ArtifactFileProjection } from "pstdio-api-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import {
-  extension_instances,
   installed_extension_sources,
+  project_extensions,
   artifact_file_projections as projections,
   artifact_file_projection_roots as roots,
   workspaces,
@@ -68,19 +68,10 @@ export const createArtifactFileProjectionsDBService = (db: DbClient) => ({
         extensionId: installed_extension_sources.extension_id,
         repoRoot: workspaces.root_path,
       })
-      .from(extension_instances)
-      .innerJoin(
-        installed_extension_sources,
-        eq(extension_instances.installed_extension_id, installed_extension_sources.id),
-      )
-      .innerJoin(workspaces, eq(workspaces.project_id, extension_instances.scope_id))
-      .where(
-        and(
-          eq(extension_instances.scope_type, "project"),
-          eq(workspaces.execution_kind, "local"),
-          isNotNull(workspaces.root_path),
-        ),
-      );
+      .from(project_extensions)
+      .innerJoin(installed_extension_sources, eq(project_extensions.extension_ref, installed_extension_sources.id))
+      .innerJoin(workspaces, eq(workspaces.project_id, project_extensions.project_id))
+      .where(and(eq(workspaces.execution_kind, "local"), isNotNull(workspaces.root_path)));
     return rows.flatMap(({ workbenchId, extensionId, repoRoot }) =>
       repoRoot ? [{ owner: { workbenchId, extensionId }, repoRoot }] : [],
     );

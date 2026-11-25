@@ -27,6 +27,12 @@ const schema = z
       .optional(),
     googleClientId: z.string().min(1),
     googleClientSecret: z.string().min(1),
+    microsoft: z
+      .strictObject({
+        clientId: z.uuid(),
+        clientSecret: z.string().min(1),
+      })
+      .optional(),
     sessionLifetimeSeconds: seconds,
     sessionUpdateAgeSeconds: seconds,
     accessLifetimeSeconds: seconds,

@@ -1,6 +1,10 @@
 import type { MarmaladeLayer, MarmaladeProperties } from "./marmalade.types";
 import { range } from "./marmalade-layers";
 
+export const marmaladeLayerDimension = { min: 1, max: 10_000 } as const;
+export const validateLayerDimension = (value: unknown) =>
+  range(value as number, marmaladeLayerDimension.min, marmaladeLayerDimension.max);
+
 export const validateColor = (value: unknown) => {
   if (typeof value !== "string" || !/^#(?:[\da-f]{3}|[\da-f]{6}|[\da-f]{8})$/i.test(value))
     throw new Error("Use a hex color");
@@ -19,8 +23,8 @@ const rules: Record<keyof MarmaladeProperties, PropertyRule> = {
       if (typeof value !== "string" || !value.trim()) throw new Error("Give the layer a name");
     },
   },
-  width: { kinds: drawable, validate: (value) => range(value as number, 1, 10000) },
-  height: { kinds: drawable, validate: (value) => range(value as number, 1, 10000) },
+  width: { kinds: drawable, validate: validateLayerDimension },
+  height: { kinds: drawable, validate: validateLayerDimension },
   rotation: { kinds: drawable, validate: (value) => range(value as number, -360, 360) },
   color: { kinds: ["text", "shape", "brush"], validate: validateColor },
   fontSize: { kinds: ["text"], validate: (value) => range(value as number, 1, 500) },

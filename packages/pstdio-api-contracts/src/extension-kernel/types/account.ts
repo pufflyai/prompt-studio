@@ -1,7 +1,22 @@
-import type { AccountDevice, AccountLogin, AccountLoginStatus, AccountStatus } from "../../account";
+import type {
+  AccountDevice,
+  AccountLogin,
+  AccountLoginStatus,
+  AccountSignInProvider,
+  AccountStatus,
+} from "../../account";
 import type { ProjectReturnAction, ProjectSyncStatus } from "../../project-sync";
 
-export type { AccountDevice, AccountLogin, AccountLoginStatus, AccountStatus, DeviceLogin } from "../../account";
+export type {
+  AccountDevice,
+  AccountLogin,
+  AccountLoginProgress,
+  AccountLoginStatus,
+  AccountSignInError,
+  AccountSignInProvider,
+  AccountStatus,
+  DeviceLogin,
+} from "../../account";
 export type {
   ProjectReturnAction,
   ProjectReturnRecord,
@@ -25,7 +40,7 @@ export interface ExtensionAccountApi {
    * Starting another sign-in closes the previous pending callback on this device. `status().loginAttempt`
    * and `accountEvents.changed` expose the same operation to every view and extension.
    */
-  login(managerOrigin?: string): Promise<AccountLogin>;
+  login(managerOrigin?: string, provider?: AccountSignInProvider): Promise<AccountLogin>;
   loginStatus(id: string): Promise<AccountLoginStatus>;
   /** Cancels a pending sign-in. Returns `complete` when the sign-in had already finished. */
   cancelLogin(id: string): Promise<Exclude<AccountLoginStatus, "pending">>;

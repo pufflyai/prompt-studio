@@ -1,0 +1,111 @@
+CREATE TABLE "credentials" (
+	"id" text PRIMARY KEY NOT NULL,
+	"extension_id" text NOT NULL,
+	"contribution_id" text NOT NULL,
+	"project_id" text,
+	"provider" text NOT NULL,
+	"account_label" text,
+	"auth_type" text NOT NULL,
+	"auth_header_name" text,
+	"scopes" text[] DEFAULT '{}' NOT NULL,
+	"secret_ref" text NOT NULL,
+	"expires_at" text,
+	"last_check" jsonb,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
+	CONSTRAINT "credentials_owner_uq" UNIQUE NULLS NOT DISTINCT("extension_id","contribution_id","project_id")
+);
+--> statement-breakpoint
+CREATE TABLE "project_extensions" (
+	"project_id" text NOT NULL,
+	"extension_ref" text NOT NULL,
+	"display_name" text,
+	"enabled" boolean DEFAULT true NOT NULL,
+	"config_json" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"diagnostics_json" jsonb,
+	"created_at" text NOT NULL,
+	"updated_at" text NOT NULL,
+	CONSTRAINT "project_extensions_project_id_extension_ref_pk" PRIMARY KEY("project_id","extension_ref")
+);
+--> statement-breakpoint
+CREATE TABLE "preferences" (
+	"scope" text NOT NULL,
+	"scope_id" text NOT NULL,
+	"extension_id" text DEFAULT '' NOT NULL,
+	"key" text NOT NULL,
+	"sync" text NOT NULL,
+	"value" jsonb,
+	"project_id" text,
+	"updated_at" text NOT NULL,
+	CONSTRAINT "preferences_scope_scope_id_extension_id_key_pk" PRIMARY KEY("scope","scope_id","extension_id","key")
+);
+--> statement-breakpoint
+ALTER TABLE "automation_principals" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "board_default_views" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "local_environment" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "extension_connections" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "extension_automation_preferences" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "extension_files" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "extension_instances" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "extension_settings" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "extension_skill_preferences" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "settings" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "skill_files" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "webview_preferences" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "workspace_sessions" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "automation_runs" DROP CONSTRAINT "automation_runs_principal_id_automation_principals_id_fk";
+--> statement-breakpoint
+ALTER TABLE "automation_tokens" DROP CONSTRAINT "automation_tokens_principal_id_automation_principals_id_fk";
+--> statement-breakpoint
+ALTER TABLE "board_views" DROP CONSTRAINT "board_views_extension_instance_id_extension_instances_id_fk";
+--> statement-breakpoint
+DROP TABLE "automation_principals" CASCADE;--> statement-breakpoint
+DROP TABLE "board_default_views" CASCADE;--> statement-breakpoint
+DROP TABLE "local_environment" CASCADE;--> statement-breakpoint
+DROP TABLE "extension_connections" CASCADE;--> statement-breakpoint
+DROP TABLE "extension_automation_preferences" CASCADE;--> statement-breakpoint
+DROP TABLE "extension_files" CASCADE;--> statement-breakpoint
+DROP TABLE "extension_instances" CASCADE;--> statement-breakpoint
+DROP TABLE "extension_settings" CASCADE;--> statement-breakpoint
+DROP TABLE "extension_skill_preferences" CASCADE;--> statement-breakpoint
+DROP TABLE "settings" CASCADE;--> statement-breakpoint
+DROP TABLE "skill_files" CASCADE;--> statement-breakpoint
+DROP TABLE "webview_preferences" CASCADE;--> statement-breakpoint
+DROP TABLE "workspace_sessions" CASCADE;--> statement-breakpoint
+ALTER TABLE "installed_extension_sources" RENAME TO "extensions";--> statement-breakpoint
+ALTER TABLE "activity_events" DROP CONSTRAINT "activity_events_source_extension_id_installed_extension_sources_id_fk";
+--> statement-breakpoint
+DROP INDEX "installed_ext_install_name_idx";--> statement-breakpoint
+DROP INDEX "installed_ext_extension_id_idx";--> statement-breakpoint
+DROP INDEX "installed_ext_status_idx";--> statement-breakpoint
+DROP INDEX "automation_runs_idempotency_idx";--> statement-breakpoint
+DROP INDEX "board_views_scope_order_idx";--> statement-breakpoint
+ALTER TABLE "automation_runs" ADD COLUMN "principal" text NOT NULL;--> statement-breakpoint
+ALTER TABLE "automation_tokens" ADD COLUMN "name" text NOT NULL;--> statement-breakpoint
+ALTER TABLE "automation_tokens" ADD COLUMN "created_by" text NOT NULL;--> statement-breakpoint
+ALTER TABLE "board_views" ADD COLUMN "is_default" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "board_views" ADD COLUMN "extension_id" text;--> statement-breakpoint
+ALTER TABLE "files" ADD COLUMN "owner" text;--> statement-breakpoint
+ALTER TABLE "files" ADD COLUMN "scope" text;--> statement-breakpoint
+ALTER TABLE "files" ADD COLUMN "path" text;--> statement-breakpoint
+ALTER TABLE "sessions" ADD COLUMN "workspace_id" text;--> statement-breakpoint
+ALTER TABLE "credentials" ADD CONSTRAINT "credentials_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "project_extensions" ADD CONSTRAINT "project_extensions_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "project_extensions" ADD CONSTRAINT "project_extensions_extension_ref_extensions_id_fk" FOREIGN KEY ("extension_ref") REFERENCES "public"."extensions"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "preferences" ADD CONSTRAINT "preferences_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "credentials_project_idx" ON "credentials" USING btree ("project_id");--> statement-breakpoint
+CREATE INDEX "project_extensions_ref_idx" ON "project_extensions" USING btree ("extension_ref");--> statement-breakpoint
+CREATE INDEX "preferences_extension_idx" ON "preferences" USING btree ("extension_id");--> statement-breakpoint
+CREATE INDEX "preferences_project_idx" ON "preferences" USING btree ("project_id");--> statement-breakpoint
+ALTER TABLE "activity_events" ADD CONSTRAINT "activity_events_source_extension_id_extensions_id_fk" FOREIGN KEY ("source_extension_id") REFERENCES "public"."extensions"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sessions" ADD CONSTRAINT "sessions_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "automation_tokens_project_idx" ON "automation_tokens" USING btree ("project_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "board_views_default_scope_idx" ON "board_views" USING btree ("project_id",coalesce("extension_id", ''),"board_id") WHERE "board_views"."is_default" = true;--> statement-breakpoint
+CREATE INDEX "files_owner_scope_idx" ON "files" USING btree ("project_id","owner","scope");--> statement-breakpoint
+CREATE UNIQUE INDEX "files_owner_path_idx" ON "files" USING btree ("owner","path") WHERE "files"."path" is not null;--> statement-breakpoint
+CREATE INDEX "sessions_workspace_idx" ON "sessions" USING btree ("workspace_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "automation_runs_idempotency_idx" ON "automation_runs" USING btree ("principal","project_id","command_id","idempotency_key");--> statement-breakpoint
+CREATE INDEX "board_views_scope_order_idx" ON "board_views" USING btree ("project_id","extension_id","board_id","sort_order");--> statement-breakpoint
+ALTER TABLE "automation_runs" DROP COLUMN "principal_id";--> statement-breakpoint
+ALTER TABLE "automation_tokens" DROP COLUMN "principal_id";--> statement-breakpoint
+ALTER TABLE "board_views" DROP COLUMN "extension_instance_id";

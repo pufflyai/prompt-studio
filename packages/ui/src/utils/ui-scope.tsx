@@ -9,7 +9,7 @@ export interface UiScope {
   toaster: ReturnType<typeof createToaster>;
 }
 const UiScopeContext = createContext<UiScope | null>(null);
-const UiScopeViewActivityContext = createContext({ active: true, revision: 0 });
+const UiScopeViewActivityContext = createContext({ active: true, revision: 0, owned: false });
 interface PortalOwner {
   container: RefObject<HTMLDivElement | null>;
   modalContainer: PortalProps["container"];
@@ -49,7 +49,7 @@ export const UiScopeActivity = (props: { active: boolean; children: ReactNode })
   const enabled = active && parent.active && (scope?.active ?? true);
   return (
     <UiScopeViewActivityContext
-      value={{ active: parent.active && active, revision: parent.revision + activity.revision }}
+      value={{ active: parent.active && active, revision: parent.revision + activity.revision, owned: true }}
     >
       <UiScopeContext value={scope ? { ...scope, active: enabled } : null}>
         <UiScopePortalContext value={{ container: { current: portal }, modalContainer }}>

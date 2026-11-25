@@ -32,6 +32,7 @@ test("extension startup failure still drains another branch before disposal comp
     extensionStorageDBService: {} as never,
     extensionConnectionsDBService: { listAll: async () => [] } as never,
     installedExtensionSourcesDBService: { list: async () => [] } as never,
+    fileService: {} as never,
     projectService: {
       list: async () => {
         if (++lists !== 2) return [];

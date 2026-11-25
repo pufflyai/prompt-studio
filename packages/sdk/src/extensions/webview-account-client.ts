@@ -3,6 +3,7 @@ import type {
   WebviewAccountQuery,
   WebviewAccountQueryValue,
 } from "pstdio-api-contracts/extension-kernel";
+import { verifyAccountLogin } from "../internal/account-login";
 import type { GuestHost } from "./guest-host";
 import { getWebviewServiceQueries, type WebviewServiceQuery } from "./webview-service-query";
 
@@ -26,7 +27,10 @@ export const createWebviewAccountClient = (host: GuestHost) =>
       host.call("account.read", { op: "projectSyncStatus", ...(projectId ? { projectId } : {}) }),
     retryProjectSyncSource: (sourceId, projectId) =>
       host.call("account.manage", { op: "retryProjectSyncSource", sourceId, ...(projectId ? { projectId } : {}) }),
-    login: (managerOrigin) => host.call("account.manage", { op: "login", managerOrigin }),
+    login: async (managerOrigin, provider) => {
+      const attempt = await host.call("account.manage", { op: "login", managerOrigin, provider });
+      return verifyAccountLogin(attempt, provider, (id) => host.call("account.manage", { op: "cancelLogin", id }));
+    },
     cancelLogin: (id) => host.call("account.manage", { op: "cancelLogin", id }),
     logout: () => host.call("account.manage", { op: "logout" }),
     renameDevice: (id, name) => host.call("account.manage", { op: "renameDevice", id, name }),

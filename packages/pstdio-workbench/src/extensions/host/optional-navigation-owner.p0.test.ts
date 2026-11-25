@@ -8,6 +8,7 @@ import {
   defineView,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import type { LoadedExtensionSource } from "pstdio-extensions";
 import { normalizeExtensionSources } from "pstdio-extensions";
 import { createWorkbenchExtensionMetadata } from "pstdio-extensions/workbench";
@@ -24,7 +25,7 @@ const source = (name: string, definition: LoadedExtensionSource["definition"]): 
     name,
     version: "1.0.0",
     main: "extension.ts",
-    enginesPstdio: "^0.4.0 || ^0.5.0",
+    enginesPstdio: `^${EXTENSION_API_VERSION}`,
   },
   definition,
 });

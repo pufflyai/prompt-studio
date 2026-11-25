@@ -2,20 +2,16 @@ import type { HarnessParams } from "pstdio-api-contracts";
 import { findAgentModel, resolveAgentModelParams } from "pstdio-api-contracts/agent-model-params";
 import type { HarnessParamsSchema } from "pstdio-api-contracts/extension-kernel";
 import { defaultHarnessParams, validateHarnessParams } from "pstdio-api-runtime-host";
+import { harnessParamsPreferenceKey } from "pstdio-db";
 import type { SessionsRouteDeps } from "./deps";
 
 export class HarnessParamError extends Error {}
 
-const HOST_HARNESS_PARAMS_EXTENSION_ID = "pstdio.harness-params";
-const DEFAULTS_SETTING_KEY = "defaults";
-
-type HarnessParamDeps = Pick<SessionsRouteDeps, "extensionSettingsDBService" | "harnessRegistry">;
-
-const settingsOwner = (projectId: string, agentId: string) => ({
-  owner_type: "extension_instance" as const,
-  owner_id: `${projectId}:${agentId}`,
-  extension_id: HOST_HARNESS_PARAMS_EXTENSION_ID,
-});
+type HarnessParamDeps = Pick<SessionsRouteDeps, "preferencesDBService" | "harnessRegistry">;
+interface StoredDefaults {
+  value: unknown;
+  created_at: string;
+}
 
 const isHarnessParams = (value: unknown): value is HarnessParams => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
@@ -43,15 +39,13 @@ export const readHarnessProjectDefaults = async (
 ) => {
   if (!input.projectId) return {};
 
-  const stored = await deps.extensionSettingsDBService.getValue({
-    ...settingsOwner(input.projectId, input.agentId),
-    key: DEFAULTS_SETTING_KEY,
-  });
+  const stored = await deps.preferencesDBService.get(harnessParamsPreferenceKey(input.projectId, input.agentId));
   if (!stored) return {};
-  if (!isHarnessParams(stored.value_json)) {
+  const value = (stored.value as StoredDefaults | null)?.value;
+  if (!isHarnessParams(value)) {
     throw new HarnessParamError(`Stored harness params are invalid: ${input.agentId}`);
   }
-  return stored.value_json;
+  return value;
 };
 
 export const writeHarnessProjectDefaults = async (
@@ -68,10 +62,16 @@ export const writeHarnessProjectDefaults = async (
     throw error;
   }
 
-  await deps.extensionSettingsDBService.setValue({
-    ...settingsOwner(input.projectId, input.agentId),
-    key: DEFAULTS_SETTING_KEY,
-    value_json: input.params,
+  const key = harnessParamsPreferenceKey(input.projectId, input.agentId);
+  const previous = await deps.preferencesDBService.get(key);
+  await deps.preferencesDBService.set({
+    ...key,
+    project_id: input.projectId,
+    sync: "team",
+    value: {
+      value: input.params,
+      created_at: (previous?.value as StoredDefaults | null)?.created_at ?? new Date().toISOString(),
+    },
   });
 
   return {

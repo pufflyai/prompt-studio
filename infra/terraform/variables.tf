@@ -101,9 +101,18 @@ variable "manager_secrets" {
     BETTER_AUTH_SECRET           = string
     GOOGLE_CLIENT_ID             = string
     GOOGLE_CLIENT_SECRET         = string
+    MICROSOFT_CLIENT_ID          = optional(string)
+    MICROSOFT_CLIENT_SECRET      = optional(string)
     PROJECT_DELETION_RELAY_TOKEN = optional(string)
   })
   sensitive = true
+  validation {
+    condition = (
+      (var.manager_secrets.MICROSOFT_CLIENT_ID != null && var.manager_secrets.MICROSOFT_CLIENT_ID != "") ==
+      (var.manager_secrets.MICROSOFT_CLIENT_SECRET != null && var.manager_secrets.MICROSOFT_CLIENT_SECRET != "")
+    )
+    error_message = "Set both MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET, or leave both unset."
+  }
 }
 
 

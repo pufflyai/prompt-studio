@@ -23,7 +23,11 @@ Use **Document actions** at the end of the tool rail for Undo, Redo, Duplicate s
 
 The sample includes paired image/mask previews and an unavailable reference row. The mask preview represents a full-image mask; this example does not edit masks. Brush strokes are vector paths. PSD files, raster retouching, and advanced masks are outside this example.
 
-Keyboard shortcuts work while the canvas or layer list owns focus. V, T, R, E, B, H, and Z select tools. Ctrl/Cmd+Z undoes; Ctrl/Cmd+Shift+Z redoes; Ctrl/Cmd+D duplicates; Ctrl/Cmd+G groups; Ctrl/Cmd+Shift+G ungroups; Delete removes selected layers. Text fields keep their normal editing shortcuts.
+Use the shared shortcut mode (Alt+Shift+Space), then **Current view** (A), followed by V, T, R, E, B, H, or Z to select tools. Ctrl/Cmd+Z undoes; Ctrl/Cmd+Shift+Z redoes; Ctrl/Cmd+D duplicates; Ctrl/Cmd+G groups; Ctrl/Cmd+Shift+G ungroups; Delete removes selected layers. Text fields and IME keep their normal editing shortcuts. Menus and modals keep keyboard ownership.
+
+Properties and Layers have fixed headers and separate scroll areas. Drag their separator or focus it and use the arrow keys to resize. The host saves the completed size as a project view preference, separate from the document and undo history. The surrounding Side panel still resizes independently.
+
+Numeric properties preview immediately in all views. Enter or leaving the input completes one edit; Escape cancels. The opacity slider previews during a drag and completes one edit on release; Escape or pointer cancellation discards its preview. Leaving the editor cancels unfinished pointer gestures even when the host retains its views. Valid typed properties complete on defocus. Invalid and empty numbers remain visible for correction without writing a document edit. A mixed selection shows **Mixed** for differing opacity or blend modes. Each edit applies to the selection in one undo step. Opacity works on both groups and individual layers. Blend mode is read-only whenever the selection includes a group. Locked selections remain readable.
 
 ## Use the same commands from an agent
 
@@ -43,6 +47,7 @@ pst extension-lab marmalade edit --action '{"type":"reorder","source":"title","t
 pst extension-lab marmalade edit --action '{"type":"create","kind":"ellipse","x":100,"y":100,"width":240,"height":180,"color":"#f4b860"}'
 pst extension-lab marmalade edit --action '{"type":"properties","id":"title","changes":{"fontSize":64,"rotation":10,"color":"#ffffff"}}'
 pst extension-lab marmalade edit --action '{"type":"adjustments","id":"artwork","changes":{"saturation":0,"contrast":120}}'
+pst extension-lab marmalade edit --action '{"type":"selection-properties","ids":["title","credit"],"changes":{"opacity":0.8,"blendMode":"multiply"}}'
 pst extension-lab marmalade edit --action '{"type":"undo"}'
 ```
 
@@ -52,7 +57,9 @@ The action union in [marmalade.types.ts](../src/apps/marmalade/marmalade.types.t
 
 The extension owns its document, selected IDs, order, groups, expansion, visibility, locks, tools, and viewport. It saves these in a project-scoped storage record. History lives in a second record, updated atomically with the document. Reads return history counts rather than duplicating the snapshots in each webview. The edit command serializes changes on the host and validates each action against the latest saved document, so separate views do not save stale copies over each other. A rejected action leaves the document and history intact.
 
-Each webview subscribes to the public `marmalade.changed` event before its first read. Notifications and host-sync reconnects trigger a fresh command read. There is no polling or browser-storage copy. Input drafts, pending selection, and in-progress drags have transient local previews. Saved document state stays on the host. Command failures appear beside the canvas and inspector controls.
+The public command editing session owns the shared document, previews and pending commands. It subscribes to `marmalade.changed` and refreshes after external changes. Older acknowledgements cannot clear newer edits. Failed commands retain intent and show inline **Retry** in the canvas and inspector. Retry uses the same accepted operation identity. Normal saving stays silent. Closing a view leaves accepted commands with their host owner; changing projects binds a separate owner. There is no polling or browser-storage copy.
+
+For this inspector composition, use `ResizableSplitLayout` with a bottom panel, sensible minimum sizes and `collapsible={false}`. Put each group's header outside its own shrinking `ScrollArea`. Save completed `onSizeChange` values through `client.preferences`; do not dispatch a document action. See [numeric editing callbacks](../../../documentation/guides/extensions/0012-numeric-property-editing.md) for the shared control contract (RB 4.A.7 and RB 6.A.13).
 
 `TreeList` owns generic focus, range-selection gestures, explicit insertion feedback, and keyboard move intent. `ListRow` supplies preview slots, persistent toggle actions, and separate expansion controls. The example supplies image rendering and lock/group rules. See the **Tree List / Outliner** Canvas stories for a domain-free composition.
 
@@ -60,4 +67,4 @@ Each webview subscribes to the public `marmalade.changed` event before its first
 
 The bundled [Great Wave image](../assets/great-wave.jpg) is Katsushika Hokusai's *Under the Wave off Kanagawa*, ca. 1830–32, Metropolitan Museum of Art, accession JP1847, [collection object 45434](https://www.metmuseum.org/art/collection/search/45434). The museum marks it public domain. Its Open Access image is bundled so editing does not require network access.
 
-*Updated at: 2026-11-17*
+*Updated at: 2026-11-22*

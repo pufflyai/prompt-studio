@@ -1,5 +1,6 @@
 import type { MarmaladeAction, MarmaladeLayer, MarmaladeState } from "./marmalade.types";
-import { setMarmaladeProperties, validateColor } from "./marmalade-layer-properties";
+import { marmaladeBlendModes } from "./marmalade-blend-modes";
+import { setMarmaladeProperties, validateColor, validateLayerDimension } from "./marmalade-layer-properties";
 import {
   defaultAdjustments,
   editable,
@@ -19,15 +20,14 @@ const validateStroke = (points: [number, number][] | undefined) => {
     point.forEach(finite);
   }
 };
-const positive = (value: number) => range(value, 1, 10000);
 const create = (state: MarmaladeState, action: Extract<MarmaladeAction, { type: "create" }>) => {
   if (!["text", "rectangle", "ellipse", "brush"].includes(action.kind)) throw new Error("Unknown layer kind");
   finite(action.x);
   finite(action.y);
   const width = action.width ?? 240;
   const height = action.height ?? (action.kind === "text" ? 48 : 160);
-  positive(width);
-  positive(height);
+  validateLayerDimension(width);
+  validateLayerDimension(height);
   const fill = action.color ?? "#f4b860";
   validateColor(fill);
   range(action.strokeWidth ?? 8, 1, 100);
@@ -159,6 +159,24 @@ const selectionAction = (state: MarmaladeState, type: "duplicate" | "delete" | "
 };
 export const applyMarmaladeAuthoring = (state: MarmaladeState, action: MarmaladeAction) => {
   switch (action.type) {
+    case "selection-properties": {
+      if (!action.ids.length) throw new Error("Select a layer");
+      for (const id of new Set(action.ids)) {
+        const layer = findLayer(state, id);
+        editable(state, layer);
+        if (action.changes.opacity !== undefined) {
+          range(action.changes.opacity, 0, 1);
+          layer.opacity = action.changes.opacity;
+        }
+        if (action.changes.blendMode !== undefined) {
+          if (layer.kind === "group") throw new Error("Blend modes are available for individual layers only");
+          if (!marmaladeBlendModes.some((mode) => mode.id === action.changes.blendMode))
+            throw new Error("Unknown blend mode");
+          layer.blendMode = action.changes.blendMode;
+        }
+      }
+      break;
+    }
     case "create":
       create(state, action);
       break;
