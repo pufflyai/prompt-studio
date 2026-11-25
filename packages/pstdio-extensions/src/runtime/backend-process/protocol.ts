@@ -19,6 +19,7 @@ export interface SerializedBackendError {
   name: string;
   message: string;
   code?: string;
+  retryable?: true;
   stack?: string;
 }
 
@@ -86,12 +87,13 @@ const describeErrorValue = (value: unknown) => {
 export const serializeBackendError = (error: unknown): SerializedBackendError => {
   try {
     if (!(error instanceof Error)) return { name: "Error", message: describeErrorValue(error) };
-    const { name, message, stack, code } = error as Error & { code?: unknown };
+    const { name, message, stack, code, retryable } = error as Error & { code?: unknown; retryable?: unknown };
     return {
       name: typeof name === "string" ? name : "Error",
       message: typeof message === "string" ? message : describeErrorValue(message),
       ...(typeof stack === "string" ? { stack } : {}),
       ...(typeof code === "string" ? { code } : {}),
+      ...(retryable === true ? { retryable: true } : {}),
     };
   } catch {
     return { name: "Error", message: "The extension backend threw a value that could not be read." };
@@ -99,10 +101,11 @@ export const serializeBackendError = (error: unknown): SerializedBackendError =>
 };
 
 export const deserializeBackendError = (serialized: SerializedBackendError) => {
-  const error = new Error(serialized.message) as Error & { code?: string };
+  const error = new Error(serialized.message) as Error & { code?: string; retryable?: true };
   error.name = serialized.name;
   if (serialized.stack) error.stack = serialized.stack;
   if (serialized.code) error.code = serialized.code;
+  if (serialized.retryable === true) error.retryable = true;
   return error;
 };
 
@@ -129,6 +132,7 @@ const isError = (value: unknown) =>
   typeof value.name === "string" &&
   typeof value.message === "string" &&
   optionalString(value.code) &&
+  (value.retryable === undefined || value.retryable === true) &&
   optionalString(value.stack);
 
 const isSettled = (message: Record<string, unknown>) =>

@@ -19,6 +19,7 @@ import { stopBackendWorkerTree } from "./stop-worker-tree";
 import { type BackendInvocation, createInvoke, createScopeCleanup, type Running } from "./supervisor-invocation";
 import { surfaceAllowsCommandRejection } from "./surface";
 import { createWatchdog, type WatchdogOptions } from "./watchdog";
+import { startWorkerTreeObservation } from "./worker-tree-observation";
 
 const DRAIN_DEADLINE_MS = 30_000;
 // Dependencies are prepared before a worker starts, so loading only evaluates the entry.
@@ -191,7 +192,8 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     try {
       return Bun.spawn(options.command, {
         cwd,
-        env: options.env,
+        // Bun cleans up descendants at orderly exit, including children spawned between host samples.
+        env: process.platform === "win32" ? options.env : { ...options.env, BUN_FEATURE_FLAG_NO_ORPHANS: "1" },
         stdio: ["ignore", "inherit", "inherit"],
         detached: process.platform !== "win32",
         serialization: "advanced",
@@ -210,6 +212,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     }
   };
   const child = spawn();
+  const observation = startWorkerTreeObservation(child);
   const requestGroupAnchor = () => {
     const reply = Promise.withResolvers<number | null>();
     groupAnchorReply = reply.resolve;
@@ -219,12 +222,12 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
   let stopping: Promise<void> | undefined;
   const stopTree = (graceful = false) => {
     if (stopping) return stopping;
-    stopping = stopBackendWorkerTree(child, BACKEND_STOP_GRACE_MS, graceful ? requestGroupAnchor : undefined).finally(
-      () => {
-        groupAnchorReply?.(null);
-        groupAnchorReply = undefined;
-      },
-    );
+    const anchor = graceful ? requestGroupAnchor : undefined;
+    const cleanup = stopBackendWorkerTree(child, BACKEND_STOP_GRACE_MS, anchor, observation?.stop());
+    stopping = cleanup.finally(() => {
+      groupAnchorReply?.(null);
+      groupAnchorReply = undefined;
+    });
     void stopping.catch((error) =>
       console.warn("[pstdio-extensions] Could not stop the extension backend tree", error),
     );
@@ -244,7 +247,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     watchdog.stop();
     fail(new BackendUnavailableError(`The extension backend exited (${code}).`));
     try {
-      await Promise.all([stopping, ...scopeCleanups]);
+      await Promise.all([observation ? stopTree() : stopping, ...scopeCleanups]);
       return code;
     } finally {
       rmSync(cwd, { recursive: true, force: true });

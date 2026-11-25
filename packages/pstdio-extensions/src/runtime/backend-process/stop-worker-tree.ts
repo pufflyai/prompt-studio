@@ -1,59 +1,8 @@
-import { execFile } from "node:child_process";
-import { readdirSync, readFileSync, readlinkSync } from "node:fs";
-import { promisify } from "node:util";
 import { stopWindowsProcessTree } from "../preparation-windows-process-tree";
+import { type ProcessEntry, readProcesses, timeLeft, unfinished } from "./worker-tree-rows";
 
-type WorkerProcess = Pick<Bun.Subprocess, "pid" | "exitCode" | "signalCode" | "exited" | "kill">;
-type ProcessEntry = { pid: number; parent: number; group: number; state: string; started: string; threads?: number };
+export type WorkerProcess = Pick<Bun.Subprocess, "pid" | "exitCode" | "signalCode" | "exited" | "kill">;
 type RequestGroupAnchor = () => Promise<number | null>;
-
-const run = promisify(execFile);
-const timeLeft = (deadline: number) => Math.ceil(deadline - performance.now());
-const unfinished = () => new Error("The extension backend worker process tree did not stop.");
-
-const linuxProcesses = (deadline: number) => {
-  if (Number(readlinkSync("/proc/self")) !== process.pid)
-    throw new Error("The extension backend process table is outside the host PID namespace.");
-  return readdirSync("/proc").flatMap((entry) => {
-    if (!/^\d+$/.test(entry)) return [];
-    if (timeLeft(deadline) <= 0) throw unfinished();
-    try {
-      const stat = readFileSync(`/proc/${entry}/stat`, "utf8");
-      const fields = stat.slice(stat.lastIndexOf(")") + 2).split(" ", 20);
-      const [state, parent, group] = fields;
-      // procfs start time is counted in ticks and distinguishes reused PIDs.
-      const started = fields[19];
-      if (!state || !started) return [];
-      return [
-        {
-          pid: Number(entry),
-          parent: Number(parent),
-          group: Number(group),
-          state,
-          started,
-          threads: Number(fields[17]),
-        },
-      ];
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code === "ENOENT" || code === "ESRCH" || code === "EPERM" || code === "EACCES") return [];
-      throw error;
-    }
-  });
-};
-
-const readProcesses = async (deadline: number) => {
-  if (process.platform === "linux") return linuxProcesses(deadline);
-  const timeout = timeLeft(deadline);
-  if (timeout <= 0) throw unfinished();
-  const { stdout } = await run("ps", ["-A", "-o", "pid=,ppid=,pgid=,stat=,lstart="], { timeout });
-  return stdout.split("\n").flatMap((line) => {
-    const row = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+(.+)$/.exec(line);
-    if (!row) return [];
-    const [, pid, parent, group, state, started] = row;
-    return [{ pid: Number(pid), parent: Number(parent), group: Number(group), state, started }];
-  });
-};
 
 const signal = (pid: number, value: NodeJS.Signals) => {
   try {
@@ -65,10 +14,11 @@ const signal = (pid: number, value: NodeJS.Signals) => {
   }
 };
 
-const isWorkerAlive = (child: WorkerProcess) => child.exitCode === null && child.signalCode === null;
+export const isWorkerAlive = (child: WorkerProcess) => child.exitCode === null && child.signalCode === null;
 // Linux may keep a zombie thread-group leader while its siblings are still executing.
-const running = (row: ProcessEntry) => (row.threads ?? 1) > 1 || (!/^[ZX]/.test(row.state) && !row.state.includes("E"));
-interface Ownership {
+export const running = (row: ProcessEntry) =>
+  (row.threads ?? 1) > 1 || (!/^[ZX]/.test(row.state) && !row.state.includes("E"));
+export interface Ownership {
   workerStart?: string;
   groupAnchor?: ProcessEntry;
   children: Map<number, ProcessEntry>;
@@ -79,7 +29,7 @@ const groupAnchorPresent = (rows: ProcessEntry[], anchor: ProcessEntry) =>
     (row) => row.pid === anchor.pid && row.started === anchor.started && row.group === anchor.group && running(row),
   );
 
-const observeWorker = (rows: ProcessEntry[], child: WorkerProcess, owned: Ownership) => {
+export const observeWorker = (rows: ProcessEntry[], child: WorkerProcess, owned: Ownership) => {
   if (!isWorkerAlive(child)) return;
   const root = rows.find(
     (row) =>
@@ -223,11 +173,21 @@ const finishWorker = (child: WorkerProcess) => {
   }
 };
 
-const stopPosixWorker = async (child: WorkerProcess, timeoutMs: number, requestGroupAnchor?: RequestGroupAnchor) => {
+const stopPosixWorker = async (
+  child: WorkerProcess,
+  timeoutMs: number,
+  requestGroupAnchor: RequestGroupAnchor | undefined,
+  observation: Promise<Ownership> | undefined,
+) => {
   let deadline = performance.now() + timeoutMs;
-  const owned: Ownership = { children: new Map() };
   let groups: Set<number> | undefined;
+  let owned: Ownership;
   try {
+    // Joining the current sample consumes the first phase's existing allowance.
+    const observed = observation ? await untilDeadline(observation, deadline) : { children: new Map() };
+    if (!observed) throw unfinished();
+    owned = observed;
+    if (!isWorkerAlive(child) && !owned.children.size) return;
     if (requestGroupAnchor) {
       // Failed or expired anchor preparation falls through to forced cleanup.
       await stopGracefully(child, owned, deadline, requestGroupAnchor).catch(() => {});
@@ -284,8 +244,11 @@ export const stopBackendWorkerTree = async (
   child: WorkerProcess,
   timeoutMs: number,
   requestGroupAnchor?: RequestGroupAnchor,
+  observation?: Promise<Ownership>,
 ) => {
-  if (!isWorkerAlive(child)) return;
-  if (process.platform === "win32") return stopWindowsWorker(child, timeoutMs);
-  return stopPosixWorker(child, timeoutMs, requestGroupAnchor);
+  if (process.platform === "win32") {
+    if (!isWorkerAlive(child)) return;
+    return stopWindowsWorker(child, timeoutMs);
+  }
+  return stopPosixWorker(child, timeoutMs, requestGroupAnchor, observation);
 };
