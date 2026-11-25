@@ -1,4 +1,4 @@
-import { sep } from "node:path";
+import { dirname, sep } from "node:path";
 import { type ArtifactMountWriteObserver, readArtifactFileState } from "pstdio-extensions";
 
 // Long enough for a change burst to settle after a slow write. Short enough that an old entry
@@ -54,6 +54,13 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
         entry.reappeared ??= new Set();
         entry.reappeared.add(path);
       }
+    }
+  };
+
+  const rememberReappearance = (path: string, state: NonNullable<FileState>) => {
+    for (let ancestor = path; ancestor !== dirname(ancestor); ancestor = dirname(ancestor)) {
+      const entry = entries.get(ancestor);
+      if (entry?.state === null) markReappearedPaths(entry, [[path, state]]);
     }
   };
 
@@ -129,11 +136,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     if (!observed?.directory || observed.identity !== identity) return;
     directories.set(folder, { observed, recordedAt });
     // Creation proves reappearance even if the watcher arrives only after an outside removal.
-    for (const [deletedPath, entry] of entries) {
-      if (entry.state === null && (folder === deletedPath || isInside(folder, deletedPath))) {
-        markReappearedPaths(entry, [[folder, observed]]);
-      }
-    }
+    rememberReappearance(folder, observed);
   };
 
   const record: ArtifactMountWriteObserver = (path, createdDirectories, parentWrites) => {
@@ -141,6 +144,8 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     const recordedAt = now();
     const state = readArtifactFileState(path);
     entries.set(path, { recordedAt, order: ++writeOrder, state });
+    // Keep this fact on older ancestor deletions even after this path's own proof is consumed.
+    if (state) rememberReappearance(path, state);
     if (!state) directories.delete(path);
     for (const [folder, identity] of createdDirectories ?? []) recordCreatedDirectory(folder, identity, recordedAt);
     for (const { path: parentPath, before, after } of parentWrites ?? []) {

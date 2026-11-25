@@ -278,6 +278,28 @@ describe("artifact mount deletions and expiry", () => {
 });
 
 describe("artifact mount restored folder batches", () => {
+  test("a newer file keeps reporting outside removals after its write proof was consumed", async () => {
+    const ledger = createArtifactMountWriteLedger(() => 0);
+    const { mount, root } = createMount(ledger);
+    const folder = join(root, "sales");
+    const child = join(folder, "new.json");
+    const outside = join(dirname(root), "returned-sales");
+    const options = { keepMatchedWrites: true };
+    await mount.writeText("sales/old.json", "{}");
+    await mount.delete("sales");
+    await mount.writeText("sales/new.json", "[]");
+    rmSync(child);
+    expect(ledger.dropEchoes([child], options)).toEqual([child]);
+
+    renameSync(folder, outside);
+    writeFileSync(join(outside, "new.json"), "returned");
+    utimesSync(outside, new Date(), new Date(Date.now() + 5_000));
+    renameSync(outside, folder);
+    expect(ledger.dropEchoes([folder], options)).toEqual([folder]);
+    rmSync(child);
+    expect(ledger.dropEchoes([child], options)).toEqual([child]);
+  });
+
   test.each([
     "sales",
     "sales/archive",
