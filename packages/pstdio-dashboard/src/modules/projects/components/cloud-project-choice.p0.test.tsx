@@ -1,11 +1,12 @@
 import { expect, test } from "bun:test";
 import { accountEvents } from "@pstdio/sdk/extensions";
+import { getWorkbenchOperations } from "@pstdio/workbench";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { getDashboardQueryClient } from "@/lib/query-client";
-import { getDashboardAccountStatusQuery } from "@/lib/scoped-queries";
+import { getDashboardAccountStatusQuery, getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { publishExtensionEvent } from "@/shared/extensions/extension-webview-broadcast";
@@ -242,6 +243,7 @@ const copyDevice = (outcome: (typeof copyStates)[number], retry: boolean) => {
     holdCatalog?: boolean;
     catalogUnavailable?: boolean;
     downloadUnavailable?: boolean;
+    removalReplyLost?: boolean;
   } = {
     presence: removingCopy || retry ? "downloading" : "cloud-only",
     id: "device",
@@ -290,6 +292,7 @@ const copyDevice = (outcome: (typeof copyStates)[number], retry: boolean) => {
     await releaseRemoval.promise;
     if (rejectedRemoval) return Response.json({ error: "Removal rejected before touching the copy" }, { status: 400 });
     device.presence = "cloud-only";
+    if (device.removalReplyLost) return Response.json({ error: "Removal response lost" }, { status: 503 });
     return Response.json({ projectId: id, presence: "cloud-only" });
   };
   const server = Bun.serve({
@@ -593,7 +596,11 @@ test.each(copyStates)("two views check the current device state before downloadi
         addLocalProject();
         publishExtensionEvent({ id: accountEvents.changed.id }, owner);
         await until(
-          () => fixture.choice.entry?.presence === "downloaded" && fixture.peer.entry?.presence === "downloaded",
+          () =>
+            fixture.choice.entry?.presence === "downloaded" &&
+            fixture.peer.entry?.presence === "downloaded" &&
+            opened.length === 1 &&
+            fixture.closed === 1,
         );
       });
       expect({ beforeReceipt, afterRemoval, opened: opened.length, closed: fixture.closed }).toEqual({
@@ -735,6 +742,47 @@ test.each([
     await act(async () => releaseRemoval.resolve());
     expect(client.getQueryData(key)).toBe(replacementCatalog);
     expect(fixture.opened).toEqual([]);
+  } finally {
+    releaseRemoval.resolve();
+    await result?.catch(() => {});
+    await fixture.cleanup();
+  }
+});
+
+test("discarding a lost removal draft keeps its copy claim against Cloud deletion", async () => {
+  const fixture = await mountCopyChoices("removal receipt");
+  const { id, account, device, owner, removalStarted, releaseRemoval } = fixture;
+  const operations = getWorkbenchOperations(getDashboardScopedQueries(owner));
+  let result: Promise<unknown> | undefined;
+  try {
+    device.removalReplyLost = true;
+    await act(async () => {
+      result = fixture.removal.remove(id, "Recovered notes", account, false);
+      void result.catch(() => {});
+      await removalStarted.promise;
+      releaseRemoval.resolve();
+      const error = await result.then(
+        () => undefined,
+        (error) => error,
+      );
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toBe("Removal response lost");
+    });
+    const recovery = operations.getSnapshot().recovery.find((entry) => entry.domain === "project.remove-device-copy");
+    expect(recovery?.status).toBe("unknown");
+    await act(async () => {
+      operations.discard(recovery!.id);
+      device.id = "replacement-device";
+      publishExtensionEvent({ id: accountEvents.changed.id }, owner);
+      await until(() => getDashboardAccountStatusQuery(owner).getSnapshot().data?.login?.deviceId === device.id);
+    });
+    expect(fixture.removal.active(id)).toBe(false);
+    const error = await fixture.deletions.start(id, "Recovered notes", account).then(
+      () => undefined,
+      (error) => error,
+    );
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toContain("pending Cloud change");
   } finally {
     releaseRemoval.resolve();
     await result?.catch(() => {});
