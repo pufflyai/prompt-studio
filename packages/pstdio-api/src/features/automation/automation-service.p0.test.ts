@@ -1,5 +1,6 @@
 import { describe, expect, jest, mock, test } from "bun:test";
 import { normalizeExtensionSources } from "pstdio-extensions";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createAutomationService } from "./automation-service";
 
 describe("automation service recovery", () => {
@@ -16,7 +17,7 @@ describe("automation service recovery", () => {
 
     expect(await service.recoverQueuedRuns()).toBe(1);
     await Bun.sleep(0);
-    await expect(service.close()).resolves.toBeUndefined();
+    expect(await service.close()).toBeUndefined();
   });
 
   test("aborts active command execution before orderly shutdown waits", async () => {
@@ -205,9 +206,9 @@ describe("automation authentication", () => {
     });
     const invalidToken = issued.token.replace(/_[^_]+$/, "_wrong-secret");
 
-    await expect(service.getRun(invalidToken, "project-1", "run-1")).rejects.toMatchObject({ status: 401 });
-    await expect(service.getRun(invalidToken, "project-1", "run-1")).rejects.toMatchObject({ status: 401 });
-    await expect(service.getRun(invalidToken, "project-1", "run-1")).rejects.toMatchObject({
+    await expectRejection(service.getRun(invalidToken, "project-1", "run-1")).toMatchObject({ status: 401 });
+    await expectRejection(service.getRun(invalidToken, "project-1", "run-1")).toMatchObject({ status: 401 });
+    await expectRejection(service.getRun(invalidToken, "project-1", "run-1")).toMatchObject({
       code: "automation_auth_rate_limited",
       status: 429,
     });
@@ -300,7 +301,7 @@ describe("automation service cancellation", () => {
     await service.recoverQueuedRuns();
     await Bun.sleep(0);
 
-    await expect(service.cancelRun(issued.token, "project-1", "run-1")).rejects.toMatchObject({
+    await expectRejection(service.cancelRun(issued.token, "project-1", "run-1")).toMatchObject({
       code: "automation_cancellation_pending",
       status: 409,
     });

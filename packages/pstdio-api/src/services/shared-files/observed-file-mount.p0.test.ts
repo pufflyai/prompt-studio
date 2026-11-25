@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createFileMount } from "pstdio-extensions";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createObservedFileMount } from "./observed-file-mount";
 import { withStorageObservation } from "./storage-observation";
 
@@ -29,9 +30,9 @@ for (const operation of ["exists", "readText", "readBytes"] as const) {
         await mount[operation]("new.md").catch(() => undefined);
       });
       await writeFile(join(root, "new.md"), "outside creation");
-      await expect(
+      await expectRejection(
         withStorageObservation(loaded.versions, () => mount.writeText("new.md", "stale empty source")),
-      ).rejects.toThrow("changed since it was loaded");
+      ).toThrow("changed since it was loaded");
       expect(await readFile(join(root, "new.md"), "utf8")).toBe("outside creation");
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -56,12 +57,12 @@ test("an outside edit immediately after a workspace write never becomes that sav
       },
     });
     const loaded = await withStorageObservation({}, () => mount.readText("note.md"));
-    await expect(
+    await expectRejection(
       withStorageObservation(loaded.versions, async () => {
         await mount.writeText("note.md", "own first");
         await mount.writeText("note.md", "own later stale");
       }),
-    ).rejects.toThrow("changed since it was loaded");
+    ).toThrow("changed since it was loaded");
     expect(await readFile(join(root, "note.md"), "utf8")).toBe("outside edit");
   } finally {
     await rm(root, { recursive: true, force: true });

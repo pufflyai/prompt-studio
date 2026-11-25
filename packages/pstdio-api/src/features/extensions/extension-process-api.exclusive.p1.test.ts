@@ -1,6 +1,7 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import { createInvocationScope } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createProcessApi, PROCESS_OUTPUT_LIMIT_BYTES } from "./extension-process-api";
 
 const silentLogger = { info: () => {}, warn: () => {}, error: () => {} };
@@ -61,7 +62,7 @@ describe("createProcessApi", () => {
       queueMicrotask(() => {
         void scope.close();
       });
-      await expect(pending).rejects.toThrow("Invocation ended");
+      await expectRejection(pending).toThrow("Invocation ended");
     });
   }
 
@@ -98,7 +99,7 @@ describe("createProcessApi", () => {
       }) as never,
     });
 
-    await expect(api.spawnDetached({ command: ["pstdio-probe-not-real", "--version"] })).resolves.toEqual({ pid: 123 });
+    expect(await api.spawnDetached({ command: ["pstdio-probe-not-real", "--version"] })).toEqual({ pid: 123 });
     expect(calls).toHaveLength(1);
     expect((calls[0] as { command: string[] }).command.join(" ")).toContain("pstdio-probe-not-real");
     expect((calls[0] as { command: string[] }).command.at(-1)).toBe("--version");
@@ -209,7 +210,7 @@ test.each(["close", "abort"])("does not spawn after %s while its workspace is be
     if (end === "close") await scope.close();
     else controller.abort(new Error("Cancelled"));
     finish(process.cwd());
-    await expect(pending).rejects.toThrow();
+    await expectRejection(pending).toThrow();
     expect(children).toHaveLength(0);
     await scope.close();
   }

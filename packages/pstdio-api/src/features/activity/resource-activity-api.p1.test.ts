@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createActivityApi } from "../extensions/command-environment/activity";
 import { createResourcesApi } from "../extensions/command-environment/resources";
 import { executeProjectExtensionCommand } from "../extensions/execute-project-extension-command";
@@ -73,21 +74,21 @@ test("only an observed edition establishes a baseline and a newer edition remain
   expect((await api.query([ref]))[0]?.changedSinceSeen).toBe(false);
   expect((await api.acknowledge(observation.receipt)).changedSinceSeen).toBe(true);
   expect((await api.acknowledge(observation.receipt)).changedSinceSeen).toBe(true);
-  await expect(api.acknowledge(observation.receipt, { ...ref, id: "other" })).rejects.toThrow("different resource");
-  await expect(api.read({ ...ref, id: "missing" })).rejects.toThrow("unavailable");
-  await expect(api.query(Array.from({ length: 51 }, () => ref))).rejects.toThrow();
+  await expectRejection(api.acknowledge(observation.receipt, { ...ref, id: "other" })).toThrow("different resource");
+  await expectRejection(api.read({ ...ref, id: "missing" })).toThrow("unavailable");
+  await expectRejection(api.query(Array.from({ length: 51 }, () => ref))).toThrow();
 });
 
 test("a provider failure cannot masquerade as successful deletion", async () => {
   const api = createResourceChanges(app.deps, project.id);
-  await expect(api.query([ref, { ...ref, id: "unavailable" }])).rejects.toThrow("temporarily unavailable");
+  await expectRejection(api.query([ref, { ...ref, id: "unavailable" }])).toThrow("temporarily unavailable");
 });
 
 test("a device-qualified ref cannot read or acknowledge a colliding local resource", async () => {
   const api = createResourceChanges(app.deps, project.id);
   const device = { ownerId: "other", id: "other-device", name: "Other device" };
-  await expect(api.read({ ...ref, device })).rejects.toThrow("device");
-  await expect(api.query([{ ...ref, device }])).rejects.toThrow("device");
+  await expectRejection(api.read({ ...ref, device })).toThrow("device");
+  await expectRejection(api.query([{ ...ref, device }])).toThrow("device");
 });
 
 test("an existing viewer cannot mint an observation for a replacement account", async () => {
@@ -112,7 +113,9 @@ test("an existing viewer cannot mint an observation for a replacement account", 
   };
   const viewer = createResourcesApi(deps, { projectId: project.id, extensionId: ref.extensionId });
   accountId = "bob";
-  await expect(viewer.observeChange!(ref, { lineage: "publication", revision: "1" })).rejects.toThrow("Reader changed");
+  await expectRejection(viewer.observeChange!(ref, { lineage: "publication", revision: "1" })).toThrow(
+    "Reader changed",
+  );
 });
 
 test("Sessions reports only committed conversation changes through its installed extension", async () => {
@@ -180,10 +183,10 @@ test("Activity checks owner capabilities and permissions, preserves evidence, an
     await api.capabilities({ type: "session", id: "one", projectId: project.id, extensionId: "pstdio" }),
   ).toBeNull();
   expect(await api.capabilities({ ...ref, type: "note" })).toEqual({ comments: true });
-  await expect(api.query({ resource: { ...ref, id: "private" } })).rejects.toThrow("Private");
-  await expect(api.query({ resource: { ...ref, id: "missing" } })).rejects.toThrow("not found");
-  await expect(api.query({ resource: { ...ref, projectId: "another-project" } })).rejects.toThrow("another project");
-  await expect(api.publish(ref, { key: "change", kind: "change", body: "Changed" })).rejects.toThrow("owner");
+  await expectRejection(api.query({ resource: { ...ref, id: "private" } })).toThrow("Private");
+  await expectRejection(api.query({ resource: { ...ref, id: "missing" } })).toThrow("not found");
+  await expectRejection(api.query({ resource: { ...ref, projectId: "another-project" } })).toThrow("another project");
+  await expectRejection(api.publish(ref, { key: "change", kind: "change", body: "Changed" })).toThrow("owner");
   const file = await api.attach(ref, {
     name: "test.log",
     mimeType: "text/plain",
@@ -197,8 +200,8 @@ test("Activity checks owner capabilities and permissions, preserves evidence, an
     target: { harnessId: "missing.harness", modelId: "model" },
   });
   expect(new TextDecoder().decode((await api.readAttachment(ref, file.id)).data)).toBe("passed");
-  await expect(api.readAttachment({ ...ref, type: "note" }, file.id)).rejects.toThrow("not found");
-  await expect(api.handoff(ref, comment.id)).rejects.toThrow("harness");
+  await expectRejection(api.readAttachment({ ...ref, type: "note" }, file.id)).toThrow("not found");
+  await expectRejection(api.handoff(ref, comment.id)).toThrow("harness");
   expect((await api.get(ref, comment.id)).body).toBe("Please review");
   expect((await api.get(ref, comment.id)).handoffError).toContain("harness");
   await owner.publish(ref, {
@@ -247,7 +250,7 @@ test("Activity checks owner capabilities and permissions, preserves evidence, an
     revision,
     validation: [{ command: "bun test", result: "passed" }],
   });
-  await expect(
+  await expectRejection(
     api.publish(ref, {
       key: "self-review",
       kind: "review",
@@ -256,7 +259,7 @@ test("Activity checks owner capabilities and permissions, preserves evidence, an
       implementationId: implementation.id,
       verdict: "passed",
     }),
-  ).rejects.toThrow("independent");
+  ).toThrow("independent");
   const review = await api.publish(ref, {
     key: "review",
     kind: "review",
@@ -266,7 +269,7 @@ test("Activity checks owner capabilities and permissions, preserves evidence, an
     verdict: "passed",
   });
   expect(review.author.id).toBe(reviewer.id);
-  await expect(
+  await expectRejection(
     api.publish(ref, {
       key: "stale-review",
       kind: "review",
@@ -275,7 +278,7 @@ test("Activity checks owner capabilities and permissions, preserves evidence, an
       implementationId: implementation.id,
       verdict: "passed",
     }),
-  ).rejects.toThrow("exact");
+  ).toThrow("exact");
   const handoff = await api.publish(ref, {
     key: "handoff",
     kind: "comment",
@@ -349,13 +352,13 @@ test("Activity checks owner capabilities and permissions, preserves evidence, an
     body: JSON.stringify({ enabled: false }),
   });
   expect(disabled.status).toBe(200);
-  await expect(api.get(ref, imported.id)).rejects.toThrow();
+  await expectRejection(api.get(ref, imported.id)).toThrow();
   expect((await source.get(ref, imported.id)).body).toBe("Old evidence");
   expect(new TextDecoder().decode((await source.readAttachment(ref, file.id)).data)).toBe("passed");
-  await expect(
+  await expectRejection(
     createResourceActivityApi(app.deps, { projectId: project.id, extensionId: "unrelated.owner" }).readAttachment(
       ref,
       file.id,
     ),
-  ).rejects.toThrow();
+  ).toThrow();
 });

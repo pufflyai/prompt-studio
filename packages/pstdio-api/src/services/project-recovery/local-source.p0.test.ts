@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import type { createRecoveryCatalog } from "./catalog";
 import { createRecoveryChunkStore, type RecoveryChunk } from "./chunks";
 import { openRecoveryJournal } from "./journal";
@@ -167,7 +168,7 @@ test("a folder without .pstignore is never copied and drops its pending copy unt
   await until(async () => (await (await f.journal()).read()).candidate === null);
   await until(async () => !(await owner.local.status()).capturing);
   expect(owner.captured()).toBe(0);
-  await expect(readFile(join(f.folder, ".pstignore"))).rejects.toThrow();
+  await expectRejection(readFile(join(f.folder, ".pstignore"))).toThrow();
   await writeFile(join(f.folder, ".pstignore"), "");
   owner.local.request("explicit");
   await until(async () => !!(await (await f.journal()).read()).candidate);

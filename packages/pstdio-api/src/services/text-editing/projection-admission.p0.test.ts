@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { StorageRevisionChangedError } from "pstdio-sync";
 import * as Y from "yjs";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { resolveNativeTextAccess } from "../native-documents/source-access";
 import { createTextEditingService } from "./service";
 import { editorView, selected, textEditingFixture } from "./text-editing.test-fixture";
@@ -106,15 +107,15 @@ test("a projection registration cannot seed a missing canonical authority from p
     await f.deps.extensionStorageService.nativeFileProjections.initialize({ ...source, state: null });
     const memberId = crypto.randomUUID();
     await f.text.request(address, { operation: "register", memberId });
-    await expect(f.text.request(address, { operation: "open", memberId, input: { grant } })).rejects.toMatchObject({
+    await expectRejection(f.text.request(address, { operation: "open", memberId, input: { grant } })).toMatchObject({
       code: "source_unavailable",
     });
     expect(f.documents.sources.current(source.owner)).toEqual([]);
-    await expect(
+    await expectRejection(
       f.deps.extensionStorageService
         .openNativeTextDocument({ owner: source.owner, fileId: source.documentKey })
         .snapshot(),
-    ).rejects.toMatchObject({ code: "native_source_pending" });
+    ).toMatchObject({ code: "native_source_pending" });
   } finally {
     await f.cleanup();
   }

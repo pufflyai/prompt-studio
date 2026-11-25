@@ -4,6 +4,7 @@ import { mkdir, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { ensureWorkspaceConfig, removeWorkspaceConfig } from "./workspace-config";
 
 describe("workspace config ownership", () => {
@@ -79,7 +80,7 @@ describe("workspace config ownership", () => {
 
   it("names the other project when the folder belongs to it", async () => {
     await writeConfig(repoPath, { project_id: "other-project", workspace_id: "other-workspace" });
-    await expect(ensure(repoPath, homeId)).rejects.toThrow("other-project");
+    await expectRejection(ensure(repoPath, homeId)).toThrow("other-project");
   });
 
   it("keeps a project-only config that another workspace of the project owns through an alias", async () => {
@@ -119,7 +120,7 @@ describe("workspace config ownership", () => {
     await mkdir(join(repoPath, ".pstdio"), { recursive: true });
     const path = join(repoPath, ".pstdio/config.json");
     await writeFile(path, "user content");
-    await expect(ensure(repoPath, homeId)).rejects.toThrow("config");
+    await expectRejection(ensure(repoPath, homeId)).toThrow("config");
     await removeWorkspaceConfig(repoPath, projectId, homeId);
     expect(readFileSync(path, "utf8")).toBe("user content");
   });

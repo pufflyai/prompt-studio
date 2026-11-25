@@ -141,14 +141,20 @@ const registerRow = async (
   existing: Awaited<ReturnType<typeof findInstalledSourceForRegistration>>,
   values: ReturnType<typeof registrationValues>,
 ) => {
-  if (existing && hasUnchangedInstalledSourceRegistration(existing, values)) return existing;
-  if (existing) return deps.sources.updateRegistration(existing.id, values);
+  if (existing) {
+    const installedSource = hasUnchangedInstalledSourceRegistration(existing, values)
+      ? existing
+      : await deps.sources.updateRegistration(existing.id, values);
+    return { installedSource, created: false };
+  }
   try {
-    return await deps.sources.register({ install_name: input.installName, ...values });
+    const installedSource = await deps.sources.register({ install_name: input.installName, ...values });
+    return { installedSource, created: true };
   } catch (error) {
     const raced = await deps.sources.getBySourcePath(input.sourcePath);
     if (!raced) throw error;
-    return deps.sources.updateRegistration(raced.id, values);
+    const installedSource = await deps.sources.updateRegistration(raced.id, values);
+    return { installedSource, created: false };
   }
 };
 const rollbackRegistration = async (
@@ -220,14 +226,15 @@ export const createInstalledSourceRegistrar =
     const state = { existing, values, previousRevision, registered: null as typeof existing, published: false };
     try {
       if (input.installation) await activatePreparedInstall(input.installation);
-      state.registered = await registerRow(deps, input, existing, values);
-      if (!state.registered) throw new Error(`Installed extension not found: ${input.installName}`);
+      const { installedSource, created } = await registerRow(deps, input, existing, values);
+      if (!installedSource) throw new Error(`Installed extension not found: ${input.installName}`);
+      state.registered = installedSource;
       state.published = await publishPreparedRegistration(input, previousRevision);
       const notification = registrationNotification(input, existing, values);
       if (notification.changed) await notify(notification.path);
       if (input.installation) await settlePreparedInstall(input.installation, true);
       deps.emitInstalledSource(state.registered);
-      return state.registered;
+      return { installedSource, created };
     } catch (error) {
       await rollbackRegistration(deps, input, state, notify);
       throw error;

@@ -256,7 +256,7 @@ test("an unavailable shared successor keeps the legacy fallback and private file
       },
     },
   };
-  await expect(adoptWorkspacesTool(unavailable, project.id)).resolves.toBeUndefined();
+  expect(await adoptWorkspacesTool(unavailable, project.id)).toBeUndefined();
   expect((await catalog.read("pstdio.git-workspaces")).value).not.toBeNull();
   await adoptWorkspacesTool(handle.deps, project.id);
   expect((await catalog.read("pstdio.git-workspaces")).value).toBeNull();

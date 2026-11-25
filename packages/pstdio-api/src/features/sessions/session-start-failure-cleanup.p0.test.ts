@@ -76,7 +76,7 @@ describe("session start failure cleanup", () => {
         new Error("queue entry removal failed"),
       );
 
-      await expect(isolated.deps.sessionService.transitionStatus(holder.id, "completed")).resolves.toMatchObject({
+      expect(await isolated.deps.sessionService.transitionStatus(holder.id, "completed")).toMatchObject({
         status: "completed",
       });
       await waitForSessionStatus(isolated, queued.id, "in_progress");

@@ -3,6 +3,7 @@ import { chmod, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { captureRecoveryFolder } from "./capture";
 import { createRecoveryChunkStore, recoveryChunkBytes } from "./chunks";
 import { nativeRecoverySupported } from "./native-recovery.fixture";
@@ -106,10 +107,10 @@ test("bounded reads preserve a multi-chunk binary file and a deliberately absent
 
 test("capture refuses an overlapping cache and included files changed during their bounded read", async () => {
   const { folder, chunks } = await fixture();
-  await expect(captureRecoveryFolder({ root: chunks.directory, chunks })).rejects.toThrow();
+  await expectRejection(captureRecoveryFolder({ root: chunks.directory, chunks })).toThrow();
   await writeFile(join(folder, "changing"), new Uint8Array(recoveryChunkBytes + 1));
   let changed = false;
-  await expect(
+  await expectRejection(
     captureRecoveryFolder({
       root: folder,
       chunks,
@@ -120,7 +121,7 @@ test("capture refuses an overlapping cache and included files changed during the
         }
       },
     }),
-  ).rejects.toMatchObject({ code: "recovery_capture_incomplete", path: "changing" });
+  ).toMatchObject({ code: "recovery_capture_incomplete", path: "changing" });
   expect(changed).toBe(true);
 });
 

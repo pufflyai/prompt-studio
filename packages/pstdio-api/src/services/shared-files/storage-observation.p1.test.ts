@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { artifactFilesFixture } from "./artifact-files.fixture";
 import { withStorageObservation } from "./storage-observation";
 
@@ -13,7 +14,7 @@ test("a native record save keeps its load precondition even after reading a newe
     });
     const loaded = await withStorageObservation({}, () => f.storage.records.read("document"));
     await f.storage.records.commit({ operationId: "outside", edits: [replace("document", "outside")] });
-    await expect(
+    await expectRejection(
       withStorageObservation(loaded.versions, () =>
         f.storage.records.transaction(async (records) => {
           const fresh = await records.read("document");
@@ -26,7 +27,7 @@ test("a native record save keeps its load precondition even after reading a newe
           });
         }),
       ),
-    ).rejects.toThrow("changed since it was loaded");
+    ).toThrow("changed since it was loaded");
     expect((await f.storage.records.read("document")).value).toEqual({ text: "outside" });
     expect((await f.storage.records.read("other")).value).toEqual({ text: "keep" });
   } finally {
@@ -60,12 +61,12 @@ test("an idempotent receipt retry cannot bless another writer's newer record", a
     const first = { operationId: "own-first", edits: [replace("document", "own first")] };
     await withStorageObservation(loaded.versions, () => f.storage.records.commit(first));
     await f.storage.records.commit({ operationId: "outside", edits: [replace("document", "outside")] });
-    await expect(
+    await expectRejection(
       withStorageObservation(loaded.versions, async () => {
         expect((await f.storage.records.commit(first)).state).toBe("saved-locally");
         await f.storage.records.commit({ operationId: "own-later", edits: [replace("document", "stale later")] });
       }),
-    ).rejects.toThrow("changed since it was loaded");
+    ).toThrow("changed since it was loaded");
     expect((await f.storage.records.read("document")).value).toEqual({ text: "outside" });
   } finally {
     await f.close();
@@ -86,12 +87,12 @@ test("one native record transaction advances its own guards only when its writes
     expect((await f.storage.records.read("document")).value).toEqual({ text: "second" });
     const reloaded = await withStorageObservation({}, () => f.storage.records.read("document"));
     await withStorageObservation(reloaded.versions, async () => {
-      await expect(
+      await expectRejection(
         f.storage.records.transaction(async (records) => {
           await records.commit({ operationId: "rolled-back", edits: [replace("document", "never committed")] });
           throw new Error("Stop this transaction");
         }),
-      ).rejects.toThrow("Stop this transaction");
+      ).toThrow("Stop this transaction");
       await f.storage.records.commit({ operationId: "after-rollback", edits: [replace("document", "after rollback")] });
     });
     expect((await f.storage.records.read("document")).value).toEqual({ text: "after rollback" });
@@ -123,12 +124,12 @@ test("rebasing an atomic pending closure does not bless another record's outside
     });
     const loaded = await withStorageObservation({}, () => f.storage.records.read("other"));
     await f.storage.records.commit({ operationId: "closure-outside", edits: [replace("other", "outside")] });
-    await expect(
+    await expectRejection(
       withStorageObservation(loaded.versions, async () => {
         await f.storage.records.commit({ operationId: "closure-own", edits: [replace("own", "own change")] });
         await f.storage.records.commit({ operationId: "closure-stale", edits: [replace("other", "stale")] });
       }),
-    ).rejects.toThrow("changed since it was loaded");
+    ).toThrow("changed since it was loaded");
     expect((await f.storage.records.read("other")).value).toEqual({ text: "outside" });
     expect((await f.storage.records.read("own")).value).toEqual({ text: "own change" });
   } finally {

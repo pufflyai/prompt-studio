@@ -2,6 +2,7 @@ import { afterEach, test as baseTest, expect } from "bun:test";
 import { mkdir, mkdtemp, readdir, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { nativeRecoverySupported } from "./native-recovery.fixture";
 import { publishRecoveryStaging } from "./publish-posix";
 
@@ -34,8 +35,8 @@ test("publication never replaces an existing destination, even an empty folder o
   const { root, publish } = await fixture();
   await mkdir(join(root, "empty"));
   await writeFile(join(root, "file"), "local work");
-  await expect(publish("empty")).rejects.toMatchObject({ code: "EEXIST" });
-  await expect(publish("file")).rejects.toMatchObject({ code: "EEXIST" });
+  await expectRejection(publish("empty")).toMatchObject({ code: "EEXIST" });
+  await expectRejection(publish("file")).toMatchObject({ code: "EEXIST" });
   expect(await readdir(join(root, "empty"))).toEqual([]);
   expect(await readFile(join(root, "file"), "utf8")).toBe("local work");
   expect(await readFile(join(root, "staging", "file"), "utf8")).toBe("restored");
@@ -44,8 +45,8 @@ test("publication never replaces an existing destination, even an empty folder o
 test("publication refuses a parent folder that was replaced after it was checked", async () => {
   const { root } = await fixture();
   const other = await stat(tmpdir(), { bigint: true });
-  await expect(
+  await expectRejection(
     publishRecoveryStaging({ parent: root, identity: { dev: other.dev, ino: other.ino }, from: "staging", to: "x" }),
-  ).rejects.toThrow("moved");
+  ).toThrow("moved");
   expect((await readdir(root)).sort()).toEqual(["staging"]);
 });

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import {
   createProcessEnvironmentPermissions,
   type ProcessEnvironmentLease,
@@ -68,7 +69,7 @@ describe("process environment permissions", () => {
     await permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity });
 
     expect((await permissions.read("project-2", "acme.agent")).granted).toEqual([]);
-    await expect(permissions.authorize("project-2", source("hash-1"), ["GH_TOKEN"])).rejects.toMatchObject({
+    await expectRejection(permissions.authorize("project-2", source("hash-1"), ["GH_TOKEN"])).toMatchObject({
       code: "process_environment_not_granted",
     });
   });
@@ -77,9 +78,9 @@ describe("process environment permissions", () => {
     const { permissions } = setup();
     const { sourceIdentity } = await permissions.read("project-1", "acme.agent");
 
-    await expect(
+    await expectRejection(
       permissions.grant("project-1", "acme.agent", { names: ["OPENAI_API_KEY"], sourceIdentity }),
-    ).rejects.toMatchObject({ code: "process_environment_not_requested" });
+    ).toMatchObject({ code: "process_environment_not_requested" });
   });
 
   test("a grant made against source the person no longer sees is rejected", async () => {
@@ -87,9 +88,9 @@ describe("process environment permissions", () => {
     const { sourceIdentity } = await permissions.read("project-1", "acme.agent");
     sources.set("project-1", source("hash-2"));
 
-    await expect(
+    await expectRejection(
       permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity }),
-    ).rejects.toMatchObject({ code: "process_environment_source_changed" });
+    ).toMatchObject({ code: "process_environment_source_changed" });
   });
 
   test("changed source content invalidates its grant until the person allows it again", async () => {
@@ -101,11 +102,11 @@ describe("process environment permissions", () => {
     const after = await permissions.read("project-1", "acme.agent");
     expect(after).toMatchObject({ granted: [], stale: true });
     expect(after.sourceIdentity).not.toBe(before.sourceIdentity);
-    await expect(permissions.authorize("project-1", source("hash-2"), ["GH_TOKEN"])).rejects.toMatchObject({
+    await expectRejection(permissions.authorize("project-1", source("hash-2"), ["GH_TOKEN"])).toMatchObject({
       code: "process_environment_not_granted",
     });
     // A command still running on the retired generation cannot use the old grant either.
-    await expect(permissions.authorize("project-1", source("hash-1"), ["GH_TOKEN"])).rejects.toMatchObject({
+    await expectRejection(permissions.authorize("project-1", source("hash-1"), ["GH_TOKEN"])).toMatchObject({
       code: "process_environment_not_granted",
     });
   });
@@ -115,14 +116,14 @@ describe("process environment permissions", () => {
     const { sourceIdentity } = await permissions.read("project-1", "acme.agent");
     await permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity });
 
-    await expect(permissions.authorize("project-1", source("hash-1"), ["GH_TOKEN"])).resolves.toBeDefined();
-    await expect(
+    expect(await permissions.authorize("project-1", source("hash-1"), ["GH_TOKEN"])).toBeDefined();
+    await expectRejection(
       permissions.authorize("project-1", source("hash-1"), ["GH_TOKEN", "ANTHROPIC_API_KEY"]),
-    ).rejects.toMatchObject({
+    ).toMatchObject({
       code: "process_environment_not_granted",
       message: expect.stringContaining("ANTHROPIC_API_KEY"),
     });
-    await expect(permissions.authorize("project-1", source("hash-1"), ["OPENAI_API_KEY"])).rejects.toMatchObject({
+    await expectRejection(permissions.authorize("project-1", source("hash-1"), ["OPENAI_API_KEY"])).toMatchObject({
       code: "process_environment_not_requested",
     });
   });
@@ -141,7 +142,7 @@ describe("process environment permissions", () => {
 
     expect(events).toEqual(["stopped while granted: true"]);
     expect((await permissions.read("project-1", "acme.agent")).granted).toEqual([]);
-    await expect(permissions.authorize("project-1", source("hash-1"), ["GH_TOKEN"])).rejects.toMatchObject({
+    await expectRejection(permissions.authorize("project-1", source("hash-1"), ["GH_TOKEN"])).toMatchObject({
       code: "process_environment_not_granted",
     });
   });
@@ -179,7 +180,7 @@ describe("process environment permissions", () => {
     const authorizing = permissions.authorize("project-1", sources.get("project-1")!, ["GH_TOKEN"]);
     await permissions.revoke("project-1", "acme.agent");
     lookup.resolve();
-    await expect(authorizing).rejects.toMatchObject({ code: "process_environment_not_granted" });
+    await expectRejection(authorizing).toMatchObject({ code: "process_environment_not_granted" });
   });
 
   test("a grant made while a revocation is stopping children waits, so no child starts in between", async () => {
@@ -192,7 +193,7 @@ describe("process environment permissions", () => {
     const revoking = permissions.revoke("project-1", "acme.agent");
     const granting = permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity });
     await Bun.sleep(10);
-    await expect(permissions.authorize("project-1", sources.get("project-1")!, ["GH_TOKEN"])).rejects.toMatchObject({
+    await expectRejection(permissions.authorize("project-1", sources.get("project-1")!, ["GH_TOKEN"])).toMatchObject({
       code: "process_environment_not_granted",
     });
     stopping.resolve();
@@ -315,7 +316,7 @@ describe("process environment grant persistence", () => {
   test("reading an extension the project does not have reports it as missing", async () => {
     const { permissions } = setup();
 
-    await expect(permissions.read("project-1", "acme.other")).rejects.toMatchObject({
+    await expectRejection(permissions.read("project-1", "acme.other")).toMatchObject({
       code: "extension_not_found",
     });
   });

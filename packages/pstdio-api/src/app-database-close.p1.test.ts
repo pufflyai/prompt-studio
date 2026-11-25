@@ -10,6 +10,7 @@ import {
 } from "./features/harnesses/test-harness-registry";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { createTestApp } from "./test-utils/create-test-app";
+import { expectRejection } from "./test-utils/expect-rejection";
 import { folderProjectInput } from "./test-utils/folder-project-input";
 
 setDefaultTimeout(20_000);
@@ -144,9 +145,9 @@ describe("app database close", () => {
       const fileInTheWay = join(root, "not-a-folder");
       writeFileSync(fileInTheWay, "");
 
-      await expect(
+      await expectRejection(
         createTestApp({ databasePath: join(root, "pstdio.db"), storageRoot: join(fileInTheWay, "storage") }),
-      ).rejects.toThrow();
+      ).toThrow();
 
       await reopen(root);
     });
@@ -157,7 +158,7 @@ describe("app database close", () => {
       const handle = await createTestApp({ databasePath: join(root, "pstdio.db"), storageRoot: join(root, "storage") });
       spyOn(handle.deps.automationService, "close").mockRejectedValue(new Error("automation close failed"));
 
-      await expect(handle.close()).rejects.toThrow("automation close failed");
+      await expectRejection(handle.close()).toThrow("automation close failed");
 
       await reopen(root);
     });
@@ -218,6 +219,6 @@ describe("closeBeforeFatalExit", () => {
   });
 
   test("does not reject when close fails", async () => {
-    await expect(closeBeforeFatalExit(() => Promise.reject(new Error("close failed")))).resolves.toBeUndefined();
+    expect(await closeBeforeFatalExit(() => Promise.reject(new Error("close failed")))).toBeUndefined();
   });
 });

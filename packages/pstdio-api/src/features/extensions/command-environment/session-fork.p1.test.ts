@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -75,7 +76,7 @@ test("the scoped public fork copies a settled native conversation and rejects fo
     expect(starts).toBe(0);
     const foreign = await handle.deps.projectService.create({ name: "Foreign" });
     const other = createSessionsApi(handle.deps, { projectId: foreign.id, project: { ...foreign, shorthand: "F" } });
-    await expect(other.fork(source.id, "answer")).rejects.toThrow("Session not found");
+    await expectRejection(other.fork(source.id, "answer")).toThrow("Session not found");
     // Keep a real public control owner alive across both reads; an ownerless status can recover to settled.
     pendingControl = api.invokeHarnessOperation(source.id, { kind: "command", text: "/status" });
     await Promise.race([
@@ -85,9 +86,9 @@ test("the scoped public fork copies a settled native conversation and rejects fo
       }),
     ]);
     expect((await api.getForkState(source.id)).disabledReason).toContain("pending work");
-    await expect(api.fork(source.id)).rejects.toThrow("pending work");
+    await expectRejection(api.fork(source.id)).toThrow("pending work");
     expect(await api.getForkState(source.id, { scope: "reply" })).toEqual({ supported: true, disabledReason: null });
-    await expect(api.fork(source.id, "answer")).rejects.toThrow("completed agent reply");
+    await expectRejection(api.fork(source.id, "answer")).toThrow("completed agent reply");
     const owner = handle.deps.sessionService.store.get(source.id)!;
     const conversation = await owner.conversationReady;
     conversation.push({
@@ -103,7 +104,7 @@ test("the scoped public fork copies a settled native conversation and rejects fo
     const earlier = await api.fork(source.id, "answer");
     expect(earlier.status).toBe("completed");
     expect(handle.deps.sessionService.store.get(source.id)).toBe(owner);
-    await expect(api.fork(source.id, "partial")).rejects.toThrow("completed agent reply");
+    await expectRejection(api.fork(source.id, "partial")).toThrow("completed agent reply");
   } finally {
     releaseControl.resolve();
     try {

@@ -209,11 +209,11 @@ describe("extension settings endpoints", () => {
   test("gets declared settings through validation", async () => {
     const declared = await app.request(`/v1/projects/${projectId}/extensions/${instanceId}/settings/counter.step`);
     expect(declared.status).toBe(200);
-    await expect(declared.json()).resolves.toMatchObject({ key: "counter.step", value: 1, source: "default" });
+    expect(await declared.json()).toMatchObject({ key: "counter.step", value: 1, source: "default" });
 
     const unknown = await app.request(`/v1/projects/${projectId}/extensions/${instanceId}/settings/missing`);
     expect(unknown.status).toBe(400);
-    await expect(unknown.json()).resolves.toMatchObject({ code: "extension_setting_unknown_key" });
+    expect(await unknown.json()).toMatchObject({ code: "extension_setting_unknown_key" });
   });
 
   test("lists defaults and stores settings by declared scope", async () => {
@@ -268,16 +268,16 @@ describe("extension settings endpoints", () => {
       value: true,
     });
     expect(unknown.status).toBe(400);
-    await expect(unknown.json()).resolves.toMatchObject({ code: "extension_setting_unknown_key" });
+    expect(await unknown.json()).toMatchObject({ code: "extension_setting_unknown_key" });
 
     const invalid = await putJson(`/v1/projects/${projectId}/extensions/${instanceId}/settings/counter.enabled`, {
       value: "yes",
     });
     expect(invalid.status).toBe(400);
-    await expect(invalid.json()).resolves.toMatchObject({ code: "extension_setting_invalid" });
+    expect(await invalid.json()).toMatchObject({ code: "extension_setting_invalid" });
 
     const wrongScope = await putJson(`/v1/extensions/installed/${installName}/settings/counter.step`, { value: 2 });
     expect(wrongScope.status).toBe(400);
-    await expect(wrongScope.json()).resolves.toMatchObject({ code: "extension_settings_scope_mismatch" });
+    expect(await wrongScope.json()).toMatchObject({ code: "extension_settings_scope_mismatch" });
   });
 });

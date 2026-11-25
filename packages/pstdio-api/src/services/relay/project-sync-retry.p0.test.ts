@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createProjectSyncRetry } from "./project-sync-retry";
 
 test("an empty selected source is rejected without retrying the project; omission still retries all sources", async () => {
@@ -23,7 +24,7 @@ test("an empty selected source is rejected without retrying the project; omissio
     folders: { get: () => source("folders") },
     extensions: new Map([[JSON.stringify(["project", "example.files"]), extension]]),
   });
-  await expect(retry("project", "")).rejects.toThrow("Unknown Cloud sync source");
+  await expectRejection(retry("project", "")).toThrow("Unknown Cloud sync source");
   expect(calls).toEqual([]);
   await retry("project", "example.files");
   expect(calls).toEqual(["extension:restart"]);

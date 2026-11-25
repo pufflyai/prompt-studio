@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createSessionScheduler } from "./session-scheduler";
 
 describe("session scheduler cancellation", () => {
@@ -66,7 +67,7 @@ describe("session scheduler cancellation", () => {
     controller.abort(new DOMException("cancelled", "AbortError"));
     inserted.resolve({ queue_position: 7 });
 
-    await expect(scheduling).rejects.toThrow();
+    await expectRejection(scheduling).toThrow();
     expect(remove).toHaveBeenCalledWith(7);
   });
 });
@@ -89,7 +90,7 @@ test("automatic continuation rejects a user stop after scheduler observation", a
         },
       },
     });
-    await expect(
+    await expectRejection(
       scheduler.startOrQueueExisting({
         session: completed,
         prompt: "Automatic",
@@ -99,7 +100,7 @@ test("automatic continuation rejects a user stop after scheduler observation", a
           endedAt: completed.last_request_ended,
         },
       }),
-    ).rejects.toThrow("execution changed");
+    ).toThrow("execution changed");
     expect((await service.get(session.id))?.status).toBe("cancelled");
     expect(await handle.deps.sessionQueueEntriesService.listPendingBySession(session.id)).toHaveLength(0);
   } finally {

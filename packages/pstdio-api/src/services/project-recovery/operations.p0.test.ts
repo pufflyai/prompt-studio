@@ -3,6 +3,7 @@ import { lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, stat, writeFile
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { captureRecoveryFolder } from "./capture";
 import type { createRecoveryCatalog } from "./catalog";
 import { createRecoveryChunkStore } from "./chunks";
@@ -80,7 +81,7 @@ test("a corrupted local chunk fails verification and the next restore downloads 
   await writeFile(join(local.directory, largest.name), bytes);
 
   expect(await restore(join(root, "second"))).toMatchObject({ state: "failed", error: { code: "integrity" } });
-  await expect(lstat(join(root, "second"))).rejects.toThrow();
+  await expectRejection(lstat(join(root, "second"))).toThrow();
   expect(await restore(join(root, "third"))).toMatchObject({ state: "complete", error: null });
   expect(await readFile(join(root, "third", "notes.md"), "utf8")).toBe("saved without a commit");
 });

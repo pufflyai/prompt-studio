@@ -3,6 +3,7 @@ import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { normalizeExtensionSources } from "pstdio-extensions";
 import { createMemoryDocumentStore } from "pstdio-sync";
 import { createDocumentStorage } from "pstdio-sync/records";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import type { ExtensionsRouteDeps } from "./deps";
 import {
   assignDeviceAutomation,
@@ -91,7 +92,7 @@ test.each([old, current])("existing assignment %s keeps its device and actual re
     scheduleId: current,
     deviceId: "original",
   });
-  await expect(assignDeviceAutomation(f.deps, "project", { scheduleId: current, deviceId: "other" })).rejects.toThrow(
+  await expectRejection(assignDeviceAutomation(f.deps, "project", { scheduleId: current, deviceId: "other" })).toThrow(
     "assigned",
   );
   await setDeviceAutomationEnabled(f.deps, "project", { scheduleId: old, instanceId: "instance", enabled: false });
@@ -110,8 +111,8 @@ test("distinct assignment histories cannot silently choose a device", async () =
       replace: { scheduleId: recordId, deviceId: recordId, enabled: true, startsAt: "2026-11-01T00:00:00Z" },
     })),
   });
-  await expect(readDeviceAutomation(f.deps, "project", current)).rejects.toThrow(/conflict/i);
-  await expect(listDeviceAutomations(f.deps, "project")).rejects.toThrow(/conflict/i);
+  await expectRejection(readDeviceAutomation(f.deps, "project", current)).toThrow(/conflict/i);
+  await expectRejection(listDeviceAutomations(f.deps, "project")).toThrow(/conflict/i);
   expect(await f.storage.records.list()).toHaveLength(2);
 });
 

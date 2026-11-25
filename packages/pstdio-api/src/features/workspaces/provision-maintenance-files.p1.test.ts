@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createWorkspaceFilesMount } from "pstdio-extensions";
 import { createWorkspaceMaintenance } from "../../services/workspace-maintenance";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { provisionProjectWorkspaces } from "./provision-coordinator";
 import { maintenanceFixture } from "./provision-maintenance.test-fixture";
 
@@ -49,7 +50,7 @@ test("converges 65 file-backed skill copies after multiple changes and removes o
       expect(await readFile(join(root, id, ".claude/skills/replacement-skill/SKILL.md"), "utf8")).toBe(
         "replacement-skill v2",
       );
-      await expect(access(join(root, id, ".claude/skills/removed-skill/SKILL.md"))).rejects.toMatchObject({
+      await expectRejection(access(join(root, id, ".claude/skills/removed-skill/SKILL.md"))).toMatchObject({
         code: "ENOENT",
       });
       expect(applied.get(id)).toEqual(["first-skill", "replacement-skill"]);

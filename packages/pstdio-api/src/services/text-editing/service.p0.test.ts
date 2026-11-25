@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import * as Y from "yjs";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { editorView, selected, textEditingFixture } from "./text-editing.test-fixture";
 
 const fixtures: Awaited<ReturnType<typeof textEditingFixture>>[] = [];
@@ -34,14 +35,14 @@ test("a selected opening returns the admitted room and binds it to its project",
   const { token, opened } = await f.text.connect("project-1", scope, { memberId, active: false });
   expect(opened?.snapshot.editable).toBe(true);
   const snapshot = { operation: "snapshot" as const, handle: opened!.handle };
-  await expect(f.text.request({ projectId: "other", token }, snapshot)).rejects.toMatchObject({
+  await expectRejection(f.text.request({ projectId: "other", token }, snapshot)).toMatchObject({
     code: "grant_invalid",
   });
   expect((await f.text.request({ projectId: "project-1", token }, snapshot)).seedId).toBe(opened!.snapshot.seedId);
   await f.text.disconnect({ projectId: "project-1", token });
-  await expect(
+  await expectRejection(
     f.text.connect("project-1", { kind: "placement", viewId: editorView }, { memberId, active: true }),
-  ).rejects.toMatchObject({ code: "grant_invalid" });
+  ).toMatchObject({ code: "grant_invalid" });
 });
 
 test("selected source grants admit a different publisher without exposing unselected source ownership", async () => {
@@ -56,9 +57,9 @@ test("selected source grants admit a different publisher without exposing unsele
   expect((own as { snapshot: { state: string } }).snapshot.state).not.toBe(
     (opened as { snapshot: { state: string } }).snapshot.state,
   );
-  await expect(
+  await expectRejection(
     open(f, connection, { extensionId: "example.context", sourceId: "body", params: {} }),
-  ).rejects.toMatchObject({ code: "invalid_frame" });
+  ).toMatchObject({ code: "invalid_frame" });
 });
 
 test("first open checks access at the room, including a read-only change since selection", async () => {
@@ -84,22 +85,22 @@ test("a copied grant or handle cannot cross member placements or projects", asyn
   const second = await connect(f);
   const grant = await f.text.request(first, { operation: "current" });
   const opened = (await open(f, first, { grant })) as { handle: string };
-  await expect(open(f, second, { grant })).rejects.toMatchObject({ code: "grant_invalid" });
-  await expect(f.text.request(second, { operation: "snapshot", handle: opened.handle })).rejects.toMatchObject({
+  await expectRejection(open(f, second, { grant })).toMatchObject({ code: "grant_invalid" });
+  await expectRejection(f.text.request(second, { operation: "snapshot", handle: opened.handle })).toMatchObject({
     code: "session_closed",
   });
-  await expect(
+  await expectRejection(
     f.text.request({ ...first, projectId: "project-other" }, { operation: "snapshot", handle: opened.handle }),
-  ).rejects.toMatchObject({ code: "grant_invalid" });
+  ).toMatchObject({ code: "grant_invalid" });
 });
 
 test("native presentation and custom presentation must match the source owner's selection", async () => {
   const f = await setup();
-  await expect(f.text.connect("project-1", { kind: "placement", target: selected })).rejects.toMatchObject({
+  await expectRejection(f.text.connect("project-1", { kind: "placement", target: selected })).toMatchObject({
     code: "capability_denied",
   });
   await writeFile(join(f.root, "native"), "");
-  await expect(connect(f)).rejects.toMatchObject({ code: "capability_denied" });
+  await expectRejection(connect(f)).toMatchObject({ code: "capability_denied" });
   const native = await f.text.connect("project-1", { kind: "placement", target: selected });
   expect(native).toHaveProperty("token");
 });
@@ -111,11 +112,11 @@ test("read-only admission and capability withdrawal are rechecked before text mu
   const grant = await f.text.request(connection, { operation: "current" });
   const opened = (await open(f, connection, { grant })) as { handle: string; snapshot: { editable: boolean } };
   expect(opened.snapshot.editable).toBe(false);
-  await expect(
+  await expectRejection(
     f.text.request(connection, { operation: "submit", handle: opened.handle, sequence: 1, update: "AAA=" }),
-  ).rejects.toMatchObject({ code: "source_read_only" });
+  ).toMatchObject({ code: "source_read_only" });
   f.disableEditor();
-  await expect(f.text.request(connection, { operation: "snapshot", handle: opened.handle })).rejects.toMatchObject({
+  await expectRejection(f.text.request(connection, { operation: "snapshot", handle: opened.handle })).toMatchObject({
     code: "capability_denied",
   });
 });
@@ -130,19 +131,19 @@ test("text frames cannot write host metadata or unrelated roots", async () => {
   const vector = Y.encodeStateVector(source);
   source.getMap("unrelated").set("value", "not source text");
   const update = Buffer.from(Y.encodeStateAsUpdate(source, vector)).toString("base64");
-  await expect(
+  await expectRejection(
     f.text.request(connection, { operation: "submit", handle: opened.handle, sequence: 1, update }),
-  ).rejects.toMatchObject({ code: "invalid_frame" });
+  ).toMatchObject({ code: "invalid_frame" });
   const memberId = crypto.randomUUID();
   await f.text.request(connection, { operation: "register", memberId });
-  await expect(
+  await expectRejection(
     f.text.request(connection, {
       operation: "open",
       memberId,
       input: { grant: grant as { token: string } },
       sourceState: Buffer.from(Y.encodeStateAsUpdate(source)).toString("base64"),
     }),
-  ).rejects.toMatchObject({ code: "invalid_frame" });
+  ).toMatchObject({ code: "invalid_frame" });
   source.destroy();
 });
 
@@ -158,14 +159,14 @@ test("read-only history recovery cannot smuggle canonical text without a pending
   const memberId = crypto.randomUUID();
   await f.text.request(connection, { operation: "register", memberId });
   try {
-    await expect(
+    await expectRejection(
       f.text.request(connection, {
         operation: "open",
         memberId,
         input: { grant: grant! },
         sourceState: Buffer.from(Y.encodeStateAsUpdate(document)).toString("base64"),
       }),
-    ).rejects.toMatchObject({ code: "source_read_only" });
+    ).toMatchObject({ code: "source_read_only" });
     const snapshot = await f.text.request(connection, { operation: "snapshot", handle: original.handle });
     const current = new Y.Doc();
     try {
@@ -204,7 +205,7 @@ test("a lost durable acknowledgement can settle after write permission is withdr
     await f.text.request(connection, { operation: "project", handle: original.handle, revision: receipt.revision });
     await writeFile(join(f.root, "read-only"), "");
     expect(await f.text.request(connection, request)).toEqual({ ...receipt, editable: false });
-    await expect(f.text.request(connection, { ...request, sequence: 2 })).rejects.toMatchObject({
+    await expectRejection(f.text.request(connection, { ...request, sequence: 2 })).toMatchObject({
       code: "source_read_only",
     });
   } finally {

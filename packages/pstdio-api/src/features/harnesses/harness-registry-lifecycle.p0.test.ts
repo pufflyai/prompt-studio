@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import type { HarnessContext } from "pstdio-api-contracts/extension-kernel";
 import { createHarnessRegistry } from "pstdio-api-runtime-host";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createHarnessRegistryLifecycle } from "./harness-registry-lifecycle";
 import { createTestHarnessRecord } from "./test-harness-registry";
 
@@ -62,7 +63,7 @@ test("catalog refresh keeps unchanged providers and disposes removed providers w
   expect(released).toEqual(["removed"]);
   await lifecycle.dispose();
   expect(released).toEqual(["removed", "kept"]);
-  await expect(lifecycle.get([kept], "p1")).rejects.toThrow("disposed");
+  await expectRejection(lifecycle.get([kept], "p1")).toThrow("disposed");
 });
 
 test("keeps the last record and reports duplicates on namespaced id collisions", async () => {

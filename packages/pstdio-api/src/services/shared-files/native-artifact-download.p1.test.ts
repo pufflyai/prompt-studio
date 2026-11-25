@@ -5,6 +5,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { documents as storage_documents } from "pstdio-db";
 import { NativeSourcePendingError } from "pstdio-sync";
 import * as Y from "yjs";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { artifactFilesFixture } from "./artifact-files.fixture";
 import { createSharedArtifactMount } from "./artifact-mount";
 
@@ -42,7 +43,7 @@ test.each([
     expect(await mount.readText("outside.txt")).toBe("Outside edit");
     expect(await Bun.file(f.pathFor("documents/waiting.md")).text()).toBe(original);
     expect(await Bun.file(join(directory, "waiting.md")).exists()).toBe(copy === "existing");
-    await expect(text.read()).rejects.toBeInstanceOf(NativeSourcePendingError);
+    await expectRejection(text.read()).toBeInstanceOf(NativeSourcePendingError);
 
     const received = new Y.Doc();
     try {

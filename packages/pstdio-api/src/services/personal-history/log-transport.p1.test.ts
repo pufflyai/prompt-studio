@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { createSyncSpace, openLive, openUpdate } from "pstdio-sync/encryption";
 import { inertSessionChannelHooks } from "../../features/sessions/session-store.test-utils";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createLiveReceiver } from "./live-messages";
 import { messageEntries } from "./log-entries";
 import { createSessionLogFiles } from "./log-files";
@@ -183,9 +184,9 @@ test("catch-up commits each expanded blob before downloading the next and resume
       },
     },
   });
-  await expect(
+  await expectRejection(
     createLogReceiver({ files, namespace: "reader", received() {} }).read(["catch-up"], space, relay),
-  ).rejects.toThrow("connection interrupted");
+  ).toThrow("connection interrupted");
   await createLogReceiver({ files, namespace: "reader", received() {} }).read(["catch-up"], space, () => transport);
   expect((await files.read("reader", "catch-up")).map((row) => row.id)).toEqual(["0", "1"]);
   expect(await files.readPosition("reader", "catch-up")).toEqual({ after: 2 });

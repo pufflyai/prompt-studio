@@ -9,6 +9,7 @@ import * as Y from "yjs";
 import { createWorkspaceContextFixture } from "../../features/extensions/workspace-context.test-fixture";
 import { createNativeDocumentRoutes } from "../../features/native-documents/routes";
 import { createTextStreamTestApp } from "../../features/text-editing/stream.test-utils";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createNativeDocumentService } from "./documents";
 import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./file-source";
 import { resolveNativeTextAccess } from "./source-access";
@@ -134,7 +135,7 @@ test.each([
   }
   await records.commit({ operationId: "remove-source", edits: [{ recordId: "source", deleted: true }] });
   if (state === "unintegrated") {
-    await expect(service.release(address)).rejects.toMatchObject({ code: "native_source_retired" });
+    await expectRejection(service.release(address)).toMatchObject({ code: "native_source_retired" });
     const retained = await storage.svc.nativeRooms.read({ owner, roomId: room.roomId });
     try {
       expect(retained.document.getText("content").toString()).toBe("editor work");
@@ -143,7 +144,7 @@ test.each([
     }
   } else {
     await service.release(address);
-    await expect(storage.svc.nativeRooms.read({ owner, roomId: room.roomId })).rejects.toMatchObject({
+    await expectRejection(storage.svc.nativeRooms.read({ owner, roomId: room.roomId })).toMatchObject({
       code: "not_found",
     });
   }
@@ -199,17 +200,17 @@ test("restart retains a deleted record's pending text and continues recovering a
   await service.close({ projectId: storage.projectAId, roomId: healthy.roomId });
   await service.dispose();
   await records.commit({ operationId: "delete-source", edits: [{ recordId: "retired", deleted: true }] });
-  await expect(
+  await expectRejection(
     storage.svc.openNativeTextDocument({ owner, fileId: retired.documentKey }).save("cannot revive"),
-  ).rejects.toMatchObject({ code: "native_source_retired" });
+  ).toMatchObject({ code: "native_source_retired" });
   await storage.svc.openNativeTextDocument({ owner, fileId: healthy.documentKey }).save("healthy pending text");
   // This fresh service resolves the same cached declaration; deletion is a known source error.
   const reopened = createService({ storage: storage.svc, load, save });
   await reopened.recover();
   expect((await records.read("retired")).deleted).toBe(true);
-  await expect(storage.svc.openNativeTextDocument({ owner, fileId: retired.documentKey }).read()).rejects.toMatchObject(
-    { code: "native_source_retired" },
-  );
+  await expectRejection(
+    storage.svc.openNativeTextDocument({ owner, fileId: retired.documentKey }).read(),
+  ).toMatchObject({ code: "native_source_retired" });
   const retained = await storage.svc.nativeRooms.read({ owner, roomId: retired.roomId });
   try {
     expect(retained.document.getText("content").toString()).toBe("retained late text");
@@ -243,9 +244,9 @@ test.each([
       content: "complete source",
     });
   }
-  await expect(
+  await expectRejection(
     resolveNativeLoadedSource(deps, { owner, source, content: "snippet", versions: {} }),
-  ).rejects.toMatchObject({ code: "native_document_source_invalid" });
+  ).toMatchObject({ code: "native_document_source_invalid" });
 });
 
 test("a read-only source cannot accept a reconnect frame or replace a writable locator", async () => {
@@ -276,15 +277,15 @@ test("a read-only source cannot accept a reconnect frame or replace a writable l
   author.getText("content").insert(0, "forbidden ");
   const pendingUpdate = Y.encodeStateAsUpdate(author, vector);
   try {
-    await expect(service.open({ ...readOnly, sourceState: Y.encodeStateAsUpdate(author) })).rejects.toMatchObject({
+    await expectRejection(service.open({ ...readOnly, sourceState: Y.encodeStateAsUpdate(author) })).toMatchObject({
       code: "source_read_only",
     });
-    await expect(service.open({ ...readOnly, sourceState: reader.state, pendingUpdate })).rejects.toMatchObject({
+    await expectRejection(service.open({ ...readOnly, sourceState: reader.state, pendingUpdate })).toMatchObject({
       code: "source_read_only",
     });
-    await expect(
+    await expectRejection(
       service.submit({ projectId: storage.projectAId, roomId: reader.roomId, update: pendingUpdate }),
-    ).rejects.toMatchObject({ code: "source_read_only" });
+    ).toMatchObject({ code: "source_read_only" });
     expect(await storage.svc.openNativeTextDocument({ owner: first.owner, fileId: first.documentKey }).read()).toBe(
       "selected folder",
     );
@@ -311,13 +312,13 @@ test("a file view's read-only restriction also limits a writable text provider",
   const vector = Y.encodeStateVector(author);
   author.getText("content").insert(0, "forbidden ");
   try {
-    await expect(
+    await expectRejection(
       service.submit({
         projectId: storage.projectAId,
         roomId: room.roomId,
         update: Y.encodeStateAsUpdate(author, vector),
       }),
-    ).rejects.toMatchObject({ code: "source_read_only" });
+    ).toMatchObject({ code: "source_read_only" });
   } finally {
     author.destroy();
   }
@@ -365,13 +366,13 @@ test("an open provider-backed file rechecks its presentation's write access befo
   const vector = Y.encodeStateVector(author);
   author.getText("content").insert(0, "forbidden ");
   try {
-    await expect(
+    await expectRejection(
       service.submit({
         projectId: storage.projectAId,
         roomId: room.roomId,
         update: Y.encodeStateAsUpdate(author, vector),
       }),
-    ).rejects.toMatchObject({ code: "source_read_only" });
+    ).toMatchObject({ code: "source_read_only" });
   } finally {
     author.destroy();
   }
@@ -479,9 +480,9 @@ test("an existing authority does not admit a legacy presentation returning a sni
     save: (input) => saveNativeMarkdownFile(deps, input),
   });
   const room = await open(service);
-  await expect(
+  await expectRejection(
     service.open({ ...target, projectId: storage.projectAId, pageParams: { snippet: true } }),
-  ).rejects.toMatchObject({ code: "native_document_source_invalid" });
+  ).toMatchObject({ code: "native_document_source_invalid" });
   expect(await storage.svc.nativeRooms.source(room)).toEqual({ ...target, pageParams: undefined });
   expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("selected folder");
 });
@@ -499,14 +500,14 @@ test("a legacy read-only presentation cannot introduce edits inside recovery his
   try {
     Y.applyUpdate(author, room.state);
     author.getText("content").insert(0, "REFUSED ");
-    await expect(
+    await expectRejection(
       service.open({
         ...target,
         projectId: storage.projectAId,
         pageParams: { readOnly: true },
         sourceState: Y.encodeStateAsUpdate(author),
       }),
-    ).rejects.toMatchObject({ code: "native_document_not_editable" });
+    ).toMatchObject({ code: "native_document_not_editable" });
     expect(await storage.svc.openNativeTextDocument({ owner: room.owner, fileId: room.documentKey }).read()).toBe(
       "selected folder",
     );
@@ -747,10 +748,10 @@ test("restart retries an unfinished file save without losing its durable editor 
       roomId: room.roomId,
       update: Y.encodeStateAsUpdate(author, vector),
     });
-    await expect(service.flush({ projectId: storage.projectAId, roomId: room.roomId })).rejects.toThrow(
+    await expectRejection(service.flush({ projectId: storage.projectAId, roomId: room.roomId })).toThrow(
       "File save paused",
     );
-    await expect(service.close(request)).rejects.toThrow("File save paused");
+    await expectRejection(service.close(request)).toThrow("File save paused");
     expect(participant.snapshot()).toHaveLength(1);
     // File failures retain the room; acknowledged text remains readable.
     const readable = new Y.Doc();
@@ -790,7 +791,7 @@ test("an outside deletion after bytes were written survives a later save-handler
       roomId: room.roomId,
       update: Y.encodeStateAsUpdate(author, vector),
     });
-    await expect(service.flush({ projectId: storage.projectAId, roomId: room.roomId })).rejects.toThrow(
+    await expectRejection(service.flush({ projectId: storage.projectAId, roomId: room.roomId })).toThrow(
       "after writing bytes",
     );
     expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("EDITOR selected folder");
@@ -829,17 +830,17 @@ test("presence stays connection-owned and never changes the durable source or ed
   expect(right.snapshot().find((participant) => participant.participantId === left.participantId)?.selection).toEqual(
     selection,
   );
-  await expect(
+  await expectRejection(
     service.presence.update({ ...secondRequest, participantId: left.participantId, selection }),
-  ).rejects.toThrow("not found");
-  await expect(
+  ).toThrow("not found");
+  await expectRejection(
     service.presence.update({
       ...firstRequest,
       projectId: storage.projectBId,
       participantId: left.participantId,
       selection,
     }),
-  ).rejects.toThrow("not found");
+  ).toThrow("not found");
   expect(await canonical.exportUpdate()).toEqual(before);
   const room = await storage.svc.nativeRooms.read({ owner: first.owner, roomId: first.roomId });
   expect(room.revision).toBe(0);
@@ -958,9 +959,9 @@ test("two local rooms converge and a stale frame retains edits made in both room
   Y.applyUpdate(snapshot, accepted.state);
   expect(snapshot.getText("content").toString()).toBe("FIRST selected folder LAST");
   await service.close({ projectId: storage.projectAId, roomId: first.roomId });
-  await expect(
+  await expectRejection(
     service.submit({ projectId: storage.projectAId, roomId: first.roomId, update: new Uint8Array([0, 0]) }),
-  ).rejects.toThrow("not found");
+  ).toThrow("not found");
   left.destroy();
   right.destroy();
   snapshot.destroy();
@@ -969,8 +970,8 @@ test("two local rooms converge and a stale frame retains edits made in both room
 test("a room handle cannot be used through another project", async () => {
   const { service } = setup();
   const room = await open(service);
-  await expect(service.snapshot({ projectId: storage.projectBId, roomId: room.roomId })).rejects.toThrow("not found");
-  await expect(service.close({ projectId: storage.projectBId, roomId: room.roomId })).rejects.toThrow("not found");
+  await expectRejection(service.snapshot({ projectId: storage.projectBId, roomId: room.roomId })).toThrow("not found");
+  await expectRejection(service.close({ projectId: storage.projectBId, roomId: room.roomId })).toThrow("not found");
 });
 
 test("a received peer insertion can anchor the next local frame without a history repair", async () => {
@@ -1138,7 +1139,7 @@ test("shutdown drains an admitted edit before recovery and refuses new editor wo
   });
   await service.dispose();
   await saving;
-  await expect(open(service)).rejects.toThrow("closed");
+  await expectRejection(open(service)).toThrow("closed");
   const resumed = createService({
     storage: storage.svc,
     load: (input) => loadNativeMarkdownFile(deps, input),

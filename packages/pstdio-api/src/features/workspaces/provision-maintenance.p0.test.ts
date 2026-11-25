@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { provisionProjectWorkspaces, removeProjectAfterProvisioning } from "./provision-coordinator";
 import { maintenanceFixture } from "./provision-maintenance.test-fixture";
 
@@ -122,11 +123,11 @@ test("project removal stops catalog catch-up and later provisioning sees the rem
 
 test("failed project removal releases the pending-removal gate for later provisioning", async () => {
   const f = maintenanceFixture(1);
-  await expect(
+  await expectRejection(
     removeProjectAfterProvisioning(f.deps, "project", async () => {
       throw new Error("Removal failed");
     }),
-  ).rejects.toThrow("Removal failed");
+  ).toThrow("Removal failed");
   await provisionProjectWorkspaces(f.deps, "project", f.hooks);
   expect(f.calls).toEqual(["ws-0"]);
 });
@@ -146,7 +147,7 @@ test("refreshes surviving workspaces when a removal interrupts an active pass an
   });
   const afterRemoval = provisionProjectWorkspaces(f.deps, "project", f.hooks);
   release.resolve();
-  await expect(removal).rejects.toThrow("Provider cleanup failed");
+  await expectRejection(removal).toThrow("Provider cleanup failed");
   await Promise.all([first, afterRemoval]);
   expect(f.calls.slice(1).sort()).toEqual(["ws-0", "ws-1", "ws-2"]);
 });

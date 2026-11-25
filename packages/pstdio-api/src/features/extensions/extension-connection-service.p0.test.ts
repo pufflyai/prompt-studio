@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createExtensionConnectionService } from "./extension-connection-service";
 import {
   connection,
@@ -64,14 +65,14 @@ describe("extension connection service", () => {
     const fetchFn = mock(async () => Response.json({ ok: true }));
     const service = createConnectionTestService(fetchFn as unknown as typeof fetch);
 
-    await expect(
+    await expectRejection(
       service.request({
         projectId: "project-1",
         extensionId: "pstdio.remote",
         connectionId: "control-plane",
         input: { method: "DELETE", path: "/v1/admin" },
       }),
-    ).rejects.toThrow("not allowed");
+    ).toThrow("not allowed");
     expect(fetchFn).not.toHaveBeenCalled();
   });
 
@@ -116,9 +117,9 @@ describe("extension connection service", () => {
       fetch,
     });
 
-    await expect(
-      service.remove({ projectId: "project-1", extensionId: "pstdio.remote", connectionId: "control-plane" }),
-    ).resolves.toBe(true);
+    expect(
+      await service.remove({ projectId: "project-1", extensionId: "pstdio.remote", connectionId: "control-plane" }),
+    ).toBe(true);
     expect(remove).toHaveBeenCalledTimes(1);
   });
 
@@ -173,7 +174,7 @@ describe("extension connection credential ownership", () => {
       fetch,
     });
 
-    await expect(
+    await expectRejection(
       service.configure({
         projectId: "project-1",
         extensionId: "pstdio.remote",
@@ -181,7 +182,7 @@ describe("extension connection credential ownership", () => {
         baseUrl: "https://control.example.test/api/",
         secret: "replacement",
       }),
-    ).rejects.toThrow("database unavailable");
+    ).toThrow("database unavailable");
     expect(deleteSecret).toHaveBeenCalledWith("secret-new");
   });
 
@@ -205,9 +206,9 @@ describe("extension connection credential ownership", () => {
       fetch,
     });
 
-    await expect(
+    await expectRejection(
       service.remove({ projectId: "project-1", extensionId: "pstdio.remote", connectionId: "control-plane" }),
-    ).rejects.toThrow("database unavailable");
+    ).toThrow("database unavailable");
     expect(deleteSecret).not.toHaveBeenCalled();
   });
 
@@ -269,7 +270,7 @@ describe("extension connection credential ownership", () => {
       fetch,
     });
 
-    await expect(
+    await expectRejection(
       service.configure({
         projectId: "project-1",
         extensionId: "pstdio.remote",
@@ -277,7 +278,7 @@ describe("extension connection credential ownership", () => {
         baseUrl: "https://new.example.test/",
         secret: "replacement",
       }),
-    ).rejects.toThrow("old credential delete failed");
+    ).toThrow("old credential delete failed");
     expect(upserts.map((input) => input.secretRef)).toEqual(["secret-new", "secret-1"]);
     expect(deleteSecret).toHaveBeenCalledWith("secret-new");
   });

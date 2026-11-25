@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { createClient } from "@pstdio/sdk/client";
 import { createAccountRoutes } from "../../features/account/routes";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createNativeAccount } from "./native-account";
 
 test.each([
@@ -79,7 +80,7 @@ test("native login rejects an invalid configured service instead of using the ho
     },
   });
   try {
-    await expect(account.login()).rejects.toThrow("https");
+    await expectRejection(account.login()).toThrow("https");
   } finally {
     await account.close();
     await rm(root, { recursive: true, force: true });

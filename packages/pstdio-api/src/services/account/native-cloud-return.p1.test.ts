@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createNativeAccount } from "./native-account";
 import type { CloudReturn } from "./native-cloud-return";
 
@@ -111,7 +112,7 @@ test("once the account's projects load, projects it does not sync are released",
         ["dismiss", "kept"],
       ]),
     );
-    await expect(host.service.resolveReturnedChanges("kept", "discard")).rejects.toThrow("No changes are held");
+    await expectRejection(host.service.resolveReturnedChanges("kept", "discard")).toThrow("No changes are held");
   } finally {
     await host.close();
     await manager.stop(true);

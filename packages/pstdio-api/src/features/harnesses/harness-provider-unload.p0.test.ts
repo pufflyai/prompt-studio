@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import type { HarnessContext } from "pstdio-api-contracts/extension-kernel";
 import { createHarnessRegistry } from "pstdio-api-runtime-host";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import type { RuntimeInvalidationInput } from "../extensions/project-extension-runtime-snapshot";
 import { createHarnessRegistryLifecycle } from "./harness-registry-lifecycle";
 import { createHarnessRegistryService } from "./harness-registry-service";
@@ -59,7 +60,7 @@ test("project disablement releases its workers without a follow-up and preserves
     expect(await registry.get(worker.id, { projectId: "p1" })).toBeNull();
     await second.capabilities({ projectId: "p2" });
     expect(released).toEqual(["p1"]);
-    await expect(first.capabilities({ projectId: "p1" })).rejects.toThrow("disposed");
+    await expectRejection(first.capabilities({ projectId: "p1" })).toThrow("disposed");
   } finally {
     await registry.dispose();
   }
@@ -102,7 +103,7 @@ test("a failed host cleanup still waits for project cleanup before shutdown reje
     expect(settled).toBe(false);
   } finally {
     releaseProject();
-    await expect(closing).rejects.toThrow("cleanup");
+    await expectRejection(closing).toThrow("cleanup");
   }
 });
 

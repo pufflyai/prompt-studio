@@ -7,6 +7,7 @@ import { openProject } from "../../features/projects/open-project";
 import { remoteWorkspaceCapabilities } from "../../features/workspaces/workspace-provider.test-fixture";
 import type { WorkspaceProviderRuntime } from "../../features/workspaces/workspace-provider-runtime";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { historyNamespace } from "../personal-history/log-files";
 import { projectRecoveryRoot } from "../project-recovery/project-paths";
 import { nativeAccountFile } from "./native-account";
@@ -210,14 +211,14 @@ test("removing a local copy preserves its source folder and stays removed after 
         await Bun.sleep(10);
       }
       expect(signal?.aborted).toBe(false);
-      await expect(
+      await expectRejection(
         data.records.commit({ operationId: "late-edit", edits: [{ recordId: "late", replace: "late" }] }),
-      ).rejects.toThrow("This device is removing");
-      await expect(unopened.records.read("note")).rejects.toThrow("This device is removing");
-      await expect(unopened.records.outcome("late-edit")).rejects.toThrow("This device is removing");
-      await expect(data.records.defineIndexes([])).rejects.toThrow("This device is removing");
-      await expect(data.records.query({ index: "notes" })).rejects.toThrow("This device is removing");
-      await expect(data.records.aggregate({ index: "notes" })).rejects.toThrow("This device is removing");
+      ).toThrow("This device is removing");
+      await expectRejection(unopened.records.read("note")).toThrow("This device is removing");
+      await expectRejection(unopened.records.outcome("late-edit")).toThrow("This device is removing");
+      await expectRejection(data.records.defineIndexes([])).toThrow("This device is removing");
+      await expectRejection(data.records.query({ index: "notes" })).toThrow("This device is removing");
+      await expectRejection(data.records.aggregate({ index: "notes" })).toThrow("This device is removing");
       expect(await lstat(attachment.storage_path)).toBeDefined();
     } finally {
       stopped.resolve();
@@ -226,7 +227,7 @@ test("removing a local copy preserves its source folder and stays removed after 
     expect((await removing).status).toBe(200);
     expect(await host.deps.projectService.get(id)).toBeNull();
     for (const path of [attachment.storage_path, cache, historyPath])
-      await expect(lstat(path)).rejects.toMatchObject({ code: "ENOENT" });
+      await expectRejection(lstat(path)).toMatchObject({ code: "ENOENT" });
     expect(await readFile(sourceFile, "utf8")).toBe("Keep the original source.");
     await secondDevice.deps.accountService.refresh();
     expect(await secondDevice.deps.projectService.get(id)).toMatchObject({ id, name });
@@ -340,7 +341,7 @@ test("provider failure leaves removal resumable and keeps the managed folder unt
     });
     expect((await request(host, `${path}/remove-local`, {})).status).toBe(200);
     expect(attempts).toEqual([attempts[0], attempts[0]]);
-    await expect(lstat(folder)).rejects.toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(folder)).toMatchObject({ code: "ENOENT" });
   } finally {
     try {
       await settleCleanup([host?.close(), manager.stop(true)]);
@@ -379,7 +380,7 @@ test("restart resumes a device removal whose consent was saved before cleanup be
       if (attempt === 50) throw new Error("Startup did not finish the persisted project removal");
       await Bun.sleep(10);
     }
-    await expect(lstat(file.storage_path)).rejects.toMatchObject({ code: "ENOENT" });
+    await expectRejection(lstat(file.storage_path)).toMatchObject({ code: "ENOENT" });
   } finally {
     await host?.close();
     await rm(root, { recursive: true, force: true });

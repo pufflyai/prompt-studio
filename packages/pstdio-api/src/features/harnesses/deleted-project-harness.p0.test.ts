@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createProjectExtensionRuntimeCatalog } from "../extensions/project-extension-runtime-catalog";
 import { ExtensionRuntimeProjectMissingError } from "../extensions/project-extension-runtime-snapshot";
 import { createHarnessRegistryService } from "./harness-registry-service";
@@ -32,12 +33,12 @@ test("a removed project releases its harness consumers during the next invalidat
     await handle.capabilities({ projectId: "removed" });
     exists = false;
     catalog.invalidate({ projectId: "removed", reason: "enablement_changed" });
-    await expect(service.get(record.id, { projectId: "removed" })).rejects.toBeInstanceOf(
+    await expectRejection(service.get(record.id, { projectId: "removed" })).toBeInstanceOf(
       ExtensionRuntimeProjectMissingError,
     );
     const stopped = await Promise.race([released.promise.then(() => true), Bun.sleep(10).then(() => false)]);
     expect(stopped).toBe(true);
-    await expect(handle.capabilities({ projectId: "removed" })).rejects.toThrow("disposed");
+    await expectRejection(handle.capabilities({ projectId: "removed" })).toThrow("disposed");
   } finally {
     await service.dispose();
   }

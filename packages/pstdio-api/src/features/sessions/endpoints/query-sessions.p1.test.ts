@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { createClient } from "@pstdio/sdk/client";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { createSessionsApi } from "../../extensions/command-environment/sessions";
 
 let handle: Awaited<ReturnType<typeof createTestApp>>;
@@ -118,13 +119,13 @@ test("SDK session iteration cancels before fetching and while yielding a cached 
   const beforeStart = new AbortController();
   beforeStart.abort();
   requests = 0;
-  await expect(client.sessions.iterate(project.id, {}, { signal: beforeStart.signal }).next()).rejects.toThrow();
+  await expectRejection(client.sessions.iterate(project.id, {}, { signal: beforeStart.signal }).next()).toThrow();
   expect(requests).toBe(0);
   const controller = new AbortController();
   const iterator = client.sessions.iterate(project.id, {}, { signal: controller.signal });
   expect((await iterator.next()).done).toBe(false);
   controller.abort();
-  await expect(iterator.next()).rejects.toThrow();
+  await expectRejection(iterator.next()).toThrow();
   expect(requests).toBe(1);
 });
 
@@ -153,7 +154,7 @@ test("session writers reject a workspace owned by another project", async () => 
   const foreign = await handle.deps.projectService.create({ name: "Foreign workspace" });
   const workspace = await handle.deps.workspaceService.createStandalone({ project_id: foreign.id });
   const session = await handle.deps.sessionService.create({ project_id: project.id, title: "Mapped", agent: "worker" });
-  await expect(handle.deps.workspaceSessionService.link(workspace.id, session.id)).rejects.toThrow("session project");
+  await expectRejection(handle.deps.workspaceSessionService.link(workspace.id, session.id)).toThrow("session project");
   const commands = createSessionsApi(handle.deps, { projectId: project.id, project: { ...project, shorthand: "P" } });
   expect(await commands.get(session.id)).toMatchObject({ workspaceId: null, workspace_id: null });
   expect(await client.sessions.get(session.id)).toMatchObject({ workspaceId: null, workspace_id: null });

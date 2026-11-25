@@ -2,6 +2,7 @@ import { afterAll, afterEach, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { writeExtension } from "../features/extensions/default-extensions-test-fixtures";
 import { createTestApp } from "../test-utils/create-test-app";
 import { runStartupTasks } from ".";
 import { prepareSourceRefreshFixture } from "./source-refresh-source.fixture";
@@ -230,4 +231,57 @@ describe("startup default extensions", () => {
       fallback.resolve();
     }
   });
+});
+
+test("activates surviving projects after a project is removed during user extension discovery", async () => {
+  const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-startup-remove-during-discovery-"));
+  const previousHome = process.env.PSTDIO_HOME;
+  process.env.PSTDIO_HOME = join(tempRoot, "home");
+  const sourcePath = join(process.env.PSTDIO_HOME, "extensions", "user-tool");
+  writeExtension(sourcePath, "user-tool", "user");
+  const { deps, close, startupSettled } = await createTestApp();
+  const background: Promise<void>[] = [];
+  try {
+    await startupSettled;
+    const removed = await deps.projectService.create({ name: "Removed project" });
+    const surviving = await deps.projectService.create({ name: "Surviving project" });
+
+    const activated: string[] = [];
+    const unsubscribe = deps.extensionRuntimeCatalog.subscribeActivation((id) => activated.push(id));
+    const startupDeps = {
+      ...deps,
+      extensionService: {
+        ...deps.extensionService,
+        syncInstalledSourceForProject: async (
+          input: Parameters<typeof deps.extensionService.syncInstalledSourceForProject>[0],
+        ) => {
+          if (input.projectId === removed.id) await deps.projectService.delete(removed.id);
+          return deps.extensionService.syncInstalledSourceForProject(input);
+        },
+      },
+    };
+    try {
+      await runStartupTasks(startupDeps, undefined, {
+        prepareDefaultExtensions: async () => {},
+        recoverOrphanedSessions: async () => {},
+        onBackgroundTask: (task) => {
+          background.push(task);
+          void task.catch(() => {});
+        },
+      });
+      await Promise.all(background);
+      expect(await deps.projectService.get(removed.id)).toBeNull();
+      expect(activated).toEqual([surviving.id]);
+      const instances = await deps.extensionService.listProjectExtensionInstances(surviving.id);
+      expect(instances.map(({ installedSource }) => installedSource.source_path)).toContain(sourcePath);
+    } finally {
+      unsubscribe();
+    }
+  } finally {
+    await Promise.allSettled(background);
+    await close();
+    if (previousHome === undefined) delete process.env.PSTDIO_HOME;
+    else process.env.PSTDIO_HOME = previousHome;
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
 });

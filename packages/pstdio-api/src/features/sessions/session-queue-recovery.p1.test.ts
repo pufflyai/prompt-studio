@@ -547,7 +547,8 @@ test("a failed recovered checkpoint stays held while later queued work drains", 
       prompt: "Next independent request",
       request_kind: "start",
     });
-    await expect((await prepareQueuedSessionRecovery(app.deps))()).resolves.toBeUndefined();
+    const recover = await prepareQueuedSessionRecovery(app.deps);
+    expect(await recover()).toBeUndefined();
     expect(launches).toEqual(["Next independent request"]);
     expect((await app.deps.sessionService.get(next.id))?.status).toBe("in_progress");
     expect(await app.deps.sessionQueueEntriesService.listDispatchStarted()).toEqual([

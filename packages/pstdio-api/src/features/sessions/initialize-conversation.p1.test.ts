@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import type { SessionMessage } from "pstdio-api-contracts";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { initializeConversation } from "./initialize-conversation";
 import { checkpointConversation } from "./session-checkpoint";
 import { getSessionHistory } from "./session-history";
@@ -78,7 +79,7 @@ test("a failed handoff restores readable closed history and retries its checkpoi
     const failed = initializeConversation(session.id, deps, async () => {
       prepared++;
     });
-    await expect(failed.conversationReady).rejects.toThrow("Checkpoint unavailable");
+    await expectRejection(failed.conversationReady).toThrow("Checkpoint unavailable");
     expect(prepared).toBe(0);
     expect(handle.deps.sessionService.store.get(session.id)).toBe(oldEntry);
     expect(await getSessionHistory(session.id, deps)).toEqual([turn("retained")]);
@@ -208,9 +209,13 @@ test("a failed optional position write recovers and cannot block a later questio
       questions: [{ question: "Choose?" }],
     });
     void question.catch(() => undefined);
-    await Bun.sleep(0);
-    await entry.contentPublications.catch(() => undefined);
-    await Bun.sleep(0);
+    // The ask saves its status after database round trips, which take longer than a tick in worker mode.
+    for (
+      let attempt = 0;
+      (await deps.sessionService.get(session.id))?.status !== "awaiting_input" && attempt < 100;
+      attempt++
+    )
+      await Bun.sleep(10);
     expect((await deps.sessionService.get(session.id))?.status).toBe("awaiting_input");
   } finally {
     await handle.close();

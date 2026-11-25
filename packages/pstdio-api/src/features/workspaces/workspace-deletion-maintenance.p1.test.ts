@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createWorkspaceMaintenance } from "../../services/workspace-maintenance";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import type { WorkspacesRouteDeps } from "./deps";
 import { provisionProjectWorkspaces, runWorkspaceProvisioning } from "./provision-coordinator";
 import { deleteWorkspace } from "./workspace-deletion";
@@ -87,7 +88,7 @@ test("refusing to delete the default workspace leaves it available for file main
     });
     const maintenance = createWorkspaceMaintenance(join(root, "pending"));
     app.deps.workspaceService.maintenance = maintenance;
-    await expect(deleteWorkspace(app.deps, workspace)).rejects.toThrow(/default workspace/i);
+    await expectRejection(deleteWorkspace(app.deps, workspace)).toThrow(/default workspace/i);
     expect(await maintenance.isRunning(workspace.id)).toBe(false);
   } finally {
     await app.close();
