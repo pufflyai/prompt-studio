@@ -155,15 +155,18 @@ export const prepareDocumentOwnerUpgrade = async (db: DbClient, path: string, re
   documentFilesFor(db, path);
   const {
     rows: [columns],
-  } = await db.execute<{ legacy: boolean }>(sql`
+  } = await db.execute<{ legacy: boolean; ordered: boolean }>(sql`
     SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public'
-      AND table_name='storage_documents' AND column_name='workbench_id') AS legacy`);
+      AND table_name='storage_documents' AND column_name='workbench_id') AS legacy,
+      to_regclass('public.storage_ordered_owners') IS NOT NULL AND to_regclass('public.storage_record_sync') IS NOT NULL AS ordered`);
+  const convertedOwners = new Set<string>();
   const restorations: {
     restore: NonNullable<Awaited<ReturnType<typeof prepareUpgradeSnapshot>>>;
     flush: () => Promise<void>;
   }[] = [];
   for (const source of sources) {
     const name = getTableName(source.table);
+    const fileRows = source.keys.includes("document_id");
     const pending: Record<string, unknown>[] = [];
     let pendingBytes = 0;
     const flush = async () => {
@@ -188,7 +191,7 @@ export const prepareDocumentOwnerUpgrade = async (db: DbClient, path: string, re
       path,
       {
         table: name,
-        where: source.keys.includes("document_id") ? receipts?.documents : undefined,
+        where: fileRows ? receipts?.documents : undefined,
         keys: source.ownerKey ? ["workbench_id", "extension_id", ...source.keys] : source.keys,
         name: `${name}-owners`,
         archive: name,
@@ -197,6 +200,13 @@ export const prepareDocumentOwnerUpgrade = async (db: DbClient, path: string, re
         capture: columns!.legacy,
       },
       async (row) => {
+        if (
+          fileRows &&
+          typeof row.document_id === "string" &&
+          row.document_id.startsWith('["resource",') &&
+          convertedOwners.has(JSON.stringify([row.workbench_id, row.extension_id]))
+        )
+          return;
         const bytes = Buffer.byteLength(JSON.stringify(row));
         if (pending.length && pendingBytes + bytes > 4 * 1024 * 1024) await flush();
         pending.push(row);
@@ -212,6 +222,16 @@ export const prepareDocumentOwnerUpgrade = async (db: DbClient, path: string, re
         return row;
       },
     );
+    // Keep the released snapshots in the normal archives. Already-converted owners would
+    // immediately retire these resource files during admission. A saved conversion or
+    // pending number migration can still need them, so keep its full input.
+    if (source.table === storage_documents && restore?.captured && columns!.ordered) {
+      const { rows } = await db.execute<{ workbench_id: string; extension_id: string }>(sql`
+        SELECT o.workbench_id,o.extension_id FROM storage_ordered_owners o
+        WHERE NOT EXISTS (SELECT 1 FROM storage_documents d WHERE d.workbench_id=o.workbench_id
+          AND d.extension_id=o.extension_id AND d.document_id IN ('["ordered-conversion"]','resource-identities'))`);
+      for (const owner of rows) convertedOwners.add(JSON.stringify([owner.workbench_id, owner.extension_id]));
+    }
     if (restore) restorations.push({ restore, flush });
   }
   // All document inputs and the separately captured owner positions must be durable before document deletion cascades to derived identities.
@@ -225,6 +245,7 @@ export const prepareDocumentOwnerUpgrade = async (db: DbClient, path: string, re
       await restore(true);
       await flush();
     }
-    for (const { restore } of restorations) await restore.complete();
+    // Finalize the headers last so a retry can restore a header for every remaining tail.
+    for (const { restore } of [...restorations].reverse()) await restore.complete();
   };
 };
