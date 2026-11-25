@@ -24,7 +24,16 @@ import {
 import type { createImportTracker } from "./remote-values";
 
 type ImportTracker = ReturnType<typeof createImportTracker>;
-type Invoke = (id: string, args: unknown[]) => Promise<unknown>;
+type Invoke = (id: string, args: unknown[], keepAbortListener?: boolean) => Promise<unknown>;
+
+const signalControllers = new WeakMap<AbortSignal, AbortController>();
+
+const abortImportedSignal = (target: WeakRef<AbortSignal>) => (reason: AbortReason) => {
+  const signal = target.deref();
+  if (!signal) return;
+  signalControllers.get(signal)?.abort(decodeReason(reason));
+  signalControllers.delete(signal);
+};
 
 const importSink = (ref: SinkRef, invoke: Invoke, tracker?: ImportTracker) => {
   const { push } = ref[SINK_MARKER];
@@ -67,13 +76,17 @@ const importIterator = (ref: IteratorRef, invoke: Invoke, tracker?: ImportTracke
 const importSignal = (ref: SignalRef, invoke: Invoke, tracker?: ImportTracker) => {
   const controller = new AbortController();
   const signal = ref[SIGNAL_MARKER];
+  const imported = controller.signal;
   if (signal.aborted) controller.abort(decodeReason(signal.reason));
   else {
     const { onAbort } = signal;
-    invoke(onAbort[FUNCTION_MARKER], [(reason: AbortReason) => controller.abort(decodeReason(reason))]).catch(() => {});
-    tracker?.track(controller.signal, [onAbort[FUNCTION_MARKER]]);
+    // The remote subscription may outlive the initial handler. Keep the callback, but let the
+    // signal be collected when the receiver no longer holds it so the subscription can detach.
+    signalControllers.set(imported, controller);
+    invoke(onAbort[FUNCTION_MARKER], [abortImportedSignal(new WeakRef(imported))], true).catch(() => {});
+    tracker?.track(imported, [onAbort[FUNCTION_MARKER]]);
   }
-  return controller.signal;
+  return imported;
 };
 
 const importReference = (value: unknown, invoke: Invoke, tracker?: ImportTracker) => {
