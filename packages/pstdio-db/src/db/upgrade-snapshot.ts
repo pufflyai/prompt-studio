@@ -9,10 +9,13 @@ import { readUpgradeRows, type UpgradeSource } from "./upgrade-rows";
 
 type Row = Record<string, unknown>;
 
-export const hasUpgradeSnapshots = async (path: string) =>
+export const hasUpgradeSnapshots = async (path: string, excludeTemporary?: string) =>
   path !== ":memory:" &&
   (await readdir(dirname(path))).some(
-    (name) => name.startsWith(`${basename(path)}-`) && /-upgrade\.jsonl?(?:\.tmp)?$/u.test(name),
+    (name) =>
+      (!excludeTemporary || name !== `${basename(path)}-${excludeTemporary}-upgrade.jsonl.tmp`) &&
+      name.startsWith(`${basename(path)}-`) &&
+      /-upgrade\.jsonl?(?:\.tmp)?$/u.test(name),
   );
 
 async function* snapshotRows(path: string) {
@@ -77,8 +80,9 @@ const copyJsonRows = async (db: DbClient, database: string, source: UpgradeSourc
       source.keys.map((key) => sql.identifier(key)),
       sql`, `,
     );
-    await db.execute(sql`COPY (SELECT row_to_json(released)::text FROM ${sql.identifier(source.table)} released
-      ORDER BY ${order}) TO '/pglite/data/pstdio-owned-rows.tmp'
+    const select = source.select ?? sql`SELECT * FROM ${sql.identifier(source.table)}`;
+    await db.execute(sql`COPY (SELECT row_to_json(released)::text FROM (${select}) released
+      WHERE ${source.where ?? sql`true`} ORDER BY ${order}) TO '/pglite/data/pstdio-owned-rows.tmp'
       WITH (FORMAT csv, DELIMITER E'\\x01', QUOTE E'\\x02', ESCAPE E'\\x02')`);
     const file = await open(temporary, "r+");
     try {

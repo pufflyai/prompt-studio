@@ -49,6 +49,7 @@ import { acquirePgliteLock } from "./pglite-lock";
 import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
 import { prepareRecordRowFinalization } from "./record-row-upgrade";
 import { prepareRecoveryOwnerUpgrade } from "./recovery-owner-upgrade";
+import { prepareReleasedSaveReceipts } from "./released-save-receipts";
 import { prepareResourceLinkOwnerUpgrade } from "./resource-link-owner-upgrade";
 import { prepareCanonicalNumberUpgrade } from "./resource-numbers-upgrade";
 import { prepareResourcePrefixUpgrade } from "./resource-prefix-upgrade";
@@ -261,6 +262,7 @@ export const createDb = async (options?: {
         migrated = true;
         return;
       }
+      const receipts = await prepareReleasedSaveReceipts(db, dbPath);
       const finishRecordRows = await prepareRecordRowFinalization(db, dbPath);
       const finishProjectExtensionsUpgrade = await prepareProjectExtensionsUpgrade(db, dbPath);
       const finishResourceLinkOwnerUpgrade = await prepareResourceLinkOwnerUpgrade(db, dbPath);
@@ -268,11 +270,11 @@ export const createDb = async (options?: {
       const finishOwnerIndexUpgrade = await prepareOwnerIndexUpgrade(db, dbPath);
       const finishOwnerProjectionUpgrade = await prepareOwnerProjectionUpgrade(db, dbPath);
       const finishCanonicalNumberUpgrade = await prepareCanonicalNumberUpgrade(db, dbPath);
-      const finishDocumentOwnerUpgrade = await prepareDocumentOwnerUpgrade(db, dbPath);
+      const finishDocumentOwnerUpgrade = await prepareDocumentOwnerUpgrade(db, dbPath, receipts);
       finishArtifactProjectionUpgrade = await prepareArtifactProjectionUpgrade(db, dbPath);
       const finishNativeOwnerUpgrade = await prepareNativeOwnerUpgrade(db, dbPath);
       const finishRecoveryOwnerUpgrade = await prepareRecoveryOwnerUpgrade(db, dbPath);
-      const finishOrderedOwnerUpgrade = await prepareOrderedOwnerUpgrade(db, dbPath);
+      const finishOrderedOwnerUpgrade = await prepareOrderedOwnerUpgrade(db, dbPath, receipts);
       const finishAssetOwnerUpgrade = await prepareAssetOwnerUpgrade(db, dbPath);
       const finishHistoryOwnerUpgrade = await prepareHistoryOwnerUpgrade(db, dbPath);
       const finishLogOwnerUpgrade = await prepareLogOwnerUpgrade(db, dbPath);
@@ -292,6 +294,7 @@ export const createDb = async (options?: {
       await finishOrderedOwnerUpgrade?.();
       await finishRecoveryOwnerUpgrade?.();
       await finishDocumentOwnerUpgrade?.();
+      await receipts?.complete();
       await finishNativeOwnerUpgrade?.();
       await finishCanonicalNumberUpgrade?.();
       await finishOwnerProjectionUpgrade?.();
@@ -351,9 +354,7 @@ export const createDb = async (options?: {
 
     let closed = false;
     const close = async () => {
-      if (closed) {
-        return;
-      }
+      if (closed) return;
 
       closed = true;
       try {

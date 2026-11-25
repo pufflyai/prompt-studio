@@ -42,8 +42,8 @@ if (action === "seed") {
       const check = await db.query(`SELECT (SELECT count(*)::int FROM records) AS records,
         (SELECT count(*)::int FROM operations) AS operations, (SELECT count(*)::int FROM asset_transfers) AS transfers,
         (SELECT count(*)::int FROM projects) AS projects`);
-      const { records, operations, transfers, projects } = storageScale;
-      assert.deepEqual(check.rows, [{ records, operations, transfers, projects }]);
+      const { records, transfers, projects } = storageScale;
+      assert.deepEqual(check.rows, [{ records, operations: 0, transfers, projects }]);
     } else {
       const { rows } = await db.query(`SELECT
       (SELECT count(*)::int FROM history_rows) AS history,

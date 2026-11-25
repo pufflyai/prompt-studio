@@ -11,6 +11,7 @@ import { storage_current_records } from "./legacy-record-row-schema";
 import { storage_resource_projections } from "./legacy-records-schema";
 import { restoreNumberRevisions } from "./number-revision-upgrade";
 import { restoreRecordRows } from "./record-row-upgrade";
+import type { ReleasedSaveReceipts } from "./released-save-receipts";
 import { restoreResourceNumbers } from "./resource-numbers-upgrade";
 import { storage_document_operations, storage_document_updates, storage_documents } from "./schemas/storage-documents";
 import { decodeUpgradeBytes as decodeBytes } from "./upgrade-bytes";
@@ -150,7 +151,7 @@ const restoreBatch = async (
 };
 
 /** Capture the entire FK graph before required integer keys replace released owner addresses. */
-export const prepareDocumentOwnerUpgrade = async (db: DbClient, path: string) => {
+export const prepareDocumentOwnerUpgrade = async (db: DbClient, path: string, receipts?: ReleasedSaveReceipts) => {
   documentFilesFor(db, path);
   const {
     rows: [columns],
@@ -187,6 +188,7 @@ export const prepareDocumentOwnerUpgrade = async (db: DbClient, path: string) =>
       path,
       {
         table: name,
+        where: source.keys.includes("document_id") ? receipts?.documents : undefined,
         keys: source.ownerKey ? ["workbench_id", "extension_id", ...source.keys] : source.keys,
         name: `${name}-owners`,
         archive: name,

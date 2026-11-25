@@ -12,6 +12,7 @@ import { storage_ordered_records } from "./legacy-record-row-schema";
 import { storage_ordered_owners } from "./legacy-records-schema";
 import { restoreOperationFacts } from "./operation-upgrade-values";
 import { restoreRecordRows } from "./record-row-upgrade";
+import type { ReleasedSaveReceipts } from "./released-save-receipts";
 import { operations, owners } from "./schemas.pg";
 import { decodeUpgradeBytes as decodeBytes } from "./upgrade-bytes";
 import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
@@ -135,7 +136,7 @@ const restoreBatch = async (
 };
 
 /** Capture the entire FK graph before required integer keys replace released owner addresses. */
-export const prepareOrderedOwnerUpgrade = async (db: DbClient, path: string) => {
+export const prepareOrderedOwnerUpgrade = async (db: DbClient, path: string, receipts?: ReleasedSaveReceipts) => {
   const {
     rows: [columns],
   } = await db.execute<{ legacy: boolean }>(sql`
@@ -176,6 +177,12 @@ export const prepareOrderedOwnerUpgrade = async (db: DbClient, path: string) => 
       path,
       {
         table: name,
+        where: [storage_ordered_operations, storage_ordered_receipts, storage_ordered_touches].some(
+          (table) => table === source.table,
+        )
+          ? receipts?.operations
+          : undefined,
+        select: source.table === storage_ordered_owners ? receipts?.owners : undefined,
         keys: ["workbench_id", "extension_id", ...source.keys],
         name: `${name}-owners`,
         archive: name,
