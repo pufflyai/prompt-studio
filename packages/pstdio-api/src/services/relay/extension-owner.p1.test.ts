@@ -27,7 +27,8 @@ test.each([
 ])("documents sync while an artifact watch is unavailable (%s)", async (mode) => {
   const root = await mkdtemp(join(tmpdir(), "relay-watch-failure-"));
   const app = await createTestApp({ storageRoot: join(root, "home") });
-  const peer = documentPeer();
+  let peerReads = 0;
+  const peer = documentPeer([], { onRead: () => peerReads++ });
   const controller = new AbortController();
   let relay: Awaited<ReturnType<typeof startRelayExtension>> | undefined;
   const nativeWatch = fs.watch;
@@ -37,6 +38,7 @@ test.each([
   const handles = new Set<fs.FSWatcher>();
   let registration: ReturnType<typeof spyOn<typeof fs, "watch">> | undefined;
   let paired: ReturnType<typeof spyOn<typeof mountWatcher, "watchArtifactMount">> | undefined;
+  let rootRetryError: ((error: unknown) => void) | undefined;
   try {
     const project = await app.deps.projectService.create({ name: "Independent watch recovery" });
     const folder = join(root, "checkout");
@@ -74,9 +76,10 @@ test.each([
       edits: [{ recordId: "note", replace: "Saved despite failed watch" }],
     });
     // Exercise the real paired-watch failure and partial-handle cleanup on every host.
-    paired = spyOn(mountWatcher, "watchArtifactMount").mockImplementation((input) =>
-      watchMount({ ...input, platform: "darwin" }),
-    );
+    paired = spyOn(mountWatcher, "watchArtifactMount").mockImplementation((input) => {
+      if (input.root.endsWith("documents")) rootRetryError = input.onRootRetryError;
+      return watchMount({ ...input, platform: "darwin" });
+    });
     registration = spyOn(fs, "watch").mockImplementation(((...args: [fs.PathLike, unknown?, unknown?]) => {
       const [path, options] = args;
       if (typeof path !== "string" || !path.includes(join("test.notes", "")))
@@ -119,20 +122,36 @@ test.each([
     const checkoutMissing = mode === "checkout missing";
     if (workspaceSetup || checkoutMissing) {
       const parked = join(root, "parked-checkout");
-      if (workspaceSetup) await app.deps.workspaceService.setInitializing(workspace.id, true);
+      if (workspaceSetup) {
+        const getDefault = app.deps.workspaceService.getDefault.bind(app.deps.workspaceService);
+        let observedSetup = false;
+        const lookup = spyOn(app.deps.workspaceService, "getDefault").mockImplementation(async (...args) => {
+          const current = await getDefault(...args);
+          if (current?.initializing) observedSetup = true;
+          return current;
+        });
+        try {
+          await app.deps.workspaceService.setInitializing(workspace.id, true);
+          await waitFor(() => observedSetup);
+          // The watch has to remain pending after observing this setup state.
+          await Bun.sleep(100);
+        } finally {
+          lookup.mockRestore();
+          await app.deps.workspaceService.setInitializing(workspace.id, false);
+        }
+      }
       if (checkoutMissing) {
         fs.renameSync(folder, parked);
         failing = false;
         relay.wake();
       }
-      // Leave the first scheduled retry ineligible, then recover the same workspace on this owner.
-      await Bun.sleep(1_200);
-      expect(attempts).toBe(1);
       if (checkoutMissing) {
+        // Let the first scheduled retry pass while the registered path is absent.
+        await Bun.sleep(1_200);
+        expect(attempts).toBe(1);
         expect(fs.existsSync(folder)).toBe(false);
         fs.renameSync(parked, folder);
       }
-      if (workspaceSetup) await app.deps.workspaceService.setInitializing(workspace.id, false);
       failing = false;
       await waitFor(() => handles.size === 4);
     } else {
@@ -153,6 +172,17 @@ test.each([
       await Bun.sleep(100);
       await writeFile(join(documentsRoot, "outside.txt"), "External save");
       await waitFor(async () => (await records.read('["artifact-file","documents/outside.txt"]')).exists);
+      if (mode === "recover") {
+        await Bun.sleep(1_100);
+        await waitFor(async () => !(await relay!.status()).busy);
+        const beforeErrors = peerReads;
+        expect(rootRetryError).toBeDefined();
+        rootRetryError?.(new Error("Still waiting for native root registration"));
+        await Bun.sleep(100);
+        rootRetryError?.(new Error("Still waiting for native root registration"));
+        await Bun.sleep(100);
+        expect(peerReads).toBe(beforeErrors);
+      }
     }
     // Parent cancellation owns timers and handles even without an explicit close call.
     controller.abort();
