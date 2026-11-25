@@ -188,6 +188,24 @@ test("a folder return retires shared mount child deletions that were not individ
   expect(ledger.dropEchoes([child], options)).toEqual([child]);
 });
 
+test("a shared API deletion after an external folder return stays quiet", async () => {
+  const f = await fixture();
+  const ledger = createArtifactMountWriteLedger(() => 0);
+  const mount = createSharedArtifactMount(f.deps, { ...f.input, onWrite: ledger.record });
+  const folder = f.pathFor("documents/sales");
+  const child = join(folder, "q3.json");
+  const options = { keepMatchedWrites: true };
+  await mount.writeText("sales/q3.json", "{}");
+  await mount.delete("sales");
+  expect(ledger.dropEchoes([folder, child], options)).toEqual([]);
+
+  await mkdir(folder);
+  await writeFile(child, "[]");
+  await mount.delete("sales/q3.json");
+  expect(ledger.dropEchoes([folder, child], options)).toEqual([folder]);
+  expect(ledger.dropEchoes([child], options)).toEqual([]);
+});
+
 test.each([
   true,
   false,
