@@ -21,7 +21,9 @@ export const cloneClosedDatabase = (from: string, to: string) =>
 
 export function startRecordPreparation(path: string) {
   const backup = `${path}.before-upgrade`;
-  cloneClosedDatabase(path, backup);
+  const started=performance.now();
+  const mark=(phase:string)=>console.log("Upgrade diagnostic",phase,Math.round(performance.now()-started));
+  cloneClosedDatabase(path, backup);mark("rollback copy");
   const worker = new Worker(
     typeof PSTDIO_TRIAL_RECORD_WORKER === "string"
       ? PSTDIO_TRIAL_RECORD_WORKER
@@ -35,8 +37,8 @@ export function startRecordPreparation(path: string) {
   }
   worker.onmessage = ({ data }) => {
     if (data.error) fail(Error(data.error));
-    else if (data.completed) completed.resolve();
-    else owners.resolve(data.owners);
+    else if (data.completed) {mark("reader exports complete");completed.resolve();}
+    else {mark("normalized records available");owners.resolve(data.owners);}
   };
   worker.onerror = (e) => fail(Error(e.message));
   void owners.promise.catch(() => {});
@@ -67,7 +69,7 @@ export function startRecordPreparation(path: string) {
       await db.execute(sql`INSERT INTO owners(project_id,extension_id)
         SELECT workbench_id,extension_id FROM storage_ordered_owners ORDER BY workbench_id COLLATE "C",extension_id COLLATE "C"`);
     },
-    load: (db: DbClient) => streamOriginalTables(db, path, owners.promise),
+    load: (db: DbClient) => streamOriginalTables(db, path, owners.promise,mark),
     cancel: () => worker.terminate(),
     async finish() {
       await completed.promise;
@@ -229,7 +231,8 @@ export async function writeTrialRecords(db: DbClient, path: string) {
     await file.close();
   }
 }
-async function streamOriginalTables(db: DbClient, path: string, preparing: Promise<string>) {
+async function streamOriginalTables(db: DbClient, path: string, preparing: Promise<string>,mark:(phase:string)=>void) {
+  mark("begin loading");
   const filePath = join(path, "trial-records.copy");
   try {
     await db.transaction(async (tx) => {
@@ -261,7 +264,7 @@ async function streamOriginalTables(db: DbClient, path: string, preparing: Promi
         },
         async () => {},
       );
-      await snapshot?.complete();
+      await snapshot?.complete();mark("canonical archive complete");
     }
     {
       const check = await preparing;
@@ -284,7 +287,7 @@ async function streamOriginalTables(db: DbClient, path: string, preparing: Promi
       await tx.execute(sql`ALTER TABLE records ADD CONSTRAINT records_owner_id_record_id_pk PRIMARY KEY(owner_id,record_id),
         ADD CONSTRAINT records_owner_id_owners_id_fk FOREIGN KEY(owner_id) REFERENCES owners(id) ON DELETE CASCADE`);
       await tx.execute(sql`CREATE INDEX records_native_sources_idx ON records USING gin(native_sources)`);
-      await tx.execute(sql`DROP SCHEMA upgrade_source CASCADE`);
+      await tx.execute(sql`DROP SCHEMA upgrade_source CASCADE`);mark("bulk records and indexes complete");
     });
   } finally {
     await rm(filePath, { force: true });

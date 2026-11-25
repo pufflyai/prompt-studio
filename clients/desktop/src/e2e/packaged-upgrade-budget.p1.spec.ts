@@ -64,9 +64,11 @@ for (const profile of ["history", "storage"] as const)
             expect(name).toBe("Verified upgrade");
             return opened;
           },
-          { timeout: projectUpgradeLimitMs },
+          // The diagnostic records total time after an over-budget launch. The assertion below still rejects every result over 20 seconds.
+          { timeout: 120_000 },
         );
         const elapsedMs = performance.now() - started;
+        console.log(JSON.stringify({ profile, elapsedMs, limitMs: projectUpgradeLimitMs }));
         await info.attach("upgrade-to-usable-project.json", {
           body: JSON.stringify({ profile, elapsedMs, limitMs: projectUpgradeLimitMs }),
           contentType: "application/json",
