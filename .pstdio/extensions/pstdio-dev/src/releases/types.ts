@@ -31,8 +31,17 @@ export interface PullRequestMergeBucket {
   date: string;
   count: number;
   categories?: Record<PullRequestType, number>;
+  /** Counts keyed by index in MergeThemeCoverage.names. */
+  themes?: Record<number, number>;
+  bugFailures?: Record<number, number>;
   velocity?: { points: number; estimatedFeatures: number };
   bugOrigins?: BugOriginCounts;
+}
+
+export interface MergeThemeCoverage {
+  analyzedAt: string;
+  names: string[];
+  validationIndices?: number[];
 }
 
 export interface BugOriginCounts {
@@ -66,6 +75,10 @@ export interface HealthHistory {
   /** Hours with merges, keyed like `2026-11-20T09:00Z` (UTC). */
   pullRequestMergesHourly?: PullRequestMergeBucket[];
   pullRequestMergesError?: string;
+  mergeThemes?: MergeThemeCoverage;
+  mergeThemesError?: string;
+  bugFailurePatterns?: MergeThemeCoverage;
+  bugFailurePatternsError?: string;
   bugOriginCoverage?: BugOriginCoverage;
   publications?: ReleasePublication[];
   publicationsError?: string;

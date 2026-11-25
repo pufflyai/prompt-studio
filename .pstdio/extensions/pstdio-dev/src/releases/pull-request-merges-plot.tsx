@@ -1,5 +1,5 @@
-import { Box, Stack, Text } from "@chakra-ui/react";
-import { AlertMessage, psTheme } from "@pstdio/ui";
+import { Box, Stack } from "@chakra-ui/react";
+import { AlertMessage, EmptyState, psTheme } from "@pstdio/ui";
 import { barY, defineChart, dot, lineY, stack } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
@@ -7,6 +7,7 @@ import { tooltip } from "@tanstack/charts/tooltip";
 import { useState } from "react";
 import type { Aggregation } from "../webview/period";
 import { periodChartMargin, periodTitle, timelineScale } from "../webview/period-chart";
+import { seriesColorSettings, useHealthChartAppearance } from "./health-chart-style";
 import { publicationRows, releaseMarks } from "./health-chart-timeline";
 import type { HealthBucket } from "./health-timeline";
 import { SeriesLegend } from "./series-legend";
@@ -19,6 +20,8 @@ const categories: Record<PullRequestType, { label: string; color: string }> = {
   chore: { label: "Chore", color: "gray.500" },
 };
 const mergeLegend = PULL_REQUEST_TYPES.map((id) => ({ id, ...categories[id] }));
+export const mergeChartColors = (categorized: boolean) =>
+  categorized ? seriesColorSettings("Category", mergeLegend) : { label: "Bar color" };
 
 type MergeType = PullRequestType | "total";
 interface MergeSegment {
@@ -48,7 +51,8 @@ interface TimelinePlotProps {
   aggregation: Aggregation;
 }
 
-const VelocityPlot = ({ buckets, aggregation }: TimelinePlotProps) => {
+export const VelocityPlot = ({ buckets, aggregation }: TimelinePlotProps) => {
+  const appearance = useHealthChartAppearance();
   // Once velocity history starts, a period without merges is a real zero. Earlier periods have no velocity data.
   const start = buckets.findIndex(({ merges }) => merges?.velocity);
   const points =
@@ -59,9 +63,9 @@ const VelocityPlot = ({ buckets, aggregation }: TimelinePlotProps) => {
           if (!merges.velocity) return [];
           return [{ date, features: merges.categories?.feature ?? 0, ...merges.velocity }];
         });
-  if (!points.length) return null;
+  if (!points.length) return <EmptyState title="No velocity data in this range" />;
 
-  const stroke = color("feature");
+  const stroke = appearance.color ?? color("feature");
   const values = scaleLinear()
     .domain([0, Math.max(1, ...points.map(({ points }) => points))])
     .nice();
@@ -105,10 +109,6 @@ const VelocityPlot = ({ buckets, aggregation }: TimelinePlotProps) => {
 
   return (
     <Stack gap="2xs">
-      <Text textStyle="label/M/medium">Velocity</Text>
-      <Text textStyle="label/XS" color="fg.muted">
-        Merged feature PRs × average complexity
-      </Text>
       <Box color="fg.muted" textStyle="label/XS">
         <Chart definition={definition} height={220} ariaLabel={`Feature velocity by ${aggregation}, UTC`} />
       </Box>
@@ -118,13 +118,16 @@ const VelocityPlot = ({ buckets, aggregation }: TimelinePlotProps) => {
 
 export const PullRequestMergesPlot = ({ buckets, aggregation, error }: TimelinePlotProps & { error?: string }) => {
   const [selection, setSelection] = useState<PullRequestType>();
+  const appearance = useHealthChartAppearance();
+  const paint = (type: MergeType) =>
+    appearance.seriesColors[type] ?? (type === "total" ? appearance.color : undefined) ?? color(type);
   const merges = buckets.flatMap(({ merges }) => (merges ? [merges] : []));
   const warning = error ? (
     <AlertMessage status="warning" title="PR merges could not be refreshed">
       {merges.length ? `Showing cached counts. ${error}` : error}
     </AlertMessage>
   ) : null;
-  if (!merges.length) return warning;
+  if (!merges.length) return warning ?? <EmptyState title="No PR merge data in this range" />;
 
   const categorized = merges.some((bucket) => bucket.categories);
   const selected = categorized ? selection : undefined;
@@ -145,7 +148,7 @@ export const PullRequestMergesPlot = ({ buckets, aggregation, error }: TimelineP
           y: "count",
           z: "type",
           layout: stack({ order: [...PULL_REQUEST_TYPES, "total"] }),
-          fill: ({ type }) => color(type),
+          fill: ({ type }) => paint(type),
           stroke: psTheme.token.var("colors.bg"),
           strokeWidth: 1,
           maxThickness: 64,
@@ -173,7 +176,7 @@ export const PullRequestMergesPlot = ({ buckets, aggregation, error }: TimelineP
               ? visibleTypes.map((type) => ({
                   label: categories[type].label,
                   value: breakdown[type].toLocaleString(),
-                  color: color(type),
+                  color: paint(type),
                 }))
               : []),
             ...publicationRows(bucket),
@@ -187,9 +190,13 @@ export const PullRequestMergesPlot = ({ buckets, aggregation, error }: TimelineP
     <Stack gap="lg">
       {warning}
       <Stack gap="2xs">
-        <Text textStyle="label/M/medium">PR merges</Text>
         {categorized ? (
-          <SeriesLegend label="PR category legend" items={mergeLegend} selected={selected} onSelect={setSelection} />
+          <SeriesLegend
+            label="PR category legend"
+            items={mergeLegend.map((item) => ({ ...item, color: paint(item.id) }))}
+            selected={selected}
+            onSelect={setSelection}
+          />
         ) : null}
         <Box color="fg.muted" textStyle="label/XS">
           <Chart
@@ -203,7 +210,6 @@ export const PullRequestMergesPlot = ({ buckets, aggregation, error }: TimelineP
           />
         </Box>
       </Stack>
-      <VelocityPlot buckets={buckets} aggregation={aggregation} />
     </Stack>
   );
 };

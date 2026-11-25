@@ -41,6 +41,10 @@ export const HealthPage = () => {
       pullRequestMergesDaily={history.data?.pullRequestMergesDaily ?? history.data?.pullRequestMerges}
       pullRequestMergesHourly={history.data?.pullRequestMergesHourly}
       pullRequestMergesError={history.data?.pullRequestMergesError}
+      mergeThemes={history.data?.mergeThemes}
+      mergeThemesError={history.data?.mergeThemesError}
+      bugFailurePatterns={history.data?.bugFailurePatterns}
+      bugFailurePatternsError={history.data?.bugFailurePatternsError}
       bugOriginCoverage={history.data?.bugOriginCoverage}
       publications={history.data?.publications}
       publicationsError={history.data?.publicationsError}
