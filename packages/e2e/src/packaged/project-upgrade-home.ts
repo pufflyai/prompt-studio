@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { access } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
-import { readClosedDocumentText } from "pstdio-db/test-fixtures";
+import { openClosedDocumentStorage, readClosedDocumentText } from "pstdio-db/test-fixtures";
 import type { StackApi } from "pstdio-scripts/testing";
 import * as Y from "yjs";
 import savedQuota from "./fixtures/home-quota-047.json";
@@ -129,6 +129,34 @@ const assertSavedQuota = async (db: PGlite, project: string, owners: string[], m
   }
 };
 
+const quotaSample = (owner: string) => {
+  const sample = savedQuota.storage_current_records.find((row) => row.extension_id === owner);
+  const operation = savedQuota.storage_ordered_operations.find((row) => row.extension_id === owner);
+  assert(sample && operation, `No quota fixture for ${owner}`);
+  return { sample, operationId: operation.operation_id };
+};
+
+const readCurrentQuota = async (db: PGlite, project: string, owner: string) => {
+  const { sample, operationId } = quotaSample(owner);
+  const { rows } = await db.query<{
+    value: unknown;
+    operation: Record<string, unknown>;
+    receiptState: string | null;
+  }>(
+    `SELECT r.value, to_jsonb(t) - 'owner_id' AS operation, t.receipt->t.settled_epoch->>'state' AS "receiptState"
+       FROM owners o
+       JOIN records r ON r.owner_id = o.id AND r.record_id = $3 AND NOT r.deleted AND r.revision IS NOT NULL
+       JOIN operations t ON t.owner_id = o.id AND t.operation_id = $4
+      WHERE o.project_id = $1 AND o.extension_id = $2`,
+    [project, owner, sample.record_id, operationId],
+  );
+  assert.equal(rows.length, 1, "Home must retain the saved quota observation and its operation");
+  const { value, operation, receiptState } = rows[0]!;
+  assert.deepEqual(value, sample.value, "Home changed the saved quota observation");
+  assert.equal(receiptState, "accepted", "Home lost the accepted quota receipt");
+  return operation;
+};
+
 const enabledHomeSources = async (db: PGlite, project: string) => {
   const {
     rows: [schema],
@@ -145,8 +173,71 @@ const enabledHomeSources = async (db: PGlite, project: string) => {
   );
 };
 
+type ClosedStorage = ReturnType<typeof openClosedDocumentStorage>;
+
+interface HomeHistory {
+  owner: string;
+  currentQuota?: Record<string, unknown>;
+}
+
+const seedCurrentQuota = async (db: PGlite, storage: ClosedStorage, project: string, owner: string) => {
+  const { sample, operationId } = quotaSample(owner);
+  const records = storage.open({ owner: { workbenchId: project, extensionId: owner } }).records;
+  const outcome = await records.commit({
+    operationId,
+    edits: [{ recordId: sample.record_id, replace: sample.value }],
+  });
+  assert.equal(outcome.state, "saved-locally", "Expected a settled local Home quota observation");
+  return readCurrentQuota(db, project, owner);
+};
+
+const checkQuotaHistory = async (
+  db: PGlite,
+  project: string,
+  owners: string[],
+  conflicted: boolean,
+  storage?: ClosedStorage,
+  before?: HomeHistory,
+) => {
+  if (storage) return seedCurrentQuota(db, storage, project, owners[0]!);
+  if (before?.currentQuota) {
+    assert.deepEqual(
+      await readCurrentQuota(db, project, canonical),
+      before.currentQuota,
+      "Home changed the saved quota operation or receipt",
+    );
+    return;
+  }
+  if (!before) await loadSavedQuota(db, project, owners);
+  await assertSavedQuota(db, project, owners, Boolean(before && !conflicted));
+};
+
+const seedDocumentText = async (
+  db: PGlite,
+  storage: ClosedStorage | undefined,
+  project: string,
+  extension: string,
+  fileId: string,
+  content: string,
+) => {
+  if (storage) {
+    await storage.openTextDocument({ owner: { workbenchId: project, extensionId: extension }, fileId }).save(content);
+    return;
+  }
+  const document = new Y.Doc();
+  try {
+    document.getText("content").insert(0, content);
+    await db.query(
+      "INSERT INTO storage_documents (workbench_id, extension_id, document_id, state, revision) VALUES ($1, $2, $3, $4, 1)",
+      [project, extension, JSON.stringify(["text-file", fileId]), Y.encodeStateAsUpdate(document)],
+    );
+  } finally {
+    document.destroy();
+  }
+};
+
 // Open only the stopped disposable profile. The candidate must run the migrations itself.
-export const checkHomeHistory = async (input: ProjectUpgradeInput, project: string, before?: { owner: string }) => {
+export const checkHomeHistory = async (input: ProjectUpgradeInput, project: string, before?: HomeHistory) => {
   const path = join(input.home, "pstdio.db");
   await access(join(path, "PG_VERSION"));
   const icu = join(dirname(require.resolve("@electric-sql/pglite-icu-full")), "icu.76.tgz");
@@ -159,35 +250,33 @@ export const checkHomeHistory = async (input: ProjectUpgradeInput, project: stri
     const owners = conflicted ? [historical, canonical] : [owner];
     if (before && !conflicted)
       assert.equal(source.rows[0]!.extension_id, canonical, "Home must use its active identity");
-    if (input.profile !== "active") {
-      if (!before) await loadSavedQuota(db, project, owners);
-      await assertSavedQuota(db, project, owners, Boolean(before && !conflicted));
-    }
+
+    const { rows } = await db.query<{ current: boolean }>(
+      "SELECT to_regclass('public.operations') IS NOT NULL AS current",
+    );
+    const storage = !before && rows[0]!.current ? openClosedDocumentStorage(db, path) : undefined;
+
+    const currentQuota =
+      input.profile === "active"
+        ? undefined
+        : await checkQuotaHistory(db, project, owners, conflicted, storage, before);
+
     for (const [index, original] of owners.entries()) {
-      const key = JSON.stringify(["text-file", `upgrade-home-${index}`]);
+      const fileId = `upgrade-home-${index}`;
       const content = `Saved Home history ${index} — résumé`;
-      const document = new Y.Doc();
-      try {
-        if (!before) {
-          document.getText("content").insert(0, content);
-          await db.query(
-            "INSERT INTO storage_documents (workbench_id, extension_id, document_id, state, revision) VALUES ($1, $2, $3, $4, 1)",
-            [project, original, key, Y.encodeStateAsUpdate(document)],
-          );
-        } else {
-          const saved = await readClosedDocumentText(
-            db,
-            path,
-            { workbenchId: project, extensionId: conflicted ? original : canonical },
-            key,
-          );
-          assert.equal(saved, content, `Home changed ${key}`);
-        }
-      } finally {
-        document.destroy();
-      }
+      if (before) {
+        const key = JSON.stringify(["text-file", fileId]);
+        const saved = await readClosedDocumentText(
+          db,
+          path,
+          { workbenchId: project, extensionId: conflicted ? original : canonical },
+          key,
+        );
+        assert.equal(saved, content, `Home changed ${key}`);
+      } else await seedDocumentText(db, storage, project, original, fileId, content);
     }
-    return { owner };
+    await storage?.flushStatistics();
+    return { owner, currentQuota };
   } finally {
     await db.close();
   }

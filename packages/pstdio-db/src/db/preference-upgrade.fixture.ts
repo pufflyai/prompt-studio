@@ -156,6 +156,7 @@ export const restoreReleasedPreferenceTables = async (connection: Awaited<Return
 };
 
 export {
+  openClosedDocumentStorage,
   readClosedDocumentText,
   readDocumentHistory,
   seedDocumentHistory,
