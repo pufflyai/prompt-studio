@@ -8,14 +8,7 @@ export const MessageSender = (props: { sender?: SessionMessageSender }) => {
   if (!sender) return null;
   return (
     <Tooltip content={sender.name}>
-      <Box
-        role="img"
-        aria-label={`Message from ${sender.name}`}
-        tabIndex={0}
-        display="inline-flex"
-        alignSelf="start"
-        mb="xs"
-      >
+      <Box role="img" aria-label={`Message from ${sender.name}`} tabIndex={0} display="inline-flex" flexShrink="0">
         <ActivityAvatar actor={{ name: sender.name }} />
       </Box>
     </Tooltip>

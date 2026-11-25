@@ -3,10 +3,12 @@ import { Check, Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import { MessageForkAction } from "./message-fork-action";
+import { MessageSender } from "./message-sender";
 import type { ChatMessagePart, SessionMessage } from "./message-types";
 
 interface MessageActionPanelProps {
   message: SessionMessage;
+  showActions?: boolean;
   alwaysVisible?: boolean;
   copyAlwaysVisible?: boolean;
   onForkMessage?: (messageId: string) => void | Promise<void>;
@@ -39,6 +41,7 @@ export const getMessageTimestampLabel = (message: SessionMessage, locale?: strin
 export const MessageActionPanel = (props: MessageActionPanelProps) => {
   const {
     message,
+    showActions = true,
     alwaysVisible = false,
     copyAlwaysVisible = alwaysVisible,
     onForkMessage,
@@ -46,8 +49,9 @@ export const MessageActionPanel = (props: MessageActionPanelProps) => {
   } = props;
   const [isCopied, setIsCopied] = useState(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
-  const copyText = getMessageCopyText(message);
-  const timestampLabel = getMessageTimestampLabel(message);
+  const trayVisible = alwaysVisible || Boolean(message.sender);
+  const copyText = showActions ? getMessageCopyText(message) : "";
+  const timestampLabel = showActions ? getMessageTimestampLabel(message) : "";
 
   useEffect(() => {
     return () => {
@@ -72,18 +76,19 @@ export const MessageActionPanel = (props: MessageActionPanelProps) => {
     }
   };
 
-  if (!copyText && !timestampLabel) return null;
+  if (!message.sender && !copyText && !timestampLabel) return null;
 
   return (
     <HStack
       data-chat-message-action-panel="true"
       gap="2xs"
       minH="6"
-      opacity={alwaysVisible ? "1" : "0"}
-      pointerEvents={alwaysVisible ? "auto" : "none"}
+      opacity={trayVisible ? "1" : "0"}
+      pointerEvents={trayVisible ? "auto" : "none"}
       transition="opacity 120ms ease"
       css={messageActionPanelHoverStyles}
     >
+      <MessageSender sender={message.sender} />
       {timestampLabel ? (
         <Text textStyle="label/XS/regular" color="fg.muted">
           {timestampLabel}
