@@ -1,6 +1,8 @@
 import type { PGlite, Transaction } from "@electric-sql/pglite";
 import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
+import { artifactProjectionRefusals } from "../artifact-projection-admission";
 import { createDb } from "../connection.pglite";
+import { unadmittedStorageOwnerFailures } from "../storage-admission";
 import {
   type DatabaseWorkerMessage,
   type DatabaseWorkerRequest,
@@ -94,10 +96,22 @@ const handle = (request: DatabaseWorkerRequest) => {
         ...request.options,
         signal: opening.signal,
         onPhase: (phase) => send({ type: "phase", phase }),
+        onLegacyConversionError: request.reportLegacyConversionErrors
+          ? ({ owner, backupPath, error }) =>
+              send({ type: "legacy-conversion-failed", owner, backupPath, error: serializeDatabaseError(error) })
+          : undefined,
       }).then(
         (opened) => {
           database = opened;
-          send({ type: "opened", path: opened.path });
+          send({
+            type: "opened",
+            path: opened.path,
+            unadmittedOwners: unadmittedStorageOwnerFailures(opened.db).map(({ owner, cause }) => ({
+              owner,
+              cause: serializeDatabaseError(cause),
+            })),
+            projectionRefusals: artifactProjectionRefusals(opened.db),
+          });
         },
         (error) => send({ type: "open-failed", error: serializeDatabaseError(error) }),
       );

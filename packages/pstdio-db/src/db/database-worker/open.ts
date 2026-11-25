@@ -1,14 +1,26 @@
 import type { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
+import { pruneDocumentFiles } from "../../services/extension-storage/document-file-retention";
+import { attachDocumentCollector, documentFilesFor } from "../../services/extension-storage/document-files";
 import {
   attachIndexNodeFiles,
   createIndexNodeFiles,
   createMemoryIndexNodeFiles,
 } from "../../services/extension-storage/index-node-files";
+import { recoveryFilesFor } from "../../services/extension-storage/recovery-files";
+import { attachArtifactProjectionRefusals } from "../artifact-projection-admission";
 import type { DbOpenPhase } from "../connection.pglite";
+import { attachDatabaseAuthority } from "../database-authority";
+import type { LegacyConversionFailure } from "../legacy-record-upgrade";
 import { observePgliteQueries } from "../query-diagnostics";
 import * as schema from "../schemas.pg";
-import { type DatabaseWorkerMessage, type DatabaseWorkerOpenOptions, deserializeDatabaseError } from "./protocol";
+import { retainUnadmittedOwner } from "../storage-admission";
+import {
+  type DatabaseWorkerMessage,
+  type DatabaseWorkerOpenOptions,
+  type DatabaseWorkerRequest,
+  deserializeDatabaseError,
+} from "./protocol";
 import { createRemotePglite } from "./remote-pglite";
 
 declare const PSTDIO_BUILD_DATABASE_WORKER: string | undefined;
@@ -37,6 +49,7 @@ const workerSpecifier = () =>
 export const createDbInWorker = async (
   options: DatabaseWorkerOpenOptions & {
     onPhase?: (phase: DbOpenPhase) => void;
+    onLegacyConversionError?: (failure: LegacyConversionFailure) => void;
     signal?: AbortSignal;
     /** The worker stopped without being closed. The database is unusable and its lock is gone. */
     onUnexpectedExit?: (error: Error) => void;
@@ -44,11 +57,20 @@ export const createDbInWorker = async (
     createWorker?: (specifier: string) => Worker;
   } = {},
 ) => {
-  const { onPhase, signal, onUnexpectedExit, createWorker = (specifier) => new Worker(specifier), ...open } = options;
+  const {
+    path: requestedPath,
+    indexNodesPath,
+    deferCleanup,
+    onPhase,
+    onLegacyConversionError,
+    signal,
+    onUnexpectedExit,
+    createWorker = (specifier) => new Worker(specifier),
+  } = options;
   signal?.throwIfAborted();
   const worker = createWorker(workerSpecifier());
   const remote = createRemotePglite(worker);
-  const opened = Promise.withResolvers<string>();
+  const opened = Promise.withResolvers<Extract<DatabaseWorkerMessage, { type: "opened" }>>();
   let exited = false;
   let closeRequested = false;
   let interruption: { reason: unknown } | undefined;
@@ -66,14 +88,18 @@ export const createDbInWorker = async (
   worker.onmessage = (event: MessageEvent<DatabaseWorkerMessage>) => {
     const message = event.data;
     if (remote.receive(message)) return;
-    if (message.type === "phase") {
+    if (message.type === "phase" || message.type === "legacy-conversion-failed") {
       if (interruption) return;
       try {
-        onPhase?.(message.phase);
+        if (message.type === "phase") onPhase?.(message.phase);
+        else {
+          const { owner, backupPath, error } = message;
+          onLegacyConversionError?.({ owner, backupPath, error: deserializeDatabaseError(error) });
+        }
       } catch (error) {
         interrupt(error);
       }
-    } else if (message.type === "opened") opened.resolve(message.path);
+    } else if (message.type === "opened") opened.resolve(message);
     else if (message.type === "open-failed") opened.reject(deserializeDatabaseError(message.error));
   };
   const stopped = (reason: string) => {
@@ -81,7 +107,7 @@ export const createDbInWorker = async (
     exited = true;
     openWorkers.delete(tracked);
     const error = new Error(`The database worker stopped: ${reason}`);
-    opened.reject(error);
+    if (opening && !closeRequested) opened.reject(error);
     remote.fail(error);
     if (!closeRequested) onUnexpectedExit?.(error);
   };
@@ -90,11 +116,15 @@ export const createDbInWorker = async (
 
   const abort = () => interrupt(signal?.reason);
   signal?.addEventListener("abort", abort, { once: true });
-  let path: string;
+  let ready: Awaited<typeof opened.promise>;
   try {
-    worker.postMessage({ type: "open", options: open });
+    worker.postMessage({
+      type: "open",
+      options: { path: requestedPath, indexNodesPath, deferCleanup },
+      reportLegacyConversionErrors: onLegacyConversionError !== undefined,
+    } satisfies DatabaseWorkerRequest);
     if (signal?.aborted) abort();
-    path = await opened.promise;
+    ready = await opened.promise;
   } catch (error) {
     closeRequested = true;
     openWorkers.delete(tracked);
@@ -128,12 +158,18 @@ export const createDbInWorker = async (
   // Diagnostics channels are per thread, so queries are observed here, where subscribers listen.
   const pglite = observePgliteQueries(remote.pglite as unknown as PGlite);
   const db = drizzle(pglite, { schema });
+  const { path, unadmittedOwners, projectionRefusals } = ready;
+  // This handle publishes files through the same SQL transaction queue as the worker.
+  attachDatabaseAuthority(db, path);
+  recoveryFilesFor(db, path);
+  documentFilesFor(db, path);
+  attachDocumentCollector(db, (projectId, ids) => pruneDocumentFiles(db, projectId, ids));
+  for (const { owner, cause } of unadmittedOwners) retainUnadmittedOwner(db, owner, deserializeDatabaseError(cause));
+  if (projectionRefusals) attachArtifactProjectionRefusals(db, projectionRefusals);
   // Index nodes are files, so this thread reads the same folder the worker upgraded at startup.
   attachIndexNodeFiles(
     db,
-    path === ":memory:"
-      ? createMemoryIndexNodeFiles()
-      : createIndexNodeFiles(open.indexNodesPath ?? `${path}-index-nodes`),
+    path === ":memory:" ? createMemoryIndexNodeFiles() : createIndexNodeFiles(indexNodesPath ?? `${path}-index-nodes`),
   );
 
   return {

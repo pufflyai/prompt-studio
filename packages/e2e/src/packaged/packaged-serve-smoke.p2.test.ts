@@ -1,6 +1,6 @@
 import { beforeAll, expect, test } from "bun:test";
 import { type ChildProcess, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -53,6 +53,53 @@ test(
     } finally {
       if (child) await stopProcess(child);
       rmSync(tempRoot, { recursive: true, force: true });
+    }
+  },
+  PACKAGED_TEST_TIMEOUT,
+);
+
+test(
+  "starts the bundled database worker and retains project data across a restart",
+  async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-packaged-database-worker-"));
+    const log = join(root, "startup.jsonl");
+    const env = { PSTDIO_DATABASE_WORKER: "1", PSTDIO_LOG_PATH: log };
+    let child: ChildProcess | undefined;
+    try {
+      const started = await startPackagedServe(root, env);
+      child = started.child;
+      const folder = join(root, "project");
+      mkdirSync(folder);
+      const name = "Database worker project";
+      const created = await fetch(`${started.baseUrl}/v1/projects`, {
+        method: "POST",
+        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+        body: JSON.stringify(folderProjectInput({ name }, folder)),
+      });
+      expect(created.status).toBe(201);
+      const { id } = (await created.json()) as { id: string };
+      await stopProcess(child);
+      child = undefined;
+
+      const reopened = await startPackagedServe(root, env);
+      child = reopened.child;
+      const project = await fetch(`${reopened.baseUrl}/v1/projects/${id}`, {
+        headers: runtimeAuthorization(reopened.descriptor),
+      });
+      expect(project.status).toBe(200);
+      expect(await project.json()).toMatchObject({ id, name });
+      await stopProcess(child);
+      child = undefined;
+
+      const opened = readFileSync(log, "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line) as { event?: string; thread?: string })
+        .filter((entry) => entry.event === "db.open");
+      expect(opened.map(({ thread }) => thread)).toEqual(["worker", "worker"]);
+    } finally {
+      if (child) await stopProcess(child);
+      rmSync(root, { recursive: true, force: true });
     }
   },
   PACKAGED_TEST_TIMEOUT,

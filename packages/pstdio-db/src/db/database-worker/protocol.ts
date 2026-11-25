@@ -1,4 +1,6 @@
 import type { currentRuntimeOperationOrigin } from "pstdio-diagnostics";
+import type { StorageOwner } from "pstdio-sync";
+import type { ArtifactProjectionRefusals } from "../artifact-projection-admission";
 import type { DbOpenPhase } from "../connection.pglite";
 
 type OperationOrigin = NonNullable<ReturnType<typeof currentRuntimeOperationOrigin>>;
@@ -31,7 +33,7 @@ export interface RemoteQueryOptions {
 }
 
 export type DatabaseWorkerRequest =
-  | { type: "open"; options: DatabaseWorkerOpenOptions }
+  | { type: "open"; options: DatabaseWorkerOpenOptions; reportLegacyConversionErrors: boolean }
   | { type: "abort" }
   | ({
       origin?: OperationOrigin;
@@ -46,31 +48,87 @@ export type DatabaseWorkerRequest =
   | { type: "stop-cleanup" }
   | { type: "close"; id: number };
 
+type SerializedErrorDetail = SerializedDatabaseError | string | number | boolean | null | undefined;
+
 export interface SerializedDatabaseError {
   name: string;
   message: string;
   stack?: string;
+  cause?: SerializedErrorDetail;
+  errors?: SerializedErrorDetail[];
   /** PGlite's DatabaseError fields, such as code, detail and constraint. */
   fields: Record<string, string | number | boolean | null>;
 }
 
 export type DatabaseWorkerMessage =
   | { type: "phase"; phase: DbOpenPhase }
-  | { type: "opened"; path: string }
+  | { type: "legacy-conversion-failed"; owner: StorageOwner; backupPath?: string; error: SerializedDatabaseError }
+  | {
+      type: "opened";
+      path: string;
+      unadmittedOwners: { owner: StorageOwner; cause: SerializedDatabaseError }[];
+      projectionRefusals?: ArtifactProjectionRefusals;
+    }
   | { type: "open-failed"; error: SerializedDatabaseError }
   | ({ type: "reply"; id: number } & ({ ok: true; value: unknown } | { ok: false; error: SerializedDatabaseError }));
 
-export const serializeDatabaseError = (error: unknown): SerializedDatabaseError => {
-  if (!(error instanceof Error)) return { name: "Error", message: String(error), fields: {} };
+const isScalarErrorDetail = (value: unknown): value is string | number | boolean | null | undefined =>
+  value == null || typeof value === "string" || typeof value === "number" || typeof value === "boolean";
+
+const scalarErrorFields = (error: Error) => {
   const fields: SerializedDatabaseError["fields"] = {};
   for (const [key, value] of Object.entries(error))
-    if (value === null || ["string", "number", "boolean"].includes(typeof value))
-      fields[key] = value as string | number | boolean | null;
-  return { name: error.name, message: error.message, stack: error.stack, fields };
+    if (key !== "cause" && key !== "errors" && isScalarErrorDetail(value) && value !== undefined) fields[key] = value;
+  return fields;
 };
 
-export const deserializeDatabaseError = (serialized: SerializedDatabaseError) => {
-  const error = Object.assign(new Error(serialized.message), serialized.fields);
+// Keep nested migration diagnostics clone-safe and bounded even if causes refer to one another.
+const MAX_ERROR_DETAILS = 32;
+export const serializeDatabaseError = (error: unknown): SerializedDatabaseError => {
+  let remaining = MAX_ERROR_DETAILS;
+  const seen = new Set<Error>();
+  const detail = (value: unknown): SerializedErrorDetail => {
+    if (!isScalarErrorDetail(value)) return serialize(value);
+    remaining--;
+    return value;
+  };
+  const aggregateDetails = (error: AggregateError) => {
+    const errors: SerializedErrorDetail[] = [];
+    for (const child of error.errors) {
+      if (remaining <= 0) break;
+      errors.push(detail(child));
+    }
+    return errors;
+  };
+  const serialize = (value: unknown): SerializedDatabaseError => {
+    remaining--;
+    if (!(value instanceof Error)) return { name: "Error", message: String(value), fields: {} };
+    const error: SerializedDatabaseError = {
+      name: value.name,
+      message: value.message,
+      stack: value.stack,
+      fields: scalarErrorFields(value),
+    };
+    if (value instanceof AggregateError) error.errors = [];
+    if (remaining <= 0 || seen.has(value)) return error;
+    seen.add(value);
+    if (value.cause !== undefined) error.cause = detail(value.cause);
+    if (value instanceof AggregateError) error.errors = aggregateDetails(value);
+    seen.delete(value);
+    return error;
+  };
+  return serialize(error);
+};
+
+const deserializeErrorDetail = (value: SerializedErrorDetail): unknown =>
+  value && typeof value === "object" ? deserializeDatabaseError(value) : value;
+
+export const deserializeDatabaseError = (serialized: SerializedDatabaseError): Error => {
+  const options = serialized.cause === undefined ? undefined : { cause: deserializeErrorDetail(serialized.cause) };
+  const error = serialized.errors
+    ? new AggregateError(serialized.errors.map(deserializeErrorDetail), serialized.message, options)
+    : new Error(serialized.message, options);
+  Object.assign(error, serialized.fields);
   error.name = serialized.name;
   if (serialized.stack) error.stack = serialized.stack;
   return error;

@@ -2,10 +2,13 @@ import { expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { createTestApp } from "./test-utils/create-test-app";
 
-test("startup logs each step with the time since the process started at the default log level", async () => {
+test.each([
+  { mode: "API thread", databaseWorker: false },
+  { mode: "database worker", databaseWorker: true },
+])("startup logs each step at the default level with the $mode", async ({ databaseWorker }) => {
   const logPath = process.env.PSTDIO_LOG_PATH as string;
   const previousLines = existsSync(logPath) ? readFileSync(logPath, "utf8").split("\n").filter(Boolean).length : 0;
-  const app = await createTestApp({ databasePath: ":memory:" });
+  const app = await createTestApp({ databasePath: ":memory:", databaseWorker });
   // Readiness excludes background discovery; let that phase finish before requesting shutdown.
   try {
     while (
