@@ -339,6 +339,7 @@ test.each([
       publishExtensionEvent({ id: accountEvents.changed.id }, owner);
       await until(() => choice.entry?.presence === "downloaded");
       if (peerMounted) await until(() => peer!.entry?.presence === "downloaded");
+      await until(() => opened.length > 0 && closed >= (peerMounted ? 2 : 1));
     });
     expect(opened).toEqual([
       {
