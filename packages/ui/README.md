@@ -196,10 +196,13 @@ Omit `onChange` for read-only use. With it, Edit dashboard opens a draft; Apply 
 the complete definition and Cancel emits nothing. The caller owns the saved value,
 persistence, permissions, and undo. An async `onChange` can reject to retain the
 draft and display its error with Retry. A successful save stays visible while the
-caller still publishes the previous definition. The next changed `value` takes
-precedence. Use stable unique widget IDs. Titles may
-be empty. Layout coordinates use a 12-column grid with widths from 3 to 12 and
-heights of at least 3 rows. Narrow presentation preserves those saved widths.
+caller publishes a previous definition or an earlier pending save. Once the caller
+publishes the applied definition or a distinct correction, `value` is authoritative
+again. Callers discard older async results before publishing them as `value`.
+
+Use stable unique widget IDs. Titles may be empty. Layout coordinates use a
+12-column grid with widths from 3 to 12 and heights of at least 3 rows. Narrow
+presentation preserves those saved widths.
 Modes are `vertical` (Compact up), `horizontal` (Compact left), and `free`.
 
 See **Design system/Components/Data display/Dashboard**, frame **Editable dashboard**. It replaces

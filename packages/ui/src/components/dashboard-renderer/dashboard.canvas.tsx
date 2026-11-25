@@ -1,7 +1,9 @@
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { useState } from "react";
 import { DashboardEmbeddedExample } from "./dashboard-embedded-example";
 import { DashboardExample } from "./dashboard-example";
 import { DashboardRenderer } from "./dashboard-renderer";
+import type { DashboardDataSource, DashboardDefinition, DashboardWidget } from "./dashboard-types";
 
 export default {
   title: "Design system/Components/Data display/Dashboard",
@@ -79,4 +81,55 @@ export const ChartEdgeCases = {
       ]}
     />
   ),
+} satisfies CanvasFrame;
+
+const groupedBars: DashboardWidget[] = [
+  { id: "bar", title: "Grouped bars", kind: "bar", source: "series", layout: { x: 0, y: 0, w: 12, h: 7 } },
+];
+
+const sourceSelection: DashboardWidget[] = [
+  {
+    id: "selected",
+    title: "Selected source",
+    kind: "custom",
+    source: "custom",
+    layout: { x: 0, y: 0, w: 6, h: 4 },
+  },
+  {
+    id: "missing",
+    title: "Missing source",
+    kind: "custom",
+    source: "missing",
+    layout: { x: 6, y: 0, w: 6, h: 4 },
+  },
+];
+
+const appearanceSources: DashboardDataSource[] = [
+  {
+    id: "series",
+    name: "Bar groups",
+    series: [
+      { label: "Today", value: 2, group: "Unassigned" },
+      { label: "Today", value: 3, group: "Unassigned (2)" },
+      { label: "Today", value: 4 },
+    ],
+  },
+  { id: "custom", name: "Build status", content: "Build passed" },
+];
+
+function AppearanceExample({ widgets }: { widgets: DashboardWidget[] }) {
+  const [value, setValue] = useState<DashboardDefinition>({ mode: "vertical", widgets });
+  return <DashboardRenderer value={value} sources={appearanceSources} onChange={setValue} />;
+}
+
+export const GroupedBarColors = {
+  name: "Grouped bar colors",
+  fullscreen: true,
+  render: () => <AppearanceExample widgets={groupedBars} />,
+} satisfies CanvasFrame;
+
+export const WidgetSourceChoices = {
+  name: "Widget source choices",
+  fullscreen: true,
+  render: () => <AppearanceExample widgets={sourceSelection} />,
 } satisfies CanvasFrame;

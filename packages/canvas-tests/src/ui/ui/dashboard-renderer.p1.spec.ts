@@ -39,6 +39,56 @@ test("edits widget descriptions and chooses colors for individual chart series",
   await expect(metric.locator('svg [stroke="var(--chakra-colors-purple-500)"]').first()).toBeAttached();
 });
 
+// Critical: two distinct groups must have independently editable chart marks.
+test("chooses independent stacked bar colors for named and ungrouped values", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/dashboard-renderer/dashboard.canvas.tsx#GroupedBarColors",
+  );
+  const widget = preview.getByRole("article", { name: "Grouped bars", exact: true });
+  await expect(widget).toBeVisible();
+  await preview.getByRole("button", { name: "Edit dashboard", exact: true }).click();
+  await widget.hover();
+  await widget.getByRole("button", { name: "Configure Grouped bars", exact: true }).click();
+  const settings = preview.getByRole("dialog", { name: "Widget settings" });
+  await settings.getByRole("button", { name: "Series Unassigned", exact: true }).click();
+  await settings.getByRole("menuitem", { name: "Unassigned (3)", exact: true }).click();
+  await settings.getByRole("button", { name: /^Series color:/ }).click();
+  await preview.getByRole("menuitemradio", { name: "Purple", exact: true }).click();
+  await settings.getByRole("button", { name: "Series Unassigned (3)", exact: true }).click();
+  await settings.getByRole("menuitem", { name: "Unassigned", exact: true }).click();
+  await settings.getByRole("button", { name: /^Series color:/ }).click();
+  await preview.getByRole("menuitemradio", { name: "Teal", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await preview.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(widget.locator('svg [fill="var(--chakra-colors-purple-500)"]').first()).toBeAttached();
+  await expect(widget.locator('svg [fill="var(--chakra-colors-teal-500)"]').first()).toBeAttached();
+});
+
+test("offers the sole Data option only when it would replace the current source", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/dashboard-renderer/dashboard.canvas.tsx#WidgetSourceChoices",
+  );
+  const selected = preview.getByRole("article", { name: "Selected source", exact: true });
+  const missing = preview.getByRole("article", { name: "Missing source", exact: true });
+  const settings = preview.getByRole("dialog", { name: "Widget settings" });
+  await preview.getByRole("button", { name: "Edit dashboard", exact: true }).click();
+  await selected.hover();
+  await selected.getByRole("button", { name: "Configure Selected source", exact: true }).click();
+  await expect(settings.getByRole("button", { name: "Data Build status", exact: true })).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(settings).toBeHidden();
+  await missing.hover();
+  await missing.getByRole("button", { name: "Configure Missing source", exact: true }).click();
+  await settings.getByRole("button", { name: /^Data / }).click();
+  await settings.getByRole("menuitem", { name: "Build status", exact: true }).click();
+  await expect(settings.getByRole("button", { name: "Data Build status", exact: true })).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await preview.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(missing.getByText("Build passed", { exact: true })).toBeVisible();
+});
+
 // Critical: cluster membership and share must be visible inside the dashboard widgets.
 test("shows grouped scatter points and ring shares on the dashboard", async ({ page }) => {
   const preview = await openCanvasPreview(

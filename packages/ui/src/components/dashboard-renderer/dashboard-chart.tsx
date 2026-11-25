@@ -16,7 +16,7 @@ import { portal } from "@tanstack/charts/tooltip/portal";
 import { useRef } from "react";
 import { Chart, chartColor } from "@/components/charts/chart";
 import { chartGeometry } from "@/theme/primitives/chart";
-import { barColorGroups, barGroup, resolveWidgetColor, widgetColorRange } from "./dashboard-colors";
+import { barColorGroups, resolveWidgetColor, widgetColorRange } from "./dashboard-colors";
 import { type DashboardDataSource, type DashboardWidget, widgetLabel } from "./dashboard-types";
 
 export function DashboardChart(props: { widget: DashboardWidget; source: DashboardDataSource; sparkline?: boolean }) {
@@ -37,14 +37,14 @@ export function DashboardChart(props: { widget: DashboardWidget; source: Dashboa
     label,
     value: series.filter((point) => point.label === label).reduce((sum, point) => sum + point.value, 0),
   }));
-  const groups = widget.kind === "bar" && !sparkline ? barColorGroups(series) : [];
-  const stacked = groups.length > 0;
+  const groups = widget.kind === "bar" && !sparkline ? barColorGroups(series) : undefined;
+  const stacked = groups && groups.keys.length > 0;
   const color = resolveWidgetColor(widget.color) ?? chartColor("vis.categorical.1");
   const mark = stacked
     ? barY(series, {
         x: "label",
         y: "value",
-        color: barGroup,
+        color: ({ group }) => group ?? groups.ungroupedLabel,
         layout: stack(),
         radius: { end: chartGeometry.barRadius },
       })
@@ -82,8 +82,8 @@ export function DashboardChart(props: { widget: DashboardWidget; source: Dashboa
             ...(stacked
               ? {
                   color: {
-                    domain: groups,
-                    range: widgetColorRange(widget, groups),
+                    domain: groups.keys,
+                    range: widgetColorRange(widget, groups.keys),
                     legend: colorLegend({ placement: "bottom" }),
                   },
                 }

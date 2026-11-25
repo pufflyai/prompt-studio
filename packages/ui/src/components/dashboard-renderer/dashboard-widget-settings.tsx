@@ -103,6 +103,7 @@ export function WidgetSettings(props: WidgetSettingsProps) {
                   <DisplayMenuSelect
                     label="Data"
                     value={widget.source}
+                    disabled={!availableSources.some(({ id }) => id !== widget.source)}
                     options={availableSources.map(({ id, name }) => ({ value: id, label: name }))}
                     onSelect={(id) => {
                       if (id === widget.source) return;
