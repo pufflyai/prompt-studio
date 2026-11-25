@@ -1,8 +1,10 @@
+import type { AssetOwner } from "pstdio-api-contracts";
 import { createReadBoundary } from "pstdio-extensions";
 import type { LiveConnection } from "pstdio-sync/relay";
 import { createDocumentRelayConnection } from "pstdio-sync/relay";
 import { watchArtifactMount } from "../../features/extensions/artifact-mount-watch/mount-watcher";
 import { resolveWorkspaceFilesPath } from "../../features/extensions/command-environment/workspace-files";
+import { WorkspaceTargetUnavailableError } from "../../features/extensions/command-environment/workspace-target";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { createPublicationStorageAccess } from "../../features/extensions/publication/storage-access";
 import { apiLogger } from "../../lib/logger";
@@ -47,6 +49,73 @@ export const extensionOwnerContextKey = (input: {
     workspace?.deleted_at,
     workspace?.provider_capabilities_json,
   ]);
+};
+
+const startRelayArtifactWatches = (input: {
+  deps: RelayDeps;
+  owner: AssetOwner;
+  repoRoot: string;
+  roots: ReadonlySet<string>;
+  signal: AbortSignal;
+  wake: () => void;
+}) => {
+  const { deps, owner, signal } = input;
+  const watches = new Map<string, ReturnType<typeof watchArtifactMount>>();
+  let retry: ReturnType<typeof setTimeout> | undefined;
+  let failures = 0;
+
+  const scheduleRetry = () => {
+    retry = setTimeout(() => void open(), Math.min(1_000 * 2 ** failures++, 30_000));
+    retry.unref?.();
+  };
+
+  const open = async () => {
+    if (signal.aborted) return;
+    const writable = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write").catch((error) => {
+      if (!signal.aborted && !(error instanceof WorkspaceTargetUnavailableError)) {
+        apiLogger.warn(
+          { err: error, event: "relay.artifact_watch.lookup_failed", ...owner },
+          "Relay artifact watch workspace lookup failed",
+        );
+        scheduleRetry();
+      }
+      return null;
+    });
+    if (signal.aborted || writable !== input.repoRoot) return;
+
+    for (const root of input.roots) {
+      if (watches.has(root)) continue;
+      try {
+        const watch = watchArtifactMount({
+          root,
+          ledger: deps.artifactMountWrites,
+          onChange: input.wake,
+          onError: input.wake,
+          onFolderLimit: input.wake,
+        });
+        watches.set(root, watch);
+        // A recovered watch may have missed edits while its mount was unwatched.
+        if (failures > 0) input.wake();
+      } catch (error) {
+        apiLogger.warn(
+          { err: error, event: "relay.artifact_watch.start_failed", ...owner, root },
+          "Relay artifact watch failed to start",
+        );
+      }
+    }
+    if (watches.size < input.roots.size) scheduleRetry();
+  };
+
+  signal.addEventListener(
+    "abort",
+    () => {
+      clearTimeout(retry);
+      for (const watch of watches.values()) watch.close();
+      watches.clear();
+    },
+    { once: true },
+  );
+  void open();
 };
 
 export const startRelayExtension = async (input: {
@@ -108,7 +177,6 @@ export const startRelayExtension = async (input: {
     if (!documents.hasDocument(name)) connection?.wake();
     connection?.wakeDocument(name);
   };
-  const watches: ReturnType<typeof watchArtifactMount>[] = [];
   const refreshFiles = async () => {
     const writableRoot = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write").catch(
       () => null,
@@ -137,19 +205,6 @@ export const startRelayExtension = async (input: {
     void projections.request({ owner, documentKey }).catch(() => {});
   });
   try {
-    const writableRoot = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write").catch(
-      () => null,
-    );
-    for (const { root } of writableRoot === repoRoot ? mounts : [])
-      watches.push(
-        watchArtifactMount({
-          root,
-          ledger: deps.artifactMountWrites,
-          onChange: () => connection?.wake(),
-          onError: () => connection?.wake(),
-          onFolderLimit: () => connection?.wake(),
-        }),
-      );
     connection = createDocumentRelayConnection({
       live: input.live,
       origin: config.relayOrigin,
@@ -174,6 +229,16 @@ export const startRelayExtension = async (input: {
       onStatusChange: input.statusChanged,
     });
     const active = connection;
+    if (repoRoot && mounts.length > 0) {
+      startRelayArtifactWatches({
+        deps,
+        owner,
+        repoRoot,
+        roots: new Set(mounts.map(({ root }) => root)),
+        signal,
+        wake: active.wake,
+      });
+    }
     return {
       owner,
       contextKey: input.contextKey,
@@ -189,13 +254,11 @@ export const startRelayExtension = async (input: {
       status: async () => ({ ...(await documents.status()), ...active.status() }),
       close: () => {
         stopProjection();
-        for (const watch of watches) watch.close();
         controller.abort();
       },
     };
   } catch (error) {
     stopProjection();
-    for (const watch of watches) watch.close();
     controller.abort();
     await projections.drain();
     await documents.close();

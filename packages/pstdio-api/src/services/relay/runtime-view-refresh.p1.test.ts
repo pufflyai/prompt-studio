@@ -1,8 +1,9 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
+import * as mountWatcher from "../../features/extensions/artifact-mount-watch/mount-watcher";
 import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
 import { loadExtensionSource } from "../../features/extensions/extension-runtime";
 import { documentPeer } from "../../features/extensions/publication/document-peer.fixture";
@@ -132,7 +133,10 @@ test("finishing views keeps downloaded Cloud documents subscribed without downlo
   }
 });
 
-test("finishing setup at the same folder projects artifacts downloaded from another device", async () => {
+test.each([
+  false,
+  true,
+])("finishing setup projects downloaded artifacts (sender watch initially fails: %s)", async (watchFails) => {
   const root = await mkdtemp(join(tmpdir(), "cloud-ready-mount-"));
   const apps = await Promise.all(
     ["sender", "receiver"].map((name) => createTestApp({ storageRoot: join(root, name) })),
@@ -142,6 +146,27 @@ test("finishing setup at the same folder projects artifacts downloaded from anot
   const runtimes: Awaited<ReturnType<typeof startRelayRuntime>>[] = [];
   const configs: RelayWorkbench[] = [];
   const folders = [join(root, "sender-checkout"), join(root, "receiver-checkout")];
+  const senderMount = join("sender-checkout", ".pstdio", "extension-storage", owner.extensionId, "documents");
+  const openWatch = mountWatcher.watchArtifactMount;
+  let allowWatch = !watchFails;
+  let attempts = 0;
+  let recovered = 0;
+  let closed = 0;
+  const native = watchFails
+    ? spyOn(mountWatcher, "watchArtifactMount").mockImplementation((input) => {
+        if (!input.root.endsWith(senderMount)) return openWatch(input);
+        attempts++;
+        if (!allowWatch) throw Object.assign(new Error("Native artifact watch is unavailable"), { code: "ENOSPC" });
+        const watcher = openWatch(input);
+        recovered++;
+        return {
+          close: () => {
+            watcher.close();
+            closed++;
+          },
+        };
+      })
+    : undefined;
   const synced = async (runtime: Awaited<ReturnType<typeof startRelayRuntime>>) => {
     const end = Date.now() + 3000;
     let observed = await runtime.status(owner.workbenchId);
@@ -228,10 +253,21 @@ test("finishing setup at the same folder projects artifacts downloaded from anot
     while (!(await Bun.file(file).exists()) && Date.now() < end) await Bun.sleep(10);
     expect(await Bun.file(file).exists()).toBe(true);
     expect(await readFile(file, "utf8")).toBe("Downloaded while setup runs");
+    if (watchFails) {
+      // The receiver obtained the actual file while the sender still lacked a native watch.
+      expect(attempts).toBeGreaterThan(0);
+      expect(recovered).toBe(0);
+      allowWatch = true;
+      const retryDeadline = Date.now() + 3_000;
+      while (recovered === 0 && Date.now() < retryDeadline) await Bun.sleep(10);
+      expect(recovered).toBe(1);
+    }
   } finally {
     await Promise.all(runtimes.map((runtime) => runtime.close()));
+    native?.mockRestore();
     await Promise.all(apps.map((app) => app.close()));
     await peer.close();
     await rm(root, { recursive: true, force: true });
   }
-});
+  if (watchFails) expect(closed).toBe(1);
+}, 8_000);

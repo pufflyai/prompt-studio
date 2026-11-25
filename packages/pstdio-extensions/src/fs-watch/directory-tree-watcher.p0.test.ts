@@ -136,6 +136,37 @@ describe("createDirectoryTreeWatcher", () => {
 });
 
 // The Linux strategy, which every platform uses when a watch function is injected.
+test("retries a returned root when reopening its watch fails", async () => {
+  const root = createRoot();
+  const errors: unknown[] = [];
+  const paths: string[] = [];
+  const failure = Object.assign(new Error("Cannot reopen the root watch"), { code: "ENOSPC" });
+  let opened = 0;
+  let listener: DirectoryWatchListener | undefined;
+  const tree = createDirectoryTreeWatcher({
+    root,
+    onEvent: (_event, path) => paths.push(path),
+    onError: (error) => errors.push(error),
+    skipDirectory: () => true,
+    watch: (_path, notify) => {
+      if (++opened === 2) throw failure;
+      listener = notify;
+      return { close: () => {} };
+    },
+  });
+  try {
+    rmSync(root, { recursive: true });
+    listener?.("rename", null);
+    mkdirSync(root);
+    await waitFor(() => opened === 3, 3_000);
+    expect(errors).toEqual([failure]);
+    listener?.("rename", "manifest.json");
+    expect(paths).toContain(join(root, "manifest.json"));
+  } finally {
+    tree.close();
+  }
+});
+
 describe("createDirectoryTreeWatcher with one handle per folder", () => {
   test("keeps discovering siblings when one new folder cannot be watched", () => {
     const root = createRoot();

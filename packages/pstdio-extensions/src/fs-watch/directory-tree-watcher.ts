@@ -147,16 +147,24 @@ export const createDirectoryTreeWatcher = (input: DirectoryTreeWatcherInput) => 
     }
   };
 
-  const watchRootWhenBack = () => {
-    if (folderIdentity(input.root)) {
-      watchFolders(input.root, true);
-      return;
+  const reopenRoot = () => {
+    addHandle(input.root);
+    const folder = folders.get(input.root);
+    if (!folder) return false;
+    if (folder.identity !== folderIdentity(input.root)) {
+      forgetFolder(input.root);
+      return false;
     }
+    watchFolders(input.root, true);
+    return true;
+  };
+
+  const watchRootWhenBack = () => {
+    if (reopenRoot()) return;
     rootCheck ??= setInterval(() => {
-      if (!folderIdentity(input.root)) return;
+      if (!reopenRoot()) return;
       if (rootCheck) clearInterval(rootCheck);
       rootCheck = null;
-      watchFolders(input.root, true);
       input.onEvent("rename", input.root);
     }, ROOT_RETURN_CHECK_MS);
     rootCheck.unref?.();
