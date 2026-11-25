@@ -6,7 +6,12 @@ import { isExtensionIdentityBackup } from "./extension-identity-backup";
 import { ARTIFACT_MOUNT_ROOT, extensionStorageDirectory } from "./extension-storage-path";
 import { createMigratedWorkspaceRoot } from "./migrated-workspace-root";
 import { normalizeArtifactMountPath } from "./path-normalization";
-import { createSafeFileRoot, normalizeMountRelativePath } from "./safe-file-root";
+import {
+  type ArtifactParentWrite,
+  createSafeFileRoot,
+  normalizeMountRelativePath,
+  observeArtifactParentWrite,
+} from "./safe-file-root";
 import { createWorkspaceFileAccess, type WorkspaceFileAccess } from "./workspace-file-access";
 import { type KeptWorkspaceFile, runAfterPendingSync, syncWorkspaceDir } from "./workspace-sync-dir";
 
@@ -17,10 +22,16 @@ type ArtifactMountLocation = {
   mountPath: string;
 };
 
+export type ArtifactMountWriteObserver = (
+  path: string,
+  createdDirectories?: ReadonlyMap<string, string>,
+  parentWrites?: readonly ArtifactParentWrite[],
+) => void;
+
 type CreateArtifactMountInput = ArtifactMountLocation & {
   signal?: AbortSignal;
   /** Called after each write, update, or delete with the changed path under the mount root. */
-  onWrite?: (path: string) => void;
+  onWrite?: ArtifactMountWriteObserver;
 };
 
 type FileMountOptions = Pick<CreateArtifactMountInput, "signal" | "onWrite">;
@@ -89,17 +100,30 @@ const createFileMountState = (
   const read = createReadBoundary(signal);
   // Report paths under the root as given, not the root's resolved real path, so they match what a
   // watcher on that root reports. A write through a linked file changes the file it points to.
-  const reportWrite = (relativePath: string, linkTarget = "") =>
-    onWrite?.(join(resolve(mountRoot), ...relativePath.split("/"), linkTarget));
+  const observedPath = (relativePath: string, linkTarget = "") =>
+    join(resolve(mountRoot), ...relativePath.split("/"), linkTarget);
+  const write = async (path: string, value: string | Uint8Array) => {
+    const createdDirectories = onWrite ? new Map<string, string>() : undefined;
+    const parentWrites: ArtifactParentWrite[] = [];
+    const { operationPath, realPath, relativePath } = await safeRoot.resolveForWrite(
+      path,
+      createdDirectories &&
+        ((folder, identity, parentWrite) => {
+          createdDirectories.set(folder, identity);
+          parentWrites.push(parentWrite);
+        }),
+    );
+    const changedPath = observedPath(relativePath, relative(operationPath, realPath));
+    const parentWrite = onWrite && observeArtifactParentWrite(changedPath);
+    await writeFile(operationPath, value);
+    if (parentWrite) parentWrites.push(parentWrite());
+    onWrite?.(changedPath, createdDirectories, parentWrites);
+  };
   const mount: ArtifactMount = {
     exists: (path) => read(async () => Boolean(await safeRoot.tryResolveExisting(path))),
     readText: (path) =>
       read(async () => readFile((await safeRoot.resolveExisting(path)).operationPath, { encoding: "utf8", signal })),
-    writeText: async (path, value) => {
-      const { operationPath, realPath, relativePath } = await safeRoot.resolveForWrite(path);
-      await writeFile(operationPath, value, "utf8");
-      reportWrite(relativePath, relative(operationPath, realPath));
-    },
+    writeText: write,
     updateText: async (path, value) => {
       const { operationPath, realPath, relativePath } = await safeRoot.resolveExisting(path);
       // Opening without O_CREAT keeps a racing delete authoritative. An unlinked
@@ -111,17 +135,13 @@ const createFileMountState = (
       } finally {
         await file.close();
       }
-      reportWrite(relativePath, relative(operationPath, realPath));
+      onWrite?.(observedPath(relativePath, relative(operationPath, realPath)));
     },
     readBytes: (path) =>
       read(
         async () => new Uint8Array(await readFile((await safeRoot.resolveExisting(path)).operationPath, { signal })),
       ),
-    writeBytes: async (path, value) => {
-      const { operationPath, realPath, relativePath } = await safeRoot.resolveForWrite(path);
-      await writeFile(operationPath, value);
-      reportWrite(relativePath, relative(operationPath, realPath));
-    },
+    writeBytes: write,
     list: (pattern) =>
       read(async () => {
         // The scoped-walk shortcut must honor the same escape guard as every other
@@ -151,8 +171,10 @@ const createFileMountState = (
     delete: async (path) => {
       const { operationPath, relativePath } = await safeRoot.resolveExisting(path);
       if (!relativePath) throw new Error("Artifact path is required");
+      const changedPath = observedPath(relativePath);
+      const parentWrite = onWrite && observeArtifactParentWrite(changedPath);
       await rm(operationPath, { recursive: true, force: true });
-      reportWrite(relativePath);
+      onWrite?.(changedPath, undefined, parentWrite ? [parentWrite()] : undefined);
     },
   };
   return { mount, safeRoot };

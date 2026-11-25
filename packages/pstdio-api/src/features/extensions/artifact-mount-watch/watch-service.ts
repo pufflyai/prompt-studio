@@ -6,7 +6,7 @@ import type { ExtensionsRouteDeps } from "../deps";
 import { fireExtensionEvent } from "../extension-event-runtime";
 import { watchArtifactMount } from "./mount-watcher";
 
-type WatchTarget = { projectId: string; mount: RuntimeArtifactMount; root: string };
+type WatchTarget = { projectId: string; mount: RuntimeArtifactMount; root: string; repoRoot: string };
 
 // These tables decide which mounts are watched and where their folders are. Only default
 // workspaces hold mount copies, so other workspace updates, such as worktree status, are skipped.
@@ -57,7 +57,7 @@ export const createArtifactMountWatchService = (input: {
           extensionId: mount.extensionId,
           mountPath: mount.relativePath,
         });
-        targets.set(JSON.stringify([projectId, mount.id, root]), { projectId, mount, root });
+        targets.set(JSON.stringify([projectId, mount.id, root]), { projectId, mount, root, repoRoot });
       }
     }
     return targets;
@@ -75,10 +75,11 @@ export const createArtifactMountWatchService = (input: {
     deliveries.add(delivery);
   };
 
-  const openWatch = ({ projectId, mount, root }: WatchTarget) => {
+  const openWatch = ({ projectId, mount, root, repoRoot }: WatchTarget) => {
     const logFields = { mount_id: mount.id, project_id: projectId };
     return watchArtifactMount({
       root,
+      workspaceRoot: repoRoot,
       ledger: deps.artifactMountWrites,
       onChange: (paths) => deliver(projectId, mount, paths),
       onError: (err) =>
