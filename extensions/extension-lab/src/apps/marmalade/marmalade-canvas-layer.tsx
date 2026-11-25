@@ -66,6 +66,7 @@ export const MarmaladeCanvasLayer = (props: { layer: MarmaladeLayer; state: Marm
       tabIndex={locked ? -1 : 0}
       transform={`translate(${pointer.current && gesture.isCurrent() ? pointer.current.baseX + offset.x : layer.x} ${pointer.current && gesture.isCurrent() ? pointer.current.baseY + offset.y : layer.y}) rotate(${layer.rotation ?? 0} ${layer.width / 2} ${layer.height / 2})`}
       opacity={layer.opacity}
+      style={{ mixBlendMode: layer.blendMode }}
       onPointerDown={start}
       onPointerMove={(event) => {
         if (pointer.current && gesture.isCurrent()) {
