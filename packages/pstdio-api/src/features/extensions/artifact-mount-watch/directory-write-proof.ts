@@ -112,10 +112,12 @@ const advanceRecordedDirectoryChild = (
   nestedDirectory: OwnedDirectory | undefined,
 ) => {
   const child = parent?.children.get(name);
-  if (!parent || !child) return;
+  if (!child) return;
   if (sameState(child.state, before)) {
-    parent.children.set(name, { state: after, nestedDirectory });
-    return;
+    // An outside edit can have the same directory metadata as the last owned write.
+    // Keep the child record so watchers retain the contents they already reported.
+    child.state = after;
+    child.nestedDirectory = nestedDirectory;
   }
   // Only a watcher that reported the exact pre-write state can suppress its later echo.
   for (const report of child.directoryReports ?? []) {

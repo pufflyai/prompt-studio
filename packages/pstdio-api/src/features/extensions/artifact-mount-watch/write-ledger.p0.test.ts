@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import * as fs from "node:fs";
 import { mkdirSync, mkdtempSync, renameSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import * as fsPromises from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -140,6 +141,47 @@ describe("artifact mount write ledger", () => {
 });
 
 describe("artifact mount directory echoes", () => {
+  test("keeps a reported folder across an API write with unchanged directory timestamps", async () => {
+    const ledger = createArtifactMountWriteLedger(() => 0);
+    const { mount, root } = createMount(ledger);
+    const folder = join(root, "sales");
+    const archive = join(folder, "archive");
+    const options = { keepMatchedWrites: true };
+    const first = ledger.createEchoFilter();
+    const second = ledger.createEchoFilter();
+    const read = fs.lstatSync;
+    const coarseTime = spyOn(fs, "lstatSync").mockImplementation(((
+      path: fs.PathLike,
+      options?: { bigint?: boolean },
+    ) => {
+      const stats = Reflect.apply(read, fs, [path, options]);
+      if (path === archive && options?.bigint && stats) {
+        // A Windows directory can keep the same size and timestamps across a burst of writes.
+        stats.size = 0n;
+        stats.mtimeNs = 0n;
+        stats.ctimeNs = 0n;
+      }
+      return stats;
+    }) as typeof fs.lstatSync);
+    try {
+      await mount.writeText("sales/archive/first.json", "{}");
+      const archiveState = readArtifactFileState(archive);
+      expect(archiveState).toMatchObject({ mtime: 0n, ctime: 0n });
+      writeFileSync(join(archive, "external.json"), "outside");
+      expect(readArtifactFileState(archive)).toEqual(archiveState);
+      expect(first([archive], options)).toEqual([archive]);
+
+      await mount.writeText("sales/archive/second.json", "{}");
+      expect(first([folder], options)).toEqual([]);
+      expect(second([folder], options)).toEqual([folder]);
+
+      writeFileSync(join(archive, "later.json"), "another outside change");
+      expect(first([folder], options)).toEqual([folder]);
+    } finally {
+      coarseTime.mockRestore();
+    }
+  });
+
   test.each([
     [false, false],
     [false, true],
