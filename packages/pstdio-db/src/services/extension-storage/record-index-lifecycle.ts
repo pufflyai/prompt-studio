@@ -11,10 +11,11 @@ import { ensureStorageOwner } from "./storage-owner-key";
 export const dropRecordIndexObjects = async (
   db: Pick<DbClient, "execute">,
   indexes: { definition: StorageRecordIndex; database_name: string }[],
+  layout: "released" | "current" = "current",
 ) => {
   for (const index of indexes) {
     const countedLayout = index.database_name.startsWith("storage_query_v4_");
-    if (countedLayout) await dropCountIndex(db, index.definition, index.database_name);
+    if (countedLayout) await dropCountIndex(db, index.definition, index.database_name, layout);
     await db.execute(sql`DROP INDEX IF EXISTS ${sql.identifier(index.database_name)}`);
     await db.execute(sql`DROP INDEX IF EXISTS ${sql.identifier(`${index.database_name}_o`)}`);
     for (const position of (countedLayout ? (index.definition.alternateOrders ?? []) : []).keys())

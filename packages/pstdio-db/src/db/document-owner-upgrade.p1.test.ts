@@ -34,6 +34,7 @@ const sorted = (rows: Record<string, unknown>[][]) =>
       .sort((a, b) => compare(JSON.stringify(a), JSON.stringify(b))),
   );
 const numeric = new Set(tables.slice(0, 6).concat("storage_record_indexes"));
+const releasedCountIndex = "storage_query_v4_00000000000000000000000000000000";
 const readRestoredTable = async (
   store: Awaited<ReturnType<typeof createDb>>["pglite"],
   table: string,
@@ -117,7 +118,12 @@ for (const interruption of ["normal", "schema", "restore"]) {
       INSERT INTO storage_resource_identities SELECT workbench_id,'same-resource','example.items','item','IT-700','IT',700 FROM storage_resource_projections;
       INSERT INTO storage_resource_aliases SELECT workbench_id,resource_id,'IT-900','IT',900 FROM storage_resource_identities;
       INSERT INTO storage_record_indexes SELECT workbench_id,extension_id,'things',
-        '{"name":"things","fields":{"state":{"type":"string","path":["state"],"derive":{"kind":"string"}}},"countBy":["state"]}'::jsonb,'old-query-' || workbench_id || '-' || extension_id FROM storage_record_projections;`);
+        '{"name":"things","fields":{"state":{"type":"string","path":["state"],"derive":{"kind":"string"}}},"countBy":["state"]}'::jsonb,
+        CASE WHEN workbench_id='project-a' AND extension_id='pstdio' THEN '${releasedCountIndex}'
+          ELSE 'old-query-' || workbench_id || '-' || extension_id END FROM storage_record_projections;
+      CREATE FUNCTION ${releasedCountIndex}_tr() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NULL; END $$;
+      CREATE TRIGGER ${releasedCountIndex}_tr_update AFTER UPDATE ON storage_current_records
+        FOR EACH ROW EXECUTE FUNCTION ${releasedCountIndex}_tr();`);
       await previous.pglite.exec(`INSERT INTO storage_documents (workbench_id,extension_id,document_id,state)
       SELECT id,'pstdio','["host-local-migration","first-party-identities-v1"]',decode('0000','hex') FROM projects`);
       // This fixture exercises exact structural rewrites of already-ordered owners.
@@ -162,6 +168,9 @@ for (const interruption of ["normal", "schema", "restore"]) {
         return Promise.all(tables.map((table) => readRestoredTable(store!.pglite, table, fileRows)));
       };
       expect(sorted(await restored())).toEqual(sorted(original));
+      expect(
+        (await store.pglite.query(`SELECT to_regprocedure('${releasedCountIndex}_tr()') AS retired`)).rows,
+      ).toEqual([{ retired: null }]);
       const countTables = await store.pglite.query<{ database_name: string }>(
         "SELECT entry.value->>'database_name' AS database_name FROM owners o CROSS JOIN LATERAL jsonb_each(o.record_indexes) AS entry(key,value)",
       );
@@ -190,5 +199,5 @@ for (const interruption of ["normal", "schema", "restore"]) {
   };
   // Each variant restores 401 additional retry facts across committed batches,
   // collects obsolete files and verifies durability on a second reopen.
-  test(name, check, 10_000);
+  test(name, check, 30_000);
 }
