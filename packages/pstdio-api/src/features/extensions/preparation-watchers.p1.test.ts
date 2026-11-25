@@ -3,7 +3,15 @@ import { copyFile, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
+import {
+  configureExtensionPreparationWorker,
+  stopExtensionPreparation,
+  subscribePreparationEvents,
+} from "pstdio-extensions";
 import { createPreparationClient } from "pstdio-extensions/preparation-client";
+import { runExtensionPreparation } from "./extension-preparation";
+import { createRootWatcherClient } from "./extension-root-watcher-client";
+import { createExtensionSourceWatcher } from "./extension-source-watcher";
 import { createTestSkillExtensionSource } from "./test-utils/create-test-extension-source";
 
 const cleanups: (() => Promise<unknown>)[] = [];
@@ -197,3 +205,65 @@ test("reattachment identifies offline source changes before slow frontend reconc
   expect(events.at(-1)?.changed).toBe(true);
   await client.run("watch.dispose", { id: input.id }, options);
 });
+
+test.each([
+  "root",
+  "source",
+] as const)("a %s watch recovers when a later worker starts after a failed replacement", async (kind) => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), "preparation-watch-retry-")));
+  cleanups.push(() => rm(root, { recursive: true, force: true }));
+  const source = createTestSkillExtensionSource({ root, name: "source", installName: "source", displayName: "Source" });
+  const watchPath = kind === "root" ? join(root, "extensions") : source;
+  const makeWorker = () => new Worker(new URL("./extension-preparation-worker.ts", import.meta.url));
+  configureExtensionPreparationWorker(makeWorker);
+  cleanups.push(async () => {
+    await stopExtensionPreparation();
+    configureExtensionPreparationWorker(makeWorker);
+  });
+
+  const failure = Promise.withResolvers<unknown>();
+  const onError = (error: unknown) => failure.resolve(error);
+  const watcher =
+    kind === "root"
+      ? await createRootWatcherClient({
+          listExtensionRoots: async () => [{ path: watchPath, ownerRoot: root, sync: async () => {} }],
+          onError,
+        })
+      : await createExtensionSourceWatcher({
+          listInstalledSources: async () => [{ install_name: "source", source_path: source }],
+          onSourceChanged: async () => {},
+          onError,
+        });
+  cleanups.push(async () => watcher.dispose());
+
+  const reattached = Promise.withResolvers<void>();
+  const edited = Promise.withResolvers<void>();
+  let editing = false;
+  let attempts = 0;
+  let started = 0;
+  const unsubscribe = subscribePreparationEvents((event) => {
+    if (started === 0 || event.sourcePath !== watchPath) return;
+    if (event.attachment) reattached.resolve();
+    else if (editing) edited.resolve();
+  });
+  cleanups.push(async () => unsubscribe());
+  configureExtensionPreparationWorker(() => {
+    attempts++;
+    if (attempts === 1) throw new Error("Temporary preparation worker startup failure");
+    const worker = makeWorker();
+    started++;
+    return worker;
+  });
+  expect(await failure.promise).toMatchObject({ message: "Temporary preparation worker startup failure" });
+
+  // An unrelated successful job starts the slot after the restoration request failed.
+  expect(await runExtensionPreparation("source.hash", { sourcePath: source })).toEqual(expect.any(String));
+  const wasReattached = await Promise.race([reattached.promise.then(() => true), Bun.sleep(5_000).then(() => false)]);
+  expect(wasReattached).toBe(true);
+  editing = true;
+  await writeFile(join(watchPath, kind === "root" ? "new-tool.txt" : "SKILL.md"), "New contents");
+  const sawEdit = await Promise.race([edited.promise.then(() => true), Bun.sleep(5_000).then(() => false)]);
+  expect(sawEdit).toBe(true);
+  expect(attempts).toBe(2);
+  expect(started).toBe(1);
+}, 20_000);
