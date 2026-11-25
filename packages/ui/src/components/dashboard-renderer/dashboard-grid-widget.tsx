@@ -77,6 +77,7 @@ export function GridWidget(props: GridWidgetProps) {
     >
       <WidgetCard
         widget={widget}
+        hidden={hidden}
         source={source}
         originalCustomSource={originalCustomSource}
         controls={

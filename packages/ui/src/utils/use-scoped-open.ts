@@ -25,13 +25,14 @@ export const useScopedOpen = <
     if (revision !== activity.revision && !(props.open ?? open)) setRevision(activity.revision);
     if ((!activity.active || revision !== activity.revision) && (props.open ?? open)) dismiss();
   }, [activity.active, activity.revision, revision, props.open, open]);
-  if (!scope) return props;
+  if (!scope && !activity.owned) return props;
+  const active = activity.active && (scope?.active ?? true);
   return {
     ...props,
-    open: scope.active && !expired && (props.open ?? open),
-    unmountOnExit: scope.active ? props.unmountOnExit : false,
+    open: active && !expired && (props.open ?? open),
+    unmountOnExit: active ? props.unmountOnExit : false,
     onOpenChange: (details: { open: boolean }) => {
-      if (!scope.active || expired) return;
+      if (!active || expired) return;
       setOpen(details.open);
       props.onOpenChange?.(details);
     },

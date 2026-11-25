@@ -24,6 +24,12 @@ export const EmbeddedDashboard = {
   fullscreen: true,
 } satisfies CanvasFrame<typeof DashboardEmbeddedExample>;
 
+export const DelayedDashboardSave = {
+  name: "Dashboard with a delayed refresh",
+  render: () => <DashboardEmbeddedExample deferRefresh />,
+  fullscreen: true,
+} satisfies CanvasFrame;
+
 export const ChartEdgeCases = {
   name: "Chart precision and group labels",
   fullscreen: true,

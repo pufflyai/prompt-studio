@@ -119,7 +119,7 @@ test("cancel restores the state of a removed custom widget", async ({ page }) =>
   await toolbar.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(marker).toHaveAttribute("aria-pressed", "false");
   await removeWidget();
-  await expect(widget.getByRole("button", { name: "Release marker", includeHidden: true })).toHaveCount(1);
+  await expect(widget.getByRole("button", { name: "Release marker", exact: true, includeHidden: true })).toHaveCount(1);
   await apply.click();
   await expect(edit).toBeFocused();
   await expect(widget).toHaveCount(0);
@@ -179,7 +179,76 @@ test("keeps the correct custom content state when canceling or applying a data s
   await toolbar.getByRole("button", { name: "Apply", exact: true }).click();
   await expect(toolbar.getByRole("button", { name: "Edit dashboard", exact: true })).toBeFocused();
   await expect(deploymentMarker).toHaveAttribute("aria-pressed", "false");
-  await expect(widget.getByRole("button", { name: "Release marker", includeHidden: true })).toHaveCount(0);
+  await expect(widget.getByRole("button", { name: "Release marker", exact: true, includeHidden: true })).toHaveCount(0);
+});
+
+// Critical: a popover must stop receiving input as soon as its widget or source is hidden.
+test("dismisses custom widget popovers when removal or a preview hides their owner", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/dashboard-renderer/dashboard.canvas.tsx#EmbeddedDashboard",
+  );
+  const widget = preview.locator('[data-widget-id="releases"]');
+  const toolbar = preview.getByRole("toolbar", { name: "Build history controls" });
+  const options = widget.getByRole("button", { name: "Release marker options", exact: true });
+  const popover = preview.getByRole("dialog", { name: "Release marker options", exact: true });
+
+  await widget.getByRole("button", { name: "Release marker", exact: true }).click();
+  for (const change of ["remove", "type", "data"]) {
+    await toolbar.getByRole("button", { name: "Edit dashboard", exact: true }).click();
+    await options.click();
+    await expect(popover.getByRole("button", { name: "Toggle release marker" })).toBeVisible();
+    await widget.hover();
+    await widget.getByRole("button", { name: "Configure Build history", exact: true }).click();
+    const settings = preview.getByRole("dialog", { name: "Widget settings" });
+    await expect(popover).toBeVisible();
+    if (change === "remove") {
+      await settings.getByRole("button", { name: "Remove widget", exact: true }).click();
+    } else if (change === "type") {
+      await settings.getByRole("button", { name: "Type Custom", exact: true }).click();
+      await preview.getByRole("menuitem", { name: "Metric", exact: true }).click();
+    } else {
+      await settings.getByRole("button", { name: "Data Build history", exact: true }).click();
+      await preview.getByRole("menuitem", { name: "Deployment history", exact: true }).click();
+    }
+    await expect(options).toBeHidden();
+    await expect(popover).toBeHidden();
+    await toolbar.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(options).toHaveAttribute("aria-expanded", "false");
+    await expect(popover).toBeHidden();
+    await expect(widget.getByRole("button", { name: "Release marker", exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  }
+});
+
+// Critical: saving before the caller publishes value must preserve the applied widget's controls.
+test("keeps an applied custom preview across a delayed controlled refresh", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/dashboard-renderer/dashboard.canvas.tsx#DelayedDashboardSave",
+  );
+  const widget = preview.locator('[data-widget-id="releases"]');
+  const toolbar = preview.getByRole("toolbar", { name: "Build history controls" });
+  const edit = toolbar.getByRole("button", { name: "Edit dashboard", exact: true });
+  await edit.click();
+  await widget.hover();
+  await widget.getByRole("button", { name: "Configure Build history", exact: true }).click();
+  const settings = preview.getByRole("dialog", { name: "Widget settings" });
+  await settings.getByRole("button", { name: "Data Build history", exact: true }).click();
+  await preview.getByRole("menuitem", { name: "Deployment history", exact: true }).click();
+  await page.keyboard.press("Escape");
+  const marker = widget.getByRole("button", { name: "Deployment marker", exact: true });
+  await marker.click();
+  await expect(marker).toHaveAttribute("aria-pressed", "false");
+
+  await toolbar.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(edit).toBeFocused();
+  await expect(marker).toHaveAttribute("aria-pressed", "false");
+  await toolbar.getByRole("button", { name: "Refresh saved dashboard", exact: true }).click();
+  await expect(marker).toHaveAttribute("aria-pressed", "false");
+  await expect(widget.getByRole("button", { name: "Release marker", exact: true, includeHidden: true })).toHaveCount(0);
 });
 
 // Critical: controlled layout edits must survive live data refresh and failed saves, and Cancel must not publish them.

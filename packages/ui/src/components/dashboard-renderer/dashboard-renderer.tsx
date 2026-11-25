@@ -16,12 +16,49 @@ import {
   widgetLabel,
 } from "./dashboard-types";
 
+interface AppliedDashboard {
+  definition: DashboardDefinition;
+  previousValue: DashboardDefinition;
+}
+
+function sameDefinition(first: DashboardDefinition, second: DashboardDefinition) {
+  if (first === second) return true;
+  if (first.mode !== second.mode || first.widgets.length !== second.widgets.length) return false;
+  return first.widgets.every((widget, index) => {
+    const other = second.widgets[index];
+    return (
+      widget.id === other.id &&
+      widget.kind === other.kind &&
+      widget.source === other.source &&
+      widget.title === other.title &&
+      widget.layout.x === other.layout.x &&
+      widget.layout.y === other.layout.y &&
+      widget.layout.w === other.layout.w &&
+      widget.layout.h === other.layout.h
+    );
+  });
+}
+
+function useAppliedDashboard(value: DashboardDefinition, editable: boolean) {
+  const [applied, setApplied] = useState<AppliedDashboard | null>(null);
+  // Saving can finish before the caller publishes the updated definition.
+  const awaitingRefresh = applied && editable && sameDefinition(applied.previousValue, value);
+  if (applied && !awaitingRefresh) setApplied(null);
+  return {
+    saved: awaitingRefresh ? applied.definition : value,
+    markApplied: (definition: DashboardDefinition) => {
+      if (!sameDefinition(definition, value)) setApplied({ definition, previousValue: value });
+    },
+  };
+}
+
 export function DashboardRenderer(props: DashboardRendererProps) {
   const { value, sources, onChange, title = "Overview", actions, renderToolbar } = props;
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
   const container = useRef<HTMLDivElement>(null);
   const editButton = useRef<HTMLButtonElement>(null);
   const applyButton = useRef<HTMLButtonElement>(null);
+  const { saved, markApplied } = useAppliedDashboard(value, Boolean(onChange));
   const [draft, setDraft] = useState<DashboardDefinition | null>(null);
   const [originalCustomSources, setOriginalCustomSources] = useState<ReadonlyMap<string, string> | null>(null);
   const [removedCustomWidgets, setRemovedCustomWidgets] = useState<DashboardWidget[]>([]);
@@ -30,16 +67,16 @@ export function DashboardRenderer(props: DashboardRendererProps) {
   const [saveError, setSaveError] = useState("");
   const [applying, setApplying] = useState(false);
   const editing = draft !== null && Boolean(onChange);
-  const definition = editing && draft ? draft : value;
+  const definition = editing && draft ? draft : saved;
   const { widgets, mode } = definition;
   const hiddenWidgets = editing ? removedCustomWidgets : [];
   const widgetButton = (id: string) =>
     container.current?.querySelector<HTMLButtonElement>(`[data-configure-widget="${CSS.escape(id)}"]`);
   const startEditing = () => {
     setOriginalCustomSources(
-      new Map(value.widgets.filter(({ kind }) => kind === "custom").map(({ id, source }) => [id, source])),
+      new Map(saved.widgets.filter(({ kind }) => kind === "custom").map(({ id, source }) => [id, source])),
     );
-    setDraft(value);
+    setDraft(saved);
   };
   const finishEditing = () => {
     setDraft(null);
@@ -55,6 +92,7 @@ export function DashboardRenderer(props: DashboardRendererProps) {
     setSaveError("");
     try {
       await onChange(definition);
+      markApplied(definition);
       finishEditing();
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Could not apply dashboard changes.");

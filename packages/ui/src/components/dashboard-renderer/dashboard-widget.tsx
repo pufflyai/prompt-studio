@@ -4,6 +4,7 @@ import { DataTable } from "@/components/data-table/data-table";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { SimpleCard } from "@/components/primitives/simple-card";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
+import { UiScopeActivity } from "@/utils/ui-scope";
 import { DashboardChart } from "./dashboard-chart";
 import { DashboardRingChart } from "./dashboard-ring-chart";
 import { DashboardScatterChart } from "./dashboard-scatter-chart";
@@ -11,13 +12,14 @@ import { type DashboardDataSource, type DashboardWidget, widgetLabel } from "./d
 
 interface WidgetCardProps {
   widget: DashboardWidget;
+  hidden: boolean;
   source?: DashboardDataSource;
   originalCustomSource?: DashboardDataSource;
   controls?: ReactNode;
 }
 
 export function WidgetCard(props: WidgetCardProps) {
-  const { widget, source, originalCustomSource, controls } = props;
+  const { widget, hidden, source, originalCustomSource, controls } = props;
   const tableKey = useId();
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
 
@@ -105,15 +107,21 @@ export function WidgetCard(props: WidgetCardProps) {
           )}
         </Box>
       )}
-      {customSourceIds.map((id) => (
-        <ScrollArea key={id} hidden={id !== activeCustomSourceId} css={styles.customContent} contentProps={{ p: "sm" }}>
-          {(id === activeCustomSourceId ? source : originalCustomSource)?.content ?? (
-            <Text color="fg.muted" textStyle="label/S/regular">
-              No widget content
-            </Text>
-          )}
-        </ScrollArea>
-      ))}
+      {customSourceIds.map((id) => {
+        const selected = id === activeCustomSourceId;
+        const active = selected && !hidden;
+        return (
+          <UiScopeActivity key={id} active={active}>
+            <ScrollArea hidden={!active} css={styles.customContent} contentProps={{ p: "sm" }}>
+              {(selected ? source : originalCustomSource)?.content ?? (
+                <Text color="fg.muted" textStyle="label/S/regular">
+                  No widget content
+                </Text>
+              )}
+            </ScrollArea>
+          </UiScopeActivity>
+        );
+      })}
     </SimpleCard>
   );
 }

@@ -4,6 +4,8 @@ import { decorative } from "@tanstack/charts/mark/decorative";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { useState } from "react";
 import { Chart, chartColor } from "@/components/charts/chart";
+import { ScopedPopover as Popover } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import { DashboardRenderer } from "./dashboard-renderer";
 import type { DashboardDefinition } from "./dashboard-types";
 
@@ -30,9 +32,27 @@ function BuildHistory({ markerLabel = "Release marker" }: { markerLabel?: string
   });
   return (
     <Box>
-      <Button size="xs" aria-pressed={showMarker} onClick={() => setShowMarker(!showMarker)}>
-        {markerLabel}
-      </Button>
+      <HStack>
+        <Button size="xs" aria-pressed={showMarker} onClick={() => setShowMarker(!showMarker)}>
+          {markerLabel}
+        </Button>
+        <Popover.Root closeOnInteractOutside={false} positioning={{ strategy: "fixed" }}>
+          <Popover.Trigger asChild>
+            <Button size="xs">{markerLabel} options</Button>
+          </Popover.Trigger>
+          <Portal>
+            <Popover.Positioner>
+              <Popover.Content aria-label={`${markerLabel} options`}>
+                <Popover.Body>
+                  <Button size="xs" onClick={() => setShowMarker(!showMarker)}>
+                    Toggle {markerLabel.toLowerCase()}
+                  </Button>
+                </Popover.Body>
+              </Popover.Content>
+            </Popover.Positioner>
+          </Portal>
+        </Popover.Root>
+      </HStack>
       <Chart
         definition={chart}
         ariaLabel={showMarker ? `Build count with a ${markerLabel.toLowerCase()}` : "Build count"}
@@ -42,12 +62,22 @@ function BuildHistory({ markerLabel = "Release marker" }: { markerLabel?: string
   );
 }
 
-export function DashboardEmbeddedExample() {
+export function DashboardEmbeddedExample(props: { deferRefresh?: boolean }) {
+  const { deferRefresh = false } = props;
   const [value, setValue] = useState(initial);
+  const [saved, setSaved] = useState<DashboardDefinition | null>(null);
   return (
     <DashboardRenderer
       value={value}
-      onChange={setValue}
+      onChange={async (next) => {
+        if (deferRefresh) {
+          setSaved(next);
+          // The caller can republish its previous layout before the saved change is available.
+          setValue({ ...value, widgets: [...value.widgets] });
+        } else {
+          setValue(next);
+        }
+      }}
       sources={[
         {
           id: "releases",
@@ -75,6 +105,16 @@ export function DashboardEmbeddedExample() {
             Build history
           </Text>
           {controls}
+          {saved && (
+            <Button
+              onClick={() => {
+                setValue(saved);
+                setSaved(null);
+              }}
+            >
+              Refresh saved dashboard
+            </Button>
+          )}
         </HStack>
       )}
     />
