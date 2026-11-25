@@ -15,6 +15,7 @@ import { remoteSessionCreation } from "../remote-session-creation";
 import { resolveSessionCwd } from "../resolve-session-cwd";
 import { SessionAttachmentError, withResolvedSubmittingSessionAttachments } from "../session-attachments";
 import { createSessionHarnessOperation, HarnessOperationError } from "../session-harness-commands";
+import { resolveMessageSender } from "../session-message-sender";
 import { toSessionResponse } from "../session-response";
 import { createSessionScheduler } from "../session-scheduler";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "./resolve-create-session";
@@ -163,6 +164,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
             title: input.title,
             agentId,
             prompt,
+            sender: await resolveMessageSender(deps, input.project_id, input.source),
             attachments,
             attachmentRefs: input.attachments,
             model: resolvedModel,

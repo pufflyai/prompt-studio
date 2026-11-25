@@ -27,7 +27,9 @@ export const dispatchQueuedEntry = async (
   const submittedQueuePosition = entry.queue_position;
   let owner: ActiveSession | null = null;
   const removeEntry = () =>
-    entry.attachments_json?.length ? undefined : deps.sessionQueueEntriesService.remove(entry.queue_position);
+    entry.attachments_json?.length || entry.sender_json
+      ? undefined
+      : deps.sessionQueueEntriesService.remove(entry.queue_position);
   const fail = async (error: unknown) => {
     // Shutdown can retire a provider while its lookup is pending. Preserve the durable
     // dispatch claim for startup recovery instead of recording a tool failure.
@@ -71,6 +73,7 @@ export const dispatchQueuedEntry = async (
         projectId: session.project_id ?? undefined,
         agentId,
         prompt: entry.prompt,
+        sender: entry.sender_json ?? undefined,
         attachments,
         title: session.title,
         model,
@@ -93,6 +96,7 @@ export const dispatchQueuedEntry = async (
         agentSessionId: session.agent_session_id,
         agentId,
         prompt: entry.prompt,
+        sender: entry.sender_json ?? undefined,
         attachments,
         model,
         params,
@@ -113,6 +117,7 @@ export const dispatchQueuedEntry = async (
       projectId: session.project_id ?? undefined,
       agentId,
       prompt: entry.prompt,
+      sender: entry.sender_json ?? undefined,
       attachments,
       model,
       params,

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import type { SessionConversationSources, SessionMessage } from "pstdio-api-contracts";
 import { normalizeMessageResults, projectToolResultRecovery, sessionMessageSchema } from "pstdio-api-contracts";
@@ -15,6 +16,58 @@ export class SessionNotFoundError extends Error {
   }
 }
 
+const getSessionCheckpointFile = async (
+  session: { session_file_id: string | null },
+  deps: Pick<HistoryDeps, "fileService">,
+) => {
+  if (!session.session_file_id) return null;
+  const file = await deps.fileService.get(session.session_file_id);
+  if (!file) throw new Error("Checkpoint missing");
+  return file;
+};
+
+const parseSessionCheckpoint = (data: Buffer) =>
+  sessionMessageSchema
+    .array()
+    .parse(JSON.parse(data.toString("utf8")))
+    .map(normalizeMessageResults);
+
+export const readSessionCheckpointSnapshot = async (
+  session: { session_file_id: string | null },
+  deps: Pick<HistoryDeps, "fileService">,
+) => {
+  const file = await getSessionCheckpointFile(session, deps);
+  if (!file) return { messages: null, fingerprint: "none" };
+  const identity = JSON.stringify([file.id, file.storage_path, file.hash, file.updated_at]);
+  let data: Buffer;
+  try {
+    data = await readFile(file.storage_path);
+  } catch (error) {
+    return {
+      messages: null,
+      fingerprint: `${identity}:unreadable:${(error as NodeJS.ErrnoException).code ?? "unknown"}`,
+    };
+  }
+  // Invalid JSON still has a byte identity. Two unreadable checkpoints must
+  // not compare equal if another writer replaced the file during provider I/O.
+  const fingerprint = `${identity}:${createHash("sha256").update(data).digest("hex")}`;
+  try {
+    const messages = parseSessionCheckpoint(data);
+    return { messages, fingerprint };
+  } catch {
+    return { messages: null, fingerprint };
+  }
+};
+
+export const readSessionCheckpoint = async (
+  session: { session_file_id: string | null },
+  deps: Pick<HistoryDeps, "fileService">,
+) => {
+  const file = await getSessionCheckpointFile(session, deps);
+  if (!file) return null;
+  return parseSessionCheckpoint(await readFile(file.storage_path));
+};
+
 export const readSessionHistorySources = async (sessionId: string, deps: HistoryDeps) => {
   const session = await deps.sessionService.get(sessionId);
   if (!session) throw new SessionNotFoundError();
@@ -30,12 +83,7 @@ export const readSessionHistorySources = async (sessionId: string, deps: History
     (async () => {
       if (!session.session_file_id) return;
       try {
-        const file = await deps.fileService.get(session.session_file_id);
-        if (!file) throw new Error("Checkpoint missing");
-        sources.checkpoint = sessionMessageSchema
-          .array()
-          .parse(JSON.parse(await readFile(file.storage_path, "utf8")))
-          .map(normalizeMessageResults);
+        sources.checkpoint = await readSessionCheckpoint(session, deps);
       } catch {
         sources.checkpoint = null;
         sources.checkpointError = "checkpoint_unreadable";

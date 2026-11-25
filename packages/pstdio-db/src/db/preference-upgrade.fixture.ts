@@ -148,6 +148,7 @@ export const restoreReleasedPreferenceTables = async (connection: Awaited<Return
   await connection.pglite.exec(
     "DROP TABLE preferences; DROP TABLE credentials; ALTER TABLE board_views DROP COLUMN is_default; ALTER TABLE sessions DROP COLUMN workspace_id",
   );
+  await connection.pglite.exec("ALTER TABLE session_queue_entries DROP COLUMN sender_json");
   await restoreReleasedTimestampColumns(connection);
   const journal = JSON.parse(await readFile(join(folder, "meta/_journal.json"), "utf8"));
   const appUpgrade = journal.entries.find((entry: { idx: number }) => entry.idx === 10);

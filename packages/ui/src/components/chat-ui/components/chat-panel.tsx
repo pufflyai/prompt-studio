@@ -12,6 +12,7 @@ import { AutoScroll } from "./auto-scroll";
 import { getRecentUserPrompts } from "./chat-input-history";
 import type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./chat-input-question-prompt";
 import { ChatMessageList } from "./chat-message-list";
+import { ChatOutlineHost } from "./chat-outline";
 import { ChatPanelComposer, useQueuedFollowUpComposer } from "./chat-panel-composer";
 import { ChatQuestionNavigationContext, useChatQuestionNavigation } from "./chat-question-navigation";
 import type { ComposerDecision } from "./composer-decision";
@@ -192,6 +193,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     chatInputCommands = [],
   } = props;
 
+  const [outlineHost, setOutlineHost] = useState<HTMLDivElement | null>(null);
   const panelStyles = useRecipe({ recipe: chatPanelRecipe })();
   const merged = useMemo(() => normalizeChatMessagesForDisplay(messages, { streaming }), [messages, streaming]);
   const hasMessages = merged.length > 0;
@@ -264,13 +266,15 @@ export const ChatPanel = (props: ChatPanelProps) => {
       <ChatLinkProvider handler={linkHandler}>
         <ChatQuestionNavigationContext value={questionNavigation.value}>
           <Flex className="ps-chat-panel" css={panelStyles}>
-            <ChatPrimitives.Root key={messageListKey}>
+            <ChatPrimitives.Root key={messageListKey} containerType="inline-size">
+              <ChatOutlineHost enabled={merged.length > 2} onAvailable={setOutlineHost} />
               <AutoScroll conversationKey={messageListKey ?? null} userMessageCount={userMessageCount} />
               <ChatPrimitives.Viewport visibility={isMessageViewportReady ? "visible" : "hidden"}>
                 {hasMessages ? (
                   <>
                     <ChatMessageList
                       key={messageListIdentity}
+                      outlineHost={outlineHost}
                       leadingResponses={leadingResponses}
                       groups={groups}
                       streaming={streaming}

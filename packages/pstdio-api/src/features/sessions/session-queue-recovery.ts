@@ -1,4 +1,6 @@
+import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
+import { recoverDispatchSender } from "./recover-dispatch-sender";
 import { createSessionQueueDrain } from "./session-queue-drain";
 
 export const prepareQueuedSessionRecovery = async (deps: SessionsRouteDeps) => {
@@ -9,13 +11,26 @@ export const prepareQueuedSessionRecovery = async (deps: SessionsRouteDeps) => {
   const queuePositions = new Set([...claimedEntries, ...pendingEntries].map((entry) => entry.queue_position));
   return async () => {
     for (const entry of claimedEntries) {
-      const session = await deps.sessionService.get(entry.session_id);
-      if (session?.status === "in_progress" && !deps.sessionService.store.get(session.id)) {
-        await deps.sessionService.recoverQueuedDispatchClaim(
-          session.id,
-          entry.queue_position,
-          session.last_request_started,
-          { drainCapacity: false },
+      try {
+        const session = await deps.sessionService.get(entry.session_id);
+        if (session?.status === "in_progress" && !deps.sessionService.store.get(session.id)) {
+          if (await recoverDispatchSender(deps, session, entry)) continue;
+          await deps.sessionService.recoverQueuedDispatchClaim(
+            session.id,
+            entry.queue_position,
+            session.last_request_started,
+            { drainCapacity: false },
+          );
+        }
+      } catch (error) {
+        sessionLogger.error(
+          {
+            err: error,
+            event: "session.queue.recovery_failed",
+            session_id: entry.session_id,
+            queue_position: entry.queue_position,
+          },
+          "Failed to recover queued request; retaining its dispatch guard",
         );
       }
     }

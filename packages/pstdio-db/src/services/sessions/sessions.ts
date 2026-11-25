@@ -43,6 +43,7 @@ type CreateInput = {
 type CreateQueuedInput = Omit<CreateInput, "status"> & {
   prompt: string;
   request_kind: string;
+  sender_json?: typeof session_queue_entries.$inferInsert.sender_json;
   question_response_json?: unknown;
   attachments_json?: Array<{ file_id: string }>;
   params_json?: HarnessParamsJson;
@@ -54,6 +55,7 @@ type QueueExistingInput = {
   id: string;
   prompt: string;
   request_kind: string;
+  sender_json?: typeof session_queue_entries.$inferInsert.sender_json;
   question_response_json?: unknown;
   attachments_json?: Array<{ file_id: string }>;
   params_json?: HarnessParamsJson;
@@ -183,6 +185,7 @@ export const createSessionsDBService = (db: DbClient) => {
         revision: crypto.randomUUID(),
         prompt: input.prompt,
         request_kind: input.request_kind,
+        sender_json: input.sender_json ?? null,
         question_response_json: input.question_response_json ?? null,
         attachments_json: input.attachments_json ?? null,
         params_json: input.params_json ?? null,
@@ -227,6 +230,7 @@ export const createSessionsDBService = (db: DbClient) => {
           revision: crypto.randomUUID(),
           prompt: input.prompt,
           request_kind: input.request_kind,
+          sender_json: input.sender_json ?? null,
           question_response_json: input.question_response_json ?? null,
           attachments_json: input.attachments_json ?? null,
           params_json: input.params_json ?? null,
@@ -260,6 +264,7 @@ export const createSessionsDBService = (db: DbClient) => {
           revision: crypto.randomUUID(),
           prompt: input.prompt,
           request_kind: input.request_kind,
+          sender_json: input.sender_json ?? null,
           question_response_json: input.question_response_json ?? null,
           attachments_json: input.attachments_json ?? null,
           params_json: input.params_json ?? null,
