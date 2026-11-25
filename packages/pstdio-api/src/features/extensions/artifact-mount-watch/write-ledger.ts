@@ -60,8 +60,13 @@ function* pathAndAncestors(path: string) {
   for (let ancestor = path; ancestor !== dirname(ancestor); ancestor = dirname(ancestor)) yield ancestor;
 }
 
-const observesDeletion = ([path, state]: PathObservation, deletedPath: string) =>
-  path === deletedPath || isInside(path, deletedPath) || (state?.directory === true && isInside(deletedPath, path));
+const hasPathOrAncestor = (path: string, paths: ReadonlySet<string> | undefined) => {
+  if (!paths) return false;
+  for (const ancestor of pathAndAncestors(path)) {
+    if (paths.has(ancestor)) return true;
+  }
+  return false;
+};
 
 export type ArtifactMountWriteLedger = ReturnType<typeof createArtifactMountWriteLedger>;
 
@@ -144,8 +149,25 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     }
   };
 
+  const indexDeletionHints = (observations: readonly PathObservation[]) => {
+    const related = new Map<string, PathObservation[]>();
+    const directories = new Set<string>();
+    for (const observation of observations) {
+      const [path, state] = observation;
+      if (state?.directory) directories.add(path);
+      for (const ancestor of pathAndAncestors(path)) {
+        if (entries.get(ancestor)?.state !== null) continue;
+        const hints = related.get(ancestor);
+        if (hints) hints.push(observation);
+        else related.set(ancestor, [observation]);
+      }
+    }
+    return { related, directories };
+  };
+
   const reconcileDeletions = (observations: readonly PathObservation[], byPath: ReadonlyMap<string, FileState>) => {
     const retired = new Map<string, number>();
+    const hints = indexDeletionHints(observations);
     // Exact folder hints can retire old children before their individual states are read.
     for (const [path, current] of observations) {
       const entry = entries.get(path);
@@ -153,34 +175,26 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     }
     for (const [recordedPath, entry] of entries) {
       if (entry.state !== null || isRetired(retired, recordedPath, entry.order)) continue;
-      const related = observations.filter((observation) => observesDeletion(observation, recordedPath));
-      if (related.length === 0) continue;
+      const related = hints.related.get(recordedPath);
+      if (!related && !hasPathOrAncestor(recordedPath, hints.directories)) continue;
 
       // A recursive watcher may report only a child when an external folder returns.
       const observed = byPath.get(recordedPath);
       const current = observed === undefined ? readArtifactFileState(recordedPath) : observed;
-      reconcileDeletion(recordedPath, entry, current, related, retired);
+      reconcileDeletion(recordedPath, entry, current, related ?? [], retired);
     }
     dropRetiredDeletions(retired);
   };
 
-  const hasReturnedAncestor = (path: string, returnedSubtrees: ReadonlySet<string> | undefined) => {
-    if (!returnedSubtrees) return false;
-    for (const ancestor of pathAndAncestors(path)) {
-      if (returnedSubtrees.has(ancestor)) return true;
-    }
-    return false;
-  };
-
   // An earlier tree deletion cannot explain the disappearance of a newer mount write.
   const matchesAncestorDeletion = (path: string, latestWriteOrder = 0) => {
-    for (const [recordedPath, recorded] of entries) {
+    for (const ancestor of pathAndAncestors(dirname(path))) {
+      const recorded = entries.get(ancestor);
       if (
-        !recorded.state &&
+        recorded?.state === null &&
         recorded.order >= latestWriteOrder &&
-        isInside(path, recordedPath) &&
         !recorded.reappeared?.has(path) &&
-        !hasReturnedAncestor(path, recorded.returnedSubtrees)
+        !hasPathOrAncestor(path, recorded.returnedSubtrees)
       )
         return true;
     }
