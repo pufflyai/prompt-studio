@@ -43,10 +43,11 @@ Core has no import code. To restore old data, ask an agent to read the export an
 
 The app-storage migration replaces `workspace_sessions` with `sessions.workspace_id`.
 Before changing the schema, startup writes and fsyncs the old link rows beside the
-database. It selects the earliest link by creation time and ID as the current
-workspace. Other workspace associations become normal session resource context
-links, preserving existing link details. After restoration commits, the original
-rows move to `<database>-migration-exports/workspace-sessions.jsonl`. This export
+database. It selects the earliest link to a workspace in the session’s project,
+ordered by creation time and ID, as the current workspace. Later links in that
+project become session resource context and retain their existing details.
+Cross-project links are kept only in the export. After restoration commits, the
+original rows move to `<database>-migration-exports/workspace-sessions.jsonl`. This export
 stays until explicitly removed. An interrupted conversion resumes from the durable
 input. The original session fields and timestamps remain unchanged.
 

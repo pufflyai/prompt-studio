@@ -6,7 +6,12 @@ import {
   automation_runs,
   automation_tokens,
 } from "../../db/schemas.pg";
-import { type AutomationRunRecord, automationRunRecord } from "./automation-owners";
+import {
+  type AutomationRunRecord,
+  automationRunRecord,
+  automationTokenOwner,
+  selectAutomationTokenOwners,
+} from "./automation-owners";
 import { createAutomationTokenDBService } from "./automation-tokens";
 import { createExtensionAutomationDBService } from "./extension-automation";
 
@@ -112,12 +117,11 @@ const createAutomationRunDBService = (db: DbClient) => {
     return db.transaction(async (tx) => {
       const createdAt = nowTimestamp();
       if (input.tokenId !== null) {
-        if (input.principalId !== `token:${input.tokenId}`) throw new Error("Automation run ownership does not match.");
-        const [token] = await tx
-          .select()
-          .from(automation_tokens)
-          .where(and(eq(automation_tokens.id, input.tokenId), eq(automation_tokens.project_id, input.projectId)));
-        if (!token) throw new Error("Automation run ownership does not match.");
+        const [row] = await selectAutomationTokenOwners(tx).where(
+          and(eq(automation_tokens.id, input.tokenId), eq(automation_tokens.project_id, input.projectId)),
+        );
+        if (!row || automationTokenOwner(row.token, row.releasedOwner).id !== input.principalId)
+          throw new Error("Automation run ownership does not match.");
       }
       const [created] = await tx
         .insert(automation_runs)

@@ -18,7 +18,7 @@ The host does not invent a local path for a remote workspace. Local file and ter
 
 ## Named connection boundary
 
-A connection contribution declares its allowed HTTP methods, path prefixes, authentication shape, and streaming support. Project settings hold only the base URL and an opaque secret reference. The credential lives in the host secret store. The request proxy enforces same-origin relative paths, HTTPS outside loopback, bounded request and response sizes, timeouts, cancellation, and no redirects.
+A connection contribution declares its allowed HTTP methods, path prefixes, authentication shape, and streaming support. Project settings hold the base URL. The device stores credential references and sign-in metadata separately, and the secret bytes live in the host secret store. Projects can share a sign-in for the same contribution and server origin. Each connection keeps its own check result on the device. The request proxy enforces same-origin relative paths, HTTPS outside loopback, bounded request and response sizes, timeouts, cancellation, and no redirects.
 
 The default desktop implementation uses the temporary file store documented in [ADR 0034](../../adrs/0034-temporary-file-connection-secret-store.md). Hosted deployments should inject their deployment secret provider through the same interface.
 
@@ -33,7 +33,7 @@ The default desktop implementation uses the temporary file store documented in [
 
 Idempotency is scoped by principal, project, command, and key. The host hashes canonical input. The same key and input returns the existing run; different input returns `409 idempotency_conflict`. The default rate limit is 60 new runs per principal and project per minute.
 
-Principals belong to one project and are removed with that project. Credential rotation issues a new token for the same principal, so retries made with the replacement token keep the existing idempotency history. A principal from another project is rejected.
+Principals belong to one project and are removed with that project. Tokens already issued for the same principal before the storage upgrade keep their shared idempotency history. Each token issued after the upgrade gets its own history. Credentials still need the matching project and command scope to retry or read a run.
 
 Queued work starts again after restart. An idempotent retry also restarts an existing queued run if its earlier in-process launch was interrupted. Work interrupted after it reached `running` becomes a retryable `host_restarted` failure. The caller may submit a new logical request with a new idempotency key.
 

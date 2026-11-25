@@ -1,10 +1,19 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { automation_tokens } from "../../db/schemas.pg";
-import { automationTokenOwner } from "./automation-owners";
+import { automationTokenOwner, selectAutomationTokenOwners } from "./automation-owners";
 
 const nowTimestamp = () => new Date().toISOString();
-const withOwner = (token: typeof automation_tokens.$inferSelect) => ({ principal: automationTokenOwner(token), token });
+const withOwner = ({
+  token,
+  releasedOwner,
+}: {
+  token: typeof automation_tokens.$inferSelect;
+  releasedOwner?: unknown;
+}) => ({
+  principal: automationTokenOwner(token, releasedOwner),
+  token,
+});
 export const createAutomationTokenDBService = (db: DbClient) => {
   const createToken = async (input: {
     name: string;
@@ -32,17 +41,15 @@ export const createAutomationTokenDBService = (db: DbClient) => {
         created_at: nowTimestamp(),
       })
       .returning();
-    return withOwner(token);
+    return withOwner({ token });
   };
   const getToken = async (id: string) => {
-    const [token] = await db.select().from(automation_tokens).where(eq(automation_tokens.id, id));
-    return token ? withOwner(token) : null;
+    const [row] = await selectAutomationTokenOwners(db).where(eq(automation_tokens.id, id));
+    return row ? withOwner(row) : null;
   };
   const listTokens = async (projectId: string) =>
     (
-      await db
-        .select()
-        .from(automation_tokens)
+      await selectAutomationTokenOwners(db)
         .where(eq(automation_tokens.project_id, projectId))
         .orderBy(asc(automation_tokens.created_at))
     ).map(withOwner);

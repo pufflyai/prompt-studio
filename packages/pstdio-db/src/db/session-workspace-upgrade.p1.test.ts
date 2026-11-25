@@ -22,7 +22,9 @@ for (const interruption of ["normal", "schema", "partial"])
     try {
       store = await createDb({ path });
       const project = await createProjectsDBService(store.db).create({ name: "Released workspace links" });
+      const foreign = await createProjectsDBService(store.db).create({ name: "Other project" });
       const workspaces = createWorkspacesDBService(store.db);
+      const foreignWorkspace = await workspaces.create({ project_id: foreign.id, shorthand_base: "FOREIGN" });
       const first = await workspaces.create({ project_id: project.id, shorthand_base: "FIRST" });
       const second = await workspaces.create({ project_id: project.id, shorthand_base: "SECOND" });
       const third = await workspaces.create({ project_id: project.id, shorthand_base: "THIRD" });
@@ -72,6 +74,10 @@ for (const interruption of ["normal", "schema", "partial"])
         "INSERT INTO workspace_sessions VALUES ('extra-b',$1,'session-000','2026-11-21T00:00:00.000Z'), ('extra-c',$2,'session-000','2026-11-22T00:00:00.000Z')",
         [second.id, third.id],
       );
+      await store.pglite.query(
+        "INSERT INTO workspace_sessions VALUES ('foreign-earlier',$1,'session-000','2026-11-19T00:00:00.000Z')",
+        [foreignWorkspace.id],
+      );
       const originalLinks = (
         await store.pglite.query("SELECT * FROM workspace_sessions ORDER BY session_id, created_at, id")
       ).rows;
@@ -89,6 +95,7 @@ for (const interruption of ["normal", "schema", "partial"])
       expect((await links.getWorkspaceBySessionId("session-000"))?.id).toBe(first.id);
       expect(await links.listByWorkspace(first.id)).toHaveLength(201);
       expect(await links.listByWorkspace(second.id)).toEqual([]);
+      expect(await links.listByWorkspace(foreignWorkspace.id)).toEqual([]);
       expect(await sessionService.get("session-200")).toEqual(originalSession);
       expect(await links.listSessionLinks("session-000")).toEqual([
         { id: "session-000", session_id: "session-000", workspace_id: first.id, created_at: stamp },
