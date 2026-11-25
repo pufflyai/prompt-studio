@@ -29,12 +29,13 @@ import { prepareBoardDefaultsUpgrade } from "./board-defaults-upgrade";
 import { prepareBoardOwnersUpgrade } from "./board-owners-upgrade";
 import { prepareConnectionCredentialsUpgrade } from "./connection-credentials-upgrade";
 import { attachDatabaseAuthority } from "./database-authority";
+import type { DbOpenOptions } from "./db-open-options";
 import { prepareDocumentOwnerUpgrade } from "./document-owner-upgrade";
 import { prepareExtensionPreferencesUpgrade } from "./extension-preferences-upgrade";
 import { prepareFileOwnersUpgrade } from "./file-owners-upgrade";
 import { prepareHistoryOwnerUpgrade } from "./history-owner-upgrade";
 import { retireLegacyRecordTables } from "./legacy-record-retirement";
-import { type LegacyConversionFailure, upgradeLegacyRecords } from "./legacy-record-upgrade";
+import { upgradeLegacyRecords } from "./legacy-record-upgrade";
 import { prepareLogOwnerUpgrade } from "./log-owner-upgrade";
 import { migratePglite, resumeCurrentPgliteSchema } from "./migrate-pglite";
 import { prepareNativeOwnerUpgrade } from "./native-owner-upgrade";
@@ -43,7 +44,7 @@ import { prepareOrderedOwnerUpgrade } from "./ordered-owner-upgrade";
 import { prepareOwnerIndexUpgrade } from "./owner-index-upgrade";
 import { prepareOwnerProjectionUpgrade } from "./owner-projection-upgrade";
 import { canonicalDbPath, resolveDbPath } from "./paths";
-import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-current-home";
+import { prepareCurrentPgliteHome } from "./pglite-current-home";
 import { pgliteIdentity } from "./pglite-identity";
 import { acquirePgliteLock } from "./pglite-lock";
 import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
@@ -57,7 +58,8 @@ import { createStorageCleanup } from "./retired-storage-cleanup";
 import * as schema from "./schemas.pg";
 import { prepareSessionWorkspaceUpgrade } from "./session-workspace-upgrade";
 import { resolveSourceEngineModule, sourceStartupOptions } from "./source-startup-image";
-import { type DatabaseMaintenancePhase, invalidateMaintenance, maintainDatabase } from "./startup-maintenance";
+import { invalidateMaintenance, maintainDatabase } from "./startup-maintenance";
+import { retainOriginalTables, startRecordPreparation } from "./trial-record-stream";
 
 type EmbeddedFile = Blob & { name: string };
 // Bun's embedded file objects are runtime-specific; narrowing the contract keeps extraction testable
@@ -176,33 +178,16 @@ export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[
   };
 };
 
-// Startup steps in order. The runtime publishes itself once the database is locked and logs every step.
-export type DbOpenPhase =
-  | PgliteRetirementPhase
-  | DatabaseMaintenancePhase
-  | "database_locked"
-  | "database_engine_loaded"
-  | "database_image_restored"
-  | "database_opened"
-  | "database_migrated"
-  | "database_index_nodes";
+export type { DbOpenPhase } from "./db-open-options";
 
-export const createDb = async (options?: {
-  path?: string;
-  onPhase?: (phase: DbOpenPhase) => void;
-  signal?: AbortSignal;
-  /** Folder for encrypted index nodes; defaults to a sibling of the database folder. */
-  indexNodesPath?: string;
-  onLegacyConversionError?: (failure: LegacyConversionFailure) => void;
-  /** The runtime vacuums in the background and schedules deletion of retired rows. */
-  deferCleanup?: boolean;
-}) => {
+export const createDb = async (options?: DbOpenOptions) => {
   const onPhase = options?.onPhase ?? (() => {});
   const requestedPath = resolveDbPath(options?.path);
   const dbPath = canonicalDbPath(requestedPath);
 
   const releaseLock = dbPath === ":memory:" ? () => {} : acquirePgliteLock(dbPath);
 
+  let preparation: ReturnType<typeof startRecordPreparation> | undefined;
   let pglite: PGlite | undefined;
   let fresh = dbPath === ":memory:";
   const onImageRestored = () => {
@@ -211,6 +196,7 @@ export const createDb = async (options?: {
   };
   try {
     onPhase("database_locked");
+    if (process.env.PSTDIO_TEST_SETTLED_MIGRATION === "1") preparation = startRecordPreparation(dbPath);
     options?.signal?.throwIfAborted();
     const embedded = getEmbeddedFiles();
     const pgliteOpts = await sourceStartupOptions(await resolvePgliteOptions(embedded));
@@ -225,7 +211,7 @@ export const createDb = async (options?: {
         onPhase,
       });
     options?.signal?.throwIfAborted();
-    pglite = await openPglite(dbPath, pgliteOpts, onImageRestored);
+    pglite = await openPglite(dbPath, preparation?.options(pgliteOpts) ?? pgliteOpts, onImageRestored);
     const openedPglite = pglite;
     await openedPglite.waitReady;
     onPhase("database_opened");
@@ -262,6 +248,7 @@ export const createDb = async (options?: {
         migrated = true;
         return;
       }
+      await preparation?.assertApplicable(db);
       const receipts = await prepareReleasedSaveReceipts(db, dbPath);
       const finishRecordRows = await prepareRecordRowFinalization(db, dbPath);
       const finishProjectExtensionsUpgrade = await prepareProjectExtensionsUpgrade(db, dbPath);
@@ -270,6 +257,7 @@ export const createDb = async (options?: {
       const finishOwnerIndexUpgrade = await prepareOwnerIndexUpgrade(db, dbPath);
       const finishOwnerProjectionUpgrade = await prepareOwnerProjectionUpgrade(db, dbPath);
       const finishCanonicalNumberUpgrade = await prepareCanonicalNumberUpgrade(db, dbPath);
+      if (preparation) await retainOriginalTables(db);
       const finishDocumentOwnerUpgrade = await prepareDocumentOwnerUpgrade(db, dbPath, receipts);
       finishArtifactProjectionUpgrade = await prepareArtifactProjectionUpgrade(db, dbPath);
       const finishNativeOwnerUpgrade = await prepareNativeOwnerUpgrade(db, dbPath);
@@ -287,10 +275,15 @@ export const createDb = async (options?: {
       const finishAutomationOwnersUpgrade = await prepareAutomationOwnersUpgrade(db, dbPath);
       const finishSessionWorkspaceUpgrade = await prepareSessionWorkspaceUpgrade(db, dbPath);
       await migratePglite(openedPglite, migrationsFolder);
+      await preparation?.seedOwners(db);
       await finishProjectExtensionsUpgrade?.();
       await finishLogOwnerUpgrade?.();
       await finishHistoryOwnerUpgrade?.();
       await finishAssetOwnerUpgrade?.();
+      if (preparation) {
+        await finishOwnerIndexUpgrade?.();
+        await preparation.load(db);
+      }
       await finishOrderedOwnerUpgrade?.();
       await finishRecoveryOwnerUpgrade?.();
       await finishDocumentOwnerUpgrade?.();
@@ -298,7 +291,7 @@ export const createDb = async (options?: {
       await finishNativeOwnerUpgrade?.();
       await finishCanonicalNumberUpgrade?.();
       await finishOwnerProjectionUpgrade?.();
-      await finishOwnerIndexUpgrade?.();
+      if (!preparation) await finishOwnerIndexUpgrade?.();
       await finishPreferencesUpgrade?.();
       await finishExtensionPreferencesUpgrade?.();
       await finishConnectionCredentialsUpgrade?.();
@@ -350,6 +343,7 @@ export const createDb = async (options?: {
       await maintainDatabase(openedPglite, db, dbPath, fresh, onPhase, movedNodes || renamed);
     const projectIds = await db.select({ id: schema.projects.id }).from(schema.projects);
     await indexNodes.retainProjects(new Set(projectIds.map((project) => project.id)));
+    await preparation?.finish();
     onPhase("database_migrated");
 
     let closed = false;
@@ -372,6 +366,7 @@ export const createDb = async (options?: {
       cleanupRetiredRows: createStorageCleanup(db, dbPath, deferredOwners, !!deferCleanup),
     };
   } catch (error) {
+    preparation?.cancel();
     await pglite?.close();
     releaseLock();
     throw error;

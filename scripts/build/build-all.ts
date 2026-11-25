@@ -18,9 +18,12 @@ const PREPARATION_ENTRIES = [
   join(process.cwd(), "packages/pstdio-extensions/src/runtime/preparation-worker.ts"),
   RECOVERY_WORKER,
   DATABASE_WORKER,
+  join(process.cwd(), "packages/pstdio-db/src/db/trial-record-worker.ts"),
 ];
 // --root . retains repository-relative worker paths in the compiled virtual filesystem.
 const recoveryWorkerDefine = (target: string) => [
+  "--define",
+  `PSTDIO_TRIAL_RECORD_WORKER=${JSON.stringify(`${target.includes("windows") ? "B:/~BUN/root/" : "/$bunfs/root/"}packages/pstdio-db/src/db/trial-record-worker.js`)}`,
   "--define",
   `PSTDIO_BUILD_RECOVERY_WORKER=${JSON.stringify(
     `${target.includes("windows") ? "B:/~BUN/root/" : "/$bunfs/root/"}packages/pstdio-api/src/services/project-recovery/recovery-worker.js`,

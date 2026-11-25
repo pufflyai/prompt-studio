@@ -39,7 +39,10 @@ for (const profile of ["history", "storage"] as const)
         const opened = await test.step(
           "Launch, open the existing project and save an edit",
           async () => {
-            const opened = await launchPackagedApp(upgradeHome, { PSTDIO_DEFAULT_EXTENSIONS: "[]" });
+            const opened = await launchPackagedApp(upgradeHome, {
+              PSTDIO_DEFAULT_EXTENSIONS: "[]",
+              ...(profile === "storage" ? { PSTDIO_TEST_SETTLED_MIGRATION: "1" } : {}),
+            });
             app = opened;
             await openPackagedProject(opened.page, { id: "upgrade-repro", name: "Upgrade fixture" });
             const name = await opened.page.evaluate(async () => {

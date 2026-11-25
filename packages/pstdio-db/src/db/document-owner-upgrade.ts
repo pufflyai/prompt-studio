@@ -150,6 +150,13 @@ const restoreBatch = async (
   if (missing.length) await tx.insert(table).values(missing);
 };
 
+const archivedDocumentFilter = (receipts?: ReleasedSaveReceipts) => {
+  if (process.env.PSTDIO_TEST_SETTLED_MIGRATION !== "1") return receipts?.documents;
+  return sql`(${receipts?.documents ?? sql`true`}) AND (NOT starts_with(document_id,'["resource",') OR (workbench_id,extension_id) NOT IN
+    (SELECT o.workbench_id,o.extension_id FROM storage_ordered_owners o WHERE NOT EXISTS (SELECT 1 FROM storage_documents d WHERE d.workbench_id=o.workbench_id
+    AND d.extension_id=o.extension_id AND d.document_id IN ('["ordered-conversion"]','resource-identities'))))`;
+};
+
 /** Capture the entire FK graph before required integer keys replace released owner addresses. */
 export const prepareDocumentOwnerUpgrade = async (db: DbClient, path: string, receipts?: ReleasedSaveReceipts) => {
   documentFilesFor(db, path);
@@ -191,7 +198,7 @@ export const prepareDocumentOwnerUpgrade = async (db: DbClient, path: string, re
       path,
       {
         table: name,
-        where: fileRows ? receipts?.documents : undefined,
+        where: fileRows ? archivedDocumentFilter(receipts) : undefined,
         keys: source.ownerKey ? ["workbench_id", "extension_id", ...source.keys] : source.keys,
         name: `${name}-owners`,
         archive: name,

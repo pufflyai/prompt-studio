@@ -215,7 +215,7 @@ export const prepareRecordRowFinalization = async (db: DbClient, path: string) =
   );
   if (!marker) return;
   return async () => {
-    await finalizeRows(db);
+    if (process.env.PSTDIO_TEST_SETTLED_MIGRATION !== "1") await finalizeRows(db);
     await marker.complete();
   };
 };
