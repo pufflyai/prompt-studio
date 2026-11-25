@@ -1,7 +1,6 @@
 import { Box, chakra, useRecipe } from "@chakra-ui/react";
 import { ActivityAvatar } from "@/components/activity/activity-avatar";
 import { Tooltip } from "@/components/primitives/tooltip";
-import { chatMessageSenderRecipe } from "@/theme/recipes/chat-message-sender";
 import { useChatLinkHandler } from "../links/chat-link-context";
 import type { SessionMessageSender } from "./message-types";
 
@@ -9,7 +8,7 @@ export const MessageSender = (props: { sender?: SessionMessageSender }) => {
   const { sender } = props;
   const handler = useChatLinkHandler();
   const openSession = sender?.type === "session" ? handler?.openSession : undefined;
-  const styles = useRecipe({ recipe: chatMessageSenderRecipe })({ interactive: Boolean(openSession) });
+  const styles = useRecipe({ key: "chatMessageSender" })({ interactive: Boolean(openSession) });
   if (!sender) return null;
   const avatar = <ActivityAvatar actor={{ name: sender.name }} />;
   return (
