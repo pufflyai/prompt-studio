@@ -1,5 +1,5 @@
 import { Box, chakra, Stack, Text, useRecipe } from "@chakra-ui/react";
-import { type KeyboardEvent, useEffect, useLayoutEffect, useRef } from "react";
+import { type KeyboardEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { Tooltip } from "@/components/primitives/tooltip";
@@ -41,6 +41,7 @@ interface ChatOutlineProps {
 
 export const ChatOutline = ({ host, rows, active, onJump }: ChatOutlineProps) => {
   const entries = getOutlineEntries(rows);
+  const [selectedEntryId, setSelectedEntryId] = useState<string>();
   const viewport = useRef<HTMLDivElement>(null);
   const { virtualizer, virtualItems, totalSize } = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: entries.length,
@@ -73,7 +74,10 @@ export const ChatOutline = ({ host, rows, active, onJump }: ChatOutlineProps) =>
     virtualizer.scrollToIndex(next, { align: "auto" });
     focusEntry(next);
   };
-  const activeEntry = entries.findIndex((entry) => entry.index === active);
+  const selectedEntry = selectedEntryId
+    ? entries.findIndex((entry) => entry.index === active && entry.id === selectedEntryId)
+    : -1;
+  const activeEntry = selectedEntry >= 0 ? selectedEntry : entries.findIndex((entry) => entry.index === active);
   useEffect(() => {
     const scroller = viewport.current;
     if (scroller && activeEntry >= 0 && !scroller.contains(scroller.ownerDocument.activeElement))
@@ -109,8 +113,11 @@ export const ChatOutline = ({ host, rows, active, onJump }: ChatOutlineProps) =>
                     data-outline-entry={item.index}
                     onKeyDown={(event) => moveFocus(event, item.index)}
                     aria-label={entry.prompt}
-                    aria-current={active === entry.index ? "location" : undefined}
-                    onClick={() => onJump(entry.index)}
+                    aria-current={activeEntry === item.index ? "location" : undefined}
+                    onClick={() => {
+                      setSelectedEntryId(entry.id);
+                      onJump(entry.index);
+                    }}
                   >
                     <Box as="span" />
                   </chakra.button>

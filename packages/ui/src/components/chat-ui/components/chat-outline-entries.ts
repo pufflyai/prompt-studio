@@ -10,10 +10,11 @@ const excerpt = (message: SessionMessage) => {
 
 export const getOutlineEntries = (rows: ChatMessageRow[]) => {
   const entries: Array<{ id: string; index: number; prompt: string; reply: string }> = [];
-  if (rows.length <= 2) return entries;
+  if (rows.length <= 2 && rows.reduce((count, row) => count + row.messageIds.length, 0) <= 2) return entries;
   for (const [index, row] of rows.entries()) {
     if (row.type === "user") {
-      entries.push({ id: row.key, index, prompt: excerpt(row.message) || "Message", reply: "" });
+      const prompt = excerpt(row.message) || "Message";
+      for (const id of row.messageIds) entries.push({ id, index, prompt, reply: "" });
     } else if (row.message.role === "assistant") {
       const turn = entries.at(-1);
       if (turn && !turn.reply) turn.reply = excerpt(row.message);

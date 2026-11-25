@@ -82,7 +82,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
 
   return (
     <Box px="xs" ref={list}>
-      {props.outlineHost && rows.length > 2 && (
+      {props.outlineHost && (
         <ChatOutline
           host={props.outlineHost}
           rows={rows}

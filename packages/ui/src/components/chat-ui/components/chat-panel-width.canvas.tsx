@@ -89,17 +89,47 @@ const outlineMessages: SessionMessage[] = Array.from({ length: 240 }, (_, index)
   },
 ]).flat();
 
+const pollingMessages = Array.from({ length: 2 }, (_, index): SessionMessage[] => [
+  {
+    id: `poll-${index}`,
+    role: "user",
+    sender: { type: "session", id: "release-checks", name: "Release checks", requestId: `request-${index}` },
+    parts: [{ type: "text", text: "Check for available work." }],
+  },
+  {
+    id: `error-${index}`,
+    role: "system",
+    parts: [{ type: "error", errorType: "other", message: "Usage limit reached." }],
+  },
+]).flat();
+
 export const ConversationOutline: Story = {
   description:
     "A wide transcript exposes each turn in its outline. Attributed prompts show a sender avatar and name; older prompts without recorded attribution keep their appearance. Arrow keys, Home, End and Tab move focus across virtualized turns; Enter selects a turn, and narrowing the panel hides the gutter.",
   render: (args) => {
     const [wide, setWide] = useState(true);
+    const [polling, setPolling] = useState(false);
+    const [visibleIds, setVisibleIds] = useState<string[]>([]);
     return (
       <Box w={wide ? "60rem" : "30rem"} h="30rem">
         <Button size="xs" onClick={() => setWide(!wide)}>
           Resize conversation
         </Button>
-        <ChatPanel {...args} messages={outlineMessages} hideComposer />
+        <Button size="xs" onClick={() => setPolling(!polling)}>
+          {polling ? "Show build checks" : "Show repeated prompts"}
+        </Button>
+        {polling && (
+          <output hidden data-testid="visible-message-ids">
+            {visibleIds.join(" ")}
+          </output>
+        )}
+        <ChatPanel
+          {...args}
+          conversationKey={polling ? "polls" : "builds"}
+          messages={polling ? pollingMessages : outlineMessages}
+          onVisibleMessageIdsChange={polling ? setVisibleIds : undefined}
+          hideComposer
+        />
       </Box>
     );
   },

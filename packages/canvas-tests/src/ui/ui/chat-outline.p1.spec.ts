@@ -53,3 +53,29 @@ test("jump to an earlier turn, then resize the conversation panel", async ({ pag
   await preview.getByRole("button", { name: "Resize conversation" }).click();
   await expect(rail).toBeHidden();
 });
+
+test("select each original turn and report its message IDs when repeated prompts share a row", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/chat-ui/components/chat-panel-width.canvas.tsx#ConversationOutline",
+  );
+  await preview.getByRole("button", { name: "Show repeated prompts" }).click();
+  const rail = preview.getByRole("navigation", { name: "Conversation outline" });
+  const turns = rail.getByRole("button", { name: "Check for available work.", exact: true });
+  await expect(turns).toHaveCount(2);
+  const first = turns.nth(0);
+  const retry = turns.nth(1);
+  await expect(first).toHaveAttribute("aria-current", "location");
+  await first.focus();
+  await first.press("ArrowDown");
+  await expect(retry).toBeFocused();
+  await retry.press("Enter");
+  await expect(retry).toHaveAttribute("aria-current", "location");
+  await expect(first).not.toHaveAttribute("aria-current", "location");
+  await expect(preview.locator('[data-chat-message-id="poll-0"]')).toBeInViewport();
+  await expect(preview.locator('[data-chat-message-id="poll-1"]')).toHaveCount(0);
+  const visible = preview.getByTestId("visible-message-ids");
+  for (const id of ["poll-0", "poll-1", "error-0", "error-1"]) {
+    await expect(visible).toContainText(id);
+  }
+});
