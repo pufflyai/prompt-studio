@@ -168,3 +168,22 @@ test("a mount reports the full-ID folder that filesystem watchers must observe",
   const f = await fixture();
   expect(f.mount().root).toBe(f.pathFor("documents"));
 });
+
+test("a folder return retires shared mount child deletions that were not individually observed", async () => {
+  const f = await fixture();
+  const ledger = createArtifactMountWriteLedger(() => 0);
+  const mount = createSharedArtifactMount(f.deps, { ...f.input, onWrite: ledger.record });
+  const folder = f.pathFor("documents/sales");
+  const child = join(folder, "q3.json");
+  const options = { keepMatchedWrites: true };
+  await mount.writeText("sales/q3.json", "{}");
+  expect(ledger.dropEchoes([folder, child], options)).toEqual([]);
+  await mount.delete("sales");
+  expect(ledger.dropEchoes([folder, child], options)).toEqual([]);
+
+  await mkdir(folder);
+  await writeFile(child, "[]");
+  expect(ledger.dropEchoes([folder], options)).toEqual([folder]);
+  await rm(child);
+  expect(ledger.dropEchoes([child], options)).toEqual([child]);
+});
