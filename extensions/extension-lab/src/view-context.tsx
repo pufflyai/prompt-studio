@@ -1,5 +1,6 @@
 import {
   createWebviewClient,
+  type ExtensionViewRenderContext,
   type GuestHost,
   type NavigationTarget,
   type PageLocation,
@@ -21,6 +22,7 @@ export interface ExampleHost {
   page: WebviewPageClient;
 }
 export interface ExampleViewInput {
+  t?: ExtensionViewRenderContext<ExampleProps>["t"];
   host: ExampleHost;
   resource?: ResourceRef;
 }
