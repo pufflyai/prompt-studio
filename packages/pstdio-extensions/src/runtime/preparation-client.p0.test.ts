@@ -1264,11 +1264,13 @@ test("an unrelated worker's slow startup does not hold the job a preemptor inter
   const client = fixture({ workers: 2, startupUrl: (worker) => (worker === 2 ? unrelatedStartup.url : undefined) });
   const warm = gate();
   const restoration = gate();
+  const restorationStarted = Promise.withResolvers<void>();
   const step = gate();
   let lost = 0;
   const restart = restartOf(client, "restoration");
   const unsubscribe = client.subscribe((event) => {
     if (event.kind === "worker-lost") lost++;
+    if (event.entered === "restoration") restorationStarted.resolve();
   });
   const work: Promise<unknown>[] = [];
   // Held work is rejected when the client stops; observe it from the start.
@@ -1300,7 +1302,8 @@ test("an unrelated worker's slow startup does not hold the job a preemptor inter
       { priority: "restoration" },
     );
     track(original);
-    await restoration.entered.promise;
+    // The HTTP request can arrive before the worker event. Count the first entry before retiring it.
+    await Promise.all([restoration.entered.promise, restorationStarted.promise]);
     edit = client.withContinuation(async () => {
       await client.run("wait", { name: "foreground", url: step.url }, { resources: ["/same"] });
       // Live restoration bars this peer, and no worker it needs is starting for the edit.
