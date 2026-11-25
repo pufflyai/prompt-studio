@@ -1,0 +1,197 @@
+name: Dashboard widgets exact source CLI review
+
+on:
+  push:
+    branches:
+      - chore/pr2434-source-cli-e96976f2
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  source_cli:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PR2434_PR_HEAD: e96976f2795e80baefe7bbf4c304933ed9fffbb0
+      PR2434_HEAD: dd42c15127c5203f3d4e7e936c5b8a3df2e7f950
+      PR2434_TREE: bf0616d1a1246f377254094ec30071670e19b335
+      PR2434_BASE: 088e5eb0d6099f5377d778914f5527471aa1dc31
+      PR2434_POLICY: eeda44a3cdb1ac1ca43bda7a351ba8ed43d09409cd8b1cc4c373fa2bfd6a2348
+      PR2434_EXPECTED_PLAN: 5c89d57f895d2b49a11912642cafd10453f9db4a5631dfa01d381d162dc13b03
+      PR2434_CLI_GROUP: 72480638f874d13d0838a290
+      PR2434_CLI_FILES_SHA256: 58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a
+      PR2434_OUTPUT: test-results/pr2434-source-cli
+      PR2434_ORDINARY_RUN: "45568044608"
+      PR2434_ORDINARY_SOURCE: dd42c15127c5203f3d4e7e936c5b8a3df2e7f950
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.PR2434_HEAD }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+
+      - name: Verify the source and sealed Linux plan
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$GITHUB_REF" = refs/heads/chore/pr2434-source-cli-e96976f2
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$PR2434_PR_HEAD"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" =             "$(printf 'A\t.github/workflows/pr2434-source-cli-e96976f2.yml')"
+          test "$(git rev-parse HEAD)" = "$PR2434_HEAD"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$PR2434_TREE"
+          git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main             refs/heads/feature/dashboard-custom-content:refs/remotes/origin/feature/dashboard-custom-content
+          test "$(git rev-parse origin/feature/dashboard-custom-content)" = "$PR2434_PR_HEAD"
+          test "$(git show -s --format=%P "$PR2434_HEAD")" = "$PR2434_BASE $PR2434_PR_HEAD"
+          test "$(git merge-tree --write-tree "$PR2434_PR_HEAD" "$PR2434_BASE")" = "$PR2434_TREE"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PR2434_ORDINARY_RUN" |
+            jq -e --arg prHead "$PR2434_PR_HEAD" --arg merged "$PR2434_HEAD" '
+              .head_sha == $prHead and .event == "pull_request" and .path == ".github/workflows/test-and-build.yml"
+              and (.referenced_workflows | length > 0) and all(.referenced_workflows[]; .sha == $merged)
+            '
+          main="$(git rev-parse origin/main)"
+          test "$(git merge-base HEAD "$main")" = "$PR2434_BASE"
+          incoming="$(git rev-list --count "HEAD..$main")"
+          test "$incoming" -le 10
+          prospective="$(git merge-tree --write-tree --no-messages HEAD "$main")"
+          test "$(git cat-file -t "$prospective")" = tree
+          test -z "$(git status --porcelain)"
+          test "$(bun --version)" = "1.4.4"
+          test "$(node --version)" = "v26.7.0"
+          test "$(jq -r .packageManager package.json)" = "bun@1.4.4"
+          mkdir -p "$PR2434_OUTPUT"
+          bun run test:review --base "$PR2434_BASE" --list > "$PR2434_OUTPUT/selected-plan.json"
+          jq -e --arg sha "$PR2434_HEAD" --arg tree "$PR2434_TREE" --arg base "$PR2434_BASE"             --arg policy "$PR2434_POLICY" --arg digest "$PR2434_EXPECTED_PLAN" --arg group "$PR2434_CLI_GROUP" '
+              .head == $sha and .mergeBase == $base and .testPlan.digest == $digest
+              and .testPlan.source == {sha:$sha,tree:$tree,policy:$policy,dirty:false}
+              and any(.selected[]; .file == "packages/ui/src/components/dashboard-renderer/dashboard-renderer.p0.test.tsx")
+              and any(.selected[]; .file == "packages/canvas-tests/src/ui/ui/dashboard-renderer.p1.spec.ts")
+              and (.testPlan.runs | length) == 85 and (.selected | length) == 2703
+              and all(.testPlan.runs[]; .target == {platform:"linux",arch:"x64"})
+              and ([.testPlan.runs[] | select(.job == "local-additions") | .id] == [$group])
+              and any(.testPlan.runs[]; .id == $group and .owner == "e2e" and .cwd == "packages/e2e"
+                and .runner == "cli" and .priority == "P1" and .lane == "stable" and .artifact == "source"
+                and .requires == ["build-e5b1f54fca1c52cd"] and (.files | length) == 10)
+              and any(.testPlan.setup[]; .id == "build-e5b1f54fca1c52cd" and .owners == ["e2e"]
+                and .kind == "build" and .requires == [])
+            ' "$PR2434_OUTPUT/selected-plan.json"
+          bun -e '
+            import { validateTestPlan } from "./scripts/ci/test-plan";
+            const { testPlan } = await Bun.file(process.env.PR2434_OUTPUT + "/selected-plan.json").json();
+            validateTestPlan(testPlan);
+          '
+          sealed_digest="$(jq -er '.testPlan.digest' "$PR2434_OUTPUT/selected-plan.json")"
+          echo "PR2434_PLAN=$sealed_digest" >> "$GITHUB_ENV"
+          jq -c --arg group "$PR2434_CLI_GROUP" '.testPlan.runs[] | select(.id == $group) | .files'             "$PR2434_OUTPUT/selected-plan.json" > "$PR2434_OUTPUT/assigned-files.json"
+          printf '%s  %s\n' "$PR2434_CLI_FILES_SHA256" "$PR2434_OUTPUT/assigned-files.json" | sha256sum -c -
+          jq -n --arg sha "$PR2434_HEAD" --arg prHead "$PR2434_PR_HEAD" --arg tree "$PR2434_TREE" --arg main "$main" --arg base "$PR2434_BASE"             --arg prospective "$prospective" --arg plan "$sealed_digest" --arg workflow "$GITHUB_WORKFLOW_SHA"             --argjson incoming "$incoming" --arg ordinary "$PR2434_ORDINARY_RUN"             --arg ordinarySource "$PR2434_ORDINARY_SOURCE"             '{sha:$sha,prHead:$prHead,tree:$tree,main:$main,mergeBase:$base,mergeTree:$prospective,incoming:$incoming,
+              planDigest:$plan,diagnosticCommit:$workflow,ordinaryCiRun:$ordinary,ordinaryCiSha:$ordinarySource}'             > "$PR2434_OUTPUT/identity.json"
+
+      - name: Open an owned private temporary directory
+        shell: bash
+        run: |
+          scratch="$(mktemp -d /tmp/pr2434.XXXXXX)"
+          printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$scratch/owner"
+          {
+            echo "PR2434_CLI_TMP=$scratch"
+            echo "TMPDIR=$scratch"
+            echo "TMP=$scratch"
+            echo "TEMP=$scratch"
+            echo "PR2434_NATIVE_BUN=$(command -v bun)"
+          } >> "$GITHUB_ENV"
+          { node --version; bun --version; docker version; df -h /tmp "$GITHUB_WORKSPACE"; }             > "$PR2434_OUTPUT/toolchain.log"
+
+      - name: Install locked dependencies and prepare Firefox
+        shell: bash
+        run: |
+          bun install --frozen-lockfile --concurrent-scripts 1
+          bun run --cwd packages/ui typegen:tokens
+          (cd packages/e2e && bun x --no-install playwright install --with-deps firefox) 2>&1             | tee "$PR2434_OUTPUT/browser-setup.log"
+          test -z "$(git status --porcelain)"
+
+      - name: Execute only the ten-file source CLI group
+        shell: bash
+        run: |
+          test "$(command -v bun)" = "$PR2434_NATIVE_BUN"
+          bun --no-orphans - <<'BUN' 2>&1 | tee "$PR2434_OUTPUT/console.log"
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+          import { executePlan } from "./scripts/ci/run-test-plan";
+
+          const root = process.cwd();
+          const { PR2434_CLI_TMP: scratch, PR2434_OUTPUT: relative, PR2434_CLI_GROUP: group } = process.env;
+          if (!scratch || !/^\/tmp\/pr2434\.[A-Za-z0-9]{6}$/.test(scratch) || !relative || !group)
+            throw new Error("Unexpected native review assignment");
+          const executionId = process.env.GITHUB_RUN_ID + "/" + process.env.GITHUB_RUN_ATTEMPT;
+          const output = resolve(root, relative);
+          for (const [key, value] of Object.entries(localReviewEnvironment(scratch))) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+          process.env.CI_PLAN_OUTPUT_DIR = relative + "/native";
+          const { testPlan } = await Bun.file(resolve(output, "selected-plan.json")).json();
+          let passed = false;
+          try {
+            const result = await executePlan(testPlan, {
+              root, runIds: [group], prebuilt: false, executionId,
+              env: { CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+            });
+            passed = result.complete && result.outcome === "success";
+          } finally {
+            const cleanup = await cleanupReviewCompose(scratch);
+            await Bun.write(resolve(output, "compose-cleanup.json"), JSON.stringify(cleanup, null, 2));
+            passed &&= cleanup.every(entry => entry.outcome === "success");
+            process.exitCode = passed ? 0 : 1;
+          }
+          BUN
+
+      - name: Verify exact native execution and file coverage
+        shell: bash
+        run: |
+          jq -e --arg group "$PR2434_CLI_GROUP" --arg digest "$PR2434_PLAN"             --slurpfile expected "$PR2434_OUTPUT/assigned-files.json"             --slurpfile sealed "$PR2434_OUTPUT/selected-plan.json" '
+              .source == $sealed[0].testPlan.source and .planDigest == $digest
+              and .complete and .outcome == "success" and .errors == [] and .runIds == [$group]
+              and (.results | length) == 1
+              and all(.results[]; .runId == $group and .complete and .outcome == "success"
+                and .exitCode == 0 and .nativeFailure != true and (.reportedFiles | sort) == ($expected[0] | sort))
+              and [.phases[] | select(.kind == "build") | [.id,.outcome]] == [["build-e5b1f54fca1c52cd","success"]]
+              and any(.phases[]; .kind == "cleanup" and .outcome == "success")
+            ' "$PR2434_OUTPUT/native/execution.json"
+          jq -e 'all(.[]; .outcome == "success")' "$PR2434_OUTPUT/compose-cleanup.json"
+          git diff --exit-code
+
+      - name: Retain and clean this invocation's temporary files
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$PR2434_OUTPUT"
+          if [[ -n "${PR2434_CLI_TMP:-}" ]]; then
+            [[ "$PR2434_CLI_TMP" =~ ^/tmp/pr2434\.[A-Za-z0-9]{6}$ ]]
+            test "$(cat "$PR2434_CLI_TMP/owner")" = "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+            if [[ -f "$PR2434_CLI_TMP/compose-projects.jsonl" ]]; then
+              cp "$PR2434_CLI_TMP/compose-projects.jsonl" "$PR2434_OUTPUT/"
+            fi
+            rm -rf -- "$PR2434_CLI_TMP"
+            test ! -e "$PR2434_CLI_TMP"
+            printf '%s\n' 'Owned temporary directory removed' > "$PR2434_OUTPUT/scratch-cleanup.txt"
+          fi
+
+      - name: Upload the fixture and native receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr2434-source-cli-e96976f2-attempt-${{ github.run_attempt }}
+          path: ${{ env.PR2434_OUTPUT }}
+          if-no-files-found: error
