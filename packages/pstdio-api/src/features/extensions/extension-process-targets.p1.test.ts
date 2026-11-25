@@ -7,6 +7,7 @@ import { EXTENSION_API_VERSION, type ProcessExit, type ProcessHandle } from "pst
 import { createProcessOwner } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { remoteReadOnlyCapabilities } from "../workspaces/workspace-provider-identity";
+import { defaultWorkspaceProviderRuntime } from "../workspaces/workspace-provider-runtime";
 import { createProcessApi } from "./extension-process-api";
 import { createExtensionProcessOwners } from "./extension-process-owners";
 import { readTargetText, resolveProcessTarget } from "./extension-targets";
@@ -107,7 +108,7 @@ export default {
       label: "Remote",
       create: ready,
       resolve: ready,
-      spawn(ctx, input) {
+      spawn(ctx, { signal, ...input }) {
         record(ctx, input);
         return ctx.process.spawn({ command: [process.execPath, "-e", "process.stdout.write('ran remotely')"] });
       },
@@ -254,6 +255,52 @@ const keep = async (projectId: string, marker: string) => {
   await waitFor(() => existsSync(marker) && readFileSync(marker, "utf8").length > 0);
   return JSON.parse(readFileSync(marker, "utf8")) as number[];
 };
+
+test("stopping a child while its remote provider is opening aborts the provider's signal", async () => {
+  const entered = Promise.withResolvers<AbortSignal>();
+  const pending = Promise.withResolvers<ProcessHandle>();
+  const owner = createProcessOwner();
+  const child = createProcessApi({
+    callOwner: owner,
+    resolveTarget: (workspaceId, signal) =>
+      resolveProcessTarget(
+        {
+          ...handle.deps,
+          workspaceProviderRuntime: {
+            async find(deps, input) {
+              const provider = await defaultWorkspaceProviderRuntime.find(deps, input);
+              if (!provider) return;
+              return {
+                ...provider,
+                provider: {
+                  ...provider.provider,
+                  spawn: (_context, input) => {
+                    input.signal?.addEventListener("abort", () => pending.reject(input.signal.reason), { once: true });
+                    entered.resolve(input.signal);
+                    return pending.promise;
+                  },
+                },
+              };
+            },
+          },
+        },
+        { projectId: projects.main, workspaceId },
+        signal,
+      ),
+  }).spawn({ command: ["agent"], workspaceId: workspaces.late });
+
+  try {
+    const providerSignal = await entered.promise;
+    expect(providerSignal?.aborted).toBe(false);
+    await owner.close();
+    expect(providerSignal.aborted).toBe(true);
+    await expect(child.started).rejects.toMatchObject({ code: "process_owner_closed" });
+    await owner.drained;
+  } finally {
+    pending.reject(new Error("Fixture closed"));
+    await owner.close();
+  }
+});
 
 test("a command's child runs in its project's workspace by default", async () => {
   const result = await spawn({ command: [process.execPath, "-e", "process.stdout.write(process.cwd())"] });
