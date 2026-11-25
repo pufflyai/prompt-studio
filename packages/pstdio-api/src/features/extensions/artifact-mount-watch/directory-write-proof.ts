@@ -1,6 +1,7 @@
 import { readdirSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { type ArtifactParentWrite, readArtifactFileState } from "pstdio-extensions";
+import { createPathSubtrees } from "./path-subtrees";
 
 export type FileState = ReturnType<typeof readArtifactFileState>;
 type PresentState = NonNullable<FileState>;
@@ -21,35 +22,22 @@ type ReportedChild = {
 };
 export type ReportedChildren = WeakMap<OwnedDirectory, Map<string, ReportedChild>>;
 
-export function* pathAndAncestors(path: string) {
-  for (let ancestor = path; ancestor !== dirname(ancestor); ancestor = dirname(ancestor)) yield ancestor;
-}
-
 export const createOwnedDirectories = () => {
   const directories = new Map<string, OwnedDirectory>();
-  const directorySubtrees = new Map<string, Set<string>>();
+  const subtrees = createPathSubtrees();
 
   const forgetDirectory = (path: string) => {
-    if (!directories.delete(path)) return;
-    for (const ancestor of pathAndAncestors(path)) {
-      const subtree = directorySubtrees.get(ancestor);
-      subtree?.delete(path);
-      if (subtree?.size === 0) directorySubtrees.delete(ancestor);
-    }
+    if (directories.delete(path)) subtrees.forget(path);
   };
 
   const forgetDirectoryTree = (path: string) => {
     // Index folders so a series of file removals never searches every owned directory.
-    for (const folder of directorySubtrees.get(path) ?? []) forgetDirectory(folder);
+    for (const folder of subtrees.under(path) ?? []) forgetDirectory(folder);
   };
 
   const recordDirectory = (path: string, directory: OwnedDirectory) => {
     directories.set(path, directory);
-    for (const ancestor of pathAndAncestors(path)) {
-      const subtree = directorySubtrees.get(ancestor) ?? new Set<string>();
-      subtree.add(path);
-      directorySubtrees.set(ancestor, subtree);
-    }
+    subtrees.record(path);
   };
 
   return { directories, recordDirectory, forgetDirectory, forgetDirectoryTree };

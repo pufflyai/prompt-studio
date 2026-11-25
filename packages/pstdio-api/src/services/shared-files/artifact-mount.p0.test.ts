@@ -188,15 +188,20 @@ test("shared API writes advance only the watcher that already reported the outsi
   expect(second([folder], options)).toEqual([folder]);
 });
 
-test("shared mount deletions retire ownership of a subtree moved away and returned", async () => {
+test.each([
+  ["folder", true],
+  ["child", true],
+  ["child", false],
+])("a shared mount reports a returned subtree from a %s hint (dual watch: %s)", async (hint, keepMatchedWrites) => {
   const f = await fixture();
   const ledger = createArtifactMountWriteLedger(() => 0);
   const mount = createSharedArtifactMount(f.deps, { ...f.input, onWrite: ledger.record });
   const folder = f.pathFor("documents/sales");
   const nested = join(folder, "nested");
   const parked = f.pathFor("parked-nested");
+  const returned = hint === "folder" ? nested : join(nested, "a.json");
   const removed = join(nested, "b.json");
-  const options = { keepMatchedWrites: true };
+  const options = { keepMatchedWrites };
   await mount.writeText("sales/nested/a.json", "{}");
   await mount.writeText("sales/nested/b.json", "{}");
   await rename(nested, parked);
@@ -205,7 +210,7 @@ test("shared mount deletions retire ownership of a subtree moved away and return
   await mount.writeText("sales/owned.json", "{}");
 
   await rename(parked, nested);
-  expect(ledger.dropEchoes([nested], options)).toEqual([nested]);
+  expect(ledger.dropEchoes([returned], options)).toEqual([returned]);
   await rm(removed);
   expect(ledger.dropEchoes([removed], options)).toEqual([removed]);
 });

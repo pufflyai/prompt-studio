@@ -5,12 +5,12 @@ import {
   createOwnedDirectories,
   type FileState,
   matchesDirectoryEcho,
-  pathAndAncestors,
   type ReportedChildren,
   recordOwnedChild,
   recordReportedChild,
   sameState,
 } from "./directory-write-proof";
+import { createPathSubtrees, pathAndAncestors } from "./path-subtrees";
 
 // Long enough for a change burst to settle after a slow write. Short enough that an old entry
 // cannot hide a later direct edit.
@@ -46,12 +46,18 @@ export type ArtifactMountWriteLedger = ReturnType<typeof createArtifactMountWrit
  */
 export const createArtifactMountWriteLedger = (now: () => number = Date.now) => {
   const entries = new Map<string, LedgerEntry>();
+  const writtenPaths = createPathSubtrees();
   let writeOrder = 0;
   const { directories, recordDirectory, forgetDirectory, forgetDirectoryTree } = createOwnedDirectories();
 
+  const forgetEntry = (path: string) => {
+    if (entries.get(path)?.state) writtenPaths.forget(path, dirname(path));
+    entries.delete(path);
+  };
+
   const forgetExpired = () => {
     for (const [path, entry] of entries) {
-      if (now() - entry.recordedAt > ECHO_WINDOW_MS) entries.delete(path);
+      if (now() - entry.recordedAt > ECHO_WINDOW_MS) forgetEntry(path);
     }
     for (const [path, entry] of directories) {
       if (now() - entry.recordedAt > ECHO_WINDOW_MS) forgetDirectory(path);
@@ -130,11 +136,11 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     }
   };
 
-  const dropRetiredEntries = (retired: ReadonlyMap<string, number>) => {
-    // A returned subtree cannot inherit old write or deletion proofs from before it was removed.
+  const dropRetiredDeletions = (retired: ReadonlyMap<string, number>) => {
+    // Walk the ledger once even when one notification proves many deletions are stale.
     if (retired.size === 0) return;
     for (const [path, entry] of entries) {
-      if (isRetired(retired, path, entry.order)) entries.delete(path);
+      if (entry.state === null && isRetired(retired, path, entry.order)) forgetEntry(path);
     }
   };
 
@@ -180,7 +186,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
       // A recursive watcher may report only a child when an external folder returns.
       reconcileDeletion(recordedPath, entry, stateAt(recordedPath), related ?? [], retired, returnedRoot);
     }
-    dropRetiredEntries(retired);
+    dropRetiredDeletions(retired);
   };
 
   // An earlier tree deletion cannot explain the disappearance of a newer mount write.
@@ -236,10 +242,17 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     forgetExpired();
     const recordedAt = now();
     const state = readArtifactFileState(path);
+    if (!state?.directory) {
+      forgetDirectoryTree(path);
+      // A later recreation can overwrite the folder's tombstone. Clear stale positive receipts
+      // at removal time while preserving actual child deletions.
+      for (const descendant of writtenPaths.under(path) ?? []) forgetEntry(descendant);
+    }
+    if (state) writtenPaths.record(path, dirname(path));
+    else if (entries.get(path)?.state) writtenPaths.forget(path, dirname(path));
     entries.set(path, { recordedAt, order: ++writeOrder, state });
     // Keep this fact on older ancestor deletions even after this path's own proof is consumed.
     if (state) rememberReappearance(path, state);
-    if (!state) forgetDirectoryTree(path);
     for (const [folder, identity] of createdDirectories ?? []) recordCreatedDirectory(folder, identity, recordedAt);
     recordOwnedChild(directories, path, state);
     for (const write of parentWrites ?? []) advanceParentWrite(directories, write);
@@ -260,7 +273,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
       if (keepMatchedWrites) {
         for (const [path, current] of kept) recordReportedChild(reported, directories, path, current);
       }
-      for (const path of consumed) entries.delete(path);
+      for (const path of consumed) forgetEntry(path);
       return kept.map(([path]) => path);
     };
   };
