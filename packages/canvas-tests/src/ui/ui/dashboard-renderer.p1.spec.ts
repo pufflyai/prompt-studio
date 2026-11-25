@@ -20,6 +20,32 @@ test("shows grouped scatter points and ring shares on the dashboard", async ({ p
   await expect(preview.getByText(/^(40|60)%$/)).toBeVisible();
 });
 
+test("distinguishes ungrouped observations from caller-named groups", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/dashboard-renderer/dashboard.canvas.tsx#Dashboard",
+  );
+  const scatter = preview.getByRole("article", { name: "Conversation clusters", exact: true });
+  const legend = scatter.locator(".ts-chart__legend");
+  for (const name of ["Unassigned", "0", "No group", "No group (2)", "No group (3)"]) {
+    await expect(legend.getByText(name, { exact: true })).toBeVisible();
+  }
+});
+
+test("reports distinct small coordinates during keyboard navigation", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/dashboard-renderer/dashboard.canvas.tsx#Dashboard",
+  );
+  const scatter = preview.getByRole("img", { name: "Conversation clusters", exact: true });
+  await scatter.press("Home");
+  await expect(preview.getByText("Open intake", { exact: true })).toBeVisible();
+  await expect(preview.getByText("0.0001", { exact: true })).toBeVisible();
+  await scatter.press("ArrowRight");
+  await expect(preview.getByText("Quick check", { exact: true })).toBeVisible();
+  await expect(preview.getByText("0.0003", { exact: true })).toBeVisible();
+});
+
 // Critical: a page-owned toolbar must still control the dashboard, including widgets with interactive content.
 test("edits custom widgets from the page toolbar", async ({ page }) => {
   const preview = await openCanvasPreview(
@@ -29,6 +55,13 @@ test("edits custom widgets from the page toolbar", async ({ page }) => {
   const widget = preview.getByRole("article", { name: "Build history", exact: true });
   await expect(widget.getByLabel("Build count with a release marker")).toBeVisible();
   const toolbar = preview.getByRole("toolbar", { name: "Build history controls" });
+  const marker = widget.getByRole("button", { name: "Release marker", exact: true });
+  await marker.click();
+  await expect(marker).toHaveAttribute("aria-pressed", "false");
+  await toolbar.getByRole("button", { name: "Edit dashboard", exact: true }).click();
+  await expect(marker).toHaveAttribute("aria-pressed", "false");
+  await toolbar.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(marker).toHaveAttribute("aria-pressed", "false");
   await toolbar.getByRole("button", { name: "Edit dashboard", exact: true }).click();
   await toolbar.getByRole("button", { name: "Add widget", exact: true }).click();
   await preview.getByRole("menuitemradio", { name: "Custom", exact: true }).click();
@@ -37,6 +70,7 @@ test("edits custom widgets from the page toolbar", async ({ page }) => {
   await page.keyboard.press("Escape");
   await toolbar.getByRole("button", { name: "Apply", exact: true }).click();
   await expect(toolbar.getByRole("button", { name: "Edit dashboard", exact: true })).toBeFocused();
+  await expect(marker).toHaveAttribute("aria-pressed", "false");
   await expect(preview.getByRole("article", { name: "Additional build history", exact: true })).toBeVisible();
 });
 
@@ -111,7 +145,10 @@ test("Cancel cancels an active resize before its pointer is released", async ({ 
   await cancel.press("Enter");
   await expect.poll(width).toBe(original);
   await expect(metric).toHaveAttribute("data-resizing", "false");
+  const edit = preview.getByRole("button", { name: "Edit dashboard", exact: true });
+  await edit.focus();
+  await edit.press("Enter");
   await page.mouse.up();
-  await preview.getByRole("button", { name: "Edit dashboard", exact: true }).click();
   await expect.poll(width).toBe(original);
+  await expect(metric).toHaveAttribute("data-resizing", "false");
 });

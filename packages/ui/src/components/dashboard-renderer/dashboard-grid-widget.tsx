@@ -33,6 +33,7 @@ interface GridWidgetProps {
 
 const handleNames = { w: "left", e: "right", s: "bottom", sw: "bottom left", se: "bottom right" };
 const resizeHandles: DashboardResizeHandle[] = ["w", "e", "sw", "s", "se"];
+const verticalResizeHandles: DashboardResizeHandle[] = ["s"];
 
 export function GridWidget(props: GridWidgetProps) {
   const {
@@ -113,12 +114,15 @@ export function GridWidget(props: GridWidgetProps) {
       )}
     </Box>
   );
-  if (!editing || !metrics) return content;
+  const resizeProps = editing && metrics ? resizeController.resizableProps(widget, metrics) : null;
+  const axis = columns === 1 ? "y" : "both";
+  const handles = columns === 1 ? verticalResizeHandles : resizeHandles;
+  // Keep caller content mounted when editing starts or ends.
   return (
     <Resizable
-      {...resizeController.resizableProps(widget, metrics)}
-      axis={columns === 1 ? "y" : "both"}
-      resizeHandles={columns === 1 ? ["s"] : resizeHandles}
+      {...(resizeProps ?? { width: 0, height: 0 })}
+      axis={resizeProps ? axis : "none"}
+      resizeHandles={resizeProps ? handles : []}
       handle={(axis, ref) => (
         <IconButton
           ref={ref as Ref<HTMLButtonElement>}
