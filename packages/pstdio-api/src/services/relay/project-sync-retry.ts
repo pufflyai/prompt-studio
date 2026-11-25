@@ -1,18 +1,25 @@
 import { AccountRequestError } from "../account/native-account";
 
 interface Source {
-  retry(): void;
+  retry(): void | Promise<void>;
   restart(): Promise<void>;
 }
+export type ProjectSyncRetry = (
+  projectId: string,
+  sourceId?: string,
+  requireCurrent?: () => Promise<void>,
+) => Promise<{ settled: Promise<void> } | void>;
+
 export const createProjectSyncRetry =
   (input: {
     refresh(): Promise<void>;
     owners: Record<string, { get(id: string): Source | undefined }>;
-    folders: { get(id: string): { retry(): void } | undefined };
+    folders: { get(id: string): Pick<Source, "retry"> | undefined };
     extensions: Map<string, Source & { owner: { workbenchId: string; extensionId: string } }>;
   }) =>
-  async (projectId: string, sourceId?: string) => {
+  async (projectId: string, sourceId?: string, requireCurrent?: () => Promise<void>) => {
     await input.refresh();
+    await requireCurrent?.();
     if (sourceId !== undefined) {
       const builtIn = Object.hasOwn(input.owners, sourceId) ? input.owners[sourceId] : undefined;
       const owner = builtIn?.get(projectId) ?? input.extensions.get(JSON.stringify([projectId, sourceId]));
@@ -20,7 +27,12 @@ export const createProjectSyncRetry =
       await owner.restart();
       return;
     }
-    for (const owners of Object.values(input.owners)) owners.get(projectId)?.retry();
-    input.folders.get(projectId)?.retry();
-    for (const owner of input.extensions.values()) if (owner.owner.workbenchId === projectId) owner.retry();
+    const retries = [
+      ...Object.values(input.owners).map((owners) => owners.get(projectId)?.retry()),
+      input.folders.get(projectId)?.retry(),
+      ...[...input.extensions.values()]
+        .filter((owner) => owner.owner.workbenchId === projectId)
+        .map((owner) => owner.retry()),
+    ];
+    return { settled: Promise.allSettled(retries).then(() => {}) };
   };
