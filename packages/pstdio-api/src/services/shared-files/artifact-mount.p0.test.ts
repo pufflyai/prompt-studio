@@ -189,6 +189,32 @@ test("a folder return retires shared mount child deletions that were not individ
   expect(ledger.dropEchoes([child], options)).toEqual([child]);
 });
 
+test("a child-only return hint preserves external removals and owned delete echoes in shared mounts", async () => {
+  const f = await fixture();
+  const ledger = createArtifactMountWriteLedger(() => 0);
+  const mount = createSharedArtifactMount(f.deps, { ...f.input, onWrite: ledger.record });
+  const missing = f.pathFor("documents/sales/old.json");
+  const options = { keepMatchedWrites: true };
+  await mount.writeText("sales/old.json", "{}");
+  await mount.delete("sales");
+  expect(ledger.dropEchoes([missing], options)).toEqual([]);
+  await mount.writeText("sales/owned.json", "[]");
+
+  const folder = f.pathFor("documents/sales/returned/nested");
+  const hint = join(folder, "a.json");
+  const child = join(folder, "b.json");
+  const owned = join(folder, "owned.json");
+  await mkdir(folder, { recursive: true });
+  await writeFile(hint, "outside");
+  await writeFile(child, "outside sibling");
+  await writeFile(owned, "outside then deleted by API");
+  await mount.delete("sales/returned/nested/owned.json");
+  expect(ledger.dropEchoes([hint], options)).toEqual([hint]);
+
+  await rm(child);
+  expect(ledger.dropEchoes([child, missing, owned], options)).toEqual([child]);
+});
+
 test("a shared API deletion after an external folder return stays quiet", async () => {
   const f = await fixture();
   const ledger = createArtifactMountWriteLedger(() => 0);

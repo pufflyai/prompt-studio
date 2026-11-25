@@ -298,6 +298,19 @@ describe("artifact mount folder-only notifications", () => {
     expect(ledger.dropEchoes([child])).toEqual([child]);
   });
 
+  test("a consumed single-watch folder echo does not make an owned subtree external", async () => {
+    const ledger = createArtifactMountWriteLedger(() => 0);
+    const { mount, root } = createMount(ledger);
+    const nested = join(root, "sales", "nested");
+    const oldChild = join(nested, "old.json");
+    await mount.writeText("sales/nested/old.json", "{}");
+    await mount.delete("sales");
+    await mount.writeText("sales/nested/new.json", "[]");
+
+    expect(ledger.dropEchoes([nested])).toEqual([]);
+    expect(ledger.dropEchoes([oldChild])).toEqual([]);
+  });
+
   test.each([
     "new",
     "replacement",
