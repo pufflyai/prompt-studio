@@ -101,7 +101,7 @@ describe("extension connection service", () => {
   });
 
   test("commits connection metadata removal when credential cleanup must retry", async () => {
-    const remove = mock(async () => connection);
+    const remove = mock(async () => [connection.secret_ref]);
     const service = createExtensionConnectionService({
       connectionsDBService: { ...credentialMethods, get: async () => connection, remove } as never,
       secretStore: {
@@ -123,7 +123,7 @@ describe("extension connection service", () => {
   });
 
   test("removes extension connection secrets and rows with retry-safe ordering", async () => {
-    const remove = mock(async () => connection);
+    const remove = mock(async () => [connection.secret_ref]);
     const deleteSecret = mock(async () => {});
     const service = createExtensionConnectionService({
       connectionsDBService: {
@@ -220,7 +220,10 @@ describe("extension connection credential ownership", () => {
         ...credentialMethods,
         get: async () => rows[0] ?? null,
         listAll: async () => rows,
-        remove: async () => rows.shift() ?? null,
+        remove: async () => {
+          const removed = rows.shift();
+          return removed ? [removed.secret_ref] : null;
+        },
       } as never,
       secretStore: {
         get: async () => "credential-canary",

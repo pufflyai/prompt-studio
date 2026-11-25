@@ -14,12 +14,18 @@ const where = (key: CredentialKey) =>
     key.projectId === null ? isNull(credentials.project_id) : eq(credentials.project_id, key.projectId),
   );
 export const credentialProvider = (baseUrl: string) => new URL(baseUrl).origin;
+export const sharedCredentialKey = (key: CredentialKey, provider: string) => ({
+  ...key,
+  projectId: null,
+  contributionId: `shared:${key.contributionId}:${provider}`,
+});
 export const createExtensionCredentialsDBService = (db: Client) => {
   const get = async (key: CredentialKey) => (await db.select().from(credentials).where(where(key)))[0] ?? null;
   return {
     get,
+    getShared: (key: CredentialKey, provider: string) => get(sharedCredentialKey(key, provider)),
     async resolve(key: CredentialKey, provider: string) {
-      const row = (await get(key)) ?? (await get({ ...key, projectId: null }));
+      const row = (await get(key)) ?? (key.projectId === null ? null : await get(sharedCredentialKey(key, provider)));
       if (!row || row.provider !== provider || (row.expires_at && Date.parse(row.expires_at) <= Date.now()))
         return null;
       return row;
@@ -30,7 +36,6 @@ export const createExtensionCredentialsDBService = (db: Client) => {
         authType: "bearer" | "header";
         authHeaderName?: string | null;
         secretRef: string;
-        resetCheck?: boolean;
       },
     ) {
       const stamp = new Date().toISOString();
@@ -41,7 +46,6 @@ export const createExtensionCredentialsDBService = (db: Client) => {
         secret_ref: input.secretRef,
         updated_at: stamp,
         expires_at: null,
-        ...(input.resetCheck ? { last_check: null } : {}),
       };
       const [row] = await db
         .insert(credentials)
@@ -113,9 +117,6 @@ export const createExtensionCredentialsDBService = (db: Client) => {
         if (rows.length < 200) return;
         cursor = rows.at(-1)!;
       }
-    },
-    async recordCheck(key: CredentialKey, check: NonNullable<typeof credentials.$inferSelect.last_check>) {
-      await db.update(credentials).set({ last_check: check }).where(where(key));
     },
   };
 };

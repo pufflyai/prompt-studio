@@ -7,6 +7,7 @@ import { credentialProvider } from "../services/extension-connections/credential
 import {
   type ConnectionConfiguration,
   configuredCredentialKey,
+  connectionCheckPreference,
   connectionPreference,
 } from "../services/extension-connections/extension-connections";
 import type { DbClient } from "./connection.pglite";
@@ -121,6 +122,15 @@ export const prepareConnectionCredentialsUpgrade = async (db: DbClient, path: st
             updated_at,
           })
           .onConflictDoNothing();
+        if (last_check_json)
+          await tx
+            .insert(preferences)
+            .values({
+              ...connectionCheckPreference(key),
+              value: last_check_json,
+              updated_at: last_check_json.checkedAt,
+            })
+            .onConflictDoNothing();
         // Existing sign-ins retain their original project boundary. Only new explicit sign-ins
         // can choose all projects; migration never broadens a credential's authority.
         if (secret_ref)
@@ -135,7 +145,6 @@ export const prepareConnectionCredentialsUpgrade = async (db: DbClient, path: st
               auth_type,
               auth_header_name,
               secret_ref,
-              last_check: last_check_json,
               created_at,
               updated_at,
             })

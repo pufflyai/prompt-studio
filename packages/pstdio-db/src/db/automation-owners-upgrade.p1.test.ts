@@ -98,7 +98,7 @@ for (const interruption of ["normal", "capture", "schema", "partial-restore", "p
       const service = createAutomationDBService(store.db);
       const token = await service.getToken("active");
       expect(token).toMatchObject({
-        principal: { id: "token:active", name: "Retained machine", created_by: "user", disabled_at: null },
+        principal: { id: "released:machine-owner", name: "Retained machine", created_by: "user", disabled_at: null },
         token: {
           id: "active",
           token_digest: "private-digest-active",
@@ -121,10 +121,12 @@ for (const interruption of ["normal", "capture", "schema", "partial-restore", "p
       expect(
         (await service.getExtensionPrincipal({ projectId: "project", extensionId: "example.disabled" })).disabled_at,
       ).toBe(stamp);
+      const replacement = (await service.getToken("rotated"))!;
+      expect(replacement.principal.id).toBe(token!.principal.id);
       const retry = await service.createRun({
         projectId: "project",
-        principalId: "token:active",
-        tokenId: "active",
+        principalId: replacement.principal.id,
+        tokenId: replacement.token.id,
         commandId: "example.retained.command.run",
         idempotencyKey: "queued",
         inputHash: "hash-queued",
