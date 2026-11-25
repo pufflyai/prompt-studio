@@ -237,9 +237,10 @@ export const getCloudCopyDownloads = createRuntimeState((owner) => {
             return { status: "confirmed", result: { projectId: id, presence: project.presence } };
           if (project?.presence !== "downloading") return { status: "unknown" };
           const personal = { accountId: login.accountId, managerOrigin: login.managerOrigin };
-          if (retry && !(await progressedRetry(project, action, () =>
-            api.projectSyncStatus(id, { signal, expected: personal }),
-          )))
+          if (
+            retry &&
+            !(await progressedRetry(project, action, () => api.projectSyncStatus(id, { signal, expected: personal })))
+          )
             return { status: "unknown" };
           await scope.waitForCurrent(signal);
           return { status: "confirmed", result: { projectId: id, presence: project.presence } };

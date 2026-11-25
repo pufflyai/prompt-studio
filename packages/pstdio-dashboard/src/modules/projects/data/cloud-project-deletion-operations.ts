@@ -7,7 +7,12 @@ import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { createRuntimeState } from "@/lib/sync/runtime-state";
 
 import { cloudProjectDeletionKey } from "./project-catalog";
-import { cloudCopyBusy, cloudCopySourceCommand, cloudProjectCopySubject, requireProjectCopyScope } from "./project-copy-scope";
+import {
+  cloudCopyBusy,
+  cloudCopySourceCommand,
+  cloudProjectCopySubject,
+  requireProjectCopyScope,
+} from "./project-copy-scope";
 
 export { cloudProjectDeletionKey } from "./project-catalog";
 
@@ -40,7 +45,9 @@ const getCloudProjectDeletions = createRuntimeState((owner) => {
   const active = (id: string, account?: ProjectCopyAccount) => {
     if (!account) return;
     const subject = cloudProjectCopySubject(id, account);
-    return operations.getSnapshot().pending.find((entry) => entry.domain === domain && entry.subjects.includes(subject));
+    return operations
+      .getSnapshot()
+      .pending.find((entry) => entry.domain === domain && entry.subjects.includes(subject));
   };
   return {
     active,

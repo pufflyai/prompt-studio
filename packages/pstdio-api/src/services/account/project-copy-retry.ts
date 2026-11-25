@@ -1,11 +1,22 @@
 import type { ProjectSyncStatus } from "pstdio-api-contracts";
 import type { ScopedDeviceLogin } from "./native-store";
-import type { createProjectCopyStore } from "./project-copy-store";
+import type { createProjectCopyStore, ProjectCopy } from "./project-copy-store";
 
 type CopyDevice = Pick<ScopedDeviceLogin, "managerOrigin" | "accountId" | "userId" | "deviceId">;
 
 export const deviceProjectCopyKey = (device: CopyDevice, projectId: string) =>
   JSON.stringify([device.managerOrigin, device.accountId, device.userId, device.deviceId, projectId]);
+
+export const requestManualCopy = async (
+  copies: ReturnType<typeof createProjectCopyStore>,
+  folderErrors: Map<string, string>,
+  choice?: ProjectCopy,
+) => {
+  if (!choice) return;
+  folderErrors.delete(deviceProjectCopyKey(choice, choice.projectId));
+  if (choice.automatic || choice.phase === "cloud-only")
+    await copies.write({ ...choice, phase: "downloading", automatic: undefined });
+};
 
 export const createCopyRetries = (input: {
   refresh(): Promise<void>;
