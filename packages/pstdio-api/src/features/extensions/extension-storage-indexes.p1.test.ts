@@ -71,7 +71,9 @@ test("failed multi-extension index installation preserves every previous runtime
     const storage = await service.open({ owner: { workbenchId: project.id, extensionId: "example.index-0" } });
     await storage.records.commit({ operationId: "seed", edits: [{ recordId: "one", replace: { title: "Saved" } }] });
     await db.execute(sql`ALTER TABLE owners ADD CONSTRAINT reject_new_b CHECK (NOT (record_indexes ? 'new-b'))`);
-    await expectRejection(installExtensionStorageIndexes(service, project.id, runtimeFor(["new-a", "new-b"]))).toThrow();
+    await expectRejection(
+      installExtensionStorageIndexes(service, project.id, runtimeFor(["new-a", "new-b"])),
+    ).toThrow();
     expect((await storage.records.query({ index: "old-a" })).records.map((record) => record.recordId)).toEqual(["one"]);
     const other = await service.open({ owner: { workbenchId: project.id, extensionId: "example.index-1" } });
     expect((await other.records.query({ index: "old-b" })).records).toEqual([]);

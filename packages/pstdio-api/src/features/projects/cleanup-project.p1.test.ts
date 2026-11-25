@@ -170,7 +170,7 @@ test("local project eviction cleans secrets only after their project row is dele
   });
   const secrets = spyOn(host.deps.extensionConnectionService, "prepareProjectRemoval").mockResolvedValue(cleanup);
   try {
-    await expect(evictProjectCopy(host.deps, project.id)).rejects.toThrow("project deletion failed");
+    await expectRejection(evictProjectCopy(host.deps, project.id)).toThrow("project deletion failed");
     expect(cleanup).not.toHaveBeenCalled();
     await evictProjectCopy(host.deps, project.id);
     expect(cleanup).toHaveBeenCalledTimes(1);
