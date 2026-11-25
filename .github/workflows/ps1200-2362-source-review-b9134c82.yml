@@ -1,0 +1,177 @@
+name: PS-1200 PR 2362 exact source review
+
+on:
+  push:
+    branches:
+      - chore/ps1200-2362-source-review-b9134c82
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  supplemental_source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      PS1200_HEAD: b9134c82693261e6e38a1d131a068066b2331a26
+      PS1200_TREE: f2d4655af0f219eb08669f22acfb502f6050fbb6
+      PS1200_BASE: 80f4cc52cae22a43ddecc984c4de13a88cb74f8e
+      PS1200_POLICY: 8465243d4dcbfafa49bdbb54282b01314cee1592adc6d1eda60eb93b521e3435
+      PS1200_PLAN: 9bf2aac43f0d5423245fc5269872679353c3ac0e649c436af9b2d34c789bffdb
+      PS1200_GROUPS: '["ba228b8374c3cad5148bcad4","72480638f874d13d0838a290"]'
+      PS1200_FILES_SHA256: d4be16e017b96f83f37f677b0615ef4ec724b688ed83c42dc5f8c1a3d26b165a
+      PS1200_OUTPUT: test-results/ps1200-2362-source-review-b9134c82
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.PS1200_HEAD }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+
+      - name: Verify the source and sealed Linux plan
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = refs/heads/chore/ps1200-2362-source-review-b9134c82
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$PS1200_HEAD"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" =             "$(printf 'A\t.github/workflows/ps1200-2362-source-review-b9134c82.yml')"
+          test "$(git rev-parse HEAD)" = "$PS1200_HEAD"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$PS1200_TREE"
+          test "$(git rev-parse HEAD^)" = "$PS1200_BASE"
+          test -z "$(git status --porcelain)"
+          test "$(bun --version)" = "1.4.4"
+          test "$(node --version)" = "v26.7.0"
+          test "$(jq -r .packageManager package.json)" = "bun@1.4.4"
+          mkdir -p "$PS1200_OUTPUT"
+          bun run test:review --base "$PS1200_BASE" --list > "$PS1200_OUTPUT/selected-plan.json"
+          jq -e --arg sha "$PS1200_HEAD" --arg tree "$PS1200_TREE" --arg base "$PS1200_BASE" \
+            --arg policy "$PS1200_POLICY" --arg digest "$PS1200_PLAN" --argjson groups "$PS1200_GROUPS" '
+              .head == $sha and .mergeBase == $base and .testPlan.digest == $digest
+              and .testPlan.source == {sha:$sha,tree:$tree,policy:$policy,dirty:false}
+              and (.testPlan.runs | length) == 97 and (.selected | length) == 2923
+              and all(.testPlan.runs[]; .target == {platform:"linux",arch:"x64"})
+              and ([.testPlan.runs[] | select(.job == "local-additions") | .id] == $groups)
+            ' "$PS1200_OUTPUT/selected-plan.json"
+          bun -e '
+            import { validateTestPlan } from "./scripts/ci/test-plan";
+            const { testPlan } = await Bun.file(process.env.PS1200_OUTPUT + "/selected-plan.json").json();
+            validateTestPlan(testPlan);
+          '
+          jq -c --argjson groups "$PS1200_GROUPS" '
+            [.testPlan.runs[] | select(.id as $id | $groups | index($id)) | {id,files}]
+          ' "$PS1200_OUTPUT/selected-plan.json" > "$PS1200_OUTPUT/assigned-files.json"
+          printf '%s  %s\n' "$PS1200_FILES_SHA256" "$PS1200_OUTPUT/assigned-files.json" | sha256sum -c -
+          jq -n --arg sha "$PS1200_HEAD" --arg tree "$PS1200_TREE" --arg base "$PS1200_BASE" \
+            --arg plan "$PS1200_PLAN" --arg workflow "$GITHUB_WORKFLOW_SHA" \
+            '{sha:$sha,tree:$tree,mergeBase:$base,planDigest:$plan,diagnosticCommit:$workflow}' \
+            > "$PS1200_OUTPUT/identity.json"
+
+      - name: Open an owned private temporary directory
+        shell: bash
+        run: |
+          scratch="$(mktemp -d /tmp/ps1200.XXXXXX)"
+          printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$scratch/owner"
+          {
+            echo "PS1200_CLI_TMP=$scratch"
+            echo "TMPDIR=$scratch"
+            echo "TMP=$scratch"
+            echo "TEMP=$scratch"
+            echo "PS1200_NATIVE_BUN=$(command -v bun)"
+          } >> "$GITHUB_ENV"
+          { node --version; bun --version; docker version; df -h /tmp "$GITHUB_WORKSPACE"; }             > "$PS1200_OUTPUT/toolchain.log"
+
+      - name: Install locked dependencies and prepare Firefox
+        shell: bash
+        run: |
+          bun install --frozen-lockfile --concurrent-scripts 1
+          bun run --cwd packages/ui typegen:tokens
+          (cd packages/e2e && bun x --no-install playwright install --with-deps firefox) 2>&1             | tee "$PS1200_OUTPUT/browser-setup.log"
+          test -z "$(git status --porcelain)"
+
+      - name: Execute the selected supplemental source groups
+        shell: bash
+        run: |
+          test "$(command -v bun)" = "$PS1200_NATIVE_BUN"
+          bun --no-orphans - <<'BUN' 2>&1 | tee "$PS1200_OUTPUT/console.log"
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+          import { executePlan } from "./scripts/ci/run-test-plan";
+
+          const root = process.cwd();
+          const { PS1200_CLI_TMP: scratch, PS1200_OUTPUT: relative, PS1200_GROUPS: groups } = process.env;
+          if (!scratch || !/^\/tmp\/ps1200\.[A-Za-z0-9]{6}$/.test(scratch) || !relative || !groups)
+            throw new Error("Unexpected native review assignment");
+          const executionId = process.env.GITHUB_RUN_ID + "/" + process.env.GITHUB_RUN_ATTEMPT;
+          const output = resolve(root, relative);
+          for (const [key, value] of Object.entries(localReviewEnvironment(scratch))) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+          process.env.CI_PLAN_OUTPUT_DIR = relative + "/native";
+          const { testPlan } = await Bun.file(resolve(output, "selected-plan.json")).json();
+          let passed = false;
+          try {
+            const result = await executePlan(testPlan, {
+              root, runIds: JSON.parse(groups), prebuilt: false, executionId,
+              env: { CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+            });
+            passed = result.complete && result.outcome === "success";
+          } finally {
+            const cleanup = await cleanupReviewCompose(scratch);
+            await Bun.write(resolve(output, "compose-cleanup.json"), JSON.stringify(cleanup, null, 2));
+            passed &&= cleanup.every(entry => entry.outcome === "success");
+            process.exitCode = passed ? 0 : 1;
+          }
+          BUN
+
+      - name: Verify exact native execution and file coverage
+        shell: bash
+        run: |
+          jq -e --argjson groups "$PS1200_GROUPS" --arg digest "$PS1200_PLAN" \
+            --slurpfile expected "$PS1200_OUTPUT/assigned-files.json" \
+            --slurpfile sealed "$PS1200_OUTPUT/selected-plan.json" '
+              .source == $sealed[0].testPlan.source and .planDigest == $digest
+              and .complete and .outcome == "success" and .errors == [] and .runIds == $groups
+              and (.results | length) == ($groups | length)
+              and all(.results[]; . as $result | .complete and .outcome == "success"
+                and .exitCode == 0 and .nativeFailure != true
+                and (.reportedFiles | sort) == ([$expected[0][] | select(.id == $result.runId) | .files[]] | sort))
+              and all(.phases[]; .outcome == "success")
+              and any(.phases[]; .kind == "cleanup")
+            ' "$PS1200_OUTPUT/native/execution.json"
+          jq -e 'all(.[]; .outcome == "success")' "$PS1200_OUTPUT/compose-cleanup.json"
+          git diff --exit-code
+
+      - name: Retain and clean this invocation's temporary files
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$PS1200_OUTPUT"
+          if [[ -n "${PS1200_CLI_TMP:-}" ]]; then
+            [[ "$PS1200_CLI_TMP" =~ ^/tmp/ps1200\.[A-Za-z0-9]{6}$ ]]
+            test "$(cat "$PS1200_CLI_TMP/owner")" = "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+            if [[ -f "$PS1200_CLI_TMP/compose-projects.jsonl" ]]; then
+              cp "$PS1200_CLI_TMP/compose-projects.jsonl" "$PS1200_OUTPUT/"
+            fi
+            rm -rf -- "$PS1200_CLI_TMP"
+            test ! -e "$PS1200_CLI_TMP"
+            printf '%s\n' 'Owned temporary directory removed' > "$PS1200_OUTPUT/scratch-cleanup.txt"
+          fi
+
+      - name: Upload the fixture and native receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps1200-2362-source-review-b9134c82-attempt-${{ github.run_attempt }}
+          path: ${{ env.PS1200_OUTPUT }}
+          if-no-files-found: error
