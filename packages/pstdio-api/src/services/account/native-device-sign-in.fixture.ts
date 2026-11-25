@@ -1,10 +1,11 @@
 import { strict as assert } from "node:assert";
 import { readFile } from "node:fs/promises";
+import type { AccountStatus } from "pstdio-api-contracts";
 import type { createAccountHostFixture } from "./native-host.fixture";
 
 export type Host = Awaited<ReturnType<typeof createAccountHostFixture>>;
 export type Device = { id: string; name: string; current: boolean; online: boolean };
-export type Status = { login: { accountId: string; deviceId: string } | null; cloudProjects: string[] };
+export type Status = AccountStatus;
 
 export const call = async <T = unknown>(host: Host, path: string, method = "GET", body?: unknown) => {
   const response = await host.app.request(`/v1${path}`, {

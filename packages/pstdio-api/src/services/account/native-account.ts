@@ -1,6 +1,7 @@
 import { dirname, join } from "node:path";
 import type {
   AccountSignInProvider,
+  AccountStatus,
   DeviceCommand,
   ProjectReturnAction,
   ProjectSyncStatus,
@@ -12,13 +13,13 @@ import { apiLogger } from "../../lib/logger";
 import type { startFolderRecovery } from "../relay/folder-recovery";
 import type { ProjectSyncRetry } from "../relay/project-sync-retry";
 import type { RelayWorkbench } from "../relay/runtime";
-import { createAccountRefresh } from "./account-refresh";
+import { createAccountRefresh, createAccountWatch } from "./account-refresh";
 import { readAccountStatus } from "./account-status";
 import { createDeviceIdentity } from "./device-identity";
-import { matchesManagerLogin, type readManagerAccount } from "./manager-account";
-import { ManagerRequestDenied, managerOriginSchema, supportsMicrosoftSignIn } from "./manager-client";
-import { createMissingProjectRecovery, partitionCloudProjects } from "./missing-project-recovery";
+import { managerOriginSchema, supportsMicrosoftSignIn } from "./manager-client";
+import { createMissingProjectRecovery } from "./missing-project-recovery";
 import { type CloudReturn, createNativeCloudReturn } from "./native-cloud-return";
+import { createNativeCloudState } from "./native-cloud-state";
 import { createNativeDeviceReader, finalizeDeviceLogin, readDeviceLogin } from "./native-device-read";
 import { createNativeLoginRequests } from "./native-login-requests";
 import { createNativeLogout } from "./native-logout";
@@ -30,21 +31,14 @@ import {
   createNativeProjectSyncReader,
 } from "./native-project-sync-read";
 import { createNativeStore, type DeviceLogin } from "./native-store";
+import { createNativeTeams } from "./native-teams";
 import { createProjectCloudCatalog } from "./project-cloud-catalog";
+import { createProjectCopyStore } from "./project-copy-store";
 import { initialProjectSyncStatus, recoveringProjectSyncStatus } from "./project-sync-readiness";
 
 type FolderRecoveryOwners = (projectId: string) => ReturnType<typeof startFolderRecovery> | undefined;
 
 const RETRY_MS = 60_000;
-const connectionFor = (login: DeviceLogin, workbenchId: string) => ({
-  accountId: login.accountId,
-  workbenchId,
-  environmentId: login.deviceId,
-  relayOrigin: login.relayOrigin,
-  managerOrigin: login.managerOrigin,
-  renewalGrant: login.token,
-});
-
 // Messages that are safe to show; other account failures stay generic.
 export class AccountRequestError extends Error {}
 export const accountUnavailableMessage = "Account request unavailable. Check the login and the account service.";
@@ -67,34 +61,7 @@ const createDeviceCommandSender = () => {
   };
 };
 
-const createAccountWatch = () => {
-  const listeners = new Set<() => void>();
-  return {
-    watch(listener: () => void) {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-    notify() {
-      for (const listener of listeners) listener();
-    },
-    close() {
-      listeners.clear();
-    },
-  };
-};
-
-const denied = (error: unknown) => error instanceof ManagerRequestDenied && error.status === 401;
 const devicePath = (id: string) => `/v1/devices/${encodeURIComponent(identitySchema.parse(id))}`;
-const projectPath = (id: string) => `/v1/workbenches/${encodeURIComponent(identitySchema.parse(id))}`;
-
-const changeCloudMembership =
-  (call: ReturnType<typeof createNativeManagerCall>, refresh: () => Promise<void>) => async (path: string) => {
-    await call(path, {});
-    await refresh();
-    return { ok: true };
-  };
 
 const retryProjectSync = async (
   projectId: string,
@@ -129,12 +96,46 @@ const readManagerOrigin = (managerOrigin?: string) => {
   return parsed.data;
 };
 
+const readNativeStatus = async (input: {
+  environment: RouteDeps["environmentService"];
+  readLogin: (deviceId?: string) => Promise<DeviceLogin | null>;
+  logins: Pick<ReturnType<typeof createNativeLoginRequests>, "attempt">;
+  store: ReturnType<typeof createNativeStore>;
+  cloud: ReturnType<typeof createNativeCloudState>;
+  catalog: Pick<ReturnType<typeof createProjectCloudCatalog>, "knownProjectIds">;
+  copies: ReturnType<typeof createProjectCopyStore>;
+}) => {
+  const { environment, readLogin, logins, store, cloud, catalog } = input;
+  const { environmentId } = await environment.get();
+  const login = await readLogin(environmentId);
+  const status = await readAccountStatus(
+    store,
+    login,
+    cloud.personal(),
+    environmentId,
+    catalog.knownProjectIds,
+    cloud.online(),
+  );
+  const loginAttempt = logins.attempt();
+  const bindings = await input.copies.teamProjects();
+  const result: AccountStatus = {
+    ...status,
+    ...cloud.teamStatus(login),
+    ...(bindings.length > 0 && {
+      teamProjectOwners: Object.fromEntries(bindings.map(({ projectId, accountId }) => [projectId, accountId])),
+    }),
+    ...(loginAttempt && { loginAttempt }),
+  };
+  return result;
+};
+
 export const createNativeAccount = (input: {
   file: string;
   environment: RouteDeps["environmentService"];
   projects: Pick<RouteDeps["projectService"], "get">;
 }) => {
   const store = createNativeStore(input.file);
+  const copies = createProjectCopyStore(input.file);
   const presence = createNativePresence({
     denied: async (login) => {
       await store.reject(login.token, login);
@@ -150,10 +151,8 @@ export const createNativeAccount = (input: {
         throw new AccountRequestError("This Cloud service has not enabled Microsoft sign-in.");
     },
   );
-  let cloudProjects: Awaited<ReturnType<typeof readManagerAccount>> | undefined;
-  let online = false;
-  const projectsFor = (login: DeviceLogin | null) =>
-    matchesManagerLogin(cloudProjects, login) ? cloudProjects?.ids : undefined;
+  const cloud = createNativeCloudState();
+  const { projectsFor } = cloud;
   let update: (connections: RelayWorkbench[]) => Promise<void> = async () => {};
   let retryProject: ProjectSyncRetry = async () => {};
   let folders: FolderRecoveryOwners = () => undefined;
@@ -189,12 +188,21 @@ export const createNativeAccount = (input: {
 
   const readProjectStatus = (id: string, login: DeviceLogin | null) =>
     connectionSyncStatus(id, login, projectsFor, projectStatus, missing);
+  const teams = createNativeTeams({
+    current,
+    call,
+    copies,
+    refresh: () => refresh(),
+    personalProjects: (login) => catalog.knownProjectIds(login),
+    project: input.projects.get,
+  });
   const catalog = createProjectCloudCatalog({
     accountFile: input.file,
+    projectLogin: teams.owner,
     login: readLogin,
-    cloud: (login) => (matchesManagerLogin(cloudProjects, login) ? cloudProjects : undefined),
+    cloud: cloud.snapshot,
     projects: input.projects,
-    online: () => online,
+    online: cloud.online,
     syncStatus: async (id) => {
       const status = await projectStatus(id);
       return missing.recovering(id) ? recoveringProjectSyncStatus(status) : status;
@@ -211,36 +219,29 @@ export const createNativeAccount = (input: {
   // One that cannot be recovered yet is tried again on the next refresh.
   const publish = async (login: DeviceLogin | null, recoverMissing = true) => {
     void presence.update(login);
-    const withdrawn = login ? await catalog.withdrawnProjectIds(login) : new Set<string>();
-    const { local, absent } = await partitionCloudProjects(
-      login ? (projectsFor(login) ?? []) : [],
-      withdrawn,
-      input.projects.get,
-      missing.recovering,
-    );
-    await update(login ? local.map((id) => connectionFor(login, id)) : []);
-    if (recoverMissing) missing.recover(login ? absent.map((id) => connectionFor(login, id)) : []);
+    const { local, absent } = await cloud.connections({
+      login,
+      catalog,
+      accept: teams.acceptDiscovery,
+      exists: input.projects.get,
+      recovering: missing.recovering,
+    });
+    await update(local);
+    if (recoverMissing) missing.recover(absent);
     await away.settle(login, projectsFor);
   };
   const load = async () => {
     clearTimeout(retry);
     if (closed) return;
-    let login = await readLogin();
-    try {
-      cloudProjects = login ? await catalog.readCloud(login, shutdown.signal) : undefined;
-      online = Boolean(cloudProjects);
-    } catch (error) {
-      online = false;
-      if (login && denied(error)) {
-        // Another device removed this one. A newer login saved meanwhile stays.
-        await store.reject(login.token, login);
-        login = await readLogin();
-        cloudProjects = undefined;
-      } else if (!closed) {
-        // Local work continues offline. The list loads once the account service is reachable.
-        apiLogger.warn({ event: "account.cloud_projects.unavailable" }, "Cloud projects will load later");
-      }
-    }
+    const login = await readLogin();
+    await cloud.load({
+      login,
+      current: readLogin,
+      reject: (device) => store.reject(device.token, device),
+      catalog,
+      teams,
+      signal: shutdown.signal,
+    });
     // Another device can enable or disable a project while this host is idle.
     // Refresh successful lists too; local database events cannot announce remote membership changes.
     if (login && !closed) {
@@ -263,11 +264,13 @@ export const createNativeAccount = (input: {
     },
   });
   const refresh = refreshes.refresh;
-  const changeMembership = changeCloudMembership(call, refresh);
   const logout = createNativeLogout({ logins, readLogin, store, refresh });
 
   return {
     ...catalog,
+    listTeams: teams.list,
+    createTeam: teams.create,
+    prepareTeamProject: teams.prepareProject,
     ...createDeviceIdentity({ current, store, call }),
     sendDeviceCommand: commands.send,
     start(
@@ -294,20 +297,8 @@ export const createNativeAccount = (input: {
       logins.start(readManagerOrigin(managerOrigin), provider),
     loginStatus: (id: string) => ({ status: logins.status(id), ...logins.failure(id) }),
     cancelLogin: logins.cancel,
-    async status() {
-      const { environmentId } = await input.environment.get();
-      const login = await readLogin(environmentId);
-      const status = await readAccountStatus(
-        store,
-        login,
-        cloudProjects,
-        environmentId,
-        catalog.knownProjectIds,
-        online,
-      );
-      const loginAttempt = logins.attempt();
-      return { ...status, ...(loginAttempt && { loginAttempt }) };
-    },
+    status: () =>
+      readNativeStatus({ environment: input.environment, readLogin, logins, store, cloud, catalog, copies }),
     projectSyncStatus: createNativeProjectSyncReader({
       login: readLogin,
       exists: (id) => input.projects.get(id),
@@ -342,9 +333,9 @@ export const createNativeAccount = (input: {
     },
     async syncProject(projectId: string) {
       if (!(await input.projects.get(projectId))) throw new AccountRequestError("Unknown project");
-      return changeMembership(projectPath(projectId));
+      return teams.changeMembership(projectId);
     },
-    stopProjectSync: (projectId: string) => changeMembership(`${projectPath(projectId)}/remove`),
+    stopProjectSync: (projectId: string) => teams.changeMembership(projectId, true),
     async close() {
       closed = true;
       shutdown.abort();

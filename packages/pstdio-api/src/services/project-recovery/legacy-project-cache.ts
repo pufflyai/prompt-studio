@@ -40,7 +40,12 @@ export const collectLegacyProjectRecovery = async (
   const sourceFiles = await readDirectory(sources);
   if (sourceFiles.length === 0 && (await readDirectory(join(root, "chunks"))).length === 0) return;
 
-  const catalog = createRecoveryCatalog({ ...copy, documents: deps.extensionStorageService.documents });
+  const userId = copy.userId ?? copy.accountId;
+  const catalog = createRecoveryCatalog({
+    ...copy,
+    accountId: userId,
+    documents: deps.extensionStorageService.documents,
+  });
   const entries = await catalog.list();
   const roots = entries.map((entry) => entry.root);
   const sourceIds = new Set(
@@ -49,7 +54,7 @@ export const collectLegacyProjectRecovery = async (
   for (const workspace of await deps.workspaceService.listForProviderReconciliation(copy.projectId)) {
     if (workspace.root_path) sourceIds.add(recoverySourceId(workspace.id, workspace.root_path));
   }
-  const journals = [...sourceIds].map((id) => [copy.projectId, copy.accountId, copy.deviceId, id]);
+  const journals = [...sourceIds].map((id) => [copy.projectId, userId, copy.deviceId, id]);
   for (const source of journals) {
     const journal = await openRecoveryJournal({ root, source }).read();
     if (journal.candidate) roots.push(journal.candidate);

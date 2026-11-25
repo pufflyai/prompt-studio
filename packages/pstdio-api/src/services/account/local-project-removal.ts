@@ -1,6 +1,7 @@
 import type {
   LocalRemovalPreflight,
   ProjectCopyAccount,
+  ProjectCopyDevice,
   ProjectSyncStatus,
   RemoveLocalProjectInput,
   RemoveLocalProjectResult,
@@ -8,12 +9,17 @@ import type {
 import { type LocalCleanupSummary, localRemovalPreflight } from "./local-removal-preflight";
 import { AccountRequestError } from "./native-account";
 import { matchesDeviceAccount } from "./native-device-read";
-import type { DeviceLogin } from "./native-store";
+import type { DeviceLogin, ScopedDeviceLogin } from "./native-store";
 import { type createProjectCopyStore, type ProjectCopy, projectCopyAccount } from "./project-copy-store";
 
 export const requireProjectCopyAccount = (login: DeviceLogin, expected?: ProjectCopyAccount) => {
   if (expected && !matchesDeviceAccount(login, expected))
     throw new AccountRequestError("The active Cloud account changed. Reopen the project action to confirm again.");
+};
+
+export const requireProjectCopyDevice = (login: DeviceLogin | null, expected?: ProjectCopyDevice) => {
+  if (expected && (!login || login.deviceId !== expected.deviceId || !matchesDeviceAccount(login, expected)))
+    throw new AccountRequestError("The active Cloud device changed. Reopen the project action to confirm again.");
 };
 
 export interface ProjectCopyHooks {
@@ -38,7 +44,7 @@ type RemovalResult = { removed: RemoveLocalProjectResult } | { conflict: LocalRe
 
 export const createLocalProjectRemoval = (input: {
   copies: ReturnType<typeof createProjectCopyStore>;
-  login(): Promise<DeviceLogin>;
+  login(id: string, expectedDevice?: ProjectCopyDevice): Promise<ScopedDeviceLogin>;
   requireCurrent(login: DeviceLogin): Promise<void>;
   isCloudProject(login: DeviceLogin, id: string): Promise<boolean>;
   project(id: string): Promise<{ id: string; name: string } | null>;
@@ -87,10 +93,13 @@ export const createLocalProjectRemoval = (input: {
   const begin = async (id: string, options: RemoveLocalProjectInput): Promise<RemovalResult> => {
     if (!hooks?.freeze || !hooks.suspend || !hooks.cleanup)
       throw new AccountRequestError("Project removal is unavailable");
-    const login = await input.login();
+    const login = await input.login(id, options.expectedDevice);
     requireProjectCopyAccount(login, options.expectedAccount);
     const choice = (await input.copies.forAccount(login)).find((row) => row.projectId === id);
-    if (choice?.phase === "removing") return finish(choice);
+    if (choice?.phase === "removing") {
+      await input.requireCurrent(login);
+      return finish(choice);
+    }
     if (choice?.phase === "cloud-only") return { removed: { projectId: id, presence: "cloud-only" } };
     const project = (await input.isCloudProject(login, id)) && (await input.project(id));
     if (!project) return null;
@@ -104,10 +113,11 @@ export const createLocalProjectRemoval = (input: {
         hooks.release!(id);
         return { conflict: preflight };
       }
-      const { managerOrigin, accountId, deviceId } = login;
+      const { managerOrigin, accountId, userId, deviceId } = login;
       copy = {
         managerOrigin,
         accountId,
+        userId,
         deviceId,
         projectId: id,
         name: project.name,
@@ -126,8 +136,8 @@ export const createLocalProjectRemoval = (input: {
     connect(next: ProjectCopyHooks) {
       hooks = next;
     },
-    async preflight(id: string) {
-      const login = await input.login();
+    async preflight(id: string, expectedDevice?: ProjectCopyDevice) {
+      const login = await input.login(id, expectedDevice);
       const choice = (await input.copies.forAccount(login)).find(
         (row) => row.projectId === id && row.phase === "removing",
       );

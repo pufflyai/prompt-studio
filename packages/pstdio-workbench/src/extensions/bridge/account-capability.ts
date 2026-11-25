@@ -24,6 +24,8 @@ const runAccountOperation = (
       return account.login(request.managerOrigin, request.provider);
     case "cancelLogin":
       return account.cancelLogin(request.id);
+    case "createTeam":
+      return account.createTeam(request.name, request.expected);
     case "logout":
       return account.logout();
     case "renameDevice":

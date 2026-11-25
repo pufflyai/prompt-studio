@@ -1,4 +1,4 @@
-import type { CloudProjectCatalogEntry, ProjectCopyAccount, ProjectSyncStatus } from "@pstdio/sdk/client";
+import type { CloudProjectCatalogEntry, DeviceLogin, ProjectCopyAccount, ProjectSyncStatus } from "@pstdio/sdk/client";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from "react";
@@ -6,80 +6,89 @@ import { getRuntimeApiClient } from "@/lib/api";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import { useCollectionSelection } from "@/lib/sync/use-collection-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
-import {
-  type CloudCopyDownloadAdmission,
-  cloudCopyDownloadAction,
-  cloudCopyScopeFor,
-  cloudCopySyncKey,
-  getCloudCopyDownloads,
-} from "../data/cloud-copy-download";
+import { cloudCopyDownloadAction, getCloudCopyDownloads } from "../data/cloud-copy-download";
 import { useCloudLocalRemoval } from "../data/cloud-local-removal";
 import { useCloudProjectDeletions } from "../data/cloud-project-deletion-operations";
 import { cloudProjectCatalogKey, useCloudProjectCatalog } from "../data/project-catalog";
+import { cloudCopySyncKey, projectCopyScopeKey } from "../data/project-copy-scope";
 import { findDashboardProject } from "../data/project-data";
-
-type DownloadOwner = { scope: string; requested: boolean };
-
-const pickerCopyScope = (id: string, cloud: { scope: string; accountKnown: boolean }, admitted?: string) =>
-  cloudCopyScopeFor(id, cloud.accountKnown ? cloud.scope : (admitted ?? cloud.scope));
-
-const clearDownloadIntent = (current: DownloadOwner, scope: string, admitted?: DownloadOwner) =>
-  (admitted ? current === admitted : current.scope === scope) ? { ...current, requested: false } : current;
+import { type DownloadOwner, useCloudCopyIntent } from "./use-cloud-copy-intent";
+import { useRecoveredProjectOpening } from "./use-recovered-project-opening";
 
 const useCloudCopyDownload = (
   input: WorkbenchPanelRenderInput,
   options: {
     id: string;
     downloading: boolean;
-    requested: boolean;
-    deleting: boolean;
+    invalidated: boolean;
+    copyBusy: boolean;
     accountUnconfirmed: boolean;
     localRemoval: ReturnType<typeof useCloudLocalRemoval>;
+    deleting: boolean;
     entry?: CloudProjectCatalogEntry;
     account?: ProjectCopyAccount;
+    login?: DeviceLogin;
     owner: DownloadOwner;
     rememberIntent: (previous: DownloadOwner, admitted: DownloadOwner) => void;
-    clearIntent: (admitted?: DownloadOwner) => void;
+    discardIntent: (admitted: DownloadOwner) => void;
+    retireIntent: (scope: string) => void;
     scope: string;
   },
 ) => {
   const {
     id,
     downloading,
-    requested,
-    deleting,
+    invalidated,
+    copyBusy,
     accountUnconfirmed,
     localRemoval,
+    deleting,
     entry,
     account,
+    login,
     owner,
     rememberIntent,
-    clearIntent,
+    discardIntent,
+    retireIntent,
     scope,
   } = options;
   const runtime = getRuntimeCollections();
   const client = getRuntimeApiClient(runtime);
   const operations = getCloudCopyDownloads(runtime);
   useSyncExternalStore(operations.subscribe, operations.snapshot, operations.snapshot);
-  const { active, failure: unresolved } = operations.state(id, scope);
+  const { active, failure: unresolved } = operations.state(id, account, login);
   const queryClient = useQueryClient();
   useCollectionSelection({ tables: ["projects", "workspaces"] });
   const localName = findDashboardProject(id)?.name;
   const sync = useQuery({
     queryKey: cloudCopySyncKey(scope),
-    queryFn: ({ signal }) => client.account.projectSyncStatus(id, { signal, expected: account }),
+    queryFn: ({ signal }) =>
+      client.account.projectSyncStatus(id, {
+        signal,
+        expected: login && { accountId: login.accountId, managerOrigin: login.managerOrigin },
+      }),
     enabled: downloading && Boolean(localName && account),
     retry: false,
     refetchInterval: 1500,
   });
   const refresh = () => queryClient.invalidateQueries({ queryKey: cloudProjectCatalogKey });
+  const action = cloudCopyDownloadAction(entry, sync.data);
   const download = useMutation({
-    mutationFn: (request: { owner: DownloadOwner; admission: CloudCopyDownloadAdmission }) => {
-      const admitted = { ...request.owner, requested: true };
+    mutationFn: (admission: {
+      id: string;
+      account: ProjectCopyAccount;
+      login: DeviceLogin;
+      owner: DownloadOwner;
+      action: NonNullable<ReturnType<typeof cloudCopyDownloadAction>>;
+    }) => {
+      const admitted = { scope: admission.owner.scope, requested: true };
       return operations.start(
-        request.admission,
-        () => rememberIntent(request.owner, admitted),
-        () => clearIntent(admitted),
+        admission.id,
+        admission.account,
+        admission.login,
+        admission.action,
+        () => rememberIntent(admission.owner, admitted),
+        () => discardIntent(admitted),
       );
     },
     onSettled(result, error) {
@@ -94,44 +103,22 @@ const useCloudCopyDownload = (
   }, [downloadScope, scope, resetDownload]);
 
   const retireRemovedCopy = useEffectEvent((removedScope: string) => {
-    if (removedScope !== scope) return;
-    clearIntent();
+    if (removedScope !== owner.scope) return;
+    retireIntent(removedScope);
     resetDownload();
   });
   useEffect(() => operations.subscribeToLocalRemoval((removedScope) => retireRemovedCopy(removedScope)), [operations]);
 
-  const removing = localRemoval.isRemoving(id);
-  useEffect(() => {
-    if (
-      !requested ||
-      entry?.presence !== "downloaded" ||
-      !localName ||
-      deleting ||
-      accountUnconfirmed ||
-      removing ||
-      localRemoval.isRemoving(id) ||
-      !operations.isCurrent(id, scope) ||
-      operations.isCheckingAccount()
-    )
-      return;
-    input.workbench.overlays.closeOverlay(input.instance.instanceId);
-    void input.workbench.commands.executeCommand(dashboardCommandIds.selectProject, {
-      project: { id, name: localName },
-    });
-  }, [
-    entry?.presence,
-    id,
-    input.instance.instanceId,
-    input.workbench,
-    requested,
-    localName,
-    deleting,
-    accountUnconfirmed,
-    removing,
-    localRemoval,
-    operations,
-    scope,
-  ]);
+  // Native recovery can finish without a Download request from this modal.
+  const ready =
+    !invalidated &&
+    !accountUnconfirmed &&
+    !owner.retired &&
+    !deleting &&
+    !localRemoval.isRemoving(id, account, login) &&
+    (!copyBusy || Boolean(active)) &&
+    entry?.presence === "downloaded";
+  useRecoveredProjectOpening(input, scope, { id, name: localName, ready, account, login, localRemoval });
 
   const checkedDownload = useRef<symbol>(undefined);
   const statusObserved =
@@ -143,18 +130,16 @@ const useCloudCopyDownload = (
     void operations.check(unresolved.id);
   }, [accountUnconfirmed, statusObserved, operations, unresolved?.id, unresolved?.canCheck]);
 
-  const action = cloudCopyDownloadAction(entry, sync.data);
   const requestDownload = () => {
-    const current = operations.state(id, scope);
-    if (action && !current.active && !current.failure) {
-      download.mutate({ owner, admission: { id, account, scope, action } });
-    }
+    const current = operations.state(id, account, login);
+    if (action && account && login && !current.active && !current.failure)
+      download.mutate({ id, account, login, owner, action });
   };
   const checkDownload = async () => {
     if (
       unresolved?.canCheck &&
-      operations.isCurrent(id, scope) &&
-      operations.state(id, scope).failure?.id === unresolved.id
+      operations.isCurrent(id, account, login) &&
+      operations.state(id, account, login).failure?.id === unresolved.id
     )
       await operations.check(unresolved.id);
   };
@@ -166,13 +151,14 @@ const useCloudCopyDownload = (
   const discardDownload = () => {
     if (
       !unresolved ||
+      !account ||
+      !login ||
       !canDiscard ||
-      !operations.isCurrent(id, scope) ||
-      operations.state(id, scope).failure?.id !== unresolved.id
+      !operations.isCurrent(id, account, login) ||
+      operations.state(id, account, login).failure?.id !== unresolved.id
     )
       return;
-    if (!operations.discard(id, scope, unresolved.id)) return;
-    download.reset();
+    if (operations.discard(id, account, login, unresolved.id)) download.reset();
   };
   return {
     sync,
@@ -194,45 +180,37 @@ const downloadMessage = (error: Error | null, entry?: CloudProjectCatalogEntry, 
     return "Cloud download needs attention. Retry to continue.";
 };
 
-const useCloudOnlyCatalogRefresh = (
-  cloud: ReturnType<typeof useCloudProjectCatalog>,
-  entry: CloudProjectCatalogEntry | undefined,
-  { requested, invalidated, deleting }: { requested: boolean; invalidated: boolean; deleting: boolean },
-) => {
-  const { refetch, isRefetchError } = cloud;
-  const checkingAvailability = isRefetchError && entry?.actions.download === false;
-  const enabled = (requested || checkingAvailability) && !invalidated && !deleting && entry?.presence === "cloud-only";
+const useCloudChoiceInvalidation = (input: WorkbenchPanelRenderInput, scope: string, known: boolean) => {
+  const [admittedScope, setAdmittedScope] = useState<string>();
+  if (known && admittedScope === undefined) setAdmittedScope(scope);
+  const invalidated = known && admittedScope !== undefined && admittedScope !== scope;
   useEffect(() => {
-    if (!enabled) return;
-    const timer = setInterval(() => {
-      void refetch({ cancelRefetch: false });
-    }, 1500);
-    return () => clearInterval(timer);
-  }, [enabled, refetch]);
+    if (invalidated) input.workbench.overlays.closeOverlay(input.instance.instanceId);
+  }, [invalidated, input.workbench, input.instance.instanceId]);
+  return invalidated;
 };
 
 export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
   const id = input.instance.resource?.id ?? "";
-  const cloud = useCloudProjectCatalog();
+  const selectedAccount = input.instance.pageContext?.params?.accountId;
+  const cloud = useCloudProjectCatalog(typeof selectedAccount === "string" ? selectedAccount : undefined, id);
   const entry = cloud.data?.projects.find((entry) => entry.id === id);
   const receipt = cloud.data?.deletions.find((entry) => entry.projectId === id);
   const account = cloud.data?.account;
+  const login = cloud.login ?? undefined;
   const name = entry?.name ?? receipt?.name ?? input.instance.title ?? id;
-  const [admittedScope, setAdmittedScope] = useState<string>();
-  if (cloud.accountKnown && admittedScope === undefined) setAdmittedScope(cloud.scope);
-  const invalidated = cloud.accountKnown && admittedScope !== undefined && admittedScope !== cloud.scope;
-  useEffect(() => {
-    if (invalidated) input.workbench.overlays.closeOverlay(input.instance.instanceId);
-  }, [invalidated, input.workbench, input.instance.instanceId]);
-  const scope = pickerCopyScope(id, cloud, admittedScope);
-  const [owner, setOwner] = useState<DownloadOwner>({ scope, requested: false });
-  if (owner.scope !== scope) setOwner({ scope, requested: false });
-  const requested = owner.scope === scope && owner.requested;
+  const invalidated = useCloudChoiceInvalidation(input, cloud.scope, cloud.accountKnown);
+  const scopeAccount = login && { managerOrigin: login.managerOrigin, accountId: cloud.accountId ?? login.accountId };
+  const copyScope = projectCopyScopeKey(getRuntimeCollections(), id, login, scopeAccount);
+  const { scope, owner, requested, rememberIntent, discardIntent, retireIntent } = useCloudCopyIntent(
+    copyScope,
+    cloud.accountKnown,
+  );
   const [deletionScope, setDeletionScope] = useState<string>();
   const deletion = useCloudProjectDeletions();
   const localRemoval = useCloudLocalRemoval();
-  const copyBusy = localRemoval.active(id);
-  const deleting = Boolean(receipt || deletionScope === scope || deletion.active(id));
+  const copyBusy = localRemoval.active(id, account, login);
+  const deleting = Boolean(receipt || deletionScope === scope || deletion.active(id, account));
   useEffect(() => {
     if (receipt) setDeletionScope(scope);
   }, [receipt, scope]);
@@ -245,18 +223,29 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
     useCloudCopyDownload(input, {
       id,
       downloading,
-      requested,
-      deleting,
+      invalidated,
+      copyBusy,
       accountUnconfirmed: cloud.accountUnconfirmed,
       localRemoval,
+      deleting,
       entry,
       account,
+      login,
       owner,
-      rememberIntent: (previous, admitted) => setOwner((current) => (current === previous ? admitted : current)),
-      clearIntent: (admitted) => setOwner((current) => clearDownloadIntent(current, scope, admitted)),
+      rememberIntent,
+      discardIntent,
+      retireIntent,
       scope,
     });
-  useCloudOnlyCatalogRefresh(cloud, entry, { requested, invalidated, deleting });
+  const { refetch: refetchCatalog, isRefetchError } = cloud;
+  const checkingAvailability = isRefetchError && entry?.actions.download === false;
+  useEffect(() => {
+    if ((!requested && !checkingAvailability) || invalidated || deleting || entry?.presence !== "cloud-only") return;
+    const timer = setInterval(() => {
+      void refetchCatalog({ cancelRefetch: false });
+    }, 1500);
+    return () => clearInterval(timer);
+  }, [requested, checkingAvailability, invalidated, deleting, entry?.presence, refetchCatalog]);
   const back = () => {
     input.workbench.overlays.closeOverlay(input.instance.instanceId);
     void input.workbench.commands.executeCommand(dashboardCommandIds.openProjects);
@@ -266,7 +255,8 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
   const requestError = entry?.presence === "downloading" ? null : (download.error ?? sharedError ?? null);
   const failure = downloadMessage(requestError ?? cloud.error ?? sync.error, entry, sync.data);
   const pending = Boolean(active && !unresolved);
-  const showProgress = (downloading || pending) && !deleting && !failure && entry?.presence !== "downloaded";
+  const downloadInProgress = downloading || pending;
+  const showProgress = downloadInProgress && !deleting && !failure && entry?.presence !== "downloaded";
   const canDownload = Boolean(
     action &&
       !cloud.accountUnconfirmed &&
@@ -284,9 +274,10 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
     entry,
     receipt,
     account,
+    login,
     scope,
     deleting,
-    downloading: downloading || pending,
+    downloading: downloadInProgress,
     canDownload,
     downloadBlocking: Boolean(active),
     downloadPending: pending,
@@ -299,9 +290,7 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
     showProgress,
     showDownload,
     invalidated,
-    requestDownload: () => {
-      if (canDownload) requestDownload();
-    },
+    requestDownload,
     checkDownload,
     discardDownload,
   };

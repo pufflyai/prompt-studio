@@ -28,7 +28,7 @@ export const accountFeatureSchema = z.strictObject({
   enabled: z.boolean(),
 });
 export const reconciliationSchema = accountRequestSchema.extend({
-  owner: ownerSchema,
+  owner: ownerSchema.optional(),
   state: z.enum(["active", "disabled"]),
 });
 export type ProvisionInput = z.input<typeof provisionSchema>;

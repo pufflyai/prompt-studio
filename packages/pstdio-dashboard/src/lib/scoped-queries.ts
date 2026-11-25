@@ -18,6 +18,15 @@ export const dashboardQueryAuthority = (status?: AccountStatus) => ({
   accountOrigin: !status?.signInRequired ? status?.login?.managerOrigin : undefined,
 });
 
+const cloudProjectAccounts = (status: AccountStatus, personalAccountId: string) => {
+  const accounts = new Map(status.cloudProjects.map((projectId) => [projectId, personalAccountId]));
+  const teams = new Set(status.teamAccounts?.map(({ accountId }) => accountId));
+  for (const [projectId, teamId] of Object.entries(status.teamProjects ?? {})) {
+    if (teams.has(teamId)) accounts.set(projectId, teamId);
+  }
+  return accounts;
+};
+
 /** All services use the existing runtime QueryClient and a single cheap freshness feed. */
 const runtimeQueries = createRuntimeState(
   (owner) => {
@@ -54,7 +63,7 @@ const runtimeQueries = createRuntimeState(
     const stopCatalog = subscribeExtensionCatalogChanges(owner, (event) => publishExtensionEvent(event, owner));
     // One event-driven identity guard remains active for this runtime; there is no timer.
     let applied: AccountStatus | undefined;
-    let knownCloudProjects = new Set<string>();
+    let knownCloudProjects = new Map<string, string>();
     const updateProjectRecovery = () => {
       const projects = owner.getCollection("projects");
       const localProjectsLoaded = owner.isInitialCollectionsSyncComplete();
@@ -78,9 +87,9 @@ const runtimeQueries = createRuntimeState(
         knownCloudProjects.clear();
       }
       if (status.cloudProjectsLoaded) {
-        const accessible = new Set(status.cloudProjects);
-        for (const projectId of knownCloudProjects)
-          if (!accessible.has(projectId)) queries.clearScope({ ...next, projectId });
+        const accessible = cloudProjectAccounts(status, next.accountId);
+        for (const [projectId, accountId] of knownCloudProjects)
+          if (accessible.get(projectId) !== accountId) queries.clearScope({ ...next, projectId });
         knownCloudProjects = accessible;
       }
       applied = status;

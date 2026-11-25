@@ -136,3 +136,11 @@ The Linux isolated infrastructure CI job runs the source suite and built image e
 Each run prints `manager-authority-<uuid>`. Its PostgreSQL data, containers and internal network belong to that run and are removed in cleanup. It publishes no host ports and mounts source read-only only in the source tester. The built smoke has no source mount. Fixture credentials are test-only. The developer application's database and unrelated Docker projects are never opened or changed.
 
 Docker allocates the fixture network automatically. `MANAGER_TEST_SUBNET` remains an explicit diagnostic override; local review clears inherited overrides. Role-denial success proves this fixture's permissions; live hosting must configure and validate its own manager/relay separation.
+
+## Team accounts
+
+A personal account ID remains the stable user ID for existing devices and private spaces. Team accounts have a separate ID and explicit team and project grants. The relay token carries the owning account ID and the signed-in user ID. The relay routes shared data by account and project, and checks private spaces by user.
+
+A team starts with early access disabled. Grant or revoke Cloud relay access for a specific team with `account-feature grant --account-id <team-account-id> --feature relay` or the matching `revoke` command. Email lookup continues to target a verified personal account.
+
+Snapshots keep team ownership, project grants and key history. Restoring an existing team preserves its current membership. Restored accounts remain disabled until operator reconciliation. For a team, reconcile its state without supplying a Google owner.

@@ -1,8 +1,11 @@
-import type { DeleteCloudProjectInput, RemoveLocalProjectInput } from "@pstdio/sdk/client";
+import type { DeleteCloudProjectInput, ProjectCopyDevice, RemoveLocalProjectInput } from "@pstdio/sdk/client";
 import { apiClient } from "@/features/api-client";
 
-export const listCloudProjects = () => apiClient().account.projectsCatalog();
-export const inspectLocalRemoval = (id: string) => apiClient().account.projectLocalRemoval(id);
+export const readCloudCopyDevice = async () => (await apiClient().account.status()).login;
+export const listCloudProjects = (accountId?: string, expectedDevice?: ProjectCopyDevice) =>
+  apiClient().account.projectsCatalog({ accountId, expectedDevice });
+export const inspectLocalRemoval = (id: string, expectedDevice?: ProjectCopyDevice) =>
+  apiClient().account.projectLocalRemoval(id, { expectedDevice });
 export const removeLocalProject = (id: string, input: RemoveLocalProjectInput) =>
   apiClient().account.removeLocalProject(id, input);
 export const downloadCloudProject = (id: string) => apiClient().account.downloadCloudProject(id);

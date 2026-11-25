@@ -18,7 +18,7 @@ import { acknowledgeProjectDeletion, listProjectDeletionJobs } from "./project-d
 import { readProviderIdentity } from "./provider-identity";
 import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
 import { devices } from "./schema";
-import { withAccountTransaction } from "./transactions";
+import { lockAccount, withAccountTransaction } from "./transactions";
 
 export const createManagerAuthentication = (input: ManagerAuthConfig) => {
   const config = parseManagerAuthConfig(input);
@@ -91,11 +91,11 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
       return auth.api.generateOneTimeToken({ headers });
     },
     jwks: () => auth.api.getJwks(),
-    async renew(token: string, workbenchId: string) {
+    async renew(token: string, workbenchId: string, accountId?: string) {
       identitySchema.parse(workbenchId);
       let category: "database" | "signing" = "database";
       try {
-        const access = await findDeviceAccess(connection.db, token, workbenchId);
+        const access = await findDeviceAccess(connection.db, token, workbenchId, accountId);
         if (!access) throw new EnvironmentAccessDenied();
         const iat = Math.floor(Date.now() / 1000);
         const exp = iat + config.accessLifetimeSeconds;
@@ -106,6 +106,7 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
             payload: {
               tokenType: "pstdio-environment-access",
               accountId: access.accountId,
+              userId: access.userId,
               workbenchId: access.workbenchId,
               environmentId: access.deviceId,
               sub: access.deviceId,
@@ -115,11 +116,13 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
           },
         });
         category = "database";
-        await withAccountTransaction(connection.db, access.accountId, async (transaction) => {
-          const current = await findDeviceAccess(transaction, token, workbenchId);
+        await withAccountTransaction(connection.db, access.userId, async (transaction) => {
+          if (access.accountId !== access.userId) await lockAccount(transaction, access.accountId);
+          const current = await findDeviceAccess(transaction, token, workbenchId, accountId);
           if (
             !current ||
             current.accountId !== access.accountId ||
+            current.userId !== access.userId ||
             current.deviceId !== access.deviceId ||
             current.workbenchId !== access.workbenchId
           )
@@ -127,7 +130,7 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
           await transaction
             .update(devices)
             .set({ lastSeenAt: sql`clock_timestamp()` })
-            .where(and(eq(devices.accountId, access.accountId), eq(devices.id, access.deviceId)));
+            .where(and(eq(devices.accountId, access.userId), eq(devices.id, access.deviceId)));
         });
         category = "signing";
         if (Date.now() >= exp * 1000) throw new Error("Prepared access expired before issuance");
