@@ -37,12 +37,14 @@ const ownerFor = (events: HostEventPublisher) => {
   if (existing) return existing;
   const owner: Owner = { id: crypto.randomUUID(), actions: new Map(), pending: new Map() };
   owners.set(events, owner);
-  const stop = events.onDisconnect(() => {
-    for (const pending of owner.pending.values()) pending.finish("The action's view disconnected.");
-    for (const action of [...owner.actions.values()]) action.dispose();
-    owners.delete(events);
-    stop();
-  });
+  const stop = events.onDisconnect(() =>
+    batchWorkbenchChanges(() => {
+      for (const pending of owner.pending.values()) pending.finish("The action's view disconnected.");
+      for (const action of [...owner.actions.values()]) action.dispose();
+      owners.delete(events);
+      stop();
+    }),
+  );
   return owner;
 };
 
@@ -102,8 +104,8 @@ export const createWebviewResourceActionRegistrations = (
         ? choices?.get(args.choiceId)
         : undefined;
     let active: string | undefined;
-    const refreshChoices = () => {
-      if (choices && owner.actions.has(request.registrationId)) batchWorkbenchChanges(renderMenu);
+    const refreshAvailability = () => {
+      if (owner.actions.has(request.registrationId)) workbench.layout.invalidateMenuItems();
     };
     const disposables: Disposable[] = [];
     let menuDisposables: Disposable[] = [];
@@ -133,7 +135,7 @@ export const createWebviewResourceActionRegistrations = (
               const finish = (error?: string) => {
                 if (!owner.pending.delete(requestId)) return;
                 active = undefined;
-                refreshChoices();
+                refreshAvailability();
                 context?.signal?.removeEventListener("abort", cancel);
                 try {
                   assertCurrent();
@@ -156,7 +158,7 @@ export const createWebviewResourceActionRegistrations = (
                 cancel();
                 return;
               }
-              refreshChoices();
+              refreshAvailability();
               if (!owner.pending.has(requestId)) return;
               hostEvents.emit({
                 scope,
