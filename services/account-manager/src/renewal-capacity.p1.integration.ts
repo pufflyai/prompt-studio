@@ -19,7 +19,11 @@ const waitFor = async (check: () => Promise<boolean>) => {
 
 test("renewal completes when other account requests occupy the pool", async () => {
   const manager = fixture.owner();
-  const auth = implementation.createManagerAuthentication(authenticationConfig(fixture.databaseUrl));
+  const databasePoolMax = 4;
+  const auth = implementation.createManagerAuthentication({
+    ...authenticationConfig(fixture.databaseUrl),
+    databasePoolMax,
+  });
   const control = new Pool({ connectionString: fixture.databaseUrl, max: 2 });
   const holder = await control.connect();
   const pending: Promise<unknown>[] = [];
@@ -51,7 +55,9 @@ test("renewal completes when other account requests occupy the pool", async () =
       const { rows } = await control.query(
         "SELECT count(*)::integer AS count FROM pg_stat_activity WHERE datname=current_database() AND wait_event='advisory'",
       );
-      return rows[0].count === 9;
+      // Renewal owns one connection; the remaining active heartbeats fill the
+      // configured pool while the rest of the nine-request burst stays queued.
+      return rows[0].count === databasePoolMax - 1;
     });
     const completed = Promise.all(pending).then(
       (value) => ({ kind: "complete" as const, value }),

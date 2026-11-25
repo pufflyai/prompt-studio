@@ -14,15 +14,16 @@ export interface RelaySyncConfig extends ObjectConfig {
   databaseUrl: string;
   assets: ReturnType<typeof createRelayAssets>;
   limits: RelayLimits;
+  poolMax?: number;
 }
 
 /**
  * The blind document store. PostgreSQL keeps metadata, sequence numbers and the latest-state check;
  * object storage keeps every encrypted byte (PRD 0014 R47).
  */
-export const createRelaySync = ({ databaseUrl, bucket, s3, assets, limits }: RelaySyncConfig) => {
-  const connection = connectRelay(databaseUrl);
-  const control = connectRelay(databaseUrl);
+export const createRelaySync = ({ databaseUrl, bucket, s3, assets, limits, poolMax }: RelaySyncConfig) => {
+  const connection = connectRelay(databaseUrl, poolMax);
+  const control = connectRelay(databaseUrl, poolMax);
   const projectAccess = createProjectAccess(control);
   const retired = new Set<(key: string) => void>();
   const disconnected = new Set<() => void>();

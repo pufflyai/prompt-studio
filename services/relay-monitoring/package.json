@@ -1,0 +1,22 @@
+{
+  "name": "pstdio-relay-monitoring",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build src/gateway-main.ts src/observer-main.ts src/probe-main.ts src/watchdog-main.ts --target bun --outdir dist",
+    "test": "bun ../../scripts/ci/run-bun-tests.ts",
+    "typecheck": "bun check",
+    "lint": "bun run typecheck && biome check ."
+  },
+  "dependencies": {
+    "pstdio-relay": "workspace:*",
+    "pstdio-service-telemetry": "workspace:*",
+    "pstdio-sync": "workspace:*",
+    "pstdio-sync-contracts": "workspace:*",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "typescript": "6.0.2"
+  }
+}

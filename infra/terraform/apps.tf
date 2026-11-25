@@ -1,5 +1,6 @@
 locals {
-  services = var.services
+  monitoring_enabled = nonsensitive(var.monitoring != null)
+  services           = var.services
   paths = {
     relay   = var.relay_path
     manager = var.manager_path
@@ -80,6 +81,7 @@ resource "digitalocean_app" "cloud" {
       content {
         name               = service.key
         http_port          = local.ports[service.key]
+        internal_ports     = local.monitoring_enabled && contains(["relay", "manager"], service.key) ? (service.key == "relay" ? [9464, 4318] : [9464]) : []
         instance_count     = 1
         instance_size_slug = "basic-xxs"
         image {
@@ -93,7 +95,11 @@ resource "digitalocean_app" "cloud" {
           http_path = "/health"
         }
         dynamic "env" {
-          for_each = local.settings[service.key]
+          for_each = merge(local.settings[service.key], local.monitoring_enabled && contains(["relay", "manager"], service.key) ? {
+            METRICS_HOST                     = "0.0.0.0", METRICS_PORT = "9464", MONITORING_ENVIRONMENT = "production",
+            OTEL_EXPORTER_OTLP_LOGS_ENDPOINT = service.key == "relay" ? "http://127.0.0.1:4318/v1/logs" : "http://relay:4318/v1/logs"
+            TELEMETRY_RELEASE                = replace(var.image_digests[service.key], "sha256:", "sha256-")
+          } : {})
           content {
             key   = env.key
             value = env.value
@@ -106,6 +112,22 @@ resource "digitalocean_app" "cloud" {
           content {
             key   = env.value
             value = local.secrets[service.key][env.value]
+            type  = "SECRET"
+            scope = "RUN_TIME"
+          }
+        }
+        dynamic "env" {
+          for_each = local.monitoring_enabled && service.key == "relay" ? toset(["METRICS_WRITE_URL", "METRICS_WRITE_TOKEN", "LOGS_WRITE_URL", "LOGS_WRITE_TOKEN", "RELAY_METRICS_TARGET", "MANAGER_METRICS_TARGET"]) : toset([])
+          content {
+            key = env.value
+            value = {
+              METRICS_WRITE_URL      = var.monitoring.metrics_write_url
+              METRICS_WRITE_TOKEN    = var.monitoring.metrics_write_token
+              LOGS_WRITE_URL         = var.monitoring.logs_write_url
+              LOGS_WRITE_TOKEN       = var.monitoring.logs_write_token
+              RELAY_METRICS_TARGET   = "127.0.0.1:9464"
+              MANAGER_METRICS_TARGET = "manager:9464"
+            }[env.value]
             type  = "SECRET"
             scope = "RUN_TIME"
           }
