@@ -295,29 +295,30 @@ const toHandle = (
       retained.closeAdmission();
       // Publish the shared settlement before any external cleanup can reenter.
       closing ??= Promise.resolve().then(async () => {
-        // A sign-in is aborted and its call's children stopped at once, but awaited only after
-        // every child of the instance is stopped below: it may be waiting on one of them.
-        const signingIn = Promise.resolve().then(() => authentication.dispose());
-        void signingIn.catch(() => {});
-        const ownership = await Promise.allSettled([Promise.resolve().then(() => commandWatches.dispose())]);
-        const admitted = await Promise.allSettled([Promise.resolve().then(() => retained.retire())]);
-        const results = await Promise.allSettled(
-          [...contexts.values()].map((context) =>
-            context.then(
-              (value) => provider.dispose?.(value),
-              () => undefined,
+        // In-flight work and provider cleanup may wait for a child owned by the instance.
+        const stopping = Promise.allSettled([...owners.values()].map((owner) => owner.close()));
+        const signingIn = Promise.allSettled([Promise.resolve().then(() => authentication.dispose())]);
+        const finishProvider = async () => {
+          const watches = await Promise.allSettled([Promise.resolve().then(() => commandWatches.dispose())]);
+          const admitted = await Promise.allSettled([Promise.resolve().then(() => retained.retire())]);
+          const disposed = await Promise.allSettled(
+            [...contexts.values()].map((context) =>
+              context.then(
+                (value) => provider.dispose?.(value),
+                () => undefined,
+              ),
             ),
-          ),
-        );
-        // Extension-lifetime children end with the instance, after the provider's own cleanup.
-        const stopped = await Promise.allSettled([...owners.values()].map((owner) => owner.close()));
-        ownership.push(...stopped);
-        // A sign-in may still be waiting for a process whose stop failed.
-        if (stopped.every((result) => result.status === "fulfilled"))
-          ownership.push(...(await Promise.allSettled([signingIn])));
-        const errors = [...ownership, ...admitted, ...results].flatMap((result) =>
-          result.status === "rejected" ? [result.reason] : [],
-        );
+          );
+          return [...watches, ...admitted, ...disposed, ...(await signingIn)];
+        };
+        const finishing = finishProvider();
+        void finishing.catch(() => {});
+        const stopped = await stopping;
+        // Report a failed stop without waiting for work that still depends on that child.
+        const results = stopped.every((result) => result.status === "fulfilled")
+          ? [...stopped, ...(await finishing)]
+          : stopped;
+        const errors = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
         if (errors.length) throw new AggregateError(errors, `Harness cleanup failed: ${record.id}`);
       });
       return closing;
