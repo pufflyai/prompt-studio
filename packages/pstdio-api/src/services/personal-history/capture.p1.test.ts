@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { capturePersonalHistory, captureSessionChanges } from "./capture";
 import { createHistoryReferences, historyReferenceName } from "./references";
 import { createPersonalHistoryStore } from "./store";
@@ -76,7 +77,7 @@ test("incremental session updates preserve the current workspace and unlinked se
       title: "Renamed unlinked",
       workspace_id: null,
     });
-    await expect(source.deps.workspaceSessionService.link(foreignWorkspace.id, unlinked.id)).rejects.toThrow(
+    await expectRejection(source.deps.workspaceSessionService.link(foreignWorkspace.id, unlinked.id)).toThrow(
       "Workspace does not belong to the session project.",
     );
     await captureSessionChanges(input, [unlinked.id]);

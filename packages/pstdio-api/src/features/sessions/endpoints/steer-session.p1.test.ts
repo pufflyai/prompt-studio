@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import type { HarnessSteeringInput, HarnessSteeringResult } from "pstdio-api-contracts";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { expectRejection } from "../../../test-utils/expect-rejection";
 import { reconcileQueuedSteering } from "../queued-steering";
 import { isSessionAttachmentSubmitted } from "../session-attachments";
 import { persistSessionMessages } from "../session-messages";
@@ -108,7 +109,7 @@ test.each([
       throw new Error("Sender checkpoint unavailable");
     };
     try {
-      await expect(reconcileQueuedSteering(fixture.handle.deps, fixture.session.id)).rejects.toThrow(
+      await expectRejection(reconcileQueuedSteering(fixture.handle.deps, fixture.session.id)).toThrow(
         "Sender checkpoint unavailable",
       );
       expect(await queue.get(intent.queue_position)).toEqual(intent);
