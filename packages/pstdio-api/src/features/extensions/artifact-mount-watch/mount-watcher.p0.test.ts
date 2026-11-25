@@ -125,6 +125,29 @@ test("one watcher cannot suppress another watcher's folder-only notification", a
   expect(relay.changes).toEqual([["sales/first.json"]]);
 });
 
+test("a mount watcher does not recreate a missing checkout", () => {
+  const parent = mkdtempSync(join(tmpdir(), "pstdio-watch-no-checkout-"));
+  const workspaceRoot = join(parent, "checkout");
+  cleanups.push(() => rmSync(parent, { recursive: true, force: true }));
+  let watcher: ReturnType<typeof watchArtifactMount> | undefined;
+  try {
+    expect(() => {
+      watcher = watchArtifactMount({
+        root: join(workspaceRoot, ".pstdio", "extension-storage", "boards"),
+        workspaceRoot,
+        ledger: createArtifactMountWriteLedger(),
+        onChange: () => {},
+        onError: () => {},
+        onFolderLimit: () => {},
+        watch: () => ({ close: () => {} }),
+      });
+    }).toThrow();
+    expect(existsSync(workspaceRoot)).toBe(false);
+  } finally {
+    watcher?.close();
+  }
+});
+
 test.each([
   ["opening", true],
   ["walking", true],

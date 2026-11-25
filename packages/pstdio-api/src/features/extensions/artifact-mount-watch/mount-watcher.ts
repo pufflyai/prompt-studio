@@ -1,5 +1,5 @@
-import { watch as fsWatch, lstatSync, mkdirSync } from "node:fs";
-import { isAbsolute, relative, sep } from "node:path";
+import { watch as fsWatch, lstatSync, mkdirSync, statSync } from "node:fs";
+import { isAbsolute, join, relative, sep } from "node:path";
 import {
   createDirectoryTreeWatcher,
   type DirectoryTreeWatcher,
@@ -22,10 +22,13 @@ const MAX_FOLDERS = 2_000;
 export type ArtifactMountWatcherInput = {
   /** Absolute mount folder. It is created when missing. */
   root: string;
+  /** Create only descendants of this existing checkout. */
+  workspaceRoot?: string;
   ledger: Pick<ArtifactMountWriteLedger, "createEchoFilter">;
   /** Changed paths relative to the root, or `[]` when the listener should reload everything. */
   onChange: (paths: string[]) => void;
   onError: (error: unknown) => void;
+  onRootRetryError?: (error: unknown) => void;
   onFolderLimit: () => void;
   maxFolders?: number;
   watch?: WatchDirectory;
@@ -49,6 +52,30 @@ const isFolder = (path: string) => {
 
 const isInsideRoot = (mountPath: string) =>
   mountPath !== "" && mountPath !== ".." && !mountPath.startsWith(`..${sep}`) && !isAbsolute(mountPath);
+
+const prepareMountDirectory = (root: string, workspaceRoot: string | undefined) => {
+  if (!workspaceRoot) {
+    mkdirSync(root, { recursive: true });
+    return;
+  }
+  const path = relative(workspaceRoot, root);
+  if (!isInsideRoot(path)) throw new Error("Artifact mount must be inside its checkout");
+  let folder = workspaceRoot;
+  for (const name of path.split(sep)) {
+    folder = join(folder, name);
+    try {
+      // A non-recursive creation cannot bring back a missing checkout.
+      mkdirSync(folder);
+    } catch (error) {
+      if (
+        (error as NodeJS.ErrnoException).code !== "EEXIST" ||
+        !statSync(folder, { throwIfNoEntry: false })?.isDirectory()
+      ) {
+        throw error;
+      }
+    }
+  }
+};
 
 /** Watch one mount folder and report changes made outside the mount API in debounced bursts. */
 export const watchArtifactMount = (input: ArtifactMountWatcherInput) => {
@@ -122,13 +149,14 @@ export const watchArtifactMount = (input: ArtifactMountWatcherInput) => {
     directRoot?.close();
   };
 
-  mkdirSync(input.root, { recursive: true });
+  prepareMountDirectory(input.root, input.workspaceRoot);
   try {
     const initialIdentity = watchRoot && readArtifactFileState(input.root)?.identity;
     tree = createDirectoryTreeWatcher({
       root: input.root,
       onEvent: handleEvent,
       onError: onWatchError,
+      onRootRetryError: input.onRootRetryError,
       maxDirectories: input.maxFolders ?? MAX_FOLDERS,
       onDirectoryLimit: () => {
         incomplete = true;
@@ -143,6 +171,7 @@ export const watchArtifactMount = (input: ArtifactMountWatcherInput) => {
         root: input.root,
         onEvent: handleEvent,
         onError: onWatchError,
+        onRootRetryError: input.onRootRetryError,
         skipDirectory: () => true,
         watch: watchRoot,
       });

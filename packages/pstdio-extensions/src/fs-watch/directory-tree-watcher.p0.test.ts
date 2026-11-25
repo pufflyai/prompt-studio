@@ -139,6 +139,7 @@ describe("createDirectoryTreeWatcher", () => {
 test("retries a returned root when reopening its watch fails", async () => {
   const root = createRoot();
   const errors: unknown[] = [];
+  const retryErrors: unknown[] = [];
   const paths: string[] = [];
   const failure = Object.assign(new Error("Cannot reopen the root watch"), { code: "ENOSPC" });
   let opened = 0;
@@ -147,6 +148,7 @@ test("retries a returned root when reopening its watch fails", async () => {
     root,
     onEvent: (_event, path) => paths.push(path),
     onError: (error) => errors.push(error),
+    onRootRetryError: (error) => retryErrors.push(error),
     skipDirectory: () => true,
     watch: (_path, notify) => {
       if (++opened === 2) throw failure;
@@ -159,7 +161,8 @@ test("retries a returned root when reopening its watch fails", async () => {
     listener?.("rename", null);
     mkdirSync(root);
     await waitFor(() => opened === 3, 3_000);
-    expect(errors).toEqual([failure]);
+    expect(errors).toEqual([]);
+    expect(retryErrors).toEqual([failure]);
     listener?.("rename", "manifest.json");
     expect(paths).toContain(join(root, "manifest.json"));
   } finally {

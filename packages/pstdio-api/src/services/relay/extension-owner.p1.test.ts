@@ -19,7 +19,12 @@ const waitFor = async (check: () => boolean | Promise<boolean>) => {
   }
 };
 
-test.each([false, true])("documents sync during a failed flat watch; close before recovery: %s", async (closeEarly) => {
+test.each([
+  "recover",
+  "cancel",
+  "workspace setup",
+  "checkout missing",
+])("documents sync while an artifact watch is unavailable (%s)", async (mode) => {
   const root = await mkdtemp(join(tmpdir(), "relay-watch-failure-"));
   const app = await createTestApp({ storageRoot: join(root, "home") });
   const peer = documentPeer();
@@ -36,7 +41,7 @@ test.each([false, true])("documents sync during a failed flat watch; close befor
     const project = await app.deps.projectService.create({ name: "Independent watch recovery" });
     const folder = join(root, "checkout");
     await mkdir(folder);
-    await initializeProjectWorkspace(
+    const workspace = await initializeProjectWorkspace(
       app.deps,
       project.id,
       { provider_id: "pstdio.root", params: { path: folder } },
@@ -109,15 +114,37 @@ test.each([false, true])("documents sync during a failed flat watch; close befor
       access: async () => ({ token: "fixture", expiresAt: new Date(Date.now() + 60_000).toISOString() }),
     });
     await waitFor(async () => (await records.outcome("initial"))?.state === "synced");
-    expect(attempts).toBeGreaterThan(0);
-    await waitFor(() => attempts >= 2);
-    expect(failing).toBe(true);
+    await waitFor(() => attempts > 0);
+    const workspaceSetup = mode === "workspace setup";
+    const checkoutMissing = mode === "checkout missing";
+    if (workspaceSetup || checkoutMissing) {
+      const parked = join(root, "parked-checkout");
+      if (workspaceSetup) await app.deps.workspaceService.setInitializing(workspace.id, true);
+      if (checkoutMissing) {
+        fs.renameSync(folder, parked);
+        failing = false;
+        relay.wake();
+      }
+      // Leave the first scheduled retry ineligible, then recover the same workspace on this owner.
+      await Bun.sleep(1_200);
+      expect(attempts).toBe(1);
+      if (checkoutMissing) {
+        expect(fs.existsSync(folder)).toBe(false);
+        fs.renameSync(parked, folder);
+      }
+      if (workspaceSetup) await app.deps.workspaceService.setInitializing(workspace.id, false);
+      failing = false;
+      await waitFor(() => handles.size === 4);
+    } else {
+      await waitFor(() => attempts >= 2);
+      expect(failing).toBe(true);
+      await waitFor(() => handles.size === 2);
+    }
     expect((await relay.status()).error).toBeUndefined();
-    await waitFor(() => handles.size === 2);
     await records.commit({ operationId: "while-failing", edits: [{ recordId: "note", replace: "Still syncing" }] });
     relay.wake();
     await waitFor(async () => (await records.outcome("while-failing"))?.state === "synced");
-    if (!closeEarly) {
+    if (mode !== "cancel") {
       const documentsRoot = join(folder, ".pstdio/extension-storage/test.notes/documents");
       await writeFile(join(documentsRoot, "gap.txt"), "Saved before recovery");
       failing = false;
@@ -133,7 +160,7 @@ test.each([false, true])("documents sync during a failed flat watch; close befor
     await waitFor(() => handles.size === 0);
     const stoppedAttempts = attempts;
     // The second failed open schedules a two-second retry.
-    await Bun.sleep(closeEarly ? 2_100 : 100);
+    await Bun.sleep(mode === "cancel" ? 2_100 : 100);
     expect(attempts).toBe(stoppedAttempts);
   } finally {
     relay?.close();

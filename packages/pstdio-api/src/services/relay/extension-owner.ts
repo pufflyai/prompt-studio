@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import type { AssetOwner } from "pstdio-api-contracts";
 import { createReadBoundary } from "pstdio-extensions";
 import type { LiveConnection } from "pstdio-sync/relay";
@@ -72,25 +73,37 @@ const startRelayArtifactWatches = (input: {
   const open = async () => {
     if (signal.aborted) return;
     const writable = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write").catch((error) => {
-      if (!signal.aborted && !(error instanceof WorkspaceTargetUnavailableError)) {
-        apiLogger.warn(
-          { err: error, event: "relay.artifact_watch.lookup_failed", ...owner },
-          "Relay artifact watch workspace lookup failed",
-        );
+      if (!signal.aborted) {
+        if (!(error instanceof WorkspaceTargetUnavailableError)) {
+          apiLogger.warn(
+            { err: error, event: "relay.artifact_watch.lookup_failed", ...owner },
+            "Relay artifact watch workspace lookup failed",
+          );
+        }
         scheduleRetry();
       }
       return null;
     });
     if (signal.aborted || writable !== input.repoRoot) return;
+    if (!existsSync(input.repoRoot)) {
+      scheduleRetry();
+      return;
+    }
 
     for (const root of input.roots) {
       if (watches.has(root)) continue;
       try {
         const watch = watchArtifactMount({
           root,
+          workspaceRoot: input.repoRoot,
           ledger: deps.artifactMountWrites,
           onChange: input.wake,
           onError: input.wake,
+          onRootRetryError: (error) =>
+            apiLogger.warn(
+              { err: error, event: "relay.artifact_watch.reopen_failed", ...owner, root },
+              "Relay artifact watch root will retry",
+            ),
           onFolderLimit: input.wake,
         });
         watches.set(root, watch);
@@ -181,7 +194,9 @@ export const startRelayExtension = async (input: {
     const writableRoot = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write").catch(
       () => null,
     );
-    if (writableRoot === repoRoot) await Promise.all(mounts.map((mount) => mount.refresh()));
+    if (writableRoot && writableRoot === repoRoot && existsSync(writableRoot)) {
+      await Promise.all(mounts.map((mount) => mount.refresh()));
+    }
   };
   // Physical copies follow canonical commits without blocking durable document transport.
   const projections = createNativeProjectionQueue({
@@ -189,7 +204,9 @@ export const startRelayExtension = async (input: {
       const writableRoot = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write").catch(
         () => null,
       );
-      if (writableRoot === repoRoot) await Promise.all(mounts.map((mount) => mount.refreshText(documentKey)));
+      if (writableRoot && writableRoot === repoRoot && existsSync(writableRoot)) {
+        await Promise.all(mounts.map((mount) => mount.refreshText(documentKey)));
+      }
     },
     failed: (_address, error) =>
       apiLogger.warn({ error, workbenchId: owner.workbenchId, extensionId }, "Artifact text projection failed"),

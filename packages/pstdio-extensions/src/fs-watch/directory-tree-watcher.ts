@@ -46,6 +46,8 @@ export type DirectoryTreeWatcherInput = {
   root: string;
   onEvent: (eventType: string, path: string) => void;
   onError: (error: unknown) => void;
+  /** A failed attempt to reopen a lost root is reported here while retry stays active. */
+  onRootRetryError?: (error: unknown) => void;
   /** Folders a per-folder watch must not enter. Linked folders are never entered. */
   skipDirectory?: (path: string) => boolean;
   /** Per-folder watches stop adding handles past this count. */
@@ -85,7 +87,7 @@ export const createDirectoryTreeWatcher = (input: DirectoryTreeWatcherInput) => 
   let limitReported = false;
   let closed = false;
 
-  const addHandle = (directoryPath: string) => {
+  const addHandle = (directoryPath: string, reportFailure = input.onError) => {
     if (folders.has(directoryPath)) return true;
     if (folders.size >= maxDirectories) {
       if (!limitReported) input.onDirectoryLimit?.();
@@ -104,7 +106,7 @@ export const createDirectoryTreeWatcher = (input: DirectoryTreeWatcherInput) => 
       );
       folders.set(directoryPath, folder);
     } catch (error) {
-      input.onError(error);
+      reportFailure(error);
     }
     return true;
   };
@@ -148,7 +150,7 @@ export const createDirectoryTreeWatcher = (input: DirectoryTreeWatcherInput) => 
   };
 
   const reopenRoot = () => {
-    addHandle(input.root);
+    addHandle(input.root, input.onRootRetryError);
     const folder = folders.get(input.root);
     if (!folder) return false;
     if (folder.identity !== folderIdentity(input.root)) {
