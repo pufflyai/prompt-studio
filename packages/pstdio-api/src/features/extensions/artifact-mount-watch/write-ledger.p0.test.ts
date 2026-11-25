@@ -298,6 +298,28 @@ describe("artifact mount restored folder batches", () => {
     expect(ledger.dropEchoes([child], options)).toEqual([child]);
   });
 
+  test("keeps a new mount delete after an external folder return", async () => {
+    const ledger = createArtifactMountWriteLedger(() => 0);
+    const { mount, root } = createMount(ledger);
+    const folder = join(root, "sales");
+    const earlier = join(folder, "earlier.json");
+    const latest = join(folder, "latest.json");
+    const options = { keepMatchedWrites: true };
+    await mount.writeText("sales/earlier.json", "{}");
+    await mount.delete("sales/earlier.json");
+    await mount.delete("sales");
+
+    mkdirSync(folder);
+    writeFileSync(earlier, "[]");
+    writeFileSync(latest, "[]");
+    await mount.delete("sales/latest.json");
+    expect(ledger.dropEchoes([folder, latest], options)).toEqual([folder]);
+    expect(ledger.dropEchoes([latest], options)).toEqual([]);
+
+    rmSync(earlier);
+    expect(ledger.dropEchoes([earlier], options)).toEqual([earlier]);
+  });
+
   test.each([
     true,
     false,

@@ -9,6 +9,7 @@ type FileState = ReturnType<typeof readArtifactFileState>;
 type PathObservation = readonly [string, FileState];
 type LedgerEntry = {
   recordedAt: number;
+  order: number;
   state: FileState;
   reappeared?: Set<string>;
 };
@@ -32,6 +33,7 @@ export type ArtifactMountWriteLedger = ReturnType<typeof createArtifactMountWrit
  */
 export const createArtifactMountWriteLedger = (now: () => number = Date.now) => {
   const entries = new Map<string, LedgerEntry>();
+  let writeOrder = 0;
   const directories = new Map<string, { recordedAt: number; observed: NonNullable<FileState> }>();
 
   const forgetExpired = () => {
@@ -52,9 +54,12 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     }
   };
 
-  const retireDeletedSubtree = (root: string) => {
+  const retireDeletedSubtree = (root: string, rootDeletionOrder: number) => {
     for (const [path, entry] of entries) {
-      if (entry.state === null && (path === root || isInside(path, root))) entries.delete(path);
+      // A delete recorded after the folder's removal can belong to the returned folder.
+      if (entry.state === null && entry.order <= rootDeletionOrder && (path === root || isInside(path, root))) {
+        entries.delete(path);
+      }
     }
   };
 
@@ -70,7 +75,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
       const current = observed === undefined ? readArtifactFileState(recordedPath) : observed;
       const owned = directories.get(recordedPath)?.observed;
       if (current && owned?.identity !== current.identity) {
-        retireDeletedSubtree(recordedPath);
+        retireDeletedSubtree(recordedPath, entry.order);
         continue;
       }
       markReappearedPaths(entry, related);
@@ -110,7 +115,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     forgetExpired();
     const recordedAt = now();
     const state = readArtifactFileState(path);
-    entries.set(path, { recordedAt, state });
+    entries.set(path, { recordedAt, order: ++writeOrder, state });
     if (!state) directories.delete(path);
     for (const [folder, identity] of createdDirectories ?? []) {
       const observed = readArtifactFileState(folder);
