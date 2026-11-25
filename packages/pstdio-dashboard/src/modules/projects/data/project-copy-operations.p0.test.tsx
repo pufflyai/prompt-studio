@@ -211,6 +211,48 @@ test("copy actions reject a personal or different team owner and an unavailable 
   }
 });
 
+test("discarding an unconfirmed team removal retains its account-wide Cloud deletion claim", async () => {
+  const host = await setup(true);
+  const replacement = { ...user, deviceId: "replacement-device" };
+  const neighbor = `${id}-neighbor`;
+  try {
+    await act(async () => {
+      await expect(host.removals.remove(id, name, team, user, false)).rejects.toThrow("Response lost");
+    });
+    const [recovery] = host.receipts.getSnapshot().recovery;
+    expect(recovery).toMatchObject({ status: "unknown" });
+    await act(async () => host.receipts.discard(recovery!.id));
+    expect(host.receipts.getSnapshot().pending).toEqual([
+      expect.objectContaining({ id: recovery!.id, intent: undefined, subjects: recovery!.subjects }),
+    ]);
+    await act(async () =>
+      host.changeStatus((status) => ({
+        ...status,
+        login: replacement,
+        teamProjectOwners: { ...status.teamProjectOwners, [neighbor]: team.accountId },
+        teamProjects: { ...status.teamProjects, [neighbor]: team.accountId },
+      })),
+    );
+    expect(host.removals.active(id, team, replacement)).toBe(false);
+    await act(async () => {
+      await expect(host.deletions.start(id, name, team, replacement)).rejects.toThrow("pending Cloud change");
+      await expect(host.deletions.start(neighbor, name, team, replacement)).rejects.toThrow("Response lost");
+    });
+    await act(async () =>
+      host.changeStatus((status) => ({
+        ...status,
+        teamProjectOwners: { ...status.teamProjectOwners, [id]: otherTeam.accountId },
+        teamProjects: { ...status.teamProjects, [id]: otherTeam.accountId },
+      })),
+    );
+    await act(async () => {
+      await expect(host.deletions.start(id, name, otherTeam, replacement)).rejects.toThrow("Response lost");
+    });
+  } finally {
+    await host.dispose();
+  }
+});
+
 test.each([
   "manager",
   "account",
