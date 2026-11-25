@@ -11,7 +11,8 @@ export const createNativeLoginRequests = (
   let current: { id: string; request: ReturnType<typeof startNativeLogin> } | undefined;
   let mutations = Promise.resolve();
   let closed = false;
-  let generation = 0;
+  let requestOrder = 0;
+  let acceptedOrder = 0;
   const serialize = <T>(run: () => Promise<T>) => {
     const result = mutations.then(run);
     mutations = result.then(
@@ -29,14 +30,17 @@ export const createNativeLoginRequests = (
   return {
     start: async (origin: string, provider?: AccountSignInProvider) => {
       if (closed) throw new Error("Account is closed");
-      const requested = ++generation;
+      const requested = ++requestOrder;
       const validate = provider === "microsoft" ? validateMicrosoft : undefined;
       // Capability checks must not block cancellation or logout for the active callback.
       if (validate) await validate(origin);
       const assertCurrent = () => {
         if (closed) throw new Error("Account is closed");
-        if (validate && requested !== generation) throw new Error("A newer account action superseded sign-in");
+        if (validate && requested < acceptedOrder) throw new Error("A newer account action superseded sign-in");
       };
+      assertCurrent();
+      // A rejected capability check must leave earlier sign-in requests eligible.
+      acceptedOrder = requested;
       return serialize(async () => {
         assertCurrent();
         await clear();
@@ -67,7 +71,7 @@ export const createNativeLoginRequests = (
         return { ok: true, status: "failed" as const };
       }),
     logout: <T>(run: () => Promise<T>) => {
-      generation++;
+      acceptedOrder = ++requestOrder;
       return serialize(async () => {
         await clear();
         return run();
