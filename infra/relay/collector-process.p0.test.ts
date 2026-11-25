@@ -10,6 +10,7 @@ const exercise = async (
   enabled: boolean,
   collector: string,
   check: (context: { url: string; directory: string; stop: () => Promise<number> }) => Promise<void>,
+  serverSource = server,
 ) => {
   const directory = await mkdtemp(join(tmpdir(), "pstdio-collector-process-"));
   const marker = join(directory, "collector-started");
@@ -36,7 +37,7 @@ const exercise = async (
     });
   });
   const child = Bun.spawn(
-    [process.execPath, join(import.meta.dir, "collector-process.ts"), process.execPath, "-e", server],
+    [process.execPath, join(import.meta.dir, "collector-process.ts"), process.execPath, "-e", serverSource],
     {
       env: {
         ...process.env,
@@ -142,4 +143,46 @@ test("relay starts without launching collection when monitoring is unconfigured"
     expect(await Bun.file(join(directory, "collector-started")).exists()).toBe(false);
     expect(await stop()).toBe(0);
   });
+});
+
+test("collector cleanup remains bounded while the relay waits to shut down", async () => {
+  const stalledServer = `
+    const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch(request) {
+      if (new URL(request.url).pathname === "/finish") setTimeout(() => { server.stop(true); process.exit(0); }, 0);
+      return new Response("relay-ready");
+    }});
+    console.log(server.url.href);
+    process.on("SIGTERM", () => {});
+    setTimeout(() => { server.stop(true); process.exit(0); }, 5000);
+  `;
+  await exercise(
+    true,
+    `process.on("SIGTERM", () => {});
+     setInterval(() => {}, 1000);
+     await Bun.write(marker + ".tmp", String(process.pid));
+     await (await import("node:fs/promises")).rename(marker + ".tmp", marker);`,
+    async ({ url, directory, stop }) => {
+      const pid = Number(await Bun.file(join(directory, "collector-started")).text());
+      expect(Number.isSafeInteger(pid) && pid > 0).toBe(true);
+      const alive = () => {
+        try {
+          process.kill(pid, 0);
+          return true;
+        } catch {
+          return false;
+        }
+      };
+      const exiting = stop();
+      try {
+        const deadline = performance.now() + 1800;
+        while (alive() && performance.now() < deadline) await Bun.sleep(10);
+        expect(alive()).toBe(false);
+        expect(await (await fetch(url)).text()).toBe("relay-ready");
+      } finally {
+        await fetch(new URL("finish", url));
+        await exiting;
+      }
+    },
+    stalledServer,
+  );
 });

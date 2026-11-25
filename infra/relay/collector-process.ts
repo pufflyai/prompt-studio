@@ -2,11 +2,18 @@
 const server = Bun.spawn(process.argv.slice(2), { stdin: "inherit", stdout: "inherit", stderr: "inherit" });
 let collector: ReturnType<typeof Bun.spawn> | undefined;
 let stopping = false;
+let collectorKill: ReturnType<typeof setTimeout> | undefined;
+const stopCollector = () => {
+  const active = collector;
+  active?.kill("SIGTERM");
+  collectorKill = setTimeout(() => active?.kill("SIGKILL"), 1000);
+  collectorKill.unref();
+};
 const stop = () => {
   if (stopping) return;
   stopping = true;
   server.kill("SIGTERM");
-  collector?.kill("SIGTERM");
+  stopCollector();
 };
 process.on("SIGTERM", stop);
 process.on("SIGINT", stop);
@@ -53,17 +60,14 @@ const collection = collect();
 try {
   process.exitCode = await server.exited;
 } finally {
-  const active = collector;
   if (!stopping) {
     stopping = true;
-    active?.kill("SIGTERM");
+    stopCollector();
   }
-  const kill = setTimeout(() => active?.kill("SIGKILL"), 1000);
-  kill.unref();
   try {
     await collection;
   } finally {
-    clearTimeout(kill);
+    clearTimeout(collectorKill);
   }
   process.off("SIGTERM", stop);
   process.off("SIGINT", stop);
