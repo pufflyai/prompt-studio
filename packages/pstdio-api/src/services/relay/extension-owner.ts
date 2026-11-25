@@ -67,9 +67,17 @@ const startRelayArtifactWatches = (input: {
   const watches = new Map<string, ReturnType<typeof watchArtifactMount>>();
   let retry: ReturnType<typeof setTimeout> | undefined;
   let failures = 0;
+  let opening = false;
+  let requested = false;
 
   const scheduleRetry = () => {
-    retry = setTimeout(() => void open(), Math.min(1_000 * 2 ** failures++, 30_000));
+    retry = setTimeout(
+      () => {
+        retry = undefined;
+        refresh();
+      },
+      Math.min(1_000 * 2 ** failures++, 30_000),
+    );
     retry.unref?.();
   };
 
@@ -133,6 +141,21 @@ const startRelayArtifactWatches = (input: {
     if (watches.size < input.roots.size) scheduleRetry();
   };
 
+  const refresh = () => {
+    if (signal.aborted || retry || watches.size === input.roots.size) return;
+    if (opening) {
+      requested = true;
+      return;
+    }
+    opening = true;
+    void open().finally(() => {
+      opening = false;
+      if (!requested) return;
+      requested = false;
+      refresh();
+    });
+  };
+
   signal.addEventListener(
     "abort",
     () => {
@@ -142,7 +165,8 @@ const startRelayArtifactWatches = (input: {
     },
     { once: true },
   );
-  void open();
+  refresh();
+  return refresh;
 };
 
 export const startRelayExtension = async (input: {
@@ -260,20 +284,22 @@ export const startRelayExtension = async (input: {
       onStatusChange: input.statusChanged,
     });
     const active = connection;
-    if (repoRoot && mounts.length > 0) {
-      startRelayArtifactWatches({
-        deps,
-        owner,
-        repoRoot,
-        roots: new Set(mounts.map(({ root }) => root)),
-        signal,
-        wake: active.wake,
-      });
-    }
+    const resumeArtifactWatches =
+      repoRoot && mounts.length > 0
+        ? startRelayArtifactWatches({
+            deps,
+            owner,
+            repoRoot,
+            roots: new Set(mounts.map(({ root }) => root)),
+            signal,
+            wake: active.wake,
+          })
+        : undefined;
     return {
       owner,
       contextKey: input.contextKey,
       wake: connection.wake,
+      resumeArtifactWatches,
       wakeDocument,
       retry: connection.retry,
       restart: connection.restart,

@@ -27,6 +27,7 @@ test.each([
   "workspace setup",
   "checkout missing",
   "read-only checkout",
+  "write access returns",
 ])("documents sync while an artifact watch is unavailable (%s)", async (mode) => {
   const root = await mkdtemp(join(tmpdir(), "relay-watch-failure-"));
   const app = await createTestApp({ storageRoot: join(root, "home") });
@@ -129,7 +130,7 @@ test.each([
     });
     await waitFor(async () => (await records.outcome("initial"))?.state === "synced");
     await waitFor(() => attempts > 0);
-    if (mode === "read-only checkout") {
+    if (mode === "read-only checkout" || mode === "write access returns") {
       await app.deps.workspaceService.updateProviderProjection(workspace.id, {
         provider_capabilities_json: { ...defaultLocalWorkspaceCapabilities, files: "read" },
       });
@@ -139,6 +140,18 @@ test.each([
       expect(writeDenials).toBe(1);
       expect(attempts).toBe(1);
       expect((await relay.status()).error).toBeUndefined();
+      if (mode === "write access returns") {
+        await app.deps.workspaceService.updateProviderProjection(workspace.id, {
+          provider_capabilities_json: defaultLocalWorkspaceCapabilities,
+        });
+        failing = false;
+        relay.resumeArtifactWatches?.();
+        await waitFor(() => handles.size === 4);
+        await Bun.sleep(100);
+        const file = join(folder, ".pstdio/extension-storage/test.notes/documents/restored-write.txt");
+        await writeFile(file, "External write after restoring access");
+        await waitFor(async () => (await records.read('["artifact-file","documents/restored-write.txt"]')).exists);
+      }
       return;
     }
     const workspaceSetup = mode === "workspace setup";
