@@ -8,6 +8,7 @@ import { pathToFileURL } from "node:url";
 import { createStorageMigration } from "pstdio-api-contracts";
 import { createExtensionProcessEnvironment } from "../process-environment";
 import { extensionContextSurface } from "./context-surface";
+import { expectRejection } from "./expect-rejection.test-utils";
 import { HANDLER_MARKER } from "./protocol";
 import { startBackendWorker } from "./supervisor";
 import type { BackendSurface } from "./surface";
@@ -250,7 +251,7 @@ for (const [close, reason] of [
       );
       try {
         const result = deadline(invoke("idle", { ...base, args: [close] }));
-        if (close === "invalid result") await expect(result).rejects.toBeInstanceOf(TypeError);
+        if (close === "invalid result") await expectRejection(result).toBeInstanceOf(TypeError);
         else await result;
         await deadline(released.promise);
       } finally {
@@ -316,14 +317,14 @@ test("a failed host reply closes exported and unvisited handles once", async () 
   await withWorker(async (invoke) => {
     const before = { close: () => closed.before++ };
     const after = { close: () => closed.after++ };
-    await expect(
+    await expectRejection(
       deadline(
         invoke(
           "open-result",
           fixture({ open: () => ({ before, invalid: { $pstdioFunction: "collision" }, after, alias: before }) }),
         ),
       ),
-    ).rejects.toThrow("cannot use the keys");
+    ).toThrow("cannot use the keys");
     expect(closed).toEqual({ before: 1, after: 1 });
   });
   expect(closed).toEqual({ before: 1, after: 1 });
