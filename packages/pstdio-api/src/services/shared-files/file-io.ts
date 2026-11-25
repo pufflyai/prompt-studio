@@ -1,5 +1,5 @@
 import { mkdir, rename, rm, rmdir, stat } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
 import type { AssetOwner, AssetReference } from "pstdio-api-contracts";
 import { historicalExtensionId } from "pstdio-api-contracts/extension-host";
 import {
@@ -85,12 +85,13 @@ export const createFileProjectionIO = (input: {
     const scoped = boundary(path);
     const existing = await scoped.safe.tryResolveExisting(scoped.path);
     if (!existing || !expected.kind || target.kind === expected.kind) return true;
+    const removal = expected.kind === "file" ? await safe.resolveExisting(path) : existing;
     const parentWrite = input.onWrite && observeArtifactParentWrite(join(input.root, path));
     if (expected.kind === "file") {
-      await rm(existing.operationPath, { recursive: true, force: true });
+      await rm(removal.operationPath, { recursive: true, force: true });
     } else {
       try {
-        await rmdir(existing.operationPath);
+        await rmdir(removal.operationPath);
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === "ENOTEMPTY") return false;
         throw error;
