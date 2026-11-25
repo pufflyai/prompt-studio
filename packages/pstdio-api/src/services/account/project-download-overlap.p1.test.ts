@@ -225,7 +225,7 @@ test.each([
     stop();
     release.resolve();
     expect(await until(() => fixture.selections === 1)).toBe(true);
-    expect(await until(() => attempts === (overlap === "completed activation" ? 3 : 2))).toBe(true);
+    expect(await until(() => attempts === 2)).toBe(true);
     if (overlap !== "completed activation") {
       expect(await fixture.canDownload()).toBe(false);
       expect((await fixture.download()).status).toBe(202);
@@ -240,8 +240,11 @@ test.each([
     ).toBe(true);
     expect(await until(fixture.canDownload)).toBe(true);
     expect(await fixture.host.deps.extensionService.listProjectExtensionInstances(fixture.id)).toHaveLength(1);
-    // Successful preparation is followed by the installed runtime load; no second preparation is admitted.
-    expect(attempts).toBe(3);
+    const { runtime } = await fixture.host.deps.extensionRuntimeCatalog.get(fixture.id);
+    expect(runtime.extensions.map((extension) => extension.id)).toContain("test.retry-overlap");
+    expect(fixture.selections).toBe(1);
+    // The installed data-only extension reuses the definition from its successful inspection.
+    expect(attempts).toBe(2);
   } finally {
     release.resolve();
     activate.resolve();
