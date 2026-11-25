@@ -15,7 +15,7 @@ import {
   requeueAfterTerminal,
 } from "./sessions-queue-ops";
 
-type SessionRecord = typeof sessions.$inferSelect;
+type SessionRecord = Omit<typeof sessions.$inferSelect, "workspace_id">;
 type HarnessParamsJson = Record<string, string | boolean>;
 type SessionStatus =
   | "in_progress"

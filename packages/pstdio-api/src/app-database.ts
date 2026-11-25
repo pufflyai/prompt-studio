@@ -17,6 +17,7 @@ import {
   createFilesDBService,
   createInstalledExtensionSourcesDBService,
   createNotificationsDBService,
+  createPreferencesDBService,
   createProjectInfoDBService,
   createProjectsDBService,
   createResourceLinksDBService,
@@ -30,6 +31,8 @@ import {
   type DbClient,
 } from "pstdio-db";
 import type { AppLifecycle } from "./app-contracts";
+import type { EventBus } from "./features/sync/event-bus";
+import { publishBoardOwnerRename } from "./features/views/board-owner-renames";
 import { apiLogger } from "./lib/logger";
 import { isPgliteCheckpointFailure, pgliteRecoverySteps } from "./lib/pglite-recovery-hint";
 import { logStartupPhase } from "./lib/startup-phase";
@@ -72,6 +75,7 @@ export const createAppDatabaseServices = (
   db: DbClient,
   databasePath: string,
   work?: ReturnType<typeof createProjectWork>,
+  eventBus?: EventBus,
 ) => ({
   assetTransfersDBService: createAssetTransfersDBService(db),
   environmentDBService: createEnvironmentDBService(db),
@@ -87,7 +91,10 @@ export const createAppDatabaseServices = (
   filesDBService: createFilesDBService(db),
   activityEventsDBService: createActivityEventsDBService(db),
   notificationsDBService: createNotificationsDBService(db),
-  installedExtensionSourcesDBService: createInstalledExtensionSourcesDBService(db),
+  installedExtensionSourcesDBService: createInstalledExtensionSourcesDBService(
+    db,
+    eventBus ? (change) => publishBoardOwnerRename(db, eventBus, change) : undefined,
+  ),
   extensionInstancesDBService: createExtensionInstancesDBService(db),
   extensionConnectionsDBService: createExtensionConnectionsDBService(db),
   extensionFilesDBService: createExtensionFilesDBService(db),
@@ -101,6 +108,7 @@ export const createAppDatabaseServices = (
   extensionResourceSequencesDBService: createExtensionResourceSequencesDBService(db),
   projectInfoDBService: createProjectInfoDBService(db),
   extensionSettingsDBService: createExtensionSettingsDBService(db),
+  preferencesDBService: createPreferencesDBService(db),
   webviewPreferencesDBService: createWebviewPreferencesDBService(db),
 });
 

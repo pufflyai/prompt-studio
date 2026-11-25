@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { createDb } from "../db/connection.pglite";
 import * as s from "../db/schemas.pg";
 import { migrateExtensionIdentities } from "./extension-identity-migration";
+import { createExtensionSettingsDBService } from "./extension-settings/extension-settings";
 
 const old = "pstdio.pstdio-notes";
 const next = "pstdio.notes";
@@ -14,6 +15,24 @@ const setup = async () => {
     .values({ id: "project", name: "Project", shorthand: "P", created_at: now, updated_at: now });
   return { ...fixture, now };
 };
+
+const insertAutomationRun = (
+  db: Awaited<ReturnType<typeof createDb>>["db"],
+  id: string,
+  extensionId: string,
+  stamp: string,
+) =>
+  db.insert(s.automation_runs).values({
+    id,
+    project_id: "project",
+    principal: `extension:${extensionId}`,
+    command_id: "command",
+    idempotency_key: id,
+    input_hash: "hash",
+    input_json: {},
+    status: "queued",
+    created_at: stamp,
+  });
 
 test("migration retains complete owner history, immutable bytes, sequence positions and source/instance IDs", async () => {
   const { db, close, now } = await setup();
@@ -40,11 +59,9 @@ test("migration retains complete owner history, immutable bytes, sequence positi
       created_at: now,
       updated_at: now,
     });
-    await db.insert(s.extension_instances).values({
-      id: "instance",
-      installed_extension_id: "source",
-      scope_type: "project",
-      scope_id: "project",
+    await db.insert(s.project_extensions).values({
+      extension_ref: "source",
+      project_id: "project",
       enabled: false,
       created_at: now,
       updated_at: now,
@@ -74,14 +91,20 @@ test("migration retains complete owner history, immutable bytes, sequence positi
       state: "accepted",
       indexed: true,
     });
-    await db.insert(s.extension_settings).values({
-      owner_type: "project",
-      owner_id: "project",
+    const settings = createExtensionSettingsDBService(db);
+    await settings.setValue({
+      owner_type: "installed_extension",
+      owner_id: "source",
       extension_id: old,
       key: "folder",
       value_json: { text: old },
-      created_at: now,
-      updated_at: now,
+    });
+    await settings.setValue({
+      owner_type: "device_extension",
+      owner_id: old,
+      extension_id: old,
+      key: "device-choice",
+      value_json: "retained",
     });
     await migrateExtensionIdentities(db);
     expect((await db.select().from(s.storage_documents))[0]).toMatchObject({
@@ -110,9 +133,8 @@ test("migration retains complete owner history, immutable bytes, sequence positi
       pending_bytes: 10,
       receipt_root: bytes,
     });
-    expect((await db.select().from(s.extension_instances))[0]).toMatchObject({
-      id: "instance",
-      installed_extension_id: "source",
+    expect((await db.select().from(s.project_extensions))[0]).toMatchObject({
+      extension_ref: "source",
       enabled: false,
     });
     expect((await db.select().from(s.installed_extension_sources)).find((row) => row.id === "source")).toMatchObject({
@@ -124,7 +146,26 @@ test("migration retains complete owner history, immutable bytes, sequence positi
     expect(
       (await db.select().from(s.installed_extension_sources)).find((row) => row.id === "custom-source"),
     ).toMatchObject({ install_name: "my-notes", extension_id: next, manifest_json: { version: "1.0.0" } });
-    expect((await db.select().from(s.extension_settings))[0]?.value_json).toEqual({ text: old });
+    expect(
+      (
+        await settings.getValue({
+          owner_type: "installed_extension",
+          owner_id: "source",
+          extension_id: next,
+          key: "folder",
+        })
+      )?.value_json,
+    ).toEqual({ text: old });
+    expect(
+      (
+        await settings.getValue({
+          owner_type: "device_extension",
+          owner_id: next,
+          extension_id: next,
+          key: "device-choice",
+        })
+      )?.value_json,
+    ).toBe("retained");
     const before = await db.select().from(s.storage_ordered_operations);
     await migrateExtensionIdentities(db);
     expect(await db.select().from(s.storage_ordered_operations)).toEqual(before);
@@ -253,16 +294,18 @@ test.each(
       target_id: "target",
       details,
     });
-    await db.insert(s.automation_principals).values([
-      {
-        id: `${planner}.opaque-principal`,
-        project_id: "project",
-        name: planner,
-        created_by: "extension",
-        created_at: now,
-      },
-      { id: "user-principal", project_id: "project", name: planner, created_by: "user", created_at: now },
-    ]);
+    await insertAutomationRun(db, `${planner}.opaque-run`, planner, now);
+    await db.insert(s.automation_tokens).values({
+      id: "user-token",
+      project_id: "project",
+      name: planner,
+      created_by: "user",
+      created_at: now,
+      token_prefix: "test",
+      token_digest: "digest",
+      command_scopes_json: [],
+      expires_at: "2099-01-01",
+    });
     await migrateExtensionIdentities(db, { extensionId: "pstdio.planner" });
     expect((await db.select().from(s.resource_anchors))[0]).toMatchObject({
       source_owner: endpoint === "source" ? "pstdio.planner" : "pstdio",
@@ -271,12 +314,11 @@ test.each(
       target_id: "target",
       details,
     });
-    expect(await db.select().from(s.automation_principals)).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: `${planner}.opaque-principal`, name: "pstdio.planner" }),
-        expect.objectContaining({ id: "user-principal", name: planner }),
-      ]),
-    );
+    expect((await db.select().from(s.automation_runs))[0]).toMatchObject({
+      id: `${planner}.opaque-run`,
+      principal: "extension:pstdio.planner",
+    });
+    expect((await db.select().from(s.automation_tokens))[0]).toMatchObject({ id: "user-token", name: planner });
     if (!marked)
       expect(
         await db.select().from(s.storage_documents).where(eq(s.storage_documents.extension_id, old)),
@@ -300,21 +342,94 @@ test.each([
   "skills",
   "workspaces",
   "dev",
-])("global migration still discovers the %s owner through an extension principal alone", async (name) => {
+])("global migration still discovers the %s owner through extension automation ownership alone", async (name) => {
   const { db, close, now } = await setup();
   try {
-    await db.insert(s.automation_principals).values({
-      id: "retained-principal",
+    await insertAutomationRun(db, "retained-run", `pstdio.pstdio-${name}`, now);
+    await migrateExtensionIdentities(db);
+    expect((await db.select().from(s.automation_runs))[0]).toMatchObject({
+      id: "retained-run",
+      principal: `extension:pstdio.${name}`,
+    });
+  } finally {
+    await close();
+  }
+});
+
+test("conflicting device settings keep both values and report a recoverable identity conflict", async () => {
+  const { db, close } = await setup();
+  try {
+    const settings = createExtensionSettingsDBService(db);
+    const key = (id: string) => ({
+      owner_type: "device_extension" as const,
+      owner_id: id,
+      extension_id: id,
+      key: "selection",
+    });
+    await settings.setValue({ ...key(old), value_json: "old choice" });
+    await settings.setValue({ ...key(next), value_json: "new choice" });
+    const conflicts: string[] = [];
+    await expect(
+      migrateExtensionIdentities(db, {
+        onConflict: async (error) => {
+          conflicts.push(error.code);
+        },
+      }),
+    ).resolves.toBe(false);
+    expect(conflicts).toEqual(["extension_identity_conflict"]);
+    expect((await settings.getValue(key(old)))?.value_json).toBe("old choice");
+    expect((await settings.getValue(key(next)))?.value_json).toBe("new choice");
+  } finally {
+    await close();
+  }
+});
+
+test("global migration discovers a stable board owner without an installation row", async () => {
+  const { db, close, now } = await setup();
+  try {
+    await db.insert(s.board_views).values({
+      id: "retained-view",
       project_id: "project",
-      name: `pstdio.pstdio-${name}`,
-      created_by: "extension",
+      extension_id: old,
+      board_id: "tasks",
+      title: "Saved view",
+      settings: { viewMode: "board", columnGrouping: "none", rowGrouping: "none", displayProperties: [] },
+      filter: { conjunction: "and", rules: [] },
+      sorts: [],
+      sort_order: 0,
       created_at: now,
+      updated_at: now,
     });
     await migrateExtensionIdentities(db);
-    expect((await db.select().from(s.automation_principals))[0]).toMatchObject({
-      id: "retained-principal",
-      name: `pstdio.${name}`,
-    });
+    expect((await db.select().from(s.board_views))[0]).toMatchObject({ id: "retained-view", extension_id: next });
+  } finally {
+    await close();
+  }
+});
+
+test("global migration discovers retained extension files and leaves host and skill ownership intact", async () => {
+  const { db, close, now } = await setup();
+  try {
+    const originals = [old, "pstdio", `skill:${old}`].map((owner, index) => ({
+      id: `retained-file-${index}`,
+      project_id: "project",
+      owner,
+      scope: owner === old ? JSON.stringify(["resource", "saved"]) : null,
+      path: owner.startsWith("skill:") ? "SKILL.md" : null,
+      file_name: "Saved.md",
+      file_kind: "extension",
+      storage_path: `/retained/bytes-${index}`,
+      mime_type: "text/markdown",
+      size_bytes: 12,
+      hash: "retained-hash",
+      created_at: now,
+      updated_at: now,
+    }));
+    await db.insert(s.files).values(originals);
+    await migrateExtensionIdentities(db);
+    expect(await db.select().from(s.files).orderBy(s.files.id)).toEqual(
+      originals.map((file) => ({ ...file, owner: file.owner === old ? next : file.owner })),
+    );
   } finally {
     await close();
   }

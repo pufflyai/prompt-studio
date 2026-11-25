@@ -44,7 +44,7 @@ export const createExtensionAutomationService = (options: {
     if (!parsed.success || automationTextEncoder.encode(canonicalJson(parsed.data)).byteLength > MAX_INPUT_BYTES) {
       throw new AutomationRequestError("invalid_automation_input", "Invalid automation input.", 400);
     }
-    const principal = await deps.automationDBService.getOrCreateExtensionPrincipal(input);
+    const principal = await deps.automationDBService.getExtensionPrincipal(input);
     if (principal.disabled_at)
       throw new AutomationRequestError("automation_scope_denied", "Automation principal is disabled.", 403);
     return options.withAdmissionLock(`${principal.id}:${input.projectId}`, () =>

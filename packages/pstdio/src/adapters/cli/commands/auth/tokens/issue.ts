@@ -8,7 +8,6 @@ export const builder = (yargs: Argv) =>
   yargs
     .option("name", { type: "string", demandOption: true, describe: "Token owner and purpose" })
     .option("project", { type: "string", demandOption: true, describe: "Exact project ID" })
-    .option("principal", { type: "string", describe: "Existing principal ID for token rotation" })
     .option("command", { type: "string", array: true, demandOption: true, describe: "Allowed command ID" })
     .option("expires-in", { type: "string", default: "90d", describe: "Expiry such as 30m, 24h, or 90d" });
 
@@ -22,13 +21,10 @@ export const parseExpirySeconds = (value: string) => {
 };
 
 export const createHandler = (client = createTokenClient()) =>
-  async function issueToken(
-    argv: Arguments<{ name: string; project: string; principal?: string; command: string[]; expiresIn: string }>,
-  ) {
+  async function issueToken(argv: Arguments<{ name: string; project: string; command: string[]; expiresIn: string }>) {
     const issued = await client.issueToken({
       name: argv.name,
       projectId: argv.project,
-      ...(argv.principal ? { principalId: argv.principal } : {}),
       commandScopes: argv.command,
       expiresInSeconds: parseExpirySeconds(argv.expiresIn),
     });

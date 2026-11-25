@@ -223,17 +223,7 @@ const issued = await client.automation.issueToken({
 });
 ```
 
-Token rotation can preserve the same project-scoped principal and idempotency history by passing the `principalId` returned with the original token:
-
-```ts
-const replacement = await client.automation.issueToken({
-  name: "notion-trigger-rotated",
-  projectId,
-  principalId: issued.principalId,
-  commandScopes: ["acme.remote.command.launch"],
-  expiresInSeconds: 30 * 24 * 60 * 60,
-});
-```
+Each token has its own run identity and idempotency history. For rotation, issue a new token with the required project and command scopes, switch the caller, then revoke the old credential. Runs created by the original token remain associated with it.
 
 Create a second client with the returned machine token. That client can call its allowed automation routes but cannot use normal project or settings routes.
 

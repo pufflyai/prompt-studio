@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { normalizeExtensionSources } from "pstdio-extensions";
 import { createMemoryDocumentStore } from "pstdio-sync";
 import { createDocumentStorage } from "pstdio-sync/records";
@@ -26,7 +27,7 @@ const fixture = () => {
         name: "notes",
         version: "1.0.0",
         main: "extension.ts",
-        enginesPstdio: "^0.4.0 || ^0.5.0",
+        enginesPstdio: `^${EXTENSION_API_VERSION}`,
       },
       definition: {
         commands: [{ id: "tick", ref: { kind: "command", id: "tick" }, title: "Tick", run() {} }],

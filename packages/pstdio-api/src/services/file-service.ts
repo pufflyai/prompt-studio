@@ -1,13 +1,15 @@
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { createFilesDBService } from "pstdio-db";
 import type { createFilesStorageService } from "pstdio-storage";
 import type { EventBus } from "../features/sync/event-bus";
+import { apiLogger } from "../lib/logger";
 import type { createProjectWork } from "./project-work";
 
 export type FileServiceDeps = {
   filesDBService: ReturnType<typeof createFilesDBService>;
   filesStorageService: Pick<
     ReturnType<typeof createFilesStorageService>,
-    "writeStream" | "writeFileAtPath" | "deleteFile" | "computeHash" | "discardUpload"
+    "writeStream" | "writeFileAtPath" | "deleteFile" | "computeHash" | "discardUpload" | "fileRemovals"
   >;
   eventBus: EventBus;
   projectWork?: ReturnType<typeof createProjectWork>;
@@ -17,6 +19,22 @@ export type FileServiceDeps = {
 export const createFileService = (deps: FileServiceDeps) => {
   const db = deps.filesDBService;
   const storage = deps.filesStorageService;
+  const removals = storage.fileRemovals(db.authority);
+  const recoverRemovals = async (filter?: { fileId?: string; projectId?: string; owner?: string }) => {
+    const failures = await removals.recover(
+      db.get,
+      (file) =>
+        (!filter?.fileId || file.id === filter.fileId) &&
+        (!filter?.projectId || file.project_id === filter.projectId) &&
+        (!filter?.owner || (file.owner !== null && canonicalExtensionId(file.owner) === filter.owner)),
+    );
+    if (filter && failures.length) throw failures[0].error;
+    for (const failure of failures)
+      apiLogger.warn(
+        { err: failure.error, path: failure.path, event: "file.removal.recovery" },
+        "File cleanup will retry on the next startup",
+      );
+  };
   const withProject = <T>(id: string, task: (signal?: AbortSignal) => Promise<T>, signal?: AbortSignal) =>
     deps.projectWork ? deps.projectWork.run(id, task, signal) : task(signal);
 
@@ -82,13 +100,11 @@ export const createFileService = (deps: FileServiceDeps) => {
     withProject(input.project_id, (signal) => uploadFile({ ...input, signal }, initialize), input.signal);
 
   const update = async (fileId: string, input: { data: Buffer }) => {
+    await recoverRemovals({ fileId });
     const existing = await db.get(fileId);
     if (!existing) return null;
 
     return withProject(existing.project_id, async () => {
-      // Overwrite the file at the existing storage path
-      storage.writeFileAtPath(existing.storage_path, input.data);
-
       const hash = storage.computeHash(input.data);
       const updated = {
         ...existing,
@@ -97,11 +113,16 @@ export const createFileService = (deps: FileServiceDeps) => {
         updated_at: new Date().toISOString(),
       };
 
-      await db.updateMetadata(fileId, {
-        size_bytes: updated.size_bytes,
-        hash: updated.hash,
-        updated_at: updated.updated_at,
-      });
+      const written = await db.updateMetadata(
+        fileId,
+        {
+          size_bytes: updated.size_bytes,
+          hash: updated.hash,
+          updated_at: updated.updated_at,
+        },
+        (file) => storage.writeFileAtPath(file.storage_path, input.data),
+      );
+      if (!written) return null;
 
       deps.eventBus.emit("files", "set", updated);
       return updated;
@@ -109,14 +130,26 @@ export const createFileService = (deps: FileServiceDeps) => {
   };
 
   const remove = async (fileId: string) => {
+    await recoverRemovals({ fileId });
     const existing = await db.get(fileId);
     if (!existing) return false;
-
     return withProject(existing.project_id, async () => {
-      storage.deleteFile(existing.storage_path);
-      await db.remove(fileId);
+      let staged: Awaited<ReturnType<typeof removals.stage>> | undefined;
+      try {
+        const removed = await db.remove(fileId, async (file) => {
+          staged = await removals.stage(file);
+        });
+        if (!removed) return false;
+      } catch (error) {
+        try {
+          await staged?.rollback();
+        } catch (rollback) {
+          throw new AggregateError([error, rollback], "File deletion failed and byte rollback is pending.");
+        }
+        throw error;
+      }
       deps.eventBus.emit("files", "delete", { id: fileId });
-
+      await staged?.commit();
       return true;
     });
   };
@@ -124,26 +157,17 @@ export const createFileService = (deps: FileServiceDeps) => {
   return {
     // Session removal deletes the file row in its own transaction. Restore its bytes if
     // that transaction fails; publish the file deletion only after the commit.
-    prepareRemoval: async (file: NonNullable<Awaited<ReturnType<typeof get>>>) => {
-      let data: Buffer | undefined;
-      try {
-        data = await readFile(file.storage_path);
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-      }
-      try {
-        storage.deleteFile(file.storage_path);
-      } catch (error) {
-        if (data) storage.writeFileAtPath(file.storage_path, data);
-        throw error;
-      }
+    prepareRemoval: async (file: NonNullable<Awaited<ReturnType<typeof get>>> & { owner?: string | null }) => {
+      const staged = await removals.stage({ ...file, owner: file.owner ?? "pstdio" });
       return {
-        rollback: () => {
-          if (data) storage.writeFileAtPath(file.storage_path, data);
+        rollback: staged.rollback,
+        commit: async () => {
+          deps.eventBus.emit("files", "delete", { id: file.id });
+          await staged.commit();
         },
-        commit: () => deps.eventBus.emit("files", "delete", { id: file.id }),
       };
     },
+    recoverRemovals,
     get,
     list,
     upload,
@@ -159,5 +183,3 @@ export const createFileService = (deps: FileServiceDeps) => {
     removeOwnedBytes: (id: string) => deps.removeOwnedBytes?.(id),
   };
 };
-
-import { readFile } from "node:fs/promises";

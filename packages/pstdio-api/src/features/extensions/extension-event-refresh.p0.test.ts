@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { defineHook } from "@pstdio/sdk/extensions";
 import type { EventContext } from "pstdio-api-contracts/extension-kernel";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { normalizeExtensionSources } from "pstdio-extensions";
 import { EventBus } from "../sync/event-bus";
 import { fireExtensionEvent } from "./extension-event-runtime";
@@ -81,7 +82,7 @@ test("broadcast false suppresses historical notices as well as canonical notices
         name: "notes",
         version: "1.0.0",
         main: "extension.ts",
-        enginesPstdio: "^0.4.0 || ^0.5.0",
+        enginesPstdio: `^${EXTENSION_API_VERSION}`,
       },
       definition: {
         hooks: [

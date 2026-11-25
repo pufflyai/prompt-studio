@@ -75,8 +75,8 @@ const createSessionEnvironment = (
     {
       extensionStorageService: makeStorageService(),
       sessionQueueLifecycle: createSessionQueueLifecycle(),
-      extensionSettingsDBService: {
-        getValue: async () => (harness.defaults ? { value_json: harness.defaults } : null),
+      preferencesDBService: {
+        get: async () => (harness.defaults ? { value: { value: harness.defaults } } : null),
       },
       workspaceService: {
         getDefault: async () => workspace,
@@ -255,7 +255,7 @@ describe("createCommandEnvironment sessions attachments", () => {
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
-        extensionSettingsDBService: { getValue: async () => null },
+        preferencesDBService: { get: async () => null },
         harnessRegistry: { get: async () => ({ listModels: async () => [], params: {} }) },
         fileService: {
           get: async () => sessionAttachmentFile("extension-follow-up.txt"),

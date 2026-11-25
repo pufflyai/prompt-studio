@@ -1,20 +1,19 @@
-import { and, asc, eq, gt, inArray, isNull, not, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, not, or, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { board_default_views, board_views } from "../../db/schemas.pg";
+import { board_views } from "../../db/schemas.pg";
 import { type PageQuery, pageBoundary, pageLimit, queryPage } from "../query-page";
+import {
+  type BoardScope,
+  boardScopeWhere,
+  getBoardDefault,
+  listBoardDefaults,
+  setBoardDefault,
+} from "./board-defaults";
 import { queryBoardViews } from "./board-view-query";
 
-type BoardScope = Pick<typeof board_views.$inferSelect, "project_id" | "extension_instance_id" | "board_id">;
 type ViewInput = Pick<typeof board_views.$inferSelect, "title" | "settings" | "filter" | "sorts">;
 type ViewsTransaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
-const scopeWhere = (table: typeof board_views | typeof board_default_views, scope: BoardScope) =>
-  and(
-    eq(table.project_id, scope.project_id),
-    scope.extension_instance_id === null
-      ? isNull(table.extension_instance_id)
-      : eq(table.extension_instance_id, scope.extension_instance_id),
-    eq(table.board_id, scope.board_id),
-  );
+const scopeWhere = (_table: typeof board_views, scope: BoardScope) => boardScopeWhere(scope);
 const viewWhere = (projectId: string, id: string) => and(eq(board_views.project_id, projectId), eq(board_views.id, id));
 
 export class LastBoardViewError extends Error {
@@ -46,7 +45,7 @@ export const createBoardViewsDBService = (db: DbClient) => {
       .where(
         and(
           eq(board_views.project_id, projectId),
-          enabledInstances.length ? inArray(board_views.extension_instance_id, enabledInstances) : sql`false`,
+          enabledInstances.length ? inArray(board_views.extension_id, enabledInstances) : sql`false`,
           boards.length ? not(or(...boards.map((board) => scopeWhere(board_views, board)))!) : undefined,
           boundary ? gt(board_views.id, boundary) : undefined,
         ),
@@ -57,8 +56,7 @@ export const createBoardViewsDBService = (db: DbClient) => {
   };
   const get = async (projectId: string, id: string) =>
     (await db.select().from(board_views).where(viewWhere(projectId, id)))[0] ?? null;
-  const getDefault = async (scope: BoardScope) =>
-    (await db.select().from(board_default_views).where(scopeWhere(board_default_views, scope)))[0] ?? null;
+  const getDefault = (scope: BoardScope) => getBoardDefault(db, scope);
   const initialize = (scope: BoardScope, views: ViewInput[], defaultIndex: number) =>
     db.transaction(async (tx) => {
       const existing = await tx
@@ -81,21 +79,7 @@ export const createBoardViewsDBService = (db: DbClient) => {
           })),
         )
         .returning();
-      await tx
-        .insert(board_default_views)
-        .values({
-          ...scope,
-          default_view_id: rows[defaultIndex].id,
-          updated_at: now,
-        })
-        .onConflictDoUpdate({
-          target: [
-            board_default_views.project_id,
-            board_default_views.extension_instance_id,
-            board_default_views.board_id,
-          ],
-          set: { default_view_id: rows[defaultIndex].id, updated_at: now },
-        });
+      await setBoardDefault(tx, scope, rows[defaultIndex].id, now);
       return rows;
     });
   const create = async (input: BoardScope & ViewInput) => {
@@ -136,35 +120,14 @@ export const createBoardViewsDBService = (db: DbClient) => {
         )
         .returning()
     )[0] ?? null;
-  const setDefault = async (scope: BoardScope, viewId: string | null) => {
-    if (viewId === null)
-      return (
-        (await db.delete(board_default_views).where(scopeWhere(board_default_views, scope)).returning())[0] ?? null
-      );
-    const row = { ...scope, default_view_id: viewId, updated_at: new Date().toISOString() };
-    return (
-      await db
-        .insert(board_default_views)
-        .values(row)
-        .onConflictDoUpdate({
-          target: [
-            board_default_views.project_id,
-            board_default_views.extension_instance_id,
-            board_default_views.board_id,
-          ],
-          set: { default_view_id: viewId, updated_at: row.updated_at },
-        })
-        .returning()
-    )[0];
-  };
+  const setDefault = (scope: BoardScope, id: string | null) => db.transaction((tx) => setBoardDefault(tx, scope, id));
   const deleteView = async (tx: ViewsTransaction, projectId: string, id: string) => {
-    const [view] = await tx.delete(board_views).where(viewWhere(projectId, id)).returning();
+    const [view] = await tx.select().from(board_views).where(viewWhere(projectId, id));
     if (!view) return null;
-    const [defaultView] = await tx
-      .delete(board_default_views)
-      .where(and(scopeWhere(board_default_views, view), eq(board_default_views.default_view_id, id)))
-      .returning();
-    return { view, defaultView: defaultView ?? null };
+    const selected = await getBoardDefault(tx, view);
+    const defaultView = selected?.default_view_id === id ? await setBoardDefault(tx, view, null) : null;
+    await tx.delete(board_views).where(viewWhere(projectId, id));
+    return { view, defaultView };
   };
   const removeOrphaned = (projectId: string, id: string) => db.transaction((tx) => deleteView(tx, projectId, id));
   const remove = (projectId: string, id: string) =>
@@ -198,6 +161,7 @@ export const createBoardViewsDBService = (db: DbClient) => {
     queryOrphaned,
     get,
     getDefault,
+    listDefaults: (projectId?: string, extensionId?: string) => listBoardDefaults(db, projectId, extensionId),
     initialize,
     create,
     update,

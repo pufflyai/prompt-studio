@@ -96,6 +96,22 @@ const assertSavedQuota = async (db: PGlite, project: string, owners: string[], m
   }
 };
 
+const enabledHomeSources = async (db: PGlite, project: string) => {
+  const {
+    rows: [schema],
+  } = await db.query<{ current: boolean; projects: boolean }>(
+    "SELECT to_regclass('public.extensions') IS NOT NULL AS current, to_regclass('public.project_extensions') IS NOT NULL AS projects",
+  );
+  const sourceTable = schema!.current ? "extensions" : "installed_extension_sources";
+  const membership = schema!.projects ? "project_extensions" : "extension_instances";
+  const sourceRef = schema!.projects ? "extension_ref" : "installed_extension_id";
+  const projectRef = schema!.projects ? "project_id" : "scope_id";
+  return db.query<{ extension_id: string }>(
+    `SELECT DISTINCT s.extension_id FROM ${sourceTable} s JOIN ${membership} i ON i.${sourceRef} = s.id WHERE i.${projectRef} = $1 AND i.enabled AND s.extension_id IN ($2, $3)`,
+    [project, historical, canonical],
+  );
+};
+
 // Open only the stopped disposable profile. The candidate must run the migrations itself.
 export const checkHomeHistory = async (input: ProjectUpgradeInput, project: string, before?: { owner: string }) => {
   const path = join(input.home, "pstdio.db");
@@ -103,10 +119,7 @@ export const checkHomeHistory = async (input: ProjectUpgradeInput, project: stri
   const icu = join(dirname(require.resolve("@electric-sql/pglite-icu-full")), "icu.76.tgz");
   const db = new PGlite(path, { database: "template1", username: "postgres", icuDataDir: Bun.file(icu) });
   try {
-    const source = await db.query<{ extension_id: string }>(
-      "SELECT DISTINCT s.extension_id FROM installed_extension_sources s JOIN extension_instances i ON i.installed_extension_id = s.id WHERE i.scope_id = $1 AND i.enabled AND s.extension_id IN ($2, $3)",
-      [project, historical, canonical],
-    );
+    const source = await enabledHomeSources(db, project);
     assert.equal(source.rows.length, 1, "Expected one enabled Home identity in the upgrade fixture");
     const owner = before?.owner ?? source.rows[0]!.extension_id;
     const conflicted = input.profile === "conflicted";

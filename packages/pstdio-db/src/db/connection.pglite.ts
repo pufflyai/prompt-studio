@@ -17,13 +17,23 @@ import {
   createMemoryIndexNodeFiles,
 } from "../services/extension-storage/index-node-files";
 import { upgradeIndexNodesToFiles } from "../services/extension-storage/index-node-upgrade";
+import { prepareAppPreferencesUpgrade } from "./app-preferences-upgrade";
+import { prepareAutomationOwnersUpgrade } from "./automation-owners-upgrade";
+import { prepareBoardDefaultsUpgrade } from "./board-defaults-upgrade";
+import { prepareBoardOwnersUpgrade } from "./board-owners-upgrade";
+import { prepareConnectionCredentialsUpgrade } from "./connection-credentials-upgrade";
+import { attachDatabaseAuthority } from "./database-authority";
+import { prepareExtensionPreferencesUpgrade } from "./extension-preferences-upgrade";
+import { prepareFileOwnersUpgrade } from "./file-owners-upgrade";
 import { openPglite } from "./open-pglite";
 import { canonicalDbPath, resolveDbPath } from "./paths";
 import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-current-home";
 import { pgliteIdentity } from "./pglite-identity";
 import { acquirePgliteLock } from "./pglite-lock";
+import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
 import { createRetiredStorageCleanup } from "./retired-storage-cleanup";
 import * as schema from "./schemas.pg";
+import { prepareSessionWorkspaceUpgrade } from "./session-workspace-upgrade";
 import { type DatabaseMaintenancePhase, invalidateMaintenance, maintainDatabase } from "./startup-maintenance";
 
 type EmbeddedFile = Blob & { name: string };
@@ -209,6 +219,7 @@ export const createDb = async (options?: {
     onPhase("database_opened");
 
     const db = drizzle(openedPglite, { schema });
+    attachDatabaseAuthority(db, dbPath);
     // The node folder belongs to this database, so another database can never clean it up.
     const indexNodes =
       dbPath === ":memory:"
@@ -218,7 +229,25 @@ export const createDb = async (options?: {
     let migrated = false;
     await withMigrationsFolder(async (migrationsFolder) => {
       if (!fs.existsSync(migrationsFolder)) return;
+      const finishProjectExtensionsUpgrade = await prepareProjectExtensionsUpgrade(db, dbPath);
+      const finishFileOwnersUpgrade = await prepareFileOwnersUpgrade(db, dbPath);
+      const finishPreferencesUpgrade = await prepareAppPreferencesUpgrade(db, dbPath);
+      const finishExtensionPreferencesUpgrade = await prepareExtensionPreferencesUpgrade(db, dbPath);
+      const finishConnectionCredentialsUpgrade = await prepareConnectionCredentialsUpgrade(db, dbPath);
+      const finishBoardOwnersUpgrade = await prepareBoardOwnersUpgrade(db, dbPath);
+      const finishBoardDefaultsUpgrade = await prepareBoardDefaultsUpgrade(db, dbPath);
+      const finishAutomationOwnersUpgrade = await prepareAutomationOwnersUpgrade(db, dbPath);
+      const finishSessionWorkspaceUpgrade = await prepareSessionWorkspaceUpgrade(db, dbPath);
       await migrate(db, { migrationsFolder });
+      await finishProjectExtensionsUpgrade?.();
+      await finishPreferencesUpgrade?.();
+      await finishExtensionPreferencesUpgrade?.();
+      await finishConnectionCredentialsUpgrade?.();
+      await finishBoardOwnersUpgrade?.();
+      await finishBoardDefaultsUpgrade?.();
+      await finishAutomationOwnersUpgrade?.();
+      await finishSessionWorkspaceUpgrade?.();
+      await finishFileOwnersUpgrade();
       migrated = true;
     });
     // Copy durable receipts before opening. Remove old rows for both sides of an identity

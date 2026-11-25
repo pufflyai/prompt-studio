@@ -24,13 +24,10 @@ const createSharedViews = <TSettings extends NonNullable<import("@pstdio/sdk/api
   input: SharedViewsInput,
 ) => {
   const { projectId, record, metadata } = input;
-  const extensionInstanceId = metadata.extensions.find(
-    (extension) => extension.id === record.extensionId,
-  )?.extensionInstanceId;
   const localId = metadata.views.find((view) => view.id === record.id)!.localId;
   return createSharedCollectionViews<TSettings>({
     projectId,
-    extensionInstanceId,
+    extensionId: record.extensionId,
     localId,
     record,
   });

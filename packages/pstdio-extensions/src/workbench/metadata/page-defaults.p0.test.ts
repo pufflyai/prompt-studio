@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { defineExtension, definePage, defineView, packageAsset, workbenchModes } from "@pstdio/sdk/extensions";
 import { workbenchExtensionMetadataSchema } from "pstdio-api-contracts";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import type { LoadedExtensionSource } from "../../runtime/loader";
 import { normalizeExtensionSources } from "../../runtime/normalize";
 import { createWorkbenchExtensionMetadata } from "./workbench-extension-metadata";
@@ -98,7 +99,7 @@ test("extension page groups preserve their default child through metadata serial
       publisher: "example",
       version: "1.0.0",
       main: "./extension.ts",
-      enginesPstdio: "^0.4.0 || ^0.5.0",
+      enginesPstdio: `^${EXTENSION_API_VERSION}`,
     },
     definition: defineExtension({ pages: [group, child] }),
   };

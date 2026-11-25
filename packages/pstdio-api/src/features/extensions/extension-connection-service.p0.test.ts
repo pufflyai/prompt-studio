@@ -1,12 +1,18 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createExtensionConnectionService } from "./extension-connection-service";
-import { connection, contribution, createConnectionTestService } from "./extension-connection-service.test-fixture";
+import {
+  connection,
+  contribution,
+  createConnectionTestService,
+  credentialMethods,
+} from "./extension-connection-service.test-fixture";
 
 describe("extension connection service", () => {
   test("records an HTTP error response as a failed health check", async () => {
     let lastCheck: { ok: boolean; status: number | null; error: string | null; checkedAt: string } | null = null;
     const service = createExtensionConnectionService({
       connectionsDBService: {
+        ...credentialMethods,
         get: async () => ({ ...connection, last_check_json: lastCheck }),
         recordCheck: async (_key: unknown, check: NonNullable<typeof lastCheck>) => {
           lastCheck = check;
@@ -73,6 +79,7 @@ describe("extension connection service", () => {
     const deleteSecret = mock(async () => {});
     const service = createExtensionConnectionService({
       connectionsDBService: {
+        ...credentialMethods,
         listByProject: async () => [connection, { ...connection, id: "connection-record-2", secret_ref: null }],
       } as never,
       secretStore: {
@@ -96,7 +103,7 @@ describe("extension connection service", () => {
   test("commits connection metadata removal when credential cleanup must retry", async () => {
     const remove = mock(async () => connection);
     const service = createExtensionConnectionService({
-      connectionsDBService: { get: async () => connection, remove } as never,
+      connectionsDBService: { ...credentialMethods, get: async () => connection, remove } as never,
       secretStore: {
         get: async () => "credential-canary",
         set: async () => "secret-1",
@@ -120,6 +127,7 @@ describe("extension connection service", () => {
     const deleteSecret = mock(async () => {});
     const service = createExtensionConnectionService({
       connectionsDBService: {
+        ...credentialMethods,
         get: async () => connection,
         listByExtension: async () => [connection],
         remove,
@@ -146,6 +154,7 @@ describe("extension connection credential ownership", () => {
     const deleteSecret = mock(async () => {});
     const service = createExtensionConnectionService({
       connectionsDBService: {
+        ...credentialMethods,
         get: async () => connection,
         upsert: async () => {
           throw new Error("database unavailable");
@@ -180,6 +189,7 @@ describe("extension connection credential ownership", () => {
     const deleteSecret = mock(async () => {});
     const service = createExtensionConnectionService({
       connectionsDBService: {
+        ...credentialMethods,
         get: async () => connection,
         remove: async () => {
           throw new Error("database unavailable");
@@ -207,6 +217,7 @@ describe("extension connection credential ownership", () => {
     const deletedSecrets: string[] = [];
     const service = createExtensionConnectionService({
       connectionsDBService: {
+        ...credentialMethods,
         get: async () => rows[0] ?? null,
         listAll: async () => rows,
         remove: async () => rows.shift() ?? null,
@@ -238,6 +249,7 @@ describe("extension connection credential ownership", () => {
     });
     const service = createExtensionConnectionService({
       connectionsDBService: {
+        ...credentialMethods,
         get: async () => connection,
         upsert: async (input: { secretRef?: string | null }) => {
           upserts.push(input);

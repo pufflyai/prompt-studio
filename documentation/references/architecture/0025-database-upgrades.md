@@ -39,6 +39,112 @@ Core has no import code. To restore old data, ask an agent to read the export an
 - A change that would need a data repair for existing homes: prefer a schema that does not need one. If it is unavoidable, the repair ships as a generated migration, tested on a copy of a large real database first. See [the lesson from 0.46](../../lessons-learned/0018-in-place-upgrades-meet-real-data-last.md).
 - A new baseline repeats the 0.46 process: squash, change the marker's `baseline`, and update the backup folder name. Decide it as a breaking release, in an ADR.
 
+### Session workspace conversion
+
+The app-storage migration replaces `workspace_sessions` with `sessions.workspace_id`.
+Before changing the schema, startup writes and fsyncs the old link rows beside the
+database. It selects the earliest link by creation time and ID as the current
+workspace. Other workspace associations become normal session resource context
+links, preserving existing link details. After restoration commits, the original
+rows move to `<database>-migration-exports/workspace-sessions.jsonl`. This export
+stays until explicitly removed. An interrupted conversion resumes from the durable
+input. The original session fields and timestamps remain unchanged.
+
+### Stable board ownership
+
+Saved board views belong to `(project_id, extension_id, board_id)`, independent
+of an installed provider. Native boards use a null extension ID. Saved defaults
+use the view flag; built-in choices and the independent selection timestamp are
+project preferences under that stable extension owner. Removing one provider
+preserves this data while another provider remains, including a disabled one.
+
+Before the schema change, startup resolves each old instance against its project
+and writes durable conversion input. It retains original view rows and default
+selections in `<database>-migration-exports/board-owners.jsonl` and
+`board-defaults.jsonl`. If several old providers had different defaults for the
+same stable board, the latest selection timestamp wins, then the greatest old
+instance ID breaks a tie. Every view and its original timestamps remain. An
+interrupted migration resumes before clients can read the rows.
+
+The public core sync collections retain their `extension_instance_id` field name
+as a serialization alias of the stable extension ID. They never store another
+instance reference. Their default-row IDs derive from project, stable extension
+and board. SDK view response fields are unchanged. Runtime identity recovery publishes updated
+view rows and replaces old default sync IDs after the rename commits, including
+built-in defaults with no saved view. Ordinary provider changes keep the same scope.
+
+### Project extension configuration
+
+`project_extensions` uses `(project_id, extension_ref)` as its primary key.
+The project reference cascades on deletion; the extension reference points to a
+local registration in `extensions` and prevents removing a source still in use.
+Enabled state, configuration, diagnostics, display name and timestamps remain
+on that project configuration. There is no separate stored instance ID or
+polymorphic scope.
+
+The instance collection and API responses keep their published fields. Their
+ID is `project-extension:` followed by the JSON array `[project ID, source ID]`.
+Changing a provider changes that ID. Activation deletes the old sync identity
+before publishing the new one, and moves project settings and skill/automation
+preferences in the same database transaction. A conflicting retained preference
+aborts activation without replacing either choice. Stable extension-owned files,
+documents and board views keep their owner.
+Preference writes validate the live installation and save within one transaction,
+so a concurrent switch or project deletion cannot leave an obsolete scope behind.
+
+Before DDL, startup captures every released instance row. It maps project rows
+and their dependent preferences to the new key, preserving values and timestamps.
+All original rows remain in
+`<database>-migration-exports/extension-instances.jsonl`, including non-project
+or missing-project scopes that have no target in the project-only schema. The
+original ID, scope and source reference in that export also identify the new
+composite key. Exports remain until explicitly removed. Interrupted restoration
+resumes from durable input; a different existing configuration causes a conflict
+instead of overwriting either value.
+
+### File ownership conversion
+
+Files carry their owner, optional scope and logical path directly. Skills use
+`skill:<skill ID>` with a logical path. Extensions use their stable extension ID
+with a scope encoded as `[scope type, scope ID]`. Removing a provider preserves
+files while another provider for that owner remains, including a disabled one.
+
+Before removing the released `skill_files` and `extension_files` relations,
+startup captures their complete rows and file metadata. A matching file may keep
+its ID. A file shared by independent owners or scopes gets independent byte
+copies and deterministic new IDs. Host attachments keep their original file.
+The alpha conversion changes secondary binding IDs; it retains every original
+binding and its converted file ID/path in `<database>-migration-exports/`.
+The `skill-files.jsonl`, `extension-files.jsonl`, `file-mappings/` and
+`file-allocations/` exports stay until explicitly removed.
+
+Copies stream through bounded buffers, verify the original size/hash, and fsync
+bytes before publishing metadata. Missing original bytes remain missing at
+independent paths. Conflicting metadata, occupied copy paths and invalid project
+owners stop conversion without replacing data. Durable conversion input remains
+until both ownership groups finish, allowing interrupted restoration to resume.
+Public file response fields stay unchanged.
+
+### File deletion recovery
+
+File deletion locks the row and refuses files still referenced by a skill,
+session or workspace. Before deleting metadata, the file service fsyncs a small
+receipt and moves the bytes to a sibling staging name using a hard link. A failed
+database transaction restores the original path. After commit, it removes the
+staged bytes, readable aliases and receipt. Session checkpoint deletion uses the
+same protocol within the session transaction.
+
+Receipts live under the storage directory's `file-removals/` directory, separated
+by the canonical database path. Startup replays only that database's receipts:
+a surviving row restores bytes, and a removed row finishes deletion. Project,
+path and inode conflicts retain the receipt and report a retryable failure.
+Receipts survive until cleanup succeeds; they add no database table. Explicit
+extension removal retries its receipts before removing the provider. A failed
+startup cleanup is reported and does not prevent other tools from opening.
+POSIX directory flushes qualify the publication order. Windows process replay is
+supported; Windows power-loss durability remains unqualified under
+[ADR 0104](../../adrs/0104-temporary-windows-database-publication-retries.md).
+
 ### Cleanup and disk maintenance
 
 Startup applies schema migrations, copies reachable receipt nodes into files, and

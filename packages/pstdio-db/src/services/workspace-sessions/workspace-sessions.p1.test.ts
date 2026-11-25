@@ -116,3 +116,31 @@ describe("createWorkspaceSessionsDBService", () => {
     await expect(workspaceSessionsService.link(ws.id, session.id)).rejects.toThrow();
   });
 });
+
+test("a session has one current workspace and survives that workspace being removed", async () => {
+  const { eq } = await import("drizzle-orm");
+  const { sessions, workspaces } = await import("../../db/schemas.pg");
+  const first = await workspacesService.create({ project_id: projectId, shorthand_base: "FIRST" });
+  const second = await workspacesService.create({ project_id: projectId, shorthand_base: "SECOND" });
+  const session = await sessionsService.create({
+    project_id: projectId,
+    title: "Moving session",
+    agent: "claude-code",
+  });
+  await workspaceSessionsService.link(first.id, session.id);
+  expect(await db.select().from(sessions).where(eq(sessions.id, session.id))).toMatchObject([
+    { workspace_id: first.id },
+  ]);
+  await workspaceSessionsService.link(second.id, session.id);
+  expect((await workspaceSessionsService.getWorkspaceBySessionId(session.id))?.id).toBe(second.id);
+  expect(await workspaceSessionsService.listByWorkspace(first.id)).toEqual([]);
+  expect(await workspaceSessionsService.listSessionLinks(session.id)).toHaveLength(1);
+  await db.delete(workspaces).where(eq(workspaces.id, second.id));
+  expect(await db.select().from(sessions).where(eq(sessions.id, session.id))).toMatchObject([{ workspace_id: null }]);
+  expect(await workspaceSessionsService.listSessionLinks(session.id)).toEqual([]);
+  const current = (await sessionsService.get(session.id))!;
+  const { anchors_json, ...fields } = current;
+  const { anchors_json: originalAnchors, ...original } = session;
+  expect(fields).toEqual(original);
+  expect(anchors_json).toContainEqual(expect.objectContaining({ type: "workspace", id: first.id }));
+});

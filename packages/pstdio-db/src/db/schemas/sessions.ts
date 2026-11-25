@@ -3,6 +3,7 @@ import type { ExtensionSessionUsage } from "pstdio-api-contracts/extension-kerne
 import { sessionStatusEnum } from "./enums";
 import { files } from "./files";
 import { projects } from "./projects";
+import { workspaces } from "./workspaces";
 
 type HarnessParamsJson = Record<string, string | boolean>;
 
@@ -12,6 +13,7 @@ export const sessions = pgTable(
     change_positions: jsonb("change_positions").$type<import("pstdio-api-contracts").SessionChangePositions>(),
     usage_json: jsonb("usage_json").$type<ExtensionSessionUsage>(),
     id: text("id").primaryKey(),
+    workspace_id: text("workspace_id").references(() => workspaces.id, { onDelete: "set null" }),
     title: text("title").notNull(),
     status: sessionStatusEnum("status").notNull().default("in_progress"),
     project_id: text("project_id").references(() => projects.id, { onDelete: "cascade" }),
@@ -28,5 +30,8 @@ export const sessions = pgTable(
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),
   },
-  (table) => [index("sessions_project_created_id_idx").on(table.project_id, table.created_at, table.id)],
+  (table) => [
+    index("sessions_project_created_id_idx").on(table.project_id, table.created_at, table.id),
+    index("sessions_workspace_idx").on(table.workspace_id),
+  ],
 );
