@@ -47,6 +47,10 @@ export interface BackendWorker {
   /** Resolves as soon as the worker can no longer answer, which can be before its process exits. */
   readonly closed: Promise<void>;
   readonly exited: Promise<number | null>;
+  /** Whether an invocation is running, so an idle worker can be retired without interrupting one. */
+  readonly busy: boolean;
+  /** A monotonic timestamp for the end of the last active invocation. */
+  readonly idleSince: number;
 }
 
 export interface BackendWorkerOptions {
@@ -64,6 +68,12 @@ type Running = HostInvocation & {
 
 export const startBackendWorker = async (options: BackendWorkerOptions): Promise<BackendWorker> => {
   const invocations = new Map<string, Running>();
+  let idleSince = performance.now();
+  const forget = (invocationId: string) => {
+    const deleted = invocations.delete(invocationId);
+    if (deleted && invocations.size === 0) idleSince = performance.now();
+    return deleted;
+  };
   const ready = Promise.withResolvers<void>();
   const loaded = Promise.withResolvers<unknown>();
   let stopped: BackendUnavailableError | undefined;
@@ -95,8 +105,9 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
 
   const hostCalls = createHostCalls(send, (invocationId) => invocations.get(invocationId), workerError);
 
+  // Idle time starts when the last invocation is finally removed, after any cancellation drain.
   const closeInvocation = (id: string, running: Running, error: unknown) => {
-    invocations.delete(id);
+    forget(id);
     clearTimeout(running.drain);
     hostCalls.reject(id, error);
     running.table.clear();
@@ -197,7 +208,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
       args,
     });
     if (!sent) {
-      invocations.delete(invocationId);
+      forget(invocationId);
       return Promise.reject(
         stopped ?? new TypeError("The invocation arguments cannot be sent to the extension backend."),
       );
@@ -227,7 +238,19 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     await ready.promise;
     if (!send({ v: BACKEND_PROTOCOL_VERSION, type: "load", entryPath: options.entryPath }))
       throw stopped ?? new BackendUnavailableError("The extension backend could not be reached.");
-    return { definition: await loaded.promise, closed: closed.promise, exited, stop, invoke };
+    return {
+      definition: await loaded.promise,
+      closed: closed.promise,
+      exited,
+      stop,
+      invoke,
+      get busy() {
+        return invocations.size > 0;
+      },
+      get idleSince() {
+        return idleSince;
+      },
+    };
   } catch (error) {
     await stop();
     throw error;

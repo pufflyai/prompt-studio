@@ -1,9 +1,10 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createStorageMigration } from "pstdio-api-contracts";
-import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { EXTENSION_API_VERSION, type ExtensionContextBase } from "pstdio-api-contracts/extension-kernel";
 import { closeBackendWorkers, prepareExtensionRevision, uncoveredContextFunctions } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
 
@@ -11,6 +12,8 @@ let root: string;
 let handle: Awaited<ReturnType<typeof createTestApp>>;
 let projectId: string;
 const previous = { home: process.env.PSTDIO_HOME, defaults: process.env.PSTDIO_DEFAULT_EXTENSIONS };
+
+const assetBody = `${"part".repeat(65_537)}asset body`;
 
 const entry = `
 const item = (ctx) => ctx.storage.collection("items");
@@ -148,6 +151,47 @@ export default {
       },
     },
     {
+      id: "locals",
+      ref: { kind: "command", id: "locals" },
+      title: "Locals",
+      async run(ctx) {
+        const first = ctx.storage.positions.between();
+        const selector = { type: "resource", resource: { type: "ticket", id: "r1" } };
+        const scoped = ctx.storage.scope(selector);
+        const recordId = scoped.records.id("k");
+        selector.resource.id = "r2";
+        await scoped.set("k", "resource");
+        const customSelector = { type: "custom", id: "one" };
+        const custom = scoped.scope(customSelector);
+        const customId = custom.records.id("k");
+        customSelector.id = "two";
+        await custom.set("k", "custom");
+        return {
+          scoped: recordId,
+          resource: await ctx.storage.scope({ type: "resource", resource: { type: "ticket", id: "r1" } }).get("k"),
+          custom: await scoped.scope({ type: "custom", id: "one" }).get("k"),
+          customId,
+          projectId: custom.scope({ type: "project" }).records.id("k"),
+          url: ctx.storage.files.urlFor("f1"),
+          ordered: ctx.storage.positions.between(undefined, first) < first,
+        };
+      },
+    },
+    {
+      id: "asset",
+      ref: { kind: "command", id: "asset" },
+      title: "Asset",
+      async run(ctx) {
+        const source = Bun.file(new URL("./asset.bin", import.meta.url));
+        source.arrayBuffer = () => { throw new Error("Asset staging must avoid a full-file read"); };
+        const asset = await ctx.storage.assets.stage({ operationId: "op-asset", source });
+        await ctx.storage.assets.verifyComplete([asset]);
+        const hash = new Bun.CryptoHasher("sha256");
+        for await (const chunk of await ctx.storage.assets.read(asset)) hash.update(chunk);
+        return { asset, verifiedSha256: hash.digest("hex") };
+      },
+    },
+    {
       id: "port",
       ref: { kind: "command", id: "port" },
       title: "Port",
@@ -185,6 +229,7 @@ beforeAll(async () => {
     }),
   );
   await writeFile(join(source, "extension.ts"), entry);
+  await writeFile(join(source, "asset.bin"), assetBody);
   const inProcess = join(root, "in-process");
   await mkdir(inProcess);
   await writeFile(
@@ -465,4 +510,44 @@ test("process-mode migration helpers preserve scoped identity and allow record m
       value: { moved: 1, previous: 0, position: migration.position(0, "entry") },
     },
   });
+});
+
+test("process-mode local helpers match the host's own results", async () => {
+  await handle.app.request(`/v1/projects/${projectId}/extensions/commands/example.in-process.command.capture/execute`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ params: {} }),
+  });
+  const host = (globalThis as { __processRuntimeHostContext?: ExtensionContextBase }).__processRuntimeHostContext!;
+  const { outcome } = await execute("locals");
+  expect(outcome.ok).toBe(true);
+  const value = outcome.value as { scoped: string; url: string; ordered: boolean };
+  expect(value.scoped).toBe(
+    host.storage.scope({ type: "resource", resource: { type: "ticket", id: "r1" } }).records.id("k"),
+  );
+  expect(value).toMatchObject({
+    resource: "resource",
+    custom: "custom",
+    customId: host.storage.scope({ type: "custom", id: "one" }).records.id("k"),
+    projectId: host.storage.records.id("k"),
+  });
+  expect(value.url).toBe(host.storage.files.urlFor("f1").replace("example.in-process", "example.isolated"));
+  expect(value.ordered).toBe(true);
+});
+
+test("process-mode handlers resume file-backed assets and read verified bytes", async () => {
+  const owner = { workbenchId: projectId, extensionId: "example.isolated" };
+  const operationId = "op-asset";
+  const asset = {
+    sha256: createHash("sha256").update(assetBody).digest("hex"),
+    byteLength: Buffer.byteLength(assetBody),
+    mediaType: "application/octet-stream",
+  };
+  const offset = 123;
+  const service = handle.deps.assetTransferService;
+  await service.begin(owner, operationId, asset);
+  await service.append(owner, operationId, 0, new Blob([assetBody.slice(0, offset)]).stream());
+  expect(await service.get(owner, operationId)).toMatchObject({ status: "staging", uploadedByteLength: offset });
+  expect((await execute("asset")).outcome).toMatchObject({ ok: true, value: { asset, verifiedSha256: asset.sha256 } });
+  expect(await service.get(owner, operationId)).toMatchObject({ status: "complete", asset });
 });

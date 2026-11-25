@@ -1,6 +1,7 @@
-import { createStorageId, createStorageMigration } from "pstdio-api-contracts";
+import { createStorageId, createStorageMigration, createStoragePositions } from "pstdio-api-contracts";
 import { isNavigationTarget } from "pstdio-api-contracts/extension-kernel";
 import { createCommandRejection } from "../runner/command-rejection";
+import { exportAssetStageInput, importAssetStageInput } from "./asset-source";
 import { openIterator } from "./iterator-lifetime";
 
 /**
@@ -15,6 +16,7 @@ export type BackendSurface =
   | { kind: "signal" }
   /** An asynchronous host method. The worker awaits the host's reply. */
   | { kind: "async" }
+  | { kind: "asset-stage" }
   /** A one-way host method, such as logging. The worker does not wait for it. */
   | { kind: "notify"; check?: "navigationTarget" }
   /** A synchronous host method that returns a `{ close() }` handle, such as `storage.observe`. */
@@ -24,10 +26,20 @@ export type BackendSurface =
   | { kind: "migrate"; projectId: string }
   | { kind: "object"; members: Record<string, BackendSurface> }
   /** A synchronous scope selection, such as `storage.collection(name)`, evaluated for each host call. */
-  | { kind: "factory"; returns: BackendSurface; snapshotArguments?: boolean }
+  | {
+      kind: "factory";
+      returns: BackendSurface;
+      snapshotArguments?: boolean;
+      /** Set on `storage.scope`: the project whose scopes the worker resolves for a local `records.id`. */
+      scopeOf?: string;
+    }
   /** A pure synchronous calculation the worker runs itself from host-provided data. Never a host call. */
   | { kind: "local"; name: "storageId" }
   | { kind: "local"; name: "recordId"; namespace: string[] }
+  | { kind: "local"; name: "position"; deviceId: string }
+  /** `records.id` of scoped storage. Its `storage.scope(...)` factory replaces it with the scope's namespace. */
+  | { kind: "local"; name: "scopedRecordId" }
+  | { kind: "local"; name: "fileUrl"; prefix: string }
   /** The middleware result constructors of ctx.commands, such as `continue()` and `patchParams(params)`. */
   | { kind: "local"; name: "middlewareResult"; type: MiddlewareResultType };
 
@@ -44,10 +56,30 @@ const middlewareResult = (type: MiddlewareResultType) => {
 const localMember = (surface: Extract<BackendSurface, { kind: "local" }>) => {
   if (surface.name === "storageId") return (prefix?: string) => createStorageId(prefix);
   if (surface.name === "middlewareResult") return middlewareResult(surface.type);
+  if (surface.name === "position") return createStoragePositions(surface.deviceId).between;
+  if (surface.name === "scopedRecordId")
+    return () => {
+      throw new Error("records.id is only available on storage returned by storage.scope(...).");
+    };
+  if (surface.name === "fileUrl") {
+    const { prefix } = surface;
+    return (id: string) => `${prefix}${encodeURIComponent(id)}/content`;
+  }
   const { namespace } = surface;
   // Same encoding as pstdio-sync's storageRecordId, which this layer may not import. The process
   // runtime API test compares the result with the host's own records.id.
   return (key: string) => JSON.stringify([...namespace, key]);
+};
+
+// Mirrors the host's resolveStorageScopeInput (command-environment/storage.ts) and recordId's "kv" namespace.
+const scopeNamespace = (projectId: string, scope: StorageScope) => {
+  if (scope?.type === "project") return ["project", projectId, "kv"];
+  if (scope?.type === "resource") {
+    if (!scope.resource?.id) throw new Error("resource storage scope requires resource.id");
+    return ["resource", scope.resource.id, "kv"];
+  }
+  if (!scope?.id) throw new Error(`${scope?.type} storage scope requires id`);
+  return [scope.type!, scope.id, "kv"];
 };
 
 /** One step from the context root: a property, or a factory call with its arguments. */
@@ -76,17 +108,18 @@ const methodOf = (target: unknown, name: string, path: SurfaceStep[]) => {
   return method as (...args: unknown[]) => unknown;
 };
 
-const matchesCall = (member: BackendSurface, kind: "async" | "notify") => {
-  if (member.kind === kind) return true;
-  return kind === "async" && (member.kind === "subscribe" || member.kind === "iterate" || member.kind === "migrate");
-};
+// Members the worker calls asynchronously and whose result it keeps locally, such as a subscription.
+const ASYNC_METHODS = new Set<BackendSurface["kind"]>(["async", "subscribe", "iterate", "migrate", "asset-stage"]);
 
-const resolveSurfaceMember = (surface: BackendSurface, path: SurfaceStep[], kind: "async" | "notify") => {
+const resolveCallMember = (surface: BackendSurface, path: SurfaceStep[], kind: "async" | "notify") => {
   let current = surface;
   for (const [index, step] of path.entries()) {
     const member = memberOf(current, step.name);
     if (!member) return;
-    if (index === path.length - 1) return !step.args && matchesCall(member, kind) ? member : undefined;
+    if (index === path.length - 1)
+      return !step.args && (kind === "async" ? ASYNC_METHODS.has(member.kind) : member.kind === "notify")
+        ? member
+        : undefined;
     if (member.kind === "object" && !step.args) current = member;
     else if (member.kind === "factory" && step.args) current = member.returns;
     else return;
@@ -101,7 +134,7 @@ export const resolveSurfaceCall = (
   args: unknown[] | (() => unknown[]),
   kind: "async" | "notify",
 ) => {
-  const member = resolveSurfaceMember(surface, path, kind);
+  const member = resolveCallMember(surface, path, kind);
   if (!member) throw new SurfaceCallRejectedError(path);
   let target = root;
   for (const step of path.slice(0, -1))
@@ -110,7 +143,8 @@ export const resolveSurfaceCall = (
       : (target as Record<string, unknown>)[step.name];
   const last = path.at(-1)!;
   const method = methodOf(target, last.name, path);
-  const input = typeof args === "function" ? args() : args;
+  const supplied = typeof args === "function" ? args() : args;
+  const input = member.kind === "asset-stage" ? [importAssetStageInput(supplied[0])] : supplied;
   return member.kind === "iterate" && member.signalArg !== undefined
     ? openIterator(method.bind(target), input, member.signalArg)
     : method.apply(target, input);
@@ -218,6 +252,9 @@ export const createSurfaceFacade = (
         return channel.signal;
       case "async":
         return (...args: unknown[]) => channel.call(path, args);
+      case "asset-stage":
+        return async (input: Parameters<typeof exportAssetStageInput>[0]) =>
+          channel.call(path, [exportAssetStageInput(input, channel.signal)]);
       case "notify":
         return (...args: unknown[]) => {
           // A one-way notification cannot return the host's synchronous validation error.
@@ -240,7 +277,13 @@ export const createSurfaceFacade = (
         return (...args: unknown[]) => {
           const input = current.snapshotArguments ? structuredClone(args) : args;
           const steps = [...path.slice(0, -1), { name: path.at(-1)!.name, args: input }];
-          return build(current.returns, steps, undefined);
+          const created = build(current.returns, steps, undefined) as { records?: Record<string, unknown> };
+          if (current.scopeOf !== undefined && created.records) {
+            // The same snapshot as the host path, so a later edit to the caller's selector changes neither.
+            const namespace = scopeNamespace(current.scopeOf, input[0] as StorageScope);
+            created.records.id = localMember({ kind: "local", name: "recordId", namespace });
+          }
+          return created;
         };
       case "object": {
         const facade: Record<string, unknown> = {};
