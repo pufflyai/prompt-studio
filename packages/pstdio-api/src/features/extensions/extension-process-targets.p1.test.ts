@@ -2,7 +2,7 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
-import { isAbsolute, join, relative } from "node:path";
+import { basename, join } from "node:path";
 import { EXTENSION_API_VERSION, type ProcessExit, type ProcessHandle } from "pstdio-api-contracts/extension-kernel";
 import { createProcessOwner } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
@@ -510,9 +510,15 @@ test("target files read local paths relative to the workspace or the home, and r
     readTargetText(handle.deps, { projectId: projects.main, workspaceId, path });
   const home = await handle.deps.workspaceService.getDefault(projects.main);
   expect(await read(home!.id, "notes.txt")).toBe("main notes");
-  // A temporary folder on another drive than the home (Windows CI) has no `~/` form.
-  const fromHome = relative(homedir(), join(root, "main", "notes.txt"));
-  if (!isAbsolute(fromHome)) expect(await read(home!.id, `~/${fromHome}`)).toBe("main notes");
+  expect(await read(home!.id, join(root, "main", "notes.txt"))).toBe("main notes");
+  // The system temporary directory can be on a different drive from the user's home.
+  const homeFixture = await mkdtemp(join(homedir(), "pstdio-target-files-"));
+  try {
+    await writeFile(join(homeFixture, "notes.txt"), "home notes");
+    expect(await read(home!.id, `~/${basename(homeFixture)}/notes.txt`)).toBe("home notes");
+  } finally {
+    await rm(homeFixture, { recursive: true, force: true });
+  }
   const before = seen().length;
   expect(await read(workspaces.remote, "~/.claude/projects/s.jsonl")).toBe("remote text at ~/.claude/projects/s.jsonl");
   expect(seen().slice(before)).toMatchObject([
