@@ -10,14 +10,19 @@ export const queueReviewPlan = (
   tests: string[],
   changed: string[],
   source: SourceIdentity = { sha: "preview", tree: "preview", policy: "preview", dirty: false },
+  desktopInCi = false,
 ) => {
   const scope = resolveCiScope({ event: "merge_group", changedFiles: changed, packages, tests });
   const required = createCiTestPlan(scope, packages, tests, source);
+  const desktopCiFiles = desktopInCi
+    ? required.runs.filter((run) => run.runner === "desktop").flatMap((run) => run.files)
+    : [];
   // Local execution proves the same selected files on its actual host. Only CI can
   // qualify the Linux artifact and ten-minute hosted result; never label a Mac pass Linux.
   const target = { platform: process.platform, arch: process.arch };
   const testPlan = mergeTestPlans(
     required.runs.flatMap((run) => {
+      if (desktopInCi && run.runner === "desktop") return [];
       // A native queue can quarantine a case that the local stable lane already runs.
       const applicable =
         run.lane === "quarantine" ? quarantineFiles(quarantineRunnerForTest(run.runner), target) : null;
@@ -44,6 +49,7 @@ export const queueReviewPlan = (
     throw new Error("Queue coverage requires the e2e test:smoke command");
   return {
     testPlan,
+    desktopCiFiles,
     files: [...new Set(testPlan.runs.filter((run) => !run.smoke).flatMap((run) => run.files))].sort(),
     owners: scope.packageMatrix.flatMap((row) => row.packages),
     smokeFiles: [...new Set(smoke.flatMap((run) => run.files))],
