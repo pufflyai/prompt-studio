@@ -1,3 +1,4 @@
+import type { RuntimeDescriptor } from "pstdio/runtime";
 import type { DesktopRuntimeManager } from "../runtime/runtime-manager";
 import type { DesktopWindowController } from "../windows/window-controller";
 
@@ -9,14 +10,17 @@ export const startWorkbench = async (
   let readiness: ReturnType<typeof runtimeManager.start> | undefined;
   try {
     const lifecycle = window.showLifecycle();
-    readiness = runtimeManager.start((descriptor) => {
-      void window.prepareWorkbench(descriptor).catch((error: unknown) => {
-        // Login/navigation can fail because the runtime itself is failing. Preserve its diagnosis.
+    const announced = Promise.withResolvers<RuntimeDescriptor>();
+    const ready = runtimeManager.start(announced.resolve);
+    readiness = ready;
+    void announced.promise
+      .then((descriptor) => window.prepareWorkbench(descriptor, ready))
+      .catch((error: unknown) => {
+        // A failed runtime can also close navigation. Preserve the runtime's diagnosis.
         if (error instanceof Error && error.message.startsWith("workbench_unavailable:")) {
           preparationFailure.reject(error);
         }
       });
-    });
     const [, runtime] = await Promise.all([
       lifecycle,
       Promise.race([readiness, preparationFailure.promise]).then(async (runtime) => {

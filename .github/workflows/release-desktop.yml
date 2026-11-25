@@ -141,6 +141,11 @@ jobs:
       - name: Test device performance lifecycle and file authorization
         run: bun scripts/test.ts clients/desktop/src/performance --lane stable --prebuilt
 
+      - name: Verify desktop login waits for runtime readiness during upgrades
+        run: >-
+          bun scripts/test.ts clients/desktop/src/lifecycle/start-workbench.p0.test.ts
+          clients/desktop/src/windows/workbench-loading.p0.test.ts --lane stable --prebuilt
+
       - name: Run native quarantines once
         run: bun scripts/test.ts --lane quarantine --scope @pstdio/desktop --runner bun --prebuilt
 

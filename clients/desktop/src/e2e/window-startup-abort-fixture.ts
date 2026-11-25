@@ -35,7 +35,7 @@ void app.whenReady().then(async () => {
   let reason: string | undefined;
   const pending =
     process.env.PSTDIO_WINDOW_TEST_OPERATION === "prepare"
-      ? controller.prepareWorkbench(descriptor)
+      ? controller.prepareWorkbench(descriptor, Promise.resolve())
       : controller.showWorkbench(descriptor);
   void pending.then(
     () => {

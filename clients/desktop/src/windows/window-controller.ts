@@ -245,8 +245,10 @@ export class DesktopWindowController {
     contents.focus();
   }
 
-  prepareWorkbench(descriptor: RuntimeDescriptor) {
-    const loading = this.#loadRuntime(descriptor, (signal) => this.#prepareWorkbenchAssets(descriptor, signal));
+  prepareWorkbench(descriptor: RuntimeDescriptor, runtimeReady: Promise<unknown>) {
+    const loading = this.#loadRuntime(descriptor, (signal) =>
+      this.#prepareWorkbenchAssets(descriptor, runtimeReady, signal),
+    );
     // Keep an early failure owned until showWorkbench joins this preparation.
     void loading.catch(() => {});
     return loading;
@@ -301,21 +303,21 @@ export class DesktopWindowController {
     this.#runtimeOrigin = descriptor.origin;
     const [loginUrl] = await Promise.all([
       createRuntimeLoginUrl((input, init) => fetch(input, { ...init, signal }), descriptor),
-      waitForStartupReadiness(this.#shown, this.#lifecycle.ready, signal),
+      waitForStartupReadiness(signal, this.#shown, this.#lifecycle.ready),
     ]);
     signal.throwIfAborted();
     const view = this.#workbench && !this.#workbenchFailed ? this.#workbench : this.createWorkbench();
     await view.webContents.loadURL(loginUrl);
   }
 
-  async #prepareWorkbenchAssets(descriptor: RuntimeDescriptor, signal: AbortSignal) {
+  async #prepareWorkbenchAssets(descriptor: RuntimeDescriptor, runtimeReady: Promise<unknown>, signal: AbortSignal) {
     this.#runtimeOrigin = descriptor.origin;
     // A visible startup document can lack Chromium paint timing on Linux.
-    await waitForStartupReadiness(this.#shown, this.#lifecycle.ready, signal);
+    await waitForStartupReadiness(signal, this.#shown, this.#lifecycle.ready);
     signal.throwIfAborted();
     const view = this.#workbench && !this.#workbenchFailed ? this.#workbench : this.createWorkbench();
     // The dashboard waits for this fragment during native bootstrap; it redeems it without reloading.
-    await prepareWorkbenchDocument(view.webContents, descriptor, fetch, signal);
+    await prepareWorkbenchDocument(view.webContents, descriptor, runtimeReady, fetch, signal);
   }
 
   private loadLifecycle() {
