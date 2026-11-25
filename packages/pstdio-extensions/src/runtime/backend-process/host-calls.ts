@@ -51,34 +51,48 @@ export const createHostCalls = (
   };
 
   const importFrom = (invocationId: string, value: unknown) =>
-    importValue(value, (fnId, args) => callWorker(invocationId, fnId, args), invocation(invocationId)?.tracker);
+    importValue(
+      value,
+      (fnId, args, keepAbortListener) => callWorker(invocationId, fnId, args, keepAbortListener),
+      invocation(invocationId)?.tracker,
+    );
 
-  const callWorker = async (invocationId: string, fnId: string, args: unknown[]): Promise<unknown> => {
+  const callWorker = async (
+    invocationId: string,
+    fnId: string,
+    args: unknown[],
+    keepAbortListener?: boolean,
+  ): Promise<unknown> => {
     const running = invocation(invocationId);
     if (!running || running.cancelled) throw new BackendUnavailableError("The invocation is no longer running.");
     return track(invocationId, async () => {
-      const exported = (await running.table.exportValue(args.map(withSnapshotSinks))) as unknown[];
-      if (invocation(invocationId) !== running || running.cancelled)
-        throw new BackendUnavailableError("The invocation is no longer running.");
-      const requestId = `h${nextRequest++}`;
-      // Only reentry from this invocation's host call borrows its narrower context.
-      const enter = hostCallOwner.getStore() === invocationId ? AsyncLocalStorage.snapshot() : undefined;
-      const reply = pending.start(invocationId, requestId, enter);
-      if (
-        !send({
-          v: BACKEND_PROTOCOL_VERSION,
-          type: "fn-call",
-          invocationId,
-          requestId,
-          fnId,
-          args: exported,
-          ...(!enter && { invocationOwned: true }),
-        })
-      ) {
-        pending.take(invocationId, requestId);
-        throw new BackendUnavailableError("The extension backend is not available.");
+      const { value, kept } = await running.table.exportResult(args.map(withSnapshotSinks), keepAbortListener);
+      try {
+        if (invocation(invocationId) !== running || running.cancelled)
+          throw new BackendUnavailableError("The invocation is no longer running.");
+        const requestId = `h${nextRequest++}`;
+        // Only reentry from this invocation's host call borrows its narrower context.
+        const enter = hostCallOwner.getStore() === invocationId ? AsyncLocalStorage.snapshot() : undefined;
+        const reply = pending.start(invocationId, requestId, enter);
+        if (
+          !send({
+            v: BACKEND_PROTOCOL_VERSION,
+            type: "fn-call",
+            invocationId,
+            requestId,
+            fnId,
+            args: value as unknown[],
+            ...(!enter && { invocationOwned: true }),
+          })
+        ) {
+          pending.take(invocationId, requestId);
+          throw new BackendUnavailableError("The extension backend is not available.");
+        }
+        return importFrom(invocationId, await reply.promise);
+      } catch (error) {
+        if (keepAbortListener) running.table.release(kept);
+        throw error;
       }
-      return importFrom(invocationId, await reply.promise);
     });
   };
 

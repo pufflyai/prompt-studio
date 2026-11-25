@@ -110,7 +110,11 @@ export const runBackendWorker = () => {
   };
 
   const importFrom = (id: string, value: unknown) =>
-    importValue(value, (fn, args) => callHost(id, fn, args), invocations.get(id)?.tracker);
+    importValue(
+      value,
+      (fn, args, keepAbortListener) => callHost(id, fn, args, keepAbortListener),
+      invocations.get(id)?.tracker,
+    );
 
   const within = (invocationId: string) => {
     const active = callback.getStore();
@@ -135,19 +139,32 @@ export const runBackendWorker = () => {
     }
   };
 
-  const callHost = async (invocationId: string, fnId: string, args: unknown[]): Promise<unknown> => {
+  const callHost = async (
+    invocationId: string,
+    fnId: string,
+    args: unknown[],
+    keepAbortListener?: boolean,
+  ): Promise<unknown> => {
     const table = invocations.get(invocationId)?.table;
     if (!table) throw new Error("This invocation has finished.");
-    const exported = (await table.exportValue(args)) as unknown[];
-    return request(invocationId, (requestId) => ({
-      v: BACKEND_PROTOCOL_VERSION,
-      type: "fn-call",
-      invocationId,
-      requestId,
-      fnId,
-      args: exported,
-      ...within(invocationId),
-    }));
+    const { value, kept } = await table.exportResult(args, keepAbortListener);
+    try {
+      return await request(invocationId, (requestId) => ({
+        v: BACKEND_PROTOCOL_VERSION,
+        type: "fn-call",
+        invocationId,
+        requestId,
+        fnId,
+        args: value as unknown[],
+        ...within(invocationId),
+      }));
+    } catch (error) {
+      if (keepAbortListener) {
+        table.release(kept);
+        dispose(invocationId);
+      }
+      throw error;
+    }
   };
 
   const answerHost = async (message: Extract<HostToWorkerMessage, { type: "fn-call" }>) => {
