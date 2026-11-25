@@ -21,7 +21,7 @@ const fetchHostBinary = async (tag: string, name: string) => {
     if (response.ok) return response;
 
     const error = new Error(`Cannot download ${tag} host: HTTP ${response.status}`);
-    await response.body?.cancel();
+    await response.body?.cancel().catch(() => {});
     if (attempt === DOWNLOAD_ATTEMPTS || !TEMPORARY_DOWNLOAD_STATUSES.has(response.status)) throw error;
 
     console.warn(`${error.message}. Retrying release asset download (attempt ${attempt + 1}/${DOWNLOAD_ATTEMPTS})`);
