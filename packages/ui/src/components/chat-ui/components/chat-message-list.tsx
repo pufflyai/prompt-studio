@@ -45,7 +45,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
   const rows = buildChatMessageRows(leadingResponses, groups, streaming);
   const animatedKeys = useMessageAnimationKeys(rows.map((row) => row.message.animationKey ?? row.key));
   const initialHeight = scrollRef.current?.clientHeight || 1;
-  const gapCount = Math.max(leadingResponses.length + groups.length - 1, 0);
+  const gapCount = rows.reduce((count, _row, index) => count + Number(hasChatRowGap(rows, index)), 0);
   const { virtualizer, virtualItems, totalSize, measurements } = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: rows.length,
     getScrollElement: () => scrollRef.current as HTMLDivElement | null,
@@ -70,7 +70,9 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
   });
 
   useTailReady({ onReady, scrollRef });
-  const visibleRows = virtualItems.map((item) => rows[item.index].key).join("\0");
+  const visibleRows = props.onVisibleMessageIdsChange
+    ? JSON.stringify(virtualItems.map((item) => rows[item.index].messageIds))
+    : "[]";
   const list = useChatMessageVisibility(scrollRef, visibleRows, props.onVisibleMessageIdsChange);
 
   const range = virtualizer.range;
@@ -105,6 +107,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
             <ChatMessageRowLayout
               key={virtualItem.key}
               rowType={row.type}
+              occurrences={row.messageIds.length}
               rowId={row.key}
               message={row.message}
               index={virtualItem.index}

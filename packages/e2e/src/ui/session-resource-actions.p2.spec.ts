@@ -28,7 +28,7 @@ const rejectCommand = (page: Page, name: string, sessionId: string, message: str
       json: {
         commandId: `pstdio.session-browser.command.${name}`,
         extensionId: "pstdio.session-browser",
-        outcome: { ok: false, status: "error", reason: message, error: { message }, notices: [] },
+        outcome: { ok: false, status: "rejected", code: "unavailable", reason: message, notices: [] },
       },
     });
   });
@@ -106,7 +106,13 @@ test("copying a failed session reference uses the invoking row and preserves the
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(open.id);
 });
 
-test("shared session actions rename another row without changing the selected session", async ({ page, request }) => {
+test("shared session actions rename another row without changing the selected session", async ({
+  page,
+  request,
+  context,
+  browserName,
+}) => {
+  if (browserName === "chromium") await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   const project = await createResourceActionsProject(request);
   const a = await createSession(request, project.id, "Open conversation");
   const b = await createSession(request, project.id, "Other conversation");
@@ -128,10 +134,19 @@ test("shared session actions rename another row without changing the selected se
   await input.fill("  Renamed conversation  ");
   await rejectCommand(page, "rename", b.id, "Save unavailable. Try again.");
   await page.getByRole("button", { name: "Run", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("Save unavailable");
-  await expect(input).toHaveValue("  Renamed conversation  ");
+  await expect(page.getByRole("dialog")).toBeHidden();
   await expect(row(page, "Other conversation")).toBeVisible();
+  const recovery = page.locator('[data-status-bar-item="workbench.system-activity"]');
+  await recovery.click();
+  await expect(page.getByRole("alert")).toContainText("Save unavailable");
+  await page.getByRole("button", { name: "Copy draft", exact: true }).click();
+  const readClipboard = () => page.evaluate(() => navigator.clipboard.readText());
+  await expect.poll(readClipboard).toBe("  Renamed conversation  ");
+  await recovery.click();
   await page.unroute(commandRoute("rename"));
+  await row(page, "Other conversation").click({ button: "right" });
+  await menuItem(page, "Rename session").click();
+  await input.fill(await readClipboard());
   await page.getByRole("button", { name: "Run", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(row(page, "Renamed conversation")).toBeVisible();

@@ -17,34 +17,53 @@ interface ActionBarMenuProps {
   onFocus(): void;
   available(action: Action): boolean;
   run(action: Action): void;
+  resourceActions?: ResourceContextAction[];
 }
 
 export const ActionBarMenuButton = (props: ActionBarMenuProps) => {
-  const { item, workbench, horizontal, tabIndex, reorderShortcuts, onFocus, available, run } = props;
+  const {
+    item,
+    workbench,
+    horizontal,
+    tabIndex,
+    reorderShortcuts,
+    onFocus,
+    available,
+    run,
+    resourceActions = [],
+  } = props;
   const pending = useRef<Action | undefined>(undefined);
+  const pendingResource = useRef<ResourceContextAction | undefined>(undefined);
   useEffect(
     () => () => {
       pending.current = undefined;
+      pendingResource.current = undefined;
     },
     [],
   );
-  const actions: ResourceContextAction[] = item.items.map((action) => ({
-    key: action.id,
-    label: action.label,
-    icon: action.icon ? <WorkbenchIcon name={action.icon} /> : undefined,
-    group: action.group ? { id: action.group } : undefined,
-    isSelected: action.selected,
-    isDisabled: !available(action),
-    endContent: <WorkbenchShortcutHint workbench={workbench} action={action.action} includeLayers />,
-    onSelect: () => {
-      const target = action.action;
-      if (target.kind === "command" && workbench.commands.getCommand(target.commandId)?.command.copyResultToClipboard) {
-        run(action);
-        return;
-      }
-      pending.current = action;
-    },
-  }));
+  const actions: ResourceContextAction[] = [
+    ...item.items.map((action) => ({
+      key: action.id,
+      label: action.label,
+      icon: action.icon ? <WorkbenchIcon name={action.icon} /> : undefined,
+      group: action.group ? { id: action.group } : undefined,
+      isSelected: action.selected,
+      isDisabled: !available(action),
+      endContent: <WorkbenchShortcutHint workbench={workbench} action={action.action} includeLayers />,
+      onSelect: () => {
+        const target = action.action;
+        if (
+          target.kind === "command" &&
+          workbench.commands.getCommand(target.commandId)?.command.copyResultToClipboard
+        ) {
+          run(action);
+          return;
+        }
+        pending.current = action;
+      },
+    })),
+    ...(item.includeResourceActions ? resourceActions : []),
+  ];
   return (
     <Menu.Root
       lazyMount
@@ -54,6 +73,9 @@ export const ActionBarMenuButton = (props: ActionBarMenuProps) => {
         const action = pending.current;
         pending.current = undefined;
         if (action) run(action);
+        const resourceAction = pendingResource.current;
+        pendingResource.current = undefined;
+        void resourceAction?.onClick?.();
       }}
     >
       <Menu.Trigger asChild>
@@ -75,7 +97,9 @@ export const ActionBarMenuButton = (props: ActionBarMenuProps) => {
             <ResourceMenuItems
               actions={actions}
               onSelect={(action) => {
-                void action.onSelect?.();
+                action.onSelect?.();
+                if (action.closeOnSelect === false) void action.onClick?.();
+                else pendingResource.current = action;
               }}
             />
           </Menu.Content>

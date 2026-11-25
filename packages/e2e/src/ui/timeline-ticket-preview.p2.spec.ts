@@ -125,13 +125,24 @@ test("selecting a gate preview keeps its gate review controls accessible", async
       data: { default_agent_id: "pstdio.workbench-fixture.harness.fake" },
     });
     expect(configured.ok()).toBe(true);
-    const gate = await executePlannerCommand<{ ticket: { id: string } }>(
+    const gate = await executePlannerCommand<{
+      ticket: { id: string };
+      launchError: string | null;
+      launchAttemptId: string;
+    }>(request, uiOrigin, id, "timeline.gate.create", { content: "# Review dependency gate" });
+    expect(gate.launchError).toBeNull();
+    const check = await executePlannerCommand<{ status: string; session: { id: string } }>(
       request,
       uiOrigin,
       id,
-      "timeline.gate.create",
-      { content: "# Review dependency gate" },
+      "timeline.gate.check-launch",
+      { ticket: gate.ticket.id, attemptId: gate.launchAttemptId },
     );
+    expect(check).toMatchObject({ status: "confirmed", session: { id: expect.any(String) } });
+    const repeated = await executePlannerCommand<{ id: string }>(request, uiOrigin, id, "timeline.gate.launch", {
+      ticket: gate.ticket.id,
+    });
+    expect(repeated.id).toBe(check.session.id);
     await page.addInitScript(() => {
       if (window === window.top) localStorage.setItem("onboarding-complete", "true");
     });
@@ -144,6 +155,34 @@ test("selecting a gate preview keeps its gate review controls accessible", async
     ).toBeVisible();
     await expect(timeline.getByRole("button", { name: "Review gate", exact: true })).toBeVisible();
     await expect(page).toHaveURL(timelinePath);
+
+    const launchRoute = "**/extensions/commands/pstdio.planner.command.timeline.gate.launch/execute";
+    let replacement: { attemptId: string; after: string } | undefined;
+    await page.route(launchRoute, async (route) => {
+      const params = route.request().postDataJSON().params;
+      if (!params.after) {
+        await route.fulfill({
+          json: { outcome: { ok: true, status: "success", value: { id: check.session.id, status: "completed" } } },
+        });
+        return;
+      }
+      replacement = params;
+      await route.abort();
+    });
+    await timeline.getByRole("button", { name: "Review gate", exact: true }).click();
+    await timeline.getByRole("button", { name: "Review again", exact: true }).click();
+    const checkLaunch = timeline.getByRole("button", { name: "Check review launch", exact: true });
+    await expect(checkLaunch).toBeEnabled();
+    expect(replacement).toMatchObject({ after: check.session.id, attemptId: expect.any(String) });
+    const recovery = page.waitForRequest(
+      "**/extensions/commands/pstdio.planner.command.timeline.gate.check-launch/execute",
+    );
+    await checkLaunch.click();
+    expect((await recovery).postDataJSON().params).toEqual({
+      ticket: gate.ticket.id,
+      attemptId: replacement!.attemptId,
+    });
+    await expect(timeline.getByText("No review session has been confirmed yet.", { exact: true })).toBeVisible();
   } finally {
     await request.delete(`${uiOrigin}/v1/projects/${id}`);
   }

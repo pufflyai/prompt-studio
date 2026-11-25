@@ -10,6 +10,8 @@ Declare commands with `defineCommand` and middleware with `defineMiddleware`. Re
 
 A middleware handler receives `(ctx, params)`. It returns a decision from `ctx.commands`: `continue`, `patchParams`, `replaceParams`, `replaceInvocation`, or `reject`. Returning nothing also continues. There is no `next()` callback. Middleware can protect a transition only when the transition runs through the command it targets.
 
+A registered command can use `ctx.commands.reject(details)` as a thrown Error's cause when a check fails before any write. If a write may have occurred, throw the original failure so the caller can reconcile its result. Older hosts can still display the Error's message.
+
 To call another extension's command, use the command ref that extension exports. Tickets, statuses, tags, and attempts belong to the Planner extension, not to the core host.
 
 ## Events and payloads

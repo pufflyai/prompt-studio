@@ -1,0 +1,166 @@
+import { expect, test } from "bun:test";
+import { workspaceEvents } from "pstdio-api-contracts/extension-kernel";
+import { MAX_CONCURRENT_INVOCATIONS_PER_EXTENSION } from "./invocation-admission";
+import { makeRunner } from "./runner.test-fixture";
+
+test("an extension at its command limit gets a retryable overload rejection until its work settles", async () => {
+  const release = Promise.withResolvers<void>();
+  const runner = makeRunner({
+    commands: [
+      {
+        id: "wait",
+        ref: { kind: "command", id: "wait" },
+        title: "Wait",
+        run: () => release.promise.then(() => "done"),
+      },
+    ],
+  });
+  const execute = () => runner.execute({ commandId: "pstdio.lab.command.wait", projectId: "p1", source: "cli" });
+
+  const running = Array.from({ length: MAX_CONCURRENT_INVOCATIONS_PER_EXTENSION }, execute);
+  const rejected = await execute();
+  expect(rejected).toMatchObject({
+    ok: false,
+    status: "rejected",
+    code: "extension_overloaded",
+    diagnostics: [{ code: "extension_overloaded", extensionId: "pstdio.lab", metadata: { retryAfterMs: 1000 } }],
+  });
+
+  release.resolve();
+  expect((await Promise.all(running)).every((outcome) => outcome.ok)).toBe(true);
+  expect(await execute()).toMatchObject({ ok: true, value: "done" });
+});
+
+test("nested commands share their caller's admission", async () => {
+  const release = Promise.withResolvers<void>();
+  const runner = makeRunner({
+    commands: [
+      {
+        id: "inner",
+        ref: { kind: "command", id: "inner" },
+        title: "Inner",
+        run: async () => "inner",
+      },
+      {
+        id: "outer",
+        ref: { kind: "command", id: "outer" },
+        title: "Outer",
+        async run(ctx) {
+          await release.promise;
+          return ctx.commands.execute({ kind: "command", id: "inner" }, { params: {} });
+        },
+      },
+    ],
+  });
+  const running = Array.from({ length: MAX_CONCURRENT_INVOCATIONS_PER_EXTENSION }, () =>
+    runner.execute({ commandId: "pstdio.lab.command.outer", projectId: "p1", source: "cli" }),
+  );
+  release.resolve();
+  const outcomes = await Promise.all(running);
+  expect(outcomes.every((outcome) => outcome.ok && (outcome.value as { ok: boolean }).ok)).toBe(true);
+});
+
+test("cancelling a command that ignores cancellation frees its slot", async () => {
+  const never = new Promise<string>(() => {});
+  const runner = makeRunner({
+    commands: [{ id: "stuck", ref: { kind: "command", id: "stuck" }, title: "Stuck", run: () => never }],
+  });
+  const controllers = Array.from({ length: MAX_CONCURRENT_INVOCATIONS_PER_EXTENSION }, () => new AbortController());
+  for (const controller of controllers)
+    void runner.execute({ commandId: "pstdio.lab.command.stuck", projectId: "p1", signal: controller.signal });
+  const execute = () => runner.execute({ commandId: "pstdio.lab.command.stuck", projectId: "p1" });
+  expect(await execute()).toMatchObject({ code: "extension_overloaded" });
+  for (const controller of controllers) controller.abort();
+  expect(await Promise.race([execute(), Bun.sleep(20).then(() => "running")])).toBe("running");
+});
+
+test("a hook needs its own slot to start a command of its extension", async () => {
+  const release = Promise.withResolvers<void>();
+  const outcomes: unknown[] = [];
+  const runner = makeRunner({
+    commands: [
+      {
+        id: "wait",
+        ref: { kind: "command", id: "wait" },
+        title: "Wait",
+        run: () => release.promise.then(() => "done"),
+      },
+    ],
+    hooks: [
+      {
+        id: "on-ping",
+        ref: { kind: "hook", id: "on-ping" },
+        event: workspaceEvents.provision,
+        run: async (ctx) => {
+          outcomes.push(await ctx.commands.execute({ kind: "command", id: "wait" }, { params: {} }));
+        },
+      },
+    ],
+  });
+  const running = Array.from({ length: MAX_CONCURRENT_INVOCATIONS_PER_EXTENSION }, () =>
+    runner.execute({ commandId: "pstdio.lab.command.wait", projectId: "p1", source: "cli" }),
+  );
+  try {
+    await runner.dispatchEvent({ eventId: "workspace.provision", projectId: "p1" });
+    expect(outcomes).toMatchObject([{ code: "extension_overloaded" }]);
+  } finally {
+    release.resolve();
+    await Promise.all(running);
+  }
+});
+
+test.each(["settles", "is cancelled"])("deferred hook work needs a fresh slot after its command %s", async (end) => {
+  const dispatch = Promise.withResolvers<void>();
+  const finishCommand = Promise.withResolvers<void>();
+  const deferred = Promise.withResolvers<{ work: Promise<unknown> }>();
+  const release = Promise.withResolvers<void>();
+  const controller = new AbortController();
+  const outcomes: unknown[] = [];
+  const runner = makeRunner({
+    commands: [
+      {
+        id: "outer",
+        ref: { kind: "command", id: "outer" },
+        title: "Outer",
+        async run(ctx) {
+          deferred.resolve({ work: dispatch.promise.then(() => ctx.events.emit("workspace.provision", {})) });
+          if (end === "is cancelled") await finishCommand.promise;
+        },
+      },
+      {
+        id: "wait",
+        ref: { kind: "command", id: "wait" },
+        title: "Wait",
+        run: () => release.promise,
+      },
+      { id: "probe", ref: { kind: "command", id: "probe" }, title: "Probe", run: () => "started" },
+    ],
+    hooks: [
+      {
+        id: "on-ping",
+        ref: { kind: "hook", id: "on-ping" },
+        event: workspaceEvents.provision,
+        run: async (ctx) => {
+          outcomes.push(await ctx.commands.execute({ kind: "command", id: "probe" }, { params: {} }));
+        },
+      },
+    ],
+  });
+  const execute = (id: string) =>
+    runner.execute({ commandId: `pstdio.lab.command.${id}`, projectId: "p1", source: "cli" });
+  const outer = runner.execute({ commandId: "pstdio.lab.command.outer", projectId: "p1", signal: controller.signal });
+  const deferredWork = await Promise.race([deferred.promise, outer.then(() => undefined)]);
+  if (end === "is cancelled") controller.abort();
+  else await outer;
+
+  const running = Array.from({ length: MAX_CONCURRENT_INVOCATIONS_PER_EXTENSION }, () => execute("wait"));
+  try {
+    dispatch.resolve();
+    await deferredWork?.work;
+    expect(outcomes).toMatchObject([{ code: "extension_overloaded" }]);
+  } finally {
+    finishCommand.resolve();
+    release.resolve();
+    await Promise.all([outer, ...running]);
+  }
+});

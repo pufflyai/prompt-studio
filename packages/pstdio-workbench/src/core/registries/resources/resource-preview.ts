@@ -4,7 +4,7 @@ import { createWorkbenchStore } from "../../shared/store/workbench-store";
 import { classifyApiWrite } from "../mutations/operation-failures";
 import { getWorkbenchOperations, resourceOperationSubject, type WorkbenchOperations } from "../mutations/operations";
 
-type ResourceChange = { label: string } | { removed: true };
+type ResourceChange = { label: string } | { removed: true; label?: never };
 interface ResourceIntent {
   resource: ResourceRef;
   change: ResourceChange;
@@ -71,12 +71,13 @@ const createPreview = (operations: WorkbenchOperations) => {
     change?: ResourceChange,
     title?: string,
     verifyRename?: (signal: AbortSignal) => Promise<boolean>,
+    renameDraft?: string,
   ) => {
     const subject = resourceOperationSubject(resource);
     const removal = change && "removed" in change ? { subject, observed: false, uncertain: false } : undefined;
-    const label = change && "label" in change ? change.label : undefined;
+    const label = change?.label;
     if (label !== undefined) assertCanRename(subject);
-    const draft = removal ? { id: resource.id, type: resource.type, label: resource.label } : label;
+    const draft = removal ? { id: resource.id, type: resource.type, label: resource.label } : (renameDraft ?? label);
     const attempt = operations.submit({
       domain,
       projectId: resource.projectId,

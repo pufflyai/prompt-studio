@@ -235,12 +235,11 @@ for (const mode of ["gone", "full", "resume", "failure"]) {
         })
       ).json();
       sessionId = session.id;
-      for (
-        let attempt = 0;
-        (await handle.deps.sessionService.get(session.id))?.status !== "completed" && attempt < 50;
-        attempt++
-      )
-        await Bun.sleep(10);
+      // The run commits its completed status before it releases its in-memory owner.
+      const settled = async () =>
+        (await handle.deps.sessionService.get(session.id))?.status === "completed" &&
+        handle.deps.sessionService.store.get(session.id) === null;
+      for (let attempt = 0; !(await settled()) && attempt < 50; attempt++) await Bun.sleep(10);
       expect((await handle.deps.sessionService.get(session.id))?.status).toBe("completed");
       expect(handle.deps.sessionService.store.get(session.id)).toBeNull();
       if (mode === "full") {

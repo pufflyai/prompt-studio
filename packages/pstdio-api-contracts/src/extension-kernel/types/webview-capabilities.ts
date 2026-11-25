@@ -67,6 +67,7 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "terminal.session",
   "files.upload",
   "files.download",
+  "files.save",
   "files.list",
   "files.delete",
   "account.read",
@@ -167,6 +168,9 @@ export interface WebviewFilesListParams {
 
 /** Download bytes already available to the extension onto the user's device. */
 export type WebviewFilesDownloadParams = Pick<WebviewFilesUploadParams, "name" | "data" | "mimeType">;
+
+/** Browsers report initiation only; desktop reports the completed write or dialog cancellation. */
+export type WebviewFilesSaveResult = { status: "initiated" } | { status: "saved" } | { status: "cancelled" };
 
 export interface WebviewFilesDeleteParams {
   id: string;
@@ -281,6 +285,7 @@ export interface WebviewHostCapabilityParams {
   "terminal.session": TerminalSessionOperation;
   "files.upload": WebviewFilesUploadParams;
   "files.download": WebviewFilesDownloadParams;
+  "files.save": WebviewFilesDownloadParams;
   /** @deprecated Use extension commands and owned storage. */
   "files.list": WebviewFilesListParams;
   /** @deprecated Use extension commands and owned storage. */
@@ -330,6 +335,7 @@ export interface WebviewHostCapabilityResults {
   "files.upload": ExtensionBlobRef;
   /** The browser accepted the download; completion and cancellation belong to its download UI. */
   "files.download": void;
+  "files.save": WebviewFilesSaveResult;
   /** @deprecated Use extension commands and owned storage. */
   "files.list": { files: ExtensionBlobRef[] };
   /** @deprecated Use extension commands and owned storage. */

@@ -54,6 +54,7 @@ export interface ExtensionWebviewPreferencesAdapter {
 
 export interface ExtensionWebviewFilesAdapter {
   download?(input: WebviewFilesDownloadParams): MaybePromise<void>;
+  save?(input: WebviewFilesDownloadParams): MaybePromise<WebviewHostCapabilityResults["files.save"]>;
   upload(input: WebviewFilesUploadParams): MaybePromise<WebviewHostCapabilityResults["files.upload"]>;
   list(input: WebviewFilesListParams): MaybePromise<WebviewHostCapabilityResults["files.list"]>;
   delete(input: WebviewFilesDeleteParams): MaybePromise<void>;

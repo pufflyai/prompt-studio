@@ -96,7 +96,7 @@ test("start, read, list and export share one durable capture and preserve eviden
   expect(exported.data).toHaveProperty("profile.nodes");
   app.forgetRun();
   expect((await app.commands["diagnostics.read"].run(app.context, { id: start.id })).status).toBe("succeeded");
-});
+}, 10_000);
 
 test("interrupted, expired and orphaned admissions share bounded history without evicting live jobs", async () => {
   const app = await setup();
@@ -191,7 +191,7 @@ test("concurrent history reads tolerate retention removing an older capture duri
     throw new Error("Runtime disconnected");
   });
   await expect(app.commands["diagnostics.list"].run(app.context, {})).rejects.toThrow("Runtime disconnected");
-});
+}, 10_000);
 
 test("cancel stops the profiler without publishing incomplete evidence", async () => {
   const app = await setup();

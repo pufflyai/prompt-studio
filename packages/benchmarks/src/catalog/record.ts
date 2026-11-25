@@ -39,7 +39,7 @@ const createCapture = async (id: ScenarioId) => {
     catalogRevision,
     catalogDigest: contract.digest,
     scenario: id,
-    workloadVersion: scenario.id === "B5" ? scenario.workloadVersion : 1,
+    workloadVersion: "workloadVersion" in scenario ? scenario.workloadVersion : 1,
     ...(scenario.id === "B5" && { memoryMetric: scenario.memoryMetrics[process.platform] }),
     planDigest: process.env.CI_PLAN_DIGEST,
     runId: process.env.CI_PLAN_RUN_ID,
@@ -103,16 +103,22 @@ const createCapture = async (id: ScenarioId) => {
     },
     finish() {
       const missing = scenario.metrics.filter((entry) => !observations.has(entry.id)).map((entry) => entry.id);
-      const failed = [...observations].filter(
+      const missed = [...observations].filter(
         ([, metric]) => metric.budget !== undefined && !meetsLimit(metric.value, metric.budget, metric.unit),
       );
+      const failed = missed.filter(([, metric]) => metric.kind !== "advisory");
+      const advisory = missed.filter(([, metric]) => metric.kind === "advisory");
       const pending = scenario.metrics
         .filter((metric) => metric.kind === "pending-guard" && !retainedLimit(id, metric.id))
         .map((metric) => metric.id);
       const failedChecks = checks.filter((check) => !check.passed).map((check) => check.name);
       const qualification =
         eligibility && !missing.length && !failed.length && !failedChecks.length ? "qualified" : "unqualified";
-      write({ event: "finished", missing, failed, failedChecks, pending, qualification });
+      write({ event: "finished", missing, failed, advisory, failedChecks, pending, qualification });
+      if (advisory.length)
+        console.warn(
+          `${id}: non-blocking timing targets missed: ${advisory.map(([name, metric]) => `${name}=${metric.value}ms (target <${metric.budget}ms)`).join(", ")}`,
+        );
       if (missing.length) throw new Error(`${id}: missing required metrics: ${missing.join(", ")}`);
       if (failed.length) throw new Error(`${id}: failed approved limits: ${failed.map(([name]) => name).join(", ")}`);
       if (failedChecks.length) throw new Error(`${id}: failed scale guards: ${failedChecks.join(", ")}`);

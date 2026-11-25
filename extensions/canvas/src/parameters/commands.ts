@@ -82,6 +82,69 @@ const versions = defineCommand({
     return { file: restored ? selected! : source.file, restored, versions };
   },
 });
+type FrameInput = { canvas: string; frame: string };
+type VersionInput = FrameInput & { file: string };
+type SaveInput = FrameInput & { file?: string; name?: string; values: Values };
+type RenameInput = VersionInput & { name: string };
+
+const prepareSave = async (ctx: CommandContext, input: SaveInput) => {
+  const source = await target(ctx, input);
+  const current = filename(input.file ?? source.file);
+  const { data, values: before } = await source.read(current);
+  const values = { ...before };
+  for (const [key, value] of Object.entries(input.values)) {
+    if (
+      !Object.hasOwn(before, key) ||
+      typeof value !== typeof before[key] ||
+      (typeof value === "number" && !Number.isFinite(value))
+    )
+      throw new Error(`Invalid saved parameter: ${key}`);
+    values[key] = value;
+  }
+  let file = current;
+  if (input.name !== undefined) {
+    const slug = input.name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    if (!slug) throw new Error("Enter a version name");
+    file = filename(`${slug}.json`);
+    if (await source.files.exists(source.path(file))) throw new Error("That version already exists");
+    if (source.key) data.name = input.name.trim();
+  }
+  return { source, file, data, values };
+};
+
+const prepareSelect = async (ctx: CommandContext, input: VersionInput) => {
+  const source = await target(ctx, input);
+  return { source, ...(await source.read(filename(input.file))) };
+};
+
+const prepareRename = async (ctx: CommandContext, input: RenameInput) => {
+  const { source, data } = await prepareSelect(ctx, input);
+  if (!input.name.trim()) throw new Error("Enter a version name");
+  return { source, data };
+};
+
+const prepareDelete = async (ctx: CommandContext, input: VersionInput) => {
+  const source = await target(ctx, input);
+  const file = filename(input.file);
+  if (file === source.file) throw new Error("The authored frame still uses this version");
+  await source.read(file);
+  return { source, file };
+};
+
+const checkedWrite = async <T>(ctx: CommandContext, read: () => Promise<T>) => {
+  try {
+    return await read();
+  } catch (error) {
+    ctx.signal.throwIfAborted();
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(reason, { cause: ctx.commands.reject({ code: "invalid_parameter_version", reason }) });
+  }
+};
+
 const save = defineCommand({
   id: "parameters.save",
   cli: true,
@@ -94,31 +157,7 @@ const save = defineCommand({
     values: params.json<Values, { required: true }>({ required: true }),
   },
   async run(ctx, input) {
-    const source = await target(ctx, input);
-    const current = filename(input.file ?? source.file);
-    const { data, values: before } = await source.read(current);
-    const values = { ...before };
-    for (const [key, value] of Object.entries(input.values)) {
-      if (
-        !Object.hasOwn(before, key) ||
-        typeof value !== typeof before[key] ||
-        (typeof value === "number" && !Number.isFinite(value))
-      )
-        throw new Error(`Invalid saved parameter: ${key}`);
-      values[key] = value;
-    }
-    let file = current;
-    if (input.name !== undefined) {
-      const slug = input.name
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "");
-      if (!slug) throw new Error("Enter a version name");
-      file = filename(`${slug}.json`);
-      if (await source.files.exists(source.path(file))) throw new Error("That version already exists");
-      if (source.key) data.name = input.name.trim();
-    }
+    const { source, file, data, values } = await checkedWrite(ctx, () => prepareSave(ctx, input));
     const saved = source.key ? { ...data, [source.key]: values } : values;
     await source.files.writeText(source.path(file), `${JSON.stringify(saved, null, 2)}\n`);
     if (!source.key && input.name)
@@ -135,8 +174,7 @@ const select = defineCommand({
   title: l10n("parameters.select", "Choose a saved frame version"),
   params: { ...frameParams, file: params.text({ required: true }) },
   async run(ctx, input) {
-    const source = await target(ctx, input);
-    const { data, values } = await source.read(filename(input.file));
+    const { source, data, values } = await checkedWrite(ctx, () => prepareSelect(ctx, input));
     await ctx.storage.collection<string>("parameter-versions").put(selectionKey(input), input.file);
     await ctx.events.emit(parametersChanged, {});
     return { file: input.file, name: await displayName(ctx, source, input.file, data), values };
@@ -149,9 +187,7 @@ const rename = defineCommand({
   title: l10n("parameters.rename", "Rename a saved frame version"),
   params: { ...frameParams, file: params.text({ required: true }), name: params.text({ required: true }) },
   async run(ctx, input) {
-    const source = await target(ctx, input);
-    const { data } = await source.read(filename(input.file));
-    if (!input.name.trim()) throw new Error("Enter a version name");
+    const { source, data } = await checkedWrite(ctx, () => prepareRename(ctx, input));
     if (source.key)
       await source.files.writeText(
         source.path(input.file),
@@ -170,10 +206,7 @@ const remove = defineCommand({
   title: l10n("parameters.delete", "Delete a saved frame version"),
   params: { ...frameParams, file: params.text({ required: true }) },
   async run(ctx, input) {
-    const source = await target(ctx, input);
-    const file = filename(input.file);
-    if (file === source.file) throw new Error("The authored frame still uses this version");
-    await source.read(file);
+    const { source, file } = await checkedWrite(ctx, () => prepareDelete(ctx, input));
     await source.files.delete(source.path(file));
     await ctx.storage.collection("parameter-version-names").delete(source.path(file));
     const selection = ctx.storage.collection<string>("parameter-versions");
@@ -184,6 +217,7 @@ const remove = defineCommand({
     return { file: next };
   },
 });
+
 export const parameterCommands = {
   "parameters.versions": versions,
   "parameters.save": save,

@@ -135,7 +135,7 @@ test("a failing keybinding produces one report", async ({ page, request }) => {
   });
 });
 
-test("a failing Run attempt is reported only in its dialog", async ({ page, request }) => {
+test("an unconfirmed Run attempt has one recovery entry after its dialog closes", async ({ page, request }) => {
   const project = await createProject(request);
   const ticket = await createPlannerTicket(request, apiBase, project.id, { content: "# Failed attempt" });
   await failCommand(page, "pstdio.planner.command.run-attempt");
@@ -145,8 +145,14 @@ test("a failing Run attempt is reported only in its dialog", async ({ page, requ
   const dialog = page.getByRole("dialog").filter({ has: page.getByText("Run attempt", { exact: true }) });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Run", exact: true }).click();
-  await expect(dialog.getByText(failure, { exact: true })).toBeVisible();
-  await expect(page.getByText(failure, { exact: true })).toHaveCount(1);
+  await expect(dialog).toBeHidden();
+  await page.locator('[data-status-bar-item="workbench.system-activity"]').click();
+  const recovery = page.getByText(
+    "The action could not be confirmed. Inspect its result before discarding the attempt.",
+  );
+  await expect(recovery).toBeVisible();
+  await expect(recovery).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Copy action details", exact: true })).toBeVisible();
   await test.info().attach("failure-report", {
     path: await page
       .screenshot({ path: test.info().outputPath("failure-report.png") })

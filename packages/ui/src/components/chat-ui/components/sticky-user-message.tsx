@@ -1,9 +1,9 @@
-import { Box, useSlotRecipe } from "@chakra-ui/react";
+import { Box, Flex, useSlotRecipe } from "@chakra-ui/react";
 import { useLayoutEffect, useRef, useState, type WheelEvent } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { ChatMessage } from "./ai-message";
 import { useMessageFadeIn } from "./chat-message-animation";
-import { StickyMessageToggle } from "./chat-message-list-items";
+import { MessageOccurrences, StickyMessageToggle } from "./chat-message-list-items";
 import { shouldStopStickyUserMessageWheel } from "./chat-panel-sticky-user-message";
 import { MessageActionPanel } from "./message-action-panel";
 import { MessagePartsRenderer } from "./message-parts-renderer";
@@ -13,6 +13,7 @@ import type { SessionMessage } from "./message-types";
 interface StickyUserMessageProps {
   message: SessionMessage;
   expanded: boolean;
+  occurrences?: number;
   animatedKeys: Set<string>;
   onToggle: (messageId: string) => void;
 }
@@ -54,7 +55,12 @@ export function StickyUserMessage(props: StickyUserMessageProps) {
     if (!isExpanded) viewportRef.current!.scrollTop = 0;
   }, [isExpanded]);
 
-  const actions = <MessageActionPanel message={message} alwaysVisible copyAlwaysVisible={false} />;
+  const actions = (
+    <Flex align="center" gap="xs">
+      <MessageOccurrences count={props.occurrences} />
+      <MessageActionPanel message={message} alwaysVisible copyAlwaysVisible={false} />
+    </Flex>
+  );
   return (
     <ChatMessage.Root from="user" delivery={message.delivery ?? "sent"} {...fadeInProps}>
       <ChatMessage.Content from="user" css={styles.root}>

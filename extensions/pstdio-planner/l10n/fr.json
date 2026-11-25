@@ -10,6 +10,7 @@
   "timeline.page.title": "Chronologie du projet",
   "timeline.actions.title": "Actions de la chronologie",
   "timeline.view.title": "Chronologie du projet",
+  "timeline.gate.checkLaunch.title": "Vérifier le lancement de la revue",
   "commands.autoBuild.title": "Construire automatiquement",
   "commands.openTickets": "Ouvrir les tâches",
   "archiveState.active": "Actif",

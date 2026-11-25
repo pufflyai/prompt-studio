@@ -1,3 +1,4 @@
+import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 
 // Writes in a burst, such as one sync round or one command, commit a few milliseconds apart and
@@ -65,7 +66,11 @@ export const createStorageChangeAnnouncer = (eventBus: ExtensionsRouteDeps["even
       if (!projects.size) firstChange = now;
       addScope(projects, projectId, scope);
       clearTimeout(timer);
-      timer = setTimeout(announce, Math.max(0, Math.min(quietMs, firstChange + maxDelayMs - now)));
+      // The shared timer outlives the writer that last re-armed it, so it must not inherit that writer's origin.
+      timer = setTimeout(
+        () => withRuntimeOperationOrigin({ kind: "background", name: "relay.storage-changes" }, announce),
+        Math.max(0, Math.min(quietMs, firstChange + maxDelayMs - now)),
+      );
     },
     close() {
       closed = true;

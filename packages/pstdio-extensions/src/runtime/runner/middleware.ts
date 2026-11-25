@@ -1,6 +1,7 @@
 import type { CommandContext, CommandInvocation, CommandMiddlewareResult, JsonObject } from "@pstdio/sdk/extensions";
 import type { CommandFailureDetails } from "pstdio-api-contracts/extension-kernel";
 import type { RuntimeMiddlewareRecord } from "../../types/runtime";
+import { asExtension } from "./invocation-admission";
 
 export type MiddlewareChainResult =
   | { status: "continue"; invocation: CommandInvocation }
@@ -20,7 +21,10 @@ export const runMiddlewareChain = async (
     const ctx = await buildCtx(invocation, mw);
     let result: CommandMiddlewareResult;
     try {
-      result = (await mw.handler(ctx, invocation.params)) as CommandMiddlewareResult;
+      const params = invocation.params;
+      result = (await asExtension(mw.extensionId, mw.id, ctx.projectId, () =>
+        mw.handler(ctx, params),
+      )) as CommandMiddlewareResult;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return {

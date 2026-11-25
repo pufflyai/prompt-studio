@@ -68,6 +68,7 @@ export const runResourceMutation = async (
       mutation.kind === "remove" ? { removed: true } : { label: (rawLabel as string).trim() },
       text(command.title, "Change resource"),
       noteRenameVerifier(context, command.id, id, rawLabel),
+      typeof rawLabel === "string" ? rawLabel : undefined,
     );
     if (mutation.kind === "rename" && !command.confirmation) execution?.onAdmitted?.();
     return result;

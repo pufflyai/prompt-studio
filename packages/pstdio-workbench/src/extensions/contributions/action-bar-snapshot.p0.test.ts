@@ -13,6 +13,7 @@ test("action bars resolve bound commands and live state for buttons and menus", 
         {
           id: "document",
           label: "Document",
+          includeResourceActions: true,
           items: [
             {
               id: "undo",
@@ -39,6 +40,7 @@ test("action bars resolve bound commands and live state for buttons and menus", 
   });
   expect(snapshot.items[1]).toMatchObject({
     id: "document",
+    includeResourceActions: true,
     items: [
       { disabled: true, action: { commandId: "example.editor.command.edit", args: { action: { type: "undo" } } } },
     ],

@@ -78,7 +78,9 @@ test("native controls work during a turn while exclusive commands cannot overlap
       (await (await app.app.request(`/v1/sessions/${session.id}/harness-commands`)).json()).commands[0].description,
     ).toBe("Paused");
     expect(inputs).toEqual(["/goal pause"]);
-    expect((await invoke("/goal resume")).status).toBe(400);
+    const lateFailure = await invoke("/goal resume");
+    expect(lateFailure.status).toBe(400);
+    expect(await lateFailure.json()).toEqual({ error: "Changed before rejection" });
     expect(commandHints).toBe(2);
     expect(
       (await (await app.app.request(`/v1/sessions/${session.id}/harness-commands`)).json()).commands[0].description,

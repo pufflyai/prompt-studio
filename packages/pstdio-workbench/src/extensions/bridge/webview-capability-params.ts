@@ -5,7 +5,11 @@ import {
   textEditingRequestSchema,
 } from "pstdio-api-contracts";
 import type { WebviewHostCapability, WebviewHostCapabilityParams } from "pstdio-api-contracts/extension-kernel";
-import { isNavigationTarget, type NavigationTarget } from "pstdio-api-contracts/extension-kernel";
+import {
+  deviceFileInputSchema,
+  isNavigationTarget,
+  type NavigationTarget,
+} from "pstdio-api-contracts/extension-kernel";
 import { z } from "zod";
 import { webviewEditingSessionParamsSchema } from "./webview-editing-params";
 import { webviewNotificationActionParamsSchema } from "./webview-notification-params";
@@ -228,6 +232,7 @@ const schemas = {
     scope: fileScope.optional(),
   }),
   "files.list": z.object({ scope: fileScope.optional() }),
+  "files.save": deviceFileInputSchema,
   "files.download": z.object({
     name: identifier
       .regex(/^[^/\\]+$/)
