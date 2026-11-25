@@ -12,6 +12,7 @@ type LedgerEntry = {
   order: number;
   state: FileState;
   reappeared?: Set<string>;
+  returnedSubtrees?: Set<string>;
 };
 
 const sameState = (recorded: FileState, current: FileState) =>
@@ -23,6 +24,10 @@ const sameState = (recorded: FileState, current: FileState) =>
       recorded.ctime === current.ctime;
 
 const isInside = (path: string, folder: string) => path.startsWith(folder + sep);
+
+function* pathAndAncestors(path: string) {
+  for (let ancestor = path; ancestor !== dirname(ancestor); ancestor = dirname(ancestor)) yield ancestor;
+}
 
 const observesDeletion = ([path, state]: PathObservation, deletedPath: string) =>
   path === deletedPath || isInside(path, deletedPath) || (state?.directory === true && isInside(deletedPath, path));
@@ -58,38 +63,83 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
   };
 
   const rememberReappearance = (path: string, state: NonNullable<FileState>) => {
-    for (let ancestor = path; ancestor !== dirname(ancestor); ancestor = dirname(ancestor)) {
+    for (const ancestor of pathAndAncestors(path)) {
       const entry = entries.get(ancestor);
       if (entry?.state === null) markReappearedPaths(entry, [[path, state]]);
     }
   };
 
-  const retireDeletedSubtree = (root: string, rootDeletionOrder: number) => {
-    for (const [path, entry] of entries) {
-      // A delete recorded after the folder's removal can belong to the returned folder.
-      if (entry.state === null && entry.order <= rootDeletionOrder && (path === root || isInside(path, root))) {
-        entries.delete(path);
+  const isExternalReturn = (path: string, current: FileState) =>
+    current !== null && directories.get(path)?.observed.identity !== current.identity;
+
+  const retireDeletion = (retired: Map<string, number>, path: string, order: number) => {
+    retired.set(path, Math.max(order, retired.get(path) ?? 0));
+  };
+
+  const isRetired = (retired: ReadonlyMap<string, number>, path: string, order: number) => {
+    if (retired.size === 0) return false;
+    for (const ancestor of pathAndAncestors(path)) {
+      if ((retired.get(ancestor) ?? 0) >= order) return true;
+    }
+    return false;
+  };
+
+  const reconcileDeletion = (
+    recordedPath: string,
+    entry: LedgerEntry,
+    current: FileState,
+    related: readonly PathObservation[],
+    retired: Map<string, number>,
+  ) => {
+    if (isExternalReturn(recordedPath, current)) {
+      retireDeletion(retired, recordedPath, entry.order);
+      return;
+    }
+    markReappearedPaths(entry, related);
+    for (const [path, state] of related) {
+      if (state?.directory && isInside(path, recordedPath) && isExternalReturn(path, state)) {
+        entry.returnedSubtrees ??= new Set();
+        entry.returnedSubtrees.add(path);
+        retireDeletion(retired, path, entry.order);
       }
+    }
+  };
+
+  const dropRetiredDeletions = (retired: ReadonlyMap<string, number>) => {
+    // Walk the ledger once even when one notification proves many deletions are stale.
+    if (retired.size === 0) return;
+    for (const [path, entry] of entries) {
+      if (entry.state === null && isRetired(retired, path, entry.order)) entries.delete(path);
     }
   };
 
   const reconcileDeletions = (observations: readonly PathObservation[]) => {
     const byPath = new Map(observations);
+    const retired = new Map<string, number>();
+    // Exact folder hints can retire old children before their individual states are read.
+    for (const [path, current] of observations) {
+      const entry = entries.get(path);
+      if (entry?.state === null && isExternalReturn(path, current)) retireDeletion(retired, path, entry.order);
+    }
     for (const [recordedPath, entry] of entries) {
-      if (entry.state !== null) continue;
+      if (entry.state !== null || isRetired(retired, recordedPath, entry.order)) continue;
       const related = observations.filter((observation) => observesDeletion(observation, recordedPath));
       if (related.length === 0) continue;
 
       // A recursive watcher may report only a child when an external folder returns.
       const observed = byPath.get(recordedPath);
       const current = observed === undefined ? readArtifactFileState(recordedPath) : observed;
-      const owned = directories.get(recordedPath)?.observed;
-      if (current && owned?.identity !== current.identity) {
-        retireDeletedSubtree(recordedPath, entry.order);
-        continue;
-      }
-      markReappearedPaths(entry, related);
+      reconcileDeletion(recordedPath, entry, current, related, retired);
     }
+    dropRetiredDeletions(retired);
+  };
+
+  const hasReturnedAncestor = (path: string, returnedSubtrees: ReadonlySet<string> | undefined) => {
+    if (!returnedSubtrees) return false;
+    for (const ancestor of pathAndAncestors(path)) {
+      if (returnedSubtrees.has(ancestor)) return true;
+    }
+    return false;
   };
 
   // An earlier tree deletion cannot explain the disappearance of a newer mount write.
@@ -99,7 +149,8 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
         !recorded.state &&
         recorded.order >= latestWriteOrder &&
         isInside(path, recordedPath) &&
-        !recorded.reappeared?.has(path)
+        !recorded.reappeared?.has(path) &&
+        !hasReturnedAncestor(path, recorded.returnedSubtrees)
       )
         return true;
     }

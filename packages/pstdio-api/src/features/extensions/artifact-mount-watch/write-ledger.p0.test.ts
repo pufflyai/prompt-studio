@@ -278,6 +278,25 @@ describe("artifact mount deletions and expiry", () => {
 });
 
 describe("artifact mount restored folder batches", () => {
+  test("reports removals in an externally returned subtree under an API-owned folder", async () => {
+    const ledger = createArtifactMountWriteLedger(() => 0);
+    const { mount, root } = createMount(ledger);
+    const missing = join(root, "sales", "old.json");
+    await mount.writeText("sales/old.json", "{}");
+    await mount.delete("sales");
+    await mount.writeText("sales/owned.json", "[]");
+
+    const folder = join(root, "sales", "returned");
+    const child = join(folder, "nested", "child.json");
+    mkdirSync(dirname(child), { recursive: true });
+    writeFileSync(child, "external");
+    const options = { keepMatchedWrites: true };
+    expect(ledger.dropEchoes([folder], options)).toEqual([folder]);
+
+    rmSync(child);
+    expect(ledger.dropEchoes([child, missing], options)).toEqual([child]);
+  });
+
   test("a newer file keeps reporting outside removals after its write proof was consumed", async () => {
     const ledger = createArtifactMountWriteLedger(() => 0);
     const { mount, root } = createMount(ledger);
