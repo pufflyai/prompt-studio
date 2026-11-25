@@ -22,6 +22,7 @@ import { browse, browsePage, search } from "./src/browse";
 import { changeHeads, readChange } from "./src/changes";
 import { connectionRefresh } from "./src/controls";
 import { copySessionId } from "./src/copy-session-id";
+import { copySessionNickname } from "./src/copy-session-nickname";
 import { acknowledgeSavedDraft } from "./src/draft-recovery";
 import { listSessionLinks } from "./src/linked-resources";
 import { acknowledgeNativeInputs } from "./src/native-recovery";
@@ -179,6 +180,7 @@ export default defineExtension({
     newInViewer,
     open,
     copySessionId,
+    copySessionNickname,
     rename,
     archive,
     remove,

@@ -1,6 +1,7 @@
 import type { PlacementTabPresentation } from "@pstdio/sdk/extensions";
 import { l10n, viewDataEvents } from "@pstdio/sdk/extensions";
 import { newInViewer, switchConversation } from "./navigation";
+import { sessionNickname } from "./session-nickname";
 
 export const conversationTab: PlacementTabPresentation = {
   refreshEvents: [viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged],
@@ -9,6 +10,7 @@ export const conversationTab: PlacementTabPresentation = {
     const saved = resource?.type === "session" ? await ctx.sessions.get(resource.id) : undefined;
     return {
       label: saved?.title ?? resource?.label ?? l10n("commands.new", "New session"),
+      ...(resource?.type === "session" && { tooltip: sessionNickname(resource.id) }),
       menu: [
         {
           id: "sessions",

@@ -42,6 +42,7 @@ test("drafts omit management actions and workspace session rows explain guarded 
   await page.goto(`/projects/${project.id}/sessions`);
   await breadcrumbMenu(page);
   await expect(menuItem(page, "Copy session ID")).toHaveCount(0);
+  await expect(menuItem(page, "Copy session nickname")).toHaveCount(0);
   await expect(menuItem(page, "Rename session")).toHaveCount(0);
   await expect(menuItem(page, "Delete session")).toHaveCount(0);
   await page.keyboard.press("Escape");
@@ -104,6 +105,27 @@ test("copying a failed session reference uses the invoking row and preserves the
   await breadcrumbMenu(page);
   await menuItem(page, "Copy session ID").click();
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(open.id);
+});
+
+test("a saved session tab shows the same nickname its menu copies", async ({ page, request, context, browserName }) => {
+  const project = await createResourceActionsProject(request);
+  const session = await createSession(request, project.id, "Saved conversation");
+  if (browserName === "chromium") await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await prepareResourceActionsDashboard(page, project.id);
+  await page.goto(`/projects/${project.id}/sessions`);
+  await openSessionSidePanel(page, session.title);
+  const tab = page
+    .locator('[data-workbench-panel-header="side"]')
+    .getByRole("tab", { name: session.title, exact: true });
+  await tab.click({ button: "right" });
+  await expect(menuItem(page, "Copy session ID")).toBeVisible();
+  await menuItem(page, "Copy session nickname").click();
+  const readClipboard = () => page.evaluate(() => navigator.clipboard.readText());
+  await expect.poll(readClipboard).toMatch(/^[a-z]+-[a-z]+$/);
+  const nickname = await readClipboard();
+  await page.mouse.move(0, 0);
+  await tab.hover();
+  await expect(page.getByRole("tooltip").getByText(nickname, { exact: true })).toBeVisible();
 });
 
 test("shared session actions rename another row without changing the selected session", async ({
