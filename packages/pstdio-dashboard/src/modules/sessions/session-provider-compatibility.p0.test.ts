@@ -135,7 +135,15 @@ const productionProvider = async () => {
   });
   const runtime = normalizeExtensionSources(loaded.sources, loaded.diagnostics);
   expect(runtime.diagnostics).toEqual([]);
-  return { runtime, metadata: createWorkbenchExtensionMetadata({ runtime }) };
+  const metadata = createWorkbenchExtensionMetadata({
+    runtime,
+    resolveWebview: ({ webview }) => ({
+      ...webview,
+      runtimeUrl: "/test-assets/runtime.js",
+      moduleUrl: "/test-assets/session-view.js",
+    }),
+  });
+  return { runtime, metadata };
 };
 
 test("legacy switch and rename collect the actual provider's missing parameters", async () => {

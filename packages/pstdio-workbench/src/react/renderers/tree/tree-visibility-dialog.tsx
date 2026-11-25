@@ -1,5 +1,5 @@
-import { Button, Stack, Text } from "@chakra-ui/react";
-import { ScopedDialog as Dialog, Portal, SearchModalContent, Switch, type TreeVisibilityItem } from "@pstdio/ui";
+import { Button, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
+import { ScopedDialog as Dialog, Portal, SearchModalContent, type TreeVisibilityItem } from "@pstdio/ui";
 import { useRef, useState } from "react";
 import { WorkbenchIcon } from "../../shared/icon";
 
@@ -50,22 +50,31 @@ export const TreeVisibilityDialog = (props: TreeVisibilityDialogProps) => {
               }
             >
               <Stack gap="sm" p="sm">
-                {matches.map((item) => (
-                  <Switch
-                    key={item.key}
-                    inputProps={{ "aria-label": item.label }}
-                    checked={item.visible}
-                    onCheckedChange={item.toggle}
-                    size="sm"
-                  >
-                    {item.label}
-                    {item.section && item.section !== item.label ? (
-                      <Text as="span" color="fg.muted" ms="xs">
-                        {item.section}
+                {matches.map((item) => {
+                  const action = `${item.visible ? "Hide" : "Show"} ${item.label}`;
+                  return (
+                    <HStack key={item.key} justify="space-between" gap="sm">
+                      <Text textStyle="label/M/regular">
+                        {item.label}
+                        {item.section && item.section !== item.label ? (
+                          <Text as="span" color="fg.muted" ms="xs">
+                            {item.section}
+                          </Text>
+                        ) : null}
                       </Text>
-                    ) : null}
-                  </Switch>
-                ))}
+                      <IconButton
+                        size="sm"
+                        variant="ghost"
+                        aria-label={action}
+                        title={action}
+                        onClick={item.toggle}
+                        flexShrink={0}
+                      >
+                        <WorkbenchIcon name={item.visible ? "eye" : "eye-off"} size={14} />
+                      </IconButton>
+                    </HStack>
+                  );
+                })}
                 {matches.length === 0 ? (
                   <Text color="fg.muted" role="status">
                     No matching navigation items

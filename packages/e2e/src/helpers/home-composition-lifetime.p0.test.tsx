@@ -5,11 +5,10 @@ import { HomeApp } from "home/testing";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { createRetainedExtensionQueryFixture } from "./retained-extension-query.fixture";
 
-test("Home snapshot updates preserve the quota owner while its actual command is held", async () => {
+test("Home snapshot updates do not query agent quotas", async () => {
   const original = Object.getOwnPropertyDescriptor(globalThis, "IS_REACT_ACT_ENVIRONMENT");
   const originalDocument = Object.getOwnPropertyDescriptor(globalThis, "document"),
     originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
-  const held = Promise.withResolvers<unknown[]>();
   let quotas = 0,
     home = 0;
   const transport = createRetainedExtensionQueryFixture({
@@ -17,7 +16,7 @@ test("Home snapshot updates preserve the quota owner while its actual command is
     execute: async (command) => {
       if (command.commandId.endsWith(".quotas")) {
         quotas++;
-        return held.promise;
+        return [];
       }
       if (command.commandId.endsWith(".read")) {
         home++;
@@ -49,19 +48,13 @@ test("Home snapshot updates preserve the quota owner while its actual command is
       );
     });
     expect(home).toBe(1);
-    expect(quotas).toBe(1);
+    expect(quotas).toBe(0);
     await act(async () => {
       transport.emit(viewDataEvents.projectsChanged.id);
     });
     expect(home).toBe(2);
-    expect(quotas).toBe(1);
-    held.resolve([]);
-    await act(async () => {
-      await held.promise;
-    });
-    expect(quotas).toBe(1);
+    expect(quotas).toBe(0);
   } finally {
-    held.resolve([]);
     await act(async () => {
       tree?.unmount();
     });

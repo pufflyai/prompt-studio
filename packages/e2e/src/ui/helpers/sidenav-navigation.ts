@@ -25,11 +25,13 @@ export const showSidenavEntry = async (page: Page, label: string) => {
   await option(sidenav, "Search").click({ button: "right" });
   await expect(page.getByRole("menu").last()).toBeVisible();
   await page.getByRole("menuitem", { name: "Hide/show items", exact: true }).click();
-  const visibilityItem = page.getByRole("switch", { name: label, exact: true });
+  const dialog = page.getByRole("dialog", { name: "Hide/show items" });
+  const show = dialog.getByRole("button", { name: `Show ${label}`, exact: true });
+  const hide = dialog.getByRole("button", { name: `Hide ${label}`, exact: true });
   // The core Search row is ready before extension navigation. Wait for the
   // contribution before deciding whether its item needs to be shown.
-  await expect(visibilityItem).toBeVisible();
-  if (!(await option(sidenav, label).isVisible())) await visibilityItem.click();
+  await expect(show.or(hide)).toBeVisible();
+  if (await show.isVisible()) await show.click();
   await page.keyboard.press("Escape");
   return getSidenavEntry(page, label);
 };
