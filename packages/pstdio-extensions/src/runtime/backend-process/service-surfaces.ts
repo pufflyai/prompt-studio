@@ -73,6 +73,7 @@ export const serviceSurfaces: Members = {
   account: object(
     calls(
       "status",
+      "createTeam",
       "login",
       "loginStatus",
       "cancelLogin",

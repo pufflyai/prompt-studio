@@ -12,7 +12,13 @@ import { createNativeAccount, nativeAccountFile } from "./native-account";
 
 // Exercise the real account routes and durable local owners without booting unrelated
 // agents, terminals or extension discovery. Packaged smoke covers full-host wiring.
-export const createAccountHostFixture = async (root: string, databasePath = join(root, "db")) => {
+export const createAccountHostFixture = async (
+  root: string,
+  {
+    databasePath = join(root, "db"),
+    recoverTeamProjects = false,
+  }: { databasePath?: string; recoverTeamProjects?: boolean } = {},
+) => {
   const database = await createDb({ path: databasePath });
   const projects = createProjectsDBService(database.db);
   const environmentService = createEnvironmentDBService(database.db);
@@ -27,7 +33,13 @@ export const createAccountHostFixture = async (root: string, databasePath = join
       synced = connections;
     },
     async () => ({ state: "first-download-incomplete", offlineReady: false }),
-    async () => {},
+    async (connection, signal, created) => {
+      if (!recoverTeamProjects || !connection.userId) return;
+      signal.throwIfAborted();
+      await account.recordCloudDiscovery(connection, "Team notebook");
+      await projects.create({ id: connection.workbenchId, name: "Team notebook" });
+      created();
+    },
     undefined,
     undefined,
     undefined,

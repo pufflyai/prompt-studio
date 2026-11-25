@@ -106,3 +106,7 @@ Each document and resource-number owner remembers that it finished its first dow
 The native account owner sends `POST /v1/devices/presence` every 15 seconds, even without a Cloud project. The account manager updates its existing `lastSeenAt`; device lists derive `online` from that timestamp and a 45-second lease using the database clock. A successful login or access renewal also proves contact. No separate stored online flag or new table is needed. Removal rejects future heartbeats; logout stops them. Other manager replicas see the same presence because PostgreSQL owns the timestamp.
 
 The packaged document sync smoke checks the `local`, `synced` and `needs-attention` states on a compiled host. The packaged two-device smoke runs two compiled hosts against a wire-level relay peer. It checks that an interrupted first download stays `first-download-incomplete` while offline, that a connected device goes `offline` and back to `synced`, and that edits made on both devices while the project is local merge when it syncs again. The packaged account smoke checks sign-in cancellation and presence.
+
+## Sign in once for personal and team projects
+
+The Google session links to one stable user. The same device credential can request access to its personal account and eligible teams. Team project renewal includes the owning team account ID. Device presence, signing keys and device removal remain scoped to the signed-in user.

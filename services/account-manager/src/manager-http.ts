@@ -8,7 +8,7 @@ import { projectDeletionServiceHttp } from "./project-deletion-http";
 import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
 
 type Authentication = ReturnType<typeof createManagerAuthentication>;
-const renewal = z.strictObject({ workbenchId: identitySchema });
+const renewal = z.strictObject({ workbenchId: identitySchema, accountId: identitySchema.optional() });
 const json = (body: unknown, status = 200, headers?: ConstructorParameters<typeof Headers>[0]) =>
   Response.json(body, {
     status,
@@ -22,14 +22,14 @@ const renewAccess = async (auth: Authentication, request: Request, log: RenewalL
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405, { allow: "POST" });
   const token = /^Bearer[ \t]+(\S+)[ \t]*$/i.exec(request.headers.get("authorization") ?? "")?.[1];
   if (!token) return unauthorized();
-  let workbenchId: string;
+  let input: z.infer<typeof renewal>;
   try {
-    workbenchId = renewal.parse(await request.json()).workbenchId;
+    input = renewal.parse(await request.json());
   } catch {
     return unauthorized();
   }
   try {
-    return json(await auth.renew(token, workbenchId));
+    return json(await auth.renew(token, input.workbenchId, input.accountId));
   } catch (error) {
     if (error instanceof EnvironmentAccessDenied) return unauthorized();
     const category = error instanceof EnvironmentAccessFailure ? error.category : "service";

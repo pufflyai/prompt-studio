@@ -4,6 +4,8 @@ import type {
   AccountLoginStatus,
   AccountSignInProvider,
   AccountStatus,
+  DeviceLogin,
+  TeamAccount,
 } from "../../account";
 import type { ProjectReturnAction, ProjectSyncStatus } from "../../project-sync";
 
@@ -16,6 +18,7 @@ export type {
   AccountSignInProvider,
   AccountStatus,
   DeviceLogin,
+  TeamAccount,
 } from "../../account";
 export type {
   ProjectReturnAction,
@@ -34,6 +37,8 @@ export type {
  */
 export interface ExtensionAccountApi {
   status(): Promise<AccountStatus>;
+  /** Creates a team owned by the signed-in person. Pass the displayed identity to reject a changed sign-in. */
+  createTeam(name: string, expected?: Pick<DeviceLogin, "accountId" | "managerOrigin">): Promise<TeamAccount>;
   /**
    * Starts a native browser sign-in. Omit the address to use the host's account service. Open `url` in a browser on
    * the computer that runs Prompt Studio, then poll `loginStatus` until it is no longer pending.

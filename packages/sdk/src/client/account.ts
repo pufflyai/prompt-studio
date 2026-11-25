@@ -12,10 +12,12 @@ import {
   type DownloadCloudProjectResult,
   type LocalRemovalPreflight,
   localRemovalConflictSchema,
+  type ProjectCopyDevice,
   type ProjectReturnAction,
   type ProjectSyncStatus,
   type RemoveLocalProjectInput,
   type RemoveLocalProjectResult,
+  type TeamAccount,
 } from "pstdio-api-contracts";
 import { verifyAccountLogin } from "../internal/account-login";
 import { PstdioApiError, type RequestFn } from "./request";
@@ -47,8 +49,37 @@ const localRemovalError = (error: unknown) => {
 };
 
 const expectedIdentityQuery = (expected?: AccountReadIdentity | null) => {
-  const query = new URLSearchParams(expected === null ? { local: "true" } : expected);
+  if (expected === undefined) return "";
+  const query = new URLSearchParams(
+    expected === null ? { local: "true" } : { accountId: expected.accountId, managerOrigin: expected.managerOrigin },
+  );
+  return `?${query.toString()}`;
+};
+
+type ProjectCopyOptions = AccountReadOptions & { expectedDevice?: ProjectCopyDevice };
+type ProjectOwnerOptions = ProjectCopyOptions & { expected?: AccountReadIdentity };
+
+const projectCopyQuery = (options?: ProjectOwnerOptions & { accountId?: string }) => {
+  const query = new URLSearchParams();
+  const { expectedDevice, expected, accountId } = options ?? {};
+  if (expected) {
+    query.set("accountId", expected.accountId);
+    query.set("managerOrigin", expected.managerOrigin);
+  } else if (accountId) {
+    query.set("accountId", accountId);
+  }
+  if (expectedDevice) {
+    query.set("deviceAccountId", expectedDevice.accountId);
+    query.set("deviceManagerOrigin", expectedDevice.managerOrigin);
+    query.set("deviceId", expectedDevice.deviceId);
+  }
   return query.size ? `?${query.toString()}` : "";
+};
+
+const projectCopyBody = <T extends { expectedDevice?: ProjectCopyDevice }>(input: T) => {
+  if (!input.expectedDevice) return input;
+  const { accountId, managerOrigin, deviceId } = input.expectedDevice;
+  return { ...input, expectedDevice: { accountId, managerOrigin, deviceId } };
 };
 
 export const createAccountClient = (request: RequestFn) => {
@@ -74,32 +105,42 @@ export const createAccountClient = (request: RequestFn) => {
     /** Cancels a pending sign-in. A sign-in that already completed stays complete. */
     cancelLogin: (id: string) =>
       request<Ok & { status: Exclude<AccountLoginStatus, "pending"> }>(login(id), { method: "DELETE" }),
+    teams: (options?: AccountReadOptions) => request<TeamAccount[]>("/v1/account/teams", options),
+    createTeam: (name: string, expected?: AccountReadIdentity) =>
+      request<TeamAccount>("/v1/account/teams", { method: "POST", body: { name, expected } }),
     /** Reads known Cloud membership, device presence, and outstanding deletion operations. */
-    projectsCatalog: (options?: AccountReadOptions) => request<CloudProjectCatalog>("/v1/account/projects", options),
+    projectsCatalog: (options?: ProjectCopyOptions & { accountId?: string }) =>
+      request<CloudProjectCatalog>(`/v1/account/projects${projectCopyQuery(options)}`, { signal: options?.signal }),
     /** Inspects current upload certainty and what removing this device's copy would clean up. */
-    projectLocalRemoval: (projectId: string, options?: AccountReadOptions) =>
-      request<LocalRemovalPreflight>(`${project(projectId)}/local-removal`, options),
+    projectLocalRemoval: (projectId: string, options?: ProjectCopyOptions) =>
+      request<LocalRemovalPreflight>(`${project(projectId)}/local-removal${projectCopyQuery(options)}`, {
+        signal: options?.signal,
+      }),
     /** Requires explicit discard acknowledgement when a fresh host check finds pending or unknown upload state. */
     removeLocalProject: (projectId: string, input: RemoveLocalProjectInput = {}, options?: AccountReadOptions) =>
       request<RemoveLocalProjectResult>(`${project(projectId)}/remove-local`, {
         ...options,
         method: "POST",
-        body: input,
+        body: projectCopyBody(input),
       }).catch((error: unknown) => {
         throw localRemovalError(error);
       }),
     /** Explicitly requests a device copy and returns its current download state. */
-    downloadCloudProject: (projectId: string, options?: AccountReadOptions & { expected?: AccountReadIdentity }) =>
-      request<DownloadCloudProjectResult>(`${project(projectId)}/download${expectedIdentityQuery(options?.expected)}`, {
+    downloadCloudProject: (projectId: string, options?: ProjectOwnerOptions) =>
+      request<DownloadCloudProjectResult>(`${project(projectId)}/download${projectCopyQuery(options)}`, {
         signal: options?.signal,
         method: "POST",
       }),
     /** Starts or resumes permanent Cloud deletion. The receipt reports whether cleanup has completed. */
     deleteCloudProject: (projectId: string, input: DeleteCloudProjectInput, options?: AccountReadOptions) =>
-      request<CloudProjectDeletion>(`${project(projectId)}/delete-cloud`, { ...options, method: "POST", body: input }),
+      request<CloudProjectDeletion>(`${project(projectId)}/delete-cloud`, {
+        ...options,
+        method: "POST",
+        body: projectCopyBody(input),
+      }),
     /** Reads an authoritative deletion receipt without requiring a device copy. */
-    projectDeletionStatus: (projectId: string, options?: AccountReadOptions & { expected?: AccountReadIdentity }) =>
-      request<CloudProjectDeletion>(`${project(projectId)}/deletion${expectedIdentityQuery(options?.expected)}`, {
+    projectDeletionStatus: (projectId: string, options?: ProjectOwnerOptions) =>
+      request<CloudProjectDeletion>(`${project(projectId)}/deletion${projectCopyQuery(options)}`, {
         signal: options?.signal,
       }),
     /** An explicit null expectation means signed out; omission preserves unspecified caller authority. */

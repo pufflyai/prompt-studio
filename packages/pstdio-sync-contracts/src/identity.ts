@@ -25,3 +25,15 @@ export const dataOwnership = {
   caches: "environment",
   developmentOverrides: "environment",
 } as const;
+
+/** Omit the team scope for legacy personal-account clients and services. */
+export const accountScopedPath = (path: string, accountId?: string) =>
+  accountId === undefined ? path : `${path}?accountId=${encodeURIComponent(identitySchema.parse(accountId))}`;
+
+export const teamAccountSchema = z.strictObject({
+  accountId: identitySchema,
+  name: z.string(),
+  role: z.enum(["owner", "member"]),
+  features: z.strictObject({ relay: z.boolean() }),
+});
+export type TeamAccount = z.infer<typeof teamAccountSchema>;

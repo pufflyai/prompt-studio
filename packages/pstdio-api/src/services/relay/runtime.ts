@@ -4,6 +4,7 @@ import { seenOwnerId } from "../../features/activity/resource-seen";
 import { publishedExtensionsId } from "../../features/extensions/publication/catalog";
 import { apiLogger } from "../../lib/logger";
 import { AccountRequestError } from "../account/native-account";
+import { signedInIdentity } from "../account/native-store";
 import { isRecoveryCatalogOwner } from "../project-recovery/catalog";
 import { startAutomationSync } from "./automations";
 import { startCoreDocumentSync } from "./core-documents";
@@ -23,6 +24,7 @@ import { type createWorkbenchAccess, createWorkbenchUpdates, drainOwnerStarts } 
 
 export type RelayWorkbench = {
   accountId: string;
+  userId?: string;
   workbenchId: string;
   environmentId: string;
   relayOrigin: string;
@@ -116,7 +118,7 @@ const privateChangesHandled = (
   origin: string | undefined,
   deps: RelayDeps,
 ) => {
-  if (extensionId !== seenOwnerId(config)) return false;
+  if (extensionId !== seenOwnerId(signedInIdentity(config))) return false;
   if (origin === "relay")
     deps.eventBus.emit("extension_events", "set", {
       id: crypto.randomUUID(),
@@ -130,7 +132,7 @@ const createSeenConnections = (
   core: (config: RelayWorkbench) => Omit<Parameters<typeof startCoreRecordSync>[0], "ownerId">,
 ) =>
   createWorkbenchConnections((config) =>
-    startCoreRecordSync({ ...core(config), ownerId: seenOwnerId(config), privateSpace: true }),
+    startCoreRecordSync({ ...core(config), ownerId: seenOwnerId(signedInIdentity(config)), privateSpace: true }),
   );
 
 export const startRelayRuntime = async (input: RelayRuntimeInput) => {

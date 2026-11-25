@@ -32,6 +32,7 @@ export const createWebviewAccountClient = (host: GuestHost) =>
       return verifyAccountLogin(attempt, provider, (id) => host.call("account.manage", { op: "cancelLogin", id }));
     },
     cancelLogin: (id) => host.call("account.manage", { op: "cancelLogin", id }),
+    createTeam: (name, expected) => host.call("account.manage", { op: "createTeam", name, expected }),
     logout: () => host.call("account.manage", { op: "logout" }),
     renameDevice: (id, name) => host.call("account.manage", { op: "renameDevice", id, name }),
     removeDevice: (id) => host.call("account.manage", { op: "removeDevice", id }),

@@ -72,7 +72,6 @@ In Cloud settings, choose **Make local** and confirm. Syncing stops on this devi
 
 Choose **Sync with Cloud** to enable syncing again. The copies merge. Where both copies changed the same thing, one change is kept.
 
-
 ## Remove a device copy or delete a Cloud project
 
 In a Cloud project's Danger zone, **Delete local version** removes this device's downloaded Prompt Studio data. Other devices keep their copies, and your selected source folder remains on disk. Prompt Studio asks for explicit acknowledgement if uploads are pending or their completion is unknown. The project stays in the picker as **Cloud only**. Open that entry and use **Download** when you want a copy on this device again.
@@ -81,4 +80,10 @@ In a Cloud project's Danger zone, **Delete local version** removes this device's
 
 **Make local** stops syncing and preserves the option to merge with Cloud later. A permanently retired project identity cannot reconnect to Cloud.
 
-*Updated at: 2026-11-18*
+## Create a team project
+
+After signing in, create a team through `pst teams create "Studio Team"`. When Cloud early access is enabled for the team, select it in the project picker and create a project in a new folder. Your second signed-in device can select the team and open the same Cloud project. Personal projects remain available under Personal.
+
+The first team release supports one owner. Invitations, project sharing and ownership transfer follow in later releases.
+
+*Updated at: 2026-11-24*

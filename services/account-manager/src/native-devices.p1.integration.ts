@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { createServer } from "node:net";
 import { resolve } from "node:path";
-import { createAuthorityFixture } from "./authority.fixture";
+import { createAuthorityFixture, deviceProfile } from "./authority.fixture";
 import * as implementation from "./index";
 import { authenticationConfig } from "./manager-authentication.fixture";
 import {
@@ -15,6 +15,7 @@ import { createOwnedTls } from "./owned-tls.fixture";
 const fixture = createAuthorityFixture(implementation);
 let cleanup = async () => {};
 let origin: string;
+let teamAccountId: string;
 let certificate: string;
 const googleSubject = `native-a-${crypto.randomUUID()}`;
 const microsoftSubject = `native-ms-${crypto.randomUUID()}`;
@@ -76,6 +77,11 @@ beforeAll(async () => {
       accountId: microsoftAccount,
       owner: { issuer: `https://login.microsoftonline.com/${fixtureMicrosoftTenant}/v2.0`, subject: microsoftSubject },
     });
+    const seed = await manager.registerDevice({ accountId, ...deviceProfile() });
+    const team = await auth.devices.createTeam(seed.token, "Cloud test team");
+    teamAccountId = team.accountId;
+    await manager.setFeature({ accountId: teamAccountId, feature: "relay", enabled: true });
+    await manager.removeDevice({ accountId, deviceId: seed.deviceId });
   } finally {
     await manager.close();
   }
@@ -90,6 +96,7 @@ const nativeFixture = (file: string, subjects: Record<string, string>) => {
         ...process.env,
         NODE_EXTRA_CA_CERTS: certificate,
         OWNER_TEST_ORIGIN: origin,
+        OWNER_TEST_TEAM: teamAccountId,
         PSTDIO_DEFAULT_EXTENSIONS: "[]",
         ...subjects,
       },

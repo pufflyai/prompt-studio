@@ -11,6 +11,7 @@ export type {
   HarnessAuthenticationQuestion,
   LocalRemovalPreflight,
   ProjectCopyAccount,
+  ProjectCopyDevice,
   ProjectSyncFile,
   ProjectSyncSource,
   ProjectSyncState,

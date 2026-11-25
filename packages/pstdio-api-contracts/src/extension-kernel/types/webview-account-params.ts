@@ -13,6 +13,7 @@ export type WebviewAccountManageParams =
   | { op: "login"; managerOrigin?: string; provider?: AccountSignInProvider }
   | { op: "cancelLogin"; id: string }
   | { op: "logout" }
+  | { op: "createTeam"; name: string; expected?: Parameters<ExtensionAccountApi["createTeam"]>[1] }
   | { op: "renameDevice"; id: string; name: string }
   | { op: "removeDevice"; id: string }
   | { op: "syncProject"; projectId?: string }

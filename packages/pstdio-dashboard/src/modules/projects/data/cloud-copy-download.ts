@@ -2,41 +2,33 @@ import type {
   CloudProjectCatalog,
   CloudProjectCatalogEntry,
   ProjectCopyAccount,
+  ProjectCopyDevice,
   ProjectSyncStatus,
 } from "@pstdio/sdk/client";
-import {
-  classifyApiWrite,
-  getWorkbenchOperations,
-  operationSubject,
-  type WorkbenchOperations,
-} from "@pstdio/workbench";
+import { classifyApiWrite, getWorkbenchOperations } from "@pstdio/workbench";
 import { getRuntimeApiClient } from "@/lib/api";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { getDashboardAccountStatusQuery, getDashboardScopedQueries } from "@/lib/scoped-queries";
-import { getRuntimeCollections } from "@/lib/sync/collections";
+import type { RuntimeCollections } from "@/lib/sync/collections";
 import { createRuntimeFeed, createRuntimeState } from "@/lib/sync/runtime-state";
-import { dashboardCommandIds } from "@/shared/app/commands";
+import { reportWorkbenchError } from "@/lib/workbench-error-report";
 
-import { cloudCatalogKeyFor, cloudCatalogScopeFor, cloudProjectDeletionKey } from "./project-catalog";
+import { cloudCatalogKeyFor, cloudProjectDeletionKey } from "./project-catalog";
+import {
+  cloudCopyBusy,
+  cloudCopySourceCommand,
+  cloudCopySyncKey,
+  cloudProjectCopySubject,
+  deviceProjectCopySubject,
+  requireProjectCopyScope,
+} from "./project-copy-scope";
 
-const downloadDomain = "project.download-device-copy";
-export const cloudCopyRemovalDomain = "project.remove-device-copy";
-export const cloudProjectCopySubject = (id: string, scope?: string) => {
-  const subject = operationSubject("cloud-project-copy", id);
-  return scope ? `${subject}:${scope}` : subject;
-};
-export const cloudCopyBusy = (operations: WorkbenchOperations, id: string, scope?: string) => {
-  const accountSubject = cloudProjectCopySubject(id);
-  const deviceSubject = scope && cloudProjectCopySubject(id, scope);
-  return operations.getSnapshot().pending.some((entry) => {
-    if (entry.subjects.includes(accountSubject)) return true;
-    if (deviceSubject) return entry.subjects.includes(deviceSubject);
-    // An account-wide deletion must check copy claims on every device.
-    return entry.subjects.some((subject) => subject.startsWith(`${accountSubject}:`));
-  });
-};
-export const cloudCopyScopeFor = (id: string, catalogScope: string) => JSON.stringify([id, catalogScope]);
-export const cloudCopySyncKey = (scope: string) => ["cloud-project-opening", scope] as const;
+interface RecoveredProjectOpening {
+  id: string;
+  read(): { name: string; account: ProjectCopyAccount; device: ProjectCopyDevice } | undefined;
+  close(): void;
+  select(name: string): Promise<unknown>;
+}
 
 export const cloudCopyDownloadAction = (entry?: CloudProjectCatalogEntry, sync?: ProjectSyncStatus) => {
   if (!entry?.actions.download) return;
@@ -46,16 +38,11 @@ export const cloudCopyDownloadAction = (entry?: CloudProjectCatalogEntry, sync?:
   if (sync?.state === "needs-attention" || sync?.sources?.some((source) => source.error)) return sync;
 };
 
-export interface CloudCopyDownloadAdmission {
-  id: string;
-  account?: ProjectCopyAccount;
-  scope: string;
-  action: NonNullable<ReturnType<typeof cloudCopyDownloadAction>>;
-}
+type DownloadAction = NonNullable<ReturnType<typeof cloudCopyDownloadAction>>;
 
 const progressedRetry = async (
   project: CloudProjectCatalogEntry,
-  action: CloudCopyDownloadAdmission["action"],
+  action: DownloadAction,
   readSync: () => Promise<ProjectSyncStatus>,
 ) => {
   if (!project.online) return false;
@@ -66,66 +53,141 @@ const progressedRetry = async (
   return state === "first-download-incomplete" || state === "waiting-to-sync" || state === "synced";
 };
 
+const createRecoveredProjectOpenings = (
+  owner: RuntimeCollections,
+  isCurrent: (id: string, account: ProjectCopyAccount, device: ProjectCopyDevice) => boolean,
+) => {
+  const openings = new Map<string, { views: number; selected: boolean; pending?: Promise<void> }>();
+  return (scope: string) => {
+    // Concurrent views of this recovery share navigation until the last view closes.
+    const opening = openings.get(scope) ?? { views: 0, selected: false };
+    openings.set(scope, opening);
+    opening.views++;
+    let released = false;
+    let waiting = false;
+    const readOpening = ({ id, read }: RecoveredProjectOpening) => {
+      if (released || owner.isDisposed()) return;
+      const ready = read();
+      return ready && isCurrent(id, ready.account, ready.device) ? ready : undefined;
+    };
+    return {
+      async open(input: RecoveredProjectOpening) {
+        if (waiting) return;
+        waiting = true;
+        const { id, close, select } = input;
+        try {
+          while (opening.pending) await opening.pending;
+          const ready = readOpening(input);
+          if (!ready) return;
+          if (opening.selected) {
+            close();
+            return;
+          }
+          const settled = Promise.withResolvers<void>();
+          opening.pending = settled.promise;
+          try {
+            close();
+            opening.selected = (await select(ready.name)) !== false;
+          } finally {
+            opening.pending = undefined;
+            settled.resolve();
+          }
+        } catch (error) {
+          reportWorkbenchError(error, id);
+        } finally {
+          waiting = false;
+        }
+      },
+      release() {
+        released = true;
+        if (--opening.views !== 0) return;
+        // Strict Mode replays cleanup and setup before the microtask queue runs.
+        queueMicrotask(() => {
+          if (opening.views === 0 && openings.get(scope) === opening) openings.delete(scope);
+        });
+      },
+    };
+  };
+};
+
 const localCopyRemovals = createRuntimeFeed<string>();
 
 export const getCloudCopyDownloads = createRuntimeState((owner) => {
   const operations = getWorkbenchOperations(getDashboardScopedQueries(owner));
   const api = getRuntimeApiClient(owner).account;
   const client = getDashboardQueryClient(owner);
+  const domain = "project.download-device-copy";
   const accountStatus = getDashboardAccountStatusQuery(owner);
-  const isCheckingAccount = () => accountStatus.getSnapshot().fetching;
-  const isCurrent = (id: string, scope: string) => {
-    if (owner.isDisposed() || getRuntimeCollections() !== owner) return false;
-    const { data, error } = accountStatus.getSnapshot();
-    // A failed read retains the previous login, but it cannot confirm the current device.
-    return !error && scope === cloudCopyScopeFor(id, cloudCatalogScopeFor(String(owner.id), data?.login));
+  const accountPending = () => accountStatus.getSnapshot().fetching;
+  const isCurrent = (id: string, account?: ProjectCopyAccount, device?: ProjectCopyDevice) => {
+    if (!account || accountPending()) return false;
+    try {
+      requireProjectCopyScope(owner, id, account, device, "The active Cloud account changed.");
+      return true;
+    } catch {
+      return false;
+    }
   };
-  const state = (id: string, scope: string) => {
+  const state = (id: string, account?: ProjectCopyAccount, device?: ProjectCopyDevice) => {
+    if (!account || !device) return {};
     const { pending, recovery } = operations.getSnapshot();
-    const subject = cloudProjectCopySubject(id, scope);
+    const subject = deviceProjectCopySubject(id, account, device);
     const matches = (entry: { domain: string; subjects: readonly string[] }) =>
-      entry.domain === downloadDomain && entry.subjects.includes(subject);
+      entry.domain === domain && entry.subjects.includes(subject);
     const active = pending.find(matches);
-    const failure = recovery.find((entry) => matches(entry) && entry.status !== "rejected");
+    const failure = recovery.find((entry) => matches(entry) && !entry.retired && entry.status !== "rejected");
     return { active, failure };
   };
 
   return {
-    isCurrent,
-    isCheckingAccount,
     state,
+    isCurrent,
     subscribeToLocalRemoval: (listener: (scope: string) => void) => localCopyRemovals.subscribe(listener, owner),
     localCopyRemoved: (scope: string) => localCopyRemovals.publish(scope, owner),
     snapshot: operations.getSnapshot,
     subscribe: operations.subscribe,
     check: operations.check,
-    discard(id: string, scope: string, attempt: symbol) {
-      if (isCheckingAccount() || !isCurrent(id, scope) || state(id, scope).failure?.id !== attempt) return false;
+    observeOpening: createRecoveredProjectOpenings(owner, isCurrent),
+    discard(id: string, account: ProjectCopyAccount, device: ProjectCopyDevice, attempt: symbol) {
+      if (!isCurrent(id, account, device) || state(id, account, device).failure?.id !== attempt) return false;
       operations.discard(attempt);
       return true;
     },
-    async start(admission: CloudCopyDownloadAdmission, onAdmitted: () => void, onDiscard: () => void) {
-      const { id, account: expected, scope, action } = admission;
-      if (!expected || !isCurrent(id, scope) || isCheckingAccount()) return;
-      const authority = getDashboardScopedQueries(owner).getScope();
-      const login = accountStatus.getSnapshot().data?.login;
-      if (authority.accountId !== expected.accountId || authority.accountOrigin !== expected.managerOrigin) return;
-      const subject = cloudProjectCopySubject(id, scope);
-      if (cloudCopyBusy(operations, id, scope)) return;
-      const queryKey = cloudCatalogKeyFor(expected.managerOrigin, expected.accountId, login?.deviceId);
-      const syncKey = cloudCopySyncKey(scope);
-      // Recovery can release the shared claim before a peer renders the confirmed catalog.
+    async start(
+      id: string,
+      expected: ProjectCopyAccount,
+      expectedDevice: ProjectCopyDevice,
+      action: DownloadAction,
+      onAdmitted: () => void,
+      onDiscard: () => void,
+    ) {
+      const scope = requireProjectCopyScope(
+        owner,
+        id,
+        expected,
+        expectedDevice,
+        "The active Cloud account changed. Choose the project again.",
+      );
+      if (accountPending() || cloudCopyBusy(operations, id, expected, expectedDevice)) return;
+      const { login } = scope;
+      const queryKey = cloudCatalogKeyFor(login.managerOrigin, login.accountId, login.deviceId, expected.accountId);
+      const syncKey = cloudCopySyncKey(scope.key);
       const catalog = client.getQueryData<CloudProjectCatalog>(queryKey);
-      if (!catalog || catalog.deletions.some((entry) => entry.projectId === id)) return;
-      if (client.getQueryData(cloudProjectDeletionKey(id, expected))) return;
+      if (
+        !catalog ||
+        catalog.deletions.some((entry) => entry.projectId === id) ||
+        client.getQueryData(cloudProjectDeletionKey(id, expected, login))
+      )
+        return;
       const project = catalog.projects.find((entry) => entry.id === id);
       const sync = client.getQueryData<ProjectSyncStatus>(syncKey);
       if (!project || cloudCopyDownloadAction(project, sync) !== action) return;
       const retry = project.presence === "downloading";
-      const clearRetriedFailure = (observed?: CloudProjectCatalogEntry) => {
-        const sync = client.getQueryCache().find<ProjectSyncStatus>({ queryKey: syncKey, exact: true });
-        if (sync?.state.data?.state === "needs-attention" || sync?.state.data === action) sync?.reset();
-        if ("presence" in action && action.downloadError && observed?.downloadError === action.downloadError) {
+      const clearRetriedFailure = (observed: CloudProjectCatalogEntry) => {
+        const cachedSync = client.getQueryCache().find<ProjectSyncStatus>({ queryKey: syncKey, exact: true });
+        if (cachedSync?.state.data?.state === "needs-attention" || cachedSync?.state.data === action)
+          cachedSync?.reset();
+        if ("presence" in action && action.downloadError && observed.downloadError === action.downloadError) {
           client.setQueryData<CloudProjectCatalog>(
             queryKey,
             (previous) =>
@@ -139,7 +201,9 @@ export const getCloudCopyDownloads = createRuntimeState((owner) => {
         }
       };
       const observe = async (signal: AbortSignal) => {
-        const catalog = await api.projectsCatalog({ signal });
+        if (!(await scope.confirm(signal))) return;
+        const catalog = await api.projectsCatalog({ signal, accountId: scope.accountId, expectedDevice });
+        if (!(await scope.confirm(signal))) return;
         if (
           catalog.account?.accountId !== expected.accountId ||
           catalog.account.managerOrigin !== expected.managerOrigin
@@ -147,90 +211,67 @@ export const getCloudCopyDownloads = createRuntimeState((owner) => {
           throw new Error("The active Cloud account changed.");
         return { catalog, project: catalog.projects.find((entry) => entry.id === id) };
       };
-      const name = project.name;
-      const waitForCurrentDevice = async (signal: AbortSignal) => {
-        if (isCheckingAccount()) await accountStatus.read(signal);
-        return isCurrent(id, scope);
-      };
-      const retiredScope = () => {
-        if (owner.isDisposed() || getRuntimeCollections() !== owner) return true;
-        const { data } = accountStatus.getSnapshot();
-        return Boolean(
-          data &&
-            (data.signInRequired ||
-              scope !== cloudCopyScopeFor(id, cloudCatalogScopeFor(String(owner.id), data.login))),
-        );
-      };
-      const confirmedScope = () => {
-        if (retiredScope()) return false;
-        const { data, error, fetching } = accountStatus.getSnapshot();
-        if (!data || error || fetching || accountStatus.inspect().stale)
-          throw new Error("Confirm the current Cloud device before reconciling Download.");
-        return true;
-      };
-      const confirmScope = async (signal: AbortSignal) => {
-        if (retiredScope()) return false;
-        const { data, error, fetching } = accountStatus.getSnapshot();
-        if (fetching) await accountStatus.read(signal);
-        else if (!data || error || accountStatus.inspect().stale) await accountStatus.refresh(signal);
-        signal.throwIfAborted();
-        return confirmedScope();
-      };
       const retired = new Error("The active Cloud device changed.");
       const operation = operations.submit({
         projectId: id,
-        domain: downloadDomain,
-        subjects: [subject],
-        sourceCommand: { id: dashboardCommandIds.openProjects },
+        domain,
+        subjects: [deviceProjectCopySubject(id, expected, expectedDevice)],
+        intent: cloudProjectCopySubject(id, expected),
+        sourceCommand: cloudCopySourceCommand(scope.accountId),
         recoverySource: "cloud-project-picker",
-        title: `Download ${name}`,
-        draft: { projectId: id, name },
+        title: `Download ${project.name}`,
+        draft: { projectId: id, name: project.name },
         releaseOnDiscard: true,
         onDiscard,
         classify: (error) => (error === retired ? "rejected" : classifyApiWrite(error)),
         async write(signal) {
-          if (!(await waitForCurrentDevice(signal))) throw retired;
-          return api.downloadCloudProject(id, { signal, expected });
+          if (scope.retired()) throw retired;
+          await scope.waitForCurrent(signal);
+          return api.downloadCloudProject(id, { signal, expected, expectedDevice });
         },
         async reconcile(receipt, signal) {
-          if (!(await confirmScope(signal))) return;
-          const { catalog, project } = await observe(signal);
-          if (!(await confirmScope(signal))) return;
-          const ready = project?.presence === "downloaded";
-          const admitted = receipt.presence === "downloading" && project?.presence === "downloading";
-          if (!ready && !admitted) throw new Error("The device catalog is still checking this copy.");
+          const observation = await observe(signal);
+          if (!observation) return;
+          const { catalog, project } = observation;
+          if (
+            !project ||
+            (project.presence !== "downloaded" &&
+              (project.presence !== "downloading" || receipt.presence !== "downloading"))
+          )
+            throw new Error("The device catalog is still checking this copy.");
           if (retry) await client.cancelQueries({ queryKey: syncKey, exact: true });
           await client.cancelQueries({ queryKey, exact: true });
-          signal.throwIfAborted();
-          if (!confirmedScope()) return;
-          // A confirmed retry consumes its earlier failure observations.
+          if (!scope.confirmed(signal)) return;
           if (retry) clearRetriedFailure(project);
           client.setQueryData(queryKey, (previous: typeof catalog | undefined) => {
             if (!previous) return catalog;
             return {
               ...previous,
               projects: previous.projects.map((entry) =>
-                entry.id === id && !(entry.presence === "downloaded" && project?.presence === "downloading")
-                  ? project!
+                entry.id === id && !(entry.presence === "downloaded" && project.presence === "downloading")
+                  ? project
                   : entry,
               ),
             };
           });
         },
         async check(signal) {
-          if (!(await confirmScope(signal))) return { status: "unknown" };
-          const { project } = await observe(signal);
-          if (!(await confirmScope(signal))) return { status: "unknown" };
+          const observation = await observe(signal);
+          if (!observation) return { status: "unknown" };
+          const { project } = observation;
           if (project?.presence === "downloaded")
             return { status: "confirmed", result: { projectId: id, presence: project.presence } };
           if (project?.presence !== "downloading") return { status: "unknown" };
-          if (retry && !(await progressedRetry(project, action, () => api.projectSyncStatus(id, { signal, expected }))))
+          const personal = { accountId: login.accountId, managerOrigin: login.managerOrigin };
+          if (
+            retry &&
+            !(await progressedRetry(project, action, () => api.projectSyncStatus(id, { signal, expected: personal })))
+          )
             return { status: "unknown" };
-          if (!(await confirmScope(signal))) return { status: "unknown" };
+          if (!(await scope.confirm(signal))) return { status: "unknown" };
           return { status: "confirmed", result: { projectId: id, presence: project.presence } };
         },
       });
-      // The host may finish the download even if its response never reaches us.
       onAdmitted();
       return operation.result;
     },

@@ -409,6 +409,7 @@ test("account capabilities route reads and changes to the host account and valid
     account: {
       status: record("status"),
       login: record("login"),
+      createTeam: record("createTeam"),
       loginStatus: record("loginStatus"),
       cancelLogin: record("cancelLogin"),
       logout: record("logout"),
@@ -427,6 +428,8 @@ test("account capabilities route reads and changes to the host account and valid
     state: "synced",
     offlineReady: true,
   });
+  const expected = { accountId: "personal-account", managerOrigin: "https://accounts.example.test" };
+  await capabilities["account.manage"]({ op: "createTeam", name: "Studio Team", expected });
   await capabilities["account.manage"]({ op: "renameDevice", id: "device-2", name: "Studio Mac" });
   await capabilities["account.manage"]({ op: "stopProjectSync", projectId: "project-2" });
   await capabilities["account.manage"]({ op: "login" });
@@ -434,6 +437,7 @@ test("account capabilities route reads and changes to the host account and valid
   await capabilities["account.manage"]({ op: "retryProjectSyncSource", sourceId: "sessions", projectId: "project-2" });
   expect(calls).toEqual([
     ["projectSyncStatus", undefined],
+    ["createTeam", "Studio Team", expected],
     ["renameDevice", "device-2", "Studio Mac"],
     ["stopProjectSync", "project-2"],
     ["login", undefined],
@@ -447,7 +451,7 @@ test("account capabilities route reads and changes to the host account and valid
   await expect(Promise.resolve().then(() => capabilities["account.manage"]({ op: "devices" }))).rejects.toMatchObject({
     code: "invalid_params",
   });
-  expect(calls).toHaveLength(6);
+  expect(calls).toHaveLength(7);
 });
 
 test("text editing validates scoped operations before passing them to the host adapter", async () => {
@@ -474,6 +478,7 @@ test("partial account services reject unavailable operations instead of resolvin
   const legacy: NonNullable<Parameters<typeof createExtensionWebviewHostCapabilities>[0]["account"]> = {
     status: async () => ({ login: null, features: null, cloudProjects: [], cloudProjectsLoaded: false }),
     login: unexpected,
+    createTeam: unexpected,
     loginStatus: unexpected,
     cancelLogin: unexpected,
     logout: unexpected,

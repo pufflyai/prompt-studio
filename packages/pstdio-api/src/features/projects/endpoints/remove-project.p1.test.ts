@@ -313,3 +313,21 @@ test("a cloud project is not deleted from one device while the account syncs it"
   expect(response.status).toBe(409);
   expect(await appHandle.deps.projectService.get(project.id)).not.toBeNull();
 });
+
+test("an offline team copy cannot bypass Cloud's local removal checks", async () => {
+  const project = await appHandle.deps.projectService.create({ name: "Team notes" });
+  const accountService = {
+    ...appHandle.deps.accountService,
+    status: async () => ({
+      login: null,
+      cloudProjects: [],
+      cloudProjectsLoaded: true,
+      features: null,
+      teamProjectOwners: { [project.id]: "team-account" },
+    }),
+  };
+  const routes = new OpenAPIHono<AppBindings>();
+  routes.openapi(removeProjectRoute, removeProjectHandler({ ...appHandle.deps, accountService }));
+  expect((await routes.request(`/projects/${project.id}`, { method: "DELETE" })).status).toBe(409);
+  expect(await appHandle.deps.projectService.get(project.id)).not.toBeNull();
+});

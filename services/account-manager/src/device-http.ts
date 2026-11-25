@@ -21,14 +21,14 @@ const ok = async (action: Promise<unknown>) => {
   return json({ ok: true });
 };
 
-const deletionRoute = async (auth: Authentication, request: Request, path: string) => {
+const deletionRoute = async (auth: Authentication, request: Request, path: string, accountId?: string) => {
   const { method } = request;
   if (path === "/v1/account" && method === "GET") {
-    const account = await auth.devices.account(bearer(request));
+    const account = await auth.devices.account(bearer(request), accountId);
     return json({ ...account, projectDeletion: auth.projectDeletions.enabled });
   }
   if (path === "/v1/project-deletions" && method === "GET")
-    return json(await auth.devices.outstandingProjectDeletions(bearer(request)));
+    return json(await auth.devices.outstandingProjectDeletions(bearer(request), accountId));
   const deletion = /^\/v1\/workbenches\/([^/]+)\/deletion$/.exec(path);
   if (!deletion || (method !== "GET" && method !== "POST")) return null;
   const token = bearer(request);
@@ -40,27 +40,36 @@ const deletionRoute = async (auth: Authentication, request: Request, path: strin
   }
   if (id.includes("\0")) return json({ error: "Invalid request" }, 400);
   if (method === "GET") {
-    const found = await auth.devices.projectDeletion(token, id);
+    const found = await auth.devices.projectDeletion(token, id, accountId);
     return found ? json(found) : json({ error: "Unknown project deletion" }, 404);
   }
   startProjectDeletionSchema.parse(await request.json());
   if (!auth.projectDeletions.enabled) return json({ error: "Cloud project deletion unavailable" }, 503);
-  const started = await auth.devices.startProjectDeletion(token, id);
+  const started = await auth.devices.startProjectDeletion(token, id, accountId);
   if (!started) return json({ error: "Unknown workbench" }, 404);
   return json(started, started.state === "completed" ? 200 : 202);
 };
 
-const workbenchRoute = async (devices: Authentication["devices"], request: Request, path: string) => {
+const workbenchRoute = async (
+  devices: Authentication["devices"],
+  request: Request,
+  path: string,
+  accountId?: string,
+) => {
   const { method } = request;
   const keys = /^\/v1\/workbenches\/([^/]+)\/keys$/.exec(path);
   if (keys && method === "GET") {
-    const found = await devices.keys(bearer(request), decodeURIComponent(keys[1]));
+    const found = await devices.keys(bearer(request), decodeURIComponent(keys[1]), accountId);
     return found ? json(found) : json({ error: "Unknown workbench" }, 404);
   }
   const workbench = /^\/v1\/workbenches\/([^/]+?)(\/remove)?$/.exec(path);
   if (workbench && method === "POST") {
     const id = decodeURIComponent(workbench[1]);
-    return ok(workbench[2] ? devices.removeWorkbench(bearer(request), id) : devices.addWorkbench(bearer(request), id));
+    return ok(
+      workbench[2]
+        ? devices.removeWorkbench(bearer(request), id, accountId)
+        : devices.addWorkbench(bearer(request), id, accountId),
+    );
   }
   return null;
 };
@@ -79,7 +88,18 @@ const signingKeyRoute = async (devices: Authentication["devices"], request: Requ
   return null;
 };
 
-const route = async (auth: Authentication, origin: string, request: Request, path: string) => {
+const teamRoute = async (devices: Authentication["devices"], request: Request) => {
+  const { method } = request;
+  if (method === "GET") return json(await devices.teams(bearer(request)));
+  if (method === "POST") {
+    const token = bearer(request);
+    const { name } = z.strictObject({ name: z.string() }).parse(await request.json());
+    return json(await devices.createTeam(token, name), 201);
+  }
+  return null;
+};
+
+const route = async (auth: Authentication, origin: string, request: Request, path: string, accountId?: string) => {
   const { method } = request;
   if (path === "/v1/device-login" && method === "POST") {
     // The provider session may be a browser cookie, so only the manager's own origin can log a device in.
@@ -91,7 +111,8 @@ const route = async (auth: Authentication, origin: string, request: Request, pat
   if (signingKey) return signingKey;
   if (path === "/v1/devices/presence" && method === "POST") return ok(devices.heartbeat(bearer(request)));
   if (path === "/v1/devices" && method === "GET") return json(await devices.devices(bearer(request)));
-  if (path === "/v1/workbenches" && method === "GET") return json(await devices.workbenches(bearer(request)));
+  if (path === "/v1/workbenches" && method === "GET")
+    return json(await devices.workbenches(bearer(request), accountId));
   const device = /^\/v1\/devices\/([^/]+)\/(rename|remove)$/.exec(path);
   if (device && method === "POST") {
     const id = decodeURIComponent(device[1]);
@@ -100,20 +121,22 @@ const route = async (auth: Authentication, origin: string, request: Request, pat
     if (!(await devices.rename(bearer(request), id, name))) return json({ error: "Unknown device" }, 404);
     return json({ ok: true });
   }
-  return path.startsWith("/v1/workbenches/") ? workbenchRoute(devices, request, path) : null;
+  return path.startsWith("/v1/workbenches/") ? workbenchRoute(devices, request, path, accountId) : null;
 };
 
 export const deviceHttp = async (auth: Authentication, origin: string, request: Request) => {
-  const path = new URL(request.url).pathname;
+  const { pathname: path, searchParams } = new URL(request.url);
+  const accountId = searchParams.get("accountId") ?? undefined;
   if (
-    !["/v1/device-login", "/v1/account", "/v1/project-deletions"].includes(path) &&
+    !["/v1/device-login", "/v1/account", "/v1/project-deletions", "/v1/teams"].includes(path) &&
     !/^\/v1\/(devices|workbenches)(\/|$)/.test(path)
   )
     return null;
   try {
     return (
-      (await deletionRoute(auth, request, path)) ??
-      (await route(auth, origin, request, path)) ??
+      (path === "/v1/teams" ? await teamRoute(auth.devices, request) : null) ??
+      (await deletionRoute(auth, request, path, accountId)) ??
+      (await route(auth, origin, request, path, accountId)) ??
       json({ error: "Method not allowed" }, 405)
     );
   } catch (error) {

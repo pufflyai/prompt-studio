@@ -67,4 +67,17 @@ The device must have connected to Cloud once since Prompt Studio started, so it 
 
 Cloud JSON listing retains `account` and `membershipKnown`. When `membershipKnown` is false, `presence: "unknown"` on a locally listed copy means its Cloud membership has not been established; empty Cloud/deletion arrays are incomplete. `delete-cloud --confirm` requires a signed-in catalog account and pins the deletion to it.
 
-*Updated at: 2026-11-19*
+## Team projects
+
+Use the same Google sign-in on each device. Create a team with `pst teams create "Studio Team"` and find its stable account ID with `pst teams list`. Cloud sync needs early access for that team.
+
+```sh
+pst projects create "Studio Notes" --path /path/to/new-folder --team <team-account-id>
+pst projects list --team <team-account-id>
+```
+
+The team owns a newly created project. Opening an existing personal project folder keeps its account. Your other signed-in devices can discover the team project using the same account ID.
+
+Pass `--team <team-account-id>` for team-scoped `delete-local` and `delete-cloud` confirmation lookups.
+
+*Updated at: 2026-11-24*

@@ -2,13 +2,14 @@ import { strict as assert } from "node:assert";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { TeamAccount } from "pstdio-api-contracts";
 import { call, devices, login, type Status, token } from "./native-device-sign-in.fixture";
 import { createAccountHostFixture } from "./native-host.fixture";
 
 const origin = process.env.OWNER_TEST_ORIGIN!;
 const roots = await Promise.all([1, 2].map(() => mkdtemp(join(tmpdir(), "native-device-"))));
 let laptop = await createAccountHostFixture(roots[0]);
-let desktop = await createAccountHostFixture(roots[1]);
+let desktop = await createAccountHostFixture(roots[1], { recoverTeamProjects: true });
 console.log("NATIVE_RUNTIME_READY");
 await Bun.stdin.stream().getReader().read();
 
@@ -57,6 +58,45 @@ try {
     desktop.synced().map((entry) => [entry.workbenchId, entry.environmentId]),
     [[project.id, desktopLogin.deviceId]],
   );
+  const expected = { accountId: laptopLogin.accountId, managerOrigin: laptopLogin.managerOrigin };
+  const createdTeam = await call<TeamAccount>(laptop, "/account/teams", "POST", { name: "Another team", expected });
+  assert.equal(createdTeam.status, 200);
+  assert.equal(createdTeam.body.features.relay, false);
+  assert.ok(
+    (await call<TeamAccount[]>(desktop, "/account/teams")).body.some(
+      ({ accountId }) => accountId === createdTeam.body.accountId,
+    ),
+  );
+  const teamAccountId = process.env.OWNER_TEST_TEAM!;
+  const teamProjectId = crypto.randomUUID();
+  const setupTeam = await laptop.account.prepareTeamProject(teamAccountId);
+  await setupTeam.reserve(teamProjectId);
+  const teamProject = await laptop.projects.create({ id: teamProjectId, name: "Team notebook" });
+  await setupTeam.sync(teamProject.id);
+  await desktop.account.refresh();
+  for (let i = 0; !desktop.synced().some((entry) => entry.workbenchId === teamProject.id); i++) {
+    assert.ok(i < 120, "The desktop should discover the new team project");
+    await Bun.sleep(25);
+  }
+  for (const host of [laptop, desktop]) {
+    const teamCatalog = await call<{ account: { accountId: string }; projects: { id: string }[] }>(
+      host,
+      `/account/projects?accountId=${teamAccountId}`,
+    );
+    assert.equal(teamCatalog.body.account.accountId, teamAccountId);
+    assert.deepEqual(
+      teamCatalog.body.projects.map(({ id }) => id),
+      [teamProject.id],
+    );
+    assert.deepEqual((await call<Status>(host, "/account")).body.cloudProjects, [project.id]);
+    assert.equal((await call<Status>(host, "/account")).body.teamProjects?.[teamProject.id], teamAccountId);
+    const scope = host.synced().find(({ workbenchId }) => workbenchId === teamProject.id);
+    assert.equal(scope?.accountId, teamAccountId);
+    assert.equal(scope?.userId, laptopLogin.accountId);
+  }
+  assert.equal((await call(laptop, `/account/projects/${teamProject.id}`, "DELETE")).status, 200);
+  await desktop.account.refresh();
+
   for (const host of [laptop, desktop]) {
     const listed = await devices(host);
     assert.deepEqual(listed.map((device) => device.id).sort(), [laptopLogin.deviceId, desktopLogin.deviceId].sort());
@@ -103,6 +143,13 @@ try {
   // Another Google user on the same client gets their own account and sees only their own devices.
   const otherLogin = await login(laptop, origin, process.env.OWNER_TEST_SUBJECT_B!);
   assert.notEqual(otherLogin.accountId, laptopLogin.accountId);
+  const staleTeam = await call<{ error: string }>(laptop, "/account/teams", "POST", {
+    name: "Stale team",
+    expected,
+  });
+  assert.equal(staleTeam.status, 400);
+  assert.equal(staleTeam.body.error, "The signed-in account changed");
+  assert.deepEqual((await call<TeamAccount[]>(laptop, "/account/teams")).body, []);
   assert.deepEqual(
     (await devices(laptop)).map((device) => device.id),
     [otherLogin.deviceId],
