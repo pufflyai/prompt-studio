@@ -7,6 +7,8 @@ import {
   transitionDesktopState,
 } from "./lifecycle-machine";
 
+type QuitIntent = "quit" | "install-update";
+
 type QuitFlowDeps = {
   runtimeManager: Pick<
     DesktopRuntimeManager,
@@ -19,20 +21,27 @@ type QuitFlowDeps = {
   /** Resolves true when the person chooses to cancel the active work and quit. */
   askToCancelActiveWork: (activity: RuntimeActivity) => Promise<boolean>;
   flushBeforeQuit: () => Promise<void>;
-  quitApp: () => void;
+  quitApp: (intent: QuitIntent) => void;
   recoveryError: (error: unknown) => DesktopRecoveryError;
   logError: (error: unknown) => void;
 };
 
 export const createQuitFlow = (deps: QuitFlowDeps) => {
   let quitAllowed = false;
+  let quitIntent: QuitIntent = "quit";
+  let finishing: Promise<void> | undefined;
   let quitting: { active: boolean; waitingForConfirmation: boolean } | undefined;
 
-  const finishQuit = async () => {
-    // Losing the last saved layout is better than an app that cannot quit.
-    await deps.flushBeforeQuit().catch(deps.logError);
-    quitAllowed = true;
-    deps.quitApp();
+  const finishQuit = () => {
+    // An external shutdown signal and the user-initiated shutdown can finish together.
+    finishing ??= deps
+      .flushBeforeQuit()
+      .catch(deps.logError)
+      .then(() => {
+        quitAllowed = true;
+        deps.quitApp(quitIntent);
+      });
+    return finishing;
   };
 
   const showQuitFailure = async (error: unknown) => {
@@ -96,6 +105,7 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
   const cancelQuit = async () => {
     const state = deps.getState();
     if (state.kind !== "confirming_active_work") return;
+    quitIntent = "quit";
     deps.setState(transitionDesktopState(state, { type: "quit_cancelled" }));
   };
 
@@ -117,7 +127,7 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
     return runQuit(stopConfirmedRuntime);
   };
 
-  const requestQuit = async () => {
+  const request = async (intent: QuitIntent) => {
     if (quitAllowed || quitting?.active) return;
     const state = deps.getState();
     if (state.kind === "confirming_active_work") {
@@ -129,8 +139,11 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
         else await cancelQuit();
       }, true);
     }
+    quitIntent = intent;
     return runQuit(stopRuntimeAndQuit);
   };
+
+  const requestQuit = () => request("quit");
 
   return {
     cancelQuit,
@@ -139,5 +152,6 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
     isQuitAllowed: () => quitAllowed,
     isQuitting: () => Boolean(quitting?.active && !quitting.waitingForConfirmation) || quitAllowed,
     requestQuit,
+    requestUpgrade: () => request("install-update"),
   };
 };

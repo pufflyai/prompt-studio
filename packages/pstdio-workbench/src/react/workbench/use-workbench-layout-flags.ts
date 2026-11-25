@@ -2,11 +2,15 @@ import type { WorkbenchCore } from "../../core";
 import { useHasSystemNotices } from "../notifications/system-error-state";
 import { useWorkbenchPanelMenusPresent } from "../panel-menu/use-panel-menu";
 import { useModeChrome } from "../region/mode-chrome";
+import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { useWorkbenchRegionContent } from "./use-workbench-region-content";
 
 export const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
   const hasDockedStatusBar = useModeChrome(workbench, "status") !== false;
   const hasSystemNotices = useHasSystemNotices(workbench);
+  const hasSystemActions = useWorkbenchStore(workbench.statusBar.store, (state) =>
+    Object.values(state.items).some((item) => item.system && (item.isVisible?.() ?? true)),
+  );
   return {
     hasNavWidgets: useWorkbenchRegionContent(workbench, "nav"),
     hasActivityBarWidgets: useWorkbenchRegionContent(workbench, "activity"),
@@ -18,6 +22,6 @@ export const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
     hasSideWidgets: useWorkbenchRegionContent(workbench, "side", { locationScoped: true }),
     hasSideMenus: useWorkbenchPanelMenusPresent(workbench, "side"),
     hasDockedStatusBar,
-    hasStatusContent: hasDockedStatusBar || hasSystemNotices,
+    hasStatusContent: hasDockedStatusBar || hasSystemNotices || hasSystemActions,
   };
 };

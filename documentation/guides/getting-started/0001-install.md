@@ -33,7 +33,7 @@ The desktop app, `pst`, and the `@pstdio/sdk` package share one version number. 
 
 ### Update the app
 
-On macOS and Windows, the app checks for updates when it starts and every four hours. When an update has downloaded, the app tells you. It installs when you quit the app. To check now, choose **Prompt Studio → Check for Updates…** on macOS or **Help → Check for Updates…** on Windows.
+On macOS and Windows, the app checks for updates when it starts and every four hours. When an update is ready, choose **Upgrade** in the footer, then choose **Restart** to install it and reopen the app. Choose **Later** to keep working. To check now, choose **Prompt Studio → Check for Updates…** on macOS or **Help → Check for Updates…** on Windows.
 
 Linux has no built-in updater. **Help → Check for Updates…** opens the page of the newest release for your update channel. Update the `.deb` with your package manager, or download a new portable build.
 

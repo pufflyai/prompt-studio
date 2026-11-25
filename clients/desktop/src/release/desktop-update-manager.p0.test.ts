@@ -22,6 +22,7 @@ type UpdateCheckOptions = {
 const createUpdateCheck = (options: UpdateCheckOptions = {}) => {
   const events = new EventEmitter();
   const notifications: string[] = [];
+  const upgradePrompts: boolean[] = [];
   const progress: string[] = [];
   const errors: Error[] = [];
   const logged: Error[] = [];
@@ -43,7 +44,10 @@ const createUpdateCheck = (options: UpdateCheckOptions = {}) => {
     }),
     openExternal: async () => {},
     onUpdateNotAvailable: () => notifications.push("up-to-date"),
-    onUpdateDownloaded: (version: string) => notifications.push(`downloaded:${version}`),
+    onUpdateDownloaded: (version: string, interactive: boolean) => {
+      notifications.push(`downloaded:${version}`);
+      upgradePrompts.push(interactive);
+    },
     onUpdateError: (error: Error) => errors.push(error),
     onUpdateProgress: (phase?: string) => progress.push(phase ?? "finished"),
     logError: (error: Error) => logged.push(error),
@@ -60,6 +64,7 @@ const createUpdateCheck = (options: UpdateCheckOptions = {}) => {
     manager,
     events,
     notifications,
+    upgradePrompts,
     progress,
     errors,
     logged,
@@ -263,11 +268,16 @@ describe("background update checks", () => {
     expect(failing.logged.map((error) => error.message)).toEqual(["offline"]);
   });
 
-  test("show the downloaded prompt once per downloaded version", async () => {
+  test("publish readiness without prompting until a person checks", async () => {
     const check = createUpdateCheck({ event: "update-downloaded" });
     await check.manager.checkInBackground();
     await check.manager.checkInBackground();
     expect(check.notifications).toEqual(["downloaded:0.33.3"]);
+    expect(check.manager.downloadedVersion).toBe("0.33.3");
+    expect(check.upgradePrompts).toEqual([false]);
+    expect(check.checks()).toBe(1);
+    await check.manager.checkForUpdates();
+    expect(check.upgradePrompts).toEqual([false, true]);
     expect(check.checks()).toBe(1);
   });
 

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createDesktopUpdateNotifications } from "./desktop-update-notifications";
 
-test("an update completed before the workbench connects is delivered once", () => {
+test("an update completed before the workbench connects stays available without opening a dialog", () => {
   const recorded: string[] = [];
   let changed = 0;
   const notifications = createDesktopUpdateNotifications({
@@ -15,11 +15,12 @@ test("an update completed before the workbench connects is delivered once", () =
     onNotice: () => changed++,
     logError: () => {},
   });
-  notifications.downloaded("2.0.0");
+  notifications.downloaded("2.0.0", false);
   expect(recorded).toEqual(["2.0.0"]);
   expect(changed).toBe(1);
-  expect(notifications.take()).toMatchObject({ level: "info", message: expect.stringContaining("2.0.0") });
-  expect(notifications.take()).toBeUndefined();
+  const ready = { kind: "progress", upgrade: { version: "2.0.0", prompt: false } };
+  expect(notifications.take("2.0.0")).toMatchObject(ready);
+  expect(notifications.take("2.0.0")).toMatchObject(ready);
 });
 
 test("completed native results replace progress and survive its cleanup", () => {
@@ -32,13 +33,14 @@ test("completed native results replace progress and survive its cleanup", () => 
   notifications.progress("checking");
   expect(notifications.take()).toMatchObject({ kind: "progress", title: expect.any(String) });
   notifications.progress("downloading");
-  notifications.downloaded("2.0.0");
+  notifications.downloaded("2.0.0", true);
   notifications.progress(undefined);
-  expect(notifications.take()).toMatchObject({
+  expect(notifications.take("2.0.0")).toMatchObject({
     kind: "progress",
     title: null,
-    outcome: { message: expect.stringContaining("2.0.0") },
+    upgrade: { version: "2.0.0", prompt: true },
   });
+  expect(notifications.take("2.0.0")).toMatchObject({ upgrade: { version: "2.0.0", prompt: false } });
 
   notifications.progress("checking");
   expect(notifications.take()).toBeDefined();

@@ -29,6 +29,7 @@ const createHarness = (input: {
   showQuitConfirmation?: () => Promise<void>;
   askToCancelActiveWork?: () => Promise<boolean>;
   showLifecycle?: () => Promise<void>;
+  flushBeforeQuit?: () => Promise<void>;
 }) => {
   let state: DesktopState = { kind: "workbench", runtime: runtime.descriptor };
   const calls: string[] = [];
@@ -57,9 +58,9 @@ const createHarness = (input: {
       calls.push("askToCancelActiveWork");
       return input.askToCancelActiveWork?.() ?? input.cancelActiveWork ?? false;
     },
-    flushBeforeQuit: async () => {},
-    quitApp: () => {
-      calls.push("quitApp");
+    flushBeforeQuit: input.flushBeforeQuit ?? (async () => {}),
+    quitApp: (intent) => {
+      calls.push(intent === "install-update" ? "install-update" : "quitApp");
     },
     recoveryError: (error) => ({ code: "unexpected_exit", message: String(error), actions: ["quit"] }),
     logError: () => {},
@@ -375,4 +376,54 @@ describe("desktop quit flow", () => {
 
     expect(calls).toEqual(["showQuitConfirmation", "detach", "quitApp"]);
   });
+});
+
+test("installing an upgrade waits for shutdown and clearing active work", async () => {
+  const { flow, calls } = createHarness({
+    refreshRuntime: async () => runtime,
+    requestShutdown: async (force) =>
+      force
+        ? { state: "accepted" }
+        : { state: "active", activity: { ...noActivity, sessions: [{ id: "s1", label: "Session" }] } },
+  });
+  await flow.requestUpgrade();
+  expect(calls).toEqual(["showQuitConfirmation"]);
+  await flow.cancelQuit();
+  await flow.requestUpgrade();
+  await flow.confirmQuit();
+  expect(calls).toEqual(["showQuitConfirmation", "showQuitConfirmation", "waitForExit", "install-update"]);
+});
+
+test("an ordinary quit after dismissing an upgrade never requests a relaunch", async () => {
+  let busy = true;
+  const { flow, calls } = createHarness({
+    refreshRuntime: async () => runtime,
+    requestShutdown: async () =>
+      busy
+        ? { state: "active", activity: { ...noActivity, sessions: [{ id: "s1", label: "Session" }] } }
+        : { state: "accepted" },
+  });
+  await flow.requestUpgrade();
+  await flow.cancelQuit();
+  busy = false;
+  await flow.requestQuit();
+  expect(calls).toEqual(["showQuitConfirmation", "waitForExit", "quitApp"]);
+});
+
+test("an upgrade and a concurrent runtime exit hand off to the installer once", async () => {
+  const flushing = Promise.withResolvers<void>();
+  const flushed = Promise.withResolvers<void>();
+  const { flow, calls } = createHarness({
+    refreshRuntime: async () => runtime,
+    flushBeforeQuit: async () => {
+      flushing.resolve();
+      await flushed.promise;
+    },
+  });
+  const upgrade = flow.requestUpgrade();
+  await flushing.promise;
+  const runtimeExit = flow.finishQuit();
+  flushed.resolve();
+  await Promise.all([upgrade, runtimeExit]);
+  expect(calls).toEqual(["waitForExit", "install-update"]);
 });

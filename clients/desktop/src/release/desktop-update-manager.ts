@@ -30,7 +30,7 @@ type DesktopUpdateManagerOptions = {
   openExternal: (url: string) => Promise<unknown>;
   onUpdateProgress?: (phase: DesktopUpdatePhase | undefined) => void;
   onUpdateNotAvailable: () => void;
-  onUpdateDownloaded: (version: string) => void;
+  onUpdateDownloaded: (version: string, interactive: boolean) => void;
   onUpdateError: (error: Error) => void;
   logError: (error: Error) => void;
   fetchReleases?: () => Promise<GitHubRelease[]>;
@@ -53,6 +53,10 @@ export class DesktopUpdateManager {
     options.updater.on("update-not-available", () => this.#download?.resolve("not-available"));
     options.updater.on("update-downloaded", () => this.#download?.resolve("downloaded"));
     options.updater.on("error", (error) => this.#download?.reject(error));
+  }
+
+  get downloadedVersion() {
+    return this.#downloadedVersion;
   }
 
   checkForUpdates() {
@@ -109,7 +113,7 @@ export class DesktopUpdateManager {
     }
     const manual = resolveDesktopUpdateStrategy(this.#options.platform).kind === "manual";
     if (!manual && this.#downloadedVersion) {
-      this.#options.onUpdateDownloaded(this.#downloadedVersion);
+      this.#options.onUpdateDownloaded(this.#downloadedVersion, this.#interactive);
       return;
     }
 
@@ -135,6 +139,6 @@ export class DesktopUpdateManager {
     }
 
     this.#downloadedVersion = release.version;
-    this.#options.onUpdateDownloaded(release.version);
+    this.#options.onUpdateDownloaded(release.version, this.#interactive);
   }
 }

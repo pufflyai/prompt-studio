@@ -35,7 +35,13 @@ export type DesktopUpdateOutcome = { level: "info" | "error"; title: string; mes
 
 export type DesktopUpdateNotice =
   | DesktopUpdateOutcome
-  | { kind: "progress"; title?: string | null; outcome?: DesktopUpdateOutcome; installed?: DesktopUpdateOutcome };
+  | {
+      kind: "progress";
+      title?: string | null;
+      outcome?: DesktopUpdateOutcome;
+      installed?: DesktopUpdateOutcome;
+      upgrade?: { version: string; prompt: boolean };
+    };
 
 export interface PromptStudioDesktopApi {
   saveFile: (input: WebviewFilesDownloadParams) => Promise<WebviewFilesSaveResult>;
@@ -53,6 +59,7 @@ export interface PromptStudioDesktopApi {
   revealInFinder: (path: string) => Promise<void>;
   copyDiagnostics: () => Promise<void>;
   checkForUpdates: () => Promise<void>;
+  restartToInstallUpdate: () => Promise<void>;
   takeUpdateNotice: () => Promise<DesktopUpdateNotice | undefined>;
   onUpdateNotice: (listener: () => void) => () => void;
   /** The chosen update channel, or `null` when this app cannot change it (Windows and source builds). */
@@ -96,6 +103,7 @@ export const DESKTOP_CHANNELS = {
   revealInFinder: "pstdio:desktop:reveal-in-finder",
   copyDiagnostics: "pstdio:desktop:copy-diagnostics",
   checkForUpdates: "pstdio:desktop:check-for-updates",
+  restartToInstallUpdate: "pstdio:desktop:restart-to-install-update",
   takeUpdateNotice: "pstdio:desktop:take-update-notice",
   updateNotice: "pstdio:desktop:update-notice",
   getUpdateChannel: "pstdio:desktop:get-update-channel",

@@ -22,6 +22,7 @@ import { createPerformanceMonitoring } from "@/modules/performance/module";
 import { BrowserAppHeader } from "@/modules/projects/components/browser-app-header";
 import type { DesktopProjectTabsController } from "@/modules/projects/desktop-project-tabs-controller";
 import { createProjectSetupHandoff } from "@/modules/projects/setup/project-setup-handoff";
+import { createDesktopUpgrade, DesktopUpgradeConfirmation } from "@/modules/updates/desktop-upgrade";
 import { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workbench-storage-keys";
 import { createDashboardPageLocationBrowser, readPageUrlProjectId } from "@/shared/app/page-location-browser";
 import { createDashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
@@ -96,10 +97,12 @@ const renderDashboard = async () => {
     ? startDesktopProjectWorkbenches(projectTabs.controller, storage)
     : startBrowserWorkbench(storage);
   const stopDesktopCommands = connectDesktopCommands(window.promptStudioDesktop, workbenches.getActive);
+  const desktopUpgrade = createDesktopUpgrade(window.promptStudioDesktop);
   const stopDesktopUpdateNotices = connectDesktopUpdateNotices(
     window.promptStudioDesktop,
     workbenches.getActive,
     projectTabs?.controller.subscribeState,
+    desktopUpgrade?.ready,
   );
   if (stopDesktopCommands) window.addEventListener("pagehide", stopDesktopCommands, { once: true });
   if (stopDesktopUpdateNotices) window.addEventListener("pagehide", stopDesktopUpdateNotices, { once: true });
@@ -119,6 +122,7 @@ const renderDashboard = async () => {
             <DesktopProjectWorkbenches
               controller={projectTabs.controller}
               lifecycle={desktopLifecycle}
+              upgrade={desktopUpgrade}
               platform={projectTabs.platform}
               storage={storage}
             />
@@ -130,6 +134,9 @@ const renderDashboard = async () => {
               titleBar={
                 <>
                   <BrowserAppHeader workbench={workbenches.getActive()!} />
+                  {desktopUpgrade && (
+                    <DesktopUpgradeConfirmation workbench={workbenches.getActive()!} upgrade={desktopUpgrade} />
+                  )}
                   {desktopLifecycle && (
                     <>
                       <DesktopStartupAppearance bridge={desktopLifecycle} />

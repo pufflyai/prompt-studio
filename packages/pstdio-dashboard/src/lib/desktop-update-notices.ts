@@ -8,7 +8,13 @@ interface UpdateNotice {
 
 type UpdateNoticeEvent =
   | UpdateNotice
-  | { kind: "progress"; title?: string | null; outcome?: UpdateNotice; installed?: UpdateNotice };
+  | {
+      kind: "progress";
+      title?: string | null;
+      outcome?: UpdateNotice;
+      installed?: UpdateNotice;
+      upgrade?: { version: string; prompt: boolean };
+    };
 
 interface DesktopUpdateNoticeBridge {
   onUpdateNotice: (listener: () => void) => () => void;
@@ -33,6 +39,7 @@ export const connectDesktopUpdateNotices = (
   bridge: unknown,
   getWorkbench: () => WorkbenchCore | undefined,
   subscribeWorkbench?: (listener: () => void) => () => void,
+  onUpgradeReady?: (version: string, prompt: boolean) => void,
 ) => {
   if (!hasUpdateNotices(bridge)) return;
   let connected = true;
@@ -67,6 +74,7 @@ export const connectDesktopUpdateNotices = (
     else if (notice.title === null) clearProgress();
     if (notice.outcome) publish(updateNoticeId, notice.outcome);
     if (notice.installed) publish(installedNoticeId, notice.installed);
+    if (notice.upgrade) onUpgradeReady?.(notice.upgrade.version, notice.upgrade.prompt);
   };
 
   let receiving = false;
