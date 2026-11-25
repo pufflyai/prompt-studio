@@ -44,12 +44,38 @@ test("Microsoft uses the browser code flow and owns only its tenant-scoped accou
         .getSetCookie()
         .map((item) => item.split(";")[0])
         .join("; ");
-      const headers = new Headers({ cookie, origin: config.origin });
-      expect((await fetchManager(redirect, headers)).status).toBe(302);
-      await expect(
-        auth.loginDevice(headers, { ...deviceProfile(), provider: provider === "google" ? "microsoft" : "google" }),
-      ).rejects.toThrow();
-      return await auth.loginDevice(headers, { ...deviceProfile(), provider });
+      const callback = await fetchManager(redirect, { cookie });
+      expect(callback.status).toBe(302);
+      const local = new URL(callback.headers.get("location")!);
+      expect(`${local.origin}${local.pathname}`).toBe("http://127.0.0.1:54321/callback");
+      expect(local.searchParams.get("state")).toBe("owned-native-state-012345678901234567890");
+      const code = local.searchParams.get("code");
+      expect(code).toBeTruthy();
+      const post = (path: string, body: unknown, token?: string) =>
+        handler(
+          new Request(new URL(path, config.origin), {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              origin: config.origin,
+              ...(token ? { authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(body),
+          }),
+        );
+      const exchange = () => post("/api/auth/one-time-token/verify", { token: code });
+      const session = await exchange();
+      expect(session.status).toBe(200);
+      const {
+        session: { token },
+      } = (await session.json()) as { session: { token: string } };
+      expect((await exchange()).status).toBe(400);
+      const connect = (provider: "google" | "microsoft") =>
+        post("/v1/device-login", { ...deviceProfile(), provider }, token);
+      expect((await connect(provider === "google" ? "microsoft" : "google")).status).toBe(401);
+      const device = await connect(provider);
+      expect(device.status).toBe(201);
+      return (await device.json()) as { accountId: string };
     };
 
     const google = await deviceLogin("google");
