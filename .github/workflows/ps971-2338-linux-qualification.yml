@@ -1,0 +1,247 @@
+name: Marmalade SVG Linux qualification
+
+on:
+  push:
+    branches:
+      - test/ps971-linux-qualification-86cff62b
+
+permissions:
+  contents: read
+
+jobs:
+  source_cli:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PSTDIO_PR_HEAD: 86cff62b04a7ed74bb562da0a946cc8520e834fd
+      PSTDIO_EXPORT_OVERLAY: 34d7a987a76ad2f9da35795742016d2c6b22de87
+      PSTDIO_EXPORT_PARENT: 9551833b7ecd4139a2e6f9da04da2f5b7542eafe
+      PSTDIO_HOST_BASE: 01d5a3823add702c9b01365b5a26a41094735546
+      PSTDIO_CLI_HEAD: 9551833b7ecd4139a2e6f9da04da2f5b7542eafe
+      PSTDIO_CLI_TREE: 8f979ffe0cc7730d53178190eedaca0f2c5d7684
+      PSTDIO_CLI_BASE: 01d5a3823add702c9b01365b5a26a41094735546
+      PSTDIO_CLI_POLICY: bb5c254ab99ea071a6be1d6041e9fb8aa3f86f2dca40dc7ef9b5897415dc93ec
+      PSTDIO_CLI_PLAN: e39fa318fb5995c9584d0f9079c32607c7d1c2816f7c99d46daae2a4f6fe2c45
+      PSTDIO_CLI_GROUP: 72480638f874d13d0838a290
+      PSTDIO_CLI_FILES_SHA256: 58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a
+      PSTDIO_CLI_OUTPUT: test-results/pr2338-source-cli
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify the diagnostic wrapper and check out the product candidate
+        run: |
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P HEAD)" = "$PSTDIO_EXPORT_OVERLAY"
+          test "$(git show -s --format=%P "$PSTDIO_EXPORT_OVERLAY")" = "$PSTDIO_EXPORT_PARENT"
+          test "$(git show -s --format=%P "$PSTDIO_EXPORT_PARENT")" = "$PSTDIO_HOST_BASE $PSTDIO_PR_HEAD"
+          test "$(git diff-tree --no-commit-id --name-status -r HEAD)" =             "$(printf 'A\t.github/workflows/ps971-2338-linux-qualification.yml')"
+          git checkout --detach "$PSTDIO_CLI_HEAD"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$PSTDIO_CLI_TREE"
+          test "$(git rev-parse HEAD^)" = "$PSTDIO_CLI_BASE"
+          test -z "$(git status --porcelain)"
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Seal the Linux planner selection and create a private runtime directory
+        run: |
+          mkdir -p "$PSTDIO_CLI_OUTPUT"
+          bun run test:review --base "$PSTDIO_CLI_BASE" --list > "$PSTDIO_CLI_OUTPUT/selected-plan.json"
+          jq -e --arg sha "$PSTDIO_CLI_HEAD" --arg tree "$PSTDIO_CLI_TREE" --arg base "$PSTDIO_CLI_BASE"             --arg policy "$PSTDIO_CLI_POLICY" --arg digest "$PSTDIO_CLI_PLAN" --arg group "$PSTDIO_CLI_GROUP" '
+            .head == $sha and .mergeBase == $base and .testPlan.digest == $digest
+            and .testPlan.source == {sha:$sha,tree:$tree,policy:$policy,dirty:false}
+            and (.testPlan.runs | length) == 78 and (.selected | length) == 2653
+            and ([.testPlan.runs[] | select(.job == "local-additions") | .id] == [$group])
+            and any(.testPlan.runs[]; .id == $group and .owner == "e2e" and .runner == "cli"
+              and .priority == "P1" and .artifact == "source" and .lane == "stable"
+              and .target == {platform:"linux",arch:"x64"} and (.files | length) == 10)
+            ' "$PSTDIO_CLI_OUTPUT/selected-plan.json"
+          jq -c --arg group "$PSTDIO_CLI_GROUP" '.testPlan.runs[] | select(.id == $group) | .files'             "$PSTDIO_CLI_OUTPUT/selected-plan.json" > "$PSTDIO_CLI_OUTPUT/assigned-files.json"
+          printf '%s  %s\n' "$PSTDIO_CLI_FILES_SHA256" "$PSTDIO_CLI_OUTPUT/assigned-files.json" | sha256sum -c -
+          scratch="$(mktemp -d "$RUNNER_TEMP/marmalade-cli.XXXXXX")"
+          printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$scratch/owner"
+          printf 'PSTDIO_CLI_SCRATCH=%s\nTMPDIR=%s\nTMP=%s\nTEMP=%s\n' "$scratch" "$scratch" "$scratch" "$scratch" >> "$GITHUB_ENV"
+      - name: Install locked dependencies and Firefox
+        run: |
+          bun install --frozen-lockfile --concurrent-scripts 1
+          bun run --cwd packages/ui typegen:tokens
+          (cd packages/e2e && bun x --no-install playwright install --with-deps firefox)
+          test -z "$(git status --porcelain)"
+      - name: Run the selected source CLI group with its owning runner
+        shell: bash
+        run: |
+          bun --no-orphans - <<'BUN' 2>&1 | tee "$PSTDIO_CLI_OUTPUT/console.log"
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+          import { executePlan } from "./scripts/ci/run-test-plan";
+
+          const { PSTDIO_CLI_SCRATCH: scratch, PSTDIO_CLI_OUTPUT: output, PSTDIO_CLI_GROUP: group } = process.env;
+          if (!scratch || !output || !group) throw new Error("Missing CLI qualification assignment");
+          const executionId = process.env.GITHUB_RUN_ID + "/" + process.env.GITHUB_RUN_ATTEMPT;
+          for (const [key, value] of Object.entries(localReviewEnvironment(scratch))) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+          process.env.CI_PLAN_OUTPUT_DIR = output + "/native";
+          const { testPlan } = await Bun.file(resolve(output, "selected-plan.json")).json();
+          let passed = false;
+          try {
+            const result = await executePlan(testPlan, {
+              root: process.cwd(), runIds: [group], executionId,
+              env: { CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+            });
+            passed = result.complete && result.outcome === "success";
+          } finally {
+            const cleanup = await cleanupReviewCompose(scratch);
+            await Bun.write(resolve(output, "compose-cleanup.json"), JSON.stringify(cleanup, null, 2));
+            process.exitCode = passed && cleanup.every((entry) => entry.outcome === "success") ? 0 : 1;
+          }
+          BUN
+      - name: Verify the completed execution receipt
+        run: |
+          jq -e --arg group "$PSTDIO_CLI_GROUP" --arg digest "$PSTDIO_CLI_PLAN"             --slurpfile expected "$PSTDIO_CLI_OUTPUT/assigned-files.json"             --slurpfile plan "$PSTDIO_CLI_OUTPUT/selected-plan.json" '
+            .source == $plan[0].testPlan.source and .planDigest == $digest and .runIds == [$group]
+            and .complete and .outcome == "success" and .errors == []
+            and ([.results[] | select(.runId == $group and .complete and .outcome == "success"
+              and .exitCode == 0 and (.reportedFiles | sort) == ($expected[0] | sort))] | length) == 1
+            and any(.phases[]; .kind == "cleanup" and .outcome == "success")
+            ' "$PSTDIO_CLI_OUTPUT/native/execution.json"
+          jq -e --arg group "$PSTDIO_CLI_GROUP" --arg source "$PSTDIO_CLI_HEAD" --arg digest "$PSTDIO_CLI_PLAN" '
+            .runId == $group and .sourceSha == $source and .planDigest == $digest
+            and .complete and .exitCode == 0 and .unreportedSelectedCases == 0
+            and .executedCases == 20 and (.executedFiles | length) == 10
+            and (.cases | length) == .executedCases and all(.cases[]; .outcome == "success")
+            ' "$PSTDIO_CLI_OUTPUT/native/$PSTDIO_CLI_GROUP/cases.json"
+          jq -e 'all(.[]; .outcome == "success")' "$PSTDIO_CLI_OUTPUT/compose-cleanup.json"
+          git diff --exit-code
+      - name: Clean up the owned temporary directory
+        if: always()
+        run: |
+          if [[ -n "${PSTDIO_CLI_SCRATCH:-}" ]]; then
+            [[ "$PSTDIO_CLI_SCRATCH" == "$RUNNER_TEMP"/marmalade-cli.* ]]
+            test "$(cat "$PSTDIO_CLI_SCRATCH/owner")" = "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+            if [[ -f "$PSTDIO_CLI_SCRATCH/compose-projects.jsonl" ]]; then
+              cp "$PSTDIO_CLI_SCRATCH/compose-projects.jsonl" "$PSTDIO_CLI_OUTPUT/"
+            fi
+            rm -rf -- "$PSTDIO_CLI_SCRATCH"
+            test ! -e "$PSTDIO_CLI_SCRATCH"
+            printf '%s\n' 'Owned runtime directory removed' > "$PSTDIO_CLI_OUTPUT/scratch-cleanup.txt"
+          fi
+      - name: Preserve the test plan and execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-2338-source-cli-attempt-${{ github.run_attempt }}
+          path: ${{ env.PSTDIO_CLI_OUTPUT }}
+          if-no-files-found: error
+
+  published_export:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI_PROFILE: production
+      CI_PLAN_OUTPUT_DIR: test-results/ci/marmalade-export
+      GH_TOKEN: ${{ github.token }}
+      PSTDIO_EXPORT_OVERLAY: 34d7a987a76ad2f9da35795742016d2c6b22de87
+      PSTDIO_EXPORT_PARENT: 9551833b7ecd4139a2e6f9da04da2f5b7542eafe
+      PSTDIO_EXPORT_TEST: packages/e2e/src/packaged/packed-marmalade-export-qualification.p1.test.ts
+      PSTDIO_EXPORT_BLOB: 68316c709fb144fe97f7e0ef5931297a26d5ac55
+      PSTDIO_EXPORT_TREE: 1a5b2b7754581d33842983d4018c3ead6ac0333b
+      PSTDIO_EXPORT_POLICY: bb5c254ab99ea071a6be1d6041e9fb8aa3f86f2dca40dc7ef9b5897415dc93ec
+      PSTDIO_EXPORT_PLAN: 675bcfa7d6b1a07cf4dbe8873b85c56e23e5af701a8d44025a46570f5da89bd9
+      PSTDIO_EXPORT_GROUP: e5b030fe6d78cc8a2b4a91ee
+      PSTDIO_PUBLISHED_PAIR: 0.49.0-preview.sha-26262f1a15dc5c8aaa2d8746197f4b65cfe63547
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.PSTDIO_EXPORT_OVERLAY }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify the exact exporter qualification source
+        run: |
+          test "$(git rev-parse HEAD)" = "$PSTDIO_EXPORT_OVERLAY"
+          test "$(git show -s --format=%P HEAD)" = "$PSTDIO_EXPORT_PARENT"
+          test "$(git diff-tree --no-commit-id --name-status -r HEAD)" = "$(printf 'A\t%s' "$PSTDIO_EXPORT_TEST")"
+          test "$(git rev-parse "HEAD:$PSTDIO_EXPORT_TEST")" = "$PSTDIO_EXPORT_BLOB"
+          test -z "$(git status --porcelain)"
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Typecheck and bundle the standalone extension with the exact published pair
+        shell: bash
+        run: |
+          receipts="$GITHUB_WORKSPACE/$CI_PLAN_OUTPUT_DIR/standalone"
+          mkdir -p "$receipts"
+          scratch="$(mktemp -d "$RUNNER_TEMP/marmalade-standalone.XXXXXX")"
+          cleanup() {
+            rm -rf -- "$scratch"
+            test ! -e "$scratch"
+          }
+          trap cleanup EXIT
+          git archive "$PSTDIO_EXPORT_PARENT" extensions/extension-lab | tar -x -C "$scratch"
+          lab="$scratch/extensions/extension-lab"
+          (cd "$lab" && bun install --frozen-lockfile) 2>&1 | tee "$receipts/frozen-install.log"
+          jq -e --arg pair "$PSTDIO_PUBLISHED_PAIR" '
+            .dependencies["@pstdio/sdk"] == $pair and .dependencies["@pstdio/ui"] == $pair
+            and .engines.pstdio == "^0.5.1 || ^0.6.0"
+            ' "$lab/package.json"
+          jq -e --arg pair "$PSTDIO_PUBLISHED_PAIR" '
+            .version == $pair and .pstdio.extensionApiVersion == "0.5.1"
+            ' "$lab/node_modules/@pstdio/sdk/package.json"
+          jq -e --arg pair "$PSTDIO_PUBLISHED_PAIR" '
+            .version == $pair and .dependencies["@pstdio/sdk"] == $pair
+            ' "$lab/node_modules/@pstdio/ui/package.json"
+          lock="$(sha256sum "$lab/bun.lock" | cut -d' ' -f1)"
+          jq -n --arg source "$PSTDIO_EXPORT_PARENT" --arg pair "$PSTDIO_PUBLISHED_PAIR" --arg lock "$lock" \
+            '{source:$source,pair:$pair,extensionLockSha256:$lock}' > "$receipts/identity.json"
+          (cd "$lab" && bun check) 2>&1 | tee "$receipts/typecheck.log"
+          (
+            cd "$lab"
+            bun build ./extension.ts --target=bun --outdir="$scratch/build/extension"
+            bun build ./src/views/marmalade-inspector.tsx ./src/views/marmalade-canvas.tsx \
+              --target=browser --outdir="$scratch/build/views"
+          ) 2>&1 | tee "$receipts/bundles.log"
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+      - name: Install the repository-pinned Chromium on its supported Ubuntu runner
+        run: cd packages/e2e && bun x --no-install playwright install --with-deps chromium
+      - name: Select and execute the single packaged SVG test
+        run: |
+          mkdir -p "$CI_PLAN_OUTPUT_DIR"
+          bun scripts/test.ts --file "$PSTDIO_EXPORT_TEST" --list --out "$CI_PLAN_OUTPUT_DIR/plan.json"
+          jq -e --arg sha "$PSTDIO_EXPORT_OVERLAY" --arg tree "$PSTDIO_EXPORT_TREE" \
+            --arg policy "$PSTDIO_EXPORT_POLICY" --arg digest "$PSTDIO_EXPORT_PLAN" \
+            --arg group "$PSTDIO_EXPORT_GROUP" --arg file "$PSTDIO_EXPORT_TEST" '
+            .source == {sha:$sha,tree:$tree,policy:$policy,dirty:false} and .digest == $digest
+            and (.runs | length) == 1 and .runs[0].id == $group and .runs[0].runner == "packaged-cli"
+            and .runs[0].files == [$file] and .runs[0].target == {platform:"linux",arch:"x64"}
+            ' "$CI_PLAN_OUTPUT_DIR/plan.json"
+          bun scripts/test.ts --plan "$CI_PLAN_OUTPUT_DIR/plan.json"
+      - name: Verify the completed packaged exporter receipt
+        run: |
+          jq -e --arg group "$PSTDIO_EXPORT_GROUP" --arg file "$PSTDIO_EXPORT_TEST" \
+            --slurpfile selected "$CI_PLAN_OUTPUT_DIR/plan.json" '
+            .source == $selected[0].source and .planDigest == $selected[0].digest
+            and .runIds == [$group] and .complete and .outcome == "success" and .errors == []
+            and ([.results[] | select(.runId == $group and .complete and .outcome == "success"
+              and .exitCode == 0 and .reportedFiles == [$file])] | length) == 1
+            and any(.phases[]; .kind == "cleanup" and .outcome == "success")
+            ' "$CI_PLAN_OUTPUT_DIR/execution.json"
+      - name: Preserve the plan, test receipts and exported SVG
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-2338-marmalade-export-attempt-${{ github.run_attempt }}
+          path: |
+            test-results/ci
+            packages/e2e/test-results
+          if-no-files-found: error
