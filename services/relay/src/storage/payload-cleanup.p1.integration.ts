@@ -1,5 +1,5 @@
-import { afterAll, beforeAll, expect, test } from "bun:test";
-import { inArray, sql } from "drizzle-orm";
+import { afterAll, beforeAll, expect, spyOn, test } from "bun:test";
+import { eq, inArray, sql } from "drizzle-orm";
 import { connectRelay } from "./database";
 import { syncObjectDeletions } from "./document-schema";
 import { cleanupPayloads } from "./payload-cleanup";
@@ -163,5 +163,75 @@ test("provider deletion failures retain retry rows and exclusion while independe
     payloads.close();
     await Promise.all([connection.close(), writer.close()]);
     await proxy.stop(true);
+  }
+});
+
+test.each([
+  "reference read",
+  "multipart discard",
+] as const)("cancellation after %s leaves payload cleanup queued", async (stage) => {
+  const connection = connectRelay(fixture.databaseUrl);
+  const payloads = createPayloadObjects({ bucket: fixture.bucket, s3: fixture.s3 });
+  const objectKey = randomId("cancelled");
+  const controller = new AbortController();
+  const reason = new Error("Controlled cleanup cancellation");
+  const interruptedConnection = {
+    ...connection,
+    run: ((action, signal) =>
+      connection.run(async (db) => {
+        const originalTransaction = db.transaction;
+        const transaction = originalTransaction.bind(db);
+        db.transaction = (callback, config) =>
+          transaction((tx) => {
+            const execute = tx.execute.bind(tx);
+            tx.execute = <Row extends Record<string, unknown>>(statement: Parameters<typeof execute>[0]) => {
+              const query = execute<Row>(statement);
+              const read = query.execute;
+              query.execute = async () => {
+                const result = await read();
+                if (stage === "reference read") controller.abort(reason);
+                return result;
+              };
+              return query;
+            };
+            return callback(tx);
+          }, config);
+        try {
+          return await action(db);
+        } finally {
+          db.transaction = originalTransaction;
+        }
+      }, signal)) satisfies typeof connection.run,
+  };
+  const queued = () =>
+    connection.run((db) => db.select().from(syncObjectDeletions).where(eq(syncObjectDeletions.objectKey, objectKey)));
+  try {
+    await fixture.putLegacyObject(objectKey, new Uint8Array([1, 2, 3]));
+    await connection.run((db) => db.insert(syncObjectDeletions).values({ objectKey }));
+
+    const discard = payloads.discard;
+    const discards = spyOn(payloads, "discard").mockImplementation(async (...args) => {
+      await discard(...args);
+      if (stage === "multipart discard") controller.abort(reason);
+    });
+    const removals = spyOn(payloads, "remove");
+    try {
+      await expect(cleanupPayloads(interruptedConnection, payloads, controller.signal)).rejects.toBe(reason);
+      expect(discards).toHaveBeenCalledTimes(stage === "reference read" ? 0 : 1);
+      expect(removals).not.toHaveBeenCalled();
+    } finally {
+      discards.mockRestore();
+      removals.mockRestore();
+    }
+    expect(await queued()).toHaveLength(1);
+    expect((await fixture.objects()).has(objectKey)).toBe(true);
+
+    await cleanupPayloads(connection, payloads);
+    expect(await queued()).toHaveLength(0);
+    expect((await fixture.objects()).has(objectKey)).toBe(false);
+  } finally {
+    await connection.run((db) => db.delete(syncObjectDeletions).where(eq(syncObjectDeletions.objectKey, objectKey)));
+    payloads.close();
+    await connection.close();
   }
 });
