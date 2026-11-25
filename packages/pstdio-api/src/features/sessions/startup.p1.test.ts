@@ -1,9 +1,15 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { HarnessEventSink, HarnessSession, SessionMessage } from "pstdio-api-contracts";
+import {
+  backendWorkerCommand,
+  createExtensionProcessEnvironment,
+  HANDLER_MARKER,
+  startBackendWorker,
+} from "pstdio-extensions";
 import { createSessionService } from "../../services/session-service";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { folderProjectInput } from "../../test-utils/folder-project-input";
@@ -387,6 +393,83 @@ describe("resolveOrphanedSessions reattach failures", () => {
     lateReattach.resolve({ done: new Promise(() => {}), stop: stopLateSession });
     await Bun.sleep(0);
     expect(stopLateSession).toHaveBeenCalledTimes(1);
+  });
+
+  test("retries a transient reattach from a process-mode harness", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-worker-reattach-"));
+    const entryPath = join(root, "extension.ts");
+    let worker: Awaited<ReturnType<typeof startBackendWorker>> | undefined;
+    let registry: ReturnType<typeof createTestHarnessRegistry> | undefined;
+    const store = createTrackedSessionStore();
+    const staleSession = {
+      id: "session-worker-reattach",
+      agent: OPENCODE_ID,
+      agent_session_id: "worker-session",
+      cwd: root,
+      project_id: "p1",
+      status: "in_progress",
+    };
+    const transitionStatus = mock(async () => ({ ...staleSession, status: "disconnected" }));
+    try {
+      writeFileSync(
+        entryPath,
+        `let attempts = 0;
+        export default { reattach() {
+          if (++attempts === 1) throw Object.assign(new Error("provider is still starting"), { retryable: true });
+          const { promise: done, resolve } = Promise.withResolvers();
+          return { done, stop: () => resolve({ status: "completed" }) };
+        } };`,
+      );
+      const active = await startBackendWorker({
+        command: backendWorkerCommand(),
+        env: createExtensionProcessEnvironment(),
+        entryPath,
+      });
+      worker = active;
+      const { reattach: handler } = active.definition as { reattach: { [HANDLER_MARKER]: string } };
+      const reattach = mock(
+        async () =>
+          (await active.invoke({
+            handlerId: handler[HANDLER_MARKER],
+            context: {},
+            surface: { kind: "object", members: {} },
+            args: [],
+          })) as HarnessSession,
+      );
+      registry = createTestHarnessRegistry([
+        createTestHarnessRecord("opencode", { provider: { capabilities: () => ["SessionReattach"], reattach } }),
+      ]);
+      const deps = {
+        harnessRegistry: registry,
+        eventBus: { emit: () => {} },
+        fileService: checkpointFileService,
+        workspaceSessionService: { getWorkspaceBySessionId: async () => null },
+        sessionQueueEntriesService: { listDispatchStarted: async () => [], remove: async () => {} },
+        sessionService: {
+          store,
+          listActive: async () => [staleSession],
+          get: async () => staleSession,
+          update: async () => staleSession,
+          transitionStatus,
+        },
+      } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
+
+      await resolveOrphanedSessions(deps);
+
+      expect(reattach).toHaveBeenCalledTimes(2);
+      expect(transitionStatus).not.toHaveBeenCalled();
+      expect(store.get(staleSession.id)?.session).toBeDefined();
+    } finally {
+      try {
+        const session = store.get(staleSession.id)?.session;
+        await session?.stop();
+        await session?.done;
+      } finally {
+        await registry?.dispose();
+        await worker?.stop();
+        rmSync(root, { recursive: true, force: true });
+      }
+    }
   });
 
   test("disconnects an orphan after a permanent reattach failure", async () => {

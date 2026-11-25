@@ -1,5 +1,3 @@
-import { deserializeBackendError, type SerializedBackendError, serializeBackendError } from "./protocol";
-
 /**
  * Functions, async iterables and abort signals that cross the worker boundary inside an invocation.
  * The side that owns one keeps it in its table and sends a reference; the other side gets a stub
@@ -9,65 +7,31 @@ import { deserializeBackendError, type SerializedBackendError, serializeBackendE
  * of a handle, such as `{ close() }`. Class instances, maps, URLs and other objects cross as cloned
  * data, so a host object's methods and internals never become callable by accident.
  */
-const FUNCTION_MARKER = "$pstdioFunction";
-const ITERATOR_MARKER = "$pstdioIterator";
-const SIGNAL_MARKER = "$pstdioSignal";
-const BLOB_MARKER = "$pstdioBlob";
-const MARKERS = [FUNCTION_MARKER, ITERATOR_MARKER, SIGNAL_MARKER, BLOB_MARKER];
 
-type RemoteFunction = (...args: unknown[]) => unknown;
-type FunctionRef = { [FUNCTION_MARKER]: string };
-type IteratorRef = { [ITERATOR_MARKER]: { next: FunctionRef; return: FunctionRef; stream?: boolean } };
-type BlobRef = { [BLOB_MARKER]: { type: string; bytes: Uint8Array } };
-type AbortReason = { error: SerializedBackendError } | { value: unknown };
-type SignalRef = {
-  [SIGNAL_MARKER]: { aborted: true; reason: AbortReason } | { aborted: false; onAbort: FunctionRef };
-};
+import type { JsonPatch } from "pstdio-api-contracts";
+import {
+  BLOB_MARKER,
+  type BlobRef,
+  type EventSink,
+  encodeReason,
+  FUNCTION_MARKER,
+  type FunctionRef,
+  ITERATOR_MARKER,
+  type IteratorRef,
+  isAsyncIterable,
+  isPlainObject,
+  MARKERS,
+  PROMISE_MARKER,
+  type RemoteFunction,
+  SIGNAL_MARKER,
+  SINK_MARKER,
+  type SignalRef,
+  SNAPSHOT_SINK,
+  setData,
+} from "./remote-markers";
 
-const encodeReason = (reason: unknown) => {
-  if (reason instanceof Error) return { error: serializeBackendError(reason) };
-  try {
-    return { value: structuredClone(reason) };
-  } catch {
-    return { error: serializeBackendError(reason) };
-  }
-};
-
-const decodeReason = (reason: AbortReason) =>
-  "error" in reason ? deserializeBackendError(reason.error) : reason.value;
-
-const setData = (copy: Record<string, unknown>, key: string, value: unknown) => {
-  if (key === "__proto__") {
-    Object.defineProperty(copy, key, { value, enumerable: true, writable: true, configurable: true });
-  } else copy[key] = value;
-};
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-const isPlainObject = (value: object) => {
-  const proto = Object.getPrototypeOf(value);
-  return proto === Object.prototype || proto === null;
-};
-
-const isFunctionRef = (value: unknown): value is FunctionRef =>
-  isRecord(value) && typeof value[FUNCTION_MARKER] === "string";
-const isIteratorRef = (value: unknown): value is IteratorRef =>
-  isRecord(value) &&
-  isRecord(value[ITERATOR_MARKER]) &&
-  isFunctionRef(value[ITERATOR_MARKER].next) &&
-  isFunctionRef(value[ITERATOR_MARKER].return);
-const isSignalRef = (value: unknown): value is SignalRef =>
-  isRecord(value) &&
-  isRecord(value[SIGNAL_MARKER]) &&
-  (value[SIGNAL_MARKER].aborted === true
-    ? isRecord(value[SIGNAL_MARKER].reason)
-    : value[SIGNAL_MARKER].aborted === false && isFunctionRef(value[SIGNAL_MARKER].onAbort));
-
-const isAsyncIterable = (value: object): value is AsyncIterable<unknown> => Symbol.asyncIterator in value;
-
-const isBlobRef = (value: unknown): value is BlobRef =>
-  isRecord(value) && isRecord(value[BLOB_MARKER]) && value[BLOB_MARKER].bytes instanceof Uint8Array;
+export { importValue } from "./remote-imports";
+export { snapshotSink } from "./remote-markers";
 
 // Read byte data without copying the object graph or invoking an iterable before export.
 const readBlobs = async (value: unknown) => {
@@ -89,28 +53,57 @@ const readBlobs = async (value: unknown) => {
   );
 };
 
+type ExportState = {
+  blobs: Map<Blob, Uint8Array>;
+  seen: WeakMap<object, unknown>;
+  refs: Set<string>;
+  exportedIterators: WeakSet<object>;
+};
+
+const closeSafely = (close: () => unknown) => {
+  try {
+    void Promise.resolve(close()).catch(() => {});
+  } catch {}
+};
+
 export const createFunctionTable = () => {
   const functions = new Map<string, { fn: RemoteFunction; cleanup: boolean }>();
-  const disposers = new Set<() => unknown>();
+  const pinned = new Set<string>();
+  const resultReferences = new Set<string>();
+  const disposers = new Map<() => unknown, Set<string>>();
   const handles = new WeakMap<object, RemoteFunction>();
   let next = 0;
+  let closed = false;
+  let resultKeepsReferences: boolean | undefined;
 
-  const register = (fn: RemoteFunction, cleanup = false): FunctionRef => {
+  const register = (state: ExportState, fn: RemoteFunction, cleanup = false): FunctionRef => {
     const id = `f${next++}`;
     functions.set(id, { fn, cleanup });
+    state.refs.add(id);
     return { [FUNCTION_MARKER]: id };
   };
 
-  const dispose = () => {
-    for (const close of disposers) {
-      try {
-        void Promise.resolve(close()).catch(() => {});
-      } catch {}
+  const own = (close: () => unknown, ...references: FunctionRef[]) => {
+    const ids = disposers.get(close) ?? new Set<string>();
+    for (const reference of references) ids.add(reference[FUNCTION_MARKER]);
+    disposers.set(close, ids);
+  };
+
+  const disposeUnused = () => {
+    for (const [close, ids] of disposers) {
+      for (const id of ids) if (!functions.has(id)) ids.delete(id);
+      if (ids.size) continue;
+      disposers.delete(close);
+      closeSafely(close);
     }
+  };
+
+  const dispose = () => {
+    for (const close of disposers.keys()) closeSafely(close);
     disposers.clear();
   };
 
-  const exportIterable = (iterable: AsyncIterable<unknown>): IteratorRef => {
+  const exportIterable = (iterable: AsyncIterable<unknown>, state: ExportState): IteratorRef => {
     const iterator = iterable[Symbol.asyncIterator]();
     let done = false;
     const finish = () => {
@@ -122,49 +115,43 @@ export const createFunctionTable = () => {
       finish();
       return iterator.return?.(value) ?? { done: true, value };
     };
-    disposers.add(close);
-    return {
-      [ITERATOR_MARKER]: {
-        stream: iterable instanceof ReadableStream,
-        next: register(async () => {
-          if (done) return { done: true, value: undefined };
-          const result = await iterator.next();
-          if (done) return { done: true, value: undefined };
-          if (result.done) finish();
-          return result;
-        }),
-        return: register(close, true),
-      },
-    };
+    const advance = register(state, async () => {
+      if (done) return { done: true, value: undefined };
+      const result = await iterator.next();
+      if (done) return { done: true, value: undefined };
+      if (result.done) finish();
+      return result;
+    });
+    const end = register(state, close, true);
+    own(close, advance, end);
+    state.exportedIterators.add(iterable);
+    return { [ITERATOR_MARKER]: { stream: iterable instanceof ReadableStream, next: advance, return: end } };
   };
 
-  const exportSignal = (signal: AbortSignal): SignalRef => ({
-    [SIGNAL_MARKER]: signal.aborted
-      ? { aborted: true, reason: encodeReason(signal.reason) }
-      : {
-          aborted: false,
-          onAbort: register((listener) => {
-            if (typeof listener !== "function") return;
-            const detach = () => {
-              signal.removeEventListener("abort", notify);
-              disposers.delete(detach);
-            };
-            const notify = () => {
-              detach();
-              void Promise.resolve()
-                .then(() => listener(encodeReason(signal.reason)))
-                .catch(() => {});
-            };
-            if (signal.aborted) notify();
-            else {
-              disposers.add(detach);
-              signal.addEventListener("abort", notify, { once: true });
-            }
-          }),
-        },
-  });
+  const exportSignal = (signal: AbortSignal, state: ExportState): SignalRef => {
+    if (signal.aborted) return { [SIGNAL_MARKER]: { aborted: true, reason: encodeReason(signal.reason) } };
+    const onAbort = register(state, (listener) => {
+      if (typeof listener !== "function") return;
+      const detach = () => {
+        signal.removeEventListener("abort", notify);
+        disposers.delete(detach);
+      };
+      const notify = () => {
+        detach();
+        void Promise.resolve()
+          .then(() => listener(encodeReason(signal.reason)))
+          .catch(() => {});
+      };
+      if (signal.aborted) notify();
+      else {
+        own(detach, onAbort);
+        signal.addEventListener("abort", notify, { once: true });
+      }
+    });
+    return { [SIGNAL_MARKER]: { aborted: false, onAbort } };
+  };
 
-  const exportClose = (owner: object, close: RemoteFunction) => {
+  const exportClose = (owner: object, close: RemoteFunction, state: ExportState) => {
     let finish = handles.get(owner);
     if (!finish) {
       let closing = false;
@@ -175,50 +162,105 @@ export const createFunctionTable = () => {
         return close.call(owner);
       };
       handles.set(owner, finish);
-      disposers.add(finish);
     }
-    return register(finish, true);
+    const ref = register(state, finish, true);
+    own(finish, ref);
+    return ref;
   };
 
-  const exportPlain = (value: object, blobs: Map<Blob, Uint8Array>, seen: WeakMap<object, unknown>) => {
+  const exportPlain = (value: object, state: ExportState) => {
     if (Array.isArray(value)) {
       const copy: unknown[] = [];
-      seen.set(value, copy);
-      for (const entry of value) copy.push(exportSync(entry, blobs, seen));
+      state.seen.set(value, copy);
+      for (const entry of value) copy.push(exportSync(entry, state));
       return copy;
     }
     if (MARKERS.some((marker) => marker in value))
       throw new TypeError(`Values sent to or from an extension backend cannot use the keys ${MARKERS.join(", ")}.`);
     const copy: Record<string, unknown> = {};
-    seen.set(value, copy);
+    state.seen.set(value, copy);
     for (const [key, entry] of Object.entries(value)) {
       const exported =
         key === "close" && typeof entry === "function"
-          ? exportClose(value, entry as RemoteFunction)
-          : exportSync(entry, blobs, seen);
+          ? exportClose(value, entry as RemoteFunction, state)
+          : exportSync(entry, state);
       setData(copy, key, exported);
     }
     return copy;
   };
 
-  /** Replaces this side's functions, iterables and signals with references. Other data is cloned. */
-  const exportSync = (value: unknown, blobs: Map<Blob, Uint8Array>, seen = new WeakMap<object, unknown>()): unknown => {
-    if (typeof value === "function") return register(value as RemoteFunction);
-    if (value === null || typeof value !== "object") return value;
-    if (value instanceof AbortSignal) return exportSignal(value);
-    if (seen.has(value)) return seen.get(value);
+  const exportSpecial = (value: object, state: ExportState) => {
     if (value instanceof Blob) {
-      const bytes = blobs.get(value);
+      const bytes = state.blobs.get(value);
       if (!bytes) throw new TypeError("Blob changed during extension backend export.");
-      const reference = { [BLOB_MARKER]: { type: value.type, bytes } } satisfies BlobRef;
-      seen.set(value, reference);
-      return reference;
+      return { [BLOB_MARKER]: { type: value.type, bytes } } satisfies BlobRef;
     }
-    if (isAsyncIterable(value)) return exportIterable(value);
-    return Array.isArray(value) || isPlainObject(value) ? exportPlain(value, blobs, seen) : value;
+    if (value instanceof AbortSignal) return exportSignal(value, state);
+    if (value instanceof Promise) return { [PROMISE_MARKER]: register(state, () => value) };
+    if (SNAPSHOT_SINK in value) {
+      const sink = (value as { [SNAPSHOT_SINK]: EventSink })[SNAPSHOT_SINK];
+      const push = register(state, (patch) => sink.push(patch as JsonPatch));
+      return { [SINK_MARKER]: { messages: [...sink.getMessages()], push } };
+    }
+    if (isAsyncIterable(value)) return exportIterable(value, state);
+    return undefined;
   };
 
-  const exportValue = async (value: unknown) => exportSync(value, await readBlobs(value));
+  const exportSync = (value: unknown, state: ExportState): unknown => {
+    if (value === null || (typeof value !== "object" && typeof value !== "function")) return value;
+    if (state.seen.has(value)) return state.seen.get(value);
+    const special = exportSpecial(value, state);
+    if (special !== undefined) {
+      state.seen.set(value, special);
+      return special;
+    }
+    if (typeof value === "function") return register(state, value as RemoteFunction);
+    return Array.isArray(value) || isPlainObject(value) ? exportPlain(value, state) : value;
+  };
+
+  const release = (ids: Iterable<string>) => {
+    for (const id of ids) {
+      functions.delete(id);
+      pinned.delete(id);
+      resultReferences.delete(id);
+    }
+    disposeUnused();
+  };
+
+  const retainExport = (ids: ReadonlySet<string>, pin: boolean | "with-result") => {
+    if (!pin || !ids.size) return;
+    let retained = pinned;
+    if (pin === "with-result") {
+      if (resultKeepsReferences === false) throw new Error("The invocation has finished.");
+      if (resultKeepsReferences === undefined) retained = resultReferences;
+    }
+    for (const id of ids) retained.add(id);
+  };
+
+  const exportResult = async (value: unknown, pin: boolean | "with-result" = false, discardOnFailure = false) => {
+    const state: ExportState = {
+      blobs: new Map(),
+      seen: new WeakMap(),
+      refs: new Set(),
+      exportedIterators: new WeakSet(),
+    };
+    try {
+      if (closed) throw new Error("The invocation has finished.");
+      state.blobs = await readBlobs(value);
+      if (closed) throw new Error("The invocation has finished.");
+      const exported = exportSync(value, state);
+      retainExport(state.refs, pin);
+      return { value: exported, kept: state.refs };
+    } catch (error) {
+      release(state.refs);
+      if (discardOnFailure) discardValue(value, (owner) => handles.has(owner) || state.exportedIterators.has(owner));
+      throw error;
+    }
+  };
+
+  const exportValue = async (value: unknown) => (await exportResult(value)).value;
+
+  const exportPinned = async (value: unknown) => (await exportResult(value, true)).value;
 
   const call = async (id: string, args: () => unknown[], cleanupOnly = false) => {
     const entry = functions.get(id);
@@ -226,83 +268,80 @@ export const createFunctionTable = () => {
     return entry.fn(...args());
   };
 
+  const seal = (kept: ReadonlySet<string> = new Set(), keepResultReferences = false) => {
+    resultKeepsReferences = keepResultReferences;
+    if (keepResultReferences) for (const id of resultReferences) pinned.add(id);
+    resultReferences.clear();
+    for (const id of functions.keys()) if (!kept.has(id) && !pinned.has(id)) functions.delete(id);
+    disposeUnused();
+  };
+
   const clear = () => {
+    closed = true;
     functions.clear();
+    pinned.clear();
+    resultReferences.clear();
     dispose();
   };
 
-  return { exportValue, call, clear, dispose };
+  return {
+    exportValue,
+    exportResult,
+    exportPinned,
+    isPinned: (id: string) => pinned.has(id),
+    call,
+    dispose,
+    release,
+    seal,
+    clear,
+    get size() {
+      return functions.size;
+    },
+  };
 };
 
-/** A host operation can produce a reader or handle after its caller has departed. */
-export const discardValue = (value: unknown) => {
-  const table = createFunctionTable();
-  // Exporting registers the value's closers; clearing the table runs them.
-  void table
-    .exportValue(value)
-    .catch(() => {})
-    .finally(() => table.clear());
+/** Close returned readers and handles when their invocation no longer has a caller. */
+export const discardValue = (value: unknown, alreadyManaged: (owner: object) => boolean = () => false) => {
+  const seen = new WeakSet<object>();
+  const visit = (entry: unknown) => {
+    if (!entry || (typeof entry !== "object" && typeof entry !== "function") || seen.has(entry)) return;
+    seen.add(entry);
+    try {
+      if (isAsyncIterable(entry)) {
+        if (alreadyManaged(entry)) return;
+        const iterator = entry[Symbol.asyncIterator]();
+        closeSafely(() => iterator.return?.());
+        return;
+      }
+      if (!Array.isArray(entry) && !isPlainObject(entry)) return;
+      const close = Object.getOwnPropertyDescriptor(entry, "close")?.value;
+      if (typeof close === "function" && !alreadyManaged(entry)) closeSafely(() => close.call(entry));
+      const properties = Object.values(Object.getOwnPropertyDescriptors(entry));
+      for (const property of properties.filter((property) => property.enumerable && "value" in property))
+        visit(property.value);
+    } catch {}
+  };
+  visit(value);
 };
 
-/** Replaces references from the other side with stubs that call back through `invoke`. */
-export const importValue = (
-  value: unknown,
-  invoke: (id: string, args: unknown[]) => Promise<unknown>,
-  seen = new WeakMap<object, unknown>(),
-): unknown => {
-  if (isFunctionRef(value))
-    return (...args: unknown[]) => {
-      const result = invoke(value[FUNCTION_MARKER], args);
-      // A listener stub is often called without being awaited; its failure must not crash its caller's process.
-      result.catch(() => {});
-      return result;
-    };
-  if (isIteratorRef(value)) {
-    const { next, return: finish } = value[ITERATOR_MARKER];
-    const iterator: AsyncIterator<unknown> = {
-      next: () => invoke(next[FUNCTION_MARKER], []) as Promise<IteratorResult<unknown>>,
-      return: (result?: unknown) => invoke(finish[FUNCTION_MARKER], [result]) as Promise<IteratorResult<unknown>>,
-    };
-    if (!value[ITERATOR_MARKER].stream) return { [Symbol.asyncIterator]: () => iterator };
-    return new ReadableStream({
-      async pull(controller) {
-        const result = await iterator.next();
-        if (result.done) controller.close();
-        else controller.enqueue(result.value);
-      },
-      cancel: async () => {
-        await iterator.return?.();
-      },
-    });
-  }
-  if (isBlobRef(value)) {
-    if (seen.has(value)) return seen.get(value);
-    const { type, bytes } = value[BLOB_MARKER];
-    const blob = new Blob([bytes as Uint8Array<ArrayBuffer>], { type });
-    seen.set(value, blob);
-    return blob;
-  }
-  if (isSignalRef(value)) {
-    const controller = new AbortController();
-    const signal = value[SIGNAL_MARKER];
-    if (signal.aborted) controller.abort(decodeReason(signal.reason));
-    else
-      invoke(signal.onAbort[FUNCTION_MARKER], [(reason: AbortReason) => controller.abort(decodeReason(reason))]).catch(
-        () => {},
-      );
-    return controller.signal;
-  }
-  if (value === null || typeof value !== "object") return value;
-  if (!Array.isArray(value) && !isPlainObject(value)) return value;
-  if (seen.has(value)) return seen.get(value);
-  if (Array.isArray(value)) {
-    const copy: unknown[] = [];
-    seen.set(value, copy);
-    for (const entry of value) copy.push(importValue(entry, invoke, seen));
-    return copy;
-  }
-  const copy: Record<string, unknown> = {};
-  seen.set(value, copy);
-  for (const [key, entry] of Object.entries(value)) setData(copy, key, importValue(entry, invoke, seen));
-  return copy;
+/**
+ * Counts the other side's references this side still holds. When a stub becomes unreachable,
+ * its owner is told so it can drop the function. A session handle therefore keeps its worker
+ * functions exactly as long as the host keeps the handle.
+ */
+export const createImportTracker = (onRelease: (ids: string[]) => void) => {
+  let live = 0;
+  const registry = new FinalizationRegistry<string[]>((ids) => {
+    live -= 1;
+    onRelease(ids);
+  });
+  return {
+    track(holder: object, ids: string[]) {
+      live += 1;
+      registry.register(holder, ids);
+    },
+    get live() {
+      return live;
+    },
+  };
 };

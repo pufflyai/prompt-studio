@@ -22,6 +22,7 @@ beforeAll(async () => {
     entryPath,
     `
 const cleanup = Promise.withResolvers();
+let lateOpen;
 export default {
   commands: [
     { id: "migration", run(ctx) {
@@ -36,6 +37,13 @@ export default {
       const iterator = ctx.live.follow()[Symbol.asyncIterator]();
       void iterator.next().catch(() => {});
       await ctx.live.reading();
+      if (close === "invalid result") {
+        const send = process.send.bind(process);
+        process.send = (message) => send(message.type === "result" && message.ok
+          ? { ...message, value: { $pstdioSignal: { aborted: true, reason: { error: null } } } }
+          : message);
+        return;
+      }
       if (close) await iterator.return();
     } },
     { id: "pending", async run(ctx) {
@@ -80,8 +88,26 @@ export default {
       return ctx.live.runCallback(() => ctx.live.wait());
     } },
     { id: "late", async run(ctx) {
-      void ctx.live.open().catch(() => {});
+      lateOpen = ctx.live.open();
+      void lateOpen.catch(() => {});
       await ctx.live.opening();
+    } },
+    { id: "close-late", async run() {
+      const handle = await lateOpen;
+      lateOpen = undefined;
+      await handle.close();
+    } },
+    { id: "retained-argument", async run(ctx) {
+      let stored;
+      await ctx.live.offer((listener) => { stored = listener; });
+      return { call: async () => stored("after settlement") };
+    } },
+    { id: "open-result", run(ctx) {
+      return ctx.live.open();
+    } },
+    { id: "callable-iterator", async run(ctx) {
+      const iterator = (await ctx.live.open())[Symbol.asyncIterator]();
+      return { next: () => iterator.next(), close: () => iterator.return() };
     } },
     { id: "unsubscribe", async run(ctx) {
       let seen = 0;
@@ -197,8 +223,12 @@ test("migration callbacks use synchronous helpers and keep the host migration sc
   });
 });
 
-for (const close of [false, true]) {
-  test(`a pending iterator read is interrupted by ${close ? "return" : "handler settlement"}`, async () => {
+for (const [close, reason] of [
+  [false, "handler settlement"],
+  [true, "return"],
+  ["invalid result", "an unreadable worker result"],
+] as const) {
+  test(`a pending iterator read is interrupted by ${reason}`, async () => {
     await withWorker(async (invoke) => {
       const reading = Promise.withResolvers<void>();
       const released = Promise.withResolvers<void>();
@@ -219,7 +249,9 @@ for (const close of [false, true]) {
         { follow: { kind: "iterate", signalArg: 0 } },
       );
       try {
-        await deadline(invoke("idle", { ...base, args: [close] }));
+        const result = deadline(invoke("idle", { ...base, args: [close] }));
+        if (close === "invalid result") await expect(result).rejects.toBeInstanceOf(TypeError);
+        else await result;
         await deadline(released.promise);
       } finally {
         fallback.abort();
@@ -259,7 +291,97 @@ test("settlement rejects an outstanding callback and closes a late host handle",
       }),
     );
     available.resolve({ close: () => closed.resolve() });
+    await deadline(invoke("close-late", fixture({})));
     await deadline(closed.promise);
+  });
+});
+
+test("a live result can call a host callback passed to it during the handler", async () => {
+  await withWorker(async (invoke) => {
+    const session = (await deadline(
+      invoke(
+        "retained-argument",
+        fixture({
+          offer: (accept: (listener: (value: string) => string) => Promise<void>) =>
+            accept((value) => `received ${value}`),
+        }),
+      ),
+    )) as { call: () => Promise<string> };
+    expect(await deadline(session.call())).toBe("received after settlement");
+  });
+});
+
+test("a failed host reply closes exported and unvisited handles once", async () => {
+  const closed = { before: 0, after: 0 };
+  await withWorker(async (invoke) => {
+    const before = { close: () => closed.before++ };
+    const after = { close: () => closed.after++ };
+    await expect(
+      deadline(
+        invoke(
+          "open-result",
+          fixture({ open: () => ({ before, invalid: { $pstdioFunction: "collision" }, after, alias: before }) }),
+        ),
+      ),
+    ).rejects.toThrow("cannot use the keys");
+    expect(closed).toEqual({ before: 1, after: 1 });
+  });
+  expect(closed).toEqual({ before: 1, after: 1 });
+});
+
+test("a revoked host reply closes handles alongside an unreadable property", async () => {
+  await withWorker(async (invoke) => {
+    const controller = new AbortController();
+    const opening = Promise.withResolvers<void>();
+    const available = Promise.withResolvers<object>();
+    const closed = Promise.withResolvers<void>();
+    const running = invoke("open-result", {
+      ...fixture({
+        open: () => {
+          opening.resolve();
+          return available.promise;
+        },
+      }),
+      signal: controller.signal,
+    }).catch((error: unknown) => error);
+    try {
+      await deadline(opening.promise);
+      controller.abort(new Error("cancelled host reply"));
+      expect(await deadline(running)).toMatchObject({ message: "cancelled host reply" });
+      available.resolve({
+        get metadata() {
+          throw new Error("unreadable metadata");
+        },
+        handle: { close: () => closed.resolve() },
+      });
+      await deadline(closed.promise);
+    } finally {
+      available.resolve({});
+    }
+  });
+});
+
+test("a callable async iterable remains readable while a worker result owns its iterator", async () => {
+  await withWorker(async (invoke) => {
+    const source = Promise.withResolvers<void>();
+    const callable = Object.assign(() => "called directly", {
+      async *[Symbol.asyncIterator]() {
+        try {
+          yield "first";
+          yield "second";
+        } finally {
+          source.resolve();
+        }
+      },
+    });
+    const session = (await deadline(invoke("callable-iterator", fixture({ open: () => callable })))) as {
+      next: () => Promise<IteratorResult<string>>;
+      close: () => Promise<IteratorResult<string>>;
+    };
+    expect(await deadline(session.next())).toEqual({ done: false, value: "first" });
+    expect(await deadline(session.next())).toEqual({ done: false, value: "second" });
+    expect((await deadline(session.close())).done).toBe(true);
+    await deadline(source.promise);
   });
 });
 

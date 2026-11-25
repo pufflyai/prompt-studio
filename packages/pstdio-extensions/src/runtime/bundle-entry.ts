@@ -3,12 +3,17 @@ import { readFileSync, realpathSync } from "node:fs";
 import { rename } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { isPackagedRuntime } from "pstdio-paths";
+import { runPreparationBundle } from "./preparation-command";
+import { createExtensionProcessEnvironment } from "./process-environment";
 import { revisionSnapshotPath } from "./revision-snapshot-path";
 
 const RUNTIME_BUNDLE_SUFFIX = ".pstdio-runtime-bundle.mjs";
 const sourceFilePattern = /\.(?:[cm]js|[jt]sx?)$/;
 const javascriptLoaders = new Set<Bun.JavaScriptLoader>(["js", "jsx", "ts", "tsx"]);
 const pendingBundles = new Map<string, Promise<string>>();
+/** A macro or plugin that never finishes is stopped, so loading the extension fails instead of waiting forever. */
+export const bundleLimits = { deadlineMs: 120_000 };
 
 const isInside = (root: string, path: string) => {
   const rel = relative(root, path);
@@ -76,15 +81,16 @@ const frozenAbsoluteImportsPlugin = (snapshotRoot: string) => ({
 // Bundling gives development and compiled hosts the same dependency resolution. Host source
 // conditions must not select files omitted from published packages, and compiled Bun cannot
 // resolve an externally imported module's node_modules. Dependencies are treated uniformly.
-const buildEntry = async (
-  entryPath: string,
-  outDir: string,
-  bundlePath: string,
-  preserveRoot: string,
-  snapshotRoot?: string,
-) => {
-  if (await Bun.file(bundlePath).exists()) return bundlePath;
+export interface BundleJob {
+  entryPath: string;
+  outDir: string;
+  bundlePath: string;
+  preserveRoot: string;
+  snapshotRoot?: string;
+}
 
+/** Runs in the bundler child. Bun evaluates macros while it builds, so this never runs in the host. */
+export const buildEntryHere = async ({ entryPath, outDir, bundlePath, preserveRoot, snapshotRoot }: BundleJob) => {
   const result = await Bun.build({
     entrypoints: [entryPath],
     target: "bun",
@@ -112,6 +118,28 @@ const buildEntry = async (
   return bundlePath;
 };
 
+const bundlerCommand = () =>
+  isPackagedRuntime()
+    ? [process.execPath, "extension-bundler"]
+    : [process.execPath, "--no-env-file", fileURLToPath(new URL("./bundle-entry.entry.ts", import.meta.url))];
+
+// Macros in an extension or its dependencies run during the build. The child gets the
+// extension's allowlisted environment and an empty working folder, never the host's secrets.
+const buildEntry = async (job: BundleJob) => {
+  if (await Bun.file(job.bundlePath).exists()) return job.bundlePath;
+  const deadlineMs = bundleLimits.deadlineMs;
+  const { exitCode, stderr, outcome, timedOut } = await runPreparationBundle({
+    argv: bundlerCommand(),
+    env: createExtensionProcessEnvironment(),
+    stdin: JSON.stringify(job),
+    deadlineMs,
+  });
+  if (timedOut) throw new Error(`Bundling ${job.entryPath} did not finish within ${deadlineMs / 1000} s.`);
+  if (!outcome?.ok)
+    throw new Error(outcome?.error ?? (stderr.trim() || `Extension bundler exited (${exitCode}) without a result.`));
+  return job.bundlePath;
+};
+
 export const bundleEntry = (entryPath: string, packagePath: string, outDir: string, snapshotRoot?: string) => {
   const bundlePath = join(outDir, `${basename(entryPath, extname(entryPath))}${RUNTIME_BUNDLE_SUFFIX}`);
   const pending = pendingBundles.get(bundlePath);
@@ -119,7 +147,8 @@ export const bundleEntry = (entryPath: string, packagePath: string, outDir: stri
 
   // A build can expose its output before it finishes. Join the pending build before checking
   // the cache, so another loader cannot import an unfinished bundle.
-  const build = buildEntry(entryPath, outDir, bundlePath, snapshotRoot ?? packagePath, snapshotRoot).finally(() => {
+  const job = { entryPath, outDir, bundlePath, preserveRoot: snapshotRoot ?? packagePath, snapshotRoot };
+  const build = buildEntry(job).finally(() => {
     pendingBundles.delete(bundlePath);
   });
   pendingBundles.set(bundlePath, build);

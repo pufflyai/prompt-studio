@@ -1,9 +1,13 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, spyOn, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { isProcessAlive } from "pstdio-paths";
+import { createExtensionProcessEnvironment } from "../process-environment";
 import { acquireBackendWorker, closeBackendWorkers } from "./backend-workers";
+import { createBackendWorkerPool } from "./pool";
 import { HANDLER_MARKER } from "./protocol";
+import type { BackendWorker } from "./supervisor";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -95,4 +99,65 @@ test("a restarted worker cannot answer for a different handler definition", asyn
   await writeFile(marker, "");
   const failure = await next(active).catch((error) => error);
   expect(failure).toMatchObject({ code: "backend_unavailable", message: expect.stringContaining("definition") });
+});
+
+const stopOutcomes = ["pending cleanup", "bounded rejection"] as const;
+test.skipIf(process.platform === "win32").each(stopOutcomes)("pool close sees %s after replacement", async (mode) => {
+  const { revision } = await fixture();
+  const { entryPath } = await revision(
+    "watchdog",
+    "export default { pid: () => process.pid, hang() { while (true); } };",
+  );
+  const pool = createBackendWorkerPool(() => ({
+    entryPath,
+    env: createExtensionProcessEnvironment(),
+    watchdog: { heartbeatMs: 20, unresponsiveMs: 500 },
+  }));
+  const invoke = (worker: BackendWorker, handler: "pid" | "hang") => {
+    const definition = worker.definition as Record<typeof handler, { [HANDLER_MARKER]: string }>;
+    return worker.invoke({
+      handlerId: definition[handler][HANDLER_MARKER],
+      context: {},
+      surface: { kind: "object", members: {} },
+      args: [],
+    });
+  };
+  const failed = await pool.acquire("same");
+  const failedPid = (await invoke(failed, "pid")) as number;
+  const nativeKill = process.kill.bind(process);
+  const cleanupStarted = Promise.withResolvers<void>();
+  const holdCleanup = spyOn(process, "kill").mockImplementation((pid, signal) => {
+    if (pid === -failedPid && signal === "SIGKILL") {
+      cleanupStarted.resolve();
+      return true;
+    }
+    return nativeKill(pid, signal);
+  });
+  try {
+    await expect(invoke(failed, "hang")).rejects.toThrow("did not respond");
+    await cleanupStarted.promise;
+    const replacement = await pool.acquire("same");
+    expect(replacement).not.toBe(failed);
+    const closing = pool.close();
+    const closeResult = closing.catch((error: unknown) => error);
+    await replacement.exited;
+    if (mode === "bounded rejection") {
+      const stopFailure = await failed.stop().catch((error: unknown) => error);
+      expect(stopFailure).toBeInstanceOf(Error);
+      expect(isProcessAlive(failedPid)).toBe(true);
+      const result = await Promise.race([closeResult, Bun.sleep(20).then(() => "pool.close is still pending")]);
+      expect(result).toBe(stopFailure);
+      return;
+    }
+    const closedEarly = await Promise.race([closing.then(() => true), Bun.sleep(20).then(() => false)]);
+    expect(closedEarly).toBe(false);
+    expect(isProcessAlive(failedPid)).toBe(true);
+    nativeKill(-failedPid, "SIGKILL");
+    await closing;
+    expect(isProcessAlive(failedPid)).toBe(false);
+  } finally {
+    holdCleanup.mockRestore();
+    if (isProcessAlive(failedPid)) nativeKill(-failedPid, "SIGKILL");
+    await Promise.allSettled([failed.exited, pool.close()]);
+  }
 });

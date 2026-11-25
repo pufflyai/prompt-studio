@@ -1,3 +1,5 @@
+export { runBundleChild } from "../bundle-entry-child";
+export { mapHostContext, markHostContext } from "../runner/host-context";
 export { closeBackendWorkers } from "./backend-workers";
 export { uncoveredContextFunctions } from "./context-surface-coverage";
 export { backendWorkerCommand, createBackendWorkerPool } from "./pool";

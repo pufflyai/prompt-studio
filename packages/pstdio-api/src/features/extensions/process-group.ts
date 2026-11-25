@@ -1,3 +1,4 @@
+import { isProcessGroupAlive } from "pstdio-paths";
 import { stopWindowsProcessTree } from "./windows-process-tree";
 
 interface SignalableChild {
@@ -27,6 +28,21 @@ export const signalProcessTree = async (child: SignalableChild, signal: NodeJS.S
       child.kill(signal);
     } catch {}
   }
+};
+
+/**
+ * Resolves true when the child and, outside Windows, every process left in its group exited inside
+ * the budget. A shell can exit on SIGTERM while a grandchild that ignores it keeps running.
+ */
+export const treeExitedWithin = async (child: SignalableChild, timeoutMs: number) => {
+  const deadline = performance.now() + timeoutMs;
+  if (!(await exitedWithin(child.exited, timeoutMs))) return false;
+  if (process.platform === "win32") return true;
+  while (isProcessGroupAlive(child.pid)) {
+    if (performance.now() >= deadline) return false;
+    await Bun.sleep(25);
+  }
+  return true;
 };
 
 /** Resolves true when the process exited inside the budget, false when the budget ran out. */

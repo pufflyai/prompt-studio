@@ -1,8 +1,9 @@
-const runTaskkill = async (pid: number) => {
+const runTaskkill = async (pid: number, signal?: AbortSignal) => {
   const taskkill = Bun.spawn(["taskkill.exe", "/PID", String(pid), "/T", "/F"], {
     stdout: "pipe",
     stderr: "pipe",
     windowsHide: true,
+    ...(signal && { signal, killSignal: "SIGKILL" as const }),
   });
   const [exitCode, stdout, stderr] = await Promise.all([
     taskkill.exited,
@@ -38,10 +39,11 @@ const stopRoot = async (child: ProcessTreeRoot) => {
   await child.exited;
 };
 
-export const stopWindowsProcessTree = async (child: ProcessTreeRoot, run = runTaskkill) => {
+export const stopWindowsProcessTree = async (child: ProcessTreeRoot, run = runTaskkill, signal?: AbortSignal) => {
   let result: Awaited<ReturnType<typeof run>>;
   try {
-    result = await run(child.pid);
+    result = await run(child.pid, signal);
+    signal?.throwIfAborted();
   } finally {
     await stopRoot(child);
   }

@@ -2,12 +2,9 @@
 
 Proposed: 2026-10-06
 
-Status: Proposed. In progress under PS-525 (stages tracked in the ticket). Extensions can opt in with `pstdio.backendRuntime: "process"`. Their entry then loads in a private worker process, which the packaged CLI starts, instead of the API process (`packages/pstdio-extensions/src/runtime/backend-process`). The worker gets an allowlisted environment, and its context calls reach only host members the host allowlists. Commands, middleware, private handlers and hooks run there. They can pass callbacks to host APIs and use returned handles and streams for the life of the invocation. Not supported in process mode yet:
+Status: Proposed. In progress under PS-525 (stages tracked in the ticket). Extensions can opt in with `pstdio.backendRuntime: "process"`. Their entry then loads in a private worker process, which the packaged CLI starts, instead of the API process (`packages/pstdio-extensions/src/runtime/backend-process`). The worker gets an allowlisted environment, and its context calls reach only host members the host allowlists. Every contribution kind runs there: commands, middleware, private handlers, hooks, harnesses, workspace types, text sources and resource hierarchy providers. Handlers can pass callbacks to host APIs. They can use the handles, promises and streams the host returns, which stay valid while either side holds them. Every `ctx` member is available, including `ctx.terminal`, whose handle the worker returns at once and connects to the host's session when it opens.
 
-- harnesses, workspace types, text sources and resource hierarchy providers
-- `terminal` and `localDirectory`
-
-Extensions without the setting are still imported into the API process. One worker serves every project that enables the same content revision. It therefore receives the invocation ids of all of them; that is no more than in-process code already reaches, since it can keep another project's `ctx`. Even in a worker, backend code keeps the user's OS account and file access until a platform sandbox ships, so it can still read `$PSTDIO_HOME`. Bundler macros still run extension code in the host during preparation (PS-1296). Until the default changes, an installed extension has the access of the user's account.
+Extensions without the setting are still imported into the API process. One worker serves every project that enables the same content revision. It therefore receives the invocation ids of all of them; that is no more than in-process code already reaches, since it can keep another project's `ctx`. Even in a worker, backend code keeps the user's OS account and file access until a platform sandbox ships, so it can still read `$PSTDIO_HOME`. Preparation bundles each entry in a separate child process with the same allowlisted environment, so bundler macros never run in the host (PS-1296). Until the default changes, an installed extension has the access of the user's account.
 
 ## Context
 

@@ -13,11 +13,13 @@ export class BackendUnavailableError extends Error {
 
 /** Both sides reject messages of another version instead of guessing their meaning. */
 export const BACKEND_PROTOCOL_VERSION = 1;
+export const BACKEND_STOP_GRACE_MS = 2_000;
 
 export interface SerializedBackendError {
   name: string;
   message: string;
   code?: string;
+  retryable?: true;
   stack?: string;
 }
 
@@ -35,9 +37,21 @@ export type HostToWorkerMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
       args: unknown[];
     }
   | { type: "cancel"; invocationId: string; reason: SerializedBackendError }
+  | { type: "discard"; invocationId: string }
   | ({ type: "reply"; invocationId: string; requestId: string } & Settled)
   /** Calls a function the worker passed to the host during this invocation. */
-  | { type: "fn-call"; invocationId: string; requestId: string; fnId: string; args: unknown[] }
+  | {
+      type: "fn-call";
+      invocationId: string;
+      requestId: string;
+      fnId: string;
+      args: unknown[];
+      /** Work started by this callback uses the invocation context and can outlive the callback reply. */
+      invocationOwned?: true;
+    }
+  | { type: "ping"; seq: number }
+  | { type: "hold-group" }
+  | { type: "release"; invocationId: string; fnIds: string[] }
 );
 
 export type WorkerToHostMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
@@ -49,6 +63,9 @@ export type WorkerToHostMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
   /** Calls a function the host passed to the worker during this invocation. */
   | { type: "fn-call"; invocationId: string; requestId: string; fnId: string; args: unknown[]; within?: string }
   | ({ type: "reply"; invocationId: string; requestId: string } & Settled)
+  | { type: "pong"; seq: number; rss: number }
+  | { type: "group-anchor"; pid: number | null }
+  | { type: "release"; invocationId: string; fnIds: string[] }
 );
 
 /** Marks a function in the definition the worker reports. Only the worker can run it. */
@@ -70,12 +87,13 @@ const describeErrorValue = (value: unknown) => {
 export const serializeBackendError = (error: unknown): SerializedBackendError => {
   try {
     if (!(error instanceof Error)) return { name: "Error", message: describeErrorValue(error) };
-    const { name, message, stack, code } = error as Error & { code?: unknown };
+    const { name, message, stack, code, retryable } = error as Error & { code?: unknown; retryable?: unknown };
     return {
       name: typeof name === "string" ? name : "Error",
       message: typeof message === "string" ? message : describeErrorValue(message),
       ...(typeof stack === "string" ? { stack } : {}),
       ...(typeof code === "string" ? { code } : {}),
+      ...(retryable === true ? { retryable: true } : {}),
     };
   } catch {
     return { name: "Error", message: "The extension backend threw a value that could not be read." };
@@ -83,10 +101,11 @@ export const serializeBackendError = (error: unknown): SerializedBackendError =>
 };
 
 export const deserializeBackendError = (serialized: SerializedBackendError) => {
-  const error = new Error(serialized.message) as Error & { code?: string };
+  const error = new Error(serialized.message) as Error & { code?: string; retryable?: true };
   error.name = serialized.name;
   if (serialized.stack) error.stack = serialized.stack;
   if (serialized.code) error.code = serialized.code;
+  if (serialized.retryable === true) error.retryable = true;
   return error;
 };
 
@@ -113,6 +132,7 @@ const isError = (value: unknown) =>
   typeof value.name === "string" &&
   typeof value.message === "string" &&
   optionalString(value.code) &&
+  (value.retryable === undefined || value.retryable === true) &&
   optionalString(value.stack);
 
 const isSettled = (message: Record<string, unknown>) =>
@@ -124,50 +144,48 @@ const isPath = (value: unknown) =>
     (step) => isRecord(step) && typeof step.name === "string" && (step.args === undefined || Array.isArray(step.args)),
   );
 
-const parseInvocationResult = (message: Record<string, unknown>) => {
-  if (typeof message.invocationId !== "string" || !isSettled(message)) return;
-  return {
-    ...message,
-    rejection: message.ok === false ? transferableCommandRejection(message.rejection) : undefined,
-  } as Extract<WorkerToHostMessage, { type: "result" }>;
+type Message = Record<string, unknown>;
+const isString = (value: unknown) => typeof value === "string";
+
+const workerMessageChecks: Record<string, (message: Message) => boolean> = {
+  ready: () => true,
+  loaded: isSettled,
+  result: (message) => isString(message.invocationId) && isSettled(message),
+  call: (message) =>
+    isString(message.invocationId) &&
+    isString(message.requestId) &&
+    isPath(message.path) &&
+    Array.isArray(message.args) &&
+    optionalString(message.within),
+  "fn-call": (message) =>
+    isString(message.invocationId) &&
+    isString(message.requestId) &&
+    isString(message.fnId) &&
+    Array.isArray(message.args) &&
+    optionalString(message.within),
+  reply: (message) => isString(message.invocationId) && isString(message.requestId) && isSettled(message),
+  notify: (message) =>
+    isString(message.invocationId) &&
+    isPath(message.path) &&
+    Array.isArray(message.args) &&
+    optionalString(message.within),
+  release: (message) => isString(message.invocationId) && Array.isArray(message.fnIds) && message.fnIds.every(isString),
+  pong: (message) =>
+    Number.isSafeInteger(message.seq) && typeof message.rss === "number" && Number.isFinite(message.rss),
+  "group-anchor": (message) =>
+    message.pid === null || (typeof message.pid === "number" && Number.isSafeInteger(message.pid) && message.pid > 1),
 };
 
 /** Validates what the worker sends. The host never trusts its shape or its claimed identity. */
 export const parseWorkerMessage = (message: unknown): WorkerToHostMessage | undefined => {
-  if (!isRecord(message) || message.v !== BACKEND_PROTOCOL_VERSION) return;
-  switch (message.type) {
-    case "ready":
-      return message as WorkerToHostMessage;
-    case "loaded":
-      return isSettled(message) ? (message as WorkerToHostMessage) : undefined;
-    case "result":
-      return parseInvocationResult(message);
-    case "call":
-      return typeof message.invocationId === "string" &&
-        typeof message.requestId === "string" &&
-        isPath(message.path) &&
-        Array.isArray(message.args) &&
-        optionalString(message.within)
-        ? (message as WorkerToHostMessage)
-        : undefined;
-    case "fn-call":
-      return typeof message.invocationId === "string" &&
-        typeof message.requestId === "string" &&
-        typeof message.fnId === "string" &&
-        Array.isArray(message.args) &&
-        optionalString(message.within)
-        ? (message as WorkerToHostMessage)
-        : undefined;
-    case "reply":
-      return typeof message.invocationId === "string" && typeof message.requestId === "string" && isSettled(message)
-        ? (message as WorkerToHostMessage)
-        : undefined;
-    case "notify":
-      return typeof message.invocationId === "string" &&
-        isPath(message.path) &&
-        Array.isArray(message.args) &&
-        optionalString(message.within)
-        ? (message as WorkerToHostMessage)
-        : undefined;
+  if (!isRecord(message) || message.v !== BACKEND_PROTOCOL_VERSION || !isString(message.type)) return;
+  const check = Object.hasOwn(workerMessageChecks, message.type) ? workerMessageChecks[message.type] : undefined;
+  if (!check?.(message)) return;
+  if (message.type === "result") {
+    return {
+      ...message,
+      rejection: message.ok === false ? transferableCommandRejection(message.rejection) : undefined,
+    } as Extract<WorkerToHostMessage, { type: "result" }>;
   }
+  return message as WorkerToHostMessage;
 };
