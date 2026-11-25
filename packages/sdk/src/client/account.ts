@@ -17,6 +17,7 @@ import {
   type RemoveLocalProjectInput,
   type RemoveLocalProjectResult,
 } from "pstdio-api-contracts";
+import { verifyAccountLogin } from "../internal/account-login";
 import { PstdioApiError, type RequestFn } from "./request";
 
 export type { AccountDevice, AccountSignInProvider, AccountStatus, DeviceLogin } from "pstdio-api-contracts";
@@ -67,11 +68,7 @@ export const createAccountClient = (request: RequestFn) => {
         method: "POST",
         body: { managerOrigin, provider },
       });
-      if (provider === "microsoft" && new URL(attempt.url).searchParams.get("provider") !== provider) {
-        await request(login(attempt.id), { method: "DELETE" }).catch(() => {});
-        throw new Error("Update Prompt Studio to sign in with Microsoft.");
-      }
-      return attempt;
+      return verifyAccountLogin(attempt, provider, (id) => request(login(id), { method: "DELETE" }));
     },
     loginStatus: (id: string) => request<AccountLoginProgress>(login(id)),
     /** Cancels a pending sign-in. A sign-in that already completed stays complete. */

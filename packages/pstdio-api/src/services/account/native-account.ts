@@ -135,8 +135,8 @@ export const createNativeAccount = (input: {
   const logins = createNativeLoginRequests(
     (...args) => finalizeDeviceLogin({ store, environment: input.environment, refresh }, ...args),
     changes.notify,
-    async (origin, provider) => {
-      if (provider === "microsoft" && !(await supportsMicrosoftSignIn(origin)))
+    async (origin) => {
+      if (!(await supportsMicrosoftSignIn(origin)))
         throw new AccountRequestError("This Cloud service has not enabled Microsoft sign-in.");
     },
   );
