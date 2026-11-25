@@ -1,5 +1,6 @@
 import {
   type createPreparationContinuations,
+  liveContinuations,
   preparationIncludes,
   type preparationPriority,
 } from "./preparation-priority";
@@ -133,10 +134,11 @@ export const createYieldClock = (jobs: () => Iterable<Job | undefined>, resume: 
 
 export const yieldPreparation = (job: Job, next: Job) => {
   for (const waiter of next.waiters) {
-    const owner = waiter.scope?.continuation;
-    if (!owner?.continuing) continue;
-    job.yielded ??= new Map();
-    job.yielded.set(owner, {});
+    for (const owner of liveContinuations(waiter.scope)) {
+      if (!owner.continuing) continue;
+      job.yielded ??= new Map();
+      job.yielded.set(owner, {});
+    }
   }
   return job;
 };

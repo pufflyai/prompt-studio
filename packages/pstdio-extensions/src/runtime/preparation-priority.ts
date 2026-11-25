@@ -14,7 +14,7 @@ interface PreparationPriority {
 export const preparationIncludes = (scope: PreparationPriority | undefined, owner: PreparationPriority) =>
   scope?.includes ? scope.includes(owner) : scope?.continuation === owner;
 type ContinuationScope = Pick<PreparationPriority, "continuation" | "continuations">;
-const liveContinuations = (scope?: ContinuationScope) =>
+export const liveContinuations = (scope?: ContinuationScope) =>
   scope?.continuations ?? (scope?.continuation?.continuing ? [scope.continuation] : []);
 
 export const preparationPriority = new AsyncLocalStorage<PreparationPriority>();
