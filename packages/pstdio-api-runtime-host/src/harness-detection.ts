@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { HarnessContext, HarnessProvider, ProcessRunInput } from "pstdio-api-contracts/extension-kernel";
+import { mapHostContext } from "pstdio-extensions";
 import { traceDetectionPhase } from "./harness-detection-phase";
 
 // Detection is a short availability probe, not a model request or a session.
@@ -18,9 +19,9 @@ export const detectHarness = async (provider: HarnessProvider, context: HarnessC
     if (finished || remaining <= 0) throw deadlineError;
     return { ...input, timeoutMs: Math.min(input.timeoutMs ?? remaining, remaining) };
   };
-  const run = (method: "run" | "runOrThrow", input: ProcessRunInput) => {
+  const run = (process: HarnessContext["process"], method: "run" | "runOrThrow", input: ProcessRunInput) => {
     const operation = traceDetectionPhase(context, identity, `process.${method}`, () =>
-      context.process[method](bounded(input)),
+      process[method](bounded(input)),
     );
     pending.add(operation);
     operation.then(
@@ -29,14 +30,14 @@ export const detectHarness = async (provider: HarnessProvider, context: HarnessC
     );
     return operation;
   };
-  const ctx: HarnessContext = {
-    ...context,
+  const ctx = mapHostContext(context, (base) => ({
+    ...base,
     process: {
-      ...context.process,
-      run: (input) => run("run", input),
-      runOrThrow: (input) => run("runOrThrow", input),
+      ...base.process,
+      run: (input) => run(base.process, "run", input),
+      runOrThrow: (input) => run(base.process, "runOrThrow", input),
     },
-  };
+  }));
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([

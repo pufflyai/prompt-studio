@@ -7,6 +7,7 @@ import {
   backendWorkerCommand,
   createExtensionProcessEnvironment,
   HANDLER_MARKER,
+  type RuntimeHarnessRecord,
   startBackendWorker,
 } from "pstdio-extensions";
 import { isProcessAlive } from "pstdio-paths";
@@ -32,6 +33,10 @@ export default {
     await start(ctx, input);
     return { available: true };
   },
+  probe: async (ctx, input, method) => {
+    await ctx.process[method](input);
+    return { available: true };
+  },
   stuck: async (ctx, input) => {
     await start(ctx, input);
     while (true);
@@ -49,32 +54,61 @@ const waitFor = async <T>(description: string, check: () => T | Promise<T>) => {
   throw new Error(`Timed out waiting for ${description}`);
 };
 
+const invoke = (
+  worker: Awaited<ReturnType<typeof startBackendWorker>>,
+  handler: string,
+  context: HarnessContext,
+  args: unknown[],
+) =>
+  worker.invoke({
+    handlerId: (worker.definition as Record<string, { [HANDLER_MARKER]: string }>)[handler][HANDLER_MARKER],
+    context,
+    surface: {
+      kind: "object",
+      members: { process: { kind: "object", members: { run: { kind: "async" }, runOrThrow: { kind: "async" } } } },
+    },
+    args,
+  });
+
+const createFixtureRegistry = (record: RuntimeHarnessRecord) =>
+  createHarnessRegistryService({
+    installedExtensionSourcesService: { list: async () => [] } as never,
+    extensionRuntimeCatalog: {
+      get: async () => ({ runtime: { harnesses: [record] } }) as never,
+      getSourcesRuntime: async () => {
+        throw new Error("Fixture uses a project harness.");
+      },
+      subscribeInvalidation: () => () => {},
+    },
+  });
+
+const childInput = (root: string, release: string, name: string) => {
+  const marker = join(root, name);
+  return {
+    marker,
+    command: [
+      process.execPath,
+      "-e",
+      `import { writeFileSync, renameSync, existsSync } from "node:fs";
+      const marker = ${JSON.stringify(marker)};
+      writeFileSync(marker + ".tmp", String(process.pid));
+      renameSync(marker + ".tmp", marker);
+      const end = performance.now() + 8000;
+      const timer = setInterval(() => {
+        if (performance.now() > end || existsSync(${JSON.stringify(release)})) clearInterval(timer);
+      }, 20);`,
+    ],
+  };
+};
+
 test("harness worker calls own their host processes across settlement and watchdog shutdown", async () => {
   const root = await mkdtemp(join(tmpdir(), "pstdio-harness-host-process-"));
   const entryPath = join(root, "extension.ts");
   const release = join(root, "release");
   await writeFile(entryPath, fixture);
-  const childInput = (name: string) => {
-    const marker = join(root, name);
-    return {
-      marker,
-      command: [
-        process.execPath,
-        "-e",
-        `import { writeFileSync, renameSync, existsSync } from "node:fs";
-        const marker = ${JSON.stringify(marker)};
-        writeFileSync(marker + ".tmp", String(process.pid));
-        renameSync(marker + ".tmp", marker);
-        const end = performance.now() + 8000;
-        const timer = setInterval(() => {
-          if (performance.now() > end || existsSync(${JSON.stringify(release)})) clearInterval(timer);
-        }, 20);`,
-      ],
-    };
-  };
-  const liveInput = childInput("live");
-  const settledInput = childInput("settled");
-  const stuckInput = childInput("stuck");
+  const liveInput = childInput(root, release, "live");
+  const settledInput = childInput(root, release, "settled");
+  const stuckInput = childInput(root, release, "stuck");
   const probe = join(root, "probe");
   const readPid = (marker: string) =>
     waitFor(marker, async () => Number(await readFile(marker, "utf8").catch(() => "")));
@@ -89,39 +123,23 @@ test("harness worker calls own their host processes across settlement and watchd
       watchdog: { heartbeatMs: 50, unresponsiveMs: 900 },
     });
     const active = worker;
-    const invoke = (handler: string, context: HarnessContext, args: unknown[]) =>
-      active.invoke({
-        handlerId: (active.definition as Record<string, { [HANDLER_MARKER]: string }>)[handler][HANDLER_MARKER],
-        context,
-        surface: { kind: "object", members: { process: { kind: "object", members: { run: { kind: "async" } } } } },
-        args,
-      });
     const record = createTestHarnessRecord("host-process", {
       provider: {
         start: async (context) =>
-          (await invoke("live", context, [
+          (await invoke(active, "live", context, [
             liveInput,
             {
               command: [process.execPath, "-e", `await Bun.write(${JSON.stringify(probe)}, "alive");`],
             },
           ])) as HarnessSession,
-        detect: async (context) => (await invoke("settled", context, [settledInput])) as HarnessDetectionResult,
+        detect: async (context) => (await invoke(active, "settled", context, [settledInput])) as HarnessDetectionResult,
         capabilities: async (context) => {
-          await invoke("stuck", context, [stuckInput]);
+          await invoke(active, "stuck", context, [stuckInput]);
           return [];
         },
       },
     });
-    service = createHarnessRegistryService({
-      installedExtensionSourcesService: { list: async () => [] } as never,
-      extensionRuntimeCatalog: {
-        get: async () => ({ runtime: { harnesses: [record] } }) as never,
-        getSourcesRuntime: async () => {
-          throw new Error("Fixture uses a project harness.");
-        },
-        subscribeInvalidation: () => () => {},
-      },
-    });
+    service = createFixtureRegistry(record);
     const options = { projectId: "project" };
     const harness = (await service.get(record.id, options))!;
     const live = await harness.start(
@@ -158,6 +176,50 @@ test("harness worker calls own their host processes across settlement and watchd
         const pid = Number(await readFile(marker, "utf8").catch(() => ""));
         if (pid) await waitFor("fixture child cleanup", () => !isProcessAlive(pid));
       }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+}, 12_000);
+
+test.each([
+  "run",
+  "runOrThrow",
+] as const)("harness detection joins its worker's %s probe at the deadline", async (method) => {
+  const root = await mkdtemp(join(tmpdir(), "pstdio-harness-detection-worker-"));
+  const entryPath = join(root, "extension.ts");
+  const release = join(root, "release");
+  const input = childInput(root, release, "probe");
+  let worker: Awaited<ReturnType<typeof startBackendWorker>> | undefined;
+  let service: ReturnType<typeof createHarnessRegistryService> | undefined;
+  try {
+    await writeFile(entryPath, fixture);
+    const active = await startBackendWorker({
+      command: backendWorkerCommand(),
+      env: createExtensionProcessEnvironment(),
+      entryPath,
+    });
+    worker = active;
+    const record = createTestHarnessRecord("detection-deadline", {
+      provider: {
+        detect: async (context) => (await invoke(active, "probe", context, [input, method])) as HarnessDetectionResult,
+      },
+    });
+    service = createFixtureRegistry(record);
+    const options = { projectId: "project" };
+    const harness = (await service.get(record.id, options))!;
+    const result = await harness.detect(options);
+    const pid = Number(await readFile(input.marker, "utf8"));
+    expect(pid).toBeGreaterThan(0);
+    expect(result.available).toBe(false);
+    expect(isProcessAlive(pid)).toBe(false);
+  } finally {
+    await writeFile(release, "");
+    try {
+      await worker?.stop();
+      await service?.dispose();
+      const pid = Number(await readFile(input.marker, "utf8").catch(() => ""));
+      if (pid) await waitFor("fixture child cleanup", () => !isProcessAlive(pid));
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -18,6 +18,17 @@ export const markHostContext = <T extends object>(context: T, backendScope?: Bac
 export const backendScopeFor = (context: unknown) =>
   isHostContext(context) ? (context as { [BACKEND_SCOPE]?: BackendScopeBinding<object> })[BACKEND_SCOPE] : undefined;
 
+/** Apply the same context change after the backend installs invocation-owned resources. */
+export const mapHostContext = <T extends object>(context: T, map: (context: T) => T) => {
+  const mapped = map(context);
+  const binding = backendScopeFor(context);
+  if (!binding) return mapped;
+  return markHostContext(mapped, {
+    logger: binding.logger,
+    withScope: (scope) => map({ ...context, ...binding.withScope(scope) }),
+  });
+};
+
 const NAVIGATION_SCOPED = Symbol.for("pstdio.runner.navigationScoped");
 
 export const markNavigationScoped = <T extends object>(navigation: T) =>
