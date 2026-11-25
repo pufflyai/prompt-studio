@@ -303,9 +303,7 @@ test.each([
     await act(async () => {
       stalePeerAction();
       release.resolve();
-      await until(
-        () => peer!.entry?.presence === "downloading" && !choice.downloadBlocking && !peer!.downloadBlocking,
-      );
+      await until(() => peer!.entry?.presence === "downloading" && !choice.downloadBlocking && !peer!.downloadBlocking);
     });
     expect(downloads).toBe(1);
     if (folderError) {
@@ -319,8 +317,11 @@ test.each([
       expect(peer!.canDownload).toBe(false);
       await act(async () => {
         stalePeerAction();
-        await until(
-          () => client.getMutationCache().getAll().every((mutation) => mutation.state.status !== "pending"),
+        await until(() =>
+          client
+            .getMutationCache()
+            .getAll()
+            .every((mutation) => mutation.state.status !== "pending"),
         );
       });
       expect(downloads).toBe(1);

@@ -22,7 +22,7 @@ import { AccountRequestError } from "./native-account";
 import { matchesDeviceAccount } from "./native-device-read";
 import type { createNativeManagerCall } from "./native-manager-call";
 import { type DeviceLogin, type ScopedDeviceLogin, scopeDeviceLogin, signedInIdentity } from "./native-store";
-import { createCopyRetries, deviceProjectCopyKey, fenceCopySyncStatus } from "./project-copy-retry";
+import { createCopyRetries, deviceProjectCopyKey, fenceCopySyncStatus, requestManualCopy } from "./project-copy-retry";
 import { createProjectCopyStore, type ProjectCopy, projectCopyAccount } from "./project-copy-store";
 
 interface CatalogInput {
@@ -40,6 +40,15 @@ interface CatalogInput {
   withdraw?: (id: string) => Promise<void>;
   changed?: () => void;
 }
+
+const readCopyStatus = async (
+  input: Pick<CatalogInput, "projects" | "syncStatus">,
+  id: string,
+  choice?: ProjectCopy,
+) => {
+  if (choice?.phase === "cloud-only" || !(await input.projects.get(id))) return;
+  return input.syncStatus(id).catch(() => undefined);
+};
 
 const createCatalogEntry =
   (input: Pick<CatalogInput, "projects" | "syncStatus">, folderErrors: Map<string, string>) =>
@@ -282,15 +291,10 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
         if (choice?.phase === "removing") throw new AccountRequestError("Finish removing the local copy first");
         const downloading = { projectId: id, presence: "downloading" } as const;
         if (retries.active(login, id)) return downloading;
-        const local = choice?.phase !== "cloud-only" && (await input.projects.get(id));
-        const status = local ? await input.syncStatus(id).catch(() => undefined) : undefined;
+        const status = await readCopyStatus(input, id, choice);
         await requireCurrentProject(login, id);
         if (!choice && status?.offlineReady) return { projectId: id, presence: "downloaded" };
-        if (choice) {
-          folderErrors.delete(deviceProjectCopyKey(choice, id));
-          if (choice.automatic || choice.phase === "cloud-only")
-            await copies.write({ ...choice, phase: "downloading", automatic: undefined });
-        }
+        await requestManualCopy(copies, folderErrors, choice);
         if (status?.state === "needs-attention") retries.start(login, id);
         else void input.refresh();
         return downloading;
