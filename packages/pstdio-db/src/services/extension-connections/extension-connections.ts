@@ -155,6 +155,22 @@ export const createExtensionConnectionsDBService = (db: DbClient) => {
       const removed = await credentialStore.remove(sharedCredentialKey(input, origin));
       return removed?.secret_ref;
     },
+    async removeCredentialAtOrigin(input: ConnectionKey, origin: string) {
+      return db.transaction(async (tx) => {
+        const store = createExtensionCredentialsDBService(tx);
+        const sharedKey = sharedCredentialKey(input, origin);
+        const globalKey = configuredCredentialKey({ ...input, projectId: null });
+        const [shared, global] = await Promise.all([store.get(sharedKey), store.get(globalKey)]);
+        const sharedMatches = shared?.provider === origin;
+        const globalMatches = global?.provider === origin;
+        if (sharedMatches && globalMatches) return { status: "ambiguous" } as const;
+        if (!sharedMatches && !globalMatches) return { status: global ? "wrong-origin" : "absent" } as const;
+        const removed = await store.remove(sharedMatches ? sharedKey : globalKey);
+        return removed
+          ? ({ status: "removed", secretRef: removed.secret_ref } as const)
+          : ({ status: "absent" } as const);
+      });
+    },
     async remove(input: ConnectionKey) {
       return db.transaction(async (tx) => {
         const [removed] = await tx.delete(preferences).where(whereKey(input)).returning({ key: preferences.key });

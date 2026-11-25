@@ -14,7 +14,7 @@ let previousFetch: typeof fetch;
 let previousPstdioHome: string | undefined;
 let previousDefaultExtensions: string | undefined;
 
-const writeConnectionExtension = (root: string) => {
+const writeConnectionExtension = (root: string, scope: "project" | "global") => {
   const extensionRoot = join(root, "extensions", "connection-test");
   mkdirSync(extensionRoot, { recursive: true });
   writeFileSync(
@@ -35,6 +35,7 @@ const writeConnectionExtension = (root: string) => {
         ref: { kind: "connection", id: "control-plane" },
         label: "Control plane",
         transport: "http",
+        scope: "${scope}",
         auth: { type: "bearer" },
         allowedMethods: ["GET"],
         allowedPathPrefixes: ["/v1/workspaces"],
@@ -64,58 +65,155 @@ afterEach(async () => {
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
+const setupConnectionRoutes = async (scope: "project" | "global" = "project") => {
+  const secrets = createMemoryConnectionSecretStore();
+  const created = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
+    host: { kind: "standalone", token: RUNTIME_TOKEN },
+    connectionSecretStore: secrets,
+  });
+  closeApp = created.close;
+  const runtimeRequest = (path: string, init: RequestInit = {}) =>
+    created.app.request(path, {
+      ...init,
+      headers: {
+        authorization: `Bearer ${RUNTIME_TOKEN}`,
+        ...Object.fromEntries(new Headers(init.headers).entries()),
+      },
+    });
+  const projectResponse = await runtimeRequest("/v1/projects", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(folderProjectInput({ name: "Connection Project" })),
+  });
+  const projectId = (await projectResponse.json()).id;
+  const sourcePath = writeConnectionExtension(tempRoot, scope);
+  const enableResponse = await runtimeRequest(`/v1/projects/${projectId}/extensions/installed/connection-test/enable`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      displayName: "Connection Test",
+      extensionId: "pstdio.connection-test",
+      manifest: { id: "pstdio.connection-test", name: "connection-test" },
+      name: "connection-test",
+      sourceHash: null,
+      sourceKind: "local_path",
+      sourcePath,
+      sourceRef: null,
+      version: null,
+    }),
+  });
+  expect(enableResponse.status).toBe(200);
+  const { instanceId } = await enableResponse.json();
+
+  const connectionPath = `/v1/projects/${projectId}/extension-connections/pstdio.connection-test/control-plane`;
+  return { created, projectId, instanceId, connectionPath, runtimeRequest, secrets };
+};
+
 describe("extension connection routes", () => {
+  test("revokes a global sign-in only at its own origin", async () => {
+    const received: (string | null)[] = [];
+    const server = Bun.serve({
+      port: 0,
+      fetch(request) {
+        received.push(request.headers.get("authorization"));
+        return Response.json({ ok: true });
+      },
+    });
+    try {
+      const { connectionPath, instanceId, projectId, runtimeRequest, secrets } = await setupConnectionRoutes("global");
+      const origin = server.url.origin;
+      const instancePath = `/v1/projects/${projectId}/extensions/${instanceId}`;
+      const configure = (secret: string) =>
+        runtimeRequest(connectionPath, {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ baseUrl: origin, secret }),
+        });
+      const check = async () => (await runtimeRequest(`${connectionPath}/check`, { method: "POST" })).json();
+      const revoke = (origin: string) => {
+        const params = new URLSearchParams({ credentialScope: "all-projects", origin });
+        return runtimeRequest(`${connectionPath}?${params}`, { method: "DELETE" });
+      };
+
+      const configured = await configure("global-canary");
+      expect(configured.status).toBe(200);
+      expect(await configured.json()).toMatchObject({ scope: "global", configured: true });
+      expect(await check()).toMatchObject({ lastCheck: { ok: true, status: 200 } });
+      const originOnly = new URLSearchParams({ origin });
+      expect((await runtimeRequest(`${connectionPath}?${originOnly}`, { method: "DELETE" })).status).toBe(400);
+      expect((await runtimeRequest(`${connectionPath}?credentialScope=project`, { method: "DELETE" })).status).toBe(
+        400,
+      );
+      const wrongOrigin = await revoke("https://other.example.test");
+      expect(await check()).toMatchObject({ lastCheck: { ok: true, status: 200 } });
+      const revoked = await revoke(origin.toUpperCase());
+      const record = await check();
+      expect({
+        wrongOrigin: wrongOrigin.status,
+        revoked: revoked.status,
+        configured: record.configured,
+        lastCheck: record.lastCheck,
+        received,
+        secretRefs: (await secrets.listRefs()).length,
+      }).toEqual({
+        wrongOrigin: 400,
+        revoked: 204,
+        configured: false,
+        lastCheck: null,
+        received: ["Bearer global-canary", "Bearer global-canary"],
+        secretRefs: 0,
+      });
+      expect((await revoke(origin)).status).toBe(204);
+
+      expect((await configure("disconnect-canary")).status).toBe(200);
+      expect(
+        (await runtimeRequest(`${connectionPath}?credentialScope=all-projects`, { method: "DELETE" })).status,
+      ).toBe(204);
+      expect(await secrets.listRefs()).toEqual([]);
+      expect((await configure("disabled-canary")).status).toBe(200);
+      expect(
+        (
+          await runtimeRequest(instancePath, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ enabled: false }),
+          })
+        ).status,
+      ).toBe(200);
+      expect(
+        (await runtimeRequest(`${connectionPath}?credentialScope=all-projects`, { method: "DELETE" })).status,
+      ).toBe(400);
+      expect(await secrets.listRefs()).toHaveLength(1);
+      expect((await revoke(origin)).status).toBe(204);
+      expect(await secrets.listRefs()).toEqual([]);
+      expect(
+        (
+          await runtimeRequest(instancePath, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ enabled: true }),
+          })
+        ).status,
+      ).toBe(200);
+      expect((await configure("uninstalled-canary")).status).toBe(200);
+      expect((await runtimeRequest(`${instancePath}?deleteUserData=true`, { method: "DELETE" })).status).toBe(204);
+      expect(await secrets.listRefs()).toHaveLength(1);
+      expect((await revoke(origin)).status).toBe(204);
+      expect(await secrets.listRefs()).toEqual([]);
+    } finally {
+      server.stop(true);
+    }
+  });
+
   test("stores credentials outside API records and injects them into allowed requests", async () => {
     const remoteFetch = mock(async (_url: RequestInfo | URL, init?: RequestInit) => {
       expect(new Headers(init?.headers).get("authorization")).toBe("Bearer credential-canary");
       return Response.json({ id: "remote-1" });
     });
     globalThis.fetch = remoteFetch as unknown as typeof fetch;
-    const secrets = createMemoryConnectionSecretStore();
-    const created = await createTestApp({
-      databasePath: ":memory:",
-      storageRoot: join(tempRoot, "storage"),
-      host: { kind: "standalone", token: RUNTIME_TOKEN },
-      connectionSecretStore: secrets,
-    });
-    closeApp = created.close;
-    const runtimeRequest = (path: string, init: RequestInit = {}) =>
-      created.app.request(path, {
-        ...init,
-        headers: {
-          authorization: `Bearer ${RUNTIME_TOKEN}`,
-          ...Object.fromEntries(new Headers(init.headers).entries()),
-        },
-      });
-    const projectResponse = await runtimeRequest("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(folderProjectInput({ name: "Connection Project" })),
-    });
-    const projectId = (await projectResponse.json()).id;
-    const sourcePath = writeConnectionExtension(tempRoot);
-    const enableResponse = await runtimeRequest(
-      `/v1/projects/${projectId}/extensions/installed/connection-test/enable`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          displayName: "Connection Test",
-          extensionId: "pstdio.connection-test",
-          manifest: { id: "pstdio.connection-test", name: "connection-test" },
-          name: "connection-test",
-          sourceHash: null,
-          sourceKind: "local_path",
-          sourcePath,
-          sourceRef: null,
-          version: null,
-        }),
-      },
-    );
-    expect(enableResponse.status).toBe(200);
-    const { instanceId } = await enableResponse.json();
-
-    const connectionPath = `/v1/projects/${projectId}/extension-connections/pstdio.connection-test/control-plane`;
+    const { created, projectId, instanceId, connectionPath, runtimeRequest, secrets } = await setupConnectionRoutes();
     const configured = await runtimeRequest(connectionPath, {
       method: "PUT",
       headers: { "content-type": "application/json" },

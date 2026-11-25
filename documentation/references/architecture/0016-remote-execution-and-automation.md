@@ -20,11 +20,15 @@ The host does not invent a local path for a remote workspace. Local file and ter
 
 A connection contribution declares its allowed HTTP methods, path prefixes, authentication shape, and streaming support. Project settings hold the base URL. The device stores credential references and sign-in metadata separately, and the secret bytes live in the host secret store. Projects can share a sign-in for the same contribution and server origin. Each connection keeps its own check result on the device and clears the displayed result when its credential changes. The request proxy enforces same-origin relative paths, HTTPS outside loopback, bounded request and response sizes, timeouts, cancellation, and no redirects.
 
-To revoke a shared sign-in, send a DELETE to the connection endpoint with `credentialScope=all-projects` and
-`origin` set to the server origin. The origin identifies the saved sign-in even after the project configuration
-is removed or the extension is disabled or uninstalled. With an enabled extension, the server can also infer the
-origin from the project configuration or from the sole saved sign-in for the contribution. A shared revocation
-preserves project connections and their own credentials.
+To revoke a global sign-in or one shared by project connections, send a DELETE to the connection endpoint with
+`credentialScope=all-projects` and `origin` set to the server origin. This works after a project configuration
+is removed or the extension is disabled or uninstalled. The server returns HTTP 400 if the origin matches both
+types of sign-in or if the only candidate is a global sign-in at a different origin. Origin-based revocation
+preserves connection configurations and their project-specific credentials.
+
+With an enabled extension, a DELETE without an origin disconnects the declared connection. For a project
+connection with `credentialScope=all-projects`, the server revokes the shared sign-in using the project
+configuration's origin or the sole saved shared sign-in for that contribution.
 
 The default desktop implementation uses the temporary file store documented in [ADR 0034](../../adrs/0034-temporary-file-connection-secret-store.md). Hosted deployments should inject their deployment secret provider through the same interface.
 

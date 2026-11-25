@@ -155,7 +155,7 @@ export const validateBaseUrl = (value: string) => {
   return url.toString();
 };
 
-export class ConnectionRemovalInputError extends Error {}
+export class ConnectionInputError extends Error {}
 
 export const validateSharedOrigin = (value: string) => {
   try {
@@ -165,9 +165,7 @@ export const validateSharedOrigin = (value: string) => {
   } catch {
     // Report one actionable error for malformed or unauthorized origin forms.
   }
-  throw new ConnectionRemovalInputError(
-    "Use an HTTPS or loopback HTTP server origin without a path, query, or fragment.",
-  );
+  throw new ConnectionInputError("Use an HTTPS or loopback HTTP server origin without a path, query, or fragment.");
 };
 
 export const resolveRequestUrl = (

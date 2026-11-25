@@ -53,6 +53,17 @@ test("one global connection serves new projects and shares updates and revocatio
       api("project-only").request(contribution.id, { method: "GET", path: "/v1/workspaces" }),
     ).rejects.toThrow("not configured");
     expect(await service.list("project-only")).toEqual([]);
+    const otherOrigin = "https://other.example.test";
+    await service.configure({
+      ...input,
+      projectId: "project-only",
+      baseUrl: otherOrigin,
+      secret: "separate-origin-credential",
+    });
+    await service.remove({ ...input, credentialScope: "all-projects", origin: otherOrigin });
+    expect((await service.list("second"))[0]).toMatchObject({ configured: true });
+    expect((await service.list("project-only"))[0]).toMatchObject({ configured: false });
+    expect(await secrets.listRefs()).toHaveLength(1);
     await service.configure({
       ...input,
       projectId: "project-only",
@@ -60,6 +71,10 @@ test("one global connection serves new projects and shares updates and revocatio
       secret: "project-configuration-credential",
       credentialScope: "all-projects",
     });
+    await expect(
+      service.remove({ ...input, credentialScope: "all-projects", origin: server.url.origin }),
+    ).rejects.toThrow("more than one saved sign-in");
+    expect(await secrets.listRefs()).toHaveLength(2);
     const rotated = await service.configure({
       ...input,
       projectId: "second",

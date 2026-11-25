@@ -11,7 +11,7 @@ import {
   type StoredConnection,
   toConnectionRecord,
 } from "./extension-connection-service-types";
-import { ConnectionRemovalInputError, validateBaseUrl, validateSharedOrigin } from "./extension-connection-transport";
+import { ConnectionInputError, validateBaseUrl, validateSharedOrigin } from "./extension-connection-transport";
 
 const prepareProjectConnectionRemoval = async (deps: ExtensionConnectionServiceDeps, projectId: string) => {
   const secretRefs = await deps.connectionsDBService.credentials.projectRefs(projectId);
@@ -202,7 +202,7 @@ const assertCredentialScope = (
   scope: ConfigureExtensionConnectionInput["credentialScope"],
 ) => {
   if (key.projectId === null && scope === "project")
-    throw new Error("A global connection requires a shared credential.");
+    throw new ConnectionInputError("A global connection requires a shared credential.");
 };
 
 const configureConnection = async (
@@ -252,7 +252,7 @@ const sharedOriginForRemoval = async (deps: ExtensionConnectionServiceDeps, key:
   const existing = await deps.connectionsDBService.get(key);
   if (existing) return new URL(existing.base_url).origin;
   const origins = await deps.connectionsDBService.credentials.sharedOriginCandidates(key);
-  if (origins.length > 1) throw new ConnectionRemovalInputError("Choose the server origin of the sign-in to revoke.");
+  if (origins.length > 1) throw new ConnectionInputError("Choose the server origin of the sign-in to revoke.");
   return origins[0];
 };
 
@@ -272,6 +272,21 @@ const revokeSharedSignIn = async (
   const ref = await deps.connectionsDBService.removeSharedCredential(key, origin);
   if (!ref) return false;
   await deleteSecret(deps, ref, "revoke_shared_connection_secret");
+  return true;
+};
+
+const revokeSignInAtOrigin = async (deps: ExtensionConnectionServiceDeps, input: ConnectionKey, origin: string) => {
+  // Explicit revocation uses saved credential ownership even when the extension is unavailable.
+  const result = await deps.connectionsDBService.removeCredentialAtOrigin(
+    connectionKey(input),
+    validateSharedOrigin(origin),
+  );
+  if (result.status === "ambiguous")
+    throw new ConnectionInputError("This server origin matches more than one saved sign-in.");
+  if (result.status === "wrong-origin")
+    throw new ConnectionInputError("The global sign-in belongs to a different server origin.");
+  if (result.status !== "removed") return false;
+  await deleteSecret(deps, result.secretRef, "revoke_connection_secret_at_origin");
   return true;
 };
 
@@ -316,12 +331,14 @@ export const createExtensionConnectionService = (input: ExtensionConnectionServi
     mutate(async () => {
       if (input.origin !== undefined) {
         if (input.credentialScope !== "all-projects")
-          throw new ConnectionRemovalInputError("A server origin requires all-projects revocation.");
-        // An exact shared slot can be revoked even if its extension no longer contributes a connection.
-        return revokeSharedSignIn(deps, connectionKey(input), validateSharedOrigin(input.origin));
+          throw new ConnectionInputError("A server origin requires all-projects revocation.");
+        return revokeSignInAtOrigin(deps, input, input.origin);
       }
       const contribution = await deps.getContribution(input);
-      if (!contribution) throw new Error(`Connection is not declared: ${input.connectionId}`);
+      if (!contribution)
+        throw new ConnectionInputError(
+          "This connection is unavailable. Provide a server origin with all-projects revocation to remove a saved sign-in.",
+        );
       const key = connectionKey(input, contribution.scope);
       assertCredentialScope(key, input.credentialScope);
       if (input.credentialScope === "all-projects" && key.projectId !== null)

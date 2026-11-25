@@ -6,7 +6,7 @@ import {
 } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
-import { ConnectionRemovalInputError } from "../extension-connection-transport";
+import { ConnectionInputError } from "../extension-connection-transport";
 
 const connectionParams = z
   .object({ projectId: z.string(), extensionId: z.string(), connectionId: z.string() })
@@ -53,7 +53,7 @@ export const deleteExtensionConnectionRoute = createRoute({
       .object({
         credentialScope: z.enum(["all-projects", "project"]).optional(),
         origin: z.url().optional().openapi({
-          description: "Server origin for revoking a shared sign-in, including for disabled or uninstalled extensions.",
+          description: "Server origin for revoking a global or shared sign-in, including for unavailable extensions.",
         }),
       })
       .strict(),
@@ -104,7 +104,7 @@ export const deleteExtensionConnectionHandler =
       await deps.extensionConnectionService.remove({ ...c.req.valid("param"), ...c.req.valid("query") });
       return c.body(null, 204);
     } catch (error) {
-      if (!(error instanceof ConnectionRemovalInputError)) throw error;
+      if (!(error instanceof ConnectionInputError)) throw error;
       return c.json({ error: error.message }, 400);
     }
   };
