@@ -36,9 +36,25 @@ for (const interruption of ["normal", "schema", "restore", "mappings"])
   test(`released file bindings preserve independent contents after ${interruption}`, async () => {
     const root = await mkdtemp(join(tmpdir(), "file-owners-upgrade-"));
     const path = join(root, "database");
+    const started = performance.now();
+    let previous = started;
+    const mark = (phase: string) => {
+      const now = performance.now();
+      console.log("FILE_OWNER_PHASE " + JSON.stringify({
+        interruption, phase, elapsedMs: Math.round(now - started), deltaMs: Math.round(now - previous),
+      }));
+      previous = now;
+    };
+    const checkpoint = (phase: string) => {
+      mark(phase);
+      const result = Bun.spawnSync(["du", "-sk", root], { stdout: "pipe" });
+      console.log("FILE_OWNER_DISK " + JSON.stringify({ interruption, phase, kib: parseInt(result.stdout.toString(), 10) }));
+    };
+    const open = (label: string) => createDb({ path, onPhase: (phase) => mark(label + "/" + phase) });
     let store: Awaited<ReturnType<typeof createDb>> | undefined;
     try {
-      store = await createDb({ path });
+      store = await open("initial-open");
+      mark("initial-open-return");
       const project = await createProjectsDBService(store.db).create({ name: "Old files" });
       const stamp = "2026-11-20T12:00:00.000Z";
       const instances = [];
@@ -111,7 +127,9 @@ for (const interruption of ["normal", "schema", "restore", "mappings"])
           updated_at: stamp,
         })),
       );
+      mark("seed files and metadata");
       await restoreReleasedPreferenceTables(store);
+      mark("restore released schema fixture");
       await store.pglite.query(
         "INSERT INTO skill_files SELECT $1, 'skill-' || n, 'SKILL.md', 'file-' || n, $2, $2 FROM generate_series(0,200) n",
         [project.id, stamp],
@@ -147,10 +165,14 @@ for (const interruption of ["normal", "schema", "restore", "mappings"])
         ]);
       const legacySkills = (await store.pglite.query("SELECT * FROM skill_files ORDER BY skill_id,path")).rows;
       const legacyExtensions = (await store.pglite.query("SELECT * FROM extension_files ORDER BY id")).rows;
+      checkpoint("seed released bindings");
       if (interruption !== "normal") {
         const finish = await prepareFileOwnersUpgrade(store.db, store.path);
+        mark("capture file owners");
         await prepareProjectExtensionsUpgrade(store.db, store.path);
+        mark("capture project extensions");
         await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        mark("apply generated schema");
         if (interruption === "mappings") await interruptMappingExport(store, finish);
         if (interruption === "restore") {
           await store.pglite.exec(
@@ -163,7 +185,9 @@ for (const interruption of ["normal", "schema", "restore", "mappings"])
         }
       }
       await store.close();
-      store = await createDb({ path });
+      mark("close before upgrade");
+      store = await open("reopen-and-upgrade");
+      checkpoint("reopen-and-upgrade-return");
       const skillService = createSkillsDBService(store.db);
       expect(await skillService.list(project.id)).toHaveLength(205);
       expect((await skillService.getByName(project.id, "skill-0"))!.files[0].path).toBe("");
@@ -213,12 +237,16 @@ for (const interruption of ["normal", "schema", "restore", "mappings"])
       expect(mappings).toHaveLength(209);
       await fileService.remove(firstScope[0].id, () => unlink(firstScope[0].storage_path));
       expect(hash(await readFile(secondScope[0].storage_path))).toBe(sharedHash);
+      mark("verify exports and owner contents");
       await store.close();
-      store = await createDb({ path });
+      mark("close after upgrade");
+      store = await open("reopen-and-verify");
+      checkpoint("reopen-and-verify-return");
       expect((await createSkillsDBService(store.db).getByName(project.id, "shared-b"))!.files[0].file_id).toBe(second);
       expect(await readdir(`${path}-migration-exports/file-mappings`)).toHaveLength(mappings.length);
     } finally {
       await store?.close();
       await rm(root, { recursive: true, force: true });
+      mark("close and remove test directory");
     }
-  });
+  }, 12_000);
