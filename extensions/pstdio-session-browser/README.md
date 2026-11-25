@@ -4,7 +4,9 @@
 
 New conversations show **Pending** until their first turn starts. Empty saved conversations use the same indicator; completed turns keep their completed status.
 
-Choose **Copy session ID** from a saved session's menu to share its full Prompt Studio ID with another agent. This includes failed sessions. `pst pstdio.session-browser copy-id --session-id <id>` returns the same reference for agent callers. The pinned SDK `0.47.0-nightly.20261111030243` includes `copyResultToClipboard`; the running host must also include PS-189's clipboard support.
+Choose **Copy session ID** from a saved session's menu to share its full Prompt Studio ID with another agent. This includes failed sessions. `pst pstdio.session-browser copy-id --session-id <id>` returns the same reference for agent callers.
+
+Hover a saved session’s tab to see its nickname under its title. Choose **Copy session nickname** from the same menu as **Copy session ID**, or run `pst pstdio.session-browser copy-nickname --session-id <id>`. The nickname comes from the saved session ID, so existing and newly saved sessions keep the same nickname after reopening or renaming. Drafts get a nickname when saved. Tab nicknames require a host with extension API 0.6.0.
 
 Other tools use `sessionBrowser` from `@pstdio/sdk/extensions`. This package re-exports the same implementation-free contract from `pstdio-session-browser/refs`. Session and draft resources retain `extensionId: "pstdio"`; navigation refs belong to this provider. New navigation uses provider refs. The host retains deprecated page/panel/command definitions that target the provider renderer, without another chat implementation or persistence owner. Missing or disabled providers use normal unavailable-target feedback.
 

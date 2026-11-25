@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import extension from "../extension";
+import { copySessionNickname } from "./copy-session-nickname";
 import { newInViewer } from "./navigation";
 import { conversationTab } from "./tab";
 
@@ -25,6 +26,7 @@ test("New session in an existing viewer starts a draft immediately with its work
     },
   });
   const snapshot = await conversationTab.query(ctx, { renderer: { rendererId: "conversation", resource } });
+  expect(snapshot.tooltip).toBe(await copySessionNickname.run(ctx, { sessionId: resource.id }));
   const action = snapshot.menu?.flatMap((group) => group.rows).find((row) => row.id === "new-session")?.action;
   if (action?.kind !== "command") throw new Error("New session must use the public command contract.");
   const command = extension.commands?.find((command) => command.id === action.target.command.id);
@@ -45,6 +47,33 @@ test("New session in an existing viewer starts a draft immediately with its work
       }),
     }),
   ]);
+});
+
+test("a saved tab keeps its nickname when its title changes and it is reopened", async () => {
+  const resource = { type: "session", id: "019a6810-f835-7000-8000-000000000001", extensionId: "pstdio" };
+  const openTab = (title: string) => {
+    const ctx = makeCommandContext({
+      storage: createMemoryStorage(),
+      params: {},
+      overrides: { sessions: { get: async () => ({ id: resource.id, title }) as never } },
+    });
+    return conversationTab.query(ctx, { renderer: { rendererId: "conversation", resource } });
+  };
+  expect(await openTab("Original title")).toMatchObject({ label: "Original title", tooltip: "still-eldema" });
+  expect(await openTab("Renamed title")).toMatchObject({ label: "Renamed title", tooltip: "still-eldema" });
+});
+
+test("a draft gets a nickname only after it becomes a saved session", async () => {
+  const id = "019a6810-f835-7000-8000-000000000002";
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    params: {},
+    overrides: { sessions: { get: async () => ({ id, title: "Newly saved session" }) as never } },
+  });
+  const openTab = (type: string) =>
+    conversationTab.query(ctx, { renderer: { rendererId: "conversation", resource: { type, id } } });
+  expect((await openTab("session-draft")).tooltip).toBeUndefined();
+  expect((await openTab("session")).tooltip).toMatch(/^[a-z]+-[a-z]+$/);
 });
 
 test.each([
