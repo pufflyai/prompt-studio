@@ -202,7 +202,8 @@ test("keeps startup render failures in the existing recovery screen after the da
       message: "Fixture startup render failed",
     }),
   );
-  await expect(lifecycle.getByRole("alert")).toBeVisible();
+  const recoveryAlert = lifecycle.getByRole("alert");
+  await expect(recoveryAlert).toBeVisible();
   // Retry replaces the failed page, which keeps the runtime origin until it closes.
   await Promise.all([
     window.waitForEvent("close"),
@@ -211,6 +212,8 @@ test("keeps startup render failures in the existing recovery screen after the da
   await expect
     .poll(async () => ({ requests: runtime.dashboardRequests(), state: await startupState(lifecycle) }))
     .toMatchObject({ requests: 2 });
+  // The lifecycle renderer can still show the previous error after Retry starts.
+  await expect(recoveryAlert).toBeHidden();
   runtime.releaseDashboard();
   const reopened = await waitForWorkbenchPage(lifecycle, runtime.descriptor.origin);
   await expect(reopened.getByText("Owned Prompt Studio dashboard")).toBeVisible();
