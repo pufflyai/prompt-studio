@@ -33,6 +33,8 @@ for (const profile of ["history", "storage"] as const)
     test("completes the upgrade, opens the project and persists an edit within the upgrade budget", async ({
       upgradeHome,
     }, info) => {
+      // Allow this diagnostic to collect an exact duration even when the unchanged gate fails.
+      test.setTimeout(180_000);
       let app: PackagedApp | undefined;
       try {
         const started = performance.now();
