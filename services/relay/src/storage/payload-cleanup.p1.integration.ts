@@ -11,6 +11,44 @@ const fixture = createSyncFixture();
 beforeAll(() => fixture.initialize());
 afterAll(() => fixture.close());
 
+test("database failures stop cleanup without retrying every remaining batch", async () => {
+  const connection = connectRelay(fixture.databaseUrl);
+  const prefix = randomId("database-failure");
+  const keys = Array.from({ length: 17 }, (_, index) => `${prefix}-${index.toString().padStart(2, "0")}`);
+  const failure = new Error("Controlled cleanup database failure");
+  const payloads = createPayloadObjects({ bucket: fixture.bucket, s3: fixture.s3 });
+  let attempts = 0;
+  let removals = 0;
+  const brokenConnection = {
+    ...connection,
+    run: ((action, signal) => {
+      if (++attempts > 1) return Promise.reject(failure);
+      return connection.run(action, signal);
+    }) satisfies typeof connection.run,
+  };
+  try {
+    await connection.run((db) => db.insert(syncObjectDeletions).values(keys.map((objectKey) => ({ objectKey }))));
+    await expect(
+      cleanupPayloads(brokenConnection, {
+        ...payloads,
+        async remove() {
+          removals++;
+        },
+      }),
+    ).rejects.toBe(failure);
+    expect(attempts).toBe(2);
+    expect(removals).toBe(0);
+    const queued = await connection.run((db) =>
+      db.select().from(syncObjectDeletions).where(inArray(syncObjectDeletions.objectKey, keys)),
+    );
+    expect(queued).toHaveLength(keys.length);
+  } finally {
+    await connection.run((db) => db.delete(syncObjectDeletions).where(inArray(syncObjectDeletions.objectKey, keys)));
+    payloads.close();
+    await connection.close();
+  }
+});
+
 test("provider deletion failures retain retry rows and exclusion while independent projects can finish", async () => {
   const prefix = randomId("retired");
   const held = `${prefix}-a`;
@@ -63,6 +101,7 @@ test("provider deletion failures retain retry rows and exclusion while independe
   const pending = () =>
     connection.run((db) => db.select().from(syncObjectDeletions).where(inArray(syncObjectDeletions.objectKey, keys)));
   let cleaning: ReturnType<typeof cleanupPayloads> | undefined;
+  let waitingTimeout: ReturnType<typeof setTimeout> | undefined;
   try {
     await connection.run((db) =>
       db.insert(syncObjectDeletions).values([
@@ -84,7 +123,17 @@ test("provider deletion failures retain retry rows and exclusion while independe
     });
     void cleaning.catch(() => {});
 
-    await Promise.race([deleteFailed.promise, cleaning]);
+    await Promise.race([
+      deleteFailed.promise,
+      cleaning,
+      new Promise<never>((_, reject) => {
+        waitingTimeout = setTimeout(
+          () => reject(new Error("Concurrent deletion did not reach the controlled failure while the first was held")),
+          2_000,
+        );
+      }),
+    ]);
+    clearTimeout(waitingTimeout);
     await expect(
       writer.run((db) =>
         db.transaction(async (tx) => {
@@ -108,6 +157,7 @@ test("provider deletion failures retain retry rows and exclusion while independe
     expect([...(await fixture.objects()).keys()]).toEqual([kept]);
     await cleanupPayloads(connection, payloads);
   } finally {
+    clearTimeout(waitingTimeout);
     releaseHeld.resolve();
     await cleaning?.catch(() => {});
     payloads.close();
