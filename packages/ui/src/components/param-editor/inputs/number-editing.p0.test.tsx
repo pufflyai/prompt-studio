@@ -4,6 +4,64 @@ import { useNumberEditing } from "./number-editing";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
+for (const finish of ["escape", "dispose"] as const) {
+  test(`numeric ${finish} restores the latest accepted value after an earlier save`, async () => {
+    const saved = Promise.withResolvers<void>();
+    const previews: number[] = [];
+    const commits: number[] = [];
+    let input!: ReturnType<typeof useNumberEditing>;
+    const Field = ({ accepted }: { accepted: number }) => {
+      input = useNumberEditing({
+        value: accepted,
+        onPreview: (value) => {
+          previews.push(value);
+        },
+        onCommit: async (value) => {
+          commits.push(value);
+          await saved.promise;
+        },
+        onCancel: () => {
+          previews.push(accepted);
+        },
+      });
+      return null;
+    };
+    let view!: ReturnType<typeof create>;
+    let saving: Promise<void> | undefined;
+    try {
+      await act(async () => {
+        view = create(<Field accepted={80} />);
+      });
+      await act(async () => {
+        input.focus();
+        input.change("50");
+      });
+      await act(async () => {
+        saving = input.commit();
+      });
+      await act(async () => {
+        input.change("60", finish === "dispose" ? "slider" : "input");
+      });
+      await act(async () => {
+        saved.resolve();
+        await saving;
+        view.update(<Field accepted={50} />);
+      });
+      expect(input.value).toBe("60");
+      await act(async () => {
+        if (finish === "escape") await input.cancel();
+        else view.unmount();
+      });
+      expect(previews).toEqual([50, 60, 50]);
+      expect(commits).toEqual([50]);
+    } finally {
+      saved.resolve();
+      await saving;
+      await act(async () => view?.unmount());
+    }
+  });
+}
+
 test("numeric drafts preview immediately, retain newer input across an old acknowledgement, and commit once", async () => {
   const previews: number[] = [];
   const commits: number[] = [];
