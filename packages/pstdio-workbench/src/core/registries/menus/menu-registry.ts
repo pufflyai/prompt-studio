@@ -53,6 +53,7 @@ export interface MenuRegistryStoreState {
 export interface MenuRegistry {
   menuStore: WorkbenchStore<MenuRegistryStoreState>;
   registerMenuItem(path: MenuPath, item: MenuItem, metadata?: ContributionMetadata): Disposable;
+  invalidateMenuItems(): void;
   listMenuItems(path: MenuPath): RegisteredMenuItem[];
 }
 
@@ -99,6 +100,11 @@ export const createMenuRegistry = (deps: MenuRegistryDeps): MenuRegistry => {
           "unregisterMenuItem",
         );
       });
+    },
+
+    invalidateMenuItems() {
+      // Recompute menu state without changing contribution identity or order.
+      menuStore.setState((state) => ({ itemsByPath: { ...state.itemsByPath } }), false, "invalidateMenuItems");
     },
 
     listMenuItems(path) {
