@@ -50,8 +50,9 @@ export const MessageActionPanel = (props: MessageActionPanelProps) => {
   const [isCopied, setIsCopied] = useState(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
   const trayVisible = alwaysVisible || Boolean(message.sender);
-  const copyText = showActions ? getMessageCopyText(message) : "";
-  const timestampLabel = showActions ? getMessageTimestampLabel(message) : "";
+  const { copyText, timestampLabel } = showActions
+    ? { copyText: getMessageCopyText(message), timestampLabel: getMessageTimestampLabel(message) }
+    : { copyText: "", timestampLabel: "" };
 
   useEffect(() => {
     return () => {
