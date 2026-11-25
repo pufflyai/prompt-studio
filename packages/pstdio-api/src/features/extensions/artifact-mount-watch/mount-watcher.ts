@@ -1,6 +1,11 @@
-import { lstatSync, mkdirSync } from "node:fs";
-import { isAbsolute, relative, sep } from "node:path";
-import { createDirectoryTreeWatcher, type WatchDirectory } from "pstdio-extensions";
+import { watch as fsWatch, lstatSync, mkdirSync, statSync } from "node:fs";
+import { isAbsolute, join, relative, sep } from "node:path";
+import {
+  createDirectoryTreeWatcher,
+  type DirectoryTreeWatcher,
+  readArtifactFileState,
+  type WatchDirectory,
+} from "pstdio-extensions";
 import type { ArtifactMountWriteLedger } from "./write-ledger";
 
 // A burst ends this long after its last change, so one save that touches several files
@@ -17,13 +22,24 @@ const MAX_FOLDERS = 2_000;
 export type ArtifactMountWatcherInput = {
   /** Absolute mount folder. It is created when missing. */
   root: string;
-  ledger: Pick<ArtifactMountWriteLedger, "dropEchoes">;
+  /** Create only descendants of this existing checkout. */
+  workspaceRoot?: string;
+  ledger: Pick<ArtifactMountWriteLedger, "createEchoFilter">;
   /** Changed paths relative to the root, or `[]` when the listener should reload everything. */
   onChange: (paths: string[]) => void;
   onError: (error: unknown) => void;
+  onRootRetryError?: (error: unknown) => void;
   onFolderLimit: () => void;
   maxFolders?: number;
   watch?: WatchDirectory;
+  watchRoot?: WatchDirectory;
+  platform?: NodeJS.Platform;
+};
+
+const watchFlatRoot: WatchDirectory = (path, listener, onError) => {
+  const watcher = fsWatch(path, { recursive: false }, listener);
+  watcher.on("error", onError);
+  return watcher;
 };
 
 const isFolder = (path: string) => {
@@ -37,19 +53,45 @@ const isFolder = (path: string) => {
 const isInsideRoot = (mountPath: string) =>
   mountPath !== "" && mountPath !== ".." && !mountPath.startsWith(`..${sep}`) && !isAbsolute(mountPath);
 
+const prepareMountDirectory = (root: string, workspaceRoot: string | undefined) => {
+  if (!workspaceRoot) {
+    mkdirSync(root, { recursive: true });
+    return;
+  }
+  const path = relative(workspaceRoot, root);
+  if (!isInsideRoot(path)) throw new Error("Artifact mount must be inside its checkout");
+  let folder = workspaceRoot;
+  for (const name of path.split(sep)) {
+    folder = join(folder, name);
+    try {
+      // A non-recursive creation cannot bring back a missing checkout.
+      mkdirSync(folder);
+    } catch (error) {
+      if (
+        (error as NodeJS.ErrnoException).code !== "EEXIST" ||
+        !statSync(folder, { throwIfNoEntry: false })?.isDirectory()
+      ) {
+        throw error;
+      }
+    }
+  }
+};
+
 /** Watch one mount folder and report changes made outside the mount API in debounced bursts. */
 export const watchArtifactMount = (input: ArtifactMountWatcherInput) => {
   const pending = new Set<string>();
+  const dropEchoes = input.ledger.createEchoFilter();
   // The mount folder itself was removed or replaced, so the paths of this burst do not say what is left.
   let rootChanged = false;
   let burstStartedAt: number | null = null;
   let lastReportAt = Number.NEGATIVE_INFINITY;
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let directRoot: DirectoryTreeWatcher | undefined;
   // Folders past the limit are not watched, so their changes go unseen.
   let incomplete = false;
 
   const report = () => {
-    const changed = input.ledger.dropEchoes([...pending]);
+    const changed = dropEchoes([...pending], { keepMatchedWrites: directRoot !== undefined });
     const reloadAll = rootChanged || incomplete || changed.length > MAX_PATHS;
     pending.clear();
     rootChanged = false;
@@ -89,26 +131,63 @@ export const watchArtifactMount = (input: ArtifactMountWatcherInput) => {
     scheduleFlush();
   };
 
-  mkdirSync(input.root, { recursive: true });
-  const tree = createDirectoryTreeWatcher({
-    root: input.root,
-    onEvent: handleEvent,
-    onError: input.onError,
-    maxDirectories: input.maxFolders ?? MAX_FOLDERS,
-    onDirectoryLimit: () => {
-      incomplete = true;
-      // Folder-only change events are ignored, but incomplete watches still need a full reload.
-      scheduleFlush();
-      input.onFolderLimit();
-    },
-    watch: input.watch,
-  });
-
-  return {
-    close: () => {
-      if (timer) clearTimeout(timer);
-      pending.clear();
-      tree.close();
-    },
+  // macOS recursive notifications can miss an atomic file replacement in the mount root.
+  const platform = input.platform ?? process.platform;
+  const watchRoot = input.watchRoot ?? (!input.watch && platform === "darwin" ? watchFlatRoot : undefined);
+  let tree: DirectoryTreeWatcher | undefined;
+  let starting = true;
+  const onWatchError = (error: unknown) => {
+    // Paired watches have to acquire both handles before the service can keep the mount.
+    if (watchRoot && starting) throw error;
+    input.onError(error);
   };
+
+  const close = () => {
+    if (timer) clearTimeout(timer);
+    pending.clear();
+    tree?.close();
+    directRoot?.close();
+  };
+
+  prepareMountDirectory(input.root, input.workspaceRoot);
+  try {
+    const initialIdentity = watchRoot && readArtifactFileState(input.root)?.identity;
+    tree = createDirectoryTreeWatcher({
+      root: input.root,
+      onEvent: handleEvent,
+      onError: onWatchError,
+      onRootRetryError: input.onRootRetryError,
+      maxDirectories: input.maxFolders ?? MAX_FOLDERS,
+      onDirectoryLimit: () => {
+        incomplete = true;
+        // Folder-only change events are ignored, but incomplete watches still need a full reload.
+        scheduleFlush();
+        input.onFolderLimit();
+      },
+      watch: input.watch,
+    });
+    if (watchRoot) {
+      directRoot = createDirectoryTreeWatcher({
+        root: input.root,
+        onEvent: handleEvent,
+        onError: onWatchError,
+        onRootRetryError: input.onRootRetryError,
+        skipDirectory: () => true,
+        watch: watchRoot,
+      });
+      if (
+        !initialIdentity ||
+        tree.rootIdentity !== initialIdentity ||
+        directRoot.rootIdentity !== initialIdentity ||
+        readArtifactFileState(input.root)?.identity !== initialIdentity
+      ) {
+        throw new Error(`Artifact mount directory changed during watch startup: ${input.root}`);
+      }
+    }
+  } catch (error) {
+    close();
+    throw error;
+  }
+  starting = false;
+  return { close };
 };

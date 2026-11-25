@@ -107,7 +107,11 @@ const MarmaladeInspectorContent = ({ input }: { input: ExampleViewInput }) => {
         collapsible={false}
         resizeLabel="Resize layers group"
         onPointerDownCapture={(event) => {
-          if (event.button === 0 && isResizeHandle(event.target)) resizePointer.current = event.pointerId;
+          const handle = isResizeHandle(event.target);
+          if (event.button !== 0 || !handle) return;
+          const activePointer = resizePointer.current;
+          if (activePointer !== undefined && handle.hasPointerCapture(activePointer)) return;
+          resizePointer.current = event.pointerId;
         }}
         onPointerUpCapture={(event) => {
           if (resizePointer.current === event.pointerId) resizePointer.current = undefined;

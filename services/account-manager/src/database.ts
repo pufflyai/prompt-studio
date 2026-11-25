@@ -2,9 +2,11 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
 
-export const connectManager = (databaseUrl: string) => {
+// The manager shares the database server with the relay; a small pool queues bursts instead of
+// exhausting the server's connection slots.
+export const connectManager = (databaseUrl: string, poolMax = 4) => {
   if (!databaseUrl) throw new Error("Account authority requires a private PostgreSQL URL");
-  const pool = new Pool({ connectionString: databaseUrl });
+  const pool = new Pool({ connectionString: databaseUrl, max: poolMax });
   let closing: Promise<void> | undefined;
   return { db: drizzle(pool), close: () => (closing ??= pool.end()) };
 };

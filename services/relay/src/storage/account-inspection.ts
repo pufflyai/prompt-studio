@@ -1,8 +1,8 @@
 import { sql } from "drizzle-orm";
 import { projectKey } from "./accounts";
-import type { connectRelay } from "./database";
+import type { RelayDatabase } from "./database";
 
-type RelayDb = ReturnType<typeof connectRelay>["db"];
+type RelayDb = RelayDatabase;
 
 const count = (value: unknown) => Number(value ?? 0);
 const at = (value: unknown) => (value ? new Date(value as string).toISOString() : null);
@@ -64,17 +64,20 @@ export const inspectRelayAccount = async (
         bytes: string;
         settled: string;
         settledBytes: string;
+        eligibleBytes: string;
         removableFrom: string | null;
         removableUntil: string | null;
       }>(sql`
         SELECT "projectKey", 'updates' AS kind, count(*) AS count, sum("byteLength") AS bytes,
           count(*) FILTER (WHERE "coveredAt" IS NOT NULL) AS settled,
           coalesce(sum("byteLength") FILTER (WHERE "coveredAt" IS NOT NULL), 0) AS "settledBytes",
+          coalesce(sum("byteLength") FILTER (WHERE "coveredAt" + ${grace} <= ${now}), 0) AS "eligibleBytes",
           min("coveredAt") + ${grace} AS "removableFrom", max("coveredAt") + ${grace} AS "removableUntil"
         FROM relay_sync_updates WHERE "projectKey" IN (${owned}) GROUP BY "projectKey"
         UNION ALL
         SELECT "projectKey", 'states', count(*), sum("byteLength"), count(*) FILTER (WHERE "replacedAt" IS NOT NULL),
           coalesce(sum("byteLength") FILTER (WHERE "replacedAt" IS NOT NULL), 0),
+          coalesce(sum("byteLength") FILTER (WHERE "replacedAt" + ${grace} <= ${now}), 0),
           min("replacedAt") + ${grace}, max("replacedAt") + ${grace}
         FROM relay_sync_states WHERE "projectKey" IN (${owned}) GROUP BY "projectKey"`);
       const blobs = await tx.execute<{ projectKey: string; status: string; count: string; bytes: string }>(sql`
@@ -85,6 +88,7 @@ export const inspectRelayAccount = async (
         count: string;
         bytes: string;
         retirableNow: string;
+        eligibleBytes: string;
         retirableFrom: string | null;
         retirableUntil: string | null;
       }>(sql`
@@ -100,6 +104,7 @@ export const inspectRelayAccount = async (
         )
         SELECT "projectKey", count(*) AS count, sum("byteLength") AS bytes,
           count(*) FILTER (WHERE "retirableAt" <= ${now}) AS "retirableNow",
+          coalesce(sum("byteLength") FILTER (WHERE "retirableAt" <= ${now}), 0) AS "eligibleBytes",
           min("retirableAt") AS "retirableFrom", max("retirableAt") AS "retirableUntil"
         FROM orphans GROUP BY "projectKey"`);
       // A document's own updates and states plus the blobs they list directly; their subtrees are not
@@ -152,6 +157,7 @@ export const inspectRelayAccount = async (
         const settled = (row: ReturnType<typeof payload>) => ({
           count: count(row?.settled),
           bytes: count(row?.settledBytes),
+          eligibleBytes: count(row?.eligibleBytes),
           removableFrom: at(row?.removableFrom),
           removableUntil: at(row?.removableUntil),
         });
@@ -171,6 +177,7 @@ export const inspectRelayAccount = async (
             count: count(orphan?.count),
             bytes: count(orphan?.bytes),
             retirableNow: count(orphan?.retirableNow),
+            eligibleBytes: count(orphan?.eligibleBytes),
             retirableFrom: at(orphan?.retirableFrom),
             retirableUntil: at(orphan?.retirableUntil),
           },

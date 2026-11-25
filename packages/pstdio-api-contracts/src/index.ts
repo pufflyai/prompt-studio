@@ -58,7 +58,7 @@ export * from "./settings";
 export * from "./skills";
 export { createStorageId, createStorageMigration } from "./storage-identities";
 export { resolveCollectionIndexes } from "./storage-indexes";
-export { createStoragePositions } from "./storage-positions";
+export { createStoragePositions, storagePositionsDevice } from "./storage-positions";
 export * from "./text-editing";
 export * from "./tool-result";
 export * from "./workspace-collection";

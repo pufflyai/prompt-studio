@@ -36,12 +36,21 @@ export const openCloudProjectInPicker = async (input: {
     await page.screenshot({ path: join(import.meta.dir, "../../test-results/cloud-project-opening.png") });
     return {
       close: () => browser.close(),
-      retry: async () => {
-        const response = page.waitForResponse(
-          (reply) => new URL(reply.url()).pathname === `/v1/account/projects/${input.projectId}/retry`,
+      retry: async (restorePeer: () => void) => {
+        const retryUrl = new URL(`/v1/account/projects/${input.projectId}/retry`, input.baseUrl).href;
+        await page.route(
+          retryUrl,
+          async (route) => {
+            if (route.request().method() === "POST") restorePeer();
+            await route.continue();
+          },
+          { times: 1 },
         );
-        await details.getByRole("button", { name: "Retry", exact: true }).click();
-        expect((await response).ok()).toBe(true);
+        const [response] = await Promise.all([
+          page.waitForResponse((reply) => reply.url() === retryUrl && reply.request().method() === "POST"),
+          details.getByRole("button", { name: "Retry", exact: true }).click(),
+        ]);
+        expect(response.ok()).toBe(true);
       },
       ready: async () => {
         await expect(status).toHaveText("Synced");

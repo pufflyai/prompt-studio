@@ -194,7 +194,12 @@ export const startRelayRuntime = async (input: RelayRuntimeInput) => {
       snapshot.enabledSources.map(async (source) => {
         if (workbenches.get(workbenchId) !== config) return;
         const key = JSON.stringify([workbenchId, source.installedSource.extension_id]);
-        if (connections.has(key)) return;
+        const current = connections.get(key);
+        if (current) {
+          const files = workspace?.provider_capabilities_json?.files;
+          if (workspace && (!files || files === "write")) current.resumeArtifactWatches?.();
+          return;
+        }
         const connection = await startRelayExtension({
           config,
           source,

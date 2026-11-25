@@ -4,9 +4,13 @@ import { Pool } from "pg";
 import { createDatabaseLeases } from "../database-leases";
 import * as schema from "./document-schema";
 
-export const connectRelay = (databaseUrl: string) => {
+// The relay opens three such pools plus single-connection control pools and listeners, and shares the
+// server with the manager. Small pools queue a burst instead of exhausting the server's connection slots.
+export const defaultRelayPoolMax = 2;
+
+export const connectRelay = (databaseUrl: string, poolMax = defaultRelayPoolMax) => {
   if (!databaseUrl) throw new Error("Relay storage requires a PostgreSQL URL");
-  const client = new Pool({ connectionString: databaseUrl });
+  const client = new Pool({ connectionString: databaseUrl, max: poolMax });
   const leases = createDatabaseLeases(databaseUrl, [client]);
   return {
     db: drizzle(client, { schema }),
