@@ -562,6 +562,10 @@ test.each(copyStates)("two views check the current device state before downloadi
         device.presence = "cloud-only";
         device.catalogUnavailable = true;
         owner.getWriter("projects")!.remove(id);
+        expect(fixture.removal.active(id)).toBe(true);
+        await expect(fixture.deletions.start(id, "Recovered notes", account)).rejects.toThrow(
+          "This project already has a pending Cloud change.",
+        );
         releaseRemoval.resolve();
         await result!;
         await until(

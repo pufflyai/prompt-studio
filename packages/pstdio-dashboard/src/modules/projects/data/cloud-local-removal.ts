@@ -46,9 +46,10 @@ const getCloudLocalRemoval = createRuntimeState((owner) => {
       const catalogKey = cloudCatalogKeyFor(accountOrigin, accountId, login?.deviceId);
       const syncKey = cloudCopySyncKey(scope);
       return operations.submit<RemoveLocalProjectResult>({
-        projectId: id,
+        // The native removal clears the local project's scope before its receipt arrives.
         domain: cloudCopyRemovalDomain,
         subjects: [cloudProjectCopySubject(id, scope)],
+        intent: cloudProjectCopySubject(id),
         title: `Delete local version of “${name}”`,
         sourceCommand: { id: dashboardCommandIds.openProjects },
         draft: { projectId: id, name, discardUnsynced },
