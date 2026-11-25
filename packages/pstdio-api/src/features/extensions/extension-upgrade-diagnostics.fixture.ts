@@ -6,12 +6,12 @@ import { closeBackendWorkers } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { writeExtension } from "./default-extensions-test-fixtures";
 import { packagedExtensionCatalog } from "./extension-catalog";
+import { createSharedNamedSourceCheckout } from "./extension-source-checkout";
 import { installExtensionSource, toExtensionEnableInput } from "./install-extension-source";
 
 const performanceEntry = packagedExtensionCatalog.extensions.find(
   (entry) => entry.extensionId === "pstdio.performance",
 )!;
-const installName = "renamed-performance";
 
 const git = (cwd: string, ...args: string[]) => {
   const result = Bun.spawnSync(["git", "-c", "user.name=Test", "-c", "user.email=test@example.com", ...args], {
@@ -39,14 +39,19 @@ const commitCapture = async (repo: string, extensionPath: string, release: strin
   return git(repo, "rev-parse", "HEAD");
 };
 
-const upgradeRenamedInstall = async (root: string, source: string) => {
+const upgradeInstall = async (root: string, source: string) => {
   let handle: Awaited<ReturnType<typeof createTestApp>> | undefined;
+  let sharedCheckout: Awaited<ReturnType<typeof createSharedNamedSourceCheckout>> | undefined;
   try {
+    const named = source === "named-release" || source === "named-override";
+    const installName = named ? performanceEntry.installName : "renamed-performance";
+    const configuredRef = source === "named-override" ? "override" : "host-release";
     const origin = {
       ...performanceEntry.origin,
       url: source === "foreign-catalog" ? "https://extensions.example.test/repo" : performanceEntry.origin.url,
+      ref: named ? configuredRef : performanceEntry.origin.ref,
     };
-    if (source === "foreign-catalog") {
+    if (named || source === "foreign-catalog") {
       process.env.PSTDIO_EXTENSION_CATALOG = join(root, "catalog.json");
       await writeFile(
         process.env.PSTDIO_EXTENSION_CATALOG,
@@ -63,10 +68,14 @@ const upgradeRenamedInstall = async (root: string, source: string) => {
     git(repo, "config", "--file", join(root, "gitconfig"), `url.${pathToFileURL(repo).href}.insteadOf`, origin.url);
     const oldCommit = await commitCapture(repo, extensionPath, "old");
     const newCommit = await commitCapture(repo, extensionPath, "new");
+    if (named) git(repo, "tag", "host-release", newCommit);
+    const upgradedCommit =
+      source === "named-override" ? await commitCapture(repo, extensionPath, "override") : newCommit;
+    if (source === "named-override") git(repo, "tag", "override", upgradedCommit);
     handle = await createTestApp({
       databasePath: ":memory:",
       storageRoot: join(root, "storage"),
-      release: { source: "git", ref: newCommit },
+      release: { source: "git", ref: named ? "host-release" : newCommit },
     });
     const { app, deps } = handle;
     const project = await deps.projectService.create({ name: "Diagnostics upgrade" });
@@ -74,15 +83,20 @@ const upgradeRenamedInstall = async (root: string, source: string) => {
     await mkdir(projectPath);
     await deps.workspaceService.ensureDefault({ project_id: project.id, root_path: projectPath, name: "Project" });
 
+    // The named cases start with a trusted checkout prepared in the shared worker.
+    if (named)
+      sharedCheckout = await createSharedNamedSourceCheckout([performanceEntry.installName], { ref: oldCommit });
     const installed = await installExtensionSource({
       source: performanceEntry.installName,
       installName,
       hostReleaseRef: source === "arbitrary-ref" ? newCommit : oldCommit,
-      originSource: { kind: "git", origin },
+      ...(sharedCheckout
+        ? { prepareNamedSource: sharedCheckout.prepareNamedSource }
+        : { originSource: { kind: "git", origin } }),
       ref: oldCommit,
       skipInstall: true,
     });
-    // Both commits have identical dependency inputs, so the upgrade can reuse the empty dependency directory.
+    // The commits have identical dependency inputs, so the upgrade can reuse the empty dependency directory.
     await mkdir(join(installed.targetPath, "node_modules"));
     const enabled = await deps.extensionService.enableInstalledSourceForProject({
       projectId: project.id,
@@ -117,16 +131,23 @@ const upgradeRenamedInstall = async (root: string, source: string) => {
       },
     );
     const current = await deps.extensionService.getProjectExtensionInstance(project.id, enabled.instance.id);
-    strictEqual(current?.installedSource.source_ref, `${origin.url}@${newCommit}#${origin.path}`);
+    strictEqual(current?.installedSource.source_ref, `${origin.url}@${upgradedCommit}#${origin.path}`);
     return { before, after: await capture() };
   } finally {
+    sharedCheckout?.cleanup();
     await handle?.close();
     await closeBackendWorkers();
   }
 };
 
 const [root, source] = process.argv.slice(2);
-deepStrictEqual(await upgradeRenamedInstall(root!, source!), {
-  before: { release: "old", status: source === "host-release" ? "captured" : "diagnostics_forbidden" },
-  after: { release: "new", status: source === "foreign-catalog" ? "diagnostics_forbidden" : "captured" },
+deepStrictEqual(await upgradeInstall(root!, source!), {
+  before: {
+    release: "old",
+    status: source === "arbitrary-ref" || source === "foreign-catalog" ? "diagnostics_forbidden" : "captured",
+  },
+  after: {
+    release: source === "named-override" ? "override" : "new",
+    status: source === "named-override" || source === "foreign-catalog" ? "diagnostics_forbidden" : "captured",
+  },
 });

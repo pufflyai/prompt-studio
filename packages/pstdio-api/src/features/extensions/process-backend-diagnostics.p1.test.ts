@@ -122,6 +122,7 @@ const installCatalogFixture = async (project: string) => {
     prepareNamedSource: async () => ({
       path: folder,
       ref: `${performanceOrigin.url}@${"a".repeat(40)}#${performanceOrigin.path}`,
+      gitRef: "fixture-release",
     }),
   });
   await handle.deps.extensionService.enableInstalledSourceForProject({

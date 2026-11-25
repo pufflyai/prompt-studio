@@ -21,6 +21,7 @@ const runUpgrade = async (source: string) => {
           GIT_CONFIG_PARAMETERS: "",
           GIT_TERMINAL_PROMPT: "0",
           PSTDIO_DEFAULT_EXTENSIONS: "[]",
+          PSTDIO_EXTENSION_CATALOG: "",
           PSTDIO_HOME: join(root, "home"),
           PSTDIO_LOG_LEVEL: "error",
           PSTDIO_LOG_PATH: join(root, "host.log"),
@@ -56,5 +57,17 @@ test(
 test(
   "a renamed Git install from an overridden catalog's foreign repository cannot capture diagnostics",
   () => runUpgrade("foreign-catalog"),
+  15_000,
+);
+
+test(
+  "a named catalog Git upgrade using the host release tag retains diagnostics access",
+  () => runUpgrade("named-release"),
+  15_000,
+);
+
+test(
+  "a named catalog Git upgrade using a different configured ref cannot capture diagnostics",
+  () => runUpgrade("named-override"),
   15_000,
 );

@@ -23,8 +23,8 @@ export const firstPartyCatalogEntry = (extensionId: string) => {
 
 /** Recorded only for bytes the installer obtained from the selected catalog or host checkout. */
 export const verifiedInstallOrigin = (
-  input: InstallExtensionSourceInput,
-  source: { kind: "named" | "local"; path: string; ref?: string },
+  input: Pick<InstallExtensionSourceInput, "hostReleaseRef">,
+  source: { kind: "named" | "local"; path: string; ref?: string; gitRef?: string },
   extensionId: string,
   targetPath: string,
 ): PreparedExtensionRevision["verifiedInstall"] => {
@@ -40,7 +40,7 @@ export const verifiedInstallOrigin = (
   if (registry?.id === entry.extensionId) return { sourcePath, ref: source.ref };
   const git = parseExtensionSourceRef(source.ref);
   if (git?.url !== entry.origin.url || git.path !== entry.origin.path) return;
-  // Explicit arbitrary refs are valid installs, but only the catalog's release selection attests to publisher code.
+  // Only the packaged catalog's release selection attests to publisher code.
   const releaseRef = entry.origin.ref === "{hostRelease}" ? input.hostReleaseRef : entry.origin.ref;
-  if (releaseRef && (input.ref === undefined || input.ref === releaseRef)) return { sourcePath, ref: source.ref };
+  if (releaseRef && source.gitRef === releaseRef) return { sourcePath, ref: source.ref };
 };
