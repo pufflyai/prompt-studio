@@ -63,7 +63,12 @@ describe("artifact mount write ledger", () => {
     const path = join(folder, "q3.json");
     await mount.writeText("sales/q3.json", "{}");
     writeFileSync(path, '{"total":1}');
-    expect(ledger.dropEchoes(fileFirst ? [path, folder] : [folder, path], { keepMatchedWrites: true })).toEqual([path]);
+    const options = { keepMatchedWrites: true };
+    expect(ledger.dropEchoes(fileFirst ? [path, folder] : [folder, path], options)).toEqual([path]);
+    expect(ledger.dropEchoes([folder], options)).toEqual([]);
+
+    writeFileSync(path, '{"total":20}');
+    expect(ledger.dropEchoes([folder], options)).toEqual([folder]);
   });
 });
 

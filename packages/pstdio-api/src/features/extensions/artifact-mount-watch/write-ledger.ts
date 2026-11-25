@@ -280,12 +280,16 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
       const byPath = new Map(observations);
       reconcileDeletions(observations, byPath);
       const consumed = new Set<string>();
-      const kept = observations
-        .filter(([path, current]) => !isEcho(path, current, byPath, consumed, keepMatchedWrites))
-        .map(([path]) => path);
+      const kept = observations.filter(
+        ([path, current]) => !isEcho(path, current, byPath, consumed, keepMatchedWrites),
+      );
+      // A later folder-only hint may repeat a child change already reported in this batch.
+      if (keepMatchedWrites) {
+        for (const [path, current] of kept) recordChild(path, current);
+      }
       // A write can explain a folder notification elsewhere in the same batch.
       for (const path of consumed) entries.delete(path);
-      return kept;
+      return kept.map(([path]) => path);
     },
   };
 };
