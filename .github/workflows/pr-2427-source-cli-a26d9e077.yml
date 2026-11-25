@@ -1,0 +1,177 @@
+name: PS-295 exact source CLI review
+
+on:
+  push:
+    branches:
+      - diagnostics/pr-2427-source-cli-a26d9e077
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  source_cli:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PS295_HEAD: a26d9e0770c54d1cb1204dc2f90086b8fa6c5a9c
+      PS295_TREE: 8bdaab1e42131a886e83356bd4362a65a3d3bc10
+      PS295_BASE: 576513030b42789395bbe9537dd4a2ed2f38b177
+      PS295_POLICY: d969d98fa1b72c805692fc92fc33447e0867544386113a75931bf76c0371180f
+      PS295_PLAN: 5dcb6a3412d543c3ce197dc04263b94ea4e869d208c1741f0a956ffaac16351c
+      PS295_CLI_GROUP: 72480638f874d13d0838a290
+      PS295_CLI_FILES_SHA256: 58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a
+      PS295_OUTPUT: test-results/pr-2427-source-cli-a26d9e077
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.PS295_HEAD }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+
+      - name: Verify the source and sealed Linux plan
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = refs/heads/diagnostics/pr-2427-source-cli-a26d9e077
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$PS295_HEAD"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" =             "$(printf 'A\t.github/workflows/pr-2427-source-cli-a26d9e077.yml')"
+          test "$(git rev-parse HEAD)" = "$PS295_HEAD"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$PS295_TREE"
+          test "$(git rev-parse HEAD^2)" = "$PS295_BASE"
+          test "$(git merge-base HEAD "$PS295_BASE")" = "$PS295_BASE"
+          test -z "$(git status --porcelain)"
+          test "$(bun --version)" = "1.4.4"
+          test "$(node --version)" = "v26.7.0"
+          test "$(jq -r .packageManager package.json)" = "bun@1.4.4"
+          mkdir -p "$PS295_OUTPUT"
+          bun run test:review --base "$PS295_BASE" --list --test packages/canvas-tests/src/ui/ui/chat-outline.p1.spec.ts > "$PS295_OUTPUT/selected-plan.json"
+          jq -e --arg sha "$PS295_HEAD" --arg tree "$PS295_TREE" --arg base "$PS295_BASE"             --arg policy "$PS295_POLICY" --arg digest "$PS295_PLAN" --arg group "$PS295_CLI_GROUP" '
+              .head == $sha and .mergeBase == $base and .testPlan.digest == $digest
+              and .testPlan.source == {sha:$sha,tree:$tree,policy:$policy,dirty:false}
+              and (.testPlan.runs | length) == 99 and (.selected | length) == 2956
+              and all(.testPlan.runs[]; .target == {platform:"linux",arch:"x64"})
+              and ([.testPlan.runs[] | select(.job == "local-additions") | .id] == [$group])
+              and any(.testPlan.runs[]; .id == $group and .owner == "e2e" and .cwd == "packages/e2e"
+                and .runner == "cli" and .priority == "P1" and .lane == "stable" and .artifact == "source"
+                and .requires == ["build-e5b1f54fca1c52cd"] and (.files | length) == 10)
+              and any(.testPlan.setup[]; .id == "build-e5b1f54fca1c52cd" and .owners == ["e2e"]
+                and .kind == "build" and .requires == [])
+            ' "$PS295_OUTPUT/selected-plan.json"
+          bun -e '
+            import { validateTestPlan } from "./scripts/ci/test-plan";
+            const { testPlan } = await Bun.file(process.env.PS295_OUTPUT + "/selected-plan.json").json();
+            validateTestPlan(testPlan);
+          '
+          jq -c --arg group "$PS295_CLI_GROUP" '.testPlan.runs[] | select(.id == $group) | .files'             "$PS295_OUTPUT/selected-plan.json" > "$PS295_OUTPUT/assigned-files.json"
+          printf '%s  %s\n' "$PS295_CLI_FILES_SHA256" "$PS295_OUTPUT/assigned-files.json" | sha256sum -c -
+          jq -n --arg sha "$PS295_HEAD" --arg tree "$PS295_TREE" --arg base "$PS295_BASE" \
+            --arg plan "$PS295_PLAN" --arg workflow "$GITHUB_WORKFLOW_SHA" \
+            '{sha:$sha,tree:$tree,mergeBase:$base,planDigest:$plan,diagnosticCommit:$workflow}' \
+            > "$PS295_OUTPUT/identity.json"
+
+      - name: Open an owned private temporary directory
+        shell: bash
+        run: |
+          scratch="$(mktemp -d /tmp/ps295-cli.XXXXXX)"
+          printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$scratch/owner"
+          {
+            echo "PS295_CLI_TMP=$scratch"
+            echo "TMPDIR=$scratch"
+            echo "TMP=$scratch"
+            echo "TEMP=$scratch"
+            echo "PS295_NATIVE_BUN=$(command -v bun)"
+          } >> "$GITHUB_ENV"
+          { node --version; bun --version; docker version; df -h /tmp "$GITHUB_WORKSPACE"; }             > "$PS295_OUTPUT/toolchain.log"
+
+      - name: Install locked dependencies and prepare Firefox
+        shell: bash
+        run: |
+          bun install --frozen-lockfile --concurrent-scripts 1
+          bun run --cwd packages/ui typegen:tokens
+          (cd packages/e2e && bun x --no-install playwright install --with-deps firefox) 2>&1             | tee "$PS295_OUTPUT/browser-setup.log"
+          test -z "$(git status --porcelain)"
+
+      - name: Execute only the ten-file source CLI group
+        shell: bash
+        run: |
+          test "$(command -v bun)" = "$PS295_NATIVE_BUN"
+          bun --no-orphans - <<'BUN' 2>&1 | tee "$PS295_OUTPUT/console.log"
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+          import { executePlan } from "./scripts/ci/run-test-plan";
+
+          const root = process.cwd();
+          const { PS295_CLI_TMP: scratch, PS295_OUTPUT: relative, PS295_CLI_GROUP: group } = process.env;
+          if (!scratch || !/^\/tmp\/ps295-cli\.[A-Za-z0-9]{6}$/.test(scratch) || !relative || !group)
+            throw new Error("Unexpected native review assignment");
+          const executionId = process.env.GITHUB_RUN_ID + "/" + process.env.GITHUB_RUN_ATTEMPT;
+          const output = resolve(root, relative);
+          for (const [key, value] of Object.entries(localReviewEnvironment(scratch))) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+          process.env.CI_PLAN_OUTPUT_DIR = relative + "/native";
+          const { testPlan } = await Bun.file(resolve(output, "selected-plan.json")).json();
+          let passed = false;
+          try {
+            const result = await executePlan(testPlan, {
+              root, runIds: [group], prebuilt: false, executionId,
+              env: { CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+            });
+            passed = result.complete && result.outcome === "success";
+          } finally {
+            const cleanup = await cleanupReviewCompose(scratch);
+            await Bun.write(resolve(output, "compose-cleanup.json"), JSON.stringify(cleanup, null, 2));
+            passed &&= cleanup.every(entry => entry.outcome === "success");
+            process.exitCode = passed ? 0 : 1;
+          }
+          BUN
+
+      - name: Verify exact native execution and file coverage
+        shell: bash
+        run: |
+          jq -e --arg group "$PS295_CLI_GROUP" --arg digest "$PS295_PLAN"             --slurpfile expected "$PS295_OUTPUT/assigned-files.json"             --slurpfile sealed "$PS295_OUTPUT/selected-plan.json" '
+              .source == $sealed[0].testPlan.source and .planDigest == $digest
+              and .complete and .outcome == "success" and .errors == [] and .runIds == [$group]
+              and (.results | length) == 1
+              and all(.results[]; .runId == $group and .complete and .outcome == "success"
+                and .exitCode == 0 and .nativeFailure != true and (.reportedFiles | sort) == ($expected[0] | sort))
+              and [.phases[] | select(.kind == "build") | [.id,.outcome]] == [["build-e5b1f54fca1c52cd","success"]]
+              and any(.phases[]; .kind == "cleanup" and .outcome == "success")
+            ' "$PS295_OUTPUT/native/execution.json"
+          jq -e 'all(.[]; .outcome == "success")' "$PS295_OUTPUT/compose-cleanup.json"
+          git diff --exit-code
+
+      - name: Retain and clean this invocation's temporary files
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$PS295_OUTPUT"
+          if [[ -n "${PS295_CLI_TMP:-}" ]]; then
+            [[ "$PS295_CLI_TMP" =~ ^/tmp/ps295-cli\.[A-Za-z0-9]{6}$ ]]
+            test "$(cat "$PS295_CLI_TMP/owner")" = "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+            if [[ -f "$PS295_CLI_TMP/compose-projects.jsonl" ]]; then
+              cp "$PS295_CLI_TMP/compose-projects.jsonl" "$PS295_OUTPUT/"
+            fi
+            rm -rf -- "$PS295_CLI_TMP"
+            test ! -e "$PS295_CLI_TMP"
+            printf '%s\n' 'Owned temporary directory removed' > "$PS295_OUTPUT/scratch-cleanup.txt"
+          fi
+
+      - name: Upload the fixture and native receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-2427-source-cli-a26d9e077-attempt-${{ github.run_attempt }}
+          path: ${{ env.PS295_OUTPUT }}
+          if-no-files-found: error
