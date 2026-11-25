@@ -4,7 +4,10 @@ import { createReadBoundary } from "pstdio-extensions";
 import type { LiveConnection } from "pstdio-sync/relay";
 import { createDocumentRelayConnection } from "pstdio-sync/relay";
 import { watchArtifactMount } from "../../features/extensions/artifact-mount-watch/mount-watcher";
-import { resolveWorkspaceFilesPath } from "../../features/extensions/command-environment/workspace-files";
+import {
+  resolveWorkspaceFilesPath,
+  WorkspaceFileAccessDeniedError,
+} from "../../features/extensions/command-environment/workspace-files";
 import { WorkspaceTargetUnavailableError } from "../../features/extensions/command-environment/workspace-target";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { createPublicationStorageAccess } from "../../features/extensions/publication/storage-access";
@@ -73,15 +76,26 @@ const startRelayArtifactWatches = (input: {
   const open = async () => {
     if (signal.aborted) return;
     const writable = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write").catch((error) => {
-      if (!signal.aborted) {
-        if (!(error instanceof WorkspaceTargetUnavailableError)) {
-          apiLogger.warn(
-            { err: error, event: "relay.artifact_watch.lookup_failed", ...owner },
-            "Relay artifact watch workspace lookup failed",
-          );
-        }
-        scheduleRetry();
+      if (signal.aborted) return null;
+      if (error instanceof WorkspaceFileAccessDeniedError) {
+        apiLogger.debug(
+          { event: "relay.artifact_watch.write_denied", ...owner },
+          "Relay artifact watch needs file writes",
+        );
+        return null;
       }
+      if (error instanceof WorkspaceTargetUnavailableError) {
+        apiLogger.debug(
+          { event: "relay.artifact_watch.workspace_pending", ...owner },
+          "Relay artifact watch is waiting for a ready workspace",
+        );
+      } else {
+        apiLogger.warn(
+          { err: error, event: "relay.artifact_watch.lookup_failed", ...owner },
+          "Relay artifact watch workspace lookup failed",
+        );
+      }
+      scheduleRetry();
       return null;
     });
     if (signal.aborted || writable !== input.repoRoot) return;

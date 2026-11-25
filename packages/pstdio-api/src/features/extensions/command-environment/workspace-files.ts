@@ -11,6 +11,8 @@ import {
 
 export type FileAccess = "read" | "write";
 
+export class WorkspaceFileAccessDeniedError extends WorkspaceTargetUnavailableError {}
+
 export const resolveWorkspaceFilesPath = async (
   deps: Pick<ExtensionsRouteDeps, "workspaceService">,
   input: WorkspaceTargetInput,
@@ -19,7 +21,7 @@ export const resolveWorkspaceFilesPath = async (
   const target = await resolveLocalWorkspaceTarget(deps, input, "file");
   const files = target.workspace.provider_capabilities_json?.files;
   if (files === "none" || (access === "write" && files && files !== "write"))
-    throw new WorkspaceTargetUnavailableError(`Workspace provider does not allow file ${access} access.`);
+    throw new WorkspaceFileAccessDeniedError(`Workspace provider does not allow file ${access} access.`);
   return target.root;
 };
 

@@ -3,11 +3,13 @@ import * as fs from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { defaultLocalWorkspaceCapabilities } from "pstdio-db";
 import * as mountWatcher from "../../features/extensions/artifact-mount-watch/mount-watcher";
 import { loadExtensionSource } from "../../features/extensions/extension-runtime";
 import { documentPeer } from "../../features/extensions/publication/document-peer.fixture";
 import { createTestExtensionSource } from "../../features/extensions/test-utils/create-test-extension-source";
 import { initializeProjectWorkspace } from "../../features/projects/project-folder";
+import { apiLogger } from "../../lib/logger";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { startRelayExtension } from "./extension-owner";
 
@@ -24,6 +26,7 @@ test.each([
   "cancel",
   "workspace setup",
   "checkout missing",
+  "read-only checkout",
 ])("documents sync while an artifact watch is unavailable (%s)", async (mode) => {
   const root = await mkdtemp(join(tmpdir(), "relay-watch-failure-"));
   const app = await createTestApp({ storageRoot: join(root, "home") });
@@ -39,6 +42,14 @@ test.each([
   let registration: ReturnType<typeof spyOn<typeof fs, "watch">> | undefined;
   let paired: ReturnType<typeof spyOn<typeof mountWatcher, "watchArtifactMount">> | undefined;
   let rootRetryError: ((error: unknown) => void) | undefined;
+  let pendingWorkspaceRetries = 0;
+  let writeDenials = 0;
+  const debug = apiLogger.debug;
+  const watcherDiagnostics = spyOn(apiLogger, "debug").mockImplementation((data, message) => {
+    if (data.event === "relay.artifact_watch.workspace_pending") pendingWorkspaceRetries++;
+    if (data.event === "relay.artifact_watch.write_denied") writeDenials++;
+    debug(data, message);
+  });
   try {
     const project = await app.deps.projectService.create({ name: "Independent watch recovery" });
     const folder = join(root, "checkout");
@@ -118,25 +129,28 @@ test.each([
     });
     await waitFor(async () => (await records.outcome("initial"))?.state === "synced");
     await waitFor(() => attempts > 0);
+    if (mode === "read-only checkout") {
+      await app.deps.workspaceService.updateProviderProjection(workspace.id, {
+        provider_capabilities_json: { ...defaultLocalWorkspaceCapabilities, files: "read" },
+      });
+      await waitFor(() => writeDenials === 1);
+      // The earlier native failure would schedule a two-second repeat if writes were temporary.
+      await Bun.sleep(2_100);
+      expect(writeDenials).toBe(1);
+      expect(attempts).toBe(1);
+      expect((await relay.status()).error).toBeUndefined();
+      return;
+    }
     const workspaceSetup = mode === "workspace setup";
     const checkoutMissing = mode === "checkout missing";
     if (workspaceSetup || checkoutMissing) {
       const parked = join(root, "parked-checkout");
       if (workspaceSetup) {
-        const getDefault = app.deps.workspaceService.getDefault.bind(app.deps.workspaceService);
-        let observedSetup = false;
-        const lookup = spyOn(app.deps.workspaceService, "getDefault").mockImplementation(async (...args) => {
-          const current = await getDefault(...args);
-          if (current?.initializing) observedSetup = true;
-          return current;
-        });
         try {
           await app.deps.workspaceService.setInitializing(workspace.id, true);
-          await waitFor(() => observedSetup);
-          // The watch has to remain pending after observing this setup state.
-          await Bun.sleep(100);
+          await waitFor(() => pendingWorkspaceRetries === 1);
+          expect(attempts).toBe(1);
         } finally {
-          lookup.mockRestore();
           await app.deps.workspaceService.setInitializing(workspace.id, false);
         }
       }
@@ -196,6 +210,7 @@ test.each([
     relay?.close();
     controller.abort();
     await relay?.done;
+    watcherDiagnostics.mockRestore();
     registration?.mockRestore();
     paired?.mockRestore();
     await app.close();
