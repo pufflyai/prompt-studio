@@ -45,14 +45,41 @@ const runs: HealthRun[] = Array.from({ length: 6 }, (_, index) => {
     errors: [],
   };
 });
+const mergeThemes = {
+  analyzedAt: "2026-11-17T13:00:00Z",
+  names: [
+    "Workbench layout and navigation",
+    "CI and test reliability",
+    "Extensions and SDK",
+    "Projects, workspaces and files",
+    "Cloud sync and storage",
+    "Sessions and conversations",
+  ],
+};
+const bugFailurePatterns = {
+  analyzedAt: "2026-11-17T13:00:00Z",
+  names: [
+    "Alternate actions and UI states",
+    "Lifecycle and async ordering",
+    "Persistence, migration and offline sync",
+    "Packaged, platform and release differences",
+    "Scale, latency and resource limits",
+    "Readiness, time budgets and fixture isolation",
+  ],
+  validationIndices: [5],
+};
 const pullRequestMerges = Array.from({ length: 30 }, (_, index) => {
   const count = index % 7 < 2 ? 0 : 5 + ((index * 11) % 24);
   const bug = Math.round(count * ((index % 5) / 6));
   const feature = Math.round((count - bug) * 0.6);
+  const theme = index % mergeThemes.names.length;
+  const secondTheme = (theme + 1) % mergeThemes.names.length;
   return {
     date: new Date(Date.UTC(2026, 10, index - 11)).toISOString().slice(0, 10),
     count,
     categories: { bug, feature, chore: count - bug - feature },
+    themes: index === 29 ? undefined : { [theme]: bug + feature, [secondTheme]: count - bug - feature },
+    bugFailures: index === 29 ? undefined : { [theme]: bug },
     velocity: { points: feature + feature * (index % 3), estimatedFeatures: Math.floor(feature / 3) },
     bugOrigins: feature ? { features: feature, fixes: index % 13, inferred: Math.floor((index % 13) / 2) } : undefined,
   };
@@ -64,14 +91,20 @@ const publications = [
   { tag: "pstdio@0.48.0-nightly.20261118071355", publishedAt: "2026-11-18T07:29:26Z" },
 ];
 
-export default { title: "Extensions/Prompt Studio Dev/Release pipeline health", fullscreen: true };
+export default {
+  title: "Extensions/Prompt Studio Dev/Release health dashboard",
+  description: "Refresh and date filters sit on the left. Dashboard editing controls sit on the right.",
+  fullscreen: true,
+};
 export const ReleaseHealth = () => {
   const [state, setState] = useState("history");
+  const refreshing = state === "refreshing";
+  const hasHistory = state !== "empty" && !refreshing;
   const merges = state === "totals only" ? mergeTotals : pullRequestMerges;
   return (
-    <Box h="100dvh" display="flex" flexDirection="column" minH="0">
-      <HStack p="sm">
-        {["history", "merges only", "totals only", "empty", "error"].map((value) => (
+    <Box w="full" h="100dvh" display="flex" flexDirection="column" minW="0" minH="0">
+      <HStack p="sm" flexWrap="wrap">
+        {["history", "merges only", "totals only", "empty", "refreshing", "error"].map((value) => (
           <Button key={value} size="xs" onClick={() => setState(value)}>
             {value}
           </Button>
@@ -80,10 +113,12 @@ export const ReleaseHealth = () => {
       <Box flex="1" minH="0">
         <HealthView
           today="2026-11-18"
-          runs={state === "empty" || state === "merges only" ? [] : runs}
-          pullRequestMergesDaily={state === "empty" ? undefined : merges}
+          runs={hasHistory && state !== "merges only" ? runs : []}
+          pullRequestMergesDaily={hasHistory ? merges : undefined}
+          mergeThemes={hasHistory && state !== "totals only" ? mergeThemes : undefined}
+          bugFailurePatterns={hasHistory && state !== "totals only" ? bugFailurePatterns : undefined}
           bugOriginCoverage={
-            state === "empty" || state === "totals only"
+            !hasHistory || state === "totals only"
               ? undefined
               : {
                   reviewedThrough: "2026-11-18T13:00:00Z",
@@ -95,11 +130,11 @@ export const ReleaseHealth = () => {
                   unlinked: 75,
                 }
           }
-          publications={state === "empty" ? undefined : publications}
+          publications={hasHistory ? publications : undefined}
           pullRequestMergesError={state === "error" ? "GitHub is unreachable." : undefined}
-          refreshing={false}
+          refreshing={refreshing}
           error={state === "error" ? "GitHub is unreachable; cached results are shown." : undefined}
-          onRefresh={() => {}}
+          onRefresh={() => setState("refreshing")}
           onOpen={() => {}}
         />
       </Box>

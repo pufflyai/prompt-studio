@@ -39,6 +39,16 @@ const mergeCounts = (bucket: HealthBucket, day: PullRequestMergeBucket) => {
     counts.categories.feature += day.categories.feature;
     counts.categories.chore += day.categories.chore;
   }
+  for (const field of ["themes", "bugFailures"] as const) {
+    const source = day[field];
+    if (!source) continue;
+    counts[field] ??= {};
+    const target = counts[field];
+    for (const [key, count] of Object.entries(source)) {
+      const index = Number(key);
+      target[index] = (target[index] ?? 0) + count;
+    }
+  }
   if (day.velocity) {
     counts.velocity ??= { points: 0, estimatedFeatures: 0 };
     counts.velocity.points += day.velocity.points;

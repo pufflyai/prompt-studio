@@ -8,6 +8,7 @@ import {
   summarizeBugOrigins,
 } from "./bug-origins";
 import { DEFAULT_COMPLEXITY, type FeatureComplexity, readFeatureComplexity } from "./feature-complexity";
+import { readMergeAnalysis } from "./merge-themes";
 import type { PullRequestMergeBucket, PullRequestType } from "./types";
 
 type Context = Pick<ExtensionContextBase, "process">;
@@ -137,10 +138,19 @@ const addMerge = (
   category: PullRequestType,
   weight: number | undefined,
   defaultPoints: number,
+  analysis: { theme?: number; failure?: number },
 ) => {
   if (!bucket) return;
   bucket.count++;
   bucket.categories[category]++;
+  if (analysis.theme !== undefined) {
+    bucket.themes ??= {};
+    bucket.themes[analysis.theme] = (bucket.themes[analysis.theme] ?? 0) + 1;
+  }
+  if (analysis.failure !== undefined) {
+    bucket.bugFailures ??= {};
+    bucket.bugFailures[analysis.failure] = (bucket.bugFailures[analysis.failure] ?? 0) + 1;
+  }
   if (category !== "feature") return;
   bucket.velocity.points += weight ?? defaultPoints;
   if (weight === undefined) bucket.velocity.estimatedFeatures++;
@@ -152,6 +162,8 @@ export const summarizeMerges = (
   through: string,
   complexity = DEFAULT_COMPLEXITY,
   audit?: BugOriginAudit,
+  themes?: Record<string, number>,
+  bugFailures?: Record<string, number>,
 ) => {
   const throughDate = through.slice(0, 10);
   const last = Date.parse(throughDate);
@@ -181,9 +193,10 @@ export const summarizeMerges = (
     const ticket = category === "feature" ? ticketOf(pull.title) : undefined;
     // 0 marks a ticket without a rating, which uses the default weight.
     const weight = ticket ? complexity.byTicket[ticket] || undefined : undefined;
-    addMerge(daily.get(date), category, weight, complexity.defaultPoints);
-    addMerge(weekly.get(utcDate(weekStart(Date.parse(date)))), category, weight, complexity.defaultPoints);
-    addMerge(hourBucket(hourOf(pull.mergedAt)), category, weight, complexity.defaultPoints);
+    const analysis = { theme: themes?.[pull.number], failure: bugFailures?.[pull.number] };
+    addMerge(daily.get(date), category, weight, complexity.defaultPoints, analysis);
+    addMerge(weekly.get(utcDate(weekStart(Date.parse(date)))), category, weight, complexity.defaultPoints, analysis);
+    addMerge(hourBucket(hourOf(pull.mergedAt)), category, weight, complexity.defaultPoints, analysis);
   }
   const originStats =
     audit &&
@@ -227,12 +240,18 @@ export const readMergeTimeline = async (files: ExtensionFiles) => {
       weeks: undefined,
       hours: undefined,
       bugOriginCoverage: undefined,
+      mergeThemes: undefined,
+      mergeThemesError: undefined,
+      bugFailurePatterns: undefined,
+      bugFailurePatternsError: undefined,
       error: timeline?.error,
     };
   }
-  const [saved, audit] = await Promise.all([
+  const [saved, audit, themes, bugFailures] = await Promise.all([
     readJson<Classifications>(files, CLASSIFICATIONS),
     readJson<BugOriginAudit>(files, BUG_ORIGIN_AUDIT),
+    readMergeAnalysis(files, timeline.repository, "merge-themes"),
+    readMergeAnalysis(files, timeline.repository, "bug-failure-patterns"),
   ]);
   const classified = saved?.repository === timeline.repository ? (saved?.categories ?? {}) : {};
   return {
@@ -242,7 +261,13 @@ export const readMergeTimeline = async (files: ExtensionFiles) => {
       timeline.refreshedAt,
       timeline.featureComplexity,
       audit?.repository === timeline.repository ? audit : undefined,
+      themes.byPull,
+      bugFailures.byPull,
     ),
+    mergeThemes: themes.coverage,
+    mergeThemesError: themes.error,
+    bugFailurePatterns: bugFailures.coverage,
+    bugFailurePatternsError: bugFailures.error,
     error: timeline.error,
   };
 };

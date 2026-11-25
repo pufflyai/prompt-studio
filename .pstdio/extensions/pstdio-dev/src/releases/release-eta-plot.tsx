@@ -1,11 +1,12 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import { psTheme } from "@pstdio/ui";
+import { EmptyState, psTheme } from "@pstdio/ui";
 import { defineChart, dot, lineY } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { periodChartMargin } from "../webview/period-chart";
+import { useHealthChartAppearance } from "./health-chart-style";
 import {
   AGENTIC_HOURS_PER_FAILURE,
   type EtaGrouping,
@@ -22,6 +23,8 @@ const rates = TEST_CATEGORIES.filter(({ id }) => AGENTIC_HOURS_PER_FAILURE[id] >
   .map(({ id, label }) => `${label} ${formatHours(AGENTIC_HOURS_PER_FAILURE[id])}`)
   .join(" · ");
 
+export const RELEASE_ETA_DESCRIPTION = `Blocking failing tests × agentic hours to fix each (${rates}). Quarantined and performance failures don't block. Latest run per period, UTC.`;
+
 interface ReleaseEtaPlotProps {
   runs: ReleaseHealth[];
   grouping: EtaGrouping;
@@ -30,11 +33,12 @@ interface ReleaseEtaPlotProps {
 
 // ETA to release: failing tests that block a release × agentic hours to fix each, per category.
 export const ReleaseEtaPlot = ({ runs, grouping, onChoose }: ReleaseEtaPlotProps) => {
+  const appearance = useHealthChartAppearance();
   const points = etaSeries(runs, grouping);
-  if (!points.length) return null;
+  if (!points.length) return <EmptyState title="No release ETA in this range" />;
 
   const latest = points.at(-1)!.latest;
-  const stroke = psTheme.token.var("colors.vis.categorical.4");
+  const stroke = appearance.color ?? psTheme.token.var("colors.vis.categorical.4");
   const rows = points.map((point) => ({ key: point.key, hours: point.latest.hours, point }));
   const hours = scaleLinear()
     .domain([0, Math.max(1, ...rows.map((row) => row.hours))])
@@ -90,13 +94,7 @@ export const ReleaseEtaPlot = ({ runs, grouping, onChoose }: ReleaseEtaPlotProps
 
   return (
     <Stack gap="2xs">
-      <Stack gap="2xs">
-        <Text textStyle="label/M/medium">ETA to release · {formatHours(latest.hours)}</Text>
-        <Text textStyle="label/XS" color="fg.muted">
-          Blocking failing tests × agentic hours to fix each ({rates}). Quarantined and performance failures don't
-          block. Latest run per period, UTC.
-        </Text>
-      </Stack>
+      <Text textStyle="label/M/medium">{formatHours(latest.hours)}</Text>
       <Box color="fg.muted" textStyle="label/XS">
         <Chart
           definition={definition}

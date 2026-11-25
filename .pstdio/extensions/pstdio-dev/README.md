@@ -29,7 +29,19 @@ The pages use your GitHub CLI login. Run `gh auth login` in this repository firs
 
 ## Release pipeline health
 
-Open **Release health** from the project navigation. The **Range** and **Aggregation** controls apply to every chart in **Overview**. Choose the last 7, 30, or 90 days or all available history, grouped by day, week, or month in UTC; the last 7 days can also be grouped by hour. Weeks start on Monday. The range applies to the **Runs** table, where each run has its duration, GitHub link, and verification evidence.
+Open **Release health** from the project navigation to see the release charts and run evidence on one dashboard. Use **Edit dashboard** on the right of the toolbar to arrange widgets for the open page.
+
+**Range** and **Aggregation** apply to the dashboard charts. Choose the last 7, 30, or 90 days or all available history, grouped by day, week, or month in UTC. The last 7 days can also be grouped by hour. Weeks start on Monday. The range also applies to the **Release runs** widget, where each run has its duration, GitHub link, and verification evidence.
+
+Under **Edit dashboard**, add a **Scatterplot** or **Ring chart** with the **Release run analysis** source. The scatterplot places one point for each timed run with test evidence, using duration and failed test count. Its colors identify verification outcomes. The ring shows the share of those runs in each outcome.
+
+**PR merge themes** shows semantic groups from a project analysis. Choose a theme and switch between merge count and share of all merges. Select **All time** and **Month** to see the full history. Merges without an assignment appear as **Unclassified**.
+
+The chart reads `releases/merge-themes.json` from the `pstdio.dev` extension's project storage. To update it, replace the file with a version 1 snapshot containing `repository` (GitHub owner/name), `analyzedAt` (UTC timestamp), `names` (theme labels in display order), and `byPull` (PR number to zero-based theme index). Refresh Release health to load the snapshot.
+
+**Bug failure patterns** shows analyzed bug-fix PRs by pattern. View fix counts or each pattern’s share of analyzed fixes, and select a pattern to see its history. The default stack shows **Validation or delivery only** separately. The patterns describe what the fixes addressed, and the date shows the analysis cutoff.
+
+This widget reads `releases/bug-failure-patterns.json` in the same snapshot format. Its `validationIndices` array identifies the patterns that belong to validation or delivery.
 
 Dashed vertical lines mark GitHub publication dates for `pstdio@` releases. When several releases fall in the same bucket, the tooltip lists each tag and timestamp. The test charts sum recorded executions and average completed run durations. Dates outside the available workflow history have gaps in the test charts.
 

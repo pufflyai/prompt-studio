@@ -1,5 +1,5 @@
 import { Box, HStack, Stack, Text } from "@chakra-ui/react";
-import { psTheme } from "@pstdio/ui";
+import { EmptyState, psTheme } from "@pstdio/ui";
 import { barY, defineChart, dot, lineY, stack } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
@@ -7,6 +7,7 @@ import { tooltip } from "@tanstack/charts/tooltip";
 import { useState } from "react";
 import type { Aggregation } from "../webview/period";
 import { periodChartMargin, periodTitle, timelineScale } from "../webview/period-chart";
+import { seriesColorSettings, useHealthChartAppearance } from "./health-chart-style";
 import { publicationRows, releaseMarks } from "./health-chart-timeline";
 import type { HealthBucket } from "./health-timeline";
 import { SeriesLegend } from "./series-legend";
@@ -40,7 +41,7 @@ const CATEGORY_COLORS: Record<TestCategory, string> = {
 const categories = [...TEST_CATEGORIES, { id: "pending" as const, label: "Uncategorized" }];
 type TestSeries = (typeof categories)[number]["id"];
 const categoryColor = (category: TestSeries) => (category === "pending" ? "fg.muted" : CATEGORY_COLORS[category]);
-const categoryLegend = categories.map(({ id, label }) => ({ id, label, color: categoryColor(id) }));
+export const testChartColors = seriesColorSettings("Category", categories);
 
 export const CategoryBreakdown = ({ run }: { run: ReleaseHealth }) => {
   const measured = TEST_CATEGORIES.flatMap((category) => {
@@ -62,7 +63,7 @@ export const CategoryBreakdown = ({ run }: { run: ReleaseHealth }) => {
   );
 };
 
-const bucketMetrics = (bucket: HealthBucket) => {
+export const bucketMetrics = (bucket: HealthBucket) => {
   const measured = bucket.runs.filter(({ counts }) => counts.reports > 0);
   const timed = bucket.runs.filter(({ runDurationSeconds }) => runDurationSeconds !== undefined);
   const passed = measured.reduce((sum, run) => sum + run.counts.passed, 0);
@@ -116,8 +117,12 @@ const testSegments = (bucket: RunBucket, selected?: TestSeries) => {
   return [{ date: bucket.date, category: selected, count }];
 };
 
-const TotalTestsPlot = ({ buckets, aggregation, onChoose }: RunPlotProps) => {
+export const TotalTestsPlot = ({ buckets, aggregation, onChoose }: RunPlotProps) => {
   const [selection, setSelection] = useState<TestSeries>();
+  const { seriesColors } = useHealthChartAppearance();
+  const paint = (id: TestSeries) => seriesColors[id] ?? color(categoryColor(id));
+  const categoryLegend = categories.map(({ id, label }) => ({ id, label, color: paint(id) }));
+  if (!buckets.some((bucket) => bucket.measured.length)) return <EmptyState title="No test summaries in this range" />;
   const byDate = new Map(buckets.map((bucket) => [bucket.date, bucket]));
   const uncategorized = buckets.some(({ segments }) => segments.some(({ category }) => category === "pending"));
   const legend = uncategorized ? categoryLegend : categoryLegend.filter(({ id }) => id !== "pending");
@@ -132,7 +137,7 @@ const TotalTestsPlot = ({ buckets, aggregation, onChoose }: RunPlotProps) => {
         z: "category",
         layout: stack({ order: categories.map(({ id }) => id) }),
         maxThickness: 64,
-        fill: ({ category }) => color(categoryColor(category)),
+        fill: ({ category }) => paint(category),
         stroke: color("bg"),
         strokeWidth: 1,
       }),
@@ -154,7 +159,7 @@ const TotalTestsPlot = ({ buckets, aggregation, onChoose }: RunPlotProps) => {
                   ...testSegments(bucket, selected?.id).map(({ category, count }) => ({
                     label: categories.find(({ id }) => id === category)!.label,
                     value: formatCount(count),
-                    color: color(categoryColor(category)),
+                    color: paint(category),
                   })),
                 ]
               : []),
@@ -166,7 +171,6 @@ const TotalTestsPlot = ({ buckets, aggregation, onChoose }: RunPlotProps) => {
   });
   return (
     <Stack gap="2xs">
-      <Text textStyle="label/M/medium">Total tests</Text>
       <SeriesLegend label="Test category legend" items={legend} selected={selected?.id} onSelect={setSelection} />
       <Box color="fg.muted" textStyle="label/XS">
         <Chart
@@ -193,27 +197,29 @@ const metricConfig = {
   duration: { title: "Average run duration", fill: "vis.categorical.1" },
 } as const;
 
-const RunMetricPlot = ({
+export const RunMetricPlot = ({
   buckets,
   aggregation,
   onChoose,
   metric,
 }: RunPlotProps & { metric: keyof typeof metricConfig }) => {
+  const { color: override } = useHealthChartAppearance();
   const { title, fill } = metricConfig[metric];
+  const paint = override ?? color(fill);
   const duration = metric === "duration";
   const points = buckets.flatMap((bucket) => {
     const value = bucket[metric];
     if (value === undefined || (!duration && !bucket.measured.length)) return [];
     return [{ date: bucket.date, value }];
   });
-  if (!points.length) return null;
+  if (!points.length) return <EmptyState title={`No data for ${title.toLowerCase()} in this range`} />;
   const byDate = new Map(buckets.map((bucket) => [bucket.date, bucket]));
   const marks = duration
     ? [
-        lineY(points, { x: "date", y: "value", stroke: color(fill), strokeWidth: 2 }),
-        dot(points, { x: "date", y: "value", fill: color(fill), r: 3 }),
+        lineY(points, { x: "date", y: "value", stroke: paint, strokeWidth: 2 }),
+        dot(points, { x: "date", y: "value", fill: paint, r: 3 }),
       ]
-    : [barY(points, { x: "date", y: "value", fill: color(fill), maxThickness: 64 })];
+    : [barY(points, { x: "date", y: "value", fill: paint, maxThickness: 64 })];
   const definition = defineChart({
     margin: periodChartMargin,
     marks: [...marks, ...releaseMarks(buckets)],
@@ -249,7 +255,6 @@ const RunMetricPlot = ({
   });
   return (
     <Stack gap="2xs">
-      <Text textStyle="label/M/medium">{title}</Text>
       <Box color="fg.muted" textStyle="label/XS">
         <Chart
           definition={definition}
@@ -263,26 +268,5 @@ const RunMetricPlot = ({
         />
       </Box>
     </Stack>
-  );
-};
-
-export const ReleaseRunPlots = ({
-  buckets,
-  aggregation,
-  onChoose,
-}: {
-  buckets: HealthBucket[];
-  aggregation: Aggregation;
-  onChoose: (id: number) => void;
-}) => {
-  const metrics = buckets.map(bucketMetrics);
-  const measured = metrics.some((bucket) => bucket.measured.length);
-  return (
-    <>
-      {measured ? <TotalTestsPlot buckets={metrics} aggregation={aggregation} onChoose={onChoose} /> : null}
-      <RunMetricPlot buckets={metrics} aggregation={aggregation} onChoose={onChoose} metric="failed" />
-      <RunMetricPlot buckets={metrics} aggregation={aggregation} onChoose={onChoose} metric="quarantined" />
-      <RunMetricPlot buckets={metrics} aggregation={aggregation} onChoose={onChoose} metric="duration" />
-    </>
   );
 };

@@ -41,6 +41,10 @@ export const readHealth = async (ctx: Context) => {
     pullRequestMergesWeekly: merges.weeks,
     pullRequestMergesHourly: merges.hours,
     pullRequestMergesError: merges.error,
+    mergeThemes: merges.mergeThemes,
+    mergeThemesError: merges.mergeThemesError,
+    bugFailurePatterns: merges.bugFailurePatterns,
+    bugFailurePatternsError: merges.bugFailurePatternsError,
     bugOriginCoverage: merges.bugOriginCoverage,
     ...publications,
   };

@@ -6,6 +6,7 @@ import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import type { Aggregation } from "../webview/period";
 import { periodChartMargin, periodTitle, timelineScale } from "../webview/period-chart";
+import { useHealthChartAppearance } from "./health-chart-style";
 import { publicationRows, releaseMarks } from "./health-chart-timeline";
 import type { HealthBucket } from "./health-timeline";
 import type { BugOriginCoverage } from "./types";
@@ -21,7 +22,8 @@ interface Props {
 
 export const BugOriginsPlot = (props: Props) => {
   const { buckets, aggregation, coverage } = props;
-  const color = psTheme.token.var("colors.red.500");
+  const { color: override } = useHealthChartAppearance();
+  const color = override ?? psTheme.token.var("colors.red.500");
   const points = buckets.flatMap(({ date, merges }) => {
     const counts = merges?.bugOrigins;
     return counts?.features ? [{ date, ratio: counts.fixes / counts.features }] : [];
@@ -70,10 +72,6 @@ export const BugOriginsPlot = (props: Props) => {
 
   return (
     <Stack gap="2xs">
-      <Text textStyle="label/M/medium">Estimated bugs per feature</Text>
-      <Text textStyle="label/XS" color="fg.muted">
-        Merged bug-fix PRs attributed to features, grouped by feature merge date
-      </Text>
       <Box color="fg.muted" textStyle="label/XS">
         {points.length ? (
           <Chart definition={definition} height={220} ariaLabel={`Estimated bugs per feature by ${aggregation}, UTC`} />
