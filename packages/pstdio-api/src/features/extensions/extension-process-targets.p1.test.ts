@@ -23,18 +23,30 @@ const providerRef = { version: 1, data: { machine: "devbox-7" } };
 const previous = { home: process.env.PSTDIO_HOME, defaults: process.env.PSTDIO_DEFAULT_EXTENSIONS };
 
 type Seen = { extensionId: string; projectId: string; commandId?: string; provider: boolean; input: unknown };
-const seen = () => (globalThis as { __targetCalls?: Seen[] }).__targetCalls ?? [];
+// Handlers run in a worker process, so they report to files the test reads.
+const callsFile = () => join(root, "target-calls.jsonl");
+const helperStoppedFile = () => join(root, "slow-helper-stopped");
+const delayEnteredFile = () => join(root, "delay-entered");
+const delayResumeFile = () => join(root, "delay-resume");
+const seen = (): Seen[] =>
+  existsSync(callsFile())
+    ? readFileSync(callsFile(), "utf8")
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => JSON.parse(line))
+    : [];
 
-const entry = `
+const entry = () => `
+import { appendFileSync, existsSync, writeFileSync } from "node:fs";
 const record = (ctx, input) => {
-  globalThis.__targetCalls ??= [];
-  globalThis.__targetCalls.push({
+  const call = {
     extensionId: ctx.extensionId,
     projectId: ctx.projectId,
     commandId: ctx.commandId,
     provider: typeof ctx.localDirectory === "function",
     input,
-  });
+  };
+  appendFileSync(${JSON.stringify(callsFile())}, JSON.stringify(call) + "\\n");
 };
 const ready = (input) => ({ state: "ready", executionKind: "remote", providerRef: input.providerRef, capabilities: { files: "none", diff: false, merge: false, rebase: false, delete: true } });
 export default {
@@ -44,9 +56,8 @@ export default {
       ref: { kind: "command", id: "delay-spawn" },
       title: "Delay spawn",
       async run(ctx, params) {
-        const gate = globalThis.__delaySpawn;
-        gate.entered();
-        await gate.resume;
+        writeFileSync(${JSON.stringify(delayEnteredFile())}, "");
+        while (!existsSync(${JSON.stringify(delayResumeFile())})) await Bun.sleep(10);
         const child = ctx.process.spawn({ command: params.command, lifetime: "extension" });
         const started = await child.started.then(() => "started", (error) => error.code);
         await child.exited;
@@ -78,18 +89,6 @@ export default {
         ctx.process.spawn(params);
         // Return only once the provider is inside its spawn call.
         while (!globalThis.__slowProviderEntered) await new Promise((resolve) => setTimeout(resolve, 10));
-        return "returned";
-      },
-    },
-    {
-      id: "fire-extension",
-      ref: { kind: "command", id: "fire-extension" },
-      title: "Fire for extension lifetime",
-      async run(ctx, params) {
-        const fixture = globalThis.__lateProvider;
-        const child = ctx.process.spawn({ ...params, lifetime: "extension" });
-        fixture.observe(child.started);
-        await fixture.dispatched;
         return "returned";
       },
     },
@@ -127,7 +126,8 @@ export default {
       resolve: ready,
       // Starts a local helper, then never answers; the caller must not wait for it.
       spawn(ctx) {
-        globalThis.__slowProviderHelper = ctx.process.spawn({ command: [process.execPath, "-e", "setInterval(() => {}, 1000)"] });
+        const helper = ctx.process.spawn({ command: [process.execPath, "-e", "setInterval(() => {}, 1000)"] });
+        helper.exited.then(() => writeFileSync(${JSON.stringify(helperStoppedFile())}, ""));
         globalThis.__slowProviderEntered = true;
         return new Promise(() => {});
       },
@@ -138,12 +138,7 @@ export default {
       label: "Late",
       create: ready,
       resolve: ready,
-      spawn() {
-        const fixture = globalThis.__lateProvider;
-        fixture.spawns++;
-        fixture.entered();
-        return fixture.reply;
-      },
+
     },
   ],
 };
@@ -201,7 +196,7 @@ beforeAll(async () => {
       engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
-  await writeFile(join(source, "extension.ts"), entry);
+  await writeFile(join(source, "extension.ts"), entry());
   handle = await createTestApp({ databasePath: ":memory:", storageRoot: join(root, "storage") });
   for (const name of ["main", "other"] as const) {
     const project = await handle.deps.projectService.create({ name });
@@ -226,6 +221,36 @@ afterAll(async () => {
   process.env.PSTDIO_DEFAULT_EXTENSIONS = previous.defaults;
   await rm(root, { recursive: true, force: true });
 });
+
+// Inject the delayed reply at the existing test provider boundary. Real worker routing is
+// exercised by the remote and slow fixtures. These tests retain the host's exact late handle.
+const lateTarget =
+  (fixture: { entered(): void; reply: Promise<ProcessHandle>; spawns: number }) =>
+  (workspaceId: string | undefined, signal?: AbortSignal) =>
+    resolveProcessTarget(
+      {
+        ...handle.deps,
+        workspaceProviderRuntime: {
+          async find(deps, input) {
+            const provider = await defaultWorkspaceProviderRuntime.find(deps, input);
+            if (!provider) return;
+            return {
+              ...provider,
+              provider: {
+                ...provider.provider,
+                spawn: () => {
+                  fixture.spawns++;
+                  fixture.entered();
+                  return fixture.reply;
+                },
+              },
+            };
+          },
+        },
+      },
+      { projectId: projects.main, workspaceId },
+      signal,
+    );
 
 const execute = async (projectId: string, command: string, params: Record<string, unknown>) => {
   const response = await handle.app.request(
@@ -361,10 +386,7 @@ test("a command that leaves a spawn opening on an unresponsive provider still en
   ]);
   expect(outcome).toMatchObject({ ok: true, value: "returned" });
   // The provider's own context closed, so the helper it started for this child stopped too.
-  const helper = (globalThis as { __slowProviderHelper?: ProcessHandle }).__slowProviderHelper!;
-  expect(await Promise.race([helper.exited.then(() => "stopped"), Bun.sleep(3_000).then(() => "running")])).toBe(
-    "stopped",
-  );
+  expect(await waitFor(() => existsSync(helperStoppedFile()), 3_000)).toBe(true);
 });
 
 test.each([
@@ -382,8 +404,6 @@ test.each([
   const rejectStop = Promise.withResolvers<void>();
   const remoteExit = Promise.withResolvers<ProcessExit>();
   const fixture = { entered: entered.resolve, reply: reply.promise, spawns: 0 };
-  const context = globalThis as typeof globalThis & { __lateProvider?: typeof fixture };
-  context.__lateProvider = fixture;
   const failure = new Error("The fixture target is temporarily unreachable.");
   let stops = 0;
   const remote: ProcessHandle = {
@@ -404,8 +424,7 @@ test.each([
   };
   const child = createProcessApi({
     callOwner: owner,
-    resolveTarget: (workspaceId, signal) =>
-      resolveProcessTarget(handle.deps, { projectId: projects.main, workspaceId }, signal),
+    resolveTarget: lateTarget(fixture),
   }).spawn({ command: ["agent"], workspaceId: workspaces.late });
   try {
     await entered.promise;
@@ -437,7 +456,6 @@ test.each([
     rejectStop.resolve();
     remoteExit.resolve({ code: null, signal: null });
     await owner.close().catch(() => {});
-    delete context.__lateProvider;
   }
 });
 
@@ -454,8 +472,6 @@ test("disposing a retired generation bounds a stuck provider stop and can retry 
   const stopStarted = Promise.withResolvers<void>();
   const remoteExit = Promise.withResolvers<ProcessExit>();
   const fixture = { entered: entered.resolve, reply: reply.promise, spawns: 0 };
-  const context = globalThis as typeof globalThis & { __lateProvider?: typeof fixture };
-  context.__lateProvider = fixture;
   let stops = 0;
   const remote: ProcessHandle = {
     id: "late-stuck-child",
@@ -474,8 +490,7 @@ test("disposing a retired generation bounds a stuck provider stop and can retry 
   };
   const child = createProcessApi({
     extensionOwner: owners.capture(projects.main, "stalled-instance", source),
-    resolveTarget: (workspaceId, signal) =>
-      resolveProcessTarget(handle.deps, { projectId: projects.main, workspaceId }, signal),
+    resolveTarget: lateTarget(fixture),
   }).spawn({ command: ["agent"], workspaceId: workspaces.late, lifetime: "extension" });
   let confirmed = false;
   const cleanup = child.treeExited!.then(() => {
@@ -501,7 +516,6 @@ test("disposing a retired generation bounds a stuck provider stop and can retry 
   } finally {
     reply.resolve(remote);
     remoteExit.resolve({ code: null, signal: null });
-    delete context.__lateProvider;
   }
 }, 10_000);
 
@@ -527,24 +541,20 @@ test("target files read local paths relative to the workspace or the home, and r
 });
 
 test("a still-running old command cannot start after identical source re-enable", async () => {
-  const entered = Promise.withResolvers<void>();
-  const resume = Promise.withResolvers<void>();
-  const context = globalThis as typeof globalThis & { __delaySpawn?: object };
-  context.__delaySpawn = { entered: entered.resolve, resume: resume.promise };
   const marker = join(root, "reenable-local-marker");
   const old = execute(projects.main, "delay-spawn", {
     command: [process.execPath, "-e", 'await Bun.write(process.argv[1], "ran")', marker],
   });
   try {
     await Promise.race([
-      entered.promise,
+      waitFor(() => existsSync(delayEnteredFile())).then((entered) => expect(entered).toBe(true)),
       old.then((outcome) => {
         throw new Error(`The original command ended before disable: ${JSON.stringify(outcome)}`);
       }),
     ]);
     await handle.deps.extensionService.setProjectExtensionEnabled(instanceId, false);
     await handle.deps.extensionService.setProjectExtensionEnabled(instanceId, true);
-    resume.resolve();
+    await writeFile(delayResumeFile(), "");
     const outcome = await old;
     expect(outcome).toMatchObject({ ok: true, value: "process_owner_closed" });
     expect(existsSync(marker)).toBe(false);
@@ -554,9 +564,8 @@ test("a still-running old command cannot start after identical source re-enable"
     });
     expect(fresh).toEqual({ startError: null, stdout: "new generation", exit: { code: 0, signal: null } });
   } finally {
-    resume.resolve();
+    await writeFile(delayResumeFile(), "");
     await old.catch(() => {});
-    delete context.__delaySpawn;
   }
 });
 
@@ -576,22 +585,19 @@ test("shutdown stops extension-owned children and retries late cleanup after dis
   await handle.deps.extensionService.setProjectExtensionEnabled(instanceId, true);
   const dispatched = Promise.withResolvers<void>();
   const reply = Promise.withResolvers<ProcessHandle>();
-  const cancelled = Promise.withResolvers<string>();
   const exited = Promise.withResolvers<ProcessExit>();
-  const fixture = {
-    entered: dispatched.resolve,
-    dispatched: dispatched.promise,
-    reply: reply.promise,
-    spawns: 0,
-    observe(started: Promise<void>) {
-      void started.then(
-        () => cancelled.resolve("started"),
-        (error) => cancelled.resolve(error.code),
-      );
-    },
-  };
-  const context = globalThis as typeof globalThis & { __lateProvider?: typeof fixture };
-  context.__lateProvider = fixture;
+  const fixture = { entered: dispatched.resolve, reply: reply.promise, spawns: 0 };
+  const source = (await handle.deps.extensionService.listEnabledSourcesForProject(projects.main)).find(
+    (entry) => entry.instance.id === instanceId,
+  )!.installedSource;
+  const child = createProcessApi({
+    extensionOwner: handle.deps.extensionProcessOwners.capture(projects.main, instanceId, source),
+    resolveTarget: lateTarget(fixture),
+  }).spawn({ command: ["agent"], workspaceId: workspaces.late, lifetime: "extension" });
+  const cancelled = child.started.then(
+    () => "started",
+    (error) => error.code,
+  );
   let stops = 0;
   const remote: ProcessHandle = {
     id: "late-extension-child",
@@ -606,13 +612,9 @@ test("shutdown stops extension-owned children and retries late cleanup after dis
     events: async function* () {},
   };
   try {
-    const outcome = await execute(projects.main, "fire-extension", {
-      command: ["agent"],
-      workspaceId: workspaces.late,
-    });
-    expect(outcome).toMatchObject({ ok: true, value: "returned" });
+    await dispatched.promise;
     await handle.deps.extensionService.setProjectExtensionEnabled(instanceId, false);
-    expect(await Promise.race([cancelled.promise, Bun.sleep(3_000).then(() => "hung")])).toBe("process_owner_closed");
+    expect(await Promise.race([cancelled, Bun.sleep(3_000).then(() => "hung")])).toBe("process_owner_closed");
     expect(stops).toBe(0);
 
     reply.resolve(remote);
@@ -626,6 +628,5 @@ test("shutdown stops extension-owned children and retries late cleanup after dis
   } finally {
     reply.resolve(remote);
     exited.resolve({ code: null, signal: null });
-    delete context.__lateProvider;
   }
 });

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
 import { withFileMutationLock } from "pstdio-paths";
+import { expectRejection } from "../test-utils/expect-rejection";
 import {
   createPreparationClient,
   createPreparationScope,
@@ -386,7 +387,7 @@ test("shutdown settles pending work even when extension evaluation never resolve
 
 test("preparation failures settle their caller and release the queue", async () => {
   const client = fixture();
-  await expect(client.run("reject", {})).rejects.toThrow("preparation failed");
+  await expectRejection(client.run("reject", {})).toThrow("preparation failed");
   expect(await client.run("value", { name: "next" })).toMatchObject({ name: "next" });
 });
 
@@ -589,12 +590,12 @@ test("requested host work can await an explicitly background dependency", async 
 
 test("failed host adoption releases admission to background work", async () => {
   const client = fixture();
-  await expect(
+  await expectRejection(
     withRequestedPreparation(async () => {
       await client.run("value", { name: "start" });
       throw new Error("host database failed");
     }),
-  ).rejects.toThrow("host database failed");
+  ).toThrow("host database failed");
   expect(await client.run("value", { name: "background" }, { priority: "background" })).toMatchObject({
     name: "background",
   });
@@ -939,7 +940,7 @@ test("saturation rejects new work transiently and preserves every admitted backg
     client.run("value", { name: `background-${index}` }, { priority: "background" }),
   );
   try {
-    await expect(client.run("value", { name: "overflow" })).rejects.toMatchObject({
+    await expectRejection(client.run("value", { name: "overflow" })).toMatchObject({
       code: "extension_preparation_unavailable",
     });
     blocked.release.resolve();
@@ -962,7 +963,7 @@ test("preemption at capacity preserves the interrupted check and every queued ow
   );
   const requested = client.run("value", { name: "requested" });
   try {
-    await expect(client.run("value", { name: "overflow" })).rejects.toMatchObject({
+    await expectRejection(client.run("value", { name: "overflow" })).toMatchObject({
       code: "extension_preparation_unavailable",
     });
     expect(await requested).toMatchObject({ name: "requested", sequence: 1 });

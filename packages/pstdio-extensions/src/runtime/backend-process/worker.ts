@@ -316,8 +316,10 @@ export const runBackendWorker = () => {
   const load = async (entryPath: string) => {
     try {
       const module = (await import(entryPath)) as { default?: unknown };
-      if (typeof module.default !== "object" || module.default === null)
-        throw new Error("Extension entry must export a default contributions object");
+      if (typeof module.default !== "object" || module.default === null || Array.isArray(module.default))
+        throw Object.assign(new Error("Extension entry must export a default contributions object"), {
+          code: "invalid_default_export",
+        });
       const described = describeBackendDefinition(module.default);
       handlers = described.handlers;
       send({
@@ -366,5 +368,8 @@ export const runBackendWorker = () => {
   });
   // The host disconnects on retirement; nothing in this process outlives it.
   process.on("disconnect", () => process.exit(0));
+  process.on("unhandledRejection", (reason) => {
+    console.error("An extension backend left a promise rejection unhandled:", reason);
+  });
   send({ v: BACKEND_PROTOCOL_VERSION, type: "ready" });
 };

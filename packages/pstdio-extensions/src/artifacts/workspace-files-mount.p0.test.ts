@@ -12,6 +12,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { createWorkspaceFilesMount } from "./artifact-mount";
 import { createSafeFileRoot } from "./safe-file-root";
 import { createWorkspaceFileAccess } from "./workspace-file-access";
@@ -50,14 +51,14 @@ test("workspace entry operations protect real Git metadata and symlink aliases",
   symlinkSync(join(root, ".git"), join(root, "metadata-alias"), "dir");
   const mount = createWorkspaceFilesMount(root);
   for (const directory of [".git", "metadata-alias"]) {
-    await expect(mount.readFile(`${directory}/config`, 1024)).rejects.toThrow("Git metadata");
-    await expect(mount.writeTextFile(`${directory}/config`, "changed", 1024)).rejects.toThrow("Git metadata");
-    await expect(mount.createTextFile(`${directory}/hooks/new-hook`, "changed", 1024)).rejects.toThrow("Git metadata");
-    await expect(mount.createDirectory(`${directory}/new-dir`)).rejects.toThrow("Git metadata");
-    await expect(mount.listEntries(directory)).rejects.toThrow("Git metadata");
-    await expect(mount.searchEntries("config", 10, directory)).rejects.toThrow("Git metadata");
-    await expect(mount.moveEntry("notes.txt", `${directory}/notes.txt`)).rejects.toThrow("Git metadata");
-    await expect(mount.deleteEntry(`${directory}/config`)).rejects.toThrow("Git metadata");
+    await expectRejection(mount.readFile(`${directory}/config`, 1024)).toThrow("Git metadata");
+    await expectRejection(mount.writeTextFile(`${directory}/config`, "changed", 1024)).toThrow("Git metadata");
+    await expectRejection(mount.createTextFile(`${directory}/hooks/new-hook`, "changed", 1024)).toThrow("Git metadata");
+    await expectRejection(mount.createDirectory(`${directory}/new-dir`)).toThrow("Git metadata");
+    await expectRejection(mount.listEntries(directory)).toThrow("Git metadata");
+    await expectRejection(mount.searchEntries("config", 10, directory)).toThrow("Git metadata");
+    await expectRejection(mount.moveEntry("notes.txt", `${directory}/notes.txt`)).toThrow("Git metadata");
+    await expectRejection(mount.deleteEntry(`${directory}/config`)).toThrow("Git metadata");
   }
   expect((await mount.listEntries()).map((entry) => entry.path)).toEqual(["notes.txt"]);
   expect((await mount.searchEntries("config", 10)).entries).toEqual([]);
@@ -78,7 +79,7 @@ test("workspace saves do not recreate a file deleted after path resolution", asy
       return resolved;
     },
   });
-  await expect(mount.writeTextFile("notes.txt", "saved", 1024)).rejects.toThrow();
+  await expectRejection(mount.writeTextFile("notes.txt", "saved", 1024)).toThrow();
   expect(existsSync(path)).toBe(false);
 });
 
@@ -213,10 +214,10 @@ describe("createWorkspaceFilesMount.syncDir", () => {
     const root = createTempDir();
     const mount = createSyncMount(root);
 
-    await expect(mount.syncDir(".claude/skills", [{ path: "../outside.txt", content: "x" }])).rejects.toThrow(
+    await expectRejection(mount.syncDir(".claude/skills", [{ path: "../outside.txt", content: "x" }])).toThrow(
       /escapes/,
     );
-    await expect(mount.syncDir(".claude/skills", [{ path: "skill/../../outside.txt", content: "x" }])).rejects.toThrow(
+    await expectRejection(mount.syncDir(".claude/skills", [{ path: "skill/../../outside.txt", content: "x" }])).toThrow(
       /escapes/,
     );
     expect(existsSync(join(root, ".claude/outside.txt"))).toBe(false);
@@ -312,14 +313,14 @@ describe("createWorkspaceFilesMount browsing", () => {
 
     mkdirSync(join(root, ".git"));
     writeFileSync(join(root, ".git/config"), "protected");
-    await expect(mount.deleteEntry(".git")).rejects.toThrow(/git metadata/i);
+    await expectRejection(mount.deleteEntry(".git")).toThrow(/git metadata/i);
     expect(existsSync(join(root, ".git/config"))).toBe(true);
 
-    await expect(mount.createTextFile("docs/new.md", "duplicate", 16)).rejects.toThrow(/already exists/i);
-    await expect(mount.createTextFile("missing/new.md", "new", 16)).rejects.toThrow(/not found/i);
-    await expect(mount.writeTextFile("missing.txt", "new", 16)).rejects.toThrow(/not found/i);
-    await expect(mount.createTextFile("large.txt", "too long", 3)).rejects.toThrow(/too large/i);
-    await expect(mount.deleteEntry("")).rejects.toThrow(/workspace root/i);
+    await expectRejection(mount.createTextFile("docs/new.md", "duplicate", 16)).toThrow(/already exists/i);
+    await expectRejection(mount.createTextFile("missing/new.md", "new", 16)).toThrow(/not found/i);
+    await expectRejection(mount.writeTextFile("missing.txt", "new", 16)).toThrow(/not found/i);
+    await expectRejection(mount.createTextFile("large.txt", "too long", 3)).toThrow(/too large/i);
+    await expectRejection(mount.deleteEntry("")).toThrow(/workspace root/i);
   });
 
   test("creates one directory under an existing parent without replacing entries", async () => {
@@ -331,8 +332,8 @@ describe("createWorkspaceFilesMount browsing", () => {
     await mount.createDirectory("docs/generated");
 
     expect(await mount.resolveEntryPath("docs/generated")).toMatchObject({ type: "directory" });
-    await expect(mount.createDirectory("existing.txt")).rejects.toThrow(/already exists/i);
-    await expect(mount.createDirectory("missing/generated")).rejects.toThrow(/not found/i);
+    await expectRejection(mount.createDirectory("existing.txt")).toThrow(/already exists/i);
+    await expectRejection(mount.createDirectory("missing/generated")).toThrow(/not found/i);
   });
 
   test("moves and renames files and directories without replacing existing entries", async () => {
@@ -351,8 +352,8 @@ describe("createWorkspaceFilesMount browsing", () => {
     expect(readFileSync(join(root, "docs/renamed.txt"), "utf8")).toBe("notes");
     expect(existsSync(join(root, "source"))).toBe(false);
     expect(readFileSync(join(root, "docs/source-renamed/nested/file.txt"), "utf8")).toBe("nested");
-    await expect(mount.moveEntry("docs/renamed.txt", "docs/existing.txt")).rejects.toThrow(/already exists/i);
-    await expect(mount.moveEntry("docs", "docs/source-renamed/docs")).rejects.toThrow(/inside itself/i);
+    await expectRejection(mount.moveEntry("docs/renamed.txt", "docs/existing.txt")).toThrow(/already exists/i);
+    await expectRejection(mount.moveEntry("docs", "docs/source-renamed/docs")).toThrow(/inside itself/i);
     expect(readFileSync(join(root, "docs/existing.txt"), "utf8")).toBe("keep");
   });
 });

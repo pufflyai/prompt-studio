@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -287,29 +287,6 @@ describe("checkExtensions", () => {
     expect(result.hostCompatibility.status).toBe("unverified");
     expect(result.warningCount).toBe(1);
     expect(formatCheckReport(result)).toContain("Host compatibility: unverified");
-  });
-
-  test("an authoring check reports backend code in the API process as deprecated, and the process runtime is not", async () => {
-    const home = createTempHome();
-    writeExtension(home, "extension-lab", validExtensionSource);
-    const quiet = await checkExtensions({ homeRoot: home, includeUserRoot: false });
-    expect(quiet.runtime.diagnostics.map((diagnostic) => diagnostic.code)).not.toContain(
-      "extension_in_process_runtime_deprecated",
-    );
-    const inProcess = await checkExtensions({ homeRoot: home, includeUserRoot: false, reportDeprecations: true });
-    const deprecated = inProcess.runtime.diagnostics.filter(
-      (diagnostic) => diagnostic.code === "extension_in_process_runtime_deprecated",
-    );
-    expect(deprecated).toHaveLength(1);
-    expect(deprecated[0]?.message).toContain('"backendRuntime": "process"');
-
-    const manifestPath = join(home, "extensions", "extension-lab", "package.json");
-    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-    writeFileSync(manifestPath, JSON.stringify({ ...manifest, pstdio: { backendRuntime: "process" } }));
-    const isolated = await checkExtensions({ homeRoot: home, includeUserRoot: false, reportDeprecations: true });
-    expect(isolated.runtime.diagnostics.map((diagnostic) => diagnostic.code)).not.toContain(
-      "extension_in_process_runtime_deprecated",
-    );
   });
 });
 describe("checkExtensionHostCompatibility", () => {

@@ -216,3 +216,23 @@ test("availability waits for process work started by its detection provider", as
     await Promise.all(children.map((child) => child.exited));
   }
 });
+
+test("detection reports a harness whose extension worker did not start without probing it", async () => {
+  const probe = createProbe();
+  let probed = false;
+  const detect = Object.assign(
+    async () => {
+      probed = true;
+      return { available: true };
+    },
+    {
+      [Symbol.for("pstdio.backendHandler.prepare")]: async () => {
+        throw new Error("Worker failed to load");
+      },
+    },
+  );
+  const detected = await detectHarness(probe.provider(detect), probe.context);
+  expect(detected).toMatchObject({ available: false });
+  expect(probed).toBe(false);
+  expect(probe.entries.at(-1)?.metadata).toMatchObject({ failure: "worker_start" });
+});

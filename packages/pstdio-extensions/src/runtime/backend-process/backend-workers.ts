@@ -1,118 +1,187 @@
-import { isDeepStrictEqual } from "node:util";
 import { isMainThread } from "node:worker_threads";
+import { finishRuntimeOperation, startRuntimeOperation } from "pstdio-diagnostics";
 import { readAcceptedRevision } from "../prepared-revision";
-import { createExtensionProcessEnvironment } from "../process-environment";
+import { createBackendWorkerEnvironment } from "../process-environment";
+import {
+  type DefinitionRevision,
+  definitionDigest,
+  forgetCachedDefinition,
+  readCachedDefinition,
+  writeCachedDefinition,
+} from "./definition-cache";
 import { backendWorkerCommand, createBackendWorkerPool } from "./pool";
-import { BackendUnavailableError, type BackendWorker, startBackendWorker } from "./supervisor";
+import { BackendUnavailableError } from "./protocol";
+import { type BackendWorker, startBackendWorker } from "./supervisor";
 
-type Revision = { entryPath: string; id: string };
-type Generation = { key: string; order: number; definition: Promise<unknown>; verified?: BackendWorker };
-type Source = { active?: Generation; candidate?: Generation };
+type Revision = DefinitionRevision & { manifest: { id: string } };
+type Generation = { key: string; digest: string; order: number; workerKey: string };
+type Source = { active?: Generation; candidate?: Generation; updating?: Promise<void> };
 
+const keyOf = (revision: DefinitionRevision) => `${revision.entryPath}#${revision.id}`;
 const entryOf = (key: string) => key.slice(0, key.lastIndexOf("#"));
-const pool = createBackendWorkerPool((key) => ({ env: createExtensionProcessEnvironment(), entryPath: entryOf(key) }));
+const pool = createBackendWorkerPool((key) => ({ env: createBackendWorkerEnvironment(), entryPath: entryOf(key) }));
 const sources = new Map<string, Source>();
-const reading = new Map<string, Promise<unknown>>();
 let updates = Promise.resolve();
 let closing: Promise<void> | undefined;
 let epoch = 0;
 let generationOrder = 0;
 
-const readDefinition = async (revision: Revision) => {
-  const worker = await startBackendWorker({
-    command: backendWorkerCommand(),
-    env: createExtensionProcessEnvironment(),
-    entryPath: revision.entryPath,
-  });
-  try {
-    return worker.definition;
-  } finally {
-    await worker.stop();
-  }
-};
+// Loads of the same revision that miss the cache together share one reading worker.
+const reading = new Map<string, Promise<unknown>>();
+const digests = new WeakMap<BackendWorker, string>();
+let definitionReads = 0;
 
-const readSharedDefinition = (key: string, revision: Revision) => {
-  const existing = reading.get(key);
-  if (existing) return existing;
-  const pending = readDefinition(revision).finally(() => reading.delete(key));
-  reading.set(key, pending);
-  return pending;
-};
+/** How many times a worker evaluated an entry only to report its definition. */
+export const readBackendDefinitionReadCount = () => definitionReads;
 
 const shutDown = () => new BackendUnavailableError("Extension backends were shut down.");
 const retired = () => new BackendUnavailableError("This extension backend generation was retired.");
 
-const adopt = (source: Source, generation: Generation, loadedIn: number, isRestored: () => Promise<boolean>) => {
-  const update = updates.then(async () => {
-    if (loadedIn !== epoch || closing) throw shutDown();
-    const previous = source.active;
-    if (previous === generation) return;
-    // Inspecting a candidate does not supersede a published definition, even before its first call.
-    if (previous && previous.order > generation.order) {
-      // The catalog can reuse a cached definition when a reload restores the same content.
-      if (!(await isRestored())) throw retired();
-      if (loadedIn !== epoch || closing) throw shutDown();
-      generation.order = ++generationOrder;
-    }
-    source.active = generation;
-    if (previous && ![...sources.values()].some((current) => current.active?.key === previous.key)) {
-      await pool.retire(previous.key);
-    }
+const assertOpen = (loadedIn: number) => {
+  if (loadedIn !== epoch || closing) throw shutDown();
+};
+
+const updateSource = (source: Source, work: () => Promise<void>) => {
+  const update = updates.then(work).finally(() => {
+    if (source.updating === update) source.updating = undefined;
   });
+  source.updating = update;
   updates = update.catch(() => {});
   return update;
 };
 
-/** Inspect contributions without adopting a candidate or keeping a check-only process alive. */
-export const acquireBackendWorker = async (packagePath: string, revision: Revision, definitionOnly = false) => {
-  if (definitionOnly || !isMainThread) {
+const sameDefinition = (a: Generation | undefined, b: Pick<Generation, "key" | "digest">) =>
+  a?.key === b.key && a.digest === b.digest;
+
+const workerIsShared = (source: Source, workerKey: string) =>
+  [...sources.values()].some((other) => other !== source && other.active?.workerKey === workerKey);
+
+const adoptGeneration = async (
+  source: Source,
+  generation: Generation,
+  loadedIn: number,
+  isRestored: () => Promise<boolean>,
+) => {
+  if (!source.updating && sameDefinition(source.active, generation)) return;
+  await updateSource(source, async () => {
+    assertOpen(loadedIn);
+    const previous = source.active;
+    if (sameDefinition(previous, generation)) return;
+    // A candidate cannot replace the active worker until the host uses its handler.
+    if (previous && previous.order > generation.order) {
+      if (previous.key === generation.key || !(await isRestored())) throw retired();
+      assertOpen(loadedIn);
+      generation.order = ++generationOrder;
+    }
+    if (previous && previous.workerKey !== generation.workerKey && !workerIsShared(source, previous.workerKey)) {
+      await pool.retire(previous.workerKey);
+      assertOpen(loadedIn);
+    }
+    source.active = generation;
+  });
+};
+
+/** Evaluates the entry in a short-lived worker that stops as soon as it has reported its definition. */
+const readDefinition = async (revision: Revision) => {
+  const started = startRuntimeOperation("extension.backend.definition", { extensionId: revision.manifest.id });
+  definitionReads += 1;
+  let failed = true;
+  try {
+    const worker = await startBackendWorker({
+      command: backendWorkerCommand(),
+      env: createBackendWorkerEnvironment(),
+      entryPath: revision.entryPath,
+    });
+    await worker.stop();
+    writeCachedDefinition(revision, worker.definition);
+    failed = false;
+    return worker.definition;
+  } finally {
+    finishRuntimeOperation(started, { failed });
+  }
+};
+
+const cachedOrRead = (revision: Revision) => {
+  const cached = readCachedDefinition(revision);
+  if (cached) return Promise.resolve(cached.definition);
+  const pending = reading.get(revision.id);
+  if (pending) return pending;
+  const read = readDefinition(revision).finally(() => reading.delete(revision.id));
+  reading.set(revision.id, read);
+  return read;
+};
+
+const acquireMatching = async (source: Source, generation: Generation, revision: Revision, loadedIn: number) => {
+  const { workerKey, digest } = generation;
+  const assertActive = () => {
+    assertOpen(loadedIn);
+    if (!sameDefinition(source.active, generation) || source.active?.workerKey !== workerKey) throw retired();
+  };
+  assertActive();
+  const worker = await pool.acquire(workerKey);
+  assertActive();
+  let reported = digests.get(worker);
+  if (reported === undefined) {
+    reported = definitionDigest(worker.definition);
+    digests.set(worker, reported);
+  }
+  if (reported === digest) return worker;
+  // The entry reports a different definition each time it loads. The next load reads it again.
+  forgetCachedDefinition(revision.id);
+  await pool.retire(workerKey);
+  throw new BackendUnavailableError(
+    "The extension reported a different definition than when it was loaded. Reload the extension.",
+  );
+};
+
+/**
+ * Returns the definition a source generation reports and a way to reach its worker. The
+ * definition comes from the revision's cache when it can be trusted, so no worker starts until
+ * a handler runs. Every call asks the pool again, so a worker that crashed is replaced by the next
+ * call, never by a restart loop.
+ */
+export const loadBackendDefinition = async (packagePath: string, revision: Revision, definitionOnly = false) => {
+  // Source checks run in preparation threads. They only need the reported data.
+  if (definitionOnly || !isMainThread)
     return {
-      definition: await readDefinition(revision),
+      definition: await cachedOrRead(revision),
       acquire: () => Promise.reject(new BackendUnavailableError("Backend handlers are unavailable during inspection.")),
     };
-  }
-  if (closing) throw shutDown();
   const loadedIn = epoch;
-  const key = `${revision.entryPath}#${revision.id}`;
+  assertOpen(loadedIn);
+  const key = keyOf(revision);
+  const order = ++generationOrder;
   const source = sources.get(packagePath) ?? {};
   sources.set(packagePath, source);
-  const existing = [source.active, source.candidate].find((generation) => generation?.key === key);
-  const generation: Generation = existing ?? {
-    key,
-    order: ++generationOrder,
-    definition: readSharedDefinition(key, revision),
-  };
-  source.candidate = generation;
-  let definition: unknown;
-  try {
-    definition = await generation.definition;
-  } catch (error) {
-    if (source.candidate === generation) source.candidate = undefined;
-    throw error;
-  }
-  if (loadedIn !== epoch || closing) throw shutDown();
-
-  // The host only invokes handlers from accepted contributions. Until then the previous backend keeps running.
+  const definition = await cachedOrRead(revision);
+  assertOpen(loadedIn);
+  const digest = definitionDigest(definition);
+  const existing = [source.active, source.candidate].find((known) => sameDefinition(known, { key, digest }));
+  const generation = existing ?? { key, digest, order, workerKey: key };
+  if (!source.candidate || source.candidate.order < generation.order) source.candidate = generation;
   const acquire = async () => {
-    await adopt(source, generation, loadedIn, async () => {
+    await adoptGeneration(source, generation, loadedIn, async () => {
       return (await readAcceptedRevision(packagePath))?.id === revision.id;
     });
-    const assertActive = () => {
-      if (loadedIn !== epoch || closing) throw shutDown();
-      if (source.active !== generation) throw retired();
-    };
-    assertActive();
-    const worker = await pool.acquire(key);
-    assertActive();
-    if (generation.verified !== worker) {
-      if (!isDeepStrictEqual(worker.definition, definition)) {
-        throw new BackendUnavailableError("The worker reported a different extension definition.");
-      }
-      generation.verified = worker;
-    }
-    return worker;
+    return acquireMatching(source, generation, revision, loadedIn);
   };
   return { definition, acquire };
+};
+
+/** Give a reloaded folder fresh worker state for its unchanged active generation. */
+export const restartBackendWorker = async (packagePath: string, revision: DefinitionRevision) => {
+  const source = sources.get(packagePath);
+  if (!source) return;
+  await updateSource(source, async () => {
+    const active = source.active;
+    if (!active || active.key !== keyOf(revision)) return;
+    if (workerIsShared(source, active.workerKey)) {
+      // Other folders still need the shared worker. Start a separate one for this folder on demand.
+      active.workerKey = `${active.key}.${++generationOrder}`;
+      return;
+    }
+    await pool.retire(active.workerKey);
+  });
 };
 
 export const closeBackendWorkers = () => {

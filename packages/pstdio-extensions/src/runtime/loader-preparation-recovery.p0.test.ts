@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { loadExtensionPackage } from "./loader";
 import {
   configureExtensionPreparationWorker,
@@ -46,7 +47,7 @@ test("temporary preparation admission failure rejects a load and the unchanged s
     await entered.promise;
     for (let index = 0; index < 128; index++)
       queued.push(runExtensionPreparation("value", { name: String(index) }).catch((error) => error));
-    await expect(loadExtensionPackage({ path: source }, [])).rejects.toThrow("queue is full");
+    await expectRejection(loadExtensionPackage({ path: source }, [])).toThrow("queue is full");
     release.resolve();
     await Promise.all([held, ...queued]);
     configureExtensionPreparationWorker(() => new Worker(new URL("./preparation-worker.ts", import.meta.url)));

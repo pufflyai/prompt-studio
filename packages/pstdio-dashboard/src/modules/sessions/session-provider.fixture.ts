@@ -3,7 +3,7 @@ import { type ExtensionContextBase, type NavigationTarget, sessionBrowserId } fr
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { registerWorkbenchExtensionContributions } from "@pstdio/workbench/extensions";
-import { loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
+import { loadExtensionSources, markHostContext, normalizeExtensionSources } from "pstdio-extensions";
 import { createWorkbenchExtensionMetadata } from "pstdio-extensions/workbench";
 import { buildDashboardWorkbenchWhenExpression } from "@/shared/extensions/workbench-extension-contributions";
 
@@ -51,21 +51,24 @@ export const registerSessionProvider = (
     createMenuWhenExpression: (contribution) => buildDashboardWorkbenchWhenExpression(contribution.when),
     async executeCommand(commandId, body) {
       const navigationRequests: NavigationTarget[] = [];
-      const ctx = makeCommandContext({
-        storage,
-        params: body.params ?? {},
-        overrides: {
-          projectId: input.projectId ?? "project-1",
-          resource: body.resource,
-          sessions: input.sessions,
-          resources: input.resources,
-          navigation: {
-            open: (target) => {
-              navigationRequests.push(target);
+      // Handlers run in extension workers, which give a host-marked ctx its surface.
+      const ctx = markHostContext(
+        makeCommandContext({
+          storage,
+          params: body.params ?? {},
+          overrides: {
+            projectId: input.projectId ?? "project-1",
+            resource: body.resource,
+            sessions: input.sessions,
+            resources: input.resources,
+            navigation: {
+              open: (target) => {
+                navigationRequests.push(target);
+              },
             },
           },
-        },
-      });
+        }),
+      );
       const command = runtime.commands.find((item) => item.id === commandId);
       const handler = runtime.privateHandlers.find((item) => item.id === commandId);
       const value = command

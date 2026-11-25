@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { Worker } from "node:worker_threads";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { createPreparationClient } from "./preparation-client";
 
 const clients: ReturnType<typeof createPreparationClient>[] = [];
@@ -200,7 +201,7 @@ test("two execution owners share one 128-job waiting bound", async () => {
     client.run("value", { name: `queued-${i}` }, { resources: [`queued-${i}`] }),
   );
   try {
-    await expect(client.run("value", { name: "overflow" })).rejects.toMatchObject({
+    await expectRejection(client.run("value", { name: "overflow" })).toMatchObject({
       code: "extension_preparation_unavailable",
     });
     a.release.resolve();
