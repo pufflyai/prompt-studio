@@ -118,7 +118,7 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
       });
       adopted = result.loaded.preparedRevision;
     }
-    // Unchanged source keeps its generation, so a reload stops its worker to give fresh module state.
+    // An unchanged revision still needs fresh module state for the reloaded source.
     if (adopted && previous?.id === adopted.id) await restartBackendWorker(existing.source_path, adopted);
     await deps.notifyInstalledSourcesChanged(existing.source_path, { loaded: result.loaded, loadKey });
     const refreshed = await deps.installedExtensionSourcesService.get(existing.id);

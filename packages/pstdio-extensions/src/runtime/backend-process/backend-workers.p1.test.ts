@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { preparationHostIdentity } from "../prepared-revision";
-import { closeBackendWorkers, loadBackendDefinition } from "./backend-workers";
+import { closeBackendWorkers, loadBackendDefinition, restartBackendWorker } from "./backend-workers";
 import { HANDLER_MARKER } from "./protocol";
 
 const roots: string[] = [];
@@ -65,6 +65,66 @@ test("a different folder keeps its shared worker when the first folder adopts a 
   expect(await next(second)).toBe(3);
   const stale = await first.acquire().catch((error) => error);
   expect(stale).toMatchObject({ code: "backend_unavailable" });
+});
+
+test("reloading unchanged source starts it fresh without restarting a worker another folder uses", async () => {
+  const { root, revision } = await fixture();
+  const shared = await revision("shared");
+  const firstPath = join(root, "first");
+  const first = await loadBackendDefinition(firstPath, shared);
+  const second = await loadBackendDefinition(join(root, "second"), shared);
+  expect(await next(first)).toBe(1);
+  expect(await next(second)).toBe(2);
+  const sharedWorker = await second.acquire();
+  expect(await first.acquire()).toBe(sharedWorker);
+
+  await restartBackendWorker(firstPath, shared);
+  expect(await next(second)).toBe(3);
+  expect(await second.acquire()).toBe(sharedWorker);
+  expect(await next(first)).toBe(1);
+  const reloadedWorker = await first.acquire();
+  expect(reloadedWorker).not.toBe(sharedWorker);
+
+  const replacement = await loadBackendDefinition(firstPath, await revision("replacement"));
+  expect(await next(replacement)).toBe(1);
+  await reloadedWorker.exited;
+  expect(await next(second)).toBe(4);
+});
+
+test("a shared worker starting during reload cannot answer for the reloaded folder", async () => {
+  const { root, revision } = await fixture();
+  const gate = join(root, "hold-worker");
+  const entered = join(root, "worker-starting");
+  const shared = await revision(
+    "shared",
+    `
+    import { existsSync } from "node:fs";
+    if (existsSync(${JSON.stringify(gate)})) {
+      await Bun.write(${JSON.stringify(entered)}, "");
+      while (existsSync(${JSON.stringify(gate)})) await Bun.sleep(10);
+    }
+    export default { next: () => ++calls };
+    `,
+  );
+  const firstPath = join(root, "first");
+  const first = await loadBackendDefinition(firstPath, shared);
+  const second = await loadBackendDefinition(join(root, "second"), shared);
+  expect(await next(first)).toBe(1);
+  expect(await next(second)).toBe(2);
+  await (await first.acquire()).stop();
+
+  await writeFile(gate, "");
+  const stale = first.acquire().catch((error: unknown) => error);
+  try {
+    for (let attempt = 0; !(await Bun.file(entered).exists()) && attempt < 100; attempt++) await Bun.sleep(10);
+    expect(await Bun.file(entered).exists()).toBe(true);
+    await restartBackendWorker(firstPath, shared);
+  } finally {
+    await rm(gate, { force: true });
+  }
+  expect(await stale).toMatchObject({ code: "backend_unavailable" });
+  expect(await next(second)).toBe(1);
+  expect(await next(first)).toBe(1);
 });
 
 test("queued and retained handlers start no worker during or after a shared shutdown", async () => {

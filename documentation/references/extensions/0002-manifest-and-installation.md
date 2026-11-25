@@ -205,12 +205,13 @@ process isolation model is in [ADR 0058](../../adrs/0058-isolate-extension-backe
 
 ### Process runtime
 
-The host never imports an extension entry. A private worker process evaluates it, and one worker
-serves every project that enables the same content revision. Commands, middleware, private handlers,
-hooks, schedules, harnesses and providers run in the worker, so a slow or CPU-heavy handler no longer
-blocks the workbench. Module state belongs to the worker: the host never shares it, and a worker
-that stops or crashes starts again with fresh module state. Reloading an extension stops its worker
-even when the source is unchanged, so the next call also starts with fresh module state.
+The host never imports an extension entry. A private worker process evaluates it. Projects that
+enable the same source use the same worker, and identical sources can share a worker. Commands,
+middleware, private handlers, hooks, schedules, harnesses and providers run in the worker, so a slow
+or CPU-heavy handler no longer blocks the workbench. Module state belongs to the worker: the host
+never shares it, and a worker that stops or crashes starts again with fresh module state. After a
+reload, the next call for that source starts with fresh module state even if the source is unchanged.
+A worker serving another source keeps running.
 
 The host reads an entry's contributions once per prepared revision. A short-lived worker evaluates
 the entry, reports its definition and stops, and the host stores that definition with the revision.

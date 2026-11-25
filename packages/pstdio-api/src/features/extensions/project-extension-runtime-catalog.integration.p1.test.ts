@@ -208,7 +208,7 @@ describe("project extension runtime snapshot integration", () => {
     expect(await count()).toBe(1);
   });
 
-  test("reloading one changed folder leaves the shared worker available to another folder", async () => {
+  test("reloading one folder leaves the shared worker available to another folder", async () => {
     const body = `let calls = 0;
       export default { commands: [{ id: "ping", ref: { kind: "command", id: "ping" }, title: "Ping",
         run: () => ++calls }] };`;
@@ -226,10 +226,14 @@ describe("project extension runtime snapshot integration", () => {
     const [{ run }] = loaded!.definition.commands!;
     expect(await run({} as never, {})).toBe(2);
 
+    await handle.deps.extensionService.reloadInstalledSourceBySourcePath(sourcePath);
+    expect(await run({} as never, {})).toBe(3);
+    expect((await createJson(commandPath, { params: {} })).outcome.value).toBe(1);
+
     writeExtension(tempRoot, "Ping v2");
     await handle.deps.extensionService.reloadInstalledSourceBySourcePath(sourcePath);
     expect((await createJson(commandPath, { params: {} })).outcome.value).toEqual({ ok: true });
-    expect(await run({} as never, {})).toBe(3);
+    expect(await run({} as never, {})).toBe(4);
   });
 
   test("reload replaces the cached runtime wrappers after a definition mismatch", async () => {

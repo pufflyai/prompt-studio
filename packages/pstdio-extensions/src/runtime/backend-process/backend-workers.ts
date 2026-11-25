@@ -14,7 +14,7 @@ import { BackendUnavailableError } from "./protocol";
 import { type BackendWorker, startBackendWorker } from "./supervisor";
 
 type Revision = DefinitionRevision & { manifest: { id: string } };
-type Generation = { key: string; digest: string; order: number };
+type Generation = { key: string; digest: string; order: number; workerKey: string };
 type Source = { active?: Generation; candidate?: Generation; updating?: Promise<void> };
 
 const keyOf = (revision: DefinitionRevision) => `${revision.entryPath}#${revision.id}`;
@@ -53,6 +53,9 @@ const updateSource = (source: Source, work: () => Promise<void>) => {
 const sameDefinition = (a: Generation | undefined, b: Pick<Generation, "key" | "digest">) =>
   a?.key === b.key && a.digest === b.digest;
 
+const workerIsShared = (source: Source, workerKey: string) =>
+  [...sources.values()].some((other) => other !== source && other.active?.workerKey === workerKey);
+
 const adoptGeneration = async (
   source: Source,
   generation: Generation,
@@ -70,12 +73,8 @@ const adoptGeneration = async (
       assertOpen(loadedIn);
       generation.order = ++generationOrder;
     }
-    if (
-      previous &&
-      previous.key !== generation.key &&
-      ![...sources.values()].some((other) => other !== source && other.active?.key === previous.key)
-    ) {
-      await pool.retire(previous.key);
+    if (previous && previous.workerKey !== generation.workerKey && !workerIsShared(source, previous.workerKey)) {
+      await pool.retire(previous.workerKey);
       assertOpen(loadedIn);
     }
     source.active = generation;
@@ -113,13 +112,13 @@ const cachedOrRead = (revision: Revision) => {
 };
 
 const acquireMatching = async (source: Source, generation: Generation, revision: Revision, loadedIn: number) => {
-  const { key, digest } = generation;
+  const { workerKey, digest } = generation;
   const assertActive = () => {
     assertOpen(loadedIn);
-    if (!sameDefinition(source.active, generation)) throw retired();
+    if (!sameDefinition(source.active, generation) || source.active?.workerKey !== workerKey) throw retired();
   };
   assertActive();
-  const worker = await pool.acquire(key);
+  const worker = await pool.acquire(workerKey);
   assertActive();
   let reported = digests.get(worker);
   if (reported === undefined) {
@@ -129,7 +128,7 @@ const acquireMatching = async (source: Source, generation: Generation, revision:
   if (reported === digest) return worker;
   // The entry reports a different definition each time it loads. The next load reads it again.
   forgetCachedDefinition(revision.id);
-  await pool.retire(key);
+  await pool.retire(workerKey);
   throw new BackendUnavailableError(
     "The extension reported a different definition than when it was loaded. Reload the extension.",
   );
@@ -158,7 +157,7 @@ export const loadBackendDefinition = async (packagePath: string, revision: Revis
   assertOpen(loadedIn);
   const digest = definitionDigest(definition);
   const existing = [source.active, source.candidate].find((known) => sameDefinition(known, { key, digest }));
-  const generation = existing ?? { key, digest, order };
+  const generation = existing ?? { key, digest, order, workerKey: key };
   if (!source.candidate || source.candidate.order < generation.order) source.candidate = generation;
   const acquire = async () => {
     await adoptGeneration(source, generation, loadedIn, async () => {
@@ -169,13 +168,19 @@ export const loadBackendDefinition = async (packagePath: string, revision: Revis
   return { definition, acquire };
 };
 
-/** Restarts the worker only if this unchanged revision is still the folder's active generation. */
+/** Give a reloaded folder fresh worker state for its unchanged active generation. */
 export const restartBackendWorker = async (packagePath: string, revision: DefinitionRevision) => {
   const source = sources.get(packagePath);
   if (!source) return;
   await updateSource(source, async () => {
-    const key = keyOf(revision);
-    if (source.active?.key === key) await pool.retire(key);
+    const active = source.active;
+    if (!active || active.key !== keyOf(revision)) return;
+    if (workerIsShared(source, active.workerKey)) {
+      // Other folders still need the shared worker. Start a separate one for this folder on demand.
+      active.workerKey = `${active.key}.${++generationOrder}`;
+      return;
+    }
+    await pool.retire(active.workerKey);
   });
 };
 
