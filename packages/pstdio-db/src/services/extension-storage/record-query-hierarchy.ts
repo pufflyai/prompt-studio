@@ -26,7 +26,7 @@ export const recordHierarchySql = (
     FROM lineage CROSS JOIN LATERAL (
       SELECT ${field(hierarchy.idField, "hierarchy_ancestor")} AS id, ${field(hierarchy.parentField, "hierarchy_ancestor")} AS parent,
         ${field(hierarchy.labelField, "hierarchy_ancestor")} AS label, ${ancestor}.record_id
-      FROM storage_current_records AS ${ancestor}
+      FROM records AS ${ancestor}
       WHERE lineage.parent IS NOT NULL AND lineage.parent <> 'null'::jsonb
         AND ${scope("hierarchy_ancestor")} AND ${equal(hierarchy.idField, field(hierarchy.idField, "hierarchy_ancestor"), sql`lineage.parent`)}
       ORDER BY ${ancestor}.record_id COLLATE "C" LIMIT 1

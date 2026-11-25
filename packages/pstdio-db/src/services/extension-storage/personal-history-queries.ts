@@ -7,8 +7,8 @@ import { storage_personal_history as history } from "../../db/schemas.pg";
 import { pageBoundary, pageLimit, queryPage } from "../query-page";
 import { decodeSessionQueryCursor } from "../sessions/session-query";
 import { sessionAnchorCondition, workspaceAnchorCondition } from "../sessions/workspace-anchor-query";
-
 import { personalAnchorCondition, personalWorkspaceSessionCondition } from "./personal-history-anchor-query";
+import { storageOwnerKey } from "./storage-owner-key";
 
 type Login = { accountId: string; deviceId: string };
 type Row = Record<string, unknown> & {
@@ -26,8 +26,7 @@ const order = (input: ExtensionSessionQuery) => {
 };
 const ownerWhere = (owner: StorageOwner, login: Login, kind: string) =>
   and(
-    eq(history.workbench_id, owner.workbenchId),
-    eq(history.extension_id, owner.extensionId),
+    eq(history.owner_id, storageOwnerKey(owner)),
     eq(history.kind, kind),
     isNotNull(history.value),
     sql`${history.value}->'device'->>'ownerId' = ${login.accountId}`,
@@ -46,8 +45,8 @@ const sessionConditions = (owner: StorageOwner, login: Login, input: ExtensionSe
   if (input.createdTo) conditions.push(sql`${field("created_at")} <= ${new Date(input.createdTo).toISOString()}`);
   if (input.updatedFrom) conditions.push(sql`${field("updated_at")} >= ${new Date(input.updatedFrom).toISOString()}`);
   if (input.workspaceId)
-    conditions.push(sql`exists (select 1 from storage_personal_history links where
-    links.workbench_id = ${owner.workbenchId} and links.extension_id = ${owner.extensionId} and links.kind = 'workspace_sessions'
+    conditions.push(sql`exists (select 1 from history_rows links where
+    links.owner_id = ${storageOwnerKey(owner)} and links.kind = 'workspace_sessions'
     and links.value->'device'->>'ownerId' = ${login.accountId} and links.value->'device'->>'id' <> ${login.deviceId}
     and links.value->>'workspace_id' = ${input.workspaceId} and links.value->>'session_id' = ${field("id")})`);
   if (input.anchor)

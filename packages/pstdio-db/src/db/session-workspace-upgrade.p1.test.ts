@@ -4,14 +4,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/pglite/migrator";
+import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
 import { createProjectsDBService } from "../services/projects/projects";
+import { resourceLinkQuery } from "../services/resource-link-rows";
 import { createSessionsDBService } from "../services/sessions/sessions";
 import { createWorkspaceSessionsDBService } from "../services/workspace-sessions/workspace-sessions";
 import { createWorkspacesDBService } from "../services/workspaces/workspaces";
 import { createDb } from "./connection.pglite";
 import { restoreReleasedPreferenceTables } from "./preference-upgrade.fixture";
 import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
-import { resource_anchors, sessions } from "./schemas.pg";
+import { prepareResourceLinkOwnerUpgrade } from "./resource-link-owner-upgrade";
+import { resource_links, sessions } from "./schemas.pg";
 import { prepareSessionWorkspaceUpgrade } from "./session-workspace-upgrade";
 
 for (const interruption of ["normal", "schema", "partial"])
@@ -51,14 +54,16 @@ for (const interruption of ["normal", "schema", "partial"])
         role: "context" as const,
         details: { type: "workspace", id: second.id, label: "My saved context", shorthand: "Custom" },
       };
-      await store.db.insert(resource_anchors).values([
-        savedContext,
+      const coreId = await ensureStorageOwner(store.db, { workbenchId: project.id, extensionId: "pstdio" });
+      const targetId = await ensureStorageOwner(store.db, { workbenchId: project.id, extensionId: "example" });
+      const { project_id: _project, ...savedFields } = savedContext;
+      await store.db.insert(resource_links).values([
+        { ...savedFields, source_owner: coreId, target_owner: coreId },
         {
-          project_id: project.id,
-          source_owner: "pstdio",
+          source_owner: coreId,
           source_kind: "workspace",
           source_id: second.id,
-          target_owner: "example",
+          target_owner: targetId,
           target_kind: "ticket",
           target_id: "ticket",
           role: "context",
@@ -83,6 +88,7 @@ for (const interruption of ["normal", "schema", "partial"])
       ).rows;
       if (interruption !== "normal") {
         await prepareSessionWorkspaceUpgrade(store.db, path);
+        await prepareResourceLinkOwnerUpgrade(store.db, path);
         await prepareProjectExtensionsUpgrade(store.db, store.path);
         await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
         if (interruption === "partial")
@@ -100,9 +106,9 @@ for (const interruption of ["normal", "schema", "partial"])
       expect(await links.listSessionLinks("session-000")).toEqual([
         { id: "session-000", session_id: "session-000", workspace_id: first.id, created_at: stamp },
       ]);
-      expect(
-        await store.db.select().from(resource_anchors).where(eq(resource_anchors.source_id, "session-000")),
-      ).toContainEqual(savedContext);
+      expect(await resourceLinkQuery(store.db).where(eq(resource_links.source_id, "session-000"))).toContainEqual(
+        savedContext,
+      );
       const context = await sessionService.query(project.id, {
         anchor: { projectId: project.id, extensionId: "example", type: "ticket", id: "ticket" },
         includeWorkspaceAnchors: true,
@@ -115,13 +121,13 @@ for (const interruption of ["normal", "schema", "partial"])
         .map((line) => JSON.parse(line));
       expect(exported).toEqual(originalLinks);
       const mtime = (await stat(archive)).mtimeMs;
-      const count = (await store.db.select().from(resource_anchors)).length;
+      const count = (await store.db.select().from(resource_links)).length;
       await store.close();
       store = await createDb({ path });
       expect((await createWorkspaceSessionsDBService(store.db).getWorkspaceBySessionId("session-000"))?.id).toBe(
         first.id,
       );
-      expect((await store.db.select().from(resource_anchors)).length).toBe(count);
+      expect((await store.db.select().from(resource_links)).length).toBe(count);
       expect((await stat(archive)).mtimeMs).toBe(mtime);
     } finally {
       await store?.close();

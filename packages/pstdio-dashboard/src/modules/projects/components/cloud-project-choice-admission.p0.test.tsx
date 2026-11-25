@@ -918,6 +918,7 @@ test("local removal on another device still blocks account-wide Cloud deletion",
       "pending Cloud change",
     );
     const key = cloudCatalogKeyFor(account.managerOrigin, account.accountId, device.id);
+    await act(async () => until(() => Boolean(client.getQueryData(key))));
     const replacementCatalog = client.getQueryData(key);
     await act(async () => {
       releaseRemoval.resolve();

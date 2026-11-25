@@ -25,7 +25,7 @@ import {
 import type { UpdateEnvelope } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import { createDb } from "../../db/connection.pglite";
-import { projects, storage_ordered_owners } from "../../db/schemas.pg";
+import { projects, owners as storage_ordered_owners } from "../../db/schemas.pg";
 import { dataMigrationContext } from "./data-migration-context";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createAssets, createRelay } from "./record-stream-relay.fixture";

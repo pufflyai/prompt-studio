@@ -205,6 +205,7 @@ export const createPackagedSyncPeer = (
     },
     ...documentStore,
     setEarlyAccess: identity.setEarlyAccess,
+    setMicrosoftSignIn: identity.setMicrosoftSignIn,
     blobContents: blobs.contents,
     /** Every successful blob read, in order, with the device that read it. */
     blobReads: blobs.served,

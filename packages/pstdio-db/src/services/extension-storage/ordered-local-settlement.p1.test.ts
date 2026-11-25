@@ -7,12 +7,8 @@ import { createSyncSpace } from "pstdio-sync/encryption";
 import { createRecordStreamSync } from "pstdio-sync/relay";
 import * as Y from "yjs";
 import { createDb } from "../../db/connection.pglite";
-import {
-  projects,
-  storage_ordered_operations,
-  storage_ordered_touches,
-  storage_record_sync,
-} from "../../db/schemas.pg";
+import { projects, storage_ordered_operations, owners as streamOwners } from "../../db/schemas.pg";
+import { readNativeRoomHistory } from "./document-history.fixture";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createAssets, createRelay } from "./record-stream-relay.fixture";
 
@@ -110,8 +106,8 @@ test("pending progress isolates every project and extension including unrelated 
   expect(await localStream.pending()).toBe(true);
   // A historical cursor belongs only to its own project/extension, like canonical and pending rows.
   await first.db
-    .insert(storage_record_sync)
-    .values({ workbench_id: otherProjectId, extension_id: "example.legacy", joined: true });
+    .insert(streamOwners)
+    .values({ project_id: otherProjectId, extension_id: "example.legacy", joined: true });
   expect(await localStream.pending()).toBe(true);
   expect(await empty.pending()).toBe(false);
   expect(await crossProject.pending()).toBe(false);
@@ -156,7 +152,7 @@ test("never-joined saves settle immediately without retaining envelopes; exact r
   expect(
     await first.db.select().from(storage_ordered_operations).where(isNotNull(storage_ordered_operations.envelope)),
   ).toEqual([]);
-  expect(await first.db.select().from(storage_ordered_touches)).toEqual([]);
+  expect((await first.db.select().from(storage_ordered_operations)).flatMap((row) => row.touches)).toEqual([]);
   expect(await first.records.commit(initial)).toMatchObject({ state: "saved-locally" });
   await expect(
     first.records.commit({ ...initial, edits: [{ recordId: "card", replace: { count: -1 } }] }),
@@ -174,6 +170,32 @@ test("never-joined saves settle immediately without retaining envelopes; exact r
   expect(
     await first.db.select().from(storage_ordered_operations).where(isNotNull(storage_ordered_operations.envelope)),
   ).toHaveLength(1);
+});
+
+test("concurrent authored saves enter project work in order and own their captured inputs", async () => {
+  const [first] = await peers(":memory:", true);
+  const gate = Promise.withResolvers<void>();
+  const leases: string[] = [];
+  const service = createDocumentStorageDBService(first.db, undefined, undefined, async (id, work) => {
+    leases.push(id);
+    await gate.promise;
+    return work();
+  });
+  const records = service.open({ owner: first.owner }).records;
+  const value = { count: 1 };
+  const create = records.commit({ operationId: "create", edits: [{ recordId: "card", replace: value }] });
+  const update = records.commit({
+    operationId: "update",
+    edits: [{ recordId: "card", set: { "/label": "kept" } }],
+  });
+  const admitted = [...leases];
+  value.count = -1;
+  gate.resolve();
+
+  await Promise.all([create, update]);
+  expect(admitted).toEqual([first.owner.workbenchId, first.owner.workbenchId]);
+  expect((await records.read("card")).value).toEqual({ count: 1, label: "kept" });
+  await service.flushStatistics();
 });
 
 test("first adoption submits the local canonical records unconditionally after the remote tail", async () => {
@@ -363,8 +385,7 @@ for (const remoteDeleted of [false, true]) {
         await expect(native.applySource(editor, { generation: old.generation })).rejects.toMatchObject({
           code: "native_source_recovery",
         });
-        const { native_document_rooms } = await import("../../db/schemas.pg");
-        const recovered = await second.db.select().from(native_document_rooms);
+        const recovered = await readNativeRoomHistory(second.db);
         expect(recovered.some((room) => room.document_key === key)).toBe(true);
         expect(await native.read()).toBe("equal");
       } else {
@@ -413,9 +434,8 @@ test("refusing a delayed first-join text save preserves its captured native line
   await first.records.commit({ operationId: "retire-before-upload", edits: [{ recordId: "card", deleted: true }] });
   await first.sync.synchronize();
   await second.sync.synchronize();
-  const { native_document_rooms } = await import("../../db/schemas.pg");
   const privateText: string[] = [];
-  for (const room of await second.db.select().from(native_document_rooms)) {
+  for (const room of await readNativeRoomHistory(second.db)) {
     if (room.document_key !== key) continue;
     const copy = new Y.Doc();
     try {

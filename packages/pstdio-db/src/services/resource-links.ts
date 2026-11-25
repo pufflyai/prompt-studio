@@ -1,33 +1,47 @@
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 import type { ResourceAnchor, ResourceRef, ResourceRole } from "pstdio-api-contracts/extension-kernel";
 import type { DbClient } from "../db/connection.pglite";
-import { resource_anchors as edges } from "../db/schemas/resource-anchors";
+import { resource_links as edges } from "../db/schemas/resource-links";
+import { ensureStorageOwner, storageOwnerKey } from "./extension-storage/storage-owner-key";
 import { queryRelatedResources } from "./related-resource-query";
+import {
+  type ResourceLinkRow,
+  resolveResourceLinkRows,
+  resourceLinkQuery,
+  sourceOwner,
+  targetOwner,
+} from "./resource-link-rows";
 import { lockResourceLinkSource } from "./resource-link-source";
 
 type Database = Pick<DbClient, "select" | "insert" | "delete" | "update" | "transaction" | "execute">;
 export type CanonicalResource = ResourceRef & { projectId: string; extensionId: string };
-type Edge = typeof edges.$inferSelect;
+type Edge = ResourceLinkRow;
 
 const sourceMatch = (ref: CanonicalResource, ids?: string[]) =>
   and(
-    eq(edges.project_id, ref.projectId),
-    eq(edges.source_owner, ref.extensionId),
+    eq(edges.source_owner, storageOwnerKey({ workbenchId: ref.projectId, extensionId: ref.extensionId })),
     eq(edges.source_kind, ref.type),
     ids ? inArray(edges.source_id, ids) : eq(edges.source_id, ref.id),
   );
 const targetMatch = (ref: CanonicalResource, ids?: string[]) =>
   and(
-    eq(edges.project_id, ref.projectId),
-    eq(edges.target_owner, ref.extensionId),
+    eq(edges.target_owner, storageOwnerKey({ workbenchId: ref.projectId, extensionId: ref.extensionId })),
     eq(edges.target_kind, ref.type),
     ids ? inArray(edges.target_id, ids) : eq(edges.target_id, ref.id),
   );
-const keyColumns = [
+const physicalKeyColumns = [
   edges.source_owner,
   edges.source_kind,
   edges.source_id,
   edges.target_owner,
+  edges.target_kind,
+  edges.target_id,
+];
+const keyColumns = [
+  sourceOwner.extension_id,
+  edges.source_kind,
+  edges.source_id,
+  targetOwner.extension_id,
   edges.target_kind,
   edges.target_id,
 ];
@@ -68,16 +82,17 @@ export const writeResourceLinks = async (
   details = anchors,
 ) => {
   const rows = new Map<string, typeof edges.$inferInsert>();
+  if (!anchors.length) return [];
+  const sourceId = await ensureStorageOwner(db, { workbenchId: resource.projectId, extensionId: resource.extensionId });
   for (const [position, anchor] of anchors.entries()) {
     if (anchor.projectId && anchor.projectId !== resource.projectId)
       throw new Error("Resource belongs to another project.");
     if (!anchor.extensionId) throw new Error("Resource owner is required.");
     rows.set(JSON.stringify([anchor.extensionId, anchor.type, anchor.id]), {
-      project_id: resource.projectId,
-      source_owner: resource.extensionId,
+      source_owner: sourceId,
       source_kind: resource.type,
       source_id: resource.id,
-      target_owner: anchor.extensionId,
+      target_owner: await ensureStorageOwner(db, { workbenchId: resource.projectId, extensionId: anchor.extensionId }),
       target_kind: anchor.type,
       target_id: anchor.id,
       role: anchor.role ?? "context",
@@ -99,7 +114,7 @@ export const writeResourceLinks = async (
     .insert(edges)
     .values([...rows.values()])
     .onConflictDoUpdate({
-      target: [edges.project_id, ...keyColumns],
+      target: physicalKeyColumns,
       set: { role: sql`excluded.role`, details: mergedDetails },
       // Identity and role are already stored in dedicated columns. Legacy details may omit them.
       setWhere: sql`${edges.role} is distinct from excluded.role or
@@ -107,7 +122,7 @@ export const writeResourceLinks = async (
         (${mergedDetails} - array['extensionId', 'projectId', 'type', 'id', 'role'])`,
     })
     .returning();
-  return changed.map(item);
+  return (await resolveResourceLinkRows(db, changed)).map(item);
 };
 
 const decodeCursor = (cursor: string) => {
@@ -139,17 +154,12 @@ export const createResourceLinksDBService = (db: Database) => ({
     }),
   find: async (resource: CanonicalResource, refs: ResourceRef[]) => {
     if (!refs.length) return [];
-    const rows = await db
-      .select()
-      .from(edges)
-      .where(
-        and(
-          sourceMatch(resource),
-          or(
-            ...refs.map((ref) => targetMatch({ ...ref, projectId: resource.projectId, extensionId: ref.extensionId! })),
-          ),
-        ),
-      );
+    const rows = await resourceLinkQuery(db).where(
+      and(
+        sourceMatch(resource),
+        or(...refs.map((ref) => targetMatch({ ...ref, projectId: resource.projectId, extensionId: ref.extensionId! }))),
+      ),
+    );
     return rows.map(item);
   },
   remove: async (resource: CanonicalResource, refs: ResourceRef[]) =>
@@ -170,7 +180,7 @@ export const createResourceLinksDBService = (db: Database) => ({
         )
         .returning();
       if (changed.length) await touchSource();
-      return changed.map(item);
+      return (await resolveResourceLinkRows(tx, changed)).map(item);
     }),
   removeValidated: async (
     resource: CanonicalResource,
@@ -180,9 +190,7 @@ export const createResourceLinksDBService = (db: Database) => ({
     if (!refs.length) return [];
     return db.transaction(async (tx) => {
       const touchSource = await lockResourceLinkSource(tx, resource);
-      const current = await tx
-        .select()
-        .from(edges)
+      const current = await resourceLinkQuery(tx)
         .where(refsMatch(resource, refs))
         .orderBy(...keyColumns)
         .for("update");
@@ -195,16 +203,17 @@ export const createResourceLinksDBService = (db: Database) => ({
         .where(and(sourceMatch(resource), or(...current.map((row) => targetMatch(item(row).target)))))
         .returning();
       if (changed.length) await touchSource();
-      return changed.map(item);
+      return (await resolveResourceLinkRows(tx, changed)).map(item);
     });
   },
-  removeResource: async (resource: CanonicalResource) => {
-    const changed = await db
-      .delete(edges)
-      .where(or(sourceMatch(resource), targetMatch(resource)))
-      .returning();
-    return changed.map(item);
-  },
+  removeResource: (resource: CanonicalResource) =>
+    db.transaction(async (tx) => {
+      const changed = await tx
+        .delete(edges)
+        .where(or(sourceMatch(resource), targetMatch(resource)))
+        .returning();
+      return (await resolveResourceLinkRows(tx, changed)).map(item);
+    }),
   list: (input: {
     resource: CanonicalResource;
     direction?: "outgoing" | "incoming" | "both";
@@ -262,9 +271,7 @@ const listResourceLinks = async (
       )})`,
     );
   }
-  const rows = await db
-    .select()
-    .from(edges)
+  const rows = await resourceLinkQuery(db)
     .where(and(...conditions))
     .orderBy(...keyColumns)
     .limit(limit + 1);

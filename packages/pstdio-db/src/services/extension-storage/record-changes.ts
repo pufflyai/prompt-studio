@@ -1,40 +1,38 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_current_records, storage_documents, storage_record_projections } from "../../db/schemas.pg";
+import { documents } from "../../db/schemas/documents";
+import { records as current, owners as recordOwners } from "../../db/schemas.pg";
+import { ensureFileDocument } from "./document-file-persistence";
+import { documentFilesFor } from "./document-files";
 import { lockStorageProject, type NativeProjectedRecord } from "./native-record-projection";
 import { publishProjectedRecords } from "./record-projection-rows";
 import { persistResourceDocuments } from "./resource-document-persistence";
 import { projectNumberRecords } from "./resource-number-records";
 import { previousNumbers, repairNumberRecords } from "./resource-number-repair";
+import { storageOwnerKey } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
-const ownerWhere = (owner: StorageOwner) =>
-  and(
-    eq(storage_record_projections.workbench_id, owner.workbenchId),
-    eq(storage_record_projections.extension_id, owner.extensionId),
-  );
+const ownerWhere = (owner: StorageOwner) => and(eq(recordOwners.id, storageOwnerKey(owner)));
 
 /** Locks the owner's projection row, which serializes its record writes, and returns its revision. */
 export const lockRecordOwner = async (tx: Transaction, owner: StorageOwner) => {
   await lockStorageProject(tx, owner.workbenchId);
-  await tx
-    .insert(storage_documents)
-    .values({
-      workbench_id: owner.workbenchId,
-      extension_id: owner.extensionId,
-      document_id: "records",
-      state: new Uint8Array([0, 0]),
-    })
-    .onConflictDoNothing();
-  await tx
-    .insert(storage_record_projections)
-    .values({ workbench_id: owner.workbenchId, extension_id: owner.extensionId, revision: 0 })
-    .onConflictDoNothing();
+  const [locked] = await tx
+    .select({ revision: recordOwners.revision, kind: documents.kind })
+    .from(recordOwners)
+    .innerJoin(documents, and(eq(documents.owner_id, recordOwners.id), eq(documents.key, "records")))
+    .where(ownerWhere(owner))
+    .for("update");
+  if (locked) {
+    if (locked.kind === "room") throw new Error("A private editor room cannot be opened as a shared document");
+    return locked.revision;
+  }
+  await ensureFileDocument(tx, documentFilesFor(tx), { owner, key: "records", kind: "local" });
   const [row] = await tx
-    .select({ revision: storage_record_projections.revision })
-    .from(storage_record_projections)
+    .select({ revision: recordOwners.revision })
+    .from(recordOwners)
     .where(ownerWhere(owner))
     .for("update");
   return row!.revision;
@@ -66,13 +64,13 @@ export const saveRecordChanges = async (
   const before = new Map<string, boolean>();
   for (let offset = 0; offset < ids.length; offset += 1_000) {
     const rows = await tx
-      .select({ id: storage_current_records.record_id, deleted: storage_current_records.deleted })
-      .from(storage_current_records)
+      .select({ id: current.record_id, deleted: current.deleted })
+      .from(current)
       .where(
         and(
-          eq(storage_current_records.workbench_id, owner.workbenchId),
-          eq(storage_current_records.extension_id, owner.extensionId),
-          inArray(storage_current_records.record_id, ids.slice(offset, offset + 1_000)),
+          eq(current.owner_id, storageOwnerKey(owner)),
+          isNotNull(current.revision),
+          inArray(current.record_id, ids.slice(offset, offset + 1_000)),
         ),
       );
     for (const row of rows) before.set(row.id, !row.deleted);
@@ -91,8 +89,8 @@ export const saveRecordChanges = async (
   const live = (record: { exists: boolean; deleted: boolean }) => Number(record.exists && !record.deleted);
   const delta = records.reduce((sum, record) => sum + live(record) - Number(before.get(record.recordId) ?? false), 0);
   await tx
-    .update(storage_record_projections)
-    .set({ revision: revision + 1, live_count: sql`${storage_record_projections.live_count} + ${delta}` })
+    .update(recordOwners)
+    .set({ revision: revision + 1, live_count: sql`${recordOwners.live_count} + ${delta}` })
     .where(ownerWhere(owner));
   return {
     projected: projected + repairedCount,

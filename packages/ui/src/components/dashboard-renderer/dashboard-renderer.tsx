@@ -21,6 +21,14 @@ interface AppliedDashboard {
   earlierDefinitions: readonly DashboardDefinition[];
 }
 
+function sameSeriesColors(first: DashboardWidget["seriesColors"], second: DashboardWidget["seriesColors"]) {
+  if (first === second) return true;
+  const entries = Object.entries(first ?? {});
+  return (
+    entries.length === Object.keys(second ?? {}).length && entries.every(([key, color]) => second?.[key] === color)
+  );
+}
+
 function sameDefinition(first: DashboardDefinition, second: DashboardDefinition) {
   if (first === second) return true;
   if (first.mode !== second.mode || first.widgets.length !== second.widgets.length) return false;
@@ -31,6 +39,9 @@ function sameDefinition(first: DashboardDefinition, second: DashboardDefinition)
       widget.kind === other.kind &&
       widget.source === other.source &&
       widget.title === other.title &&
+      widget.description === other.description &&
+      widget.color === other.color &&
+      sameSeriesColors(widget.seriesColors, other.seriesColors) &&
       widget.layout.x === other.layout.x &&
       widget.layout.y === other.layout.y &&
       widget.layout.w === other.layout.w &&
@@ -122,9 +133,11 @@ export function DashboardRenderer(props: DashboardRendererProps) {
     if (!draft || !kind) return;
     const source = sourcesForKind(sources, kind.id)[0];
     if (!source) return;
+    const defaults = kind.id === "custom" ? source.customWidgetDefaults : undefined;
     const widget: DashboardWidget = {
       id: crypto.randomUUID(),
       title: kind.id === "custom" ? "" : `New ${kind.name.toLowerCase()}`,
+      ...defaults,
       kind: kind.id,
       source: source.id,
       layout: { x: 0, y: 0, w: 6, h: kind.id === "metric" ? 3 : 8 },
@@ -177,12 +190,6 @@ export function DashboardRenderer(props: DashboardRendererProps) {
             onToggle={add}
             disabled={!availableKinds.length || applying}
           />
-          <Button onClick={finishEditing} disabled={applying}>
-            Cancel
-          </Button>
-          <Button ref={applyButton} variant="primary" onClick={apply} disabled={applying}>
-            {saveError ? "Retry" : "Apply"}
-          </Button>
           <DashboardDisplaySettings
             mode={mode}
             disabled={applying}
@@ -191,6 +198,19 @@ export function DashboardRenderer(props: DashboardRendererProps) {
               setDraft({ mode: nextMode, widgets: compactWidgets(widgets, nextMode) });
             }}
           />
+          {saveError && (
+            <Text role="alert" color="fg.error" textStyle="label/S/regular">
+              {saveError}
+            </Text>
+          )}
+          <HStack gap="xs" ml="auto">
+            <Button onClick={finishEditing} disabled={applying}>
+              Cancel
+            </Button>
+            <Button ref={applyButton} variant="primary" onClick={apply} disabled={applying}>
+              {saveError ? "Retry" : "Apply"}
+            </Button>
+          </HStack>
         </>
       ) : (
         onChange && (
@@ -199,11 +219,6 @@ export function DashboardRenderer(props: DashboardRendererProps) {
             Edit dashboard
           </Button>
         )
-      )}
-      {saveError && editing && (
-        <Text role="alert" color="fg.error" textStyle="label/S/regular">
-          {saveError}
-        </Text>
       )}
     </Box>
   );

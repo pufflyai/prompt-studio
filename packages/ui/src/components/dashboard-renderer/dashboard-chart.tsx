@@ -4,6 +4,7 @@ import {
   type ChartTooltipAnchor,
   type ChartTooltipRow,
   colorLegend,
+  colorLegendItems,
   defineChart,
   lineY,
   stack,
@@ -16,6 +17,7 @@ import { portal } from "@tanstack/charts/tooltip/portal";
 import { useRef } from "react";
 import { Chart, chartColor } from "@/components/charts/chart";
 import { chartGeometry } from "@/theme/primitives/chart";
+import { barColorGroups, dashboardGroupKey, resolveWidgetColor, widgetColorRange } from "./dashboard-colors";
 import { type DashboardDataSource, type DashboardWidget, widgetLabel } from "./dashboard-types";
 
 export function DashboardChart(props: { widget: DashboardWidget; source: DashboardDataSource; sparkline?: boolean }) {
@@ -36,23 +38,25 @@ export function DashboardChart(props: { widget: DashboardWidget; source: Dashboa
     label,
     value: series.filter((point) => point.label === label).reduce((sum, point) => sum + point.value, 0),
   }));
-  const stacked = widget.kind === "bar" && series.some((point) => point.group != null) && !sparkline;
+  const groups = widget.kind === "bar" && !sparkline ? barColorGroups(series) : undefined;
+  const stacked = groups && groups.keys.length > 0;
+  const color = resolveWidgetColor(widget.color) ?? chartColor("vis.categorical.1");
   const mark = stacked
     ? barY(series, {
         x: "label",
         y: "value",
-        color: "group",
+        color: ({ group }) => dashboardGroupKey(group),
         layout: stack(),
         radius: { end: chartGeometry.barRadius },
       })
-    : lineY(points, { x: "label", y: "value", stroke: chartColor("vis.categorical.1") });
+    : lineY(points, { x: "label", y: "value", stroke: color });
   const marks =
     widget.kind === "bar" && !stacked && !sparkline
       ? [
           barY(points, {
             x: "label",
             y: "value",
-            fill: chartColor("vis.categorical.1"),
+            fill: color,
             radius: { end: chartGeometry.barRadius },
           }),
         ]
@@ -76,7 +80,18 @@ export function DashboardChart(props: { widget: DashboardWidget; source: Dashboa
             guides: !sparkline,
             ...(sparkline ? { margin: 0 } : {}),
             scales: { x: { scale: scaleBand }, y: { scale: scaleLinear, grid: !sparkline } },
-            ...(stacked ? { color: { legend: colorLegend({ placement: "bottom" }) } } : {}),
+            ...(stacked
+              ? {
+                  color: {
+                    domain: groups.keys,
+                    range: widgetColorRange(widget, groups.keys),
+                    legend: colorLegend({
+                      placement: "bottom",
+                      items: colorLegendItems({ label: { format: (key) => groups.names[String(key)] } }),
+                    }),
+                  },
+                }
+              : {}),
           },
           {
             keyboard: !sparkline,
@@ -89,7 +104,7 @@ export function DashboardChart(props: { widget: DashboardWidget; source: Dashboa
               sort: "color-domain",
               content: (focused) => {
                 const rows: ChartTooltipRow[] = focused.map((point) => ({
-                  label: point.group == null ? sourceLabel : String(point.group),
+                  label: (stacked && groups.names[String(point.group)]) || sourceLabel,
                   value: number.format(point.datum.value),
                   color: point.color,
                 }));

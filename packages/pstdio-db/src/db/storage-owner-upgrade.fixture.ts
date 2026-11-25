@@ -1,0 +1,196 @@
+import { readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { sql } from "drizzle-orm";
+import { dropRecordIndexes } from "../services/extension-storage/record-index-lifecycle";
+import type { createDb } from "./connection.pglite";
+import { releasedDocumentRows } from "./released-document-rows.fixture";
+import { releasedOperationQuery } from "./released-operation-rows.fixture";
+import { releasedRecordRows } from "./released-record-rows.fixture";
+import { decodeUpgradeBytes } from "./upgrade-bytes";
+
+/** Preserve seeded data when an app-upgrade fixture reconstructs the released storage schema. */
+export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<typeof createDb>>) => {
+  const query = async (source: string) =>
+    (await connection.pglite.query<{ row: Record<string, unknown> }>(source)).rows.map(({ row }) => row);
+  const links =
+    await query(`SELECT to_jsonb(link) AS row FROM (SELECT s.project_id,s.extension_id AS source_owner,l.source_kind,l.source_id,
+    t.extension_id AS target_owner,l.target_kind,l.target_id,l.role,l.details
+    FROM resource_links l JOIN owners s ON l.source_owner=s.id JOIN owners t ON l.target_owner=t.id) link`);
+  const documentTables = ["storage_record_projections", "storage_current_records", "storage_record_indexes"];
+  const releasedFiles = await releasedDocumentRows(connection);
+  const recordRows = await releasedRecordRows(connection.db);
+  const documents: Record<string, Record<string, unknown>[]> = {
+    storage_documents: releasedFiles.storage_documents!,
+    storage_document_updates: releasedFiles.storage_document_updates!,
+    storage_document_operations: releasedFiles.storage_document_operations!,
+  };
+  const documentRows = async (table: string) => {
+    if (table === "storage_current_records") return recordRows.storage_current_records!;
+    if (table === "storage_record_projections")
+      return query(`SELECT jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id,
+        'document_id','records','revision',o.revision,'live_count',o.live_count) AS row FROM owners o
+        WHERE EXISTS (SELECT 1 FROM documents d WHERE d.owner_id=o.id AND d.key='records')`);
+    if (table === "storage_record_indexes")
+      return query(`SELECT jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id,
+        'name',entry.key,'definition',entry.value->'definition','database_name',entry.value->'database_name') AS row
+        FROM owners o CROSS JOIN LATERAL jsonb_each(o.record_indexes) AS entry(key,value)`);
+    return query(`SELECT (to_jsonb(d)-'owner_id') ||
+        jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id) AS row
+        FROM ${table} d JOIN owners o ON d.owner_id=o.id`);
+  };
+  for (const table of documentTables) documents[table] = await documentRows(table);
+  documents.storage_resource_projections = await query(`SELECT jsonb_build_object('workbench_id',o.project_id,
+    'extension_id',o.extension_id,'document_id','records','revision',o.numbers_revision) AS row FROM owners o
+    WHERE o.extension_id='pstdio' AND EXISTS(SELECT 1 FROM documents d WHERE d.owner_id=o.id AND d.key='records')`);
+  documents.storage_resource_identities = await query(`SELECT jsonb_build_object('workbench_id',project_id,
+    'resource_id',resource_id,'extension_id',extension_id,'kind',kind,'shorthand',shorthand,'prefix',prefix,'value',value::text)
+    AS row FROM resource_numbers WHERE current`);
+  documents.storage_resource_aliases = await query(`SELECT jsonb_build_object('workbench_id',project_id,
+    'resource_id',resource_id,'shorthand',shorthand,'prefix',prefix,'value',value::text) AS row FROM resource_numbers WHERE alias`);
+  // The released reconstruction owns these generated query objects too.
+  await dropRecordIndexes(connection.db, sql`true`);
+  const ordered: Record<string, Record<string, unknown>[]> = {
+    storage_ordered_owners:
+      await query(`SELECT jsonb_build_object('workbench_id',project_id,'extension_id',extension_id,
+      'epoch',epoch,'joined',joined,'after',"after",'state_id',state_id,'through',through,
+      'pending_bytes',pending_bytes,'state_bytes',state_bytes,'skipped',skipped,'receipt_root',receipt_root) AS row
+      FROM owners`),
+  };
+  for (const table of [
+    "storage_ordered_operations",
+    "storage_ordered_records",
+    "storage_ordered_touches",
+    "storage_ordered_receipts",
+  ])
+    ordered[table] =
+      table === "storage_ordered_records"
+        ? recordRows.storage_ordered_records!
+        : await query(releasedOperationQuery(table));
+  ordered.storage_ordered_resource_numbers = await query(`SELECT jsonb_build_object('workbench_id',project_id,
+    'resource_id',resource_id,'prefix',prefix,'high_water',max(value)::text,
+    'extension_id',coalesce(max(extension_id)FILTER(WHERE canonical_current),''),
+    'kind',coalesce(max(kind)FILTER(WHERE canonical_current),''),'value',
+    (max(value)FILTER(WHERE canonical_current))::text,'current',bool_or(canonical_current)) AS row
+    FROM resource_numbers WHERE canonical GROUP BY project_id,resource_id,prefix`);
+  const orderedSequence = (
+    await connection.pglite.query<{ last_value: string; is_called: boolean }>(
+      "SELECT last_value,is_called FROM operations_local_sequence_seq",
+    )
+  ).rows[0]!;
+  const recovery = releasedFiles.recovery_point_owners!;
+  const points = await query(`SELECT (to_jsonb(r)-'project_id') ||
+    jsonb_build_object('workbench_id',project_id) AS row FROM recovery_points r`);
+  const native = releasedFiles;
+  const assets = await query(`SELECT (to_jsonb(a)-'owner_id') ||
+    jsonb_build_object('project_id',o.project_id,'extension_id',o.extension_id) AS row
+    FROM asset_transfers a JOIN owners o ON a.owner_id=o.id`);
+  const logs = await query(`SELECT (to_jsonb(s)-'id'-'owner_id') ||
+    jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id) AS row
+    FROM log_streams s JOIN owners o ON s.owner_id=o.id`);
+  const entries = await query(`SELECT (to_jsonb(e)-'stream_id') || jsonb_build_object(
+    'workbench_id',o.project_id,'extension_id',o.extension_id,'log_name',s.log_name,'scope',s.scope,'stream',s.stream) AS row
+    FROM log_entries e JOIN log_streams s ON e.stream_id=s.id JOIN owners o ON s.owner_id=o.id`);
+  const history = async (table: string) =>
+    query(`SELECT (to_jsonb(h)-'owner_id') ||
+    jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id) AS row
+    FROM ${table} h JOIN owners o ON h.owner_id=o.id`);
+  const rows = await history("history_rows");
+  const sources = await history("history_sources");
+  const prefixes = await query(`SELECT to_jsonb(p) ||
+    jsonb_build_object('next_value',next_value::text,'created_at','2026-11-22','updated_at','2026-11-22') AS row
+    FROM resource_prefixes p`);
+  const positions = await query(`SELECT jsonb_build_object('workbench_id',project_id,'extension_id',extension_id,
+    'cursor',history_cursor,'migrated',history_migrated) AS row FROM owners`);
+  const sequence = (
+    await connection.pglite.query<{ last_value: string; is_called: boolean }>(
+      "SELECT last_value,is_called FROM log_entries_local_sequence_seq",
+    )
+  ).rows[0]!;
+  await connection.pglite.exec(
+    "DROP TABLE resource_links; DROP TABLE resource_prefixes; DROP TABLE resource_numbers; DROP TABLE records; DROP TABLE file_projections; DROP TABLE documents; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE operations; DROP TABLE IF EXISTS storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
+  );
+  const data = {
+    artifact_file_projection_roots: releasedFiles.artifact_file_projection_roots!,
+    artifact_file_projections: releasedFiles.artifact_file_projections!,
+    resource_anchors: links,
+    extension_resource_sequences: prefixes,
+    ...documents,
+    native_document_sources: native.native_document_sources!,
+    native_document_file_projections: native.native_document_file_projections!,
+    native_document_rooms: native.native_document_rooms!,
+    native_document_room_updates: native.native_document_room_updates!,
+    recovery_points: points,
+    recovery_point_owners: recovery,
+    ...ordered,
+    storage_record_sync: [],
+    storage_record_outbox: [],
+    asset_transfers: assets,
+    storage_log_streams: logs,
+    storage_log_entries: entries,
+    storage_personal_history: rows,
+    storage_personal_history_sources: sources,
+    storage_personal_history_positions: positions,
+  };
+  const tables = Object.keys(data);
+  const folder = join(import.meta.dirname, "../../drizzle");
+  const files = (await readdir(folder)).filter((name) => /^(000\d|0010)_.*\.sql$/u.test(name)).sort();
+  const constraints: string[] = [];
+  for (const file of files)
+    for (const input of (await readFile(join(folder, file), "utf8")).split("--> statement-breakpoint")) {
+      const statement = input.trim();
+      if (
+        tables.some((table) =>
+          [
+            `CREATE TABLE "${table}" (`,
+            `ALTER TABLE "${table}" ADD COLUMN `,
+            `ALTER TABLE "${table}" ALTER COLUMN `,
+          ].some((prefix) => statement.startsWith(prefix)),
+        )
+      )
+        await connection.pglite.exec(statement);
+      if (
+        tables.some(
+          (table) =>
+            statement.startsWith(`ALTER TABLE "${table}" ADD CONSTRAINT`) ||
+            (statement.startsWith("CREATE ") && statement.includes(` ON "${table}" `)),
+        )
+      )
+        constraints.push(statement);
+    }
+  for (const statement of constraints) await connection.pglite.exec(statement);
+  for (const [table, values] of Object.entries(data))
+    for (const row of values) {
+      const columns = Object.keys(row);
+      await connection.pglite.query(
+        `INSERT INTO ${table} (${columns.map((column) => `"${column}"`).join(",")})
+        VALUES (${columns.map((_, index) => `$${index + 1}`).join(",")})`,
+        columns.map((column) => {
+          const value = row[column];
+          const binaryColumns: Record<string, string[]> = {
+            storage_documents: ["state"],
+            storage_document_updates: ["update"],
+            native_document_rooms: ["state"],
+            native_document_room_updates: ["update"],
+            native_document_file_projections: ["baseline", "pending"],
+            recovery_point_owners: ["records", "metadata"],
+            storage_log_entries: ["entry", "envelope"],
+            storage_ordered_owners: ["receipt_root"],
+            storage_ordered_records: ["state"],
+            storage_ordered_operations: ["envelope", "admission"],
+          };
+          if (binaryColumns[table]?.includes(column) && value !== null) {
+            return decodeUpgradeBytes(value);
+          }
+          return value !== null && typeof value === "object" ? JSON.stringify(value) : value;
+        }),
+      );
+    }
+  await connection.pglite.query("SELECT setval('storage_ordered_operations_local_sequence_seq',$1,$2)", [
+    orderedSequence.last_value,
+    orderedSequence.is_called,
+  ]);
+  await connection.pglite.query("SELECT setval('storage_log_entries_local_sequence_seq' ,$1,$2)", [
+    sequence.last_value,
+    sequence.is_called,
+  ]);
+};

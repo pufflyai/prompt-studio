@@ -5,7 +5,8 @@ import { createRecordStreamSync, decodeOrderedEntry, decodeRecordFrame, recordFr
 import type { Json } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import { createDb } from "../../db/connection.pglite";
-import { native_document_rooms, projects } from "../../db/schemas.pg";
+import { projects } from "../../db/schemas.pg";
+import { readNativeRoomHistory } from "./document-history.fixture";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createNativeDocumentRoomsDBService } from "./native-document-rooms";
 import { createRelay } from "./record-stream-relay.fixture";
@@ -580,7 +581,7 @@ test("a native full-state relay cannot launder an unsettled conditional group's 
   expect(await first.records.outcome("forwarded-conditional")).toMatchObject({ state: "refused" });
   expect((await receiver.snapshot()).generation).not.toBe(receiverBefore.generation);
   const retained = [];
-  for (const room of await second.db.select().from(native_document_rooms)) {
+  for (const room of await readNativeRoomHistory(second.db)) {
     if (room.document_key !== key) continue;
     const copy = new Y.Doc();
     try {

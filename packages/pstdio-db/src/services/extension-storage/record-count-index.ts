@@ -7,14 +7,21 @@ import { identityQueryText } from "./record-identity-query";
 import { projectionKey } from "./record-projection-codec";
 import { recordFieldSql, recordScopeSql, sqlLiteral } from "./record-query-sql";
 import { identityQueryKey } from "./resource-query-values";
+import { ensureStorageOwner } from "./storage-owner-key";
 
 type Writer = Pick<DbClient, "execute">;
+type IndexWriter = Pick<DbClient, "execute" | "select" | "insert">;
 const ddl = (query: SQL) => new PgDialect().sqlToQuery(query.inlineParams()).sql;
 const literal = (value: string) => ddl(sqlLiteral(value));
 
 // Each physical index owns its counts. For identity-backed views the two halves of
 // membership can arrive in either order, including within the same transaction.
-export const installCountIndex = async (tx: Writer, owner: StorageOwner, index: StorageRecordIndex, name: string) => {
+export const installCountIndex = async (
+  tx: IndexWriter,
+  owner: StorageOwner & { ownerId: number },
+  index: StorageRecordIndex,
+  name: string,
+) => {
   if (!index.countBy?.length) return;
   const counts = `${name}_c`,
     records = `${name}_r`,
@@ -35,12 +42,13 @@ export const installCountIndex = async (tx: Writer, owner: StorageOwner, index: 
   const resource = (alias: string) =>
     index.identity ? ddl(identityQueryText(recordFieldSql(index, index.identity.idField, alias))) : "NULL::text";
   const scope = (alias: string) => ddl(recordScopeSql(owner, { ...index, identity: undefined }, alias));
+  const coreOwner = index.identity ? String(await ensureStorageOwner(tx, { ...owner, extensionId: "pstdio" })) : "-1";
   const workbench = literal(owner.workbenchId),
     extension = literal(owner.extensionId);
   const kind = literal(index.identity?.kind ?? "");
   const named = (alias: string) =>
-    `(${alias}.query_values #> ARRAY[${literal(identityQueryKey)},'shorthand']) IS NOT NULL`;
-  const mapped = (alias: string) => `${alias}.extension_id=${extension} AND ${alias}.kind=${kind}`;
+    `(${alias}.revision IS NOT NULL AND NOT ${alias}.deleted AND (${alias}.query_values #> ARRAY[${literal(identityQueryKey)},'shorthand']) IS NOT NULL)`;
+  const mapped = (alias: string) => `${alias}.current AND ${alias}.extension_id=${extension} AND ${alias}.kind=${kind}`;
   const visible = (id: string) =>
     index.identity ? `EXISTS(SELECT 1 FROM ${identities} WHERE rid=${id} AND mapped AND named)` : "true";
   // Oversize values share a sentinel. Queries fall back to the canonical aggregate
@@ -56,14 +64,14 @@ export const installCountIndex = async (tx: Writer, owner: StorageOwner, index: 
     );
     await tx.execute(
       sql.raw(`INSERT INTO ${identities}
-      SELECT resource_id,true,${named("c")} FROM storage_resource_identities m
-      LEFT JOIN storage_current_records c ON c.workbench_id=m.workbench_id AND c.extension_id='pstdio' AND c.record_id=m.resource_id
-      WHERE m.workbench_id=${workbench} AND ${mapped("m")}`),
+      SELECT resource_id,true,${named("c")} FROM resource_numbers m
+      LEFT JOIN records c ON c.owner_id=${coreOwner} AND c.record_id=m.resource_id
+      WHERE m.project_id=${workbench} AND ${mapped("m")}`),
     );
   }
   await tx.execute(
     sql.raw(`INSERT INTO ${records} SELECT record_id,${resource("src")},${bounded(dimensions("src"))}
-    FROM storage_current_records src WHERE ${scope("src")}`),
+    FROM records src WHERE ${scope("src")}`),
   );
   await tx.execute(
     sql.raw(`INSERT INTO ${counts} SELECT dims,count(*) FROM ${records} r WHERE ${visible("r.rid")} GROUP BY dims`),
@@ -85,7 +93,7 @@ export const installCountIndex = async (tx: Writer, owner: StorageOwner, index: 
       `DECLARE was boolean; now_visible boolean; g record; BEGIN
       SELECT mapped AND named INTO was FROM ${identities} WHERE rid=key;
       IF mapping AND present THEN
-        SELECT EXISTS(SELECT 1 FROM storage_current_records c WHERE c.workbench_id=${workbench} AND c.extension_id='pstdio'
+        SELECT EXISTS(SELECT 1 FROM records c WHERE c.owner_id=${coreOwner}
           AND c.record_id=key AND ${named("c")}) INTO now_visible;
         INSERT INTO ${identities} VALUES(key,true,now_visible) ON CONFLICT(rid) DO UPDATE SET named=excluded.named;
       ELSIF mapping THEN
@@ -104,10 +112,11 @@ export const installCountIndex = async (tx: Writer, owner: StorageOwner, index: 
     END`,
     );
   const syncFlag = (mapping: boolean) => {
-    const test = mapping ? mapped : (v: string) => `${v}.extension_id='pstdio' AND ${named(v)}`;
+    const test = mapping ? mapped : (v: string) => `${named(v)}`;
+    const scope = (v: string) => (mapping ? `${v}.project_id=${workbench}` : `${v}.owner_id=${coreOwner}`);
     const id = mapping ? "resource_id" : "record_id";
-    return `old_flag := TG_OP<>'INSERT' AND OLD.workbench_id=${workbench} AND ${test("OLD")};
-      new_flag := TG_OP<>'DELETE' AND NEW.workbench_id=${workbench} AND ${test("NEW")};
+    return `old_flag := TG_OP<>'INSERT' AND ${scope("OLD")} AND ${test("OLD")};
+      new_flag := TG_OP<>'DELETE' AND ${scope("NEW")} AND ${test("NEW")};
       IF old_flag AND (NOT new_flag OR OLD.${id}<>NEW.${id}) THEN PERFORM ${flag}(OLD.${id},${mapping},false); END IF;
       IF new_flag AND (NOT old_flag OR OLD.${id}<>NEW.${id}) THEN PERFORM ${flag}(NEW.${id},${mapping},true); END IF;`;
   };
@@ -118,7 +127,7 @@ export const installCountIndex = async (tx: Writer, owner: StorageOwner, index: 
     `DECLARE old_flag boolean; new_flag boolean; old_row ${records}%ROWTYPE; new_dims jsonb; new_id text; BEGIN
     ${
       index.identity
-        ? `IF TG_TABLE_NAME='storage_resource_identities' THEN ${syncFlag(true)} RETURN NULL; END IF;
+        ? `IF TG_TABLE_NAME='resource_numbers' THEN ${syncFlag(true)} RETURN NULL; END IF;
     ${syncFlag(false)}`
         : ""
     }
@@ -138,11 +147,11 @@ export const installCountIndex = async (tx: Writer, owner: StorageOwner, index: 
     RETURN NULL;
   END`,
   );
-  for (const table of ["storage_current_records", ...(index.identity ? ["storage_resource_identities"] : [])]) {
+  for (const table of ["records", ...(index.identity ? ["resource_numbers"] : [])]) {
     const belongs = (row: string) =>
-      table === "storage_resource_identities"
-        ? `(${row}.workbench_id=${workbench} AND ${mapped(row)})`
-        : `(${scope(row)}${index.identity ? ` OR (${row}.workbench_id=${workbench} AND ${row}.extension_id='pstdio' AND ${named(row)})` : ""})`;
+      table === "resource_numbers"
+        ? `(${row}.project_id=${workbench} AND ${mapped(row)})`
+        : `(${scope(row)}${index.identity ? ` OR (${row}.owner_id=${coreOwner} AND ${named(row)})` : ""})`;
     for (const [verb, condition] of [
       ["INSERT", belongs("new")],
       ["DELETE", belongs("old")],
@@ -158,7 +167,7 @@ export const installCountIndex = async (tx: Writer, owner: StorageOwner, index: 
 
 export const dropCountIndex = async (tx: Writer, index: StorageRecordIndex, name: string) => {
   if (!index.countBy?.length) return;
-  for (const table of ["storage_current_records", ...(index.identity ? ["storage_resource_identities"] : [])])
+  for (const table of ["records", ...(index.identity ? ["resource_numbers"] : [])])
     for (const verb of ["insert", "delete", "update"])
       await tx.execute(sql.raw(`DROP TRIGGER IF EXISTS ${name}_tr_${verb} ON ${table}`));
   await tx.execute(

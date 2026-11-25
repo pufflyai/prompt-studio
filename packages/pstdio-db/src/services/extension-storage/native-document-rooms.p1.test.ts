@@ -1,8 +1,12 @@
 import { afterEach, expect, test } from "bun:test";
+import { eq } from "drizzle-orm";
 import { createNativeDocumentKey } from "pstdio-api-contracts";
 import { saveTextDocument, seedTextDocument } from "pstdio-sync/text";
 import * as Y from "yjs";
-import { native_document_room_updates } from "../../db/schemas.pg";
+import { documents } from "../../db/schemas.pg";
+import { readFileDocumentHead } from "./document-file-persistence";
+import { documentFilesFor } from "./document-files";
+import { roomDocumentId } from "./document-kind";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageDBService } from "./extension-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
@@ -102,7 +106,12 @@ test("long-lived rooms fold their update journal and reopen with every edit", as
     f.author.getText("content").insert(f.author.getText("content").length, String(index % 10));
     await f.rooms.apply({ owner: f.owner, roomId: room.id, update: Y.encodeStateAsUpdate(f.author, before) });
   }
-  expect(await f.db.select().from(native_document_room_updates)).toHaveLength(2);
+  const [row] = await f.db
+    .select()
+    .from(documents)
+    .where(eq(documents.key, roomDocumentId(room.id)));
+  const head = await f.db.transaction((tx) => readFileDocumentHead(documentFilesFor(tx), f.owner.workbenchId, row!));
+  expect(head.updates).toHaveLength(2);
   const reopened = createExtensionStorageDBService(f.db).nativeRooms;
   const saved = await reopened.read({ owner: f.owner, roomId: room.id });
   expect(saved.document.getText("content").toString()).toBe(f.author.getText("content").toString());

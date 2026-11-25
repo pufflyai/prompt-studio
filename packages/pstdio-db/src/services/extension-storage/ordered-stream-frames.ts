@@ -9,17 +9,22 @@ type Apply = (
   admission: OrderedAdmission,
   epoch: string,
 ) => Promise<string[]>;
+
+/** Verify each frame once and set aside frames with a non-admission entry as a whole. */
+export const decodeOrderedStreamFrame = async (frame: RecordFrame | null) => {
+  if (!frame) return;
+  const entries = await Promise.all(frame.records.map((record) => decodeOrderedEntry(record.bytes)));
+  if (entries.every((entry) => entry.type === "admission" || entry.type === "text")) return entries;
+};
+
 export const applyOrderedStreamFrame = async (
   journal: OrderedJournal,
   tx: OrderedTransaction,
-  frame: RecordFrame,
+  entries: NonNullable<Awaited<ReturnType<typeof decodeOrderedStreamFrame>>>,
   epoch: string,
   applyGroup: Apply,
   applyNative: Apply,
 ) => {
-  const entries = await Promise.all(frame.records.map((record) => decodeOrderedEntry(record.bytes)));
-  if (entries.some((entry) => entry.type !== "admission" && entry.type !== "text"))
-    throw new Error("An update must contain ordered group or text admissions");
   const changed = [];
   for (const entry of entries) {
     if (entry.type === "admission") changed.push(...(await applyGroup(journal, tx, entry.admission, epoch)));
@@ -27,10 +32,3 @@ export const applyOrderedStreamFrame = async (
   }
   return changed;
 };
-
-/** Updates carry only group or text admissions; anything else is set aside whole, never applied. */
-export const admissibleOrderedFrame = async (frame: RecordFrame | null) =>
-  !!frame &&
-  (await Promise.all(frame.records.map((record) => decodeOrderedEntry(record.bytes)))).every(
-    (entry) => entry.type === "admission" || entry.type === "text",
-  );

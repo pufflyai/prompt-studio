@@ -8,10 +8,10 @@ test("a pending delete stays deleted through upgrade and stale-device replay", a
   await second.oldSync.synchronize();
   // The second device retains the live record while the first still has an unsent delete.
   await first.legacy.commit({ operationId: "delete", edits: [{ recordId: "card", deleted: true }] });
-  const upgraded = first.upgrade();
+  const upgraded = await first.upgrade();
   expect((await upgraded.records.read("card")).deleted).toBe(true);
   await upgraded.sync.synchronize();
-  const stale = second.upgrade();
+  const stale = await second.upgrade();
   await stale.sync.synchronize();
   expect((await stale.records.read("card")).deleted).toBe(true);
   expect((await upgraded.records.read("card")).deleted).toBe(true);
@@ -22,7 +22,7 @@ test("an unsent create and delete in the same backlog keep their final tombstone
   await first.legacy.commit({ operationId: "create", edits: [{ recordId: "card", replace: "retained" }] });
   await first.legacy.commit({ operationId: "delete", edits: [{ recordId: "card", deleted: true }] });
   expect((await first.legacy.read("card")).deleted).toBe(true);
-  expect((await first.upgrade().records.read("card")).deleted).toBe(true);
+  expect((await (await first.upgrade()).records.read("card")).deleted).toBe(true);
 });
 
 // Deleting an already deleted record writes a new tombstone entry that replaces the previous one.
@@ -36,7 +36,7 @@ for (const synced of [true, false])
     await first.legacy.commit({ operationId: "delete-again", edits: [{ recordId: "card", deleted: true }] });
     expect((await first.legacy.read("card")).deleted).toBe(true);
 
-    expect((await first.upgrade().records.read("card")).deleted).toBe(true);
+    expect((await (await first.upgrade()).records.read("card")).deleted).toBe(true);
   });
 
 test("a pending restore of a deleted record still restores it after upgrade", async () => {
@@ -47,5 +47,5 @@ test("a pending restore of a deleted record still restores it after upgrade", as
   await first.legacy.commit({ operationId: "restore", edits: [{ recordId: "card", deleted: false }] });
   expect((await first.legacy.read("card")).deleted).toBe(false);
 
-  expect((await first.upgrade().records.read("card")).deleted).toBe(false);
+  expect((await (await first.upgrade()).records.read("card")).deleted).toBe(false);
 });

@@ -59,22 +59,24 @@ export const verifyPanelInsertionTargets = async (page: Page) => {
   for (const region of ["side", "secondary"] as const) {
     const panel = page.locator(`[data-workbench-panel="${region}"]:visible`);
     await expect(panel).toBeVisible();
+    await expect
+      .poll(async () => {
+        const moved = await panel.boundingBox();
+        const content = await main.boundingBox();
+        if (!moved || !content) return false;
+        return region === "side" ? moved.x < content.x : moved.y < content.y;
+      })
+      .toBe(true);
     const header = page.getByLabel(region === "side" ? "Side panel header" : "Bottom panel header", { exact: true });
     await expect(header).toHaveAttribute("data-panel-draggable", "true");
     await header.focus();
+    await expect(header).toBeFocused();
     await header.press("Shift+F10");
     await expect(page.getByRole("menuitem", { name: /^Move panel to / })).toHaveCount(1);
     await expect(
       page.getByRole("menuitem", { name: `Move panel to ${region === "side" ? "right" : "bottom"}`, exact: true }),
     ).toBeVisible();
     await page.keyboard.press("Escape");
-    await expect
-      .poll(async () => {
-        const moved = (await panel.boundingBox())!;
-        const content = (await main.boundingBox())!;
-        return region === "side" ? moved.x < content.x : moved.y < content.y;
-      })
-      .toBe(true);
   }
   await verifyNearbyTabTargets(page);
 };

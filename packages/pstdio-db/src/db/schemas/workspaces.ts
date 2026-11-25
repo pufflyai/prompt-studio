@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { boolean, jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { files } from "./files";
+import { isoTimestamp } from "./iso-timestamp";
 import { projects } from "./projects";
 
 type JsonObject = Record<string, unknown>;
@@ -84,9 +85,9 @@ export const workspaces = pgTable(
     initializing: boolean("initializing").notNull().default(false),
     setup_error: text("setup_error"),
     startup_log_file_id: text("startup_log_file_id").references(() => files.id, { onDelete: "set null" }),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
-    deleted_at: text("deleted_at"),
+    created_at: isoTimestamp("created_at").notNull(),
+    updated_at: isoTimestamp("updated_at").notNull(),
+    deleted_at: isoTimestamp("deleted_at"),
   },
   (table) => [
     uniqueIndex("workspaces_project_workspace_shorthand_idx").on(table.project_id, table.workspace_shorthand),

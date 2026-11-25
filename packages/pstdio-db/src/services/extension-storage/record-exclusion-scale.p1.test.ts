@@ -3,8 +3,10 @@ import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { drizzle } from "drizzle-orm/pglite";
 import type { RecordEdit, StoragePredicate, StorageRecordIndex } from "pstdio-sync-contracts";
 import * as schema from "../../db/schemas.pg";
+import { attachDocumentFiles, documentFilesFor } from "./document-files";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { attachIndexNodeFiles, indexNodeFilesFor } from "./index-node-files";
 
 let fixture: Awaited<ReturnType<typeof createExtensionStorageFixture>>;
 let service: ReturnType<typeof createDocumentStorageDBService>;
@@ -47,6 +49,8 @@ beforeAll(async () => {
       },
     },
   });
+  attachDocumentFiles(db, documentFilesFor(fixture.db));
+  attachIndexNodeFiles(db, indexNodeFilesFor(fixture.db));
   service = createDocumentStorageDBService(db);
   const owner = { workbenchId: fixture.projectAId, extensionId: "exclusion-scale" };
   records = service.open({ owner }).records;
@@ -110,9 +114,7 @@ test("an ordered page of unplaced resources does not rescan every placement for 
   });
   capture = false;
   expect(page.records.map(({ fields }) => fields.id)).toEqual(ids.slice(100, 200));
-  const statement = statements.find(
-    ({ query }) => query.includes(" AS fields,") && query.includes("FROM storage_current_records"),
-  )!;
+  const statement = statements.find(({ query }) => query.includes(" AS fields,") && query.includes("FROM records"))!;
   const plan = await fixture.db.$client.query(`EXPLAIN (ANALYZE, FORMAT JSON) ${statement.query}`, statement.params);
   const visits = (value: unknown): number => {
     if (!value || typeof value !== "object") return 0;

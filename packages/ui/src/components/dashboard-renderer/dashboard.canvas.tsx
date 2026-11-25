@@ -1,7 +1,10 @@
+import { Button, Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { useState } from "react";
 import { DashboardEmbeddedExample } from "./dashboard-embedded-example";
 import { DashboardExample } from "./dashboard-example";
 import { DashboardRenderer } from "./dashboard-renderer";
+import type { DashboardDataSource, DashboardDefinition, DashboardWidget } from "./dashboard-types";
 
 export default {
   title: "Design system/Components/Data display/Dashboard",
@@ -79,4 +82,71 @@ export const ChartEdgeCases = {
       ]}
     />
   ),
+} satisfies CanvasFrame;
+
+const groupedBars: DashboardWidget[] = [
+  { id: "bar", title: "Grouped bars", kind: "bar", source: "series", layout: { x: 0, y: 0, w: 12, h: 7 } },
+];
+
+const sourceSelection: DashboardWidget[] = [
+  {
+    id: "selected",
+    title: "Selected source",
+    kind: "custom",
+    source: "custom",
+    layout: { x: 0, y: 0, w: 6, h: 4 },
+  },
+  {
+    id: "missing",
+    title: "Missing source",
+    kind: "custom",
+    source: "missing",
+    layout: { x: 6, y: 0, w: 6, h: 4 },
+  },
+];
+
+const appearanceSources: DashboardDataSource[] = [
+  {
+    id: "series",
+    name: "Bar groups",
+    series: [
+      { label: "Today", value: 2, group: "Unassigned" },
+      { label: "Today", value: 3, group: "Unassigned (2)" },
+      { label: "Today", value: 4 },
+    ],
+  },
+  { id: "custom", name: "Build status", content: "Build passed" },
+];
+
+function AppearanceExample({ widgets }: { widgets: DashboardWidget[] }) {
+  const [value, setValue] = useState<DashboardDefinition>({ mode: "vertical", widgets });
+  return <DashboardRenderer value={value} sources={appearanceSources} onChange={setValue} />;
+}
+
+function GroupedBarExample() {
+  const [value, setValue] = useState<DashboardDefinition>({ mode: "vertical", widgets: groupedBars });
+  const [refreshed, setRefreshed] = useState(false);
+  const source = appearanceSources[0];
+  const series = [...(source.series ?? [])];
+  if (refreshed) series.push({ label: "Today", value: 1, group: "Unassigned (3)" });
+  return (
+    <Stack h="full" minH="0" gap="0">
+      <Button alignSelf="start" size="xs" onClick={() => setRefreshed(true)}>
+        Add named group
+      </Button>
+      <DashboardRenderer value={value} sources={[{ ...source, series }]} onChange={setValue} />
+    </Stack>
+  );
+}
+
+export const GroupedBarColors = {
+  name: "Grouped bar colors",
+  fullscreen: true,
+  render: GroupedBarExample,
+} satisfies CanvasFrame;
+
+export const WidgetSourceChoices = {
+  name: "Widget source choices",
+  fullscreen: true,
+  render: () => <AppearanceExample widgets={sourceSelection} />,
 } satisfies CanvasFrame;

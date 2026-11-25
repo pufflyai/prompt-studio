@@ -1,6 +1,6 @@
 import { createReadStream } from "node:fs";
-import { mkdir, open, rename, rm, stat } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { mkdir, open, readdir, rename, rm, stat } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
 import { createInterface } from "node:readline";
 import { sql } from "drizzle-orm";
 import type { DbClient } from "./connection.pglite";
@@ -8,6 +8,13 @@ import { flushDirectory } from "./pglite-home-recovery";
 import { readUpgradeRows, type UpgradeSource } from "./upgrade-rows";
 
 type Row = Record<string, unknown>;
+
+export const hasUpgradeSnapshots = async (path: string) =>
+  path !== ":memory:" &&
+  (await readdir(dirname(path))).some(
+    (name) => name.startsWith(`${basename(path)}-`) && /-upgrade\.jsonl?(?:\.tmp)?$/u.test(name),
+  );
+
 async function* snapshotRows(path: string) {
   const stream = createReadStream(path, { encoding: "utf8" });
   const lines = createInterface({ input: stream, crlfDelay: Number.POSITIVE_INFINITY });
@@ -28,27 +35,64 @@ const hasSnapshot = async (path: string) => {
     return false;
   }
 };
+const snapshotWriter = (path: string) => {
+  let file: Awaited<ReturnType<typeof open>> | undefined;
+  let lines: string[] = [];
+  let bufferedBytes = 0;
+  const flush = async () => {
+    if (!lines.length) return;
+    file ??= await open(path, "w", 0o600);
+    await file.writeFile(lines.join(""));
+    lines = [];
+    bufferedBytes = 0;
+  };
+  return {
+    async append(row: Row) {
+      const line = `${JSON.stringify(row)}\n`;
+      const bytes = Buffer.byteLength(line);
+      if (bufferedBytes && bufferedBytes + bytes > 64 * 1024) await flush();
+      lines.push(line);
+      bufferedBytes += bytes;
+      // An oversized row leaves alone; ordinary batches stay within 64 KiB.
+      if (bufferedBytes >= 64 * 1024) await flush();
+    },
+    async sync() {
+      await flush();
+      file ??= await open(path, "w", 0o600);
+      await file.sync();
+    },
+    close: () => file?.close(),
+  };
+};
 const captureRows = async (
   db: DbClient,
-  source: UpgradeSource,
+  source: UpgradeSource & { keepEmpty?: boolean },
   snapshot: string | undefined,
   normalize: (row: Row) => Promise<Row>,
 ) => {
   const memory: Row[] = [];
   const temporary = snapshot && `${snapshot}.tmp`;
-  const file = temporary ? await open(temporary, "w", 0o600) : undefined;
+  const writer = temporary ? snapshotWriter(temporary) : undefined;
+  let captured = false;
   try {
     for await (const released of readUpgradeRows(db, source)) {
       const row = await normalize(released);
-      if (file) await file.writeFile(`${JSON.stringify(row)}\n`);
+      captured = true;
+      if (writer) await writer.append(row);
       else memory.push(row);
     }
-    await file?.sync();
+    if (!captured && !source.keepEmpty) {
+      if (temporary) await rm(temporary, { force: true });
+      return;
+    }
+    // An explicit empty marker records work that must finish after DDL. Ordinary
+    // empty sources contain no data to preserve and need no durable file.
+    await writer?.sync();
   } catch (error) {
     if (temporary) await rm(temporary, { force: true });
     throw error;
   } finally {
-    await file?.close();
+    await writer?.close();
   }
   if (temporary && snapshot) {
     await rename(temporary, snapshot);
@@ -71,7 +115,7 @@ const finishSnapshot = async (snapshot: string, archive?: string) => {
 export const prepareUpgradeSnapshot = async (
   db: DbClient,
   path: string,
-  source: UpgradeSource & { name: string; capture?: boolean; archive?: string },
+  source: UpgradeSource & { name: string; capture?: boolean; keepEmpty?: boolean; archive?: string | (() => string) },
   restore: (row: Row) => Promise<void>,
   normalize: (row: Row) => Promise<Row> = async (row) => row,
 ) => {
@@ -86,14 +130,14 @@ export const prepareUpgradeSnapshot = async (
       sql`SELECT to_regclass(${`public.${source.table}`})::text AS present`,
     );
     if (!table.present) return;
-    memory = await captureRows(db, source, snapshot, normalize);
+    const captured = await captureRows(db, source, snapshot, normalize);
+    if (captured === undefined) return;
+    memory = captured;
   }
   const complete = async () => {
     if (snapshot) {
-      await finishSnapshot(
-        snapshot,
-        source.archive ? join(`${path}-migration-exports`, `${source.archive}.jsonl`) : undefined,
-      );
+      const archive = typeof source.archive === "function" ? source.archive() : source.archive;
+      await finishSnapshot(snapshot, archive ? join(`${path}-migration-exports`, `${archive}.jsonl`) : undefined);
     }
   };
   const resume = async (retain = false) => {
