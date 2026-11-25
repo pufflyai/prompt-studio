@@ -1,4 +1,22 @@
+import type { currentRuntimeOperationOrigin } from "pstdio-diagnostics";
 import type { DbOpenPhase } from "../connection.pglite";
+
+type OperationOrigin = NonNullable<ReturnType<typeof currentRuntimeOperationOrigin>>;
+
+/** Project host attribution onto the scalar fields the worker uses for admission and diagnostics. */
+export const readDatabaseWorkerOrigin = (value: unknown) => {
+  if (typeof value !== "object" || value === null) return;
+  const { kind, name, id, projectId, extensionId } = value as Partial<Record<keyof OperationOrigin, unknown>>;
+  if (kind !== "command" && kind !== "event" && kind !== "background" && kind !== "request") return;
+  if (typeof name !== "string") return;
+  return {
+    kind,
+    name,
+    id: typeof id === "string" ? id : undefined,
+    projectId: typeof projectId === "string" ? projectId : undefined,
+    extensionId: typeof extensionId === "string" ? extensionId : undefined,
+  } satisfies OperationOrigin;
+};
 
 export interface DatabaseWorkerOpenOptions {
   path?: string;
@@ -15,9 +33,13 @@ export interface RemoteQueryOptions {
 export type DatabaseWorkerRequest =
   | { type: "open"; options: DatabaseWorkerOpenOptions }
   | { type: "abort" }
-  | { type: "query"; id: number; sql: string; params?: unknown[]; options?: RemoteQueryOptions; txId?: number }
-  | { type: "exec"; id: number; sql: string; txId?: number }
-  | { type: "begin"; id: number }
+  | ({
+      origin?: OperationOrigin;
+    } & (
+      | { type: "query"; id: number; sql: string; params?: unknown[]; options?: RemoteQueryOptions; txId?: number }
+      | { type: "exec"; id: number; sql: string; txId?: number }
+      | { type: "begin"; id: number }
+    ))
   | { type: "end"; id: number; txId: number; commit: boolean }
   | { type: "cleanup"; id: number }
   /** The API thread's `stopped()` turned true; the running cleanup stops at its next check. */

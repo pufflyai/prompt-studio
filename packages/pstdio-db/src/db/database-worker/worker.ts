@@ -1,9 +1,11 @@
 import type { PGlite, Transaction } from "@electric-sql/pglite";
+import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
 import { createDb } from "../connection.pglite";
 import {
   type DatabaseWorkerMessage,
   type DatabaseWorkerRequest,
   type RemoteQueryOptions,
+  readDatabaseWorkerOrigin,
   serializeDatabaseError,
 } from "./protocol";
 
@@ -43,6 +45,11 @@ const reply = async (id: number, run: () => Promise<unknown>) => {
   } catch (error) {
     send({ type: "reply", id, ok: false, error: serializeDatabaseError(error) });
   }
+};
+
+const withRequestOrigin = <T>(origin: unknown, run: () => T) => {
+  const restored = readDatabaseWorkerOrigin(origin);
+  return restored ? withRuntimeOperationOrigin(restored, run) : run();
 };
 
 // Settles once a transaction has committed or rolled back; `end` waits for it.
@@ -100,14 +107,16 @@ const handle = (request: DatabaseWorkerRequest) => {
       return;
     case "query":
       void reply(request.id, () =>
-        target(request.txId).query(request.sql, request.params, queryOptions(request.options)),
+        withRequestOrigin(request.origin, () =>
+          target(request.txId).query(request.sql, request.params, queryOptions(request.options)),
+        ),
       );
       return;
     case "exec":
-      void reply(request.id, () => target(request.txId).exec(request.sql));
+      void reply(request.id, () => withRequestOrigin(request.origin, () => target(request.txId).exec(request.sql)));
       return;
     case "begin":
-      begin(request.id);
+      withRequestOrigin(request.origin, () => begin(request.id));
       return;
     case "end":
       void reply(request.id, async () => {

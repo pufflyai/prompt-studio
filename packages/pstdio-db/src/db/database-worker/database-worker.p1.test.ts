@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { sql } from "drizzle-orm";
+import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
 import { projects } from "../schemas.pg";
 import { createDbInWorker, waitForDatabaseWorkersIdle } from "./open";
 
@@ -29,6 +30,33 @@ test("Drizzle queries run against the worker's database", async () => {
     .values({ id: "p-worker", name: "Worker", shorthand: "WRK", created_at: "now", updated_at: "now" });
   const [row] = await database.db.select({ name: projects.name }).from(projects);
   expect(row).toEqual({ name: "Worker" });
+});
+
+test.each([
+  "query",
+  "exec",
+  "transaction",
+] as const)("a core read gets a turn during an extension %s burst", async (method) => {
+  const { pglite } = database;
+  await pglite.exec("CREATE TEMP TABLE IF NOT EXISTS worker_admission (id integer); TRUNCATE worker_admission");
+  const statement = "INSERT INTO worker_admission VALUES (1)";
+  const write = () => {
+    if (method === "query") return pglite.query(statement);
+    if (method === "exec") return pglite.exec(statement);
+    return pglite.transaction((tx) => tx.query(statement));
+  };
+
+  // Keep the engine occupied until the worker has received both writes and the core read.
+  const { burst, read } = await pglite.transaction(async () => {
+    const burst = withRuntimeOperationOrigin({ kind: "command", name: "bulk.save", extensionId: "ext.bulk" }, () =>
+      Promise.all([write(), write()]),
+    );
+    const read = pglite.query<{ writes: number }>("SELECT count(*)::int AS writes FROM worker_admission");
+    return { burst, read };
+  });
+
+  const [result] = await Promise.all([read, burst]);
+  expect(result.rows[0]!.writes).toBeLessThan(2);
 });
 
 test("transactions commit, roll back and nest through savepoints", async () => {
