@@ -156,6 +156,20 @@ const createSSEReader = (response: Response) => {
   return { readEvents, close };
 };
 
+const readReplayEvents = async (sse: ReturnType<typeof createSSEReader>, count: number) => {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      sse.readEvents(count),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error(`Timed out waiting for ${count} replay stream events`)), 3_000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
 const createHistoryReplayRecord = (input: {
   initialPatches: JsonPatch[];
   livePatch: JsonPatch;
@@ -377,7 +391,7 @@ describe("session stream active session replay", () => {
       expect(streamRes.status).toBe(200);
 
       sse = createSSEReader(streamRes);
-      const events = await sse.readEvents(3);
+      const events = await readReplayEvents(sse, 3);
 
       expect(events[0]?.event).toBe("ready");
 
@@ -391,7 +405,7 @@ describe("session stream active session replay", () => {
       expect(events[2]?.data).toEqual({ op: "replace", path: "/approval_requests", value: [] });
       // The fixture must stay active until the client has received its initial snapshot.
       readyForLivePatch.resolve();
-      const [liveEvent] = await sse.readEvents(1);
+      const [liveEvent] = await readReplayEvents(sse, 1);
       expect(liveEvent?.event).toBe("patch");
       const initialMessages = snapshotPatch.value as SessionMessage[];
       // A paused consumer may receive a coalesced snapshot instead of an incremental patch.
@@ -404,9 +418,12 @@ describe("session stream active session replay", () => {
     } finally {
       readyForLivePatch.resolve();
       exit.resolve({ status: "completed" });
-      await sse?.close();
-      await closeReplayApp();
-      rmSync(replayRoot, { recursive: true, force: true });
+      try {
+        await sse?.close();
+      } finally {
+        await closeReplayApp();
+        rmSync(replayRoot, { recursive: true, force: true });
+      }
     }
   });
 
