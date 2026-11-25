@@ -1,5 +1,4 @@
-import { Carousel, Heading, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
-import { CopyButton } from "@pstdio/ui";
+import { Button, Carousel, Heading, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import { useRef, useState } from "react";
 import { HomeIcon } from "./home-icon";
 
@@ -29,8 +28,15 @@ const ideas = [
 const HomePromptIdea = (props: { title: string; prompt: string }) => {
   const { title, prompt } = props;
   const text = useRef<HTMLParagraphElement>(null);
-  const [selectedForCopy, setSelectedForCopy] = useState(false);
-  const selectPrompt = () => {
+  const [copyStatus, setCopyStatus] = useState<"copied" | "selected">();
+  const copyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setCopyStatus("copied");
+      return;
+    } catch {
+      // The text remains copyable in webviews where the browser denies the clipboard API.
+    }
     const element = text.current;
     const selection = element?.ownerDocument.getSelection();
     if (!element || !selection) return;
@@ -38,7 +44,7 @@ const HomePromptIdea = (props: { title: string; prompt: string }) => {
     range.selectNodeContents(element);
     selection.removeAllRanges();
     selection.addRange(range);
-    setSelectedForCopy(true);
+    setCopyStatus("selected");
   };
   return (
     <Stack gap="xs">
@@ -46,19 +52,16 @@ const HomePromptIdea = (props: { title: string; prompt: string }) => {
         <Heading as="h3" textStyle="label/M/medium">
           {title}
         </Heading>
-        <CopyButton
-          text={prompt}
-          label="Copy prompt"
-          onCopy={() => setSelectedForCopy(false)}
-          onCopyError={selectPrompt}
-        />
+        <Button variant="ghost" size="xs" onClick={() => void copyPrompt()}>
+          Copy prompt
+        </Button>
       </HStack>
       <Text ref={text} textStyle="paragraph/S/regular" color="fg.muted" userSelect="text">
         {prompt}
       </Text>
-      {selectedForCopy && (
+      {copyStatus && (
         <Text role="status" textStyle="label/S/regular" color="fg.muted">
-          Prompt selected. Press Cmd+C or Ctrl+C to copy it.
+          {copyStatus === "copied" ? "Prompt copied." : "Prompt selected. Press Cmd+C or Ctrl+C to copy it."}
         </Text>
       )}
     </Stack>

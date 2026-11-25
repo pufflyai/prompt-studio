@@ -9,6 +9,7 @@ test("Home snapshot updates do not query agent quotas", async () => {
   const original = Object.getOwnPropertyDescriptor(globalThis, "IS_REACT_ACT_ENVIRONMENT");
   const originalDocument = Object.getOwnPropertyDescriptor(globalThis, "document"),
     originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+  const originalObserver = Object.getOwnPropertyDescriptor(globalThis, "IntersectionObserver");
   let quotas = 0,
     home = 0;
   const transport = createRetainedExtensionQueryFixture({
@@ -39,6 +40,13 @@ test("Home snapshot updates do not query agent quotas", async () => {
       }),
     });
     Object.defineProperty(globalThis, "window", { configurable: true, value: globalThis });
+    Object.defineProperty(globalThis, "IntersectionObserver", {
+      configurable: true,
+      value: class {
+        observe() {}
+        disconnect() {}
+      },
+    });
     const context = { host: frame.host, propsStore: frame.host.propsStore } as never;
     await act(async () => {
       tree = create(
@@ -64,6 +72,8 @@ test("Home snapshot updates do not query agent quotas", async () => {
     else Reflect.deleteProperty(globalThis, "document");
     if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
     else Reflect.deleteProperty(globalThis, "window");
+    if (originalObserver) Object.defineProperty(globalThis, "IntersectionObserver", originalObserver);
+    else Reflect.deleteProperty(globalThis, "IntersectionObserver");
     if (original) Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", original);
     else Reflect.deleteProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT");
   }
