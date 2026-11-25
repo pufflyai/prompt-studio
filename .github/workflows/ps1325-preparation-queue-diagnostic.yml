@@ -1,0 +1,130 @@
+name: PS-1325 real-worker queue phase diagnostic
+on:
+  push:
+    branches: [test/ps1325-preparation-queue-diagnostic]
+permissions:
+  contents: read
+jobs:
+  phase-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: 088e5eb0d6099f5377d778914f5527471aa1dc31
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version-file: package.json
+      - name: Record source and apply phase-only probe
+        run: |
+          test "$(git rev-parse HEAD)" = '088e5eb0d6099f5377d778914f5527471aa1dc31'
+          mkdir -p "$RUNNER_TEMP/preparation-queue-diagnostic" node_modules
+          ln -s ../packages/pstdio-paths node_modules/pstdio-paths
+          git rev-parse HEAD 'HEAD^{tree}' > "$RUNNER_TEMP/preparation-queue-diagnostic/source.txt"
+          cat > "$RUNNER_TEMP/preparation-queue-diagnostic/phase.patch" <<'PHASE_PATCH'
+          diff --git a/packages/pstdio-extensions/src/runtime/preparation-client.p0.test.ts b/packages/pstdio-extensions/src/runtime/preparation-client.p0.test.ts
+          index a6575b51ac..711d116fb9 100644
+          --- a/packages/pstdio-extensions/src/runtime/preparation-client.p0.test.ts
+          +++ b/packages/pstdio-extensions/src/runtime/preparation-client.p0.test.ts
+          @@ -1260,6 +1260,9 @@ test.each([
+           });
+           
+           test("an unrelated worker's slow startup does not hold the job a preemptor interrupted", async () => {
+          +  const started = performance.now();
+          +  const phase = (name: string) => console.error(`phase +${(performance.now() - started).toFixed(2)}ms ${name}`);
+          +  phase("start");
+             const unrelatedStartup = gate();
+             const client = fixture({ workers: 2, startupUrl: (worker) => (worker === 2 ? unrelatedStartup.url : undefined) });
+             const warm = gate();
+          @@ -1268,18 +1271,20 @@ test("an unrelated worker's slow startup does not hold the job a preemptor inter
+             let lost = 0;
+             const restart = restartOf(client, "restoration");
+             const unsubscribe = client.subscribe((event) => {
+          +    phase(`client event ${event.kind ?? event.entered}`);
+               if (event.kind === "worker-lost") lost++;
+             });
+             const work: Promise<unknown>[] = [];
+             // Held work is rejected when the client stops; observe it from the start.
+             const track = <T>(promise: Promise<T>) => {
+          -    work.push(promise.catch(() => undefined));
+          +    work.push(promise.catch((error) => phase(`task rejected: ${String(error)}`)));
+               return promise;
+             };
+             let edit: Promise<unknown> | undefined;
+             try {
+               const occupied = client.run("wait", { name: "warm", url: warm.url }, { resources: ["/same"] });
+               await warm.entered.promise;
+          +    phase("warm HTTP entered");
+               // The overflow slot starts for disjoint background work, and its worker never becomes ready.
+               track(
+                 client.withContinuation(
+          @@ -1288,8 +1293,10 @@ test("an unrelated worker's slow startup does not hold the job a preemptor inter
+                 ),
+               );
+               await unrelatedStartup.entered.promise;
+          +    phase("unrelated startup HTTP entered");
+               warm.release.resolve();
+               await occupied;
+          +    phase("warm task finished");
+               const original = client.withContinuation(
+                 () =>
+                   client.run(
+          @@ -1301,27 +1308,36 @@ test("an unrelated worker's slow startup does not hold the job a preemptor inter
+               );
+               track(original);
+               await restoration.entered.promise;
+          +    phase("restoration HTTP entered");
+               edit = client.withContinuation(async () => {
+                 await client.run("wait", { name: "foreground", url: step.url }, { resources: ["/same"] });
+          +      phase("foreground task finished");
+                 // Live restoration bars this peer, and no worker it needs is starting for the edit.
+                 const peer = client.run("value", { name: "peer" }, { resources: ["/same"], priority: "background" });
+                 await Promise.all([original, peer]);
+          +      phase("restoration and peer completed");
+               });
+               await step.entered.promise;
+          +    phase("foreground HTTP entered");
+               expect(lost).toBe(1);
+               restoration.release.resolve();
+               step.release.resolve();
+               expect(await Promise.race([edit.then(() => "completed"), Bun.sleep(3_000).then(() => "stalled")])).toBe(
+                 "completed",
+               );
+          +    phase("edit completed inside 3s race");
+               await restart.restarted;
+          +    phase("restoration restart received");
+               expect(lost).toBe(1);
+             } finally {
+          +    phase("cleanup entered");
+               unsubscribe();
+               restart.unsubscribe();
+               for (const open of [warm, restoration, step, unrelatedStartup]) open.release.resolve();
+               await client.stop();
+          +    phase("client stopped");
+               await Promise.allSettled([edit, ...work]);
+          +    phase("cleanup complete");
+             }
+           });
+           
+          PHASE_PATCH
+          git apply --check "$RUNNER_TEMP/preparation-queue-diagnostic/phase.patch"
+          git apply "$RUNNER_TEMP/preparation-queue-diagnostic/phase.patch"
+          git diff --check
+      - name: Execute the exact real-worker case once
+        working-directory: packages/pstdio-extensions
+        env:
+          CASE_NAME: an unrelated worker's slow startup does not hold the job a preemptor interrupted
+        run: |
+          bun --version
+          uname -sm
+          bun test --conditions=source --test-name-pattern "${CASE_NAME}$" \
+            --reporter=junit --reporter-outfile "$RUNNER_TEMP/preparation-queue-diagnostic/results.xml" \
+            ./src/runtime/preparation-client.p0.test.ts 2>&1 | tee "$RUNNER_TEMP/preparation-queue-diagnostic/trace.log"
+      - name: Preserve phase diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps1325-preparation-queue-phase
+          path: ${{ runner.temp }}/preparation-queue-diagnostic
+          if-no-files-found: error
