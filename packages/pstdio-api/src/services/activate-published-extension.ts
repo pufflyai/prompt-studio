@@ -21,6 +21,7 @@ interface ActivationDeps {
   emit: (source: unknown) => void;
   emitRemoved: (source: unknown) => void;
   emitInstance: (instance: unknown) => void;
+  emitInstanceRemoved: (instance: unknown) => void;
 }
 
 type RegisteredActivation = {
@@ -65,6 +66,15 @@ const refreshActivation = async (deps: ActivationDeps, { input, registered }: Re
   Object.assign(registered, current);
 };
 
+const discardUnactivatedSources = async (deps: ActivationDeps, prepared: RegisteredActivation[]) => {
+  for (const { registered, input } of prepared)
+    if (
+      input.source.kind === "prepared" &&
+      !(await deps.instances.list({ installed_extension_id: registered.id })).length
+    )
+      await deps.sources.remove(registered.id);
+};
+
 /** Prepare every source before one database transaction changes the project's running set. */
 export const activatePublishedExtensions = async (deps: ActivationDeps, inputs: Activation[]) => {
   const prepared: RegisteredActivation[] = [];
@@ -88,6 +98,7 @@ export const activatePublishedExtensions = async (deps: ActivationDeps, inputs: 
     const replacedFolders: string[] = [];
     for (const [index, entry] of prepared.entries()) {
       deps.emit(entry.registered);
+      for (const instance of activated[index]!.removed) deps.emitInstanceRemoved(instance);
       for (const instance of activated[index]!.changed) deps.emitInstance(instance);
       if (
         entry.previousSource?.id !== entry.registered.id &&
@@ -108,9 +119,7 @@ export const activatePublishedExtensions = async (deps: ActivationDeps, inputs: 
     }));
   } catch (error) {
     // A source referenced by an instance has crossed the activation boundary and must stay usable.
-    for (const { registered } of prepared)
-      if (!(await deps.instances.list({ installed_extension_id: registered.id })).length)
-        await deps.sources.remove(registered.id);
+    await discardUnactivatedSources(deps, prepared);
     await deps.refresh().catch(() => {});
     throw error;
   }

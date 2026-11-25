@@ -6,7 +6,11 @@ import path from "node:path";
 const LEGACY_FILES = new Set(["src/services/legacy-resource-links.ts"]);
 
 // First-party extension ids: `pstdio.pstdio-<name>` and `pstdio.harness-<name>`.
-const extensionId = /\bpstdio\.(?:pstdio|harness)-[a-z0-9-]+/;
+const extensionId = /\bpstdio\.(?:pstdio|harness)-[a-z0-9-]+/g;
+// Released core used this synthetic namespace without installing an extension. Only its
+// migration may recognize it; other first-party ids in that file remain prohibited.
+const isLegacyHostSetting = (file: string, id: string) =>
+  file === "src/db/extension-preferences-upgrade.ts" && id === "pstdio.harness-params";
 
 const packageRoot = path.resolve(import.meta.dir, "../..");
 
@@ -20,7 +24,11 @@ const filesUnder = (dir: string): string[] =>
 describe("pstdio-db extension ownership", () => {
   test("migrations and database code name no extension ids", () => {
     const offenders = [...filesUnder("src"), ...filesUnder("drizzle")].filter(
-      (file) => !LEGACY_FILES.has(file) && extensionId.test(readFileSync(path.join(packageRoot, file), "utf8")),
+      (file) =>
+        !LEGACY_FILES.has(file) &&
+        [...readFileSync(path.join(packageRoot, file), "utf8").matchAll(extensionId)].some(
+          ([id]) => !isLegacyHostSetting(file, id),
+        ),
     );
 
     expect(offenders).toEqual([]);

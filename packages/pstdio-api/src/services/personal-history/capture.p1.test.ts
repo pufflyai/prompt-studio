@@ -4,7 +4,7 @@ import { capturePersonalHistory, captureSessionChanges } from "./capture";
 import { createHistoryReferences, historyReferenceName } from "./references";
 import { createPersonalHistoryStore } from "./store";
 
-test("incremental session updates preserve the primary workspace and unlinked sessions", async () => {
+test("incremental session updates preserve the current workspace and unlinked sessions", async () => {
   const source = await createTestApp();
   try {
     const project = await source.deps.projectService.create({ name: "Incremental history" });
@@ -70,13 +70,15 @@ test("incremental session updates preserve the primary workspace and unlinked se
     expect(rows.find((row) => row.id === linked.id)?.anchors_json).toContainEqual(expect.objectContaining(anchor));
     expect(rows.find((row) => row.id === linked.id)).toMatchObject({
       title: "Renamed linked",
-      workspace_id: first.id,
+      workspace_id: second.id,
     });
     expect(rows.find((row) => row.id === unlinked.id)).toMatchObject({
       title: "Renamed unlinked",
       workspace_id: null,
     });
-    await source.deps.workspaceSessionService.link(foreignWorkspace.id, unlinked.id);
+    await expect(source.deps.workspaceSessionService.link(foreignWorkspace.id, unlinked.id)).rejects.toThrow(
+      "Workspace does not belong to the session project.",
+    );
     await captureSessionChanges(input, [unlinked.id]);
     expect((await history.readRecords("sessions")).find((row) => row.id === unlinked.id)).toHaveProperty(
       "workspace_id",

@@ -12,6 +12,7 @@ import {
 import { createDb } from "../../db/connection.pglite";
 import { runDatabaseScaleEntrypoint } from "./database-scale-entrypoint";
 import { createDocumentStorageDBService } from "./document-storage";
+import { storageOwnerKey } from "./storage-owner-key";
 
 const projectId = "00000000-0000-4000-8000-000000000903";
 const address = { workbenchId: projectId, extensionId: "scale.owner" };
@@ -96,8 +97,8 @@ export const benchmarkDatabase = async (kind: Workload, count: number, root: str
     const history = async () =>
       (
         await db.execute<{ count: string }>(sql`
-        SELECT count(*) FROM storage_ordered_operations
-        WHERE workbench_id = ${address.workbenchId} AND extension_id = ${address.extensionId}
+        SELECT count(*) FROM operations
+        WHERE owner_id = ${storageOwnerKey(address)}
       `)
       ).rows[0]!.count;
     const before = await history();

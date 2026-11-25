@@ -55,6 +55,13 @@ resource rows; empty collection pages use this path.
 Planner requires this host API. Its independent release must follow publication
 of the matching SDK and host; a local development link only proves the candidate.
 
+The API 0.6.0 step, after 0.48.0, removes `principalId` from automation token
+issuance. Each token owns its retry history; callers issue separate tokens for
+independent authorities. Connection configuration also accepts optional
+`credentialScope` to select device-wide or project credentials. First-party
+manifests retain their earlier supported ranges and add `^0.6.0` before the host
+adopts this step. This compatibility metadata does not adopt new SDK methods.
+
 The [native terminal view body](0022-terminal-sessions.md#native-terminal-views)
 shares the coordinated API 0.4.0 step on `main`. It requires a published SDK exporting
 `TerminalViewBody` and a compatible host advertising `view.terminal.v1` (planned

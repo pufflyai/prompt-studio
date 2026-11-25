@@ -7,6 +7,7 @@ import type {
   createExtensionSettingsDBService,
   createExtensionStorageDBService,
   createInstalledExtensionSourcesDBService,
+  createPreferencesDBService,
   createProjectInfoDBService,
   createResourceLinksDBService,
   createSessionQueueEntriesDBService,
@@ -89,6 +90,7 @@ export interface RouteDeps {
   extensionFileService: ReturnType<typeof createExtensionFileService>;
   extensionConnectionService: ReturnType<typeof createExtensionConnectionService>;
   extensionSettingsDBService: ReturnType<typeof createExtensionSettingsDBService>;
+  preferencesDBService: ReturnType<typeof createPreferencesDBService>;
   webviewPreferencesDBService: ReturnType<typeof createWebviewPreferencesDBService>;
   extensionService: ReturnType<typeof createExtensionService>;
   extensionUpgradeService: ReturnType<typeof createExtensionUpgradeService>;

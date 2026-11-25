@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { drizzle } from "drizzle-orm/pglite";
 import * as schema from "../../db/schemas.pg";
+import { attachDocumentFiles, documentFilesFor } from "./document-files";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 
@@ -12,10 +13,11 @@ test("a local bulk save reads its selected canonical bodies once across compilat
       schema,
       logger: {
         logQuery: (query) => {
-          if (query.startsWith("select") && query.includes('from "storage_ordered_records"')) reads++;
+          if (query.startsWith("select") && query.includes('from "records"') && query.includes('"base"')) reads++;
         },
       },
     });
+    attachDocumentFiles(db, documentFilesFor(f.db));
     const owner = { workbenchId: f.projectAId, extensionId: "ext.example" };
     const service = createDocumentStorageDBService(db);
     const records = service.open({ owner }).records;

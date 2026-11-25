@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { access } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
+import { readClosedDocumentText } from "pstdio-db/test-fixtures";
 import type { StackApi } from "pstdio-scripts/testing";
 import * as Y from "yjs";
 import savedQuota from "./fixtures/home-quota-047.json";
@@ -70,13 +71,44 @@ const loadSavedQuota = async (db: PGlite, project: string, owners: string[]) => 
   });
 };
 
+const quotaJournalSql = (table: string, numeric: boolean, consolidated: boolean) => {
+  if (consolidated)
+    return {
+      from: `operations t JOIN owners o ON t.owner_id=o.id${table === "storage_ordered_receipts" ? " CROSS JOIN LATERAL jsonb_each(t.receipt) fact(key,value)" : ""}`,
+      address: "o.project_id=$1 AND o.extension_id=$2",
+      retained:
+        table === "storage_ordered_receipts"
+          ? `jsonb_build_object('extension_id',o.extension_id,'operation_id',t.operation_id,'epoch',fact.key,
+        'admission_fingerprint',fact.value->>'admissionFingerprint','state',fact.value->>'state',
+        'indexed',(fact.value->>'indexed')::boolean)`
+          : "(to_jsonb(t)-'owner_id'-'touches'-'receipt_epoch'-'receipt'-'receipt_indexed') || jsonb_build_object('extension_id',o.extension_id)",
+    };
+  if (numeric)
+    return {
+      from: `${table} t JOIN owners o ON t.owner_id=o.id`,
+      address: "o.project_id=$1 AND o.extension_id=$2",
+      retained: "(to_jsonb(t)-'owner_id') || jsonb_build_object('extension_id',o.extension_id)",
+    };
+  return { from: `${table} t`, address: "t.workbench_id=$1 AND t.extension_id=$2", retained: "to_jsonb(t)" };
+};
+
 const assertSavedQuota = async (db: PGlite, project: string, owners: string[], migrated: boolean) => {
+  const {
+    rows: [layout],
+  } = await db.query<{ numeric: boolean; documents: boolean; consolidated: boolean; records: boolean }>(`SELECT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_schema='public'
+      AND table_name='storage_ordered_operations' AND column_name='owner_id') AS numeric, to_regclass('public.records') IS NOT NULL AS records, to_regclass('public.operations') IS NOT NULL AS consolidated, EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='storage_current_records' AND column_name='owner_id') AS documents`);
   for (const sample of savedQuota.storage_current_records.filter((row) => owners.includes(row.extension_id))) {
     const owner = migrated ? canonical : sample.extension_id;
-    const { rows } = await db.query<{ value: unknown }>(
-      "SELECT value FROM storage_current_records WHERE workbench_id = $1 AND extension_id = $2 AND record_id = $3 AND NOT deleted",
-      [project, owner, sample.record_id],
-    );
+    let query =
+      "SELECT value FROM storage_current_records WHERE workbench_id=$1 AND extension_id=$2 AND record_id=$3 AND NOT deleted";
+    if (layout!.documents)
+      query =
+        "SELECT value FROM storage_current_records WHERE owner_id=(SELECT id FROM owners WHERE project_id=$1 AND extension_id=$2) AND record_id=$3 AND NOT deleted";
+    if (layout!.records)
+      query =
+        "SELECT value FROM records WHERE owner_id=(SELECT id FROM owners WHERE project_id=$1 AND extension_id=$2) AND record_id=$3 AND NOT deleted AND revision IS NOT NULL";
+    const { rows } = await db.query<{ value: unknown }>(query, [project, owner, sample.record_id]);
     assert.deepEqual(
       rows.map((row) => row.value),
       [sample.value],
@@ -86,14 +118,31 @@ const assertSavedQuota = async (db: PGlite, project: string, owners: string[], m
       for (const entry of savedQuota[table].filter((row) => row.extension_id === sample.extension_id)) {
         // local_sequence is assigned by the receiving database on insert.
         const data = { ...entry, extension_id: owner };
+        const { from, address, retained } = quotaJournalSql(table, layout!.numeric, layout!.consolidated);
         const matches = await db.query(
-          `SELECT 1 FROM ${table} t WHERE workbench_id = $1 AND extension_id = $2 AND operation_id = $3 AND to_jsonb(t) @> ($4::jsonb - 'local_sequence')`,
+          `SELECT 1 FROM ${from} WHERE ${address} AND t.operation_id = $3 AND (${retained}) @> ($4::jsonb - 'local_sequence')`,
           [project, owner, entry.operation_id, JSON.stringify(data)],
         );
         assert.equal(matches.rows.length, 1, `Home lost or changed ${table} for ${sample.record_id}`);
       }
     }
   }
+};
+
+const enabledHomeSources = async (db: PGlite, project: string) => {
+  const {
+    rows: [schema],
+  } = await db.query<{ current: boolean; projects: boolean }>(
+    "SELECT to_regclass('public.extensions') IS NOT NULL AS current, to_regclass('public.project_extensions') IS NOT NULL AS projects",
+  );
+  const sourceTable = schema!.current ? "extensions" : "installed_extension_sources";
+  const membership = schema!.projects ? "project_extensions" : "extension_instances";
+  const sourceRef = schema!.projects ? "extension_ref" : "installed_extension_id";
+  const projectRef = schema!.projects ? "project_id" : "scope_id";
+  return db.query<{ extension_id: string }>(
+    `SELECT DISTINCT s.extension_id FROM ${sourceTable} s JOIN ${membership} i ON i.${sourceRef} = s.id WHERE i.${projectRef} = $1 AND i.enabled AND s.extension_id IN ($2, $3)`,
+    [project, historical, canonical],
+  );
 };
 
 // Open only the stopped disposable profile. The candidate must run the migrations itself.
@@ -103,10 +152,7 @@ export const checkHomeHistory = async (input: ProjectUpgradeInput, project: stri
   const icu = join(dirname(require.resolve("@electric-sql/pglite-icu-full")), "icu.76.tgz");
   const db = new PGlite(path, { database: "template1", username: "postgres", icuDataDir: Bun.file(icu) });
   try {
-    const source = await db.query<{ extension_id: string }>(
-      "SELECT DISTINCT s.extension_id FROM installed_extension_sources s JOIN extension_instances i ON i.installed_extension_id = s.id WHERE i.scope_id = $1 AND i.enabled AND s.extension_id IN ($2, $3)",
-      [project, historical, canonical],
-    );
+    const source = await enabledHomeSources(db, project);
     assert.equal(source.rows.length, 1, "Expected one enabled Home identity in the upgrade fixture");
     const owner = before?.owner ?? source.rows[0]!.extension_id;
     const conflicted = input.profile === "conflicted";
@@ -129,13 +175,13 @@ export const checkHomeHistory = async (input: ProjectUpgradeInput, project: stri
             [project, original, key, Y.encodeStateAsUpdate(document)],
           );
         } else {
-          const { rows } = await db.query<{ state: Uint8Array }>(
-            "SELECT state FROM storage_documents WHERE workbench_id = $1 AND extension_id = $2 AND document_id = $3",
-            [project, conflicted ? original : canonical, key],
+          const saved = await readClosedDocumentText(
+            db,
+            path,
+            { workbenchId: project, extensionId: conflicted ? original : canonical },
+            key,
           );
-          assert.equal(rows.length, 1, `Active Home lost access to ${key} after upgrade`);
-          Y.applyUpdate(document, rows[0]!.state);
-          assert.equal(document.getText("content").toString(), content, `Home changed ${key}`);
+          assert.equal(saved, content, `Home changed ${key}`);
         }
       } finally {
         document.destroy();

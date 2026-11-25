@@ -196,7 +196,10 @@ test.each([
     await created.promise;
     expect(fixture.owner.controlInvocations.size).toBe(1);
     if (change === "cancelled") fixture.owner.cancellationRequested = true;
-    else await fixture.handle.deps.sessionService.update(fixture.session.id, { last_request_started: "new-run" });
+    else
+      await fixture.handle.deps.sessionService.update(fixture.session.id, {
+        last_request_started: "2099-01-01T00:00:00.000Z",
+      });
     release.resolve();
     expect(await (await response).json()).toMatchObject({
       status: "rejected",

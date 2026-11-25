@@ -25,7 +25,7 @@ test("startup imports only its recorded workspace contexts and preserves newer i
     await upgradeArtifactFileProjections(input);
     expect(await Bun.file(address.path).exists()).toBe(false);
     expect(await Bun.file(other.path).exists()).toBe(true);
-    const root = input.projections.open(address.key);
+    const root = input.projections.open(address.key, f.owner);
     expect((await root.read()).state).toEqual(old);
     await root.write(current);
     await Bun.write(address.path, JSON.stringify(old));
@@ -57,7 +57,9 @@ test("a failed startup import keeps its original and requests do not retry or ov
       await expect(projection.read(["documents/note.md"])).rejects.toThrow("startup");
     expect(failures).toHaveLength(1);
     expect(await Bun.file(address.path).text()).toBe("invalid JSON");
-    expect((await f.deps.extensionStorageService.fileProjections.open(address.key).read()).initialized).toBe(false);
+    expect((await f.deps.extensionStorageService.fileProjections.open(address.key, f.owner).read()).initialized).toBe(
+      false,
+    );
   } finally {
     await f.close();
   }

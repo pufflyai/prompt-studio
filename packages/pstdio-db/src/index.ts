@@ -30,10 +30,12 @@ export {
 } from "./services/extension-storage/personal-history-index";
 export { RecoveryPointError } from "./services/extension-storage/recovery-points";
 export { createExtensionUserDataDBService } from "./services/extension-user-data/extension-user-data";
-export { createFilesDBService } from "./services/files/files";
+export { createFilesDBService, fileColumns } from "./services/files/files";
 export { createInstalledExtensionSourcesDBService } from "./services/installed-extension-sources/installed-extension-sources";
 export { legacyResourceOwner, sessionColumns, workspaceColumns } from "./services/legacy-resource-links";
 export { createNotificationsDBService } from "./services/notifications/notifications";
+export { harnessParamsPreferenceKey } from "./services/preferences/preference-owners";
+export { createPreferencesDBService } from "./services/preferences/preferences";
 export { createProjectInfoDBService } from "./services/project-info";
 export { createProjectsDBService } from "./services/projects/projects";
 export { pageBoundary, pageLimit, queryPage } from "./services/query-page";

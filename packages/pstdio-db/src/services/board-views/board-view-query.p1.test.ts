@@ -8,7 +8,7 @@ test("malformed saved-view cursor positions restart instead of exceeding the dat
   try {
     const project = await createProjectsDBService(db).create({ name: "Cursor validation" });
     const service = createBoardViewsDBService(db);
-    const scope = { project_id: project.id, extension_instance_id: null, board_id: "workspaces" };
+    const scope = { project_id: project.id, extension_id: null, board_id: "workspaces" };
     const row = await service.create({
       ...scope,
       title: "View",

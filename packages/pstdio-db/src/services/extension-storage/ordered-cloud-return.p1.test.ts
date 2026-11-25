@@ -1,13 +1,13 @@
 import { afterEach, expect, test } from "bun:test";
-import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, isNotNull, isNull, sql } from "drizzle-orm";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { createRecordStreamSync } from "pstdio-sync/relay";
 import type { Json } from "pstdio-sync-contracts";
 import { createDb } from "../../db/connection.pglite";
 import { storage_ordered_operations as operations, projects } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
-import { readConversion, saveConversion } from "./ordered-conversion-state";
 import { orderedReturnLimits, readOrderedReturnState } from "./ordered-return";
+import { orderedOwnerWhere } from "./ordered-sql";
 import { createRelay } from "./record-stream-relay.fixture";
 
 const cleanup: (() => Promise<unknown>)[] = [];
@@ -64,7 +64,7 @@ const devices = async () => {
         .select({ count: sql<number>`count(*)::int` })
         .from(operations)
         .where(
-          and(eq(operations.workbench_id, projectId), isNotNull(operations.envelope), isNull(operations.settled_epoch)),
+          and(orderedOwnerWhere(operations, owner), isNotNull(operations.envelope), isNull(operations.settled_epoch)),
         );
       return row!.count;
     };
@@ -107,17 +107,12 @@ const seeded = async (tickets: Record<string, Json>) => {
   return pair;
 };
 
-test("removal preflight inspects pending saves without resuming legacy conversion", async () => {
+test("removal preflight inspects admitted pending saves", async () => {
   const { laptop, projectId } = await seeded({ "PS-1": { title: "Seed" } });
   expect(await laptop.service.cloudReturn.removalState(projectId)).toBe("verified");
   await laptop.service.cloudReturn.signOut();
   await laptop.save("PS-1", { set: { "/title": "Edited offline" } });
   expect(await laptop.service.cloudReturn.removalState(projectId)).toBe("pending");
-
-  const owner = { workbenchId: projectId, extensionId: "example.tickets" };
-  await laptop.db.transaction((tx) => saveConversion(tx, owner, { phase: "records" }));
-  expect(await laptop.service.cloudReturn.removalState(projectId)).toBe("unknown");
-  expect(await readConversion(laptop.db, owner)).toEqual({ phase: "records" });
 });
 
 test("signing out keeps every edit, folds unsent saves and keeps one pending save per record", async () => {

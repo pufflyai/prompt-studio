@@ -1,12 +1,19 @@
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, ne } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { type NativeTextTarget, nativeTextTargetSchema } from "pstdio-api-contracts";
 import type { StorageOwner } from "pstdio-sync";
 import { applyTextEditorUpdate, readTextDocumentSeed } from "pstdio-sync/text";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
-import { native_document_room_updates, native_document_rooms, native_document_sources } from "../../db/schemas.pg";
+import { documents } from "../../db/schemas/documents";
+import { owners as storageOwners } from "../../db/schemas/owners";
+import { assertStorageOwnerAdmitted, storageOwnerAdmissionPending } from "../../db/storage-admission";
 import { createDocumentCache } from "./document-cache";
+import { fileDocumentWhere, loadFileDocument, saveFileDocument } from "./document-file-persistence";
+import { documentFilesFor, trackDocumentFiles } from "./document-files";
+import { nativeDocumentId, roomDocumentId } from "./document-kind";
 import { NativeDocumentRoomError } from "./native-document-errors";
+import { externalRoomId, insertNativeRoom, nativeKeyFromId } from "./native-document-files";
 import {
   orderedRoomMarkerId,
   removeRoomGeneration,
@@ -18,18 +25,9 @@ interface RoomAddress {
   owner: StorageOwner;
   roomId: string;
 }
+const source = alias(documents, "room_source");
 const roomWhere = ({ owner, roomId }: RoomAddress) =>
-  and(
-    eq(native_document_rooms.id, roomId),
-    eq(native_document_rooms.workbench_id, owner.workbenchId),
-    eq(native_document_rooms.extension_id, owner.extensionId),
-  );
-const sourceWhere = ({ owner, documentKey }: { owner: StorageOwner; documentKey: string }) =>
-  and(
-    eq(native_document_sources.workbench_id, owner.workbenchId),
-    eq(native_document_sources.extension_id, owner.extensionId),
-    eq(native_document_sources.document_key, documentKey),
-  );
+  and(eq(documents.kind, "room"), fileDocumentWhere(owner, roomDocumentId(roomId)));
 const validate = async (document: Y.Doc) => {
   if (document.store.pendingStructs || document.store.pendingDs)
     throw new NativeDocumentRoomError("missing_history", "The editor source is missing causal history");
@@ -40,63 +38,33 @@ const copy = (document: Y.Doc) => {
   Y.applyUpdate(snapshot, Y.encodeStateAsUpdate(document));
   return snapshot;
 };
-type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
-const append = async (
-  tx: Transaction,
-  input: RoomAddress,
-  row: { id: string; revision: number; folded_revision: number },
-  document: Y.Doc,
-  updates: Uint8Array[],
-) => {
-  if (!updates.length) return row.revision;
-  const revision = row.revision + 1;
-  await tx.insert(native_document_room_updates).values({ room_id: row.id, revision, update: Y.mergeUpdates(updates) });
-  const fold = revision - row.folded_revision >= 128;
-  await tx
-    .update(native_document_rooms)
-    .set({
-      revision,
-      ...(fold && { state: Y.encodeStateAsUpdate(document), folded_revision: revision }),
-    })
-    .where(roomWhere(input));
-  if (fold) await tx.delete(native_document_room_updates).where(eq(native_document_room_updates.room_id, row.id));
-  return revision;
-};
-
 export const createNativeDocumentRoomsDBService = (db: DbClient) => {
   const cache = createDocumentCache();
   const access = async <T>(input: RoomAddress, action: (document: Y.Doc) => Promise<T>) => {
-    const key = JSON.stringify([input.owner, input.roomId]);
+    assertStorageOwnerAdmitted(db, input.owner);
+    let key = JSON.stringify([input.owner, input.roomId]);
     let loaded: Y.Doc | undefined;
     try {
       const result = await db.transaction(async (tx) => {
-        const [row] = await tx
-          .select({
-            id: native_document_rooms.id,
-            document_key: native_document_rooms.document_key,
-            revision: native_document_rooms.revision,
-            folded_revision: native_document_rooms.folded_revision,
-          })
-          .from(native_document_rooms)
+        const [saved] = await tx
+          .select({ room: documents, sourceKey: source.key })
+          .from(documents)
+          .innerJoin(
+            source,
+            and(eq(source.id, documents.room_of), eq(source.owner_id, documents.owner_id), ne(source.kind, "room")),
+          )
           .where(roomWhere(input))
           .for("update");
-        if (!row) throw new NativeDocumentRoomError("not_found", "Editor room not found");
+        if (!saved) throw new NativeDocumentRoomError("not_found", "Editor room not found");
+        const row = saved.room;
+        key = JSON.stringify([row.owner_id, input.roomId]);
         const cached = cache.get(key);
-        const document = cached?.revision === row.revision ? cached.document : new Y.Doc();
+        const files = documentFilesFor(tx);
+        const document =
+          cached?.revision === row.revision
+            ? cached.document
+            : (await loadFileDocument(files, input.owner.workbenchId, row)).document;
         loaded = document;
-        if (document !== cached?.document) {
-          const [saved] = await tx
-            .select({ state: native_document_rooms.state })
-            .from(native_document_rooms)
-            .where(roomWhere(input));
-          Y.applyUpdate(document, saved.state);
-          const tail = await tx
-            .select({ update: native_document_room_updates.update })
-            .from(native_document_room_updates)
-            .where(eq(native_document_room_updates.room_id, row.id))
-            .orderBy(native_document_room_updates.revision);
-          for (const { update } of tail) Y.applyUpdate(document, update);
-        }
         const updates: Uint8Array[] = [];
         const capture = (update: Uint8Array) => updates.push(update);
         document.on("update", capture);
@@ -106,12 +74,18 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
         } finally {
           document.off("update", capture);
         }
-        const revision = await append(tx, input, row, document, updates);
+        const revision = await saveFileDocument(tx, files, {
+          projectId: input.owner.workbenchId,
+          row,
+          document,
+          updates,
+        });
         return {
           value,
           document,
+          ownerId: row.owner_id,
           revision,
-          documentKey: row.document_key,
+          documentKey: nativeKeyFromId(saved.sourceKey),
           generation: await roomGeneration(tx, input.owner, input.roomId),
         };
       });
@@ -147,6 +121,7 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
       writable?: boolean;
       generation?: string;
     }) {
+      assertStorageOwnerAdmitted(db, input.owner);
       const parsed = nativeTextTargetSchema.parse(input.target);
       const normalized = "fileRendererId" in parsed ? { ...parsed, resource: parsed.resource } : parsed;
       const target = input.writable === false ? null : normalized;
@@ -162,34 +137,13 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
           throw new NativeDocumentRoomError("invalid_frame", "Invalid editor source");
         }
         const id = crypto.randomUUID();
-        await db.transaction(async (tx) => {
-          const insert = tx.insert(native_document_sources).values({
-            workbench_id: input.owner.workbenchId,
-            extension_id: input.owner.extensionId,
-            document_key: input.documentKey,
-            target,
-          });
-          if (target)
-            await insert.onConflictDoUpdate({
-              target: [
-                native_document_sources.workbench_id,
-                native_document_sources.extension_id,
-                native_document_sources.document_key,
-              ],
-              set: { target },
-            });
-          else await insert.onConflictDoNothing();
-          await tx.insert(native_document_rooms).values({
-            id,
-            workbench_id: input.owner.workbenchId,
-            extension_id: input.owner.extensionId,
-            document_key: input.documentKey,
-            state: Y.encodeStateAsUpdate(document),
-          });
+        const ownerId = await db.transaction(async (tx) => {
+          const row = await insertNativeRoom(tx, { ...input, id, target, state: Y.encodeStateAsUpdate(document) });
           if (input.generation !== undefined)
             await saveOrderedMarker(tx, input.owner, orderedRoomMarkerId(id), { generation: input.generation });
+          return row.owner_id;
         });
-        cache.publish(JSON.stringify([input.owner, id]), { document, revision: 0 });
+        cache.publish(JSON.stringify([ownerId, id]), { document, ownerId, revision: 0 });
         return { id };
       } catch (error) {
         document.destroy();
@@ -208,39 +162,51 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
     apply: (input: RoomAddress & { update: Uint8Array }) => apply(input, true),
     receive: (input: RoomAddress & { update: Uint8Array }) => apply(input, false),
     async remove(input: RoomAddress) {
+      assertStorageOwnerAdmitted(db, input.owner);
       const removed = await db.transaction(async (tx) => {
         const removed = await tx
-          .delete(native_document_rooms)
+          .delete(documents)
           .where(roomWhere(input))
-          .returning({ id: native_document_rooms.id });
+          .returning({ id: documents.id, owner_id: documents.owner_id });
+        for (const row of removed) trackDocumentFiles(tx, input.owner.workbenchId, row.id);
         if (removed.length) await removeRoomGeneration(tx, input.owner, input.roomId);
         return removed;
       });
-      cache.discard(JSON.stringify([input.owner, input.roomId]));
+      for (const row of removed) cache.discard(JSON.stringify([row.owner_id, input.roomId]));
       return removed.length > 0;
     },
     async source(input: { owner: StorageOwner; documentKey: string }) {
+      assertStorageOwnerAdmitted(db, input.owner);
       const [row] = await db
-        .select({ target: native_document_sources.target })
-        .from(native_document_sources)
-        .where(sourceWhere(input));
+        .select({ target: documents.target })
+        .from(documents)
+        .where(fileDocumentWhere(input.owner, nativeDocumentId(input.documentKey)));
       return row?.target;
     },
     async *pending() {
-      let cursor: string | undefined;
+      let cursor: number | undefined;
       while (true) {
         const rows = await db
           .select({
-            id: native_document_rooms.id,
-            workbenchId: native_document_rooms.workbench_id,
-            extensionId: native_document_rooms.extension_id,
-            documentKey: native_document_rooms.document_key,
+            internalId: documents.id,
+            key: documents.key,
+            workbenchId: storageOwners.project_id,
+            extensionId: storageOwners.extension_id,
+            sourceKey: source.key,
           })
-          .from(native_document_rooms)
-          .where(cursor ? gt(native_document_rooms.id, cursor) : undefined)
-          .orderBy(native_document_rooms.id)
+          .from(documents)
+          .innerJoin(storageOwners, eq(storageOwners.id, documents.owner_id))
+          .innerJoin(
+            source,
+            and(eq(source.id, documents.room_of), eq(source.owner_id, documents.owner_id), ne(source.kind, "room")),
+          )
+          .where(and(eq(documents.kind, "room"), cursor ? gt(documents.id, cursor) : undefined))
+          .orderBy(documents.id)
           .limit(100);
-        for (const { id, workbenchId, extensionId, documentKey } of rows) {
+        for (const { key, workbenchId, extensionId, sourceKey } of rows) {
+          const id = externalRoomId(key);
+          const documentKey = nativeKeyFromId(sourceKey);
+          if (storageOwnerAdmissionPending(db, { workbenchId, extensionId })) continue;
           const generation = await roomGeneration(db, { workbenchId, extensionId }, id);
           yield {
             id,
@@ -250,7 +216,7 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
           };
         }
         if (rows.length < 100) return;
-        cursor = rows.at(-1)!.id;
+        cursor = rows.at(-1)!.internalId;
       }
     },
   };

@@ -54,7 +54,7 @@ export const recordPageSql = (
     SELECT record_id, revision,
       jsonb_build_object(${sql.join(selected, sql`, `)}) AS fields,
       jsonb_build_array(${sql.join(sort, sql`, `)}) AS sort_values
-    FROM ${candidates ?? sql`storage_current_records`}
+    FROM ${candidates ?? sql`records`}
     ${candidates ? sql`` : sql`WHERE ${where}`}
     ORDER BY ${pageOrderSql(index, resolve, owner)} LIMIT ${limit} OFFSET ${offset}`;
 };

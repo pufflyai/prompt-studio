@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { classifyWebviewEntry, collectExtensionWebviews, safeWebviewId } from "./extension-webviews";
 
 test("allocates portable webview cache paths for Windows device publishers", () => {
@@ -36,7 +37,7 @@ describe("collectExtensionWebviews", () => {
         name: "pstdio-home",
         displayName: "Home",
         version: "1.0.0",
-        enginesPstdio: "^0.4.0 || ^0.5.0",
+        enginesPstdio: `^${EXTENSION_API_VERSION}`,
       },
       definition: {
         views: [{ id: "home", title: "Home", body: { kind: "webview", entry: asset("./home.tsx") } }],

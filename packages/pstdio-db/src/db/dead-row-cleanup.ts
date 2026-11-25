@@ -42,7 +42,7 @@ export const vacuumDeadRows = async (
     if (options.stopped?.()) break;
     try {
       // PGlite queues each statement behind any open transaction, so a vacuum never runs inside one.
-      if (options.all && name === "storage_current_records") {
+      if (options.all && name === "records") {
         await db.exec(`VACUUM ${name}`);
         if (!options.stopped?.())
           await db.transaction((tx) => analyzeRecordProjection((statement) => tx.exec(statement)));
@@ -61,14 +61,30 @@ export const startDeadRowCleanup = (
   db: PGlite,
   cleanupRetiredRows: (stopped: () => boolean) => Promise<void>,
   onError: (error: unknown, table?: string) => void,
+  isQuiet: () => boolean,
 ) => {
   let stopped = false;
+  let firstPassPending = true;
   let running: Promise<unknown> | undefined;
-  const pass = (all: boolean) => {
+  const interrupted = () => stopped || !isQuiet();
+  const pass = () => {
+    if (interrupted()) return;
+    const all = firstPassPending;
     running ??= withRuntimeOperationOrigin({ kind: "background", name: "database.dead-row-cleanup" }, async () => {
-      await cleanupRetiredRows(() => stopped);
-      if (!stopped) await vacuumDeadRows(db, { all, stopped: () => stopped, onError });
-      if (!all && !stopped) await analyzeMissingRecordStatistics(db);
+      let vacuumFailed = false;
+      await cleanupRetiredRows(interrupted);
+      if (!interrupted())
+        await vacuumDeadRows(db, {
+          all,
+          stopped: interrupted,
+          onError: (error, table) => {
+            vacuumFailed = true;
+            onError(error, table);
+          },
+        });
+      if (interrupted()) return;
+      if (!vacuumFailed) firstPassPending = false;
+      if (!all) await analyzeMissingRecordStatistics(db);
     })
       .catch((error) => onError(error))
       .finally(() => {
@@ -76,8 +92,8 @@ export const startDeadRowCleanup = (
       });
   };
   // The first pass covers what earlier sessions left; later passes follow this session's counters.
-  const firstPass = setTimeout(() => pass(true), FIRST_PASS_DELAY_MS);
-  const timer = setInterval(() => pass(false), CHECK_INTERVAL_MS);
+  const firstPass = setTimeout(pass, FIRST_PASS_DELAY_MS);
+  const timer = setInterval(pass, CHECK_INTERVAL_MS);
   firstPass.unref?.();
   timer.unref?.();
   return async () => {

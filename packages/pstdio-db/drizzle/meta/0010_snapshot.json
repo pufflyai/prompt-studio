@@ -1,5 +1,5 @@
 {
-  "id": "46895e82-1d9d-4aa6-ac71-87a7aa7d7266",
+  "id": "7831c13a-76db-4e65-a402-222b04fffc09",
   "prevId": "e22b1e43-5e44-4e7c-b676-5be106a4f0ab",
   "version": "7",
   "dialect": "postgresql",
@@ -177,10 +177,10 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "activity_events_source_extension_id_installed_extension_sources_id_fk": {
-          "name": "activity_events_source_extension_id_installed_extension_sources_id_fk",
+        "activity_events_source_extension_id_extensions_id_fk": {
+          "name": "activity_events_source_extension_id_extensions_id_fk",
           "tableFrom": "activity_events",
-          "tableTo": "installed_extension_sources",
+          "tableTo": "extensions",
           "columnsFrom": ["source_extension_id"],
           "columnsTo": ["id"],
           "onDelete": "set null",
@@ -322,65 +322,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.automation_principals": {
-      "name": "automation_principals",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "project_id": {
-          "name": "project_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "disabled_at": {
-          "name": "disabled_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "automation_principals_project_id_projects_id_fk": {
-          "name": "automation_principals_project_id_projects_id_fk",
-          "tableFrom": "automation_principals",
-          "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.automation_runs": {
       "name": "automation_runs",
       "schema": "",
@@ -397,8 +338,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "principal_id": {
-          "name": "principal_id",
+        "principal": {
+          "name": "principal",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -496,7 +437,7 @@
           "name": "automation_runs_idempotency_idx",
           "columns": [
             {
-              "expression": "principal_id",
+              "expression": "principal",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -536,15 +477,6 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "automation_runs_principal_id_automation_principals_id_fk": {
-          "name": "automation_runs_principal_id_automation_principals_id_fk",
-          "tableFrom": "automation_runs",
-          "tableTo": "automation_principals",
-          "columnsFrom": ["principal_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "automation_runs_token_id_automation_tokens_id_fk": {
           "name": "automation_runs_token_id_automation_tokens_id_fk",
           "tableFrom": "automation_runs",
@@ -571,8 +503,14 @@
           "primaryKey": true,
           "notNull": true
         },
-        "principal_id": {
-          "name": "principal_id",
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by": {
+          "name": "created_by",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -641,18 +579,24 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "automation_tokens_project_idx": {
+          "name": "automation_tokens_project_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
-        "automation_tokens_principal_id_automation_principals_id_fk": {
-          "name": "automation_tokens_principal_id_automation_principals_id_fk",
-          "tableFrom": "automation_tokens",
-          "tableTo": "automation_principals",
-          "columnsFrom": ["principal_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
         "automation_tokens_project_id_projects_id_fk": {
           "name": "automation_tokens_project_id_projects_id_fk",
           "tableFrom": "automation_tokens",
@@ -669,74 +613,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.board_default_views": {
-      "name": "board_default_views",
-      "schema": "",
-      "columns": {
-        "project_id": {
-          "name": "project_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "extension_instance_id": {
-          "name": "extension_instance_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "board_id": {
-          "name": "board_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "default_view_id": {
-          "name": "default_view_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "board_default_views_project_id_projects_id_fk": {
-          "name": "board_default_views_project_id_projects_id_fk",
-          "tableFrom": "board_default_views",
-          "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "board_default_views_extension_instance_id_extension_instances_id_fk": {
-          "name": "board_default_views_extension_instance_id_extension_instances_id_fk",
-          "tableFrom": "board_default_views",
-          "tableTo": "extension_instances",
-          "columnsFrom": ["extension_instance_id"],
-          "columnsTo": ["id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "board_default_views_scope_unique": {
-          "name": "board_default_views_scope_unique",
-          "nullsNotDistinct": true,
-          "columns": ["project_id", "extension_instance_id", "board_id"]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.board_views": {
       "name": "board_views",
       "schema": "",
@@ -747,14 +623,21 @@
           "primaryKey": true,
           "notNull": true
         },
+        "is_default": {
+          "name": "is_default",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "project_id": {
           "name": "project_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "extension_instance_id": {
-          "name": "extension_instance_id",
+        "extension_id": {
+          "name": "extension_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -810,6 +693,34 @@
         }
       },
       "indexes": {
+        "board_views_default_scope_idx": {
+          "name": "board_views_default_scope_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "coalesce(\"extension_id\", '')",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "board_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"board_views\".\"is_default\" = true",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "board_views_scope_order_idx": {
           "name": "board_views_scope_order_idx",
           "columns": [
@@ -820,7 +731,7 @@
               "nulls": "last"
             },
             {
-              "expression": "extension_instance_id",
+              "expression": "extension_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -853,15 +764,6 @@
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
-        },
-        "board_views_extension_instance_id_extension_instances_id_fk": {
-          "name": "board_views_extension_instance_id_extension_instances_id_fk",
-          "tableFrom": "board_views",
-          "tableTo": "extension_instances",
-          "columnsFrom": ["extension_instance_id"],
-          "columnsTo": ["id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -870,50 +772,14 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.local_environment": {
-      "name": "local_environment",
+    "public.credentials": {
+      "name": "credentials",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
           "type": "text",
           "primaryKey": true,
-          "notNull": true
-        },
-        "environment_id": {
-          "name": "environment_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "local_environment_single_owner": {
-          "name": "local_environment_single_owner",
-          "value": "\"local_environment\".\"id\" = 'local'"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.extension_connections": {
-      "name": "extension_connections",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "project_id": {
-          "name": "project_id",
-          "type": "text",
-          "primaryKey": false,
           "notNull": true
         },
         "extension_id": {
@@ -928,11 +794,23 @@
           "primaryKey": false,
           "notNull": true
         },
-        "base_url": {
-          "name": "base_url",
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider": {
+          "name": "provider",
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "account_label": {
+          "name": "account_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "auth_type": {
           "name": "auth_type",
@@ -946,21 +824,27 @@
           "primaryKey": false,
           "notNull": false
         },
+        "scopes": {
+          "name": "scopes",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
         "secret_ref": {
           "name": "secret_ref",
           "type": "text",
           "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "text",
+          "primaryKey": false,
           "notNull": false
         },
-        "config_json": {
-          "name": "config_json",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "last_check_json": {
-          "name": "last_check_json",
+        "last_check": {
+          "name": "last_check",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
@@ -979,38 +863,26 @@
         }
       },
       "indexes": {
-        "extension_connections_project_contribution_idx": {
-          "name": "extension_connections_project_contribution_idx",
+        "credentials_project_idx": {
+          "name": "credentials_project_idx",
           "columns": [
             {
               "expression": "project_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            },
-            {
-              "expression": "extension_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "contribution_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
             }
           ],
-          "isUnique": true,
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
         }
       },
       "foreignKeys": {
-        "extension_connections_project_id_projects_id_fk": {
-          "name": "extension_connections_project_id_projects_id_fk",
-          "tableFrom": "extension_connections",
+        "credentials_project_id_projects_id_fk": {
+          "name": "credentials_project_id_projects_id_fk",
+          "tableFrom": "credentials",
           "tableTo": "projects",
           "columnsFrom": ["project_id"],
           "columnsTo": ["id"],
@@ -1019,7 +891,13 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "credentials_owner_uq": {
+          "name": "credentials_owner_uq",
+          "nullsNotDistinct": true,
+          "columns": ["extension_id", "contribution_id", "project_id"]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1116,615 +994,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.extension_automation_preferences": {
-      "name": "extension_automation_preferences",
-      "schema": "",
-      "columns": {
-        "project_id": {
-          "name": "project_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "extension_instance_id": {
-          "name": "extension_instance_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "automation_id": {
-          "name": "automation_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "enabled": {
-          "name": "enabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "extension_automation_prefs_instance_idx": {
-          "name": "extension_automation_prefs_instance_idx",
-          "columns": [
-            {
-              "expression": "extension_instance_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "extension_automation_preferences_project_id_projects_id_fk": {
-          "name": "extension_automation_preferences_project_id_projects_id_fk",
-          "tableFrom": "extension_automation_preferences",
-          "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "extension_automation_preferences_extension_instance_id_extension_instances_id_fk": {
-          "name": "extension_automation_preferences_extension_instance_id_extension_instances_id_fk",
-          "tableFrom": "extension_automation_preferences",
-          "tableTo": "extension_instances",
-          "columnsFrom": ["extension_instance_id"],
-          "columnsTo": ["id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "extension_automation_preferences_project_id_extension_instance_id_automation_id_pk": {
-          "name": "extension_automation_preferences_project_id_extension_instance_id_automation_id_pk",
-          "columns": ["project_id", "extension_instance_id", "automation_id"]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.extension_files": {
-      "name": "extension_files",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "project_id": {
-          "name": "project_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "extension_instance_id": {
-          "name": "extension_instance_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "file_id": {
-          "name": "file_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "scope_type": {
-          "name": "scope_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "scope_id": {
-          "name": "scope_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "extension_files_instance_file_uq": {
-          "name": "extension_files_instance_file_uq",
-          "columns": [
-            {
-              "expression": "extension_instance_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "file_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "extension_files_instance_scope_idx": {
-          "name": "extension_files_instance_scope_idx",
-          "columns": [
-            {
-              "expression": "extension_instance_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "scope_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "scope_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "extension_files_project_idx": {
-          "name": "extension_files_project_idx",
-          "columns": [
-            {
-              "expression": "project_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "extension_files_file_idx": {
-          "name": "extension_files_file_idx",
-          "columns": [
-            {
-              "expression": "file_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "extension_files_project_id_projects_id_fk": {
-          "name": "extension_files_project_id_projects_id_fk",
-          "tableFrom": "extension_files",
-          "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "extension_files_extension_instance_id_extension_instances_id_fk": {
-          "name": "extension_files_extension_instance_id_extension_instances_id_fk",
-          "tableFrom": "extension_files",
-          "tableTo": "extension_instances",
-          "columnsFrom": ["extension_instance_id"],
-          "columnsTo": ["id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "extension_files_file_id_files_id_fk": {
-          "name": "extension_files_file_id_files_id_fk",
-          "tableFrom": "extension_files",
-          "tableTo": "files",
-          "columnsFrom": ["file_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.extension_instances": {
-      "name": "extension_instances",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "installed_extension_id": {
-          "name": "installed_extension_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "scope_type": {
-          "name": "scope_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "scope_id": {
-          "name": "scope_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "display_name_override": {
-          "name": "display_name_override",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "enabled": {
-          "name": "enabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "config_json": {
-          "name": "config_json",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "diagnostics_json": {
-          "name": "diagnostics_json",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "extension_instances_scope_installed_uq": {
-          "name": "extension_instances_scope_installed_uq",
-          "columns": [
-            {
-              "expression": "scope_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "scope_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "installed_extension_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "extension_instances_scope_idx": {
-          "name": "extension_instances_scope_idx",
-          "columns": [
-            {
-              "expression": "scope_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "scope_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "extension_instances_installed_idx": {
-          "name": "extension_instances_installed_idx",
-          "columns": [
-            {
-              "expression": "installed_extension_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "extension_instances_installed_extension_id_installed_extension_sources_id_fk": {
-          "name": "extension_instances_installed_extension_id_installed_extension_sources_id_fk",
-          "tableFrom": "extension_instances",
-          "tableTo": "installed_extension_sources",
-          "columnsFrom": ["installed_extension_id"],
-          "columnsTo": ["id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.extension_settings": {
-      "name": "extension_settings",
-      "schema": "",
-      "columns": {
-        "owner_type": {
-          "name": "owner_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "owner_id": {
-          "name": "owner_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "extension_id": {
-          "name": "extension_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "key": {
-          "name": "key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "value_json": {
-          "name": "value_json",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "extension_settings_owner_idx": {
-          "name": "extension_settings_owner_idx",
-          "columns": [
-            {
-              "expression": "owner_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "owner_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "extension_settings_extension_idx": {
-          "name": "extension_settings_extension_idx",
-          "columns": [
-            {
-              "expression": "extension_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "extension_settings_owner_type_owner_id_extension_id_key_pk": {
-          "name": "extension_settings_owner_type_owner_id_extension_id_key_pk",
-          "columns": ["owner_type", "owner_id", "extension_id", "key"]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.extension_skill_preferences": {
-      "name": "extension_skill_preferences",
-      "schema": "",
-      "columns": {
-        "project_id": {
-          "name": "project_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "extension_instance_id": {
-          "name": "extension_instance_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "skill_key": {
-          "name": "skill_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "enabled": {
-          "name": "enabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "display_name_override": {
-          "name": "display_name_override",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "description_override": {
-          "name": "description_override",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "metadata_json": {
-          "name": "metadata_json",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "extension_skill_prefs_instance_idx": {
-          "name": "extension_skill_prefs_instance_idx",
-          "columns": [
-            {
-              "expression": "extension_instance_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "extension_skill_preferences_project_id_projects_id_fk": {
-          "name": "extension_skill_preferences_project_id_projects_id_fk",
-          "tableFrom": "extension_skill_preferences",
-          "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "extension_skill_preferences_extension_instance_id_extension_instances_id_fk": {
-          "name": "extension_skill_preferences_extension_instance_id_extension_instances_id_fk",
-          "tableFrom": "extension_skill_preferences",
-          "tableTo": "extension_instances",
-          "columnsFrom": ["extension_instance_id"],
-          "columnsTo": ["id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "extension_skill_preferences_project_id_extension_instance_id_skill_key_pk": {
-          "name": "extension_skill_preferences_project_id_extension_instance_id_skill_key_pk",
-          "columns": ["project_id", "extension_instance_id", "skill_key"]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.installed_extension_sources": {
-      "name": "installed_extension_sources",
+    "public.extensions": {
+      "name": "extensions",
       "schema": "",
       "columns": {
         "id": {
@@ -1829,21 +1100,6 @@
         }
       },
       "indexes": {
-        "installed_ext_install_name_idx": {
-          "name": "installed_ext_install_name_idx",
-          "columns": [
-            {
-              "expression": "install_name",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "installed_ext_source_path_uq": {
           "name": "installed_ext_source_path_uq",
           "columns": [
@@ -1858,27 +1114,76 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.project_extensions": {
+      "name": "project_extensions",
+      "schema": "",
+      "columns": {
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
         },
-        "installed_ext_extension_id_idx": {
-          "name": "installed_ext_extension_id_idx",
+        "extension_ref": {
+          "name": "extension_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "config_json": {
+          "name": "config_json",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "diagnostics_json": {
+          "name": "diagnostics_json",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "project_extensions_ref_idx": {
+          "name": "project_extensions_ref_idx",
           "columns": [
             {
-              "expression": "extension_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "installed_ext_status_idx": {
-          "name": "installed_ext_status_idx",
-          "columns": [
-            {
-              "expression": "status",
+              "expression": "extension_ref",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1890,8 +1195,32 @@
           "with": {}
         }
       },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
+      "foreignKeys": {
+        "project_extensions_project_id_projects_id_fk": {
+          "name": "project_extensions_project_id_projects_id_fk",
+          "tableFrom": "project_extensions",
+          "tableTo": "projects",
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "project_extensions_extension_ref_extensions_id_fk": {
+          "name": "project_extensions_extension_ref_extensions_id_fk",
+          "tableFrom": "project_extensions",
+          "tableTo": "extensions",
+          "columnsFrom": ["extension_ref"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "project_extensions_project_id_extension_ref_pk": {
+          "name": "project_extensions_project_id_extension_ref_pk",
+          "columns": ["project_id", "extension_ref"]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -1901,6 +1230,24 @@
       "name": "files",
       "schema": "",
       "columns": {
+        "owner": {
+          "name": "owner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "path": {
+          "name": "path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "id": {
           "name": "id",
           "type": "text",
@@ -1962,7 +1309,57 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "files_owner_scope_idx": {
+          "name": "files_owner_scope_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "owner",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "scope",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "files_owner_path_idx": {
+          "name": "files_owner_path_idx",
+          "columns": [
+            {
+              "expression": "owner",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "path",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"files\".\"path\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "files_project_id_projects_id_fk": {
           "name": "files_project_id_projects_id_fk",
@@ -2498,6 +1895,114 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.preferences": {
+      "name": "preferences",
+      "schema": "",
+      "columns": {
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope_id": {
+          "name": "scope_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "extension_id": {
+          "name": "extension_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sync": {
+          "name": "sync",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "preferences_extension_idx": {
+          "name": "preferences_extension_idx",
+          "columns": [
+            {
+              "expression": "extension_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "preferences_project_idx": {
+          "name": "preferences_project_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "preferences_project_id_projects_id_fk": {
+          "name": "preferences_project_id_projects_id_fk",
+          "tableFrom": "preferences",
+          "tableTo": "projects",
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "preferences_scope_scope_id_extension_id_key_pk": {
+          "name": "preferences_scope_scope_id_extension_id_key_pk",
+          "columns": ["scope", "scope_id", "extension_id", "key"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.projects": {
       "name": "projects",
       "schema": "",
@@ -2874,12 +2379,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "sender_json": {
-          "name": "sender_json",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
         "request_kind": {
           "name": "request_kind",
           "type": "text",
@@ -2979,6 +2478,12 @@
           "type": "text",
           "primaryKey": true,
           "notNull": true
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "title": {
           "name": "title",
@@ -3101,9 +2606,33 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "sessions_workspace_idx": {
+          "name": "sessions_workspace_idx",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
+        "sessions_workspace_id_workspaces_id_fk": {
+          "name": "sessions_workspace_id_workspaces_id_fk",
+          "tableFrom": "sessions",
+          "tableTo": "workspaces",
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
         "sessions_project_id_projects_id_fk": {
           "name": "sessions_project_id_projects_id_fk",
           "tableFrom": "sessions",
@@ -3124,162 +2653,6 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.settings": {
-      "name": "settings",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "'global'"
-        },
-        "notifications_enabled": {
-          "name": "notifications_enabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "machine_tokens_enabled": {
-          "name": "machine_tokens_enabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "max_concurrent_sessions": {
-          "name": "max_concurrent_sessions",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.skill_files": {
-      "name": "skill_files",
-      "schema": "",
-      "columns": {
-        "project_id": {
-          "name": "project_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "skill_id": {
-          "name": "skill_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "path": {
-          "name": "path",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "file_id": {
-          "name": "file_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "skill_files_skill_file_idx": {
-          "name": "skill_files_skill_file_idx",
-          "columns": [
-            {
-              "expression": "skill_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "file_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "skill_files_project_id_projects_id_fk": {
-          "name": "skill_files_project_id_projects_id_fk",
-          "tableFrom": "skill_files",
-          "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "skill_files_skill_id_skills_id_fk": {
-          "name": "skill_files_skill_id_skills_id_fk",
-          "tableFrom": "skill_files",
-          "tableTo": "skills",
-          "columnsFrom": ["skill_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "skill_files_file_id_files_id_fk": {
-          "name": "skill_files_file_id_files_id_fk",
-          "tableFrom": "skill_files",
-          "tableTo": "files",
-          "columnsFrom": ["file_id"],
-          "columnsTo": ["id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "skill_files_skill_id_path_pk": {
-          "name": "skill_files_skill_id_path_pk",
-          "columns": ["skill_id", "path"]
-        }
-      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -5572,153 +4945,6 @@
           "columns": ["workbench_id"]
         }
       },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.webview_preferences": {
-      "name": "webview_preferences",
-      "schema": "",
-      "columns": {
-        "extension_id": {
-          "name": "extension_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "scope_type": {
-          "name": "scope_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "scope_id": {
-          "name": "scope_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "value_json": {
-          "name": "value_json",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "webview_preferences_extension_id_name_scope_type_scope_id_pk": {
-          "name": "webview_preferences_extension_id_name_scope_type_scope_id_pk",
-          "columns": ["extension_id", "name", "scope_type", "scope_id"]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.workspace_sessions": {
-      "name": "workspace_sessions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "workspace_id": {
-          "name": "workspace_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "session_id": {
-          "name": "session_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "workspace_sessions_ws_session_idx": {
-          "name": "workspace_sessions_ws_session_idx",
-          "columns": [
-            {
-              "expression": "workspace_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "session_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "workspace_sessions_session_idx": {
-          "name": "workspace_sessions_session_idx",
-          "columns": [
-            {
-              "expression": "session_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "workspace_sessions_workspace_id_workspaces_id_fk": {
-          "name": "workspace_sessions_workspace_id_workspaces_id_fk",
-          "tableFrom": "workspace_sessions",
-          "tableTo": "workspaces",
-          "columnsFrom": ["workspace_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "workspace_sessions_session_id_sessions_id_fk": {
-          "name": "workspace_sessions_session_id_sessions_id_fk",
-          "tableFrom": "workspace_sessions",
-          "tableTo": "sessions",
-          "columnsFrom": ["session_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

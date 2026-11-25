@@ -27,22 +27,46 @@ test("one global connection serves new projects and shares updates and revocatio
     };
     const service = createExtensionConnectionService(deps);
     const input = { projectId: "first", extensionId: "pstdio.remote", connectionId: contribution.id };
+    await expect(
+      service.configure({
+        ...input,
+        baseUrl: server.url.origin,
+        secret: "must-stay-project-only",
+        credentialScope: "project",
+      }),
+    ).rejects.toThrow("A global connection requires a shared credential");
+    expect(await secrets.listRefs()).toEqual([]);
     await service.configure({ ...input, baseUrl: server.url.origin, secret: "shared-credential" });
     const api = (projectId: string) =>
       createExtensionConnectionsApi(service, { projectId, extensionId: input.extensionId });
     expect((await api("second").request(contribution.id, { method: "GET", path: "/v1/workspaces" })).status).toBe(200);
     expect(received).toEqual(["Bearer shared-credential"]);
-    expect((await service.list("second"))[0]).toMatchObject({ scope: "global", configured: true });
+    await expect(service.remove({ ...input, credentialScope: "project" })).rejects.toThrow(
+      "A global connection requires a shared credential",
+    );
+    expect((await service.list("second"))[0]).toMatchObject({
+      scope: "global",
+      configured: true,
+      lastCheck: { ok: true, status: 200 },
+    });
     await expect(
       api("project-only").request(contribution.id, { method: "GET", path: "/v1/workspaces" }),
     ).rejects.toThrow("not configured");
     expect(await service.list("project-only")).toEqual([]);
     await service.configure({
       ...input,
+      projectId: "project-only",
+      baseUrl: server.url.origin,
+      secret: "project-configuration-credential",
+      credentialScope: "all-projects",
+    });
+    const rotated = await service.configure({
+      ...input,
       projectId: "second",
       baseUrl: server.url.origin,
       secret: "rotated-credential",
     });
+    expect(rotated.lastCheck).toBeNull();
     const removeSecrets = await service.prepareProjectRemoval("first");
     await projects.remove("first");
     await removeSecrets();
@@ -55,13 +79,17 @@ test("one global connection serves new projects and shares updates and revocatio
     });
     expect((await newApi.request(contribution.id, { method: "GET", path: "/v1/workspaces" })).status).toBe(200);
     expect(received.at(-1)).toBe("Bearer rotated-credential");
-    expect(await secrets.listRefs()).toHaveLength(1);
-    expect(await db.listAll()).toHaveLength(1);
+    expect(await secrets.listRefs()).toHaveLength(2);
+    expect(await db.listAll()).toHaveLength(2);
     await reloaded.remove({ ...input, projectId: "new-project" });
     await expect(api("second").request(contribution.id, { method: "GET", path: "/v1/workspaces" })).rejects.toThrow(
       "not configured",
     );
-    expect(await secrets.listRefs()).toEqual([]);
+    expect((await api("project-only").request(contribution.id, { method: "GET", path: "/v1/workspaces" })).status).toBe(
+      200,
+    );
+    expect(received.at(-1)).toBe("Bearer project-configuration-credential");
+    expect(await secrets.listRefs()).toHaveLength(1);
   } finally {
     server.stop(true);
     await store.close();
@@ -87,7 +115,8 @@ test("configuring a global connection retires project copies and survives reconc
         extensionId: "pstdio.remote",
         connectionId: contribution.id,
         baseUrl: "https://example.test",
-        secret: id + "-credential",
+        secret: `${id}-credential`,
+        credentialScope: "project",
       });
     }
     expect(await secrets.listRefs()).toHaveLength(2);
@@ -127,7 +156,7 @@ for (const change of ["remove", "rotate"] as const) {
       // read/replace path pauses after its read; an atomic update pauses before it.
       store.pglite.query = async <T>(...args: Parameters<typeof store.pglite.query>) => {
         const [sql] = args;
-        if (!armed || !sql.includes('"extension_settings"') || !/^\s*(select|update)\b/i.test(sql))
+        if (!armed || !sql.includes('"credentials"') || !/^\s*(select|update)\b/i.test(sql))
           return originalQuery<T>(...args);
         armed = false;
         if (/^\s*select\b/i.test(sql)) {

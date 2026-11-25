@@ -1,13 +1,15 @@
 import { afterEach } from "bun:test";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { createDocumentSync, createRecordStreamSync } from "pstdio-sync/relay";
-import { createDb } from "../../db/connection.pglite";
+import { convertLegacyOwner } from "../../db/legacy-record-conversion";
+import { openReleasedNativeText } from "../../db/legacy-records/native-text.fixture";
+import { createRecordStreamStore } from "../../db/legacy-records/record-stream-store";
+import { createResourceRecords } from "../../db/legacy-records/resource-records";
+import { createUnadmittedLegacyFixture } from "../../db/legacy-records/unadmitted.fixture";
 import { projects } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createProjectionStatistics } from "./projection-statistics";
 import { createAssets, createRelay } from "./record-stream-relay.fixture";
-import { createRecordStreamStore } from "./record-stream-store";
-import { createResourceRecords } from "./resource-records";
 
 const cleanup: (() => Promise<unknown>)[] = [];
 afterEach(async () => {
@@ -28,7 +30,7 @@ export const peers = async () => {
   const documentId = await space.documentId("ordered");
   const devices = [];
   for (let index = 0; index < 2; index++) {
-    const connection = await createDb({ path: ":memory:" });
+    const connection = await createUnadmittedLegacyFixture();
     cleanup.push(connection.close);
     const now = new Date().toISOString();
     await connection.db
@@ -55,18 +57,26 @@ export const peers = async () => {
       quarantine,
       assets: assets.store,
     });
-    const upgrade = () => ({
-      records: service.open({ owner, assets: assets.store }).records,
-      sync: createRecordStreamSync({
-        space,
-        documentId,
-        relay,
-        store: service.documents.recordStream(owner),
-        quarantine,
-        assets: assets.store,
-      }),
-    });
-    const native = (key: string) => service.openNativeTextDocument({ owner, fileId: key });
+    let upgraded = false;
+    const upgrade = async () => {
+      await convertLegacyOwner(connection.db, owner);
+      upgraded = true;
+      return {
+        records: service.open({ owner, assets: assets.store }).records,
+        sync: createRecordStreamSync({
+          space,
+          documentId,
+          relay,
+          store: service.documents.recordStream(owner),
+          quarantine,
+          assets: assets.store,
+        }),
+      };
+    };
+    const native = (key: string) =>
+      upgraded
+        ? service.openNativeTextDocument({ owner, fileId: key })
+        : openReleasedNativeText(connection.db, owner, key);
     const oldNativeSync = async (key: string) => {
       const remote = nativeRelays.get(key) ?? createRelay();
       nativeRelays.set(key, remote);

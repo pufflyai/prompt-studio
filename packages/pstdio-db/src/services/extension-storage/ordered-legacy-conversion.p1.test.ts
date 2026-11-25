@@ -1,24 +1,25 @@
 import { expect, test } from "bun:test";
 import { coreOwnerId } from "pstdio-sync/records";
-import { projects, storage_ordered_owners, storage_record_outbox, storage_record_sync } from "../../db/schemas.pg";
+import { convertLegacyOwner as ensureOrderedOwner } from "../../db/legacy-record-conversion";
+import { readConversion } from "../../db/legacy-records/ordered-conversion-state";
+import { createResourceRecords } from "../../db/legacy-records/resource-records";
+import { storage_record_outbox, storage_record_sync } from "../../db/legacy-records-schema";
 import { createDocumentStorageDBService } from "./document-storage";
 import { resolveNativeRecordAddress } from "./native-source-address";
-import { ensureOrderedOwner } from "./ordered-conversion";
-import { readConversion } from "./ordered-conversion-state";
 import { peers } from "./ordered-legacy-pending.fixture";
 import { readOrderedPending } from "./ordered-stream-pending";
 import { createProjectionStatistics } from "./projection-statistics";
 import { installRecordIndexes } from "./record-index-installation";
-import { createResourceRecords } from "./resource-records";
 
-test("catalog index installation leaves legacy conversion outside its transaction", async () => {
+test("pre-admission catalog installation preserves records for conversion", async () => {
   const { first } = await peers();
   await first.legacy.commit({ operationId: "seed", edits: [{ recordId: "card", replace: { title: "saved" } }] });
   await installRecordIndexes(first.db, [{ owner: first.owner, definitions: [] }], () => {});
-  expect(await first.db.select().from(storage_ordered_owners)).toHaveLength(0);
+  expect((await first.legacy.read("card")).value).toEqual({ title: "saved" });
+  expect((await (await first.upgrade()).records.read("card")).value).toEqual({ title: "saved" });
 });
 
-test("legacy conversion yields before completing a cold owner read", async () => {
+test("startup conversion yields between committed record pages", async () => {
   const { first } = await peers();
   await first.legacy.commit({
     operationId: "seed",
@@ -29,51 +30,32 @@ test("legacy conversion yields before completing a cold owner read", async () =>
     timerFired = true;
   }, 0);
   try {
-    let complete = false;
-    const conversion = first
-      .upgrade()
-      .records.read("card-0")
-      .then((record) => {
-        complete = true;
-        return record;
-      });
-    const service = createDocumentStorageDBService(first.db);
-    await service.open({ owner: { ...first.owner, extensionId: "example.other" } }).records.read("missing");
-    expect(complete).toBe(false);
-    expect(await first.db.select().from(projects)).toHaveLength(1);
-    expect((await conversion).value).toEqual({ title: "saved" });
+    await ensureOrderedOwner(first.db, first.owner);
     expect(timerFired).toBe(true);
+    expect((await (await first.upgrade()).records.read("card-0")).value).toEqual({ title: "saved" });
   } finally {
     clearTimeout(timer);
   }
 });
 
-test("startup cancellation stops a conversion first admitted by a request", async () => {
+test("startup cancellation retains its last committed cursor and resumes before native address access", async () => {
   const { first } = await peers();
-  await first.legacy.commit({ operationId: "seed", edits: [{ recordId: "card", replace: true }] });
-  const request = ensureOrderedOwner(first.db, first.owner);
+  await first.legacy.commit({ operationId: "seed", edits: [{ recordId: "card", replace: { body: "saved" } }] });
+  const documentKey = "a".repeat(64);
+  await first.legacy.bindText({ recordId: "card", field: "/body", documentKey });
   const controller = new AbortController();
   const startup = ensureOrderedOwner(first.db, first.owner, controller.signal);
-  controller.abort(new Error("shutdown"));
-  await expect(request).rejects.toThrow("shutdown");
-  await expect(startup).rejects.toThrow("shutdown");
-  expect(await readConversion(first.db, first.owner)).toBeDefined();
-  expect((await first.upgrade().records.read("card")).value).toBe(true);
-});
-
-test("native address admission waits for the owner's converted lifetime", async () => {
-  const { first } = await peers();
-  await first.legacy.commit({
-    operationId: "seed",
-    edits: Array.from({ length: 300 }, (_, i) => ({ recordId: `card-${i}`, replace: { body: "saved" } })),
-  });
-  const documentKey = "a".repeat(64);
-  await first.legacy.bindText({ recordId: "card-299", field: "/body", documentKey });
-  const converting = ensureOrderedOwner(first.db, first.owner);
-  const address = await resolveNativeRecordAddress(first.db, first.owner, { recordId: "card-299", documentKey });
-  await converting;
-  expect(address.documentKey).toBe(documentKey);
-  expect(address.lifetime).toBe("initial");
+  const timer = setTimeout(() => controller.abort(new Error("shutdown")), 0);
+  try {
+    await expect(startup).rejects.toThrow("shutdown");
+    expect(await readConversion(first.db, first.owner)).toBeDefined();
+    await first.upgrade();
+    const address = await resolveNativeRecordAddress(first.db, first.owner, { recordId: "card", documentKey });
+    expect(address.documentKey).toBe(documentKey);
+    expect(address.lifetime).toBe("initial");
+  } finally {
+    clearTimeout(timer);
+  }
 });
 
 test("a hot record's legacy lifecycles commit projection progress between queue pages", async () => {
@@ -108,8 +90,7 @@ test("a hot record's legacy lifecycles commit projection progress between queue 
   }
   expect(checkpoint).toBe(true);
   expect((await readConversion(first.db, first.owner))?.sequence).toBeGreaterThan(0);
-  expect(await readOrderedPending(first.db, first.owner)).toBeUndefined();
-  expect((await first.upgrade().records.read("card")).value).toBe("saved");
+  expect((await (await first.upgrade()).records.read("card")).value).toBe("saved");
   expect(await readOrderedPending(first.db, first.owner)).toBe(true);
 });
 
@@ -131,6 +112,7 @@ test("legacy core conversion preserves repaired number claims and their aliases"
     });
     const before = (await legacy.readMany(["a", "z"])).map((record) => record.value);
     expect(before[1]).toMatchObject({ value: 2, aliases: expect.arrayContaining(["PS-1"]) });
+    await ensureOrderedOwner(first.db, owner);
     const records = createDocumentStorageDBService(first.db).open({ owner }).records;
     expect((await records.readMany(["a", "z"])).map((record) => record.value)).toEqual(before);
   } finally {

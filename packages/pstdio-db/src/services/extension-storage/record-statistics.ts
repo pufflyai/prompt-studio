@@ -56,7 +56,7 @@ export const aggregateRecordStatistics = async (
   const results: Record<string, StorageStatisticResult> = {};
   for (const [name, statistic] of statisticOptions(index, query)) {
     const field = recordFieldSql(index, statistic.field, undefined, resolve, owner);
-    const source = sql`SELECT record_id, ${field} AS value FROM storage_current_records
+    const source = sql`SELECT record_id, ${field} AS value FROM records
       WHERE ${where} AND ${field} IS NOT NULL AND ${field} NOT IN ('null'::jsonb, '""'::jsonb)`;
     if (statistic.type === "unique") {
       const result = await tx.execute<{ count: string }>(
