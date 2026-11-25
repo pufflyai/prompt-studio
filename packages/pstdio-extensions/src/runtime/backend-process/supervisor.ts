@@ -129,6 +129,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
 
   const receive = (raw: unknown) => {
     const message = parseWorkerMessage(raw);
+    console.log("host IPC receive", (raw as { type?: string })?.type, message?.type);
     if (message?.type === "ready") ready.resolve();
     else if (message?.type === "loaded") {
       if (message.ok) loaded.resolve(message.value);

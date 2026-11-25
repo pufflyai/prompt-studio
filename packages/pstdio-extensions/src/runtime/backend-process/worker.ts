@@ -75,7 +75,11 @@ export const describeBackendDefinition = (definition: unknown) => {
   return { definition: describe(definition, "default"), handlers };
 };
 
-const send = (message: WorkerToHostMessage) => process.send?.(message);
+const send = (message: WorkerToHostMessage) => {
+  const sent = process.send?.(message);
+  console.log("worker IPC send", message.type, "ok" in message ? message.ok : undefined, sent);
+  return sent;
+};
 
 /**
  * Runs in the private worker process: no API, no host database connection and no host environment
@@ -189,7 +193,9 @@ export const runBackendWorker = () => {
       const value = await handler(context, ...message.args);
       send({ v: BACKEND_PROTOCOL_VERSION, type: "result", invocationId, ok: true, value });
     } catch (error) {
+      console.log("worker IPC caught invocation error");
       const rejection = transferableCommandRejection(readCommandRejection(error, controller.signal));
+      console.log("worker IPC read rejection");
       send({
         v: BACKEND_PROTOCOL_VERSION,
         type: "result",
