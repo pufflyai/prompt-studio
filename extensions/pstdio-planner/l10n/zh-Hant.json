@@ -16,7 +16,7 @@
   "kanbanRenderers.tickets.rowActions.breakIntoSubTickets": "拆分為子工單",
   "kanbanRenderers.tickets.rowActions.createWorkspace": "建立工作區",
   "kanbanRenderers.tickets.rowActions.refineTicket": "優化工單",
-  "kanbanRenderers.tickets.rowActions.runAttempt": "執行嘗試",
+  "kanbanRenderers.tickets.rowActions.runAttempt": "實作工作項目",
   "kanbanRenderers.tickets.rowActions.unarchive": "取消封存",
   "kanbanRenderers.tickets.title": "工單",
   "displayMenu.orderingOptions.shorthand": "ID",

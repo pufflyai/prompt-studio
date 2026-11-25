@@ -38,6 +38,8 @@ export const MarkdownFileContent = (props: MarkdownFileContentProps) => {
           open={open}
           placeholder={content.placeholder ?? "Write…"}
           sectionNavigation={sectionNavigation}
+          commentActions={props.commentActions}
+          onSourceSelection={props.onSourceSelection}
           onActiveSectionChange={onActiveSectionChange}
           errorNotice={errorNotice}
         />
@@ -55,6 +57,8 @@ export const MarkdownFileContent = (props: MarkdownFileContentProps) => {
           open={open}
           placeholder={content.placeholder ?? "Write…"}
           sectionNavigation={sectionNavigation}
+          commentActions={props.commentActions}
+          onSourceSelection={props.onSourceSelection}
           onActiveSectionChange={onActiveSectionChange}
           errorNotice={errorNotice}
         />
@@ -73,6 +77,7 @@ export const MarkdownFileContent = (props: MarkdownFileContentProps) => {
           placeholder={editable ? (content.placeholder ?? "Write…") : undefined}
           onActiveSectionChange={onActiveSectionChange}
           onChange={editable ? onChange : undefined}
+          onSourceSelection={props.onSourceSelection}
         />
       </Box>
       {errorNotice}

@@ -53,7 +53,7 @@ test("adding a tool keeps the other empty panel open", async () => {
     await signInBrowser(page, started.descriptor);
     phase("signed in; open project");
     await page.goto(`${started.baseUrl}/projects/${project.id}/`);
-    await expect(homeFrame(page).getByText("Project home", { exact: true })).toBeVisible();
+    await expect(homeFrame(page).getByText("Recently Used", { exact: true })).toBeVisible();
     await expect(
       page.locator('[data-workbench-panel="main"]').getByLabel("Available tabs", { exact: true }),
     ).toHaveCount(0);

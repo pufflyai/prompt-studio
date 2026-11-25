@@ -58,11 +58,13 @@ import { steerQueuedFollowUpHandler, steerQueuedFollowUpRoute } from "./endpoint
 import { steerSessionHandler, steerSessionRoute } from "./endpoints/steer-session";
 import { updateSessionStatusHandler, updateSessionStatusRoute } from "./endpoints/update-session-status";
 import { createSessionStreamConnections } from "./session-stream-connections";
+import { createWorkbenchContextRoutes } from "./workbench-context";
 
 export const createSessionRoutes = (
   deps: SessionsRouteDeps & ExtensionsRouteDeps & Pick<RouteDeps, "textEditing" | "nativeDocuments">,
 ) => {
   const routes = new OpenAPIHono<AppBindings>();
+  routes.route("/", createWorkbenchContextRoutes(deps));
   routes.openapi(querySessionsRoute, querySessionsHandler(deps));
   const streamConnections = createSessionStreamConnections();
   routes.openapi(draftHarnessCommandsRoute, draftHarnessCommandsHandler(deps));

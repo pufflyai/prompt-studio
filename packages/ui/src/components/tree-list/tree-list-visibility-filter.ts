@@ -89,51 +89,56 @@ interface BuildMenuOptions {
   resetIcon?: ReactNode;
 }
 
-const visibilityEndContent = (effective: VisibilityOverride, options: BuildMenuOptions) =>
-  effective === "shown" ? options.visibleIcon : options.hiddenIcon;
-
-const buildSectionAction = (
-  section: TreeListSection,
-  label: string,
-  sectionOverrides: Record<string, VisibilityOverride>,
-  actions: TreeVisibilityMenuActions,
-  options: BuildMenuOptions,
-): ResourceContextAction => {
-  const hiddenByDefault = section.hiddenByDefault === true;
-  const effective = resolveVisibility(sectionOverrides[section.id], hiddenByDefault);
-  return {
-    key: `section:${section.id}`,
-    label,
-    onClick: () => actions.onToggleSection(section.id, hiddenByDefault),
-    endContent: visibilityEndContent(effective, options),
-  };
-};
-
-const buildNodeAction = (
-  node: TreeListNode,
-  nodeOverrides: Record<string, VisibilityOverride>,
-  actions: TreeVisibilityMenuActions,
-  options: BuildMenuOptions,
-): ResourceContextAction => {
-  const hiddenByDefault = node.hiddenByDefault === true;
-  const effective = resolveVisibility(nodeOverrides[node.id], hiddenByDefault);
-  return {
-    key: `node:${node.id}`,
-    label: toStringLabel(node.label, node.id),
-    icon: node.icon,
-    onClick: () => actions.onToggleNode(node.id, hiddenByDefault),
-    endContent: visibilityEndContent(effective, options),
-  };
-};
-
 export interface TreeVisibilityMenuItems {
   headerSections?: TreeListSection[];
   sections: TreeListSection[];
   footerSections?: TreeListSection[];
 }
 
-// Builds the back-of-tree hide/show menu. Every slot uses sections, so the same rules apply to
-// pinned and scrolling content. Hideability is explicit per item.
+export interface TreeVisibilityItem {
+  key: string;
+  label: string;
+  section?: string;
+  icon?: ReactNode;
+  visible: boolean;
+  toggle(): void;
+}
+
+export const listTreeVisibilityItems = (
+  items: TreeVisibilityMenuItems,
+  sectionOverrides: Record<string, VisibilityOverride>,
+  nodeOverrides: Record<string, VisibilityOverride>,
+  actions: Pick<TreeVisibilityMenuActions, "onToggleSection" | "onToggleNode">,
+) => {
+  const inventory = (sections: TreeListSection[]) =>
+    sections.flatMap((section) => {
+      const label = section.label ?? section.menuLabel;
+      const entries: TreeVisibilityItem[] = [];
+      if (label && isCustomizable(section)) {
+        entries.push({
+          key: `section:${section.id}`,
+          label,
+          section: label,
+          visible: resolveVisibility(sectionOverrides[section.id], section.hiddenByDefault) === "shown",
+          toggle: () => actions.onToggleSection(section.id, section.hiddenByDefault === true),
+        });
+      }
+      // Hideability is explicit. The children of top-level rows do not participate.
+      for (const node of section.nodes.filter(isCustomizable)) {
+        entries.push({
+          key: `node:${node.id}`,
+          label: toStringLabel(node.label, node.id),
+          section: label,
+          icon: node.icon,
+          visible: isNodeVisible(node, nodeOverrides),
+          toggle: () => actions.onToggleNode(node.id, node.hiddenByDefault === true),
+        });
+      }
+      return entries;
+    });
+  return [inventory(items.headerSections ?? []), inventory(items.sections), inventory(items.footerSections ?? [])];
+};
+
 export const buildTreeVisibilityMenuActions = (
   items: TreeVisibilityMenuItems,
   sectionOverrides: Record<string, VisibilityOverride>,
@@ -142,43 +147,26 @@ export const buildTreeVisibilityMenuActions = (
   options: BuildMenuOptions,
 ): ResourceContextAction[] => {
   const result: ResourceContextAction[] = [];
-  const appendGroup = (group: ResourceContextAction[]) => {
-    if (group.length === 0) return;
-    if (result.length > 0) group[0] = { ...group[0], separatorBefore: true };
-    result.push(...group);
-  };
-
-  const actionsForSections = (sections: TreeListSection[]) => {
-    const sectionActions: ResourceContextAction[] = [];
-    for (const section of sections) {
-      // Without a name, a section toggle would show its internal id; its rows keep their own toggles.
-      const label = section.label ?? section.menuLabel;
-      if (label && isCustomizable(section)) {
-        sectionActions.push(buildSectionAction(section, label, sectionOverrides, actions, options));
-      }
-      // Top-level rows that opt in (e.g. a "Tickets" nav entry) are hideable too; their leaf
-      // children are not visited, so files/sessions inside a category stay non-hideable.
-      for (const node of section.nodes) {
-        if (isCustomizable(node)) sectionActions.push(buildNodeAction(node, nodeOverrides, actions, options));
-      }
-    }
-    return sectionActions;
-  };
-
-  appendGroup(actionsForSections(items.headerSections ?? []));
-  appendGroup(actionsForSections(items.sections));
-  appendGroup(actionsForSections(items.footerSections ?? []));
-
-  if (result.length === 0) return result;
-
-  // A separator splits the visibility toggles above from the reset actions below.
-  result.push({
-    key: "__reset-visibility",
-    label: "Reset to default",
-    icon: options.resetIcon,
-    separatorBefore: true,
-    onClick: actions.onResetAll,
-  });
-
+  for (const group of listTreeVisibilityItems(items, sectionOverrides, nodeOverrides, actions)) {
+    result.push(
+      ...group.map(({ key, label, icon, visible, toggle }, index) => ({
+        key,
+        label,
+        ...(icon ? { icon } : {}),
+        onClick: toggle,
+        ...(index === 0 && result.length > 0 ? { separatorBefore: true } : {}),
+        endContent: visible ? options.visibleIcon : options.hiddenIcon,
+      })),
+    );
+  }
+  if (result.length > 0) {
+    result.push({
+      key: "__reset-visibility",
+      label: "Reset to default",
+      icon: options.resetIcon,
+      separatorBefore: true,
+      onClick: actions.onResetAll,
+    });
+  }
   return result;
 };

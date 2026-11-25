@@ -36,7 +36,7 @@ export const resolveLinkedResources = async (
       resource,
       target: target ? toWorkbenchNavigationTarget(target) : undefined,
       open: target
-        ? async () => {
+        ? async (region?: "main", source?: ResourceRef) => {
             if (
               authority.aborted ||
               owner.isDisposed() ||
@@ -44,7 +44,16 @@ export const resolveLinkedResources = async (
               getDashboardSelectedProjectId(ctx) !== projectId
             )
               return;
-            await ctx.navigation.openTarget(toWorkbenchNavigationTarget(resourceLinkTarget(target)));
+            const navigation =
+              region && target.kind === "page" ? { ...target, region, open: undefined } : resourceLinkTarget(target);
+            const sourceKey = source && resourceKey(source);
+            const sideSource =
+              sourceKey &&
+              ctx.layout
+                .listPanelInstances("side")
+                .find((item) => item.resource && resourceKey(item.resource) === sourceKey);
+            const invocation = sideSource && ctx.viewers.captureContext(sideSource.placementIdentity);
+            await ctx.navigation.openTarget(toWorkbenchNavigationTarget(navigation), invocation || undefined);
           }
         : undefined,
     }));

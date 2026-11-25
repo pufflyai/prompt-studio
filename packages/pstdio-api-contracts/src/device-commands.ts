@@ -5,6 +5,7 @@ import {
   updateQueuedFollowUpInputSchema,
 } from "./queued-follow-ups";
 import { approvalInputSchema, sessionCreateRequestSchema, sessionFollowUpRequestSchema } from "./sessions";
+import { workbenchOriginSchema } from "./workbench-context";
 import { extensionWorkspaceCreateInputSchema } from "./workspaces";
 
 const id = z.string().min(1);
@@ -20,14 +21,17 @@ const commandSchema = z.discriminatedUnion("type", [
     type: z.literal("session.create"),
     input: sessionCreateRequestSchema.omit({ deviceId: true }).strict(),
     attachmentContents: z.array(attachmentSchema).optional(),
+    workbenchOrigin: workbenchOriginSchema.optional(),
   }),
   z.strictObject({
     type: z.literal("session.followUp"),
     id,
     input: sessionFollowUpRequestSchema.strict(),
     attachmentContents: z.array(attachmentSchema).optional(),
+    workbenchOrigin: workbenchOriginSchema.optional(),
   }),
   z.strictObject({ type: z.literal("session.queuedMessages"), id }),
+  z.strictObject({ type: z.literal("workbench.context"), id: z.uuid() }),
   z.strictObject({ type: z.literal("session.queuedFollowUps"), id }),
   z.strictObject({
     type: z.literal("session.queueUpdate"),

@@ -56,6 +56,7 @@ const mainRecord = (main: RuntimePageMain, extensionId: string) => {
   return {
     ...main,
     view: normalizedRef(main.view, extensionId),
+    intro: main.intro ? normalizedRef(main.intro, extensionId) : undefined,
     empty: emptyRecord(main.empty, extensionId),
     tab: tabRecord(main.tab, extensionId),
   };

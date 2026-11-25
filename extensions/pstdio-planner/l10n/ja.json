@@ -16,7 +16,7 @@
   "kanbanRenderers.tickets.rowActions.breakIntoSubTickets": "サブチケットに分割",
   "kanbanRenderers.tickets.rowActions.createWorkspace": "ワークスペースを作成",
   "kanbanRenderers.tickets.rowActions.refineTicket": "チケットを改善",
-  "kanbanRenderers.tickets.rowActions.runAttempt": "試行を実行",
+  "kanbanRenderers.tickets.rowActions.runAttempt": "チケットを実装",
   "kanbanRenderers.tickets.rowActions.unarchive": "アーカイブを解除",
   "kanbanRenderers.tickets.title": "チケット",
   "displayMenu.orderingOptions.shorthand": "ID",

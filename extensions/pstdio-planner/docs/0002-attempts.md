@@ -30,7 +30,7 @@ To link an existing workspace or session to a ticket, use [`pst pstdio.planner l
 
 ## Run an attempt
 
-Open a ticket and choose **Run attempt** from its actions menu. Pick the agent and the branch to start from. From a terminal, run:
+Open a ticket and choose **Implement ticket** from its actions menu. Pick the agent and the branch to start from. From a terminal, run:
 
 ```sh
 pst pstdio.planner run-attempt --ticket PS-12
@@ -49,7 +49,7 @@ Planner does not merge work. Merging, delivering, and moving the ticket to a com
 
 Folder attempts record validation and completion evidence in ticket Activity and update ticket progress. They have no Git revisions, stacks, PR or merge step. Read their history with `pst pstdio.planner read-attempt-history --attempt-id <attempt-id>`, and use `--attempt-id` for selection, reconciliation, repairs and human requests. An explicit unavailable Git base is an error rather than a request to change modes. Folder dependencies wait for completed prerequisite tickets and any pending human decisions; Git-backed dependency work must still retain its commit evidence.
 
-If two implementation sessions are already running in the project, Run attempt does not start another one. To change the limit, open **Settings → Project Planner → Workflow & automation**, set **Maximum in-progress tickets**, and select **Save changes**.
+If two implementation sessions are already running in the project, Implement ticket does not start another one. To change the limit, open **Settings → Project Planner → Workflow & automation**, set **Maximum in-progress tickets**, and select **Save changes**.
 
 `pst pstdio.planner implement-ticket` is a lighter option. It starts one agent session with the implement-ticket prompt. The agent updates the ticket status itself. It does not create a worktree, a managed attempt, or a review.
 
@@ -76,9 +76,9 @@ Before an attempt starts, Planner checks every ticket the ticket depends on, dir
 - Completed statuses describe ticket completion. Choose them in Planner's workflow settings: open **Settings → Project Planner → Workflow & automation**. Selections use status IDs, so renaming or reordering columns keeps them. A completed status does not prove that a managed dependency's code reached the chosen base. Planner checks whether that base contains the submitted commit or its recorded merge commit. A completed manual task with no managed attempt needs no Git integration.
 - When all dependency code is integrated, the attempt starts from the commit you chose, or from the project folder's current commit.
 - An unfinished dependency needs exactly one submitted attempt, or the attempt selected for that ticket. A review verdict is not required. Retired attempts and attempts whose owner is still running cannot supply a dependency commit. The new attempt starts from a dependency tip that contains all required code and the chosen base. Otherwise, Planner combines the submitted branches into an attempt base without changing the target branch. If those branches conflict, the implementation owner starts from a clean base and reconciles them in its assigned workspace.
-- If a dependency has no submitted or selected attempt yet, Run attempt cannot start.
+- If a dependency has no submitted or selected attempt yet, Implement ticket cannot start.
 
-When Run attempt cannot start, its dialog and command show the blocker and the next step. A missing dependency, a dependency loop, or ambiguous attempts also ask a person to fix the ticket graph or choose an attempt. Run attempt also refuses a second start while another start for the same ticket is still running. `attempt-readiness` returns a structured `reason` for agents and the CLI.
+When Implement ticket cannot start, its dialog and command show the blocker and the next step. A missing dependency, a dependency loop, or ambiguous attempts also ask a person to fix the ticket graph or choose an attempt. Implement ticket also refuses a second start while another start for the same ticket is still running. `attempt-readiness` returns a structured `reason` for agents and the CLI.
 
 ## Updating a dependency stack
 

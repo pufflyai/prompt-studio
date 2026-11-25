@@ -3,10 +3,11 @@ import {
   defineKeybinding,
   defineNavigationItem,
   definePage,
-  defineSchedule,
   defineView,
   l10n,
+  type PageMainView,
   packageAsset,
+  sessionBrowser,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { commands } from "./src/commands";
@@ -20,13 +21,22 @@ const view = defineView({
     capabilities: ["commands.query", "commands.execute", "navigation.open"],
   },
 });
+const withRecentResources = {
+  kind: "view",
+  view: sessionBrowser.views.conversation,
+  intro: view.ref,
+  cardinality: "one",
+  presentation: "page",
+} as const;
+// The published SDK accepts the standalone view shape. Newer hosts also render the intro.
+const mainView: PageMainView = withRecentResources;
 export const home = definePage({
   id: "home",
   title: l10n("home.title", "Home"),
   icon: "house",
   path: "home",
   mode: workbenchModes.project,
-  main: { kind: "view", view: view.ref, cardinality: "one", presentation: "page" },
+  main: mainView,
   slots: [],
 });
 const target = { kind: "page" as const, page: home.ref };
@@ -34,14 +44,6 @@ export default defineExtension({
   defaultLocale: "en",
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
   commands: Object.values(commands),
-  schedules: [
-    defineSchedule({
-      id: "quota-history",
-      title: l10n("quotas.schedule", "Record quota history"),
-      schedule: "0 * * * *",
-      command: commands.quotas.ref,
-    }),
-  ],
   views: [view],
   pages: [home],
   navigationItems: [

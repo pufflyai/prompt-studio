@@ -130,6 +130,9 @@ export const useResourceActivity = (
         key: draft.key,
         kind: "comment",
         body: draft.body,
+        quote: draft.quote,
+        passage: draft.passage,
+        replyToId: draft.replyToId,
         attachmentIds: draft.attachments.map((file) => file.id),
       };
       const entry = await binding.api.publish(resource, input);

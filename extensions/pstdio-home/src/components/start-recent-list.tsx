@@ -13,7 +13,7 @@ export const StartRecentList = (props: StartRecentListProps) => {
 
   return (
     <Stack gap="sm" minW="0">
-      <Text textStyle="label/L/regular">Recent</Text>
+      <Text textStyle="label/L/regular">Recently Used</Text>
       <Stack gap="none" minW="0">
         {resources.map((resource) => (
           <ListRow

@@ -16,7 +16,7 @@ interface RelatedResourcesProps {
 
 const RelatedResourceListRow = (props: {
   row: RelatedResourceRow;
-  onOpen(candidate: ResourceLinkCandidate): Promise<void>;
+  onOpen(candidate: ResourceLinkCandidate, region?: "main"): Promise<void>;
   onRemove(source: ResourceRef, target: ResourceRef): Promise<void>;
 }) => {
   const {
@@ -63,6 +63,17 @@ const RelatedResourceListRow = (props: {
                     disabled: !candidate.open,
                     onAction: () => void onOpen(candidate),
                   },
+                  ...(candidate.target?.kind === "page"
+                    ? [
+                        {
+                          id: "open-main",
+                          label: "Open in Main",
+                          icon: <WorkbenchIcon name="panels-top-left" />,
+                          disabled: !candidate.open,
+                          onAction: () => void onOpen(candidate, "main"),
+                        },
+                      ]
+                    : []),
                   {
                     id: "remove",
                     label: "Remove link",
@@ -154,9 +165,9 @@ export const RelatedResources = (props: RelatedResourcesProps) => {
     }
   };
   const remove = (source: ResourceRef, target: ResourceRef) => update(() => service.remove(source, [target]));
-  const open = (candidate: ResourceLinkCandidate) =>
+  const open = (candidate: ResourceLinkCandidate, region?: "main") =>
     run(async () => {
-      await candidate.open?.();
+      await candidate.open?.(region, resource);
       onClose();
     });
   return (

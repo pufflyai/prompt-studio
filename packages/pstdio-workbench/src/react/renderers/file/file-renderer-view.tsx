@@ -1,5 +1,8 @@
 import { Box, Button, Center, Flex, Text } from "@chakra-ui/react";
-import { useRef } from "react";
+import type { ResourceRef } from "@pstdio/sdk/extensions";
+import type { MarkdownEditorProps } from "@pstdio/ui/rich-text";
+import { createNativeDocumentKey } from "pstdio-api-contracts";
+import { useEffect, useRef } from "react";
 import type {
   RegisteredFileRendererContribution,
   WorkbenchCore,
@@ -11,6 +14,8 @@ import {
   getFileSectionNavigation,
   resolveFileSectionTargetId,
 } from "../../../core/registries/renderers/file-section-navigation";
+import { boundedResource, setWorkbenchSelection } from "../../../core/workbench-context";
+import { useMarkdownActivity } from "../../resource-activity/markdown-activity";
 import { useOpenPlacementIds } from "../../shared/use-open-placement-ids";
 import { usePageParams } from "../use-page-params";
 import { getNativeMarkdownConnection, getPublicMarkdownConnection } from "./file-renderer-connections";
@@ -68,9 +73,50 @@ const FileRendererHeader = (props: { file: LoadedFile; dirty: boolean }) => {
   ) : null;
 };
 
+const useFileWorkbenchSelection = (
+  workbench: WorkbenchCore,
+  instanceId: string | undefined,
+  resource: ResourceRef | undefined,
+  documentKey: string,
+) => {
+  useEffect(() => {
+    void documentKey;
+    return () => {
+      if (instanceId) setWorkbenchSelection(workbench, instanceId);
+    };
+  }, [workbench, instanceId, documentKey]);
+  return (selection: Parameters<NonNullable<MarkdownEditorProps["onSourceSelection"]>>[0], path?: string) => {
+    const projectId = workbench.pages.store.getState().projectId;
+    const document = projectId && boundedResource(resource, projectId);
+    if (instanceId && document)
+      setWorkbenchSelection(
+        workbench,
+        instanceId,
+        selection ? { kind: "text", document, documentPath: path?.slice(0, 2048), ...selection } : { kind: "none" },
+      );
+  };
+};
+
+const useFileMarkdownActivity = (
+  props: WorkbenchFileRendererViewProps,
+  file: LoadedFile | null,
+  open: boolean,
+  collaborative: boolean,
+) => {
+  const { workbench, contribution, placement } = props;
+  const resource = placement?.resource;
+  const documentKey = createNativeDocumentKey({
+    fileRendererId: contribution.id,
+    resource,
+    documentKey: file?.filePath ?? file?.fileName ?? contribution.documentKey?.(resource) ?? "",
+  });
+  return useMarkdownActivity(workbench, placement, documentKey, open && collaborative);
+};
+
 export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps) => {
   const { workbench, contribution } = props;
   const resource = props.placement?.resource;
+  const instanceId = props.placement?.instanceId;
   const openPlacements = useOpenPlacementIds(workbench);
   const open = !props.placement?.placementIdentity || openPlacements.has(props.placement.instanceId);
   const position = props.placement?.position;
@@ -90,6 +136,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     pageParams,
     documentKey: contribution.documentKey?.(resource),
   });
+  const reportSelection = useFileWorkbenchSelection(workbench, instanceId, resource, documentKey);
   const scopeIdentity = [queryScope.projectId, queryScope.extensionId, resource?.device?.ownerId, resource?.device?.id];
   const cacheKey = `${documentKey}:${JSON.stringify(scopeIdentity)}`;
   const loadKey = `${cacheKey}:${authority.generation}`;
@@ -109,6 +156,9 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   useFileSectionSelection(workbench, resource, sectionNavigation);
   const currentLoaded = isCurrentLoadedFile(loaded, loadKey) ? loaded : null;
   const loadError = error?.loadKey === loadKey ? error.message : undefined;
+  const connectDocument = getNativeMarkdownConnection(contribution, currentLoaded, resource, pageParams);
+  const connectText = getPublicMarkdownConnection(contribution, currentLoaded, props.presentationInput, pageParams);
+  const commentActions = useFileMarkdownActivity(props, currentLoaded, open, Boolean(connectText || connectDocument));
   if (currentLoaded?.textEditor)
     return <SelectedTextEditor {...props} open={open} content={currentLoaded} pageParams={pageParams} />;
   if (loadError && !currentLoaded) {
@@ -125,8 +175,6 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   // documents from the same renderer both start at revision 1, so keying on the
   // contribution alone reuses the editor and keeps showing the previous file.
   let editorKey = currentLoaded ? `${currentLoaded.loadKey}:${currentLoaded.editorRevision}` : "";
-  const connectDocument = getNativeMarkdownConnection(contribution, currentLoaded, resource, pageParams);
-  const connectText = getPublicMarkdownConnection(contribution, currentLoaded, props.presentationInput, pageParams);
   const sharedEditor = connectText ?? connectDocument;
   if (sharedEditor && currentLoaded) editorKey = currentLoaded.loadKey;
   const errorNotice = (
@@ -163,6 +211,8 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           position={position}
           editorKey={editorKey}
           errorNotice={errorNotice}
+          commentActions={commentActions}
+          onSourceSelection={(selection) => reportSelection(selection, currentLoaded?.filePath)}
           contributionCanSave={Boolean(contribution.save)}
           onActiveSectionChange={
             sectionNavigation

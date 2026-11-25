@@ -51,6 +51,7 @@ const normalizeMain = (input: NormalizePageInput, main: PageMain): RuntimePageMa
   return {
     ...presentation,
     view: normalizeContributionRef(input.ext, main.view),
+    intro: main.intro ? normalizeContributionRef(input.ext, main.intro) : undefined,
     ...(main.empty ? { empty: normalizeEmpty(input, main.empty) } : {}),
     tab: normalizePlacementTab({ ...input, id: `${input.pageId}.$main`, tab }),
   };

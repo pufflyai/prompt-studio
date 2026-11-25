@@ -91,7 +91,7 @@ const Preview = (props: PreviewProps) => {
   );
 };
 
-export default { title: "Extensions/Home/Agent quotas", component: Preview } satisfies CanvasMeta<typeof Preview>;
+export default { title: "Extensions/Sessions/Agent quotas", component: Preview } satisfies CanvasMeta<typeof Preview>;
 export const Graph: CanvasFrame<typeof Preview> = {
   name: "Automatic quota history",
   description:

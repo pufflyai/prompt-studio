@@ -84,6 +84,10 @@ export interface RegisterWorkbenchExtensionContributionsInput extends ChatComman
   subscribeRefreshReset?: (listener: (event?: QueryChangeEnvelope) => void) => Disposable;
   webviewArtifacts?: ExtensionWebviewArtifactCapabilities;
   webviewFiles?: ExtensionWebviewFileCapabilities;
+  captureChatContext?: (
+    workbench: import("../../core").WorkbenchCore,
+    composer: string,
+  ) => import("pstdio-api-contracts/workbench-context").WorkbenchOrigin | undefined;
   workbench: WorkbenchModuleContext;
 }
 

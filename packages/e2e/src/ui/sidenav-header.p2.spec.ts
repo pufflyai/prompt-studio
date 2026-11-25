@@ -161,13 +161,14 @@ test("customizes the Sidenav from any point and persists section visibility", as
   await expectSidenavSections(sidenav);
 
   await row(sidenav, "Search").click({ button: "right" });
-  await page.getByRole("menuitem", { name: "Hide/show items" }).hover();
-  const searchToggle = page.getByRole("menuitem", { name: /Search/ });
-  const workspacesToggle = page.getByRole("menuitem", { name: "Workspaces", exact: true });
+  await page.getByRole("menuitem", { name: "Hide/show items" }).click();
+  const searchToggle = page.getByRole("switch", { name: "Search", exact: true });
+  const workspacesToggle = page.getByRole("switch", { name: "Workspaces", exact: true });
+  await expect(page.getByRole("textbox", { name: "Search navigation items" })).toBeFocused();
   await expect(searchToggle).toBeVisible();
   await expect(workspacesToggle).toBeVisible();
   for (const name of ["Header", "Navigation", "Footer"]) {
-    await expect(page.getByRole("menuitem", { name, exact: true })).toBeVisible();
+    await expect(page.getByRole("switch", { name, exact: true })).toBeVisible();
   }
   await workspacesToggle.click();
   await expect(row(sidenav, "Workspaces")).toHaveCount(0);
@@ -181,12 +182,11 @@ test("customizes the Sidenav from any point and persists section visibility", as
   await searchToggle.click();
   await expect(row(sidenav, "Search")).toBeVisible();
   await page.keyboard.press("Escape");
-  await page.keyboard.press("Escape");
   await expect(searchToggle).toBeHidden();
 
   await row(sidenav, "Tickets").click({ button: "right" });
-  const ticketsToggle = page.getByRole("menuitem", { name: "Tickets", exact: true });
-  await page.getByRole("menuitem", { name: "Hide/show items" }).hover();
+  const ticketsToggle = page.getByRole("switch", { name: "Tickets", exact: true });
+  await page.getByRole("menuitem", { name: "Hide/show items" }).click();
   await expect(ticketsToggle).toBeVisible();
   await ticketsToggle.click();
   await expect(row(sidenav, "Tickets")).toHaveCount(0);
@@ -200,10 +200,18 @@ test("customizes the Sidenav from any point and persists section visibility", as
   await expect(row(sidenav, "Workspaces")).toHaveCount(0);
 
   await row(sidenav, "Search").click({ button: "right" });
-  await page.getByRole("menuitem", { name: "Hide/show items" }).hover();
+  await page.getByRole("menuitem", { name: "Hide/show items" }).click();
+  const query = page.getByRole("textbox", { name: "Search navigation items" });
+  await query.fill("unmatched label");
+  await expect(page.getByText("No matching navigation items")).toBeVisible();
+  await query.fill("Workspaces");
+  await expect(workspacesToggle).toBeVisible();
+  await expect(workspacesToggle).not.toBeChecked();
+  await expect(searchToggle).toBeHidden();
+  await query.clear();
   await searchToggle.click();
   await expect(row(sidenav, "Search")).toHaveCount(0);
-  await page.getByRole("menuitem", { name: "Reset to default", exact: true }).click();
+  await page.getByRole("button", { name: "Reset to default", exact: true }).click();
   await expect(row(sidenav, "Search")).toBeVisible();
   await expectSidenavSections(sidenav);
 

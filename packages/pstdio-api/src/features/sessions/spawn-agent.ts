@@ -11,6 +11,7 @@ import {
 import { submittedMessageSender } from "./submitted-message-identity";
 import { prepareSubmittedSender } from "./submitted-message-sender";
 import { trackHarnessSession } from "./track-harness-session";
+import type { WorkbenchSender } from "./workbench-context";
 
 type SpawnInput = {
   sender?: import("pstdio-api-contracts").SessionMessageSender;
@@ -72,6 +73,7 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
 
   const conversation = await entry.conversationReady;
   await prepareSubmittedSender(conversation, input, deps);
+  entry.workbenchOrigin = (input.sender as WorkbenchSender | undefined)?.workbenchOrigin;
   input.signal?.throwIfAborted();
 
   let cwd = input.cwd;
@@ -158,6 +160,7 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
 
   const conversation = await entry.conversationReady;
   await prepareSubmittedSender(conversation, input, deps);
+  entry.workbenchOrigin = (input.sender as WorkbenchSender | undefined)?.workbenchOrigin;
   input.signal?.throwIfAborted();
 
   const session = await harness.resume(
@@ -268,6 +271,7 @@ export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps
     input.signal,
     "reattach",
   );
+  entry.workbenchOrigin = (input.sender as WorkbenchSender | undefined)?.workbenchOrigin;
   const conversation = await entry.conversationReady;
   input.signal?.throwIfAborted();
 

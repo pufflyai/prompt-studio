@@ -123,7 +123,7 @@ export default defineExtension({
         default: 2,
         title: "Maximum in-progress tickets",
         description:
-          "Most tickets with a running implementation at once. At this limit, Run attempt does not start another ticket, whether automation or a person runs it.",
+          "Most tickets with a running implementation at once. At this limit, Implement ticket does not start another ticket, whether automation or a person runs it.",
       },
       "implementation.defaultTargetBranch": {
         type: "string",

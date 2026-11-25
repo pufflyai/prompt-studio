@@ -2,10 +2,11 @@ import { Box, Button, HStack, IconButton, Separator, Stack, Text } from "@chakra
 import type { ResourceActivityEntry, ResourceRef } from "@pstdio/sdk/extensions";
 import { Activity, AlertMessage, LazyRichMessage } from "@pstdio/ui";
 import { X } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import type { ResourceActivityBinding } from "../../core/registries/resources/resource-activity";
 import { activityActorName, activityChangeSummary, activityTime } from "./activity-presentation";
+import { revealActivityPassage } from "./markdown-activity";
 import { useActivityHistory } from "./use-activity-history";
 import { useResourceActivity } from "./use-resource-activity";
 
@@ -13,11 +14,35 @@ const EntryBody = (props: {
   entry: ResourceActivityEntry;
   controller: ReturnType<typeof useResourceActivity>;
   workbench: WorkbenchCore;
+  ownerInstanceId?: string;
 }) => {
-  const { entry, controller, workbench } = props;
+  const { entry, controller, workbench, ownerInstanceId } = props;
+  const [passageMissing, setPassageMissing] = useState(false);
+  const passage = entry.passage;
   return (
     <Stack gap="xs">
-      {entry.quote && <Text color="fg.muted">“{entry.quote}”</Text>}
+      {entry.quote &&
+        (passage ? (
+          <Stack gap="2xs">
+            <Button
+              variant="ghost"
+              alignSelf="start"
+              whiteSpace="normal"
+              h="auto"
+              textAlign="start"
+              onClick={() => setPassageMissing(!revealActivityPassage(workbench, ownerInstanceId, passage))}
+            >
+              “{entry.quote}”
+            </Button>
+            {passageMissing ? (
+              <Text role="status" color="fg.muted">
+                Passage unavailable
+              </Text>
+            ) : null}
+          </Stack>
+        ) : (
+          <Text color="fg.muted">“{entry.quote}”</Text>
+        ))}
       {entry.kind !== "comment" && (
         <Text textStyle="label/S/medium">
           {
@@ -93,6 +118,25 @@ const EntryBody = (props: {
           Open session
         </Button>
       )}
+      {entry.kind === "comment" && !entry.replyToId && controller.capabilities.comments ? (
+        <Button
+          size="xs"
+          variant="ghost"
+          alignSelf="start"
+          disabled={controller.busy}
+          onClick={() =>
+            controller.changeDraft({
+              ...controller.draft,
+              quote: undefined,
+              passage: undefined,
+              replyToId: entry.id,
+              key: crypto.randomUUID(),
+            })
+          }
+        >
+          Reply
+        </Button>
+      ) : null}
       {entry.handoffError && (
         <AlertMessage
           status="error"
@@ -117,12 +161,69 @@ const EntryBody = (props: {
     </Stack>
   );
 };
+const ActivityEntries = (props: {
+  controller: ReturnType<typeof useResourceActivity>;
+  workbench: WorkbenchCore;
+  ownerInstanceId?: string;
+}) => {
+  const { controller, workbench, ownerInstanceId } = props;
+  const replies = new Map<string, ResourceActivityEntry[]>();
+  for (const entry of controller.items) {
+    if (!entry.replyToId) continue;
+    const group = replies.get(entry.replyToId) ?? [];
+    group.push(entry);
+    replies.set(entry.replyToId, group);
+  }
+  const roots = new Set(controller.items.map((entry) => entry.id));
+  return (
+    <Activity.Feed>
+      {controller.items
+        .filter((entry) => !entry.replyToId || !roots.has(entry.replyToId))
+        .map((entry) =>
+          entry.kind === "change" ? (
+            <Activity.Timeline key={entry.id} data-activity-entry={entry.id}>
+              <Activity.Event actor={{ name: activityActorName(entry) }} timestamp={activityTime(entry.createdAt)}>
+                {activityChangeSummary(entry)}
+              </Activity.Event>
+            </Activity.Timeline>
+          ) : (
+            <Activity.Comment
+              key={entry.id}
+              data-activity-entry={entry.id}
+              actor={{ name: activityActorName(entry) }}
+              timestamp={activityTime(entry.createdAt)}
+              tone={entry.author.type === "user" ? "sent" : "default"}
+            >
+              <EntryBody
+                entry={entry}
+                controller={controller}
+                workbench={workbench}
+                ownerInstanceId={ownerInstanceId}
+              />
+              {replies.get(entry.id)?.map((reply) => (
+                <Activity.Comment
+                  key={reply.id}
+                  data-activity-entry={reply.id}
+                  actor={{ name: activityActorName(reply) }}
+                  timestamp={activityTime(reply.createdAt)}
+                >
+                  <EntryBody entry={reply} controller={controller} workbench={workbench} />
+                </Activity.Comment>
+              ))}
+            </Activity.Comment>
+          ),
+        )}
+      {!controller.items.length && !controller.error && <Text color="fg.muted">No activity yet</Text>}
+    </Activity.Feed>
+  );
+};
 export const WorkbenchResourceActivity = (props: {
   workbench: WorkbenchCore;
   binding: ResourceActivityBinding;
   resource: ResourceRef;
   visible: boolean;
   menu?: boolean;
+  ownerInstanceId?: string;
 }) => {
   const { workbench, binding, resource, visible } = props;
   const controller = useResourceActivity(workbench, binding, resource, visible);
@@ -174,28 +275,31 @@ export const WorkbenchResourceActivity = (props: {
         {controller.cursor && (
           <Box ref={history.boundary} role="status" aria-label="Loading earlier activity" minH="px" />
         )}
-        <Activity.Feed>
-          {controller.items.map((entry) =>
-            entry.kind === "change" ? (
-              <Activity.Timeline key={entry.id} data-activity-entry={entry.id}>
-                <Activity.Event actor={{ name: activityActorName(entry) }} timestamp={activityTime(entry.createdAt)}>
-                  {activityChangeSummary(entry)}
-                </Activity.Event>
-              </Activity.Timeline>
-            ) : (
-              <Activity.Comment
-                key={entry.id}
-                data-activity-entry={entry.id}
-                actor={{ name: activityActorName(entry) }}
-                timestamp={activityTime(entry.createdAt)}
-                tone={entry.author.type === "user" ? "sent" : "default"}
-              >
-                <EntryBody entry={entry} controller={controller} workbench={workbench} />
-              </Activity.Comment>
-            ),
-          )}
-          {!controller.items.length && !controller.error && <Text color="fg.muted">No activity yet</Text>}
-        </Activity.Feed>
+        <ActivityEntries controller={controller} workbench={workbench} ownerInstanceId={props.ownerInstanceId} />
+        {controller.draft.quote || controller.draft.replyToId ? (
+          <HStack gap="xs" align="start">
+            <Text color="fg.muted" lineClamp={3}>
+              {controller.draft.quote ? `“${controller.draft.quote}”` : "Replying to a comment"}
+            </Text>
+            <IconButton
+              size="2xs"
+              variant="ghost"
+              aria-label="Clear comment reference"
+              disabled={controller.busy}
+              onClick={() =>
+                controller.changeDraft({
+                  ...controller.draft,
+                  passage: undefined,
+                  quote: undefined,
+                  replyToId: undefined,
+                  key: crypto.randomUUID(),
+                })
+              }
+            >
+              <X />
+            </IconButton>
+          </HStack>
+        ) : null}
         {controller.capabilities.comments && (
           <Activity.Composer
             variant="compact"

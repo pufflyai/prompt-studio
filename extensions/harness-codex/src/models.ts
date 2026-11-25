@@ -12,10 +12,15 @@ const effortMetadata: Record<string, { label: string; icon: string }> = {
   ultra: { label: "Ultra", icon: "flame" },
 };
 
+const preferredEffort = (efforts: string[], providerDefault?: string) => {
+  if (efforts.includes("medium")) return "medium";
+  return providerDefault && efforts.includes(providerDefault) ? providerDefault : efforts[0];
+};
+
 const reasoningEffortParam = (efforts: string[], defaultValue?: string): HarnessParamDescriptor => ({
   type: "select",
   label: "Reasoning effort",
-  defaultValue: defaultValue && efforts.includes(defaultValue) ? defaultValue : efforts[0],
+  defaultValue: preferredEffort(efforts, defaultValue),
   options: efforts.map((value) => ({
     label: effortMetadata[value]?.label ?? value,
     value,

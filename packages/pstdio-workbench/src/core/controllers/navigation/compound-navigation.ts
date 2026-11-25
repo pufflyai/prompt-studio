@@ -143,6 +143,28 @@ const applyViewerReferences = (
   else if (last?.kind === "page" && core.pages.getContent()) core.focus.setActiveRegion("main");
 };
 
+type LinkSource = { identity: PlacementIdentity; resource?: ResourceRef; widget: WorkbenchWidgetPlacement };
+
+const retainLinkSource = (
+  core: WorkbenchCore,
+  target: NavigationOperation,
+  source: LinkSource | undefined,
+  pins: Map<string, PlacementIdentity>,
+  state: Parameters<typeof prepareReusedViewerPin>[3],
+) => {
+  if (target.region !== "side" || target.open === "pin" || !target.resource || !source?.resource) return state;
+  const key = placementIdentityKey(source.identity);
+  if (pins.has(key)) return state;
+  const { section, position, pageContext } = source.widget;
+  pins.set(key, source.identity);
+  return prepareReusedViewerPin(
+    core,
+    source.identity,
+    { resource: source.resource, section, position, pageContext },
+    state,
+  );
+};
+
 export const prepareWorkbenchNavigation = (
   core: WorkbenchCore,
   targets: readonly NavigationOperation[],
@@ -152,6 +174,7 @@ export const prepareWorkbenchNavigation = (
     replace?: WorkbenchWidgetPlacement;
     history?: "push" | "replace" | "none";
     resourceTabs?: boolean;
+    previewSource?: LinkSource;
   } = {},
 ) => {
   requireCorePanelTargets(core, targets);
@@ -223,6 +246,15 @@ export const prepareWorkbenchNavigation = (
       }
       continue;
     }
+    ({
+      page: proposed,
+      mode: modeState,
+      shell: shellState,
+    } = retainLinkSource(core, target, options.previewSource, outgoingPins, {
+      page: proposed,
+      mode: modeState,
+      shell: shellState,
+    }));
     if (target.kind === "page") {
       const page = preparePageNavigation(core, target, proposed, modeState, shellState);
       proposed = page.state;

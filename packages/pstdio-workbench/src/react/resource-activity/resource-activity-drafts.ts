@@ -1,10 +1,13 @@
-import type { ResourceActivityAttachment } from "@pstdio/sdk/extensions";
+import type { PublishResourceActivity, ResourceActivityAttachment } from "@pstdio/sdk/extensions";
 import type { WorkbenchCore } from "../../core";
 
 export interface ActivityDraft {
   body: string;
   key: string;
   attachments: ResourceActivityAttachment[];
+  quote?: string;
+  passage?: PublishResourceActivity["passage"];
+  replyToId?: string;
 }
 export const emptyActivityDraft = (): ActivityDraft => ({ body: "", key: crypto.randomUUID(), attachments: [] });
 const caches = new WeakMap<WorkbenchCore, Map<string, ReturnType<typeof createDraft>>>();

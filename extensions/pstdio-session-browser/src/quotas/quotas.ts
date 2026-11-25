@@ -20,7 +20,7 @@ export interface QuotaReport extends QuotaSnapshot {
   icon?: string;
 }
 
-// These five extension commands are the complete integration for Home.
+// These five extension commands are the complete integration for Sessions.
 const providers = [
   ["harness-codex", "Codex"],
   ["harness-claude-code", "Claude Code"],

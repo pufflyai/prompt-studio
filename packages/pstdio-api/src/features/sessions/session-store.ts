@@ -20,6 +20,7 @@ export type SessionChannelHooks = {
 };
 
 export type ActiveSession = {
+  workbenchOrigin?: import("pstdio-api-contracts/workbench-context").WorkbenchOrigin;
   eventStore: ReturnType<typeof createEventStore>;
   approvalService: ReturnType<typeof createApprovalService>;
   questionService: QuestionService;

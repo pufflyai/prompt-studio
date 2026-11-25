@@ -4,8 +4,8 @@ import { useState } from "react";
 import { quotaSeries } from "../quota-history";
 import { quotaSelection } from "../quota-selection";
 import type { QuotaReport } from "../quotas";
-import { HomeIcon } from "./home-icon";
 import { QuotaHistoryChart } from "./quota-history-chart";
+import { QuotaIcon } from "./quota-icon";
 
 interface QuotaGraphProps {
   providers: QuotaReport[];
@@ -26,7 +26,13 @@ export const QuotaGraph = (props: QuotaGraphProps) => {
   const { providers, loading, error } = props;
   const [selectedId, setSelectedId] = useState<string>();
   const { available, selected } = quotaSelection(providers, selectedId);
-  if (!selected && !error) return null;
+  if (!selected && !error) {
+    return (
+      <Text color="fg.muted" role="status">
+        {loading ? "Checking quotas…" : "No agent quotas are available."}
+      </Text>
+    );
+  }
   const singleLimit = selected?.limits.length === 1 ? selected.limits[0] : undefined;
   const heading = selected && (
     <HStack justify={singleLimit ? "space-between" : "flex-end"} minW="0" flexWrap="wrap">
@@ -34,9 +40,9 @@ export const QuotaGraph = (props: QuotaGraphProps) => {
         <Menu.Root>
           <Menu.Trigger asChild>
             <Button size="sm" variant="ghost" aria-label={`Quota harness: ${selected.label}`} maxW="full">
-              <HomeIcon name={selected.icon ?? "terminal"} />
+              <QuotaIcon name={selected.icon ?? "terminal"} />
               <Text truncate>{selected.label}</Text>
-              <HomeIcon name="chevron-down" />
+              <QuotaIcon name="chevron-down" />
             </Button>
           </Menu.Trigger>
           <Menu.Positioner>
@@ -44,10 +50,10 @@ export const QuotaGraph = (props: QuotaGraphProps) => {
               <Menu.RadioItemGroup value={selected.id} onValueChange={({ value }) => setSelectedId(value)}>
                 {available.map((provider) => (
                   <Menu.RadioItem key={provider.id} value={provider.id}>
-                    <HomeIcon name={provider.icon ?? "terminal"} />
+                    <QuotaIcon name={provider.icon ?? "terminal"} />
                     <Menu.ItemText>{provider.label}</Menu.ItemText>
                     <Menu.ItemIndicator>
-                      <HomeIcon name="check" />
+                      <QuotaIcon name="check" />
                     </Menu.ItemIndicator>
                   </Menu.RadioItem>
                 ))}
@@ -57,7 +63,7 @@ export const QuotaGraph = (props: QuotaGraphProps) => {
         </Menu.Root>
       ) : (
         <HStack gap="sm" minW="0">
-          <HomeIcon name={selected.icon ?? "terminal"} />
+          <QuotaIcon name={selected.icon ?? "terminal"} />
           <Text textStyle="paragraph/M/medium" truncate>
             {selected.label}
           </Text>

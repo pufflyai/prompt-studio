@@ -4,6 +4,7 @@ import type { ExtensionSessionsApi } from "pstdio-api-contracts/extension-kernel
 import type { z } from "zod";
 import { readDeviceCommandResult, remoteCreationDevice } from "../../account/device-command-response";
 import { toExtensionSession } from "../../sessions/extension-session";
+import { forwardingWorkbenchOrigin } from "../../sessions/workbench-context";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createSessionAccess, type SessionApiScope } from "./session-access";
 
@@ -45,6 +46,7 @@ export const createRemoteSession = async (
       device.id,
       {
         type: "session.create",
+        workbenchOrigin: await forwardingWorkbenchOrigin(deps, input.workbenchOrigin),
         input: {
           projectId: input.projectId,
           title: sessionInput.title,

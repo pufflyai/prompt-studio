@@ -1,5 +1,6 @@
 import { defineExtension, defineKeybinding, packageAsset } from "@pstdio/sdk/extensions";
 import {
+  authorizeNoteActivity,
   checkNoteTitleCommand,
   createNoteCommand,
   deleteNoteCommand,
@@ -27,6 +28,7 @@ export default defineExtension({
   pages: [notesPage, notePage],
   placements: [notesViewer],
   commands: [
+    authorizeNoteActivity,
     resolveNotesCommand,
     createNoteCommand,
     deleteNoteCommand,

@@ -7,6 +7,7 @@ import {
   defineNavigationTree,
   definePage,
   definePlacement,
+  defineSchedule,
   defineView,
   defineViewMenu,
   l10n,
@@ -41,6 +42,7 @@ import {
 } from "./src/navigation";
 import { quotaAvailability } from "./src/quota-availability";
 import { quotaRestart, quotaRestartHook } from "./src/quota-restart";
+import { quotas } from "./src/quotas/commands";
 import { sessionId } from "./src/resource";
 import { pinSession, sessionPinsChanged, sessionPinsIndex } from "./src/session-pins";
 import { composerControls, readSnapshot } from "./src/snapshot";
@@ -110,6 +112,26 @@ const sessions = definePage({
   main: { kind: "group", default: compose.ref },
   slots: [],
 });
+const quotasView = defineView({
+  id: "quotas",
+  title: l10n("quotas.title", "Quotas"),
+  icon: "gauge",
+  body: {
+    kind: "webview",
+    entry: packageAsset("./src/quotas/view.tsx", import.meta.url),
+    capabilities: ["commands.execute"],
+  },
+});
+const quotasPage = definePage({
+  id: "quotas",
+  title: l10n("quotas.title", "Quotas"),
+  icon: "gauge",
+  path: "conversations/quotas",
+  mode: workbenchModes.project,
+  parent: sessions.ref,
+  main: { kind: "view", view: quotasView.ref, cardinality: "one", presentation: "page" },
+  slots: [],
+});
 const session = definePage({
   id: "conversation",
   title: l10n("conversation.title", "Session"),
@@ -170,7 +192,16 @@ export default defineExtension({
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
   storageIndexes: [nativeSubmissionIndex, sessionPinsIndex],
   hooks: [quotaRestartHook],
+  schedules: [
+    defineSchedule({
+      id: "quota-history",
+      title: l10n("quotas.schedule", "Record quota history"),
+      schedule: "0 * * * *",
+      command: quotas.ref,
+    }),
+  ],
   commands: [
+    quotas,
     changeHeads,
     readChange,
     quotaRestart,
@@ -190,11 +221,18 @@ export default defineExtension({
     resolve,
     watch,
   ],
-  views: [conversation, list, links],
-  pages: [sessions, compose, session, draft],
+  views: [conversation, list, links, quotasView],
+  pages: [sessions, compose, session, draft, quotasPage],
   placements: [viewer],
   viewMenus: [defineViewMenu({ id: "session.resources", owner: conversation.ref, view: links.ref, side: "right" })],
   navigationItems: [
+    defineNavigationItem({
+      id: "quotas",
+      owner: sessions.ref,
+      label: l10n("quotas.title", "Quotas"),
+      icon: "gauge",
+      action: { kind: "page", page: quotasPage.ref },
+    }),
     defineNavigationItem({
       id: "sessions",
       owner: workbenchModes.project,

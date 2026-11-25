@@ -115,6 +115,8 @@ const validateModeAndRegions = (runtime: Accumulator, record: RuntimePageRecord)
 const validatePageMainDefaults = (runtime: Accumulator, record: RuntimePageRecord) => {
   const page = record.contribution;
   const main = page.main;
+  if (main.kind === "view" && main.intro)
+    ownRefMissing(runtime, record, main.intro, `pages.${record.localId}.main.intro`);
   if (main.kind === "view" && main.empty)
     ownRefMissing(runtime, record, pagePlaceholderView(main.empty)!, `pages.${record.localId}.main.empty`);
   if (

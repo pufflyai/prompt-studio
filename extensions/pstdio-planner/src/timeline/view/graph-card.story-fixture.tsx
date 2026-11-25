@@ -30,7 +30,7 @@ export function EditableCardPreview(props: EditableCardPreviewProps) {
   const [host] = useState<GuestHost>(() => ({
     extensionId: "pstdio.planner",
     call: (async (method, request) => {
-      if (method === "resources.actions") return [{ key: "run", label: "Run attempt", icon: "Play" }];
+      if (method === "resources.actions") return [{ key: "run", label: "Implement ticket", icon: "Play" }];
       if (method === "commands.execute") {
         const { params } = request as WebviewCommandsExecuteParams;
         setValues((current) => ({ ...current, [String(params?.attributeId)]: params?.value }));

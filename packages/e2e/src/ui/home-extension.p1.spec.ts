@@ -17,10 +17,7 @@ const emptyMain = (page: Page) => {
     .or(main.getByText("No tabs available", { exact: true }));
 };
 
-test("Home resumes opened resources and public actions without prematurely creating a session", async ({
-  page,
-  request,
-}) => {
+test("Home reopens recent resources and only starts a session when a person sends", async ({ page, request }) => {
   const response = await request.post("/v1/projects", { data: folderProjectInput({ name: "Home actions" }) });
   expect(response.status()).toBe(201);
   const project = (await response.json()) as { id: string };
@@ -57,17 +54,27 @@ test("Home resumes opened resources and public actions without prematurely creat
   await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(sessions[6].title);
   await page.getByRole("button", { name: "Back to project", exact: true }).click();
   await page.getByRole("option", { name: "Home", exact: true }).click();
-  await homeFrame(page).getByRole("link", { name: "New conversation", exact: true }).click();
-  await expect(homePage(page)).not.toBeVisible();
-  const current = (await (await request.get(`/v1/projects/${project.id}/sessions`)).json()) as { items: unknown[] };
-  expect(current.items).toHaveLength(7);
-  await page.getByRole("button", { name: "Back to project", exact: true }).click();
-  await page.getByRole("option", { name: "Home", exact: true }).click();
-  await homeFrame(page).getByRole("link", { name: "Open a tool", exact: true }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await page.keyboard.press("Escape");
-  await homeFrame(page).getByRole("link", { name: "Browse extensions", exact: true }).click();
-  await expect(page.getByTestId("extensions-panel")).toBeVisible();
+  const composer = page.locator('[data-workbench-panel="main"] [data-workbench-composer]');
+  const editor = composer.locator('[data-testid="content-editable"][contenteditable="true"]');
+  const send = composer.getByTestId("send-message-button");
+  const prompt = "Start a session from Home";
+  await editor.fill(prompt);
+  await expect(homePage(page)).toBeVisible();
+  const sessionsInProject = async () =>
+    (await (await request.get(`/v1/projects/${project.id}/sessions`)).json()) as {
+      items: { title: string }[];
+    };
+  expect((await sessionsInProject()).items).toHaveLength(7);
+  await expect(send).toBeEnabled();
+  await send.click();
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(prompt);
+  await expect
+    .poll(async () => (await sessionsInProject()).items.filter((item) => item.title === prompt))
+    .toHaveLength(1);
+  await expect(page.locator('[data-workbench-panel="main"]').getByText(prompt, { exact: true })).toBeVisible();
+  await page.getByRole("option", { name: "Quotas", exact: true }).click();
+  await expect(page).toHaveURL(/conversations\/quotas$/);
+  await expect(page.locator('iframe[title="Quotas"]')).toBeVisible();
 });
 
 test("disabling Home exposes the existing empty panel and enabling it restores one page", async ({ page, request }) => {

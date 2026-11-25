@@ -1,4 +1,5 @@
 import { Box } from "@chakra-ui/react";
+import { contributionRefId } from "@pstdio/sdk/extensions";
 import { UiScopeActivity } from "@pstdio/ui";
 import {
   Activity,
@@ -124,6 +125,16 @@ const PanelViewPortal = (props: {
     placement.viewId ? workbench.views.getView(placement.viewId) : undefined,
   );
   const headerViewId = view?.header?.viewId;
+  const intro = useWorkbenchStore(workbench.pages.store, (state) => {
+    const pageRef = placement.pageContext?.page;
+    let page = pageRef
+      ? Object.values(state.pages).find(({ ref }) => contributionRefId(ref) === contributionRefId(pageRef))
+      : undefined;
+    if (!page && workbench.pages.getContent()?.widgetId === placement.widgetId)
+      page = state.pages[state.activePageId ?? ""];
+    const main = page?.main;
+    return main?.kind === "view" && main.intro ? contributionRefId(main.intro) : undefined;
+  });
   const collection =
     view?.body.kind === "dataTable" || view?.body.kind === "kanban" || view?.body.kind === "resourceList";
   // The portal target is stable for the life of a view. Only its DOM parent moves.
@@ -177,6 +188,7 @@ const PanelViewPortal = (props: {
       minW="0"
       minH="0"
       w="full"
+      flexDirection="column"
       overflow="hidden"
       onPointerDown={activate}
       onFocusCapture={(event) => {
@@ -187,6 +199,18 @@ const PanelViewPortal = (props: {
     >
       {/* The retained view owns its viewport, so another tab cannot reset its scroll position. */}
       <UiScopeActivity active={active}>
+        {intro ? (
+          <Box flexShrink={0} maxH="1/2" overflow="auto" display="flex" data-workbench-page-intro>
+            <WorkbenchWidgetHost
+              workbench={workbench}
+              placement={placement}
+              viewId={intro}
+              region={region}
+              visible={active}
+              sizing="content-height"
+            />
+          </Box>
+        ) : null}
         <RegionScrollArea>
           {/* Preserve collection state while deferring updates and reads for hidden pages. */}
           <Activity mode={active || !collection ? "visible" : "hidden"}>

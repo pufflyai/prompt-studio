@@ -80,9 +80,12 @@ export type RegisteredNavigationParser = Omit<NavigationParser, "priority"> & Re
 export interface NavigationDispatcherContext {
   canOpenPanel?(target: NavigationTargetPanel): boolean;
   canExecuteCommand?(commandId: string): boolean;
-  prepareNavigation?(targets: readonly (NavigationTargetPage | NavigationTargetPanel)[]): { commit(): unknown };
-  openPanelTarget?(target: NavigationTargetPanel): unknown;
-  openPageTarget?(target: NavigationTargetPage): unknown;
+  prepareNavigation?(
+    targets: readonly (NavigationTargetPage | NavigationTargetPanel)[],
+    context?: NavigationInvocationContext,
+  ): { commit(): unknown };
+  openPanelTarget?(target: NavigationTargetPanel, context?: NavigationInvocationContext): unknown;
+  openPageTarget?(target: NavigationTargetPage, context?: NavigationInvocationContext): unknown;
   openDialogTarget?(target: NavigationTargetDialog): unknown;
   openViewerTarget?(target: NavigationTargetViewer, context?: NavigationInvocationContext): unknown;
   executeCommand(
@@ -156,12 +159,12 @@ const dispatchItem = async (
   }
   if (target.kind === "page") {
     if (!dispatcher.openPageTarget) throw new Error("navigation.openTarget: page target dispatcher is not configured");
-    return dispatcher.openPageTarget(target);
+    return dispatcher.openPageTarget(target, context);
   }
   if (target.kind === "panel") {
     if (!dispatcher.openPanelTarget)
       throw new Error("navigation.openTarget: panel target dispatcher is not configured");
-    return dispatcher.openPanelTarget(target);
+    return dispatcher.openPanelTarget(target, context);
   }
   if (target.kind === "viewer") {
     if (!dispatcher.openViewerTarget) throw new Error("Viewer navigation is not configured");
@@ -249,7 +252,7 @@ export const createNavigationRegistry = (input: CreateNavigationRegistryInput = 
           throw new Error("Compound navigation accepts only page and panel targets");
         if (!dispatcher.prepareNavigation)
           throw new Error("navigation.openTarget: navigation preparation is not configured");
-        const prepared = dispatcher.prepareNavigation(target.targets);
+        const prepared = dispatcher.prepareNavigation(target.targets, context);
         const result = [prepared.commit()];
         for (const listener of listeners) runWorkbenchEffect("navigation observer", () => listener(target));
         return result;

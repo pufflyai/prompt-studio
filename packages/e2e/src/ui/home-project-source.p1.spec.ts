@@ -36,9 +36,9 @@ test("projects own editable Home sources and keep their customizations through s
       return { ...project, home };
     }),
   );
-  const component = "src/components/start-about-panel.tsx";
+  const component = "src/components/start-recent-list.tsx";
   const originalSource = readFileSync(join(original.home.sourcePath, component), "utf8");
-  const customizedSource = "export const StartAboutPanel = () => <p>Project-specific welcome notes</p>;\n";
+  const customizedSource = "export const StartRecentList = () => <p>Project-specific welcome notes</p>;\n";
   causalEvidence.mark("custom-home:loading");
   await page.goto(`/projects/${custom.id}`);
   await expect(homePage(page)).toBeVisible();

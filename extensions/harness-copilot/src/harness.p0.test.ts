@@ -19,6 +19,14 @@ test("models expose only the reasoning efforts Copilot supports for them", () =>
       { label: "High", value: "high" },
     ],
   });
+  expect(
+    toAgentModel({
+      id: "gpt",
+      name: "GPT",
+      supportedReasoningEfforts: ["low", "medium", "high"],
+      defaultReasoningEffort: "low",
+    } as ModelInfo).paramOverrides?.reasoning,
+  ).toMatchObject({ defaultValue: "medium" });
   expect(toAgentModel({ id: "auto", name: "Auto" } as ModelInfo).paramOverrides).toEqual({ reasoning: null });
 });
 

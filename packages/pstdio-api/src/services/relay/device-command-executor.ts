@@ -1,5 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { type DeviceCommand, deviceCommandSchema } from "pstdio-api-contracts";
+import type { WorkbenchOrigin } from "pstdio-api-contracts/workbench-context";
 import { type Json, jsonSchema } from "pstdio-sync-contracts";
 import { approveSessionHandler, approveSessionRoute } from "../../features/sessions/endpoints/approve-session";
 import { createSessionHandler, createSessionRoute } from "../../features/sessions/endpoints/create-session";
@@ -27,6 +28,7 @@ import {
   updateSessionStatusHandler,
   updateSessionStatusRoute,
 } from "../../features/sessions/endpoints/update-session-status";
+import { getLiveWorkbenchContext, submittedWorkbenchOrigin } from "../../features/sessions/workbench-context";
 import { createWorkspaceHandler, createWorkspaceRoute } from "../../features/workspaces/endpoints/create-workspace";
 import {
   getWorkspaceDiffFileHandler,
@@ -60,6 +62,8 @@ const requestFor = (command: DeviceCommand) => {
   if (command.type === "workspace.create") return { path: "/workspaces", method: "POST", body: command.input };
   const id = encodeURIComponent(command.id);
   switch (command.type) {
+    case "workbench.context":
+      throw new Error("Workbench reads are dispatched directly.");
     case "session.queuedMessages":
       return { path: `/sessions/${id}/queued-messages`, method: "GET" };
     case "session.queuedFollowUps":
@@ -125,8 +129,15 @@ export const createDeviceCommandExecutor = (deps: RelayDeps, projectId: string) 
   routes.openapi(deleteQueuedFollowUpRoute, deleteQueuedFollowUpHandler(deps));
   routes.openapi(moveQueuedFollowUpRoute, moveQueuedFollowUpHandler(deps));
   routes.openapi(combineQueuedFollowUpsRoute, combineQueuedFollowUpsHandler(deps));
-  routes.openapi(createSessionRoute, createSessionHandler(deps));
-  routes.openapi(followUpSessionRoute, followUpSessionHandler(deps));
+  const origins = new WeakMap<Request, WorkbenchOrigin>();
+  routes.openapi(
+    createSessionRoute,
+    createSessionHandler(deps, (request) => origins.get(request)),
+  );
+  routes.openapi(
+    followUpSessionRoute,
+    followUpSessionHandler(deps, (request) => origins.get(request)),
+  );
   routes.openapi(approveSessionRoute, approveSessionHandler(deps));
   routes.openapi(updateSessionStatusRoute, updateSessionStatusHandler(deps));
   routes.openapi(createWorkspaceRoute, createWorkspaceHandler(deps));
@@ -161,6 +172,12 @@ export const createDeviceCommandExecutor = (deps: RelayDeps, projectId: string) 
   return async (value: Json, context: { signal: AbortSignal }) => {
     context.signal.throwIfAborted();
     const command = deviceCommandSchema.parse(value);
+    if (command.type === "workbench.context") {
+      const view = getLiveWorkbenchContext(deps, projectId, command.id);
+      return view
+        ? { status: 200, body: jsonSchema.parse(view) }
+        : { status: 404, body: { error: "Workbench unavailable" } };
+    }
     if (!(await inScope(command)))
       return { status: 404, body: { error: "Resource not found on this device in this project" } };
     context.signal.throwIfAborted();
@@ -168,12 +185,17 @@ export const createDeviceCommandExecutor = (deps: RelayDeps, projectId: string) 
       await executeWithDeviceAttachments(deps, projectId, command, async () => {
         context.signal.throwIfAborted();
         const request = requestFor(command);
-        const response = await routes.request(request.path, {
+        const relayRequest = new Request(new URL(request.path, "http://localhost"), {
           method: request.method,
           signal: context.signal,
           headers: { "content-type": "application/json" },
           ...("body" in request ? { body: JSON.stringify(request.body) } : {}),
         });
+        if ("workbenchOrigin" in command && command.workbenchOrigin?.deviceId) {
+          const origin = submittedWorkbenchOrigin(command.workbenchOrigin, projectId);
+          if (origin) origins.set(relayRequest, origin);
+        }
+        const response = await routes.request(relayRequest);
         return { status: response.status, body: jsonSchema.parse(await response.json()) };
       }),
     );

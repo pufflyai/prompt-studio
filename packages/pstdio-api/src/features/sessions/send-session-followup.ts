@@ -38,6 +38,7 @@ export const sendSessionFollowUp = async (
   input: FollowUpInput,
   options: {
     signal?: AbortSignal;
+    workbenchOrigin?: import("pstdio-api-contracts/workbench-context").WorkbenchOrigin;
     expectedRun?: { status: string; startedAt: string | null; endedAt: string | null };
   } = {},
 ) => {
@@ -77,6 +78,7 @@ export const sendSessionFollowUp = async (
           deps,
           session.project_id!,
           input.source ?? (input.sourceSessionId ? { type: "session", id: input.sourceSessionId } : undefined),
+          options.workbenchOrigin,
         ),
       ),
       cwd: session.cwd ?? undefined,

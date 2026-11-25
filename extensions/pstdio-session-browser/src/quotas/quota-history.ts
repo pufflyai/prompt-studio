@@ -3,7 +3,7 @@ import type { QuotaLimit, QuotaReport } from "./quotas";
 
 const hour = 3600000;
 const retention = 8 * 24 * hour;
-interface SavedSample {
+export interface SavedSample {
   kind: "quota-sample";
   providerId: string;
   limitId: string;
@@ -39,18 +39,19 @@ export const saveQuotaHistory = async (
   reports: QuotaReport[],
   now = Date.now(),
   signal?: AbortSignal,
+  legacy: SavedSample[] = [],
 ) => {
   const records = storage.records;
   const saved = (await records.list()).flatMap((record) => {
     const value = record.value as unknown as SavedSample | null;
     return value?.kind === "quota-sample" ? [{ recordId: record.recordId, value, revision: record.revision }] : [];
   });
+  const sampleId = (providerId: string, limitId: string, resetsAt: string | null, at: string) =>
+    records.id(`quota:${providerId}:${limitId}:${resetsAt ?? "unknown"}:${Math.floor(Date.parse(at) / hour)}`);
   const current = reports.flatMap((report) =>
     report.status === "available"
       ? report.limits.map((limit) => ({
-          recordId: records.id(
-            `quota:${report.id}:${limit.id}:${limit.resetsAt ?? "unknown"}:${Math.floor(Date.parse(report.checkedAt) / hour)}`,
-          ),
+          recordId: sampleId(report.id, limit.id, limit.resetsAt ?? null, report.checkedAt),
           value: {
             kind: "quota-sample" as const,
             providerId: report.id,
@@ -62,7 +63,17 @@ export const saveQuotaHistory = async (
         }))
       : [],
   );
-  const written = await Promise.all(current.map((sample) => saveSample(storage, sample, signal)));
+  const previous = legacy.flatMap((value) =>
+    Date.parse(value.at) >= now - retention
+      ? [{ recordId: sampleId(value.providerId, value.limitId, value.resetsAt, value.at), value }]
+      : [],
+  );
+  const combined = new Map<string, SampleRecord>();
+  for (const sample of [...previous, ...current]) {
+    const old = combined.get(sample.recordId);
+    if (!old || Date.parse(sample.value.at) > Date.parse(old.value.at)) combined.set(sample.recordId, sample);
+  }
+  const written = await Promise.all([...combined.values()].map((sample) => saveSample(storage, sample, signal)));
   const expired = saved.filter((sample) => Date.parse(sample.value.at) < now - retention);
   if (expired.length) {
     await records.commit({

@@ -76,7 +76,10 @@ const createdSessionResponse = (session: Parameters<typeof toSessionResponse>[0]
   ...("operation_result" in session ? { operationResult: session.operation_result } : {}),
 });
 
-export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<typeof createSessionRoute> => {
+export const createSessionHandler = (
+  deps: SessionsRouteDeps,
+  originFor?: (request: Request) => import("pstdio-api-contracts/workbench-context").WorkbenchOrigin | undefined,
+): AppRouteHandler<typeof createSessionRoute> => {
   return async (c) => {
     const input = c.req.valid("json");
     const forwarded = await remoteSessionCreation(createSessionRoute, deps.accountService, input, c.req.raw.signal);
@@ -150,6 +153,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
           input.operation,
           onCreated,
           c.req.raw.signal,
+          originFor?.(c.req.raw),
         );
         return c.json(createdSessionResponse(session, resolvedWorkspaceId), 201);
       }
@@ -164,7 +168,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
             title: input.title,
             agentId,
             prompt,
-            sender: await resolveMessageSender(deps, input.project_id, input.source),
+            sender: await resolveMessageSender(deps, input.project_id, input.source, originFor?.(c.req.raw)),
             attachments,
             attachmentRefs: input.attachments,
             model: resolvedModel,

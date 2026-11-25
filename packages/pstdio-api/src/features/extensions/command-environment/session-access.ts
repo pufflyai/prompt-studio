@@ -5,6 +5,7 @@ export interface SessionApiScope {
   projectId: string;
   signal?: AbortSignal;
   scope?: InvocationScope;
+  workbenchOrigin?: import("pstdio-api-contracts/workbench-context").WorkbenchOrigin;
 }
 
 export const createSessionAccess = (deps: ExtensionsRouteDeps, input: SessionApiScope) => {

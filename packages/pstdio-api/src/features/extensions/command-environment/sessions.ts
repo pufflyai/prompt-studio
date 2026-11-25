@@ -17,6 +17,7 @@ import { queryExtensionSessions } from "../../sessions/query-sessions";
 import { combineQueuedRequests, updateQueuedRequest } from "../../sessions/queued-request-operations";
 import { steerQueuedFollowUp } from "../../sessions/queued-steering";
 import { sendSessionFollowUp } from "../../sessions/send-session-followup";
+import { forwardingWorkbenchOrigin } from "../../sessions/workbench-context";
 import type { ExtensionsRouteDeps } from "../deps";
 import { resolveExtensionPrompt } from "./prompt";
 import { validateLegacyAnchors } from "./resource-link-policy";
@@ -136,6 +137,7 @@ export const createSessionsApi = (
           followupInput.sessionId,
           {
             type: "session.followUp",
+            workbenchOrigin: await forwardingWorkbenchOrigin(deps, input.workbenchOrigin),
             id: followupInput.sessionId,
             input: {
               prompt: followupInput.prompt,
@@ -180,7 +182,7 @@ export const createSessionsApi = (
           summary_role: followupInput.summaryRole,
           attachments: followupInput.attachments,
         },
-        { signal: input.signal, expectedRun: followupInput.expectedRun },
+        { signal: input.signal, workbenchOrigin: input.workbenchOrigin, expectedRun: followupInput.expectedRun },
       );
     },
     addAnchors: async (id, anchors) => {

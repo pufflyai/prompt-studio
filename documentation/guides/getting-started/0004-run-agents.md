@@ -1,5 +1,7 @@
 # Run agents
 
+On the project **Home** page, write below **Recently Used** and send to open a new conversation. To check provider usage, open **Sessions → Quotas**.
+
 Prompt Studio runs coding agents that you install, such as Claude Code, Codex, and OpenCode. Install an agent, then start a session.
 
 ## Install an agent

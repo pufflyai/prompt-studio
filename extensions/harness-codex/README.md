@@ -43,7 +43,7 @@ The **Speed** option offers Standard and Fast. Fast uses the native Codex servic
 
 Choose a speed before sending a prompt. It applies to that turn and later turns in the session; choosing Standard switches Fast off. It also applies when starting or resuming a goal and when compacting a conversation. Prompt Studio resolves an omitted selection to Standard. Programmatic callers can set the harness parameter `service_tier` to `fast` or `default` (Standard). Direct harness callers that omit this parameter keep the native Codex setting.
 
-The **Reasoning effort** option sets how much Codex thinks before it answers: Minimal, Low, Medium, High, or XHigh. The default is Medium. Each model can offer fewer levels or its own default, and models without the option hide it.
+The **Reasoning effort** option sets how much Codex thinks before it answers: Minimal, Low, Medium, High, or XHigh. The default is Medium. Models that offer fewer levels use their supported default when Medium is unavailable. Models without reasoning controls hide the option.
 
 ## How it runs
 

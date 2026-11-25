@@ -30,6 +30,8 @@ export type PagePlaceholder =
 export interface PageMainView extends PlacementPresentation {
   readonly kind: "view";
   readonly view: ViewRef;
+  /** Content-sized companion above the primary view on a standalone page. */
+  readonly intro?: ViewRef;
   readonly cardinality: PageSlotCardinality;
   /** Render page content without tab controls, or normal tabs. Defaults to tabs. */
   readonly presentation?: "page" | "tabs";

@@ -31,5 +31,8 @@
   "links.tickets": "Tickets",
   "links.workspaces": "Espaces de travail",
   "links.related": "Ressources associées",
-  "links.unavailable": "Ressource indisponible"
+  "links.unavailable": "Ressource indisponible",
+  "quotas.title": "Quotas",
+  "quotas.read": "Lire les quotas des agents",
+  "quotas.schedule": "Enregistrer l’historique des quotas"
 }

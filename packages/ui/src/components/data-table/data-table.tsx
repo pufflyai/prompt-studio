@@ -2,7 +2,7 @@ import "./data-table.css";
 
 import { Box, Flex } from "@chakra-ui/react";
 import { getCoreRowModel, type RowSelectionState, useReactTable } from "@tanstack/react-table";
-import { useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { CollectionViewEmptyState } from "../collection-view/collection-view-empty-state";
 import { findField } from "../collection-view/collection-view-fields";
 import { DisplaySortControl } from "../collection-view/display-sort-control";
@@ -65,6 +65,10 @@ const DatasetDataTable = (props: DataTableProps) => {
     rows: new Map<string, Record<string, unknown>>(),
   });
   const rowSelection = selection.key === pageKey ? selection.ids : {};
+  const reportSelection = useEffectEvent((rows: Record<string, unknown>[]) => props.onSelectedRowsChange?.(rows));
+  useEffect(() => {
+    reportSelection(selection.key === pageKey ? [...selection.rows.values()] : []);
+  }, [selection, pageKey]);
   const enableSelection = shouldEnableSelection(props);
   const selectionActions = resolveSelectionActions(props);
   const { groups } = view;

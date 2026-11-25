@@ -22,7 +22,7 @@
   "kanbanRenderers.tickets.rowActions.breakIntoSubTickets": "Découper en sous-tâches",
   "kanbanRenderers.tickets.rowActions.createWorkspace": "Créer un espace de travail",
   "kanbanRenderers.tickets.rowActions.refineTicket": "Affiner la tâche",
-  "kanbanRenderers.tickets.rowActions.runAttempt": "Lancer une tentative",
+  "kanbanRenderers.tickets.rowActions.runAttempt": "Implémenter le ticket",
   "kanbanRenderers.tickets.rowActions.unarchive": "Désarchiver",
   "kanbanRenderers.tickets.title": "Tâches",
   "displayMenu.orderingOptions.shorthand": "ID",

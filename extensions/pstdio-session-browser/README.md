@@ -34,14 +34,16 @@ Pin and Unpin actions keep chosen sessions in a separate leading section, includ
 
 Session history loads the next bounded page as the person scrolls toward its end, including within an expanded workspace group. Stable date headings join pages at the same level. This requires a published SDK and host supporting `view.tree.pages.v1`; updating the SDK alone does not update the running host.
 
+## Quotas
+
+Open **Quotas** in Sessions navigation to see supported provider windows, usage, forecast and reset times. The page refreshes automatically while open. Sessions also collects hourly samples and retains eight days of readings. It imports recent saved samples from Home when they are available.
+
 ## Local development and release
 
 Follow `extensions/AGENTS.md`: use CLI `extensions dev`, then production-like `extensions add --force`, without skipping installation. Local built SDK/UI packages can qualify this stacked implementation. An independent install must use fresh package-local Bun dependencies from built tarballs rather than symlinks or copied installed dependencies.
 
-The backend provider uses only the SDK at runtime. Its canonical patch reducer is
-shared through `@pstdio/sdk/extensions`; native rendering stays in the host. The
-SDK-only dependency removes the UI package's rendering/editor dependency tree from
-each project install without changing message identity or stream behavior.
+The Sessions backend uses the SDK at runtime. The Quotas webview uses the shared chart and UI packages. Its canonical patch reducer is
+shared through `@pstdio/sdk/extensions`; native rendering stays in the host.
 
 This provider has an independent version, changelog, and changeset. It stays outside
 the host fixed group. `private: true` follows bundled/PSX core-extension conventions.

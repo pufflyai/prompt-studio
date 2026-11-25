@@ -55,7 +55,7 @@ describe("parseClaudeModels", () => {
           thinking: {
             type: "select",
             label: "Thinking",
-            defaultValue: "high",
+            defaultValue: "medium",
             options: [
               { label: "Low", value: "low", icon: "level-low" },
               { label: "Medium", value: "medium", icon: "level-mid" },
@@ -73,7 +73,7 @@ describe("parseClaudeModels", () => {
           thinking: {
             type: "select",
             label: "Thinking",
-            defaultValue: "high",
+            defaultValue: "medium",
             options: [
               { label: "Low", value: "low", icon: "level-low" },
               { label: "Medium", value: "medium", icon: "level-mid" },

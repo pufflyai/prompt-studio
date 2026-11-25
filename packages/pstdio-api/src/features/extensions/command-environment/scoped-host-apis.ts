@@ -47,6 +47,7 @@ export const createScopedHostApis = (
     projectId: string;
     workspaceId?: string;
     eventId?: string;
+    workbenchOrigin?: import("pstdio-api-contracts/workbench-context").WorkbenchOrigin;
     /** The installed source generation this invocation runs. Host environment grants are checked against it. */
     source: ProcessEnvironmentSource;
     extensionOwner: () => ProcessOwner;
@@ -82,7 +83,13 @@ export const createScopedHostApis = (
   const terminal = hosts.terminal && resolveCwd ? createWorkspaceTerminal(hosts.terminal, resolveCwd) : hosts.terminal;
 
   return {
-    sessions: createSessionsApi(deps, { projectId: input.projectId, project: input.project, signal, scope }),
+    sessions: createSessionsApi(deps, {
+      projectId: input.projectId,
+      project: input.project,
+      signal,
+      scope,
+      workbenchOrigin: input.workbenchOrigin,
+    }),
     workspaces: createWorkspacesApi(deps, { projectId: input.projectId, signal }, runtimeDeps),
     connections: signal ? withConnectionSignal(hosts.connections, signal) : hosts.connections,
     process: createProcessApi({

@@ -273,15 +273,17 @@ async function launchAttempt(
   };
 }
 
+const implementationLabel = l10n("kanbanRenderers.tickets.rowActions.runAttempt", "Implement ticket");
+
 export const runAttemptCommand = defineCommand({
   id: "run-attempt",
-  title: "Run attempt",
+  title: implementationLabel,
   mutating: true,
   cli: { examples: ["pst pstdio.planner run-attempt --ticket PS-1"] },
   menus: [
     {
       slot: ticketMenuSlots.headerOverflow,
-      label: l10n("kanbanRenderers.tickets.rowActions.runAttempt", "Run attempt"),
+      label: implementationLabel,
       icon: "play",
     },
   ],
