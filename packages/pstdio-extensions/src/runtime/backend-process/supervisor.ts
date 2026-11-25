@@ -72,6 +72,32 @@ export interface BackendWorkerOptions {
   drainDeadlineMs?: number;
 }
 
+const spawnWorker = (
+  options: BackendWorkerOptions,
+  cwd: string,
+  receive: (raw: unknown) => void,
+  onDisconnect: () => void,
+) => {
+  try {
+    return Bun.spawn(options.command, {
+      cwd,
+      // Bun cleans up descendants at orderly exit, including children spawned between host samples.
+      env: process.platform === "win32" ? options.env : { ...options.env, BUN_FEATURE_FLAG_NO_ORPHANS: "1" },
+      stdio: ["ignore", "inherit", "inherit"],
+      // Its own process group, so processes extension code starts stop with it.
+      detached: process.platform !== "win32",
+      serialization: "advanced",
+      ipc: receive,
+      // A worker that drops its channel can never answer again, even if its process keeps running.
+      onDisconnect,
+    });
+  } catch (error) {
+    // Nothing started, so nothing else will remove the working folder.
+    rmSync(cwd, { recursive: true, force: true });
+    throw error;
+  }
+};
+
 export const startBackendWorker = async (options: BackendWorkerOptions): Promise<BackendWorker> => {
   const invocations = new Map<string, Running>();
   const { closeScope, scopeCleanups } = createScopeCleanup();
@@ -212,31 +238,11 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
   };
 
   const life = startRuntimeOperation("extension.backend.worker");
-  const spawn = () => {
-    try {
-      return Bun.spawn(options.command, {
-        cwd,
-        // Bun cleans up descendants at orderly exit, including children spawned between host samples.
-        env: process.platform === "win32" ? options.env : { ...options.env, BUN_FEATURE_FLAG_NO_ORPHANS: "1" },
-        stdio: ["ignore", "inherit", "inherit"],
-        // Its own process group, so processes extension code starts stop with it.
-        detached: process.platform !== "win32",
-        serialization: "advanced",
-        ipc: receive,
-        // A worker that drops its channel can never answer again, even if its process keeps running.
-        onDisconnect: () => {
-          groupAnchorReply?.(null);
-          fail(new BackendUnavailableError("The extension backend disconnected."));
-          stopTree();
-        },
-      });
-    } catch (error) {
-      // Nothing started, so nothing else will remove the working folder.
-      rmSync(cwd, { recursive: true, force: true });
-      throw error;
-    }
-  };
-  const child = spawn();
+  const child = spawnWorker(options, cwd, receive, () => {
+    groupAnchorReply?.(null);
+    fail(new BackendUnavailableError("The extension backend disconnected."));
+    stopTree();
+  });
   const observation = startWorkerTreeObservation(child);
   const requestGroupAnchor = () => {
     const reply = Promise.withResolvers<number | null>();
