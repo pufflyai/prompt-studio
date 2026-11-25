@@ -124,6 +124,7 @@ test("Retry cancels a stalled download and resumes on the same shared connection
   const entered = Promise.withResolvers<AbortSignal>();
   const release = Promise.withResolvers<void>();
   const retried = Promise.withResolvers<AbortSignal>();
+  const finishRetry = Promise.withResolvers<void>();
   let passes = 0;
   let ready = 0;
   const owner = createDocumentRelayConnection({
@@ -140,18 +141,107 @@ test("Retry cancels a stalled download and resumes on the same shared connection
             signal.addEventListener("abort", () => reject(signal.reason), { once: true }),
           ),
         ]);
-      } else retried.resolve(signal);
+      } else {
+        retried.resolve(signal);
+        await finishRetry.promise;
+      }
     },
   });
   try {
     const original = await entered.promise;
-    owner.retry();
+    let finished = false;
+    const retry = owner.retry().then(() => {
+      finished = true;
+    });
     expect(original.aborted).toBe(true);
     const next = await retried.promise;
     expect(next).not.toBe(original);
     expect(next.aborted).toBe(false);
     expect(ready).toBe(2);
     expect(f.live.status().connected).toBe(true);
+    expect(finished).toBe(false);
+    finishRetry.resolve();
+    await retry;
+    expect(finished).toBe(true);
+  } finally {
+    release.resolve();
+    finishRetry.resolve();
+    f.controller.abort();
+    await owner.done;
+    await f.close();
+  }
+});
+
+test("a new targeted failure completes the owner's explicit Retry", async () => {
+  const f = documentConnectionFixture();
+  const initialPass = Promise.withResolvers<void>();
+  let ready = 0;
+  let passes = 0;
+  const owner = createDocumentRelayConnection({
+    ...f,
+    projectId: "project",
+    signal: f.controller.signal,
+    onReady() {
+      if (++ready === 2) owner.wakeDocument("text");
+    },
+    async synchronize() {
+      passes++;
+      initialPass.resolve();
+    },
+    async synchronizeDocument() {
+      throw new Error("The document still cannot download");
+    },
+  });
+  try {
+    await initialPass.promise;
+    let completed = false;
+    void owner.retry().then(() => {
+      completed = true;
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(passes).toBe(1);
+    expect(owner.status().error).toBe("Cloud source failed; retry scheduled");
+    expect(completed).toBe(true);
+  } finally {
+    f.controller.abort();
+    await owner.done;
+    await f.close();
+  }
+});
+
+test.each(["reconnect", "shutdown"] as const)("Retry waits for a disconnected owner to %s", async (outcome) => {
+  const grant = Promise.withResolvers<{ token: string; expiresAt: string }>();
+  const f = documentConnectionFixture({ access: () => grant.promise });
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const owner = createDocumentRelayConnection({
+    ...f,
+    projectId: "project",
+    signal: f.controller.signal,
+    async synchronize() {
+      entered.resolve();
+      await release.promise;
+      throw new Error("The new attempt failed");
+    },
+  });
+  try {
+    let settled = false;
+    const retry = owner.retry().then(() => {
+      settled = true;
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(f.live.status().connected).toBe(false);
+    expect(settled).toBe(false);
+    if (outcome === "shutdown") f.controller.abort();
+    else {
+      grant.resolve({ token: "fixture", expiresAt: new Date(Date.now() + 60_000).toISOString() });
+      await entered.promise;
+      expect(settled).toBe(false);
+      release.resolve();
+    }
+    await retry;
+    expect(settled).toBe(true);
+    if (outcome === "reconnect") expect(owner.status().error).toBe("Cloud source failed; retry scheduled");
   } finally {
     release.resolve();
     f.controller.abort();
