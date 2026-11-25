@@ -18,7 +18,10 @@ const emptyMain = (page: Page) => {
 };
 
 test("Home reopens recent resources and only starts a session when a person sends", async ({ page, request }) => {
-  const response = await request.post("/v1/projects", { data: folderProjectInput({ name: "Home actions" }) });
+  const harness = "pstdio.workbench-fixture.harness.fake";
+  const response = await request.post("/v1/projects", {
+    data: folderProjectInput({ name: "Home actions", agents: [harness] }),
+  });
   expect(response.status()).toBe(201);
   const project = (await response.json()) as { id: string };
   const sessions: { id: string; title: string }[] = [];
@@ -28,7 +31,7 @@ test("Home reopens recent resources and only starts a session when a person send
         project_id: project.id,
         title: `Home conversation ${i}`,
         prompt: "",
-        agent: "pstdio.workbench-fixture.harness.fake",
+        agent: harness,
       },
     });
     expect(created.status()).toBe(201);
@@ -71,7 +74,7 @@ test("Home reopens recent resources and only starts a session when a person send
   await expect
     .poll(async () => (await sessionsInProject()).items.filter((item) => item.title === prompt))
     .toHaveLength(1);
-  await expect(page.locator('[data-workbench-panel="main"]').getByText(prompt, { exact: true })).toBeVisible();
+  await expect(page.getByRole("main").getByRole("log").getByText(prompt, { exact: true })).toBeVisible();
   await page.getByRole("option", { name: "Quotas", exact: true }).click();
   await expect(page).toHaveURL(/conversations\/quotas$/);
   await expect(page.locator('iframe[title="Quotas"]')).toBeVisible();
