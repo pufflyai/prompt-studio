@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createAppCloser } from "./app-runtime";
 import { createTestHarnessRecord, createTestHarnessRegistry } from "./features/harnesses/test-harness-registry";
 import { createTestApp } from "./test-utils/create-test-app";
 
@@ -48,4 +49,43 @@ test("a blocked shutdown records its entered phase when ordinary request logs ar
     else process.env.PSTDIO_LOG_LEVEL = previous.level;
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("an early shutdown failure still closes extension workers before the database", async () => {
+  const order: string[] = [];
+  const done = async () => {};
+  const close = createAppCloser({
+    closeBackendWorkers: async () => {
+      order.push("workers");
+      throw new Error("worker cleanup failed");
+    },
+    startupAbort: new AbortController(),
+    startupDone: Promise.resolve(),
+    getStartupBackgroundDone: done,
+    notificationWakeTimer: setInterval(() => {}, 60_000),
+    stopDeadRowCleanup: done,
+    unsubscribeExtensionEvents: () => {},
+    extensionRuntime: {
+      dispose: async () => {
+        throw new Error("extension runtime did not stop");
+      },
+    },
+    extensionScheduler: { dispose: done },
+    artifactMountWatch: { dispose: done },
+    automationService: { close: done },
+    terminalSupervisor: { dispose: done },
+    closeDb: async () => {
+      order.push("database");
+    },
+    closeSessionHooks: done,
+    stopQueueReadiness: done,
+    sessionQueueLifecycle: { close: done } as never,
+    harnessRegistry: { dispose: done } as never,
+    extensionInstallations: { dispose: done } as never,
+    nativeDocuments: { dispose: done },
+    textEditing: { dispose: done },
+  });
+  const failure = await close().catch((error) => error);
+  expect(String(failure)).toContain("extension runtime did not stop");
+  expect(order).toEqual(["workers", "database"]);
 });

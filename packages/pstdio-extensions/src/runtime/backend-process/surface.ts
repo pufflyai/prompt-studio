@@ -1,3 +1,7 @@
+import { createStorageId } from "pstdio-api-contracts";
+import { isNavigationTarget } from "pstdio-api-contracts/extension-kernel";
+import { createCommandRejection } from "../runner/command-rejection";
+
 /**
  * The explicit allowlist of host capabilities a backend worker may reach. The host resolves every
  * worker call against it and the worker builds its context facade from the same description, so
@@ -11,10 +15,34 @@ export type BackendSurface =
   /** An asynchronous host method. The worker awaits the host's reply. */
   | { kind: "async" }
   /** A one-way host method, such as logging. The worker does not wait for it. */
-  | { kind: "notify" }
+  | { kind: "notify"; check?: "navigationTarget" }
   | { kind: "object"; members: Record<string, BackendSurface> }
   /** A synchronous scope selection, such as `storage.collection(name)`, evaluated for each host call. */
-  | { kind: "factory"; returns: BackendSurface };
+  | { kind: "factory"; returns: BackendSurface }
+  /** A pure synchronous calculation the worker runs itself from host-provided data. Never a host call. */
+  | { kind: "local"; name: "storageId" }
+  | { kind: "local"; name: "recordId"; namespace: string[] }
+  /** The middleware result constructors of ctx.commands, such as `continue()` and `patchParams(params)`. */
+  | { kind: "local"; name: "middlewareResult"; type: MiddlewareResultType };
+
+type MiddlewareResultType = "continue" | "patchParams" | "replaceParams" | "replaceInvocation" | "reject";
+
+// Mirrors the runner's command helpers (runner/context.ts buildCommandsApi).
+const middlewareResult = (type: MiddlewareResultType) => {
+  if (type === "continue") return () => ({ type });
+  if (type === "patchParams" || type === "replaceParams") return (params: unknown) => ({ type, params });
+  if (type === "replaceInvocation") return (invocation: unknown) => ({ type, invocation });
+  return createCommandRejection;
+};
+
+const localMember = (surface: Extract<BackendSurface, { kind: "local" }>) => {
+  if (surface.name === "storageId") return (prefix?: string) => createStorageId(prefix);
+  if (surface.name === "middlewareResult") return middlewareResult(surface.type);
+  const { namespace } = surface;
+  // Same encoding as pstdio-sync's storageRecordId, which this layer may not import. The process
+  // runtime API test compares the result with the host's own records.id.
+  return (key: string) => JSON.stringify([...namespace, key]);
+};
 
 /** One step from the context root: a property, or a factory call with its arguments. */
 export type SurfaceStep = { name: string; args?: unknown[] };
@@ -29,6 +57,12 @@ export class SurfaceCallRejectedError extends Error {
 
 const memberOf = (surface: BackendSurface, name: string) =>
   surface.kind === "object" && Object.hasOwn(surface.members, name) ? surface.members[name] : undefined;
+
+export const surfaceAllowsCommandRejection = (surface: BackendSurface) => {
+  const commands = memberOf(surface, "commands");
+  const reject = commands && memberOf(commands, "reject");
+  return reject?.kind === "local" && reject.name === "middlewareResult" && reject.type === "reject";
+};
 
 const methodOf = (target: unknown, name: string, path: SurfaceStep[]) => {
   const method = (target as Record<string, unknown> | null | undefined)?.[name];
@@ -103,7 +137,14 @@ export const createSurfaceFacade = (
       case "async":
         return (...args: unknown[]) => channel.call(path, args);
       case "notify":
-        return (...args: unknown[]) => channel.notify(path, args);
+        return (...args: unknown[]) => {
+          // A one-way notification cannot return the host's synchronous validation error.
+          if (current.check === "navigationTarget" && !isNavigationTarget(args[0]))
+            throw new Error("Invalid navigation target.");
+          channel.notify(path, args);
+        };
+      case "local":
+        return localMember(current);
       case "factory":
         return (...args: unknown[]) => {
           const steps = [...path.slice(0, -1), { name: path.at(-1)!.name, args }];

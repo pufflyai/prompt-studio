@@ -1,6 +1,8 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createCommandRejection } from "../runner/command-rejection";
 import {
   BACKEND_PROTOCOL_VERSION,
   deserializeBackendError,
@@ -10,7 +12,12 @@ import {
   serializeBackendError,
   type WorkerToHostMessage,
 } from "./protocol";
-import { type BackendSurface, collectSurfaceValues, resolveSurfaceCall } from "./surface";
+import {
+  type BackendSurface,
+  collectSurfaceValues,
+  resolveSurfaceCall,
+  surfaceAllowsCommandRejection,
+} from "./surface";
 
 /** Raised to every caller waiting on a worker that exited or was retired. Never replayed. */
 export class BackendUnavailableError extends Error {
@@ -47,6 +54,8 @@ export interface BackendWorker {
   invoke(invocation: BackendInvocation): Promise<unknown>;
   /** Stops the process. Pending invocations reject with BackendUnavailableError. */
   stop(): Promise<void>;
+  /** Resolves as soon as the worker can no longer answer, which can be before its process exits. */
+  readonly closed: Promise<void>;
   readonly exited: Promise<number | null>;
 }
 
@@ -61,6 +70,7 @@ export interface BackendWorkerOptions {
 type Running = {
   context: unknown;
   surface: BackendSurface;
+  resume: ReturnType<typeof AsyncLocalStorage.snapshot>;
   settle: ReturnType<typeof Promise.withResolvers<unknown>>;
 };
 
@@ -72,8 +82,10 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
   // Bun reads .env files from the working directory at startup. An empty folder keeps host files out.
   const cwd = mkdtempSync(join(tmpdir(), "pstdio-backend-"));
 
+  const closed = Promise.withResolvers<void>();
   const fail = (error: BackendUnavailableError) => {
     stopped ??= error;
+    closed.resolve();
     ready.reject(error);
     loaded.reject(error);
     for (const running of invocations.values()) running.settle.reject(error);
@@ -96,8 +108,8 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     const running = invocations.get(message.invocationId);
     try {
       if (!running) throw new BackendUnavailableError("The invocation is no longer running.");
-      const { context, surface } = running;
-      const value = await resolveSurfaceCall(context, surface, message.path, message.args, "async");
+      const { context, surface, resume } = running;
+      const value = await resume(resolveSurfaceCall, context, surface, message.path, message.args, "async");
       if (!send({ v: BACKEND_PROTOCOL_VERSION, type: "reply", requestId: message.requestId, ok: true, value }))
         throw new Error("The host result could not be sent to the worker.");
     } catch (error) {
@@ -109,8 +121,15 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
   const settle = (message: Extract<WorkerToHostMessage, { type: "result" }>) => {
     const running = invocations.get(message.invocationId);
     invocations.delete(message.invocationId);
-    if (message.ok) running?.settle.resolve(message.value);
-    else running?.settle.reject(workerError(message.error));
+    if (!running) return;
+    if (message.ok) {
+      running.settle.resolve(message.value);
+      return;
+    }
+    const error = workerError(message.error);
+    if (message.rejection && surfaceAllowsCommandRejection(running.surface))
+      error.cause = createCommandRejection(message.rejection);
+    running.settle.reject(error);
   };
 
   const relay = (message: Extract<WorkerToHostMessage, { type: "notify" }>) => {
@@ -118,8 +137,10 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     if (!running) return;
     // A one-way call has nobody to answer, so a rejected or failing call is simply not acted on.
     try {
-      const { context, surface } = running;
-      Promise.resolve(resolveSurfaceCall(context, surface, message.path, message.args, "notify")).catch(() => {});
+      const { context, surface, resume } = running;
+      Promise.resolve(resume(resolveSurfaceCall, context, surface, message.path, message.args, "notify")).catch(
+        () => {},
+      );
     } catch {}
   };
 
@@ -187,7 +208,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     // A getter may abort while collecting context values.
     if (signal?.aborted) return Promise.reject(signal.reason);
     const settle = Promise.withResolvers<unknown>();
-    invocations.set(invocationId, { context, surface, settle });
+    invocations.set(invocationId, { context, surface, resume: AsyncLocalStorage.snapshot(), settle });
     const sent = send({
       v: BACKEND_PROTOCOL_VERSION,
       type: "invoke",
@@ -223,7 +244,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     await ready.promise;
     if (!send({ v: BACKEND_PROTOCOL_VERSION, type: "load", entryPath: options.entryPath }))
       throw stopped ?? new BackendUnavailableError("The extension backend could not be reached.");
-    return { definition: await loaded.promise, exited, stop, invoke };
+    return { definition: await loaded.promise, closed: closed.promise, exited, stop, invoke };
   } catch (error) {
     await stop();
     throw error;

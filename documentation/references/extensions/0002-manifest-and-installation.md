@@ -40,6 +40,9 @@ Optional fields:
 - SVG images retain their own colors. For a monochrome `currentColor` SVG, define its color inside the asset. A `prefers-color-scheme` media rule follows the embedding app's light/dark `color-scheme`; it does not inherit the surrounding text color.
 - Catalogs may provide a Lucide name or a public SVG data URL. Repository catalog entries can use the same `./assets/icon.svg` declaration as the manifest: the host build embeds its bytes for discovery independently of source-archive inclusion. Embedded icons are keyed by the exact catalog package origin, full ID, install name, and declared asset path; an operator catalog cannot borrow a stock icon merely by reusing its install name. External catalogs must supply their own display metadata.
 - `pstdio.scope`: install/load scope, either `user` or `repo`. Defaults to `user`.
+- `pstdio.backendRuntime`: set to `"process"` to run the backend in its own worker process instead
+  of the API process. See [Process runtime](#process-runtime). Leave it out to keep the current
+  in-process behavior.
 
 Derived fields:
 
@@ -194,6 +197,46 @@ value, and it does not check a signature on remote catalogs. PS-528 adds both.
 An installed extension runs inside the API process with the access of the user's account. It can read
 files, the host environment, and stored connection secrets. The process isolation model is in
 [ADR 0058](../../adrs/0058-isolate-extension-backends.md).
+
+### Process runtime
+
+With `"pstdio": { "backendRuntime": "process" }`, the host never imports the extension entry. A
+private worker process imports it instead, and one worker serves every project that enables the same
+content revision. Commands, middleware, private handlers and hooks run in the worker, so a slow or
+CPU-heavy handler no longer blocks the workbench. The worker gets an allowlisted environment, so
+provider keys and the runtime token are not in its `process.env`.
+
+It is not a sandbox. The worker still runs as your OS account and can read the same files as the
+host, including the Prompt Studio home folder.
+
+In this release, handler code in the worker can use every `ctx` member that takes and returns
+plain data. That includes identity fields, `signal`, `logger`, `navigation.open`, `stream.write`,
+`commands`, `events`, `settings`, `storage`, `resources`, `views`, `artifacts`, `projectFiles`,
+`workspaceFiles`, `packageFiles`, `extensionFiles`, `files`, `skills`, `activity`, `notify`,
+`automation`, `process`, `net`, `connections.request`, `account`, `extensions`, `workspaces` and
+`sessions`.
+
+These members are not available yet, because they take callbacks or return streams or live handles:
+
+- `storage.observe`, `storage.migrate`, `storage.records.transaction`, `storage.positions`,
+  `storage.text`, `storage.log` and `storage.assets`
+- `urlFor` on storage files and attachments
+- `records.id` inside `storage.scope(...)`
+- `sessions.observeMetadata`, `sessions.stream` and `sessions.retainResources`
+- `connections.stream`, `terminal` and `localDirectory`
+
+Harnesses, workspace types, text sources and resource hierarchy providers are not loaded, and the
+extension reports an `extension_process_runtime_unsupported` diagnostic. Arguments and results must
+be plain data: objects, arrays, strings, numbers, booleans, `Date` and bytes.
+
+The host inspects contributions in a short-lived worker. A runtime worker starts on the first
+handler call. A source check finishes after inspection. A candidate that fails validation leaves
+the active worker running. When a changed source first runs a handler, the old worker stops before
+the replacement starts, unless another folder with identical content still uses it.
+
+A worker that crashes rejects its running calls with `backend_unavailable`. The next call can
+start a fresh worker and proceeds only if its reported definition matches the one the host loaded.
+Calls that failed during the crash stay failed.
 
 Repo extensions are discovered and enabled when a project opens, and their entry code runs at that
 point. User extensions stay disabled until someone enables them. The planned trust step, which reads

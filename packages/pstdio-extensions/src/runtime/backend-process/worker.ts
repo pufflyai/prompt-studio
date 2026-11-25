@@ -1,3 +1,4 @@
+import { readCommandRejection } from "../runner/command-rejection";
 import {
   BACKEND_PROTOCOL_VERSION,
   type BackendHandlerRef,
@@ -5,6 +6,7 @@ import {
   HANDLER_MARKER,
   type HostToWorkerMessage,
   serializeBackendError,
+  transferableCommandRejection,
   type WorkerToHostMessage,
 } from "./protocol";
 import { createSurfaceFacade, type SurfaceStep } from "./surface";
@@ -104,12 +106,14 @@ export const runBackendWorker = () => {
       const value = await handler(context, ...message.args);
       send({ v: BACKEND_PROTOCOL_VERSION, type: "result", invocationId: message.invocationId, ok: true, value });
     } catch (error) {
+      const rejection = transferableCommandRejection(readCommandRejection(error, controller.signal));
       send({
         v: BACKEND_PROTOCOL_VERSION,
         type: "result",
         invocationId: message.invocationId,
         ok: false,
         error: serializeBackendError(error),
+        rejection,
       });
     } finally {
       invocations.delete(message.invocationId);
