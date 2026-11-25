@@ -38,16 +38,22 @@ const removePayloads = async (
     SELECT "objectKey" FROM relay_sync_updates WHERE ${inArray(syncUpdates.objectKey, objectKeys)}
     UNION
     SELECT "objectKey" FROM relay_sync_states WHERE ${inArray(syncStates.objectKey, objectKeys)}`);
+  signal?.throwIfAborted();
   const referenced = new Set(present.rows.map(({ objectKey }) => objectKey));
   const results = await Promise.allSettled(
     keys.map(async ({ objectKey, multipartId }) => {
-      if (!referenced.has(objectKey)) {
-        await payloads.discard(objectKey, multipartId, signal);
-        await payloads.remove(objectKey, signal);
-        if (legacyOnly) await payloads.verifyRemoved(objectKey, signal);
+      if (referenced.has(objectKey)) return;
+      signal?.throwIfAborted();
+      await payloads.discard(objectKey, multipartId, signal);
+      signal?.throwIfAborted();
+      await payloads.remove(objectKey, signal);
+      if (legacyOnly) {
+        signal?.throwIfAborted();
+        await payloads.verifyRemoved(objectKey, signal);
       }
     }),
   );
+  signal?.throwIfAborted();
   const failures = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
   if (failures.length)
     throw new PayloadDeletionFailure(
