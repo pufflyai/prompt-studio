@@ -6,6 +6,18 @@ import { tryLockProject } from "./project-access";
 
 const batchSize = 500;
 
+class PayloadDeletionFailure extends Error {
+  constructor(readonly reason: unknown) {
+    super("Payload cleanup failed", { cause: reason });
+  }
+}
+
+const deferredProviderFailure = (error: unknown, signal: AbortSignal | undefined) => {
+  signal?.throwIfAborted();
+  if (!(error instanceof PayloadDeletionFailure)) throw error;
+  return { error: error.reason };
+};
+
 const canReclaim = async (tx: RelayTransaction, projectKey: string | null) => {
   if (!projectKey) return true;
   // A live PUT holds shared access. A retired scope owns its own durable purge queue.
@@ -37,8 +49,10 @@ const removePayloads = async (
     }),
   );
   const failures = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
-  if (failures.length === 1) throw failures[0];
-  if (failures.length) throw new AggregateError(failures, "Payload cleanup failed");
+  if (failures.length)
+    throw new PayloadDeletionFailure(
+      failures.length === 1 ? failures[0] : new AggregateError(failures, "Payload cleanup failed"),
+    );
   await tx.delete(syncObjectDeletions).where(inArray(syncObjectDeletions.objectKey, objectKeys));
 };
 
@@ -86,9 +100,9 @@ export const cleanupPayloads = async (
             signal,
           );
         } catch (error) {
-          signal?.throwIfAborted();
-          // Leave failed batches queued and let independent work finish before reporting the failure.
-          firstFailure ??= { error };
+          // Leave provider failures queued and let independent work finish. Database errors stop the sweep.
+          const failure = deferredProviderFailure(error, signal);
+          firstFailure ??= failure;
         }
       }
     }
