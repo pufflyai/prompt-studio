@@ -1,5 +1,5 @@
 import type { LiveServerMessage } from "pstdio-sync-contracts";
-import { createLiveConnection, type LiveConnection, type SubscribeDocument } from "./live";
+import { createLiveConnection, type LiveConnection, type LiveTopic, type SubscribeDocument } from "./live";
 
 type Change = Extract<LiveServerMessage, { type: "changed" | "discovered" }>;
 
@@ -32,21 +32,74 @@ const documentLiveConnection = (input: DocumentRelayConnectionInput) =>
     onStatusChange: input.onStatusChange,
   });
 
-export const createDocumentRelayConnection = (input: DocumentRelayConnectionInput) => {
-  const live = documentLiveConnection(input);
+const retainDocumentTopics = (live: LiveConnection, signal: AbortSignal) => {
   const topics = new Map<string, () => void>();
   const awaiting = new Set<string>();
-  // Initial late admissions have their own catch-up rounds. A renewal must also
-  // own replay of the subscriptions it retained before it can report idle.
+  // Initial late admissions have their own catch-up rounds. Renewal also replays retained subscriptions.
   const renewalReplay = new Set<string>();
+  const keyOf = (spaceOwner: string | null, topic: string) => JSON.stringify([spaceOwner, topic]);
   const subscribe: SubscribeDocument = (spaceOwner, documentId) => {
-    if (input.signal.aborted) return;
-    const key = JSON.stringify([spaceOwner, documentId]);
+    if (signal.aborted) return;
+    const key = keyOf(spaceOwner, documentId);
     if (!topics.has(key)) {
       awaiting.add(key);
       topics.set(key, live.subscribe({ spaceOwner, topic: documentId }));
     }
   };
+  return {
+    subscribe,
+    has: (spaceOwner: string | null, topic: string) => topics.has(keyOf(spaceOwner, topic)),
+    replay(renewing: boolean) {
+      for (const key of topics.keys()) {
+        awaiting.add(key);
+        if (renewing) renewalReplay.add(key);
+      }
+    },
+    admit(event: LiveTopic) {
+      const key = keyOf(event.spaceOwner, event.topic);
+      if (!awaiting.delete(key)) return;
+      const replayed = renewalReplay.delete(key);
+      return { replayed, drained: !awaiting.size || (replayed && !renewalReplay.size) };
+    },
+    replaying: () => renewalReplay.size > 0,
+    clearReplay: () => renewalReplay.clear(),
+    close() {
+      for (const release of topics.values()) release();
+      topics.clear();
+      awaiting.clear();
+      renewalReplay.clear();
+    },
+  };
+};
+
+const trackDocumentRetry = (live: LiveConnection, restart: () => Promise<void>, stopped: () => boolean) => {
+  let pending: ReturnType<typeof Promise.withResolvers<void>> | undefined;
+  const complete = (completion: typeof pending) => {
+    if (!completion || pending !== completion) return;
+    pending = undefined;
+    completion.resolve();
+  };
+  return {
+    current: () => pending,
+    complete,
+    cancel: () => complete(pending),
+    start() {
+      if (pending) return pending.promise;
+      if (stopped() || live.signal.aborted) return Promise.resolve();
+      // A disconnected owner cannot run its new pass until the project socket is ready.
+      const completion = Promise.withResolvers<void>();
+      pending = completion;
+      live.retry();
+      void restart();
+      return completion.promise;
+    },
+  };
+};
+
+export const createDocumentRelayConnection = (input: DocumentRelayConnectionInput) => {
+  const live = documentLiveConnection(input);
+  const topics = retainDocumentTopics(live, input.signal);
+  const subscribe = topics.subscribe;
   let attempt = new AbortController();
   let attemptSignal = AbortSignal.any([attempt.signal, input.signal]);
   let dirty = false;
@@ -66,6 +119,7 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
   };
   const failed = (current: AbortController, error: unknown) => {
     if (current.signal.aborted || current !== attempt || stopped) return;
+    const completion = manualRetry.current();
     input.onError?.(error);
     errorMessage = "Cloud source failed; retry scheduled";
     current.abort();
@@ -75,6 +129,7 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
       },
       Math.min(1000 * 2 ** failures++, 30_000),
     );
+    manualRetry.complete(completion);
   };
   const target = (work: (signal: AbortSignal) => Promise<boolean>) => {
     if (stopped || restarting) return;
@@ -120,6 +175,7 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
   };
   const drain = async () => {
     const current = attempt;
+    const completion = manualRetry.current();
     try {
       while (dirty && live.status().connected && !stopped && current === attempt && !current.signal.aborted) {
         dirty = false;
@@ -127,6 +183,7 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
         if (current.signal.aborted) break;
         failures = 0;
         errorMessage = undefined;
+        manualRetry.complete(completion);
       }
     } catch (error) {
       failed(current, error);
@@ -147,7 +204,7 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
     attempt.abort();
     restarting = Promise.allSettled([running, ...targeted]).then(() => {
       restarting = undefined;
-      if (stopped) return;
+      if (stopped || live.signal.aborted) return;
       resetAttempt();
       errorMessage = undefined;
       input.onReady?.();
@@ -157,11 +214,9 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
     input.onStatusChange?.();
     return restarting;
   };
+  const manualRetry = trackDocumentRetry(live, restart, () => stopped);
   const ready = () => {
-    for (const key of topics.keys()) {
-      awaiting.add(key);
-      if (renewing) renewalReplay.add(key);
-    }
+    topics.replay(renewing);
     if (restarting) return;
     if (!renewing || attempt.signal.aborted) resetAttempt();
     renewing = false;
@@ -169,10 +224,9 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
     input.onStatusChange?.();
     wake();
   };
-  const admitted = (event: { spaceOwner: string | null; topic: string }) => {
-    const key = JSON.stringify([event.spaceOwner, event.topic]);
-    if (!awaiting.delete(key)) return;
-    const replayed = renewalReplay.delete(key);
+  const admitted = (event: LiveTopic) => {
+    const admission = topics.admit(event);
+    if (!admission) return;
     if (input.synchronizeChanged)
       changed({
         type: "changed",
@@ -181,12 +235,12 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
         lastSequence: 0,
         stateId: null,
       });
-    else if (!awaiting.size || (replayed && !renewalReplay.size)) wake();
-    if (replayed) input.onStatusChange?.();
+    else if (admission.drained) wake();
+    if (admission.replayed) input.onStatusChange?.();
   };
   const stopListening = live.listen((event) => {
     if (event.type === "disconnected") {
-      renewalReplay.clear();
+      topics.clearReplay();
       renewing = event.reason === "renewal";
       if (!renewing) attempt.abort();
       input.onDisconnect?.(event.reason);
@@ -195,31 +249,33 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
     if (event.type === "ready") ready();
     if (event.type === "event") input.onLive?.(event);
     if (event.type === "subscribed") admitted(event);
-    if (event.type === "changed" && topics.has(JSON.stringify([event.spaceOwner, event.documentId]))) changed(event);
-    if (
-      event.type === "discovered" &&
-      (topics.has(JSON.stringify([event.spaceOwner, event.documentId])) || !input.acceptsChange)
-    )
+    if (event.type === "changed" && topics.has(event.spaceOwner, event.documentId)) changed(event);
+    if (event.type === "discovered" && (topics.has(event.spaceOwner, event.documentId) || !input.acceptsChange))
       changed({ ...event, type: "changed" });
   });
   const releaseDiscovery = live.discover(null);
   const done = Promise.withResolvers<void>();
+  const closeTransport = () => {
+    clearTimeout(retry);
+    attempt.abort();
+    void Promise.allSettled([running, ...targeted, restarting]).then(manualRetry.cancel);
+  };
   const close = () => {
     if (stopped) return;
     stopped = true;
     clearTimeout(retry);
     attempt.abort();
     stopListening();
+    live.signal.removeEventListener("abort", closeTransport);
     releaseDiscovery();
-    for (const release of topics.values()) release();
-    topics.clear();
-    awaiting.clear();
-    renewalReplay.clear();
+    topics.close();
     if (!input.live) live.close();
-    void Promise.allSettled([running, ...targeted, restarting, input.live ? undefined : live.done]).then(() =>
-      done.resolve(),
-    );
+    void Promise.allSettled([running, ...targeted, restarting, input.live ? undefined : live.done]).then(() => {
+      manualRetry.cancel();
+      done.resolve();
+    });
   };
+  live.signal.addEventListener("abort", closeTransport, { once: true });
   input.signal.addEventListener("abort", close, { once: true });
   if (input.signal.aborted) close();
   else if (live.status().connected)
@@ -236,14 +292,11 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
     subscribe,
     wakeDocument: (name: string) =>
       input.synchronizeDocument ? target((signal) => input.synchronizeDocument!(name, signal)) : wake(),
-    retry() {
-      live.retry();
-      void restart();
-    },
+    retry: manualRetry.start,
     done: done.promise.finally(() => input.signal.removeEventListener("abort", close)),
     status: () => ({
       connected: live.status().connected,
-      busy: dirty || !!running || targeted.size > 0 || !!restarting || renewalReplay.size > 0,
+      busy: dirty || !!running || targeted.size > 0 || !!restarting || topics.replaying(),
       error: errorMessage,
     }),
   };
