@@ -34,7 +34,7 @@ bun run --cwd services/account-manager account-feature grant --email person@exam
 bun run --cwd services/account-manager account-feature revoke --email person@example.com --feature relay
 ```
 
-Use `--account <account-id>` for Microsoft accounts. Obtain the account ID from the signed-in host’s public account status API or your manager’s private account inventory. The operator selects the entitlement by stable account ID because Microsoft email claims are optional and can change.
+For Microsoft accounts, pass the stable ID to `--account`. Read `login.accountId` from the signed-in host’s `GET /v1/account` response or use the private manager inventory. Microsoft email claims are optional and can change. [Feature grant example](0011-device-login.md#login-flow)
 
 The production manager image includes the same command at `bun dist/account-feature.js`. An unknown, unverified or ambiguous email fails without creating an account. The command follows the stored Google subject to the product account; email itself is not the account identity. Repeating a grant keeps its original timestamp. Repeating a revoke succeeds.
 
@@ -70,7 +70,7 @@ Better Auth owns `/api/auth/*`, including Google and Microsoft sign-in/callback,
 | Route | Caller and result |
 | --- | --- |
 | GET /v1/native-login, /v1/native-callback | Browser. Starts the selected provider’s sign-in (Google by default) and returns a single-use code to the native loopback callback. |
-| POST /v1/device-login | Provider session and the manager's exact Origin. Body `{ deviceId, name, platform }`. Finds or creates the user's account, registers the device, and returns its credential and the relay origin. |
+| POST /v1/device-login | Provider session and the manager's exact Origin. Body `{ deviceId, name, platform, provider? }`. If supplied, `provider` must match the session. Finds or creates the user's account, registers the device, and returns its credential and the relay origin. |
 | POST /v1/environment-access | Device credential plus JSON workbenchId; returns finite token and expiresAt. |
 | GET /v1/account | Device credential. Returns the account's feature grants. |
 | GET /v1/devices | Device credential. Returns this device's account and device IDs and the account's devices. |
@@ -94,7 +94,7 @@ The Application (client) ID forms part of the Microsoft subject’s stability. R
 
 ## Addresses with a path
 
-MANAGER_ORIGIN and RELAY_AUDIENCE are HTTPS addresses and may include a path, so both services can share one host, for example `https://base.prompt.studio/accounts` and `https://base.prompt.studio/relay`. The proxy in front of each service removes that path before forwarding, so the services keep serving at `/`. The manager uses its full address for the Google callback, the native sign-in callback and the token issuer, and adds its path back before Better Auth handles a request. Browser `Origin` checks still compare the origin without the path. Clients join every request path under the address they were given.
+MANAGER_ORIGIN and RELAY_AUDIENCE are HTTPS addresses and may include a path, so both services can share one host, for example `https://base.prompt.studio/accounts` and `https://base.prompt.studio/relay`. The proxy in front of each service removes that path before forwarding, so the services keep serving at `/`. The manager uses its full address for the provider callbacks, the native sign-in callback and the token issuer, and adds its path back before Better Auth handles a request. Browser `Origin` checks still compare the origin without the path. Clients join every request path under the address they were given.
 
 Build the production image with `docker build -f infra/account-manager/Dockerfile .`. Apply generated migrations through operator tooling first. The slim runtime needs no source mount or dependency install. Never put secrets in command arguments, URLs or logs.
 

@@ -35,10 +35,11 @@ completion, cancellation and expiry. Views read this owner instead of storing a
 second request ID in extension settings. The field is absent before a login starts,
 after sign-out and after a runtime restart.
 
-Signing in, registering a device, presence, listing devices, renaming and removing devices stay available without early access. Cloud sync requires the account's `relay` feature. Without it, the manager lists no cloud projects, hands out no encryption keys and issues no relay access. After the first sign-in, an operator can grant or revoke it with `--email` for a verified Google email. For Microsoft, take the stable account ID from the signed-in host's `GET /v1/account` response (`login.accountId`) or the private manager inventory. Run the command in the manager's operator environment with its private `DATABASE_URL` configured:
+Signing in, registering a device, presence, listing devices, renaming and removing devices stay available without early access. Cloud sync requires the account's `relay` feature. Without it, the manager lists no cloud projects, hands out no encryption keys and issues no relay access. After the first sign-in, an operator can grant or revoke it with `--email` for a verified Google email. For Microsoft, take the stable account ID from the signed-in host's `GET /v1/account` response (`login.accountId`) or the private manager inventory. Set `ACCOUNT_ID` to that ID in the manager's operator environment with its private `DATABASE_URL` configured. Replace `REPLACE_WITH_ACCOUNT_ID` before running the example.
 
 ```sh
-bun run --cwd services/account-manager account-feature grant --account <account-id> --feature relay
+ACCOUNT_ID='REPLACE_WITH_ACCOUNT_ID'
+bun run --cwd services/account-manager account-feature grant --account "$ACCOUNT_ID" --feature relay
 ```
 
 Use `revoke` with the same account ID to remove access. See [Cloud early access](0007-account-manager.md#cloud-early-access).
