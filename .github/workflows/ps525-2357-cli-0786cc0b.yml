@@ -1,0 +1,214 @@
+name: PS-525 exact source CLI review
+
+on:
+  push:
+    branches:
+      - chore/ps525-2357-cli-0786cc0b
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  source_cli:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PS525_PRODUCT_HEAD: 0786cc0b6bcc8ff97eb747b65f7290a947f341af
+      PS525_CI_BASE: 73dd6ca211ef27d2384536321a13da084e75e05a
+      PS525_BRANCH_BASE: c65c595b7de1a2c9c3325f342c50208c80ed4ccc
+      PS525_HEAD: 7fb1364076dd9bc55cee476077cd0ce1395b3eac
+      PS525_TREE: db952a28f3f32838dfb9dfb653d1ffc959b643ca
+      PS525_BASE: 73dd6ca211ef27d2384536321a13da084e75e05a
+      PS525_POLICY: 1d37252415354d6950950000391e5cb9630af747c63180d85fb1479770c289a8
+      PS525_PLAN: b85c1f07f7d42ea11a47d778ed02bac029045043bca8c7f812d9f4cf08b2b5f0
+      PS525_CLI_GROUP: 72480638f874d13d0838a290
+      PS525_CLI_FILES_SHA256: 58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a
+      PS525_OUTPUT: test-results/ps525-2357-cli
+      PS525_ORDINARY_RUN: "45540570204"
+      PS525_ORDINARY_SOURCE: 7fb1364076dd9bc55cee476077cd0ce1395b3eac
+      PS525_ORDINARY_PLAN: d0081960e91fd2aa3812d1911fadb1f8fb62a44272a79f75574a60c0718dda2f
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.PS525_HEAD }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+
+      - name: Verify the source and sealed Linux plan
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = refs/heads/chore/ps525-2357-cli-0786cc0b
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$PS525_PRODUCT_HEAD"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" =             "$(printf 'A\t.github/workflows/ps525-2357-cli-0786cc0b.yml')"
+          test "$(git rev-parse HEAD)" = "$PS525_HEAD"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$PS525_TREE"
+          test "$(git show -s --format=%P HEAD)" = "$PS525_CI_BASE $PS525_PRODUCT_HEAD"
+          git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main refs/heads/ps525/database-worker:refs/remotes/origin/ps525/database-worker refs/heads/ps525/process-spawn:refs/remotes/origin/ps525/process-spawn
+          test "$(git rev-parse origin/ps525/database-worker)" = "$PS525_PRODUCT_HEAD"
+          main="$(git rev-parse origin/main)"
+          test "$(git merge-base HEAD "$PS525_BASE")" = "$PS525_BASE"
+          test "$(git rev-parse origin/ps525/process-spawn)" = "$PS525_BRANCH_BASE"
+          git merge-base --is-ancestor "$PS525_BRANCH_BASE" "$PS525_CI_BASE"
+          incoming="$(git rev-list --count "HEAD..$main")"
+          test "$incoming" -le 10
+          prospective="$(git merge-tree --write-tree --no-messages HEAD "$main")"
+          test "$(git cat-file -t "$prospective")" = tree
+          test -z "$(git status --porcelain)"
+          test "$(bun --version)" = "1.4.4"
+          test "$(jq -r .packageManager package.json)" = "bun@1.4.4"
+          mkdir -p "$PS525_OUTPUT"
+          bun run test:review --base "$PS525_BASE" --list > "$PS525_OUTPUT/selected-plan.json"
+          jq -e --arg sha "$PS525_HEAD" --arg tree "$PS525_TREE" --arg base "$PS525_BASE"             --arg policy "$PS525_POLICY" --arg digest "$PS525_PLAN" --arg group "$PS525_CLI_GROUP" '
+              .head == $sha and .mergeBase == $base and .testPlan.digest == $digest
+              and .testPlan.source == {sha:$sha,tree:$tree,policy:$policy,dirty:false}
+              and (.testPlan.runs | length) == 96 and (.selected | length) == 2901
+              and all(.testPlan.runs[]; .target == {platform:"linux",arch:"x64"})
+              and ([.testPlan.runs[] | select(.job == "local-additions") | .id] == [$group])
+              and any(.testPlan.runs[]; .id == $group and .owner == "e2e" and .cwd == "packages/e2e"
+                and .runner == "cli" and .priority == "P1" and .lane == "stable" and .artifact == "source"
+                and .requires == ["build-e5b1f54fca1c52cd"] and (.files | length) == 10)
+              and any(.testPlan.setup[]; .id == "build-e5b1f54fca1c52cd" and .owners == ["e2e"]
+                and .kind == "build" and .requires == [])
+            ' "$PS525_OUTPUT/selected-plan.json"
+          jq -c --arg group "$PS525_CLI_GROUP" '.testPlan.runs[] | select(.id == $group) | .files'             "$PS525_OUTPUT/selected-plan.json" > "$PS525_OUTPUT/assigned-files.json"
+          printf '%s  %s\n' "$PS525_CLI_FILES_SHA256" "$PS525_OUTPUT/assigned-files.json" | sha256sum -c -
+          jq -n --arg sha "$PS525_HEAD" --arg tree "$PS525_TREE" --arg main "$main" --arg base "$PS525_BASE"             --arg prospective "$prospective" --arg plan "$PS525_PLAN" --arg workflow "$GITHUB_WORKFLOW_SHA"             --argjson incoming "$incoming" --arg ordinary "$PS525_ORDINARY_RUN"             --arg ordinarySource "$PS525_ORDINARY_SOURCE"             '{sha:$sha,tree:$tree,main:$main,mergeBase:$base,mergeTree:$prospective,incoming:$incoming,
+              planDigest:$plan,diagnosticCommit:$workflow,ordinaryCiRun:$ordinary,ordinaryCiSha:$ordinarySource}'             > "$PS525_OUTPUT/identity.json"
+
+      - name: Retain the ordinary Linux scope artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: test-plan-attempt-1
+          path: ${{ env.PS525_OUTPUT }}/ordinary-ci
+          run-id: ${{ env.PS525_ORDINARY_RUN }}
+          github-token: ${{ github.token }}
+
+      - name: Verify ordinary source prerequisites and open a private temp directory
+        shell: bash
+        run: |
+          prior="$PS525_OUTPUT/ordinary-ci"
+          jq -e --arg tested "$PS525_ORDINARY_SOURCE" --arg tree "$PS525_TREE" --arg policy "$PS525_POLICY" --arg plan "$PS525_ORDINARY_PLAN" --arg group "$PS525_CLI_GROUP" '
+              .source == {sha:$tested,tree:$tree,policy:$policy,dirty:false} and .digest == $plan
+              and (.runs | length) == 95 and all(.runs[]; .id != $group)
+            ' "$prior/plan.json"
+          for assignment in scope:138958026644 static_checks:138959172216 build_host:138959172270; do
+            job_name="${assignment%:*}"
+            job_id="${assignment#*:}"
+            GH_TOKEN="${{ github.token }}" gh api "repos/$GITHUB_REPOSITORY/actions/jobs/$job_id" --jq '{id,name,run_id,run_attempt,head_sha,status,conclusion,steps:[.steps[]|{name,status,conclusion}]}' > "$prior/$job_name.json"
+            jq -e --arg name "$job_name" --arg run "$PS525_ORDINARY_RUN" --arg sha "$PS525_PRODUCT_HEAD" '
+              .name == $name and (.run_id | tostring) == $run and .run_attempt == 1
+              and .head_sha == $sha and .status == "completed" and .conclusion == "success"
+            ' "$prior/$job_name.json"
+          done
+          scratch="$(mktemp -d /tmp/ps525.XXXXXX)"
+          printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$scratch/owner"
+          {
+            echo "PS525_CLI_TMP=$scratch"
+            echo "TMPDIR=$scratch"
+            echo "TMP=$scratch"
+            echo "TEMP=$scratch"
+            echo "PS525_NATIVE_BUN=$(command -v bun)"
+          } >> "$GITHUB_ENV"
+          { node --version; bun --version; docker version; df -h /tmp "$GITHUB_WORKSPACE"; }             > "$PS525_OUTPUT/toolchain.log"
+
+      - name: Install locked dependencies and prepare Firefox
+        shell: bash
+        run: |
+          bun install --frozen-lockfile --concurrent-scripts 1
+          bun run --cwd packages/ui typegen:tokens
+          (cd packages/e2e && bun x --no-install playwright install --with-deps firefox) 2>&1             | tee "$PS525_OUTPUT/browser-setup.log"
+          test -z "$(git status --porcelain)"
+
+      - name: Execute only the ten-file source CLI group
+        shell: bash
+        run: |
+          test "$(command -v bun)" = "$PS525_NATIVE_BUN"
+          bun --no-orphans - <<'BUN' 2>&1 | tee "$PS525_OUTPUT/console.log"
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+          import { executePlan } from "./scripts/ci/run-test-plan";
+
+          const root = process.cwd();
+          const { PS525_CLI_TMP: scratch, PS525_OUTPUT: relative, PS525_CLI_GROUP: group } = process.env;
+          if (!scratch || !/^\/tmp\/ps525\.[A-Za-z0-9]{6}$/.test(scratch) || !relative || !group)
+            throw new Error("Unexpected native review assignment");
+          const executionId = process.env.GITHUB_RUN_ID + "/" + process.env.GITHUB_RUN_ATTEMPT;
+          const output = resolve(root, relative);
+          for (const [key, value] of Object.entries(localReviewEnvironment(scratch))) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+          process.env.CI_PLAN_OUTPUT_DIR = relative + "/native";
+          const { testPlan } = await Bun.file(resolve(output, "selected-plan.json")).json();
+          let passed = false;
+          try {
+            const result = await executePlan(testPlan, {
+              root, runIds: [group], prebuilt: false, executionId,
+              env: { CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+            });
+            passed = result.complete && result.outcome === "success";
+          } finally {
+            const cleanup = await cleanupReviewCompose(scratch);
+            await Bun.write(resolve(output, "compose-cleanup.json"), JSON.stringify(cleanup, null, 2));
+            passed &&= cleanup.every(entry => entry.outcome === "success");
+            process.exitCode = passed ? 0 : 1;
+          }
+          BUN
+
+      - name: Verify exact native execution and file coverage
+        shell: bash
+        run: |
+          jq -e --arg group "$PS525_CLI_GROUP" --arg digest "$PS525_PLAN"             --slurpfile expected "$PS525_OUTPUT/assigned-files.json"             --slurpfile sealed "$PS525_OUTPUT/selected-plan.json" '
+              .source == $sealed[0].testPlan.source and .planDigest == $digest
+              and .complete and .outcome == "success" and .errors == [] and .runIds == [$group]
+              and (.results | length) == 1
+              and all(.results[]; .runId == $group and .complete and .outcome == "success"
+                and .exitCode == 0 and .nativeFailure != true and (.reportedFiles | sort) == ($expected[0] | sort))
+              and [.phases[] | select(.kind == "build") | [.id,.outcome]] == [["build-e5b1f54fca1c52cd","success"]]
+              and any(.phases[]; .kind == "cleanup" and .outcome == "success")
+            ' "$PS525_OUTPUT/native/execution.json"
+          jq -e --arg group "$PS525_CLI_GROUP" --arg sha "$PS525_HEAD" --arg digest "$PS525_PLAN" \
+            --arg execution "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" --slurpfile expected "$PS525_OUTPUT/assigned-files.json" '
+              .complete and .exitCode == 0 and .sourceSha == $sha and .planDigest == $digest
+              and .executionId == $execution and .runId == $group and .unreportedSelectedCases == 0
+              and .executedCases == 20 and (.cases | length) == 20
+              and all(.cases[]; .outcome == "success")
+              and (.executedFiles | sort) == ($expected[0] | sort) and (.reportedFiles | sort) == ($expected[0] | sort)
+            ' "$PS525_OUTPUT/native/$PS525_CLI_GROUP/cases.json"
+          jq -e 'all(.[]; .outcome == "success")' "$PS525_OUTPUT/compose-cleanup.json"
+          git diff --exit-code
+
+      - name: Retain and clean this invocation's temporary files
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$PS525_OUTPUT"
+          if [[ -n "${PS525_CLI_TMP:-}" ]]; then
+            [[ "$PS525_CLI_TMP" =~ ^/tmp/ps525\.[A-Za-z0-9]{6}$ ]]
+            test "$(cat "$PS525_CLI_TMP/owner")" = "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+            if [[ -f "$PS525_CLI_TMP/compose-projects.jsonl" ]]; then
+              cp "$PS525_CLI_TMP/compose-projects.jsonl" "$PS525_OUTPUT/"
+            fi
+            rm -rf -- "$PS525_CLI_TMP"
+            test ! -e "$PS525_CLI_TMP"
+            printf '%s\n' 'Owned temporary directory removed' > "$PS525_OUTPUT/scratch-cleanup.txt"
+          fi
+
+      - name: Upload the fixture and native receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps525-2357-source-cli-0786cc0b-attempt-${{ github.run_attempt }}
+          path: ${{ env.PS525_OUTPUT }}
+          if-no-files-found: error
