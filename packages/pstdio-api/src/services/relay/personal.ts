@@ -24,6 +24,17 @@ const closePersonalResources = (resources: { close(): unknown }[]) => {
   for (const resource of resources) resource.close();
 };
 
+const closePersonalTransport = (
+  channel: { close(): unknown },
+  live: { close(): unknown },
+  shared: boolean,
+  announcements: { clear(): void },
+) => {
+  channel.close();
+  if (!shared) live.close();
+  announcements.clear();
+};
+
 /**
  * Publishes this device's session history to the user's private space and copies the user's other devices'
  * history here. Each device publishes index changes as an append-only log. Each conversation is a log of
@@ -234,6 +245,7 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
   });
   return {
     retry: connection.retry,
+    prepareRetry: connection.prepareRetry,
     restart: connection.restart,
     async status() {
       const indexStatus = await documents.status(publisher.hasPendingHeads());
@@ -251,9 +263,7 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
     close() {
       void stopWatching();
       controller.abort();
-      channel.close();
-      if (!input.live) live.close();
-      announcements.clear();
+      closePersonalTransport(channel, live, Boolean(input.live), announcements);
     },
   };
 };

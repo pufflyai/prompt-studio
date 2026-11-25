@@ -43,6 +43,7 @@ export const startCoreRecordSync = (input: {
   return {
     wake: connection.wake,
     retry: connection.retry,
+    prepareRetry: connection.prepareRetry,
     restart: connection.restart,
     done: connection.done.finally(() => {
       stop();
