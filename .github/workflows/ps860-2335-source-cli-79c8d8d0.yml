@@ -1,0 +1,204 @@
+name: PS-860 Marmalade source CLI qualification
+
+on:
+  push:
+    branches:
+      - chore/ps860-2335-source-cli-79c8d8d0
+
+permissions:
+  actions: read
+  contents: read
+
+env:
+  PRODUCT_HEAD: 79c8d8d090704a8a6066be4132390fadbc7029aa
+  SOURCE: 1b2378e81ad0a387050c50b702188e3824f382aa
+  SOURCE_TREE: 12ad528bd4b97f75499a92ed128c2a734716186d
+  BASE: 088e5eb0d6099f5377d778914f5527471aa1dc31
+  ORDINARY_RUN: "45564272136"
+  ORDINARY_SCOPE_ARTIFACT: "14998738856"
+  ORDINARY_db7badc79d4d7e1c76d2472cc59bafbcaa279a3bf2e7398044c7bd7f0b601fec256: db7badc79d4d7e1c76d2472cc59bafbcaa279a3bf2e7398044c7bd7f0b601fec
+  ORDINARY_PLAN_DIGEST: 09b4da2be089d18f239e9d0abe46e771cc42aa8dc13f4953599d82c3485ec6f6
+  RECEIPTS: test-results/ps860-2335-source-cli
+
+jobs:
+
+  source_cli:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.SOURCE }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - name: Seal source, canonical Linux plan, and the exact source CLI residual
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$GITHUB_REF" = refs/heads/chore/ps860-2335-source-cli-79c8d8d0
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$PRODUCT_HEAD"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" = "$(printf 'A\t.github/workflows/ps860-2335-source-cli-79c8d8d0.yml')"
+          test "$(git show -s --format=%P "$SOURCE")" = "$BASE $PRODUCT_HEAD"
+          test "$(git rev-parse HEAD)" = "$SOURCE"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$SOURCE_TREE"
+          test "$(git rev-parse HEAD^)" = "$BASE"
+          test -z "$(git status --porcelain)"
+          mkdir -p "$RECEIPTS"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ORDINARY_SCOPE_ARTIFACT" > "$RECEIPTS/ordinary-scope-meta.json"
+          jq -e --arg run "$ORDINARY_RUN" --arg head "$PRODUCT_HEAD" --arg artifact "$ORDINARY_SCOPE_ARTIFACT" --arg hash "sha256:$ORDINARY_SCOPE_SHA256" '
+            .id == ($artifact | tonumber) and .workflow_run.id == ($run | tonumber) and .workflow_run.head_sha == $head
+            and .name == "test-plan-attempt-1" and .digest == $hash and (.expired | not)
+          ' "$RECEIPTS/ordinary-scope-meta.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ORDINARY_SCOPE_ARTIFACT/zip" > "$RECEIPTS/ordinary-scope.zip"
+          printf '%s  %s\n' "$ORDINARY_SCOPE_SHA256" "$RECEIPTS/ordinary-scope.zip" | sha256sum -c
+          unzip -p "$RECEIPTS/ordinary-scope.zip" plan.json > "$RECEIPTS/ordinary-scope-plan.json"
+          jq -e --arg sha "$SOURCE" --arg tree "$SOURCE_TREE" --arg digest "$ORDINARY_PLAN_DIGEST" '
+            .source.sha == $sha and .source.tree == $tree and (.source.dirty | not) and .digest == $digest
+            and (.runs | length) == 97
+          ' "$RECEIPTS/ordinary-scope-plan.json"
+          git ls-remote origin refs/heads/main refs/heads/feature/marmalade-backlog > "$RECEIPTS/live-refs.txt"
+          git update-ref refs/remotes/origin/main "$BASE"
+          bun run test:review --base origin/main --list > "$RECEIPTS/linux-plan.json"
+          jq -e --arg sha "$SOURCE" --arg tree "$SOURCE_TREE" --arg base "$BASE" '
+            .head == $sha and .mergeBase == $base
+            and .testPlan.source.sha == $sha and .testPlan.source.tree == $tree and (.testPlan.source.dirty | not)
+            and all(.testPlan.runs[]; .target == {platform:"linux",arch:"x64"})
+            and ([.testPlan.runs[] | select(.job == "local-additions")] | length) == 1
+            and any(.testPlan.runs[]; .job == "local-additions" and .owner == "e2e" and .runner == "cli"
+              and .priority == "P1" and .artifact == "source" and .lane == "stable" and (.files | length) == 10
+              and .requires == ["build-e5b1f54fca1c52cd"])
+          ' "$RECEIPTS/linux-plan.json"
+          jq -c '.testPlan.runs[] | select(.job == "local-additions")' "$RECEIPTS/linux-plan.json" > "$RECEIPTS/cli-assignment.json"
+          bun - <<'BUN'
+          import { resolve } from "node:path";
+          import { validateTestPlan } from "./scripts/ci/test-plan";
+
+          const directory = process.env.RECEIPTS!;
+          const load = (file: string) => Bun.file(resolve(directory, file)).json();
+          const { testPlan: canonical } = await load("linux-plan.json");
+          const ordinary = await load("ordinary-scope-plan.json");
+          const cli = await load("cli-assignment.json");
+          validateTestPlan(canonical);
+          validateTestPlan(ordinary);
+          if (JSON.stringify(canonical.source) !== JSON.stringify(ordinary.source)) throw new Error("Source identities differ");
+
+          const canonicalJson = (value: unknown) => JSON.stringify(value, (_, item) =>
+            item !== null && typeof item === "object" && !Array.isArray(item)
+              ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b))) : item,
+          );
+          const signatures = (plan: typeof canonical) => {
+            const known = new Map<string, (typeof plan.setup)[number]>(plan.setup.map((item: { id: string }) => [item.id, item]));
+            const setup = (id: string): object => {
+              const { id: _identifier, requires, ...rest } = known.get(id)!;
+              return { ...rest, requires: requires.map(setup) };
+            };
+            return plan.runs.map((run: (typeof plan.runs)[number]) => {
+              const { id: _identifier, files: _files, reasons: _reasons, requires, ...rest } = run;
+              return { run, signature: canonicalJson({ ...rest, requires: requires.map(setup) }) };
+            });
+          };
+          const ordinaryRuns = signatures(ordinary);
+          const mappings = [];
+          const missing = [];
+          for (const { run, signature } of signatures(canonical)) {
+            const matches = ordinaryRuns.filter(({ run: candidate, signature: candidateSignature }: typeof ordinaryRuns[number]) =>
+              signature === candidateSignature && run.files.every((file: string) => candidate.files.includes(file)),
+            );
+            if (!matches.length) { missing.push(run.id); continue; }
+            if (matches.length !== 1) throw new Error(`Ambiguous coverage for ${run.id}`);
+            const [match] = matches;
+            const extra = match.run.files.filter((file: string) => !run.files.includes(file));
+            if (extra.length && (run.runner !== "packaged-cli" || run.priority !== "P2")) throw new Error(`Unexpected superset for ${run.id}`);
+            mappings.push({ canonical: run.id, ordinary: match.run.id, files: run.files.length, extra });
+          }
+          const distinctOrdinary = new Set(mappings.map((item) => item.ordinary));
+          if (missing.length !== 1 || missing[0] !== cli.id || distinctOrdinary.size !== mappings.length)
+            throw new Error(`Unexpected residual ${JSON.stringify(missing)}`);
+          await Bun.write(resolve(directory, "coverage-map.json"), JSON.stringify({
+            source: canonical.source, canonicalPlanDigest: canonical.digest, ordinaryPlanDigest: ordinary.digest,
+            canonicalGroups: canonical.runs.length, selectedFiles: canonical.runs.flatMap((r: {files:string[]}) => r.files).length,
+            ordinaryGroups: mappings.length, ordinaryTotal: ordinary.runs.length, nativeGroup: cli.id, mappings,
+          }, null, 2));
+          BUN
+          scratch="$(mktemp -d /tmp/ps975-cli.XXXXXX)"
+          printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$scratch/owner"
+          echo "REVIEW_SCRATCH=$scratch" >> "$GITHUB_ENV"
+      - name: Install locked dependencies and prepare Firefox
+        shell: bash
+        run: |
+          bun install --frozen-lockfile --concurrent-scripts 1
+          bun run --cwd packages/ui typegen:tokens
+          (cd packages/e2e && bun x --no-install playwright install --with-deps firefox)
+          test -z "$(git status --porcelain)"
+      - name: Execute the exact ten-file source CLI group
+        shell: bash
+        run: |
+          bun --no-orphans - <<'BUN' 2>&1 | tee "$RECEIPTS/cli-console.log"
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+          import { executePlan } from "./scripts/ci/run-test-plan";
+          import { validateTestPlan } from "./scripts/ci/test-plan";
+
+          const root = process.cwd();
+          const { REVIEW_SCRATCH: scratch, RECEIPTS: relative } = process.env;
+          if (!scratch || !/^\/tmp\/ps975-cli\.[A-Za-z0-9]{6}$/.test(scratch) || !relative) throw new Error("Unexpected review directory");
+          const executionId = process.env.GITHUB_RUN_ID + "/" + process.env.GITHUB_RUN_ATTEMPT;
+          const output = resolve(root, relative);
+          const { testPlan } = await Bun.file(resolve(output, "linux-plan.json")).json();
+          const { id: group } = await Bun.file(resolve(output, "cli-assignment.json")).json();
+          validateTestPlan(testPlan);
+          for (const [key, value] of Object.entries(localReviewEnvironment(scratch))) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+          process.env.CI_PLAN_OUTPUT_DIR = relative + "/native";
+          let passed = false;
+          try {
+            const result = await executePlan(testPlan, {
+              root, runIds: [group], prebuilt: false, executionId,
+              env: { CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+            });
+            passed = result.complete && result.outcome === "success";
+          } finally {
+            const cleanup = await cleanupReviewCompose(scratch);
+            await Bun.write(resolve(output, "compose-cleanup.json"), JSON.stringify(cleanup, null, 2));
+            passed &&= cleanup.every((entry) => entry.outcome === "success");
+            process.exitCode = passed ? 0 : 1;
+          }
+          BUN
+          jq -e --slurpfile selection "$RECEIPTS/linux-plan.json" --slurpfile assignment "$RECEIPTS/cli-assignment.json" '
+            .source == $selection[0].testPlan.source and .planDigest == $selection[0].testPlan.digest
+            and .complete and .outcome == "success" and .errors == [] and .runIds == [$assignment[0].id]
+            and (.results | length) == 1
+            and all(.results[]; .runId == $assignment[0].id and .complete and .outcome == "success"
+              and .exitCode == 0 and .nativeFailure != true and (.reportedFiles | sort) == ($assignment[0].files | sort))
+            and [.phases[] | select(.kind == "build") | [.id,.outcome]] == [["build-e5b1f54fca1c52cd","success"]]
+            and any(.phases[]; .kind == "cleanup" and .outcome == "success")
+          ' "$RECEIPTS/native/execution.json"
+          git diff --exit-code
+      - name: Clean owned temporary files and upload Linux CLI receipts
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${REVIEW_SCRATCH:-}" ]]; then
+            [[ "$REVIEW_SCRATCH" =~ ^/tmp/ps975-cli\.[A-Za-z0-9]{6}$ ]]
+            test "$(cat "$REVIEW_SCRATCH/owner")" = "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+            rm -rf -- "$REVIEW_SCRATCH"
+            test ! -e "$REVIEW_SCRATCH"
+            printf '%s\n' 'Owned temporary directory removed' > "$RECEIPTS/scratch-cleanup.txt"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ps860-2335-source-cli-79c8d8d0-attempt-${{ github.run_attempt }}
+          path: ${{ env.RECEIPTS }}
+          if-no-files-found: error
