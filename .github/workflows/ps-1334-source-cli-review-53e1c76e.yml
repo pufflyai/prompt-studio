@@ -1,0 +1,176 @@
+name: PS-1334 exact source CLI review
+
+on:
+  push:
+    branches:
+      - chore/ps-1334-source-cli-review-53e1c76e
+
+permissions:
+  contents: read
+
+jobs:
+  source_cli:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PS1334_HEAD: 53e1c76e1efcf05b7d051ea4ac0cdcd8515cf496
+      PS1334_TREE: 9c8bc80104f964c96b503d98eea917e4acfeec4c
+      PS1334_BASE: 2ae8f11c55991c6894e9252ac4db28a1e542fbea
+      PS1334_POLICY: 1d37252415354d6950950000391e5cb9630af747c63180d85fb1479770c289a8
+      PS1334_CLI_GROUP: 72480638f874d13d0838a290
+      PS1334_CLI_FILES_SHA256: 58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a
+      PS1334_OUTPUT: test-results/ps-1334-source-cli
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.PS1334_HEAD }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+
+      - name: Verify the source and sealed Linux plan
+        shell: bash
+        run: |
+          mkdir -p "$PS1334_OUTPUT"
+          git show -s --format='%H %T %P' HEAD "$GITHUB_WORKFLOW_SHA" "$PS1334_BASE" > "$PS1334_OUTPUT/git-identities.log"
+          test "$GITHUB_REF" = refs/heads/chore/ps-1334-source-cli-review-53e1c76e
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$PS1334_HEAD"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" = \
+            "$(printf 'A\t.github/workflows/ps-1334-source-cli-review-53e1c76e.yml')"
+          test "$(git rev-parse HEAD)" = "$PS1334_HEAD"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$PS1334_TREE"
+          test "$(git merge-base HEAD "$PS1334_BASE")" = "$PS1334_BASE"
+          test -z "$(git status --porcelain)"
+          test "$(bun --version)" = "1.4.4"
+          test "$(jq -r .packageManager package.json)" = "bun@1.4.4"
+          bun run test:review --base "$PS1334_BASE" --list > "$PS1334_OUTPUT/selected-plan.json"
+          jq -e --arg sha "$PS1334_HEAD" --arg tree "$PS1334_TREE" --arg base "$PS1334_BASE" \
+            --arg policy "$PS1334_POLICY" --arg group "$PS1334_CLI_GROUP" '
+              .head == $sha and .mergeBase == $base
+              and .testPlan.source == {sha:$sha,tree:$tree,policy:$policy,dirty:false}
+              and (.testPlan.digest | test("^[0-9a-f]{64}$"))
+              and all(.testPlan.runs[]; .target == {platform:"linux",arch:"x64"})
+              and ([.testPlan.runs[] | select(.job == "local-additions") | .id] == [$group])
+              and any(.testPlan.runs[]; .id == $group and .owner == "e2e" and .cwd == "packages/e2e"
+                and .runner == "cli" and .priority == "P1" and .lane == "stable" and .artifact == "source"
+                and .requires == ["build-e5b1f54fca1c52cd"] and (.files | length) == 10)
+              and any(.testPlan.setup[]; .id == "build-e5b1f54fca1c52cd" and .owners == ["e2e"]
+                and .kind == "build" and .requires == [])
+            ' "$PS1334_OUTPUT/selected-plan.json"
+          jq -c --arg group "$PS1334_CLI_GROUP" '.testPlan.runs[] | select(.id == $group) | .files' \
+            "$PS1334_OUTPUT/selected-plan.json" > "$PS1334_OUTPUT/assigned-files.json"
+          printf '%s  %s\n' "$PS1334_CLI_FILES_SHA256" "$PS1334_OUTPUT/assigned-files.json" | sha256sum -c -
+          jq -n --arg sha "$PS1334_HEAD" --arg tree "$PS1334_TREE" --arg base "$PS1334_BASE" \
+            --arg workflow "$GITHUB_WORKFLOW_SHA" \
+            '{sha:$sha,tree:$tree,mergeBase:$base,diagnosticCommit:$workflow}' \
+            > "$PS1334_OUTPUT/identity.json"
+
+      - name: Create a private temporary directory
+        shell: bash
+        run: |
+          scratch="$(mktemp -d /tmp/ps1334.XXXXXX)"
+          printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$scratch/owner"
+          {
+            echo "PS1334_CLI_TMP=$scratch"
+            echo "TMPDIR=$scratch"
+            echo "TMP=$scratch"
+            echo "TEMP=$scratch"
+            echo "PS1334_NATIVE_BUN=$(command -v bun)"
+          } >> "$GITHUB_ENV"
+          { node --version; bun --version; docker version; df -h /tmp "$GITHUB_WORKSPACE"; } \
+            > "$PS1334_OUTPUT/toolchain.log"
+
+      - name: Install locked dependencies and prepare Firefox
+        shell: bash
+        run: |
+          bun install --frozen-lockfile --concurrent-scripts 1
+          bun run --cwd packages/ui typegen:tokens
+          (cd packages/e2e && bun x --no-install playwright install --with-deps firefox) 2>&1 \
+            | tee "$PS1334_OUTPUT/browser-setup.log"
+          test -z "$(git status --porcelain)"
+
+      - name: Execute only the ten-file source CLI group
+        shell: bash
+        run: |
+          test "$(command -v bun)" = "$PS1334_NATIVE_BUN"
+          bun --no-orphans - <<'BUN' 2>&1 | tee "$PS1334_OUTPUT/console.log"
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+          import { executePlan } from "./scripts/ci/run-test-plan";
+
+          const root = process.cwd();
+          const { PS1334_CLI_TMP: scratch, PS1334_OUTPUT: relative, PS1334_CLI_GROUP: group } = process.env;
+          if (!scratch || !/^\/tmp\/ps1334\.[A-Za-z0-9]{6}$/.test(scratch) || !relative || !group)
+            throw new Error("Unexpected native review assignment");
+          const executionId = process.env.GITHUB_RUN_ID + "/" + process.env.GITHUB_RUN_ATTEMPT;
+          const output = resolve(root, relative);
+          for (const [key, value] of Object.entries(localReviewEnvironment(scratch))) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+          process.env.CI_PLAN_OUTPUT_DIR = relative + "/native";
+          const { testPlan } = await Bun.file(resolve(output, "selected-plan.json")).json();
+          let passed = false;
+          try {
+            const result = await executePlan(testPlan, {
+              root, runIds: [group], prebuilt: false, executionId,
+              env: { CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+            });
+            passed = result.complete && result.outcome === "success";
+          } finally {
+            const cleanup = await cleanupReviewCompose(scratch);
+            await Bun.write(resolve(output, "compose-cleanup.json"), JSON.stringify(cleanup, null, 2));
+            passed &&= cleanup.every(entry => entry.outcome === "success");
+            process.exitCode = passed ? 0 : 1;
+          }
+          BUN
+
+      - name: Verify exact native execution and file coverage
+        shell: bash
+        run: |
+          jq -e --arg group "$PS1334_CLI_GROUP" \
+            --slurpfile expected "$PS1334_OUTPUT/assigned-files.json" \
+            --slurpfile sealed "$PS1334_OUTPUT/selected-plan.json" '
+              .source == $sealed[0].testPlan.source and .planDigest == $sealed[0].testPlan.digest
+              and .complete and .outcome == "success" and .errors == [] and .runIds == [$group]
+              and (.results | length) == 1
+              and all(.results[]; .runId == $group and .complete and .outcome == "success"
+                and .exitCode == 0 and .nativeFailure != true and (.reportedFiles | sort) == ($expected[0] | sort))
+              and [.phases[] | select(.kind == "build") | [.id,.outcome]] == [["build-e5b1f54fca1c52cd","success"]]
+              and any(.phases[]; .kind == "cleanup" and .outcome == "success")
+            ' "$PS1334_OUTPUT/native/execution.json"
+          jq -e 'all(.[]; .outcome == "success")' "$PS1334_OUTPUT/compose-cleanup.json"
+          git diff --exit-code
+
+      - name: Retain and clean this invocation's temporary files
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$PS1334_OUTPUT"
+          if [[ -n "${PS1334_CLI_TMP:-}" ]]; then
+            [[ "$PS1334_CLI_TMP" =~ ^/tmp/ps1334\.[A-Za-z0-9]{6}$ ]]
+            test "$(cat "$PS1334_CLI_TMP/owner")" = "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+            if [[ -f "$PS1334_CLI_TMP/compose-projects.jsonl" ]]; then
+              cp "$PS1334_CLI_TMP/compose-projects.jsonl" "$PS1334_OUTPUT/"
+            fi
+            rm -rf -- "$PS1334_CLI_TMP"
+            test ! -e "$PS1334_CLI_TMP"
+            printf '%s\n' 'Owned temporary directory removed' > "$PS1334_OUTPUT/scratch-cleanup.txt"
+          fi
+
+      - name: Upload the fixture and native receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps-1334-source-cli-53e1c76e-attempt-${{ github.run_attempt }}
+          path: ${{ env.PS1334_OUTPUT }}
+          if-no-files-found: error
