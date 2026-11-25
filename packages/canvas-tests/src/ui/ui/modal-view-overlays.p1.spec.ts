@@ -4,7 +4,7 @@ import { openCanvasPreview } from "../preview";
 const frame = "packages/ui/src/utils/scoped-overlays-modal-view.canvas.tsx#RetainedView";
 
 // Critical: a retained view's popup must not remain over the destination inside an open modal.
-test("a popup inside a modal follows its retained view", async ({ page }) => {
+test("a reopened popup takes Escape before its retained modal", async ({ page }) => {
   const preview = await openCanvasPreview(page, frame);
   const dialog = preview.getByRole("dialog", { name: "Retained modal", exact: true });
   const draft = dialog.getByRole("textbox", { name: "Modal draft", exact: true });
@@ -20,12 +20,48 @@ test("a popup inside a modal follows its retained view", async ({ page }) => {
   await dialog.getByRole("button", { name: "First view", exact: true }).click();
   await expect(draft).toHaveValue("Keep my modal draft");
   await expect(popup).toBeHidden();
-  await trigger.click();
-  await expect(popup).toBeVisible();
-  await popup.press("Escape");
+  // Hold animation frames from the reopening click until the Escape keydown has reached the page.
+  const resumeAnimationFrames = await trigger.evaluateHandle((element) => {
+    const callbacks = new Map<number, FrameRequestCallback>();
+    let nextId = 0;
+    const requestFrame = window.requestAnimationFrame;
+    const cancelFrame = window.cancelAnimationFrame;
+    element.addEventListener(
+      "click",
+      () => {
+        window.requestAnimationFrame = (callback) => {
+          const id = --nextId;
+          callbacks.set(id, callback);
+          return id;
+        };
+        window.cancelAnimationFrame = (id) => {
+          if (id < 0) callbacks.delete(id);
+          else cancelFrame(id);
+        };
+      },
+      { capture: true, once: true },
+    );
+    return () => {
+      window.requestAnimationFrame = requestFrame;
+      window.cancelAnimationFrame = cancelFrame;
+      for (const callback of callbacks.values()) requestFrame(callback);
+    };
+  });
+  try {
+    await trigger.click();
+    await expect(popup).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  } finally {
+    await resumeAnimationFrames.evaluate((resume) => resume());
+    await resumeAnimationFrames.dispose();
+  }
   await expect(popup).toBeHidden();
   await expect(trigger).toBeFocused();
   await expect(dialog).toBeVisible();
+  await expect(draft).toHaveValue("Keep my modal draft");
+  await trigger.press("Escape");
+  await expect(dialog).toBeHidden();
 });
 
 // Critical: a deeper dialog keeps popup interaction and focus inside its own modal owner.
