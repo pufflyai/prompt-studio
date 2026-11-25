@@ -21,7 +21,8 @@ export const cloudCatalogScopeFor = (runtimeId: string, login?: AccountStatus["l
 
 export const useCloudProjectCatalog = () => {
   const runtime = getRuntimeCollections();
-  const { data: status, fetching, error } = useScopedQuery(getDashboardAccountStatusQuery(runtime));
+  const account = getDashboardAccountStatusQuery(runtime);
+  const { data: status, fetching } = useScopedQuery(account);
   const login = status?.login;
   const queryClient = useQueryClient();
   const signedIn = Boolean(login);
@@ -61,7 +62,7 @@ export const useCloudProjectCatalog = () => {
     signInRequired: Boolean(status?.signInRequired),
     scope: cloudCatalogScopeFor(String(runtime.id), login),
     accountKnown: Boolean(status),
-    accountUnconfirmed: fetching || Boolean(error),
+    accountUnconfirmed: fetching || Boolean(account.getSnapshot().error),
     membershipKnown: catalog.data?.membershipKnown ?? status?.cloudProjectsLoaded,
   };
 };

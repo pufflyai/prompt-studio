@@ -245,6 +245,10 @@ const copyDevice = (outcome: (typeof copyStates)[number], retry: boolean) => {
     downloadUnavailable?: boolean;
     removalReplyLost?: boolean;
     accountUnavailable?: boolean;
+    disconnectAccount?: boolean;
+    holdAccount?: boolean;
+    syncState?: string;
+    sourceError?: string;
     removals: number;
   } = {
     presence: removingCopy || retry ? "downloading" : "cloud-only",
@@ -299,7 +303,22 @@ const copyDevice = (outcome: (typeof copyStates)[number], retry: boolean) => {
     if (device.removalReplyLost) return Response.json({ error: "Removal response lost" }, { status: 503 });
     return Response.json({ projectId: id, presence: "cloud-only" });
   };
-  const readAccount = () => {
+  const accountCaptured = Promise.withResolvers<void>();
+  const releaseAccount = Promise.withResolvers<void>();
+  const readAccount = async () => {
+    if (device.holdAccount) {
+      accountCaptured.resolve();
+      await releaseAccount.promise;
+    }
+    if (device.disconnectAccount)
+      return new Response(
+        new ReadableStream({
+          start(stream) {
+            stream.enqueue(new TextEncoder().encode('{"login":'));
+            setTimeout(() => stream.error(new Error("Account connection closed")), 10);
+          },
+        }),
+      );
     if (device.accountUnavailable) return Response.json({ error: "Account read unavailable" }, { status: 503 });
     return Response.json({
       login: { ...account, deviceId: device.id },
@@ -309,6 +328,26 @@ const copyDevice = (outcome: (typeof copyStates)[number], retry: boolean) => {
       signInRequired: false,
     });
   };
+  const readSync = () =>
+    Response.json({
+      state: device.syncState ?? (device.syncFailed ? "needs-attention" : "first-download-incomplete"),
+      sources: device.sourceError
+        ? [
+            {
+              id: "activity",
+              name: "Resource Activity",
+              connected: false,
+              busy: false,
+              downloaded: false,
+              canRetry: true,
+              phase: "retrying",
+              error: device.sourceError,
+              files: [],
+            },
+          ]
+        : [],
+      offlineReady: false,
+    });
   const server = Bun.serve({
     port: 0,
     fetch(request) {
@@ -346,10 +385,7 @@ const copyDevice = (outcome: (typeof copyStates)[number], retry: boolean) => {
         }
         return observation;
       }
-      return Response.json({
-        state: device.syncFailed ? "needs-attention" : "first-download-incomplete",
-        offlineReady: false,
-      });
+      return readSync();
     },
   });
   return {
@@ -364,12 +400,14 @@ const copyDevice = (outcome: (typeof copyStates)[number], retry: boolean) => {
     releaseRemoval,
     catalogCaptured,
     releaseCatalog,
+    accountCaptured,
+    releaseAccount,
   };
 };
 
 const mountCopyChoices = async (outcome: (typeof copyStates)[number], retry = false) => {
   const fixture = copyDevice(outcome, retry);
-  const { id, server, release, releaseRemoval, releaseCatalog } = fixture;
+  const { id, server, release, releaseRemoval, releaseCatalog, releaseAccount } = fixture;
   const opened: unknown[] = [];
   let closed = 0;
   const runtime = globalThis as typeof globalThis & {
@@ -433,6 +471,7 @@ const mountCopyChoices = async (outcome: (typeof copyStates)[number], retry = fa
     release.resolve();
     releaseRemoval.resolve();
     releaseCatalog.resolve();
+    releaseAccount.resolve();
     await act(async () => {
       renderer?.unmount();
       peerRenderer?.unmount();
@@ -1017,5 +1056,163 @@ test("sign-in-required membership does not expose ordinary project deletion", as
     await owner.dispose();
     runtime.__PSTDIO_CONFIG__ = previous;
     await server.stop(true);
+  }
+});
+
+test("a captured Discard cannot release its unresolved copy claim during an account read", async () => {
+  const fixture = await mountCopyChoices("sync error", true);
+  try {
+    fixture.device.lostReply = "before-write";
+    fixture.release.resolve();
+    await fixture.clickAndSettle(fixture.choice.requestDownload);
+    await act(async () => until(() => Boolean(fixture.choice.discardDownload)));
+    const discard = fixture.choice.discardDownload!;
+    const operations = getWorkbenchOperations(getDashboardScopedQueries(fixture.owner));
+    const attempt = operations.getSnapshot().recovery[0]!.id;
+    fixture.device.holdAccount = true;
+    const status = getDashboardAccountStatusQuery(fixture.owner);
+    let checking: Promise<unknown>;
+    await act(async () => {
+      status.invalidate();
+      checking = status.read();
+      await fixture.accountCaptured.promise;
+    });
+    expect(status.getSnapshot().fetching).toBe(true);
+    await act(async () => discard());
+    expect(operations.getSnapshot().recovery.some((entry) => entry.id === attempt)).toBe(true);
+    expect(fixture.peer.canDownload).toBe(false);
+    fixture.releaseAccount.resolve();
+    await act(async () => {
+      await checking!;
+    });
+    await act(async () => until(() => Boolean(fixture.choice.discardDownload)));
+    await act(async () => fixture.choice.discardDownload!());
+    expect(operations.getSnapshot().recovery.some((entry) => entry.id === attempt)).toBe(false);
+    expect(fixture.device.downloads).toBe(1);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test.each([
+  "first-download-incomplete",
+  "offline",
+  "waiting-to-sync",
+] as const)("the picker exposes Download for %s with a source error but not healthy progress", async (state) => {
+  const fixture = await mountCopyChoices("sync error", true);
+  try {
+    fixture.device.syncState = state;
+    fixture.device.sourceError = "Cloud source failed; retry scheduled";
+    await act(async () => {
+      await fixture.choice.sync.refetch();
+    });
+    await act(async () => until(() => fixture.choice.sync.data?.state === state));
+    expect(fixture.choice.sync.data?.state).toBe(state);
+    expect(fixture.choice.canDownload).toBe(true);
+    fixture.device.sourceError = undefined;
+    fixture.device.syncFailed = false;
+    await act(async () => {
+      await fixture.choice.sync.refetch();
+    });
+    await act(async () => until(() => !fixture.choice.sync.data?.sources?.some((source) => source.error)));
+    expect(fixture.choice.canDownload).toBe(false);
+    expect(fixture.device.downloads).toBe(0);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test.each([
+  false,
+  true,
+])("lost Retry checks actual source progress before clearing its claim (source healed: %j)", async (healed) => {
+  const fixture = await mountCopyChoices("sync error", true);
+  try {
+    fixture.device.sourceError = "Cloud source failed; retry scheduled";
+    await act(async () => {
+      await fixture.choice.sync.refetch();
+    });
+    await act(async () => until(() => fixture.choice.sync.data?.sources?.[0]?.error === fixture.device.sourceError));
+    fixture.device.lostReply = "before-write";
+    fixture.device.syncState = "first-download-incomplete";
+    if (healed) fixture.device.sourceError = undefined;
+    fixture.release.resolve();
+    await fixture.clickAndSettle(fixture.choice.requestDownload);
+    await act(async () => {
+      await until(() => !fixture.choice.downloadBlocking || Boolean(fixture.choice.checkDownload));
+      await fixture.choice.checkDownload?.();
+    });
+    expect(fixture.choice.downloadBlocking).toBe(!healed);
+    if (healed)
+      await act(async () => {
+        await fixture.peer.sync.refetch();
+      });
+    expect(fixture.peer.canDownload).toBe(false);
+    expect(fixture.device.downloads).toBe(1);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test("reconciling an older downloading receipt preserves a newer downloaded catalog row", async () => {
+  const fixture = await mountCopyChoices("sync error", true);
+  try {
+    fixture.device.holdCatalog = true;
+    await act(async () => {
+      fixture.choice.requestDownload();
+      await fixture.started.promise;
+      fixture.release.resolve();
+      await fixture.catalogCaptured.promise;
+    });
+    const status = getDashboardAccountStatusQuery(fixture.owner);
+    fixture.device.holdAccount = true;
+    let checking: Promise<unknown>;
+    await act(async () => {
+      status.invalidate();
+      checking = status.read();
+      await fixture.accountCaptured.promise;
+      fixture.releaseCatalog.resolve();
+    });
+    const key = cloudCatalogKeyFor(fixture.account.managerOrigin, fixture.account.accountId, fixture.device.id);
+    fixture.device.presence = "downloaded";
+    await act(async () => {
+      await fixture.client.refetchQueries({ queryKey: key, exact: true }, { cancelRefetch: false });
+    });
+    await act(async () => until(() => fixture.choice.entry?.presence === "downloaded"));
+    expect(fixture.choice.entry?.presence).toBe("downloaded");
+    fixture.releaseAccount.resolve();
+    await act(async () => {
+      await checking!;
+      await until(fixture.mutationsSettled);
+    });
+    expect(fixture.choice.entry?.presence).toBe("downloaded");
+    expect(fixture.choice.showProgress).toBe(false);
+    expect(fixture.device.downloads).toBe(1);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test("a lost account connection disables Download until the same device is confirmed again", async () => {
+  const fixture = await mountCopyChoices("cloud-only");
+  try {
+    const status = getDashboardAccountStatusQuery(fixture.owner);
+    fixture.device.disconnectAccount = true;
+    await act(async () => {
+      status.invalidate();
+      await status.read().catch(() => {});
+    });
+    expect(status.getSnapshot().fetching).toBe(false);
+    expect(status.getSnapshot().error).toMatchObject({ name: "PstdioConnectionError" });
+    expect(fixture.choice.canDownload).toBe(false);
+    fixture.device.disconnectAccount = false;
+    await act(async () => {
+      status.invalidate();
+      await status.read();
+    });
+    await act(async () => until(() => fixture.choice.canDownload));
+    expect(fixture.device.downloads).toBe(0);
+  } finally {
+    await fixture.cleanup();
   }
 });

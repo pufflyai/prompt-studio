@@ -22,6 +22,8 @@ for (const [stored, failedState] of [
   [false, "first-download-incomplete"],
   [true, "offline"],
   [false, "offline"],
+  [true, "waiting-to-sync"],
+  [false, "waiting-to-sync"],
 ] as const)
   test(`Download retries a failed source without restarting healthy work (stored: ${stored}, state: ${failedState})`, async () => {
     const root = await mkdtemp(join(tmpdir(), "native-download-retry-"));
@@ -30,7 +32,6 @@ for (const [stored, failedState] of [
     const controller = new AbortController();
     const firstResponse = Promise.withResolvers<Response>();
     const finishRetry = Promise.withResolvers<void>();
-    const sourceFailed = Promise.withResolvers<void>();
     const sockets = new Set<Bun.ServerWebSocket<undefined>>();
     let phase: "initial" | "failed" | "retry" = "initial";
     let allowLive = true;
@@ -107,9 +108,6 @@ for (const [stored, failedState] of [
           firstDownloaded = true;
           downloaded = true;
         },
-        onStatusChange() {
-          if (source?.status().error) sourceFailed.resolve();
-        },
       });
       const retry = createProjectSyncRetry({
         refresh: async () => {},
@@ -167,7 +165,7 @@ for (const [stored, failedState] of [
       expect((await download()).status).toBe(202);
       await host.account.refresh();
       expect({ manualRetries, sourceRequests }).toEqual({ manualRetries: 0, sourceRequests: 1 });
-      if (failedState === "offline") {
+      if (failedState !== "first-download-incomplete") {
         firstResponse.resolve(Response.json({ ok: true }));
         expect(await until(() => downloaded)).toBe(true);
         downloaded = false;
@@ -176,7 +174,7 @@ for (const [stored, failedState] of [
       } else {
         firstResponse.resolve(Response.json({ error: "Source unavailable" }, { status: 503 }));
       }
-      await sourceFailed.promise;
+      expect(await until(() => Boolean(source?.status().error))).toBe(true);
       if (failedState === "offline") {
         allowLive = false;
         for (const socket of sockets) socket.close();

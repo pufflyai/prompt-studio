@@ -6,6 +6,12 @@ import type { ProjectSyncStatus } from "pstdio-api-contracts";
 import { createProjectCloudCatalog } from "./project-cloud-catalog";
 import { createProjectCopyStore } from "./project-copy-store";
 
+const until = async (ready: () => boolean) => {
+  const deadline = Date.now() + 2000;
+  while (!ready() && Date.now() < deadline) await Bun.sleep(5);
+  return ready();
+};
+
 test.each([
   [true, "needs-attention"],
   [false, "needs-attention"],
@@ -36,9 +42,7 @@ test.each([
     updated_at: "2026-01-01",
     deleted_at: null,
   };
-  const refreshStarted = Promise.withResolvers<void>();
   const finishRefresh = Promise.withResolvers<void>();
-  const retryStarted = Promise.withResolvers<void>();
   const finishRetry = Promise.withResolvers<void>();
   let attempts = 0;
   let refreshes = 0;
@@ -65,12 +69,10 @@ test.each([
     async refresh() {
       refreshes++;
       if (!holdRefresh) return;
-      refreshStarted.resolve();
       await finishRefresh.promise;
     },
     async retry() {
       attempts++;
-      retryStarted.resolve();
       await finishRetry.promise;
     },
   });
@@ -112,7 +114,7 @@ test.each([
     holdRefresh = true;
     expect(await canDownload()).toBe(true);
     expect(await catalog.downloadCloudProject(id)).toEqual({ projectId: id, presence: "downloading" });
-    await refreshStarted.promise;
+    expect(await until(() => refreshes === 2)).toBe(true);
     expect(await canDownload()).toBe(false);
     expect((await catalog.fenceLocalStatus(id, login, async () => status)).state).toBe(
       failedState === "needs-attention" ? "first-download-incomplete" : failedState,
@@ -125,7 +127,7 @@ test.each([
     finishRefresh.resolve();
     await new Promise<void>((resolve) => setImmediate(resolve));
     expect(attempts).toBe(1);
-    await retryStarted.promise;
+    expect(await until(() => attempts === 1)).toBe(true);
     expect(await canDownload()).toBe(false);
     expect((await catalog.fenceLocalStatus(id, login, async () => status)).state).toBe(
       failedState === "needs-attention" ? "first-download-incomplete" : failedState,

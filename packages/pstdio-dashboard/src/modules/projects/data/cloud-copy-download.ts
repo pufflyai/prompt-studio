@@ -43,7 +43,7 @@ export const cloudCopyDownloadAction = (entry?: CloudProjectCatalogEntry, sync?:
   if (entry.presence === "cloud-only") return entry;
   if (entry.presence !== "downloading") return;
   if (entry.downloadError) return entry;
-  if (sync?.state === "needs-attention") return sync;
+  if (sync?.state === "needs-attention" || sync?.sources?.some((source) => source.error)) return sync;
 };
 
 export interface CloudCopyDownloadAdmission {
@@ -61,7 +61,8 @@ const progressedRetry = async (
   if (!project.online) return false;
   if ("presence" in action) return Boolean(action.downloadError && !project.downloadError);
   if (project.downloadError) return false;
-  const { state } = await readSync();
+  const { state, sources } = await readSync();
+  if (sources?.some((source) => source.error)) return false;
   return state === "first-download-incomplete" || state === "waiting-to-sync" || state === "synced";
 };
 
@@ -99,7 +100,9 @@ export const getCloudCopyDownloads = createRuntimeState((owner) => {
     subscribe: operations.subscribe,
     check: operations.check,
     discard(id: string, scope: string, attempt: symbol) {
-      if (isCurrent(id, scope) && state(id, scope).failure?.id === attempt) operations.discard(attempt);
+      if (isCheckingAccount() || !isCurrent(id, scope) || state(id, scope).failure?.id !== attempt) return false;
+      operations.discard(attempt);
+      return true;
     },
     async start(admission: CloudCopyDownloadAdmission, onAdmitted: () => void) {
       const { id, account: expected, scope, action } = admission;
@@ -121,7 +124,7 @@ export const getCloudCopyDownloads = createRuntimeState((owner) => {
       const retry = project.presence === "downloading";
       const clearRetriedFailure = (observed?: CloudProjectCatalogEntry) => {
         const sync = client.getQueryCache().find<ProjectSyncStatus>({ queryKey: syncKey, exact: true });
-        if (sync?.state.data?.state === "needs-attention") sync.reset();
+        if (sync?.state.data?.state === "needs-attention" || sync?.state.data === action) sync?.reset();
         if ("presence" in action && action.downloadError && observed?.downloadError === action.downloadError) {
           client.setQueryData<CloudProjectCatalog>(
             queryKey,
@@ -179,7 +182,14 @@ export const getCloudCopyDownloads = createRuntimeState((owner) => {
           if (retry) clearRetriedFailure(project);
           client.setQueryData(queryKey, (previous: typeof catalog | undefined) => {
             if (!previous) return catalog;
-            return { ...previous, projects: previous.projects.map((entry) => (entry.id === id ? project! : entry)) };
+            return {
+              ...previous,
+              projects: previous.projects.map((entry) =>
+                entry.id === id && !(entry.presence === "downloaded" && project?.presence === "downloading")
+                  ? project!
+                  : entry,
+              ),
+            };
           });
         },
         async check(signal) {

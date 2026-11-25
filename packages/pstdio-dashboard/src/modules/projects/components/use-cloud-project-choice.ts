@@ -1,4 +1,4 @@
-import type { CloudProjectCatalogEntry, ProjectCopyAccount } from "@pstdio/sdk/client";
+import type { CloudProjectCatalogEntry, ProjectCopyAccount, ProjectSyncStatus } from "@pstdio/sdk/client";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from "react";
@@ -159,7 +159,7 @@ const useCloudCopyDownload = (
       operations.state(id, scope).failure?.id !== unresolved.id
     )
       return;
-    operations.discard(id, scope, unresolved.id);
+    if (!operations.discard(id, scope, unresolved.id)) return;
     download.reset();
     clearIntent();
   };
@@ -176,10 +176,11 @@ const useCloudCopyDownload = (
   };
 };
 
-const downloadMessage = (error: Error | null, entry?: CloudProjectCatalogEntry, syncState?: string) => {
+const downloadMessage = (error: Error | null, entry?: CloudProjectCatalogEntry, sync?: ProjectSyncStatus) => {
   if (error) return error.message;
   if (entry?.downloadError) return entry.downloadError;
-  if (syncState === "needs-attention") return "Cloud download needs attention. Retry to continue.";
+  if (sync?.state === "needs-attention" || sync?.sources?.some((source) => source.error))
+    return "Cloud download needs attention. Retry to continue.";
 };
 
 const useCloudOnlyCatalogRefresh = (
@@ -253,7 +254,7 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
 
   const sharedError = unresolved?.error instanceof Error ? unresolved.error : undefined;
   const requestError = entry?.presence === "downloading" ? null : (download.error ?? sharedError ?? null);
-  const failure = downloadMessage(requestError ?? cloud.error ?? sync.error, entry, sync.data?.state);
+  const failure = downloadMessage(requestError ?? cloud.error ?? sync.error, entry, sync.data);
   const pending = Boolean(active && !unresolved);
   const showProgress = (downloading || pending) && !deleting && !failure && entry?.presence !== "downloaded";
   const canDownload = Boolean(
