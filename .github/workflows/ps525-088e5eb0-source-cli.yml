@@ -1,0 +1,429 @@
+name: PS-525 sealed source CLI matrix
+
+on:
+  push:
+    branches:
+      - chore/ps525-088e5eb0-source-cli
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  source_cli:
+    name: source_cli (#${{ matrix.pr }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - pr: "2349"
+            branch: "ps525/process-runtime-gaps"
+            base_branch: "main"
+            product: "bebc58c4dad4c0897038f63eb341580fe01ad898"
+            branch_base: "088e5eb0d6099f5377d778914f5527471aa1dc31"
+            checkout: "21428d99cf6776f25303078f65c65188a28eaffc"
+            tree: "6a4fc5f44d5b5b3e40696ad197c1b090cad6da23"
+            base: "088e5eb0d6099f5377d778914f5527471aa1dc31"
+            policy: "eeda44a3cdb1ac1ca43bda7a351ba8ed43d09409cd8b1cc4c373fa2bfd6a2348"
+            plan: "2bb7f704fecf446003c1bebd9b1987b17e7c3cbf6643541add7ec6732d923603"
+            plan_groups: "92"
+            selected: "2833"
+            files_sha256: "58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a"
+            run: "45562491930"
+            ordinary_plan: "9ecd65234712dce90863338f8fe7fcb3dd907f92f3f42401b7ebe3697f69b291"
+            ordinary_groups: "91"
+            scope_job: "139029287834"
+            static_job: "139029480439"
+            build_job: "139029480459"
+          - pr: "2350"
+            branch: "ps525/streaming-process-spawn"
+            base_branch: "ps525/process-runtime-gaps"
+            product: "49a29d48583f583b5a5df8bd76ae3391f13efca6"
+            branch_base: "bebc58c4dad4c0897038f63eb341580fe01ad898"
+            checkout: "b24014e92544bfd5a25a93ce064795d972dc54bb"
+            tree: "76a7765dc4add1dd8652a414decd79959f6d004c"
+            base: "21428d99cf6776f25303078f65c65188a28eaffc"
+            policy: "eeda44a3cdb1ac1ca43bda7a351ba8ed43d09409cd8b1cc4c373fa2bfd6a2348"
+            plan: "5bb2e2e353816bdf67a7ad00b8e10584b9999ffcc4a61530430b28f2a1135247"
+            plan_groups: "92"
+            selected: "2838"
+            files_sha256: "58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a"
+            run: "45562491559"
+            ordinary_plan: "0019efe9e30cb58c9a1422e09e888065f78cb06e16aaba6b7ac07aa5ff8849a6"
+            ordinary_groups: "91"
+            scope_job: "139029286428"
+            static_job: "139029524838"
+            build_job: "139029524847"
+          - pr: "2351"
+            branch: "ps525/process-environment-permissions"
+            base_branch: "ps525/streaming-process-spawn"
+            product: "55b9b209e019420bb0190e21ad59401ce2cd22ed"
+            branch_base: "49a29d48583f583b5a5df8bd76ae3391f13efca6"
+            checkout: "f0b7ff9ff9b2b9f516aa74dcf44ca1dd6381eb12"
+            tree: "7b42266fab561e575545029c5ecf24433a5dc832"
+            base: "b24014e92544bfd5a25a93ce064795d972dc54bb"
+            policy: "eeda44a3cdb1ac1ca43bda7a351ba8ed43d09409cd8b1cc4c373fa2bfd6a2348"
+            plan: "36adf6be243f0aa668280eb1f1117f3a46ee39699efb3a37779eb871b1fc3aae"
+            plan_groups: "93"
+            selected: "2844"
+            files_sha256: "58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a"
+            run: "45562721196"
+            ordinary_plan: "4b9f2ae19421b0c81c35cd4715b479c6908d77e48ea5227d2db981aa9e88eefc"
+            ordinary_groups: "92"
+            scope_job: "139030039860"
+            static_job: "139030919346"
+            build_job: "139030919553"
+          - pr: "2353"
+            branch: "ps525/worker-lifecycle"
+            base_branch: "ps525/process-environment-permissions"
+            product: "a885c670cdbdf8503eba29ff10bb86436fefde1c"
+            branch_base: "55b9b209e019420bb0190e21ad59401ce2cd22ed"
+            checkout: "50cc25d247c3fdbaa102da9a6230d1480497d2d8"
+            tree: "d891e06792dfa986479c9ea7e53c0107ec384dd3"
+            base: "f0b7ff9ff9b2b9f516aa74dcf44ca1dd6381eb12"
+            policy: "eeda44a3cdb1ac1ca43bda7a351ba8ed43d09409cd8b1cc4c373fa2bfd6a2348"
+            plan: "98f9022b8ccd2d3c3a2cb14cffd6dadc3873993a4da7f0db8c736ddec2405f74"
+            plan_groups: "81"
+            selected: "2677"
+            files_sha256: "58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a"
+            run: "45562491166"
+            ordinary_plan: "1d08234064c1d063a25966bbfcc0a6a35c904165a445258070e1272a64825b3f"
+            ordinary_groups: "80"
+            scope_job: "139029285008"
+            static_job: "139029524920"
+            build_job: "139029524927"
+          - pr: "2356"
+            branch: "ps525/process-spawn"
+            base_branch: "ps525/worker-lifecycle"
+            product: "f1668231ba96469a29d207138277014260c4c5ed"
+            branch_base: "a885c670cdbdf8503eba29ff10bb86436fefde1c"
+            checkout: "650a5646432a2db9ce6237adb17b320fa0f54edc"
+            tree: "be44cc58b9bec47ae3e566849089251f87ddd3ca"
+            base: "50cc25d247c3fdbaa102da9a6230d1480497d2d8"
+            policy: "eeda44a3cdb1ac1ca43bda7a351ba8ed43d09409cd8b1cc4c373fa2bfd6a2348"
+            plan: "95e291865b26d3262c630243bed049eaf4b0d22760a860851ec8c918d3e4865d"
+            plan_groups: "92"
+            selected: "2851"
+            files_sha256: "58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a"
+            run: "45562490494"
+            ordinary_plan: "dcd09e9554d557ab0de444a3ab3e9d4af7218fcccef470b8a08673d2f4443828"
+            ordinary_groups: "91"
+            scope_job: "139029283384"
+            static_job: "139029500224"
+            build_job: "139029500410"
+          - pr: "2357"
+            branch: "ps525/database-worker"
+            base_branch: "ps525/process-spawn"
+            product: "14443819a364a26532ae4f1457d75e551c6035eb"
+            branch_base: "f1668231ba96469a29d207138277014260c4c5ed"
+            checkout: "bd437acb03e41228bf62848e7995860170c484cc"
+            tree: "7c247d8e98302512c12d2df4cff7072fad96f34b"
+            base: "650a5646432a2db9ce6237adb17b320fa0f54edc"
+            policy: "eeda44a3cdb1ac1ca43bda7a351ba8ed43d09409cd8b1cc4c373fa2bfd6a2348"
+            plan: "2fe2b910ef3e579e0e37c1364e516dd941adea6a3d7fdec80997b2fad4857ebb"
+            plan_groups: "98"
+            selected: "2907"
+            files_sha256: "58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a"
+            run: "45562491575"
+            ordinary_plan: "bfdad6bcf382f301c2dded53511eb3f1ea8d7a6991d92cb615c41d4f97bdcf58"
+            ordinary_groups: "97"
+            scope_job: "139029287007"
+            static_job: "139029492373"
+            build_job: "139029492400"
+          - pr: "2382"
+            branch: "ps525/worker-mode-tests"
+            base_branch: "ps525/database-worker"
+            product: "06973322449188bed4093b8f074671367c4d333f"
+            branch_base: "14443819a364a26532ae4f1457d75e551c6035eb"
+            checkout: "7c9115f7634ed6ab82c1e2101a9695e1d5eb8b46"
+            tree: "410f91a27fd9671915a0996a9b01bfc66b39a53a"
+            base: "bd437acb03e41228bf62848e7995860170c484cc"
+            policy: "eeda44a3cdb1ac1ca43bda7a351ba8ed43d09409cd8b1cc4c373fa2bfd6a2348"
+            plan: "c59a8b5f465549daf799eecd8bf73c3fe88b7b8d1142b8abc4d85d74465becdd"
+            plan_groups: "77"
+            selected: "2674"
+            files_sha256: "58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a"
+            run: "45562491179"
+            ordinary_plan: "c3a05b40c0b077523ca3dbb78f6b01bcf48b75585406cbb3a1142d577c3b986c"
+            ordinary_groups: "76"
+            scope_job: "139029285007"
+            static_job: "139029532215"
+            build_job: "139029532126"
+          - pr: "2388"
+            branch: "ps525/database-worker-only"
+            base_branch: "ps525/worker-mode-tests"
+            product: "f5090aef47fd8a21c79a224077ade13f0bed0df6"
+            branch_base: "06973322449188bed4093b8f074671367c4d333f"
+            checkout: "a82465fd7e71aac8895007113de659eb1898c65a"
+            tree: "f13d1d1cd5cf913d6b283fb94edd913a3e706fda"
+            base: "7c9115f7634ed6ab82c1e2101a9695e1d5eb8b46"
+            policy: "eeda44a3cdb1ac1ca43bda7a351ba8ed43d09409cd8b1cc4c373fa2bfd6a2348"
+            plan: "a237a8fd6f278f46c91d12ba45304adfc2cf4881992b4e597a20705b876318d1"
+            plan_groups: "82"
+            selected: "2687"
+            files_sha256: "58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a"
+            run: "45562635750"
+            ordinary_plan: "1403fcecebde9f7c1ed7efaf893ae1e62510a2d168e8e6697ad41221cf6c7df7"
+            ordinary_groups: "81"
+            scope_job: "139029905792"
+            static_job: "139030639968"
+            build_job: "139030639857"
+          - pr: "2400"
+            branch: "ps525/workers-only"
+            base_branch: "ps525/database-worker-only"
+            product: "a9393381d3a54a5adfe843f57e21a64dcec536a1"
+            branch_base: "f5090aef47fd8a21c79a224077ade13f0bed0df6"
+            checkout: "21f9e497a3abd4d8394cd6cce8b32685ebdf467c"
+            tree: "96ea60f8022e49bdefd443fb54566bffc451f047"
+            base: "f5090aef47fd8a21c79a224077ade13f0bed0df6"
+            policy: "eeda44a3cdb1ac1ca43bda7a351ba8ed43d09409cd8b1cc4c373fa2bfd6a2348"
+            plan: "535cd7e28cf7f0a6504f2292536bbeba45db6e383c02436e7714d6fe81e7f8ac"
+            plan_groups: "93"
+            selected: "2855"
+            files_sha256: "58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a"
+            run: "45563529853"
+            ordinary_plan: "dff94eae81595d1ff426dde1ce00451f14b51fb847599477c159de26681aad11"
+            ordinary_groups: "92"
+            scope_job: "139032705574"
+            static_job: "139033886420"
+            build_job: "139033886409"
+          - pr: "2402"
+            branch: "ps525/host-diagnostics"
+            base_branch: "ps525/workers-only"
+            product: "8b444328884142086bffce20421b89f0c9951673"
+            branch_base: "a9393381d3a54a5adfe843f57e21a64dcec536a1"
+            checkout: "99f5b7b7f83a7b51f7e9b0d330e367d0cf4bcdb8"
+            tree: "e3a11bcebf4be6323065e3b59ce7f68fbeb75651"
+            base: "a9393381d3a54a5adfe843f57e21a64dcec536a1"
+            policy: "eeda44a3cdb1ac1ca43bda7a351ba8ed43d09409cd8b1cc4c373fa2bfd6a2348"
+            plan: "7bd64fc644919f4b26dfc53242f5ea5338319bbfc9cca30f46115b633c98e196"
+            plan_groups: "92"
+            selected: "2861"
+            files_sha256: "58d8a6b1f28c46136461a9d26acb7a8700f52cf27fdc5841e7117801d9420c7a"
+            run: "45563524649"
+            ordinary_plan: "379aa064831d57bde3e1af87caabc724c28a591c164427187ab306e27715aa12"
+            ordinary_groups: "91"
+            scope_job: "139032699837"
+            static_job: "139034178282"
+            build_job: "139034178215"
+    env:
+      PS525_WORKFLOW_PARENT: bebc58c4dad4c0897038f63eb341580fe01ad898
+      PS525_PRODUCT_HEAD: ${{ matrix.product }}
+      PS525_BRANCH: ${{ matrix.branch }}
+      PS525_BASE_BRANCH: ${{ matrix.base_branch }}
+      PS525_PR: ${{ matrix.pr }}
+      PS525_CI_BASE: ${{ matrix.base }}
+      PS525_BRANCH_BASE: ${{ matrix.branch_base }}
+      PS525_HEAD: ${{ matrix.checkout }}
+      PS525_TREE: ${{ matrix.tree }}
+      PS525_BASE: ${{ matrix.base }}
+      PS525_POLICY: ${{ matrix.policy }}
+      PS525_PLAN: ${{ matrix.plan }}
+      PS525_CLI_GROUP: 72480638f874d13d0838a290
+      PS525_CLI_FILES_SHA256: ${{ matrix.files_sha256 }}
+      PS525_OUTPUT: test-results/ps525-${{ matrix.pr }}-cli
+      PS525_ORDINARY_RUN: ${{ matrix.run }}
+      PS525_ORDINARY_SOURCE: ${{ matrix.checkout }}
+      PS525_ORDINARY_PLAN: ${{ matrix.ordinary_plan }}
+      PS525_PLAN_GROUPS: ${{ matrix.plan_groups }}
+      PS525_SELECTED: ${{ matrix.selected }}
+      PS525_ORDINARY_GROUPS: ${{ matrix.ordinary_groups }}
+      PS525_SCOPE_JOB: ${{ matrix.scope_job }}
+      PS525_STATIC_JOB: ${{ matrix.static_job }}
+      PS525_BUILD_JOB: ${{ matrix.build_job }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.PS525_HEAD }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+
+      - name: Verify the source and sealed Linux plan
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = refs/heads/chore/ps525-088e5eb0-source-cli
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$PS525_WORKFLOW_PARENT"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" =             "$(printf 'A\t.github/workflows/ps525-088e5eb0-source-cli.yml')"
+          test "$(git rev-parse HEAD)" = "$PS525_HEAD"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$PS525_TREE"
+          test "$(git show -s --format=%P HEAD)" = "$PS525_CI_BASE $PS525_PRODUCT_HEAD"
+          actual_pr="$(GH_TOKEN="${{ github.token }}" gh api "repos/$GITHUB_REPOSITORY/pulls/$PS525_PR")"
+          jq -e --arg product "$PS525_PRODUCT_HEAD" --arg branch "$PS525_BRANCH" --arg base "$PS525_BASE_BRANCH" '
+            .state == "open" and .head.sha == $product and .head.ref == $branch and .base.ref == $base
+          ' <<<"$actual_pr"
+          refs=(refs/heads/main:refs/remotes/origin/main "refs/heads/$PS525_BRANCH:refs/remotes/origin/$PS525_BRANCH")
+          if [[ "$PS525_BASE_BRANCH" != main ]]; then
+            refs+=("refs/heads/$PS525_BASE_BRANCH:refs/remotes/origin/$PS525_BASE_BRANCH")
+          fi
+          git fetch --no-tags origin "${refs[@]}"
+          test "$(git rev-parse "origin/$PS525_BRANCH")" = "$PS525_PRODUCT_HEAD"
+          test "$(git rev-parse "origin/$PS525_BASE_BRANCH")" = "$PS525_BRANCH_BASE"
+          main="$(git rev-parse origin/main)"
+          test "$(git merge-base HEAD "$PS525_BASE")" = "$PS525_BASE"
+          git merge-base --is-ancestor "$PS525_BRANCH_BASE" "$PS525_CI_BASE"
+          incoming="$(git rev-list --count "HEAD..$main")"
+          test "$incoming" -le 10
+          prospective="$(git merge-tree --write-tree --no-messages HEAD "$main")"
+          test "$(git cat-file -t "$prospective")" = tree
+          test -z "$(git status --porcelain)"
+          test "$(bun --version)" = "1.4.4"
+          test "$(jq -r .packageManager package.json)" = "bun@1.4.4"
+          mkdir -p "$PS525_OUTPUT"
+          bun run test:review --base "$PS525_BASE" --list > "$PS525_OUTPUT/selected-plan.json"
+          jq -e --arg sha "$PS525_HEAD" --arg tree "$PS525_TREE" --arg base "$PS525_BASE"             --arg policy "$PS525_POLICY" --arg digest "$PS525_PLAN" --arg group "$PS525_CLI_GROUP" --argjson groups "$PS525_PLAN_GROUPS" --argjson selected "$PS525_SELECTED" '
+              .head == $sha and .mergeBase == $base and .testPlan.digest == $digest
+              and .testPlan.source == {sha:$sha,tree:$tree,policy:$policy,dirty:false}
+              and (.testPlan.runs | length) == $groups and (.selected | length) == $selected
+              and all(.testPlan.runs[]; .target == {platform:"linux",arch:"x64"})
+              and ([.testPlan.runs[] | select(.job == "local-additions") | .id] == [$group])
+              and any(.testPlan.runs[]; .id == $group and .owner == "e2e" and .cwd == "packages/e2e"
+                and .runner == "cli" and .priority == "P1" and .lane == "stable" and .artifact == "source"
+                and .requires == ["build-e5b1f54fca1c52cd"] and (.files | length) == 10)
+              and any(.testPlan.setup[]; .id == "build-e5b1f54fca1c52cd" and .owners == ["e2e"]
+                and .kind == "build" and .requires == [])
+            ' "$PS525_OUTPUT/selected-plan.json"
+          jq -c --arg group "$PS525_CLI_GROUP" '.testPlan.runs[] | select(.id == $group) | .files'             "$PS525_OUTPUT/selected-plan.json" > "$PS525_OUTPUT/assigned-files.json"
+          printf '%s  %s\n' "$PS525_CLI_FILES_SHA256" "$PS525_OUTPUT/assigned-files.json" | sha256sum -c -
+          jq -n --arg sha "$PS525_HEAD" --arg tree "$PS525_TREE" --arg main "$main" --arg base "$PS525_BASE"             --arg prospective "$prospective" --arg plan "$PS525_PLAN" --arg workflow "$GITHUB_WORKFLOW_SHA"             --argjson incoming "$incoming" --arg ordinary "$PS525_ORDINARY_RUN"             --arg ordinarySource "$PS525_ORDINARY_SOURCE"             '{sha:$sha,tree:$tree,main:$main,mergeBase:$base,mergeTree:$prospective,incoming:$incoming,
+              planDigest:$plan,diagnosticCommit:$workflow,ordinaryCiRun:$ordinary,ordinaryCiSha:$ordinarySource}'             > "$PS525_OUTPUT/identity.json"
+
+      - name: Retain the ordinary Linux scope artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: test-plan-attempt-1
+          path: ${{ env.PS525_OUTPUT }}/ordinary-ci
+          run-id: ${{ env.PS525_ORDINARY_RUN }}
+          github-token: ${{ github.token }}
+
+      - name: Verify ordinary source prerequisites and open a private temp directory
+        shell: bash
+        run: |
+          prior="$PS525_OUTPUT/ordinary-ci"
+          jq -e --arg tested "$PS525_ORDINARY_SOURCE" --arg tree "$PS525_TREE" --arg policy "$PS525_POLICY" --arg plan "$PS525_ORDINARY_PLAN" --arg group "$PS525_CLI_GROUP" --argjson groups "$PS525_ORDINARY_GROUPS" '
+              .source == {sha:$tested,tree:$tree,policy:$policy,dirty:false} and .digest == $plan
+              and (.runs | length) == $groups and all(.runs[]; .id != $group)
+            ' "$prior/plan.json"
+          for assignment in "scope:$PS525_SCOPE_JOB" "static_checks:$PS525_STATIC_JOB" "build_host:$PS525_BUILD_JOB"; do
+            job_name="${assignment%:*}"
+            job_id="${assignment#*:}"
+            GH_TOKEN="${{ github.token }}" gh api "repos/$GITHUB_REPOSITORY/actions/jobs/$job_id" --jq '{id,name,run_id,run_attempt,head_sha,status,conclusion,steps:[.steps[]|{name,status,conclusion}]}' > "$prior/$job_name.json"
+            jq -e --arg name "$job_name" --arg run "$PS525_ORDINARY_RUN" --arg sha "$PS525_PRODUCT_HEAD" '
+              .name == $name and (.run_id | tostring) == $run and .run_attempt == 1
+              and .head_sha == $sha and .status == "completed" and .conclusion == "success"
+            ' "$prior/$job_name.json"
+          done
+          scratch="$(mktemp -d /tmp/ps525.XXXXXX)"
+          printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$scratch/owner"
+          {
+            echo "PS525_CLI_TMP=$scratch"
+            echo "TMPDIR=$scratch"
+            echo "TMP=$scratch"
+            echo "TEMP=$scratch"
+            echo "PS525_NATIVE_BUN=$(command -v bun)"
+          } >> "$GITHUB_ENV"
+          { node --version; bun --version; docker version; df -h /tmp "$GITHUB_WORKSPACE"; }             > "$PS525_OUTPUT/toolchain.log"
+
+      - name: Install locked dependencies and prepare Firefox
+        shell: bash
+        run: |
+          bun install --frozen-lockfile --concurrent-scripts 1
+          bun run --cwd packages/ui typegen:tokens
+          (cd packages/e2e && bun x --no-install playwright install --with-deps firefox) 2>&1             | tee "$PS525_OUTPUT/browser-setup.log"
+          test -z "$(git status --porcelain)"
+
+      - name: Execute only the ten-file source CLI group
+        shell: bash
+        run: |
+          test "$(command -v bun)" = "$PS525_NATIVE_BUN"
+          bun --no-orphans - <<'BUN' 2>&1 | tee "$PS525_OUTPUT/console.log"
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+          import { executePlan } from "./scripts/ci/run-test-plan";
+
+          const root = process.cwd();
+          const { PS525_CLI_TMP: scratch, PS525_OUTPUT: relative, PS525_CLI_GROUP: group } = process.env;
+          if (!scratch || !/^\/tmp\/ps525\.[A-Za-z0-9]{6}$/.test(scratch) || !relative || !group)
+            throw new Error("Unexpected native review assignment");
+          const executionId = process.env.GITHUB_RUN_ID + "/" + process.env.GITHUB_RUN_ATTEMPT;
+          const output = resolve(root, relative);
+          for (const [key, value] of Object.entries(localReviewEnvironment(scratch))) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+          process.env.CI_PLAN_OUTPUT_DIR = relative + "/native";
+          const { testPlan } = await Bun.file(resolve(output, "selected-plan.json")).json();
+          let passed = false;
+          try {
+            const result = await executePlan(testPlan, {
+              root, runIds: [group], prebuilt: false, executionId,
+              env: { CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+            });
+            passed = result.complete && result.outcome === "success";
+          } finally {
+            const cleanup = await cleanupReviewCompose(scratch);
+            await Bun.write(resolve(output, "compose-cleanup.json"), JSON.stringify(cleanup, null, 2));
+            passed &&= cleanup.every(entry => entry.outcome === "success");
+            process.exitCode = passed ? 0 : 1;
+          }
+          BUN
+
+      - name: Verify exact native execution and file coverage
+        shell: bash
+        run: |
+          jq -e --arg group "$PS525_CLI_GROUP" --arg digest "$PS525_PLAN"             --slurpfile expected "$PS525_OUTPUT/assigned-files.json"             --slurpfile sealed "$PS525_OUTPUT/selected-plan.json" '
+              .source == $sealed[0].testPlan.source and .planDigest == $digest
+              and .complete and .outcome == "success" and .errors == [] and .runIds == [$group]
+              and (.results | length) == 1
+              and all(.results[]; .runId == $group and .complete and .outcome == "success"
+                and .exitCode == 0 and .nativeFailure != true and (.reportedFiles | sort) == ($expected[0] | sort))
+              and [.phases[] | select(.kind == "build") | [.id,.outcome]] == [["build-e5b1f54fca1c52cd","success"]]
+              and any(.phases[]; .kind == "cleanup" and .outcome == "success")
+            ' "$PS525_OUTPUT/native/execution.json"
+          jq -e --arg group "$PS525_CLI_GROUP" --arg sha "$PS525_HEAD" --arg digest "$PS525_PLAN" \
+            --arg execution "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" --slurpfile expected "$PS525_OUTPUT/assigned-files.json" '
+              .complete and .exitCode == 0 and .sourceSha == $sha and .planDigest == $digest
+              and .executionId == $execution and .runId == $group and .unreportedSelectedCases == 0
+              and .executedCases == 20 and (.cases | length) == 20
+              and all(.cases[]; .outcome == "success")
+              and (.executedFiles | sort) == ($expected[0] | sort) and (.reportedFiles | sort) == ($expected[0] | sort)
+            ' "$PS525_OUTPUT/native/$PS525_CLI_GROUP/cases.json"
+          jq -e 'all(.[]; .outcome == "success")' "$PS525_OUTPUT/compose-cleanup.json"
+          git diff --exit-code
+
+      - name: Retain and clean this invocation's temporary files
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$PS525_OUTPUT"
+          if [[ -n "${PS525_CLI_TMP:-}" ]]; then
+            [[ "$PS525_CLI_TMP" =~ ^/tmp/ps525\.[A-Za-z0-9]{6}$ ]]
+            test "$(cat "$PS525_CLI_TMP/owner")" = "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+            if [[ -f "$PS525_CLI_TMP/compose-projects.jsonl" ]]; then
+              cp "$PS525_CLI_TMP/compose-projects.jsonl" "$PS525_OUTPUT/"
+            fi
+            rm -rf -- "$PS525_CLI_TMP"
+            test ! -e "$PS525_CLI_TMP"
+            printf '%s\n' 'Owned temporary directory removed' > "$PS525_OUTPUT/scratch-cleanup.txt"
+          fi
+
+      - name: Upload the fixture and native receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps525-${{ matrix.pr }}-source-cli-088e5eb0-attempt-${{ github.run_attempt }}
+          path: ${{ env.PS525_OUTPUT }}
+          if-no-files-found: error
