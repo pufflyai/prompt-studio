@@ -133,7 +133,7 @@ export const selectCiTests = (
   const appMatrix = functional.flatMap((priority) =>
     fileRows(
       app.filter((file) => priorityFromFile(file) === priority),
-      priority === "P1" ? 3 : 12,
+      priority === "P1" ? 4 : 12,
       priority,
     ),
   );
