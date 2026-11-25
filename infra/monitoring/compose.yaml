@@ -1,0 +1,72 @@
+name: relay-monitoring
+x-runtime: &runtime
+  restart: unless-stopped
+  cgroup_parent: relay-monitoring.slice
+  logging: { driver: local, options: { max-size: 2m, max-file: '2' } }
+services:
+  gateway:
+    <<: *runtime
+    image: ${MONITORING_IMAGE:?Set the released relay image digest}
+    command: ['bun', 'gateway-main.js']
+    ports: ['127.0.0.1:9460:8080']
+    volumes: ['./secrets/gateway.json:/run/secrets/gateway.json:ro']
+    mem_limit: 48m
+    read_only: true
+    tmpfs: ['/tmp:size=8m']
+  prometheus:
+    <<: *runtime
+    image: prom/prometheus:v3.16.0@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06
+    command: ['--config.file=/etc/prometheus/prometheus.yaml', '--web.enable-remote-write-receiver', '--query.timeout=10s', '--query.max-concurrency=2', '--query.max-samples=1000000', '--storage.tsdb.retention.time=30d', '--storage.tsdb.retention.size=512MB']
+    environment: { GOMEMLIMIT: 64MiB }
+    volumes: ['./prometheus.yaml:/etc/prometheus/prometheus.yaml:ro', './generated:/etc/monitoring:ro', './state/prometheus:/prometheus']
+    mem_limit: 128m
+  loki:
+    <<: *runtime
+    image: grafana/loki:3.7.10@sha256:b43c257ccfc925d4a50b8717cac61a3b51df8c48d01847936057e5c4075a24a7
+    command: ['-config.file=/etc/loki/config.yaml']
+    environment: { GOMEMLIMIT: 64MiB }
+    volumes: ['./loki.yaml:/etc/loki/config.yaml:ro', './state/loki:/loki']
+    mem_limit: 128m
+  alertmanager:
+    <<: *runtime
+    image: prom/alertmanager:v0.35.0@sha256:e638797febd034838eca8b98cdbd46f951e9bf7f178777aa8669167406a9946c
+    command: ['--config.file=/etc/alertmanager/config.yaml', '--storage.path=/alertmanager', '--data.retention=120h']
+    environment: { GOMEMLIMIT: 16MiB }
+    volumes: ['./secrets/alertmanager.yaml:/etc/alertmanager/config.yaml:ro', './state/alertmanager:/alertmanager']
+    mem_limit: 48m
+  observer:
+    <<: *runtime
+    image: ${MONITORING_IMAGE:?Set the released relay image digest}
+    command: ['bun', 'observer-main.js']
+    environment: { METRICS_HOST: 0.0.0.0 }
+    volumes: ['./secrets/observer.json:/run/secrets/observer.json:ro', './secrets/database-ca.pem:/run/secrets/database-ca.pem:ro']
+    mem_limit: 64m
+  probes:
+    <<: *runtime
+    image: ${MONITORING_IMAGE:?Set the released relay image digest}
+    command: ['flock', '-n', '/checkpoint/owner.lock', 'bun', 'probe-main.js']
+    environment: { METRICS_HOST: 0.0.0.0 }
+    volumes: ['./secrets/probe.json:/run/secrets/probe.json:ro', './state/checkpoint:/checkpoint']
+    mem_limit: 80m
+  alloy:
+    <<: *runtime
+    image: grafana/alloy:v1.22.0@sha256:9acc2529bc1edb7f5b2bd801dd8334ebc80c158e3a9e5526ecd7c9a273d43189
+    command: ['run', '--storage.path=/var/lib/alloy/data', '/etc/alloy/config.alloy']
+    environment: { GOMEMLIMIT: 32MiB }
+    env_file: ./secrets/collector.env
+    volumes: ['./probes.alloy:/etc/alloy/config.alloy:ro', './blackbox.yaml:/etc/alloy/blackbox.yaml:ro', './state/alloy:/var/lib/alloy/data']
+    mem_limit: 80m
+  watchdog:
+    <<: *runtime
+    image: ${MONITORING_IMAGE:?Set the released relay image digest}
+    command: ['bun', 'watchdog-main.js']
+    volumes: ['./secrets/watchdog.json:/run/secrets/watchdog.json:ro']
+    mem_limit: 16m
+  tls:
+    <<: *runtime
+    profiles: [public]
+    image: caddy:2.11.2@sha256:25cdc846626b62d05f6b633b9b40c2c9f6ef89b515dc76133cefd920f7dbe562
+    environment: { MONITORING_HOST: '${MONITORING_HOST:?Set the monitoring TLS host}', GOMEMLIMIT: 8MiB }
+    ports: ['80:80', '443:443']
+    volumes: ['./Caddyfile:/etc/caddy/Caddyfile:ro', './state/caddy:/data']
+    mem_limit: 40m

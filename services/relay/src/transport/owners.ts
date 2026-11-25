@@ -17,7 +17,12 @@ export interface RelayOwners {
 
 /** The document store, live hub and limits behind the sync protocol. */
 export const createSyncOwners = (
-  config: ObjectConfig & { databaseUrl: string; assets: ReturnType<typeof createRelayAssets>; limits: RelayLimits },
+  config: ObjectConfig & {
+    databaseUrl: string;
+    assets: ReturnType<typeof createRelayAssets>;
+    limits: RelayLimits;
+    poolMax?: number;
+  },
 ) => {
   const allow = createRateLimit(config.limits.requestsPerSecond, config.limits.requestBurst);
   const sync = createRelaySync(config);

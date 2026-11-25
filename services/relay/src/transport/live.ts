@@ -73,6 +73,16 @@ export const createLiveHub = (limits: RelayLimits, allow: RateLimit, access?: Li
     void access(projectKey, dispatch).catch(() => retire(projectKey));
   };
   return {
+    stats() {
+      let connections = 0;
+      let subscriptions = 0;
+      for (const group of projects.values())
+        for (const connection of group) {
+          connections++;
+          subscriptions += connection.subscriptions.size;
+        }
+      return { connections, subscriptions };
+    },
     retire,
     closeAll() {
       for (const group of projects.values()) for (const connection of group) connection.close();

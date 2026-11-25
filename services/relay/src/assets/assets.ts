@@ -12,6 +12,7 @@ import { writeUploadPart } from "./upload-part";
 
 export interface AssetConfig extends ObjectConfig {
   databaseUrl: string;
+  poolMax?: number;
 }
 
 const removeUploadObjects = async (
@@ -46,6 +47,7 @@ export const createRelayAssets = (config: AssetConfig) => {
     config.databaseUrl,
     (key) => active.get(key)?.abort(new Error("Asset upload was cancelled")),
     (reason) => operations.abort(reason),
+    config.poolMax,
   );
   const identity = async (owner: AssetOwner, id: string) => ({
     ownerId: await fingerprint(assetOwnerSchema.parse(owner)),

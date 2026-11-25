@@ -64,6 +64,7 @@ const desktopPublicMethods = [
   "retainPerformanceCapture",
   "retryRuntime",
   "revealInFinder",
+  "saveFile",
   "setPerformanceMonitoring",
   "setProjectTabs",
   "setStartupAppearance",

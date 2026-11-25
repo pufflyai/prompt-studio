@@ -89,6 +89,56 @@ test("a changed receipt rewrites only its index paths and lookup downloads only 
   expect(JSON.stringify(extended).length).toBeLessThan(256);
 });
 
+test("failed receipt appends drain an in-flight sibling write without publishing a new root", async () => {
+  const f = fixture();
+  const original = receipt("previously-saved");
+  const root = await f.index.append(null, [original]);
+  const releaseWrite = Promise.withResolvers<void>();
+  const failWrite = Promise.withResolvers<void>();
+  const failure = new Error("Receipt page write failed");
+  let leafWrites = 0;
+  let branchWrites = 0;
+  const index = createOrderedReceiptIndex({
+    space,
+    blobs: {
+      ...f.blobs,
+      async put(id, bytes, refs) {
+        if (refs.length) branchWrites++;
+        else if (++leafWrites === 1) await releaseWrite.promise;
+        else if (leafWrites === 2) {
+          failWrite.resolve();
+          throw failure;
+        }
+        await f.blobs.put(id, bytes, refs);
+      },
+    },
+  });
+  const additions = Array.from({ length: 64 }, (_, i) => receipt(`new-save-${i}`));
+  let settled = false;
+  const outcome = index
+    .append(root, additions)
+    .then(
+      () => undefined,
+      (error: unknown) => error,
+    )
+    .finally(() => {
+      settled = true;
+    });
+  try {
+    await failWrite.promise;
+    // Let the failure propagate while the sibling write is still blocked.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(settled).toBe(false);
+    expect(branchWrites).toBe(0);
+  } finally {
+    releaseWrite.resolve();
+    await outcome;
+  }
+  expect(await outcome).toBe(failure);
+  expect(branchWrites).toBe(0);
+  expect(await index.receipt(root, original.decision.epoch, original.decision.operationId)).toEqual(original);
+});
+
 test("an unavailable rooted page blocks lookup instead of proving a save absent", async () => {
   const f = fixture();
   const original = receipt("saved-before-backup");

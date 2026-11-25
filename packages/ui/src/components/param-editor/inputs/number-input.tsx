@@ -4,8 +4,9 @@ import { NumberInputField, NumberInputRoot } from "@/components/primitives/numbe
 import { Slider } from "@/components/primitives/slider";
 import { ParamEditorLabel } from "../param-editor-label";
 import { ParamEditorReadOnlyValue } from "../param-editor-read-only-value";
+import { NumberEditingInput } from "./number-editing-input";
 
-interface NumberInputProps {
+export interface NumberInputProps {
   id: string;
   defaultValue: number;
   name: string;
@@ -13,6 +14,11 @@ interface NumberInputProps {
   min?: number;
   max?: number;
   onChange: (id: string, value: number) => void;
+  /** Opt into immediate preview and one onChange per completed gesture. No debounce applies. */
+  onPreview?: (value: number, interaction: "input" | "slider") => void | Promise<void>;
+  onCancel?: () => void | Promise<void>;
+  mixed?: boolean;
+  unit?: string;
   description: string;
   changeDelay?: number;
   readOnly?: boolean;
@@ -24,7 +30,10 @@ interface NumberInputProps {
   size?: "xs" | "sm";
 }
 
-export const NumberInput = (props: NumberInputProps) => {
+export const NumberInput = (props: NumberInputProps) =>
+  props.onPreview ? <NumberEditingInput {...props} /> : <NumberFormInput {...props} />;
+
+const NumberFormInput = (props: NumberInputProps) => {
   const {
     id,
     defaultValue,

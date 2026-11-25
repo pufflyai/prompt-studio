@@ -73,6 +73,16 @@ const startNewSessionInViewer = async (page: Page, preview: Locator, workspaceNa
   await page.getByRole("menuitem", { name: "New session", exact: true }).click();
 };
 
+const setTerminalNavigationState = async (page: Page, terminalInput: Locator) => {
+  const terminalRows = page.locator(".xterm:visible .xterm-rows");
+  await expect(terminalRows).toContainText(/\S/);
+  await terminalInput.pressSequentially(
+    'export PSTDIO_NAVIGATION_STATE=retained && printf "__before_%s__\\n" "$PSTDIO_NAVIGATION_STATE"',
+  );
+  await terminalInput.press("Enter");
+  await expect(terminalRows).toContainText("__before_retained__");
+};
+
 export const verifyPackagedSessionMenus = async (
   page: Page,
   baseUrl: string,
@@ -175,8 +185,7 @@ export const verifyPackagedSessionMenus = async (
   expect(terminalWidgetId).toBeTruthy();
   const terminalTab = page.locator(`[data-workbench-tab=${JSON.stringify(terminalWidgetId)}]`).getByRole("tab");
   const terminalInput = page.getByRole("textbox", { name: "Terminal input" }).filter({ visible: true });
-  await terminalInput.pressSequentially("export PSTDIO_NAVIGATION_STATE=retained");
-  await terminalInput.press("Enter");
+  await setTerminalNavigationState(page, terminalInput);
   await leaveWorkspace();
   await expect(terminalTab).toBeVisible();
   await expect(bottomHeader.getByRole("tab")).toHaveCount(1);

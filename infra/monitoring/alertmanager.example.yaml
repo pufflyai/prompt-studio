@@ -1,0 +1,21 @@
+route:
+  receiver: operator
+  group_by: [environment, alertname, check]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers: ['alertname="MonitoringAlertingHeartbeat"']
+      receiver: alerting-watchdog
+      group_wait: 0s
+      group_interval: 1m
+      repeat_interval: 1m
+receivers:
+  - name: operator
+    webhook_configs:
+      - url: https://alerts.example.invalid/replace-with-your-receiver
+        send_resolved: true
+  - name: alerting-watchdog
+    webhook_configs:
+      - url: https://watchdog.example.invalid/replace-with-a-separate-alerting-deadman
+        send_resolved: false

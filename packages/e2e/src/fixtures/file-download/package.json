@@ -6,7 +6,7 @@
   "type": "module",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.5.0"
+    "pstdio": "^0.5.0 || ^0.6.0"
   },
   "dependencies": {
     "@pstdio/sdk": "0.48.0"
