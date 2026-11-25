@@ -5,6 +5,7 @@ export const packagedAccountCode = (accountId: string) => `account:${accountId}`
 /** Controlled account credentials bind every relay request to its enrolled account, device and project. */
 export const createPackagedSyncIdentity = () => {
   let earlyAccess = true;
+  let microsoftSignIn = true;
   const devices = new Map<string, { name: string; accountId: string }>();
   const credentials = new Map<string, { deviceId: string; accountId: string }>();
   const accessTokens = new Map<string, { deviceId: string; projectId: string; accountId: string }>();
@@ -67,7 +68,12 @@ export const createPackagedSyncIdentity = () => {
     setEarlyAccess(enabled: boolean) {
       earlyAccess = enabled;
     },
+    setMicrosoftSignIn(enabled: boolean) {
+      microsoftSignIn = enabled;
+    },
     async request(request: Request, path: string, origin: string) {
+      if (path === "/v1/sign-in-providers" && request.method === "GET")
+        return Response.json({ microsoft: microsoftSignIn });
       if (path === "/v1/native-login" && request.method === "GET")
         return new Response("Controlled sign-in. Complete or cancel through the test.", {
           headers: { "content-type": "text/plain; charset=utf-8" },

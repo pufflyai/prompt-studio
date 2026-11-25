@@ -1,7 +1,8 @@
 import { HStack, Input, Stack, Text } from "@chakra-ui/react";
-import type { AccountDevice } from "@pstdio/sdk/extensions";
+import type { AccountDevice, AccountSignInProvider } from "@pstdio/sdk/extensions";
 import { AlertMessage, DeleteConfirmationModal, ScrollArea, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { type ReactNode, useState } from "react";
+import { AccountSignInActions, AccountSignInNotice } from "./account-sign-in-actions";
 import { Button } from "./button";
 import { useCloudContext } from "./cloud-context";
 import { CloudError } from "./cloud-error";
@@ -117,17 +118,17 @@ export const CloudSettings = (props: { projectId?: string }) => {
       await action();
       refresh();
     } catch (cause) {
-      setActionError({ section, message: String(cause) });
+      setActionError({ section, message: cause instanceof Error ? cause.message : String(cause) });
     } finally {
       setBusy(undefined);
     }
   };
-  const signIn = async () => {
-    const login = await client.account.login();
+  const signIn = async (provider: AccountSignInProvider) => {
+    const login = await client.account.login(undefined, provider);
     try {
       await client.navigation.open({ kind: "href", href: login.url });
     } catch (cause) {
-      await client.account.cancelLogin(login.id);
+      await client.account.cancelLogin(login.id).catch(() => {});
       throw cause;
     }
   };
@@ -139,9 +140,6 @@ export const CloudSettings = (props: { projectId?: string }) => {
   const local = data?.sync.state === "local";
   const earlyAccess = account?.features?.relay;
   const signingOut = account?.login && !account.signInRequired;
-  let accountAction = t("status.signIn", "Sign in");
-  if (account?.signInRequired) accountAction = t("status.signInAgain", "Sign in again");
-  if (signingOut) accountAction = t("account.signOut", "Sign out");
   let accessLabel = t("access.comingSoon", "Coming soon");
   if (earlyAccess) accessLabel = t("access.enabled", "Early access enabled");
   if (account?.features === null) accessLabel = t("access.loading", "Checking Cloud access…");
@@ -163,49 +161,43 @@ export const CloudSettings = (props: { projectId?: string }) => {
             <SimpleCardBody>
               <Stack gap="sm" position="relative">
                 <SectionTitle icon="user-round">{t("account.title", "Account")}</SectionTitle>
-                <HStack justify="space-between">
+                <HStack justify="space-between" flexWrap="wrap">
                   <Stack gap="2xs">
                     <Text>
-                      {account?.login?.email ??
-                        (account?.login ? t("status.signedIn", "Signed in") : t("account.signedOut", "Not signed in"))}
+                      {account?.signInRequired
+                        ? t("status.signInAgain", "Sign in again")
+                        : (account?.login?.email ??
+                          (account?.login
+                            ? t("status.signedIn", "Signed in")
+                            : t("account.signedOut", "Not signed in")))}
                     </Text>
                     {data?.signingIn && <CloudLabel data={data} online={online} />}
                   </Stack>
-                  {data?.signingIn ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={!!busy}
-                      onClick={() => void run("account", cancelSignIn)}
-                    >
-                      {t("account.cancelLogin", "Cancel sign-in")}
-                    </Button>
-                  ) : (
+                  {signingOut && !data?.signingIn ? (
                     <Button
                       size="sm"
                       variant="outline"
                       loading={busy === "account"}
-                      disabled={!data || !!busy}
-                      onClick={() =>
-                        void run(
-                          "account",
-                          signingOut
-                            ? async () => {
-                                await client.account.logout();
-                              }
-                            : signIn,
-                        )
-                      }
+                      disabled={!!busy}
+                      onClick={() => void run("account", () => client.account.logout())}
                     >
-                      <CloudIcon name={signingOut ? "log-out" : "user-round-key"} />
-                      {accountAction}
+                      <CloudIcon name="log-out" />
+                      {t("account.signOut", "Sign out")}
                     </Button>
+                  ) : (
+                    <AccountSignInActions
+                      pending={!!data?.signingIn}
+                      disabled={!data}
+                      busy={!!busy}
+                      signIn={(provider) => void run("account", () => signIn(provider))}
+                      cancel={() => void run("account", cancelSignIn)}
+                    />
                   )}
                 </HStack>
-                {data?.loginFailed && !account?.login && (
-                  <CloudError message={t("account.loginFailed", "Sign-in did not complete. Sign in to try again.")} />
-                )}
-                <ActionFailure section="account" error={actionError} onClose={() => setActionError(undefined)} />
+                <AccountSignInNotice
+                  actionError={actionError?.section === "account" ? actionError.message : undefined}
+                  attempt={busy || signingOut ? undefined : account?.loginAttempt}
+                />
               </Stack>
             </SimpleCardBody>
           </SimpleCard>
