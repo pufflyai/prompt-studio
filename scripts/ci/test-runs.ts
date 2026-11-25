@@ -43,7 +43,7 @@ const groupRuns = (id: string, group: TestGroup, priority: TestPriority) => {
   };
   if (group.runner !== "integration")
     return [{ ...base, command: runnerCommand(group.runner, group.files, group.owner, group.componentOwner) }];
-  if (["pstdio-account-manager", "pstdio-relay", "pstdio-psx"].includes(group.owner.name))
+  if (["pstdio-account-manager", "pstdio-relay", "pstdio-relay-monitoring", "pstdio-psx"].includes(group.owner.name))
     return [{ ...base, command: runnerCommand(group.runner, group.files, group.owner) }];
   return group.files.map((file) => ({
     ...base,

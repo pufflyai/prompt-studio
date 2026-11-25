@@ -4,7 +4,8 @@
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/transport/testing.ts"
   },
   "scripts": {
     "build": "bun build src/server.ts src/index.ts --target bun --outdir dist",
