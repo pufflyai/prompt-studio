@@ -22,7 +22,7 @@ type SignalRef = {
   [SIGNAL_MARKER]: { aborted: true; reason: AbortReason } | { aborted: false; onAbort: FunctionRef };
 };
 
-const encodeReason = (reason: unknown): AbortReason => {
+const encodeReason = (reason: unknown) => {
   if (reason instanceof Error) return { error: serializeBackendError(reason) };
   try {
     return { value: structuredClone(reason) };
