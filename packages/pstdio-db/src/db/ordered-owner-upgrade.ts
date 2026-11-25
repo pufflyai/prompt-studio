@@ -179,6 +179,7 @@ export const prepareOrderedOwnerUpgrade = async (db: DbClient, path: string) => 
         keys: ["workbench_id", "extension_id", ...source.keys],
         name: `${name}-owners`,
         archive: name,
+        copyJson: true,
         capture: columns!.legacy,
       },
       async (row) => {

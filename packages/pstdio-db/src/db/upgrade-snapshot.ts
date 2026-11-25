@@ -64,6 +64,38 @@ const snapshotWriter = (path: string) => {
     close: () => file?.close(),
   };
 };
+// These sources already consist of JSON-compatible PostgreSQL scalars. COPY streams
+// one whole row at a time to the Node-backed PGlite volume without a JS round trip.
+// JSON escapes control characters, so these CSV delimiters can never quote a row.
+const copyJsonRows = async (db: DbClient, database: string, source: UpgradeSource, snapshot: string) => {
+  const temporary = join(database, "pstdio-owned-rows.tmp");
+  try {
+    // Recreate the host entry before PGlite reuses its cached filesystem node.
+    await rm(temporary, { force: true });
+    await (await open(temporary, "wx", 0o600)).close();
+    const order = sql.join(
+      source.keys.map((key) => sql.identifier(key)),
+      sql`, `,
+    );
+    await db.execute(sql`COPY (SELECT row_to_json(released)::text FROM ${sql.identifier(source.table)} released
+      ORDER BY ${order}) TO '/pglite/data/pstdio-owned-rows.tmp'
+      WITH (FORMAT csv, DELIMITER E'\\x01', QUOTE E'\\x02', ESCAPE E'\\x02')`);
+    const file = await open(temporary, "r+");
+    try {
+      if (!(await file.stat()).size) return;
+      await file.chmod(0o600);
+      await file.sync();
+    } finally {
+      await file.close();
+    }
+    await rename(temporary, snapshot);
+    await flushDirectory(dirname(snapshot));
+    await flushDirectory(database);
+    return [];
+  } finally {
+    await rm(temporary, { force: true });
+  }
+};
 const captureRows = async (
   db: DbClient,
   source: UpgradeSource & { keepEmpty?: boolean },
@@ -115,7 +147,13 @@ const finishSnapshot = async (snapshot: string, archive?: string) => {
 export const prepareUpgradeSnapshot = async (
   db: DbClient,
   path: string,
-  source: UpgradeSource & { name: string; capture?: boolean; keepEmpty?: boolean; archive?: string | (() => string) },
+  source: UpgradeSource & {
+    name: string;
+    capture?: boolean;
+    copyJson?: boolean;
+    keepEmpty?: boolean;
+    archive?: string | (() => string);
+  },
   restore: (row: Row) => Promise<void>,
   normalize: (row: Row) => Promise<Row> = async (row) => row,
 ) => {
@@ -130,7 +168,10 @@ export const prepareUpgradeSnapshot = async (
       sql`SELECT to_regclass(${`public.${source.table}`})::text AS present`,
     );
     if (!table.present) return;
-    const captured = await captureRows(db, source, snapshot, normalize);
+    const captured =
+      source.copyJson && snapshot
+        ? await copyJsonRows(db, path, source, snapshot)
+        : await captureRows(db, source, snapshot, normalize);
     if (captured === undefined) return;
     memory = captured;
   }
@@ -144,5 +185,5 @@ export const prepareUpgradeSnapshot = async (
     for await (const row of snapshot ? snapshotRows(snapshot) : memory) await restore(row);
     if (!retain) await complete();
   };
-  return Object.assign(resume, { complete });
+  return Object.assign(resume, { complete, captured: !exists });
 };

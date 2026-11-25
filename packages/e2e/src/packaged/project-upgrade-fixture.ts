@@ -595,6 +595,16 @@ export const editUpgradeProject = async (api: StackApi, seed: Seed) => {
   assert.equal(saved.content, `# ${editText}`);
 };
 
+export const verifyFirstUpgradeTicketEdit = async (api: StackApi, seed: Seed) => {
+  const commands = await planner(api, seed.id);
+  const original = await commands.execute<Ticket>("get-ticket", { id: seed.firstTicket });
+  assert.equal(original.id, seed.firstTicket);
+  await editUpgradeProject(api, seed);
+  return async () => {
+    await commands.execute("update-ticket", { id: seed.firstTicket, content: original.content });
+  };
+};
+
 export const assertUpgradeEdit = async (api: StackApi, seed: Seed) => {
   const commands = await planner(api, seed.id);
   const saved = await commands.execute<Ticket>("get-ticket", { id: seed.firstTicket });

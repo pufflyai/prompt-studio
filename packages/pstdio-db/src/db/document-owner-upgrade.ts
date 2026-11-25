@@ -190,6 +190,8 @@ export const prepareDocumentOwnerUpgrade = async (db: DbClient, path: string) =>
         keys: source.ownerKey ? ["workbench_id", "extension_id", ...source.keys] : source.keys,
         name: `${name}-owners`,
         archive: name,
+        // Released resource numbers are deliberately serialized as decimal strings.
+        copyJson: source.table !== storage_resource_identities && source.table !== storage_resource_aliases,
         capture: columns!.legacy,
       },
       async (row) => {

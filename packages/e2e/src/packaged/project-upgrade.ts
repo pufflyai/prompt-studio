@@ -20,6 +20,7 @@ import {
   seedUpgradeProject,
   upgradeApi,
   upgradeCoreProjectTools,
+  verifyFirstUpgradeTicketEdit,
 } from "./project-upgrade-fixture";
 import { assertHomeConflict, assertHomeOpens, checkHomeHistory } from "./project-upgrade-home";
 import { captureUpgradeLayouts } from "./project-upgrade-layout";
@@ -160,28 +161,14 @@ const verifyRestart = async (
 };
 
 const verifyFirstProjectEdit = async (runtime: Runtime, fixture: Seed, start: number, evidence: string) => {
-  const api = upgradeApi(runtime.descriptor);
-  const path = `/projects/${fixture.id}`;
-  const rename = async (name: string) => {
-    const response = await api.raw(path, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name }),
-    });
-    await response.json();
-  };
-  const edited = `${fixture.name} upgraded`;
-  assert.equal((await api.get<{ name: string }>(path)).name, fixture.name);
-  await rename(edited);
-  const saved = await api.get<{ name: string }>(path);
+  const restoreTicket = await verifyFirstUpgradeTicketEdit(upgradeApi(runtime.descriptor), fixture);
   const elapsedMs = performance.now() - start;
-  assert.equal(saved.name, edited);
   await record(evidence, "upgrade-to-usable-project", { elapsedMs, limitMs: projectUpgradeLimitMs });
   assert(
     elapsedMs <= projectUpgradeLimitMs,
     `Upgrade and first saved project edit took ${elapsedMs.toFixed(0)} ms (limit ${projectUpgradeLimitMs} ms)`,
   );
-  await rename(fixture.name);
+  await restoreTicket();
 };
 
 const assertCurrentDatabase = async (home: string) => {
