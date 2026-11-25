@@ -22,7 +22,8 @@ test("Cloud status toggles and opens its app-wide settings with keyboard recover
   await page.locator("footer").getByRole("button", { name: "Prompt Studio Cloud", exact: true }).click();
   await details.getByRole("button", { name: "Cloud settings" }).click();
   const settings = page.frameLocator('iframe[title="Cloud"]');
-  await expect(settings.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
+  await expect(settings.getByRole("button", { name: "Sign in with Google", exact: true })).toBeVisible();
+  await expect(settings.getByRole("button", { name: "Sign in with Microsoft", exact: true })).toBeVisible();
   await expect(settings.getByText("Not signed in", { exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.locator('iframe[title="Cloud"]')).toBeHidden();
