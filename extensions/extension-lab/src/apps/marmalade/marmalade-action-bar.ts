@@ -68,6 +68,7 @@ export const marmaladeActionBar = defineView({
               id: "document",
               label: l10n("marmalade.actions.document", "Document actions"),
               icon: "Ellipsis",
+              includeResourceActions: true,
               items: commands,
             },
           ],

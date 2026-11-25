@@ -1,6 +1,11 @@
 import "@pstdio/ui/style.css";
 import { Box, Text } from "@chakra-ui/react";
-import { defineExtensionView, type GuestHost, type PropsStore } from "@pstdio/sdk/extensions";
+import {
+  defineExtensionView,
+  type ExtensionViewRenderContext,
+  type GuestHost,
+  type PropsStore,
+} from "@pstdio/sdk/extensions";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { type ComponentType, useEffect, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
@@ -25,6 +30,7 @@ interface ExampleStoreConnection {
   ): () => void;
 }
 interface ExampleRootProps {
+  t: ExtensionViewRenderContext<ExampleProps>["t"];
   Component: ComponentType<{ input: ExampleViewInput }>;
   bridge: GuestHost;
   propsStore: PropsStore<ExampleProps>;
@@ -32,7 +38,7 @@ interface ExampleRootProps {
   background?: string;
 }
 const ExampleRoot = (props: ExampleRootProps) => {
-  const { Component, bridge, propsStore, store, background } = props;
+  const { Component, bridge, propsStore, store, background, t } = props;
   const [host] = useState(() => createExampleHost(bridge));
   const [error, setError] = useState<string>();
   const [ready, setReady] = useState(!store);
@@ -54,6 +60,7 @@ const ExampleRoot = (props: ExampleRootProps) => {
     host,
     projectId: hostProps.projectId,
     resource: hostProps.resource ?? hostProps.pageLocation?.resource,
+    t,
   };
   return (
     <ViewContext value={input}>
@@ -77,11 +84,12 @@ export const createExampleView = (
   background?: string,
 ) =>
   defineExtensionView<ExampleProps>({
-    render({ mount, host, propsStore }) {
+    render({ mount, host, propsStore, t }) {
       const root = createRoot(mount);
       root.render(
         <ChakraProvider value={psTheme}>
           <ExampleRoot
+            t={t}
             Component={Component}
             bridge={host}
             propsStore={propsStore}
