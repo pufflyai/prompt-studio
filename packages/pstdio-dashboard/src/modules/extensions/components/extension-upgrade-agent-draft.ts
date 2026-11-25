@@ -21,6 +21,7 @@ const promptFor = async (projectId: string, instanceId: string, review: Extensio
       action: "file",
       id: review.id,
       path,
+      revision: review.revision,
     });
     remaining -= new TextEncoder().encode(JSON.stringify(file)).byteLength;
     if (remaining <= 0) break;

@@ -15,7 +15,8 @@ export const findUpgradeAgentProposal = (messages: SessionMessage[], reviewId: s
     if (message.role !== "assistant") continue;
     const text = message.parts.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("");
     try {
-      if (parseProposal(text).reviewId === reviewId) return text;
+      const proposal = parseProposal(text);
+      if (proposal.reviewId === reviewId) return { text, revision: proposal.revision };
     } catch {
       // Explanatory replies may precede the structured proposal.
     }

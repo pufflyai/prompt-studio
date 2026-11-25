@@ -10,15 +10,16 @@ import {
 } from "../features/extensions/install-extension-source";
 import {
   cancelExtensionSourceReview,
-  type ExtensionReviewSource,
   findExtensionSourceReview,
   getExtensionSourceReview,
   getExtensionSourceReviewFile,
+  refreshExtensionSourceReview,
   saveExtensionSourceReview,
   startExtensionSourceReview,
   useExtensionSourceReview,
 } from "../features/extensions/review-extension-source";
 import { readExtensionReviewRecord } from "../features/extensions/review-extension-source-record";
+import type { ExtensionReviewSource } from "../features/extensions/review-extension-working-copy";
 import type { ExtensionService, ExtensionUpgradeServiceDeps } from "./extension-upgrade-service";
 
 type ExistingInstance = NonNullable<Awaited<ReturnType<ExtensionService["getProjectExtensionInstance"]>>>;
@@ -213,6 +214,18 @@ export const createExtensionUpgradeReviewService = (input: {
 
   return {
     beginReview,
+    refreshReview: async (
+      projectId: string,
+      instanceId: string,
+      id: string,
+      revision: string,
+      draft?: Parameters<typeof refreshExtensionSourceReview>[6],
+    ) => {
+      const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
+      if (!existing) return null;
+      const source = await getReviewSource(projectId, existing);
+      return refreshExtensionSourceReview(reviewHome(), id, projectId, instanceId, source, revision, draft);
+    },
     projectForReview: async (id: string) => (await readExtensionReviewRecord(reviewHome(), id))?.record.projectId,
     saveReview: (
       projectId: string,
@@ -223,8 +236,8 @@ export const createExtensionUpgradeReviewService = (input: {
     ) => saveExtensionSourceReview(reviewHome(), id, projectId, instanceId, revision, resolutions),
     readReview: (projectId: string, instanceId: string, id: string) =>
       getExtensionSourceReview(reviewHome(), id, projectId, instanceId),
-    readReviewFile: (projectId: string, instanceId: string, id: string, path: string) =>
-      getExtensionSourceReviewFile(reviewHome(), id, projectId, instanceId, path),
+    readReviewFile: (projectId: string, instanceId: string, id: string, path: string, revision?: string) =>
+      getExtensionSourceReviewFile(reviewHome(), id, projectId, instanceId, path, revision),
     cancelReview: (projectId: string, instanceId: string, id: string) =>
       cancelExtensionSourceReview(reviewHome(), id, projectId, instanceId),
     applyReview,

@@ -4,10 +4,10 @@ import { apiClient } from "@/features/api-client";
 import { selectProjectExtensions } from "@/features/extensions/project-extension-selectors";
 import { resolveProjectId } from "@/features/projects/resolve-project-id";
 
-const actions = ["begin", "read", "file", "save", "validate", "apply", "cancel"] as const;
+const actions = ["begin", "read", "file", "refresh", "save", "validate", "apply", "cancel"] as const;
 
 export const command = "review <action> <name>";
-export const describe = "Inspect, resolve, or explicitly apply an extension upgrade review";
+export const describe = "Inspect, refresh, resolve, or explicitly apply an extension upgrade review";
 
 type ReviewArgs = {
   action: (typeof actions)[number];
@@ -26,7 +26,7 @@ export const builder = (yargs: Argv) =>
     .positional("name", { type: "string", describe: "Installed extension name or project instance ID" })
     .option("project-id", { type: "string", describe: "Project ID" })
     .option("review-id", { type: "string", describe: "ID returned by the begin operation" })
-    .option("revision", { type: "string", describe: "Revision returned by begin, read, or save" })
+    .option("revision", { type: "string", describe: "Revision returned by the latest review response" })
     .option("path", { type: "string", describe: "Relative file path shown in the review" })
     .option("resolutions", { type: "string", describe: "JSON file containing per-path resolutions to stage or apply" })
     .option("use-published", {
@@ -39,9 +39,18 @@ const requestFor = async (argv: ReviewArgs): Promise<ExtensionUpgradeReviewReque
   if (action === "begin") return { action };
   const id = argv["review-id"];
   if (!id) throw new Error("Supply --review-id from the begin operation.");
-  if (action === "file") return extensionUpgradeReviewRequestSchema.parse({ action, id, path: argv.path });
+  if (action === "file")
+    return extensionUpgradeReviewRequestSchema.parse({ action, id, path: argv.path, revision: argv.revision });
+  if (action === "refresh") {
+    return extensionUpgradeReviewRequestSchema.parse({
+      action,
+      id,
+      revision: argv.revision,
+      resolutions: argv.resolutions ? await Bun.file(argv.resolutions).json() : undefined,
+    });
+  }
   if (action === "apply" || action === "save" || action === "validate") {
-    if (!argv.revision) throw new Error("Supply --revision from the latest begin, read, or save operation.");
+    if (!argv.revision) throw new Error("Supply --revision from the latest review response.");
     const resolutions = argv.resolutions ? await Bun.file(argv.resolutions).json() : [];
     return extensionUpgradeReviewRequestSchema.parse({
       action,

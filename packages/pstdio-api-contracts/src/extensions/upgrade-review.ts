@@ -28,6 +28,7 @@ export const extensionUpgradeReviewSchema = z.object({
   revision: z.string(),
   changedPaths: staleExtensionUpgradeReviewDetailsSchema.shape.changedPaths.optional(),
   resolutions: z.array(extensionUpgradeReviewResolutionSchema),
+  previousResolutions: z.array(extensionUpgradeReviewResolutionSchema).optional(),
   changes: z.array(
     z.object({
       path: resolutionPath,
@@ -48,7 +49,13 @@ export const extensionUpgradeReviewFileSchema = z.object({
 export const extensionUpgradeReviewRequestSchema = z.discriminatedUnion("action", [
   z.strictObject({ action: z.literal("begin") }),
   z.strictObject({ action: z.literal("read"), id: reviewId }),
-  z.strictObject({ action: z.literal("file"), id: reviewId, path: resolutionPath }),
+  z.strictObject({ action: z.literal("file"), id: reviewId, path: resolutionPath, revision: z.string().optional() }),
+  z.strictObject({
+    action: z.literal("refresh"),
+    id: reviewId,
+    revision: z.string(),
+    resolutions: z.array(extensionUpgradeReviewResolutionSchema).max(20_000).optional(),
+  }),
   z.strictObject({
     action: z.literal("save"),
     id: reviewId,
@@ -74,6 +81,7 @@ export const extensionUpgradeReviewRequestSchema = z.discriminatedUnion("action"
 export const extensionUpgradeReviewResponseSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("begin"), review: extensionUpgradeReviewSchema }),
   z.object({ action: z.literal("read"), review: extensionUpgradeReviewSchema }),
+  z.object({ action: z.literal("refresh"), review: extensionUpgradeReviewSchema }),
   z.object({ action: z.literal("file"), file: extensionUpgradeReviewFileSchema }),
   z.object({ action: z.literal("save"), review: extensionUpgradeReviewSchema }),
   z.object({ action: z.literal("cancel") }),

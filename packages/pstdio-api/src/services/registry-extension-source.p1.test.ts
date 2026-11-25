@@ -225,6 +225,8 @@ test("reviews an overlapping edit against the original release and applies user-
   const original = await readFile(path, "utf8");
   const local = original.replace('title:"Version"', 'title:"My version command"');
   await writeFile(path, local);
+  const manifest = join(installed.targetPath, "package.json");
+  await writeFile(manifest, JSON.stringify({ ...(await Bun.file(manifest).json()), description: "Local description" }));
   await writeFile(join(installed.targetPath, "local-notes.txt"), "local notes");
   await f.publish("0.45.2");
   const service = f.upgradeService(recorded);
@@ -247,7 +249,10 @@ test("reviews an overlapping edit against the original release and applies user-
   ).toThrow("Resolve every conflict");
   expect(await readFile(path, "utf8")).toBe(local);
   const text = difference.incoming!.replace('title:"Version"', 'title:"My version command"');
-  const choices = [{ path: "extension.ts", kind: "text" as const, text }];
+  const choices = [
+    { path: "extension.ts", kind: "text" as const, text },
+    { path: "package.json", kind: "incoming" as const },
+  ];
   const saved = (await reviews.saveReview("test-project", "test-instance", review.id, review.revision, choices))!;
   const resumed = await f.upgradeService(recorded).reviews.beginReview("test-project", "test-instance");
   expect(resumed).toMatchObject({ id: saved.id, revision: saved.revision, resolutions: choices });
@@ -269,20 +274,43 @@ test("reviews an overlapping edit against the original release and applies user-
     resolutions: choices,
     changedPaths: ["extension.ts"],
   });
-  await writeFile(path, local);
-  expect(await reviews.validateReview("test-project", "test-instance", review.id, saved.revision, choices)).toEqual({
-    valid: true,
-    revision: saved.revision,
+  await f.publish("0.45.3");
+  f.requests.length = 0;
+  const refreshed = await reviews.refreshReview("test-project", "test-instance", review.id, saved.revision);
+  expect(refreshed).toMatchObject({
+    id: review.id,
+    incomingVersion: "0.45.2",
+    resolutions: [choices[1]],
+    previousResolutions: [choices[0]],
   });
-  expect(await readFile(path, "utf8")).toBe(local);
-  const applied = await reviews.applyReview("test-project", "test-instance", review.id, choices, {
-    revision: saved.revision,
+  expect(refreshed?.revision).not.toBe(saved.revision);
+  expect(refreshed?.changedPaths).toBeUndefined();
+  expect(f.requests).toEqual([]);
+  expect(await reviews.readReviewFile("test-project", "test-instance", review.id, "extension.ts")).toMatchObject({
+    local: `${local}\n// A later edit`,
+    incoming: difference.incoming,
+  });
+  const resumedRefresh = await f.upgradeService(recorded).reviews.beginReview("test-project", "test-instance");
+  expect(resumedRefresh).toEqual(refreshed);
+  await expect(
+    reviews.applyReview("test-project", "test-instance", review.id, choices, { revision: saved.revision }),
+  ).rejects.toThrow("Another view");
+  const merged = `${text}\n// A later edit`;
+  const updatedChoices = [{ path: "extension.ts", kind: "text" as const, text: merged }, choices[1]!];
+  expect(
+    await reviews.validateReview("test-project", "test-instance", review.id, refreshed!.revision, updatedChoices),
+  ).toEqual({
+    valid: true,
+    revision: refreshed!.revision,
+  });
+  expect(await readFile(path, "utf8")).toBe(`${local}\n// A later edit`);
+  const applied = await reviews.applyReview("test-project", "test-instance", review.id, updatedChoices, {
+    revision: refreshed!.revision,
   });
   expect(applied?.installedSource.version).toBe("0.45.2");
   expect(await reviews.readReview("test-project", "test-instance", review.id)).toBeNull();
-  expect(await readFile(path, "utf8")).toBe(text);
+  expect(await readFile(path, "utf8")).toBe(merged);
   expect(await readFile(join(installed.targetPath, "local-notes.txt"), "utf8")).toBe("local notes");
-  await f.publish("0.45.3");
   await expectRejection(
     f.upgrade({
       source_kind: "registry",
@@ -290,7 +318,7 @@ test("reviews an overlapping edit against the original release and applies user-
       version: "0.45.2",
     }),
   ).toThrow("local changes");
-  expect(await readFile(path, "utf8")).toBe(text);
+  expect(await readFile(path, "utf8")).toBe(merged);
 });
 
 test("prefetches source and runtime without installing, then reuses the exact verified pair", async () => {
@@ -390,12 +418,22 @@ test("switches one project to a separate published provider and preserves the lo
   expect(stale.status).toBe(409);
   expect(await stale.json()).toMatchObject({ details: { changedPaths: ["notes.txt"] } });
   expect(await readFile(localNote, "utf8")).toBe("edited during review");
-  await writeFile(localNote, "local only");
+  const refreshedResponse = await post(reviewPath, { action: "refresh", id: review.id, revision: review.revision });
+  expect(refreshedResponse.status).toBe(200);
+  const { review: refreshed } = (await refreshedResponse.json()) as { review: typeof review };
+  expect(refreshed.revision).not.toBe(review.revision);
+  const obsoleteRead = await post(reviewPath, {
+    action: "file",
+    id: review.id,
+    path: "notes.txt",
+    revision: review.revision,
+  });
+  expect(obsoleteRead.status).toBe(409);
   const validated = await post(reviewPath, {
     action: "validate",
     id: review.id,
-    revision: review.revision,
-    resolutions: review.changes
+    revision: refreshed.revision,
+    resolutions: refreshed.changes
       .filter(({ status }) => status === "conflict")
       .map(({ path }) => ({ path, kind: path === "notes.txt" ? "local" : "incoming" })),
   });
@@ -404,11 +442,11 @@ test("switches one project to a separate published provider and preserves the lo
   expect((await post(reviewPath, { action: "apply", id: review.id, resolutions: [], usePublished: true })).status).toBe(
     400,
   );
-  const applied = await post(reviewPath, usePublished);
+  const applied = await post(reviewPath, { ...usePublished, revision: refreshed.revision });
   expect(await applied.json()).toMatchObject({
     upgrade: { changed: true, extension: { version: "0.45.2", enabled: true } },
   });
   expect((await service.getProjectExtensionInstance(primary, local.instance.id))?.instance.enabled).toBe(false);
   expect((await service.getProjectExtensionInstance(secondary, other.instance.id))?.instance.enabled).toBe(true);
-  expect(await readFile(localNote, "utf8")).toBe("local only");
+  expect(await readFile(localNote, "utf8")).toBe("edited during review");
 });
