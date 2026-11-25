@@ -16,6 +16,8 @@ Awaiting the operation with ordinary promise handlers before asserting the error
 
 The extension backend worker test also hangs while asserting the failure returned by a worker command. The [scheduled nightly](https://github.com/pufflyai/prompt-studio/actions/runs/45537048760/job/138951129087) and [manual nightly](https://github.com/pufflyai/prompt-studio/actions/runs/45581787680/job/139100404900) both reach the existing 15-second test deadline. A [focused Windows run with IPC tracing](https://github.com/pufflyai/prompt-studio/actions/runs/45618695298) shows the worker sends the failure and the parent handles neither the notification nor the failure before teardown.
 
+A later [nightly Windows lane](https://github.com/pufflyai/prompt-studio/actions/runs/45645266858/job/139322930385) reached the existing two-second deadline while the callback lifecycle suite awaited two worker IPC rejections. These cases check that the host releases a pending iterator after an unreadable result and closes handles exactly once after a failed reply.
+
 ## Temporary decision
 
 The relay fixture and extension backend worker tests await the rejection first, then check its type and message synchronously. The worker test also checks that the host strips the reserved error code from the worker's response. No timeout, process behavior, negative control, or cancellation check changes. Other rejection assertions remain unchanged unless they reproduce the same problem.
