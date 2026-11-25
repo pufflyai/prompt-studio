@@ -1,4 +1,5 @@
 import { statSync } from "node:fs";
+import { closeBackendWorkers } from "./backend-process/backend-workers";
 import { loadExtensionPackage } from "./loader";
 import { stopExtensionPreparation } from "./preparation-client";
 import { acceptPreparedRevision, prepareExtensionRevision, readAcceptedRevision } from "./prepared-revision";
@@ -59,7 +60,7 @@ try {
   process.exitCode = 1;
 } finally {
   try {
-    await phase("stop-workers", stopExtensionPreparation);
+    await phase("stop-workers", () => Promise.all([stopExtensionPreparation(), closeBackendWorkers()]));
   } catch (error) {
     observation.error = String(error);
     process.exitCode = 1;

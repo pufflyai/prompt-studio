@@ -5,6 +5,8 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createTestApp } from "../../test-utils/create-test-app";
 import type { AppBindings } from "../../types";
+import { writeExtension } from "../extensions/default-extensions-test-fixtures";
+import { loadExtensionSource } from "../extensions/extension-runtime";
 
 let app: OpenAPIHono<AppBindings>;
 let closeApp: () => Promise<void>;
@@ -73,4 +75,21 @@ test("an explicit runtime diagnostic read returns numeric owner counters and hea
   expect(reading.heapUsedBytes).toBeGreaterThan(0);
   expect(reading.externalBytes).toBeGreaterThanOrEqual(0);
   expect(reading.counters).toMatchObject({ activeSessions: 0, retainedMessages: 0, queuedEvents: 0 });
+});
+
+test("extension imports count worker definition reads, not loads the stored definition answers", async () => {
+  const previousHome = process.env.PSTDIO_HOME;
+  process.env.PSTDIO_HOME = join(tempRoot, "home");
+  const imports = async () => (await (await app.request("/diagnostics/performance")).json()).counters.extensionImports;
+  try {
+    const source = join(tempRoot, "extensions", "counted");
+    writeExtension(source, "counted");
+    const before = await imports();
+    await loadExtensionSource(source);
+    await loadExtensionSource(source);
+    expect((await imports()) - before).toBe(1);
+  } finally {
+    if (previousHome === undefined) delete process.env.PSTDIO_HOME;
+    else process.env.PSTDIO_HOME = previousHome;
+  }
 });

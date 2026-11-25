@@ -37,7 +37,7 @@ export default {
           command: [process.execPath, "-e", script, params.marker],
           envFromHost: ["EXTENSION_AGENT_KEY"],
         });
-        return { revision: ${revision}, workerSees: process.env.EXTENSION_AGENT_KEY ?? null, stdout: result.stdout.trim() };
+        return { revision: ${revision}, stdout: result.stdout.trim() };
       },
     },
   ],
@@ -77,7 +77,7 @@ beforeAll(async () => {
       publisher: "example",
       main: "./extension.ts",
       engines: { pstdio: `^${EXTENSION_API_VERSION}` },
-      pstdio: { backendRuntime: "process", processEnvironment: ["EXTENSION_AGENT_KEY", "EXTENSION_OTHER_KEY"] },
+      pstdio: { processEnvironment: ["EXTENSION_AGENT_KEY", "EXTENSION_OTHER_KEY"] },
     }),
   );
   await writeFile(join(source, "extension.ts"), entry(1));
@@ -168,7 +168,7 @@ describe("extension process environment permissions", () => {
     expect((await grant({ names: ["EXTENSION_AGENT_KEY"], sourceIdentity: "earlier-source" })).status).toBe(409);
   });
 
-  test("granting forwards the selected value to the child only", async () => {
+  test("granting forwards the selected value to the child, and its output never carries it", async () => {
     const { sourceIdentity } = await read();
     const response = await grant({ names: ["EXTENSION_AGENT_KEY"], sourceIdentity });
     expect(response.status).toBe(200);
@@ -177,7 +177,7 @@ describe("extension process environment permissions", () => {
     const marker = join(root, "granted");
     const { body, text } = await startAgent(marker);
 
-    expect(body.outcome).toMatchObject({ ok: true, value: { revision: 1, workerSees: null } });
+    expect(body.outcome).toMatchObject({ ok: true, value: { revision: 1, stdout: "[Redacted]" } });
     expect(existsSync(marker)).toBe(true);
     expect(text).not.toContain(AGENT_KEY);
   });

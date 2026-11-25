@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { hashRevisionInputs, hashRevisionInputsAsync, type RevisionHashInput } from "./revision-file-hash";
 
 test("async revision hashing preserves byte order across cached, prefetched and large files", async () => {
@@ -34,12 +35,12 @@ test("a failed dependency read rejects after the other bounded reads settle", as
   const file = join(root, "present.bin");
   writeFileSync(file, "present");
   try {
-    await expect(
+    await expectRejection(
       hashRevisionInputsAsync(
         [{ file: join(root, "missing.bin") }, ...Array.from({ length: 12 }, () => ({ file }))],
         new Map(),
       ),
-    ).rejects.toThrow();
+    ).toThrow();
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

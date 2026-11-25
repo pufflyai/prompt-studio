@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { loadExtensionPackage, readAcceptedRevision } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { folderProjectInput } from "../../test-utils/folder-project-input";
 import type { AppBindings } from "../../types";
@@ -181,6 +182,82 @@ describe("project extension runtime snapshot integration", () => {
     expect(commands.commands).toContainEqual(
       expect.objectContaining({ id: "pstdio.lab.command.ping", title: "Ping v2" }),
     );
+  });
+
+  test("reloading unchanged source runs the next call with fresh module state", async () => {
+    writeFileSync(
+      join(sourcePath, "extension.ts"),
+      `let calls = 0;
+      export default {
+        commands: [{ id: "count", ref: { kind: "command", id: "count" }, title: "Count", run: () => ++calls }],
+      };`,
+    );
+    await handle.deps.extensionService.reloadInstalledSourceBySourcePath(sourcePath);
+    const count = async () => {
+      const response = await app.request(
+        `/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.count/execute`,
+        { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ params: {} }) },
+      );
+      expect(response.status).toBe(200);
+      return (await response.json()).outcome.value as number;
+    };
+    expect(await count()).toBe(1);
+    expect(await count()).toBe(2);
+
+    await handle.deps.extensionService.reloadInstalledSourceBySourcePath(sourcePath);
+    expect(await count()).toBe(1);
+  });
+
+  test("reloading one folder leaves the shared worker available to another folder", async () => {
+    const body = `let calls = 0;
+      export default { commands: [{ id: "ping", ref: { kind: "command", id: "ping" }, title: "Ping",
+        run: () => ++calls }] };`;
+    writeFileSync(join(sourcePath, "extension.ts"), body);
+    await handle.deps.extensionService.reloadInstalledSourceBySourcePath(sourcePath);
+    const commandPath = `/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.ping/execute`;
+    expect((await createJson(commandPath, { params: {} })).outcome.value).toBe(1);
+
+    const other = writeExtension(join(tempRoot, "other"), "Ping");
+    writeFileSync(join(other, "extension.ts"), body);
+    const diagnostics: Parameters<typeof loadExtensionPackage>[1] = [];
+    const loaded = await loadExtensionPackage({ path: other }, diagnostics);
+    expect(diagnostics).toEqual([]);
+    expect(loaded!.preparedRevision!.id).toBe((await readAcceptedRevision(sourcePath))!.id);
+    const [{ run }] = loaded!.definition.commands!;
+    expect(await run({} as never, {})).toBe(2);
+
+    await handle.deps.extensionService.reloadInstalledSourceBySourcePath(sourcePath);
+    expect(await run({} as never, {})).toBe(3);
+    expect((await createJson(commandPath, { params: {} })).outcome.value).toBe(1);
+
+    writeExtension(tempRoot, "Ping v2");
+    await handle.deps.extensionService.reloadInstalledSourceBySourcePath(sourcePath);
+    expect((await createJson(commandPath, { params: {} })).outcome.value).toEqual({ ok: true });
+    expect(await run({} as never, {})).toBe(4);
+  });
+
+  test("reload replaces the cached runtime wrappers after a definition mismatch", async () => {
+    const titlePath = join(tempRoot, "title.txt");
+    writeFileSync(titlePath, "Before");
+    writeFileSync(
+      join(sourcePath, "extension.ts"),
+      `import { readFileSync } from "node:fs";
+        const title = readFileSync(${JSON.stringify(titlePath)}, "utf8");
+        export default { commands: [{ id: "ping", ref: { kind: "command", id: "ping" }, title,
+          run: () => title }] };`,
+    );
+    await handle.deps.extensionService.reloadInstalledSourceBySourcePath(sourcePath);
+    const before = (await readAcceptedRevision(sourcePath))!.id;
+    await handle.deps.extensionRuntimeCatalog.get(projectId);
+    writeFileSync(titlePath, "After");
+
+    const commandPath = `/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.ping/execute`;
+    expect((await createJson(commandPath, { params: {} })).outcome.reason).toContain("different definition");
+
+    const reload = await handle.deps.extensionService.reloadInstalledSourceBySourcePath(sourcePath);
+    expect(reload.installedSource.status).toBe("loaded");
+    expect((await readAcceptedRevision(sourcePath))!.id).toBe(before);
+    expect((await createJson(commandPath, { params: {} })).outcome).toMatchObject({ ok: true, value: "After" });
   });
 
   test("toggling extension enablement invalidates only that project's snapshot", async () => {

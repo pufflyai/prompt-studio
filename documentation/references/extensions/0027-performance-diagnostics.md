@@ -52,7 +52,7 @@ These are gaps in the published API, not choices of the Performance Monitoring e
 
 ## Backend operation instrumentation
 
-The host publishes bounded operation metadata to the process-local Node `diagnostics_channel` named `pstdio.diagnostics.operation` while it has subscribers. Backend monitoring extensions may subscribe using Node's public diagnostics-channel API. Subscriptions belong to the explicit diagnostic capture and must be released when it ends. Opening a monitoring view does not subscribe. These backend events are separate from the device snapshot and its sanitized recordings.
+The host publishes bounded operation metadata to the process-local Node `diagnostics_channel` named `pstdio.diagnostics.operation` while it has subscribers. Extension backends run in their own workers, which do not see this channel. A first-party monitoring extension collects these events, together with a profile of the API process, through [`ctx.diagnostics.capture`](0003-command-and-process-api.md#host-diagnostics). The capture subscribes only while it runs. Opening a monitoring view does not subscribe. These backend events are separate from the device snapshot and its sanitized recordings.
 
 The event has `kind`, `startedAt` in UTC, and `durationMs`. Host database events also have `id`, optional `parentId`, an optional `origin` with `kind`, `name`, `id` and `projectId`, and a bounded `caller` stack. Command origins identify the canonical command, request origins use the matched route pattern, and instrumented background owners use a static task name. Capture the origin before asynchronous queueing so concurrent callers retain their own identity.
 
@@ -60,6 +60,6 @@ The event has `kind`, `startedAt` in UTC, and `durationMs`. Host database events
 - `database.execute` includes protocol-result `bytes` and `failed`. Its `parentId` links engine work to its enclosing query when the query API supplies that context.
 - `chat.encode` includes a stable `id`, a `complete` flag, `sessionId`, `revision`, `logicalBytes`, `wireBytes`, `fragments` and `failed`. Its duration measures the chat-event generator's synchronous work. It excludes awaited transport delivery. Cumulative progress is emitted before every fragment yield, and the final update marks completion or failure. Retain the latest update per ID to include encoding work still awaiting delivery. Conversation contents are excluded.
 
-Subscribers must bound their own retention and handle malformed events without throwing. The Performance extension's CPU captures retain the latest 60 seconds subject to a 1,000-event and 512 KiB limit and export the dropped-event count. Raw backend evidence can include source paths and runtime identifiers and stays in its protected local capture store. See the [armed recording commands](../../../extensions/pstdio-performance/README.md#for-agents) for collecting and exporting a spike.
+Subscribers must bound their own retention and handle malformed events without throwing. Host captures retain the latest 60 seconds subject to a 1,000-event and 512 KiB limit and export the dropped-event count. Raw backend evidence can include source paths and runtime identifiers and stays in its protected local capture store. See the [armed recording commands](../../../extensions/pstdio-performance/README.md#for-agents) for collecting and exporting a spike.
 
-*Updated at: 2026-11-18*
+*Updated at: 2026-11-23*

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { createArtifactMount, createFileMount, resolveArtifactMountRoot } from "./artifact-mount";
 
 const tempDirs: string[] = [];
@@ -140,7 +141,7 @@ describe("createFileMount", () => {
     await mount.updateText("note.md", "short");
     expect(await mount.readText("note.md")).toBe("short");
     await mount.delete("note.md");
-    await expect(mount.updateText("note.md", "stale draft")).rejects.toThrow();
+    await expectRejection(mount.updateText("note.md", "stale draft")).toThrow();
     expect(await mount.exists("note.md")).toBe(false);
   });
 
@@ -170,10 +171,10 @@ describe("createFileMount", () => {
   test("rejects paths escaping the mount root", async () => {
     const mount = createFileMount(createTempDir());
 
-    await expect(mount.writeText("../evil.md", "x")).rejects.toThrow(/escapes/);
-    await expect(mount.writeText("/abs.md", "x")).rejects.toThrow(/escapes/);
-    await expect(mount.writeText("C:/evil.md", "x")).rejects.toThrow(/escapes/);
-    await expect(mount.writeText("nested\\evil.md", "x")).rejects.toThrow(/escapes/);
+    await expectRejection(mount.writeText("../evil.md", "x")).toThrow(/escapes/);
+    await expectRejection(mount.writeText("/abs.md", "x")).toThrow(/escapes/);
+    await expectRejection(mount.writeText("C:/evil.md", "x")).toThrow(/escapes/);
+    await expectRejection(mount.writeText("nested\\evil.md", "x")).toThrow(/escapes/);
   });
 
   test("rejects existing symlinks that leave the mount root", async () => {
@@ -191,10 +192,10 @@ describe("createFileMount", () => {
     }
     const mount = createFileMount(root);
 
-    await expect(mount.readText("escape/secret.txt")).rejects.toThrow(/escapes/);
-    await expect(mount.writeText("escape/secret.txt", "changed")).rejects.toThrow(/escapes/);
-    await expect(mount.list("escape/**")).rejects.toThrow(/escapes/);
-    await expect(mount.listDirs("escape")).rejects.toThrow(/escapes/);
+    await expectRejection(mount.readText("escape/secret.txt")).toThrow(/escapes/);
+    await expectRejection(mount.writeText("escape/secret.txt", "changed")).toThrow(/escapes/);
+    await expectRejection(mount.list("escape/**")).toThrow(/escapes/);
+    await expectRejection(mount.listDirs("escape")).toThrow(/escapes/);
     expect(await Bun.file(join(outside, "private/secret.txt")).text()).toBe("secret");
   });
 
@@ -231,8 +232,8 @@ describe("createFileMount", () => {
   test("list rejects a pattern whose literal prefix escapes the mount root", async () => {
     const mount = createFileMount(createTempDir());
 
-    await expect(mount.list("../../etc/**")).rejects.toThrow(/escapes/);
-    await expect(mount.list("/etc/**")).rejects.toThrow(/escapes/);
+    await expectRejection(mount.list("../../etc/**")).toThrow(/escapes/);
+    await expectRejection(mount.list("/etc/**")).toThrow(/escapes/);
   });
 });
 

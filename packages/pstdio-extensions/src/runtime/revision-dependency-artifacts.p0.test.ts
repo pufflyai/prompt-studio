@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../test-utils/expect-rejection";
 import type { collectRevisionDependencies } from "./revision-dependencies";
 import { copyRevisionDependencies } from "./revision-dependency-artifacts";
 import { revisionSnapshotLocation, revisionSnapshotPath } from "./revision-snapshot-path";
@@ -47,7 +48,7 @@ for (const conflict of [false, true]) {
       const copy = () =>
         copyRevisionDependencies(packages, source, revisionSnapshotPath(generation, source), generation);
       if (conflict) {
-        await expect(copy()).rejects.toThrow();
+        await expectRejection(copy()).toThrow();
         return;
       }
       await copy();

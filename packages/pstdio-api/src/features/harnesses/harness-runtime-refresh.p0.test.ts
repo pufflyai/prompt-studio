@@ -1,16 +1,20 @@
-import { afterEach, beforeEach, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { acceptPreparedRevision, prepareExtensionRevision } from "pstdio-extensions";
+import { createExtensionProbe } from "../../test-utils/extension-probe";
 import { createProjectExtensionRuntimeCatalog } from "../extensions/project-extension-runtime-catalog";
 import { createHarnessRegistryService } from "./harness-registry-service";
 
 let root: string;
 let previousPstdioHome: string | undefined;
 const released: string[] = [];
-(globalThis as { __harnessRefreshReleased?: string[] }).__harnessRefreshReleased = released;
+// The harness runs in a worker; its dispose reports the released project through the probe.
+const probe = createExtensionProbe();
+probe.answer((projectId) => released.push(projectId as string));
+afterAll(() => probe.stop());
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "pstdio-harness-refresh-"));
@@ -50,7 +54,7 @@ export default {
     listModels: () => [],
     start: run,
     resume: run,
-    dispose: (ctx) => void globalThis.__harnessRefreshReleased.push(ctx.projectId),
+    dispose: async (ctx) => void ${probe.call("ctx.projectId")},
   }],
 };`,
   );

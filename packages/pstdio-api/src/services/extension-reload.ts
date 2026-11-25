@@ -6,6 +6,7 @@ import {
   type PreparedExtensionRevision,
   preparedRevisionState,
   readAcceptedRevision,
+  restartBackendWorker,
 } from "pstdio-extensions";
 import { checkCandidateSource } from "../features/extensions/extension-candidate";
 import { runExtensionPreparation } from "../features/extensions/extension-preparation";
@@ -117,6 +118,8 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
       });
       adopted = result.loaded.preparedRevision;
     }
+    // An unchanged revision still needs fresh module state for the reloaded source.
+    if (adopted && previous?.id === adopted.id) await restartBackendWorker(existing.source_path, adopted);
     await deps.notifyInstalledSourcesChanged(existing.source_path, { loaded: result.loaded, loadKey });
     const refreshed = await deps.installedExtensionSourcesService.get(existing.id);
     if (!refreshed) throw new Error(`Installed extension not found: ${existing.id}`);

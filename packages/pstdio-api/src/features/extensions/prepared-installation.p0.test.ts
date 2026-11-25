@@ -736,7 +736,7 @@ test.each([
 });
 
 test("one worker job prepares two default installs while either evaluation is waiting", async () => {
-  const { source } = fixture();
+  const { source, root } = fixture();
   const entered = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
   let attempts = 0;
@@ -751,9 +751,16 @@ test("one worker job prepares two default installs while either evaluation is wa
   });
   const install = createExtensionInstallBatch(2);
   writeFileSync(join(source, "extension.ts"), `await fetch(${JSON.stringify(gate.url.href)}); export default {};`);
+  // Identical content shares one evaluation, so the second install gets its own revision.
+  const other = join(root, "other");
+  cpSync(source, other, { recursive: true });
+  writeFileSync(
+    join(other, "extension.ts"),
+    `await fetch(${JSON.stringify(gate.url.href)}); export default {}; // other`,
+  );
   const prepared = Promise.all([
     install({ source, installName: "first", skipInstall: true }),
-    install({ source, installName: "second", skipInstall: true }),
+    install({ source: other, installName: "second", skipInstall: true }),
   ]);
   try {
     await entered.promise;

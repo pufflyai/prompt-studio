@@ -47,7 +47,8 @@ test("prepares the workbench while its runtime starts and reveals it only after 
   const startup = startWorkbench(
     {
       showLifecycle: async () => {},
-      prepareWorkbench: async (descriptor: ManagedRuntime["descriptor"]) => {
+      prepareWorkbench: async (descriptor, runtimeReady) => {
+        expect(runtimeReady).toBe(ready.promise);
         expect(descriptor).toBe(runtime.descriptor);
         prepared = true;
       },

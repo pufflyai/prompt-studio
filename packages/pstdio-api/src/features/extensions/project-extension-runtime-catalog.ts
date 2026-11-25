@@ -7,6 +7,7 @@ import type { createWorkspaceService } from "../../services/workspace-service";
 import { type ExtensionStorageIndexService, installExtensionStorageIndexes } from "./extension-storage-indexes";
 import { migrateRuntimeExtensionFiles } from "./migrate-runtime-extension-files";
 import {
+  bindAdoptedSourceRevisions,
   ExtensionRuntimeGenerationStaleError,
   ExtensionRuntimeLoadFailedError,
   ExtensionRuntimeProjectMissingError,
@@ -117,7 +118,8 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
 
     await installExtensionStorageIndexes(deps.extensionStorageService, projectId, runtime, validate);
 
-    return { enabledSources, project, runtime };
+    const sourcesWithAdoption = bindAdoptedSourceRevisions(enabledSources, runtime, cachedSources);
+    return { enabledSources: sourcesWithAdoption, project, runtime };
   };
 
   const discardStaleLoad = (context: LoadContext) => {
@@ -281,7 +283,8 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
 
     if (input.sourcePath) {
       const sourcePath = canonicalSourcePath(input.sourcePath);
-      sources.recheck(sourcePath);
+      if (input.reason === "source_reloaded") sources.reload(sourcePath);
+      else sources.recheck(sourcePath);
       for (const [projectId, state] of states) {
         if (projectId !== input.projectId && !state.knownSourcePaths.has(sourcePath)) continue;
         markDirty(state, input.reason);

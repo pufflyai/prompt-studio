@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createProjectsDBService } from "pstdio-db";
+import { closeBackendWorkers } from "pstdio-extensions";
 import { artifactFilesFixture } from "../../../services/shared-files/artifact-files.fixture";
 import { createTestExtensionProcessOwners } from "../../../test-utils/create-test-extension-process-owners";
 import { EventBus } from "../../sync/event-bus";
@@ -13,7 +14,6 @@ import { createArtifactMountWatchService } from "./watch-service";
 import { createArtifactMountWriteLedger } from "./write-ledger";
 
 type HookCall = { mount: string; paths: string[]; projectId: string; workspaceId?: string };
-type WatchState = { calls: HookCall[]; hookGate?: Promise<void> };
 
 const services: Array<{ dispose: () => Promise<void> }> = [];
 const cleanups: Array<() => void | Promise<void>> = [];
@@ -21,8 +21,8 @@ const cleanups: Array<() => void | Promise<void>> = [];
 afterEach(async () => {
   // Windows cannot remove a folder while a watch handle on it is open.
   for (const service of services.splice(0)) await service.dispose();
+  await closeBackendWorkers();
   for (const cleanup of cleanups.splice(0)) await cleanup();
-  delete (globalThis as Record<string, unknown>).__artifactWatchState;
 });
 
 const tempDir = (prefix: string) => {
@@ -39,9 +39,12 @@ const waitFor = async (check: () => boolean, timeoutMs = 3_000) => {
   }
 };
 
-// The hook writes into the mount it watches. Without echo suppression, it would run forever.
-const writeDashboardsExtension = () => {
+// The hook writes into the mount it watches. Without echo suppression, it would run forever. It runs
+// in a worker process, so it reports each call to a file and waits while the gate file exists.
+const writeDashboardsExtension = (stateDir: string) => {
   const sourcePath = tempDir("pstdio-artifact-watch-ext-");
+  const callsPath = join(stateDir, "calls.jsonl");
+  const gatePath = join(stateDir, "gate");
   writeFileSync(
     join(sourcePath, "package.json"),
     JSON.stringify({
@@ -56,6 +59,7 @@ const writeDashboardsExtension = () => {
   writeFileSync(
     join(sourcePath, "extension.ts"),
     `
+      import { appendFileSync, existsSync } from "node:fs";
       export default {
         artifactMounts: [
           { id: "boards", ref: { kind: "artifact-mount", id: "boards" }, path: "boards", label: "Boards", watch: true },
@@ -67,8 +71,8 @@ const writeDashboardsExtension = () => {
             ref: { kind: "hook", id: "index-boards" },
             event: { kind: "event", id: "artifact.changed:boards" },
             async run(ctx, payload) {
-              globalThis.__artifactWatchState.calls.push(payload);
-              await globalThis.__artifactWatchState.hookGate;
+              appendFileSync(${JSON.stringify(callsPath)}, JSON.stringify(payload) + "\\n");
+              while (existsSync(${JSON.stringify(gatePath)})) await Bun.sleep(5);
               await ctx.artifacts.mount("boards").writeText("index.json", JSON.stringify(payload.paths));
             },
           },
@@ -76,16 +80,26 @@ const writeDashboardsExtension = () => {
       };
     `,
   );
-  return sourcePath;
+  return {
+    sourcePath,
+    calls: (): HookCall[] =>
+      existsSync(callsPath)
+        ? readFileSync(callsPath, "utf8")
+            .split("\n")
+            .filter(Boolean)
+            .map((line) => JSON.parse(line))
+        : [],
+    closeGate: () => writeFileSync(gatePath, ""),
+    openGate: () => rmSync(gatePath, { force: true }),
+  };
 };
 
 const createHarness = async (listProjectIds = async () => ["project-1"]) => {
   const shared = await artifactFilesFixture();
   cleanups.push(() => shared.close());
   await createProjectsDBService(shared.db).create({ id: "project-1", name: "Watched files" });
-  const state: WatchState = { calls: [] };
-  (globalThis as Record<string, unknown>).__artifactWatchState = state;
-  const sourcePath = writeDashboardsExtension();
+  const state = writeDashboardsExtension(tempDir("pstdio-artifact-watch-state-"));
+  const { sourcePath } = state;
   const workspace = {
     id: "workspace-1",
     project_id: "project-1",
@@ -212,9 +226,9 @@ describe("artifact mount watch service", () => {
     mkdirSync(join(harness.boards(), "..", "runs"), { recursive: true });
     writeFileSync(join(harness.boards(), "..", "runs", "run-1.json"), "{}");
 
-    await waitFor(() => harness.state.calls.length > 0);
+    await waitFor(() => harness.state.calls().length > 0);
     await Bun.sleep(1_500);
-    expect(harness.state.calls).toEqual([
+    expect(harness.state.calls()).toEqual([
       expect.objectContaining({
         projectId: "project-1",
         workspaceId: "workspace-1",
@@ -236,15 +250,15 @@ describe("artifact mount watch service", () => {
     await Bun.sleep(100);
     writeFileSync(join(firstBoards, "old.json"), "{}");
     writeFileSync(join(harness.boards(), "new.json"), "{}");
-    await waitFor(() => harness.state.calls.length > 0);
+    await waitFor(() => harness.state.calls().length > 0);
     await Bun.sleep(400);
-    expect(harness.state.calls.map((call) => call.paths)).toEqual([["new.json"]]);
+    expect(harness.state.calls().map((call) => call.paths)).toEqual([["new.json"]]);
 
     harness.disable();
     await harness.service.refresh();
     writeFileSync(join(harness.boards(), "after-disable.json"), "{}");
     await Bun.sleep(1_200);
-    expect(harness.state.calls).toHaveLength(1);
+    expect(harness.state.calls()).toHaveLength(1);
   });
 
   test("does not watch when the default workspace has no local root", async () => {
@@ -287,12 +301,11 @@ describe("artifact mount watch service", () => {
 
   test("dispose waits for hooks that are still handling a change", async () => {
     const harness = await createHarness();
-    const gate = Promise.withResolvers<void>();
-    harness.state.hookGate = gate.promise;
+    harness.state.closeGate();
     await harness.service.refresh();
     await Bun.sleep(100);
     writeFileSync(join(harness.boards(), "sales.json"), "{}");
-    await waitFor(() => harness.state.calls.length > 0);
+    await waitFor(() => harness.state.calls().length > 0);
 
     let disposed = false;
     const disposing = harness.service.dispose().then(() => {
@@ -301,7 +314,7 @@ describe("artifact mount watch service", () => {
     await Bun.sleep(20);
     expect(disposed).toBe(false);
 
-    gate.resolve();
+    harness.state.openGate();
     await disposing;
   });
 });

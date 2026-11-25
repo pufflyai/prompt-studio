@@ -58,3 +58,27 @@ test("a surface path must be valid before a host factory runs", () => {
   expect(() => resolveSurfaceCall(source, surface, path, ["a"], "notify")).toThrow(SurfaceCallRejectedError);
   expect(opened).toBe(0);
 });
+
+test("a rejected call runs no factory along its path", () => {
+  let opened = 0;
+  const root = {
+    storage: {
+      collection: () => {
+        opened += 1;
+        return { get: async () => "value" };
+      },
+    },
+  };
+  const scoped: BackendSurface = {
+    kind: "object",
+    members: {
+      storage: {
+        kind: "object",
+        members: { collection: { kind: "factory", returns: { kind: "object", members: { get: { kind: "async" } } } } },
+      },
+    },
+  };
+  const path = [{ name: "storage" }, { name: "collection", args: ["items"] }, { name: "delete" }];
+  expect(() => resolveSurfaceCall(root, scoped, path, [], "async")).toThrow(SurfaceCallRejectedError);
+  expect(opened).toBe(0);
+});

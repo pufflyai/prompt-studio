@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createHostCapabilityGate } from "../contract";
 import { createGuestHost } from "../guest/define-extension-view";
 import { capabilityReply } from "./capability-reply";
@@ -9,7 +10,7 @@ test("capability denials preserve their code and nested data through guest repli
     (request) => capabilityReply(() => gate.call(request)),
     () => () => {},
   );
-  await expect(host.call("preferences.get", { name: "density" })).rejects.toMatchObject({
+  await expectRejection(host.call("preferences.get", { name: "density" })).toMatchObject({
     code: "undeclared_webview_capability",
     data: { capability: "preferences.get" },
   });
@@ -21,7 +22,7 @@ test("capability denials preserve their code and nested data through guest repli
       }),
     () => () => {},
   );
-  await expect(rejected.call("commands.execute", { commandId: "save" })).rejects.toMatchObject({
+  await expectRejection(rejected.call("commands.execute", { commandId: "save" })).toMatchObject({
     code: "stale_revision",
     message: "Changed",
     data,
@@ -34,6 +35,6 @@ test("capability replies retain successful values including void", async () => {
     () => capabilityReply(() => result),
     () => () => {},
   );
-  await expect(host.call("commands.execute", { commandId: "save" })).resolves.toEqual(result);
+  await expect(await host.call("commands.execute", { commandId: "save" })).toEqual(result);
   expect(await capabilityReply(() => undefined)).toEqual({ ok: true, value: undefined });
 });

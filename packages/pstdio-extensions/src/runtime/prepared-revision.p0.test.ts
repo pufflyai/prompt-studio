@@ -65,6 +65,19 @@ test("a host upgrade can replace incompatible acceptance while guarding compatib
   expect((await readAcceptedRevision(source))?.id).toBe(concurrent.id);
 });
 
+test("a host rebuild preserves install provenance of the same preparation inputs", async () => {
+  const source = fixture();
+  const prepared = await prepareExtensionRevision(source);
+  const verifiedInstall = { sourcePath: source, ref: "catalog-release" };
+  await acceptPreparedRevision(source, { ...prepared, verifiedInstall });
+  writeFileSync(
+    acceptedRevisionPath(source),
+    JSON.stringify({ ...prepared, id: "legacy", host: "previous-host", verifiedInstall }),
+  );
+  await acceptPreparedRevision(source, prepared, { expectedId: null, expectedState: null });
+  expect((await readAcceptedRevision(source))?.verifiedInstall).toEqual(verifiedInstall);
+});
+
 test("accepted artifacts survive worker restart and offline source edits", async () => {
   const source = fixture();
   const prepared = await prepareExtensionRevision(source);
