@@ -1,0 +1,132 @@
+name: PS-1281 monitoring storage PromQL qualification
+
+on:
+  push:
+    branches: [chore/ps1281-2316-promql-df11ddfe]
+
+permissions:
+  contents: read
+
+jobs:
+  storage_queries:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      PRODUCT_HEAD: df11ddfe3be05d4fdace1c120f44cfb2ca57e94a
+      PRIOR_HEAD: 4a037c53204aa09d680b0331745c15804653fa26
+      CANDIDATE_HEAD: 89a213c406b1178a67e77afb8e6265d0f7c1baf9
+      CANDIDATE_TREE: 60b1d19dec2bd94de22f7b0cec6ee5b2d91e48b0
+      BASE_HEAD: 1cb27f767c9d41875aca7d9d8c85fb24cb6e790d
+      OUTPUT_DIR: test-results/ps1281-2316-promql-df11ddfe
+      PROMETHEUS_IMAGE: prom/prometheus:v3.16.0@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.CANDIDATE_HEAD }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Seal the exact monitoring source and Prometheus image
+        shell: bash
+        run: |
+          mkdir -p "$OUTPUT_DIR"
+          printf '%s\n' "$GITHUB_SHA" "$CANDIDATE_HEAD" > "$OUTPUT_DIR/requested-source.txt"
+          test "$GITHUB_REF" = refs/heads/chore/ps1281-2316-promql-df11ddfe
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$PRODUCT_HEAD"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" = "$(printf 'A\t.github/workflows/ps1281-2316-promql-df11ddfe.yml')"
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_HEAD"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$CANDIDATE_TREE"
+          test "$(git show -s --format=%P HEAD)" = "$BASE_HEAD $PRODUCT_HEAD"
+          test "$(git rev-parse "$PRODUCT_HEAD^")" = "$PRIOR_HEAD"
+          test -z "$(git status --porcelain)"
+          grep -Fq "image: $PROMETHEUS_IMAGE" infra/monitoring/compose.yaml
+          mkdir -p "$OUTPUT_DIR"
+          echo "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$OUTPUT_DIR/execution-id.txt"
+          printf '%s\n' "$PRODUCT_HEAD" "$CANDIDATE_HEAD" "$CANDIDATE_TREE" "$BASE_HEAD" "$PROMETHEUS_IMAGE" > "$OUTPUT_DIR/identity.txt"
+      - name: Build fixture from the source query expressions
+        shell: bash
+        run: |
+          source_dir=.pstdio/extensions/relay-monitor/src
+          mkdir -p "$OUTPUT_DIR/old/src" "$OUTPUT_DIR/new/src"
+          for file in queries.ts model.ts; do
+            git show "$PRIOR_HEAD:$source_dir/$file" > "$OUTPUT_DIR/old/src/$file"
+            cp "$source_dir/$file" "$OUTPUT_DIR/new/src/$file"
+          done
+          cat > "$OUTPUT_DIR/fixture.ts" <<'BUN'
+          import { expressions } from "./src/queries";
+
+          const query = expressions(720);
+          const selector = (name: string, account?: string, kind?: string) =>
+            `${name}{environment="production"${account ? `,account="${account}"` : ""}${kind ? `,kind="${kind}"` : ""}}`;
+          const input = (name: string, account: string, values: string, kind?: string) => ({ series: selector(name, account, kind), values });
+          const repeated = (value: number) => `${value}+0x3`;
+          const GiB = 1024 ** 3;
+          const MiB = 1024 ** 2;
+          const expect = (expr: string, eval_time: string, exp_samples: { labels: string; value: number }[]) => ({ expr, eval_time, exp_samples });
+          const partial = (time: string) => [expect(query.storage!, time, []), expect(query.cleanup!, time, []),
+            expect(query.capacity!, time, [{ labels: '{account="alpha",environment="production"}', value: 10 }])];
+          const cases = {
+            evaluation_interval: "10m",
+            tests: [{
+              interval: "10m",
+              input_series: [
+                input("pstdio_relay_account_quota_bytes", "alpha", repeated(10 * GiB)),
+                input("pstdio_relay_account_quota_bytes", "beta", repeated(10 * GiB)),
+                input("pstdio_relay_account_storage_bytes", "alpha", repeated(GiB)),
+                input("pstdio_relay_account_storage_bytes", "beta", repeated(2 * GiB)),
+                input("pstdio_relay_storage_bytes", "alpha", repeated(GiB), "updates"),
+                input("pstdio_relay_storage_bytes", "beta", repeated(2 * GiB), "updates"),
+                input("pstdio_relay_cleanup_eligible_bytes", "alpha", repeated(MiB)),
+                input("pstdio_relay_cleanup_eligible_bytes", "beta", repeated(2 * MiB)),
+                input("pstdio_relay_account_observation_success", "alpha", "1 1 1 1"),
+                input("pstdio_relay_account_observation_success", "beta", "1 0 0 1"),
+                input("pstdio_relay_account_observed_timestamp_seconds", "alpha", "0 600 1200 1800"),
+                input("pstdio_relay_account_observed_timestamp_seconds", "beta", "0 0 0 0"),
+              ],
+              promql_expr_test: process.env.PSTDIO_MONITOR_STORAGE_RED ? partial("10m").concat(partial("30m")) : [
+                expect(query.storage!, "0m", [{ labels: '{environment="production",kind="updates"}', value: 3 }]),
+                expect(query.cleanup!, "0m", [{ labels: '{environment="production"}', value: 3 }]),
+                expect(query.capacity!, "0m", [
+                  { labels: '{account="alpha",environment="production"}', value: 10 },
+                  { labels: '{account="beta",environment="production"}', value: 20 },
+                ]),
+                ...partial("10m"),
+                ...partial("30m"),
+              ],
+            }],
+          };
+          console.log(JSON.stringify(cases, null, 2));
+          BUN
+          cp "$OUTPUT_DIR/fixture.ts" "$OUTPUT_DIR/old/fixture.ts"
+          cp "$OUTPUT_DIR/fixture.ts" "$OUTPUT_DIR/new/fixture.ts"
+          PSTDIO_MONITOR_STORAGE_RED=1 bun --no-install "$OUTPUT_DIR/old/fixture.ts" > "$OUTPUT_DIR/storage-red.yml"
+          bun --no-install "$OUTPUT_DIR/new/fixture.ts" > "$OUTPUT_DIR/storage-green.yml"
+      - name: Verify missing account gaps with the pinned query engine
+        shell: bash
+        run: |
+          docker pull "$PROMETHEUS_IMAGE"
+          read_query() {
+            docker run --rm --network none --entrypoint /bin/promtool \
+              --mount "type=bind,src=$PWD/$OUTPUT_DIR/$1,dst=/fixture.yml,readonly" \
+              "$PROMETHEUS_IMAGE" test rules /fixture.yml
+          }
+          set +e
+          read_query storage-red.yml > "$OUTPUT_DIR/storage-red.log" 2>&1
+          status=$?
+          set -e
+          test "$status" -eq 1
+          grep -Fq 'time: 10m,' "$OUTPUT_DIR/storage-red.log"
+          grep -Fq 'time: 30m,' "$OUTPUT_DIR/storage-red.log"
+          grep -Eq 'exp:|exp_samples' "$OUTPUT_DIR/storage-red.log"
+          read_query storage-green.yml 2>&1 | tee "$OUTPUT_DIR/storage-green.log"
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - name: Preserve source and query results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps1281-2316-promql-df11ddfe-attempt-${{ github.run_attempt }}
+          path: ${{ env.OUTPUT_DIR }}
+          if-no-files-found: error
