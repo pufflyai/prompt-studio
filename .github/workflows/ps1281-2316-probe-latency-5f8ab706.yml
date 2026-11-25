@@ -1,0 +1,126 @@
+name: PS-1281 skipped probe latency qualification
+
+on:
+  push:
+    branches: [chore/ps1281-2316-probe-latency-5f8ab706]
+
+permissions:
+  contents: read
+
+jobs:
+  probe_latency_queries:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      PRODUCT_HEAD: 5f8ab706fe3d107d2389a2772d062596d857d8d0
+      PRIOR_HEAD: df11ddfe3be05d4fdace1c120f44cfb2ca57e94a
+      CANDIDATE_HEAD: 6e1aa793a2b809766825af12ca3289400c4806d4
+      CANDIDATE_TREE: 6f67ed27363927fc05fda81cdc8227ce52977158
+      BASE_HEAD: 1cb27f767c9d41875aca7d9d8c85fb24cb6e790d
+      OUTPUT_DIR: test-results/ps1281-2316-probe-latency-5f8ab706
+      PROMETHEUS_IMAGE: prom/prometheus:v3.16.0@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.CANDIDATE_HEAD }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Seal the exact monitoring source and Prometheus image
+        shell: bash
+        run: |
+          mkdir -p "$OUTPUT_DIR"
+          printf '%s\n' "$GITHUB_SHA" "$CANDIDATE_HEAD" > "$OUTPUT_DIR/requested-source.txt"
+          test "$GITHUB_REF" = refs/heads/chore/ps1281-2316-probe-latency-5f8ab706
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$PRODUCT_HEAD"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" = "$(printf 'A\t.github/workflows/ps1281-2316-probe-latency-5f8ab706.yml')"
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_HEAD"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$CANDIDATE_TREE"
+          test "$(git show -s --format=%P HEAD)" = "$BASE_HEAD $PRODUCT_HEAD"
+          test "$(git rev-parse "$PRODUCT_HEAD^")" = "$PRIOR_HEAD"
+          test -z "$(git status --porcelain)"
+          grep -Fq "image: $PROMETHEUS_IMAGE" infra/monitoring/compose.yaml
+          mkdir -p "$OUTPUT_DIR"
+          echo "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$OUTPUT_DIR/execution-id.txt"
+          printf '%s\n' "$PRODUCT_HEAD" "$CANDIDATE_HEAD" "$CANDIDATE_TREE" "$BASE_HEAD" "$PROMETHEUS_IMAGE" > "$OUTPUT_DIR/identity.txt"
+      - name: Build fixture from the source query expressions
+        shell: bash
+        run: |
+          source_dir=.pstdio/extensions/relay-monitor/src
+          mkdir -p "$OUTPUT_DIR/old/src" "$OUTPUT_DIR/new/src"
+          for file in queries.ts model.ts; do
+            git show "$PRIOR_HEAD:$source_dir/$file" > "$OUTPUT_DIR/old/src/$file"
+            cp "$source_dir/$file" "$OUTPUT_DIR/new/src/$file"
+          done
+          cat > "$OUTPUT_DIR/fixture.ts" <<'BUN'
+          import { expressions } from "./src/queries";
+
+          const queries = expressions(60);
+          const checks = [
+            { check: "live", expiresAt: "12m" },
+            { check: "sync", expiresAt: "12m" },
+            { check: "blobs", expiresAt: "22m" },
+          ] as const;
+          const labels = (check: string) => `{check="${check}",environment="production"}`;
+          const input = (name: string, check: string, values: string) => ({ series: `${name}${labels(check)}`, values });
+          const expect = (expr: string, eval_time: string, exp_samples: { labels: string; value: number }[]) => ({ expr, eval_time, exp_samples });
+          const fixture = {
+            evaluation_interval: "1m",
+            tests: checks.map(({ check, expiresAt }) => {
+              const query = queries[check];
+              const skipped = expect(query, "1m", []);
+              return {
+                name: `${check}: successful, skipped and failed probe observations`,
+                interval: "1m",
+                input_series: [
+                  input("pstdio_relay_check_success", check, "1 -1 0+0x25"),
+                  input("pstdio_relay_check_observed_timestamp_seconds", check, "0 0 120+0x25"),
+                  input("pstdio_relay_probe_duration_seconds", check, "0.1 0.1 0.3+0x25"),
+                ],
+                promql_expr_test: process.env.PSTDIO_LATENCY_RED ? [skipped] : [
+                  expect(query, "0m", [{ labels: labels(check), value: 100 }]),
+                  skipped,
+                  expect(query, "2m", [{ labels: labels(check), value: 300 }]),
+                  expect(query, expiresAt, []),
+                ],
+              };
+            }),
+          };
+          console.log(JSON.stringify(fixture, null, 2));
+          BUN
+          cp "$OUTPUT_DIR/fixture.ts" "$OUTPUT_DIR/old/fixture.ts"
+          cp "$OUTPUT_DIR/fixture.ts" "$OUTPUT_DIR/new/fixture.ts"
+          PSTDIO_LATENCY_RED=1 bun --no-install "$OUTPUT_DIR/old/fixture.ts" > "$OUTPUT_DIR/probe-latency-red.yml"
+          bun --no-install "$OUTPUT_DIR/new/fixture.ts" > "$OUTPUT_DIR/probe-latency-green.yml"
+      - name: Verify skipped probe gaps with the pinned query engine
+        shell: bash
+        run: |
+          docker pull "$PROMETHEUS_IMAGE"
+          read_query() {
+            docker run --rm --network none --entrypoint /bin/promtool \
+              --mount "type=bind,src=$PWD/$OUTPUT_DIR/$1,dst=/fixture.yml,readonly" \
+              "$PROMETHEUS_IMAGE" test rules /fixture.yml
+          }
+          set +e
+          read_query probe-latency-red.yml > "$OUTPUT_DIR/probe-latency-red.log" 2>&1
+          status=$?
+          set -e
+          test "$status" -eq 1
+          test "$(grep -Fc 'time: 1m,' "$OUTPUT_DIR/probe-latency-red.log")" -eq 3
+          for check in live sync blobs; do
+            grep -Fq "check=\"$check\", environment=\"production\"" "$OUTPUT_DIR/probe-latency-red.log" ||
+            grep -Fq "check=\"$check\",environment=\"production\"" "$OUTPUT_DIR/probe-latency-red.log"
+          done
+          grep -Eq 'exp:|exp_samples' "$OUTPUT_DIR/probe-latency-red.log"
+          read_query probe-latency-green.yml 2>&1 | tee "$OUTPUT_DIR/probe-latency-green.log"
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - name: Preserve source and query results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps1281-2316-probe-latency-5f8ab706-attempt-${{ github.run_attempt }}
+          path: ${{ env.OUTPUT_DIR }}
+          if-no-files-found: error
