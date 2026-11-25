@@ -104,6 +104,15 @@ const retryProjectSync = async (
   return { ok: true };
 };
 
+const retryFailedProjectSync = async (
+  projectId: string,
+  retry: ProjectSyncRetry,
+  requireCurrent?: () => Promise<void>,
+) => {
+  const scheduled = await retry(projectId, { failedOnly: true }, requireCurrent);
+  await scheduled?.settled;
+};
+
 const readManagerOrigin = (managerOrigin?: string) => {
   const parsed = managerOriginSchema.safeParse(
     managerOrigin ?? process.env.PSTDIO_ACCOUNT_MANAGER_ORIGIN ?? "https://base.prompt.studio/accounts",
@@ -184,10 +193,7 @@ export const createNativeAccount = (input: {
     returnedUploadState: away.removalState,
     call,
     refresh: () => refresh(),
-    retry: async (id, requireCurrent) => {
-      const retry = await retryProject(id, { failedOnly: true }, requireCurrent);
-      await retry?.settled;
-    },
+    retry: (id, requireCurrent) => retryFailedProjectSync(id, retryProject, requireCurrent),
     withdraw: (id) => missing.withdraw(id).then(() => refreshes.changed()),
     changed: changes.notify,
   });
