@@ -83,6 +83,7 @@ test.each([
   "write access returns",
   "initially read-only",
 ])("documents sync while an artifact watch is unavailable (%s)", async (mode) => {
+  const checkoutMissing = mode === "checkout missing";
   const root = await mkdtemp(join(tmpdir(), "relay-watch-failure-"));
   const app = await createTestApp({ storageRoot: join(root, "home") });
   let peerReads = 0;
@@ -150,15 +151,16 @@ test.each([
       const [path, options] = args;
       if (typeof path !== "string" || !path.includes(join("test.notes", "")))
         return Reflect.apply(nativeWatch, fs, args);
-      if (
+      const flatDocumentsWatch =
         path.endsWith("documents") &&
         options &&
         typeof options === "object" &&
         "recursive" in options &&
-        options.recursive === false
-      ) {
-        attempts++;
-        if (failing) throw Object.assign(new Error("Native flat watch unavailable"), { code: "ENOSPC" });
+        options.recursive === false;
+      if (flatDocumentsWatch) attempts++;
+      // A native watch on the sibling mount keeps Windows from moving the checkout.
+      if (failing && (flatDocumentsWatch || (checkoutMissing && path.endsWith("other")))) {
+        throw Object.assign(new Error("Native watch unavailable"), { code: "ENOSPC" });
       }
       const handle = Reflect.apply(nativeWatch, fs, args);
       handles.add(handle);
@@ -208,7 +210,6 @@ test.each([
     }
     await waitFor(() => attempts > 0);
     const workspaceSetup = mode === "workspace setup";
-    const checkoutMissing = mode === "checkout missing";
     if (workspaceSetup || checkoutMissing) {
       const parked = join(root, "parked-checkout");
       if (workspaceSetup) {
@@ -221,6 +222,7 @@ test.each([
         }
       }
       if (checkoutMissing) {
+        await waitFor(() => handles.size === 0);
         fs.renameSync(folder, parked);
         failing = false;
         relay.wake();
