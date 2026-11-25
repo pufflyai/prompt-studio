@@ -1,6 +1,6 @@
 import { expect, spyOn, test } from "bun:test";
 import * as fs from "node:fs";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as mountWatcher from "../../features/extensions/artifact-mount-watch/mount-watcher";
@@ -11,18 +11,25 @@ import { initializeProjectWorkspace } from "../../features/projects/project-fold
 import { createTestApp } from "../../test-utils/create-test-app";
 import { startRelayExtension } from "./extension-owner";
 
-const waitFor = async (check: () => boolean | Promise<boolean>) => {
-  const end = Date.now() + 3_000;
+const waitFor = async (check: () => boolean | Promise<boolean>, timeout = 3_000) => {
+  const end = Date.now() + timeout;
   while (!(await check())) {
     if (Date.now() >= end) throw new Error("Timed out waiting for relay progress");
     await Bun.sleep(10);
   }
 };
 
-test.each([false, true])("documents sync during a failed flat watch; close before recovery: %s", async (closeEarly) => {
+test.each([
+  "recover",
+  "cancel",
+  "removed checkout",
+  "workspace setup",
+])("document sync and watch recovery: %s", async (mode) => {
+  const closeEarly = mode === "cancel";
   const root = await mkdtemp(join(tmpdir(), "relay-watch-failure-"));
   const app = await createTestApp({ storageRoot: join(root, "home") });
-  const peer = documentPeer();
+  let reads = 0;
+  const peer = documentPeer([], { onRead: () => reads++ });
   const controller = new AbortController();
   let relay: Awaited<ReturnType<typeof startRelayExtension>> | undefined;
   const nativeWatch = fs.watch;
@@ -32,6 +39,8 @@ test.each([false, true])("documents sync during a failed flat watch; close befor
   const handles = new Set<fs.FSWatcher>();
   let registration: ReturnType<typeof spyOn<typeof fs, "watch">> | undefined;
   let paired: ReturnType<typeof spyOn<typeof mountWatcher, "watchArtifactMount">> | undefined;
+  let workspaceLookup: ReturnType<typeof spyOn<typeof app.deps.workspaceService, "getDefault">> | undefined;
+  let watchError: ((error: unknown) => void) | undefined;
   try {
     const project = await app.deps.projectService.create({ name: "Independent watch recovery" });
     const folder = join(root, "checkout");
@@ -69,9 +78,10 @@ test.each([false, true])("documents sync during a failed flat watch; close befor
       edits: [{ recordId: "note", replace: "Saved despite failed watch" }],
     });
     // Exercise the real paired-watch failure and partial-handle cleanup on every host.
-    paired = spyOn(mountWatcher, "watchArtifactMount").mockImplementation((input) =>
-      watchMount({ ...input, platform: "darwin" }),
-    );
+    paired = spyOn(mountWatcher, "watchArtifactMount").mockImplementation((input) => {
+      if (input.root.endsWith("documents")) watchError = input.onError;
+      return watchMount({ ...input, platform: "darwin" });
+    });
     registration = spyOn(fs, "watch").mockImplementation(((...args: [fs.PathLike, unknown?, unknown?]) => {
       const [path, options] = args;
       if (typeof path !== "string" || !path.includes(join("test.notes", "")))
@@ -117,15 +127,59 @@ test.each([false, true])("documents sync during a failed flat watch; close befor
     await records.commit({ operationId: "while-failing", edits: [{ recordId: "note", replace: "Still syncing" }] });
     relay.wake();
     await waitFor(async () => (await records.outcome("while-failing"))?.state === "synced");
+    await waitFor(async () => !(await relay!.status()).busy);
+    if (mode === "removed checkout") {
+      // Keep this case about recovery admission, without a separate live mount's hints.
+      for (const handle of handles) handle.close();
+      await waitFor(() => handles.size === 0);
+      await rename(folder, `${folder}.moved`);
+      await Bun.sleep(2_200);
+      expect(fs.existsSync(folder)).toBe(false);
+      await rename(`${folder}.moved`, folder);
+      failing = false;
+      await waitFor(() => handles.size === 2, 5_000);
+      await Bun.sleep(100);
+      await writeFile(join(folder, ".pstdio/extension-storage/test.notes/documents/restored.txt"), "After return");
+      await waitFor(async () => (await records.read('["artifact-file","documents/restored.txt"]')).exists);
+      controller.abort();
+      await relay.done;
+      await waitFor(() => handles.size === 0);
+      return;
+    }
+    if (mode === "workspace setup") {
+      const workspace = await app.deps.workspaceService.getDefault(project.id);
+      const getDefault = app.deps.workspaceService.getDefault.bind(app.deps.workspaceService);
+      let observedSetup = false;
+      workspaceLookup = spyOn(app.deps.workspaceService, "getDefault").mockImplementation(async (...args) => {
+        const current = await getDefault(...args);
+        if (current?.initializing) observedSetup = true;
+        return current;
+      });
+      await app.deps.workspaceService.setInitializing(workspace!.id, true);
+      await waitFor(() => observedSetup);
+      // Keep setup active through the pending second-open recovery deadline.
+      await Bun.sleep(2_200);
+      await app.deps.workspaceService.setInitializing(workspace!.id, false);
+    }
     if (!closeEarly) {
       const documentsRoot = join(folder, ".pstdio/extension-storage/test.notes/documents");
       await writeFile(join(documentsRoot, "gap.txt"), "Saved before recovery");
       failing = false;
-      await waitFor(() => handles.size === 4);
+      await waitFor(() => handles.size === 4, 5_000);
       await waitFor(async () => (await records.read('["artifact-file","documents/gap.txt"]')).exists);
       await Bun.sleep(100);
       await writeFile(join(documentsRoot, "outside.txt"), "External save");
       await waitFor(async () => (await records.read('["artifact-file","documents/outside.txt"]')).exists);
+      if (mode === "recover") {
+        await Bun.sleep(1_100);
+        await waitFor(async () => !(await relay!.status()).busy);
+        reads = 0;
+        watchError?.(new Error("Native root still unavailable"));
+        await Bun.sleep(100);
+        watchError?.(new Error("Native root still unavailable"));
+        await Bun.sleep(100);
+        expect(reads).toBe(0);
+      }
     }
     // Parent cancellation owns timers and handles even without an explicit close call.
     controller.abort();
@@ -141,8 +195,9 @@ test.each([false, true])("documents sync during a failed flat watch; close befor
     await relay?.done;
     registration?.mockRestore();
     paired?.mockRestore();
+    workspaceLookup?.mockRestore();
     await app.close();
     await peer.close();
     await rm(root, { recursive: true, force: true });
   }
-}, 10_000);
+}, 15_000);

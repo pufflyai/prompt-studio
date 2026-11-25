@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import type { AssetOwner } from "pstdio-api-contracts";
 import { createReadBoundary } from "pstdio-extensions";
 import type { LiveConnection } from "pstdio-sync/relay";
@@ -69,39 +70,49 @@ const startRelayArtifactWatches = (input: {
     retry.unref?.();
   };
 
-  const open = async () => {
-    if (signal.aborted) return;
-    const writable = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write").catch((error) => {
-      if (!signal.aborted && !(error instanceof WorkspaceTargetUnavailableError)) {
+  const writableRoot = () =>
+    resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write").catch((error) => {
+      if (signal.aborted) return null;
+      if (!(error instanceof WorkspaceTargetUnavailableError))
         apiLogger.warn(
           { err: error, event: "relay.artifact_watch.lookup_failed", ...owner },
           "Relay artifact watch workspace lookup failed",
         );
-        scheduleRetry();
-      }
+      scheduleRetry();
       return null;
     });
-    if (signal.aborted || writable !== input.repoRoot) return;
-
+  const openWatch = (root: string) => {
+    try {
+      const watch = watchArtifactMount({
+        root,
+        ledger: deps.artifactMountWrites,
+        onChange: input.wake,
+        // Loss and recovery arrive as change hints. A failed reopen alone has no new files to scan.
+        onError: (err) =>
+          apiLogger.warn({ err, event: "relay.artifact_watch.error", ...owner, root }, "Relay artifact watch failed"),
+        onFolderLimit: input.wake,
+      });
+      watches.set(root, watch);
+      // A recovered watch may have missed edits while its mount was unwatched.
+      if (failures > 0) input.wake();
+    } catch (error) {
+      apiLogger.warn(
+        { err: error, event: "relay.artifact_watch.start_failed", ...owner, root },
+        "Relay artifact watch failed to start",
+      );
+    }
+  };
+  const open = async () => {
+    if (signal.aborted) return;
+    const writable = await writableRoot();
+    if (signal.aborted || writable === null) return;
+    // The saved workspace path can outlive its checkout. Only the mount folder may be created.
+    if (writable !== input.repoRoot || !existsSync(input.repoRoot)) {
+      scheduleRetry();
+      return;
+    }
     for (const root of input.roots) {
-      if (watches.has(root)) continue;
-      try {
-        const watch = watchArtifactMount({
-          root,
-          ledger: deps.artifactMountWrites,
-          onChange: input.wake,
-          onError: input.wake,
-          onFolderLimit: input.wake,
-        });
-        watches.set(root, watch);
-        // A recovered watch may have missed edits while its mount was unwatched.
-        if (failures > 0) input.wake();
-      } catch (error) {
-        apiLogger.warn(
-          { err: error, event: "relay.artifact_watch.start_failed", ...owner, root },
-          "Relay artifact watch failed to start",
-        );
-      }
+      if (!watches.has(root)) openWatch(root);
     }
     if (watches.size < input.roots.size) scheduleRetry();
   };
