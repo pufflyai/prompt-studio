@@ -1,0 +1,124 @@
+name: PS-525 granted Linux process lifetime
+
+on:
+  push:
+    branches: [chore/ps525-2351-linux-zombie-red-dd1a510c]
+
+permissions:
+  contents: read
+
+jobs:
+  zombie_lifetime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      SOURCE_HEAD: dd1a510c589cacfbfff928468a925e059afa823f
+      SOURCE_TREE: a47ee03c0a80508d47ab7d870b6cceab1fcc3946
+      EXPECT_EXIT: "0"
+      IMAGE: oven/bun:1.4.4-slim
+      OUTPUT: test-results/ps525-2351-linux-zombie-red-dd1a510c
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.SOURCE_HEAD }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify the workflow and exact product source
+        shell: bash
+        run: |
+          mkdir -p "$OUTPUT"
+          test "$GITHUB_REF" = refs/heads/chore/ps525-2351-linux-zombie-red-dd1a510c
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$SOURCE_HEAD"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" = "$(printf 'A\t.github/workflows/ps525-2351-linux-zombie-red-dd1a510c.yml')"
+          test "$(git rev-parse HEAD)" = "$SOURCE_HEAD"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$SOURCE_TREE"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          printf '%s\n' "$SOURCE_HEAD" "$SOURCE_TREE" "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" "$EXPECT_EXIT" > "$OUTPUT/identity.txt"
+      - name: Observe an orphaned Linux process group with a real non-reaping PID 1
+        shell: bash
+        run: |
+          export fixture="$OUTPUT/reproduce.ts"
+          cat > "$fixture" <<'BUN'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          import { exitedWithin, processGroupExited, signalProcessTree, treeExitedWithin } from "/workspace/packages/pstdio-api/src/features/extensions/process-group";
+
+          const parseProc = (pid: number) => {
+            const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
+            const [state, parent, group] = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
+            return { state, parent: Number(parent), group: Number(group) };
+          };
+          const waitFor = async <T>(find: () => T | undefined) => {
+            const deadline = performance.now() + 3000;
+            while (performance.now() < deadline) {
+              const result = find();
+              if (result !== undefined) return result;
+              await Bun.sleep(10);
+            }
+            throw new Error("Timed out waiting for the observed process state");
+          };
+          assert.equal(process.platform, "linux");
+          assert.equal(Bun.version, "1.4.4");
+          assert.equal(readFileSync("/proc/1/comm", "utf8").trim(), "sleep");
+          const child = Bun.spawn(["/bin/sh", "-c", 'sleep 60 >/dev/null 2>&1 & printf "%s\\n" "$!"'], {
+            detached: true,
+            stdout: "pipe",
+            stderr: "inherit",
+          });
+          try {
+            const grandchild = Number(await new Response(child.stdout).text());
+            assert.ok(Number.isSafeInteger(grandchild) && grandchild > 1);
+            assert.equal(await child.exited, 0);
+            const running = await waitFor(() => {
+              const stat = parseProc(grandchild);
+              return stat.parent === 1 && stat.state !== "Z" && stat.state !== "X" ? stat : undefined;
+            });
+            assert.equal(running.group, child.pid);
+            const lease = processGroupExited(child);
+            const before = await treeExitedWithin(child, 100);
+            const leaseBefore = await exitedWithin(lease, 100);
+            assert.equal(before, false, "a running descendant must block cleanup");
+            assert.equal(leaseBefore, false, "a running descendant must retain the grant lease");
+            await signalProcessTree(child, "SIGKILL");
+            const zombie = await waitFor(() => {
+              const stat = parseProc(grandchild);
+              return stat.state === "Z" && stat.parent === 1 ? stat : undefined;
+            });
+            assert.equal(zombie.group, child.pid);
+            process.kill(-child.pid, 0);
+            const start = performance.now();
+            const after = await treeExitedWithin(child, 5000);
+            const stopMs = performance.now() - start;
+            const leaseAfter = await exitedWithin(lease, 1000);
+            console.log(JSON.stringify({ running, zombie, groupSignalZero: true, before, leaseBefore, after, leaseAfter, stopMs }));
+            const fixed = process.env.PSTDIO_EXPECT_ZOMBIE_EXIT === "1";
+            assert.equal(after, fixed, "zombie-only cleanup verification");
+            assert.equal(leaseAfter, fixed, "zombie-only lease release");
+          } finally {
+            await signalProcessTree(child, "SIGKILL");
+            await child.exited;
+          }
+          BUN
+          docker pull "$IMAGE"
+          docker image inspect "$IMAGE" --format '{{json .RepoDigests}}' > "$OUTPUT/image-digests.json"
+          container="ps525-zombie-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          cleanup() {
+            docker rm -f "$container" >/dev/null 2>&1 || true
+            if docker inspect "$container" >/dev/null 2>&1; then return 1; fi
+            printf '%s\n' 'Owned container removed' > "$OUTPUT/container-cleanup.txt"
+          }
+          trap cleanup EXIT
+          docker run --detach --rm --pull never --network none --name "$container" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/workspace,readonly" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE/$fixture,dst=/fixture.ts,readonly" \
+            --entrypoint /bin/sleep "$IMAGE" 120 > "$OUTPUT/container-id.txt"
+          docker exec --workdir /workspace --env "PSTDIO_EXPECT_ZOMBIE_EXIT=$EXPECT_EXIT" "$container" \
+            bun --no-install /fixture.ts 2>&1 | tee "$OUTPUT/result.log"
+      - name: Preserve the result and owned cleanup evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps525-2351-linux-zombie-red-dd1a510c-attempt-${{ github.run_attempt }}
+          path: ${{ env.OUTPUT }}
+          if-no-files-found: error
