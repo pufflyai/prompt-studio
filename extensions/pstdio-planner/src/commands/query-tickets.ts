@@ -19,5 +19,5 @@ export const queryTicketsCommand = defineCommand({
     page: params.json<KanbanRendererQueryParams["page"]>(),
     settings: params.json<KanbanRendererQueryParams["settings"]>(),
   },
-  run: queryTickets,
+  run: (ctx, input) => queryTickets(ctx, input, ctx.signal),
 });
