@@ -87,6 +87,8 @@ export const serviceSurfaces: Members = {
   // Harness contexts only.
   targetFiles: object(calls("readText")),
   net: object(calls("findFreePort")),
+  // The checkpoint callback and signal in its input cross as remote values.
+  diagnostics: object(calls("capture")),
   connections: object({ ...calls("request"), stream: { kind: "iterate", signalArg: 1 } }),
   account: object(
     calls(
