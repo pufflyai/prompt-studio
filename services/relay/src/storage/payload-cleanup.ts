@@ -49,6 +49,7 @@ export const cleanupPayloads = async (
   legacyOnly = false,
 ) => {
   let after = "";
+  let firstFailure: { error: unknown } | undefined;
   while (true) {
     const keys = await connection.run(
       (db) =>
@@ -73,19 +74,26 @@ export const cleanupPayloads = async (
     }
     for (const [projectKey, entries] of projects) {
       for (let offset = 0; offset < entries.length; offset += 8) {
-        await connection.run(
-          (db) =>
-            db.transaction(async (tx) => {
-              if (!(await canReclaim(tx, projectKey))) return;
-              // One exclusion protects these independent keys until every admitted
-              // removal drains. Small groups avoid holding it for an entire page.
-              await removePayloads(tx, payloads, entries.slice(offset, offset + 8), signal, legacyOnly);
-            }),
-          signal,
-        );
+        try {
+          await connection.run(
+            (db) =>
+              db.transaction(async (tx) => {
+                if (!(await canReclaim(tx, projectKey))) return;
+                // One exclusion protects these independent keys until every admitted
+                // removal drains. Small groups avoid holding it for an entire page.
+                await removePayloads(tx, payloads, entries.slice(offset, offset + 8), signal, legacyOnly);
+              }),
+            signal,
+          );
+        } catch (error) {
+          signal?.throwIfAborted();
+          // Leave failed batches queued and let independent work finish before reporting the failure.
+          firstFailure ??= { error };
+        }
       }
     }
-    if (keys.length < batchSize) return;
+    if (keys.length < batchSize) break;
     after = keys.at(-1)!.objectKey;
   }
+  if (firstFailure) throw firstFailure.error;
 };
