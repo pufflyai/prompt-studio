@@ -286,6 +286,59 @@ describe("artifact mount deletions and expiry", () => {
 });
 
 describe("artifact mount folder-only notifications", () => {
+  test("an owned nested write advances only the watcher that reported the folder", async () => {
+    const ledger = createArtifactMountWriteLedger(() => 0);
+    const { mount, root } = createMount(ledger);
+    const observer = ledger.createEchoFilter();
+    const unnotified = ledger.createEchoFilter();
+    const folder = join(root, "sales");
+    const archive = join(folder, "archive");
+    const options = { keepMatchedWrites: true };
+    await mount.writeText("sales/archive/first.json", "{}");
+    expect(observer([folder, archive], options)).toEqual([]);
+
+    writeFileSync(join(archive, "external.json"), "[]");
+    utimesSync(archive, new Date(), new Date(Date.now() + 5_000));
+    expect(observer([archive], options)).toEqual([archive]);
+    await mount.writeText("sales/archive/owned.json", "{}");
+
+    expect(observer([folder], options)).toEqual([]);
+    expect(unnotified([folder], options)).toEqual([folder]);
+  });
+
+  test.each([
+    true,
+    false,
+  ])("reports an external child added during an owned nested write (previous report: %s)", async (reported) => {
+    const ledger = createArtifactMountWriteLedger(() => 0);
+    const { mount, root } = createMount(ledger);
+    const observer = ledger.createEchoFilter();
+    const folder = join(root, "sales");
+    const archive = join(folder, "archive");
+    const external = join(archive, "new-external.json");
+    const options = { keepMatchedWrites: true };
+    await mount.writeText("sales/archive/first.json", "{}");
+    expect(observer([folder, archive], options)).toEqual([]);
+    if (reported) {
+      writeFileSync(join(archive, "already-reported.json"), "[]");
+      expect(observer([archive], options)).toEqual([archive]);
+    }
+
+    const write = fsPromises.writeFile;
+    const duringWrite = spyOn(fsPromises, "writeFile").mockImplementation(async (...args) => {
+      if (typeof args[0] === "string" && basename(args[0]) === "owned.json") writeFileSync(external, "[]");
+      return write(...args);
+    });
+    try {
+      await mount.writeText("sales/archive/owned.json", "{}");
+    } finally {
+      duringWrite.mockRestore();
+    }
+
+    expect(await mount.exists("sales/archive/new-external.json")).toBe(true);
+    expect(observer([folder], options)).toEqual([folder]);
+  });
+
   test("retires external folder returns on a single watch before the old echo is observed", async () => {
     const ledger = createArtifactMountWriteLedger(() => 0);
     const { mount, root } = createMount(ledger);

@@ -1,12 +1,20 @@
-import { readdirSync } from "node:fs";
-import { basename, dirname, join, sep } from "node:path";
-import { type ArtifactMountWriteObserver, type ArtifactParentWrite, readArtifactFileState } from "pstdio-extensions";
+import { dirname, sep } from "node:path";
+import { type ArtifactMountWriteObserver, readArtifactFileState } from "pstdio-extensions";
+import {
+  advanceParentWrite,
+  type FileState,
+  matchesOwnedChildren,
+  type OwnedDirectory,
+  type ReportedChildren,
+  recordOwnedChild,
+  recordReportedChild,
+  sameState,
+} from "./directory-write-proof";
 
 // Long enough for a change burst to settle after a slow write. Short enough that an old entry
 // cannot hide a later direct edit.
 const ECHO_WINDOW_MS = 5_000;
 
-type FileState = ReturnType<typeof readArtifactFileState>;
 type PathObservation = readonly [string, FileState];
 type LedgerEntry = {
   recordedAt: number;
@@ -16,81 +24,9 @@ type LedgerEntry = {
   returnedSubtrees?: Set<string>;
 };
 
-type RecordedChild = { state: FileState };
-
-type OwnedDirectory = {
-  recordedAt: number;
-  observed: NonNullable<FileState>;
-  children: Map<string, RecordedChild>;
-};
-
-type ReportedChild = { forWrite: RecordedChild | undefined; state: FileState };
-type ReportedChildren = WeakMap<OwnedDirectory, Map<string, ReportedChild>>;
 type EchoOptions = { keepMatchedWrites?: boolean };
 
-const sameState = (recorded: FileState, current: FileState) =>
-  recorded === null || current === null
-    ? recorded === current
-    : recorded.identity === current.identity &&
-      recorded.size === current.size &&
-      recorded.mtime === current.mtime &&
-      recorded.ctime === current.ctime;
-
 const isInside = (path: string, folder: string) => path.startsWith(folder + sep);
-
-const recordReportedChild = (
-  reported: ReportedChildren,
-  directories: ReadonlyMap<string, OwnedDirectory>,
-  path: string,
-  state: FileState,
-) => {
-  const parent = directories.get(dirname(path));
-  if (!parent) return;
-  const name = basename(path);
-  const children = reported.get(parent) ?? new Map();
-  children.set(name, { forWrite: parent.children.get(name), state });
-  reported.set(parent, children);
-};
-
-const expectedChildren = (directory: OwnedDirectory, reported: ReportedChildren) => {
-  const expected = new Map<string, NonNullable<FileState>>();
-  for (const [name, child] of directory.children) {
-    if (child.state) expected.set(name, child.state);
-  }
-  for (const [name, child] of reported.get(directory) ?? []) {
-    // A later owned operation replaces the proof that this reported observation depended on.
-    if (directory.children.get(name) !== child.forWrite) continue;
-    if (child.state) expected.set(name, child.state);
-    else expected.delete(name);
-  }
-  return expected;
-};
-
-const matchesOwnedChildren = (
-  path: string,
-  directory: OwnedDirectory,
-  observed: ReadonlyMap<string, FileState>,
-  reported: ReportedChildren,
-) => {
-  try {
-    const expected = expectedChildren(directory, reported);
-    const names = readdirSync(path);
-    return (
-      names.length === expected.size &&
-      names.every((name) => {
-        const recorded = expected.get(name);
-        if (!recorded) return false;
-        const childPath = join(path, name);
-        const childHint = observed.get(childPath);
-        // The changed child already accounts for an independent hint in this batch.
-        if (childHint !== undefined && !sameState(recorded, childHint)) return true;
-        return sameState(recorded, readArtifactFileState(childPath));
-      })
-    );
-  } catch {
-    return false;
-  }
-};
 
 function* pathAndAncestors(path: string) {
   for (let ancestor = path; ancestor !== dirname(ancestor); ancestor = dirname(ancestor)) yield ancestor;
@@ -301,28 +237,11 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     return matchesDirectory || (!current && matchesAncestorDeletion(path, entry?.order));
   };
 
-  const recordChild = (path: string, state: FileState) => {
-    const parent = directories.get(dirname(path));
-    if (!parent) return;
-    parent.children.set(basename(path), { state });
-  };
-
-  const advanceParentWrite = ({ path, before, after }: ArtifactParentWrite) => {
-    if (!before || after?.identity !== before.identity) return;
-    const directory = directories.get(path);
-    if (directory && sameState(directory.observed, before)) directory.observed = after;
-
-    const children = directories.get(dirname(path))?.children;
-    const name = basename(path);
-    const child = children?.get(name);
-    if (child && sameState(child.state, before)) children?.set(name, { state: after });
-  };
-
   const recordCreatedDirectory = (folder: string, identity: string, recordedAt: number) => {
     const observed = readArtifactFileState(folder);
     if (!observed?.directory || observed.identity !== identity) return;
     directories.set(folder, { observed, recordedAt, children: new Map() });
-    recordChild(folder, observed);
+    recordOwnedChild(directories, folder, observed);
     // Creation proves reappearance even if the watcher arrives only after an outside removal.
     rememberReappearance(folder, observed);
   };
@@ -336,8 +255,8 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     if (state) rememberReappearance(path, state);
     if (!state) directories.delete(path);
     for (const [folder, identity] of createdDirectories ?? []) recordCreatedDirectory(folder, identity, recordedAt);
-    recordChild(path, state);
-    for (const write of parentWrites ?? []) advanceParentWrite(write);
+    recordOwnedChild(directories, path, state);
+    for (const write of parentWrites ?? []) advanceParentWrite(directories, write);
   };
 
   const createEchoFilter = () => {
