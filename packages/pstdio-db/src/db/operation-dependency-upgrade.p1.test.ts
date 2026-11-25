@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { applyOrderedOperation, prepareOrderedOperation, projectOrderedOperation } from "pstdio-sync/records";
+import { readDocumentRetry, rememberDocumentRetry } from "../services/extension-storage/document-retries";
 import { withOrderedOwner } from "../services/extension-storage/ordered-journal";
 import { encodeOrderedJson } from "../services/extension-storage/ordered-sql";
 import { createDb } from "./connection.pglite";
@@ -20,6 +21,9 @@ test("the upgrade forgets historical save receipts and remembers decisions learn
     await old.pglite.exec(`INSERT INTO projects (id,name,shorthand,created_at,updated_at)
       VALUES ('foreign-receipts','Foreign receipts','FR','2026-11-22','2026-11-22');
       INSERT INTO storage_ordered_owners (workbench_id,extension_id,epoch) VALUES ('foreign-receipts','example.records','current');
+      INSERT INTO storage_documents (workbench_id,extension_id,document_id,state)
+        VALUES ('foreign-receipts','example.records','local-note',decode('0000','hex'));
+      INSERT INTO storage_document_operations VALUES ('foreign-receipts','example.records','local-note','save','old-binding');
       INSERT INTO storage_ordered_operations (workbench_id,extension_id,operation_id,fingerprint)
         VALUES ('foreign-receipts','example.records','foreign-save','identity');
       INSERT INTO storage_ordered_receipts (workbench_id,extension_id,epoch,operation_id,admission_fingerprint,state,indexed)
@@ -31,6 +35,8 @@ test("the upgrade forgets historical save receipts and remembers decisions learn
     await old.close();
     oldClosed = true;
     current = await createDb({ path: old.path });
+    expect(await readDocumentRetry(current.db, owner, "local-note", "save")).toBeUndefined();
+    await current.db.transaction((tx) => rememberDocumentRetry(tx, owner, "local-note", "save", "new-binding"));
     const markers = await current.pglite.query("SELECT key FROM documents WHERE key LIKE '[\"ordered-dependency\",%'");
     expect(markers.rows).toEqual([]);
     expect(await Bun.file(`${old.path}-migration-exports/storage_ordered_receipts.jsonl`).exists()).toBe(false);
@@ -47,6 +53,11 @@ test("the upgrade forgets historical save receipts and remembers decisions learn
     });
     await current.close();
     current = await createDb({ path: old.path });
+    expect(await readDocumentRetry(current.db, owner, "local-note", "save")).toBe("new-binding");
+    await current.db.transaction((tx) => rememberDocumentRetry(tx, owner, "local-note", "save", "new-binding"));
+    await expect(
+      current.db.transaction((tx) => rememberDocumentRetry(tx, owner, "local-note", "save", "other")),
+    ).rejects.toThrow("Operation identity reused");
     await withOrderedOwner(current.db, owner, async (journal) => {
       expect((await journal.knownDependency("foreign-save"))?.epoch).toBe("zzz");
       expect(await journal.cachedDecision("foreign-save", "aaa")).toBeUndefined();
@@ -68,7 +79,10 @@ test("an offline edit resolves its exact predecessor after an interrupted upgrad
     await old.pglite.exec(`INSERT INTO projects (id,name,shorthand,created_at,updated_at)
       VALUES ('offline','Offline','OF','2026-11-25','2026-11-25');
       INSERT INTO storage_ordered_owners(workbench_id,extension_id,epoch,joined)
-      VALUES ('offline','example.records','cloud',true);`);
+      VALUES ('offline','example.records','cloud',true);
+      INSERT INTO storage_documents (workbench_id,extension_id,document_id,state)
+        VALUES ('offline','example.records','local-note',decode('0000','hex'));
+      INSERT INTO storage_document_operations VALUES ('offline','example.records','local-note','save','old-binding');`);
     const first = await prepareOrderedOperation(
       { operationId: "first", edits: [{ recordId: "card", replace: { title: "one" } }] },
       new Map(),
@@ -103,11 +117,12 @@ test("an offline edit resolves its exact predecessor after an interrupted upgrad
     // Simulate a crash before the queue manifest is renamed, then one after ordered rows have been cleared.
     await Bun.write(`${old.path}-ordered-queue-dependencies-upgrade.jsonl.tmp`, "partial");
     const receipts = await prepareReleasedSaveReceipts(old.db, old.path);
-    expect(receipts).toBeDefined();
+    expect(receipts?.expireDocumentRetries).toBe(false);
     await prepareOrderedOwnerUpgrade(old.db, old.path, receipts);
     await old.close();
     oldClosed = true;
     current = await createDb({ path: old.path });
+    expect(await readDocumentRetry(current.db, owner, "local-note", "save")).toBe("old-binding");
     await withOrderedOwner(current.db, owner, async (journal) => {
       expect(await journal.knownDependency("unrelated")).toBeUndefined();
       const decision = await journal.knownDependency("first");

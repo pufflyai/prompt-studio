@@ -26,7 +26,13 @@ const queueEntry = async (row: Row): Promise<QueueEntry> => {
   }
   return { workbench_id: String(row.workbench_id), extension_id: String(row.extension_id), ids: [...ids], opaque };
 };
-export type ReleasedSaveReceipts = { operations: SQL; documents: SQL; owners: SQL; complete: () => Promise<void> };
+export type ReleasedSaveReceipts = {
+  operations: SQL;
+  documents: SQL;
+  expireDocumentRetries: boolean;
+  owners: SQL;
+  complete: () => Promise<void>;
+};
 
 /** The legacy layout change expires old save IDs. Preserve the evidence a queued save may need
  * to resolve its dependencies and recover its delivery outcome after reconnecting. */
@@ -41,6 +47,7 @@ export const prepareReleasedSaveReceipts = async (
     AND table_name='storage_ordered_operations' AND column_name='workbench_id') AS released`);
   // Capture just the live queue's references before any group can clear its source.
   // If an older build already staged recovery inputs, finish those under their original rules.
+  let hasQueuedSaves = false;
   const pending: QueueEntry[] = [];
   const flush = async () => {
     if (!pending.length) return;
@@ -64,6 +71,7 @@ export const prepareReleasedSaveReceipts = async (
       keepEmpty: true,
     },
     async (row) => {
+      hasQueuedSaves = true;
       pending.push(row as QueueEntry);
       if (pending.length === 200) await flush();
     },
@@ -78,7 +86,16 @@ export const prepareReleasedSaveReceipts = async (
   await flush();
   const queued = sql`(workbench_id,extension_id) IN (SELECT workbench_id,extension_id FROM upgrade_pending_owners)`;
   const opaque = sql`(workbench_id,extension_id) IN (SELECT workbench_id,extension_id FROM upgrade_pending_owners WHERE opaque)`;
+  // Document operation rows only bind prior save IDs to fingerprints. An outstanding
+  // edit in either released queue keeps its original retry behavior across conversion.
+  const expireDocumentRetries = Boolean(
+    schema?.released &&
+      !hasQueuedSaves &&
+      (await db.execute<{ settled: boolean }>(sql`SELECT NOT EXISTS (SELECT 1 FROM storage_record_outbox) AS settled`))
+        .rows[0]?.settled,
+  );
   return {
+    expireDocumentRetries,
     operations: sql`${opaque} OR (workbench_id,extension_id,operation_id) IN
       (SELECT workbench_id,extension_id,operation_id FROM upgrade_needed_operations)`,
     documents: sql`(document_id NOT LIKE '["ordered-dependency",%' OR ${opaque} OR

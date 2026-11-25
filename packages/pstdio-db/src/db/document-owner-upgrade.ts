@@ -204,7 +204,7 @@ export const prepareDocumentOwnerUpgrade = async (db: DbClient, path: string, re
         archive: name,
         // Released resource numbers are deliberately serialized as decimal strings.
         copyJson: source.table !== storage_resource_identities && source.table !== storage_resource_aliases,
-        capture: columns!.legacy,
+        capture: columns!.legacy && !(source.table === storage_document_operations && receipts?.expireDocumentRetries),
       },
       async (row) => {
         if (
