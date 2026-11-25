@@ -124,12 +124,19 @@ jobs:
           bun -e 'require("electron")'
           sudo chown root:root node_modules/electron/dist/chrome-sandbox
           sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+      - name: Run the selected source Electron spec
+        if: runner.os == 'Linux' && inputs.test_file == 'clients/desktop/src/e2e/desktop-active-work.p2.spec.ts'
+        env:
+          TEST_PRIORITIES: P2
+          CI_PRIORITY: P2
+        working-directory: clients/desktop
+        shell: bash
+        run: xvfb-run -a bun x --no-install playwright test --config playwright.config.ts src/e2e/desktop-active-work.p2.spec.ts
       # Direct argv preserves the native shell's signal behavior and keeps the input out of shell syntax.
       - name: Run the selected native file with its owning runner
-        env:
-          PLAN_DISPLAY: ${{ runner.os == 'Linux' && inputs.test_file == 'clients/desktop/src/e2e/desktop-active-work.p2.spec.ts' }}
+        if: runner.os != 'Linux' || inputs.test_file != 'clients/desktop/src/e2e/desktop-active-work.p2.spec.ts'
         run: >-
-          bun -e 'const args = ["bun", "scripts/test.ts", "--plan", "test-results/ci/native-file-plan.json"]; if (process.env.PLAN_DISPLAY === "true") args.push("--prebuilt"); const child = Bun.spawnSync(args, { stdio: ["inherit", "inherit", "inherit"] }); process.exit(child.exitCode);'
+          bun -e 'const child = Bun.spawnSync(["bun", "scripts/test.ts", "--plan", "test-results/ci/native-file-plan.json"], { stdio: ["inherit", "inherit", "inherit"] }); process.exit(child.exitCode);'
       - name: Preserve native file execution
         if: always()
         uses: actions/upload-artifact@v4
