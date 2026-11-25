@@ -258,7 +258,8 @@ test.each([
       expect(attempts).toBeGreaterThan(0);
       expect(recovered).toBe(0);
       allowWatch = true;
-      const retryDeadline = Date.now() + 3_000;
+      // Registration can already be in the 30-second backoff when the receiver finishes.
+      const retryDeadline = Date.now() + 35_000;
       while (recovered === 0 && Date.now() < retryDeadline) await Bun.sleep(10);
       expect(recovered).toBe(1);
     }
@@ -270,4 +271,4 @@ test.each([
     await rm(root, { recursive: true, force: true });
   }
   if (watchFails) expect(closed).toBe(1);
-}, 20_000);
+}, 55_000);
