@@ -2,7 +2,9 @@ import { putTicket } from "../data/ticket-context.fixture";
 import { fixture } from "./auto-build.fixture";
 
 export const waitingPage = async () => {
+  const began = performance.now();
   const f = await fixture();
+  console.log("PS-1281 diagnostic base fixture ms", performance.now() - began);
   await putTicket(f.storage, {
     id: "prerequisite",
     shorthand: "T-102",
@@ -40,6 +42,7 @@ export const waitingPage = async () => {
     });
   }
   f.ctx.sessions.query = async () => ({ items: [], nextCursor: null });
+  console.log("PS-1281 diagnostic 101 ready tickets seeded ms", performance.now() - began);
   const collection = f.storage.collection.bind(f.storage);
   f.storage.collection = <T>(name: string) => ({
     ...collection<T>(name),
