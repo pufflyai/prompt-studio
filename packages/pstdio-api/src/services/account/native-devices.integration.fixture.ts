@@ -1,12 +1,9 @@
 import { strict as assert } from "node:assert";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { call, devices, login, type Status, token } from "./native-device-sign-in.fixture";
 import { createAccountHostFixture } from "./native-host.fixture";
-
-type Host = Awaited<ReturnType<typeof createAccountHostFixture>>;
-type Device = { id: string; name: string; current: boolean; online: boolean };
-type Status = { login: { accountId: string; deviceId: string } | null; cloudProjects: string[] };
 
 const origin = process.env.OWNER_TEST_ORIGIN!;
 const roots = await Promise.all([1, 2].map(() => mkdtemp(join(tmpdir(), "native-device-"))));
@@ -15,16 +12,6 @@ let desktop = await createAccountHostFixture(roots[1]);
 console.log("NATIVE_RUNTIME_READY");
 await Bun.stdin.stream().getReader().read();
 
-const call = async <T = unknown>(host: Host, path: string, method = "GET", body?: unknown) => {
-  const response = await host.app.request(`/v1${path}`, {
-    method,
-    ...(body === undefined ? {} : { headers: { "content-type": "application/json" }, body: JSON.stringify(body) }),
-  });
-  const text = await response.text();
-  return { status: response.status, body: JSON.parse(text) as T, text };
-};
-const token = async (host: Host) =>
-  (JSON.parse(await readFile(host.file, "utf8")) as { login: { token: string } | null }).login?.token;
 const renew = async (credential: string, workbenchId: string) =>
   (
     await fetch(new URL("/v1/environment-access", origin), {
@@ -33,35 +20,6 @@ const renew = async (credential: string, workbenchId: string) =>
       body: JSON.stringify({ workbenchId }),
     })
   ).status;
-// The fixture provider completes Google OAuth for this subject before the browser follows the manager's redirect.
-const login = async (host: Host, subject: string) => {
-  const started = await call<{ id: string; url: string }>(host, "/account/login", "POST", { managerOrigin: origin });
-  assert.equal(started.status, 200);
-  const browser = await fetch(started.body.url, {
-    headers: { "x-fixture-google-subject": subject },
-    redirect: "manual",
-  });
-  assert.equal(browser.status, 302);
-  const url = new URL(browser.headers.get("location")!);
-  const cookie = browser.headers
-    .getSetCookie()
-    .map((value) => value.split(";")[0])
-    .join("; ");
-  const completed = await fetch(url, { headers: { cookie }, redirect: "manual" });
-  assert.equal(completed.status, 302);
-  const invalid = new URL(completed.headers.get("location")!);
-  invalid.searchParams.set("state", "another-login-state");
-  assert.equal((await fetch(invalid)).status, 400);
-  assert.equal((await fetch(completed.headers.get("location")!)).status, 200);
-  assert.equal((await call<{ status: string }>(host, `/account/login/${started.body.id}`)).body.status, "complete");
-  // Sign-in completes at credential persistence; discovery runs without delaying its callback.
-  await host.account.refresh();
-  const status = await call<Status>(host, "/account");
-  assert.ok(status.body.login);
-  assert.ok(!status.text.includes((await token(host))!), "The device credential never leaves the native host");
-  return status.body.login;
-};
-const devices = async (host: Host) => (await call<Device[]>(host, "/account/devices")).body;
 
 try {
   const project = await laptop.projects.create({ name: "Shared notes" });
@@ -81,7 +39,7 @@ try {
   const offlineBefore = await offline.records.list();
 
   assert.equal((await call<{ error: string }>(laptop, "/account/devices")).body.error, "Log in first with pst login");
-  const laptopLogin = await login(laptop, process.env.OWNER_TEST_SUBJECT_A!);
+  const laptopLogin = await login(laptop, origin, process.env.OWNER_TEST_SUBJECT_A!);
   assert.equal(laptopLogin.deviceId, (await laptop.deps.environmentService.get()).environmentId);
   assert.equal((await call(laptop, `/account/projects/${project.id}`, "PUT")).status, 200);
   assert.deepEqual(
@@ -91,7 +49,7 @@ try {
 
   // The second device binds the same project and logs in. No per-project step connects it.
   await desktop.projects.create({ id: project.id, name: "Shared notes" });
-  const desktopLogin = await login(desktop, process.env.OWNER_TEST_SUBJECT_A!);
+  const desktopLogin = await login(desktop, origin, process.env.OWNER_TEST_SUBJECT_A!);
   assert.equal(desktopLogin.accountId, laptopLogin.accountId);
   assert.notEqual(desktopLogin.deviceId, laptopLogin.deviceId);
   assert.deepEqual((await call<Status>(desktop, "/account")).body.cloudProjects, [project.id]);
@@ -143,7 +101,7 @@ try {
   assert.equal(await token(desktop), undefined);
 
   // Another Google user on the same client gets their own account and sees only their own devices.
-  const otherLogin = await login(laptop, process.env.OWNER_TEST_SUBJECT_B!);
+  const otherLogin = await login(laptop, origin, process.env.OWNER_TEST_SUBJECT_B!);
   assert.notEqual(otherLogin.accountId, laptopLogin.accountId);
   assert.deepEqual(
     (await devices(laptop)).map((device) => device.id),
