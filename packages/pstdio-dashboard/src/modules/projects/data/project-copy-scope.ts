@@ -26,8 +26,7 @@ export const projectCopyScopeKey = (
   id: string,
   device?: ProjectCopyDevice,
   account?: ProjectCopyAccount,
-) =>
-  JSON.stringify([owner.id, id, device?.managerOrigin, device?.accountId, device?.deviceId, account?.accountId]);
+) => JSON.stringify([owner.id, id, device?.managerOrigin, device?.accountId, device?.deviceId, account?.accountId]);
 
 export const cloudCopySyncKey = (scope: string) => ["cloud-project-opening", scope] as const;
 
@@ -35,7 +34,14 @@ export const cloudProjectCopySubject = (id: string, account: ProjectCopyAccount)
   operationSubject("cloud-project-copy", account.managerOrigin, account.accountId, id);
 
 export const deviceProjectCopySubject = (id: string, account: ProjectCopyAccount, device: ProjectCopyDevice) =>
-  operationSubject("cloud-project-device-copy", account.managerOrigin, account.accountId, id, device.accountId, device.deviceId);
+  operationSubject(
+    "cloud-project-device-copy",
+    account.managerOrigin,
+    account.accountId,
+    id,
+    device.accountId,
+    device.deviceId,
+  );
 
 export const cloudCopyBusy = (
   operations: WorkbenchOperations,
@@ -46,9 +52,12 @@ export const cloudCopyBusy = (
   if (!account) return false;
   const subject = cloudProjectCopySubject(id, account);
   const local = device && deviceProjectCopySubject(id, account, device);
-  return operations.getSnapshot().pending.some(
-    (entry) => entry.subjects.includes(subject) || (local ? entry.subjects.includes(local) : entry.intent === subject),
-  );
+  return operations
+    .getSnapshot()
+    .pending.some(
+      (entry) =>
+        entry.subjects.includes(subject) || (local ? entry.subjects.includes(local) : entry.intent === subject),
+    );
 };
 
 export const requireProjectCopyScope = (
