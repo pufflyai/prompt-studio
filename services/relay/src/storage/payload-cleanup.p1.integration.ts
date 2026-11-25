@@ -1,37 +1,53 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { inArray } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 import { connectRelay } from "./database";
 import { syncObjectDeletions } from "./document-schema";
 import { cleanupPayloads } from "./payload-cleanup";
 import { createPayloadObjects } from "./payloads";
+import { projectAdvisoryKey } from "./project-access";
 import { createSyncFixture, randomId } from "./sync-fixture";
 
 const fixture = createSyncFixture();
 beforeAll(() => fixture.initialize());
 afterAll(() => fixture.close());
 
-test("partial provider deletion keeps durable retry rows and never removes an unrelated payload", async () => {
-  const keys = Array.from({ length: 3 }, () => randomId("retired"));
+test("provider deletion failures retain retry rows and exclusion while independent projects can finish", async () => {
+  const prefix = randomId("retired");
+  const held = `${prefix}-a`;
+  const healthy = `${prefix}-b`;
+  const failing = `${prefix}-c`;
+  const keys = [held, healthy, failing];
+  const projectKey = randomId("project");
+  const healthyProjectKey = randomId("project");
   const kept = randomId("retained");
   for (const key of [...keys, kept]) await fixture.putLegacyObject(key, new Uint8Array([1, 2, 3]));
   const connection = connectRelay(fixture.databaseUrl);
+  const writer = connectRelay(fixture.databaseUrl);
+  const heldStarted = Promise.withResolvers<void>();
+  const releaseHeld = Promise.withResolvers<void>();
+  const deleteFailed = Promise.withResolvers<void>();
   let partial = true;
   const proxy = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
     async fetch(request) {
       const url = new URL(request.url);
-      if (
-        request.method === "DELETE" &&
-        url.pathname.endsWith(`/${keys[1]}`) &&
-        !url.searchParams.has("uploadId") &&
-        partial
-      ) {
-        partial = false;
-        return new Response("<Error><Code>InternalError</Code><Message>Controlled partial deletion</Message></Error>", {
-          status: 500,
-          headers: { "content-type": "application/xml" },
-        });
+      if (request.method === "DELETE" && !url.searchParams.has("uploadId")) {
+        if (url.pathname.endsWith(`/${held}`)) {
+          heldStarted.resolve();
+          await releaseHeld.promise;
+        }
+        if (url.pathname.endsWith(`/${failing}`) && partial) {
+          await heldStarted.promise;
+          partial = false;
+          return new Response(
+            "<Error><Code>InternalError</Code><Message>Controlled partial deletion</Message></Error>",
+            {
+              status: 500,
+              headers: { "content-type": "application/xml" },
+            },
+          );
+        }
       }
       return fetch(`${fixture.s3.endpoint}${url.pathname}${url.search}`, {
         method: request.method,
@@ -46,13 +62,45 @@ test("partial provider deletion keeps durable retry rows and never removes an un
   });
   const pending = () =>
     connection.run((db) => db.select().from(syncObjectDeletions).where(inArray(syncObjectDeletions.objectKey, keys)));
+  let cleaning: ReturnType<typeof cleanupPayloads> | undefined;
   try {
-    await connection.run((db) => db.insert(syncObjectDeletions).values(keys.map((objectKey) => ({ objectKey }))));
-    await expect(cleanupPayloads(connection, payloads)).rejects.toThrow("Controlled partial deletion");
-    expect(await pending()).toHaveLength(3);
+    await connection.run((db) =>
+      db.insert(syncObjectDeletions).values([
+        { objectKey: held, projectKey },
+        { objectKey: healthy, projectKey: healthyProjectKey },
+        { objectKey: failing, projectKey },
+      ]),
+    );
+    cleaning = cleanupPayloads(connection, {
+      ...payloads,
+      async remove(key, signal) {
+        try {
+          await payloads.remove(key, signal);
+        } catch (error) {
+          if (key === failing) deleteFailed.resolve();
+          throw error;
+        }
+      },
+    });
+    void cleaning.catch(() => {});
+
+    await Promise.race([deleteFailed.promise, cleaning]);
+    await expect(
+      writer.run((db) =>
+        db.transaction(async (tx) => {
+          await tx.execute(sql`SET LOCAL lock_timeout = 250`);
+          await tx.execute(sql`SELECT pg_advisory_xact_lock_shared(${projectAdvisoryKey(projectKey)})`);
+        }),
+      ),
+    ).rejects.toMatchObject({ cause: { code: "55P03" } });
+    releaseHeld.resolve();
+
+    await expect(cleaning).rejects.toThrow("Controlled partial deletion");
+    expect((await pending()).map(({ objectKey }) => objectKey).sort()).toEqual([held, failing]);
     const incomplete = await fixture.objects();
-    expect(incomplete.has(keys[0]!)).toBe(false);
-    expect(incomplete.has(keys[1]!)).toBe(true);
+    expect(incomplete.has(held)).toBe(false);
+    expect(incomplete.has(healthy)).toBe(false);
+    expect(incomplete.has(failing)).toBe(true);
     expect(incomplete.has(kept)).toBe(true);
 
     await cleanupPayloads(connection, payloads);
@@ -60,8 +108,10 @@ test("partial provider deletion keeps durable retry rows and never removes an un
     expect([...(await fixture.objects()).keys()]).toEqual([kept]);
     await cleanupPayloads(connection, payloads);
   } finally {
+    releaseHeld.resolve();
+    await cleaning?.catch(() => {});
     payloads.close();
-    await connection.close();
+    await Promise.all([connection.close(), writer.close()]);
     await proxy.stop(true);
   }
 });
