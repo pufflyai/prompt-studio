@@ -38,6 +38,41 @@ const createAccountHost = () => {
 };
 
 describe("webview account client", () => {
+  test.each([
+    "https://manager.example/v1/native-login",
+    "https://manager.example/v1/native-login?provider=google",
+    "invalid-url",
+  ])("Microsoft sign-in cancels an attempt with an incompatible URL (%s)", async (url) => {
+    const { host, calls } = createAccountHost();
+    const attempt = { id: "previous-host", url };
+    host.call = async <TResult>(method: string, params?: unknown) => {
+      calls.push({ method, params });
+      return attempt as TResult;
+    };
+    const client = createWebviewClient<Record<never, never>>(host);
+
+    await expect(client.account.login(undefined, "microsoft")).rejects.toThrow("Update Prompt Studio");
+    expect(calls).toEqual([
+      { method: "account.manage", params: { op: "login", managerOrigin: undefined, provider: "microsoft" } },
+      { method: "account.manage", params: { op: "cancelLogin", id: attempt.id } },
+    ]);
+  });
+
+  test.each([undefined, "microsoft"] as const)("sign-in accepts the host's matching attempt (%s)", async (provider) => {
+    const { host, calls } = createAccountHost();
+    const url = new URL("https://manager.example/v1/native-login");
+    if (provider) url.searchParams.set("provider", provider);
+    const attempt = { id: "host-attempt", url: url.href };
+    host.call = async <TResult>(method: string, params?: unknown) => {
+      calls.push({ method, params });
+      return attempt as TResult;
+    };
+    const client = createWebviewClient<Record<never, never>>(host);
+
+    expect(await client.account.login(url.origin, provider)).toEqual(attempt);
+    expect(calls).toEqual([{ method: "account.manage", params: { op: "login", managerOrigin: url.origin, provider } }]);
+  });
+
   test("a webview reads sign-in recovery after the public account change event", async () => {
     const { host, rejected } = createAccountHost();
     const client = createWebviewClient<Record<never, never>>(host);
