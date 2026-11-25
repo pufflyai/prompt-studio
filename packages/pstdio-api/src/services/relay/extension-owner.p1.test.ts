@@ -21,6 +21,59 @@ const waitFor = async (check: () => boolean | Promise<boolean>) => {
   }
 };
 
+type TestApp = Awaited<ReturnType<typeof createTestApp>>;
+type RelayOwner = Awaited<ReturnType<typeof startRelayExtension>>;
+type Records = Awaited<ReturnType<TestApp["deps"]["extensionStorageService"]["open"]>>["records"];
+
+const checkWriteAccessRecovery = async (input: {
+  mode: string;
+  app: TestApp;
+  workspaceId: string;
+  folder: string;
+  relay: RelayOwner;
+  records: Records;
+  attempts: () => number;
+  writeDenials: () => number;
+  watchCount: () => number;
+  allowWatch: () => void;
+}) => {
+  const { mode, app, workspaceId, folder, relay, records } = input;
+  const initiallyReadOnly = mode === "initially read-only";
+  if (!initiallyReadOnly) {
+    await waitFor(() => input.attempts() > 0);
+    await app.deps.workspaceService.updateProviderProjection(workspaceId, {
+      provider_capabilities_json: { ...defaultLocalWorkspaceCapabilities, files: "read" },
+    });
+  }
+  await waitFor(() => input.writeDenials() === 1);
+  expect(input.attempts()).toBe(initiallyReadOnly ? 0 : 1);
+  if (mode === "read-only checkout") {
+    // The earlier native failure would schedule a two-second repeat if writes were temporary.
+    await Bun.sleep(2_100);
+    expect(input.writeDenials()).toBe(1);
+    expect((await relay.status()).error).toBeUndefined();
+    return;
+  }
+  const documentsRoot = join(folder, ".pstdio/extension-storage/test.notes/documents");
+  const file = join(documentsRoot, "restored-write.txt");
+  if (initiallyReadOnly) {
+    await waitFor(async () => !(await relay.status()).busy);
+    await mkdir(documentsRoot, { recursive: true });
+    await writeFile(file, "Written before the first watch");
+  }
+  await app.deps.workspaceService.updateProviderProjection(workspaceId, {
+    provider_capabilities_json: defaultLocalWorkspaceCapabilities,
+  });
+  input.allowWatch();
+  relay.resumeArtifactWatches?.();
+  await waitFor(() => input.watchCount() === 4);
+  if (!initiallyReadOnly) {
+    await Bun.sleep(100);
+    await writeFile(file, "External write after restoring access");
+  }
+  await waitFor(async () => (await records.read('["artifact-file","documents/restored-write.txt"]')).exists);
+};
+
 test.each([
   "recover",
   "cancel",
@@ -28,6 +81,7 @@ test.each([
   "checkout missing",
   "read-only checkout",
   "write access returns",
+  "initially read-only",
 ])("documents sync while an artifact watch is unavailable (%s)", async (mode) => {
   const root = await mkdtemp(join(tmpdir(), "relay-watch-failure-"));
   const app = await createTestApp({ storageRoot: join(root, "home") });
@@ -111,6 +165,12 @@ test.each([
       handle.once("close", () => handles.delete(handle));
       return handle;
     }) as typeof fs.watch);
+    const initiallyReadOnly = mode === "initially read-only";
+    if (initiallyReadOnly) {
+      await app.deps.workspaceService.updateProviderProjection(workspace.id, {
+        provider_capabilities_json: { ...defaultLocalWorkspaceCapabilities, files: "read" },
+      });
+    }
     relay = await startRelayExtension({
       config: {
         accountId: "owner",
@@ -129,31 +189,24 @@ test.each([
       access: async () => ({ token: "fixture", expiresAt: new Date(Date.now() + 60_000).toISOString() }),
     });
     await waitFor(async () => (await records.outcome("initial"))?.state === "synced");
-    await waitFor(() => attempts > 0);
-    if (mode === "read-only checkout" || mode === "write access returns") {
-      await app.deps.workspaceService.updateProviderProjection(workspace.id, {
-        provider_capabilities_json: { ...defaultLocalWorkspaceCapabilities, files: "read" },
+    if (["read-only checkout", "write access returns", "initially read-only"].includes(mode)) {
+      await checkWriteAccessRecovery({
+        mode,
+        app,
+        workspaceId: workspace.id,
+        folder,
+        relay,
+        records,
+        attempts: () => attempts,
+        writeDenials: () => writeDenials,
+        watchCount: () => handles.size,
+        allowWatch: () => {
+          failing = false;
+        },
       });
-      await waitFor(() => writeDenials === 1);
-      // The earlier native failure would schedule a two-second repeat if writes were temporary.
-      await Bun.sleep(2_100);
-      expect(writeDenials).toBe(1);
-      expect(attempts).toBe(1);
-      expect((await relay.status()).error).toBeUndefined();
-      if (mode === "write access returns") {
-        await app.deps.workspaceService.updateProviderProjection(workspace.id, {
-          provider_capabilities_json: defaultLocalWorkspaceCapabilities,
-        });
-        failing = false;
-        relay.resumeArtifactWatches?.();
-        await waitFor(() => handles.size === 4);
-        await Bun.sleep(100);
-        const file = join(folder, ".pstdio/extension-storage/test.notes/documents/restored-write.txt");
-        await writeFile(file, "External write after restoring access");
-        await waitFor(async () => (await records.read('["artifact-file","documents/restored-write.txt"]')).exists);
-      }
       return;
     }
+    await waitFor(() => attempts > 0);
     const workspaceSetup = mode === "workspace setup";
     const checkoutMissing = mode === "checkout missing";
     if (workspaceSetup || checkoutMissing) {
@@ -171,8 +224,6 @@ test.each([
         fs.renameSync(folder, parked);
         failing = false;
         relay.wake();
-      }
-      if (checkoutMissing) {
         // Let the first scheduled retry pass while the registered path is absent.
         await Bun.sleep(1_200);
         expect(attempts).toBe(1);

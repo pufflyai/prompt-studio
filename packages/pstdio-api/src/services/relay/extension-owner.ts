@@ -67,10 +67,12 @@ const startRelayArtifactWatches = (input: {
   const watches = new Map<string, ReturnType<typeof watchArtifactMount>>();
   let retry: ReturnType<typeof setTimeout> | undefined;
   let failures = 0;
+  let reconcileOnAttach = false;
   let opening = false;
   let requested = false;
 
   const scheduleRetry = () => {
+    reconcileOnAttach = true;
     retry = setTimeout(
       () => {
         retry = undefined;
@@ -81,9 +83,8 @@ const startRelayArtifactWatches = (input: {
     retry.unref?.();
   };
 
-  const open = async () => {
-    if (signal.aborted) return;
-    const writable = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write").catch((error) => {
+  const resolveWritableRoot = () =>
+    resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write").catch((error) => {
       if (signal.aborted) return null;
       if (error instanceof WorkspaceFileAccessDeniedError) {
         apiLogger.debug(
@@ -106,37 +107,48 @@ const startRelayArtifactWatches = (input: {
       scheduleRetry();
       return null;
     });
-    if (signal.aborted || writable !== input.repoRoot) return;
+
+  const openWatch = (root: string) => {
+    try {
+      const watch = watchArtifactMount({
+        root,
+        workspaceRoot: input.repoRoot,
+        ledger: deps.artifactMountWrites,
+        onChange: input.wake,
+        onError: input.wake,
+        onRootRetryError: (error) =>
+          apiLogger.warn(
+            { err: error, event: "relay.artifact_watch.reopen_failed", ...owner, root },
+            "Relay artifact watch root will retry",
+          ),
+        onFolderLimit: input.wake,
+      });
+      watches.set(root, watch);
+      // A recovered watch may have missed edits while its mount was unwatched.
+      if (reconcileOnAttach) input.wake();
+    } catch (error) {
+      apiLogger.warn(
+        { err: error, event: "relay.artifact_watch.start_failed", ...owner, root },
+        "Relay artifact watch failed to start",
+      );
+    }
+  };
+
+  const open = async () => {
+    if (signal.aborted) return;
+    const writable = await resolveWritableRoot();
+    if (signal.aborted) return;
+    if (writable !== input.repoRoot) {
+      reconcileOnAttach = true;
+      return;
+    }
     if (!existsSync(input.repoRoot)) {
       scheduleRetry();
       return;
     }
 
     for (const root of input.roots) {
-      if (watches.has(root)) continue;
-      try {
-        const watch = watchArtifactMount({
-          root,
-          workspaceRoot: input.repoRoot,
-          ledger: deps.artifactMountWrites,
-          onChange: input.wake,
-          onError: input.wake,
-          onRootRetryError: (error) =>
-            apiLogger.warn(
-              { err: error, event: "relay.artifact_watch.reopen_failed", ...owner, root },
-              "Relay artifact watch root will retry",
-            ),
-          onFolderLimit: input.wake,
-        });
-        watches.set(root, watch);
-        // A recovered watch may have missed edits while its mount was unwatched.
-        if (failures > 0) input.wake();
-      } catch (error) {
-        apiLogger.warn(
-          { err: error, event: "relay.artifact_watch.start_failed", ...owner, root },
-          "Relay artifact watch failed to start",
-        );
-      }
+      if (!watches.has(root)) openWatch(root);
     }
     if (watches.size < input.roots.size) scheduleRetry();
   };
