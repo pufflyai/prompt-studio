@@ -72,7 +72,7 @@ const spawnThroughProvider = (
   const pending = (async () => {
     const context = handle.contextForScope ? await handle.contextForScope(scope) : handle.context;
     scope.signal.throwIfAborted();
-    return handle.provider.spawn(context, { ...providerInput(workspace), process });
+    return handle.provider.spawn(context, { ...providerInput(workspace), process, signal: scope.signal });
   })();
   return pending.then(
     (opened) => {

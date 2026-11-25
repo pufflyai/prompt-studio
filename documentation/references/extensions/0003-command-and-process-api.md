@@ -124,9 +124,10 @@ Error codes on `started`: `process_command_not_found`, `process_target_unsupport
 
 A workspace type whose workspaces run elsewhere can add two optional methods:
 
-- `spawn(ctx, { projectId, workspaceId, providerRef, process })` returns a process handle with the
-  same contract. `ctx` is the provider's own context. The host owns the returned handle: it kills it
-  when the caller's lifetime ends. Resolve the optional `treeExited` promise when the target
+- `spawn(ctx, { projectId, workspaceId, providerRef, process, signal })` returns a process handle
+  with the same contract. `ctx` is the provider's own context. Observe `signal` to cancel opening
+  the remote process if the caller stops it before the handle is returned. The host owns the
+  returned handle and kills it when the caller's lifetime ends. Resolve `treeExited` when the target
   confirms the child and its descendants have exited and output capture has finished or discarded
   the remaining data. The provider's call and its local helpers stay open until that confirmation,
   a successful stop, or cancellation.

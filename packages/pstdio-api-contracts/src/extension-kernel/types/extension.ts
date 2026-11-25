@@ -227,6 +227,8 @@ export interface WorkspaceTypeProvider extends ContributionDefinition<"workspace
 
 export interface WorkspaceProviderSpawnInput extends WorkspaceProviderResolveInput {
   process: ProcessSpawnInput;
+  /** Aborts when the caller stops the process before the provider returns its handle. */
+  signal: AbortSignal;
 }
 
 export interface WorkspaceProviderReadTextInput extends WorkspaceProviderResolveInput {
