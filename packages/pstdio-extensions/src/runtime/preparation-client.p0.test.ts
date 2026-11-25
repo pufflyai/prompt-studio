@@ -131,6 +131,94 @@ test("requested tools overtake queued background inspections", async () => {
   expect((await background).sequence).toBe(3);
 });
 
+test.each([
+  "continues",
+  "cancels",
+] as const)("restoration stays held in its second preemptor's gap until the edit %s", async (mode) => {
+  const client = fixture();
+  const restoration = gate();
+  const build = gate();
+  const restart = restartOf(client, "shared-build-restoration");
+  const startedFirst = Promise.withResolvers<void>();
+  const startedSecond = Promise.withResolvers<void>();
+  const shared = Promise.withResolvers<{ sequence: number }>();
+  void shared.promise.catch(() => undefined);
+  const gap = Promise.withResolvers<void>();
+  const cancellation = new AbortController();
+  const cancelled = new Error("Cancel the second edit in its callback gap");
+  const dependency = withBackgroundPreparation(createPreparationScope);
+  let workerLosses = 0;
+  const unsubscribe = client.subscribe((event) => {
+    if (event.kind === "worker-lost") workerLosses++;
+  });
+  const restore = client.withContinuation(
+    () => client.run("wait", { name: "shared-build-restoration", url: restoration.url }, { resources: ["/shared"] }),
+    { priority: "restoration" },
+  );
+  const edit = (started: typeof startedFirst, afterBuild: () => Promise<unknown> | undefined) =>
+    client.withContinuation(async () => {
+      const caller = createPreparationScope();
+      const release = dependency.request(caller);
+      started.resolve();
+      try {
+        await shared.promise;
+        return await afterBuild();
+      } finally {
+        release();
+        caller.dispose();
+      }
+    });
+  let first: ReturnType<typeof edit> | undefined;
+  let second: Promise<unknown> | undefined;
+  try {
+    await restoration.entered.promise;
+    first = edit(startedFirst, () => undefined);
+    void first.catch(() => undefined);
+    await startedFirst.promise;
+    second = edit(startedSecond, async () => {
+      await gap.promise;
+      cancellation.signal.throwIfAborted();
+      return client.run<{ sequence: number }>("value", { name: "second-edit-step" }, { resources: ["/shared"] });
+    }).catch((error: unknown) => error);
+    await startedSecond.promise;
+    expect(dependency.continuations).toHaveLength(2);
+    shared.resolve(
+      dependency.run(() =>
+        client.run<{ sequence: number }>(
+          "wait",
+          { name: "shared-edit-build", url: build.url },
+          {
+            resources: ["/shared"],
+          },
+        ),
+      ),
+    );
+    await build.entered.promise;
+    build.release.resolve();
+    expect((await shared.promise).sequence).toBe(1);
+    await first;
+
+    const next = await Promise.race([restart.restarted.then(() => "resumed"), Bun.sleep(75).then(() => "held")]);
+    expect(next).toBe("held");
+    if (mode === "cancels") cancellation.abort(cancelled);
+    gap.resolve();
+    if (mode === "cancels") expect(await second).toBe(cancelled);
+    else expect(await second).toMatchObject({ sequence: 2 });
+    await restart.restarted;
+    expect(workerLosses).toBe(1);
+  } finally {
+    shared.reject(cancelled);
+    gap.resolve();
+    build.release.resolve();
+    restoration.release.resolve();
+    await client.stop();
+    await Promise.allSettled([restore, first, second]);
+    restart.unsubscribe();
+    unsubscribe();
+    dependency.dispose();
+  }
+});
+
 test("restoration reserves its asynchronous admission gap before background work resumes", async () => {
   const client = fixture();
   const active = gate();
