@@ -39,6 +39,15 @@ export const createBackendWorkerPool = (
   let closing: Promise<void> | undefined;
   let sweep: ReturnType<typeof setInterval> | undefined;
 
+  const trackCleanup = (completion: Promise<void>) => {
+    stopping.add(completion);
+    const forget = () => {
+      stopping.delete(completion);
+    };
+    void completion.then(forget, forget);
+    return completion;
+  };
+
   const recordFailure = (key: string) => {
     const now = performance.now();
     const recent = (failures.get(key) ?? []).filter((at) => now - at < restartBudget.windowMs);
@@ -87,7 +96,12 @@ export const createBackendWorkerPool = (
     };
     void starting.then((worker) => {
       entry.worker = worker;
-      return worker.closed.then(forget);
+      return worker.closed.then(() => {
+        if (workers.get(key) !== entry) return;
+        // Join bounded cleanup even when the process has yet to report its raw exit.
+        trackCleanup(worker.stop());
+        forget();
+      });
     }, forget);
     if (!sweep) {
       sweep = setInterval(retireIdle, Math.max(1, Math.min(idleMs, 60_000)));
@@ -101,13 +115,12 @@ export const createBackendWorkerPool = (
     const entry = workers.get(key);
     if (!entry) return Promise.resolve();
     workers.delete(key);
-    const stopped = entry.starting.then(
-      (running) => running.stop(),
-      () => {},
+    return trackCleanup(
+      entry.starting.then(
+        (running) => running.stop(),
+        () => {},
+      ),
     );
-    const completion = stopped.finally(() => stopping.delete(completion));
-    stopping.add(completion);
-    return completion;
   };
 
   /** Refuses new workers while it stops the running ones; the pool can be used again afterwards. */

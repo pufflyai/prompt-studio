@@ -3,6 +3,7 @@ import { readCommandRejection } from "../runner/command-rejection";
 import { createPendingCalls } from "./pending-calls";
 import {
   BACKEND_PROTOCOL_VERSION,
+  BACKEND_STOP_GRACE_MS,
   type BackendHandlerRef,
   BackendUnavailableError,
   deserializeBackendError,
@@ -77,6 +78,19 @@ export const describeBackendDefinition = (definition: unknown) => {
 };
 
 const send = (message: WorkerToHostMessage) => process.send?.(message);
+
+const holdWorkerGroup = () => {
+  if (process.platform === "win32") return null;
+  try {
+    // The host kills this member during cleanup. Expiry also bounds its lifetime if the host dies.
+    const seconds = String(Math.ceil((2 * BACKEND_STOP_GRACE_MS) / 1_000) + 1);
+    const anchor = Bun.spawn(["/bin/sleep", seconds], { stdio: ["ignore", "ignore", "ignore"] });
+    anchor.unref();
+    return anchor.pid;
+  } catch {
+    return null;
+  }
+};
 
 /**
  * Runs in the private worker process: no API, no host database connection and no host environment
@@ -304,6 +318,8 @@ export const runBackendWorker = () => {
     else if (raw.type === "fn-call") void answerHost(raw);
     else if (raw.type === "ping")
       send({ v: BACKEND_PROTOCOL_VERSION, type: "pong", seq: raw.seq, rss: process.memoryUsage.rss() });
+    else if (raw.type === "hold-group")
+      send({ v: BACKEND_PROTOCOL_VERSION, type: "group-anchor", pid: holdWorkerGroup() });
     else if (raw.type === "release") {
       invocations.get(raw.invocationId)?.table.release(raw.fnIds);
       dispose(raw.invocationId);

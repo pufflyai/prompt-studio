@@ -13,6 +13,7 @@ export class BackendUnavailableError extends Error {
 
 /** Both sides reject messages of another version instead of guessing their meaning. */
 export const BACKEND_PROTOCOL_VERSION = 1;
+export const BACKEND_STOP_GRACE_MS = 2_000;
 
 export interface SerializedBackendError {
   name: string;
@@ -48,6 +49,7 @@ export type HostToWorkerMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
       invocationOwned?: true;
     }
   | { type: "ping"; seq: number }
+  | { type: "hold-group" }
   | { type: "release"; invocationId: string; fnIds: string[] }
 );
 
@@ -61,6 +63,7 @@ export type WorkerToHostMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
   | { type: "fn-call"; invocationId: string; requestId: string; fnId: string; args: unknown[]; within?: string }
   | ({ type: "reply"; invocationId: string; requestId: string } & Settled)
   | { type: "pong"; seq: number; rss: number }
+  | { type: "group-anchor"; pid: number | null }
   | { type: "release"; invocationId: string; fnIds: string[] }
 );
 
@@ -165,6 +168,8 @@ const workerMessageChecks: Record<string, (message: Message) => boolean> = {
   release: (message) => isString(message.invocationId) && Array.isArray(message.fnIds) && message.fnIds.every(isString),
   pong: (message) =>
     Number.isSafeInteger(message.seq) && typeof message.rss === "number" && Number.isFinite(message.rss),
+  "group-anchor": (message) =>
+    message.pid === null || (typeof message.pid === "number" && Number.isSafeInteger(message.pid) && message.pid > 1),
 };
 
 /** Validates what the worker sends. The host never trusts its shape or its claimed identity. */

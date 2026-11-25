@@ -6,6 +6,7 @@ import { createCommandRejection } from "../runner/command-rejection";
 import { createHostCalls, type HostInvocation } from "./host-calls";
 import {
   BACKEND_PROTOCOL_VERSION,
+  BACKEND_STOP_GRACE_MS,
   BackendUnavailableError,
   deserializeBackendError,
   type HostToWorkerMessage,
@@ -15,10 +16,10 @@ import {
   type WorkerToHostMessage,
 } from "./protocol";
 import { createFunctionTable, createImportTracker } from "./remote-values";
+import { stopBackendWorkerTree } from "./stop-worker-tree";
 import { type BackendSurface, collectSurfaceValues, surfaceAllowsCommandRejection } from "./surface";
 import { createWatchdog, type WatchdogOptions } from "./watchdog";
 
-const STOP_GRACE_MS = 2_000;
 const DRAIN_DEADLINE_MS = 30_000;
 // Dependencies are prepared before a worker starts, so loading only evaluates the entry.
 const LOAD_DEADLINE_MS = 60_000;
@@ -162,6 +163,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
   const ready = Promise.withResolvers<void>();
   const loaded = Promise.withResolvers<unknown>();
   let stopped: BackendUnavailableError | undefined;
+  let groupAnchorReply: ((pid: number | null) => void) | undefined;
   // Bun reads .env files from the working directory at startup. An empty folder keeps host files out.
   const cwd = mkdtempSync(join(tmpdir(), "pstdio-backend-"));
 
@@ -179,7 +181,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
 
   /** Returns false when the message could not be sent; the caller then has nothing to wait for. */
   const send = (message: HostToWorkerMessage) => {
-    if (stopped) return false;
+    if (stopped && message.type !== "hold-group") return false;
     try {
       child.send(message);
       return true;
@@ -273,6 +275,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
       else loaded.reject(workerError(message.error));
     } else if (message?.type === "result") settle(message);
     else if (message?.type === "pong") watchdog.answered(message.rss);
+    else if (message?.type === "group-anchor") groupAnchorReply?.(message.pid);
     else if (message?.type === "release") {
       invocations.get(message.invocationId)?.table.release(message.fnIds);
       dispose(message.invocationId);
@@ -285,12 +288,14 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
         cwd,
         env: options.env,
         stdio: ["ignore", "inherit", "inherit"],
+        detached: process.platform !== "win32",
         serialization: "advanced",
         ipc: receive,
         // A worker that drops its channel can never answer again, even if its process keeps running.
         onDisconnect: () => {
+          groupAnchorReply?.(null);
           fail(new BackendUnavailableError("The extension backend disconnected."));
-          child.kill("SIGKILL");
+          stopTree();
         },
       });
     } catch (error) {
@@ -300,32 +305,55 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     }
   };
   const child = spawn();
+  const requestGroupAnchor = () => {
+    const reply = Promise.withResolvers<number | null>();
+    groupAnchorReply = reply.resolve;
+    if (!send({ v: BACKEND_PROTOCOL_VERSION, type: "hold-group" })) reply.resolve(null);
+    return reply.promise;
+  };
+  let stopping: Promise<void> | undefined;
+  const stopTree = (graceful = false) => {
+    if (stopping) return stopping;
+    stopping = stopBackendWorkerTree(child, BACKEND_STOP_GRACE_MS, graceful ? requestGroupAnchor : undefined).finally(
+      () => {
+        groupAnchorReply?.(null);
+        groupAnchorReply = undefined;
+      },
+    );
+    void stopping.catch((error) =>
+      console.warn("[pstdio-extensions] Could not stop the extension backend tree", error),
+    );
+    return stopping;
+  };
 
   const watchdog = createWatchdog(
     (seq) => send({ v: BACKEND_PROTOCOL_VERSION, type: "ping", seq }),
     (reason) => {
       fail(new BackendUnavailableError(reason));
-      child.kill("SIGKILL");
+      stopTree();
     },
     options.watchdog,
   );
 
-  const exited = child.exited.then((code) => {
+  const exited = child.exited.then(async (code) => {
     watchdog.stop();
     fail(new BackendUnavailableError(`The extension backend exited (${code}).`));
-    rmSync(cwd, { recursive: true, force: true });
-    return code;
+    try {
+      await stopping;
+      return code;
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
   });
+  void exited.catch(() => {});
   // Callers observe startup failures through `loaded`; these copies only prevent unhandled rejections.
   ready.promise.catch(() => {});
   loaded.promise.catch(() => {});
 
-  const stop = async () => {
+  const stop = async (graceful: boolean) => {
     fail(new BackendUnavailableError("The extension backend was stopped."));
-    child.kill("SIGTERM");
-    const timer = setTimeout(() => child.kill("SIGKILL"), STOP_GRACE_MS);
+    await stopTree(graceful);
     await exited;
-    clearTimeout(timer);
   };
 
   const invoke = createInvoke({
@@ -349,7 +377,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
       definition: await loaded.promise,
       closed: closed.promise,
       exited,
-      stop,
+      stop: () => stop(true),
       invoke,
       get busy() {
         return invocations.size > 0;
@@ -359,7 +387,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
       },
     };
   } catch (error) {
-    await stop();
+    await stop(false).catch(() => {});
     throw error;
   } finally {
     clearTimeout(deadline);
