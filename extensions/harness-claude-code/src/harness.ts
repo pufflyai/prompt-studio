@@ -12,7 +12,7 @@ import type {
 import { l10n, params } from "@pstdio/sdk/extensions";
 import { authenticateClaude, getClaudeAuthentication } from "./authentication";
 import { claudeCommandState, prepareClaudeOperation } from "./commands";
-import { detectClaude } from "./detection";
+import { detectClaude, requireSupportedClaude } from "./detection";
 import { recoverClaudeMessages } from "./history-reconciliation";
 import { discoverClaudeModels } from "./models";
 import { getClaudeForkMessageId, normalizeClaudeCodeMessages } from "./normalize-transcript";
@@ -190,8 +190,9 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
 
     // Hosts from PS-1197 on pass approvals on start too. Drop the widened type once a released SDK
     // declares `approvals` on HarnessStartInput.
-    start: (ctx, input: HarnessStartInput & { approvals?: HarnessApprovalChannel }) =>
+    start: async (ctx, input: HarnessStartInput & { approvals?: HarnessApprovalChannel }) =>
       deps.startSession({
+        command: await requireSupportedClaude(ctx, input.signal),
         prompt: input.prompt,
         attachments: input.attachments,
         model: input.model,
@@ -205,8 +206,9 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
         signal: input.signal,
       }),
 
-    resume: (ctx, input) =>
+    resume: async (ctx, input) =>
       resumeClaudeCodeSession({
+        command: await requireSupportedClaude(ctx, input.signal),
         agentSessionId: input.agentSessionId,
         prompt: input.prompt,
         attachments: input.attachments,

@@ -282,3 +282,22 @@ test("start passes the host's cancel signal to the Claude session", async () => 
   });
   expect(signals[0]).toBe(controller.signal);
 });
+
+test("refuses to start or resume a session with an outdated Claude Code executable", async () => {
+  const harness = createClaudeCodeHarness({
+    startSession: async () => {
+      throw new Error("The session tried to start");
+    },
+  });
+  const outdated = {
+    ...ctx,
+    process: {
+      ...ctx.process,
+      run: async () => ({ exitCode: 0, stdout: "2.1.250 (Claude Code)", stderr: "" }),
+    },
+  };
+  const input = { prompt: "Plan", sessionId: "host", events: { getMessages: () => [], push() {} } };
+  const error = "Requires Claude Code 2.1.251 or newer. Found 2.1.250.";
+  await expect(harness.start(outdated, input)).rejects.toThrow(error);
+  await expect(harness.resume(outdated, { ...input, agentSessionId: "native" })).rejects.toThrow(error);
+});

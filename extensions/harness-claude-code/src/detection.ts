@@ -1,23 +1,20 @@
 import type { HarnessContext } from "@pstdio/sdk/extensions";
 import { resolveClaudeCommand } from "./cli";
 
-// 2.1.203 is the first release that reports `background_tasks_changed` in stream JSON. Older releases
-// end the run at the first result and kill the agent's background tasks. There is no upper bound
-// because Claude Code ships almost daily and the harness ignores events it does not know.
-export const MINIMUM_VERSION = "2.1.203";
+// 2.1.251 fixes GHSA-5xjx-9qx6-jcrv and supports the background-task events the harness needs.
+export const MINIMUM_VERSION = "2.1.251";
 
 const unavailable = (ctx: HarnessContext, reason: string, version?: string) => {
   ctx.logger.warn(reason);
   return { available: false, reason, ...(version ? { version } : {}) };
 };
 
-export const detectClaude = async (ctx: HarnessContext) => {
+export const detectClaude = async (ctx: HarnessContext, command?: string) => {
   try {
     // CLAUDECODE is cleared so a nested session is not mistaken for the CLI itself.
     // Model listing also calls this probe without the host availability wrapper.
-    const command = resolveClaudeCommand();
     const result = await ctx.process.run({
-      command: [command, "--version"],
+      command: [command ?? resolveClaudeCommand(), "--version"],
       env: { CLAUDECODE: "" },
       timeoutMs: 3_000,
     });
@@ -39,4 +36,12 @@ export const detectClaude = async (ctx: HarnessContext) => {
     // Avoid logging raw process output or environment values.
     return unavailable(ctx, "Claude Code could not run. Install Claude Code or check the runtime PATH.");
   }
+};
+
+export const requireSupportedClaude = async (ctx: HarnessContext, signal?: AbortSignal) => {
+  signal?.throwIfAborted();
+  const command = resolveClaudeCommand();
+  const detected = await detectClaude(ctx, command);
+  if ("reason" in detected) throw new Error(detected.reason);
+  return command;
 };

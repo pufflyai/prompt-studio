@@ -15,7 +15,7 @@ Prompt Studio installs a private Claude Code CLI with this extension. It uses an
 
 Cancelling sign-in stops its native worker. The CLI stores its own credentials; Prompt Studio does not copy them into extension settings. Installing the CLI does not sign you in automatically. The session background asks you to sign in and sending stays disabled when the native CLI reports that you are signed out. Use `/logout` to remove stored credentials. Credentials supplied by the runtime environment must be changed there.
 
-Prompt Studio supports Claude Code 2.1.203 and newer. An older CLI on PATH shows as unavailable with its version and the minimum required version. Update that CLI, or remove it from PATH to use the private installation. Private CLI versions update with the extension.
+Prompt Studio supports Claude Code 2.1.251 and newer. An older CLI on PATH shows as unavailable with its version and the minimum required version. Update that CLI, or remove it from PATH to use the private installation. Private CLI versions update with the extension.
 
 If you removed the extension, install it again from **Settings → Project → Extensions** or run `pst extensions add harness-claude-code`.
 
@@ -58,7 +58,7 @@ If the run has already stopped accepting input, delivery is rejected. If the con
 
 ## Account quotas
 
-Run `pst harness-claude-code quotas` to inspect the native account quota snapshot, including model-specific windows. It sends only `initialize` and `get_usage` control requests in a temporary process, with no prompt, MCP servers, or saved session. It requests that local transcript analysis be skipped; older CLIs, including the bundled 2.1.203, ignore that request and may still scan local usage history. Reads are time bounded, and cleanup stops the owned process tree and closes its pipes within a separate one-second allowance. Claude Code may return no account quota snapshot for the current sign-in; the command then reports `unavailable` rather than estimating a balance from session tokens.
+Run `pst harness-claude-code quotas` to inspect the native account quota snapshot, including model-specific windows. It sends only `initialize` and `get_usage` control requests in a temporary process, with no prompt, MCP servers, or saved session. It requests that local transcript analysis be skipped; CLI releases that ignore that request may still scan local usage history. Reads are time bounded, and cleanup stops the owned process tree and closes its pipes within a separate one-second allowance. Claude Code may return no account quota snapshot for the current sign-in; the command then reports `unavailable` rather than estimating a balance from session tokens.
 
 
 ## Restart after quota reset
