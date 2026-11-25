@@ -552,7 +552,11 @@ test.each(copyStates)("two views check the current device state before downloadi
         await inFlightCatalog!;
         await until(() => fixture.choice.entry?.presence === "downloaded");
       });
-      const beforeReceipt = { claimed: fixture.removal.active(id, account, fixture.choice.login), opened: opened.length, closed: fixture.closed };
+      const beforeReceipt = {
+        claimed: fixture.removal.active(id, account, fixture.choice.login),
+        opened: opened.length,
+        closed: fixture.closed,
+      };
       if (outcome === "rejected removal after retry") {
         await act(async () => {
           releaseRemoval.resolve();
@@ -786,9 +790,9 @@ test("a lost download from another device does not block a new device on the sam
       blocking: false,
     });
     await act(async () => staleCheck?.());
-    await expect(fixture.deletions.start(fixture.id, "Recovered notes", fixture.account, fixture.peer.login!)).rejects.toThrow(
-      "This project already has a pending Cloud change.",
-    );
+    await expect(
+      fixture.deletions.start(fixture.id, "Recovered notes", fixture.account, fixture.peer.login!),
+    ).rejects.toThrow("This project already has a pending Cloud change.");
     await fixture.clickAndSettle(fixture.peer.requestDownload);
     expect([device.downloads, fixture.peer.downloadBlocking]).toEqual([2, false]);
   } finally {
