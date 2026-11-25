@@ -526,3 +526,312 @@ test.each(["owner", "document"] as const)("a failed %s synchronization reports i
     await f.close();
   }
 });
+
+test.each([
+  "reconnect",
+  "shutdown",
+] as const)("selective retry retains work queued after its snapshot through %s", async (outcome) => {
+  let accesses = 0;
+  const renewal = Promise.withResolvers<{ token: string; expiresAt: string }>();
+  const token = () => ({ token: "fixture", expiresAt: new Date(Date.now() + 60_000).toISOString() });
+  const fixture = documentConnectionFixture({
+    access: () => (++accesses === 1 ? Promise.resolve(token()) : renewal.promise),
+  });
+  const failed = Promise.withResolvers<void>();
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let calls = 0;
+  let restarted = false;
+  const connection = createDocumentRelayConnection({
+    ...fixture,
+    projectId: "project",
+    signal: fixture.controller.signal,
+    synchronize: async () => {
+      if (++calls === 1) throw new Error("Initial pass failed");
+      entered.resolve();
+      await release.promise;
+    },
+    onError: () => failed.resolve(),
+  });
+  try {
+    await failed.promise;
+    const retry = connection.prepareRetry({
+      beforeRetry: () => {
+        restarted = true;
+      },
+    });
+    fixture.live.reconnect();
+    const deadline = Date.now() + 2000;
+    while (accesses < 2 && Date.now() < deadline) await Bun.sleep(5);
+    expect(accesses).toBe(2);
+    await connection.restart();
+    let settled = false;
+    const completion = retry().then(() => {
+      settled = true;
+    });
+    await Bun.sleep(5);
+    expect(settled).toBe(false);
+    expect(restarted).toBe(false);
+    expect(calls).toBe(1);
+    if (outcome === "shutdown") {
+      fixture.controller.abort();
+      await connection.done;
+    } else {
+      renewal.resolve(token());
+      await entered.promise;
+      expect(settled).toBe(false);
+      release.resolve();
+    }
+    await completion;
+    expect(settled).toBe(true);
+    expect(calls).toBe(outcome === "reconnect" ? 2 : 1);
+  } finally {
+    release.resolve();
+    renewal.resolve(token());
+    fixture.controller.abort();
+    await connection.done;
+    await fixture.close();
+  }
+});
+
+test("resuming a logical owner failure queues a pass without cancelling healthy work and fences admission after close", async () => {
+  const fixture = documentConnectionFixture();
+  const entered = Promise.withResolvers<AbortSignal>();
+  const release = Promise.withResolvers<void>();
+  let calls = 0;
+  let admissions = 0;
+  const connection = createDocumentRelayConnection({
+    ...fixture,
+    projectId: "project",
+    signal: fixture.controller.signal,
+    synchronize: async (signal) => {
+      if (++calls === 1) {
+        entered.resolve(signal);
+        await release.promise;
+      }
+    },
+  });
+  try {
+    const active = await entered.promise;
+    let settled = false;
+    const completion = connection
+      .resume(() => {
+        admissions++;
+      })
+      .then(() => {
+        settled = true;
+      });
+    expect(admissions).toBe(1);
+    expect(active.aborted).toBe(false);
+    expect(settled).toBe(false);
+    release.resolve();
+    await completion;
+    expect(calls).toBe(2);
+    expect(active.aborted).toBe(false);
+    fixture.controller.abort();
+    await connection.done;
+    await connection.resume(() => {
+      admissions++;
+    });
+    expect(admissions).toBe(1);
+  } finally {
+    release.resolve();
+    fixture.controller.abort();
+    await connection.done;
+    await fixture.close();
+  }
+});
+
+test("explicit Retry upgrades a non-cancelling logical resume without losing its waiter", async () => {
+  const fixture = documentConnectionFixture();
+  const entered = Promise.withResolvers<AbortSignal>();
+  const replacement = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let calls = 0;
+  const connection = createDocumentRelayConnection({
+    ...fixture,
+    projectId: "project",
+    signal: fixture.controller.signal,
+    synchronize: async (signal) => {
+      if (++calls === 1) {
+        entered.resolve(signal);
+        await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+      } else {
+        replacement.resolve();
+        await release.promise;
+      }
+    },
+  });
+  try {
+    const first = await entered.promise;
+    let settled = false;
+    const resumed = connection.resume().then(() => {
+      settled = true;
+    });
+    const explicit = connection.retry();
+    expect(first.aborted).toBe(true);
+    await replacement.promise;
+    expect(settled).toBe(false);
+    release.resolve();
+    await Promise.all([resumed, explicit]);
+    expect(calls).toBe(2);
+  } finally {
+    release.resolve();
+    fixture.controller.abort();
+    await connection.done;
+    await fixture.close();
+  }
+});
+
+test("failure in an older pass cannot settle a logical resume queued behind it", async () => {
+  const fixture = documentConnectionFixture();
+  const entered = Promise.withResolvers<void>();
+  const fail = Promise.withResolvers<void>();
+  const failed = Promise.withResolvers<void>();
+  const replacement = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let calls = 0;
+  const connection = createDocumentRelayConnection({
+    ...fixture,
+    projectId: "project",
+    signal: fixture.controller.signal,
+    synchronize: async () => {
+      if (++calls === 1) {
+        entered.resolve();
+        await fail.promise;
+        throw new Error("Older pass failed");
+      }
+      replacement.resolve();
+      await release.promise;
+    },
+    onError: () => failed.resolve(),
+  });
+  try {
+    await entered.promise;
+    let settled = false;
+    const resumed = connection.resume().then(() => {
+      settled = true;
+    });
+    fail.resolve();
+    await failed.promise;
+    await Bun.sleep(5);
+    expect(settled).toBe(false);
+    await replacement.promise;
+    expect(settled).toBe(false);
+    release.resolve();
+    await resumed;
+    expect(calls).toBe(2);
+  } finally {
+    fail.resolve();
+    release.resolve();
+    fixture.controller.abort();
+    await connection.done;
+    await fixture.close();
+  }
+});
+
+test("selective retry retains an observed recovery that disconnects before its pass completes", async () => {
+  let accesses = 0;
+  const renewal = Promise.withResolvers<{ token: string; expiresAt: string }>();
+  const token = () => ({ token: "fixture", expiresAt: new Date(Date.now() + 60_000).toISOString() });
+  const fixture = documentConnectionFixture({
+    access: () => (++accesses === 1 ? Promise.resolve(token()) : renewal.promise),
+  });
+  const failed = Promise.withResolvers<void>();
+  const entered = Promise.withResolvers<AbortSignal>();
+  const replacement = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let calls = 0;
+  const connection = createDocumentRelayConnection({
+    ...fixture,
+    projectId: "project",
+    signal: fixture.controller.signal,
+    synchronize: async (signal) => {
+      if (++calls === 1) throw new Error("Initial pass failed");
+      if (calls === 2) {
+        entered.resolve(signal);
+        await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+      } else {
+        replacement.resolve();
+        await release.promise;
+      }
+    },
+    onError: () => failed.resolve(),
+  });
+  try {
+    await failed.promise;
+    const retry = connection.prepareRetry();
+    await connection.restart();
+    const current = await entered.promise;
+    let settled = false;
+    const completion = retry().then(() => {
+      settled = true;
+    });
+    fixture.live.reconnect();
+    const deadline = Date.now() + 2000;
+    while (accesses < 2 && Date.now() < deadline) await Bun.sleep(5);
+    expect(accesses).toBe(2);
+    expect(current.aborted).toBe(true);
+    await Bun.sleep(5);
+    expect(settled).toBe(false);
+    renewal.resolve(token());
+    await replacement.promise;
+    expect(settled).toBe(false);
+    release.resolve();
+    await completion;
+    expect(calls).toBe(3);
+  } finally {
+    renewal.resolve(token());
+    release.resolve();
+    fixture.controller.abort();
+    await connection.done;
+    await fixture.close();
+  }
+});
+
+test("a selective observer follows an explicit Retry replacing the recovery it observed", async () => {
+  const fixture = documentConnectionFixture();
+  const failed = Promise.withResolvers<void>();
+  const entered = Promise.withResolvers<void>();
+  const replacement = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let calls = 0;
+  const connection = createDocumentRelayConnection({
+    ...fixture,
+    projectId: "project",
+    signal: fixture.controller.signal,
+    synchronize: async (signal) => {
+      if (++calls === 1) throw new Error("Initial pass failed");
+      if (calls === 2) {
+        entered.resolve();
+        await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+      } else {
+        replacement.resolve();
+        await release.promise;
+      }
+    },
+    onError: () => failed.resolve(),
+  });
+  try {
+    await failed.promise;
+    const retry = connection.prepareRetry();
+    await connection.restart();
+    await entered.promise;
+    let settled = false;
+    const observed = retry().then(() => {
+      settled = true;
+    });
+    const explicit = connection.retry();
+    await replacement.promise;
+    await Bun.sleep(5);
+    expect(settled).toBe(false);
+    release.resolve();
+    await Promise.all([observed, explicit]);
+    expect(calls).toBe(3);
+  } finally {
+    release.resolve();
+    fixture.controller.abort();
+    await connection.done;
+    await fixture.close();
+  }
+});

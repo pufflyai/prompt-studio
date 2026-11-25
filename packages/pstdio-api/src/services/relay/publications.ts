@@ -65,6 +65,7 @@ export const startPublishedExtensions = (input: {
       const selected = await catalog.list();
       const key = canonicalJson(selected.map(({ recordId, value, asset }) => ({ recordId, value, asset })));
       if (failed?.key === key && failed.waiting) return;
+      admitRetry();
       try {
         const entries = publishedEntries(selected);
         await activatePublishedSet(deps, config.workbenchId, entries, attemptSignal, false, async () => {
@@ -108,7 +109,17 @@ export const startPublishedExtensions = (input: {
       admitRetry();
       return connection.retry();
     },
-    prepareRetry: () => connection.prepareRetry({ beforeRetry: admitRetry }),
+    prepareRetry() {
+      const activation = failed;
+      const retry = connection.prepareRetry({ beforeRetry: admitRetry });
+      return () => {
+        // A document-only reconnect cannot heal a failed activation held in backoff.
+        if (activation && failed === activation && activation.waiting) {
+          return connection.resume(admitRetry);
+        }
+        return retry();
+      };
+    },
     wake: connection.wake,
     done: connection.done.finally(() => {
       clearTimeout(retry);

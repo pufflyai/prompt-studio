@@ -3,6 +3,7 @@ import type { LiveConnection } from "./live";
 export const trackDocumentRetry = (
   live: LiveConnection,
   restart: () => Promise<void>,
+  wake: () => void,
   stopped: () => boolean,
   progress: () => {
     attempt: AbortController;
@@ -13,26 +14,39 @@ export const trackDocumentRetry = (
   },
 ) => {
   let version = 0;
-  let pending: ReturnType<typeof Promise.withResolvers<void>> | undefined;
-  const complete = (completion: typeof pending) => {
-    if (!completion || pending !== completion) return;
+  type Completion = ReturnType<typeof Promise.withResolvers<void>>;
+  let pending: { completion: Completion; mode: "restart" | "resume" | "observe" } | undefined;
+  const complete = (completion: Completion | undefined) => {
+    if (!completion || pending?.completion !== completion) return;
     pending = undefined;
     completion.resolve();
   };
-  const start = () => {
-    if (pending) return pending.promise;
-    if (stopped() || live.signal.aborted) return Promise.resolve();
+  const schedule = (mode: NonNullable<typeof pending>["mode"], work?: () => void | Promise<void>) => {
+    if (stopped() || live.signal.aborted) return pending?.completion.promise ?? Promise.resolve();
+    if (pending) {
+      if ((mode === "restart" && pending.mode !== "restart") || (mode === "resume" && pending.mode === "observe")) {
+        pending.mode = mode;
+        live.retry();
+        void work?.();
+      }
+      return pending.completion.promise;
+    }
     const completion = Promise.withResolvers<void>();
-    pending = completion;
+    pending = { completion, mode };
     live.retry();
-    void restart();
+    void work?.();
     return completion.promise;
   };
   return {
-    current: () => pending,
+    current: () => pending?.completion,
     complete,
-    cancel: () => complete(pending),
-    start,
+    cancel: () => complete(pending?.completion),
+    start: () => schedule("restart", restart),
+    resume: (before?: () => void) =>
+      schedule("resume", () => {
+        before?.();
+        wake();
+      }),
     advance: () => {
       version++;
     },
@@ -43,9 +57,10 @@ export const trackDocumentRetry = (
         const state = progress();
         const recovering =
           !state.attempt.signal.aborted && Boolean(state.running || state.restarting || state.targeted.size);
-        if (observed !== version || recovering || input?.current?.() === false) return settleDocumentWork(progress);
+        if (observed !== version || recovering || input?.current?.() === false)
+          return settleDocumentWork(progress, () => schedule("observe"));
         input?.beforeRetry?.();
-        return start();
+        return schedule("restart", restart);
       };
     },
   };
@@ -53,16 +68,23 @@ export const trackDocumentRetry = (
 
 const settleDocumentWork = async (
   progress: () => {
+    attempt: AbortController;
     dirty: boolean;
     running: Promise<void> | undefined;
     restarting: Promise<void> | undefined;
     targeted: Set<Promise<unknown>>;
   },
+  queued: () => Promise<void>,
 ) => {
+  const waiting = (work: ReturnType<typeof progress>) =>
+    Boolean(work.restarting || (work.dirty && !work.running && !work.targeted.size));
   const observed = progress();
-  await Promise.allSettled([observed.running, observed.restarting, ...observed.targeted]);
-  if (observed.restarting || observed.dirty) {
-    const next = progress();
+  if (waiting(observed)) return queued();
+  await Promise.allSettled([observed.running, ...observed.targeted]);
+  const next = progress();
+  if (waiting(next)) return queued();
+  if (observed.dirty || observed.attempt.signal.aborted) {
     await Promise.allSettled([next.running, ...next.targeted]);
+    if (waiting(progress())) return queued();
   }
 };

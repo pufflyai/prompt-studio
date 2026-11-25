@@ -23,7 +23,9 @@ const unreadableJournal = async (fixture: Awaited<ReturnType<typeof createDownlo
   await mkdir(directory, { recursive: true });
   const key = recoveryJournalKey([id, config.accountId, config.environmentId, recoverySourceId(workspace.id, path)]);
   await writeFile(join(directory, `${key}.json`), "Unreadable journal JSON");
-  await expect(fixture.folder.status()).rejects.toBeInstanceOf(SyntaxError);
+  expect(await fixture.folder.folder()).toMatchObject({
+    capture: { state: "needs-attention", error: { code: "failed" } },
+  });
 };
 
 test("an unreadable native folder journal cannot prevent a failed Activity owner from retrying", async () => {
@@ -40,7 +42,11 @@ test("an unreadable native folder journal cannot prevent a failed Activity owner
     fixture.traffic.activity.finish.resolve();
     await scheduled?.settled;
     expect(await fixture.activity.status()).toMatchObject({ downloaded: true, error: undefined });
-    await expect(fixture.folder.status()).rejects.toBeInstanceOf(SyntaxError);
+    expect(fixture.folderRetries).toBe(0);
+    expect(fixture.traffic.folder.cancelled).toBe(0);
+    expect(await fixture.folder.folder()).toMatchObject({
+      capture: { state: "needs-attention", error: { code: "failed" } },
+    });
   } finally {
     await fixture.close();
   }

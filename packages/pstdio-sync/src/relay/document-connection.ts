@@ -73,14 +73,29 @@ const retainDocumentTopics = (live: LiveConnection, signal: AbortSignal) => {
   };
 };
 
+const scheduleDocumentRetry = (restart: () => Promise<void>, failures: number) =>
+  setTimeout(() => void restart(), Math.min(1000 * 2 ** failures, 30_000));
+
+const routeDocumentChanges =
+  (
+    input: DocumentRelayConnectionInput,
+    target: (work: (signal: AbortSignal) => Promise<boolean>) => void,
+    wake: () => void,
+  ) =>
+  (change: Change) => {
+    if (input.acceptsChange && !input.acceptsChange(change)) return;
+    if (input.synchronizeChanged) target((signal) => input.synchronizeChanged!(change, signal));
+    else wake();
+  };
+
 export const createDocumentRelayConnection = (input: DocumentRelayConnectionInput) => {
   const live = documentLiveConnection(input);
   const topics = retainDocumentTopics(live, input.signal);
-  const subscribe = topics.subscribe;
   let attempt = new AbortController();
   let attemptSignal = AbortSignal.any([attempt.signal, input.signal]);
   let dirty = false;
   let running: Promise<void> | undefined;
+  let runningCompletion: ReturnType<typeof Promise.withResolvers<void>> | undefined;
   let stopped = false;
   let failures = 0;
   let errorMessage: string | undefined;
@@ -93,19 +108,14 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
     attempt.abort();
     attempt = new AbortController();
     attemptSignal = AbortSignal.any([attempt.signal, input.signal]);
+    runningCompletion = manualRetry.current();
   };
-  const failed = (current: AbortController, error: unknown) => {
+  const failed = (current: AbortController, error: unknown, completion: typeof runningCompletion) => {
     if (current.signal.aborted || current !== attempt || stopped) return;
-    const completion = manualRetry.current();
     input.onError?.(error);
     errorMessage = "Cloud source failed; retry scheduled";
     current.abort();
-    retry = setTimeout(
-      () => {
-        void restart();
-      },
-      Math.min(1000 * 2 ** failures++, 30_000),
-    );
+    retry = scheduleDocumentRetry(restart, failures++);
     manualRetry.complete(completion);
   };
   const completeTarget = (pending: Promise<unknown>, current: AbortController) => {
@@ -120,6 +130,7 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
       return;
     }
     const current = attempt;
+    const completion = runningCompletion;
     manualRetry.advance();
     const pending = work(attemptSignal);
     if (targeted.has(pending)) return;
@@ -129,7 +140,7 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
         (handled) => {
           if (!handled && current === attempt && !current.signal.aborted) wake();
         },
-        (error) => failed(current, error),
+        (error) => failed(current, error, completion),
       )
       .finally(() => completeTarget(pending, current));
     input.onStatusChange?.();
@@ -137,25 +148,23 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
   const admit = <T>(work: () => Promise<T>) => {
     if (stopped || restarting || attempt.signal.aborted) return Promise.reject(new Error("Cloud source is restarting"));
     const current = attempt;
+    const completion = runningCompletion;
     manualRetry.advance();
     const pending = work();
     targeted.add(pending);
-    void pending.catch((error) => failed(current, error)).finally(() => completeTarget(pending, current));
+    void pending.catch((error) => failed(current, error, completion)).finally(() => completeTarget(pending, current));
     input.onStatusChange?.();
     return pending;
   };
-  const changed = (change: Change) => {
-    if (input.acceptsChange && !input.acceptsChange(change)) return;
-    if (input.synchronizeChanged) target((signal) => input.synchronizeChanged!(change, signal));
-    else wake();
-  };
   const drain = async () => {
     const current = attempt;
-    const completion = manualRetry.current();
+    let completion: typeof runningCompletion;
     try {
       while (dirty && live.status().connected && !stopped && current === attempt && !current.signal.aborted) {
+        completion = manualRetry.current();
+        runningCompletion = completion;
         dirty = false;
-        await input.synchronize(attemptSignal, subscribe);
+        await input.synchronize(attemptSignal, topics.subscribe);
         if (current.signal.aborted) break;
         failures = 0;
         errorMessage = undefined;
@@ -163,9 +172,10 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
         manualRetry.complete(completion);
       }
     } catch (error) {
-      failed(current, error);
+      failed(current, error, completion);
     } finally {
       running = undefined;
+      runningCompletion = undefined;
       input.onStatusChange?.();
       if (dirty && !stopped && live.status().connected && !attempt.signal.aborted) wake();
     }
@@ -177,6 +187,7 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
       running = Promise.resolve().then(drain);
     }
   };
+  const changed = routeDocumentChanges(input, target, wake);
   const restart = () => {
     if (restarting) return restarting;
     manualRetry.advance();
@@ -195,7 +206,7 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
     return restarting;
   };
   const currentWork = () => ({ attempt, dirty, running, restarting, targeted });
-  const manualRetry = trackDocumentRetry(live, restart, () => stopped, currentWork);
+  const manualRetry = trackDocumentRetry(live, restart, wake, () => stopped, currentWork);
   const ready = () => {
     topics.replay(renewing);
     if (restarting) return;
@@ -223,6 +234,7 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
     if (event.type === "disconnected") {
       topics.clearReplay();
       renewing = event.reason === "renewal";
+      dirty = dirty || !renewing;
       if (!renewing) attempt.abort();
       input.onDisconnect?.(event.reason);
       input.onStatusChange?.();
@@ -270,10 +282,12 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
     wake,
     admit,
     restart,
-    subscribe,
+    subscribe: topics.subscribe,
     wakeDocument: (name: string) =>
       input.synchronizeDocument ? target((signal) => input.synchronizeDocument!(name, signal)) : wake(),
     retry: manualRetry.start,
+    /** Queue a full pass without cancelling current work, and retain its completion. */
+    resume: manualRetry.resume,
     prepareRetry: manualRetry.prepare,
     done: done.promise.finally(() => input.signal.removeEventListener("abort", close)),
     status: () => ({

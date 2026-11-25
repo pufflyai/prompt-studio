@@ -229,8 +229,14 @@ export const startFolderRecovery = (input: {
       return { capture: { state, folder: own.folder, error }, ...operations.status() };
     },
     async status() {
-      const own = await local.status();
-      return { ...own, needsAttention: own.needsAttention || publishFailed, downloaded, ...connection.status() };
+      // Local capture diagnostics remain visible in folder(); their read cannot hide a known relay failure.
+      const own = await local.status().catch(() => undefined);
+      return {
+        ...own,
+        needsAttention: Boolean(own?.needsAttention || publishFailed),
+        downloaded,
+        ...connection.status(),
+      };
     },
     done: connection.done.finally(async () => {
       stopCatalog();

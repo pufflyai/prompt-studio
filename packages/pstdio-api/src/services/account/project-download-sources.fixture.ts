@@ -13,6 +13,7 @@ import { startCoreRecordSync } from "../relay/core-records";
 import { startFolderRecovery } from "../relay/folder-recovery";
 import { projectOwnerProgress, readOwnerStatus } from "../relay/project-owner-progress";
 import { createProjectSyncRetry } from "../relay/project-sync-retry";
+import { startPublishedExtensions } from "../relay/publications";
 import { nativeAccountFile } from "./native-account";
 import { createNativeStore } from "./native-store";
 import { createProjectCopyStore } from "./project-copy-store";
@@ -82,10 +83,14 @@ export const createDownloadSourcesFixture = async ({
   stored = true,
   failedFolder = false,
   afterStatus,
+  beforeLiveAccess,
+  publications = false,
 }: {
   stored?: boolean;
   failedFolder?: boolean;
   afterStatus?: () => Promise<void>;
+  beforeLiveAccess?: () => Promise<void>;
+  publications?: boolean;
 } = {}) => {
   const root = await mkdtemp(join(tmpdir(), "native-copy-sources-"));
   const databasePath = ":memory:";
@@ -115,7 +120,15 @@ export const createDownloadSourcesFixture = async ({
   let folderRetries = 0;
   const relay = createSourceRelay(peer.origin, Object.values(traffic));
   const access = async () => ({ token: "device", expiresAt: new Date(Date.now() + 60_000).toISOString() });
-  const live = createLiveConnection({ origin: peer.origin, projectId: id, access, signal: controller.signal });
+  const live = createLiveConnection({
+    origin: peer.origin,
+    projectId: id,
+    access: async () => {
+      await beforeLiveAccess?.();
+      return access();
+    },
+    signal: controller.signal,
+  });
   const { environmentId } = await host.deps.environmentService.get();
   const config = {
     accountId: "alice",
@@ -136,10 +149,13 @@ export const createDownloadSourcesFixture = async ({
     statusChanged() {},
   });
   const folder = startFolderRecovery({ config, deps: host.deps, access, live, signal: controller.signal });
+  const publication = publications
+    ? startPublishedExtensions({ config, deps: host.deps, access, live, signal: controller.signal })
+    : undefined;
   let selections = 0;
   const retry = createProjectSyncRetry({
     refresh: async () => {},
-    owners: { core: { get: () => core }, activity: { get: () => activity } },
+    owners: { core: { get: () => core }, activity: { get: () => activity }, publications: { get: () => publication } },
     folders: {
       get: () => ({
         ...folder,
@@ -163,7 +179,7 @@ export const createDownloadSourcesFixture = async ({
     async () =>
       projectOwnerProgress(
         id,
-        await Promise.all([core, undefined, undefined, activity].map(readOwnerStatus)),
+        await Promise.all([core, publication, undefined, activity].map(readOwnerStatus)),
         [],
         [],
         await folder.folder(),
@@ -190,8 +206,9 @@ export const createDownloadSourcesFixture = async ({
     core.close();
     activity.close();
     folder.close();
+    publication?.close();
     controller.abort();
-    await Promise.all([core.done, activity.done, folder.done, live.done]);
+    await Promise.all([core.done, activity.done, folder.done, publication?.done, live.done]);
     await api.stop(true);
     await relay.stop(true);
     await peer.close();
@@ -221,6 +238,7 @@ export const createDownloadSourcesFixture = async ({
       core,
       activity,
       folder,
+      publication,
       live,
       api,
       retry,
