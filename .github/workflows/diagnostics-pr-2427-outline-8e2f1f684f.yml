@@ -1,0 +1,138 @@
+name: PS-295 exact source conversation outline
+
+on:
+  push:
+    branches:
+      - "diagnostics/pr-2427-outline-8e2f1f684f-20261125"
+
+permissions:
+  contents: read
+
+jobs:
+  outline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PS295_HEAD: "8e2f1f684f9c031a369cefbb324db21c84eb267e"
+      PS295_TREE: "762dc049162ed0b23fe66df22fe4eaf9320db124"
+      PS295_MAIN: "e00cf5aa8e2a68aa7275fe3013a059c799d733f1"
+      PS295_WORKFLOW: ".github/workflows/diagnostics-pr-2427-outline-8e2f1f684f.yml"
+      PS295_OUTPUT: "${{ github.workspace }}/test-results/ps295-outline"
+      PS295_CANVAS_SPEC: packages/canvas-tests/src/ui/ui/chat-outline.p1.spec.ts
+      PS295_CANVAS_FILE: packages/ui/src/components/chat-ui/components/chat-panel-width.canvas.tsx
+      CANVAS_PREVIEW_PORT: "43287"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.PS295_HEAD }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+
+      - name: Verify the source and fixture identity
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = "refs/heads/diagnostics/pr-2427-outline-8e2f1f684f-20261125"
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$PS295_HEAD"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" = "$(printf 'A\t%s' "$PS295_WORKFLOW")"
+          test "$(git rev-parse HEAD)" = "$PS295_HEAD"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$PS295_TREE"
+          git merge-base --is-ancestor "$PS295_MAIN" "$PS295_HEAD"
+          test -z "$(git status --porcelain)"
+          test "$(bun --version)" = "1.4.4"
+          test "$(node --version)" = "v26.7.0"
+          test "$(jq -r .packageManager package.json)" = "bun@1.4.4"
+          mkdir -p "$PS295_OUTPUT"
+          sha256sum "$PS295_CANVAS_SPEC" "$PS295_CANVAS_FILE" > "$PS295_OUTPUT/checked-files.sha256"
+          jq -n --arg head "$PS295_HEAD" --arg tree "$PS295_TREE" --arg base "$PS295_MAIN" \
+            --arg workflow "$GITHUB_WORKFLOW_SHA" --arg run "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" \
+            '{head:$head,tree:$tree,main:$base,workflow:$workflow,run:$run}' > "$PS295_OUTPUT/identity.json"
+
+      - name: Create a temporary directory for this run
+        shell: bash
+        run: |
+          scratch="$(mktemp -d /tmp/ps295-outline.XXXXXX)"
+          printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$scratch/owner"
+          {
+            echo "PS295_SCRATCH=$scratch"
+            echo "TMPDIR=$scratch"
+            echo "TMP=$scratch"
+            echo "TEMP=$scratch"
+          } >> "$GITHUB_ENV"
+
+      - name: Install locked dependencies and Chromium
+        shell: bash
+        run: |
+          bun install --frozen-lockfile --concurrent-scripts 1 2>&1 | tee "$PS295_OUTPUT/install.log"
+          (cd packages/canvas-tests && bun x --no-install playwright install --with-deps chromium) 2>&1 | tee "$PS295_OUTPUT/chromium.log"
+          git diff --exit-code
+
+      - name: Build the source packages and Canvas previews
+        shell: bash
+        run: |
+          bun run --cwd packages/sdk build 2>&1 | tee "$PS295_OUTPUT/build-sdk.log"
+          bun run --cwd packages/ui build 2>&1 | tee "$PS295_OUTPUT/build-ui.log"
+          bun run --cwd packages/pstdio-workbench build 2>&1 | tee "$PS295_OUTPUT/build-workbench.log"
+          bun run --cwd packages/canvas-tests build:previews 2>&1 | tee "$PS295_OUTPUT/build-previews.log"
+          jq -e --arg expected "$PS295_CANVAS_FILE" '
+            all(.canvases[]; .error == null) and
+            any(.canvases[]; .id == $expected and .error == null)
+          ' __test-tmp__/canvas-verification/build/manifest.json
+
+      - name: Run the conversation outline tests once
+        shell: bash
+        run: |
+          export PLAYWRIGHT_JSON_OUTPUT_FILE="$PS295_OUTPUT/playwright.json"
+          bun run --cwd packages/canvas-tests test:browser src/ui/ui/chat-outline.p1.spec.ts --reporter=list,json 2>&1 |
+            tee "$PS295_OUTPUT/browser.log"
+          jq -e '
+            .stats | .expected == 2 and .unexpected == 0 and .flaky == 0 and .skipped == 0
+          ' "$PLAYWRIGHT_JSON_OUTPUT_FILE"
+          jq -e '
+            [.. | objects | select(has("specs")) | .specs[]] as $specs
+            | ($specs | map(.title) | sort) == [
+                "jump to an earlier turn, then resize the conversation panel",
+                "select each original turn and report its message IDs when repeated prompts share a row"
+              ]
+            and all($specs[]; .file == "ui/chat-outline.p1.spec.ts" and .ok
+              and (.tests | length) == 1
+              and all(.tests[]; .projectName == "chromium" and .status == "expected"
+                and (.results | map([.status, .retry])) == [["passed", 0]]))
+          ' "$PLAYWRIGHT_JSON_OUTPUT_FILE"
+          sha256sum -c "$PS295_OUTPUT/checked-files.sha256"
+          git diff --exit-code
+
+      - name: Clean up this browser run
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$PS295_OUTPUT"
+          if [[ -n "${PS295_SCRATCH:-}" ]]; then
+            [[ "$PS295_SCRATCH" =~ ^/tmp/ps295-outline\.[A-Za-z0-9]{6}$ ]]
+            test "$(cat "$PS295_SCRATCH/owner")" = "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+            rm -rf -- "$PS295_SCRATCH"
+            test ! -e "$PS295_SCRATCH"
+          fi
+          if curl -sS --noproxy '*' --connect-timeout 1 --max-time 2 "http://127.0.0.1:$CANVAS_PREVIEW_PORT" >/dev/null 2>&1; then
+            echo "The Canvas preview server is still listening"
+            exit 1
+          fi
+          printf '%s\n' "Owned temp directory removed and Canvas server closed" > "$PS295_OUTPUT/cleanup.txt"
+
+      - name: Upload the exact source and browser receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps295-2427-outline-attempt-${{ github.run_attempt }}
+          path: |
+            ${{ env.PS295_OUTPUT }}
+            packages/canvas-tests/test-results
+          if-no-files-found: error
