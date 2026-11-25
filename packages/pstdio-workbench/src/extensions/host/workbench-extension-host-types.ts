@@ -87,7 +87,7 @@ export interface RegisterWorkbenchExtensionContributionsInput extends ChatComman
   captureChatContext?: (
     workbench: import("../../core").WorkbenchCore,
     composer: string,
-  ) => import("pstdio-api-contracts/workbench-context").WorkbenchOrigin | undefined;
+  ) => import("pstdio-api-contracts").WorkbenchOrigin | undefined;
   workbench: WorkbenchModuleContext;
 }
 

@@ -5,7 +5,7 @@ import {
   type WorkbenchOrigin,
   workbenchContextSchema,
   workbenchOriginSchema,
-} from "pstdio-api-contracts/workbench-context";
+} from "pstdio-api-contracts";
 import type { AppBindings } from "../../types";
 import { readDeviceCommandResult } from "../account/device-command-response";
 import type { SessionsRouteDeps } from "./deps";

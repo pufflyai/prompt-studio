@@ -5,8 +5,8 @@ import type {
   HarnessParams,
   HarnessSession,
   PreparedHarnessOperation,
+  WorkbenchOrigin,
 } from "pstdio-api-contracts";
-import type { WorkbenchOrigin } from "pstdio-api-contracts/workbench-context";
 import { HarnessDisposedError } from "pstdio-api-runtime-host";
 import { readCurrentHarness } from "../harnesses/read-current-harness";
 import { workspaceSessionReadiness } from "../workspaces/workspace-session-readiness";

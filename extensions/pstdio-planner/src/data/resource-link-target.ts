@@ -6,7 +6,10 @@ export const resourceLinkTarget = (target: NavigationTarget): NavigationTarget =
     item: NavigationTargetPage | NavigationTargetPanel,
   ): NavigationTargetPage | NavigationTargetPanel => {
     if (!item.resource || (item.region && item.region !== "side")) return item;
-    if (item.kind === "panel") return { ...item, region: "side" };
+    if (item.kind === "panel") {
+      const { open, ...panel } = item;
+      return { ...panel, region: "side", ...(open === "pin" ? { open } : {}) };
+    }
     return { ...item, region: "side", open: item.open ?? "preview" };
   };
   if (target.kind === "compound") {

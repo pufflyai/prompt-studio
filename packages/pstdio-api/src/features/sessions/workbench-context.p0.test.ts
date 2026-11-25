@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { WorkbenchContext, WorkbenchOrigin } from "pstdio-api-contracts/workbench-context";
+import type { WorkbenchContext, WorkbenchOrigin } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
 import { createWorkbenchContextRoutes, submittedWorkbenchOrigin } from "./workbench-context";
 

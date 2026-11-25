@@ -38,7 +38,7 @@ export const sendSessionFollowUp = async (
   input: FollowUpInput,
   options: {
     signal?: AbortSignal;
-    workbenchOrigin?: import("pstdio-api-contracts/workbench-context").WorkbenchOrigin;
+    workbenchOrigin?: import("pstdio-api-contracts").WorkbenchOrigin;
     expectedRun?: { status: string; startedAt: string | null; endedAt: string | null };
   } = {},
 ) => {

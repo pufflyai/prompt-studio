@@ -1,6 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
+import type { WorkbenchOrigin } from "pstdio-api-contracts";
 import { type DeviceCommand, deviceCommandSchema } from "pstdio-api-contracts";
-import type { WorkbenchOrigin } from "pstdio-api-contracts/workbench-context";
 import { type Json, jsonSchema } from "pstdio-sync-contracts";
 import { approveSessionHandler, approveSessionRoute } from "../../features/sessions/endpoints/approve-session";
 import { createSessionHandler, createSessionRoute } from "../../features/sessions/endpoints/create-session";

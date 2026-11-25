@@ -63,6 +63,7 @@ export { resolveCollectionIndexes } from "./storage-indexes";
 export { createStoragePositions, storagePositionsDevice } from "./storage-positions";
 export * from "./text-editing";
 export * from "./tool-result";
+export * from "./workbench-context";
 export * from "./workspace-collection";
 export * from "./workspace-diffs";
 export * from "./workspace-query";

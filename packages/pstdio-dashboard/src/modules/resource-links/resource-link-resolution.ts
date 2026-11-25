@@ -1,7 +1,7 @@
 import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
-import { resourceLinkTarget } from "pstdio-api-contracts/extension-kernel";
+import { resourceLinkFallback, resourceLinkTarget } from "pstdio-api-contracts/extension-kernel";
 import { getRuntimeApiClient } from "@/lib/api";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
@@ -32,29 +32,32 @@ export const resolveLinkedResources = async (
   const order = new Map(refs.map((ref, index) => [resourceKey(ref), index]));
   return resolved
     .sort((a, b) => order.get(resourceKey(a.resource))! - order.get(resourceKey(b.resource))!)
-    .map(({ resource, target }) => ({
-      resource,
-      target: target ? toWorkbenchNavigationTarget(target) : undefined,
-      open: target
-        ? async (region?: "main", source?: ResourceRef) => {
-            if (
-              authority.aborted ||
-              owner.isDisposed() ||
-              getRuntimeCollections() !== owner ||
-              getDashboardSelectedProjectId(ctx) !== projectId
-            )
-              return;
-            const navigation =
-              region && target.kind === "page" ? { ...target, region, open: undefined } : resourceLinkTarget(target);
-            const sourceKey = source && resourceKey(source);
-            const sideSource =
-              sourceKey &&
-              ctx.layout
-                .listPanelInstances("side")
-                .find((item) => item.resource && resourceKey(item.resource) === sourceKey);
-            const invocation = sideSource && ctx.viewers.captureContext(sideSource.placementIdentity);
-            await ctx.navigation.openTarget(toWorkbenchNavigationTarget(navigation), invocation || undefined);
-          }
-        : undefined,
-    }));
+    .map(({ resource, target }) => {
+      const fallback = target && resourceLinkFallback(target);
+      return {
+        resource,
+        target: target ? toWorkbenchNavigationTarget(target) : undefined,
+        fallbackLabel: fallback && (fallback.kind === "page" ? "Open in Main" : "Open using default placement"),
+        open: target
+          ? async (placement?: "registered", source?: ResourceRef) => {
+              if (
+                authority.aborted ||
+                owner.isDisposed() ||
+                getRuntimeCollections() !== owner ||
+                getDashboardSelectedProjectId(ctx) !== projectId
+              )
+                return;
+              const navigation = placement === "registered" && fallback ? fallback : resourceLinkTarget(target);
+              const sourceKey = source && resourceKey(source);
+              const sideSource =
+                sourceKey &&
+                ctx.layout
+                  .listPanelInstances("side")
+                  .find((item) => item.resource && resourceKey(item.resource) === sourceKey);
+              const invocation = sideSource && ctx.viewers.captureContext(sideSource.placementIdentity);
+              await ctx.navigation.openTarget(toWorkbenchNavigationTarget(navigation), invocation || undefined);
+            }
+          : undefined,
+      };
+    });
 };

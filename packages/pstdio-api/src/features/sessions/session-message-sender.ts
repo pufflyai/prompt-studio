@@ -1,5 +1,4 @@
-import type { SessionMessageSender, SessionMessageSource } from "pstdio-api-contracts";
-import type { WorkbenchOrigin } from "pstdio-api-contracts/workbench-context";
+import type { SessionMessageSender, SessionMessageSource, WorkbenchOrigin } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
 
 // Sender labels are copied into durable queue rows; keep the display scalar small.

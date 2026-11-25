@@ -1,5 +1,5 @@
 import { readWorkbenchContext, subscribeWorkbenchContext, type WorkbenchCore } from "@pstdio/workbench";
-import type { WorkbenchOrigin } from "pstdio-api-contracts/workbench-context";
+import type { WorkbenchOrigin } from "pstdio-api-contracts";
 import { buildApiUrl } from "@/lib/api";
 import type { RuntimeCollections } from "@/lib/sync/collections";
 

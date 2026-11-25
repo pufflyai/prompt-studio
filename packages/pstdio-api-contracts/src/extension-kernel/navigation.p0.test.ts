@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { navigationTargetSchema } from "../extensions/navigation-target-metadata";
 import { isNavigationTarget, qualifyNavigationTarget } from "./navigation";
-import { resourceLinkTarget } from "./resource-link-target";
+import { resourceLinkFallback, resourceLinkTarget } from "./resource-link-target";
 
 test("resource links retain semantic context while requesting an unpinned Side preview", () => {
   const target = {
@@ -24,6 +24,10 @@ test("resource links retain semantic context while requesting an unpinned Side p
   const compound = resourceLinkTarget({ kind: "compound", targets: [target.parent, panel] });
   expect(compound).toEqual({ kind: "compound", targets: [{ ...panel, region: "side" }] });
   expect(compound).toEqual(navigationTargetSchema.parse(compound));
+  const registered = { kind: "compound" as const, targets: [target.parent, panel] };
+  expect(resourceLinkFallback(registered)).toBe(registered);
+  expect(resourceLinkFallback(target)).toBe(target);
+  expect(resourceLinkFallback({ ...target, region: "secondary" })).toBeUndefined();
 });
 
 test("a resource link followed from Side also previews in Side", () => {

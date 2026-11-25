@@ -78,7 +78,7 @@ const createdSessionResponse = (session: Parameters<typeof toSessionResponse>[0]
 
 export const createSessionHandler = (
   deps: SessionsRouteDeps,
-  originFor?: (request: Request) => import("pstdio-api-contracts/workbench-context").WorkbenchOrigin | undefined,
+  originFor?: (request: Request) => import("pstdio-api-contracts").WorkbenchOrigin | undefined,
 ): AppRouteHandler<typeof createSessionRoute> => {
   return async (c) => {
     const input = c.req.valid("json");

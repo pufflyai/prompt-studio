@@ -55,7 +55,7 @@ const toCanonicalDecision = (decision: FollowUpDecision) => {
 
 export const followUpSessionHandler = (
   deps: SessionsRouteDeps,
-  originFor?: (request: Request) => import("pstdio-api-contracts/workbench-context").WorkbenchOrigin | undefined,
+  originFor?: (request: Request) => import("pstdio-api-contracts").WorkbenchOrigin | undefined,
 ): AppRouteHandler<typeof followUpSessionRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");

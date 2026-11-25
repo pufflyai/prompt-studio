@@ -1,5 +1,5 @@
 import type { ResourceRef } from "@pstdio/sdk/extensions";
-import type { WorkbenchContext } from "pstdio-api-contracts/workbench-context";
+import type { WorkbenchContext } from "pstdio-api-contracts";
 import type { WorkbenchWidgetPlacement } from "./registries/layout/layout-types";
 import type { WorkbenchCore } from "./workbench-core-types";
 import { registerWorkbenchRequiredWork } from "./workbench-required-work";

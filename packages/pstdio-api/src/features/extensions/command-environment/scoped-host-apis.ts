@@ -47,7 +47,7 @@ export const createScopedHostApis = (
     projectId: string;
     workspaceId?: string;
     eventId?: string;
-    workbenchOrigin?: import("pstdio-api-contracts/workbench-context").WorkbenchOrigin;
+    workbenchOrigin?: import("pstdio-api-contracts").WorkbenchOrigin;
     /** The installed source generation this invocation runs. Host environment grants are checked against it. */
     source: ProcessEnvironmentSource;
     extensionOwner: () => ProcessOwner;
