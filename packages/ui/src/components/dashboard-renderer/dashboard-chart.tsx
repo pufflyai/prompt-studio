@@ -4,6 +4,7 @@ import {
   type ChartTooltipAnchor,
   type ChartTooltipRow,
   colorLegend,
+  colorLegendItems,
   defineChart,
   lineY,
   stack,
@@ -16,7 +17,7 @@ import { portal } from "@tanstack/charts/tooltip/portal";
 import { useRef } from "react";
 import { Chart, chartColor } from "@/components/charts/chart";
 import { chartGeometry } from "@/theme/primitives/chart";
-import { barColorGroups, resolveWidgetColor, widgetColorRange } from "./dashboard-colors";
+import { barColorGroups, dashboardGroupKey, resolveWidgetColor, widgetColorRange } from "./dashboard-colors";
 import { type DashboardDataSource, type DashboardWidget, widgetLabel } from "./dashboard-types";
 
 export function DashboardChart(props: { widget: DashboardWidget; source: DashboardDataSource; sparkline?: boolean }) {
@@ -44,7 +45,7 @@ export function DashboardChart(props: { widget: DashboardWidget; source: Dashboa
     ? barY(series, {
         x: "label",
         y: "value",
-        color: ({ group }) => group ?? groups.ungroupedLabel,
+        color: ({ group }) => dashboardGroupKey(group),
         layout: stack(),
         radius: { end: chartGeometry.barRadius },
       })
@@ -84,7 +85,10 @@ export function DashboardChart(props: { widget: DashboardWidget; source: Dashboa
                   color: {
                     domain: groups.keys,
                     range: widgetColorRange(widget, groups.keys),
-                    legend: colorLegend({ placement: "bottom" }),
+                    legend: colorLegend({
+                      placement: "bottom",
+                      items: colorLegendItems({ label: { format: (key) => groups.names[String(key)] } }),
+                    }),
                   },
                 }
               : {}),
@@ -100,7 +104,7 @@ export function DashboardChart(props: { widget: DashboardWidget; source: Dashboa
               sort: "color-domain",
               content: (focused) => {
                 const rows: ChartTooltipRow[] = focused.map((point) => ({
-                  label: point.group == null ? sourceLabel : String(point.group),
+                  label: (stacked && groups.names[String(point.group)]) || sourceLabel,
                   value: number.format(point.datum.value),
                   color: point.color,
                 }));

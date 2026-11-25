@@ -1,3 +1,4 @@
+import { Button, Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { DashboardEmbeddedExample } from "./dashboard-embedded-example";
@@ -122,10 +123,26 @@ function AppearanceExample({ widgets }: { widgets: DashboardWidget[] }) {
   return <DashboardRenderer value={value} sources={appearanceSources} onChange={setValue} />;
 }
 
+function GroupedBarExample() {
+  const [value, setValue] = useState<DashboardDefinition>({ mode: "vertical", widgets: groupedBars });
+  const [refreshed, setRefreshed] = useState(false);
+  const source = appearanceSources[0];
+  const series = [...(source.series ?? [])];
+  if (refreshed) series.push({ label: "Today", value: 1, group: "Unassigned (3)" });
+  return (
+    <Stack h="full" minH="0" gap="0">
+      <Button alignSelf="start" size="xs" onClick={() => setRefreshed(true)}>
+        Add named group
+      </Button>
+      <DashboardRenderer value={value} sources={[{ ...source, series }]} onChange={setValue} />
+    </Stack>
+  );
+}
+
 export const GroupedBarColors = {
   name: "Grouped bar colors",
   fullscreen: true,
-  render: () => <AppearanceExample widgets={groupedBars} />,
+  render: GroupedBarExample,
 } satisfies CanvasFrame;
 
 export const WidgetSourceChoices = {

@@ -35,25 +35,27 @@ export const widgetColorRange = (widget: DashboardWidget, domain: string[]) =>
 export const hasCoordinates = ({ x, y }: DashboardScatterPoint) => Number.isFinite(x) && Number.isFinite(y);
 export const isRingSlice = ({ value }: DashboardSeriesPoint) => Number.isFinite(value) && value > 0;
 
-function availableGroupLabel(groups: ReadonlySet<string | undefined>, preferredLabel: string) {
-  let label = preferredLabel;
-  for (let suffix = 2; groups.has(label); suffix++) label = `${preferredLabel} (${suffix})`;
-  return label;
+export const dashboardGroupKey = (group?: string) => (group === undefined ? "ungrouped" : `group:${group}`);
+
+function chartGroups(groups: (string | undefined)[], preferredLabel: string) {
+  const named = new Set(groups);
+  let ungroupedLabel = preferredLabel;
+  for (let suffix = 2; named.has(ungroupedLabel); suffix++) ungroupedLabel = `${preferredLabel} (${suffix})`;
+  const keys = groups.map(dashboardGroupKey);
+  const names = Object.fromEntries(groups.map((group) => [dashboardGroupKey(group), group ?? ungroupedLabel]));
+  return { keys, names, ungroupedLabel };
 }
 
 export const barColorGroups = (series: DashboardSeriesPoint[]) => {
-  const groups = new Set(series.map(({ group }) => group));
-  const ungroupedLabel = availableGroupLabel(groups, "Unassigned");
-  const keys = groups.size === 1 && groups.has(undefined) ? [] : [...groups].map((group) => group ?? ungroupedLabel);
-  return { keys, ungroupedLabel };
+  const groups = [...new Set(series.map(({ group }) => group))];
+  return chartGroups(groups.some((group) => group !== undefined) ? groups : [], "Unassigned");
 };
 
 export const scatterColorGroups = (points: DashboardScatterPoint[]) => {
   const groups = new Set(points.filter(hasCoordinates).map(({ group }) => group));
-  const keys = [...groups].filter((group) => group !== undefined).sort();
-  const ungroupedLabel = availableGroupLabel(groups, "No group");
-  if (keys.length && groups.has(undefined)) keys.push(ungroupedLabel);
-  return { keys, ungroupedLabel };
+  const sorted: (string | undefined)[] = [...groups].filter((group) => group !== undefined).sort();
+  if (sorted.length && groups.has(undefined)) sorted.push(undefined);
+  return chartGroups(sorted, "No group");
 };
 
 export const ringColorGroups = (series: DashboardSeriesPoint[]) =>
@@ -70,12 +72,14 @@ export const widgetColorSettings = (
     case "line":
       return { label: "Line color" };
     case "bar": {
-      const { keys } = barColorGroups(series);
-      return keys.length ? { label: "Series color", series: { label: "Series", keys } } : { label: "Bar color" };
+      const { keys, names } = barColorGroups(series);
+      return keys.length ? { label: "Series color", series: { label: "Series", keys, names } } : { label: "Bar color" };
     }
     case "scatter": {
-      const { keys } = scatterColorGroups(source?.scatter?.points ?? []);
-      return keys.length ? { label: "Cluster color", series: { label: "Cluster", keys } } : { label: "Point color" };
+      const { keys, names } = scatterColorGroups(source?.scatter?.points ?? []);
+      return keys.length
+        ? { label: "Cluster color", series: { label: "Cluster", keys, names } }
+        : { label: "Point color" };
     }
     case "ring":
       return { label: "Slice color", series: { label: "Slice", keys: ringColorGroups(series) } };

@@ -1,10 +1,16 @@
 import { Text } from "@chakra-ui/react";
-import { colorLegend, defineChart, dot } from "@tanstack/charts";
+import { colorLegend, colorLegendItems, defineChart, dot } from "@tanstack/charts";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { portal } from "@tanstack/charts/tooltip/portal";
 import { Chart, chartColor } from "@/components/charts/chart";
-import { hasCoordinates, resolveWidgetColor, scatterColorGroups, widgetColorRange } from "./dashboard-colors";
+import {
+  dashboardGroupKey,
+  hasCoordinates,
+  resolveWidgetColor,
+  scatterColorGroups,
+  widgetColorRange,
+} from "./dashboard-colors";
 import { type DashboardDataSource, type DashboardWidget, widgetLabel } from "./dashboard-types";
 
 const number = new Intl.NumberFormat(undefined, { maximumSignificantDigits: 17 });
@@ -20,7 +26,7 @@ export function DashboardScatterChart(props: { widget: DashboardWidget; scatter?
         No scatterplot data
       </Text>
     );
-  const { keys: groups, ungroupedLabel } = scatterColorGroups(values);
+  const { keys: groups, names, ungroupedLabel } = scatterColorGroups(values);
   const color = resolveWidgetColor(widget.color) ?? chartColor("vis.categorical.1");
   return (
     <Chart
@@ -32,7 +38,7 @@ export function DashboardScatterChart(props: { widget: DashboardWidget; scatter?
               x: "x",
               y: "y",
               r: 4,
-              ...(groups.length ? { color: ({ group }) => group ?? ungroupedLabel } : { fill: color }),
+              ...(groups.length ? { color: ({ group }) => dashboardGroupKey(group) } : { fill: color }),
             }),
           ],
           scales: {
@@ -44,7 +50,10 @@ export function DashboardScatterChart(props: { widget: DashboardWidget; scatter?
                 color: {
                   domain: groups,
                   range: widgetColorRange(widget, groups),
-                  legend: colorLegend({ placement: "bottom" }),
+                  legend: colorLegend({
+                    placement: "bottom",
+                    items: colorLegendItems({ label: { format: (key) => names[String(key)] } }),
+                  }),
                 },
               }
             : {}),

@@ -63,6 +63,13 @@ test("chooses independent stacked bar colors for named and ungrouped values", as
   await preview.getByRole("button", { name: "Apply", exact: true }).click();
   await expect(widget.locator('svg [fill="var(--chakra-colors-purple-500)"]').first()).toBeAttached();
   await expect(widget.locator('svg [fill="var(--chakra-colors-teal-500)"]').first()).toBeAttached();
+  await preview.getByRole("button", { name: "Add named group", exact: true }).click();
+  await preview.getByRole("button", { name: "Edit dashboard", exact: true }).click();
+  await widget.hover();
+  await widget.getByRole("button", { name: "Configure Grouped bars", exact: true }).click();
+  await settings.getByRole("button", { name: "Series Unassigned", exact: true }).click();
+  await settings.getByRole("menuitem", { name: "Unassigned (4)", exact: true }).click();
+  await expect(settings.getByRole("button", { name: "Series color: Purple", exact: true })).toBeVisible();
 });
 
 test("offers the sole Data option only when it would replace the current source", async ({ page }) => {
