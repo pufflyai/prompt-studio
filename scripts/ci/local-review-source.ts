@@ -6,7 +6,7 @@ import { discoverTestFiles } from "./test-discovery";
 import { testPlanSource } from "./test-plan-source";
 import { readWorkspacePackages } from "./workspace-packages";
 
-export const readReviewSource = (root: string, base: string, additionalTests: string[] = []) => {
+export const readReviewSource = (root: string, base: string, additionalTests: string[] = [], desktopInCi = false) => {
   const git = (...args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8", timeout: 10000 });
   const head = git("rev-parse", "HEAD").trim();
   const mergeBase = git("merge-base", base, head).trim();
@@ -25,6 +25,7 @@ export const readReviewSource = (root: string, base: string, additionalTests: st
       tests: discoverTestFiles(root),
       changed,
       additionalTests,
+      desktopInCi,
       source: testPlanSource(root),
     }),
   };
