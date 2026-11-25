@@ -1,6 +1,7 @@
 ---
 "pstdio": patch
 "@pstdio/ui": patch
+"@pstdio/workbench": patch
 ---
 
-Show sender avatars alongside message actions and animate conversation outline marks on hover and focus.
+Show compact sender avatars alongside message actions. Click a session avatar to open its conversation. Outline marks animate on hover and focus.

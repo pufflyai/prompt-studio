@@ -276,6 +276,7 @@ export const createChatRendererOwner = (
                 action,
                 linkHandler,
                 sourceRegion: () => conversationRegion(render),
+                sourcePlacement: render.instance.placementIdentity,
                 conversationKey: key,
                 observe: slot.observe,
                 resolve: slot.resolve,

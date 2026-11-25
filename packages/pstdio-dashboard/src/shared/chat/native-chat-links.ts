@@ -12,6 +12,7 @@ export const composeNativeChatLinks = (
     (await provider?.resolveImageSource?.(source)) ?? (await host.resolveImageSource?.(source)) ?? null,
   resolveIcon: async (href) => (await provider?.resolveIcon?.(href)) ?? (await host.resolveIcon?.(href)) ?? null,
   describe: (candidate) => provider?.describe?.(candidate) ?? host.describe?.(candidate) ?? `Open ${candidate.source}`,
+  openSession: host.openSession,
   open: async (candidate) => {
     if (await provider?.resolveResource?.(candidate)) return provider?.open(candidate);
     return host.open(candidate);
