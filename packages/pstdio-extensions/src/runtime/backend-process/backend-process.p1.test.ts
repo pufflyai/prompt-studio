@@ -193,9 +193,15 @@ export default {
     {
       id: "orphan",
       title: "Orphan",
-      run: (ctx, exit) => {
-        const child = Bun.spawn([process.execPath, "-e", "setInterval(() => {}, 1000)"], { stdio: ["ignore", "ignore", "ignore"] });
-        if (exit) setTimeout(() => process.exit(3), 50);
+      run: () => {
+        const detached = process.platform === "win32";
+        const child = Bun.spawn([process.execPath, "-e", "setInterval(() => {}, 1000)"], {
+          stdio: ["ignore", "ignore", "ignore"],
+          detached,
+          windowsHide: true,
+        });
+        // Keep Bun's own Windows subprocess cleanup from masking the supervisor's job.
+        if (detached) child.unref();
         return child.pid;
       },
     },
@@ -1413,7 +1419,6 @@ test("a worker that ignores cancellation keeps its invocation only until the cle
   }
 });
 
-const posixOnlyTest = process.platform === "win32" ? test.skip : test;
 const isAlive = (pid: number) => {
   try {
     process.kill(pid, 0);
@@ -1433,22 +1438,35 @@ test("processes extension code starts stop with its worker", async () => {
     handlerId: handlerOf(stopped.definition, "orphan"),
     context: {},
     surface,
-    args: [false],
+    args: [],
   })) as number;
   await stopped.stop();
   expect(await stopsWithin(left)).toBe(true);
 });
 
-posixOnlyTest("processes extension code starts stop when its worker crashes", async () => {
+test("processes extension code starts stop when its worker crashes", async () => {
   const crashing = await start();
-  const orphan = (await crashing.invoke({
-    handlerId: handlerOf(crashing.definition, "orphan"),
-    context: {},
-    surface,
-    args: [true],
-  })) as number;
-  await crashing.exited;
-  expect(await stopsWithin(orphan)).toBe(true);
+  let orphan: number | undefined;
+  try {
+    orphan = (await crashing.invoke({
+      handlerId: handlerOf(crashing.definition, "orphan"),
+      context: {},
+      surface,
+      args: [],
+    })) as number;
+    expect(isAlive(orphan)).toBe(true);
+    await expectRejection(
+      crashing.invoke({ handlerId: handlerOf(crashing.definition, "crash"), context: {}, surface, args: [] }),
+    ).toBeInstanceOf(BackendUnavailableError);
+    expect(await crashing.exited).toBe(7);
+    expect(await stopsWithin(orphan)).toBe(true);
+  } finally {
+    try {
+      await crashing.stop();
+    } finally {
+      if (orphan && isAlive(orphan)) process.kill(orphan, "SIGKILL");
+    }
+  }
 });
 
 test("a worker stopped before its first heartbeat records its resident memory", async () => {
