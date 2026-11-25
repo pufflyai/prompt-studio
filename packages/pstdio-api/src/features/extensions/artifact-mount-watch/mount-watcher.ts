@@ -137,7 +137,6 @@ export const watchArtifactMount = (input: ArtifactMountWatcherInput) => {
         input.onFolderLimit();
       },
       watch: input.watch,
-      requireRoot: Boolean(watchRoot),
     });
     if (watchRoot) {
       directRoot = createDirectoryTreeWatcher({
@@ -146,9 +145,13 @@ export const watchArtifactMount = (input: ArtifactMountWatcherInput) => {
         onError: onWatchError,
         skipDirectory: () => true,
         watch: watchRoot,
-        requireRoot: true,
       });
-      if (!initialIdentity || readArtifactFileState(input.root)?.identity !== initialIdentity) {
+      if (
+        !initialIdentity ||
+        tree.rootIdentity !== initialIdentity ||
+        directRoot.rootIdentity !== initialIdentity ||
+        readArtifactFileState(input.root)?.identity !== initialIdentity
+      ) {
         throw new Error(`Artifact mount directory changed during watch startup: ${input.root}`);
       }
     }

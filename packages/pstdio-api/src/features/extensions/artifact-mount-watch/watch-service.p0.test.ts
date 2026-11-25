@@ -153,7 +153,7 @@ const createHarness = async (listProjectIds = async () => ["project-1"]) => {
   };
 };
 
-test.skipIf(process.platform !== "darwin").each(["registration fails", "root disappears"])(
+test.skipIf(process.platform !== "darwin").each(["registration fails", "root disappears", "root briefly changes"])(
   "retries an incomplete flat watch on the next refresh when its %s",
   async (mode) => {
     const nativeWatch = fs.watch;
@@ -172,8 +172,13 @@ test.skipIf(process.platform !== "darwin").each(["registration fails", "root dis
         throw Object.assign(new Error("Cannot open native flat watch"), { code: "ENOSPC" });
       }
       const handle = Reflect.apply(nativeWatch, fs, args);
-      if (isTarget && options.recursive === true && ++treeStarts === 1 && mode === "root disappears") {
+      if (isTarget && options.recursive === true && ++treeStarts === 1 && mode !== "registration fails") {
         fs.renameSync(path, `${path}.parked`);
+        if (mode === "root briefly changes") mkdirSync(path);
+      }
+      if (flat && flatStarts === 1 && mode === "root briefly changes") {
+        fs.renameSync(path, `${path}.replacement`);
+        fs.renameSync(`${path}.parked`, path);
       }
       return handle;
     };
@@ -181,7 +186,7 @@ test.skipIf(process.platform !== "darwin").each(["registration fails", "root dis
     try {
       const harness = await createHarness();
       await harness.service.refresh();
-      const expectedFlatStarts = mode === "registration fails" ? 2 : 1;
+      const expectedFlatStarts = mode === "root disappears" ? 1 : 2;
       expect({ treeStarts, flatStarts }).toEqual({ treeStarts: 2, flatStarts: expectedFlatStarts });
       await harness.service.refresh();
       expect({ treeStarts, flatStarts }).toEqual({ treeStarts: 2, flatStarts: expectedFlatStarts });

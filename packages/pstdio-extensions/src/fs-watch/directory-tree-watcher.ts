@@ -53,8 +53,6 @@ export type DirectoryTreeWatcherInput = {
   onDirectoryLimit?: () => void;
   /** An injected watch always runs one handle per folder. */
   watch?: WatchDirectory;
-  /** Fail startup if no handle can be registered for the root. */
-  requireRoot?: boolean;
 };
 
 // Linux cannot watch a folder that does not exist, and nothing above the root is watched. A
@@ -97,17 +95,13 @@ export const createDirectoryTreeWatcher = (input: DirectoryTreeWatcherInput) => 
     const identity = folderIdentity(directoryPath);
     // A folder removed before its handle starts is reported by its parent.
     if (!identity) return true;
-    try {
-      const folder: WatchedFolder = { identity };
-      folder.handle = watch(
-        directoryPath,
-        (eventType, filename) => handleEvent(directoryPath, folder, eventType, filename),
-        input.onError,
-      );
-      folders.set(directoryPath, folder);
-    } catch (error) {
-      input.onError(error);
-    }
+    const folder: WatchedFolder = { identity };
+    folder.handle = watch(
+      directoryPath,
+      (eventType, filename) => handleEvent(directoryPath, folder, eventType, filename),
+      input.onError,
+    );
+    folders.set(directoryPath, folder);
     return true;
   };
 
@@ -130,6 +124,8 @@ export const createDirectoryTreeWatcher = (input: DirectoryTreeWatcherInput) => 
     try {
       visit(startPath);
     } catch (error) {
+      // Startup must fail even when the production error callback only logs.
+      if (!reportEntries) throw error;
       // A folder removed during the walk is reported by its own event.
       if (!isGone(error)) input.onError(error);
     }
@@ -208,14 +204,11 @@ export const createDirectoryTreeWatcher = (input: DirectoryTreeWatcherInput) => 
   try {
     if (recursive) addHandle(input.root);
     else watchFolders(input.root, false);
-    if (input.requireRoot && !folders.has(input.root)) {
-      throw new Error(`Cannot attach filesystem watch for ${input.root}`);
-    }
   } catch (error) {
     close();
     throw error;
   }
-  return { recursive, close };
+  return { recursive, close, rootIdentity: folders.get(input.root)?.identity };
 };
 
 export type DirectoryTreeWatcher = ReturnType<typeof createDirectoryTreeWatcher>;

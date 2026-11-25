@@ -22,6 +22,33 @@ afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
+test.each([
+  [true, true],
+  [false, true],
+  [true, false],
+  [false, false],
+])("reports nested edits (owned subtree: %s, API write after report: %s)", async (ownedSubtree, apiWrite) => {
+  const ledger = createArtifactMountWriteLedger(() => 0);
+  const { mount, root } = createMount(ledger);
+  const observer = ledger.createEchoFilter();
+  const folder = join(root, "sales");
+  const archive = join(folder, "archive");
+  const nested = join(archive, "2026", "note.json");
+  const options = { keepMatchedWrites: true };
+  await mount.writeText("sales/archive/first.json", "{}");
+  if (ownedSubtree) await mount.writeText("sales/archive/2026/note.json", "{}");
+  else {
+    mkdirSync(dirname(nested));
+    writeFileSync(nested, "{}");
+  }
+  writeFileSync(join(archive, "external.json"), "outside");
+  expect(observer([archive], options)).toEqual([archive]);
+
+  writeFileSync(nested, "a new outside edit inside a nested directory");
+  if (apiWrite) await mount.writeText("sales/archive/owned.json", "{}");
+  expect(observer([folder], options)).toEqual([folder]);
+});
+
 describe("artifact mount write ledger", () => {
   test("drops paths in the state a mount write left, and the folders it created", async () => {
     const ledger = createArtifactMountWriteLedger();
