@@ -163,17 +163,17 @@ export const createAppCloser = (input: {
 }) => {
   let closePromise: Promise<void> | null = null;
   let backendsStopped: Promise<void> | undefined;
-  let processesStopped: Promise<void> | undefined;
   const stopBackendWorkers = () =>
     (backendsStopped ??= traceShutdownPhase("extension_backends", input.closeBackendWorkers));
-  const stopExtensionProcesses = () =>
-    (processesStopped ??= traceShutdownPhase("extension_processes", () => input.extensionProcessOwners.dispose()));
   return async () => {
     closePromise ??= (async () => {
       // A vacuum holds PGlite's only thread, so database cleanup stops before any other part waits on it.
       const deadRowCleanupStopped = traceShutdownPhase("dead_row_cleanup", () => input.stopDeadRowCleanup());
       deadRowCleanupStopped.catch(() => {});
       const hooksStopped = traceShutdownPhase("session_hooks", () => input.closeSessionHooks());
+      // A session hook can wait for a child owned by its extension. Stop those children while hooks drain.
+      const processesStopped = traceShutdownPhase("extension_processes", () => input.extensionProcessOwners.dispose());
+      processesStopped.catch(() => {});
       const installationsStopped = traceShutdownPhase("extension_installations", () =>
         input.extensionInstallations.dispose(),
       );
@@ -207,7 +207,7 @@ export const createAppCloser = (input: {
         await traceShutdownPhase("extension_runtime", () => input.extensionRuntime.dispose());
         await traceShutdownPhase("artifact_mounts", () => input.artifactMountWatch.dispose());
         await traceShutdownPhase("extension_scheduler", () => input.extensionScheduler.dispose());
-        await stopExtensionProcesses();
+        await processesStopped;
         // Workers call back into host storage, so they stop before the database closes.
         await stopBackendWorkers();
         await traceShutdownPhase("automation", () => input.automationService.close());
@@ -223,7 +223,7 @@ export const createAppCloser = (input: {
         }
         await nativeDocumentsStopped.catch(recordFailure);
         await deadRowCleanupStopped.catch(recordFailure);
-        await stopExtensionProcesses().catch(recordFailure);
+        await processesStopped.catch(recordFailure);
         await stopBackendWorkers().catch(recordFailure);
         await traceShutdownPhase("database", () => input.closeDb()).catch(recordFailure);
       }
