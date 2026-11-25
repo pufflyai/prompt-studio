@@ -633,6 +633,7 @@ test.each(copyStates)("two views check the current device state before downloadi
       await clickAndSettle(stalePeerAction);
       expect(device.downloads).toBe(0);
       await act(async () => {
+        if (outcome === "removal receipt") owner.getWriter("projects")!.remove(id);
         releaseRemoval.resolve();
         await result!;
       });
@@ -718,6 +719,76 @@ test.each(copyStates)("two views check the current device state before downloadi
     expect(fixture.closed).toBe(1);
     expect(device.downloads).toBe(1 + Number(shouldRetry) + Number(hasRetryableFailure));
   } finally {
+    await fixture.cleanup();
+  }
+});
+
+test.each([
+  "accountId",
+  "managerOrigin",
+] as const)("local removal cannot reconcile after the %s changes", async (changed) => {
+  const fixture = await mountCopyChoices("removal receipt");
+  const { id, account, owner, client, removalStarted, releaseRemoval } = fixture;
+  let result: Promise<unknown> | undefined;
+  try {
+    await act(async () => {
+      result = fixture.removal.remove(id, "Recovered notes", { ...account }, fixture.choice.login!, false);
+      // Observe retirement before delivering the response of the previous account.
+      void result.catch(() => {});
+      await removalStarted.promise;
+    });
+    await act(async () => {
+      account[changed] = changed === "accountId" ? "replacement-account" : "https://replacement.example.test";
+      publishExtensionEvent({ id: accountEvents.changed.id }, owner);
+      await until(
+        () => getDashboardAccountStatusQuery(owner).getSnapshot().data?.login?.[changed] === account[changed],
+      );
+    });
+    await expect(result!).rejects.toThrow("original authority is no longer active");
+    const key = cloudCatalogKeyFor(account.managerOrigin, account.accountId, fixture.device.id);
+    await act(async () => until(() => Boolean(client.getQueryData(key))));
+    const replacementCatalog = client.getQueryData(key);
+    await act(async () => releaseRemoval.resolve());
+    expect(client.getQueryData(key)).toBe(replacementCatalog);
+    expect(fixture.opened).toEqual([]);
+  } finally {
+    releaseRemoval.resolve();
+    await result?.catch(() => {});
+    await fixture.cleanup();
+  }
+});
+
+test("local removal on another device still blocks account-wide Cloud deletion", async () => {
+  const fixture = await mountCopyChoices("removal receipt");
+  const { id, account, device, owner, client, removalStarted, releaseRemoval } = fixture;
+  let result: Promise<unknown> | undefined;
+  try {
+    await act(async () => {
+      result = fixture.removal.remove(id, "Recovered notes", account, fixture.choice.login!, false);
+      await removalStarted.promise;
+    });
+    await act(async () => {
+      device.id = "replacement-device";
+      device.presence = "downloaded";
+      publishExtensionEvent({ id: accountEvents.changed.id }, owner);
+      await until(() => fixture.peer.login?.deviceId === device.id && fixture.peer.entry?.presence === "downloaded");
+    });
+    const replacement = fixture.peer.login!;
+    expect(fixture.removal.active(id, account, replacement)).toBe(false);
+    await expect(fixture.deletions.start(id, "Recovered notes", account, replacement)).rejects.toThrow(
+      "pending Cloud change",
+    );
+    const key = cloudCatalogKeyFor(account.managerOrigin, account.accountId, device.id);
+    const replacementCatalog = client.getQueryData(key);
+    await act(async () => {
+      releaseRemoval.resolve();
+      await expect(result!).rejects.toThrow("The active Cloud account changed");
+    });
+    expect(client.getQueryData(key)).toBe(replacementCatalog);
+    expect(fixture.opened).toEqual([]);
+  } finally {
+    releaseRemoval.resolve();
+    await result?.catch(() => {});
     await fixture.cleanup();
   }
 });
