@@ -157,9 +157,7 @@ test.each([
     });
     if (changed === "deviceId") {
       await act(async () => until(() => renderer!.root.findByType("button").props["data-presence"] === "downloaded"));
-    }
-    expect({ opened, closed }).toEqual({ opened: 0, closed: 0 });
-    if (changed === "deviceId") {
+      expect({ opened, closed }).toEqual({ opened: 0, closed: 0 });
       await act(async () => {
         releaseReplacement.resolve();
         await until(() => Boolean(status.getSnapshot().error) && !status.getSnapshot().fetching);
