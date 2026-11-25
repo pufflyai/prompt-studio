@@ -22,6 +22,7 @@ export interface ExampleHost {
 }
 export interface ExampleViewInput {
   host: ExampleHost;
+  projectId?: string;
   resource?: ResourceRef;
 }
 export const ViewContext = createContext<ExampleViewInput | null>(null);
