@@ -21,8 +21,10 @@ import { cloudCatalogKeyFor, cloudCatalogScopeFor, cloudProjectDeletionKey } fro
 
 const downloadDomain = "project.download-device-copy";
 export const cloudCopyRemovalDomain = "project.remove-device-copy";
-export const cloudProjectCopySubject = (id: string, scope?: string) =>
-  scope ? operationSubject("cloud-project-copy", id, scope) : operationSubject("cloud-project-copy", id);
+export const cloudProjectCopySubject = (id: string, scope?: string) => {
+  const subject = operationSubject("cloud-project-copy", id);
+  return scope ? `${subject}:${scope}` : subject;
+};
 export const cloudCopyBusy = (operations: WorkbenchOperations, id: string, scope?: string) => {
   const accountSubject = cloudProjectCopySubject(id);
   const deviceSubject = scope && cloudProjectCopySubject(id, scope);
@@ -30,10 +32,7 @@ export const cloudCopyBusy = (operations: WorkbenchOperations, id: string, scope
     if (entry.subjects.includes(accountSubject)) return true;
     if (deviceSubject) return entry.subjects.includes(deviceSubject);
     // An account-wide deletion must check copy claims on every device.
-    return (
-      (entry.projectId ?? entry.intent) === id &&
-      (entry.domain === downloadDomain || entry.domain === cloudCopyRemovalDomain)
-    );
+    return entry.subjects.some((subject) => subject.startsWith(`${accountSubject}:`));
   });
 };
 export const cloudCopyScopeFor = (id: string, catalogScope: string) => JSON.stringify([id, catalogScope]);
