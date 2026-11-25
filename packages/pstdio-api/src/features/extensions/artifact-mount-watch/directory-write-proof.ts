@@ -134,6 +134,8 @@ const expectedChildren = (directory: OwnedDirectory, reported: ReportedChildren)
   for (const [name, child] of reported.get(directory) ?? []) {
     // A later owned operation replaces the proof that this reported observation depended on.
     if (directory.children.get(name) !== child.forWrite) continue;
+    // Seeing an outside-created directory does not prove that an ancestor hint is an owned echo.
+    if (child.state?.directory && child.state.identity !== child.forWrite.state?.identity) continue;
     if (child.state) expected.set(name, child);
     else expected.delete(name);
   }

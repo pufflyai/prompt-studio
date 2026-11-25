@@ -141,7 +141,10 @@ describe("artifact mount write ledger", () => {
 });
 
 describe("artifact mount directory echoes", () => {
-  test("keeps a reported folder across an API write with unchanged directory timestamps", async () => {
+  test.each([
+    true,
+    false,
+  ])("keeps folder ownership across a write with unchanged directory timestamps (owned child: %s)", async (owned) => {
     const ledger = createArtifactMountWriteLedger(() => 0);
     const { mount, root } = createMount(ledger);
     const folder = join(root, "sales");
@@ -155,7 +158,7 @@ describe("artifact mount directory echoes", () => {
       options?: { bigint?: boolean },
     ) => {
       const stats = Reflect.apply(read, fs, [path, options]);
-      if (path === archive && options?.bigint && stats) {
+      if ((path === archive || path === folder) && options?.bigint && stats) {
         // A Windows directory can keep the same size and timestamps across a burst of writes.
         stats.size = 0n;
         stats.mtimeNs = 0n;
@@ -164,7 +167,9 @@ describe("artifact mount directory echoes", () => {
       return stats;
     }) as typeof fs.lstatSync);
     try {
-      await mount.writeText("sales/archive/first.json", "{}");
+      await mount.writeText("sales/first.json", "{}");
+      if (owned) await mount.writeText("sales/archive/first.json", "{}");
+      else mkdirSync(archive);
       const archiveState = readArtifactFileState(archive);
       expect(archiveState).toMatchObject({ mtime: 0n, ctime: 0n });
       writeFileSync(join(archive, "external.json"), "outside");
@@ -172,7 +177,7 @@ describe("artifact mount directory echoes", () => {
       expect(first([archive], options)).toEqual([archive]);
 
       await mount.writeText("sales/archive/second.json", "{}");
-      expect(first([folder], options)).toEqual([]);
+      expect(first([folder], options)).toEqual(owned ? [] : [folder]);
       expect(second([folder], options)).toEqual([folder]);
 
       writeFileSync(join(archive, "later.json"), "another outside change");
