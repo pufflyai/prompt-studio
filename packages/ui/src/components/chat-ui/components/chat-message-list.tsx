@@ -5,11 +5,13 @@ import { useVirtualizer } from "@/utils/use-virtualizer";
 import { useMessageAnimationKeys } from "./chat-message-animation";
 import { ChatMessageRowLayout } from "./chat-message-row-layout";
 import { buildChatMessageRows, getChatStickyRowIndex, hasChatRowGap } from "./chat-message-rows";
+import { ChatOutline } from "./chat-outline";
 import type { MessageGroup, SessionMessage } from "./message-types";
 import { useChatMessageVisibility } from "./use-chat-message-visibility";
 import { useTailReady } from "./use-chat-tail-ready";
 
 interface ChatMessageListProps {
+  outlineHost?: HTMLElement | null;
   leadingResponses: SessionMessage[];
   groups: MessageGroup[];
   streaming: boolean;
@@ -39,7 +41,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
     onForkMessage,
     forkDisabledReason,
   } = props;
-  const { scrollRef, state } = useStickToBottomContext();
+  const { scrollRef, state, stopScroll, isAtBottom } = useStickToBottomContext();
   const rows = buildChatMessageRows(leadingResponses, groups, streaming);
   const animatedKeys = useMessageAnimationKeys(rows.map((row) => row.message.animationKey ?? row.key));
   const initialHeight = scrollRef.current?.clientHeight || 1;
@@ -73,8 +75,24 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
     : "[]";
   const list = useChatMessageVisibility(scrollRef, visibleRows, props.onVisibleMessageIdsChange);
 
+  const range = virtualizer.range;
+  const viewingTail =
+    isAtBottom || (props.outlineHost && range?.endIndex === rows.length - 1 && virtualizer.isAtEnd(2));
+  const currentRow = viewingTail ? rows.length - 1 : (range?.startIndex ?? 0);
+
   return (
     <Box px="xs" ref={list}>
+      {props.outlineHost && (
+        <ChatOutline
+          host={props.outlineHost}
+          rows={rows}
+          active={getChatStickyRowIndex(rows, currentRow)}
+          onJump={(index) => {
+            stopScroll();
+            virtualizer.scrollToIndex(index, { align: "start" });
+          }}
+        />
+      )}
       <Box position="relative" width="100%" style={{ height: totalSize }}>
         {virtualItems.map((virtualItem) => {
           const row = rows[virtualItem.index];

@@ -1,4 +1,5 @@
 import { index, integer, jsonb, pgTable, text } from "drizzle-orm/pg-core";
+import type { SessionMessageSender } from "pstdio-api-contracts";
 import { isoTimestamp } from "./iso-timestamp";
 import { sessions } from "./sessions";
 
@@ -15,6 +16,7 @@ export const session_queue_entries = pgTable(
     steering_delivery_json: jsonb("steering_delivery_json").$type<{ id: string; runStartedAt: string }>(),
     revision: text("revision").notNull(),
     prompt: text("prompt").notNull(),
+    sender_json: jsonb("sender_json").$type<SessionMessageSender & { afterTurn?: number; runStartedAt?: string }>(),
     request_kind: text("request_kind").notNull().default("start"),
     question_response_json: jsonb("question_response_json"),
     attachments_json: jsonb("attachments_json").$type<Array<{ file_id: string }>>(),

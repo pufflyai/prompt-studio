@@ -26,6 +26,7 @@ export const queuedMessagesFromRequests = async (
       messages.push({
         id: `queued-prompt-${sessionId}-${entry.queuePosition}`,
         role: "user",
+        ...(entry.sender ? { sender: entry.sender } : {}),
         parts: [{ type: "text", text: entry.prompt }, ...sessionAttachmentFileParts(attachments)],
       });
     }

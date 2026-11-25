@@ -8,9 +8,12 @@ import {
   rejectPersistedSessionCancellation,
   rejectStoreSessionCancellation,
 } from "./session-request-cancellation";
+import { submittedMessageSender } from "./submitted-message-identity";
+import { prepareSubmittedSender } from "./submitted-message-sender";
 import { trackHarnessSession } from "./track-harness-session";
 
 type SpawnInput = {
+  sender?: import("pstdio-api-contracts").SessionMessageSender;
   sessionId: string;
   projectId?: string;
   agentId: string;
@@ -68,6 +71,7 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
   entry.executionSettings = { model: input.model ?? null, params: input.params ?? {} };
 
   const conversation = await entry.conversationReady;
+  await prepareSubmittedSender(conversation, input, deps);
   input.signal?.throwIfAborted();
 
   let cwd = input.cwd;
@@ -108,6 +112,8 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
     deps,
     {
       submittedAttachmentFileIds: submittedAttachmentFileIds(input.attachments),
+      sender: submittedMessageSender(input),
+      prompt: input.prompt,
       submittedQueuePosition: input.submittedQueuePosition,
     },
     entry,
@@ -117,6 +123,7 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
 };
 
 type ResumeInput = {
+  sender?: import("pstdio-api-contracts").SessionMessageSender;
   sessionId: string;
   projectId?: string;
   agentSessionId: string;
@@ -150,6 +157,7 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
   entry.executionSettings = { model: input.model ?? null, params: input.params ?? {} };
 
   const conversation = await entry.conversationReady;
+  await prepareSubmittedSender(conversation, input, deps);
   input.signal?.throwIfAborted();
 
   const session = await harness.resume(
@@ -187,6 +195,8 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
     deps,
     {
       submittedAttachmentFileIds: submittedAttachmentFileIds(input.attachments),
+      sender: submittedMessageSender(input),
+      prompt: input.prompt,
       submittedQueuePosition: input.submittedQueuePosition,
     },
     entry,
@@ -196,6 +206,8 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
 };
 
 type ReattachInput = {
+  sender?: import("pstdio-api-contracts").SessionMessageSender;
+  prompt?: string;
   sessionId: string;
   projectId?: string;
   agentSessionId: string;
@@ -290,6 +302,8 @@ export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps
     deps,
     {
       submittedAttachmentFileIds: input.submittedAttachmentFileIds ?? [],
+      sender: submittedMessageSender(input),
+      prompt: input.prompt,
       submittedQueuePosition: input.submittedQueuePosition,
     },
     entry,

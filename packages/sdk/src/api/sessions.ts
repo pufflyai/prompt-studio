@@ -21,6 +21,8 @@ export type {
   SessionAttachmentRef,
   SessionConversationResponse,
   SessionConversationSources,
+  SessionMessageSender,
+  SessionMessageSource,
   SessionQueuedMessagesResponse,
   SessionSteeringInput,
   SteerQueuedFollowUpInput,

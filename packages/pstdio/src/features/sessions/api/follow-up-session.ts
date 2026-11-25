@@ -12,4 +12,10 @@ export const followUpSession = async (
     summary_format?: "brief" | "detailed";
     summary_role?: "assistant" | "all";
   },
-) => apiClient().sessions.followUp(sessionId, input);
+) =>
+  apiClient().sessions.followUp(sessionId, {
+    ...input,
+    ...(process.env.PSTDIO_SESSION_ID
+      ? { source: { type: "session" as const, id: process.env.PSTDIO_SESSION_ID } }
+      : {}),
+  });

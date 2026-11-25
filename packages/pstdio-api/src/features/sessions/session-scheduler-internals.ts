@@ -1,4 +1,10 @@
-import type { HarnessAttachment, HarnessParams, QuestionResponse, SessionAttachmentRef } from "pstdio-api-contracts";
+import type {
+  HarnessAttachment,
+  HarnessParams,
+  QuestionResponse,
+  SessionAttachmentRef,
+  SessionMessageSender,
+} from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
 import { logStartupFailure } from "./session-startup-failure";
 import type { ActiveSession } from "./session-store";
@@ -10,6 +16,7 @@ export type PendingQueueEntry = Awaited<
 >[number];
 
 export type StartExistingInput = {
+  sender?: SessionMessageSender;
   session: ExistingSession;
   expectedRun?: { status: ExistingSession["status"]; startedAt: string | null; endedAt: string | null };
   prompt: string;
@@ -94,6 +101,7 @@ export const insertFollowUpEntry = async (
     id: input.session.id,
     expectedRun: input.expectedRun,
     prompt: input.prompt,
+    sender_json: input.sender,
     request_kind: "follow_up",
     question_response_json: input.questionResponse ?? null,
     attachments_json: input.attachmentRefs,
@@ -132,6 +140,7 @@ export const createSubmittedDispatchEntry = async (
   deps: SessionsRouteDeps,
   input: {
     sessionId: string;
+    sender?: SessionMessageSender;
     prompt: string;
     requestKind: "start" | "follow_up";
     model?: string;
@@ -141,11 +150,12 @@ export const createSubmittedDispatchEntry = async (
   },
 ) => {
   // Initial requests must survive a restart while the harness is still starting.
-  if (input.requestKind === "follow_up" && !hasAttachmentRefs(input.attachmentRefs)) return undefined;
+  if (input.requestKind === "follow_up" && !hasAttachmentRefs(input.attachmentRefs) && !input.sender) return undefined;
 
   const entry = await deps.sessionQueueEntriesService.createDispatchStarted({
     session_id: input.sessionId,
     prompt: input.prompt,
+    sender_json: input.sender,
     request_kind: input.requestKind,
     model: input.model,
     question_response_json: input.questionResponse ?? null,
@@ -171,6 +181,7 @@ export const prepareExistingDispatch = async (deps: SessionsRouteDeps, input: Di
   const submittedQueuePosition = await createSubmittedDispatchEntry(deps, {
     sessionId: session.id,
     prompt,
+    sender: input.sender,
     requestKind: "follow_up",
     model,
     questionResponse: input.questionResponse,
@@ -235,6 +246,7 @@ export const prepareExistingDispatch = async (deps: SessionsRouteDeps, input: Di
             agentSessionId: session.agent_session_id,
             agentId,
             prompt,
+            sender: input.sender,
             attachments: input.attachments,
             model,
             params,
@@ -257,6 +269,7 @@ export const prepareExistingDispatch = async (deps: SessionsRouteDeps, input: Di
           projectId: projectIdForAgentEnv(session),
           agentId,
           prompt,
+          sender: input.sender,
           attachments: input.attachments,
           model,
           params,

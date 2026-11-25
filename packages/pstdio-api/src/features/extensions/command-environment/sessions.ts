@@ -139,6 +139,7 @@ export const createSessionsApi = (
             id: followupInput.sessionId,
             input: {
               prompt: followupInput.prompt,
+              source: followupInput.source,
               agent: followupInput.harness?.harnessId,
               model: followupInput.harness?.model,
               params: followupInput.harness?.params,
@@ -169,6 +170,7 @@ export const createSessionsApi = (
         session,
         {
           prompt: resolveExtensionPrompt(followupInput),
+          source: followupInput.source,
           agent: harness?.harnessId,
           model: harness?.model,
           params: harness?.params,

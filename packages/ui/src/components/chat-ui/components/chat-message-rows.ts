@@ -11,6 +11,11 @@ export type ChatMessageRow = {
 
 const singlePart = (message: SessionMessage) => (message.parts.length === 1 ? message.parts[0] : undefined);
 
+const hasSameSender = (first: SessionMessage, second: SessionMessage) =>
+  first.sender?.type === second.sender?.type &&
+  first.sender?.id === second.sender?.id &&
+  first.sender?.name === second.sender?.name;
+
 const repeatablePrompt = (group: MessageGroup) => {
   const part = singlePart(group.userMessage);
   if (group.userMessage.delivery || part?.type !== "text") return;
@@ -31,6 +36,7 @@ export const buildChatMessageRows = (leadingResponses: SessionMessage[], groups:
         previous?.type === "response" &&
         previous.userIndex === userIndex &&
         previous.message.role === message.role &&
+        hasSameSender(previous.message, message) &&
         previousPart?.type === "error" &&
         previousPart.errorType === part.errorType &&
         previousPart.message === part.message
@@ -56,7 +62,13 @@ export const buildChatMessageRows = (leadingResponses: SessionMessage[], groups:
     const userIndex = rows.length;
     const prompt = repeatablePrompt(group);
     let last = index;
-    while (prompt !== undefined && last + 1 < groups.length && repeatablePrompt(groups[last + 1]) === prompt) last++;
+    while (
+      prompt !== undefined &&
+      last + 1 < groups.length &&
+      repeatablePrompt(groups[last + 1]) === prompt &&
+      hasSameSender(group.userMessage, groups[last + 1].userMessage)
+    )
+      last++;
     const userRow: ChatMessageRow = {
       type: "user",
       key: group.userMessage.id,

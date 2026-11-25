@@ -1,5 +1,6 @@
 import type { EventStore, JsonPatch, SessionMessage } from "pstdio-api-contracts";
 import { normalizeMessageResults } from "pstdio-api-contracts";
+import { createPromptSenders } from "./session-prompt-senders";
 
 const normalizePatch = (patch: JsonPatch) => {
   if (patch.op === "remove") return patch;
@@ -33,14 +34,17 @@ export const createSessionConversation = (
   changed?: (patch: JsonPatch) => void,
 ) => {
   let messages = initialMessages.map(normalizeMessageResults);
+  const senders = createPromptSenders();
   let closed = false;
   return {
+    attributePrompt: (prompt: string, sender: SessionMessage["sender"], deliveryId?: string, afterTurn?: number) =>
+      senders.attributePrompt(messages, prompt, sender, deliveryId, afterTurn),
     get closed() {
       return closed;
     },
     push(patch: JsonPatch) {
       if (closed) throw new Error("Conversation is closed");
-      patch = normalizePatch(patch);
+      patch = senders.apply(messages, normalizePatch(patch));
       messages = applyMessagePatch(messages, patch);
       events.push(patch);
       changed?.(patch);

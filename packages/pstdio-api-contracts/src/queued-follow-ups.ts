@@ -1,7 +1,9 @@
 import { z } from "zod";
+import { sessionMessageSenderSchema } from "./session-messages";
 import { harnessParamsInputSchema, sessionAttachmentRefSchema } from "./session-request-values";
 
 export const queuedFollowUpSchema = z.object({
+  sender: sessionMessageSenderSchema.optional(),
   queuePosition: z.number().int().positive(),
   revision: z.string().min(1),
   prompt: z.string(),

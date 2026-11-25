@@ -5,6 +5,7 @@ import { buildFollowUpPrompt } from "./follow-up-prompt";
 import { resolveHarnessRunParams } from "./harness-params";
 import { QuestionReplyRejectedError, replyToLiveSessionQuestion } from "./live-question-reply";
 import { withResolvedSubmittingSessionAttachments } from "./session-attachments";
+import { resolveMessageSender } from "./session-message-sender";
 import { createSessionScheduler } from "./session-scheduler";
 import { updateExistingDispatchSelection } from "./session-scheduler-internals";
 
@@ -71,6 +72,13 @@ export const sendSessionFollowUp = async (
     return createSessionScheduler(deps).startOrQueueExisting({
       session,
       prompt,
+      sender: await read(() =>
+        resolveMessageSender(
+          deps,
+          session.project_id!,
+          input.source ?? (input.sourceSessionId ? { type: "session", id: input.sourceSessionId } : undefined),
+        ),
+      ),
       cwd: session.cwd ?? undefined,
       agentId: input.agent,
       model: input.model?.trim() || undefined,

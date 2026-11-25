@@ -81,6 +81,7 @@ export interface WorkbenchTabMenuGroup {
 }
 
 export interface WorkbenchTabSnapshot {
+  tooltip?: string;
   label?: string;
   icon?: string;
   indicator?: { icon: string; color?: string; label?: string };

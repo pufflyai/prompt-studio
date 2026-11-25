@@ -1,4 +1,9 @@
-import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
+import type {
+  HarnessAttachment,
+  HarnessParams,
+  SessionAttachmentRef,
+  SessionMessageSender,
+} from "pstdio-api-contracts";
 import type { ResourceRef } from "pstdio-db";
 import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
@@ -23,6 +28,7 @@ import { logStartupFailure } from "./session-startup-failure";
 import { spawnAgentSession } from "./spawn-agent";
 
 type CreateSessionInput = {
+  sender?: SessionMessageSender;
   projectId: string;
   workspaceId?: string;
   title: string;
@@ -87,6 +93,7 @@ const startScheduledSession = async (
       projectId: input.projectId,
       agentId: input.agentId,
       prompt: input.prompt,
+      sender: input.sender,
       attachments: input.attachments,
       title: input.title,
       model: input.model,
@@ -117,7 +124,7 @@ const startScheduledSession = async (
     spawning
       .then(
         async () => {
-          if (submittedQueuePosition !== undefined && !input.attachmentRefs?.length) {
+          if (submittedQueuePosition !== undefined && !input.attachmentRefs?.length && !input.sender) {
             await deps.sessionQueueEntriesService.remove(submittedQueuePosition);
           }
         },
@@ -178,6 +185,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
               anchors: input.anchors,
               params_json: input.params,
               prompt: input.prompt,
+              sender_json: input.sender,
               attachments_json: input.attachmentRefs,
               request_kind: "start",
             },
@@ -215,6 +223,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
         const submittedQueuePosition = await createSubmittedDispatchEntry(deps, {
           sessionId: started.id,
           prompt: input.prompt,
+          sender: input.sender,
           requestKind: "start",
           model: input.model,
           attachmentRefs: input.attachmentRefs,

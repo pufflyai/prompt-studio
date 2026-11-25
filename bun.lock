@@ -1175,7 +1175,7 @@
         "@pstdio/sdk": "workspace:*",
         "@tanstack/charts": "1.2.1",
         "@tanstack/react-table": "^8.21.3",
-        "@tanstack/react-virtual": "^3.13.19",
+        "@tanstack/react-virtual": "^3.13.26",
         "@types/mdast": "^4.0.4",
         "@xterm/addon-fit": "^0.10.0",
         "@xterm/addon-web-links": "^0.11.0",
