@@ -71,7 +71,12 @@ test("an early shutdown failure still closes extension workers before the databa
       },
     },
     extensionScheduler: { dispose: done },
-    extensionProcessOwners: { dispose: done },
+    extensionProcessOwners: {
+      dispose: async () => {
+        order.push("processes");
+        throw new Error("process cleanup failed");
+      },
+    },
     artifactMountWatch: { dispose: done },
     automationService: { close: done },
     terminalSupervisor: { dispose: done },
@@ -88,5 +93,5 @@ test("an early shutdown failure still closes extension workers before the databa
   });
   const failure = await close().catch((error) => error);
   expect(String(failure)).toContain("extension runtime did not stop");
-  expect(order).toEqual(["workers", "database"]);
+  expect(order).toEqual(["processes", "workers", "database"]);
 });

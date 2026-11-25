@@ -163,8 +163,11 @@ export const createAppCloser = (input: {
 }) => {
   let closePromise: Promise<void> | null = null;
   let backendsStopped: Promise<void> | undefined;
+  let processesStopped: Promise<void> | undefined;
   const stopBackendWorkers = () =>
     (backendsStopped ??= traceShutdownPhase("extension_backends", input.closeBackendWorkers));
+  const stopExtensionProcesses = () =>
+    (processesStopped ??= traceShutdownPhase("extension_processes", () => input.extensionProcessOwners.dispose()));
   return async () => {
     closePromise ??= (async () => {
       // A vacuum holds PGlite's only thread, so database cleanup stops before any other part waits on it.
@@ -199,7 +202,7 @@ export const createAppCloser = (input: {
         await traceShutdownPhase("extension_runtime", () => input.extensionRuntime.dispose());
         await traceShutdownPhase("artifact_mounts", () => input.artifactMountWatch.dispose());
         await traceShutdownPhase("extension_scheduler", () => input.extensionScheduler.dispose());
-        await traceShutdownPhase("extension_processes", () => input.extensionProcessOwners.dispose());
+        await stopExtensionProcesses();
         // Workers call back into host storage, so they stop before the database closes.
         await stopBackendWorkers();
         await traceShutdownPhase("automation", () => input.automationService.close());
@@ -217,6 +220,7 @@ export const createAppCloser = (input: {
             try {
               await deadRowCleanupStopped;
             } finally {
+              await stopExtensionProcesses().catch(() => {});
               await stopBackendWorkers().catch(() => {});
               await traceShutdownPhase("database", () => input.closeDb());
             }
