@@ -1,0 +1,160 @@
+name: PS-1314 team copy owning contracts
+
+on:
+  push:
+    branches:
+      - chore/ps1314-2416-picker-green-0e31421c
+
+permissions:
+  contents: read
+
+jobs:
+  owning_contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      TEAM_HEAD: 0e31421ca0cb85e0e707137ee3c8531130c65c54
+      TEAM_TREE: 62aaaed87294802999554692d41418c6d0f17eb2
+      STACK_BASE: c6f294d90c26fbdc29f387e2793fb9f9cdc766e8
+      TEAM_REPORT: test-results/ps1314-2416-picker
+      CI_PROFILE: production
+      NX_DAEMON: "false"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TEAM_HEAD }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify immutable candidate and wrapper
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = refs/heads/chore/ps1314-2416-picker-green-0e31421c
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$TEAM_HEAD"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" = \
+            "$(printf 'A\t.github/workflows/ps1314-2416-picker-green-0e31421c.yml')"
+          test "$(git rev-parse HEAD)" = "$TEAM_HEAD"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$TEAM_TREE"
+          git merge-base --is-ancestor "$STACK_BASE" HEAD
+          test -z "$(git status --porcelain)"
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+          windows-dev-drive: "false"
+
+      - name: Seal only the picker, native owner and SDK files
+        id: plan
+        shell: bash
+        run: |
+          test "$(bun --version)" = 1.4.4
+          test "$(node --version)" = v26.7.0
+          test -z "$(git status --porcelain)"
+          mkdir -p "$TEAM_REPORT"
+          files=(
+            packages/pstdio-dashboard/src/modules/projects/components/cloud-project-choice.p0.test.tsx
+            packages/pstdio-dashboard/src/modules/projects/components/cloud-project-choice-admission.p0.test.tsx
+            packages/pstdio-dashboard/src/modules/projects/data/project-copy-operations.p0.test.tsx
+            packages/pstdio-api/src/services/account/project-copy-retry.p0.test.ts
+            packages/pstdio-api/src/services/account/project-catalog-identity.p1.test.ts
+            packages/sdk/src/client/account-project-lifecycle.p0.test.ts
+          )
+          options=()
+          for file in "${files[@]}"; do
+            test -f "$file"
+            options+=(--file "$file")
+          done
+          bun scripts/test.ts "${options[@]}" --list --out "$TEAM_REPORT/plan.json"
+          printf '%s\n' "${files[@]}" | jq -sR 'split("\n") | map(select(length > 0))' > "$TEAM_REPORT/assigned.json"
+          jq -e --slurpfile files "$TEAM_REPORT/assigned.json" --arg sha "$TEAM_HEAD" --arg tree "$TEAM_TREE" '
+            .source.sha == $sha and .source.tree == $tree and .source.dirty == false
+            and ([.runs[].files[]] | sort) == ($files[0] | sort)
+            and all(.runs[]; .lane == "stable" and .artifact == "source" and .target == {platform:"linux",arch:"x64"})
+          ' "$TEAM_REPORT/plan.json"
+          scratch="$(mktemp -d /tmp/ps1314-team.XXXXXX)"
+          printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$scratch/owner"
+          {
+            echo "TEAM_TMP=$scratch"
+            echo "TMPDIR=$scratch"
+            echo "TMP=$scratch"
+            echo "TEMP=$scratch"
+          } >> "$GITHUB_ENV"
+
+      - name: Execute all selected source groups
+        shell: bash
+        run: |
+          bun --no-orphans - <<'BUN' 2>&1 | tee "$TEAM_REPORT/execution.log"
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+          import { executePlan } from "./scripts/ci/run-test-plan";
+          const root = process.cwd();
+          const scratch = process.env.TEAM_TMP;
+          const relative = process.env.TEAM_REPORT;
+          if (!scratch || !/^\/tmp\/ps1314-team\.[A-Za-z0-9]{6}$/.test(scratch) || !relative)
+            throw new Error("Missing isolated test directory");
+          const executionId = process.env.GITHUB_RUN_ID + "/" + process.env.GITHUB_RUN_ATTEMPT;
+          for (const [key, value] of Object.entries(localReviewEnvironment(scratch))) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+          process.env.CI_PLAN_OUTPUT_DIR = relative + "/execution";
+          const output = resolve(root, relative);
+          const plan = await Bun.file(resolve(output, "plan.json")).json();
+          let passed = false;
+          try {
+            const report = await executePlan(plan, { root, executionId, env: { CI_PROFILE: "production" } });
+            passed = report.complete && report.outcome === "success";
+          } finally {
+            const cleanup = await cleanupReviewCompose(scratch);
+            await Bun.write(resolve(output, "compose-cleanup.json"), JSON.stringify(cleanup, null, 2));
+            process.exitCode = passed && cleanup.every((entry) => entry.outcome === "success") ? 0 : 1;
+          }
+          BUN
+          jq -e --slurpfile plan "$TEAM_REPORT/plan.json" --slurpfile files "$TEAM_REPORT/assigned.json" '
+            .source == $plan[0].source and .planDigest == $plan[0].digest and .complete and .outcome == "success"
+            and (.runIds | sort) == ([$plan[0].runs[].id] | sort)
+            and ([.results[].reportedFiles[]] | sort | unique) == ($files[0] | sort)
+            and all(.results[]; .complete and .outcome == "success" and .exitCode == 0)
+          ' "$TEAM_REPORT/execution/execution.json"
+
+      - name: Check the package types against built SDK declarations
+        if: ${{ !cancelled() && steps.plan.outcome == 'success' }}
+        shell: bash
+        run: |
+          failed=0
+          for owner in packages/sdk packages/pstdio-dashboard packages/pstdio-api; do
+            report="$TEAM_REPORT/typecheck-${owner##*/}.log"
+            bun run --cwd "$owner" typecheck 2>&1 | tee "$report" || failed=1
+          done
+          git diff --exit-code
+          test "$failed" = 0
+
+      - name: Clean the owned fixture directory
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$TEAM_REPORT"
+          if [[ -n "${TEAM_TMP:-}" ]]; then
+            [[ "$TEAM_TMP" =~ ^/tmp/ps1314-team\.[A-Za-z0-9]{6}$ ]]
+            test "$(cat "$TEAM_TMP/owner")" = "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+            rm -rf -- "$TEAM_TMP"
+            test ! -e "$TEAM_TMP"
+            printf '%s\n' 'Owned temporary directory removed' > "$TEAM_REPORT/scratch-cleanup.txt"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ps1314-2416-picker-0e31421c-attempt-${{ github.run_attempt }}
+          path: ${{ env.TEAM_REPORT }}
+          if-no-files-found: error
