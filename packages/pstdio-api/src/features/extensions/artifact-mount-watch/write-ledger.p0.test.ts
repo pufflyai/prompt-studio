@@ -335,20 +335,24 @@ describe("artifact mount folder-only notifications", () => {
 });
 
 describe("artifact mount restored folder batches", () => {
-  test("reports removals in an externally returned subtree under an API-owned folder", async () => {
+  test.each(["folder", "child"])("reports removals in an externally returned subtree from a %s hint", async (hint) => {
     const ledger = createArtifactMountWriteLedger(() => 0);
     const { mount, root } = createMount(ledger);
     const missing = join(root, "sales", "old.json");
     await mount.writeText("sales/old.json", "{}");
     await mount.delete("sales");
+    const options = { keepMatchedWrites: true };
+    expect(ledger.dropEchoes([missing], options)).toEqual([]);
     await mount.writeText("sales/owned.json", "[]");
 
     const folder = join(root, "sales", "returned");
     const child = join(folder, "nested", "child.json");
     mkdirSync(dirname(child), { recursive: true });
     writeFileSync(child, "external");
-    const options = { keepMatchedWrites: true };
-    expect(ledger.dropEchoes([folder], options)).toEqual([folder]);
+    const sibling = join(folder, "nested", "sibling.json");
+    writeFileSync(sibling, "external sibling");
+    const notified = hint === "folder" ? folder : sibling;
+    expect(ledger.dropEchoes([notified], options)).toEqual([notified]);
 
     rmSync(child);
     expect(ledger.dropEchoes([child, missing], options)).toEqual([child]);

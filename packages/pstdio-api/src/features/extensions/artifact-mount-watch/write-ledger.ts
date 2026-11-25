@@ -68,6 +68,24 @@ const hasPathOrAncestor = (path: string, paths: ReadonlySet<string> | undefined)
   return false;
 };
 
+function* hintedDirectories(
+  recordedPath: string,
+  related: readonly PathObservation[],
+  observed: Map<string, FileState>,
+) {
+  const checked = new Set<string>();
+  for (const [hint, state] of related) {
+    // A child-only hint also proves the return of its intermediate directories.
+    for (const path of pathAndAncestors(state?.directory ? hint : dirname(hint))) {
+      if (!isInside(path, recordedPath) || checked.has(path)) break;
+      checked.add(path);
+      if (!observed.has(path)) observed.set(path, readArtifactFileState(path));
+      const current = observed.get(path);
+      if (current?.directory) yield [path, current] as const;
+    }
+  }
+}
+
 export type ArtifactMountWriteLedger = ReturnType<typeof createArtifactMountWriteLedger>;
 
 /**
@@ -126,14 +144,15 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     current: FileState,
     related: readonly PathObservation[],
     retired: Map<string, number>,
+    observed: Map<string, FileState>,
   ) => {
     if (isExternalReturn(recordedPath, current)) {
       retireDeletion(retired, recordedPath, entry.order);
       return;
     }
     markReappearedPaths(entry, related);
-    for (const [path, state] of related) {
-      if (state?.directory && isInside(path, recordedPath) && isExternalReturn(path, state)) {
+    for (const [path, state] of hintedDirectories(recordedPath, related, observed)) {
+      if (isExternalReturn(path, state)) {
         entry.returnedSubtrees ??= new Set();
         entry.returnedSubtrees.add(path);
         retireDeletion(retired, path, entry.order);
@@ -168,6 +187,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
   const reconcileDeletions = (observations: readonly PathObservation[], byPath: ReadonlyMap<string, FileState>) => {
     const retired = new Map<string, number>();
     const hints = indexDeletionHints(observations);
+    const directoryStates = new Map(byPath);
     // Exact folder hints can retire old children before their individual states are read.
     for (const [path, current] of observations) {
       const entry = entries.get(path);
@@ -181,7 +201,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
       // A recursive watcher may report only a child when an external folder returns.
       const observed = byPath.get(recordedPath);
       const current = observed === undefined ? readArtifactFileState(recordedPath) : observed;
-      reconcileDeletion(recordedPath, entry, current, related ?? [], retired);
+      reconcileDeletion(recordedPath, entry, current, related ?? [], retired, directoryStates);
     }
     dropRetiredDeletions(retired);
   };
