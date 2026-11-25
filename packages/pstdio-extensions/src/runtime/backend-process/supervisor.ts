@@ -242,10 +242,21 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     if (!resolvers) return;
     running.settle = undefined;
     hostCalls.reject(invocationId, new BackendUnavailableError("The invocation has finished."));
-    running.table.seal();
     if (message.ok) {
-      resolvers.resolve(hostCalls.importFrom(invocationId, message.value));
+      // Earlier imports can belong to callbacks or handles that are absent from this result.
+      const previousImports = running.tracker.live;
+      let result: unknown;
+      try {
+        result = hostCalls.importFrom(invocationId, message.value);
+      } catch (error) {
+        resolvers.reject(error);
+        discard(invocationId, running);
+        return;
+      }
+      running.table.seal(undefined, running.tracker.live > previousImports);
+      resolvers.resolve(result);
     } else {
+      running.table.seal();
       const error = workerError(message.error);
       if (message.rejection && surfaceAllowsCommandRejection(running.surface))
         error.cause = createCommandRejection(message.rejection);

@@ -68,10 +68,12 @@ const closeSafely = (close: () => unknown) => {
 export const createFunctionTable = () => {
   const functions = new Map<string, { fn: RemoteFunction; cleanup: boolean }>();
   const pinned = new Set<string>();
+  const resultIterators = new Set<string>();
   const disposers = new Map<() => unknown, Set<string>>();
   const handles = new WeakMap<object, RemoteFunction>();
   let next = 0;
   let closed = false;
+  let resultKeepsIterators: boolean | undefined;
 
   const register = (state: ExportState, fn: RemoteFunction, cleanup = false): FunctionRef => {
     const id = `f${next++}`;
@@ -218,18 +220,29 @@ export const createFunctionTable = () => {
     for (const id of ids) {
       functions.delete(id);
       pinned.delete(id);
+      resultIterators.delete(id);
     }
     disposeUnused();
   };
 
-  const exportResult = async (value: unknown, pin = false) => {
+  const retainExport = (ids: ReadonlySet<string>, pin: boolean | "with-result") => {
+    if (!pin) return;
+    let retained = pinned;
+    if (pin === "with-result") {
+      if (resultKeepsIterators === false) throw new Error("The invocation has finished.");
+      if (resultKeepsIterators === undefined) retained = resultIterators;
+    }
+    for (const id of ids) retained.add(id);
+  };
+
+  const exportResult = async (value: unknown, pin: boolean | "with-result" = false) => {
     if (closed) throw new Error("The invocation has finished.");
     const blobs = await readBlobs(value);
     if (closed) throw new Error("The invocation has finished.");
     const kept = new Set<string>();
     try {
       const exported = exportSync(value, { blobs, seen: new WeakMap(), refs: kept });
-      if (pin) for (const id of kept) pinned.add(id);
+      retainExport(kept, pin);
       return { value: exported, kept };
     } catch (error) {
       release(kept);
@@ -247,7 +260,10 @@ export const createFunctionTable = () => {
     return entry.fn(...args());
   };
 
-  const seal = (kept: ReadonlySet<string> = new Set()) => {
+  const seal = (kept: ReadonlySet<string> = new Set(), keepResultIterators = false) => {
+    resultKeepsIterators = keepResultIterators;
+    if (keepResultIterators) for (const id of resultIterators) pinned.add(id);
+    resultIterators.clear();
     for (const id of functions.keys()) if (!kept.has(id) && !pinned.has(id)) functions.delete(id);
     disposeUnused();
   };
@@ -256,6 +272,7 @@ export const createFunctionTable = () => {
     closed = true;
     functions.clear();
     pinned.clear();
+    resultIterators.clear();
     dispose();
   };
 

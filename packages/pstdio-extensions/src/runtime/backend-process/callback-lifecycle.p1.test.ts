@@ -37,6 +37,13 @@ export default {
       const iterator = ctx.live.follow()[Symbol.asyncIterator]();
       void iterator.next().catch(() => {});
       await ctx.live.reading();
+      if (close === "invalid result") {
+        const send = process.send.bind(process);
+        process.send = (message) => send(message.type === "result" && message.ok
+          ? { ...message, value: { $pstdioSignal: { aborted: true, reason: { error: null } } } }
+          : message);
+        return;
+      }
       if (close) await iterator.return();
     } },
     { id: "pending", async run(ctx) {
@@ -207,8 +214,12 @@ test("migration callbacks use synchronous helpers and keep the host migration sc
   });
 });
 
-for (const close of [false, true]) {
-  test(`a pending iterator read is interrupted by ${close ? "return" : "handler settlement"}`, async () => {
+for (const [close, reason] of [
+  [false, "handler settlement"],
+  [true, "return"],
+  ["invalid result", "an unreadable worker result"],
+] as const) {
+  test(`a pending iterator read is interrupted by ${reason}`, async () => {
     await withWorker(async (invoke) => {
       const reading = Promise.withResolvers<void>();
       const released = Promise.withResolvers<void>();
@@ -229,7 +240,9 @@ for (const close of [false, true]) {
         { follow: { kind: "iterate", signalArg: 0 } },
       );
       try {
-        await deadline(invoke("idle", { ...base, args: [close] }));
+        const result = deadline(invoke("idle", { ...base, args: [close] }));
+        if (close === "invalid result") await expect(result).rejects.toBeInstanceOf(TypeError);
+        else await result;
         await deadline(released.promise);
       } finally {
         fallback.abort();

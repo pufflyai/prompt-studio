@@ -131,10 +131,10 @@ export const createHostCalls = (
             message.type === "fn-call"
               ? running.table.isPinned(message.fnId)
               : surfaceMemberKind(running.surface, message.path) === "handle";
-          // A live session can keep the iterator it opened before its handler returned.
+          // A returned live result can keep an invocation-owned iterator. Ordinary results end the read.
           const keepIterator =
             message.within === undefined && result !== null && typeof result === "object" && isAsyncIterable(result);
-          const pin = inherited || keepIterator;
+          const pin = inherited || (keepIterator && "with-result");
           const { value, kept } = await running.table.exportResult(result, pin).catch((error) => {
             if (revoked()) discardValue(result);
             throw error;

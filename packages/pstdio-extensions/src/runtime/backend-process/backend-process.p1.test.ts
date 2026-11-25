@@ -80,7 +80,6 @@ export default {
       },
     },
     { id: "finish", title: "Finish", run: (ctx) => ctx.finish() },
-    { id: "collect", run: () => Bun.gc(true) },
     {
       id: "endless",
       title: "Endless",
@@ -781,10 +780,7 @@ test("listener failures, host objects, abort signals and abandoned iterators sta
         args: [],
       }),
     ).toEqual({ entityKeys: ["name"], hasMethod: "undefined", aborted: "aborted" });
-    for (let attempt = 0; !iteratorClosed && attempt < 10; attempt++) {
-      await worker.invoke({ handlerId: handlerOf(worker.definition, "collect"), context: {}, surface, args: [] });
-      await Bun.sleep(10);
-    }
+    await Bun.sleep(50);
     expect(iteratorClosed).toBe(true);
     expect(unhandled).toEqual([]);
   } finally {
