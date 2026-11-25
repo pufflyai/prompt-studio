@@ -62,7 +62,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
   const resizablePanelRef = useRef<HTMLDivElement>(null);
   const contentPanelRef = useRef<HTMLDivElement>(null);
   const separatorRef = useRef<HTMLDivElement>(null);
-  const cleanupDragRef = useRef<() => void>(() => undefined);
+  const cleanupDragRef = useRef<(() => void) | null>(null);
   const { rootSize, separatorSize } = useResizableSplitRootSize(rootRef, separatorRef, axis.dimension);
   const lastSizeRef = useRef(defaultSizePx);
   const [panelSize, setPanelSize] = useState(defaultSizePx);
@@ -91,7 +91,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     setPanelSize(defaultSizePx);
   }, [defaultSizePx]);
 
-  useEffect(() => () => cleanupDragRef.current(), []);
+  useEffect(() => () => cleanupDragRef.current?.(), []);
 
   const applyPanelSize = (size: number) => {
     // Keep the retained size owned by React so dragging closed cannot overwrite it.

@@ -21,7 +21,7 @@ interface ResizeStartHandlerInput {
   resizablePanelRef: RefObject<HTMLDivElement | null>;
   contentPanelRef: RefObject<HTMLDivElement | null>;
   separatorRef: RefObject<HTMLDivElement | null>;
-  cleanupDragRef: RefObject<() => void>;
+  cleanupDragRef: RefObject<(() => void) | null>;
   lastSizeRef: RefObject<number>;
   applyPanelSize(size: number): void;
   commitPanelSize(size: number): void;
@@ -55,12 +55,12 @@ export const createResizeStartHandler = (input: ResizeStartHandlerInput) => {
     setDragging,
   } = input;
   return (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || (collapsed && !collapsible)) return;
+    if (event.button !== 0 || (collapsed && !collapsible) || cleanupDragRef.current) return;
 
     event.preventDefault();
-    cleanupDragRef.current();
 
     const resizeHandle = event.currentTarget;
+    const pointerId = event.pointerId;
     const bounds = resolveResizableBounds({
       rootSize: getElementSize(rootRef.current, axis.dimension),
       fallbackRootSize: FALLBACK_ROOT_SIZE[axis.dimension],
@@ -93,6 +93,8 @@ export const createResizeStartHandler = (input: ResizeStartHandlerInput) => {
     };
 
     const handlePointerMove = (moveEvent: PointerEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
+
       moved ||= moveEvent[axis.pointerCoordinate] !== startPointer;
       const result = resolveDraggedPanelSize({
         side: resizableSide,
@@ -109,18 +111,18 @@ export const createResizeStartHandler = (input: ResizeStartHandlerInput) => {
 
     const cleanup = () => {
       window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", cleanup);
-      window.removeEventListener("pointercancel", cleanup);
+      window.removeEventListener("pointerup", handlePointerEnd);
+      window.removeEventListener("pointercancel", handlePointerEnd);
       window.removeEventListener("blur", cleanup);
       document.body.style.cursor = previousCursor;
       document.body.style.userSelect = previousUserSelect;
-      if (resizeHandle.hasPointerCapture(event.pointerId)) resizeHandle.releasePointerCapture(event.pointerId);
+      if (resizeHandle.hasPointerCapture(pointerId)) resizeHandle.releasePointerCapture(pointerId);
       setDraggingPanelState("");
       if (animationFrame) {
         window.cancelAnimationFrame(animationFrame);
         animationFrame = 0;
       }
-      cleanupDragRef.current = () => undefined;
+      cleanupDragRef.current = null;
       if (!moved) {
         // Resume opening without committing an intermediate size from a divider press.
         flushSync(() => setDragging(false));
@@ -140,8 +142,12 @@ export const createResizeStartHandler = (input: ResizeStartHandlerInput) => {
       setDragging(false);
     };
 
+    const handlePointerEnd = (endEvent: PointerEvent) => {
+      if (endEvent.pointerId === pointerId) cleanup();
+    };
+
+    resizeHandle.setPointerCapture(pointerId);
     cleanupDragRef.current = cleanup;
-    resizeHandle.setPointerCapture(event.pointerId);
     document.body.style.cursor = axis.cursor;
     document.body.style.userSelect = "none";
     setDraggingPanelState("none");
@@ -149,8 +155,8 @@ export const createResizeStartHandler = (input: ResizeStartHandlerInput) => {
     rootRef.current?.style.setProperty("--split-size", `${startSize}px`);
     setDragging(true);
     window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", cleanup, { once: true });
-    window.addEventListener("pointercancel", cleanup, { once: true });
+    window.addEventListener("pointerup", handlePointerEnd);
+    window.addEventListener("pointercancel", handlePointerEnd);
     window.addEventListener("blur", cleanup, { once: true });
   };
 };
