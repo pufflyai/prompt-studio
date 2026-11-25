@@ -78,6 +78,7 @@ const outlineMessages: SessionMessage[] = Array.from({ length: 240 }, (_, index)
   {
     id: `q-${index}`,
     role: "user" as const,
+    ...(index === 0 || index === 239 ? { createdAt: Date.UTC(2026, 10, 25, 13, 31) } : {}),
     ...(index === 0 ? { sender: { type: "session" as const, id: "release-checks", name: "Release checks" } } : {}),
     ...(index === 239 ? { sender: { type: "user" as const, id: "alex", name: "Alex" } } : {}),
     parts: [{ type: "text" as const, text: `Check build ${index + 1}` }],
@@ -105,11 +106,12 @@ const pollingMessages = Array.from({ length: 2 }, (_, index): SessionMessage[] =
 
 export const ConversationOutline: Story = {
   description:
-    "A wide transcript exposes each turn in its outline. Attributed prompts show a sender avatar and name; older prompts without recorded attribution keep their appearance. Arrow keys, Home, End and Tab move focus across virtualized turns; Enter selects a turn, and narrowing the panel hides the gutter.",
+    "A wide transcript exposes each turn in its outline. Compact avatars sit in the action tray. Activate a session avatar to open its conversation. Arrow keys, Home, End and Tab move focus across virtualized turns; Enter selects a turn, and narrowing the panel hides the gutter.",
   render: (args) => {
     const [wide, setWide] = useState(true);
     const [polling, setPolling] = useState(false);
     const [visibleIds, setVisibleIds] = useState<string[]>([]);
+    const [openedSession, setOpenedSession] = useState<string>();
     return (
       <Box w={wide ? "60rem" : "30rem"} h="30rem">
         <Button size="xs" onClick={() => setWide(!wide)}>
@@ -118,6 +120,7 @@ export const ConversationOutline: Story = {
         <Button size="xs" onClick={() => setPolling(!polling)}>
           {polling ? "Show build checks" : "Show repeated prompts"}
         </Button>
+        {openedSession ? <output aria-label="Opened session">{openedSession}</output> : null}
         {polling && (
           <output hidden data-testid="visible-message-ids">
             {visibleIds.join(" ")}
@@ -125,6 +128,7 @@ export const ConversationOutline: Story = {
         )}
         <ChatPanel
           {...args}
+          linkHandler={{ open: () => {}, resolveHref: () => null, openSession: setOpenedSession }}
           conversationKey={polling ? "polls" : "builds"}
           messages={polling ? pollingMessages : outlineMessages}
           onVisibleMessageIdsChange={polling ? setVisibleIds : undefined}

@@ -37,6 +37,7 @@ interface NativeChatViewProps extends NativeChatHostServices {
   action: Parameters<ChatSession["run"]>[1];
   linkHandler?: ChatLinkHandler;
   sourceRegion?: NativeChatHostProps["sourceRegion"];
+  sourcePlacement?: NativeChatHostProps["sourcePlacement"];
   conversationKey: string;
   observe?: (session: ChatSession) => () => void;
   resolve?: () => NativeChatPresentation | undefined;
@@ -147,7 +148,7 @@ const runQueueGesture = (work: () => Promise<unknown>, report: (error: unknown) 
   void Promise.resolve().then(work).catch(report);
 
 const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevision: number; unresolved: boolean }) => {
-  const { session, conversationKey, renderParamField, unresolved } = props;
+  const { session, conversationKey, renderParamField, unresolved, sourceRegion, sourcePlacement } = props;
   const state = useSyncExternalStore(session.subscribeToView, session.getSnapshot, session.getSnapshot);
   const { conversation: confirmed, draft, messages, queuedFollowUps, pending, loading, initializing, sending } = state;
   const observation = useNativeChatObservation(props, state);
@@ -209,7 +210,7 @@ const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevisio
       attachments={attachments}
       extensionId={props.extensionId}
       linkHandler={props.linkHandler}
-      sourceRegion={props.sourceRegion}
+      {...{ sourceRegion, sourcePlacement }}
     >
       {(host) => {
         const availability = nativeChatComposerAvailability({

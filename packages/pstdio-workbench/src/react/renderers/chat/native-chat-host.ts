@@ -1,4 +1,4 @@
-import type { ChatAttachment, ControlValueMap } from "@pstdio/sdk/extensions";
+import type { ChatAttachment, ControlValueMap, PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { ChatLinkHandler, ChatPanel, SessionMessage } from "@pstdio/ui/chat-ui";
 import type { ComponentProps, ReactNode } from "react";
 import type { WorkbenchPanelRegion } from "../../../core";
@@ -33,5 +33,6 @@ export interface NativeChatHostProps {
   linkHandler?: ChatLinkHandler;
   /** The panel showing this conversation when a link opens, so references can preview beside it. */
   sourceRegion?: () => WorkbenchPanelRegion | undefined;
+  sourcePlacement?: PlacementIdentity;
   children(services: NativeChatHostServices): ReactNode;
 }

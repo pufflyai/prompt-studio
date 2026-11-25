@@ -3,7 +3,6 @@ import { type KeyboardEvent, useEffect, useLayoutEffect, useRef, useState } from
 import { createPortal } from "react-dom";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { Tooltip } from "@/components/primitives/tooltip";
-import { chatOutlineRecipe } from "@/theme/recipes/chat-outline";
 import { useVirtualizer } from "@/utils/use-virtualizer";
 import type { ChatMessageRow } from "./chat-message-rows";
 import { getOutlineEntries } from "./chat-outline-entries";
@@ -16,7 +15,7 @@ export const ChatOutlineHost = ({
   onAvailable: (host: HTMLDivElement | null) => void;
 }) => {
   const root = useRef<HTMLDivElement>(null);
-  const styles = useRecipe({ recipe: chatOutlineRecipe })();
+  const styles = useRecipe({ key: "chatOutline" })();
   useLayoutEffect(() => {
     if (!enabled) return;
     const host = root.current!;

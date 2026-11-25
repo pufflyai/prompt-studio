@@ -13,7 +13,7 @@ export const useSessionLinks = (
   projectId: string | undefined,
   workspaceId: string | null | undefined,
   provider: ChatLinkHandler | undefined,
-  sourceRegion?: NativeChatHostProps["sourceRegion"],
+  source?: Pick<NativeChatHostProps, "sourceRegion" | "sourcePlacement">,
 ) => {
   const [error, setError] = useState<string | null>(null);
   // Messages can render before the workspace syncs. A new row makes a new handler, so paths resolve again.
@@ -33,7 +33,7 @@ export const useSessionLinks = (
     projectId,
     workspace,
     origin: window.location.origin,
-    sourceRegion,
+    ...source,
     onError: setError,
   });
   return {
