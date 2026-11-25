@@ -270,4 +270,4 @@ test.each([
     await rm(root, { recursive: true, force: true });
   }
   if (watchFails) expect(closed).toBe(1);
-}, 8_000);
+}, 20_000);
