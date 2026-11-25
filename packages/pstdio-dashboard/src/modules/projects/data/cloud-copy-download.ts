@@ -30,7 +30,10 @@ export const cloudCopyBusy = (operations: WorkbenchOperations, id: string, scope
     if (entry.subjects.includes(accountSubject)) return true;
     if (deviceSubject) return entry.subjects.includes(deviceSubject);
     // An account-wide deletion must check copy claims on every device.
-    return entry.projectId === id && (entry.domain === downloadDomain || entry.domain === cloudCopyRemovalDomain);
+    return (
+      (entry.projectId ?? entry.intent) === id &&
+      (entry.domain === downloadDomain || entry.domain === cloudCopyRemovalDomain)
+    );
   });
 };
 export const cloudCopyScopeFor = (id: string, catalogScope: string) => JSON.stringify([id, catalogScope]);
