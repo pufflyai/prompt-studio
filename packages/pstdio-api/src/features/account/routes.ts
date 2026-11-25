@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { deviceCommandSchema } from "pstdio-api-contracts";
+import { accountSignInProviderSchema, deviceCommandSchema } from "pstdio-api-contracts";
 import { managerOriginSchema } from "../../services/account/manager-client";
 import {
   AccountRequestError,
@@ -51,10 +51,17 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
       method: "post",
       path: "/account/login",
       tags,
-      request: { body: json(z.object({ managerOrigin: managerOriginSchema.optional() })) },
+      request: {
+        body: json(
+          z.object({ managerOrigin: managerOriginSchema.optional(), provider: accountSignInProviderSchema.optional() }),
+        ),
+      },
       responses,
     }),
-    async (c) => c.json(await service.login(c.req.valid("json").managerOrigin), 200),
+    async (c) => {
+      const { managerOrigin, provider } = c.req.valid("json");
+      return c.json(await service.login(managerOrigin, provider), 200);
+    },
   );
   routes.openapi(
     createRoute({

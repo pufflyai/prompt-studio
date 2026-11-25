@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { serviceUrl } from "pstdio-sync/relay";
+import { type AccountSignInError, type AccountSignInProvider, accountSignInErrorSchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import { managerRequest } from "./manager-client";
 
@@ -9,8 +10,13 @@ const sessionSchema = z.object({
 });
 export const startNativeLogin = (
   origin: string,
-  save: (token: string, signal: AbortSignal, user: { email: string }) => Promise<void>,
+  save: (
+    token: string,
+    signal: AbortSignal,
+    user: { email?: string; provider?: AccountSignInProvider },
+  ) => Promise<void>,
   changed: () => void = () => {},
+  provider?: AccountSignInProvider,
 ) => {
   const controller = new AbortController();
   const state = randomBytes(32).toString("base64url");
@@ -20,6 +26,7 @@ export const startNativeLogin = (
     status = next;
     changed();
   };
+  let error: AccountSignInError | undefined;
   let consuming = false;
   let saving: Promise<void> | undefined;
   const server = Bun.serve({
@@ -27,12 +34,14 @@ export const startNativeLogin = (
     port: 0,
     async fetch(request) {
       const url = new URL(request.url);
+      const code = url.searchParams.get("code");
+      const failure = accountSignInErrorSchema.safeParse(url.searchParams.get("error"));
       if (
         url.host !== server.url.host ||
         request.method !== "GET" ||
         url.pathname !== "/callback" ||
         url.searchParams.get("state") !== state ||
-        !url.searchParams.get("code") ||
+        Boolean(code) === failure.success ||
         consuming ||
         status !== "pending"
       )
@@ -41,20 +50,28 @@ export const startNativeLogin = (
       // A login that reached its exchange finishes even past the expiry, or its new credential would be lost.
       clearTimeout(expiry);
       try {
+        if (failure.success) {
+          error = failure.data;
+          throw new Error("Provider sign-in failed");
+        }
         const session = sessionSchema.parse(
           await managerRequest(
             origin,
             "/api/auth/one-time-token/verify",
             undefined,
             {
-              token: url.searchParams.get("code"),
+              token: code,
             },
             controller.signal,
           ),
         );
         if (session.session.expiresAt <= new Date()) throw new Error("Expired session");
         controller.signal.throwIfAborted();
-        saving = save(session.session.token, controller.signal, { email: session.user.email });
+        saving = save(
+          session.session.token,
+          controller.signal,
+          provider === "microsoft" ? { provider } : { email: session.user.email },
+        );
         await saving;
         // The owner checks cancellation and rolls back before fulfilling its save.
         // Once it fulfills, the credential is committed even if cancellation arrived in this continuation gap.
@@ -66,7 +83,7 @@ export const startNativeLogin = (
         settle("failed");
         return new Response("Sign-in failed. Start sign-in again from Prompt Studio.", {
           status: 401,
-          headers: { "cache-control": "no-store" },
+          headers: { "cache-control": "no-store", "referrer-policy": "no-referrer" },
         });
       } finally {
         clearTimeout(expiry);
@@ -99,5 +116,6 @@ export const startNativeLogin = (
   const url = serviceUrl(origin, "/v1/native-login");
   url.searchParams.set("callback", new URL("/callback", server.url).href);
   url.searchParams.set("state", state);
-  return { origin, url: url.href, status: () => status, close };
+  if (provider) url.searchParams.set("provider", provider);
+  return { origin, url: url.href, status: () => status, error: () => error, close };
 };

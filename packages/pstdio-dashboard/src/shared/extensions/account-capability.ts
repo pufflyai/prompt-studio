@@ -6,7 +6,7 @@ import { getApiClient } from "@/lib/api";
 export const createAccountAdapter = (projectId: string, client: Pick<PstdioClient, "account"> = getApiClient()) =>
   ({
     status: () => client.account.status(),
-    login: (managerOrigin) => client.account.login(managerOrigin),
+    login: (managerOrigin, provider) => client.account.login(managerOrigin, provider),
     loginStatus: async (id) => (await client.account.loginStatus(id)).status,
     cancelLogin: async (id) => (await client.account.cancelLogin(id)).status,
     logout: async () => ({ removed: (await client.account.logout()).removed }),

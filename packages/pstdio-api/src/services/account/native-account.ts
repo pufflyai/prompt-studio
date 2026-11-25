@@ -1,5 +1,10 @@
 import { dirname, join } from "node:path";
-import type { DeviceCommand, ProjectReturnAction, ProjectSyncStatus } from "pstdio-api-contracts";
+import type {
+  AccountSignInProvider,
+  DeviceCommand,
+  ProjectReturnAction,
+  ProjectSyncStatus,
+} from "pstdio-api-contracts";
 import type { Json } from "pstdio-sync-contracts";
 import { identitySchema } from "pstdio-sync-contracts";
 import type { RouteDeps } from "../../features/deps";
@@ -10,7 +15,7 @@ import { createAccountRefresh } from "./account-refresh";
 import { readAccountStatus } from "./account-status";
 import { createDeviceIdentity } from "./device-identity";
 import { matchesManagerLogin, type readManagerAccount } from "./manager-account";
-import { ManagerRequestDenied, managerOriginSchema } from "./manager-client";
+import { ManagerRequestDenied, managerOriginSchema, supportsMicrosoftSignIn } from "./manager-client";
 import { createMissingProjectRecovery, partitionCloudProjects } from "./missing-project-recovery";
 import { type CloudReturn, createNativeCloudReturn } from "./native-cloud-return";
 import { createNativeDeviceReader, finalizeDeviceLogin, readDeviceLogin } from "./native-device-read";
@@ -130,6 +135,10 @@ export const createNativeAccount = (input: {
   const logins = createNativeLoginRequests(
     (...args) => finalizeDeviceLogin({ store, environment: input.environment, refresh }, ...args),
     changes.notify,
+    async (origin) => {
+      if (!(await supportsMicrosoftSignIn(origin)))
+        throw new AccountRequestError("This Cloud service has not enabled Microsoft sign-in.");
+    },
   );
   let cloudProjects: Awaited<ReturnType<typeof readManagerAccount>> | undefined;
   let online = false;
@@ -271,8 +280,9 @@ export const createNativeAccount = (input: {
     },
     refresh,
     watch: changes.watch,
-    login: async (managerOrigin?: string) => logins.start(readManagerOrigin(managerOrigin)),
-    loginStatus: (id: string) => ({ status: logins.status(id) }),
+    login: async (managerOrigin?: string, provider?: AccountSignInProvider) =>
+      logins.start(readManagerOrigin(managerOrigin), provider),
+    loginStatus: (id: string) => ({ status: logins.status(id), ...logins.failure(id) }),
     cancelLogin: logins.cancel,
     async status() {
       const { environmentId } = await input.environment.get();

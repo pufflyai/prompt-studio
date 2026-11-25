@@ -1,4 +1,4 @@
-import type { ExtensionAccountApi, ProjectReturnAction } from "./account";
+import type { AccountSignInProvider, ExtensionAccountApi, ProjectReturnAction } from "./account";
 import type { WebviewAccountQuery, WebviewServiceQueryRequest } from "./webview-service-query";
 
 export type WebviewAccountReadParams =
@@ -10,7 +10,7 @@ export type WebviewAccountReadParams =
 
 /** Changes mirror `ctx.account`. A missing project id means the webview's project. */
 export type WebviewAccountManageParams =
-  | { op: "login"; managerOrigin?: string }
+  | { op: "login"; managerOrigin?: string; provider?: AccountSignInProvider }
   | { op: "cancelLogin"; id: string }
   | { op: "logout" }
   | { op: "renameDevice"; id: string; name: string }

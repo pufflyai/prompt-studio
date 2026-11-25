@@ -1,7 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
-import { identitySchema } from "pstdio-sync-contracts";
+import { accountSignInProviderSchema, identitySchema } from "pstdio-sync-contracts";
 import { readAccountFeatures, requireRelay } from "./account-features";
-import { account } from "./auth-schema";
 import { deviceNameSchema, deviceProfileSchema } from "./contracts";
 import { digestCredential } from "./credential";
 import type { ManagerDatabase, ManagerTransaction } from "./database";
@@ -19,41 +18,40 @@ import {
   renameDeviceInTransaction,
 } from "./devices";
 import { listOutstandingProjectDeletions, readProjectDeletion, startProjectDeletion } from "./project-deletion";
+import { readProviderIdentity } from "./provider-identity";
 import { DeviceAccessDenied } from "./renewal-errors";
 import { accounts } from "./schema";
 import { spaceKeysInTransaction } from "./space-keys";
 import { withAccountTransaction } from "./transactions";
 
-const googleIssuer = "https://accounts.google.com";
 type SessionReader = (headers: Headers) => Promise<{ user: { id: string } } | null>;
 type Device = { accountId: string; deviceId: string };
 
-// Logging in is the only step that needs a Google session. It finds or creates the user's account.
+// Logging in finds or creates the account owned by the provider identity.
 export const createDeviceLogin =
   (db: ManagerDatabase, readSession: SessionReader) => async (headers: Headers, input: unknown) => {
-    const profile = deviceProfileSchema.parse(input);
+    const { provider, ...profile } = deviceProfileSchema
+      .extend({ provider: accountSignInProviderSchema.optional() })
+      .parse(input);
     const session = await readSession(headers);
     if (!session) throw new DeviceAccessDenied();
-    const [provider] = await db
-      .select({ subject: account.accountId })
-      .from(account)
-      .where(and(eq(account.userId, session.user.id), eq(account.providerId, "google")));
-    if (!provider) throw new DeviceAccessDenied();
-    // A Google user has one account: the one they already own, or a new one whose ID comes from their identity.
+    const identity = await readProviderIdentity(db, session.user.id);
+    if (!identity || (provider && identity.provider !== provider)) throw new DeviceAccessDenied();
+    const { issuer, subject } = identity;
     const [owned] = await db
       .select({ id: accounts.id })
       .from(accounts)
-      .where(and(eq(accounts.ownerIssuer, googleIssuer), eq(accounts.ownerSubject, provider.subject)))
+      .where(and(eq(accounts.ownerIssuer, issuer), eq(accounts.ownerSubject, subject)))
       .orderBy(asc(accounts.id))
       .limit(1);
-    const accountId = owned?.id ?? digestCredential(`${googleIssuer}\n${provider.subject}`);
+    const accountId = owned?.id ?? digestCredential(`${issuer}\n${subject}`);
     return withAccountTransaction(db, accountId, async (transaction) => {
       await transaction
         .insert(accounts)
-        .values({ id: accountId, ownerIssuer: googleIssuer, ownerSubject: provider.subject, state: "active" })
+        .values({ id: accountId, ownerIssuer: issuer, ownerSubject: subject, state: "active" })
         .onConflictDoNothing();
       const [saved] = await transaction.select().from(accounts).where(eq(accounts.id, accountId));
-      if (saved.ownerIssuer !== googleIssuer || saved.ownerSubject !== provider.subject) throw new DeviceAccessDenied();
+      if (saved.ownerIssuer !== issuer || saved.ownerSubject !== subject) throw new DeviceAccessDenied();
       return registerDeviceInTransaction(transaction, { accountId, ...profile });
     });
   };

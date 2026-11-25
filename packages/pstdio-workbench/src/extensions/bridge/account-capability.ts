@@ -21,7 +21,7 @@ const runAccountOperation = (
     case "projectSyncStatus":
       return account.projectSyncStatus(request.projectId);
     case "login":
-      return account.login(request.managerOrigin);
+      return account.login(request.managerOrigin, request.provider);
     case "cancelLogin":
       return account.cancelLogin(request.id);
     case "logout":
