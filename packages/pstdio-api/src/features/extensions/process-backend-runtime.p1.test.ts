@@ -2,6 +2,7 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createStorageMigration } from "pstdio-api-contracts";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { closeBackendWorkers, prepareExtensionRevision, uncoveredContextFunctions } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
@@ -14,6 +15,7 @@ const previous = { home: process.env.PSTDIO_HOME, defaults: process.env.PSTDIO_D
 const entry = `
 const item = (ctx) => ctx.storage.collection("items");
 export default {
+  storage: { logs: ["worker-events"] },
   harnesses: [{ id: "agent" }],
   middlewares: [
     {
@@ -60,6 +62,23 @@ export default {
       },
     },
     {
+      id: "log-scope",
+      ref: { kind: "command", id: "log-scope" },
+      title: "Log scope",
+      async run(ctx) {
+        const options = { scope: { type: "resource", resource: { type: "fixture", id: "original" } } };
+        const log = ctx.storage.log("worker-events", options);
+        options.scope.resource.id = "changed";
+        await log.append({ recorded: true }, { id: "entry" });
+        const readScope = async (id) => {
+          const scope = { type: "resource", resource: { type: "fixture", id } };
+          const result = await ctx.storage.log("worker-events", { scope }).read({ after: 0 });
+          return result.entries.map((entry) => entry.id);
+        };
+        return { original: await readScope("original"), changed: await readScope("changed") };
+      },
+    },
+    {
       id: "reject-stale",
       ref: { kind: "command", id: "reject-stale" },
       title: "Reject stale",
@@ -83,6 +102,51 @@ export default {
       run: (ctx) => item(ctx).get("hooked"),
     },
     { id: "crash", ref: { kind: "command", id: "crash" }, title: "Crash", run: () => process.exit(1) },
+    {
+      id: "migrate",
+      ref: { kind: "command", id: "migrate" },
+      title: "Migrate",
+      async run(ctx) {
+        await ctx.storage.migrate(1, async (previous) => {
+          await ctx.storage.set("migrated-from", previous);
+        });
+        return ctx.storage.get("migrated-from");
+      },
+    },
+    {
+      id: "migrate-records",
+      ref: { kind: "command", id: "migrate-records" },
+      title: "Migrate records",
+      async run(ctx) {
+        const selector = { type: "resource", resource: { type: "fixture", id: "original" } };
+        const storage = ctx.storage.scope(selector);
+        selector.resource.id = "another";
+        await storage.collection("legacy").put("entry", { imported: true });
+        let id;
+        await storage.migrate(2, async (previous, migration) => {
+          const { moved } = await migration.moveCollection("legacy", { keyPrefix: "import-" });
+          id = migration.id("source", "nt");
+          const position = migration.position(0, "entry");
+          await storage.records.commit({ operationId: id, edits: [{ recordId: id, replace: { moved, previous, position } }] });
+        });
+        return { id, value: (await storage.records.read(id)).value };
+      },
+    },
+    {
+      id: "observe",
+      ref: { kind: "command", id: "observe" },
+      title: "Observe",
+      async run(ctx) {
+        const recordId = ctx.storage.records.id("watched");
+        let seen = 0;
+        const handle = ctx.storage.observe(() => { seen += 1; }, { recordIds: [recordId] });
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        await ctx.storage.set("watched", "changed");
+        for (let attempt = 0; seen === 0 && attempt < 50; attempt++) await new Promise((resolve) => setTimeout(resolve, 10));
+        handle.close();
+        return seen;
+      },
+    },
     {
       id: "port",
       ref: { kind: "command", id: "port" },
@@ -185,6 +249,11 @@ test("a process-mode command runs in its worker and uses host storage through ct
   expect(value.pid).not.toBe(process.pid);
   expect(value.stored).toEqual({ text: "HELLO" });
   expect(value.id).toBe(handle.deps.extensionStorageService.recordId("project", projectId, "a"));
+});
+
+test("a process-mode log keeps its resource scope after the caller edits the options", async () => {
+  const { outcome } = await execute("log-scope");
+  expect(outcome).toMatchObject({ ok: true, value: { original: ["entry"], changed: [] } });
 });
 
 test("a process-mode command preserves a structured command rejection", async () => {
@@ -378,4 +447,22 @@ test("an accepted source can return to the same content after another generation
   await writeFile(entryPath, define("replacement"));
   await handle.deps.extensionService.reloadInstalledSourceBySourcePath(source);
   expect(await ping()).toMatchObject({ ok: true, value: "replacement" });
+});
+
+test("process-mode handlers can pass callbacks to host storage", async () => {
+  expect((await execute("migrate")).outcome).toMatchObject({ ok: true, value: 0 });
+  const observed = (await execute("observe")).outcome;
+  expect(observed.ok).toBe(true);
+  expect(observed.value).toBeGreaterThan(0);
+});
+
+test("process-mode migration helpers preserve scoped identity and allow record moves and commits", async () => {
+  const migration = createStorageMigration(["example.isolated", projectId, "resource", "original", 2]);
+  expect((await execute("migrate-records")).outcome).toMatchObject({
+    ok: true,
+    value: {
+      id: migration.id("source", "nt"),
+      value: { moved: 1, previous: 0, position: migration.position(0, "entry") },
+    },
+  });
 });

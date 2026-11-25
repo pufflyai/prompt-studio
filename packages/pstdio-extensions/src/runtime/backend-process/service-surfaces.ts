@@ -1,9 +1,8 @@
 import type { BackendSurface } from "./surface";
 
 /**
- * Host services whose members are asynchronous calls with plain-data arguments and results.
- * Members that take callbacks, return streams or return live handles are listed in
- * `UNSUPPORTED_CONTEXT_MEMBERS` instead, so every ctx function is accounted for.
+ * Host service methods and streaming members that are reachable through the worker's ctx.
+ * The coverage check compares these declarations with the real host context.
  */
 type Members = Record<string, BackendSurface>;
 
@@ -70,7 +69,7 @@ export const serviceSurfaces: Members = {
   automation: object(calls("enqueue", "get", "list", "cancel")),
   process: object(calls("run", "runOrThrow", "spawnDetached")),
   net: object(calls("findFreePort")),
-  connections: object(calls("request")),
+  connections: object({ ...calls("request"), stream: { kind: "iterate", signalArg: 1 } }),
   account: object(
     calls(
       "status",
@@ -153,6 +152,9 @@ export const serviceSurfaces: Members = {
       "uploadAttachment",
       "readAttachment",
       "deleteAttachment",
+      "observeMetadata",
+      "stream",
+      "retainResources",
     ),
   ),
 };
@@ -162,20 +164,13 @@ export const serviceSurfaces: Members = {
  * later stage adds. Storage entries apply at every `storage.scope(...)` depth.
  */
 export const UNSUPPORTED_CONTEXT_MEMBERS = [
-  "storage.observe",
-  "storage.migrate",
   "storage.positions",
-  "storage.text",
-  "storage.log",
   "storage.assets",
+  // Offered by the SDK's in-memory test storage only; the host ctx has no records.transaction.
   "storage.records.transaction",
   "storage.files.urlFor",
   "storage.collection.attachments.urlFor",
   "storage.scope.records.id",
-  "sessions.observeMetadata",
-  "sessions.stream",
-  "sessions.retainResources",
-  "connections.stream",
   "stream.close",
   "terminal",
   "localDirectory",

@@ -49,9 +49,15 @@ const records = (namespace?: string[]) =>
     ...(namespace ? { id: { kind: "local", name: "recordId", namespace } } : {}),
   });
 
-const storageMembers = (namespace?: string[]) =>
+const log = object({ ...calls("append", "read"), follow: { kind: "iterate", signalArg: 0 } });
+
+const storageMembers = (projectId: string, namespace?: string[]) =>
   ({
     ...calls("get", "set", "delete", "canMigrate", "readLegacy"),
+    migrate: { kind: "migrate", projectId },
+    observe: { kind: "subscribe" },
+    text: { kind: "factory", returns: object(calls("edit")) },
+    log: { kind: "factory", returns: log, snapshotArguments: true },
     ids: object({ create: { kind: "local", name: "storageId" } }),
     records: records(namespace),
     files: blobs,
@@ -59,8 +65,15 @@ const storageMembers = (namespace?: string[]) =>
   }) satisfies Members;
 
 // A scope's record namespace is resolved by the host, so scoped storage does not offer records.id yet.
-const scopedStorage: Extract<BackendSurface, { kind: "object" }> = { kind: "object", members: storageMembers() };
-scopedStorage.members.scope = { kind: "factory", returns: scopedStorage };
+const storageSurface = (projectId: string) => {
+  const scopedStorage: Extract<BackendSurface, { kind: "object" }> = {
+    kind: "object",
+    members: storageMembers(projectId),
+  };
+  const scope = { kind: "factory", returns: scopedStorage, snapshotArguments: true } satisfies BackendSurface;
+  scopedStorage.members.scope = scope;
+  return object({ ...storageMembers(projectId, ["project", projectId, "kv"]), scope });
+};
 
 type ContextData = { projectId: string; navigation?: unknown };
 
@@ -84,10 +97,7 @@ export const extensionContextSurface = (context: ContextData) => {
     }),
     events: object(calls("emit")),
     settings: object(calls("all", "get", "set", "delete")),
-    storage: object({
-      ...storageMembers(["project", context.projectId, "kv"]),
-      scope: { kind: "factory", returns: scopedStorage },
-    }),
+    storage: storageSurface(context.projectId),
   };
   return object({
     ...values(
