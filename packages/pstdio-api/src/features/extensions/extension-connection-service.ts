@@ -185,10 +185,16 @@ const resolveCredentialChoice = async (
   deps: ExtensionConnectionServiceDeps,
   key: ReturnType<typeof connectionKey>,
   scope: ConfigureExtensionConnectionInput["credentialScope"],
+  origin: string,
 ) => {
   const project = await deps.connectionsDBService.credentials.get(key);
-  if (scope === "project" || (scope === undefined && project)) return { projectId: key.projectId, credential: project };
-  return { projectId: null, credential: await deps.connectionsDBService.credentials.get({ ...key, projectId: null }) };
+  if (scope === "project" || (scope === undefined && project))
+    return { projectId: key.projectId, credential: project, retired: null };
+  return {
+    projectId: null,
+    credential: await deps.connectionsDBService.credentials.getShared(key, origin),
+    retired: project,
+  };
 };
 
 const assertCredentialScope = (
@@ -210,10 +216,10 @@ const configureConnection = async (
   const existing = await deps.connectionsDBService.get(key);
   const baseUrl = validateBaseUrl(input.baseUrl);
   const global = key.projectId === null;
-  const choice = global ? null : await resolveCredentialChoice(deps, key, input.credentialScope);
+  const origin = new URL(baseUrl).origin;
+  const choice = global ? null : await resolveCredentialChoice(deps, key, input.credentialScope, origin);
   const credentialProjectId = choice?.projectId ?? null;
   const previous = choice?.credential;
-  const origin = new URL(baseUrl).origin;
   const previousRef = global ? existing?.secret_ref : previous?.secret_ref;
   const previousOrigin = global && existing ? new URL(existing.base_url).origin : previous?.provider;
   const usable = previousOrigin === origin && (!previous?.expires_at || Date.parse(previous.expires_at) > Date.now());
@@ -234,8 +240,10 @@ const configureConnection = async (
     throw error;
   }
   await retirePreviousSecret(deps, key, existing, newSecretRef, credentialProjectId);
-  if (previous?.secret_ref && previous.secret_ref !== secretRef && previous.secret_ref !== existing?.secret_ref)
-    await deleteSecret(deps, previous.secret_ref, "retire_previous_connection_secret");
+  const retiring = new Set([previous?.secret_ref, choice?.retired?.secret_ref]);
+  for (const ref of retiring)
+    if (ref && ref !== secretRef && (!newSecretRef || ref !== existing?.secret_ref))
+      await deleteSecret(deps, ref, "retire_previous_connection_secret");
   if (global) await retireProjectCopies(deps, input);
   return toConnectionRecord(stored);
 };
@@ -245,22 +253,9 @@ const removeConnection = async (
   key: ReturnType<typeof connectionKey>,
   allProjects = false,
 ) => {
-  const existing = await deps.connectionsDBService.get(key);
-  const global =
-    allProjects && key.projectId !== null
-      ? await deps.connectionsDBService.credentials.get({ ...key, projectId: null })
-      : null;
-  if (!existing) {
-    if (!global) return false;
-    await deps.connectionsDBService.credentials.remove({ ...key, projectId: null });
-    await deleteSecret(deps, global.secret_ref, "remove_unused_shared_connection_secret");
-    return true;
-  }
   const removed = await deps.connectionsDBService.remove(key, allProjects);
   if (!removed) return false;
-  if (existing.secret_ref) await deleteSecret(deps, existing.secret_ref, "remove_connection_secret");
-  if (global?.secret_ref && global.secret_ref !== existing.secret_ref)
-    await deleteSecret(deps, global.secret_ref, "remove_shared_connection_secret");
+  for (const ref of new Set(removed)) await deleteSecret(deps, ref, "remove_connection_secret");
   return true;
 };
 

@@ -153,3 +153,30 @@ test("an interrupted unbound creation stops eviction before project artifacts or
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("local project eviction cleans secrets only after their project row is deleted", async () => {
+  const host = await createTestApp();
+  const project = await host.deps.projectService.create({ name: "Project with credentials" });
+  let deleted = false;
+  const originalDelete = host.deps.projectService.delete;
+  const remove = spyOn(host.deps.projectService, "delete")
+    .mockRejectedValueOnce(new Error("project deletion failed"))
+    .mockImplementation(async (id) => {
+      deleted = await originalDelete(id);
+      return deleted;
+    });
+  const cleanup = mock(async () => {
+    expect(deleted).toBe(true);
+  });
+  const secrets = spyOn(host.deps.extensionConnectionService, "prepareProjectRemoval").mockResolvedValue(cleanup);
+  try {
+    await expect(evictProjectCopy(host.deps, project.id)).rejects.toThrow("project deletion failed");
+    expect(cleanup).not.toHaveBeenCalled();
+    await evictProjectCopy(host.deps, project.id);
+    expect(cleanup).toHaveBeenCalledTimes(1);
+  } finally {
+    remove.mockRestore();
+    secrets.mockRestore();
+    await host.close();
+  }
+});

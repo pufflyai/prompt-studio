@@ -143,44 +143,47 @@ test("configuring a global connection retires project copies and survives reconc
 for (const change of ["remove", "rotate"] as const) {
   test(`a late global health check cannot undo credential ${change}`, async () => {
     const store = await createDb({ path: ":memory:" });
+    const secrets = createMemoryConnectionSecretStore();
     const db = createExtensionConnectionsDBService(store.db);
-    const key = { projectId: null, extensionId: "pstdio.remote", contributionId: contribution.id };
-    const input = { ...key, baseUrl: "https://example.test", authType: "bearer" as const, secretRef: "old-reference" };
+    const service = createExtensionConnectionService({
+      connectionsDBService: db,
+      secretStore: secrets,
+      getContribution: async () => ({ ...contribution, scope: "global" }),
+    });
+    const input = { projectId: "first", extensionId: "pstdio.remote", connectionId: contribution.id };
+    const key = { projectId: null, extensionId: input.extensionId, contributionId: input.connectionId };
     const entered = Promise.withResolvers<void>();
     const release = Promise.withResolvers<void>();
-    const originalQuery = store.pglite.query.bind(store.pglite);
-    let armed = true;
-    try {
-      await db.upsert(input);
-      // Delay the real database operation across a credential change. The old
-      // read/replace path pauses after its read; an atomic update pauses before it.
-      store.pglite.query = async <T>(...args: Parameters<typeof store.pglite.query>) => {
-        const [sql] = args;
-        if (!armed || !sql.includes('"credentials"') || !/^\s*(select|update)\b/i.test(sql))
-          return originalQuery<T>(...args);
-        armed = false;
-        if (/^\s*select\b/i.test(sql)) {
-          const result = await originalQuery<T>(...args);
-          entered.resolve();
-          await release.promise;
-          return result;
-        }
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        expect(request.headers.get("authorization")).toBe("Bearer original-credential");
         entered.resolve();
         await release.promise;
-        return originalQuery<T>(...args);
-      };
-      const check = db.recordCheck(key, { ok: true, status: 200, error: null, checkedAt: new Date().toISOString() });
-      await entered.promise;
-      if (change === "remove") await db.remove(key);
-      else await db.upsert({ ...input, secretRef: "new-reference" });
+        return Response.json({ ok: true });
+      },
+    });
+    let pending: ReturnType<typeof service.request> | undefined;
+    try {
+      await createProjectsDBService(store.db).create({ id: "first", name: "First" });
+      const params = { ...input, baseUrl: server.url.origin };
+      await service.configure({ ...params, secret: "original-credential" });
+      pending = service.request({ ...input, input: { method: "GET", path: "/v1/workspaces" } });
+      await Promise.race([entered.promise, pending]);
+      if (change === "remove") await service.remove(input);
+      else await service.configure({ ...params, secret: "new-credential" });
       release.resolve();
-      await check;
+      expect((await pending).status).toBe(200);
       const current = await db.get(key);
       if (change === "remove") expect(current).toBeNull();
-      else expect(current?.secret_ref).toBe("new-reference");
+      else {
+        expect(await secrets.get(current!.secret_ref!)).toBe("new-credential");
+        expect(current?.last_check_json).toBeNull();
+      }
     } finally {
       release.resolve();
-      store.pglite.query = originalQuery;
+      await pending?.catch(() => undefined);
+      server.stop(true);
       await store.close();
     }
   });

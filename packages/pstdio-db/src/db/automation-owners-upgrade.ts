@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import { releasedAutomationOwner, releasedTokenOwnerPreference } from "../services/automation/automation-owners";
 import { restoreAutomationRun } from "./automation-run-upgrade";
 import type { DbClient } from "./connection.pglite";
 import { automation_runs, automation_tokens } from "./schemas/automation";
@@ -56,10 +57,16 @@ export const prepareAutomationOwnersUpgrade = async (db: DbClient, path: string)
     path,
     { table: "automation_tokens", keys: ["id"], name: "automation-tokens", capture: Boolean(legacy.present) },
     async (row) => {
-      await db
-        .insert(automation_tokens)
-        .values(row as typeof automation_tokens.$inferInsert)
-        .onConflictDoNothing();
+      const { released_principal_id, ...values } = row;
+      const token = values as typeof automation_tokens.$inferInsert;
+      await db.transaction(async (tx) => {
+        await tx.insert(automation_tokens).values(token).onConflictDoNothing();
+        if (typeof released_principal_id === "string")
+          await tx
+            .insert(preferences)
+            .values(releasedTokenOwnerPreference(token, released_principal_id))
+            .onConflictDoNothing();
+      });
     },
     async (row) => {
       const owner = await releasedPrincipal(db, row.principal_id, row.project_id);
@@ -69,6 +76,7 @@ export const prepareAutomationOwnersUpgrade = async (db: DbClient, path: string)
         name: owner.name,
         created_by: owner.created_by,
         revoked_at: row.revoked_at ?? owner.disabled_at,
+        released_principal_id: owner.id,
       };
     },
   );
@@ -93,7 +101,7 @@ export const prepareAutomationOwnersUpgrade = async (db: DbClient, path: string)
       const { principal_id, ...run } = row;
       return {
         ...run,
-        principal: row.token_id !== null ? `token:${row.token_id}` : `extension:${owner.name}`,
+        principal: row.token_id !== null ? releasedAutomationOwner(owner.id) : `extension:${owner.name}`,
         released_principal_id: owner.id,
       };
     },

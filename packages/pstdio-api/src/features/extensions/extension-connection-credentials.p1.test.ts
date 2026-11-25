@@ -15,11 +15,12 @@ const setup = async (isExtensionInstalled?: ExtensionConnectionServiceDeps["isEx
   const store = await createDb({ path: ":memory:" });
   for (const id of ["first", "second"]) await createProjectsDBService(store.db).create({ id, name: id });
   const received: string[] = [];
+  let status = 200;
   const server = Bun.serve({
     port: 0,
     fetch: (request) => {
       received.push(request.headers.get("authorization")!);
-      return Response.json({ ok: true });
+      return Response.json({ ok: status === 200 }, { status });
     },
   });
   const secrets = createMemoryConnectionSecretStore();
@@ -47,6 +48,9 @@ const setup = async (isExtensionInstalled?: ExtensionConnectionServiceDeps["isEx
     configure,
     request,
     received,
+    setStatus: (next: number) => {
+      status = next;
+    },
     cleanup: async () => {
       server.stop(true);
       await store.close();
@@ -119,10 +123,14 @@ test("project-specific credentials override the device sign-in until explicitly 
     expect(f.received.at(-1)).toBe("Bearer global-canary");
     await f.request("second");
     expect(f.received.at(-1)).toBe("Bearer project-canary");
-    await f.connections.remove(f.key("second"));
-    await f.configure("second");
+    await f.connections.configure({
+      ...f.key("second"),
+      baseUrl: f.server.url.origin,
+      credentialScope: "all-projects",
+    });
     await f.request("second");
     expect(f.received.at(-1)).toBe("Bearer global-canary");
+    expect(await f.secrets.listRefs()).toHaveLength(1);
     await f.connections.remove({ ...f.key("first"), credentialScope: "all-projects" });
     await expect(f.request("second")).rejects.toThrow("credential is not configured");
     expect(await f.secrets.listRefs()).toHaveLength(0);
@@ -256,6 +264,49 @@ test("startup reconciliation removes orphan project credentials while preserving
     await f.connections.removeExtension("second", "example.shared-credential");
     await f.request("second");
     expect(f.received.at(-1)).toBe("Bearer global-canary");
+  } finally {
+    await f.cleanup();
+  }
+});
+
+test("two shared sign-ins at different origins keep each project's credential", async () => {
+  const f = await setup();
+  const otherReceived: string[] = [];
+  const other = Bun.serve({
+    port: 0,
+    fetch: (request) => {
+      otherReceived.push(request.headers.get("authorization")!);
+      return Response.json({ ok: true });
+    },
+  });
+  try {
+    await f.configure("first", "first-origin");
+    await f.connections.configure({ ...f.key("second"), baseUrl: other.url.origin, secret: "second-origin" });
+    await f.request("first");
+    await f.request("second");
+    expect(f.received).toEqual(["Bearer first-origin"]);
+    expect(otherReceived).toEqual(["Bearer second-origin"]);
+    expect(await f.secrets.listRefs()).toHaveLength(2);
+    await f.connections.remove({ ...f.key("second"), credentialScope: "all-projects" });
+    await f.request("first");
+    expect(await f.secrets.listRefs()).toHaveLength(1);
+  } finally {
+    other.stop(true);
+    await f.cleanup();
+  }
+});
+
+test("projects using a shared sign-in retain their own connection health", async () => {
+  const f = await setup();
+  try {
+    await f.configure("first", "shared-health");
+    await f.configure("second");
+    await f.request("first");
+    f.setStatus(403);
+    await f.request("second");
+    expect((await f.connections.list("first"))[0]?.lastCheck).toMatchObject({ ok: true, status: 200 });
+    expect((await f.connections.list("second"))[0]?.lastCheck).toMatchObject({ ok: false, status: 403 });
+    expect(await f.secrets.listRefs()).toHaveLength(1);
   } finally {
     await f.cleanup();
   }
