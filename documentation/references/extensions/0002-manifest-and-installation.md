@@ -42,7 +42,9 @@ Optional fields:
 - `pstdio.scope`: install/load scope, either `user` or `repo`. Defaults to `user`.
 - `pstdio.backendRuntime`: set to `"process"` to run the backend in its own worker process instead
   of the API process. See [Process runtime](#process-runtime). Leave it out to keep the current
-  in-process behavior.
+  in-process behavior. The in-process runtime is deprecated: `pst extensions check <path>` warns
+  (`extension_in_process_runtime_deprecated`) when backend code would run in the API process, and
+  a later release makes the process runtime the only one.
 - `pstdio.processEnvironment`: names of host environment variables the extension may ask the host
   to pass to the children it starts, such as `["ANTHROPIC_API_KEY"]`. See
   [Host environment names](#host-environment-names).
@@ -228,7 +230,13 @@ from the host's own session id. The host still ends a session when the call that
 worker with the same results as the host. `Blob` arguments and `ReadableStream` results, such as
 `storage.assets.stage` and `read`, work across the boundary.
 
-A worker that has run nothing for 10 minutes stops. The next call starts it again.
+A worker that has run nothing for 10 minutes stops, including the worker of an extension that was
+disabled. The next authorized call starts it again. By default, children started directly by
+extension code, such as with `Bun.spawn`, share the worker's process group on POSIX or its Job
+Object on Windows. The host uses these groups for cleanup and tracks POSIX descendants it observes
+before they reparent. An independently detached POSIX child can reparent before the host observes
+it and survive an immediate hard crash. Use `ctx.process` or `ctx.terminal` for host-managed process
+lifetimes tied to the call or extension.
 
 The host watches each worker from outside:
 - A worker whose event loop does not answer for 60 seconds is stopped, for example one stuck in an

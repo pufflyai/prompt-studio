@@ -56,7 +56,7 @@ export type HostToWorkerMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
 
 export type WorkerToHostMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
   | { type: "ready" }
-  | ({ type: "loaded" } & Settled)
+  | ({ type: "loaded"; rss: number } & Settled)
   | ({ type: "result"; invocationId: string } & InvocationResult)
   | { type: "call"; invocationId: string; requestId: string; path: SurfaceStep[]; args: unknown[]; within?: string }
   | { type: "notify"; invocationId: string; path: SurfaceStep[]; args: unknown[]; within?: string }
@@ -147,9 +147,11 @@ const isPath = (value: unknown) =>
 type Message = Record<string, unknown>;
 const isString = (value: unknown) => typeof value === "string";
 
+const isRss = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0;
+
 const workerMessageChecks: Record<string, (message: Message) => boolean> = {
   ready: () => true,
-  loaded: isSettled,
+  loaded: (message) => isSettled(message) && isRss(message.rss),
   result: (message) => isString(message.invocationId) && isSettled(message),
   call: (message) =>
     isString(message.invocationId) &&
@@ -170,8 +172,7 @@ const workerMessageChecks: Record<string, (message: Message) => boolean> = {
     Array.isArray(message.args) &&
     optionalString(message.within),
   release: (message) => isString(message.invocationId) && Array.isArray(message.fnIds) && message.fnIds.every(isString),
-  pong: (message) =>
-    Number.isSafeInteger(message.seq) && typeof message.rss === "number" && Number.isFinite(message.rss),
+  pong: (message) => Number.isSafeInteger(message.seq) && isRss(message.rss),
   "group-anchor": (message) =>
     message.pid === null || (typeof message.pid === "number" && Number.isSafeInteger(message.pid) && message.pid > 1),
 };

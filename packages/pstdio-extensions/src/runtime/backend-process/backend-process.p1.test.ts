@@ -1,10 +1,13 @@
 import { afterAll, beforeAll, expect, mock, spyOn, test } from "bun:test";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { subscribe, unsubscribe } from "node:diagnostics_channel";
 import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { runtimeOperationChannel } from "pstdio-diagnostics";
 import { createExtensionProcessEnvironment } from "../process-environment";
 import { markHostContext } from "../runner/host-context";
+import { expectRejection } from "./expect-rejection.test-utils";
 import { backendWorkerCommand, createBackendWorkerPool } from "./pool";
 import { HANDLER_MARKER } from "./protocol";
 import { snapshotSink } from "./remote-values";
@@ -187,6 +190,21 @@ export default {
         await new Promise(() => {});
       },
     },
+    {
+      id: "orphan",
+      title: "Orphan",
+      run: () => {
+        const detached = process.platform === "win32";
+        const child = Bun.spawn([process.execPath, "-e", "setInterval(() => {}, 1000)"], {
+          stdio: ["ignore", "ignore", "ignore"],
+          detached,
+          windowsHide: true,
+        });
+        // Keep Bun's own Windows subprocess cleanup from masking the supervisor's job.
+        if (detached) child.unref();
+        return child.pid;
+      },
+    },
     { id: "mark", title: "Mark", run: (ctx, path) => Bun.write(path, "ran") },
     {
       id: "session",
@@ -330,13 +348,13 @@ test("a definition keeps class methods and rejects values the host cannot receiv
   }
   const mapEntry = join(root, "map-extension.ts");
   await writeFile(mapEntry, `export default { commands: [{ id: "m", run: () => 1, options: new Map() }] };`);
-  await expect(
+  await expectRejection(
     startBackendWorker({
       command: backendWorkerCommand(),
       env: createExtensionProcessEnvironment(),
       entryPath: mapEntry,
     }),
-  ).rejects.toThrow("default.commands[0].options cannot be sent");
+  ).toThrow("default.commands[0].options cannot be sent");
 });
 
 afterAll(async () => {
@@ -455,7 +473,7 @@ test("cancelling settles the caller and aborts the worker's signal", async () =>
       worker.invoke({ handlerId: handlerOf(worker.definition, "waiting"), context: {}, surface, args: [] });
     while (!(await invokeWaiting())) await Bun.sleep(5);
     controller.abort(new Error("stop"));
-    await expect(waiting).rejects.toThrow("stop");
+    await expectRejection(waiting).toThrow("stop");
     expect(
       await worker.invoke({
         handlerId: handlerOf(worker.definition, "observed-abort"),
@@ -492,7 +510,12 @@ test("an abort during context value collection settles the invocation", async ()
       surface,
       args: [],
     });
-    const outcome = await Promise.race([waiting.catch((error: Error) => error.message), status.then(() => "pending")]);
+    // Stopping the worker below rejects the status call if it has not been answered yet.
+    const answered = status.then(
+      () => "pending",
+      () => "pending",
+    );
+    const outcome = await Promise.race([waiting.catch((error: Error) => error.message), answered]);
     expect(outcome).toBe("stopped during context read");
   } finally {
     await worker.stop();
@@ -526,11 +549,11 @@ test("a crashed worker rejects its callers once and the next request starts a fr
     const first = await pool.acquire("source@1");
     const { context } = hostContext();
     const crash = first.invoke({ handlerId: handlerOf(first.definition, "crash"), context, surface, args: [] });
-    await expect(crash).rejects.toBeInstanceOf(BackendUnavailableError);
+    await expectRejection(crash).toBeInstanceOf(BackendUnavailableError);
     await first.exited;
-    await expect(
+    await expectRejection(
       first.invoke({ handlerId: handlerOf(first.definition, "save"), context, surface, args: [{ id: "b" }] }),
-    ).rejects.toBeInstanceOf(BackendUnavailableError);
+    ).toBeInstanceOf(BackendUnavailableError);
 
     const second = await pool.acquire("source@1");
     expect(second).not.toBe(first);
@@ -561,14 +584,14 @@ test("hostile or broken workers settle their callers without host errors", async
     expect(error).toBeInstanceOf(Error);
     expect(error).toMatchObject({ message: "boom" });
     expect(error).not.toMatchObject({ code: "backend_unavailable" });
-    await expect(
+    await expectRejection(
       worker.invoke({
         handlerId: handlerOf(worker.definition, "save"),
         context,
         surface,
         args: [{ id: "a", tag: Symbol("not sendable") }],
       }),
-    ).rejects.toThrow();
+    ).toThrow();
     expect(
       await worker.invoke({ handlerId: handlerOf(worker.definition, "save"), context, surface, args: [{ id: "a" }] }),
     ).toMatchObject({ project: "p1" });
@@ -578,7 +601,7 @@ test("hostile or broken workers settle their callers without host errors", async
       surface,
       args: [],
     });
-    await expect(dropped).rejects.toBeInstanceOf(BackendUnavailableError);
+    await expectRejection(dropped).toBeInstanceOf(BackendUnavailableError);
     await worker.exited;
   } finally {
     await worker.stop();
@@ -601,13 +624,13 @@ test("retiring a generation stops its worker before a new one starts", async () 
 test("a worker that cannot start leaves no working folder behind", async () => {
   const leftovers = async () => (await readdir(tmpdir())).filter((name) => name.startsWith("pstdio-backend-")).length;
   const before = await leftovers();
-  await expect(
+  await expectRejection(
     startBackendWorker({
       command: [join(root, "missing-executable")],
       env: createExtensionProcessEnvironment(),
       entryPath,
     }),
-  ).rejects.toThrow();
+  ).toThrow();
   expect(await leftovers()).toBe(before);
 });
 
@@ -615,7 +638,7 @@ test("closing the pool refuses new workers and stops every running one", async (
   const pool = createBackendWorkerPool(() => ({ env: createExtensionProcessEnvironment(), entryPath }));
   const running = await pool.acquire("source@1");
   const closing = pool.close();
-  await expect(pool.acquire("source@2")).rejects.toBeInstanceOf(BackendUnavailableError);
+  await expectRejection(pool.acquire("source@2")).toBeInstanceOf(BackendUnavailableError);
   await closing;
   expect(await running.exited).not.toBeUndefined();
   const reopened = await pool.acquire("source@1");
@@ -650,7 +673,7 @@ test("closing waits for a retirement the pool did not start", async () => {
     const retiring = pool.retire("source@1");
     const closing = pool.close();
     try {
-      await expect(pool.acquire("source@2")).rejects.toBeInstanceOf(BackendUnavailableError);
+      await expectRejection(pool.acquire("source@2")).toBeInstanceOf(BackendUnavailableError);
     } finally {
       await Promise.all([retiring, closing]);
     }
@@ -1046,7 +1069,7 @@ test("a call cancelled while its arguments are prepared never reaches the worker
       signal: controller.signal,
     });
     controller.abort(new Error("cancelled"));
-    await expect(running).rejects.toThrow("cancelled");
+    await expectRejection(running).toThrow("cancelled");
     await Bun.sleep(200);
     expect(await Bun.file(marker).exists()).toBe(false);
     expect(worker.busy).toBe(false);
@@ -1074,7 +1097,7 @@ test("an endless loop or a memory hog is stopped from outside the worker", async
         surface,
         args: [],
       });
-      await expect(Promise.race([invoke, expiry.promise])).rejects.toThrow(expected);
+      await expectRejection(Promise.race([invoke, expiry.promise])).toThrow(expected);
       await Promise.race([worker.exited, expiry.promise]);
     } finally {
       clearTimeout(timer);
@@ -1098,7 +1121,7 @@ test("a worker that keeps failing waits out a cooldown instead of restarting in 
         .catch(() => {});
       await worker.exited;
     }
-    await expect(pool.acquire("crashy@1")).rejects.toThrow("can start again");
+    await expectRejection(pool.acquire("crashy@1")).toThrow("can start again");
   } finally {
     await pool.close();
   }
@@ -1399,5 +1422,75 @@ test("a worker that ignores cancellation keeps its invocation only until the cle
     expect(worker.busy).toBe(false);
   } finally {
     await worker.stop();
+  }
+});
+
+const isAlive = (pid: number) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+const stopsWithin = async (pid: number) => {
+  for (let attempt = 0; isAlive(pid) && attempt < 100; attempt++) await Bun.sleep(20);
+  return !isAlive(pid);
+};
+
+test("processes extension code starts stop with its worker", async () => {
+  const stopped = await start();
+  const left = (await stopped.invoke({
+    handlerId: handlerOf(stopped.definition, "orphan"),
+    context: {},
+    surface,
+    args: [],
+  })) as number;
+  await stopped.stop();
+  expect(await stopsWithin(left)).toBe(true);
+});
+
+test("processes extension code starts stop when its worker crashes", async () => {
+  const crashing = await start();
+  let orphan: number | undefined;
+  try {
+    orphan = (await crashing.invoke({
+      handlerId: handlerOf(crashing.definition, "orphan"),
+      context: {},
+      surface,
+      args: [],
+    })) as number;
+    expect(isAlive(orphan)).toBe(true);
+    await expectRejection(
+      crashing.invoke({ handlerId: handlerOf(crashing.definition, "crash"), context: {}, surface, args: [] }),
+    ).toBeInstanceOf(BackendUnavailableError);
+    expect(await crashing.exited).toBe(7);
+    expect(await stopsWithin(orphan)).toBe(true);
+  } finally {
+    try {
+      await crashing.stop();
+    } finally {
+      if (orphan && isAlive(orphan)) process.kill(orphan, "SIGKILL");
+    }
+  }
+});
+
+test("a worker stopped before its first heartbeat records its resident memory", async () => {
+  const records: Array<Record<string, unknown>> = [];
+  const listener = (message: unknown) => records.push(message as Record<string, unknown>);
+  subscribe(runtimeOperationChannel, listener);
+  try {
+    const worker = await startBackendWorker({
+      command: backendWorkerCommand(),
+      env: createExtensionProcessEnvironment(),
+      entryPath,
+    });
+    await worker.stop();
+    const life = records.find((record) => record.kind === "extension.backend.worker");
+    expect(life?.lastRssBytes).toBeGreaterThan(0);
+    expect(life?.peakRssBytes).toBeGreaterThan(0);
+    expect(life).toHaveProperty("exitCode");
+  } finally {
+    unsubscribe(runtimeOperationChannel, listener);
   }
 });

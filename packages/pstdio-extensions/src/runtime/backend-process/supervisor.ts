@@ -1,6 +1,8 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { finishRuntimeOperation, startRuntimeOperation } from "pstdio-diagnostics";
+import { createWindowsProcessJob } from "pstdio-paths/windows-process-job";
 import { createCommandRejection } from "../runner/command-rejection";
 import { createHostCalls } from "./host-calls";
 import {
@@ -33,6 +35,20 @@ const workerError = (serialized: SerializedBackendError) => {
   return error;
 };
 
+const sweepExitedWorkerGroup = (pid: number) => {
+  if (process.platform === "win32") return;
+  // A natural exit can leave the worker's original process group alive.
+  try {
+    process.kill(pid, 0);
+    return;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ESRCH") return;
+  }
+  try {
+    process.kill(-pid, "SIGKILL");
+  } catch {}
+};
+
 export interface BackendWorker {
   readonly definition: unknown;
   invoke(invocation: BackendInvocation): Promise<unknown>;
@@ -56,6 +72,66 @@ export interface BackendWorkerOptions {
   watchdog?: WatchdogOptions;
   drainDeadlineMs?: number;
 }
+
+type WorkerJob = ReturnType<typeof createWindowsProcessJob>;
+
+const stopWorkerJob = async (job: WorkerJob) => {
+  const deadline = performance.now() + BACKEND_STOP_GRACE_MS;
+  try {
+    if (!job.hasProcesses()) return;
+    job.terminate();
+    while (job.hasProcesses()) {
+      const remainingMs = deadline - performance.now();
+      if (remainingMs <= 0) throw new Error("The extension backend worker's process job did not stop.");
+      await Bun.sleep(Math.min(20, remainingMs));
+    }
+  } finally {
+    job.close();
+  }
+};
+
+const spawnWorker = (
+  options: BackendWorkerOptions,
+  cwd: string,
+  receive: (raw: unknown) => void,
+  onDisconnect: () => void,
+) => {
+  let job: WorkerJob | undefined;
+  let admitted = false;
+  try {
+    if (process.platform === "win32") job = createWindowsProcessJob();
+    const child = Bun.spawn(options.command, {
+      cwd,
+      // Bun cleans up descendants at orderly exit, including children spawned between host samples.
+      env: process.platform === "win32" ? options.env : { ...options.env, BUN_FEATURE_FLAG_NO_ORPHANS: "1" },
+      stdio: ["ignore", "inherit", "inherit"],
+      // Its own process group, so processes extension code starts stop with it.
+      detached: process.platform !== "win32",
+      serialization: "advanced",
+      ipc: receive,
+      onDisconnect: () => {
+        if (admitted) onDisconnect();
+      },
+    });
+    try {
+      // The trusted worker entry waits for the host's load message before running extension code.
+      job?.attachLauncher(child.pid);
+    } catch (error) {
+      try {
+        child.kill("SIGKILL");
+      } catch (stopError) {
+        throw new AggregateError([error, stopError], "Could not admit or stop the extension backend worker.");
+      }
+      throw error;
+    }
+    admitted = true;
+    return { child, job };
+  } catch (error) {
+    job?.close();
+    rmSync(cwd, { recursive: true, force: true });
+    throw error;
+  }
+};
 
 export const startBackendWorker = async (options: BackendWorkerOptions): Promise<BackendWorker> => {
   const invocations = new Map<string, Running>();
@@ -173,45 +249,36 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     dispose(invocationId);
   };
 
+  const memory = { last: 0, peak: 0 };
+  const recordRss = (rss: number) => {
+    memory.last = rss;
+    memory.peak = Math.max(memory.peak, rss);
+  };
   const receive = (raw: unknown) => {
     const message = parseWorkerMessage(raw);
     if (message?.type === "ready") ready.resolve();
     else if (message?.type === "loaded") {
+      recordRss(message.rss);
       if (message.ok) loaded.resolve(message.value);
       else loaded.reject(workerError(message.error));
     } else if (message?.type === "result") settle(message);
-    else if (message?.type === "pong") watchdog.answered(message.rss);
-    else if (message?.type === "group-anchor") groupAnchorReply?.(message.pid);
+    else if (message?.type === "pong") {
+      recordRss(message.rss);
+      watchdog.answered(message.rss);
+    } else if (message?.type === "group-anchor") groupAnchorReply?.(message.pid);
     else if (message?.type === "release") {
       invocations.get(message.invocationId)?.table.release(message.fnIds);
       dispose(message.invocationId);
     } else if (message) hostCalls.handle(message);
   };
 
-  const spawn = () => {
-    try {
-      return Bun.spawn(options.command, {
-        cwd,
-        // Bun cleans up descendants at orderly exit, including children spawned between host samples.
-        env: process.platform === "win32" ? options.env : { ...options.env, BUN_FEATURE_FLAG_NO_ORPHANS: "1" },
-        stdio: ["ignore", "inherit", "inherit"],
-        detached: process.platform !== "win32",
-        serialization: "advanced",
-        ipc: receive,
-        // A worker that drops its channel can never answer again, even if its process keeps running.
-        onDisconnect: () => {
-          groupAnchorReply?.(null);
-          fail(new BackendUnavailableError("The extension backend disconnected."));
-          stopTree();
-        },
-      });
-    } catch (error) {
-      // Nothing started, so nothing else will remove the working folder.
-      rmSync(cwd, { recursive: true, force: true });
-      throw error;
-    }
-  };
-  const child = spawn();
+  const life = startRuntimeOperation("extension.backend.worker");
+  const { child, job } = spawnWorker(options, cwd, receive, () => {
+    // A worker that drops its channel can never answer again, even if its process keeps running.
+    groupAnchorReply?.(null);
+    fail(new BackendUnavailableError("The extension backend disconnected."));
+    stopTree();
+  });
   const observation = startWorkerTreeObservation(child);
   const requestGroupAnchor = () => {
     const reply = Promise.withResolvers<number | null>();
@@ -222,9 +289,12 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
   let stopping: Promise<void> | undefined;
   const stopTree = (graceful = false) => {
     if (stopping) return stopping;
+    watchdog.stop();
     const anchor = graceful ? requestGroupAnchor : undefined;
-    const cleanup = stopBackendWorkerTree(child, BACKEND_STOP_GRACE_MS, anchor, observation?.stop());
-    stopping = cleanup.finally(() => {
+    const stop = job
+      ? stopWorkerJob(job)
+      : stopBackendWorkerTree(child, BACKEND_STOP_GRACE_MS, anchor, observation?.stop());
+    stopping = stop.finally(() => {
       groupAnchorReply?.(null);
       groupAnchorReply = undefined;
     });
@@ -244,10 +314,15 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
   );
 
   const exited = child.exited.then(async (code) => {
+    // One record per worker life, so memory can be compared across workers and workloads.
+    finishRuntimeOperation(life, { exitCode: code, lastRssBytes: memory.last, peakRssBytes: memory.peak });
     watchdog.stop();
     fail(new BackendUnavailableError(`The extension backend exited (${code}).`));
     try {
-      await Promise.all([observation ? stopTree() : stopping, ...scopeCleanups]);
+      // Wait for retained descendants and any active Unix anchor before sweeping the original group.
+      const sweep = () => sweepExitedWorkerGroup(child.pid);
+      const cleanup = observation ? stopTree() : stopping;
+      await Promise.all([job ? stopTree() : (cleanup?.finally(sweep) ?? sweep()), ...scopeCleanups]);
       return code;
     } finally {
       rmSync(cwd, { recursive: true, force: true });
