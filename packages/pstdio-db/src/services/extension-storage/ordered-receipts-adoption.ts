@@ -10,12 +10,9 @@ import {
 import type { createOrderedReceiptIndex, OrderedIndexReference } from "pstdio-sync/relay";
 import { decodeOrderedEntry, type OrderedStreamEntry, type RecordStreamCursor } from "pstdio-sync/relay";
 import { fingerprint, type Json } from "pstdio-sync-contracts";
-import {
-  storage_ordered_records as canonical,
-  storage_current_records as current,
-  storage_record_projections as projections,
-} from "../../db/schemas.pg";
+import { storage_ordered_records as canonical, records as current, owners as projections } from "../../db/schemas.pg";
 import { dirtyOrderedReceipts } from "./ordered-checkpoint";
+import { checkpointCanonicalRecords } from "./ordered-checkpoint-records";
 import { queueOrderedCheckpointRepairs } from "./ordered-checkpoint-repair";
 import type { OrderedJournal } from "./ordered-journal";
 import { settleLocalOrderedSaves } from "./ordered-local-settlement";
@@ -24,9 +21,10 @@ import { resetCanonicalNumberIndex } from "./ordered-number-canonical";
 import { rebaseOrderedProjection } from "./ordered-rebase";
 import { createOrderedReceiptResolver } from "./ordered-receipts-resolver";
 import { receiptRoots, sameReceiptRoot, saveReceiptRoots } from "./ordered-receipts-state";
-import { decodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner, saveOrderedCursor } from "./ordered-stream-state";
 import { captureProjectedRecordChanges } from "./projected-record-changes";
+import { clearRetainedRecords } from "./retained-records";
 
 const checkpointEntries = async (remote: Map<string, Uint8Array[]>) => {
   const entries = [];
@@ -111,10 +109,8 @@ export const adoptOrderedCheckpoint = async (input: {
   const owned = await readOrderedOwner(tx, owner);
   // Capture locally settled records before replacing canonical state, including saves made
   // while our own founding upload was in flight. The tail must precede their new saves.
-  const local = !(await orderedOwnerJoinedCloud(tx, owner, owned))
-    ? (await tx.select({ state: canonical.state }).from(canonical).where(orderedOwnerWhere(canonical, owner))).map(
-        (row) => decodeOrderedJson<OrderedRecord>(row.state),
-      )
+  const local = !(await orderedOwnerJoinedCloud(owned))
+    ? [...(await checkpointCanonicalRecords(tx, owner)).values()]
     : [];
   const previous = receiptRoots(owned.receipt_root);
   const records = entries.flatMap((entry) => (entry.type === "record" ? [entry.record] : []));
@@ -132,7 +128,7 @@ export const adoptOrderedCheckpoint = async (input: {
   const dirty = await dirtyOrderedReceipts(journal);
   for (let offset = 0; offset < dirty.length; offset += 100)
     root = await index.append(root, dirty.slice(offset, offset + 100));
-  const resolver = createOrderedReceiptResolver(journal, root, index);
+  const resolver = createOrderedReceiptResolver(journal, root, index, meta.receiptRoot);
   let after = 0;
   const pendingIds = new Set<string>();
   while (true) {
@@ -146,6 +142,7 @@ export const adoptOrderedCheckpoint = async (input: {
   }
   if (new Set(records.map((record) => record.recordId)).size !== records.length)
     throw new Error("A checkpoint repeats a record");
+  await clearRetainedRecords(tx, owner);
   await tx.delete(canonical).where(orderedOwnerWhere(canonical, owner));
   await tx.delete(current).where(orderedOwnerWhere(current, owner));
   await tx.update(projections).set({ live_count: 0 }).where(orderedOwnerWhere(projections, owner));

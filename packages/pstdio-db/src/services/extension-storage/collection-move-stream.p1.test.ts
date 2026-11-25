@@ -3,16 +3,8 @@ import { createSyncSpace } from "pstdio-sync/encryption";
 import { createLegacyRecordStorage, moveCollection, storageRecordId } from "pstdio-sync/records";
 import { createRecordStreamSync } from "pstdio-sync/relay";
 import { createDb } from "../../db/connection.pglite";
-import {
-  projects,
-  storage_current_records,
-  storage_documents,
-  storage_ordered_operations,
-  storage_ordered_owners,
-  storage_ordered_records,
-  storage_ordered_touches,
-  storage_record_projections,
-} from "../../db/schemas.pg";
+import { projects, records, storage_ordered_operations, owners as storageOwners } from "../../db/schemas.pg";
+import { captureDocumentFiles, restoreDocumentBackup } from "./document-history.fixture";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createRelay } from "./record-stream-relay.fixture";
 
@@ -231,18 +223,25 @@ test("two devices that move under different key prefixes end with every item und
 });
 
 // Copies a device's ordered storage, without receipts, as a backup taken before its pending save uploaded.
-const tables = [
-  storage_documents,
-  storage_ordered_owners,
-  storage_ordered_records,
-  storage_ordered_operations,
-  storage_ordered_touches,
-  storage_record_projections,
-  storage_current_records,
-] as const;
+const tables = [records, storage_ordered_operations] as const;
 const copyStorage = async (from: Device["db"], to: Device["db"]) => {
-  for (const table of tables)
-    for (const row of await from.select().from(table)) await to.insert(table).values(row as never);
+  const files = await captureDocumentFiles(from);
+  await to.transaction(async (tx) => {
+    const ownerIds = new Map<number, number>();
+    for (const { id, ...fields } of await from.select().from(storageOwners)) {
+      const [copied] = await tx.insert(storageOwners).values(fields).returning({ id: storageOwners.id });
+      ownerIds.set(id, copied!.id);
+    }
+    for (const table of tables)
+      for (const row of await from.select().from(table)) {
+        const copy = "owner_id" in row ? { ...row, owner_id: ownerIds.get(row.owner_id) } : row;
+        // This backup predates receipt capture, even though the facts now share one row.
+        if (table === storage_ordered_operations)
+          Object.assign(copy, { receipt: {}, receipt_epoch: null, receipt_indexed: true });
+        await tx.insert(table).values(copy as never);
+      }
+    await restoreDocumentBackup(tx, files, ownerIds);
+  });
 };
 
 test("an offline write that a compacted checkpoint refuses still reaches the moved record", async () => {

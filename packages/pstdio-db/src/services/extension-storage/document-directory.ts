@@ -1,10 +1,12 @@
-import { and, gt, inArray, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNotNull, sql } from "drizzle-orm";
 import type { DocumentStore, StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_current_records as current, storage_documents as documents } from "../../db/schemas.pg";
+import { documents } from "../../db/schemas/documents";
+import { records as current } from "../../db/schemas.pg";
 import { runDocumentTransaction } from "./document-persistence";
 import { orderedFieldMarkerId, readOrderedMarker, saveOrderedMarker } from "./ordered-native-metadata";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import { decodeProjectionValue, projectionKey } from "./record-projection-codec";
 
 const bootstrapId = JSON.stringify(["ordered-directory"]);
 const nativeKey = (id: string) => (id.startsWith('["native-markdown",') ? (JSON.parse(id) as string[])[1] : undefined);
@@ -38,21 +40,35 @@ export const createDocumentDirectory = (
     let after: string | undefined;
     while (true) {
       const rows = await db
-        .select({ id: documents.document_id })
+        .select({ id: documents.key })
         .from(documents)
         .where(
-          and(orderedOwnerWhere(documents, owner), after === undefined ? undefined : gt(documents.document_id, after)),
+          and(
+            orderedOwnerWhere(documents, owner),
+            eq(documents.kind, "shared"),
+            after === undefined ? undefined : gt(documents.key, after),
+          ),
         )
-        .orderBy(documents.document_id)
+        .orderBy(documents.key)
         .limit(1_000);
       if (!rows.length) return names;
       for (const row of rows) if (shared(row.id)) names.push(row.id);
       after = rows.at(-1)!.id;
     }
   };
+  const hiddenKinds = async (owner: StorageOwner, names: string[], hidden: Set<string>) => {
+    for (let offset = 0; offset < names.length; offset += 1_000) {
+      const saved = await db
+        .select({ key: documents.key, kind: documents.kind })
+        .from(documents)
+        .where(and(orderedOwnerWhere(documents, owner), inArray(documents.key, names.slice(offset, offset + 1_000))));
+      for (const row of saved) if (row.kind !== "shared") hidden.add(row.key);
+    }
+  };
   const hiddenFields = async (owner: StorageOwner, names: string[]) => {
     const keys = names.flatMap((id) => nativeKey(id) ?? []);
     const hidden = new Set<string>();
+    await hiddenKinds(owner, names, hidden);
     for (let offset = 0; offset < keys.length; offset += 1_000) {
       const batch = keys.slice(offset, offset + 1_000);
       const rows = await db
@@ -61,18 +77,19 @@ export const createDocumentDirectory = (
         .where(
           and(
             orderedOwnerWhere(current, owner),
-            sql`${current.native_sources} ?| ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(batch)}::jsonb))`,
+            isNotNull(current.revision),
+            sql`${current.native_sources} ?| ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(batch.map(projectionKey))}::jsonb))`,
           ),
         );
       for (const row of rows)
-        for (const [key, source] of Object.entries(row.sources))
+        for (const [key, source] of Object.entries(
+          decodeProjectionValue(row.sources as never) as unknown as import("pstdio-sync/records").NativeRecordSources,
+        ))
           if ("field" in source) hidden.add(JSON.stringify(["native-markdown", key]));
       const markers = await db
-        .select({ id: documents.document_id })
+        .select({ id: documents.key })
         .from(documents)
-        .where(
-          and(orderedOwnerWhere(documents, owner), inArray(documents.document_id, batch.map(orderedFieldMarkerId))),
-        );
+        .where(and(orderedOwnerWhere(documents, owner), inArray(documents.key, batch.map(orderedFieldMarkerId))));
       for (const marker of markers)
         hidden.add(JSON.stringify(["native-markdown", (JSON.parse(marker.id) as string[])[1]]));
     }

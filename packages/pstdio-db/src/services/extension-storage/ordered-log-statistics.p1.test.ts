@@ -24,7 +24,7 @@ const seedProject = async (db: Awaited<ReturnType<typeof createDb>>["db"]) => {
 };
 const estimatedRows = async (db: Awaited<ReturnType<typeof createDb>>["db"]) => {
   const result = await db.execute<{ rows: number }>(
-    sql`SELECT reltuples AS rows FROM pg_class WHERE relname = 'storage_log_entries'`,
+    sql`SELECT reltuples AS rows FROM pg_class WHERE relname = 'log_entries'`,
   );
   return Number(result.rows[0]!.rows);
 };
@@ -113,7 +113,7 @@ test("maintained full-writer point reads, updates and selected-ID hydration seek
         statement.params,
       );
       const plan = JSON.stringify(result.rows[0]!["QUERY PLAN"][0]!.Plan);
-      expect(plan).toContain('"Index Name":"storage_log_entries_pk"');
+      expect(plan).toContain('"Index Name":"log_entries_pk"');
       expect(plan).not.toContain('"Rows Removed by Filter"');
     }
     expect((await store.lookupMetadata!(selected)).map((entry) => entry.id).sort()).toEqual(selected);

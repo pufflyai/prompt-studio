@@ -1,0 +1,247 @@
+import { type StorageOwner, StorageRevisionChangedError } from "pstdio-sync";
+import { editResourceDocument } from "pstdio-sync/records";
+import {
+  assertStorageLimits,
+  fingerprint,
+  type StorageConflict,
+  type StorageConflictInspection,
+  type StorageGroup,
+  type StorageSaveOutcome,
+} from "pstdio-sync-contracts";
+import { createCommitQueue } from "../../services/extension-storage/commit-queue";
+import { dataMigrationContext } from "../../services/extension-storage/data-migration-context";
+import { readDocumentRetry, rememberDocumentRetry } from "../../services/extension-storage/document-retries";
+import { lockRecordOwner, saveRecordChanges } from "../../services/extension-storage/record-changes";
+import type { RecordDependencies } from "../../services/extension-storage/record-dependencies";
+import {
+  createRecordQueries,
+  listProjectedRecords,
+  readProjectedRecords,
+} from "../../services/extension-storage/record-queries";
+import {
+  loadResourceDocuments,
+  resourceDocumentId,
+} from "../../services/extension-storage/resource-document-persistence";
+import type { NumberChange } from "../../services/extension-storage/resource-number-repair";
+import type { DbClient } from "../connection.pglite";
+import { bindNativeRecordSource } from "./bind-native-source";
+import { prepareNativeRecordWrite } from "./native-record-write";
+import { queueRecordUpload } from "./record-outbox";
+
+type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
+// A record's update tail folds into its checkpoint after this many updates.
+export const resourceFoldEvery = 128;
+
+const outcome = (operationId: string) => ({
+  operationId,
+  state: "saved-locally" as const,
+  status: "saved-locally" as const,
+});
+
+/** Records of one owner. Each record is its own Yjs document; reads use the SQL projection. */
+export const createResourceRecords = (db: DbClient, owner: StorageOwner, deps: RecordDependencies) => {
+  // Owner-locked transactions load the latest state, so this handle can continue its
+  // causal clock instead of adding a new Yjs writer to every record on every save.
+  const writer = crypto.getRandomValues(new Uint32Array(1))[0]!;
+  const { queryIn: _queryIn, ...queries } = createRecordQueries(db, owner, deps.diagnostics);
+  const receipt = async (tx: Pick<DbClient, "select">, operationId: string) => {
+    const fingerprint = await readDocumentRetry(tx, owner, "records", operationId);
+    return fingerprint === undefined ? [] : [{ fingerprint }];
+  };
+  const commitIn = async (
+    tx: Transaction,
+    group: StorageGroup,
+    identity: string,
+    ownRevisions?: Map<string, string>,
+    options: { content?: string } = {},
+  ) => {
+    const revision = await lockRecordOwner(tx, owner);
+    const ids = group.edits.map(({ recordId }) => recordId);
+    const [previous] = await receipt(tx, group.operationId);
+    if (previous) {
+      if (previous.fingerprint !== identity) throw new Error("Operation identity reused with changed payload");
+      // A retry acknowledges its original operation, never a newer writer’s state.
+      return { records: [], projected: 0, nativeKeys: [] as string[], events: [] as NumberChange[] };
+    }
+    const expected = new Map(
+      ids.flatMap((id) => {
+        const revision = deps.observer?.expected?.(owner, id);
+        return revision === undefined ? [] : [[id, ownRevisions?.get(id) ?? revision] as const];
+      }),
+    );
+    for (const record of await readProjectedRecords(tx, owner, [...expected.keys()]))
+      if (expected.get(record.recordId) !== record.revision) throw new StorageRevisionChangedError();
+    const { sources } = await loadResourceDocuments(tx, owner, ids.map(resourceDocumentId));
+    const migration = dataMigrationContext.getStore();
+    // Every edit is validated and prepared before anything is written; a failure aborts the whole group.
+    const prepared = await Promise.all(
+      group.edits.map(async (edit) => {
+        const id = resourceDocumentId(edit.recordId);
+        const saved = sources.get(id);
+        const next = (saved?.revision ?? 0) + 1;
+        const foldedRevision = saved?.folded_revision ?? 0;
+        const checkpoint = !saved || next - foldedRevision >= resourceFoldEvery;
+        const native = await prepareNativeRecordWrite(tx, { owner, states: saved?.states ?? [], edit, ...options });
+        const result = await editResourceDocument(
+          saved?.states ?? [],
+          native.edit,
+          checkpoint,
+          migration && { ...migration, document: JSON.stringify([owner.workbenchId, owner.extensionId, id]) },
+          writer,
+        );
+        return { id, revision: next, foldedRevision, ...result, nativeKeys: native.changed };
+      }),
+    );
+    const records = prepared.map((value) => value.record);
+    assertStorageLimits(records);
+    const saved = await saveRecordChanges(tx, owner, revision, prepared);
+    await queueRecordUpload(tx, owner, [...prepared, ...saved.repairs]);
+    await rememberDocumentRetry(tx, owner, "records", group.operationId, identity);
+    const bound = saved.records.filter((record) => "nativeSources" in record);
+    const materialized = new Map(
+      (
+        await readProjectedRecords(
+          tx,
+          owner,
+          bound.map((record) => record.recordId),
+        )
+      ).map((record) => [record.recordId, record]),
+    );
+    return {
+      ...saved,
+      records: saved.records.map((record) => materialized.get(record.recordId) ?? record),
+      nativeKeys: prepared.flatMap((record) => record.nativeKeys),
+    };
+  };
+  const prepare = async (group: StorageGroup) => {
+    if (!group.operationId || !group.edits.length) throw new Error("Empty storage commit");
+    const ids = group.edits.map(({ recordId }) => recordId);
+    if (ids.some((id) => !id) || new Set(ids).size !== ids.length)
+      throw new Error("A commit must name each record once");
+    const assets = group.edits.flatMap((edit) => (edit.asset ? [edit.asset] : []));
+    if (assets.length) {
+      if (!deps.assets) throw new Error("Asset verification is unavailable");
+      await deps.assets.verifyComplete(assets);
+    }
+    return fingerprint(group.edits.map(({ expectedRevision: _revision, ...edit }) => edit));
+  };
+  const published = (
+    result: {
+      records: { recordId: string; revision: string }[];
+      projected: number;
+      nativeKeys: string[];
+      events: NumberChange[];
+    },
+    operationId: string,
+  ) => {
+    if (result.projected) deps.statistics.record(result.projected);
+    if (result.records.length) deps.changed(result.records.map((record) => record.recordId));
+    deps.nativeChanged?.(result.nativeKeys);
+    deps.numbersChanged?.(result.events);
+    const saved = outcome(operationId);
+    if (result.records.length) deps.observer?.committed(owner, result.records, saved);
+    return saved;
+  };
+  const read = async (connection: Pick<DbClient, "select">, id: string) => {
+    const [record] = await readProjectedRecords(connection, owner, [id]);
+    deps.observer?.read(owner, record);
+    return record;
+  };
+  return {
+    ...queries,
+    async bindText(input: {
+      recordId: string;
+      field?: string;
+      documentKey: string;
+      sourceKey?: string;
+      content?: string;
+    }) {
+      const result = await bindNativeRecordSource(db, owner, input, deps.observer);
+      if (result.changed) {
+        deps.changed([input.recordId]);
+        deps.nativeChanged?.([result.documentKey]);
+        deps.observer?.committed(owner, [result.record], { status: "saved-locally" });
+      }
+      return { documentKey: result.documentKey, lifetime: result.lifetime, changed: result.changed };
+    },
+    async writeTextAsset(input: {
+      recordId: string;
+      content: string;
+      replace: StorageGroup["edits"][number]["replace"];
+    }) {
+      const identity = await fingerprint({ ...input, replace: input.replace ?? null });
+      const group = { operationId: crypto.randomUUID(), edits: [{ recordId: input.recordId, replace: input.replace }] };
+      return published(
+        await db.transaction((tx) => commitIn(tx, group, identity, undefined, { content: input.content })),
+        group.operationId,
+      );
+    },
+    readMany: queries.readMany,
+    read: async (id: string, _branch?: { operationId: string }) => {
+      return read(db, id);
+    },
+    list: async (prefix = "") => {
+      const records = await listProjectedRecords(db, owner, prefix);
+      for (const record of records) deps.observer?.read(owner, record);
+      return records;
+    },
+    outcome: async (id: string) => {
+      const [row] = await receipt(db, id);
+      return row ? outcome(id) : undefined;
+    },
+    commit: async (group: StorageGroup) => {
+      const identity = await prepare(group);
+      return published(await db.transaction((tx) => commitIn(tx, group, identity)), group.operationId);
+    },
+    /** Reads and commits inside one owner lock, for read-modify-write callers. */
+    transaction: async <T>(
+      run: (
+        records: {
+          read: (id: string) => ReturnType<typeof read>;
+          readMany: (ids: string[]) => ReturnType<typeof readProjectedRecords>;
+          commit: (group: StorageGroup) => Promise<ReturnType<typeof outcome>>;
+        },
+        connection: Transaction,
+      ) => Promise<T>,
+    ) => {
+      const committed: { result: Awaited<ReturnType<typeof commitIn>>; operationId: string }[] = [];
+      const ownRevisions = new Map<string, string>();
+      const enqueueCommit = createCommitQueue();
+      const value = await db.transaction(async (tx) => {
+        await lockRecordOwner(tx, owner);
+        try {
+          return await run(
+            {
+              read: (id) => read(tx, id),
+              readMany: async (ids) => {
+                const records = await readProjectedRecords(tx, owner, ids);
+                for (const record of records) deps.observer?.read(owner, record);
+                return records;
+              },
+              commit: (group) =>
+                enqueueCommit.run(async () => {
+                  const result = await commitIn(tx, group, await prepare(group), ownRevisions);
+                  for (const record of result.records) ownRevisions.set(record.recordId, record.revision);
+                  committed.push({ result, operationId: group.operationId });
+                  return outcome(group.operationId);
+                }),
+            },
+            tx,
+          );
+        } finally {
+          // Promise.all can reject before another admitted save finishes. Drain before rollback.
+          await enqueueCommit.settled();
+        }
+      });
+      for (const { result, operationId } of committed) published(result, operationId);
+      return value;
+    },
+    conflicts: async () => [] as StorageConflict[],
+    inspect: (_id: string) =>
+      Promise.reject<StorageConflictInspection>(
+        new Error("Records merge automatically; there are no conflicts to inspect"),
+      ),
+    resolve: (_proposal: unknown) =>
+      Promise.reject<StorageSaveOutcome>(new Error("Records merge automatically; there are no conflicts to resolve")),
+  };
+};

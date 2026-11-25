@@ -5,6 +5,7 @@ import { jsonBatches } from "./json-batches";
 import type { OrderedJournal } from "./ordered-journal";
 import { orderedNumber } from "./ordered-number-values";
 import type { OrderedTransaction } from "./ordered-sql";
+import { storageOwnerKey } from "./storage-owner-key";
 
 /** Number claims couple otherwise independent records. Include pending claimants before
  * checking a repair's author-group budget. Shown aliases retain original claims after
@@ -40,23 +41,23 @@ export const pendingOrderedNumberPeers = async (
         AS k(extension_id text, kind text, shorthand text)
     ), alias_matches AS MATERIALIZED (
       SELECT a.resource_id, r.extension_id, r.kind FROM requested r
-        INNER JOIN storage_resource_aliases a
-          ON a.workbench_id = ${owner.workbenchId} AND a.shorthand = r.shorthand
+        INNER JOIN resource_numbers a
+          ON a.alias AND a.project_id = ${owner.workbenchId} AND a.shorthand = r.shorthand
     ) SELECT candidate.resource_id FROM (
-      SELECT i.resource_id FROM storage_resource_identities i
+      SELECT i.resource_id FROM resource_numbers i
         INNER JOIN requested USING(extension_id, kind, shorthand)
-        WHERE i.workbench_id = ${owner.workbenchId}
+        WHERE i.current AND i.project_id = ${owner.workbenchId}
       UNION ALL
       SELECT m.resource_id FROM alias_matches m
-        INNER JOIN storage_resource_identities i
-          ON i.workbench_id = ${owner.workbenchId} AND i.resource_id = m.resource_id
+        INNER JOIN resource_numbers i
+          ON i.current AND i.project_id = ${owner.workbenchId} AND i.resource_id = m.resource_id
             AND i.extension_id = m.extension_id AND i.kind = m.kind
     ) candidate
     WHERE NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(${JSON.stringify(ids)}::jsonb) included(id)
       WHERE included.id = candidate.resource_id)
-      AND EXISTS (SELECT 1 FROM storage_ordered_touches t
-        WHERE t.workbench_id = ${owner.workbenchId} AND t.extension_id = ${owner.extensionId}
-          AND t.record_id = candidate.resource_id)
+      AND EXISTS (SELECT 1 FROM operations o
+        WHERE o.owner_id = ${storageOwnerKey(owner)} AND o.envelope IS NOT NULL AND o.settled_epoch IS NULL
+          AND o.touches @> ARRAY[candidate.resource_id])
     LIMIT 100`);
     for (const row of result.rows as { resource_id: string }[])
       if (!included.has(row.resource_id)) peers.add(row.resource_id);

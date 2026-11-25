@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { index, jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { isoTimestamp } from "./iso-timestamp";
 import { projects } from "./projects";
 
 export const notifications = pgTable(
@@ -24,12 +25,12 @@ export const notifications = pgTable(
     actions_json: jsonb("actions_json").$type<unknown[]>().notNull().default([]),
     metadata_json: jsonb("metadata_json").$type<Record<string, unknown> | null>(),
     dedupe_key: text("dedupe_key"),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
-    read_at: text("read_at"),
-    resolved_at: text("resolved_at"),
+    created_at: isoTimestamp("created_at").notNull(),
+    updated_at: isoTimestamp("updated_at").notNull(),
+    read_at: isoTimestamp("read_at"),
+    resolved_at: isoTimestamp("resolved_at"),
     snoozed_until: text("snoozed_until"),
-    expires_at: text("expires_at"),
+    expires_at: isoTimestamp("expires_at"),
   },
   (table) => [
     index("notifications_project_status_updated_idx").on(table.project_id, table.status, table.updated_at, table.id),

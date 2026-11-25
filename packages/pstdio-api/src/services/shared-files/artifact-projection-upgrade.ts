@@ -28,7 +28,7 @@ export const upgradeArtifactFileProjections = async (input: {
     try {
       const source = Bun.file(address.path);
       if (!(await source.exists())) continue;
-      const indexed = input.projections.open(address.key);
+      const indexed = input.projections.open(address.key, owner);
       if (!(await indexed.read([])).initialized) {
         const state = artifactFileProjectionSchema.parse(await source.json());
         await indexed.initialize(state);

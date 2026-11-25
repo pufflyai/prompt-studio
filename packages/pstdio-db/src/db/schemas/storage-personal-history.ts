@@ -1,17 +1,16 @@
-import { bigint, boolean, integer, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { bigint, integer, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 import type { Json } from "pstdio-sync-contracts";
-import { projects } from "./projects";
+import { owners } from "./owners";
 
 const owner = () => ({
-  workbench_id: text("workbench_id")
+  owner_id: integer("owner_id")
     .notNull()
-    .references(() => projects.id, { onDelete: "cascade" }),
-  extension_id: text("extension_id").notNull(),
+    .references(() => owners.id, { onDelete: "cascade" }),
 });
 
 /** Materialized private device-log data; these rows never become a second sync owner. */
 export const storage_personal_history = pgTable(
-  "storage_personal_history",
+  "history_rows",
   {
     ...owner(),
     device_id: text("device_id").notNull(),
@@ -23,15 +22,15 @@ export const storage_personal_history = pgTable(
   },
   (table) => [
     primaryKey({
-      name: "storage_personal_history_pk",
-      columns: [table.workbench_id, table.extension_id, table.kind, table.device_id, table.record_id],
+      name: "history_rows_pk",
+      columns: [table.owner_id, table.kind, table.device_id, table.record_id],
     }),
   ],
 );
 
 /** Canonical contributions at each device's covered log position; snapshots never include a later local overlay. */
 export const storage_personal_history_sources = pgTable(
-  "storage_personal_history_sources",
+  "history_sources",
   {
     ...owner(),
     source_id: text("source_id").notNull(),
@@ -46,21 +45,8 @@ export const storage_personal_history_sources = pgTable(
   },
   (table) => [
     primaryKey({
-      name: "storage_personal_history_sources_pk",
-      columns: [table.workbench_id, table.extension_id, table.source_id, table.kind, table.device_id, table.record_id],
+      name: "history_sources_pk",
+      columns: [table.owner_id, table.source_id, table.kind, table.device_id, table.record_id],
     }),
-  ],
-);
-
-/** The cursor advances atomically with the rows obtained from that page. */
-export const storage_personal_history_positions = pgTable(
-  "storage_personal_history_positions",
-  {
-    ...owner(),
-    cursor: text("cursor"),
-    migrated: boolean("migrated").notNull().default(false),
-  },
-  (table) => [
-    primaryKey({ name: "storage_personal_history_positions_pk", columns: [table.workbench_id, table.extension_id] }),
   ],
 );

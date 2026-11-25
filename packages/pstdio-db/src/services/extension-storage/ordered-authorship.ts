@@ -1,8 +1,11 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { OrderedAdmission, OrderedOperation } from "pstdio-sync/records";
-import { storage_ordered_operations as operations, storage_ordered_receipts as receipts } from "../../db/schemas.pg";
+import type { OperationReceipt } from "../../db/schemas/storage-ordered-records";
+import { storage_ordered_operations as operations } from "../../db/schemas.pg";
+import { operationReceipt } from "./ordered-receipt-values";
 import { decodeOrderedJson as decode, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import type { RetainedOperation } from "./retained-operations";
 
 export const orderedLocalOperation = (row: typeof operations.$inferSelect) =>
   row.envelope
@@ -20,35 +23,49 @@ export const createOrderedAuthorship = (
   tx: OrderedTransaction,
   owner: StorageOwner,
   operation: (id: string) => Promise<typeof operations.$inferSelect | undefined>,
-) => ({
-  async operationCoordinates(id: string) {
-    const row = await operation(id);
-    return row && { admission: row.admission_epoch, settled: row.settled_epoch };
-  },
-  async localOperation(id: string) {
-    const row = await operation(id);
-    return row ? orderedLocalOperation(row) : undefined;
-  },
-
-  async isIndexed(id: string, epoch: string) {
+  retained: (id: string) => Promise<RetainedOperation | undefined>,
+) => {
+  const where = (id: string) => and(orderedOwnerWhere(operations, owner), eq(operations.operation_id, id));
+  const receipt = async (id: string, epoch: string) => {
     const [row] = await tx
-      .select({ indexed: receipts.indexed })
-      .from(receipts)
-      .where(and(orderedOwnerWhere(receipts, owner), eq(receipts.operation_id, id), eq(receipts.epoch, epoch)));
-    return row?.indexed ?? false;
-  },
-  async requestIdentity(id: string) {
-    return (await operation(id))?.request_fingerprint ?? undefined;
-  },
-  async dropSettledEnvelope(id: string) {
-    const row = await operation(id);
-    if (!row?.settled_epoch) throw new Error("Only a decided save can drop its envelope");
-    await tx
-      .update(operations)
-      .set({ envelope: null, admission: null })
-      .where(and(orderedOwnerWhere(operations, owner), eq(operations.operation_id, id)));
-  },
-});
+      .select({ receipt: sql<OperationReceipt | null>`${operations.receipt}->${epoch}::text` })
+      .from(operations)
+      .where(where(id));
+    if (row) return row.receipt ?? undefined;
+    const saved = await retained(id);
+    return saved ? operationReceipt(saved.receipt, epoch) : undefined;
+  };
+  return {
+    async operationCoordinates(id: string) {
+      const [row] = await tx
+        .select({ admission: operations.admission_epoch, settled: operations.settled_epoch })
+        .from(operations)
+        .where(where(id));
+      if (row) return row;
+      const saved = await retained(id);
+      return saved && { admission: saved.admission_epoch, settled: saved.settled_epoch };
+    },
+    async localOperation(id: string) {
+      const row = await operation(id);
+      return row ? orderedLocalOperation(row) : undefined;
+    },
+
+    async isIndexed(id: string, epoch: string) {
+      return (await receipt(id, epoch))?.indexed ?? false;
+    },
+    async publishedReceipt(id: string, epoch: string) {
+      const saved = await receipt(id, epoch);
+      if (!saved?.indexed || !saved.indexedAt) return;
+      if (!Number.isFinite(Date.parse(saved.indexedAt))) throw new Error("Invalid receipt coverage time");
+      return saved;
+    },
+    async requestIdentity(id: string) {
+      const [row] = await tx.select({ request: operations.request_fingerprint }).from(operations).where(where(id));
+      if (row) return row.request ?? undefined;
+      return (await retained(id))?.request_fingerprint ?? undefined;
+    },
+  };
+};
 
 export const retryOrderedLocalOperation = (
   row: typeof operations.$inferSelect,

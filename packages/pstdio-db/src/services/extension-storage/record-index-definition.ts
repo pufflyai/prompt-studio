@@ -4,14 +4,16 @@ import { compareQueryValues, validateIndexes } from "pstdio-sync/records";
 import type { Json, StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { analyzeRecordProjection } from "../../db/record-projection-statistics";
-import { storage_current_records as current, storage_record_indexes as indexes } from "../../db/schemas.pg";
+import { records as current } from "../../db/schemas.pg";
 import { traceStorageQuery } from "./query-trace";
 import { retainDateFormatIndexes } from "./record-date-format";
 import { derivedQueryChanges, rebuildDerivedQueryValues } from "./record-derived-fields";
 import { formatDatabasePrefix } from "./record-format-key";
 import { dropRecordIndexes, installRecordIndex, recordIndexName } from "./record-index-lifecycle";
+import { deleteRecordIndexRows, recordIndexRows as indexes } from "./record-index-rows";
 import { decodeProjectionValue } from "./record-projection-codec";
 import type { StorageDiagnostics } from "./storage-diagnostics";
+import { ensureStorageOwner, storageOwnerKey } from "./storage-owner-key";
 
 const orderDefinitions = (definitions: StorageRecordIndex[]) =>
   definitions.sort((left, right) => compareQueryValues(left.name, right.name));
@@ -30,14 +32,22 @@ export const defineRecordIndexes = async (
   statistics: "immediate" | "maintenance",
   diagnostics?: StorageDiagnostics,
 ) => {
-  const scope = and(eq(indexes.workbench_id, owner.workbenchId), eq(indexes.extension_id, owner.extensionId))!;
+  const scope = and(eq(indexes.owner_id, storageOwnerKey(owner)))!;
   traceStorageQuery("indexes-start", definitions.map(({ name }) => name).join(","));
   validateIndexes(definitions);
   const publicDesired = orderDefinitions(structuredClone(definitions));
-  const names = new Map(
-    await Promise.all(publicDesired.map(async (index) => [index.name, await recordIndexName(owner, index)] as const)),
-  );
   await db.transaction(async (tx) => {
+    const ownerId = await ensureStorageOwner(tx, owner);
+    const coreOwnerId = publicDesired.some((index) => index.identity)
+      ? await ensureStorageOwner(tx, { ...owner, extensionId: "pstdio" })
+      : null;
+    const names = new Map(
+      await Promise.all(
+        publicDesired.map(
+          async (index) => [index.name, await recordIndexName({ ...owner, ownerId, coreOwnerId }, index)] as const,
+        ),
+      ),
+    );
     // The physical name hashes the complete definition and implementation version.
     // Check that exact catalog identity before hydrating definitions needed only for replacement.
     const catalog = await tx
@@ -71,7 +81,7 @@ export const defineRecordIndexes = async (
         ),
       )!;
       await dropRecordIndexes(tx, removed);
-      await tx.delete(indexes).where(removed);
+      await deleteRecordIndexRows(tx, removed);
     }
     await rebuildDerivedQueryValues(tx, owner, derivedQueryChanges(installed, desired), diagnostics);
     const saved = new Map(previous.map((row) => [row.name, row.database_name]));
@@ -83,7 +93,7 @@ export const defineRecordIndexes = async (
       const [row] = await tx
         .select({ id: current.record_id })
         .from(current)
-        .where(and(eq(current.workbench_id, owner.workbenchId), eq(current.extension_id, owner.extensionId)))
+        .where(and(eq(current.owner_id, storageOwnerKey(owner))))
         .limit(1);
       if (row) await analyzeRecordProjection((statement) => tx.execute(sql.raw(statement)));
     }

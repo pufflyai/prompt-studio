@@ -2,6 +2,7 @@ import { eq, getTableColumns, sql } from "drizzle-orm";
 import type { ResourceAnchor, ResourceRef } from "pstdio-api-contracts/extension-kernel";
 import type { DbClient } from "../db/connection.pglite";
 import { sessions, workspaces } from "../db/schemas.pg";
+import { resourceLinkRows } from "./resource-link-rows";
 import { createResourceLinksDBService, writeResourceLinks } from "./resource-links";
 
 export const legacyResourceOwner = (ref: ResourceRef) => {
@@ -20,17 +21,17 @@ export const hostResourceRef = (kind: "workspace" | "session", row: { id: string
 const anchorProjection = (table: typeof workspaces | typeof sessions, kind: string) =>
   sql<ResourceAnchor[]>`(
   select coalesce(jsonb_agg(details - 'sourceRef' order by target_owner, target_kind, target_id), '[]'::jsonb)
-  from resource_anchors
+  from ${resourceLinkRows} linked
   where project_id = ${table.project_id} and source_owner = 'pstdio' and source_kind = ${kind} and source_id = ${table.id}
 )`.as("anchors_json");
 /** Private history retains both directions, independent of this device's shared link index. */
 export const historyAnchorProjection = (table: typeof workspaces | typeof sessions, kind: string) =>
   sql<ResourceAnchor[]>`(select coalesce(jsonb_agg(anchor order by anchor::text), '[]'::jsonb) from (
-    select details - 'sourceRef' as anchor from resource_anchors
+    select details - 'sourceRef' as anchor from ${resourceLinkRows} linked
     where project_id = ${table.project_id} and source_owner = 'pstdio' and source_kind = ${kind} and source_id = ${table.id}
     union
     select jsonb_build_object('type', source_kind, 'id', source_id, 'extensionId', source_owner, 'projectId', project_id)
-    from resource_anchors where project_id = ${table.project_id}
+    from ${resourceLinkRows} linked where project_id = ${table.project_id}
       and target_owner = 'pstdio' and target_kind = ${kind} and target_id = ${table.id}
   ) linked)`.as("anchors_json");
 

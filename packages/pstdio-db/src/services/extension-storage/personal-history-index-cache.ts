@@ -1,8 +1,9 @@
-import { and, eq, isNotNull, type SQL } from "drizzle-orm";
+import { and, eq, isNotNull, type SQL, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { canonicalJson } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_personal_history as rows } from "../../db/schemas.pg";
+import { storageOwnerKey } from "./storage-owner-key";
 
 type Row = typeof rows.$inferSelect;
 const key = (row: Pick<Row, "device_id" | "kind" | "record_id">) =>
@@ -10,7 +11,7 @@ const key = (row: Pick<Row, "device_id" | "kind" | "record_id">) =>
 
 /** SQL owns selection; retain identities only for records readers actually requested. */
 export const createPersonalIndexCache = (db: DbClient) => {
-  const owners = new Map<string, ReturnType<typeof create>>();
+  const owners = new Map<string, { ownerId: number | null; cache: ReturnType<typeof create> }>();
   const create = (owner: StorageOwner) => {
     const identities = new Map<string, Row>();
     const points = new Map<string, Row | undefined>();
@@ -30,14 +31,7 @@ export const createPersonalIndexCache = (db: DbClient) => {
       db
         .select()
         .from(rows)
-        .where(
-          and(
-            eq(rows.workbench_id, owner.workbenchId),
-            eq(rows.extension_id, owner.extensionId),
-            eq(rows.kind, kind),
-            condition,
-          ),
-        );
+        .where(and(eq(rows.owner_id, storageOwnerKey(owner)), eq(rows.kind, kind), condition));
     return {
       apply(changes: Row[]) {
         if (changes.length) generation++;
@@ -82,8 +76,7 @@ export const createPersonalIndexCache = (db: DbClient) => {
           .from(rows)
           .where(
             and(
-              eq(rows.workbench_id, owner.workbenchId),
-              eq(rows.extension_id, owner.extensionId),
+              eq(rows.owner_id, storageOwnerKey(owner)),
               eq(rows.kind, kind),
               eq(rows.device_id, deviceId),
               isNotNull(rows.seed_id),
@@ -108,13 +101,15 @@ export const createPersonalIndexCache = (db: DbClient) => {
       },
     };
   };
-  return (owner: StorageOwner) => {
+  return async (owner: StorageOwner) => {
     const id = JSON.stringify(owner);
+    const selected = await db.execute<{ id: number | null }>(sql`SELECT ${storageOwnerKey(owner)} AS id`);
+    const ownerId = selected.rows[0]!.id;
     let current = owners.get(id);
-    if (!current) {
-      current = create(owner);
+    if (!current || current.ownerId !== ownerId) {
+      current = { ownerId, cache: create(owner) };
       owners.set(id, current);
     }
-    return current;
+    return current.cache;
   };
 };

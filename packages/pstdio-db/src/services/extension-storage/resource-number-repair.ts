@@ -4,7 +4,7 @@ import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId, editResourceDocument } from "pstdio-sync/records";
 import type { StorageRecord } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_resource_identities as identities } from "../../db/schemas.pg";
+import { resource_numbers as identities } from "../../db/schemas.pg";
 import type { RecordChange } from "./record-changes";
 import { readProjectedRecords } from "./record-queries";
 import { loadResourceDocuments, resourceDocumentId } from "./resource-document-persistence";
@@ -28,7 +28,8 @@ export const previousNumbers = async (tx: Transaction, owner: StorageOwner, ids:
       .from(identities)
       .where(
         and(
-          eq(identities.workbench_id, owner.workbenchId),
+          eq(identities.project_id, owner.workbenchId),
+          eq(identities.current, true),
           inArray(identities.resource_id, ids.slice(offset, offset + 1_000)),
         ),
       );

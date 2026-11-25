@@ -1,41 +1,86 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId, type OrderedOperation, type OrderedRecord } from "pstdio-sync/records";
-import { storage_ordered_resource_numbers as numbers } from "../../db/schemas.pg";
+import { resource_numbers as numbers } from "../../db/schemas.pg";
 import { jsonBatches } from "./json-batches";
 import type { OrderedJournal } from "./ordered-journal";
 import { type OrderedNumberIndex, repairOrderedNumbers } from "./ordered-number-repair";
-import { numberAliasIntent, numberHistory, orderedNumber, retainNumberHistory } from "./ordered-number-values";
+import {
+  numberAlias,
+  numberAliasIntent,
+  numberHistory,
+  orderedNumber,
+  retainNumberHistory,
+  shownNumberAliases,
+} from "./ordered-number-values";
 import type { OrderedTransaction } from "./ordered-sql";
+
+const pruneUnusedNumbers = (tx: OrderedTransaction, owner: StorageOwner, ids?: string[]) =>
+  tx
+    .delete(numbers)
+    .where(
+      and(
+        eq(numbers.project_id, owner.workbenchId),
+        eq(numbers.current, false),
+        eq(numbers.alias, false),
+        eq(numbers.canonical, false),
+        ids ? inArray(numbers.resource_id, ids) : undefined,
+      ),
+    );
 
 const saveNumbers = async (tx: OrderedTransaction, owner: StorageOwner, records: OrderedRecord[]) => {
   for (let offset = 0; offset < records.length; offset += 500) {
     const selected = records.slice(offset, offset + 500);
-    await tx.delete(numbers).where(
-      and(
-        eq(numbers.workbench_id, owner.workbenchId),
-        inArray(
-          numbers.resource_id,
-          selected.map((record) => record.recordId),
+    await tx
+      .update(numbers)
+      .set({ canonical: false, canonical_current: false })
+      .where(
+        and(
+          eq(numbers.project_id, owner.workbenchId),
+          inArray(
+            numbers.resource_id,
+            selected.map((record) => record.recordId),
+          ),
         ),
-      ),
-    );
+      );
     const rows = selected.flatMap((record) => {
-      const retained = retainNumberHistory(undefined, record);
-      const current = orderedNumber(record);
-      return Object.entries(numberHistory(retained)).map(([prefix, high_water]) => ({
-        workbench_id: owner.workbenchId,
+      const retained = retainNumberHistory(undefined, record),
+        current = orderedNumber(record),
+        previous = orderedNumber(record, true);
+      const namespace = current ?? previous;
+      const values = new Map<string, { prefix: string; value: number }>();
+      for (const [prefix, value] of Object.entries(numberHistory(retained)))
+        values.set(`${prefix}-${value}`, { prefix, value });
+      for (const alias of [...shownNumberAliases(retained), ...(previous?.aliases ?? [])]) {
+        const value = numberAlias(alias);
+        if (value) values.set(alias, value);
+      }
+      if (current) values.set(`${current.prefix}-${current.value}`, { prefix: current.prefix, value: current.value });
+      return [...values].map(([shorthand, value]) => ({
+        project_id: owner.workbenchId,
         resource_id: record.recordId,
-        prefix,
-        high_water,
-        extension_id: current?.extensionId ?? "",
-        kind: current?.kind ?? "",
-        value: current?.prefix === prefix ? current.value : null,
-        current: current?.prefix === prefix,
+        shorthand,
+        ...value,
+        extension_id: namespace?.extensionId ?? "",
+        kind: namespace?.kind ?? "",
+        canonical: true,
+        canonical_current: current?.prefix === value.prefix && current.value === value.value,
       }));
     });
-    for (let start = 0; start < rows.length; start += 500)
-      if (rows.length) await tx.insert(numbers).values(rows.slice(start, start + 500));
+    for (const batch of jsonBatches(rows))
+      await tx.execute(sql`INSERT INTO resource_numbers
+      (project_id,resource_id,shorthand,prefix,value,extension_id,kind,canonical,canonical_current)
+      SELECT project_id,resource_id,shorthand,prefix,value,extension_id,kind,true,canonical_current
+      FROM jsonb_to_recordset(${batch}::jsonb) AS r(project_id text,resource_id text,shorthand text,prefix text,
+        value bigint,extension_id text,kind text,canonical boolean,canonical_current boolean)
+      ON CONFLICT(project_id,shorthand,resource_id) DO UPDATE SET canonical=true,canonical_current=excluded.canonical_current,
+        extension_id=CASE WHEN resource_numbers.current THEN resource_numbers.extension_id ELSE excluded.extension_id END,
+        kind=CASE WHEN resource_numbers.current THEN resource_numbers.kind ELSE excluded.kind END`);
+    await pruneUnusedNumbers(
+      tx,
+      owner,
+      selected.map((record) => record.recordId),
+    );
   }
 };
 
@@ -48,10 +93,10 @@ const canonicalNumberIndex = (
   save: (records) => saveNumbers(tx, owner, records),
   async next(prefix) {
     const [row] = await tx
-      .select({ value: numbers.high_water })
+      .select({ value: numbers.value })
       .from(numbers)
-      .where(and(eq(numbers.workbench_id, owner.workbenchId), eq(numbers.prefix, prefix)))
-      .orderBy(desc(numbers.high_water))
+      .where(and(eq(numbers.project_id, owner.workbenchId), eq(numbers.prefix, prefix), eq(numbers.canonical, true)))
+      .orderBy(desc(numbers.value))
       .limit(1);
     return (row?.value ?? 0) + 1;
   },
@@ -80,10 +125,10 @@ const canonicalNumberIndex = (
       const rows = await tx.execute(sql`SELECT resource_id FROM (
           SELECT i.resource_id, min(i.resource_id COLLATE "C")
             OVER (PARTITION BY i.extension_id, i.kind, i.prefix, i.value) AS first
-          FROM storage_ordered_resource_numbers i
+          FROM resource_numbers i
           INNER JOIN (SELECT DISTINCT extension_id, kind, prefix, value FROM jsonb_to_recordset(${batch}::jsonb)
             AS k(extension_id text, kind text, prefix text, value bigint)) k USING(extension_id, kind, prefix, value)
-          WHERE i.workbench_id = ${owner.workbenchId} AND i.current = true
+          WHERE i.project_id = ${owner.workbenchId} AND i.canonical_current = true
         ) claims WHERE resource_id COLLATE "C" > first`);
       for (const row of rows.rows as { resource_id: string }[]) losers.add(row.resource_id);
     }
@@ -111,8 +156,12 @@ export const resetCanonicalNumberIndex = async (
   records: OrderedRecord[],
 ) => {
   if (owner.extensionId !== coreOwnerId) return;
-  await tx.delete(numbers).where(eq(numbers.workbench_id, owner.workbenchId));
+  await tx
+    .update(numbers)
+    .set({ canonical: false, canonical_current: false })
+    .where(eq(numbers.project_id, owner.workbenchId));
   await saveNumbers(tx, owner, records);
+  await pruneUnusedNumbers(tx, owner);
 };
 
 /** Initial conversion is paged; each batch imports only its genuine retained values. */
@@ -127,7 +176,11 @@ export const indexInitialCanonicalNumbers = async (
 /** Legacy pending creations belong to the queue, not the imported canonical claim set. */
 export const removeInitialCanonicalNumbers = async (tx: OrderedTransaction, owner: StorageOwner, ids: string[]) => {
   if (owner.extensionId !== coreOwnerId || !ids.length) return;
-  await tx.delete(numbers).where(and(eq(numbers.workbench_id, owner.workbenchId), inArray(numbers.resource_id, ids)));
+  await tx
+    .update(numbers)
+    .set({ canonical: false, canonical_current: false })
+    .where(and(eq(numbers.project_id, owner.workbenchId), inArray(numbers.resource_id, ids)));
+  await pruneUnusedNumbers(tx, owner, ids);
 };
 
 /** An impossible pending repair cannot block receiving its earlier canonical competitor. */
@@ -147,11 +200,11 @@ export const canProjectOrderedNumbers = async (
   for (const batch of jsonBatches(keys)) {
     const result =
       await tx.execute(sql`SELECT 1 FROM jsonb_to_recordset(${batch}::jsonb) AS k(extension_id text, kind text, prefix text, value bigint)
-      INNER JOIN storage_ordered_resource_numbers c USING(extension_id,kind,prefix,value)
-      WHERE c.workbench_id=${owner.workbenchId} AND c.current=true
+      INNER JOIN resource_numbers c USING(extension_id,kind,prefix,value)
+      WHERE c.project_id=${owner.workbenchId} AND c.canonical_current=true
       AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(${touched}::jsonb) touched(id) WHERE touched.id=c.resource_id)
-      AND EXISTS (SELECT 1 FROM storage_ordered_resource_numbers floor WHERE floor.workbench_id=c.workbench_id
-        AND floor.prefix=k.prefix AND floor.high_water>=${Number.MAX_SAFE_INTEGER}) LIMIT 1`);
+      AND EXISTS (SELECT 1 FROM resource_numbers floor WHERE floor.project_id=c.project_id
+        AND floor.prefix=k.prefix AND floor.canonical=true AND floor.value>=${Number.MAX_SAFE_INTEGER}) LIMIT 1`);
     if (result.rows.length) return false;
   }
   return true;

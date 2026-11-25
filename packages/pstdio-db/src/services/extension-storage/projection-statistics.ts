@@ -10,11 +10,12 @@ import { analyzeRecordProjection } from "../../db/record-projection-statistics";
  */
 export const createProjectionStatistics = (
   db: Pick<DbClient, "execute" | "transaction">,
-  table: "storage_current_records" | "storage_log_entries" = "storage_current_records",
+  table: "records" | "log_entries" = "records",
 ) => {
   let changed = 0;
   let pending: Promise<void> | undefined;
   const stale = async () => {
+    if (changed <= 50) return false;
     const { rows } = await db.execute<{ rows: number }>(
       sql`SELECT greatest(reltuples, 0) AS rows FROM pg_class WHERE relname = ${table}`,
     );
@@ -23,7 +24,7 @@ export const createProjectionStatistics = (
   const run = async () => {
     while (await stale()) {
       changed = 0;
-      if (table === "storage_current_records") {
+      if (table === "records") {
         await db.transaction((tx) => analyzeRecordProjection((statement) => tx.execute(sql.raw(statement))));
       } else {
         await db.execute(sql`ANALYZE ${sql.identifier(table)}`);

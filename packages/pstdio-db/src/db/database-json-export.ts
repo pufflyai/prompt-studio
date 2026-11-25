@@ -77,8 +77,13 @@ const exportExtensionRecords = async (
     "select to_regclass('public.storage_documents') is not null as present",
   );
   if (!present.rows[0].present) return;
-  const owners = await db.query<{ workbench_id: string; extension_id: string }>(
-    "select distinct workbench_id, extension_id from storage_documents order by 1, 2",
+  const columns = await db.query(
+    "SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='storage_documents' AND column_name='owner_id'",
+  );
+  const owners = await db.query<{ workbench_id: string; extension_id: string; owner_id?: number }>(
+    columns.rows.length
+      ? "SELECT DISTINCT o.project_id AS workbench_id,o.extension_id,o.id AS owner_id FROM storage_documents d JOIN owners o ON d.owner_id=o.id ORDER BY 1,2"
+      : "select distinct workbench_id, extension_id from storage_documents order by 1, 2",
   );
   for (const owner of owners.rows) {
     const part = `extension-records/${owner.workbench_id}/${owner.extension_id}.jsonl`;
@@ -94,15 +99,15 @@ const exportExtensionRecords = async (
 
 type ExportedRecord = Omit<Awaited<ReturnType<typeof readDocumentRecord>>, "revision" | "exists">;
 
-const readDocumentRecords = async (db: ExportDatabase, address: [string, string, string]) => {
-  const state = await db.query<{ state: Uint8Array }>(
-    "select state from storage_documents where workbench_id = $1 and extension_id = $2 and document_id = $3",
-    address,
-  );
+const readDocumentRecords = async (db: ExportDatabase, address: [string, string, string], ownerId?: number) => {
+  const where =
+    ownerId === undefined ? "workbench_id=$1 AND extension_id=$2 AND document_id=$3" : "owner_id=$1 AND document_id=$2";
+  const params = ownerId === undefined ? address : [ownerId, address[2]];
+  const state = await db.query<{ state: Uint8Array }>(`select state from storage_documents where ${where}`, params);
   const updates = await db.query<{ update: Uint8Array }>(
     `select "update" from storage_document_updates
-     where workbench_id = $1 and extension_id = $2 and document_id = $3 order by revision`,
-    address,
+     where ${where} order by revision`,
+    params,
   );
   const document = new Y.Doc();
   try {
@@ -123,20 +128,22 @@ const readDocumentRecords = async (db: ExportDatabase, address: [string, string,
 const exportOwnerRecords = async (
   db: ExportDatabase,
   directory: string,
-  owner: { workbench_id: string; extension_id: string },
+  owner: { workbench_id: string; extension_id: string; owner_id?: number },
   failed: (documentId: string, error: unknown) => void,
 ) => {
   await mkdir(join(directory, owner.workbench_id), { recursive: true });
   const records: ExportedRecord[] = [];
   const documents = await db.query<{ document_id: string }>(
-    "select document_id from storage_documents where workbench_id = $1 and extension_id = $2 order by 1",
-    [owner.workbench_id, owner.extension_id],
+    owner.owner_id === undefined
+      ? "select document_id from storage_documents where workbench_id = $1 and extension_id = $2 order by 1"
+      : "select document_id from storage_documents where owner_id=$1 order by 1",
+    owner.owner_id === undefined ? [owner.workbench_id, owner.extension_id] : [owner.owner_id],
   );
   // One damaged document must not cost the owner's healthy records, so each document reads on its own.
   for (const { document_id } of documents.rows) {
     try {
       const address: [string, string, string] = [owner.workbench_id, owner.extension_id, document_id];
-      for (const record of await readDocumentRecords(db, address)) records.push(record);
+      for (const record of await readDocumentRecords(db, address, owner.owner_id)) records.push(record);
     } catch (error) {
       failed(document_id, error);
     }

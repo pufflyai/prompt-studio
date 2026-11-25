@@ -69,13 +69,13 @@ test("failed multi-extension index installation preserves every previous runtime
     await installExtensionStorageIndexes(service, project.id, runtimeFor(["old-a", "old-b"]));
     const storage = await service.open({ owner: { workbenchId: project.id, extensionId: "example.index-0" } });
     await storage.records.commit({ operationId: "seed", edits: [{ recordId: "one", replace: { title: "Saved" } }] });
-    await db.execute(sql`ALTER TABLE storage_record_indexes ADD CONSTRAINT reject_new_b CHECK (name <> 'new-b')`);
+    await db.execute(sql`ALTER TABLE owners ADD CONSTRAINT reject_new_b CHECK (NOT (record_indexes ? 'new-b'))`);
     await expect(installExtensionStorageIndexes(service, project.id, runtimeFor(["new-a", "new-b"]))).rejects.toThrow();
     expect((await storage.records.query({ index: "old-a" })).records.map((record) => record.recordId)).toEqual(["one"]);
     const other = await service.open({ owner: { workbenchId: project.id, extensionId: "example.index-1" } });
     expect((await other.records.query({ index: "old-b" })).records).toEqual([]);
     await expect(storage.records.query({ index: "new-a" })).rejects.toThrow("not installed");
-    await db.execute(sql`ALTER TABLE storage_record_indexes DROP CONSTRAINT reject_new_b`);
+    await db.execute(sql`ALTER TABLE owners DROP CONSTRAINT reject_new_b`);
     await expect(
       installExtensionStorageIndexes(service, project.id, runtimeFor(["new-a", "new-b"]), () => {
         throw new Error("Candidate generation was superseded");

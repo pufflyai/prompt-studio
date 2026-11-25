@@ -2,8 +2,10 @@ import { expect, test } from "bun:test";
 import { randomBytes } from "node:crypto";
 import { sql } from "drizzle-orm";
 import type { StorageRecordIndex } from "pstdio-sync-contracts";
+import { resource_numbers } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { withOrderedOwner } from "./ordered-journal";
 
 test("maintained counts follow both identity halves, field changes, overlong groups and teardown", async () => {
   const f = await createExtensionStorageFixture();
@@ -42,6 +44,37 @@ test("maintained counts follow both identity halves, field changes, overlong gro
       operationId: "before-index",
       edits: [{ recordId: "1", replace: { id: "a", group: "first" } }],
     });
+    await rows.defineIndexes([
+      definition,
+      { ...definition, name: "reference", countBy: undefined, alternateOrders: undefined },
+    ]);
+    expect(await group()).toBe(0);
+    await withOrderedOwner(f.db, { ...owner, extensionId: "pstdio" }, async (journal) =>
+      journal.saveCanonical([
+        {
+          recordId: "a",
+          value: { value: allocated },
+          deleted: false,
+          lifetime: "initial",
+          stamps: { "": JSON.stringify(["canonical", "local", "a"]) },
+        },
+      ]),
+    );
+    await f.db.insert(resource_numbers).values({
+      project_id: owner.workbenchId,
+      resource_id: "a",
+      shorthand: "T-1",
+      extension_id: owner.extensionId,
+      kind: "thing",
+      prefix: "T",
+      value: 1,
+      current: true,
+      alias: true,
+    });
+    // Backfill and live count triggers must require the core query facet, too.
+    expect((await rows.query({ index: "view" })).records).toEqual([]);
+    expect(await group()).toBe(0);
+    await rows.defineIndexes([]);
     await rows.defineIndexes([
       definition,
       { ...definition, name: "reference", countBy: undefined, alternateOrders: undefined },
