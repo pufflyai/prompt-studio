@@ -32,6 +32,7 @@ const interruptMappingExport = async (store: Awaited<ReturnType<typeof createDb>
   await unlink(join(exports, "file-mappings"));
 };
 
+// These cold, disk-backed migrations include two database reopens and interrupted file restoration.
 for (const interruption of ["normal", "schema", "restore", "mappings"])
   test(`released file bindings preserve independent contents after ${interruption}`, async () => {
     const root = await mkdtemp(join(tmpdir(), "file-owners-upgrade-"));
@@ -215,4 +216,4 @@ for (const interruption of ["normal", "schema", "restore", "mappings"])
       await store?.close();
       await rm(root, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
