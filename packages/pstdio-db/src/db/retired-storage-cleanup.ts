@@ -1,14 +1,18 @@
 import { and, eq, like, type SQL, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
+import { compactStorageTombstones } from "../services/extension-storage/compact-tombstones";
 import { legacyNodeRows } from "../services/extension-storage/index-node-upgrade";
+import { pruneStorageOperations } from "../services/extension-storage/prune-operations";
+import { purgeStorageTombstones } from "../services/extension-storage/purge-tombstones";
+import { storageOwnerKey } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
-import { storage_documents as documents } from "./schemas.pg";
+import { deleteStorageDocuments } from "./delete-storage-documents";
+import { documents } from "./schemas/documents";
 import { invalidateMaintenance, legacyOwnerPrefix } from "./startup-maintenance";
 
 const BATCH_SIZE = 32;
-const key = sql`(${documents.workbench_id}, ${documents.extension_id}, ${documents.document_id})`;
-const address = (row: { workbenchId: string; extensionId: string; documentId: string }) =>
-  sql`(${row.workbenchId}, ${row.extensionId}, ${row.documentId})`;
+const key = sql`(${documents.owner_id}, ${documents.key})`;
+const address = (row: { ownerId: number; documentId: string }) => sql`(${row.ownerId}, ${row.documentId})`;
 
 const removeRows = async (db: DbClient, filter: SQL, stopped: () => boolean, beforeDelete: () => Promise<void>) => {
   let after: SQL | undefined;
@@ -18,18 +22,17 @@ const removeRows = async (db: DbClient, filter: SQL, stopped: () => boolean, bef
     if (stopped()) return false;
     const batch = await db
       .select({
-        workbenchId: documents.workbench_id,
-        extensionId: documents.extension_id,
-        documentId: documents.document_id,
+        ownerId: documents.owner_id,
+        documentId: documents.key,
       })
       .from(documents)
       .where(and(filter, after ? sql`${key} > ${after}` : undefined))
-      .orderBy(documents.workbench_id, documents.extension_id, documents.document_id)
+      .orderBy(documents.owner_id, documents.key)
       .limit(BATCH_SIZE);
     if (!batch.length) return true;
     if (stopped()) return false;
     await beforeDelete();
-    await db.delete(documents).where(sql`${key} IN (${sql.join(batch.map(address), sql`, `)})`);
+    await deleteStorageDocuments(db, sql`${key} IN (${sql.join(batch.map(address), sql`, `)})`);
     after = address(batch.at(-1)!);
   }
   return false;
@@ -47,19 +50,25 @@ export const createRetiredStorageCleanup = (db: DbClient, path: string, owners: 
   return async (stopped: () => boolean) => {
     for (; nextOwner < owners.length; nextOwner++) {
       const owner = owners[nextOwner]!;
-      const filter = and(
-        eq(documents.workbench_id, owner.workbenchId),
-        eq(documents.extension_id, owner.extensionId),
-        like(documents.document_id, legacyNodeRows),
-      )!;
+      const filter = and(eq(documents.owner_id, storageOwnerKey(owner)), like(documents.key, legacyNodeRows))!;
       if (!(await removeRows(db, filter, stopped, beforeDelete))) return;
     }
     if (!historyDone)
       historyDone = await removeRows(
         db,
-        sql`starts_with(${documents.extension_id}, ${legacyOwnerPrefix})`,
+        sql`${documents.owner_id} IN (SELECT id FROM owners WHERE starts_with(extension_id, ${legacyOwnerPrefix}))`,
         stopped,
         beforeDelete,
       );
+  };
+};
+
+export const createStorageCleanup = (db: DbClient, path: string, owners: StorageOwner[], defer: boolean) => {
+  const retiredRows = defer ? createRetiredStorageCleanup(db, path, owners) : async () => {};
+  return async (stopped: () => boolean) => {
+    await retiredRows(stopped);
+    if (!stopped()) await compactStorageTombstones(db, stopped);
+    if (!stopped()) await purgeStorageTombstones(db, stopped);
+    if (!stopped()) await pruneStorageOperations(db, stopped);
   };
 };

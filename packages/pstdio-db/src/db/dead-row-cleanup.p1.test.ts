@@ -1,9 +1,9 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, jest, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
-import { vacuumDeadRows } from "./dead-row-cleanup";
+import { startDeadRowCleanup, vacuumDeadRows } from "./dead-row-cleanup";
 
 // PGlite otherwise publishes table statistics only after the session has been idle for a second.
 const publishStatistics = async (db: PGlite) => {
@@ -60,6 +60,83 @@ describe("dead-row cleanup", () => {
   test("vacuums nothing once stopped", async () => {
     expect(await vacuumDeadRows(db, { stopped: () => true })).toEqual([]);
     expect(await deadRows(db, "rewritten")).toBe(500);
+  });
+
+  test("defers cleanup during request activity and preserves the first full vacuum until quiet", async () => {
+    let quiet = false;
+    const errors: unknown[] = [];
+    jest.useFakeTimers();
+    const stop = startDeadRowCleanup(
+      db,
+      async () => {
+        await db.exec("DELETE FROM settled WHERE id=1");
+      },
+      (error) => errors.push(error),
+      () => quiet,
+    );
+    try {
+      jest.advanceTimersByTime(60_000);
+      expect((await db.query<{ count: number }>("SELECT count(*)::int AS count FROM settled")).rows).toEqual([
+        { count: 500 },
+      ]);
+      expect(await deadRows(db, "rewritten")).toBe(500);
+      quiet = true;
+      jest.advanceTimersByTime(5 * 60_000);
+      jest.useRealTimers();
+      for (let turn = 0; turn < 100; turn++) {
+        await publishStatistics(db);
+        if ((await deadRows(db, "settled")) === 0 && (await deadRows(db, "rewritten")) === 0) break;
+        await Bun.sleep(5);
+      }
+      expect((await db.query<{ count: number }>("SELECT count(*)::int AS count FROM settled")).rows).toEqual([
+        { count: 499 },
+      ]);
+      expect(await deadRows(db, "settled")).toBe(0);
+      expect(await deadRows(db, "rewritten")).toBe(0);
+    } finally {
+      jest.useRealTimers();
+      await stop();
+    }
+    expect(errors).toEqual([]);
+  });
+
+  test("retries a failed first full vacuum for a table below the dead-row threshold", async () => {
+    const exec = db.exec.bind(db);
+    let failed = false;
+    const errors: unknown[] = [];
+    db.exec = async (statement, options) => {
+      if (!failed && statement.startsWith("VACUUM") && statement.endsWith(" settled")) {
+        failed = true;
+        return exec("VACUUM missing_cleanup_relation", options);
+      }
+      return exec(statement, options);
+    };
+    const drain = async () => {
+      for (let turn = 0; turn < 50; turn++) {
+        jest.advanceTimersByTime(0);
+        await db.query("SELECT 1");
+      }
+    };
+    jest.useFakeTimers();
+    const stop = startDeadRowCleanup(
+      db,
+      async () => {},
+      (error) => errors.push(error),
+      () => true,
+    );
+    try {
+      jest.advanceTimersByTime(60_000);
+      await drain();
+      expect(errors).toHaveLength(1);
+      expect(await deadRows(db, "settled")).toBe(10);
+      jest.advanceTimersByTime(5 * 60_000);
+      await drain();
+      expect(await deadRows(db, "settled")).toBe(0);
+    } finally {
+      jest.useRealTimers();
+      await stop();
+      db.exec = exec;
+    }
   });
 });
 

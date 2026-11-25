@@ -1,30 +1,28 @@
-import { bigint, foreignKey, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { bigint, foreignKey, index, integer, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 import type { NativeTextTarget } from "pstdio-api-contracts";
-import { projects } from "./projects";
+import { owners } from "./owners";
 import { bytea } from "./types";
 
 // Host projection targets are local metadata. Shared documents contain only the source CRDT.
 export const native_document_sources = pgTable(
   "native_document_sources",
   {
-    workbench_id: text("workbench_id")
+    owner_id: integer("owner_id")
       .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    extension_id: text("extension_id").notNull(),
+      .references(() => owners.id, { onDelete: "cascade" }),
     document_key: text("document_key").notNull(),
     target: jsonb("target").$type<NativeTextTarget>(),
   },
-  (table) => [primaryKey({ columns: [table.workbench_id, table.extension_id, table.document_key] })],
+  (table) => [primaryKey({ columns: [table.owner_id, table.document_key] })],
 );
 
 // The last projected anchors and any unfinished save belong to this host, never to presence.
 export const native_document_file_projections = pgTable(
   "native_document_file_projections",
   {
-    workbench_id: text("workbench_id")
+    owner_id: integer("owner_id")
       .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    extension_id: text("extension_id").notNull(),
+      .references(() => owners.id, { onDelete: "cascade" }),
     document_key: text("document_key").notNull(),
     projection_key: text("projection_key").notNull().default("handler"),
     baseline: bytea("baseline"),
@@ -34,7 +32,7 @@ export const native_document_file_projections = pgTable(
   (table) => [
     primaryKey({
       name: "native_document_file_projections_pk",
-      columns: [table.workbench_id, table.extension_id, table.document_key, table.projection_key],
+      columns: [table.owner_id, table.document_key, table.projection_key],
     }),
   ],
 );
@@ -45,21 +43,17 @@ export const native_document_rooms = pgTable(
   "native_document_rooms",
   {
     id: text("id").primaryKey(),
-    workbench_id: text("workbench_id").notNull(),
-    extension_id: text("extension_id").notNull(),
+    owner_id: integer("owner_id").notNull(),
     document_key: text("document_key").notNull(),
     state: bytea("state").notNull(),
     revision: bigint("revision", { mode: "number" }).notNull().default(0),
     folded_revision: bigint("folded_revision", { mode: "number" }).notNull().default(0),
   },
   (table) => [
+    index("native_rooms_source").on(table.owner_id, table.document_key),
     foreignKey({
-      columns: [table.workbench_id, table.extension_id, table.document_key],
-      foreignColumns: [
-        native_document_sources.workbench_id,
-        native_document_sources.extension_id,
-        native_document_sources.document_key,
-      ],
+      columns: [table.owner_id, table.document_key],
+      foreignColumns: [native_document_sources.owner_id, native_document_sources.document_key],
     }).onDelete("cascade"),
   ],
 );

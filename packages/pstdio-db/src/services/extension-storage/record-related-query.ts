@@ -23,7 +23,7 @@ export const relatedRecordPredicateSql = (
   index: StorageRecordIndex,
   where: StoragePredicate | undefined,
   indexFor: (name: string) => StorageRecordIndex,
-  rootAlias = "storage_current_records",
+  rootAlias = "records",
 ) => {
   const statement = statementSequence++;
   const compile = (
@@ -97,7 +97,7 @@ export const relatedRecordPredicateSql = (
           parents,
           indexFor,
         );
-        const selected = sql`SELECT 1 FROM storage_current_records AS ${sql.identifier(targetAlias)}
+        const selected = sql`SELECT 1 FROM records AS ${sql.identifier(targetAlias)}
           WHERE ${recordScopeSql(owner, target, targetAlias)} AND ${sql.join(joins, sql` AND `)}
           AND ${candidates ?? sql`true`}
           AND ${compile(target, selection.where, targetAlias, depth + 1, parents, names)}`;

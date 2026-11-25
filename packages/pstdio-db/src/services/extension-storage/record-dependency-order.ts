@@ -3,7 +3,7 @@ import type { StorageRecordIndex, StorageRecordQuery } from "pstdio-sync-contrac
 import { expressionArray } from "./query-expression-values";
 import { projectionKey } from "./record-projection-codec";
 import { pageOrderSql } from "./record-query-page";
-import { type QuerySqlOwner, recordFieldSql, sqlLiteral } from "./record-query-sql";
+import { type QuerySqlOwner, queryOwnerKey, recordFieldSql, sqlLiteral } from "./record-query-sql";
 
 /** The graph is a database working set. Only the selected batch's fields cross the storage boundary. */
 export const dependencyOrderedPageSql = (
@@ -24,7 +24,7 @@ export const dependencyOrderedPageSql = (
       SELECT record_id, ${recordFieldSql(index, graph.idField, undefined, resolve, owner)} AS graph_id,
         ${recordFieldSql(index, graph.dependenciesField, undefined, resolve, owner)} AS refs,
         row_number() OVER (ORDER BY ${pageOrderSql(index, resolve, owner)}) AS priority
-      FROM storage_current_records WHERE ${where}
+      FROM records WHERE ${where}
     ),
     nodes AS MATERIALIZED (
       SELECT candidates.*, min(priority) OVER (PARTITION BY graph_id) AS identity_priority FROM candidates
@@ -76,13 +76,12 @@ export const dependencyOrderedPageSql = (
       ) updates
       WHERE walk.depth < ${limit}
     )
-    SELECT storage_current_records.record_id, revision,
+    SELECT records.record_id, revision,
       jsonb_build_object(${sql.join(selected, sql`, `)}) AS fields, '[]'::jsonb AS sort_values
     FROM (SELECT selected FROM walk ORDER BY depth DESC LIMIT 1) batch
     CROSS JOIN LATERAL unnest(batch.selected) WITH ORDINALITY chosen(priority, position)
     INNER JOIN nodes ON nodes.priority = chosen.priority
-    INNER JOIN storage_current_records ON storage_current_records.record_id = nodes.record_id
-      AND storage_current_records.workbench_id = ${owner.workbenchId}
-      AND storage_current_records.extension_id = ${owner.extensionId}
+    INNER JOIN records ON records.record_id = nodes.record_id
+      AND records.owner_id = ${queryOwnerKey(owner)}
     ORDER BY chosen.position`;
 };

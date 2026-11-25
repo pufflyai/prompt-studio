@@ -1,13 +1,11 @@
 import { and, eq, inArray } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
-import { storage_log_entries as entries, storage_personal_history_positions as positions } from "../../db/schemas.pg";
+import { storage_log_entries as entries, owners } from "../../db/schemas.pg";
+import { logWhere } from "./ordered-log-sql";
 import type { PersonalIndexAccepted, PersonalIndexDelta } from "./personal-history-index";
-import {
-  applyPersonalIndexRows,
-  type PersonalIndexTransaction,
-  personalIndexAddress,
-} from "./personal-history-index-rows";
+import { applyPersonalIndexRows, type PersonalIndexTransaction } from "./personal-history-index-rows";
 import { acceptPersonalSource } from "./personal-history-source";
+import { ensureStorageOwner, storageOwnerWhere } from "./storage-owner-key";
 
 /** A publish can acknowledge the durable append before its optimistic projection runs. */
 export const applyPendingPersonalIndex = async (
@@ -16,12 +14,8 @@ export const applyPendingPersonalIndex = async (
   sourceId: string,
   changes: { delta: PersonalIndexDelta; pendingId: string }[],
 ) => {
-  await tx.insert(positions).values(personalIndexAddress(owner)).onConflictDoNothing();
-  await tx
-    .select()
-    .from(positions)
-    .where(and(eq(positions.workbench_id, owner.workbenchId), eq(positions.extension_id, owner.extensionId)))
-    .for("update");
+  await ensureStorageOwner(tx, owner);
+  await tx.select().from(owners).where(storageOwnerWhere(owner)).for("update");
   const changed: Awaited<ReturnType<typeof applyPersonalIndexRows>> = [];
   for (let offset = 0; offset < changes.length; offset += 100) {
     const page = changes.slice(offset, offset + 100);
@@ -30,11 +24,7 @@ export const applyPendingPersonalIndex = async (
       .from(entries)
       .where(
         and(
-          eq(entries.workbench_id, owner.workbenchId),
-          eq(entries.extension_id, owner.extensionId),
-          eq(entries.log_name, "index"),
-          eq(entries.scope, "project"),
-          eq(entries.stream, sourceId),
+          logWhere(entries, { owner, name: "index", scope: "project", stream: sourceId, writerId: sourceId }),
           eq(entries.local, true),
           inArray(
             entries.entry_id,

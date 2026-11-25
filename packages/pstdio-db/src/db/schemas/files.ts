@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { bigint, index, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { isoTimestamp } from "./iso-timestamp";
 import { projects } from "./projects";
 
 export const files = pgTable(
@@ -18,8 +19,8 @@ export const files = pgTable(
     mime_type: text("mime_type"),
     size_bytes: bigint("size_bytes", { mode: "number" }).notNull(),
     hash: text("hash"),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
+    created_at: isoTimestamp("created_at").notNull(),
+    updated_at: isoTimestamp("updated_at").notNull(),
   },
   (table) => [
     index("files_owner_scope_idx").on(table.project_id, table.owner, table.scope),

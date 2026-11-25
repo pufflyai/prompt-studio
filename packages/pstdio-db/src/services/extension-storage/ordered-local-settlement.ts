@@ -1,7 +1,13 @@
 import type { StorageOwner } from "pstdio-sync";
-import { applyOrderedNativeOperation, operationDependencies } from "pstdio-sync/records";
-import { fingerprint, type Json } from "pstdio-sync-contracts";
-import { storage_ordered_owners as owners } from "../../db/schemas.pg";
+import {
+  applyOrderedNativeOperation,
+  type OrderedAdmission,
+  type OrderedDecision,
+  type OrderedOperation,
+  operationDependencies,
+} from "pstdio-sync/records";
+import { owners } from "../../db/schemas.pg";
+import type { createOrderedCanonicalBatch } from "./ordered-canonical-batch";
 import type { OrderedJournal } from "./ordered-journal";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
 import { applyOrderedNumberPolicy } from "./ordered-number-admission";
@@ -10,38 +16,83 @@ import { applyBoundedOrderedOperation } from "./ordered-policy";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
 
+type CanonicalBatch = ReturnType<typeof createOrderedCanonicalBatch>;
+export type OrderedLocalSettlement = {
+  ownerState: Pick<typeof owners.$inferSelect, "epoch" | "joined">;
+  queued: Awaited<ReturnType<OrderedJournal["queue"]>>;
+};
+
+const settlementJournal = async (
+  journal: OrderedJournal,
+  batch: CanonicalBatch | undefined,
+  operation: OrderedOperation,
+  native: boolean,
+) => {
+  if (!batch) return journal;
+  if (!native && !operation.edits.some((edit) => edit.texts?.length)) return batch.journal;
+  await batch.flush();
+  return journal;
+};
+
+const localDependencies = async (journal: OrderedJournal, operation: OrderedOperation) => {
+  const decisions = new Map<string, OrderedDecision>();
+  const dependencies = [];
+  for (const [operationId, identity] of operationDependencies(operation)) {
+    const decision = await journal.knownDependency(operationId);
+    if (!decision || decision.fingerprint !== identity) return;
+    decisions.set(operationId, decision);
+    dependencies.push({ operationId, fingerprint: identity, epoch: decision.epoch });
+  }
+  return { decisions, dependencies };
+};
+
+const recordLocalDecision = async (
+  journal: OrderedJournal,
+  admission: OrderedAdmission,
+  decision: OrderedDecision,
+  identity?: string,
+) => {
+  if (!identity && decision.state === "accepted" && (await journal.settleFreshLocalAdmission(admission, decision)))
+    return;
+  await journal.recordDecision(decision, identity ?? (await journal.admit(admission)));
+};
+
 /** Never-joined devices own their order. Joining Cloud permanently ends local settlement. */
 export const settleLocalOrderedSaves = async (
   journal: OrderedJournal,
   tx: OrderedTransaction,
   owner: StorageOwner,
   selected?: Awaited<ReturnType<OrderedJournal["pending"]>>,
+  canonical?: CanonicalBatch,
+  authored?: OrderedLocalSettlement,
 ) => {
-  const row = await readOrderedOwner(tx, owner);
-  if (await orderedOwnerJoinedCloud(tx, owner, row)) return [];
+  const row = authored?.ownerState ?? (await readOrderedOwner(tx, owner));
+  if (orderedOwnerJoinedCloud(row)) return;
   const epoch = row.epoch ?? `local:${crypto.randomUUID()}`;
   if (!row.epoch) await tx.update(owners).set({ epoch }).where(orderedOwnerWhere(owners, owner));
   const changed = new Set<string>();
-  for await (const { operation, requestFingerprint } of selected ?? pendingOrderedOperations(journal)) {
-    const decisions = new Map();
-    const dependencies = [];
-    for (const [operationId, identity] of operationDependencies(operation)) {
-      const decision = await journal.knownDependency(operationId);
-      if (!decision || decision.fingerprint !== identity) continue;
-      decisions.set(operationId, decision);
-      dependencies.push({ operationId, fingerprint: identity, epoch: decision.epoch });
-    }
+  let pending = false;
+  const operations = authored ? [authored.queued] : (selected ?? pendingOrderedOperations(journal));
+  for await (const { operation, requestFingerprint } of operations) {
+    const resolved = await localDependencies(journal, operation);
     // A foreign editor source can carry an unknown Cloud parent; local authority cannot decide it.
-    if (dependencies.length !== operationDependencies(operation).size) continue;
+    if (!resolved) {
+      pending = true;
+      continue;
+    }
+    const { decisions, dependencies } = resolved;
     const ids = operation.edits.map((edit) => edit.recordId);
-    const before = await journal.canonical(ids);
-    if (isOrderedNativeRequest(requestFingerprint)) {
+    const native = isOrderedNativeRequest(requestFingerprint);
+    const writes = await settlementJournal(journal, canonical, operation, native);
+    const before = await writes.canonical(ids, canonical?.previous);
+    if (native) {
       const result = await applyOrderedNativeOperation(before, operation, epoch, decisions);
-      await journal.saveCanonical(result.records);
+      await writes.saveCanonical(result.records);
       await journal.completeNative(operation, result.state);
     } else {
       const admission = { epoch, operation, dependencies };
-      await journal.admit(admission);
+      const plainAuthored = authored && !operation.edits.some((edit) => edit.texts?.length);
+      const identity = plainAuthored ? undefined : await journal.admit(admission);
       const result = await applyOrderedNumberPolicy(
         tx,
         owner,
@@ -50,12 +101,11 @@ export const settleLocalOrderedSaves = async (
         await applyBoundedOrderedOperation(before, operation, epoch, undefined, decisions),
         false,
       );
-      await journal.saveCanonical(result.records);
-      await journal.recordDecision(result.decision, await fingerprint(admission as unknown as Json));
-      await journal.dropSettledEnvelope(operation.operationId);
+      await writes.saveCanonical(result.records);
+      await recordLocalDecision(journal, admission, result.decision, identity);
       for (const record of result.records) changed.add(record.recordId);
     }
     for (const id of ids) changed.add(id);
   }
-  return [...changed];
+  return { changed, pending };
 };

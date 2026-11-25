@@ -19,14 +19,17 @@ const entry = (path: string, revision: string) => ({
 
 test("point and full reconciliation share persisted path projection facts", async () => {
   const f = await fixture();
-  const projection = f.projections.open("owner-root");
+  const projection = f.projections.open("owner-root", { workbenchId: f.projectAId, extensionId: "ext.example" });
   expect(await projection.read(["notes/one.md"])).toEqual({ initialized: false, state: {} });
   await projection.write({
     "notes/one.md": entry("notes/one.md", "first"),
     "notes/two.md": entry("notes/two.md", "second"),
   });
   await projection.write({ "notes/one.md": entry("notes/one.md", "updated") });
-  const reopened = createExtensionStorageDBService(f.db).fileProjections.open("owner-root");
+  const reopened = createExtensionStorageDBService(f.db).fileProjections.open("owner-root", {
+    workbenchId: f.projectAId,
+    extensionId: "ext.example",
+  });
   expect(await reopened.read(["notes/one.md"])).toEqual({
     initialized: true,
     state: { "notes/one.md": entry("notes/one.md", "updated") },
@@ -38,12 +41,14 @@ test("point and full reconciliation share persisted path projection facts", asyn
       "notes/two.md": entry("notes/two.md", "second"),
     },
   });
-  expect(await f.projections.open("another-root").read()).toEqual({ initialized: false, state: {} });
+  expect(
+    await f.projections.open("another-root", { workbenchId: f.projectAId, extensionId: "ext.example" }).read(),
+  ).toEqual({ initialized: false, state: {} });
 });
 
 test("an existing indexed root wins when a legacy import is retried after interrupted cleanup", async () => {
   const f = await fixture();
-  const projection = f.projections.open("owner-root");
+  const projection = f.projections.open("owner-root", { workbenchId: f.projectAId, extensionId: "ext.example" });
   expect(await projection.initialize({ "notes/one.md": entry("notes/one.md", "old") })).toBe(true);
   await projection.write({ "notes/one.md": entry("notes/one.md", "new") });
   expect(await projection.initialize({ "notes/one.md": entry("notes/one.md", "old") })).toBe(false);

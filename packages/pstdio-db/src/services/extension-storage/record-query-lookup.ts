@@ -42,7 +42,7 @@ export const recordLookupSql = (
       match = sql`EXISTS (SELECT 1 FROM jsonb_array_elements(${expressionArray(right)}) AS lookup_member(value) WHERE ${expressionComparable(sql`lookup_member.value`)} = ${expressionComparable(left)})`;
     return sql`${left} IS NOT NULL AND ${left} <> 'null'::jsonb AND ${right} IS NOT NULL AND ${right} <> 'null'::jsonb AND ${match}`;
   });
-  return sql`(SELECT ${read(target, lookup.field, targetAlias)} FROM storage_current_records AS ${sql.identifier(targetAlias)}
+  return sql`(SELECT ${read(target, lookup.field, targetAlias)} FROM records AS ${sql.identifier(targetAlias)}
     WHERE ${scope(target, targetAlias)} AND ${sql.join(matches, sql` AND `)}
     ORDER BY ${sql.identifier(targetAlias)}.record_id COLLATE "C" LIMIT 1)`;
 };

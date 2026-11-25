@@ -136,7 +136,7 @@ test("maintenance collects new index statistics together after admission without
   const analyzeCount = async () => {
     await f.db.execute(sql`SELECT pg_stat_force_next_flush()`);
     const { rows } = await f.db.execute<{ analyze_count: string }>(
-      sql`SELECT analyze_count FROM pg_stat_user_tables WHERE relname = 'storage_current_records'`,
+      sql`SELECT analyze_count FROM pg_stat_user_tables WHERE relname = 'records'`,
     );
     return Number(rows[0].analyze_count);
   };

@@ -1,5 +1,6 @@
+import { and, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
-import { storage_current_records as current } from "../../db/schemas.pg";
+import { records as current } from "../../db/schemas.pg";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 
 /** Small checkpoints retain exact invalidation scope without loading record values or an unbounded index. */
@@ -7,7 +8,7 @@ export const captureProjectedRecordChanges = async (tx: OrderedTransaction, owne
   const rows = await tx
     .select({ id: current.record_id, revision: current.revision })
     .from(current)
-    .where(orderedOwnerWhere(current, owner))
+    .where(and(orderedOwnerWhere(current, owner), sql`${current.revision} IS NOT NULL`))
     .limit(129);
   const before = new Map(rows.map((row) => [row.id, row.revision]));
   return (records: readonly { recordId: string; revision: string }[]) => {

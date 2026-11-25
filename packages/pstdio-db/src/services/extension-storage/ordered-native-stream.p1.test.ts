@@ -8,13 +8,10 @@ import {
 } from "pstdio-sync/relay";
 import * as Y from "yjs";
 import { createDb } from "../../db/connection.pglite";
-import {
-  native_document_rooms,
-  projects,
-  storage_ordered_operations,
-  storage_ordered_receipts,
-} from "../../db/schemas.pg";
+import { projects, storage_ordered_operations } from "../../db/schemas.pg";
+import { readNativeRoomHistory } from "./document-history.fixture";
 import { createDocumentStorageDBService } from "./document-storage";
+import { readOperationReceipts } from "./operation-facts.fixture";
 import { createRelay } from "./record-stream-relay.fixture";
 
 const cleanup: (() => Promise<unknown>)[] = [];
@@ -126,7 +123,7 @@ test("refused multi-record text saves retain each private history without crossi
     expect((await device.records.read("card:one")).value).toEqual({ body: "first base", model: "remote" });
     expect((await device.records.read("card:two")).value).toEqual({ body: "second base" });
   }
-  const retained = await first.db.select().from(native_document_rooms);
+  const retained = await readNativeRoomHistory(first.db);
   for (const [key, text] of [
     [firstKey, "FIRST private first base"],
     [secondKey, "SECOND private second base"],
@@ -158,14 +155,14 @@ test("native typing uses idempotent text frames without permanent operation rece
   await first.records.bindText({ recordId: "card:one", field: "/body", documentKey: key });
   await first.sync.synchronize();
   await second.sync.synchronize();
-  const receipts = (await first.db.select().from(storage_ordered_receipts)).length;
+  const receipts = (await readOperationReceipts(first.db)).length;
   const before = f.relay.updates().length;
   const native = first.native(key);
   for (let index = 0; index < 12; index++) await type(native, ".");
   await first.sync.synchronize();
   await second.sync.synchronize();
   expect(await second.native(key).read()).toBe(`base${".".repeat(12)}`);
-  expect((await first.db.select().from(storage_ordered_receipts)).length).toBe(receipts);
+  expect((await readOperationReceipts(first.db)).length).toBe(receipts);
   const frames = [];
   for (const update of f.relay.updates().slice(before))
     for (const record of decodeRecordFrame(await openUpdate(f.space, f.documentId, update)).records)
@@ -188,7 +185,7 @@ test("pending native typing and conditional public text saves keep their authore
   await first.records.bindText({ recordId: "card:one", field: "/body", documentKey: key });
   await first.sync.synchronize();
   await second.sync.synchronize();
-  const initial = (await first.db.select().from(storage_ordered_receipts)).length;
+  const initial = (await readOperationReceipts(first.db)).length;
   const before = f.relay.updates().length;
   await type(first.native(key), "A");
   const observed = await first.records.read("card:one");
@@ -207,7 +204,7 @@ test("pending native typing and conditional public text saves keep their authore
   await second.sync.synchronize();
   expect(await second.native(key).read()).toBe("baseAGZ");
   expect((await first.records.outcome("guarded"))?.state).toBe("synced");
-  expect((await first.db.select().from(storage_ordered_receipts)).length).toBe(initial + 1);
+  expect((await readOperationReceipts(first.db)).length).toBe(initial + 1);
   const entries = [];
   for (const update of f.relay.updates().slice(before))
     for (const record of decodeRecordFrame(await openUpdate(f.space, f.documentId, update)).records)
@@ -249,12 +246,12 @@ test("lost native acknowledgement and later duplicate structs do not create rece
   await second.sync.synchronize();
   await first.restart().synchronize();
   const observed = await first.records.read("card:one");
-  const receiptCount = (await first.db.select().from(storage_ordered_receipts)).length;
+  const receiptCount = (await readOperationReceipts(first.db)).length;
   await f.relay.relay.update({ ...nativeFrame, blobIds: [] });
   await first.restart().synchronize();
   expect(await first.native(key).read()).toBe("baseAG");
   expect((await first.records.read("card:one")).revision).toBe(observed.revision);
-  expect((await first.db.select().from(storage_ordered_receipts)).length).toBe(receiptCount);
+  expect((await readOperationReceipts(first.db)).length).toBe(receiptCount);
 });
 
 test("a founding native prefix survives crash after CAS through idempotent replay without keystroke receipts", async () => {
@@ -280,7 +277,7 @@ test("a founding native prefix survives crash after CAS through idempotent repla
   const second = await f.device();
   await second.sync.synchronize();
   expect(await second.native(key).read()).toBe("baseA");
-  expect((await first.db.select().from(storage_ordered_receipts)).length).toBe(2);
+  expect((await readOperationReceipts(first.db)).length).toBe(2);
   expect(
     (await first.db.select().from(storage_ordered_operations)).some((row) =>
       row.request_fingerprint?.startsWith("native-text:"),
@@ -323,13 +320,13 @@ test("native typing that observed a refused group stays private and creates no d
   for (const peer of [first, second])
     expect((await peer.records.read("card:one")).value).toEqual({ body: "base", model: "remote" });
   expect((await first.records.outcome("careful"))?.state).toBe("refused");
-  expect((await first.db.select().from(storage_ordered_receipts)).length).toBe(4);
+  expect((await readOperationReceipts(first.db)).length).toBe(4);
   expect(
     (await first.db.select().from(storage_ordered_operations)).some((row) =>
       row.request_fingerprint?.startsWith("native-text:"),
     ),
   ).toBe(false);
-  const retained = await first.db.select().from(native_document_rooms);
+  const retained = await readNativeRoomHistory(first.db);
   expect(
     retained.some((room) => {
       const document = new Y.Doc();

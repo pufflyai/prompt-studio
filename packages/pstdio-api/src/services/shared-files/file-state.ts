@@ -31,7 +31,8 @@ export const fileProjection = (
   projections: ReturnType<typeof createExtensionStorageDBService>["fileProjections"],
 ) => {
   const address = projectionAddress(key);
-  const indexed = projections.open(address.key);
+  const [owner] = JSON.parse(key) as [StorageOwner, string];
+  const indexed = projections.open(address.key, owner);
   const read = async (paths?: string[], descendantsOf?: string) => {
     const result = await indexed.read(paths, descendantsOf);
     if (!result.initialized && (await Bun.file(address.path).exists()))

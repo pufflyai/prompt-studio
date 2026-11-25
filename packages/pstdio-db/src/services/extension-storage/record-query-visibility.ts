@@ -9,7 +9,7 @@ import { recordFieldSql, recordScopeSql } from "./record-query-sql";
  * Reuse their eligibility for ordinary pages and canonical filtered aggregates too.
  */
 export const recordVisibilitySql = async (
-  owner: StorageOwner,
+  owner: StorageOwner & { ownerId?: number },
   index: StorageRecordIndex,
   declared: StorageRecordIndex,
   physicalName: string | undefined,
