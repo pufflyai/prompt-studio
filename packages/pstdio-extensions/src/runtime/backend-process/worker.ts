@@ -78,6 +78,41 @@ export const describeBackendDefinition = (definition: unknown) => {
 
 const send = (message: WorkerToHostMessage) => process.send?.(message);
 
+const createHostCall =
+  ({
+    tableFor,
+    request,
+    within,
+    dispose,
+  }: {
+    tableFor: (invocationId: string) => ReturnType<typeof createFunctionTable> | undefined;
+    request: (invocationId: string, message: (requestId: string) => WorkerToHostMessage) => Promise<unknown>;
+    within: (invocationId: string) => { within?: string };
+    dispose: (invocationId: string) => void;
+  }) =>
+  async (invocationId: string, fnId: string, args: unknown[], keepAbortListener?: boolean) => {
+    const table = tableFor(invocationId);
+    if (!table) throw new Error("This invocation has finished.");
+    const { value, kept } = await table.exportResult(args, keepAbortListener);
+    try {
+      return await request(invocationId, (requestId) => ({
+        v: BACKEND_PROTOCOL_VERSION,
+        type: "fn-call",
+        invocationId,
+        requestId,
+        fnId,
+        args: value as unknown[],
+        ...within(invocationId),
+      }));
+    } catch (error) {
+      if (keepAbortListener) {
+        table.release(kept);
+        dispose(invocationId);
+      }
+      throw error;
+    }
+  };
+
 /**
  * Runs in the private worker process: no API, no host database connection and no host environment
  * secrets. It still runs as the user's OS account, so it is not a filesystem sandbox (ADR 0058).
@@ -122,7 +157,6 @@ export const runBackendWorker = () => {
   };
 
   /** Sends a request to the host and resolves with its reply, importing any host functions in it. */
-  // Recursive with callHost, so TypeScript needs the return types spelled out.
   const request = async (invocationId: string, message: (requestId: string) => WorkerToHostMessage) => {
     const entry = invocations.get(invocationId);
     if (!entry) throw new BackendUnavailableError("The invocation has finished.");
@@ -139,33 +173,7 @@ export const runBackendWorker = () => {
     }
   };
 
-  const callHost = async (
-    invocationId: string,
-    fnId: string,
-    args: unknown[],
-    keepAbortListener?: boolean,
-  ): Promise<unknown> => {
-    const table = invocations.get(invocationId)?.table;
-    if (!table) throw new Error("This invocation has finished.");
-    const { value, kept } = await table.exportResult(args, keepAbortListener);
-    try {
-      return await request(invocationId, (requestId) => ({
-        v: BACKEND_PROTOCOL_VERSION,
-        type: "fn-call",
-        invocationId,
-        requestId,
-        fnId,
-        args: value as unknown[],
-        ...within(invocationId),
-      }));
-    } catch (error) {
-      if (keepAbortListener) {
-        table.release(kept);
-        dispose(invocationId);
-      }
-      throw error;
-    }
-  };
+  const callHost = createHostCall({ tableFor: (id) => invocations.get(id)?.table, request, within, dispose });
 
   const answerHost = async (message: Extract<HostToWorkerMessage, { type: "fn-call" }>) => {
     const { invocationId, requestId } = message;
