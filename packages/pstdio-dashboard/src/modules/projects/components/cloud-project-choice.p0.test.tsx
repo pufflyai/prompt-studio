@@ -561,9 +561,9 @@ test.each(copyStates)("two views check the current device state before downloadi
       await act(async () => {
         device.presence = "cloud-only";
         device.catalogUnavailable = true;
+        owner.getWriter("projects")!.remove(id);
         releaseRemoval.resolve();
         await result!;
-        owner.getWriter("projects")!.remove(id);
         await until(
           () =>
             fixture.choice.entry?.presence === "cloud-only" &&
