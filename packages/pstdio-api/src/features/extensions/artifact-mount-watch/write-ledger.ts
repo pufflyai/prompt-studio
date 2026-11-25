@@ -85,9 +85,16 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     }
   };
 
-  const matchesAncestorDeletion = (path: string) => {
+  // An earlier tree deletion cannot explain the disappearance of a newer mount write.
+  const matchesAncestorDeletion = (path: string, latestWriteOrder = 0) => {
     for (const [recordedPath, recorded] of entries) {
-      if (!recorded.state && isInside(path, recordedPath) && !recorded.reappeared?.has(path)) return true;
+      if (
+        !recorded.state &&
+        recorded.order >= latestWriteOrder &&
+        isInside(path, recordedPath) &&
+        !recorded.reappeared?.has(path)
+      )
+        return true;
     }
     return false;
   };
@@ -111,7 +118,22 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
       return true;
     }
     if (entry?.state && keepMatchedWrites) consumed.add(path);
-    return matchesCreatedDirectory(path, current, keepMatchedWrites) || (!current && matchesAncestorDeletion(path));
+    return (
+      matchesCreatedDirectory(path, current, keepMatchedWrites) ||
+      (!current && matchesAncestorDeletion(path, entry?.order))
+    );
+  };
+
+  const recordCreatedDirectory = (folder: string, identity: string, recordedAt: number) => {
+    const observed = readArtifactFileState(folder);
+    if (!observed?.directory || observed.identity !== identity) return;
+    directories.set(folder, { observed, recordedAt });
+    // Creation proves reappearance even if the watcher arrives only after an outside removal.
+    for (const [deletedPath, entry] of entries) {
+      if (entry.state === null && (folder === deletedPath || isInside(folder, deletedPath))) {
+        markReappearedPaths(entry, [[folder, observed]]);
+      }
+    }
   };
 
   const record: ArtifactMountWriteObserver = (path, createdDirectories, parentWrites) => {
@@ -120,10 +142,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     const state = readArtifactFileState(path);
     entries.set(path, { recordedAt, order: ++writeOrder, state });
     if (!state) directories.delete(path);
-    for (const [folder, identity] of createdDirectories ?? []) {
-      const observed = readArtifactFileState(folder);
-      if (observed?.directory && observed.identity === identity) directories.set(folder, { observed, recordedAt });
-    }
+    for (const [folder, identity] of createdDirectories ?? []) recordCreatedDirectory(folder, identity, recordedAt);
     for (const { path: parentPath, before, after } of parentWrites ?? []) {
       const directory = directories.get(parentPath);
       if (directory && before && after?.identity === before.identity && sameState(directory.observed, before)) {

@@ -278,6 +278,34 @@ describe("artifact mount deletions and expiry", () => {
 });
 
 describe("artifact mount restored folder batches", () => {
+  test.each([
+    "sales",
+    "sales/archive",
+  ])("reports an outside removal of a directory created after deleting %s", async (deletedPath) => {
+    const ledger = createArtifactMountWriteLedger(() => 0);
+    const { mount, root } = createMount(ledger);
+    await mount.writeText("sales/archive/old.json", "{}");
+    await mount.delete(deletedPath);
+    await mount.writeText("sales/archive/new.json", "[]");
+    const folder = join(root, "sales", "archive");
+    rmSync(folder, { recursive: true });
+
+    expect(ledger.dropEchoes([folder], { keepMatchedWrites: true })).toEqual([folder]);
+  });
+
+  test("reports an outside deletion of a file written after an owned folder restore", async () => {
+    const ledger = createArtifactMountWriteLedger(() => 0);
+    const { mount, root } = createMount(ledger);
+    const options = { keepMatchedWrites: true };
+    await mount.writeText("sales/old.json", "{}");
+    await mount.delete("sales");
+    await mount.writeText("sales/new.json", "[]");
+    const child = join(root, "sales", "new.json");
+    rmSync(child);
+
+    expect(ledger.dropEchoes([child], options)).toEqual([child]);
+  });
+
   test("a replacement folder hint retires returned child deletions and keeps missing sibling echoes", async () => {
     const ledger = createArtifactMountWriteLedger(() => 0);
     const { mount, root } = createMount(ledger);
