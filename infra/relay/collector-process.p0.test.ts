@@ -80,7 +80,13 @@ test("relay remains available when its optional collector exits", async () => {
 test("relay shutdown also stops and reaps its running collector", async () => {
   await exercise(
     true,
-    'process.once("SIGTERM",async()=>{await Bun.write(stopped,"stopped");process.exit(0)});setInterval(()=>{},1000);await Bun.write(marker,"started");',
+    `process.once("SIGTERM", async () => {
+      await Bun.sleep(100);
+      await Bun.write(stopped, "stopped");
+      process.exit(0);
+    });
+    setInterval(() => {}, 1000);
+    await Bun.write(marker, "started");`,
     async ({ url, directory, stop }) => {
       expect(await (await fetch(url)).text()).toBe("relay-ready");
       expect(await stop()).toBe(0);
