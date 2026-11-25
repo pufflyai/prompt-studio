@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdir, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, symlink, utimes, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { createArtifactMountWriteLedger } from "../../features/extensions/artifact-mount-watch/write-ledger";
 import { artifactFilesFixture } from "./artifact-files.fixture";
@@ -186,4 +186,26 @@ test("a folder return retires shared mount child deletions that were not individ
   expect(ledger.dropEchoes([folder], options)).toEqual([folder]);
   await rm(child);
   expect(ledger.dropEchoes([child], options)).toEqual([child]);
+});
+
+test.each([
+  true,
+  false,
+])("an edited mount-owned folder preserves old deletion echoes (folder first: %s)", async (folderFirst) => {
+  const f = await fixture();
+  const ledger = createArtifactMountWriteLedger(() => 0);
+  const mount = createSharedArtifactMount(f.deps, { ...f.input, onWrite: ledger.record });
+  const folder = f.pathFor("documents/sales");
+  const oldChild = join(folder, "old.json");
+  const options = { keepMatchedWrites: true };
+  await mount.writeText("sales/old.json", "{}");
+  await mount.delete("sales");
+  await mount.writeText("sales/new.json", "[]");
+  await writeFile(join(folder, "external.json"), "{}");
+  await utimes(folder, new Date(), new Date(Date.now() + 5_000));
+
+  expect(ledger.dropEchoes([oldChild], options)).toEqual([]);
+  const paths = folderFirst ? [folder, oldChild] : [oldChild, folder];
+  expect(ledger.dropEchoes(paths, options)).toEqual([folder]);
+  expect(ledger.dropEchoes([oldChild], options)).toEqual([]);
 });
