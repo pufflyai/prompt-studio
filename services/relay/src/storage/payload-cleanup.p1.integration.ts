@@ -76,7 +76,7 @@ test("provider deletion failures retain retry rows and exclusion while independe
           await releaseHeld.promise;
         }
         if (url.pathname.endsWith(`/${failing}`) && partial) {
-          await heldStarted.promise;
+          await Promise.race([heldStarted.promise, releaseHeld.promise]);
           partial = false;
           return new Response(
             "<Error><Code>InternalError</Code><Message>Controlled partial deletion</Message></Error>",
