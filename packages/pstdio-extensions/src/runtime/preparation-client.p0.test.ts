@@ -1060,6 +1060,7 @@ test.each([
 ] as const)("a continuation that waits on the job it interrupted lets it run (%s)", async (mode) => {
   const client = fixture({ workers: 2 });
   const blocked = gate();
+  const predecessorStarted = Promise.withResolvers<void>();
   const busy = gate();
   const competingStep = mode === "released-foreground-loan" ? gate() : undefined;
   const work: Promise<unknown>[] = [];
@@ -1067,11 +1068,12 @@ test.each([
     work.push(promise.catch(() => undefined));
     return promise;
   };
+  const input = { name: "predecessor", url: blocked.url };
   let lost = 0;
   const unsubscribe = client.subscribe((event) => {
     if (event.kind === "worker-lost") lost++;
+    if (event.entered === input.name) predecessorStarted.resolve();
   });
-  const input = { name: "predecessor", url: blocked.url };
   const options = { priority: "background", resources: ["/same"] } as const;
   const restart = restartOf(client, input.name);
   let predecessor: ReturnType<typeof createPreparationScope> | undefined;
@@ -1087,7 +1089,8 @@ test.each([
       { priority: "restoration" },
     ),
   );
-  await blocked.entered.promise;
+  // The HTTP request can arrive before the worker event. Count the first entry before retiring it.
+  await Promise.all([blocked.entered.promise, predecessorStarted.promise]);
   const edit = track(
     client.withContinuation(async () => {
       await client.run("value", { name: "urgent-step" }, { resources: ["/same"] });
