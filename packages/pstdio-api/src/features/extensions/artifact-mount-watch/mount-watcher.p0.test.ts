@@ -67,6 +67,64 @@ const startWatch = async (
   return { changes, mount: createArtifactMount({ ...location, onWrite: ledger.record }), root };
 };
 
+test("one watcher cannot suppress another watcher's folder-only notification", async () => {
+  const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-independent-mount-watches-"));
+  const location = { repoRoot, extensionId: "pstdio.dashboards", mountPath: "boards" };
+  const root = resolveArtifactMountRoot(location);
+  const ledger = createArtifactMountWriteLedger();
+  const mount = createArtifactMount({ ...location, onWrite: ledger.record });
+  await mount.writeText("sales/first.json", "{}");
+
+  const openWatch = () => {
+    const changes: string[][] = [];
+    let tree = (_event: string, _path: string) => {};
+    let flat = (_event: string, _path: string) => {};
+    const watch = watchArtifactMount({
+      root,
+      ledger,
+      onChange: (paths) => changes.push(paths),
+      onError: (error) => {
+        throw error;
+      },
+      onFolderLimit: () => {},
+      watch: (path, listener) => {
+        if (path === root) tree = listener;
+        return { close: () => {} };
+      },
+      watchRoot: (_path, listener) => {
+        flat = listener;
+        return { close: () => {} };
+      },
+    });
+    return {
+      changes,
+      tree: (event: string, path: string) => tree(event, path),
+      flat: (event: string, path: string) => flat(event, path),
+      close: watch.close,
+    };
+  };
+  const relay = openWatch();
+  const view = openWatch();
+  cleanups.push(() => {
+    relay.close();
+    view.close();
+    rmSync(repoRoot, { recursive: true, force: true });
+  });
+
+  writeFileSync(join(root, "sales", "first.json"), "external");
+  relay.tree("change", "sales/first.json");
+  await waitFor(() => relay.changes.length === 1);
+  expect(relay.changes).toEqual([["sales/first.json"]]);
+
+  view.flat("rename", "sales");
+  await waitFor(() => view.changes.length === 1);
+  expect(view.changes).toEqual([["sales"]]);
+
+  relay.flat("rename", "sales");
+  await Bun.sleep(1_050);
+  expect(relay.changes).toEqual([["sales/first.json"]]);
+});
+
 describe("watchArtifactMount", () => {
   test.each(["darwin", "linux", "win32"] as const)("uses the default root watch policy for %s", async (platform) => {
     const nativeWatch = fs.watch;

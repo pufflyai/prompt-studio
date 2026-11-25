@@ -16,11 +16,17 @@ type LedgerEntry = {
   returnedSubtrees?: Set<string>;
 };
 
+type RecordedChild = { state: FileState };
+
 type OwnedDirectory = {
   recordedAt: number;
   observed: NonNullable<FileState>;
-  children: Map<string, NonNullable<FileState>>;
+  children: Map<string, RecordedChild>;
 };
+
+type ReportedChild = { forWrite: RecordedChild | undefined; state: FileState };
+type ReportedChildren = WeakMap<OwnedDirectory, Map<string, ReportedChild>>;
+type EchoOptions = { keepMatchedWrites?: boolean };
 
 const sameState = (recorded: FileState, current: FileState) =>
   recorded === null || current === null
@@ -32,12 +38,42 @@ const sameState = (recorded: FileState, current: FileState) =>
 
 const isInside = (path: string, folder: string) => path.startsWith(folder + sep);
 
+const recordReportedChild = (
+  reported: ReportedChildren,
+  directories: ReadonlyMap<string, OwnedDirectory>,
+  path: string,
+  state: FileState,
+) => {
+  const parent = directories.get(dirname(path));
+  if (!parent) return;
+  const name = basename(path);
+  const children = reported.get(parent) ?? new Map();
+  children.set(name, { forWrite: parent.children.get(name), state });
+  reported.set(parent, children);
+};
+
+const expectedChildren = (directory: OwnedDirectory, reported: ReportedChildren) => {
+  const expected = new Map<string, NonNullable<FileState>>();
+  for (const [name, child] of directory.children) {
+    if (child.state) expected.set(name, child.state);
+  }
+  for (const [name, child] of reported.get(directory) ?? []) {
+    // A later owned operation replaces the proof that this reported observation depended on.
+    if (directory.children.get(name) !== child.forWrite) continue;
+    if (child.state) expected.set(name, child.state);
+    else expected.delete(name);
+  }
+  return expected;
+};
+
 const matchesOwnedChildren = (
   path: string,
-  expected: OwnedDirectory["children"],
+  directory: OwnedDirectory,
   observed: ReadonlyMap<string, FileState>,
+  reported: ReportedChildren,
 ) => {
   try {
+    const expected = expectedChildren(directory, reported);
     const names = readdirSync(path);
     return (
       names.length === expected.size &&
@@ -242,12 +278,13 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     observed: ReadonlyMap<string, FileState>,
     consumed: Set<string>,
     keepMatchedWrites: boolean,
+    reported: ReportedChildren,
   ) => {
     const entry = entries.get(path);
     const directory = directories.get(path);
     // An outside writer can add a sibling while an owned mutation is changing the same timestamps.
     const matchesDirectory =
-      directory && sameState(directory.observed, current) && matchesOwnedChildren(path, directory.children, observed);
+      directory && sameState(directory.observed, current) && matchesOwnedChildren(path, directory, observed, reported);
     const matchesEntry = entry && sameState(entry.state, current) && !entry.reappeared?.has(path);
     if (matchesEntry && (!directory || matchesDirectory)) {
       if (!keepMatchedWrites) {
@@ -267,9 +304,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
   const recordChild = (path: string, state: FileState) => {
     const parent = directories.get(dirname(path));
     if (!parent) return;
-    const name = basename(path);
-    if (state) parent.children.set(name, state);
-    else parent.children.delete(name);
+    parent.children.set(basename(path), { state });
   };
 
   const advanceParentWrite = ({ path, before, after }: ArtifactParentWrite) => {
@@ -280,7 +315,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     const children = directories.get(dirname(path))?.children;
     const name = basename(path);
     const child = children?.get(name);
-    if (child && sameState(child, before)) children?.set(name, after);
+    if (child && sameState(child.state, before)) children?.set(name, { state: after });
   };
 
   const recordCreatedDirectory = (folder: string, identity: string, recordedAt: number) => {
@@ -305,26 +340,32 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     for (const write of parentWrites ?? []) advanceParentWrite(write);
   };
 
-  return {
-    /** Record the state a mount write, update, or delete left at `path`. */
-    record,
-    /** Return external changes. Keep matched writes when independent watchers can still echo them. */
-    dropEchoes: (paths: string[], { keepMatchedWrites = false } = {}) => {
+  const createEchoFilter = () => {
+    const reported: ReportedChildren = new WeakMap();
+    return (paths: string[], { keepMatchedWrites = false }: EchoOptions = {}) => {
       forgetExpired();
       const observations: PathObservation[] = paths.map((path) => [path, readArtifactFileState(path)]);
       const byPath = new Map(observations);
       reconcileDeletions(observations, byPath, keepMatchedWrites);
       const consumed = new Set<string>();
       const kept = observations.filter(
-        ([path, current]) => !isEcho(path, current, byPath, consumed, keepMatchedWrites),
+        ([path, current]) => !isEcho(path, current, byPath, consumed, keepMatchedWrites, reported),
       );
-      // A later folder-only hint may repeat a child change already reported in this batch.
+      // A later folder-only hint may repeat a child change already delivered to this watcher.
       if (keepMatchedWrites) {
-        for (const [path, current] of kept) recordChild(path, current);
+        for (const [path, current] of kept) recordReportedChild(reported, directories, path, current);
       }
-      // A write can explain a folder notification elsewhere in the same batch.
       for (const path of consumed) entries.delete(path);
       return kept.map(([path]) => path);
-    },
+    };
+  };
+
+  return {
+    /** Record the state a mount write, update, or delete left at `path`. */
+    record,
+    /** Default filter for callers with one watcher. */
+    dropEchoes: createEchoFilter(),
+    /** Share write proofs while tracking external reports separately for each watcher. */
+    createEchoFilter,
   };
 };

@@ -17,7 +17,7 @@ const MAX_FOLDERS = 2_000;
 export type ArtifactMountWatcherInput = {
   /** Absolute mount folder. It is created when missing. */
   root: string;
-  ledger: Pick<ArtifactMountWriteLedger, "dropEchoes">;
+  ledger: Pick<ArtifactMountWriteLedger, "createEchoFilter">;
   /** Changed paths relative to the root, or `[]` when the listener should reload everything. */
   onChange: (paths: string[]) => void;
   onError: (error: unknown) => void;
@@ -48,6 +48,7 @@ const isInsideRoot = (mountPath: string) =>
 /** Watch one mount folder and report changes made outside the mount API in debounced bursts. */
 export const watchArtifactMount = (input: ArtifactMountWatcherInput) => {
   const pending = new Set<string>();
+  const dropEchoes = input.ledger.createEchoFilter();
   // The mount folder itself was removed or replaced, so the paths of this burst do not say what is left.
   let rootChanged = false;
   let burstStartedAt: number | null = null;
@@ -57,7 +58,7 @@ export const watchArtifactMount = (input: ArtifactMountWatcherInput) => {
   let incomplete = false;
 
   const report = () => {
-    const changed = input.ledger.dropEchoes([...pending], { keepMatchedWrites: directRoot !== undefined });
+    const changed = dropEchoes([...pending], { keepMatchedWrites: directRoot !== undefined });
     const reloadAll = rootChanged || incomplete || changed.length > MAX_PATHS;
     pending.clear();
     rootChanged = false;
