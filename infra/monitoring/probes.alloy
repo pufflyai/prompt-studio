@@ -1,0 +1,43 @@
+prometheus.exporter.blackbox "relay" {
+  config_file = "/etc/alloy/blackbox.yaml"
+  target { name = "relay"
+    address = sys.env("RELAY_HEALTH_URL")
+    module = "https" }
+}
+prometheus.scrape "blackbox" {
+  targets = prometheus.exporter.blackbox.relay.targets
+  scrape_interval = "30s"
+  forward_to = [prometheus.relabel.public.receiver]
+}
+prometheus.scrape "observer" {
+  targets = [{"__address__" = "observer:9465"}]
+  scrape_interval = "30s"
+  forward_to = [prometheus.relabel.public.receiver]
+}
+prometheus.scrape "canary" {
+  targets = [{"__address__" = "probes:9466"}]
+  scrape_interval = "30s"
+  forward_to = [prometheus.relabel.public.receiver]
+}
+prometheus.relabel "public" {
+  rule { action = "keep"
+    source_labels = ["__name__"]
+    regex = "pstdio_relay_.+|probe_success|probe_ssl_earliest_cert_expiry|probe_dns_lookup_time_seconds|probe_duration_seconds" }
+  rule { action = "replace"
+    target_label = "environment"
+    replacement = sys.env("MONITORING_ENVIRONMENT") }
+  rule { action = "labeldrop"
+    regex = "instance|job|target|__param_target|name" }
+  forward_to = [prometheus.remote_write.monitoring.receiver]
+}
+prometheus.remote_write "monitoring" {
+  endpoint {
+    url = sys.env("METRICS_WRITE_URL")
+    authorization { type = "Bearer"
+    credentials = sys.env("METRICS_WRITE_TOKEN") }
+    queue_config { capacity = 1000
+    max_shards = 2
+    max_samples_per_send = 500 }
+  }
+  wal { max_keepalive_time = "2h" }
+}

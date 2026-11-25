@@ -20,7 +20,7 @@ const bunFlags = (owner: string) => {
 export const runnerCommand = (runner: string, files: string[], owner: TestPackage, componentOwner?: string) => {
   const paths = files.map((file) => relative(owner.dir, file).replaceAll("\\", "/"));
   if (runner === "integration") {
-    if (["pstdio-account-manager", "pstdio-relay", "pstdio-psx"].includes(owner.name))
+    if (["pstdio-account-manager", "pstdio-relay", "pstdio-relay-monitoring", "pstdio-psx"].includes(owner.name))
       return [
         "bun",
         relative(owner.dir, "scripts/ci/run-service-integrations.ts").replaceAll("\\", "/"),

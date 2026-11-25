@@ -143,6 +143,9 @@ Operators set limits through environment variables. Defaults are in `services/re
 | `RELAY_ACCOUNT_QUOTA_BYTES` | 50 GiB |
 | `RELAY_MAX_READ_BYTES` | 8 MiB |
 | `RELAY_REQUESTS_PER_SECOND` and `RELAY_REQUEST_BURST` | 50 per second, bursts of 500, per device |
+| `DATABASE_POOL_MAX` | 2 connections in each of the relay's three PostgreSQL pools, and 4 in the account manager's pool |
+
+The relay also holds single-connection control pools and two listeners, so it uses at most 12 connections with the default. Size `DATABASE_POOL_MAX` so the relay, the account manager, migration jobs and any observer fit the server's connection limit; the smallest managed PostgreSQL plans allow about 22. A full server rejects new connections, and the relay answers those requests with 503.
 
 Over a size limit returns 413, over the quota 507 and over the rate 429.
 

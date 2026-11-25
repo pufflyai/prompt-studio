@@ -9,6 +9,7 @@ const serviceCommands = () => {
       ["bun", "scripts/test-isolated.ts"],
       ["bun", isolation, ...files],
     ];
+  if (service === "pstdio-relay-monitoring") return [["bun", isolation, ...files]];
   if (service === "pstdio-psx") return [["bun", isolation, ...files]];
 };
 const commands = serviceCommands();

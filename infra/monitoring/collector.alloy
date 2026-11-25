@@ -1,0 +1,59 @@
+// Runs inside the relay's private App Platform network. There is no public ingress.
+prometheus.scrape "services" {
+  targets = [
+    {"__address__" = sys.env("RELAY_METRICS_TARGET"), "service" = "relay"},
+    {"__address__" = sys.env("MANAGER_METRICS_TARGET"), "service" = "manager"},
+  ]
+  scrape_interval = "30s"
+  scrape_timeout = "10s"
+  forward_to = [prometheus.relabel.private.receiver]
+}
+otelcol.receiver.otlp "private" {
+  http { endpoint = "0.0.0.0:4318" }
+  output {
+    metrics = [otelcol.exporter.prometheus.private.input]
+    logs = [otelcol.exporter.loki.private.input]
+  }
+}
+otelcol.exporter.prometheus "private" { forward_to = [prometheus.relabel.private.receiver] }
+otelcol.exporter.loki "private" { forward_to = [loki.relabel.private.receiver] }
+prometheus.relabel "private" {
+  rule { action = "keep"
+    source_labels = ["__name__"]
+    regex = "pstdio_(relay|manager)_.+|up" }
+  rule { action = "replace"
+    target_label = "environment"
+    replacement = sys.env("MONITORING_ENVIRONMENT") }
+  rule { action = "labeldrop"
+    regex = "instance|job|exported_instance|exported_job|service_name" }
+  forward_to = [prometheus.remote_write.monitoring.receiver]
+}
+prometheus.remote_write "monitoring" {
+  endpoint {
+    url = sys.env("METRICS_WRITE_URL")
+    authorization { type = "Bearer"
+    credentials = sys.env("METRICS_WRITE_TOKEN") }
+    queue_config { capacity = 1000
+    max_shards = 2
+    max_samples_per_send = 500 }
+  }
+  wal { max_keepalive_time = "2h" }
+}
+loki.relabel "private" {
+  rule { action = "replace"
+    target_label = "environment"
+    replacement = sys.env("MONITORING_ENVIRONMENT") }
+  rule { action = "replace"
+    source_labels = ["service_name"]
+    target_label = "service" }
+  rule { action = "labelkeep"
+    regex = "environment|service" }
+  forward_to = [loki.write.monitoring.receiver]
+}
+loki.write "monitoring" {
+  endpoint {
+    url = sys.env("LOGS_WRITE_URL")
+    authorization { type = "Bearer"
+    credentials = sys.env("LOGS_WRITE_TOKEN") }
+  }
+}

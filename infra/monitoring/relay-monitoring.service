@@ -1,0 +1,20 @@
+[Unit]
+Description=Relay monitoring
+Requires=docker.service relay-monitoring-disks.service relay-monitoring.slice
+After=docker.service relay-monitoring-disks.service relay-monitoring.slice network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/relay-monitoring
+ExecStartPre=/usr/local/bin/bun /opt/relay-monitoring/prepare-host.ts
+ExecStartPre=/usr/bin/mountpoint --quiet /opt/relay-monitoring/state/prometheus
+ExecStartPre=/usr/bin/mountpoint --quiet /opt/relay-monitoring/state/loki
+ExecStartPre=/usr/bin/mountpoint --quiet /opt/relay-monitoring/state/alloy
+ExecStartPre=/usr/bin/mountpoint --quiet /opt/relay-monitoring/state/checkpoint
+ExecStart=/usr/bin/docker compose --profile public up --detach
+ExecStop=/usr/bin/docker compose --profile public down
+
+[Install]
+WantedBy=multi-user.target

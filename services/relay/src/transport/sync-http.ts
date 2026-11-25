@@ -111,7 +111,7 @@ export const handleSyncRequest = async (
     return await owners.sync.projectAccess.response(key, request.signal, handle);
   } catch (error) {
     if (error instanceof SyncRejection) return relayResponse(error.body, error.status);
-    if (!request.signal.aborted) report(failures[route.kind]);
+    if (!request.signal.aborted) report(failures[route.kind], error);
     return syncFailure(503, "unavailable");
   }
 };
