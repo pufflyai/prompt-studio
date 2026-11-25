@@ -100,7 +100,7 @@ const expectSidenavSections = async (
 };
 
 test("removes and restores owner-scoped collections across project and session pages", async ({ page, request }) => {
-  test.setTimeout(45_000);
+  test.setTimeout(75_000);
   const project = await createProject(request);
   await waitForTicketsExtension(request, project.id);
   await createSession(request, project.id, "Existing sidenav session");

@@ -2,6 +2,7 @@ import { readCollectionPage } from "@pstdio/sdk/data";
 import type { KanbanRendererQueryParams } from "@pstdio/sdk/extensions";
 import { attentionPanelTarget } from "../attention-panel";
 import { createTicketRowMapper, statusToColumnConfig } from "./mappers";
+import { readStableTicketPage } from "./read-ticket-page";
 import { readReviewLinkProjections, reviewLinkProjectionFields } from "./review-link-projections";
 import { readReviewCounts } from "./review-query-counts";
 import {
@@ -104,5 +105,8 @@ export const readTicketViewPage = async (
   return { ...prepared, result, tickets, projections, reviews, parents };
 };
 
-export const queryTicketPage = async (ctx: TicketQueryContext, input: Partial<KanbanRendererQueryParams>) =>
-  (await readTicketViewPage(ctx, input, {}, input.page?.fields)).result;
+export const queryTicketPage = (ctx: TicketQueryContext, input: Partial<KanbanRendererQueryParams>) =>
+  readStableTicketPage(
+    input.page?.cursor !== undefined || input.page?.revision !== undefined,
+    async () => (await readTicketViewPage(ctx, input, {}, input.page?.fields)).result,
+  );

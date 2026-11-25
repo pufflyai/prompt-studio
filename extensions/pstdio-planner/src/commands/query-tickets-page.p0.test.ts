@@ -6,6 +6,38 @@ import { planPlacements } from "../timeline/commands/placement-store";
 import { makeCommandContext } from "./command-context.fixture";
 import { queryTickets } from "./query-tickets";
 
+test("Board restarts an unpinned read when a ticket syncs and rejects a stale pinned revision", async () => {
+  const storage = createMemoryStorage();
+  const ctx = makeCommandContext({ storage, params: {} });
+  const ticket = {
+    id: "synced-ticket",
+    shorthand: "T-1",
+    title: "Synced ticket",
+    content: "# Synced ticket",
+    statusId: "ready",
+    archived: false,
+    createdAt: "2026-01-01",
+    updatedAt: "2026-01-01",
+  };
+  const query = storage.records.query.bind(storage.records);
+  let syncPending = true;
+  storage.records.query = async (input) => {
+    if (syncPending && input.index === "ticket-view" && input.revision !== undefined) {
+      syncPending = false;
+      await putTicket(storage, ticket);
+    }
+    return query(input);
+  };
+  const page = { limit: 10, offset: 0, fields: ["title"], search: "" };
+  const result = await queryTickets(ctx, { page });
+  expect(result.rows.map(({ title }) => title)).toEqual(["Synced ticket"]);
+
+  await putTicket(storage, { ...ticket, content: "# Updated ticket" });
+  await expect(queryTickets(ctx, { page: { ...page, revision: result.page.revision } })).rejects.toThrow(
+    "revision is stale",
+  );
+});
+
 test("Board milestone date controls select active tickets with that date", async () => {
   const storage = createMemoryStorage();
   const ctx = makeCommandContext({ storage, params: {} });
