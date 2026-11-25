@@ -60,9 +60,10 @@ const useRecoveredProjectOpening = (
   }, [operations, scope]);
 
   useEffect(
-    () => operations.subscribeToLocalRemoval((removedScope) => {
-      if (removedScope === scope && eligible.current?.key === openingKey) eligible.current = undefined;
-    }),
+    () =>
+      operations.subscribeToLocalRemoval((removedScope) => {
+        if (removedScope === scope && eligible.current?.key === openingKey) eligible.current = undefined;
+      }),
     [openingKey, operations, scope],
   );
 
@@ -135,10 +136,11 @@ const useCloudCopyDownload = (
   const localName = findDashboardProject(id)?.name;
   const sync = useQuery({
     queryKey: cloudCopySyncKey(scope),
-    queryFn: ({ signal }) => client.account.projectSyncStatus(id, {
-      signal,
-      expected: login && { accountId: login.accountId, managerOrigin: login.managerOrigin },
-    }),
+    queryFn: ({ signal }) =>
+      client.account.projectSyncStatus(id, {
+        signal,
+        expected: login && { accountId: login.accountId, managerOrigin: login.managerOrigin },
+      }),
     enabled: downloading && Boolean(localName && account),
     retry: false,
     refetchInterval: 1500,
@@ -323,7 +325,13 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
   const downloadInProgress = downloading || pending;
   const showProgress = downloadInProgress && !deleting && !failure && entry?.presence !== "downloaded";
   const canDownload = Boolean(
-    action && !cloud.accountUnconfirmed && !invalidated && !unresolved && !copyBusy && !deleting && (!downloading || failure),
+    action &&
+      !cloud.accountUnconfirmed &&
+      !invalidated &&
+      !unresolved &&
+      !copyBusy &&
+      !deleting &&
+      (!downloading || failure),
   );
   const showDownload = !receipt && !deleting && entry?.presence !== "removing";
 

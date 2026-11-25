@@ -1,4 +1,9 @@
-import type { CloudProjectCatalog, ProjectCopyAccount, ProjectCopyDevice, RemoveLocalProjectResult } from "@pstdio/sdk/client";
+import type {
+  CloudProjectCatalog,
+  ProjectCopyAccount,
+  ProjectCopyDevice,
+  RemoveLocalProjectResult,
+} from "@pstdio/sdk/client";
 import { classifyApiWrite, getWorkbenchOperations } from "@pstdio/workbench";
 import { useSyncExternalStore } from "react";
 import { getRuntimeApiClient } from "@/lib/api";
@@ -29,7 +34,9 @@ const getCloudLocalRemoval = createRuntimeState((owner) => {
     isRemoving(id: string, account?: ProjectCopyAccount, device?: ProjectCopyDevice) {
       if (!account || !device) return false;
       const subject = deviceProjectCopySubject(id, account, device);
-      return operations.getSnapshot().pending.some((entry) => entry.domain === domain && entry.subjects.includes(subject));
+      return operations
+        .getSnapshot()
+        .pending.some((entry) => entry.domain === domain && entry.subjects.includes(subject));
     },
     snapshot: operations.getSnapshot,
     subscribe: operations.subscribe,
@@ -49,7 +56,8 @@ const getCloudLocalRemoval = createRuntimeState((owner) => {
         expectedDevice,
         "The active Cloud account changed. Reopen this action to confirm again.",
       );
-      if (active(id, expectedAccount, expectedDevice)) throw new Error("This project already has a pending Cloud change.");
+      if (active(id, expectedAccount, expectedDevice))
+        throw new Error("This project already has a pending Cloud change.");
       const { managerOrigin, accountId, deviceId } = scope.login;
       const catalogKey = cloudCatalogKeyFor(managerOrigin, accountId, deviceId, expectedAccount.accountId);
       const syncKey = cloudCopySyncKey(scope.key);
