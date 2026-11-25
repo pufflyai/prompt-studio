@@ -11,6 +11,15 @@ export const MARKERS = [FUNCTION_MARKER, ITERATOR_MARKER, SIGNAL_MARKER, BLOB_MA
 
 export type EventSink = { push(patch: JsonPatch): void; getMessages(): readonly SessionMessage[] };
 export const SNAPSHOT_SINK = Symbol("pstdio.snapshotSink");
+const cleanupFunctions = new WeakSet<object>();
+
+/** Local capacity metadata. Function references never carry this through IPC. */
+export const markCleanupFunction = <T extends (...args: never[]) => unknown>(fn: T): T => {
+  cleanupFunctions.add(fn);
+  return fn;
+};
+
+export const isCleanupFunction = (fn: object) => cleanupFunctions.has(fn);
 
 /**
  * Marks a harness event sink. Its `getMessages()` is synchronous, so the other side receives the

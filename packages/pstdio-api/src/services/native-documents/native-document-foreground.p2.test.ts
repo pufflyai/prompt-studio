@@ -97,7 +97,9 @@ beforeAll(async () => {
     if (owner.workbenchId === projectId && owner.extensionId === extensionId) audit.getStore()?.push(record.recordId);
     originalRead(owner, record);
   };
-});
+  // On hosted Linux, seeding took 58.6 s. The setup allowance also covers app startup and the
+  // final record-count check.
+}, 120_000);
 
 afterAll(async () => {
   storageObserver.read = originalRead;

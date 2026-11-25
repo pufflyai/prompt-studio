@@ -84,6 +84,14 @@ test("input written before end() reaches the child even when nobody awaited it",
 });
 
 const alive = (pid: number) => {
+  if (process.platform === "win32") {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  }
   // A killed grandchild may still have a zombie entry while the OS reaps it.
   const stat = Bun.spawnSync(["ps", "-o", "stat=", "-p", String(pid)])
     .stdout.toString()
@@ -126,6 +134,7 @@ test("kill finishes despite unread output and a grandchild holding the pipes", a
   expect(performance.now() - started).toBeLessThan(5_000);
   const exit = await handle.exited;
   expect(exit.code === 0).toBe(false);
+  if (process.platform === "win32") expect(exit).toEqual({ code: 1, signal: null });
   const events = await collect(handle.events());
   expect(events.at(-1)?.type).toBe("exit");
 });
@@ -164,6 +173,60 @@ test("exited settles when the child exits even if nobody reads its output", asyn
     }
   }
 });
+
+test.skipIf(process.platform !== "win32").each([
+  { code: 0, disconnect: false },
+  { code: 1, disconnect: false },
+  { code: 7, disconnect: true },
+])(
+  "preserves natural Windows exit $code when stopping remaining job members (disconnect=$disconnect)",
+  async ({ code, disconnect }) => {
+    const marker = join(root, `natural-exit-${code}-descendant`);
+    const background = `await Bun.write(${JSON.stringify(marker)}, String(process.pid)); setInterval(() => {}, 1000);`;
+    const spawner = ((argv, options) =>
+      Bun.spawn(argv, {
+        ...options,
+        ipc: (message, launcher) => {
+          if (typeof options?.ipc === "function") options.ipc(message, launcher);
+          if (typeof message?.pid === "number") launcher.disconnect();
+        },
+      })) as typeof Bun.spawn;
+    const handle = spawnProcessHandle(
+      {
+        argv: [
+          process.execPath,
+          "-e",
+          `
+          const fs = require("node:fs");
+          require("node:child_process").spawn(process.execPath, ["-e", ${JSON.stringify(background)}], {
+            stdio: "ignore", detached: true,
+          }).unref();
+          const deadline = Date.now() + 5000;
+          while (!fs.existsSync(${JSON.stringify(marker)}) || !fs.readFileSync(${JSON.stringify(marker)}, "utf8")) {
+            if (Date.now() >= deadline) throw new Error("The background fixture did not become ready.");
+            await Bun.sleep(10);
+          }
+          process.exit(${code});
+        `,
+        ],
+        env,
+      },
+      { spawner: disconnect ? spawner : Bun.spawn },
+    );
+    try {
+      await handle.started;
+      const exit = { code, signal: null };
+      expect(await handle.exited).toEqual(exit);
+      const descendant = Number(await Bun.file(marker).text());
+      expect(Number.isSafeInteger(descendant) && descendant > 0 && alive(descendant)).toBe(true);
+      await handle.kill("SIGKILL");
+      expect(alive(descendant)).toBe(false);
+      expect(await collect(handle.events())).toEqual([{ type: "exit", exit }]);
+    } finally {
+      await handle.kill("SIGKILL");
+    }
+  },
+);
 
 test("a command that cannot start rejects started with a code and still reports an exit", async () => {
   const unhandled: unknown[] = [];

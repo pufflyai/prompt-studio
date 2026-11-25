@@ -186,8 +186,12 @@ test("native team relay synchronizes seen baselines only between the same user's
       ]);
       const deadline = Date.now() + 2000;
       const seen = async () => (await runtime.status(projectId)).sources?.find(({ id }) => id === "seen");
-      while (!(await seen())?.downloaded && Date.now() < deadline) await Bun.sleep(10);
-      expect(await seen()).toMatchObject({ downloaded: true });
+      let seenStatus = await seen();
+      while (!seenStatus?.downloaded && Date.now() < deadline) {
+        await Bun.sleep(10);
+        seenStatus = await seen();
+      }
+      expect(seenStatus).toMatchObject({ downloaded: true });
     }
     const [, aliceSecond, bobFirst] = stores;
     const end = Date.now() + 3000;

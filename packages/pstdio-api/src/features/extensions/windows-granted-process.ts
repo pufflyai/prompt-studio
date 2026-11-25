@@ -32,7 +32,9 @@ const launcherSource = `
       return;
     }
     await new Promise((resolve, reject) => process.send({ pid: child.pid }, (error) => error ? reject(error) : resolve()));
-    process.exit(await child.exited);
+    const exitCode = await child.exited;
+    if (!process.connected) process.exit(exitCode);
+    process.send({ exitCode }, () => process.exit(exitCode));
   });
 `;
 
@@ -75,9 +77,10 @@ export const watchJobExit = (job: JobExit, launcherExited: Promise<unknown>, onF
  * Bun cannot attach a job at process creation. Assign a trusted, idle Bun launcher to the job
  * first, then admit the requested program. Windows puts its ordinary descendants in the same job.
  */
-export const startWindowsGrantedProcess = (input: StartInput) => {
-  const job = createWindowsProcessJob();
+export const startWindowsGrantedProcess = (input: StartInput, createJob = createWindowsProcessJob) => {
+  const job = createJob();
   const started = Promise.withResolvers<number>();
+  const reportedExit = Promise.withResolvers<number | undefined>();
   started.promise.catch(() => {});
   const output = input.detached ? "ignore" : "pipe";
   const launchError = (commandMissing = false) => {
@@ -98,11 +101,18 @@ export const startWindowsGrantedProcess = (input: StartInput) => {
       windowsHide: true,
       detached: input.detached,
       ipc: (message, launcher) => {
-        if (message && typeof message.pid === "number") started.resolve(message.pid);
+        if (message && typeof message.pid === "number") {
+          started.resolve(message.pid);
+          return;
+        }
+        if (message && typeof message.exitCode === "number") reportedExit.resolve(message.exitCode);
         else started.reject(launchError(message?.commandMissing === true));
         launcher.disconnect();
       },
-      onDisconnect: () => started.reject(launchError()),
+      onDisconnect: () => {
+        started.reject(launchError());
+        reportedExit.resolve(undefined);
+      },
     });
     job.attachLauncher(child.pid);
     child.send({
@@ -123,7 +133,10 @@ export const startWindowsGrantedProcess = (input: StartInput) => {
     throw error;
   }
 
-  const exited = Promise.all([started.promise, child.exited]).then(([, exitCode]) => exitCode);
+  // Keep the program's reported exit independent of the retained launcher's own exit.
+  const exited = Promise.all([started.promise, child.exited, reportedExit.promise]).then(
+    ([, launcherCode, reportedCode]) => reportedCode ?? launcherCode,
+  );
   exited.catch(() => {});
   const { treeExited, check } = watchJobExit(job, child.exited, (error) => {
     apiLogger.warn(

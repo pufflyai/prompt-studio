@@ -65,7 +65,8 @@ describe("session scheduler reattach recovery", () => {
     }
     const recovered = await createTestApp({ databasePath, storageRoot, harnessRegistry: registry() });
     try {
-      for (let attempt = 0; attempt < 40 && resumed.length + reattached.length === 0; attempt += 1) await Bun.sleep(25);
+      // The provider callback can run before startup has retired the recovered dispatch entry.
+      await recovered.startupSettled;
       if (claimed) {
         expect(resumed).toEqual(["accepted follow-up"]);
         expect(reattached).toEqual([]);

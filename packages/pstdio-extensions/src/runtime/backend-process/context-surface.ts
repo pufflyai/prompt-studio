@@ -106,6 +106,7 @@ const terminalSurface = object({
   openSession: {
     kind: "handle",
     members: { id: "id", write: "notify", resize: "notify", kill: "async", events: "iterate" },
+    cleanupReserve: "kill",
   },
 });
 

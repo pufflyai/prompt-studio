@@ -9,7 +9,9 @@ import { runtimeOperationChannel } from "pstdio-diagnostics";
 import { createExtensionProcessEnvironment } from "../process-environment";
 import { createProcessHandleProxy, createProcessOwner, failedProcessHandle, processError } from "../process-owner";
 import { markHostContext } from "../runner/host-context";
+import { extensionContextSurface } from "./context-surface";
 import { expectRejection } from "./expect-rejection.test-utils";
+import { HOST_CALL_LIMITS } from "./host-calls";
 import { backendWorkerCommand, createBackendWorkerPool } from "./pool";
 import { HANDLER_MARKER } from "./protocol";
 import { snapshotSink } from "./remote-values";
@@ -242,6 +244,30 @@ export default {
         // Keep Bun's own Windows subprocess cleanup from masking the supervisor's job.
         if (detached) child.unref();
         return child.pid;
+      },
+    },
+    {
+      id: "flood",
+      title: "Flood",
+      async run(ctx, kind, count, refusals = 0) {
+        const handle = kind === "terminal" ? ctx.terminal.openSession({ cols: 80, rows: 24 }) : ctx.open();
+        if (kind === "terminal") {
+          const stream = handle.events()[Symbol.asyncIterator]();
+          await stream.next();
+          await stream.return();
+        } else await handle.started;
+        const calls = Array.from({ length: count }, () => ctx.storage.collection("items").get("never"));
+        // Release the held calls only once the expected refusals arrived, whatever the runner's speed.
+        let refused = 0;
+        if (refusals)
+          await new Promise((resolve) =>
+            calls.forEach((call) => call.catch(() => ++refused === refusals && resolve())),
+          );
+        const cleanup = await handle.kill().then(() => "killed", (error) => error.code);
+        ctx.release?.();
+        const results = await Promise.allSettled(calls);
+        const refusedCodes = results.filter((result) => result.status === "rejected").map((result) => result.reason.code);
+        return { refusedCodes, cleanup };
       },
     },
     { id: "mark", title: "Mark", run: (ctx, path) => Bun.write(path, "ran") },
@@ -1686,6 +1712,83 @@ test("materialized workspace provider handles retain cleanup after the direct ch
       expect(output).toEqual([{ type: "stdout", data: new Uint8Array([confirmed ? 0 : 1]) }]);
     }
   } finally {
+    await worker.stop();
+  }
+});
+
+test.each([
+  "process",
+  "terminal",
+])("the host-call limit refuses more work while letting a %s handle close", async (kind) => {
+  const worker = await start();
+  const previous = HOST_CALL_LIMITS.inFlight;
+  HOST_CALL_LIMITS.inFlight = 5;
+  try {
+    const gate = Promise.withResolvers<void>();
+    let terminalKills = 0;
+    const context = {
+      projectId: "p1",
+      open: () => {
+        const child = createProcessHandleProxy(
+          Promise.resolve({
+            id: "fixture-child",
+            started: Promise.resolve(),
+            exited: Promise.resolve({ code: 0, signal: null }),
+            write: async () => {},
+            end: async () => {},
+            kill: async () => {},
+            events: async function* () {},
+          }),
+        );
+        return { started: child.started, kill: child.kill };
+      },
+      terminal: {
+        openSession: () => ({
+          id: "fixture-terminal",
+          kill: async () => {
+            terminalKills += 1;
+          },
+          events: async function* () {
+            yield { kind: "title", title: "Fixture terminal" };
+          },
+        }),
+      },
+      storage: { collection: () => ({ get: () => gate.promise.then(() => null), put: async () => {} }) },
+      release: () => gate.resolve(),
+    };
+    // A one-way call: it does not count against the limit the held calls fill.
+    const flood: BackendSurface = {
+      kind: "object",
+      members: {
+        ...(surface as Extract<BackendSurface, { kind: "object" }>).members,
+        open: { kind: "handle", members: { started: "promise", kill: "async" } },
+        terminal: extensionContextSurface(context).members.terminal!,
+        release: { kind: "notify" },
+      },
+    };
+    expect(
+      await worker.invoke({
+        handlerId: handlerOf(worker.definition, "flood"),
+        context,
+        surface: flood,
+        args: [kind, 8, 3],
+      }),
+    ).toEqual({
+      refusedCodes: ["extension_overloaded", "extension_overloaded", "extension_overloaded"],
+      cleanup: "killed",
+    });
+    expect(terminalKills).toBe(kind === "terminal" ? 1 : 0);
+    expect(
+      await worker.invoke({
+        handlerId: handlerOf(worker.definition, "flood"),
+        context,
+        surface: flood,
+        args: [kind, 3],
+      }),
+    ).toEqual({ refusedCodes: [], cleanup: "killed" });
+    expect(terminalKills).toBe(kind === "terminal" ? 2 : 0);
+  } finally {
+    HOST_CALL_LIMITS.inFlight = previous;
     await worker.stop();
   }
 });

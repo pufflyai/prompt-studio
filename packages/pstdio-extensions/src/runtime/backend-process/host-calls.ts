@@ -27,6 +27,18 @@ export interface HostInvocation {
 
 type Call = Extract<WorkerToHostMessage, { type: "call" | "fn-call" }>;
 
+/**
+ * Calls one worker may have the host answering at once. Past it, calls are refused rather than
+ * queued, so a worker that floods the host cannot grow its memory without bound. Long-polling calls
+ * such as an events iterator's `next()` count too, which is why this refuses instead of waiting.
+ */
+export const HOST_CALL_LIMITS = { inFlight: 4096, cleanupReserve: 256 };
+
+const overloaded = () =>
+  Object.assign(new Error("The extension made too many host calls at once. Retry after some of them finish."), {
+    code: "extension_overloaded",
+  });
+
 export const createHostCalls = (
   send: (message: HostToWorkerMessage) => boolean,
   invocation: (invocationId: string) => HostInvocation | undefined,
@@ -35,6 +47,7 @@ export const createHostCalls = (
 ) => {
   const pending = createPendingCalls<Enter | undefined>();
   const hostCallOwner = new AsyncLocalStorage<string>();
+  let answering = 0;
   const inFlight = new Map<string, number>();
   let nextRequest = 0;
 
@@ -118,9 +131,14 @@ export const createHostCalls = (
 
   const answer = async (message: Call) => {
     const { invocationId, requestId } = message;
+    answering += 1;
     try {
       const running = invocation(invocationId);
       if (!running) throw new BackendUnavailableError("The invocation is no longer running.");
+      // A cleanup reference may finish work already holding the regular slots.
+      const reserve = message.type === "fn-call" && running.table.usesCleanupReserve(message.fnId);
+      const limit = HOST_CALL_LIMITS.inFlight + (reserve ? HOST_CALL_LIMITS.cleanupReserve : 0);
+      if (answering > limit) throw overloaded();
       // Cancellation ends callback scopes. The table still permits calls to existing cleanup references.
       const cleanupOnly = running.cancelled && message.type === "fn-call";
       const enter = cleanupOnly ? running.enter : enterFor(running, invocationId, message.within);
@@ -159,6 +177,8 @@ export const createHostCalls = (
         ok: false,
         error: serializeBackendError(error),
       });
+    } finally {
+      answering -= 1;
     }
   };
 
