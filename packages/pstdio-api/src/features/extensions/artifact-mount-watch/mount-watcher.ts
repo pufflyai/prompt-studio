@@ -1,6 +1,6 @@
 import { watch as fsWatch, lstatSync, mkdirSync } from "node:fs";
 import { isAbsolute, relative, sep } from "node:path";
-import { createDirectoryTreeWatcher, type WatchDirectory } from "pstdio-extensions";
+import { createDirectoryTreeWatcher, type DirectoryTreeWatcher, type WatchDirectory } from "pstdio-extensions";
 import type { ArtifactMountWriteLedger } from "./write-ledger";
 
 // A burst ends this long after its last change, so one save that touches several files
@@ -54,6 +54,7 @@ export const watchArtifactMount = (input: ArtifactMountWatcherInput) => {
   let burstStartedAt: number | null = null;
   let lastReportAt = Number.NEGATIVE_INFINITY;
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let directRoot: DirectoryTreeWatcher | undefined;
   // Folders past the limit are not watched, so their changes go unseen.
   let incomplete = false;
 
@@ -115,22 +116,26 @@ export const watchArtifactMount = (input: ArtifactMountWatcherInput) => {
   // macOS recursive notifications can miss an atomic file replacement in the mount root.
   const platform = input.platform ?? process.platform;
   const watchRoot = input.watchRoot ?? (!input.watch && platform === "darwin" ? watchFlatRoot : undefined);
-  const directRoot =
-    watchRoot &&
-    createDirectoryTreeWatcher({
-      root: input.root,
-      onEvent: handleEvent,
-      onError: input.onError,
-      skipDirectory: () => true,
-      watch: watchRoot,
-    });
-
-  return {
-    close: () => {
-      if (timer) clearTimeout(timer);
-      pending.clear();
-      tree.close();
-      directRoot?.close();
-    },
+  const close = () => {
+    if (timer) clearTimeout(timer);
+    pending.clear();
+    tree.close();
+    directRoot?.close();
   };
+
+  try {
+    if (watchRoot) {
+      directRoot = createDirectoryTreeWatcher({
+        root: input.root,
+        onEvent: handleEvent,
+        onError: input.onError,
+        skipDirectory: () => true,
+        watch: watchRoot,
+      });
+    }
+  } catch (error) {
+    close();
+    throw error;
+  }
+  return { close };
 };

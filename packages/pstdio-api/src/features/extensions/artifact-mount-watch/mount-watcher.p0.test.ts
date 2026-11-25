@@ -71,7 +71,7 @@ test("one watcher cannot suppress another watcher's folder-only notification", a
   const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-independent-mount-watches-"));
   const location = { repoRoot, extensionId: "pstdio.dashboards", mountPath: "boards" };
   const root = resolveArtifactMountRoot(location);
-  const ledger = createArtifactMountWriteLedger();
+  const ledger = createArtifactMountWriteLedger(() => 0);
   const mount = createArtifactMount({ ...location, onWrite: ledger.record });
   await mount.writeText("sales/first.json", "{}");
 
@@ -126,6 +126,42 @@ test("one watcher cannot suppress another watcher's folder-only notification", a
 });
 
 describe("watchArtifactMount", () => {
+  test("closes the tree and cancels its refresh when flat setup throws", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-watch-startup-"));
+    cleanups.push(() => rmSync(root, { recursive: true, force: true }));
+    mkdirSync(join(root, "subfolder"));
+    const failure = new Error("cannot start flat watcher");
+    const changes: string[][] = [];
+    let closed = 0;
+    let limited = false;
+    expect(() =>
+      watchArtifactMount({
+        root,
+        ledger: createArtifactMountWriteLedger(),
+        onChange: (paths) => changes.push(paths),
+        onError: (error) => {
+          throw error;
+        },
+        onFolderLimit: () => {
+          limited = true;
+        },
+        maxFolders: 1,
+        watch: () => ({
+          close: () => {
+            closed++;
+          },
+        }),
+        watchRoot: () => {
+          throw failure;
+        },
+      }),
+    ).toThrow(failure);
+    expect(limited).toBe(true);
+    expect(closed).toBe(1);
+    await Bun.sleep(250);
+    expect(changes).toEqual([]);
+  });
+
   test.each(["darwin", "linux", "win32"] as const)("uses the default root watch policy for %s", async (platform) => {
     const nativeWatch = fs.watch;
     const watches = spyOn(fs, "watch").mockImplementation(nativeWatch);

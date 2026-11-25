@@ -9,6 +9,7 @@ type RecordedChild = { state: FileState; nestedDirectory?: OwnedDirectory; direc
 export type OwnedDirectory = {
   recordedAt: number;
   observed: NonNullable<FileState>;
+  echoConsumed?: boolean;
   children: Map<string, RecordedChild>;
 };
 
@@ -19,6 +20,40 @@ type ReportedChild = {
   verifyContents?: boolean;
 };
 export type ReportedChildren = WeakMap<OwnedDirectory, Map<string, ReportedChild>>;
+
+export function* pathAndAncestors(path: string) {
+  for (let ancestor = path; ancestor !== dirname(ancestor); ancestor = dirname(ancestor)) yield ancestor;
+}
+
+export const createOwnedDirectories = () => {
+  const directories = new Map<string, OwnedDirectory>();
+  const directorySubtrees = new Map<string, Set<string>>();
+
+  const forgetDirectory = (path: string) => {
+    if (!directories.delete(path)) return;
+    for (const ancestor of pathAndAncestors(path)) {
+      const subtree = directorySubtrees.get(ancestor);
+      subtree?.delete(path);
+      if (subtree?.size === 0) directorySubtrees.delete(ancestor);
+    }
+  };
+
+  const forgetDirectoryTree = (path: string) => {
+    // Index folders so a series of file removals never searches every owned directory.
+    for (const folder of directorySubtrees.get(path) ?? []) forgetDirectory(folder);
+  };
+
+  const recordDirectory = (path: string, directory: OwnedDirectory) => {
+    directories.set(path, directory);
+    for (const ancestor of pathAndAncestors(path)) {
+      const subtree = directorySubtrees.get(ancestor) ?? new Set<string>();
+      subtree.add(path);
+      directorySubtrees.set(ancestor, subtree);
+    }
+  };
+
+  return { directories, recordDirectory, forgetDirectory, forgetDirectoryTree };
+};
 
 export const sameState = (recorded: FileState, current: FileState) =>
   recorded === null || current === null
@@ -128,7 +163,7 @@ const matchesReportedContents = (path: string, contents: ReadonlyMap<string, Pre
   );
 };
 
-export const matchesOwnedChildren = (
+const matchesOwnedChildren = (
   path: string,
   directory: OwnedDirectory,
   observed: ReadonlyMap<string, FileState>,
@@ -160,6 +195,18 @@ export const matchesOwnedChildren = (
     return false;
   }
 };
+
+export const matchesDirectoryEcho = (
+  path: string,
+  directory: OwnedDirectory | undefined,
+  current: FileState,
+  observed: ReadonlyMap<string, FileState>,
+  reported: ReportedChildren,
+) =>
+  directory !== undefined &&
+  !directory.echoConsumed &&
+  sameState(directory.observed, current) &&
+  matchesOwnedChildren(path, directory, observed, reported);
 
 export const recordOwnedChild = (directories: ReadonlyMap<string, OwnedDirectory>, path: string, state: FileState) => {
   const parentPath = dirname(path);
