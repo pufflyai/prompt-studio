@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 interface NumberEditingOptions {
   value: number;
@@ -14,6 +14,10 @@ interface NumberEditingOptions {
 /** Authored input survives incoming previews and acknowledgements until its own completion. */
 export const useNumberEditing = (options: NumberEditingOptions) => {
   const { value, mixed, min, max, step = 1, onPreview, onCommit, onCancel } = options;
+  const cancel = useRef(onCancel);
+  useLayoutEffect(() => {
+    cancel.current = onCancel;
+  }, [onCancel]);
   const [draft, setDraft] = useState<string>();
   const [error, setError] = useState("");
   const pending = useRef<
@@ -23,7 +27,6 @@ export const useNumberEditing = (options: NumberEditingOptions) => {
         interaction: "input" | "slider";
         intent: "commit" | "cancel";
         commit: typeof onCommit;
-        cancel: typeof onCancel;
       }
     | undefined
   >(undefined);
@@ -61,7 +64,7 @@ export const useNumberEditing = (options: NumberEditingOptions) => {
         try {
           if (current?.valid && current.interaction === "input" && current.intent === "commit") {
             await current.commit(Number(current.raw));
-          } else if (current) await current.cancel();
+          } else if (current) await cancel.current();
         } catch (error) {
           // The document owner retains required writes after disposal; also observe callback rejections.
           setError(error instanceof Error ? error.message : String(error));
@@ -87,7 +90,7 @@ export const useNumberEditing = (options: NumberEditingOptions) => {
     change(raw: string, interaction: "input" | "slider" = "input") {
       const acceptable = valid(raw);
       const cancelPrevious = !acceptable && pending.current?.valid;
-      pending.current = { raw, valid: acceptable, interaction, intent: "commit", commit: onCommit, cancel: onCancel };
+      pending.current = { raw, valid: acceptable, interaction, intent: "commit", commit: onCommit };
       revision.current++;
       setError("");
       setDraft(raw);
@@ -125,7 +128,7 @@ export const useNumberEditing = (options: NumberEditingOptions) => {
       const accepted = ++revision.current;
       cancelling.current = accepted;
       try {
-        if (current) await current.cancel();
+        if (current) await cancel.current();
         if (revision.current === accepted) {
           setDraft(undefined);
           setError("");
