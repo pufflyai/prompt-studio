@@ -15,6 +15,7 @@ import { getCloudCopyDownloads } from "./cloud-copy-download";
 import { useCloudLocalRemoval } from "./cloud-local-removal";
 import { cloudProjectDeletionKey, useCloudProjectDeletions } from "./cloud-project-deletion-operations";
 import { cloudCatalogKeyFor } from "./project-catalog";
+import { cloudCopyBusy } from "./project-copy-scope";
 
 const id = "team-project";
 const name = "Team notes";
@@ -214,10 +215,18 @@ test("copy actions reject a personal or different team owner and an unavailable 
 test("discarding an unconfirmed team removal retains its account-wide Cloud deletion claim", async () => {
   const host = await setup(true);
   const replacement = { ...user, deviceId: "replacement-device" };
-  const neighbor = `${id}-neighbor`;
+  const projectId = `${id}:["notes"]`;
+  const neighbor = `${projectId}-neighbor`;
   try {
+    await act(async () =>
+      host.changeStatus((status) => ({
+        ...status,
+        teamProjectOwners: { ...status.teamProjectOwners, [projectId]: team.accountId, [neighbor]: team.accountId },
+        teamProjects: { ...status.teamProjects, [projectId]: team.accountId, [neighbor]: team.accountId },
+      })),
+    );
     await act(async () => {
-      await expect(host.removals.remove(id, name, team, user, false)).rejects.toThrow("Response lost");
+      await expect(host.removals.remove(projectId, name, team, user, false)).rejects.toThrow("Response lost");
     });
     const [recovery] = host.receipts.getSnapshot().recovery;
     expect(recovery).toMatchObject({ status: "unknown" });
@@ -229,24 +238,25 @@ test("discarding an unconfirmed team removal retains its account-wide Cloud dele
       host.changeStatus((status) => ({
         ...status,
         login: replacement,
-        teamProjectOwners: { ...status.teamProjectOwners, [neighbor]: team.accountId },
-        teamProjects: { ...status.teamProjects, [neighbor]: team.accountId },
       })),
     );
-    expect(host.removals.active(id, team, replacement)).toBe(false);
+    expect(host.removals.active(projectId, team, replacement)).toBe(false);
+    expect(cloudCopyBusy(host.receipts, projectId, { ...team, managerOrigin: "https://other.example.test" })).toBe(
+      false,
+    );
     await act(async () => {
-      await expect(host.deletions.start(id, name, team, replacement)).rejects.toThrow("pending Cloud change");
+      await expect(host.deletions.start(projectId, name, team, replacement)).rejects.toThrow("pending Cloud change");
       await expect(host.deletions.start(neighbor, name, team, replacement)).rejects.toThrow("Response lost");
     });
     await act(async () =>
       host.changeStatus((status) => ({
         ...status,
-        teamProjectOwners: { ...status.teamProjectOwners, [id]: otherTeam.accountId },
-        teamProjects: { ...status.teamProjects, [id]: otherTeam.accountId },
+        teamProjectOwners: { ...status.teamProjectOwners, [projectId]: otherTeam.accountId },
+        teamProjects: { ...status.teamProjects, [projectId]: otherTeam.accountId },
       })),
     );
     await act(async () => {
-      await expect(host.deletions.start(id, name, otherTeam, replacement)).rejects.toThrow("Response lost");
+      await expect(host.deletions.start(projectId, name, otherTeam, replacement)).rejects.toThrow("Response lost");
     });
   } finally {
     await host.dispose();
