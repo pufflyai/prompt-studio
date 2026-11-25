@@ -1,8 +1,29 @@
-import { Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
+import { Button, HStack, Input, Stack, Text, usePopover } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { Activity, useState } from "react";
+import { Activity, useId, useState } from "react";
 import { ScopedDialog as Dialog, ScopedPopover as Popover } from "./scoped-overlays";
 import { Portal, UiScopeActivity, UiScopeProvider, UiScopeRoot } from "./ui-scope";
+
+const PreferenceOptions = (props: { onKeep: () => void }) => {
+  const triggerId = useId();
+  const popover = usePopover({ ids: { trigger: triggerId } });
+  return (
+    <Popover.RootProvider value={popover}>
+      <Popover.Trigger asChild>
+        <Button id={triggerId}>Preference options</Button>
+      </Popover.Trigger>
+      <Portal>
+        <Popover.Positioner>
+          <Popover.Content aria-label="Preference options">
+            <Popover.Body>
+              <Button onClick={props.onKeep}>Keep preference</Button>
+            </Popover.Body>
+          </Popover.Content>
+        </Popover.Positioner>
+      </Portal>
+    </Popover.RootProvider>
+  );
+};
 
 const ModalViews = () => {
   const [first, setFirst] = useState(true);
@@ -85,20 +106,7 @@ const ModalViews = () => {
                     </UiScopeActivity>
                     {!first && <Text>Second modal view</Text>}
                     <UiScopeProvider active>
-                      <Popover.Root>
-                        <Popover.Trigger asChild>
-                          <Button>Preference options</Button>
-                        </Popover.Trigger>
-                        <Portal>
-                          <Popover.Positioner>
-                            <Popover.Content aria-label="Preference options">
-                              <Popover.Body>
-                                <Button onClick={() => setRootlessChoice(true)}>Keep preference</Button>
-                              </Popover.Body>
-                            </Popover.Content>
-                          </Popover.Positioner>
-                        </Portal>
-                      </Popover.Root>
+                      <PreferenceOptions onKeep={() => setRootlessChoice(true)} />
                     </UiScopeProvider>
                     {rootlessChoice && <Text>Preference kept</Text>}
                     <Button onClick={() => setSurfaceActive(true)}>Restore nested surface</Button>

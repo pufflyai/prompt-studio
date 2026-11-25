@@ -1,5 +1,6 @@
+import { type BigIntStats, lstatSync } from "node:fs";
 import { mkdir, realpath, stat } from "node:fs/promises";
-import { isAbsolute, join, posix, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 import { isExtensionIdentityBackup } from "./extension-identity-backup";
 
 export const normalizeMountRelativePath = (path: string) => {
@@ -34,6 +35,40 @@ export interface SafeResolvedPath {
   relativePath: string;
 }
 
+export const filesystemIdentity = ({ dev, ino, birthtimeNs }: Pick<BigIntStats, "dev" | "ino" | "birthtimeNs">) =>
+  `${dev}:${ino}:${birthtimeNs}`;
+
+export const readArtifactFileState = (path: string) => {
+  // An ancestor that was removed or replaced by a file makes this path absent.
+  try {
+    const stats = lstatSync(path, { bigint: true, throwIfNoEntry: false });
+    if (!stats) return null;
+    return {
+      identity: filesystemIdentity(stats),
+      size: stats.size,
+      mtime: stats.mtimeNs,
+      ctime: stats.ctimeNs,
+      directory: stats.isDirectory(),
+    };
+  } catch {
+    return null;
+  }
+};
+
+export type ArtifactParentWrite = {
+  path: string;
+  before: ReturnType<typeof readArtifactFileState>;
+  after: ReturnType<typeof readArtifactFileState>;
+};
+
+export const observeArtifactParentWrite = (path: string) => {
+  const parent = dirname(path);
+  const before = readArtifactFileState(parent);
+  return (): ArtifactParentWrite => ({ path: parent, before, after: readArtifactFileState(parent) });
+};
+
+type OnDirectoryCreated = (path: string, identity: string, parentWrite: ArtifactParentWrite) => void;
+
 export const createSafeFileRoot = (mountRoot: string) => {
   const absoluteRoot = resolve(mountRoot);
 
@@ -65,35 +100,43 @@ export const createSafeFileRoot = (mountRoot: string) => {
     }
   };
 
-  const ensureDirectory = async (root: string, relativePath: string) => {
+  const ensureDirectory = async (root: string, relativePath: string, onDirectoryCreated?: OnDirectoryCreated) => {
     let current = root;
     for (const segment of relativePath.split("/").filter(Boolean)) {
       current = join(current, segment);
+      const parentWrite = onDirectoryCreated && observeArtifactParentWrite(join(absoluteRoot, relative(root, current)));
       // Another writer can create the same folder at the same time. The checks below still
       // reject a folder that resolves outside the root or is not a folder.
-      await mkdir(current).catch((error: NodeJS.ErrnoException) => {
-        if (error.code !== "EEXIST") throw error;
-      });
+      const created = await mkdir(current).then(
+        () => parentWrite?.(),
+        (error: NodeJS.ErrnoException) => {
+          if (error.code !== "EEXIST") throw error;
+          return undefined;
+        },
+      );
       const currentRealPath = await realpath(current);
       assertContained(root, currentRealPath);
       if (isExtensionIdentityBackup(currentRealPath))
         throw new Error("Extension migration originals are retained by the host");
-      if (!(await stat(currentRealPath)).isDirectory()) {
+      const stats = await stat(currentRealPath, { bigint: true });
+      if (!stats.isDirectory()) {
         throw new Error(`Artifact directory is not a directory: ${relativePath}`);
       }
+      if (created)
+        onDirectoryCreated?.(join(absoluteRoot, relative(root, currentRealPath)), filesystemIdentity(stats), created);
       current = currentRealPath;
     }
     return current;
   };
 
-  const resolveForWrite = async (path: string): Promise<SafeResolvedPath> => {
+  const resolveForWrite = async (path: string, onDirectoryCreated?: OnDirectoryCreated): Promise<SafeResolvedPath> => {
     const relativePath = normalizeMountRelativePath(path);
     if (isExtensionIdentityBackup(join(absoluteRoot, relativePath)))
       throw new Error("Extension migration originals are retained by the host");
     const root = await resolveRoot(true);
     const parent = posix.dirname(relativePath);
     const safeParent = parent === "." ? "" : parent;
-    const realParent = await ensureDirectory(root, safeParent);
+    const realParent = await ensureDirectory(root, safeParent, onDirectoryCreated);
     const operationPath = relativePath ? join(root, ...relativePath.split("/")) : root;
     const existing = await tryResolveExisting(relativePath);
     if (existing) return existing;

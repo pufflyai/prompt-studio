@@ -1,5 +1,5 @@
 import { historicalContributionId } from "pstdio-api-contracts/extension-host";
-import type { CommandRunnerEnvironment, RuntimeArtifactMount } from "pstdio-extensions";
+import type { ArtifactMountWriteObserver, CommandRunnerEnvironment, RuntimeArtifactMount } from "pstdio-extensions";
 import { createReadBoundary, migrateExtensionFiles } from "pstdio-extensions";
 import { createSharedArtifactMount } from "../../../services/shared-files/artifact-mount";
 import type { ExtensionsRouteDeps } from "../deps";
@@ -11,7 +11,7 @@ export const createArtifactsApi = (
     artifactMounts?: RuntimeArtifactMount[];
     extensionId: string;
     name: string;
-    onWrite: (path: string) => void;
+    onWrite: ArtifactMountWriteObserver;
     assertWritable?: () => Promise<void>;
     projectId: string;
     signal?: AbortSignal;

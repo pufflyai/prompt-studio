@@ -1,16 +1,18 @@
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Client, Pool } from "pg";
 import { createDatabaseLeases } from "../database-leases";
+import { defaultRelayPoolMax } from "../storage/database";
 
 export const createAssetDatabase = (
   databaseUrl: string,
   cancelled: (key: string) => void,
   failed: (reason: unknown) => void,
+  poolMax = defaultRelayPoolMax,
 ) => {
   if (!databaseUrl) throw new Error("Relay assets require a PostgreSQL URL");
   // Cancellation must not queue behind connections held by streaming uploads.
   const control = new Pool({ connectionString: databaseUrl, max: 1 });
-  const writers = new Pool({ connectionString: databaseUrl });
+  const writers = new Pool({ connectionString: databaseUrl, max: poolMax });
   const leases = createDatabaseLeases(databaseUrl, [control, writers]);
   let listener: { client: Client; ready: Promise<void> } | undefined;
   const retiring = new Set<Promise<void>>();

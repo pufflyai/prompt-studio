@@ -1,10 +1,41 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, test } from "@playwright/test";
 import { openCanvasPreview } from "../preview";
 
 const frame = "packages/ui/src/utils/scoped-overlays-modal-view.canvas.tsx#RetainedView";
 
+const holdFramesOnClick = (trigger: Locator) => {
+  // Hold animation frames from the reopening click until the Escape keydown has reached the page.
+  return trigger.evaluateHandle((element) => {
+    const callbacks = new Map<number, FrameRequestCallback>();
+    let nextId = 0;
+    const requestFrame = window.requestAnimationFrame;
+    const cancelFrame = window.cancelAnimationFrame;
+    element.addEventListener(
+      "click",
+      () => {
+        window.requestAnimationFrame = (callback) => {
+          const id = --nextId;
+          callbacks.set(id, callback);
+          return id;
+        };
+        window.cancelAnimationFrame = (id) => {
+          if (id < 0) callbacks.delete(id);
+          else cancelFrame(id);
+        };
+      },
+      { capture: true, once: true },
+    );
+    return async () => {
+      window.requestAnimationFrame = requestFrame;
+      window.cancelAnimationFrame = cancelFrame;
+      for (const callback of callbacks.values()) requestFrame(callback);
+      await new Promise<void>((resolve) => requestFrame(() => resolve()));
+    };
+  });
+};
+
 // Critical: a retained view's popup must not remain over the destination inside an open modal.
-test("a popup inside a modal follows its retained view", async ({ page }) => {
+test("a reopened popup takes Escape before its retained modal", async ({ page }) => {
   const preview = await openCanvasPreview(page, frame);
   const dialog = preview.getByRole("dialog", { name: "Retained modal", exact: true });
   const draft = dialog.getByRole("textbox", { name: "Modal draft", exact: true });
@@ -20,12 +51,25 @@ test("a popup inside a modal follows its retained view", async ({ page }) => {
   await dialog.getByRole("button", { name: "First view", exact: true }).click();
   await expect(draft).toHaveValue("Keep my modal draft");
   await expect(popup).toBeHidden();
-  await trigger.click();
-  await expect(popup).toBeVisible();
-  await popup.press("Escape");
+  const resumeAnimationFrames = await holdFramesOnClick(trigger);
+  try {
+    await trigger.click();
+    await expect(popup).toBeVisible();
+    const nextView = popup.getByRole("button", { name: "Next view from options", exact: true });
+    await nextView.focus();
+    await expect(nextView).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  } finally {
+    await resumeAnimationFrames.evaluate((resume) => resume());
+    await resumeAnimationFrames.dispose();
+  }
   await expect(popup).toBeHidden();
   await expect(trigger).toBeFocused();
   await expect(dialog).toBeVisible();
+  await expect(draft).toHaveValue("Keep my modal draft");
+  await trigger.press("Escape");
+  await expect(dialog).toBeHidden();
 });
 
 // Critical: a deeper dialog keeps popup interaction and focus inside its own modal owner.
@@ -70,12 +114,34 @@ test("a provider without a surface root keeps popup choices inside its dialog", 
   const preview = await openCanvasPreview(page, frame);
   const dialog = preview.getByRole("dialog", { name: "Retained modal", exact: true });
   const trigger = dialog.getByRole("button", { name: "Preference options", exact: true });
+  const popup = preview.getByRole("dialog", { name: "Preference options", exact: true });
   await trigger.press("Enter");
-  const choice = dialog.getByRole("button", { name: "Keep preference", exact: true });
+  const choice = popup.getByRole("button", { name: "Keep preference", exact: true });
   await expect(choice).toBeFocused();
   await choice.press("Enter");
   await expect(dialog.getByText("Preference kept", { exact: true })).toBeVisible();
   await choice.press("Escape");
-  await expect(preview.getByRole("dialog", { name: "Preference options", exact: true })).toBeHidden();
+  await expect(popup).toBeHidden();
   await expect(trigger).toBeFocused();
+  const draft = dialog.getByRole("textbox", { name: "Modal draft", exact: true });
+  await draft.fill("Keep my provider draft");
+  const resumeAnimationFrames = await holdFramesOnClick(trigger);
+  try {
+    await trigger.click();
+    await choice.focus();
+    await expect(choice).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(draft).toBeVisible();
+    await expect(draft).toHaveValue("Keep my provider draft");
+    await expect(popup).toBeVisible();
+  } finally {
+    await resumeAnimationFrames.evaluate((resume) => resume());
+    await resumeAnimationFrames.dispose();
+  }
+  await expect(popup).toBeVisible();
+  await choice.press("Escape");
+  await expect(popup).toBeHidden();
+  await expect(trigger).toBeFocused();
+  await expect(dialog).toBeVisible();
+  await expect(draft).toHaveValue("Keep my provider draft");
 });

@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, watch as fsWatch, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import * as fs from "node:fs";
+import { existsSync, watch as fsWatch, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createArtifactMount, resolveArtifactMountRoot, type WatchDirectory } from "pstdio-extensions";
@@ -28,13 +29,23 @@ const watchOneFolder: WatchDirectory = (path, listener, onError) => {
 };
 
 const startWatch = async (
-  options: { initialFolders?: string[]; maxFolders?: number; onFolderLimit?: () => void; watch?: WatchDirectory } = {},
+  options: {
+    initialFiles?: Record<string, string>;
+    initialFolders?: string[];
+    maxFolders?: number;
+    onFolderLimit?: () => void;
+    watch?: WatchDirectory;
+    watchRoot?: WatchDirectory;
+    platform?: NodeJS.Platform;
+  } = {},
 ) => {
-  const { initialFolders = [], ...watchOptions } = options;
+  const { initialFiles = {}, initialFolders = [], ...watchOptions } = options;
   const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-mount-watch-"));
   const location = { repoRoot, extensionId: "pstdio.dashboards", mountPath: "boards" };
   const root = resolveArtifactMountRoot(location);
+  mkdirSync(root, { recursive: true });
   for (const folder of initialFolders) mkdirSync(join(root, folder), { recursive: true });
+  for (const [file, text] of Object.entries(initialFiles)) writeFileSync(join(root, file), text);
   const ledger = createArtifactMountWriteLedger();
   const changes: string[][] = [];
   const watcher = watchArtifactMount({
@@ -56,7 +67,195 @@ const startWatch = async (
   return { changes, mount: createArtifactMount({ ...location, onWrite: ledger.record }), root };
 };
 
+test("one watcher cannot suppress another watcher's folder-only notification", async () => {
+  const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-independent-mount-watches-"));
+  const location = { repoRoot, extensionId: "pstdio.dashboards", mountPath: "boards" };
+  const root = resolveArtifactMountRoot(location);
+  const ledger = createArtifactMountWriteLedger(() => 0);
+  const mount = createArtifactMount({ ...location, onWrite: ledger.record });
+  await mount.writeText("sales/first.json", "{}");
+
+  const openWatch = () => {
+    const changes: string[][] = [];
+    let tree = (_event: string, _path: string) => {};
+    let flat = (_event: string, _path: string) => {};
+    const watch = watchArtifactMount({
+      root,
+      ledger,
+      onChange: (paths) => changes.push(paths),
+      onError: (error) => {
+        throw error;
+      },
+      onFolderLimit: () => {},
+      watch: (path, listener) => {
+        if (path === root) tree = listener;
+        return { close: () => {} };
+      },
+      watchRoot: (_path, listener) => {
+        flat = listener;
+        return { close: () => {} };
+      },
+    });
+    return {
+      changes,
+      tree: (event: string, path: string) => tree(event, path),
+      flat: (event: string, path: string) => flat(event, path),
+      close: watch.close,
+    };
+  };
+  const relay = openWatch();
+  const view = openWatch();
+  cleanups.push(() => {
+    relay.close();
+    view.close();
+    rmSync(repoRoot, { recursive: true, force: true });
+  });
+
+  writeFileSync(join(root, "sales", "first.json"), "external");
+  relay.tree("change", "sales/first.json");
+  await waitFor(() => relay.changes.length === 1);
+  expect(relay.changes).toEqual([["sales/first.json"]]);
+
+  view.flat("rename", "sales");
+  await waitFor(() => view.changes.length === 1);
+  expect(view.changes).toEqual([["sales"]]);
+
+  relay.flat("rename", "sales");
+  await Bun.sleep(1_050);
+  expect(relay.changes).toEqual([["sales/first.json"]]);
+});
+
+test("a mount watcher does not recreate a missing checkout", () => {
+  const parent = mkdtempSync(join(tmpdir(), "pstdio-watch-no-checkout-"));
+  const workspaceRoot = join(parent, "checkout");
+  cleanups.push(() => rmSync(parent, { recursive: true, force: true }));
+  let watcher: ReturnType<typeof watchArtifactMount> | undefined;
+  try {
+    expect(() => {
+      watcher = watchArtifactMount({
+        root: join(workspaceRoot, ".pstdio", "extension-storage", "boards"),
+        workspaceRoot,
+        ledger: createArtifactMountWriteLedger(),
+        onChange: () => {},
+        onError: () => {},
+        onFolderLimit: () => {},
+        watch: () => ({ close: () => {} }),
+      });
+    }).toThrow();
+    expect(existsSync(workspaceRoot)).toBe(false);
+  } finally {
+    watcher?.close();
+  }
+});
+
+test.each([
+  ["opening", true],
+  ["walking", true],
+  ["opening", false],
+  ["walking", false],
+])("closes startup handles when %s fails (error callback throws: %s)", async (stage, rethrow) => {
+  const root = mkdtempSync(join(tmpdir(), "pstdio-watch-startup-"));
+  cleanups.push(() => rmSync(root, { recursive: true, force: true }));
+  mkdirSync(join(root, "subfolder"));
+  const failure = new Error("cannot start flat watcher");
+  const changes: string[][] = [];
+  const closed: string[] = [];
+  let limited = false;
+  let flatOpened = false;
+  let watcher: ReturnType<typeof watchArtifactMount> | undefined;
+  cleanups.push(() => watcher?.close());
+  const readDirectory = fs.readdirSync;
+  const read = spyOn(fs, "readdirSync").mockImplementation((...args) => {
+    if (flatOpened && args[0] === root) throw failure;
+    return Reflect.apply(readDirectory, fs, args);
+  });
+  try {
+    expect(
+      () =>
+        (watcher = watchArtifactMount({
+          root,
+          ledger: createArtifactMountWriteLedger(),
+          onChange: (paths) => changes.push(paths),
+          onError: (error) => {
+            if (rethrow) throw error;
+          },
+          onFolderLimit: () => {
+            limited = true;
+          },
+          maxFolders: 1,
+          watch: () => ({ close: () => closed.push("tree") }),
+          watchRoot: () => {
+            if (stage === "opening") throw failure;
+            flatOpened = true;
+            return { close: () => closed.push("flat") };
+          },
+        })),
+    ).toThrow(failure);
+  } finally {
+    read.mockRestore();
+  }
+  expect(limited).toBe(true);
+  expect(closed.sort()).toEqual(stage === "opening" ? ["tree"] : ["flat", "tree"]);
+  await Bun.sleep(250);
+  expect(changes).toEqual([]);
+});
+
 describe("watchArtifactMount", () => {
+  test.each(["darwin", "linux", "win32"] as const)("uses the default root watch policy for %s", async (platform) => {
+    const nativeWatch = fs.watch;
+    const watches = spyOn(fs, "watch").mockImplementation(nativeWatch);
+    try {
+      const { root } = await startWatch(platform === process.platform ? {} : { platform });
+      const recursive = process.platform === "darwin" || process.platform === "win32";
+      const registrations: unknown[] = watches.mock.calls.map(([path, options]) => [path, options]);
+      const expected = [[root, { recursive }]];
+      if (platform === "darwin") expected.push([root, { recursive: false }]);
+      expect(registrations).toEqual(expected);
+    } finally {
+      watches.mockRestore();
+    }
+  });
+
+  test("reports replaced manifests when the tree watch delivers no notification", async () => {
+    const { changes, root } = await startWatch({
+      initialFiles: { "manifest.json": '{"version":1}' },
+      watch: () => ({ close: () => {} }),
+      watchRoot: watchOneFolder,
+    });
+    writeFileSync(join(root, ".manifest.new"), '{"version":2}');
+    renameSync(join(root, ".manifest.new"), join(root, "manifest.json"));
+    await waitFor(() => changes.length > 0);
+    expect(changes[0]).toContain("manifest.json");
+  });
+
+  test("drops staggered echoes from both watches and reports a subsequent direct edit", async () => {
+    let emitTree: (event: string, file: string) => void = () => {};
+    let emitRoot: (event: string, file: string) => void = () => {};
+    const { changes, mount, root } = await startWatch({
+      watch: (_path, listener) => {
+        emitTree = listener;
+        return { close: () => {} };
+      },
+      watchRoot: (_path, listener) => {
+        emitRoot = listener;
+        return { close: () => {} };
+      },
+    });
+
+    await mount.writeText("manifest.json", "{}");
+    emitRoot("rename", "manifest.json");
+    await Bun.sleep(250);
+    expect(changes).toEqual([]);
+    emitTree("rename", "manifest.json");
+    await Bun.sleep(250);
+    expect(changes).toEqual([]);
+
+    writeFileSync(join(root, "manifest.json"), '{"version":2}');
+    emitRoot("change", "manifest.json");
+    await waitFor(() => changes.length > 0);
+    expect(changes).toEqual([["manifest.json"]]);
+  });
+
   test("reports one change with every path of a burst of direct edits", async () => {
     const { changes, root } = await startWatch();
 

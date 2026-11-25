@@ -21,8 +21,8 @@ export const createRelayHandler =
   (owners: RelayOwners, upgrade: RelayUpgrade, report: ReportFailure) => async (request: Request) => {
     try {
       return await handleRelayRequest(owners, upgrade, request, report);
-    } catch {
-      if (!request.signal.aborted) report("request_exception");
+    } catch (error) {
+      if (!request.signal.aborted) report("request_exception", error);
       return relayResponse({ error: "Relay unavailable" }, 503);
     } finally {
       if (request.body && !request.body.locked) await request.body.cancel().catch(() => {});

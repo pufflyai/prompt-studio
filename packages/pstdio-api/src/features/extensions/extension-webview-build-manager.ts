@@ -41,11 +41,18 @@ import {
   collectExtensionWebviews,
   resolveManagedWebviewPaths,
 } from "./extension-webviews";
-import { createPendingWebviewChecks } from "./pending-webview-checks";
+import {
+  awaitOwnedPreparation,
+  type CheckOwner,
+  createPendingWebviewChecks,
+  ownedPreparation,
+} from "./pending-webview-checks";
 
 interface BuildAttempt extends ManagedWebviewBuildIdentity {
   users: number;
   work: Promise<ManagedWebviewBuildResult> | ManagedWebviewBuildResult;
+  /** The build's preparation scope. Another caller that waits for this build lends it its urgency. */
+  owner: CheckOwner;
 }
 type SourceRefresh = {
   current: NonNullable<Awaited<ReturnType<typeof loadCurrentWebviewSource>>>;
@@ -207,21 +214,24 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
       if (attempt) attempts.delete(key);
       if (readWebviewBuildSignature(paths.distDir) === signature || backoff.isBlocked(key, signature)) return;
       backoff.forget(key);
+      const owned = ownedPreparation(() =>
+        build({
+          ...inspected,
+          row,
+          snapshot,
+          webview,
+          isCurrent: () => !disposed && attempts.get(key) === created,
+        }),
+      );
       const created: BuildAttempt = {
         row,
         webview,
         snapshot,
         signature,
         users: 0,
-        work: Promise.resolve()
-          .then(async () => {
-            const result = await build({
-              ...inspected,
-              row,
-              snapshot,
-              webview,
-              isCurrent: () => !disposed && attempts.get(key) === created,
-            });
+        owner: owned.owner,
+        work: owned.work
+          .then((result) => {
             created.work = result;
             return result;
           })
@@ -235,7 +245,8 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     }
     attempt.users++;
     try {
-      await reconcileResult(key, attempt, await attempt.work);
+      // Waiting for another caller's build lends it urgency, so a continuation that interrupted it cannot hold it.
+      await reconcileResult(key, attempt, await awaitOwnedPreparation(attempt.owner, attempt.work));
     } finally {
       attempt.users--;
     }

@@ -26,6 +26,8 @@ export interface PackageManifest {
   pstdio?: {
     scope?: ExtensionLoadScope;
     projectFiles?: { tracked: boolean };
+    /** "process" runs the backend in its own worker process instead of the API process (ADR 0058). */
+    backendRuntime?: "process";
   };
   id: string;
 }
@@ -125,9 +127,22 @@ const validatePstdioMetadata = (
     }
   }
 
-  if (scope === undefined && projectFiles === undefined) return undefined;
+  const backendRuntime = value.backendRuntime;
+  if (backendRuntime !== undefined && backendRuntime !== "process") {
+    diagnostics.push(
+      createDiagnostic({
+        code: "extension_manifest_invalid_value",
+        message: `pstdio.backendRuntime "${String(backendRuntime)}" must be "process"`,
+        sourcePath: packagePath,
+      }),
+    );
+    return null;
+  }
+
+  if (scope === undefined && projectFiles === undefined && backendRuntime === undefined) return undefined;
   return {
     ...(scope ? { scope } : {}),
+    ...(backendRuntime ? { backendRuntime } : {}),
     ...(projectFiles ? { projectFiles: { tracked: projectFiles.tracked as boolean } } : {}),
   };
 };

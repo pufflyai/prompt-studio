@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, watch as fsWatch, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { createDirectoryTreeWatcher, type WatchDirectory } from "./directory-tree-watcher";
+import { createDirectoryTreeWatcher, type DirectoryWatchListener, type WatchDirectory } from "./directory-tree-watcher";
 
 const roots: string[] = [];
 const createRoot = () => {
@@ -136,7 +136,70 @@ describe("createDirectoryTreeWatcher", () => {
 });
 
 // The Linux strategy, which every platform uses when a watch function is injected.
+test("retries a returned root when reopening its watch fails", async () => {
+  const root = createRoot();
+  const errors: unknown[] = [];
+  const retryErrors: unknown[] = [];
+  const paths: string[] = [];
+  const failure = Object.assign(new Error("Cannot reopen the root watch"), { code: "ENOSPC" });
+  let opened = 0;
+  let listener: DirectoryWatchListener | undefined;
+  const tree = createDirectoryTreeWatcher({
+    root,
+    onEvent: (_event, path) => paths.push(path),
+    onError: (error) => errors.push(error),
+    onRootRetryError: (error) => retryErrors.push(error),
+    skipDirectory: () => true,
+    watch: (_path, notify) => {
+      if (++opened === 2) throw failure;
+      listener = notify;
+      return { close: () => {} };
+    },
+  });
+  try {
+    rmSync(root, { recursive: true });
+    listener?.("rename", null);
+    mkdirSync(root);
+    await waitFor(() => opened === 3, 3_000);
+    expect(errors).toEqual([]);
+    expect(retryErrors).toEqual([failure]);
+    listener?.("rename", "manifest.json");
+    expect(paths).toContain(join(root, "manifest.json"));
+  } finally {
+    tree.close();
+  }
+});
+
 describe("createDirectoryTreeWatcher with one handle per folder", () => {
+  test("keeps discovering siblings when one new folder cannot be watched", () => {
+    const root = createRoot();
+    const folder = join(root, "new");
+    const denied = join(folder, "a-denied");
+    const usable = join(folder, "z-usable");
+    const failure = Object.assign(new Error("Cannot watch this folder"), { code: "EACCES" });
+    const errors: unknown[] = [];
+    const listeners = new Map<string, DirectoryWatchListener>();
+    const tree = createDirectoryTreeWatcher({
+      root,
+      onEvent: () => {},
+      onError: (error) => errors.push(error),
+      watch: (path, listener) => {
+        if (path === denied) throw failure;
+        listeners.set(path, listener);
+        return { close: () => listeners.delete(path) };
+      },
+    });
+    try {
+      mkdirSync(denied, { recursive: true });
+      mkdirSync(usable);
+      listeners.get(root)?.("rename", "new");
+      expect(errors).toEqual([failure]);
+      expect(listeners.has(usable)).toBe(true);
+    } finally {
+      tree.close();
+    }
+  });
+
   test("reports what a new folder already holds when its handle starts", async () => {
     const root = createRoot();
     const paths: string[] = [];

@@ -27,7 +27,14 @@ export {
   type WorkspaceMountResolvedEntry,
   type WorkspaceMountSearchResult,
 } from "./artifacts";
-export { createSafeFileRoot } from "./artifacts/safe-file-root";
+export type { ArtifactMountWriteObserver } from "./artifacts/artifact-mount";
+export {
+  type ArtifactParentWrite,
+  createSafeFileRoot,
+  filesystemIdentity,
+  observeArtifactParentWrite,
+  readArtifactFileState,
+} from "./artifacts/safe-file-root";
 export {
   createDirectoryTreeWatcher,
   type DirectoryTreeWatcher,

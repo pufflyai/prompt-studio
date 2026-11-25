@@ -34,6 +34,8 @@ Use `Dialog.Title`, the shared `CloseButton`, and `Dialog.Footer` with grouped a
 The workbench overlay owns its close button; widgets supply the header, body, and footer.
 Scoped dialog content owns nested popup portals so their focus stays inside the dialog. A retained view or surface inside that dialog owns a visibility boundary within the same dialog; choices in a deeper dialog use that deeper modal's content. Popup positioning stays fixed within clipped dialog content; an explicit popup container or positioning still takes precedence. Nested dialog roots retain their own backdrop and portal owner.
 
+`ScopedPopover.Root` handles Escape as soon as the popover is visible inside a scoped dialog. A popover supplied through `ScopedPopover.RootProvider` may need a second Escape if the first arrives before Chakra registers its layer. The first press keeps the dialog open. After registration, Chakra applies the provider's Escape settings.
+
 Put parameter explanations in `description`. `ParamEditorLabel` shows a tooltip on hover or keyboard focus of its
 info button. Escape uses the shared overlay behavior and can also dismiss a containing dialog. Labels do not add an asterisk; required validation
 stays in the form.

@@ -1,6 +1,8 @@
-import { afterEach, expect, test } from "bun:test";
-import { mkdir, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
+import { afterEach, expect, spyOn, test } from "bun:test";
+import * as fsPromises from "node:fs/promises";
+import { mkdir, readFile, rename, rm, symlink, utimes, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { createArtifactMountWriteLedger } from "../../features/extensions/artifact-mount-watch/write-ledger";
 import { artifactFilesFixture } from "./artifact-files.fixture";
 import { createSharedArtifactMount } from "./artifact-mount";
 
@@ -142,16 +144,193 @@ test("write notifications keep the workspace path used by filesystem watchers", 
   const alias = join(f.root, "workspace-link");
   await symlink(f.input.repoRoot, alias, "junction");
   const writes: string[] = [];
+  const directories: string[] = [];
+  const ledger = createArtifactMountWriteLedger(() => 0);
+  const nested = join(alias, ".pstdio/extension-storage/example.documents/documents/nested");
   const mount = createSharedArtifactMount(f.deps, {
     ...f.input,
     repoRoot: alias,
-    onWrite: (path) => writes.push(path),
+    onWrite: (path, created, parentWrite) => {
+      writes.push(path);
+      directories.push(...(created?.keys() ?? []));
+      ledger.record(path, created, parentWrite);
+    },
   });
   await mount.writeText("note.md", "saved through linked workspace");
+  await mount.writeText("nested/first.md", "created the directory");
+  expect(ledger.dropEchoes([nested, join(nested, "first.md")], { keepMatchedWrites: true })).toEqual([]);
+  await mount.writeText("nested/second.md", "used the existing directory");
+  expect(ledger.dropEchoes([nested, join(nested, "second.md")], { keepMatchedWrites: true })).toEqual([]);
   expect(writes).toContain(join(alias, ".pstdio/extension-storage/example.documents/documents/note.md"));
+  expect(directories).toEqual([nested]);
 });
 
 test("a mount reports the full-ID folder that filesystem watchers must observe", async () => {
   const f = await fixture();
   expect(f.mount().root).toBe(f.pathFor("documents"));
+});
+
+test("shared API writes advance only the watcher that already reported the outside folder change", async () => {
+  const f = await fixture();
+  const ledger = createArtifactMountWriteLedger(() => 0);
+  const mount = createSharedArtifactMount(f.deps, { ...f.input, onWrite: ledger.record });
+  const folder = f.pathFor("documents/sales");
+  const archive = join(folder, "archive");
+  const options = { keepMatchedWrites: true };
+  const first = ledger.createEchoFilter();
+  const second = ledger.createEchoFilter();
+  await mount.writeText("sales/archive/first.json", "{}");
+  await writeFile(join(archive, "external.json"), "outside");
+  expect(first([archive], options)).toEqual([archive]);
+
+  await mount.writeText("sales/archive/second.json", "{}");
+  expect(first([folder], options)).toEqual([]);
+  expect(second([folder], options)).toEqual([folder]);
+});
+
+test.each([
+  ["folder", true],
+  ["child", true],
+  ["child", false],
+])("a shared mount reports a returned subtree from a %s hint (dual watch: %s)", async (hint, keepMatchedWrites) => {
+  const f = await fixture();
+  const ledger = createArtifactMountWriteLedger(() => 0);
+  const mount = createSharedArtifactMount(f.deps, { ...f.input, onWrite: ledger.record });
+  const folder = f.pathFor("documents/sales");
+  const nested = join(folder, "nested");
+  const parked = f.pathFor("parked-nested");
+  const returned = hint === "folder" ? nested : join(nested, "a.json");
+  const removed = join(nested, "b.json");
+  const options = { keepMatchedWrites };
+  await mount.writeText("sales/nested/a.json", "{}");
+  await mount.writeText("sales/nested/b.json", "{}");
+  await rename(nested, parked);
+  await mount.delete("sales");
+  expect(ledger.dropEchoes([folder], options)).toEqual([]);
+  await mount.writeText("sales/owned.json", "{}");
+
+  await rename(parked, nested);
+  expect(ledger.dropEchoes([returned], options)).toEqual([returned]);
+  await rm(removed);
+  expect(ledger.dropEchoes([removed], options)).toEqual([removed]);
+});
+
+test("a folder return retires shared mount child deletions that were not individually observed", async () => {
+  const f = await fixture();
+  const ledger = createArtifactMountWriteLedger(() => 0);
+  const mount = createSharedArtifactMount(f.deps, { ...f.input, onWrite: ledger.record });
+  const folder = f.pathFor("documents/sales");
+  const child = join(folder, "q3.json");
+  const options = { keepMatchedWrites: true };
+  await mount.writeText("sales/q3.json", "{}");
+  expect(ledger.dropEchoes([folder, child], options)).toEqual([]);
+  await mount.delete("sales");
+  expect(ledger.dropEchoes([folder, child], options)).toEqual([]);
+
+  await mkdir(folder);
+  await writeFile(child, "[]");
+  expect(ledger.dropEchoes([folder], options)).toEqual([folder]);
+  await rm(child);
+  expect(ledger.dropEchoes([child], options)).toEqual([child]);
+});
+
+test("a child-only return hint preserves external removals and owned delete echoes in shared mounts", async () => {
+  const f = await fixture();
+  const ledger = createArtifactMountWriteLedger(() => 0);
+  const mount = createSharedArtifactMount(f.deps, { ...f.input, onWrite: ledger.record });
+  const missing = f.pathFor("documents/sales/old.json");
+  const options = { keepMatchedWrites: true };
+  await mount.writeText("sales/old.json", "{}");
+  await mount.delete("sales");
+  expect(ledger.dropEchoes([missing], options)).toEqual([]);
+  await mount.writeText("sales/owned.json", "[]");
+
+  const folder = f.pathFor("documents/sales/returned/nested");
+  const hint = join(folder, "a.json");
+  const child = join(folder, "b.json");
+  const owned = join(folder, "owned.json");
+  await mkdir(folder, { recursive: true });
+  await writeFile(hint, "outside");
+  await writeFile(child, "outside sibling");
+  await writeFile(owned, "outside then deleted by API");
+  await mount.delete("sales/returned/nested/owned.json");
+  expect(ledger.dropEchoes([hint], options)).toEqual([hint]);
+
+  await rm(child);
+  expect(ledger.dropEchoes([child, missing, owned], options)).toEqual([child]);
+});
+
+test("a shared API deletion after an external folder return stays quiet", async () => {
+  const f = await fixture();
+  const ledger = createArtifactMountWriteLedger(() => 0);
+  const mount = createSharedArtifactMount(f.deps, { ...f.input, onWrite: ledger.record });
+  const folder = f.pathFor("documents/sales");
+  const child = join(folder, "q3.json");
+  const options = { keepMatchedWrites: true };
+  await mount.writeText("sales/q3.json", "{}");
+  await mount.delete("sales");
+  expect(ledger.dropEchoes([folder, child], options)).toEqual([]);
+
+  await mkdir(folder);
+  await writeFile(child, "[]");
+  await mount.delete("sales/q3.json");
+  expect(ledger.dropEchoes([folder, child], options)).toEqual([folder]);
+  expect(ledger.dropEchoes([child], options)).toEqual([]);
+});
+
+test.each([
+  true,
+  false,
+])("an edited mount-owned folder preserves old deletion echoes (folder first: %s)", async (folderFirst) => {
+  const f = await fixture();
+  const ledger = createArtifactMountWriteLedger(() => 0);
+  const mount = createSharedArtifactMount(f.deps, { ...f.input, onWrite: ledger.record });
+  const folder = f.pathFor("documents/sales");
+  const oldChild = join(folder, "old.json");
+  const options = { keepMatchedWrites: true };
+  await mount.writeText("sales/old.json", "{}");
+  await mount.delete("sales");
+  await mount.writeText("sales/new.json", "[]");
+  await writeFile(join(folder, "external.json"), "{}");
+  await utimes(folder, new Date(), new Date(Date.now() + 5_000));
+
+  expect(ledger.dropEchoes([oldChild], options)).toEqual([]);
+  const paths = folderFirst ? [folder, oldChild] : [oldChild, folder];
+  expect(ledger.dropEchoes(paths, options)).toEqual([folder]);
+  expect(ledger.dropEchoes([oldChild], options)).toEqual([]);
+});
+
+test("shared projection preserves an outside parent change during placement lookup", async () => {
+  const f = await fixture();
+  const ledger = createArtifactMountWriteLedger(() => 0);
+  const mount = createSharedArtifactMount(f.deps, { ...f.input, onWrite: ledger.record });
+  const folder = f.pathFor("documents/sales");
+  const existing = join(folder, "existing.json");
+  const child = join(folder, "child.json");
+  const outside = f.pathFor("returned-sales");
+  const options = { keepMatchedWrites: true };
+  await mount.writeText("sales/existing.json", "{}");
+  expect(ledger.dropEchoes([folder, existing], options)).toEqual([]);
+
+  const makeDirectory = fsPromises.mkdir;
+  const physicalFolder = await fsPromises.realpath(folder);
+  let edited = false;
+  const editDuringLookup = async (...args: Parameters<typeof makeDirectory>) => {
+    if (!edited && args[0] === physicalFolder && args[1] === undefined) {
+      edited = true;
+      await rename(folder, outside);
+      await writeFile(join(outside, "external.json"), "outside");
+      await utimes(outside, new Date(), new Date(Date.now() + 5_000));
+      await rename(outside, folder);
+    }
+    return Reflect.apply(makeDirectory, fsPromises, args);
+  };
+  const lookup = spyOn(fsPromises, "mkdir").mockImplementation(editDuringLookup as typeof makeDirectory);
+  try {
+    await mount.writeText("sales/child.json", "[]");
+  } finally {
+    lookup.mockRestore();
+  }
+  expect(edited).toBe(true);
+  expect(ledger.dropEchoes([folder, child], options)).toEqual([folder]);
 });

@@ -5,14 +5,16 @@ COPY patches patches
 COPY packages/canvas/package.json ./packages/canvas/package.json
 COPY services/telemetry/package.json ./services/telemetry/package.json
 COPY services/relay/package.json ./services/relay/package.json
+COPY services/relay-monitoring/package.json ./services/relay-monitoring/package.json
 COPY services/account-manager/package.json ./services/account-manager/package.json
 COPY packages/pstdio-sync/package.json ./packages/pstdio-sync/package.json
 COPY packages/pstdio-sync-contracts/package.json ./packages/pstdio-sync-contracts/package.json
 # The relay benchmark's writer is a development dependency; the production install skips it but needs its manifest.
 COPY packages/benchmarks/package.json ./packages/benchmarks/package.json
 COPY packages/storage-scale-fixture/package.json ./packages/storage-scale-fixture/package.json
-RUN bun install --frozen-lockfile --production --filter pstdio-relay
+RUN bun install --frozen-lockfile --production --filter pstdio-relay --filter pstdio-relay-monitoring
 COPY services/relay/src ./services/relay/src
+COPY services/relay-monitoring/src ./services/relay-monitoring/src
 COPY services/relay/scripts ./services/relay/scripts
 COPY services/account-manager/src ./services/account-manager/src
 COPY services/telemetry/src ./services/telemetry/src
@@ -20,6 +22,9 @@ COPY packages/pstdio-sync/src ./packages/pstdio-sync/src
 COPY packages/pstdio-sync-contracts/src ./packages/pstdio-sync-contracts/src
 COPY services/account-manager/scripts/database-migration.ts ./services/relay/database-migration.ts
 RUN bun build services/relay/database-migration.ts --target bun --outfile dist/database-migration.js
+COPY infra/relay/collector-process.ts ./collector-process.ts
+RUN bun build collector-process.ts --target bun --outfile dist/collector-process.js
+RUN bun build services/relay-monitoring/src/*-main.ts --target bun --outdir dist/monitoring
 RUN bun build services/relay/src/server.ts services/relay/src/index.ts services/relay/scripts/smoke.ts services/relay/scripts/smoke-replacement.ts services/relay/scripts/enroll-local.fixture.ts services/relay/scripts/initialize.fixture.ts services/relay/scripts/transport-client-smoke.ts --target bun --outdir dist
 
 RUN bun build services/account-manager/src/server.ts --target bun --outfile dist/manager.js
@@ -32,8 +37,14 @@ RUN mkdir /tls-private /tls-public /relay-tls-private && chown bun:bun /tls-priv
 USER bun
 CMD ["bun", "tls.fixture.ts"]
 
+FROM grafana/alloy:v1.22.0@sha256:9acc2529bc1edb7f5b2bd801dd8334ebc80c158e3a9e5526ecd7c9a273d43189 AS collector
+
 FROM oven/bun:1.4.4-slim AS base
 WORKDIR /app
+COPY --from=build --chown=bun:bun /build/dist/monitoring/ ./
+COPY --from=collector /bin/alloy /usr/local/bin/alloy
+COPY --chown=bun:bun infra/monitoring/collector.alloy /etc/alloy/config.alloy
+COPY --from=build --chown=bun:bun /build/dist/collector-process.js ./collector-process.js
 COPY --from=build --chown=bun:bun /build/dist/src/server.js ./server.js
 COPY --from=build --chown=bun:bun /build/dist/src/index.js ./storage.js
 COPY --from=build --chown=bun:bun /build/dist/database-migration.js ./database-migration.js
@@ -42,7 +53,7 @@ COPY --chown=bun:bun services/relay/drizzle ./drizzle
 ENV RELAY_HOST=0.0.0.0 RELAY_PORT=8080
 USER bun
 EXPOSE 8080
-CMD ["bun", "container-entrypoint.ts", "bun", "server.js"]
+CMD ["bun", "container-entrypoint.ts", "bun", "collector-process.js", "bun", "server.js"]
 
 FROM base AS smoke
 COPY --from=build --chown=bun:bun /build/dist/scripts/smoke.js ./smoke.js
