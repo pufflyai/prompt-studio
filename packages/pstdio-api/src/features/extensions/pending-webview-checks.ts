@@ -10,18 +10,35 @@ export const joinPreparationDependencies = <T>(
 ) => {
   const leases = new Map<
     CheckOwner,
-    { source: "requested" | NonNullable<typeof caller.continuation>; release: () => void }
+    {
+      requested: boolean;
+      continuations: typeof caller.continuations;
+      requestedContinuations: typeof caller.requestedContinuations;
+      release: () => void;
+    }
   >();
+  const sameOwners = (previous: typeof caller.continuations, next: typeof caller.continuations) =>
+    previous.length === next.length && previous.every((continuation, index) => continuation === next[index]);
   const refresh = () => {
-    const source = caller.requested ? "requested" : caller.continuation;
+    const source = {
+      requested: caller.requested,
+      continuations: caller.continuations,
+      requestedContinuations: caller.requestedContinuations,
+    };
     for (const owner of owners) {
       const current = leases.get(owner);
-      if (current && (owner.settled || !source || current.source !== source)) {
-        current.release();
+      if (owner.settled || (!source.requested && !source.continuations.length)) {
         leases.delete(owner);
+        current?.release();
+      } else if (
+        current?.requested !== source.requested ||
+        !sameOwners(current.continuations, source.continuations) ||
+        !sameOwners(current.requestedContinuations, source.requestedContinuations)
+      ) {
+        // Several continuations can wait through the same caller. Keep urgency through a lease transfer.
+        leases.set(owner, { ...source, release: owner.scope.request(source) });
+        current?.release();
       }
-      if (source && !owner.settled && !leases.has(owner))
-        leases.set(owner, { source, release: owner.scope.request(caller) });
     }
   };
   const unsubscribe = caller.subscribe(refresh);
@@ -30,6 +47,26 @@ export const joinPreparationDependencies = <T>(
     unsubscribe();
     for (const lease of leases.values()) lease.release();
   });
+};
+
+/** Runs preparation work under its own scope, so another caller that waits for it can lend it urgency. */
+export const ownedPreparation = <T>(work: () => Promise<T>) => {
+  const owner: CheckOwner = { scope: createPreparationScope(), settled: false };
+  const settled = owner.scope.run(work).finally(() => {
+    owner.settled = true;
+    owner.scope.dispose();
+  });
+  return { owner, work: settled };
+};
+
+/** Waits for another caller's preparation work while lending it this caller's urgency. */
+export const awaitOwnedPreparation = async <T>(owner: CheckOwner, work: T | Promise<T>) => {
+  const caller = createPreparationScope();
+  try {
+    return await joinPreparationDependencies(caller, [owner], Promise.resolve(work));
+  } finally {
+    caller.dispose();
+  }
 };
 
 // Refresh callers await their own work. Requests depend on every overlapping check,
