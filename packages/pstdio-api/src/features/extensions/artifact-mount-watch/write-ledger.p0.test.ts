@@ -278,6 +278,49 @@ describe("artifact mount deletions and expiry", () => {
 });
 
 describe("artifact mount restored folder batches", () => {
+  test("retires prior file deletions when a restored folder is the only return hint", async () => {
+    const ledger = createArtifactMountWriteLedger();
+    const { mount, root } = createMount(ledger);
+    const folder = join(root, "sales");
+    const child = join(folder, "q3.json");
+    const outside = join(dirname(root), "restored-sales");
+    const options = { keepMatchedWrites: true };
+    await mount.writeText("sales/q3.json", "{}");
+    await mount.delete("sales/q3.json");
+    await mount.delete("sales");
+    expect(ledger.dropEchoes([folder, child], options)).toEqual([]);
+
+    mkdirSync(outside);
+    writeFileSync(join(outside, "q3.json"), "[]");
+    renameSync(outside, folder);
+    expect(ledger.dropEchoes([folder], options)).toEqual([folder]);
+    rmSync(child);
+    expect(ledger.dropEchoes([child], options)).toEqual([child]);
+  });
+
+  test.each([
+    true,
+    false,
+  ])("keeps a missing sibling's owned deletion echo after an external sibling is added (%s)", async (folderFirst) => {
+    const ledger = createArtifactMountWriteLedger();
+    const { mount, root } = createMount(ledger);
+    const folder = join(root, "sales");
+    const oldPath = join(folder, "old.json");
+    const newPath = join(folder, "new.json");
+    const options = { keepMatchedWrites: true };
+    await mount.writeText("sales/old.json", "{}");
+    ledger.dropEchoes([folder, oldPath], options);
+    await mount.delete("sales");
+    expect(ledger.dropEchoes([folder, oldPath], options)).toEqual([]);
+    await mount.writeText("sales/new.json", "{}");
+    expect(ledger.dropEchoes([folder, newPath], options)).toEqual([]);
+
+    writeFileSync(join(folder, "external.json"), "[]");
+    const paths = folderFirst ? [folder, oldPath] : [oldPath, folder];
+    expect(ledger.dropEchoes(paths, options)).toEqual([folder]);
+    expect(ledger.dropEchoes([oldPath], options)).toEqual([]);
+  });
+
   test.each([
     [true, true],
     [true, false],

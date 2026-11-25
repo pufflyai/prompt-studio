@@ -32,7 +32,7 @@ export type ArtifactMountWriteLedger = ReturnType<typeof createArtifactMountWrit
  */
 export const createArtifactMountWriteLedger = (now: () => number = Date.now) => {
   const entries = new Map<string, LedgerEntry>();
-  const directories = new Map<string, { recordedAt: number; observed: FileState }>();
+  const directories = new Map<string, { recordedAt: number; observed: NonNullable<FileState> }>();
 
   const forgetExpired = () => {
     for (const [path, entry] of entries) {
@@ -52,6 +52,12 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     }
   };
 
+  const retireDeletedSubtree = (root: string) => {
+    for (const [path, entry] of entries) {
+      if (entry.state === null && (path === root || isInside(path, root))) entries.delete(path);
+    }
+  };
+
   const reconcileDeletions = (observations: readonly PathObservation[]) => {
     const byPath = new Map(observations);
     for (const [recordedPath, entry] of entries) {
@@ -62,11 +68,9 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
       // A recursive watcher may report only a child when an external folder returns.
       const observed = byPath.get(recordedPath);
       const current = observed === undefined ? readArtifactFileState(recordedPath) : observed;
-      const owned = directories.get(recordedPath)?.observed ?? null;
-      const returnedByMount =
-        observed === undefined ? owned?.identity === current?.identity : sameState(owned, current);
-      if (current && !returnedByMount) {
-        entries.delete(recordedPath);
+      const owned = directories.get(recordedPath)?.observed;
+      if (current && owned?.identity !== current.identity) {
+        retireDeletedSubtree(recordedPath);
         continue;
       }
       markReappearedPaths(entry, related);
@@ -84,7 +88,8 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     const recorded = directories.get(path);
     if (!recorded) return false;
     const matches = sameState(recorded.observed, current);
-    if (!matches || !keepMatchedWrites) directories.delete(path);
+    // A changed snapshot reports the folder, while the same inode still proves an owned restore.
+    if (!keepMatchedWrites || recorded.observed.identity !== current?.identity) directories.delete(path);
     return matches;
   };
 
