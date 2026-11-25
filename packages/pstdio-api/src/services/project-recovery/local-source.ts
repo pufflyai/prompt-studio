@@ -248,6 +248,7 @@ export const createLocalRecoverySource = (input: {
     },
     publish,
     prune,
+    needsAttention: () => scheduler.status().failed,
     async status() {
       const current = await source();
       const pending = !!current && (!!(await current.journal.read()).candidate || scheduler.status().pending);

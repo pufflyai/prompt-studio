@@ -12,12 +12,12 @@ import { createNativeAccount, nativeAccountFile } from "./native-account";
 
 // Exercise the real account routes and durable local owners without booting unrelated
 // agents, terminals or extension discovery. Packaged smoke covers full-host wiring.
-export const createAccountHostFixture = async (root: string) => {
-  const database = await createDb({ path: join(root, "db") });
+export const createAccountHostFixture = async (root: string, databasePath = join(root, "db")) => {
+  const database = await createDb({ path: databasePath });
   const projects = createProjectsDBService(database.db);
   const environmentService = createEnvironmentDBService(database.db);
   const extensionStorageService = createExtensionStorageDBService(database.db);
-  const file = nativeAccountFile(join(root, "db"), join(root, "storage"));
+  const file = nativeAccountFile(databasePath, join(root, "storage"));
   let synced: RelayWorkbench[] = [];
   const account = createNativeAccount({ file, projects, environment: environmentService });
   // No relay runs here, so a synced project never finishes its first download, and a cloud project

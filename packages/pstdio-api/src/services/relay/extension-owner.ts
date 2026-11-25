@@ -180,6 +180,7 @@ export const startRelayExtension = async (input: {
       wake: connection.wake,
       wakeDocument,
       retry: connection.retry,
+      prepareRetry: connection.prepareRetry,
       restart: connection.restart,
       done: connection.done.finally(async () => {
         stopProjection();

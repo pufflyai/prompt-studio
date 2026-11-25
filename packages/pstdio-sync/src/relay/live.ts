@@ -74,6 +74,7 @@ interface LiveConnectionInput {
 
 export const createLiveConnection = (input: LiveConnectionInput) => {
   const controller = new AbortController();
+  const signal = AbortSignal.any([input.signal, controller.signal]);
   let protocolUnsupported = false;
   let controlRefused = false;
   let renewing = false;
@@ -181,7 +182,7 @@ export const createLiveConnection = (input: LiveConnectionInput) => {
   };
   const transport = createRelaySocket({
     ...input,
-    signal: AbortSignal.any([input.signal, controller.signal]),
+    signal,
     path: syncPath({ kind: "live", projectId: input.projectId }),
     headers: { [syncProtocolHeader]: String(syncProtocolVersion), [liveProtocolHeader]: String(liveProtocolVersion) },
     message(body) {
@@ -206,6 +207,7 @@ export const createLiveConnection = (input: LiveConnectionInput) => {
   });
   const retain = controls.retain;
   return {
+    signal,
     done: transport.done,
     // Routing admission is sampled separately from a document owner's synchronization work.
     status: () => liveStatus(transport, controls, { protocolUnsupported, controlRefused, renewing }),
