@@ -510,13 +510,9 @@ test.each(copyStates)("two views check the current device state before downloadi
     id,
     account,
     device,
-    folderError,
-    started,
     release,
     removalStarted,
     releaseRemoval,
-    catalogCaptured,
-    releaseCatalog,
     opened,
     owner,
     client,
@@ -540,7 +536,7 @@ test.each(copyStates)("two views check the current device state before downloadi
         device.presence = "downloaded";
         device.holdCatalog = true;
         inFlightCatalog = client.refetchQueries({ queryKey: ["cloud-project-catalog"] });
-        await catalogCaptured.promise;
+        await fixture.catalogCaptured.promise;
       });
       let result: Promise<unknown>;
       await act(async () => {
@@ -548,7 +544,7 @@ test.each(copyStates)("two views check the current device state before downloadi
         await removalStarted.promise;
       });
       await act(async () => {
-        releaseCatalog.resolve();
+        fixture.releaseCatalog.resolve();
         await inFlightCatalog!;
         await until(() => fixture.choice.entry?.presence === "downloaded");
       });
@@ -609,7 +605,11 @@ test.each(copyStates)("two views check the current device state before downloadi
         addLocalProject();
         publishExtensionEvent({ id: accountEvents.changed.id }, owner);
         await until(
-          () => fixture.choice.entry?.presence === "downloaded" && fixture.peer.entry?.presence === "downloaded",
+          () =>
+            fixture.choice.entry?.presence === "downloaded" &&
+            fixture.peer.entry?.presence === "downloaded" &&
+            opened.length === 1 &&
+            fixture.closed === 1,
         );
       });
       expect({ beforeReceipt, afterRemoval, opened: opened.length, closed: fixture.closed }).toEqual({
@@ -645,7 +645,7 @@ test.each(copyStates)("two views check the current device state before downloadi
     }
     await act(async () => {
       fixture.choice.requestDownload();
-      await started.promise;
+      await fixture.started.promise;
     });
     expect(fixture.peer.showProgress).toBe(true);
     expect(fixture.peer.canDownload).toBe(false);
@@ -683,7 +683,7 @@ test.each(copyStates)("two views check the current device state before downloadi
       if (hasRetryableFailure) {
         await clickAndSettle(staleRetry);
         expect(device.downloads).toBe(2);
-        if (outcome === "folder error") device.downloadError = folderError;
+        if (outcome === "folder error") device.downloadError = fixture.folderError;
         else device.syncFailed = true;
         await act(async () => {
           await client.refetchQueries({
