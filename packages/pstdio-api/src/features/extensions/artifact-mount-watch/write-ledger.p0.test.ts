@@ -278,6 +278,29 @@ describe("artifact mount deletions and expiry", () => {
 });
 
 describe("artifact mount restored folder batches", () => {
+  test("a replacement folder hint retires returned child deletions and keeps missing sibling echoes", async () => {
+    const ledger = createArtifactMountWriteLedger(() => 0);
+    const { mount, root } = createMount(ledger);
+    const folder = join(root, "sales");
+    const child = join(folder, "q3.json");
+    const missingSibling = join(folder, "old.json");
+    const options = { keepMatchedWrites: true };
+    await mount.writeText("sales/q3.json", "{}");
+    await mount.writeText("sales/old.json", "{}");
+    await mount.delete("sales/q3.json");
+    await mount.delete("sales/old.json");
+    expect(ledger.dropEchoes([child, missingSibling], options)).toEqual([]);
+
+    const replacement = join(dirname(root), "replacement-sales");
+    mkdirSync(replacement);
+    writeFileSync(join(replacement, "q3.json"), "[]");
+    renameSync(folder, join(dirname(root), "previous-sales"));
+    renameSync(replacement, folder);
+    expect(ledger.dropEchoes([folder], options)).toEqual([folder]);
+    rmSync(child);
+    expect(ledger.dropEchoes([child, missingSibling], options)).toEqual([child]);
+  });
+
   test("retires prior file deletions when a restored folder is the only return hint", async () => {
     const ledger = createArtifactMountWriteLedger();
     const { mount, root } = createMount(ledger);

@@ -24,6 +24,9 @@ const sameState = (recorded: FileState, current: FileState) =>
 
 const isInside = (path: string, folder: string) => path.startsWith(folder + sep);
 
+const observesDeletion = ([path, state]: PathObservation, deletedPath: string) =>
+  path === deletedPath || isInside(path, deletedPath) || (state?.directory === true && isInside(deletedPath, path));
+
 export type ArtifactMountWriteLedger = ReturnType<typeof createArtifactMountWriteLedger>;
 
 /**
@@ -67,7 +70,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     const byPath = new Map(observations);
     for (const [recordedPath, entry] of entries) {
       if (entry.state !== null) continue;
-      const related = observations.filter(([path]) => path === recordedPath || isInside(path, recordedPath));
+      const related = observations.filter((observation) => observesDeletion(observation, recordedPath));
       if (related.length === 0) continue;
 
       // A recursive watcher may report only a child when an external folder returns.
