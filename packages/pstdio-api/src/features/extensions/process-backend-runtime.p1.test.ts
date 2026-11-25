@@ -15,6 +15,7 @@ const previous = { home: process.env.PSTDIO_HOME, defaults: process.env.PSTDIO_D
 const entry = `
 const item = (ctx) => ctx.storage.collection("items");
 export default {
+  storage: { logs: ["worker-events"] },
   harnesses: [{ id: "agent" }],
   middlewares: [
     {
@@ -58,6 +59,23 @@ export default {
         await item(ctx).put(params.id, { text: params.text });
         ctx.logger.info("saved");
         return { pid: process.pid, stored: await item(ctx).get(params.id), id: ctx.storage.records.id(params.id) };
+      },
+    },
+    {
+      id: "log-scope",
+      ref: { kind: "command", id: "log-scope" },
+      title: "Log scope",
+      async run(ctx) {
+        const options = { scope: { type: "resource", resource: { type: "fixture", id: "original" } } };
+        const log = ctx.storage.log("worker-events", options);
+        options.scope.resource.id = "changed";
+        await log.append({ recorded: true }, { id: "entry" });
+        const readScope = async (id) => {
+          const scope = { type: "resource", resource: { type: "fixture", id } };
+          const result = await ctx.storage.log("worker-events", { scope }).read({ after: 0 });
+          return result.entries.map((entry) => entry.id);
+        };
+        return { original: await readScope("original"), changed: await readScope("changed") };
       },
     },
     {
@@ -231,6 +249,11 @@ test("a process-mode command runs in its worker and uses host storage through ct
   expect(value.pid).not.toBe(process.pid);
   expect(value.stored).toEqual({ text: "HELLO" });
   expect(value.id).toBe(handle.deps.extensionStorageService.recordId("project", projectId, "a"));
+});
+
+test("a process-mode log keeps its resource scope after the caller edits the options", async () => {
+  const { outcome } = await execute("log-scope");
+  expect(outcome).toMatchObject({ ok: true, value: { original: ["entry"], changed: [] } });
 });
 
 test("a process-mode command preserves a structured command rejection", async () => {
