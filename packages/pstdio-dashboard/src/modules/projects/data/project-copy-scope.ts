@@ -34,14 +34,7 @@ export const cloudProjectCopySubject = (id: string, account: ProjectCopyAccount)
   operationSubject("cloud-project-copy", account.managerOrigin, account.accountId, id);
 
 export const deviceProjectCopySubject = (id: string, account: ProjectCopyAccount, device: ProjectCopyDevice) =>
-  operationSubject(
-    "cloud-project-device-copy",
-    account.managerOrigin,
-    account.accountId,
-    id,
-    device.accountId,
-    device.deviceId,
-  );
+  `${cloudProjectCopySubject(id, account)}:${operationSubject("device", device.accountId, device.deviceId)}`;
 
 export const cloudCopyBusy = (
   operations: WorkbenchOperations,
@@ -50,14 +43,15 @@ export const cloudCopyBusy = (
   device?: ProjectCopyDevice,
 ) => {
   if (!account) return false;
-  const subject = cloudProjectCopySubject(id, account);
-  const local = device && deviceProjectCopySubject(id, account, device);
-  return operations
-    .getSnapshot()
-    .pending.some(
-      (entry) =>
-        entry.subjects.includes(subject) || (local ? entry.subjects.includes(local) : entry.intent === subject),
-    );
+  const accountSubject = cloudProjectCopySubject(id, account);
+  const deviceSubject = device && deviceProjectCopySubject(id, account, device);
+  const devicePrefix = `${accountSubject}:`;
+  return operations.getSnapshot().pending.some((entry) => {
+    if (entry.subjects.includes(accountSubject)) return true;
+    if (deviceSubject) return entry.subjects.includes(deviceSubject);
+    // Discarding a draft leaves the device claim in place.
+    return entry.subjects.some((subject) => subject.startsWith(devicePrefix));
+  });
 };
 
 export const requireProjectCopyScope = (
