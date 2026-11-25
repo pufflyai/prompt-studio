@@ -20,7 +20,7 @@ test("duplicate collection views share reads and observation, and ignore another
   const subscribe = spyOn(owner, "subscribeCollections");
   const second = createSharedCollectionViews({
     projectId: "project",
-    extensionInstanceId: null,
+    extensionId: null,
     localId: "table",
     record: { id: "table" },
   });

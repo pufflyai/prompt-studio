@@ -2,7 +2,6 @@ import { createHash, scrypt, scryptSync, timingSafeEqual } from "node:crypto";
 import type { AutomationRunError } from "pstdio-api-contracts";
 import type { createAutomationDBService } from "pstdio-db";
 import { canonicalRuntimeId } from "pstdio-extensions";
-import { apiLogger } from "../../lib/logger";
 import type { ExtensionsRouteDeps } from "../extensions/deps";
 import { fireExtensionEventAsync } from "../extensions/extension-event-runtime";
 
@@ -185,20 +184,12 @@ export const recordRunActivity = async (deps: AutomationPolicyDeps, run: Automat
     })
     .catch(() => undefined);
   if (run.token_id === null) {
-    const principal = await deps.automationDBService.getPrincipal(run.project_id, run.principal_id).catch((err) => {
-      apiLogger.warn(
-        { err, event: "automation.notification.failed", run_id: run.id },
-        "Automation status notification failed",
-      );
-      return null;
+    const extensionId = run.principal_id.slice("extension:".length);
+    fireExtensionEventAsync(deps.getCommandDeps(), run.project_id, `${extensionId}.event.automation-run-changed`, {
+      runId: run.id,
+      commandId: run.command_id,
+      status: run.status,
     });
-    if (principal?.created_by === "extension") {
-      fireExtensionEventAsync(deps.getCommandDeps(), run.project_id, `${principal.name}.event.automation-run-changed`, {
-        runId: run.id,
-        commandId: run.command_id,
-        status: run.status,
-      });
-    }
   }
 };
 

@@ -44,6 +44,7 @@ export type SessionHookDeps = Pick<
   | "extensionService"
   | "extensionInstallations"
   | "extensionSettingsDBService"
+  | "preferencesDBService"
   | "extensionSettingsService"
   | "extensionStorageService"
   | "storagePositions"

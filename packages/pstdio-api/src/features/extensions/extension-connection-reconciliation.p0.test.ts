@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMemoryConnectionSecretStore } from "./connection-secret-store";
 import { createExtensionConnectionService } from "./extension-connection-service";
-import { connection, contribution } from "./extension-connection-service.test-fixture";
+import { connection, contribution, credentialMethods } from "./extension-connection-service.test-fixture";
 
 test("background reconciliation preserves credentials configured after the app opens", async () => {
   const entered = Promise.withResolvers<void>();
@@ -10,6 +10,7 @@ test("background reconciliation preserves credentials configured after the app o
   let stored: typeof connection | null = null;
   const service = createExtensionConnectionService({
     connectionsDBService: {
+      ...credentialMethods,
       listAll: async () => (stored ? [stored] : []),
       get: async () => stored,
       upsert: async (input: { secretRef: string }) => {

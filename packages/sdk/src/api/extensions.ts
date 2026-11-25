@@ -29,6 +29,7 @@ export type {
   LocalizableString,
   MarketplaceExtension,
   ProjectExtensionInstance,
+  SavedExtensionSignIn,
   UpdateExtensionSettingRequest,
   UpgradeProjectExtensionResponse,
   WorkbenchExtensionAutomationRecord,

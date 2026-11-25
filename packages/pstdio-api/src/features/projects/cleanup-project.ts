@@ -68,10 +68,10 @@ export const evictProjectCopy = (
           }),
         );
         const removeSecrets = await deps.extensionConnectionService.prepareProjectRemoval(id);
-        await removeSecrets();
         await removeManagedProjectFolder(id, home?.root_path);
         // Delete local rows only after retryable external cleanup succeeds.
         await deps.projectService.delete(id);
+        await removeSecrets();
       }),
     );
   });

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { defineExtension, projectSlots } from "@pstdio/sdk/extensions";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { buildCliHelpTree } from "./cli-help";
 import type { LoadedExtensionSource } from "./loader";
 import { normalizeExtensionSources } from "./normalize";
@@ -75,7 +76,7 @@ describe("buildCliHelpTree", () => {
       ...source.manifest,
       id: "pstdio.pstdio-planner",
       name: "pstdio-planner",
-      enginesPstdio: "^0.4.0 || ^0.5.0",
+      enginesPstdio: `^${EXTENSION_API_VERSION}`,
     };
     const runtime = normalizeExtensionSources([source]);
     expect(runtime.diagnostics).toEqual([]);

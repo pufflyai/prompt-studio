@@ -3,6 +3,7 @@ export type {
   CloudProjectCatalogEntry,
   CloudProjectDeletion,
   DeleteCloudProjectInput,
+  DeleteExtensionConnectionInput,
   DownloadCloudProjectResult,
   HarnessAuthentication,
   HarnessAuthenticationInput,

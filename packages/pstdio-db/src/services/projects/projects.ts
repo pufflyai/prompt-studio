@@ -1,6 +1,7 @@
 import { and, asc, eq, gt, isNull, notInArray } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { extension_instances, projects, storage_record_indexes } from "../../db/schemas.pg";
+import { project_extensions, projects, storage_record_indexes } from "../../db/schemas.pg";
+import { projectExtensionRow } from "../extension-instances/project-extension-row";
 import { dropRecordIndexes } from "../extension-storage/record-index-lifecycle";
 import { type PageQuery, pageBoundary, pageLimit, queryPage } from "../query-page";
 import { deriveShorthand } from "./derive-shorthand";
@@ -102,18 +103,17 @@ export const createProjectsDBService = (db: DbClient) => {
     return true;
   };
 
-  // Project-scoped extension instances point at the project through a polymorphic scope, so no
-  // foreign key cascades them. The caller receives them to publish their removal.
+  // Capture rows for committed sync deletions before the project FK cascades them.
   const hardDelete = async (id: string) =>
     db.transaction(async (tx) => {
       await dropRecordIndexes(tx, eq(storage_record_indexes.workbench_id, id));
+      const extensionInstances = await tx
+        .select()
+        .from(project_extensions)
+        .where(eq(project_extensions.project_id, id));
       const [deleted] = await tx.delete(projects).where(eq(projects.id, id)).returning({ id: projects.id });
       if (!deleted) return null;
-      const extensionInstances = await tx
-        .delete(extension_instances)
-        .where(and(eq(extension_instances.scope_type, "project"), eq(extension_instances.scope_id, id)))
-        .returning();
-      return { extensionInstances };
+      return { extensionInstances: extensionInstances.map(projectExtensionRow) };
     });
 
   return {

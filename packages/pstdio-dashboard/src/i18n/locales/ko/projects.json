@@ -107,7 +107,10 @@
         "connect": "연결",
         "reconnect": "다시 연결",
         "check": "확인",
-        "revoke": "폐기",
+        "disconnectProject": "프로젝트 연결 해제",
+        "revokeSignIn": "로그인 취소",
+        "revokeSharedSignIn": "공유 로그인 취소",
+        "savedSignIns": "저장된 로그인",
         "saved": "연결을 저장했습니다",
         "actionFailed": "연결 작업에 실패했습니다"
       },

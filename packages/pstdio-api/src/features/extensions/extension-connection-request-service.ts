@@ -10,6 +10,7 @@ import {
   type ConnectionRequestAudit,
   connectionKey,
   type ExtensionConnectionServiceDeps,
+  type StoredConnection,
   toConnectionRecord,
 } from "./extension-connection-service-types";
 import {
@@ -26,7 +27,7 @@ import {
 } from "./extension-connection-transport";
 
 type RequestInput = ConnectionKey & { input: ExtensionConnectionRequest };
-type PreparedKey = ReturnType<typeof connectionKey>;
+type RequestTarget = { key: ReturnType<typeof connectionKey>; configured: StoredConnection };
 
 export const createExtensionConnectionRequestService = (deps: ExtensionConnectionServiceDeps) => {
   const fetchFn = deps.fetch ?? globalThis.fetch;
@@ -34,7 +35,7 @@ export const createExtensionConnectionRequestService = (deps: ExtensionConnectio
   const recordRequest = async (
     input: RequestInput,
     result: Omit<ConnectionRequestAudit, keyof ConnectionKey | "method" | "path">,
-    key?: PreparedKey,
+    target?: RequestTarget,
   ) => {
     const audit = {
       projectId: input.projectId,
@@ -47,13 +48,12 @@ export const createExtensionConnectionRequestService = (deps: ExtensionConnectio
     await Promise.allSettled([
       Promise.resolve().then(
         () =>
-          key &&
-          deps.connectionsDBService.recordCheck(key, {
-            ok: result.ok,
-            status: result.status,
-            error: result.error,
-            checkedAt: new Date().toISOString(),
-          }),
+          target &&
+          deps.connectionsDBService.recordCheck(
+            target.key,
+            { ok: result.ok, status: result.status, error: result.error, checkedAt: new Date().toISOString() },
+            target.configured,
+          ),
       ),
       Promise.resolve().then(() => deps.onRequestComplete?.(audit)),
     ]);
@@ -65,9 +65,18 @@ export const createExtensionConnectionRequestService = (deps: ExtensionConnectio
     return contribution;
   };
 
-  const prepare = async (input: RequestInput, contribution: ExtensionConnectionContribution) => {
-    const configured = await deps.connectionsDBService.get(connectionKey(input, contribution.scope));
+  const resolveTarget = async (input: RequestInput, contribution: ExtensionConnectionContribution) => {
+    const key = connectionKey(input, contribution.scope);
+    const configured = await deps.connectionsDBService.get(key);
     if (!configured) throw new Error(`Connection is not configured: ${input.connectionId}`);
+    return { key, configured };
+  };
+
+  const prepare = async (
+    input: RequestInput,
+    contribution: ExtensionConnectionContribution,
+    configured: StoredConnection,
+  ) => {
     const url = resolveRequestUrl(contribution, configured.base_url, input.input);
     const secret = configured.secret_ref ? await deps.secretStore.get(configured.secret_ref) : null;
     if (!secret) throw new Error(`Connection credential is not configured: ${input.connectionId}`);
@@ -91,11 +100,11 @@ export const createExtensionConnectionRequestService = (deps: ExtensionConnectio
   const request = async <TBody = JsonValue>(input: RequestInput): Promise<ExtensionConnectionResponse<TBody>> => {
     const startedAt = performance.now();
     let status: number | null = null;
-    let key: PreparedKey | undefined;
+    let target: RequestTarget | undefined;
     try {
       const contribution = await contributionFor(input);
-      key = connectionKey(input, contribution.scope);
-      const { response, secret, secretHeader } = await prepare(input, contribution);
+      target = await resolveTarget(input, contribution);
+      const { response, secret, secretHeader } = await prepare(input, contribution, target.configured);
       status = response.status;
       const declaredLength = Number(response.headers.get("content-length"));
       if (Number.isFinite(declaredLength) && declaredLength > MAX_RESPONSE_BYTES) {
@@ -129,7 +138,7 @@ export const createExtensionConnectionRequestService = (deps: ExtensionConnectio
           durationMs: performance.now() - startedAt,
           responseBytes: bytes.byteLength,
         },
-        key,
+        target,
       );
       return result;
     } catch (error) {
@@ -142,7 +151,7 @@ export const createExtensionConnectionRequestService = (deps: ExtensionConnectio
           durationMs: performance.now() - startedAt,
           responseBytes: 0,
         },
-        key,
+        target,
       );
       throw error;
     }
@@ -154,14 +163,14 @@ export const createExtensionConnectionRequestService = (deps: ExtensionConnectio
     let total = 0;
     let completed = false;
     let responseBody: ReadableStream<Uint8Array> | null = null;
-    let key: PreparedKey | undefined;
+    let target: RequestTarget | undefined;
     try {
       const contribution = await contributionFor(input);
-      key = connectionKey(input, contribution.scope);
+      target = await resolveTarget(input, contribution);
       if (!contribution?.supportsStreaming) {
         throw new Error(`Connection does not allow streaming: ${input.connectionId}`);
       }
-      const { response, secret, secretHeader } = await prepare(input, contribution);
+      const { response, secret, secretHeader } = await prepare(input, contribution, target.configured);
       responseBody = response.body;
       status = response.status;
       let headers: Record<string, string>;
@@ -187,7 +196,7 @@ export const createExtensionConnectionRequestService = (deps: ExtensionConnectio
           durationMs: performance.now() - startedAt,
           responseBytes: total,
         },
-        key,
+        target,
       );
       yield { type: "end" };
     } finally {
@@ -202,7 +211,7 @@ export const createExtensionConnectionRequestService = (deps: ExtensionConnectio
             durationMs: performance.now() - startedAt,
             responseBytes: total,
           },
-          key,
+          target,
         );
       }
     }

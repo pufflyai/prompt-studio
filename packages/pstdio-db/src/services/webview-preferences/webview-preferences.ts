@@ -1,55 +1,48 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { webview_preferences } from "../../db/schemas.pg";
+import { preferences } from "../../db/schemas/preferences";
+import { preferenceProjectId, type WebviewPreferenceKey, webviewPreferenceKey } from "../preferences/preference-owners";
+import { preferenceOwnerWhere } from "../preferences/preferences";
 
-export interface WebviewPreferenceKey {
-  extension_id: string;
-  name: string;
-  scope_type: string;
-  scope_id: string;
-}
+export type { WebviewPreferenceKey } from "../preferences/preference-owners";
 
+const whereKey = (key: WebviewPreferenceKey) =>
+  and(preferenceOwnerWhere(webviewPreferenceKey(key)), eq(preferences.key, `webview:${key.name}`));
 export const createWebviewPreferencesDBService = (db: DbClient) => ({
   async get(key: WebviewPreferenceKey) {
-    const [row] = await db
-      .select()
-      .from(webview_preferences)
-      .where(
-        and(
-          eq(webview_preferences.extension_id, key.extension_id),
-          eq(webview_preferences.name, key.name),
-          eq(webview_preferences.scope_type, key.scope_type),
-          eq(webview_preferences.scope_id, key.scope_id),
-        ),
-      );
-    return row?.value_json;
+    const [row] = await db.select().from(preferences).where(whereKey(key));
+    return row?.value;
   },
   async set(input: WebviewPreferenceKey & { value_json: unknown }) {
     const size = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).byteLength;
     if (size(input.value_json) > 16384) throw new Error("preference_too_large: value exceeds 16 KiB");
     await db.transaction(async (tx) => {
-      // Serialize the quota check with writes, including the first value for a new owner.
-      await tx.execute(sql`LOCK TABLE webview_preferences IN SHARE ROW EXCLUSIVE MODE`);
+      await tx.execute(sql`LOCK TABLE preferences IN SHARE ROW EXCLUSIVE MODE`);
       const rows = await tx
         .select()
-        .from(webview_preferences)
-        .where(eq(webview_preferences.extension_id, input.extension_id));
+        .from(preferences)
+        .where(and(eq(preferences.extension_id, input.extension_id), sql`starts_with(${preferences.key}, 'webview:')`));
+      const key = webviewPreferenceKey(input);
       const others = rows.filter(
-        (row) => row.name !== input.name || row.scope_type !== input.scope_type || row.scope_id !== input.scope_id,
+        (row) => row.key !== key.key || row.scope !== key.scope || row.scope_id !== key.scope_id,
       );
-      if (others.reduce((total, row) => total + size(row.value_json), size(input.value_json)) > 262144)
+      if (others.reduce((total, row) => total + size(row.value), size(input.value_json)) > 262144)
         throw new Error("preference_too_large: extension exceeds 256 KiB");
+      let sync: "team" | "personal" | "device" = "device";
+      if (key.scope === "user") sync = "personal";
+      if (key.scope === "project") sync = "team";
       await tx
-        .insert(webview_preferences)
-        .values({ ...input, updated_at: new Date().toISOString() })
+        .insert(preferences)
+        .values({
+          ...key,
+          value: input.value_json,
+          project_id: await preferenceProjectId(tx, key.scope, key.scope_id),
+          sync,
+          updated_at: new Date().toISOString(),
+        })
         .onConflictDoUpdate({
-          target: [
-            webview_preferences.extension_id,
-            webview_preferences.name,
-            webview_preferences.scope_type,
-            webview_preferences.scope_id,
-          ],
-          set: { value_json: input.value_json, updated_at: new Date().toISOString() },
+          target: [preferences.scope, preferences.scope_id, preferences.extension_id, preferences.key],
+          set: { value: input.value_json, updated_at: new Date().toISOString() },
         });
     });
   },

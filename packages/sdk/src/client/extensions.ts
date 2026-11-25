@@ -4,6 +4,7 @@ import type {
   CommandExecuteResponse,
   CommandExecutionResult,
   ConfigureExtensionConnectionInput,
+  DeleteExtensionConnectionInput,
   DispatchExtensionEventInput,
   EnableInstalledExtensionRequest,
   EnableInstalledExtensionResponse,
@@ -62,7 +63,12 @@ export type ExtensionClient = ReturnType<typeof createExtensionControlsClient> &
       input: ConfigureExtensionConnectionInput,
     ): Promise<ExtensionConnectionRecord>;
     checkConnection(projectId: string, extensionId: string, connectionId: string): Promise<ExtensionConnectionRecord>;
-    deleteConnection(projectId: string, extensionId: string, connectionId: string): Promise<void>;
+    deleteConnection(
+      projectId: string,
+      extensionId: string,
+      connectionId: string,
+      input?: DeleteExtensionConnectionInput,
+    ): Promise<void>;
     execute(
       commandId: string,
       request: CommandExecuteRequest,
@@ -109,11 +115,14 @@ export const createExtensionClient = (
       `/v1/projects/${projectId}/extension-connections/${encodeURIComponent(extensionId)}/${encodeURIComponent(connectionId)}/check`,
       { method: "POST" },
     ),
-  deleteConnection: (projectId, extensionId, connectionId) =>
-    request(
-      `/v1/projects/${projectId}/extension-connections/${encodeURIComponent(extensionId)}/${encodeURIComponent(connectionId)}`,
-      { method: "DELETE" },
-    ),
+  deleteConnection: (projectId, extensionId, connectionId, input) => {
+    const query = new URLSearchParams();
+    if (input?.credentialScope !== undefined) query.set("credentialScope", input.credentialScope);
+    if (input?.origin !== undefined) query.set("origin", input.origin);
+    if (input?.signInScope !== undefined) query.set("signInScope", input.signInScope);
+    const path = `/v1/projects/${projectId}/extension-connections/${encodeURIComponent(extensionId)}/${encodeURIComponent(connectionId)}`;
+    return request(query.size ? `${path}?${query}` : path, { method: "DELETE" });
+  },
   execute: (commandId, input, options) => {
     const { projectId, ...body } = input;
     return request(`/v1/projects/${projectId}/extensions/commands/${encodeURIComponent(commandId)}/execute`, {

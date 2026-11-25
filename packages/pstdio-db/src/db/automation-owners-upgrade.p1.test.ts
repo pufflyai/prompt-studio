@@ -1,0 +1,189 @@
+import { expect, test } from "bun:test";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { migrate } from "drizzle-orm/pglite/migrator";
+import { createAutomationDBService } from "../services/automation/automation";
+import { createProjectsDBService } from "../services/projects/projects";
+import { prepareAutomationOwnersUpgrade, restoreAutomationPolicy } from "./automation-owners-upgrade";
+import { restoreAutomationRun } from "./automation-run-upgrade";
+import { createDb } from "./connection.pglite";
+import { restoreReleasedPreferenceTables } from "./preference-upgrade.fixture";
+import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
+import { automation_runs, automation_tokens } from "./schemas/automation";
+
+const stamp = "2026-11-20T12:00:00.000Z";
+const owner = (id: string, name: string, created_by = "user", disabled_at: string | null = null) => ({
+  id,
+  project_id: "project",
+  name,
+  created_by,
+  created_at: stamp,
+  disabled_at,
+});
+const principals = [
+  owner("machine-owner", "Retained machine"),
+  owner("disabled-owner", "Blocked", "user", stamp),
+  owner("opaque-extension:owner", "example.retained", "extension"),
+  owner("second-extension-owner", "example.retained", "extension"),
+  owner("disabled-extension", "example.disabled", "extension", stamp),
+];
+const restorePart = async (store: Awaited<ReturnType<typeof createDb>>, path: string, partial: boolean) => {
+  for (const principal of principals) {
+    await restoreAutomationPolicy(store.db, principal);
+  }
+  for (const [name, table] of [
+    ["automation-tokens", automation_tokens],
+    ["automation-runs", automation_runs],
+  ] as const) {
+    const rows = (await Bun.file(`${path}-${name}-upgrade.jsonl`).text())
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    for (const row of partial ? rows.slice(0, 1) : rows) {
+      if (table === automation_runs) await restoreAutomationRun(store.db, path, row);
+      else await store.db.insert(automation_tokens).values(row).onConflictDoNothing();
+    }
+  }
+};
+for (const interruption of ["normal", "capture", "schema", "partial-restore", "partial-cleanup"])
+  test(`released automation authentication and run identity survive ${interruption}`, async () => {
+    const root = await mkdtemp(join(tmpdir(), "automation-owners-upgrade-"));
+    const path = join(root, "database");
+    let store: Awaited<ReturnType<typeof createDb>> | undefined;
+    try {
+      store = await createDb({ path });
+      await createProjectsDBService(store.db).create({ id: "project", name: "Released automation" });
+      await restoreReleasedPreferenceTables(store);
+      for (const principal of principals)
+        await store.pglite.query(
+          "INSERT INTO automation_principals (id, project_id, name, created_by, created_at, disabled_at) VALUES ($1, $2, $3, $4, $5, $6)",
+          Object.values(principal),
+        );
+      for (const [id, principal] of [
+        ["active", "machine-owner"],
+        ["rotated", "machine-owner"],
+        ["disabled", "disabled-owner"],
+      ])
+        await store.pglite.query(
+          "INSERT INTO automation_tokens VALUES ($1, $2, $3, $4, 'project', $5::jsonb, '2099-01-01T00:00:00.000Z', NULL, NULL, $6)",
+          [
+            id,
+            principal,
+            `pst_at_${id}`,
+            `private-digest-${id}`,
+            JSON.stringify(["example.retained.command.run"]),
+            stamp,
+          ],
+        );
+      for (const [id, principal, token, status, started, finished] of [
+        ["queued", "machine-owner", "active", "queued", null, null],
+        ["finished", "machine-owner", "rotated", "succeeded", stamp, stamp],
+        ["extension", "opaque-extension:owner", null, "running", stamp, null],
+        ["extension-alias", "second-extension-owner", null, "queued", null, null],
+      ])
+        await store.pglite.query(
+          "INSERT INTO automation_runs VALUES ($1, 'project', $2, $3, 'example.retained.command.run', CASE WHEN $1::text = 'extension-alias' THEN 'extension' ELSE $1::text END, $4, $5::jsonb, $6, NULL, NULL, $7, $8, $9)",
+          [id, principal, token, `hash-${id}`, JSON.stringify({ input: "日本語" }), status, stamp, started, finished],
+        );
+      if (interruption !== "normal") {
+        await prepareAutomationOwnersUpgrade(store.db, path);
+        if (interruption !== "capture") await prepareProjectExtensionsUpgrade(store.db, store.path);
+        await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        if (interruption.startsWith("partial-")) await restorePart(store, path, interruption === "partial-restore");
+        if (interruption === "partial-cleanup") await rm(`${path}-automation-owners-upgrade.jsonl`);
+      }
+      await store.close();
+      store = await createDb({ path });
+      const service = createAutomationDBService(store.db);
+      const token = await service.getToken("active");
+      expect(token).toMatchObject({
+        principal: { id: "released:machine-owner", name: "Retained machine", created_by: "user", disabled_at: null },
+        token: {
+          id: "active",
+          token_digest: "private-digest-active",
+          command_scopes_json: ["example.retained.command.run"],
+          revoked_at: null,
+        },
+      });
+      expect((await service.getToken("disabled"))?.token.revoked_at).toBe(stamp);
+      expect(await service.getRun("project", "extension")).toMatchObject({
+        principal_id: "extension:example.retained",
+        status: "running",
+        input_json: { input: "日本語" },
+      });
+      expect(
+        await service.getExtensionRun({ projectId: "project", extensionId: "example.retained" }, "extension"),
+      ).toMatchObject({ id: "extension" });
+      expect(
+        await service.getExtensionRun({ projectId: "project", extensionId: "example.retained" }, "extension-alias"),
+      ).toMatchObject({ id: "extension-alias", principal_id: "extension:example.retained" });
+      expect(
+        (await service.getExtensionPrincipal({ projectId: "project", extensionId: "example.disabled" })).disabled_at,
+      ).toBe(stamp);
+      const replacement = (await service.getToken("rotated"))!;
+      expect(replacement.principal.id).toBe(token!.principal.id);
+      const retry = await service.createRun({
+        projectId: "project",
+        principalId: replacement.principal.id,
+        tokenId: replacement.token.id,
+        commandId: "example.retained.command.run",
+        idempotencyKey: "queued",
+        inputHash: "hash-queued",
+        inputJson: { input: "日本語" },
+      });
+      expect(retry.created).toBe(false);
+      expect(retry.run.id).toBe("queued");
+      const exported = await Bun.file(`${path}-migration-exports/automation/extension-alias.json`).json();
+      expect(exported).toMatchObject({
+        id: "extension-alias",
+        idempotency_key: "extension",
+        principal_id: "second-extension-owner",
+      });
+      const events = await service.listRunEvents("finished");
+      expect(events.map((event) => event.type)).toEqual(["queued", "running", "succeeded"]);
+      expect((await service.listRunEvents("finished", events[1].cursor)).map((event) => event.type)).toEqual([
+        "succeeded",
+      ]);
+      expect((await readdir(root)).filter((file) => file.endsWith("-upgrade.jsonl"))).toEqual([]);
+      await store.close();
+      store = await createDb({ path });
+      expect((await createAutomationDBService(store.db).getToken("active"))?.token.token_digest).toBe(
+        "private-digest-active",
+      );
+    } finally {
+      await store?.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+for (const mismatch of ["token-project", "run-token", "run-kind"])
+  test(`an inconsistent released ${mismatch} owner cannot gain authority during migration`, async () => {
+    const root = await mkdtemp(join(tmpdir(), "automation-owner-boundary-"));
+    const path = join(root, "database");
+    let store: Awaited<ReturnType<typeof createDb>> | undefined;
+    try {
+      store = await createDb({ path });
+      for (const id of ["project", "foreign"]) await createProjectsDBService(store.db).create({ id, name: id });
+      await restoreReleasedPreferenceTables(store);
+      await store.pglite.query(
+        "INSERT INTO automation_principals VALUES ('owner','project','Owner','user',$1,NULL), ('peer',$2,'Peer','user',$1,NULL)",
+        [stamp, mismatch === "token-project" ? "foreign" : "project"],
+      );
+      await store.pglite.query(
+        "INSERT INTO automation_tokens VALUES ('token','peer','prefix','digest','project','[]'::jsonb,'2099-01-01',NULL,NULL,$1)",
+        [stamp],
+      );
+      if (mismatch !== "token-project")
+        await store.pglite.query(
+          "INSERT INTO automation_runs VALUES ('run','project','owner',$2,'command','key','hash','{}'::jsonb,'queued',NULL,NULL,$1,NULL,NULL)",
+          [stamp, mismatch === "run-kind" ? null : "token"],
+        );
+      await expect(prepareAutomationOwnersUpgrade(store.db, path)).rejects.toThrow("ownership");
+      expect((await store.pglite.query("SELECT * FROM automation_tokens")).rows).toHaveLength(1);
+      expect((await store.pglite.query("SELECT * FROM automation_principals")).rows).toHaveLength(2);
+    } finally {
+      await store?.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });

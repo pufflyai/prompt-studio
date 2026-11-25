@@ -104,6 +104,39 @@ const verifyOfflineInterrupt = async (sessionId: string) => {
   expect((await destination.deps.personalHistoryService.getSession(sessionId))?.status).toBe("completed");
 };
 
+const verifyWorkspaceHistory = async (
+  projectId: string,
+  sessionId: string,
+  previousWorkspaceId: string,
+  currentWorkspaceId: string,
+  device: { ownerId: string; id: string; name: string },
+) => {
+  const rows = await destination.app.request(
+    `/v1/projects/${projectId}/sessions?workspaceId=${previousWorkspaceId}&orderBy=updated`,
+  );
+  expect(rows.status).toBe(200);
+  expect(await rows.json()).toMatchObject({ items: [] });
+  const contextRows = await destination.app.request(
+    `/v1/projects/${projectId}/sessions?anchorType=workspace&anchorId=${previousWorkspaceId}&anchorExtensionId=pstdio`,
+  );
+  expect(await contextRows.json()).toMatchObject({
+    items: [{ id: sessionId, device, workspaceId: currentWorkspaceId }],
+  });
+  const secondRows = await destination.app.request(
+    `/v1/projects/${projectId}/sessions?workspaceId=${currentWorkspaceId}`,
+  );
+  expect(await secondRows.json()).toMatchObject({ items: [{ id: sessionId, workspaceId: currentWorkspaceId }] });
+  const workspaces = await destination.app.request(`/v1/projects/${projectId}/workspaces`);
+  expect(await workspaces.json()).toMatchObject({
+    items: expect.arrayContaining([expect.objectContaining({ id: previousWorkspaceId, device })]),
+  });
+  const state = await destination.deps.syncService.getFullState();
+  expect(state.sessions).toContainEqual(expect.objectContaining({ id: sessionId, device }));
+  expect(state.workspace_sessions).toEqual([
+    expect.objectContaining({ session_id: sessionId, workspace_id: currentWorkspaceId }),
+  ]);
+};
+
 const managerOrigin = "https://127.0.0.1:1";
 const accountId = "alice";
 test("personal history is readable offline after restart, private to the account, and never a local execution record", async () => {
@@ -210,22 +243,7 @@ test("personal history is readable offline after restart, private to the account
     const read = await destination.app.request(`/v1/sessions/${session.id}/conversation`);
     expect(read.status).toBe(200);
     expect(await read.json()).toMatchObject({ session: { id: session.id, device }, messages });
-    const rows = await destination.app.request(
-      `/v1/projects/${project.id}/sessions?workspaceId=${workspace.id}&orderBy=updated`,
-    );
-    expect(rows.status).toBe(200);
-    expect(await rows.json()).toMatchObject({ items: [{ id: session.id, device, workspaceId: workspace.id }] });
-    const secondRows = await destination.app.request(
-      `/v1/projects/${project.id}/sessions?workspaceId=${secondWorkspace.id}`,
-    );
-    expect(await secondRows.json()).toMatchObject({ items: [{ id: session.id, workspaceId: secondWorkspace.id }] });
-    const workspaces = await destination.app.request(`/v1/projects/${project.id}/workspaces`);
-    expect(await workspaces.json()).toMatchObject({
-      items: expect.arrayContaining([expect.objectContaining({ id: workspace.id, device })]),
-    });
-    const state = await destination.deps.syncService.getFullState();
-    expect(state.sessions).toContainEqual(expect.objectContaining({ id: session.id, device }));
-    expect(state.workspace_sessions).toHaveLength(2);
+    await verifyWorkspaceHistory(project.id, session.id, workspace.id, secondWorkspace.id, device);
     const shared = createResourceLinksApi(destination.deps, { projectId: project.id });
     await shared.addAnchors({ type: "project", id: project.id }, [
       {

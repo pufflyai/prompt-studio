@@ -1,15 +1,15 @@
 import { eq, getTableColumns, inArray } from "drizzle-orm";
 import { getTableConfig, type PgColumn, type PgTable } from "drizzle-orm/pg-core";
 import { boardDefaultSyncRow } from "pstdio-api-contracts";
-import type { board_default_views, DbClient } from "pstdio-db";
-import { SYNCED_TABLES, tableMap } from "./get-full-state";
+import { createBoardViewsDBService, type DbClient, sessions } from "pstdio-db";
+import { PHYSICAL_SYNCED_TABLES, tableMap } from "./get-full-state";
 
 type SyncedTable = keyof typeof tableMap;
 type RootTable = Exclude<SyncedTable, "board_default_views">;
 type Row = Record<string, unknown>;
 type CascadeEdge = { parent: SyncedTable; parentKey: string; child: SyncedTable; childColumn: PgColumn };
 
-const syncedTableOf = (table: PgTable) => SYNCED_TABLES.find((name) => tableMap[name] === table);
+const syncedTableOf = (table: PgTable) => PHYSICAL_SYNCED_TABLES.find((name) => tableMap[name] === table);
 
 const propertyKey = (table: PgTable, column: PgColumn) => {
   const entry = Object.entries(getTableColumns(table)).find(([, value]) => value === column);
@@ -18,7 +18,7 @@ const propertyKey = (table: PgTable, column: PgColumn) => {
 };
 
 // The schema's cascading foreign keys between synced tables decide which rows a delete removes.
-const cascadeEdges = SYNCED_TABLES.flatMap((child) =>
+const cascadeEdges = PHYSICAL_SYNCED_TABLES.flatMap((child) =>
   getTableConfig(tableMap[child])
     .foreignKeys.filter((key) => key.onDelete === "cascade")
     .flatMap((key): CascadeEdge[] => {
@@ -36,12 +36,24 @@ const visit = (table: SyncedTable) => {
   for (const edge of cascadeEdges) if (edge.parent === table) visit(edge.child);
   childrenFirst.push(table);
 };
-for (const table of SYNCED_TABLES) visit(table);
+for (const table of PHYSICAL_SYNCED_TABLES) visit(table);
 
-const syncId = (table: SyncedTable, row: Row) =>
-  table === "board_default_views"
-    ? boardDefaultSyncRow(row as typeof board_default_views.$inferSelect).id
-    : (row.id as string);
+const syncId = (_table: SyncedTable, row: Row) => row.id as string;
+
+const collectWorkspaceLinkDeletes = async (db: DbClient, removedSessions: Row[], removedWorkspaces: Row[]) => {
+  const ids = new Set(
+    removedSessions.filter((row) => typeof row.workspace_id === "string").map((row) => row.id as string),
+  );
+  const workspaces = removedWorkspaces.map((row) => row.id as string);
+  for (let offset = 0; offset < workspaces.length; offset += 200) {
+    const linked = await db
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(inArray(sessions.workspace_id, workspaces.slice(offset, offset + 200)));
+    for (const row of linked) ids.add(row.id);
+  }
+  return [...ids].map((id) => ({ table: "workspace_sessions" as const, id }));
+};
 
 /** Lists the synced rows a delete removes, children before their parents and the root last. */
 export const collectCascadeDeletes = async (db: DbClient, root: RootTable, id: string) => {
@@ -66,5 +78,21 @@ export const collectCascadeDeletes = async (db: DbClient, root: RootTable, id: s
     }
   }
 
-  return childrenFirst.flatMap((table) => [...(rows.get(table)?.keys() ?? [])].map((rowId) => ({ table, id: rowId })));
+  const defaults =
+    root === "projects"
+      ? (await createBoardViewsDBService(db).listDefaults(id)).map((row) => ({
+          table: "board_default_views" as const,
+          id: boardDefaultSyncRow(row).id,
+        }))
+      : [];
+  const links = await collectWorkspaceLinkDeletes(
+    db,
+    [...(rows.get("sessions")?.values() ?? [])],
+    [...(rows.get("workspaces")?.values() ?? [])],
+  );
+  return [
+    ...links,
+    ...defaults,
+    ...childrenFirst.flatMap((table) => [...(rows.get(table)?.keys() ?? [])].map((rowId) => ({ table, id: rowId }))),
+  ];
 };

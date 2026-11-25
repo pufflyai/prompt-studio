@@ -63,7 +63,7 @@ export const setup = (
   markInitialCollectionsSyncComplete();
   return createSharedCollectionViews({
     projectId: "project",
-    extensionInstanceId: null,
+    extensionId: null,
     localId: "table",
     record: { id: "table" },
   });

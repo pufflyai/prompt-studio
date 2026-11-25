@@ -3,6 +3,36 @@ import type { CommandOutcome } from "../extensions";
 import { createClient } from "./client";
 import { PstdioApiError } from "./request";
 
+test("selects a saved connection sign-in while preserving ordinary disconnects", async () => {
+  const calls: Request[] = [];
+  const client = createClient({
+    baseUrl: "http://host",
+    fetch: (async (url, init) => {
+      calls.push(new Request(url, init));
+      return new Response(null, { status: 204 });
+    }) as typeof fetch,
+  }).extensions;
+  const origin = "http://[::1]:1234";
+
+  await client.deleteConnection("project", "example.tool", "connection/id");
+  await client.deleteConnection("project", "example.tool", "connection/id", {
+    credentialScope: "all-projects",
+    origin,
+    signInScope: "global",
+  });
+
+  expect(calls.map((request) => request.method)).toEqual(["DELETE", "DELETE"]);
+  const [local, selected] = calls.map((request) => new URL(request.url));
+  expect(local!.pathname).toBe("/v1/projects/project/extension-connections/example.tool/connection%2Fid");
+  expect(local!.search).toBe("");
+  expect(selected!.pathname).toEqual(local!.pathname);
+  expect(Object.fromEntries(selected!.searchParams)).toEqual({
+    credentialScope: "all-projects",
+    origin,
+    signInScope: "global",
+  });
+});
+
 test("command execution keeps legacy field access and complete rejection details", async () => {
   const outcome = {
     ok: false,

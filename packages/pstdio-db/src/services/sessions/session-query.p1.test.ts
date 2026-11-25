@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { createDb } from "../../db/connection.pglite";
-import { sessions, workspace_sessions } from "../../db/schemas.pg";
+import { sessions } from "../../db/schemas.pg";
 import { createProjectsDBService } from "../projects/projects";
 import { createResourceLinksDBService } from "../resource-links";
+import { createWorkspaceSessionsDBService } from "../workspace-sessions/workspace-sessions";
 import { createWorkspacesDBService } from "../workspaces/workspaces";
 import { createSessionsDBService } from "./sessions";
 
@@ -45,12 +46,11 @@ test("ticket session pages include linked workspace history without duplicate se
   const reverse = await create("Linked from ticket");
   await links.add(anchor, [{ projectId, extensionId: "pstdio", type: "session", id: reverse.id }]);
   await create("Unrelated");
-  await conn.db.insert(workspace_sessions).values([
-    { id: "direct-a", workspace_id: a.id, session_id: direct.id, created_at: "2026-10-01" },
-    { id: "workspace-a", workspace_id: a.id, session_id: workspace.id, created_at: "2026-10-01" },
-    { id: "workspace-b", workspace_id: b.id, session_id: workspace.id, created_at: "2026-10-01" },
-    { id: "second-b", workspace_id: b.id, session_id: second.id, created_at: "2026-10-01" },
-  ]);
+  const memberships = createWorkspaceSessionsDBService(conn.db);
+  await memberships.link(a.id, direct.id);
+  await memberships.link(a.id, workspace.id);
+  await memberships.link(b.id, workspace.id);
+  await memberships.link(b.id, second.id);
   const input = { anchor, includeWorkspaceAnchors: true, limit: 2 };
   const first = await service.query(projectId, input);
   const next = await service.query(projectId, { ...input, cursor: first.nextCursor! });
@@ -126,14 +126,18 @@ test("workspace membership filters do not duplicate sessions and report the sele
   const a = await workspaces.create({ project_id: projectId, shorthand_base: "A" });
   const b = await workspaces.create({ project_id: projectId, shorthand_base: "B" });
   const row = await create("linked");
-  await conn.db.insert(workspace_sessions).values([
-    { id: "a", workspace_id: a.id, session_id: row.id, created_at: "2026-10-01" },
-    { id: "b", workspace_id: b.id, session_id: row.id, created_at: "2026-10-02" },
-  ]);
+  const memberships = createWorkspaceSessionsDBService(conn.db);
+  await memberships.link(a.id, row.id);
   expect((await service.query(projectId)).rows).toMatchObject([{ id: row.id, workspace_id: a.id }]);
+  await memberships.link(b.id, row.id);
+  expect((await service.query(projectId, { workspaceId: a.id })).rows).toEqual([]);
   expect((await service.query(projectId, { workspaceId: b.id })).rows).toMatchObject([
     { id: row.id, workspace_id: b.id },
   ]);
+  expect(
+    (await service.query(projectId, { anchor: { projectId, extensionId: "pstdio", type: "workspace", id: a.id } }))
+      .rows,
+  ).toMatchObject([{ id: row.id, workspace_id: b.id }]);
 });
 
 test("default and maximum pages stay bounded while HTTP can read the complete result", async () => {
@@ -214,4 +218,18 @@ test("pages by update time independently of creation and run timestamps", async 
   const second = await service.query(projectId, { orderBy: "updated", limit: 1, cursor: first.nextCursor! });
   expect(second.rows.map((row) => row.id)).toEqual([newer.id]);
   expect(second.nextCursor).toBeNull();
+});
+
+test("session queries and workspace readers exclude cross-project workspace references", async () => {
+  const foreign = await createProjectsDBService(conn.db).create({ name: "Foreign workspace owner" });
+  const workspace = await createWorkspacesDBService(conn.db).create({ project_id: foreign.id, shorthand_base: "F" });
+  const session = await create("Owned session");
+  const memberships = createWorkspaceSessionsDBService(conn.db);
+  await expect(memberships.link(workspace.id, session.id)).rejects.toThrow("session project");
+  // Reader isolation also applies to malformed data introduced outside the service.
+  await conn.db.update(sessions).set({ workspace_id: workspace.id }).where(eq(sessions.id, session.id));
+  expect((await service.query(projectId)).rows).toMatchObject([{ id: session.id, workspace_id: null }]);
+  expect((await service.query(projectId, { workspaceId: workspace.id })).rows).toEqual([]);
+  expect(await memberships.getWorkspaceBySessionId(session.id)).toBeNull();
+  expect(await memberships.listByWorkspace(workspace.id)).toEqual([]);
 });

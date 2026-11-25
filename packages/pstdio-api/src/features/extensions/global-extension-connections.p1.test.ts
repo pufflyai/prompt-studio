@@ -27,22 +27,61 @@ test("one global connection serves new projects and shares updates and revocatio
     };
     const service = createExtensionConnectionService(deps);
     const input = { projectId: "first", extensionId: "pstdio.remote", connectionId: contribution.id };
+    await expect(
+      service.configure({
+        ...input,
+        baseUrl: server.url.origin,
+        secret: "must-stay-project-only",
+        credentialScope: "project",
+      }),
+    ).rejects.toThrow("A global connection requires a shared credential");
+    expect(await secrets.listRefs()).toEqual([]);
     await service.configure({ ...input, baseUrl: server.url.origin, secret: "shared-credential" });
     const api = (projectId: string) =>
       createExtensionConnectionsApi(service, { projectId, extensionId: input.extensionId });
     expect((await api("second").request(contribution.id, { method: "GET", path: "/v1/workspaces" })).status).toBe(200);
     expect(received).toEqual(["Bearer shared-credential"]);
-    expect((await service.list("second"))[0]).toMatchObject({ scope: "global", configured: true });
+    await expect(service.remove({ ...input, credentialScope: "project" })).rejects.toThrow(
+      "A global connection requires a shared credential",
+    );
+    expect((await service.list("second"))[0]).toMatchObject({
+      scope: "global",
+      configured: true,
+      lastCheck: { ok: true, status: 200 },
+    });
     await expect(
       api("project-only").request(contribution.id, { method: "GET", path: "/v1/workspaces" }),
     ).rejects.toThrow("not configured");
     expect(await service.list("project-only")).toEqual([]);
+    const otherOrigin = "https://other.example.test";
     await service.configure({
+      ...input,
+      projectId: "project-only",
+      baseUrl: otherOrigin,
+      secret: "separate-origin-credential",
+    });
+    await service.remove({ ...input, credentialScope: "all-projects", origin: otherOrigin });
+    expect((await service.list("second"))[0]).toMatchObject({ configured: true });
+    expect((await service.list("project-only"))[0]).toMatchObject({ configured: false });
+    expect(await secrets.listRefs()).toHaveLength(1);
+    await service.configure({
+      ...input,
+      projectId: "project-only",
+      baseUrl: server.url.origin,
+      secret: "project-configuration-credential",
+      credentialScope: "all-projects",
+    });
+    await expect(
+      service.remove({ ...input, credentialScope: "all-projects", origin: server.url.origin }),
+    ).rejects.toThrow("more than one saved sign-in");
+    expect(await secrets.listRefs()).toHaveLength(2);
+    const rotated = await service.configure({
       ...input,
       projectId: "second",
       baseUrl: server.url.origin,
       secret: "rotated-credential",
     });
+    expect(rotated.lastCheck).toBeNull();
     const removeSecrets = await service.prepareProjectRemoval("first");
     await projects.remove("first");
     await removeSecrets();
@@ -55,13 +94,17 @@ test("one global connection serves new projects and shares updates and revocatio
     });
     expect((await newApi.request(contribution.id, { method: "GET", path: "/v1/workspaces" })).status).toBe(200);
     expect(received.at(-1)).toBe("Bearer rotated-credential");
-    expect(await secrets.listRefs()).toHaveLength(1);
-    expect(await db.listAll()).toHaveLength(1);
+    expect(await secrets.listRefs()).toHaveLength(2);
+    expect(await db.listAll()).toHaveLength(2);
     await reloaded.remove({ ...input, projectId: "new-project" });
     await expect(api("second").request(contribution.id, { method: "GET", path: "/v1/workspaces" })).rejects.toThrow(
       "not configured",
     );
-    expect(await secrets.listRefs()).toEqual([]);
+    expect((await api("project-only").request(contribution.id, { method: "GET", path: "/v1/workspaces" })).status).toBe(
+      200,
+    );
+    expect(received.at(-1)).toBe("Bearer project-configuration-credential");
+    expect(await secrets.listRefs()).toHaveLength(1);
   } finally {
     server.stop(true);
     await store.close();
@@ -87,7 +130,8 @@ test("configuring a global connection retires project copies and survives reconc
         extensionId: "pstdio.remote",
         connectionId: contribution.id,
         baseUrl: "https://example.test",
-        secret: id + "-credential",
+        secret: `${id}-credential`,
+        credentialScope: "project",
       });
     }
     expect(await secrets.listRefs()).toHaveLength(2);
@@ -114,44 +158,47 @@ test("configuring a global connection retires project copies and survives reconc
 for (const change of ["remove", "rotate"] as const) {
   test(`a late global health check cannot undo credential ${change}`, async () => {
     const store = await createDb({ path: ":memory:" });
+    const secrets = createMemoryConnectionSecretStore();
     const db = createExtensionConnectionsDBService(store.db);
-    const key = { projectId: null, extensionId: "pstdio.remote", contributionId: contribution.id };
-    const input = { ...key, baseUrl: "https://example.test", authType: "bearer" as const, secretRef: "old-reference" };
+    const service = createExtensionConnectionService({
+      connectionsDBService: db,
+      secretStore: secrets,
+      getContribution: async () => ({ ...contribution, scope: "global" }),
+    });
+    const input = { projectId: "first", extensionId: "pstdio.remote", connectionId: contribution.id };
+    const key = { projectId: null, extensionId: input.extensionId, contributionId: input.connectionId };
     const entered = Promise.withResolvers<void>();
     const release = Promise.withResolvers<void>();
-    const originalQuery = store.pglite.query.bind(store.pglite);
-    let armed = true;
-    try {
-      await db.upsert(input);
-      // Delay the real database operation across a credential change. The old
-      // read/replace path pauses after its read; an atomic update pauses before it.
-      store.pglite.query = async <T>(...args: Parameters<typeof store.pglite.query>) => {
-        const [sql] = args;
-        if (!armed || !sql.includes('"extension_settings"') || !/^\s*(select|update)\b/i.test(sql))
-          return originalQuery<T>(...args);
-        armed = false;
-        if (/^\s*select\b/i.test(sql)) {
-          const result = await originalQuery<T>(...args);
-          entered.resolve();
-          await release.promise;
-          return result;
-        }
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        expect(request.headers.get("authorization")).toBe("Bearer original-credential");
         entered.resolve();
         await release.promise;
-        return originalQuery<T>(...args);
-      };
-      const check = db.recordCheck(key, { ok: true, status: 200, error: null, checkedAt: new Date().toISOString() });
-      await entered.promise;
-      if (change === "remove") await db.remove(key);
-      else await db.upsert({ ...input, secretRef: "new-reference" });
+        return Response.json({ ok: true });
+      },
+    });
+    let pending: ReturnType<typeof service.request> | undefined;
+    try {
+      await createProjectsDBService(store.db).create({ id: "first", name: "First" });
+      const params = { ...input, baseUrl: server.url.origin };
+      await service.configure({ ...params, secret: "original-credential" });
+      pending = service.request({ ...input, input: { method: "GET", path: "/v1/workspaces" } });
+      await Promise.race([entered.promise, pending]);
+      if (change === "remove") await service.remove(input);
+      else await service.configure({ ...params, secret: "new-credential" });
       release.resolve();
-      await check;
+      expect((await pending).status).toBe(200);
       const current = await db.get(key);
       if (change === "remove") expect(current).toBeNull();
-      else expect(current?.secret_ref).toBe("new-reference");
+      else {
+        expect(await secrets.get(current!.secret_ref!)).toBe("new-credential");
+        expect(current?.last_check_json).toBeNull();
+      }
     } finally {
       release.resolve();
-      store.pglite.query = originalQuery;
+      await pending?.catch(() => undefined);
+      server.stop(true);
       await store.close();
     }
   });
