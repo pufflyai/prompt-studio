@@ -6,6 +6,8 @@ import type { ExtensionConnectionRequest, ExtensionConnectionsApi } from "pstdio
 import type { HarnessRegistry } from "pstdio-api-runtime-host";
 import { createHarnessRegistry } from "pstdio-api-runtime-host";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
+import type { ProcessEnvironmentSource } from "../extensions/process-environment/permissions";
+import type { EnabledExtensionSource } from "../extensions/project-extension-runtime-snapshot";
 import { createHarnessRegistryService } from "./harness-registry-service";
 import { createTestHarnessRecord, testHarnessId } from "./test-harness-registry";
 
@@ -36,11 +38,11 @@ const buildFakeRegistry = (records: RuntimeHarnessRecord[]): HarnessRegistry =>
 
 type SourceRow = { source_path: string; source_kind: "local_path" };
 
-const fakeSnapshot = (generation: number, records: RuntimeHarnessRecord[]) =>
+const fakeSnapshot = (generation: number, records: RuntimeHarnessRecord[], source?: ProcessEnvironmentSource) =>
   ({
     generation,
     project: { id: "p1", name: "Project", shorthand: "PS" },
-    enabledSources: [],
+    enabledSources: source ? [{ installedSource: source } as EnabledExtensionSource] : [],
     runtime: { harnesses: records },
     stale: null,
   }) as never;
@@ -58,6 +60,7 @@ const makeService = (opts: {
   now?: () => number;
   detectCacheTtlMs?: number;
   createConnectionsApi?: Parameters<typeof createHarnessRegistryService>[0]["createConnectionsApi"];
+  processEnvironment?: Parameters<typeof createHarnessRegistryService>[0]["processEnvironment"];
 }) =>
   createHarnessRegistryService({
     installedExtensionSourcesService: { list: async () => opts.installedSources?.() ?? [] } as never,
@@ -70,6 +73,7 @@ const makeService = (opts: {
     now: opts.now,
     detectCacheTtlMs: opts.detectCacheTtlMs,
     createConnectionsApi: opts.createConnectionsApi,
+    processEnvironment: opts.processEnvironment,
   });
 
 const SCOPE = { projectId: "p1" };
@@ -147,40 +151,63 @@ describe("harness registry host-scope caching", () => {
 
 describe("harness registry project scope", () => {
   test.each([
-    ["granted", "harness-grant"],
-    ["other", null],
+    ["granted", true],
+    ["other", false],
   ])("limits process environment grants to the owning harness extension %s", async (name, expected) => {
-    const variable = "PSTDIO_TEST_HARNESS_PROCESS_GRANT";
-    const previous = {
-      [variable]: process.env[variable],
-      PSTDIO_EXTENSION_PROCESS_ENV: process.env.PSTDIO_EXTENSION_PROCESS_ENV,
-    };
+    // Names starting with PSTDIO_ are reserved and can never be granted.
+    const variable = "EXAMPLE_HARNESS_PROCESS_GRANT";
+    const previous = process.env[variable];
     process.env[variable] = "harness-grant";
-    process.env.PSTDIO_EXTENSION_PROCESS_ENV = `pstdio.pstdio-granted:${variable}`;
-    let observed: string | null | undefined;
+    let observed: boolean | undefined;
     const record = createTestHarnessRecord(name!, {
       provider: {
         detect: async (context) => {
           const result = await context.process.runOrThrow({
-            command: [process.execPath, "-e", `process.stdout.write(JSON.stringify(process.env.${variable} ?? null))`],
+            // Granted values are redacted from output, so the child reports whether it got the value.
+            command: [
+              process.execPath,
+              "-e",
+              `process.stdout.write(JSON.stringify(process.env.${variable} === "harness-grant"))`,
+            ],
           });
           observed = JSON.parse(result.stdout);
           return { available: true };
         },
       },
     });
-    const service = makeService({ snapshot: () => fakeSnapshot(1, [record]) });
+    // The user allowed the name for the granted extension in this project only.
+    const granted = (projectId: string, extensionId: string) =>
+      projectId === SCOPE.projectId && extensionId === "pstdio.pstdio-granted" ? [variable] : [];
+    const source = {
+      extension_id: record.extensionId,
+      source_path: `/test/${record.name}`,
+      source_hash: "fixture-hash",
+      manifest_json: {},
+    };
+    const service = makeService({
+      snapshot: () => fakeSnapshot(1, [record], source),
+      processEnvironment: {
+        grantedNames: async (projectId, owner) => {
+          expect(owner).toBe(source);
+          return granted(projectId, owner.extension_id);
+        },
+        authorize: async (projectId, owner, names) => {
+          expect(owner).toBe(source);
+          expect(names).toEqual(granted(projectId, owner.extension_id));
+          return { start: (spawn) => spawn().value, release: () => {}, releaseUnused: () => {} };
+        },
+      },
+    });
     try {
       const handle = await service.get(record.id, SCOPE);
       expect(handle).toBeDefined();
-      await handle!.detect();
+      // Grants belong to a project, so the call names one; detection outside a project gets none.
+      await handle!.detect(SCOPE);
       expect(observed).toBe(expected);
     } finally {
       await service.dispose();
-      for (const [key, value] of Object.entries(previous)) {
-        if (value === undefined) delete process.env[key];
-        else process.env[key] = value;
-      }
+      if (previous === undefined) delete process.env[variable];
+      else process.env[variable] = previous;
     }
   });
 

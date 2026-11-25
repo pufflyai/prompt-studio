@@ -114,6 +114,19 @@
         "saved": "连接已保存",
         "actionFailed": "连接操作失败"
       },
+      "environmentAccess": {
+        "title": "环境访问",
+        "description": "来自启动 Prompt Studio 的环境中的命名值，会传递给此扩展启动的程序。允许某个名称后，此扩展即可使用其值。",
+        "notAllowed": "未允许",
+        "partlyAllowed": "已允许 {{count}}/{{total}}",
+        "allowed": "已允许",
+        "stale": "允许访问后扩展已更改。请重新允许这些名称。",
+        "allow": "允许所选项",
+        "revoke": "撤销",
+        "fileAccess": "这不会限制文件访问。扩展仍可读取和更改你的账户可访问的任何文件。",
+        "actionFailed": "未更改环境访问",
+        "loadError": "无法加载环境访问。"
+      },
       "detail": {
         "back": "扩展",
         "sourcePath": "源文件夹",

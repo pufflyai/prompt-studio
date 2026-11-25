@@ -45,13 +45,26 @@ export const treeExitedWithin = async (child: SignalableChild, timeoutMs: number
   return true;
 };
 
+/**
+ * Resolves once nothing is left in the process group a detached child leads. Programs the child
+ * started in the background stay in its group after the child itself exits. Windows has no
+ * process groups to watch, so it resolves when the child exits.
+ */
+export const processGroupExited = async (child: Pick<SignalableChild, "pid" | "exited">, intervalMs = 250) => {
+  await child.exited;
+  if (process.platform === "win32") return;
+  while (isProcessGroupAlive(child.pid)) await new Promise((resolve) => setTimeout(resolve, intervalMs).unref());
+};
+
 /** Resolves true when the process exited inside the budget, false when the budget ran out. */
 export const exitedWithin = async (exited: Promise<unknown>, timeoutMs: number) => {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<boolean>((resolve) => {
     timer = setTimeout(() => resolve(false), timeoutMs);
   });
-  const stopped = await Promise.race([exited.then(() => true), deadline]);
-  clearTimeout(timer);
-  return stopped;
+  try {
+    return await Promise.race([exited.then(() => true), deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
 };

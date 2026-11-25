@@ -19,6 +19,7 @@ import { subscribeExtensionEnablementInvalidation } from "./features/extensions/
 import type { LoadedExtensionSnapshot } from "./features/extensions/extension-runtime";
 import { installExtensionSource } from "./features/extensions/install-extension-source";
 import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
+import { createProcessEnvironmentPermissions } from "./features/extensions/process-environment/permissions";
 import { completeProjectExtensionInstallation } from "./features/extensions/project-extension-lifecycle";
 import { createProjectExtensionRuntimeCatalog } from "./features/extensions/project-extension-runtime-catalog";
 import { subscribeProjectWorkspaceExtensionRefresh } from "./features/extensions/project-workspace-extension-refresh";
@@ -27,7 +28,7 @@ import type { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
 import { logStartupPhase } from "./lib/startup-phase";
 import { createExtensionInstallations } from "./services/extension-installations";
-import { createExtensionService } from "./services/extension-service";
+import { createExtensionService, ProjectNotFoundError } from "./services/extension-service";
 import { createExtensionUpgradeService } from "./services/extension-upgrade-service";
 import type { createFileService } from "./services/file-service";
 import type { createProjectService } from "./services/project-service";
@@ -143,10 +144,34 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
         "Extension connection request completed",
       ),
   });
+  const extensionProcessEnvironment = createProcessEnvironmentPermissions({
+    path: join(input.storageRoot, "extension-process-environment.json"),
+    findSource: async (projectId, extensionId, enabledOnly) => {
+      try {
+        const matching = (await extensionService.listProjectExtensionInstances(projectId)).filter(
+          ({ installedSource }) => installedSource.extension_id === extensionId,
+        );
+        return (
+          matching.find(({ instance }) => instance.enabled)?.installedSource ??
+          (enabledOnly ? undefined : matching[0]?.installedSource)
+        );
+      } catch (error) {
+        // An unknown project has no extension to grant for.
+        if (error instanceof ProjectNotFoundError) return undefined;
+        throw error;
+      }
+    },
+  });
+  if (process.env.PSTDIO_EXTENSION_PROCESS_ENV)
+    apiLogger.warn(
+      { event: "extensions.process_environment.legacy_variable" },
+      "PSTDIO_EXTENSION_PROCESS_ENV is no longer read. Extensions request host variables in pstdio.processEnvironment, and you allow them per project in the extension's details.",
+    );
   const harnessRegistry = input.dependencies.createHarnessRegistry({
     installedExtensionSourcesService: input.installedExtensionSourcesDBService,
     extensionRuntimeCatalog,
     createConnectionsApi: (scope) => createExtensionConnectionsApi(extensionConnectionService, scope),
+    processEnvironment: extensionProcessEnvironment,
   });
   const extensionRuntime = createInstalledExtensionRuntime({
     eventBus: input.eventBus,
@@ -192,6 +217,7 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
     extensionRuntime,
     extensionRuntimeCatalog,
     extensionConnectionService,
+    extensionProcessEnvironment,
     extensionService,
     extensionUpgradeService,
     harnessRegistry,

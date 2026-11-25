@@ -82,6 +82,8 @@ export {
   loadExtensionSources,
   normalizeExtensionSources,
   type PackageManifest,
+  ProcessEnvironmentUnavailableError,
+  parseProcessEnvironmentDeclaration,
   pstdioExtensionsRoot,
   pstdioHomeRoot,
   type ReadPackageManifestResult,

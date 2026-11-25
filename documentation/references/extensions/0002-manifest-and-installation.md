@@ -43,6 +43,9 @@ Optional fields:
 - `pstdio.backendRuntime`: set to `"process"` to run the backend in its own worker process instead
   of the API process. See [Process runtime](#process-runtime). Leave it out to keep the current
   in-process behavior.
+- `pstdio.processEnvironment`: names of host environment variables the extension may ask the host
+  to pass to the children it starts, such as `["ANTHROPIC_API_KEY"]`. See
+  [Host environment names](#host-environment-names).
 
 Derived fields:
 
@@ -252,6 +255,46 @@ the replacement starts, unless another folder with identical content still uses 
 A worker that crashes rejects its running calls with `backend_unavailable`. The next call can
 start a fresh worker and proceeds only if its reported definition matches the one the host loaded.
 Calls that failed during the crash stay failed.
+
+### Host environment names
+
+`pstdio.processEnvironment` lists the host environment variables an extension may pass to the
+children it starts with `ctx.process`. It holds names, never values. Each entry must be an exact
+variable name (letters, digits and `_`, not starting with a digit), listed once. Wildcards are
+rejected. So are names reserved for Prompt Studio and package registries: anything starting with
+`PSTDIO_` or `NPM_CONFIG_`, and `NPM_TOKEN`, `NPM_AUTH_TOKEN`, `NODE_AUTH_TOKEN` and
+`BUN_AUTH_TOKEN`. An invalid list stops the extension from loading, with an
+`extension_manifest_invalid_value` diagnostic.
+
+```json
+{ "pstdio": { "backendRuntime": "process", "processEnvironment": ["ANTHROPIC_API_KEY"] } }
+```
+
+Declaring a name grants nothing. The user allows names per project in the extension's details
+(**Environment access**, then **Allow selected**), or with the CLI:
+
+```sh
+pst extensions permissions show acme.agent
+pst extensions permissions grant acme.agent --names ANTHROPIC_API_KEY --source-identity <sourceIdentity from show>
+pst extensions permissions revoke acme.agent
+```
+
+The same owner-authenticated API backs both:
+`GET`, `PUT` and `DELETE /v1/projects/{projectId}/extension-process-environment/{extensionId}`.
+`PUT` takes the names and the `sourceIdentity` the caller read, and is refused with `409` when the
+source has changed since then. Scoped machine tokens cannot call these routes.
+
+A grant covers one project and one exact extension source. Installing or reloading changed source
+content retires it, and the details show that access must be allowed again. Grants live in the
+host's storage folder as names and source identities. They are not project files, extension
+settings or synced data. The extension requests a granted name per child with `envFromHost`; see
+[Host environment values](0003-command-and-process-api.md#host-environment-values).
+
+A grant controls which values reach a child. It does not limit file access: the extension and its
+children still run as your account and can read the same files you can.
+
+This replaces the `PSTDIO_EXTENSION_PROCESS_ENV` host variable, which shared values with every
+child an extension started, in every project. The host no longer reads it.
 
 Repo extensions are discovered and enabled when a project opens, and their entry code runs at that
 point. User extensions stay disabled until someone enables them. The planned trust step, which reads

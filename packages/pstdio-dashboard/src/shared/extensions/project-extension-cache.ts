@@ -19,6 +19,8 @@ export const invalidateExtensionAuxiliaryQueries = (queryClient: QueryClient, pr
     invalidateWorkspaceProviders(queryClient, projectId),
     queryClient.invalidateQueries({ queryKey: ["agents-info"] }),
     queryClient.invalidateQueries({ queryKey: ["agent-models"] }),
+    // Reloaded source has a new identity, so a grant shown for the old one no longer applies.
+    queryClient.invalidateQueries({ queryKey: ["extension-process-environment"] }),
   ]);
 
 const replaceAutomation = (

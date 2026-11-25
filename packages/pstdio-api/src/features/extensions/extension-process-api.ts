@@ -7,8 +7,15 @@ import {
 } from "pstdio-extensions";
 import { redactSensitiveText } from "pstdio-logging";
 import { apiLogger } from "../../lib/logger";
+import { startProcessChild } from "./extension-process-lifetime";
 import { resolveProcessEnvironmentCommand } from "./process-command";
-import { signalProcessTree } from "./process-group";
+import {
+  type ProcessEnvironmentLease,
+  ProcessEnvironmentPermissionError,
+  type ProcessEnvironmentPermissions,
+  type ProcessEnvironmentSource,
+} from "./process-environment/permissions";
+import { redactText } from "./process-output-redaction";
 
 type ProcessSpawner = typeof Bun.spawn;
 
@@ -97,13 +104,49 @@ const createStopGate = (kill: () => Promise<void>) => {
   };
 };
 
+const watchLease = (treeExited: Promise<void> | undefined, lease?: ProcessEnvironmentLease) => {
+  if (!treeExited || !lease) return;
+  void treeExited.then(lease.release, (error: unknown) => {
+    apiLogger.warn(
+      { err: error, event: "extension.process.grant_tracking_failed" },
+      "Could not verify granted process exit",
+    );
+  });
+};
+
 export interface ProcessApiOptions {
   extensionId?: string;
+  /**
+   * Authorizes the `envFromHost` names of one child for this invocation. Without it, a child
+   * cannot receive host values; host-level probes have no extension grant to use.
+   */
+  hostEnvironment?: (names: string[]) => Promise<ProcessEnvironmentLease>;
+  /**
+   * The names the user allowed for a process the host starts for an extension, such as a harness's
+   * or a workspace provider's. Such a process gets them without asking, through `hostEnvironment`.
+   */
+  grantedNames?: () => Promise<string[]>;
   /** Invocation that owns the spawned children. Absent for host-level probes. */
   scope?: InvocationScope;
   resolveCwd?: (input: ProcessRunInput) => Promise<string>;
   spawner?: ProcessSpawner;
 }
+
+/**
+ * Grant options for a process the host starts for an extension in a project. Outside a project,
+ * such as harness detection at startup, there is no grant to use.
+ */
+export const hostStartedGrants = (
+  permissions: Pick<ProcessEnvironmentPermissions, "grantedNames" | "authorize"> | undefined,
+  projectId: string | undefined,
+  source: ProcessEnvironmentSource | undefined,
+): Pick<ProcessApiOptions, "grantedNames" | "hostEnvironment"> =>
+  permissions && projectId && source
+    ? {
+        grantedNames: () => permissions.grantedNames(projectId, source),
+        hostEnvironment: (names) => permissions.authorize(projectId, source, names),
+      }
+    : {};
 
 export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunnerEnvironment["process"] => {
   const spawner = options.spawner ?? Bun.spawn;
@@ -115,8 +158,9 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
   };
   const resolveInput = async (input: ProcessRunInput) => {
     ensureActive();
-    const cwd = await options.resolveCwd?.(input);
-    return { ...input, cwd: input.cwd ?? cwd };
+    const resolved = { ...input, envFromHost: input.envFromHost && [...input.envFromHost] };
+    const cwd = await options.resolveCwd?.(resolved);
+    return { ...resolved, cwd: resolved.cwd ?? cwd };
   };
 
   // Children outliving the invocation that started them is the leak this owns. The scope
@@ -129,28 +173,77 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
     );
   });
 
+  // Granted values go into the child's environment only. A child that echoes one does not hand
+  // it back to the extension through the result.
+  const prepareEnvironment = async (input: ProcessRunInput) => {
+    // A granted name the host has no value for is skipped rather than failing a host-started process.
+    const names =
+      input.envFromHost ?? (await options.grantedNames?.())?.filter((name) => process.env[name] !== undefined) ?? [];
+    if (names.length === 0)
+      return {
+        env: createExtensionProcessEnvironment(process.env, input.env, process.platform),
+        hide: (text: string) => text,
+      };
+    if (!options.hostEnvironment)
+      throw new ProcessEnvironmentPermissionError(
+        "process_environment_not_granted",
+        "envFromHost is only available in a project, to extension commands, hooks, schedules, harnesses and workspace providers.",
+      );
+    const lease = await options.hostEnvironment(names);
+    try {
+      ensureActive();
+      const env = createExtensionProcessEnvironment(process.env, input.env, process.platform, names);
+      const requested = new Set(names.map((name) => name.toUpperCase()));
+      const secrets = Object.entries(env).flatMap(([name, value]) =>
+        requested.has(name.toUpperCase()) && value ? [value] : [],
+      );
+      const hide = (text: string) => redactText(text, secrets);
+      return { env, lease, hide };
+    } catch (error) {
+      lease.release();
+      throw error;
+    }
+  };
+
   const runToCompletion = async (input: ProcessRunInput) => {
     input = await resolveInput(input);
     ensureActive();
 
-    const env = createExtensionProcessEnvironment(process.env, input.env, process.platform, options.extensionId);
-    const resolved = resolveProcessEnvironmentCommand(input.command, env, input.cwd);
-    // Unix needs a separate process group to stop descendants. Windows detachment
-    // disconnects the console instead and loses output from commands inside npm shims.
-    const child = spawner(resolved.argv, {
-      cwd: input.cwd,
-      detached: process.platform !== "win32",
-      env,
-      stderr: "pipe",
-      stdout: "pipe",
-      windowsHide: true,
-      windowsVerbatimArguments: resolved.windowsVerbatimArguments,
-    });
+    const { env, lease, hide } = await prepareEnvironment(input);
+    try {
+      ensureActive();
+      const result = await runChild(input, env, hide, lease);
+      return { ...result, stdout: hide(result.stdout), stderr: hide(result.stderr) };
+    } catch (error) {
+      lease?.releaseUnused();
+      throw error;
+    }
+  };
 
-    const gate = createStopGate(async () => {
-      await signalProcessTree(child, "SIGKILL");
-      await child.exited;
-    });
+  const runChild = async (
+    input: ProcessRunInput,
+    env: NodeJS.ProcessEnv,
+    hide: (text: string) => string,
+    lease?: ProcessEnvironmentLease,
+  ) => {
+    const resolved = resolveProcessEnvironmentCommand(input.command, env, input.cwd);
+    const start = () => {
+      const started = startProcessChild({
+        spawner,
+        command: resolved,
+        cwd: input.cwd,
+        env,
+        detached: false,
+        trackTree: lease !== undefined,
+      });
+      const gate = createStopGate(started.stop);
+      return {
+        value: { started, gate },
+        stop: (reason: unknown) => (gate.stopped ? started.stop() : gate.stop(reason)),
+      };
+    };
+    const { started, gate } = lease ? lease.start(start) : start().value;
+    watchLease(started.treeExited, lease);
     running.add(gate.stop);
 
     const timeout =
@@ -172,10 +265,13 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
       );
 
     const collect = Promise.all([
-      readWithinBudget(child.stdout as ReadableStream<Uint8Array>, budget, onExceeded, gate.released),
-      readWithinBudget(child.stderr as ReadableStream<Uint8Array>, budget, onExceeded, gate.released),
-      child.exited,
-    ]).then(([stdout, stderr, exitCode]) => (gate.stopped ? gate.failed : { exitCode, stdout, stderr }));
+      readWithinBudget(started.child.stdout as ReadableStream<Uint8Array>, budget, onExceeded, gate.released),
+      readWithinBudget(started.child.stderr as ReadableStream<Uint8Array>, budget, onExceeded, gate.released),
+      started.exited,
+    ]).then(
+      ([stdout, stderr, exitCode]) => (gate.stopped ? gate.failed : { exitCode, stdout, stderr }),
+      (error: unknown) => (gate.stopped ? gate.failed : Promise.reject(error)),
+    );
     collect.catch(() => {});
 
     try {
@@ -187,7 +283,7 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
             event: "extension.process.failed",
             extensionId: options.extensionId,
             exitCode: result.exitCode,
-            stderr: redactSensitiveText(result.stderr, secrets, 4096).trim(),
+            stderr: redactSensitiveText(hide(result.stderr), secrets, 4096).trim(),
           },
           "Extension subprocess exited unsuccessfully.",
         );
@@ -212,20 +308,29 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
     async spawnDetached(input) {
       input = await resolveInput(input);
       ensureActive();
-      const env = createExtensionProcessEnvironment(process.env, input.env, process.platform, options.extensionId);
-      const resolved = resolveProcessEnvironmentCommand(input.command, env, input.cwd);
-      const proc = spawner(resolved.argv, {
-        detached: true,
-        cwd: input.cwd,
-        env,
-        stderr: "ignore",
-        stdin: "ignore",
-        stdout: "ignore",
-        windowsHide: true,
-        windowsVerbatimArguments: resolved.windowsVerbatimArguments,
-      });
-      proc.unref();
-      return { pid: proc.pid };
+      const { env, lease } = await prepareEnvironment(input);
+      try {
+        ensureActive();
+        const resolved = resolveProcessEnvironmentCommand(input.command, env, input.cwd);
+        const start = () => {
+          const child = startProcessChild({
+            spawner,
+            command: resolved,
+            cwd: input.cwd,
+            env,
+            detached: true,
+            trackTree: lease !== undefined,
+          });
+          return { value: child, stop: child.stop };
+        };
+        const child = lease ? lease.start(start) : start().value;
+        child.child.unref();
+        watchLease(child.treeExited, lease);
+        return { pid: await child.pid };
+      } catch (error) {
+        lease?.releaseUnused();
+        throw error;
+      }
     },
   };
 

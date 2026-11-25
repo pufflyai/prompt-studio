@@ -68,7 +68,12 @@ export {
   prepareExtensionRevision,
   readAcceptedRevision,
 } from "./prepared-revision";
-export { createExtensionInstallEnvironment, createExtensionProcessEnvironment } from "./process-environment";
+export {
+  createExtensionInstallEnvironment,
+  createExtensionProcessEnvironment,
+  ProcessEnvironmentUnavailableError,
+} from "./process-environment";
+export { parseProcessEnvironmentDeclaration } from "./process-environment-declaration";
 export {
   type BuildEnvironmentInput,
   type CommandExecuteInput,

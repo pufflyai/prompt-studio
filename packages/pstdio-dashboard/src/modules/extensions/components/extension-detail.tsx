@@ -18,11 +18,11 @@ import { createExtensionStringResolver } from "@/shared/extensions/extension-loc
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import { ExtensionActionButton } from "./extension-action-button";
 import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
-import { ExtensionConnectionsCard } from "./extension-connections-card";
 import { ExtensionContributions } from "./extension-contributions";
 import { ExtensionDeleteSection } from "./extension-delete-section";
 import { ExtensionDetailHealth } from "./extension-detail-health";
 import { ExtensionHealthPopover } from "./extension-health-popover";
+import { ExtensionHostAccess, hasExtensionHostAccess } from "./extension-host-access";
 import { ExtensionIcon } from "./extension-icon";
 import { ExtensionAuthorBadge, ExtensionScopeBadge } from "./extension-labels";
 import { ExtensionSettingsForm } from "./extension-settings-form";
@@ -34,6 +34,7 @@ export interface ExtensionDetailProps {
   workbench?: WorkbenchCore;
   extension: ProjectExtensionInstance;
   metadata: DashboardExtensionMetadata | undefined;
+  hasStaleEnvironmentGrant?: boolean;
   automations: WorkbenchExtensionAutomationRecord[];
   diagnostics: ExtensionDiagnostic[];
   unavailableHarnesses?: AgentInfo[];
@@ -101,9 +102,14 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
   const showReload = !extension.canUpgrade && extension.updateAvailable;
   const hasErrorDiagnostics = diagnostics.some((diagnostic) => diagnostic.severity === "error");
   const hasSettings = settingsToParams(settings, {}, resolveString).length > 0;
-  const connections = metadata?.connections ?? [];
-  const hasConnections = !!projectId && connections.length > 0;
-  const hasSettingsContent = hasSettings || Boolean(settingsViews) || hasConnections || automations.length > 0;
+  const hostAccess = {
+    projectId,
+    extensionId: extension.extensionId,
+    connections: metadata?.connections ?? [],
+    showEnvironment: Boolean(extension.processEnvironment?.length || props.hasStaleEnvironmentGrant),
+  };
+  const hasHostAccess = hasExtensionHostAccess(hostAccess);
+  const hasSettingsContent = hasSettings || Boolean(settingsViews) || hasHostAccess || automations.length > 0;
   const [tab, setTab] = useState("settings");
 
   return (
@@ -271,7 +277,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                 ) : null}
                 {settingsViews}
 
-                {hasConnections ? <ExtensionConnectionsCard projectId={projectId} definitions={connections} /> : null}
+                {hasHostAccess ? <ExtensionHostAccess {...hostAccess} /> : null}
 
                 {automations.length > 0 && (
                   <Stack gap="2xs">

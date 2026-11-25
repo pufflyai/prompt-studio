@@ -1,9 +1,16 @@
 import type { InvocationScope } from "pstdio-extensions";
-import { createProcessApi } from "../extensions/extension-process-api";
+import { createProcessApi, hostStartedGrants } from "../extensions/extension-process-api";
+import type { ProcessEnvironmentSource } from "../extensions/process-environment/permissions";
 import type { WorkspacesRouteDeps } from "./deps";
 import { createWorkspaceProviderDirectory } from "./workspace-provider-directory";
 
-type ProviderProcessInput = { projectId: string; providerId: string; extensionId: string; workspaceId?: string };
+type ProviderProcessInput = {
+  projectId: string;
+  providerId: string;
+  extensionId: string;
+  workspaceId?: string;
+  installedSource?: ProcessEnvironmentSource;
+};
 
 const ownedWorkspace = async (deps: WorkspacesRouteDeps, input: ProviderProcessInput) => {
   if (!input.workspaceId) return null;
@@ -25,6 +32,7 @@ export const createWorkspaceProviderProcess = (
 ) =>
   createProcessApi({
     extensionId: input.extensionId,
+    ...hostStartedGrants(deps.extensionProcessEnvironment, input.projectId, input.installedSource),
     scope,
     resolveCwd: async (process) => {
       scope?.signal.throwIfAborted();

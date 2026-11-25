@@ -114,6 +114,19 @@
         "saved": "連線已儲存",
         "actionFailed": "連線操作失敗"
       },
+      "environmentAccess": {
+        "title": "環境存取",
+        "description": "來自啟動 Prompt Studio 之環境的具名值，會傳遞給此擴充功能啟動的程式。允許某個名稱後，此擴充功能即可使用其值。",
+        "notAllowed": "未允許",
+        "partlyAllowed": "已允許 {{count}}/{{total}}",
+        "allowed": "已允許",
+        "stale": "允許存取後擴充功能已變更。請重新允許這些名稱。",
+        "allow": "允許所選項目",
+        "revoke": "撤銷",
+        "fileAccess": "這不會限制檔案存取。擴充功能仍可讀取和變更你的帳戶可存取的任何檔案。",
+        "actionFailed": "未變更環境存取",
+        "loadError": "無法載入環境存取。"
+      },
       "detail": {
         "back": "擴充功能",
         "sourcePath": "來源資料夾",
