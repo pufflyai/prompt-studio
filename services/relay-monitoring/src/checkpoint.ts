@@ -33,6 +33,8 @@ export const createCheckpoint = async (directory: string, initial: () => Checkpo
       await file.close();
     }
     await rename(`${path}.next`, path);
+    // Windows can flush the file but rejects fsync on a directory handle.
+    if (process.platform === "win32") return;
     const folder = await open(directory, "r");
     try {
       await folder.sync();
