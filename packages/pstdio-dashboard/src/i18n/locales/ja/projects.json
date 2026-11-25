@@ -110,6 +110,7 @@
         "disconnectProject": "プロジェクトの接続を解除",
         "revokeSignIn": "サインインを取り消す",
         "revokeSharedSignIn": "共有サインインを取り消す",
+        "savedSignIns": "保存済みのサインイン",
         "saved": "接続を保存しました",
         "actionFailed": "接続操作に失敗しました"
       },

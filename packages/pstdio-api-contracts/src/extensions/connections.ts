@@ -51,12 +51,21 @@ export const deleteExtensionConnectionSchema = z
   })
   .strict();
 
+const savedExtensionSignInSchema = z.object({
+  extensionId: z.string(),
+  connectionId: z.string(),
+  origin: z.url(),
+  signInScope: extensionConnectionSignInScopeSchema,
+});
+
 export const listExtensionConnectionsResponseSchema = z.object({
   connections: z.array(extensionConnectionRecordSchema),
+  savedSignIns: z.array(savedExtensionSignInSchema).optional(),
 });
 
 export type ExtensionConnectionRecord = z.infer<typeof extensionConnectionRecordSchema>;
 export type ConfigureExtensionConnectionInput = z.infer<typeof configureExtensionConnectionSchema>;
 export type DeleteExtensionConnectionInput = z.infer<typeof deleteExtensionConnectionSchema>;
 export type ExtensionConnectionSignInScope = z.infer<typeof extensionConnectionSignInScopeSchema>;
+export type SavedExtensionSignIn = z.infer<typeof savedExtensionSignInSchema>;
 export type ListExtensionConnectionsResponse = z.infer<typeof listExtensionConnectionsResponseSchema>;

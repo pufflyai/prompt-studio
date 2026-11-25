@@ -1,4 +1,4 @@
-import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import type { SavedExtensionSignIn, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { classifyApiWrite, getWorkbenchOperations, operationSubject } from "@pstdio/workbench";
 import { useQuery } from "@tanstack/react-query";
 import { useSyncExternalStore } from "react";
@@ -30,6 +30,22 @@ const titles = {
   check: "Check extension connection",
 };
 const endpoint = (value: string) => (URL.canParse(value) ? new URL(value).origin : undefined);
+const signInScope = (scope: ConnectionTarget["scope"]): SavedExtensionSignIn["signInScope"] =>
+  scope === "global" ? "global" : "shared";
+export const findSavedExtensionSignIn = (
+  signIns: SavedExtensionSignIn[] | undefined,
+  target: ConnectionTarget,
+  baseUrl: string | undefined,
+) => {
+  const origin = baseUrl ? endpoint(baseUrl) : undefined;
+  return signIns?.find(
+    (item) =>
+      item.extensionId === target.extensionId &&
+      item.connectionId === target.localId &&
+      item.origin === origin &&
+      item.signInScope === signInScope(target.scope),
+  );
+};
 const connectionRemoval = (
   action: ConnectionChange["action"],
   scope: ConnectionTarget["scope"],
@@ -41,7 +57,7 @@ const connectionRemoval = (
   return {
     credentialScope: "all-projects" as const,
     origin,
-    signInScope: scope === "global" ? ("global" as const) : ("shared" as const),
+    signInScope: signInScope(scope),
   };
 };
 
@@ -74,10 +90,11 @@ export const getExtensionConnectionOperations = createRuntimeState((owner) => {
       const removal = connectionRemoval(action, scope, origin);
       const verifyRemoval = async (signal: AbortSignal) => {
         signal.throwIfAborted();
-        const { connections } = await api.listConnections(projectId);
-        const record = connections.find((item) => item.extensionId === extensionId && item.connectionId === localId);
+        const { connections, savedSignIns } = await api.listConnections(projectId);
         const confirmed =
-          action === "disconnect" ? !record : record?.configured === false && endpoint(record.baseUrl) === origin;
+          removal?.credentialScope === "all-projects"
+            ? Array.isArray(savedSignIns) && !findSavedExtensionSignIn(savedSignIns, target, removal.origin)
+            : !connections.some((item) => item.extensionId === extensionId && item.connectionId === localId);
         return confirmed ? { status: "confirmed" as const, result: undefined } : { status: "unknown" as const };
       };
       return operations.submit<void>({

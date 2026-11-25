@@ -3,6 +3,7 @@ import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionConnectionsApi } from "pstdio-api-contracts/extension-kernel";
 import type { ConnectionSecretStore } from "./connection-secret-store";
 import { deleteSecret, prepareProjectConnectionRemoval, reportCleanupError } from "./extension-connection-cleanup";
+import { createExtensionConnectionListService } from "./extension-connection-list-service";
 import { createExtensionConnectionRequestService } from "./extension-connection-request-service";
 import {
   type ConnectionKey,
@@ -278,6 +279,7 @@ export const createExtensionConnectionService = (input: ExtensionConnectionServi
     getContribution: (key) => input.getContribution({ ...key, extensionId: canonicalExtensionId(key.extensionId) }),
   };
   const requestService = createExtensionConnectionRequestService(deps);
+  const listService = createExtensionConnectionListService(deps);
   // Cleanup compares database references with secret files. Keep that comparison
   // ordered with credential writes now that startup cleanup runs beside requests.
   let mutations = Promise.resolve();
@@ -291,24 +293,6 @@ export const createExtensionConnectionService = (input: ExtensionConnectionServi
   };
   const configure = (input: ConnectionKey & ConfigureExtensionConnectionInput) =>
     mutate(() => configureConnection(deps, input));
-  const list = async (projectId: string) => {
-    const rows = [
-      ...(await deps.connectionsDBService.listByProject(projectId)),
-      ...(await deps.connectionsDBService.listGlobal()),
-    ];
-    const visible = await Promise.all(
-      rows.map(async (row) => {
-        const definition = await deps.getContribution({
-          projectId,
-          extensionId: row.extension_id,
-          connectionId: row.contribution_id,
-        });
-        if (!definition || (definition.scope === "global") !== (row.project_id === null)) return null;
-        return toConnectionRecord(row);
-      }),
-    );
-    return visible.filter((row) => row !== null);
-  };
   const remove = (input: ConnectionRemoval) =>
     mutate(async () => {
       if (input.origin !== undefined || input.signInScope !== undefined) {
@@ -335,7 +319,7 @@ export const createExtensionConnectionService = (input: ExtensionConnectionServi
   const removeExtension = (projectId: string, extensionId: string) =>
     mutate(() => removeExtensionConnections(deps, projectId, canonicalExtensionId(extensionId)));
 
-  return { ...requestService, configure, list, prepareProjectRemoval, reconcile, remove, removeExtension };
+  return { ...requestService, ...listService, configure, prepareProjectRemoval, reconcile, remove, removeExtension };
 };
 
 export const createExtensionConnectionsApi = (

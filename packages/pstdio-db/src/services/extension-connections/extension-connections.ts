@@ -9,6 +9,7 @@ import {
   type CredentialKey,
   createExtensionCredentialsDBService,
   credentialProvider,
+  globalCredentialKey,
   sharedCredentialKey,
 } from "./credentials";
 
@@ -30,11 +31,8 @@ export const connectionPreference = ({ projectId, extensionId, contributionId }:
   sync: projectId === null ? ("device" as const) : ("team" as const),
 });
 // Keep global configurations separate from shared credentials for project connections.
-export const configuredCredentialKey = (key: ConnectionKey, projectId = key.projectId) => ({
-  ...key,
-  projectId: key.projectId === null ? null : projectId,
-  contributionId: key.projectId === null ? `global:${key.contributionId}` : key.contributionId,
-});
+export const configuredCredentialKey = (key: ConnectionKey, projectId = key.projectId) =>
+  key.projectId === null ? globalCredentialKey(key) : { ...key, projectId };
 export const connectionCheckPreference = (key: ConnectionKey) => ({
   ...connectionPreference(key),
   key: `connection-check:${key.contributionId}`,
@@ -168,6 +166,7 @@ export const createExtensionConnectionsDBService = (db: DbClient) => {
     upsert,
     listByProject: (projectId: string) => list(eq(preferences.project_id, projectId)),
     listGlobal: () => list(eq(preferences.scope, "global")),
+    listSavedSignIns: credentialStore.listSavedSignIns,
     listAll: () => list(),
     listByExtension: (projectId: string, extensionId: string) =>
       list(and(eq(preferences.project_id, projectId), eq(preferences.extension_id, extensionId))),

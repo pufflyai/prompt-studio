@@ -123,12 +123,20 @@ test.each([
     runtimeRequest(connectionPath, {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ baseUrl: origin, secret, credentialScope }),
+      body: JSON.stringify({ baseUrl: `${origin.toUpperCase()}:443/api`, secret, credentialScope }),
     });
   const revokePath = (parameters: Record<string, string>) =>
     `${connectionPath}?${new URLSearchParams({ credentialScope: "all-projects", ...parameters })}`;
   const revoke = (parameters: Record<string, string>) => runtimeRequest(revokePath(parameters), { method: "DELETE" });
   const saved = async () => (await Promise.all((await secrets.listRefs()).map(secrets.get))).sort();
+  const listPath = `/v1/projects/${projectId}/extension-connections`;
+  const list = async () => (await runtimeRequest(listPath)).json();
+  const signIns = ["global", "shared"].map((signInScope) => ({
+    extensionId: "pstdio.connection-test",
+    connectionId: "control-plane",
+    origin,
+    signInScope,
+  }));
 
   const global = await configure("global-canary");
   expect(await global.json()).toMatchObject({ scope: "global", configured: true });
@@ -140,6 +148,7 @@ test.each([
   expect(sharedRecord.scope).toBeUndefined();
   expect((await configure("private-canary", "project")).status).toBe(200);
   expect(await saved()).toEqual(["global-canary", "private-canary", "shared-canary"]);
+  expect(await list()).toMatchObject({ connections: [{ configured: true }], savedSignIns: signIns });
 
   if (lifecycle === "disabled") {
     const changed = await runtimeRequest(instancePath, {
@@ -158,6 +167,8 @@ test.each([
       : ["global-canary", "shared-canary"];
   const signInScope = lifecycle === "disabled" ? "shared" : "global";
   expect(await saved()).toEqual(before);
+  expect(await list()).toEqual({ connections: [], savedSignIns: signIns });
+  expect((await created.app.request(listPath)).status).toBe(401);
   expect((await revoke({ origin })).status).toBe(400);
   expect((await revoke({ signInScope })).status).toBe(400);
   expect((await revoke({ origin, signInScope, credentialScope: "project" })).status).toBe(400);
@@ -174,6 +185,10 @@ test.each([
   });
   expect((await revoke({ origin, signInScope })).status).toBe(204);
   expect(await saved()).toEqual(before.filter((secret) => secret !== `${signInScope}-canary`));
+  expect(await list()).toEqual({
+    connections: [],
+    savedSignIns: signIns.filter((signIn) => signIn.signInScope !== signInScope),
+  });
 });
 
 describe("extension connection routes", () => {
@@ -324,6 +339,15 @@ describe("extension connection routes", () => {
     expect((await configure(otherOrigin, "other-credential")).status).toBe(200);
     expect((await runtimeRequest(connectionPath, { method: "DELETE" })).status).toBe(204);
     expect(await secrets.listRefs()).toHaveLength(2);
+    expect(await (await runtimeRequest(`/v1/projects/${projectId}/extension-connections`)).json()).toEqual({
+      connections: [],
+      savedSignIns: [firstOrigin, otherOrigin].map((origin) => ({
+        extensionId: "pstdio.connection-test",
+        connectionId: "control-plane",
+        origin,
+        signInScope: "shared",
+      })),
+    });
     const ambiguous = await revoke();
     const explicit = await revoke(firstOrigin.toUpperCase());
     expect({
@@ -358,7 +382,7 @@ describe("extension connection routes", () => {
       body: JSON.stringify({ enabled: false }),
     });
     expect(disabled.status).toBe(200);
-    expect(await (await runtimeRequest(`/v1/projects/${projectId}/extension-connections`)).json()).toEqual({
+    expect(await (await runtimeRequest(`/v1/projects/${projectId}/extension-connections`)).json()).toMatchObject({
       connections: [],
     });
     expect(await secrets.listRefs()).toHaveLength(2);

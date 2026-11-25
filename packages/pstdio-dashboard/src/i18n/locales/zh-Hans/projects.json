@@ -110,6 +110,7 @@
         "disconnectProject": "断开项目连接",
         "revokeSignIn": "撤销登录",
         "revokeSharedSignIn": "撤销共享登录",
+        "savedSignIns": "已保存的登录信息",
         "saved": "连接已保存",
         "actionFailed": "连接操作失败"
       },

@@ -21,7 +21,7 @@ export const listExtensionConnectionsRoute = createRoute({
   request: { params: z.object({ projectId: z.string() }).strict() },
   responses: {
     200: {
-      description: "Configured extension connections.",
+      description: "Configured extension connections and redacted saved sign-ins on this device.",
       content: { "application/json": { schema: listExtensionConnectionsResponseSchema } },
     },
   },
@@ -76,7 +76,11 @@ export const listExtensionConnectionsHandler =
   (deps: ExtensionsRouteDeps): AppRouteHandler<typeof listExtensionConnectionsRoute> =>
   async (c) => {
     const { projectId } = c.req.valid("param");
-    return c.json({ connections: await deps.extensionConnectionService.list(projectId) }, 200);
+    const [connections, savedSignIns] = await Promise.all([
+      deps.extensionConnectionService.list(projectId),
+      deps.extensionConnectionService.listSavedSignIns(),
+    ]);
+    return c.json({ connections, savedSignIns }, 200);
   };
 
 export const configureExtensionConnectionHandler =

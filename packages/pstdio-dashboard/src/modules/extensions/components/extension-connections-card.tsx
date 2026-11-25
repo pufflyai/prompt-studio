@@ -1,5 +1,5 @@
 import { Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
-import type { ExtensionConnectionRecord } from "@pstdio/sdk/api";
+import type { ExtensionConnectionRecord, SavedExtensionSignIn } from "@pstdio/sdk/api";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getRuntimeCollections } from "@/lib/sync/collections";
@@ -7,6 +7,7 @@ import { useActionError } from "@/shared/components/use-action-error";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import {
   type ConnectionDefinition,
+  findSavedExtensionSignIn,
   useExtensionConnectionActions,
   useExtensionConnections,
 } from "../data/use-extension-connections";
@@ -15,16 +16,18 @@ interface ExtensionConnectionRowProps {
   projectId: string;
   definition: ConnectionDefinition;
   configured: ExtensionConnectionRecord | undefined;
+  savedSignIns: SavedExtensionSignIn[] | undefined;
 }
 
 const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
-  const { projectId, definition, configured } = props;
+  const { projectId, definition, configured, savedSignIns } = props;
   const { showError, errorNotice, clearError } = useActionError();
   const { t } = useTranslation("projects");
   const connection = useExtensionConnectionActions(projectId, definition);
   const [draftUrl, setBaseUrl] = useState<string>();
   const baseUrl = draftUrl ?? configured?.baseUrl ?? "";
   const [secret, setSecret] = useState("");
+  const savedSignIn = findSavedExtensionSignIn(savedSignIns, definition, configured?.baseUrl);
 
   const notifyError = (error: Error) =>
     showError({
@@ -130,7 +133,7 @@ const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
             {t("projectSettings.extensionsPanel.connections.disconnectProject")}
           </Button>
         )}
-        {configured?.configured && (
+        {savedSignIn && (
           <Button
             size="2xs"
             variant="destructive"
@@ -138,7 +141,7 @@ const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
             disabled={connection.busy}
             onClick={() => {
               clearError();
-              void connection.run({ action: "revoke", baseUrl: configured.baseUrl }).catch(notifyError);
+              void connection.run({ action: "revoke", baseUrl: savedSignIn.origin }).catch(notifyError);
             }}
           >
             {definition.scope === "global"
@@ -169,6 +172,7 @@ export const ExtensionConnectionsCard = (props: { projectId: string; definitions
           key={JSON.stringify([connections.authority, projectId, definition.id])}
           projectId={projectId}
           definition={definition}
+          savedSignIns={connections.data?.savedSignIns}
           configured={connections.data?.connections.find(
             (connection) =>
               connection.extensionId === definition.extensionId && connection.connectionId === definition.localId,

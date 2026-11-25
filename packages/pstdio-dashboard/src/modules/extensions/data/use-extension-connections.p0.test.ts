@@ -90,3 +90,50 @@ test("a global connection has one pending request and recovery retains no creden
     await server.stop(true);
   }
 });
+
+test("checks a lost revoke reply against the exact saved sign-in while a private connection remains", async () => {
+  const origin = "https://fixture.invalid";
+  const identity = { extensionId: "fixture", connectionId: "remote" };
+  const selected = { ...identity, origin, signInScope: "shared" };
+  const siblingSignIns = [
+    { ...identity, origin, signInScope: "global" },
+    { ...selected, origin: "https://other.invalid" },
+  ];
+  let savedSignIns: (typeof selected)[] | undefined;
+  let writes = 0;
+  const server = Bun.serve({
+    port: 0,
+    fetch(request) {
+      if (request.method === "DELETE") {
+        writes++;
+        return Response.json({ error: "Response lost" }, { status: 503 });
+      }
+      return Response.json({
+        connections: [{ ...identity, baseUrl: `${origin}/api`, configured: true }],
+        savedSignIns,
+      });
+    },
+  });
+  const owner = createRuntimeCollections({ baseUrl: server.url.origin, token: "test-token" });
+  const operations = getWorkbenchOperations(getDashboardScopedQueries(owner));
+  const service = getExtensionConnectionOperations(owner);
+  try {
+    const target = { extensionId: identity.extensionId, localId: identity.connectionId };
+    await expect(
+      service.change("project", target, { action: "revoke", baseUrl: origin }, service.authority()),
+    ).rejects.toThrow("Response lost");
+    const recovery = operations.getSnapshot().recovery[0]!;
+    await operations.check(recovery.id);
+    expect(operations.getSnapshot().recovery).toHaveLength(1);
+    savedSignIns = [...siblingSignIns, selected];
+    await operations.check(recovery.id);
+    expect(operations.getSnapshot().recovery).toHaveLength(1);
+    savedSignIns = siblingSignIns;
+    await operations.check(recovery.id);
+    expect(operations.getSnapshot().recovery).toEqual([]);
+    expect(writes).toBe(1);
+  } finally {
+    await owner.dispose();
+    await server.stop(true);
+  }
+});
