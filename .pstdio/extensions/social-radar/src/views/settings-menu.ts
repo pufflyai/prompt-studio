@@ -16,10 +16,10 @@ export const settingsPartOf = (resource?: ResourceRef): SettingsPart => {
   if (resource?.type === channelResource.id) return { kind: "channel", id: resource.id };
   return { kind: "section", id: sections.find((section) => section.id === resource?.id)?.id ?? "research" };
 };
-const settingsTarget = (resource: ResourceRef) =>
-  ({ kind: "page", page: pageRef("settings"), resource }) satisfies NavigationTarget;
-export const sectionTarget = (section: Section = sections[0]) =>
-  settingsTarget({ type: settingsSection.id, id: section.id, label: section.label });
+const settingsTarget = (resource: ResourceRef, from?: ResourceRef) =>
+  ({ kind: "viewer", operation: "switch", from, resource, page: pageRef("settings") }) satisfies NavigationTarget;
+export const sectionRef = (section: Section = sections[0]) =>
+  ({ type: settingsSection.id, id: section.id, label: section.label }) satisfies ResourceRef;
 type RowIcon = Pick<TreeNode, "icon" | "iconColor" | "iconTooltip">;
 const row = (
   id: string,
@@ -46,7 +46,7 @@ const channelIcon = (channel: Channel, paused: boolean, loginNeeded: boolean) =>
   return { icon: channel.url ? "Globe" : "RadioTower" };
 };
 
-/** Lists the settings sections and channels beside the settings view; each row opens the page on it. */
+/** Lists the sections and channels that can open inside the current Settings viewer. */
 export const settingsMenu = defineView({
   id: "settings-menu",
   title: "Settings sections",
@@ -58,9 +58,10 @@ export const settingsMenu = defineView({
       const { channels } = await readSettings(ctx.settings);
       const paused = await pausedChannelIds(ctx);
       const runs = newest(await runsOf(ctx).list(), (run) => run.startedAt);
-      const open = renderer.resource ?? sectionTarget().resource;
+      const current = renderer.resource;
+      const open = current ?? sectionRef();
       const sectionNodes: TreeNode[] = sections.map((section) =>
-        row(section.id, section.label, { icon: section.icon }, sectionTarget(section), open),
+        row(section.id, section.label, { icon: section.icon }, settingsTarget(sectionRef(section), current), open),
       );
       const missing = builtInChannels.filter((builtIn) => !channels.some((channel) => channel.id === builtIn.id));
       return [
@@ -93,7 +94,7 @@ export const settingsMenu = defineView({
               channel.id,
               channel.name,
               channelIcon(channel, paused.has(channel.id), needsLogin(runs, channel.id)),
-              settingsTarget({ type: channelResource.id, id: channel.id, label: channel.name }),
+              settingsTarget({ type: channelResource.id, id: channel.id, label: channel.name }, current),
               open,
             ),
             actions: [
