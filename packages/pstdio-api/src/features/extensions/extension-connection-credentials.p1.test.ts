@@ -139,6 +139,32 @@ test("project-specific credentials override the device sign-in until explicitly 
   }
 });
 
+test("revoking a shared sign-in preserves the same-origin project's own connection and credential", async () => {
+  const f = await setup();
+  try {
+    await f.configure("first", "shared-canary");
+    await f.connections.configure({
+      ...f.key("second"),
+      baseUrl: f.server.url.origin,
+      secret: "project-canary",
+      credentialScope: "project",
+    });
+    await f.request("first");
+    await f.request("second");
+    const before = await f.connections.list("second");
+    expect((await f.connections.list("first"))[0]?.lastCheck).toMatchObject({ ok: true, status: 200 });
+    await f.connections.remove({ ...f.key("second"), credentialScope: "all-projects" });
+    expect(await f.connections.list("second")).toEqual(before);
+    await f.request("second");
+    expect(f.received).toEqual(["Bearer shared-canary", "Bearer project-canary", "Bearer project-canary"]);
+    expect((await f.connections.list("first"))[0]).toMatchObject({ configured: false, lastCheck: null });
+    await expect(f.request("first")).rejects.toThrow("credential is not configured");
+    expect(await f.secrets.listRefs()).toHaveLength(1);
+  } finally {
+    await f.cleanup();
+  }
+});
+
 test("a changed shared provider URL cannot receive an existing device credential", async () => {
   const f = await setup();
   const captured: string[] = [];

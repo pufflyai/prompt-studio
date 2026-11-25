@@ -151,23 +151,18 @@ export const createExtensionConnectionsDBService = (db: DbClient) => {
     listAll: () => list(),
     listByExtension: (projectId: string, extensionId: string) =>
       list(and(eq(preferences.project_id, projectId), eq(preferences.extension_id, extensionId))),
-    async remove(input: ConnectionKey, sharedOrigin?: string) {
+    async removeSharedCredential(input: ConnectionKey, origin: string) {
+      const removed = await credentialStore.remove(sharedCredentialKey(input, origin));
+      return removed?.secret_ref;
+    },
+    async remove(input: ConnectionKey) {
       return db.transaction(async (tx) => {
-        const [row] = await tx.select({ value: preferences.value }).from(preferences).where(whereKey(input));
-        const config = row?.value as ConnectionConfiguration | undefined;
-        const removeLocal = config && (!sharedOrigin || credentialProvider(config.base_url) === sharedOrigin);
-        if (!removeLocal && !sharedOrigin) return null;
-
+        const [removed] = await tx.delete(preferences).where(whereKey(input)).returning({ key: preferences.key });
+        if (!removed) return null;
+        await tx.delete(preferences).where(wherePreference(connectionCheckPreference(input)));
         const store = createExtensionCredentialsDBService(tx);
-        const shared = sharedOrigin ? await store.remove(sharedCredentialKey(input, sharedOrigin)) : null;
-        const refs = shared ? [shared.secret_ref] : [];
-        if (removeLocal) {
-          await tx.delete(preferences).where(whereKey(input));
-          await tx.delete(preferences).where(wherePreference(connectionCheckPreference(input)));
-          const local = await store.remove(configuredCredentialKey(input));
-          if (local) refs.push(local.secret_ref);
-        }
-        return refs;
+        const local = await store.remove(configuredCredentialKey(input));
+        return local ? [local.secret_ref] : [];
       });
     },
     async recordCheck(

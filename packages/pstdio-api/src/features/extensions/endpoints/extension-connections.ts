@@ -53,7 +53,7 @@ export const deleteExtensionConnectionRoute = createRoute({
       .object({
         credentialScope: z.enum(["all-projects", "project"]).optional(),
         origin: z.url().optional().openapi({
-          description: "Server origin for all-projects revocation, including after project configuration is removed.",
+          description: "Server origin for revoking a shared sign-in, including for disabled or uninstalled extensions.",
         }),
       })
       .strict(),

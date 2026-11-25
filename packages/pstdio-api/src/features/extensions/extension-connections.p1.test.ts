@@ -113,6 +113,7 @@ describe("extension connection routes", () => {
       },
     );
     expect(enableResponse.status).toBe(200);
+    const { instanceId } = await enableResponse.json();
 
     const connectionPath = `/v1/projects/${projectId}/extension-connections/pstdio.connection-test/control-plane`;
     const configured = await runtimeRequest(connectionPath, {
@@ -184,5 +185,25 @@ describe("extension connection routes", () => {
     expect((await revoke()).status).toBe(204);
     expect(await secrets.listRefs()).toEqual([]);
     expect((await revoke()).status).toBe(204);
+
+    expect((await configure(firstOrigin, "disabled-credential")).status).toBe(200);
+    expect((await configure(otherOrigin, "uninstalled-credential")).status).toBe(200);
+    const instancePath = `/v1/projects/${projectId}/extensions/${instanceId}`;
+    const disabled = await runtimeRequest(instancePath, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ enabled: false }),
+    });
+    expect(disabled.status).toBe(200);
+    expect(await (await runtimeRequest(`/v1/projects/${projectId}/extension-connections`)).json()).toEqual({
+      connections: [],
+    });
+    expect(await secrets.listRefs()).toHaveLength(2);
+    expect((await revoke(firstOrigin)).status).toBe(204);
+    expect(await secrets.listRefs()).toHaveLength(1);
+    expect((await runtimeRequest(`${instancePath}?deleteUserData=true`, { method: "DELETE" })).status).toBe(204);
+    expect(await secrets.listRefs()).toHaveLength(1);
+    expect((await revoke(otherOrigin)).status).toBe(204);
+    expect(await secrets.listRefs()).toEqual([]);
   });
 });

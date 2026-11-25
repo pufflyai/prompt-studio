@@ -20,10 +20,11 @@ The host does not invent a local path for a remote workspace. Local file and ter
 
 A connection contribution declares its allowed HTTP methods, path prefixes, authentication shape, and streaming support. Project settings hold the base URL. The device stores credential references and sign-in metadata separately, and the secret bytes live in the host secret store. Projects can share a sign-in for the same contribution and server origin. Each connection keeps its own check result on the device and clears the displayed result when its credential changes. The request proxy enforces same-origin relative paths, HTTPS outside loopback, bounded request and response sizes, timeouts, cancellation, and no redirects.
 
-To revoke a shared sign-in after removing its project configuration, send a DELETE to the connection endpoint with
-`credentialScope=all-projects` and `origin` set to the server origin. Existing configurations supply their origin when
-the query omits it. A detached sign-in can omit the origin only if it is the sole saved sign-in for that contribution.
-Revoking one origin leaves settings and credentials for other origins in place.
+To revoke a shared sign-in, send a DELETE to the connection endpoint with `credentialScope=all-projects` and
+`origin` set to the server origin. The origin identifies the saved sign-in even after the project configuration
+is removed or the extension is disabled or uninstalled. With an enabled extension, the server can also infer the
+origin from the project configuration or from the sole saved sign-in for the contribution. A shared revocation
+preserves project connections and their own credentials.
 
 The default desktop implementation uses the temporary file store documented in [ADR 0034](../../adrs/0034-temporary-file-connection-secret-store.md). Hosted deployments should inject their deployment secret provider through the same interface.
 
