@@ -55,12 +55,16 @@ const dropReleasedIndexes = async (db: DbClient) => {
     table: "storage_record_indexes",
     keys: ["workbench_id", "extension_id", "name"],
   }))
-    await dropRecordIndexObjects(db, [
-      {
-        definition: row.definition as StorageRecordIndex,
-        database_name: String(row.database_name),
-      },
-    ]);
+    await dropRecordIndexObjects(
+      db,
+      [
+        {
+          definition: row.definition as StorageRecordIndex,
+          database_name: String(row.database_name),
+        },
+      ],
+      "released",
+    );
   await db.execute(sql`DELETE FROM storage_record_indexes`);
 };
 
