@@ -2,9 +2,9 @@ import { dirname, sep } from "node:path";
 import { type ArtifactMountWriteObserver, readArtifactFileState } from "pstdio-extensions";
 import {
   advanceParentWrite,
+  createDirectoryEchoCheck,
   createOwnedDirectories,
   type FileState,
-  matchesDirectoryEcho,
   type ReportedChildren,
   recordOwnedChild,
   recordReportedChild,
@@ -207,15 +207,14 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
   const isEcho = (
     path: string,
     current: FileState,
-    observed: ReadonlyMap<string, FileState>,
     consumed: Set<string>,
     keepMatchedWrites: boolean,
-    reported: ReportedChildren,
+    checkDirectory: ReturnType<typeof createDirectoryEchoCheck>,
   ) => {
     const entry = entries.get(path);
     const directory = directories.get(path);
     // An outside writer can add a sibling while an owned mutation is changing the same timestamps.
-    const matchesDirectory = matchesDirectoryEcho(path, directory, current, observed, reported);
+    const matchesDirectory = checkDirectory(path, directory, current);
     const matchesEntry = entry && sameState(entry.state, current) && !entry.reappeared?.has(path);
     // A single watcher consumes its echo but still needs to recognize the same restored inode.
     if (directory && !keepMatchedWrites) directory.echoConsumed = true;
@@ -266,8 +265,9 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
       const byPath = new Map(observations);
       reconcileDeletions(observations, byPath);
       const consumed = new Set<string>();
+      const checkDirectory = createDirectoryEchoCheck(byPath, reported);
       const kept = observations.filter(
-        ([path, current]) => !isEcho(path, current, byPath, consumed, keepMatchedWrites, reported),
+        ([path, current]) => !isEcho(path, current, consumed, keepMatchedWrites, checkDirectory),
       );
       // A later folder-only hint may repeat a child change already delivered to this watcher.
       if (keepMatchedWrites) {

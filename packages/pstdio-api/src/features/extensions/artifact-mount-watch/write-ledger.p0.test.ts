@@ -343,6 +343,20 @@ describe("artifact mount deletions and expiry", () => {
 });
 
 describe("artifact mount folder-only notifications", () => {
+  test("checks a newly created nested directory before suppressing its ancestor hint", async () => {
+    const ledger = createArtifactMountWriteLedger(() => 0);
+    const { mount, root } = createMount(ledger);
+    const options = { keepMatchedWrites: true };
+    const folder = join(root, "sales");
+    const file = join(folder, "archive", "note.json");
+    await mount.writeText("sales/archive/note.json", "{}");
+    expect(ledger.dropEchoes([folder], options)).toEqual([]);
+
+    writeFileSync(file, "[]");
+    utimesSync(file, new Date(), new Date(Date.now() + 5_000));
+    expect(ledger.dropEchoes([folder], options)).toEqual([folder]);
+  });
+
   test("keeps an ancestor hint when a reported directory has an unverified nested edit", async () => {
     const ledger = createArtifactMountWriteLedger(() => 0);
     const { mount, root } = createMount(ledger);

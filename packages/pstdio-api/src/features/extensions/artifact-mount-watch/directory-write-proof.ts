@@ -157,11 +157,15 @@ const matchesOwnedChildren = (
   directory: OwnedDirectory,
   observed: ReadonlyMap<string, FileState>,
   reported: ReportedChildren,
+  checked: WeakMap<OwnedDirectory, boolean>,
 ): boolean => {
+  const previous = checked.get(directory);
+  if (previous !== undefined) return previous;
+  let matches = false;
   try {
     const expected = expectedChildren(directory, reported);
     const names = readdirSync(path);
-    return (
+    matches =
       names.length === expected.size &&
       names.every((name) => {
         const recorded = expected.get(name);
@@ -171,31 +175,28 @@ const matchesOwnedChildren = (
         // The changed child already accounts for an independent hint in this batch.
         if (childHint !== undefined && !sameState(recorded.state, childHint)) return true;
         if (!sameState(recorded.state, readArtifactFileState(childPath))) return false;
-        if ("forWrite" in recorded && recorded.state?.directory) {
+        if (!recorded.state?.directory) return true;
+        if ("forWrite" in recorded) {
           return recorded.contents !== undefined && matchesReportedContents(childPath, recorded.contents);
         }
-        if ("nestedDirectory" in recorded && recorded.nestedDirectory) {
-          return matchesOwnedChildren(childPath, recorded.nestedDirectory, observed, reported);
-        }
-        return true;
-      })
-    );
+        const nested = recorded.nestedDirectory;
+        return nested !== undefined && matchesOwnedChildren(childPath, nested, observed, reported, checked);
+      });
   } catch {
-    return false;
+    // A disappearing or inaccessible directory cannot prove an echo.
   }
+  checked.set(directory, matches);
+  return matches;
 };
 
-export const matchesDirectoryEcho = (
-  path: string,
-  directory: OwnedDirectory | undefined,
-  current: FileState,
-  observed: ReadonlyMap<string, FileState>,
-  reported: ReportedChildren,
-) =>
-  directory !== undefined &&
-  !directory.echoConsumed &&
-  sameState(directory.observed, current) &&
-  matchesOwnedChildren(path, directory, observed, reported);
+export const createDirectoryEchoCheck = (observed: ReadonlyMap<string, FileState>, reported: ReportedChildren) => {
+  const checked = new WeakMap<OwnedDirectory, boolean>();
+  return (path: string, directory: OwnedDirectory | undefined, current: FileState) =>
+    directory !== undefined &&
+    !directory.echoConsumed &&
+    sameState(directory.observed, current) &&
+    matchesOwnedChildren(path, directory, observed, reported, checked);
+};
 
 export const recordOwnedChild = (directories: ReadonlyMap<string, OwnedDirectory>, path: string, state: FileState) => {
   const parentPath = dirname(path);
@@ -205,7 +206,10 @@ export const recordOwnedChild = (directories: ReadonlyMap<string, OwnedDirectory
   }
   const parent = directories.get(parentPath);
   if (!parent) return;
-  parent.children.set(name, { state });
+  // Folder creation is sampled after the write. Link its own child proof at recording time.
+  const child = state?.directory ? directories.get(path) : undefined;
+  const nestedDirectory = child?.observed.identity === state?.identity ? child : undefined;
+  parent.children.set(name, { state, nestedDirectory });
 };
 
 export const advanceParentWrite = (
