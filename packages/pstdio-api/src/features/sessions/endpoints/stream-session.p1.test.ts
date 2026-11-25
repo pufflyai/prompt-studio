@@ -330,7 +330,7 @@ describe("session stream active session replay", () => {
     const replayRoot = mkdtempSync(join(tmpdir(), "pstdio-api-stream-history-test-"));
     const readyForLivePatch = Promise.withResolvers<void>();
     const exit = Promise.withResolvers<HarnessExit>();
-    const liveMessage = { id: "m3", role: "assistant", parts: [{ type: "text", text: "LIVE" }] };
+    const liveMessage: SessionMessage = { id: "m3", role: "assistant", parts: [{ type: "text", text: "LIVE" }] };
     const initialPatches: JsonPatch[] = [
       {
         op: "add",
