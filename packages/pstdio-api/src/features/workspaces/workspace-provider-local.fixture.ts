@@ -86,8 +86,8 @@ const setupLocalProvider = (options: { backendRuntime?: "process" }) => {
       return result(directory);
     },
     async validateParams(ctx, input) {
-      if (input.params.revision === "cancel-process") {
-        await ctx.process.runOrThrow({ command: input.params.command });
+      if (input.revision === "cancel-process") {
+        await ctx.process.runOrThrow({ command: input.command });
         return;
       }
       await ctx.projectFiles.readText("revision.txt");
@@ -263,7 +263,7 @@ const discoveryAndDirectoryTests = (s: LocalProviderState) => {
       runtime!,
       async (ctx) => {
         if (mode === "worker") {
-          await runtime!.provider.validateParams!(ctx, { params: { revision: "cancel-process", command } });
+          await runtime!.provider.validateParams!(ctx, { revision: "cancel-process", command });
           return;
         }
         await ctx.process.runOrThrow({ command });
