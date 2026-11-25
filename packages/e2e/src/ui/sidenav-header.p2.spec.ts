@@ -151,7 +151,6 @@ test("removes and restores owner-scoped collections across project and session p
 });
 
 test("customizes the Sidenav from any point and persists section visibility", async ({ page, request }) => {
-  test.setTimeout(45_000);
   const project = await createProject(request);
   await waitForTicketsExtension(request, project.id);
   await prepareDashboard(page, project.id);
