@@ -14,7 +14,7 @@ import {
 import { folderProjectInput } from "../helpers/folder-project";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
-export type ProjectUpgradeProfile = "active" | "aged" | "conflicted";
+export type ProjectUpgradeProfile = "active" | "aged" | "conflicted" | "cloud";
 export interface ProjectUpgradeInput {
   home: string;
   profile: ProjectUpgradeProfile;
@@ -153,7 +153,7 @@ export const upgradeCoreProjectTools = async (api: StackApi, project: string) =>
   return changes;
 };
 
-const planner = async (api: StackApi, project: string) => {
+export const planner = async (api: StackApi, project: string) => {
   const { commands, diagnostics } = await api.get<{ commands: CommandInfo[]; diagnostics: unknown[] }>(
     `/projects/${project}/extensions/commands`,
   );
@@ -247,6 +247,7 @@ interface Seed {
   deletedId: string | null;
   folder: string;
   firstTicket: string;
+  secondTicket: string;
   linkedSession: string;
   linkedWorkspace: string;
   sessionIds: string[];
@@ -381,6 +382,15 @@ export const seedConflictedProject = async (api: StackApi, home: string) => {
   return id;
 };
 
+export const installUpgradePlanner = async (api: StackApi, projectId: string, catalog?: { installName: string }[]) => {
+  const prefix = `/projects/${projectId}`;
+  const marketplace =
+    catalog ?? (await api.get<{ marketplace: { installName: string }[] }>(`${prefix}/extensions`)).marketplace;
+  const plannerEntry = marketplace.find(({ installName }) => /^(pstdio-)?planner$/.test(installName));
+  assert(plannerEntry, "The published baseline must offer Planner");
+  await api.post(`${prefix}/extensions/install`, { source: { kind: "catalog", name: plannerEntry.installName } });
+};
+
 export const seedUpgradeProject = async (api: StackApi, input: ProjectUpgradeInput) => {
   const folder = join(input.home, "project");
   const name = `Upgrade ${input.profile}`;
@@ -395,9 +405,7 @@ export const seedUpgradeProject = async (api: StackApi, input: ProjectUpgradeInp
     marketplace: { installName: string }[];
     extensions: ProjectExtension[];
   }>(`${prefix}/extensions`);
-  const plannerEntry = marketplace.find(({ installName }) => /^(pstdio-)?planner$/.test(installName));
-  assert(plannerEntry, "The published baseline must offer Planner");
-  await api.post(`${prefix}/extensions/install`, { source: { kind: "catalog", name: plannerEntry.installName } });
+  await installUpgradePlanner(api, project.id, marketplace);
   // The generated history belongs to the Codex harness. The reader needs its declaration to open it.
   const enabled = new Set(extensions.filter(({ enabled }) => enabled).map(({ extensionId }) => extensionId));
   await ensureHome(api, prefix, marketplace, enabled);
@@ -453,6 +461,7 @@ export const seedUpgradeProject = async (api: StackApi, input: ProjectUpgradeInp
     deletedId,
     folder,
     firstTicket,
+    secondTicket: ticketIds[1]!,
     linkedSession,
     linkedWorkspace,
     sessionIds,

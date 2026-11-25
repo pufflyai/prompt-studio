@@ -239,7 +239,7 @@ jobs:
       - name: Install Chromium for the upgraded workbench
         working-directory: packages/e2e
         run: bun x --no-install playwright install chromium --with-deps --no-shell
-      - name: Upgrade both populated projects
+      - name: Upgrade populated local and Cloud projects
         run: |
           bun --no-env-file packages/e2e/src/packaged/project-upgrade.ts \
             --from "$FROM_TAG" --candidate "$CANDIDATE_BINARY" --candidate-ref "$CANDIDATE_REF" --candidate-root __test-tmp__/upgrade-candidate

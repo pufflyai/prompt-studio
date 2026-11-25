@@ -8,6 +8,7 @@ import { describeProductionPayload, projectUpgradeLimitMs } from "pstdio-scripts
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
+import { checkCloudProjectUpgrade } from "./project-upgrade-cloud";
 import {
   assertProjectToolsRetained,
   assertUpgradeEdit,
@@ -211,6 +212,7 @@ const run = async (
     platform: process.platform,
     arch: process.arch,
   });
+  if (input.profile === "cloud") return checkCloudProjectUpgrade(input.home, input.evidence, baseline, candidate);
   const launch = async (binary: string, phase: string) => {
     console.log(`[project upgrade ${input.profile}] ${phase}`);
     const controller = new AbortController();
@@ -297,8 +299,12 @@ if (import.meta.main) {
   });
   const profile = values.profile;
   assert(
-    profile === undefined || profile === "active" || profile === "aged" || profile === "conflicted",
-    "Choose --profile active, aged or conflicted",
+    profile === undefined ||
+      profile === "active" ||
+      profile === "aged" ||
+      profile === "conflicted" ||
+      profile === "cloud",
+    "Choose --profile active, aged, conflicted or cloud",
   );
   const { from, candidate, "candidate-ref": candidateRef, "baseline-binary": baselinePath } = values;
   assert(from, "Supply the published release tag with --from");
@@ -314,7 +320,7 @@ if (import.meta.main) {
   const expectedVersions = values["candidate-root"] ? await candidateToolVersions(values["candidate-root"]) : undefined;
   const pair = { from, candidateRef, baseline, candidate: resolve(candidate), expectedVersions };
   const failures: unknown[] = [];
-  const profiles: ProjectUpgradeInput["profile"][] = profile ? [profile] : ["active", "aged"];
+  const profiles: ProjectUpgradeInput["profile"][] = profile ? [profile] : ["active", "aged", "cloud"];
   if (!profile && from === "pstdio@0.47.0") profiles.push("conflicted");
   for (const variant of profiles) {
     const output = join(evidence, variant);
