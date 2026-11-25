@@ -130,11 +130,11 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
     }
   };
 
-  const dropRetiredDeletions = (retired: ReadonlyMap<string, number>) => {
-    // Walk the ledger once even when one notification proves many deletions are stale.
+  const dropRetiredEntries = (retired: ReadonlyMap<string, number>) => {
+    // A returned subtree cannot inherit old write or deletion proofs from before it was removed.
     if (retired.size === 0) return;
     for (const [path, entry] of entries) {
-      if (entry.state === null && isRetired(retired, path, entry.order)) entries.delete(path);
+      if (isRetired(retired, path, entry.order)) entries.delete(path);
     }
   };
 
@@ -180,7 +180,7 @@ export const createArtifactMountWriteLedger = (now: () => number = Date.now) => 
       // A recursive watcher may report only a child when an external folder returns.
       reconcileDeletion(recordedPath, entry, stateAt(recordedPath), related ?? [], retired, returnedRoot);
     }
-    dropRetiredDeletions(retired);
+    dropRetiredEntries(retired);
   };
 
   // An earlier tree deletion cannot explain the disappearance of a newer mount write.

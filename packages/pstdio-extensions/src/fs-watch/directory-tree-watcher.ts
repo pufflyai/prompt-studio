@@ -196,18 +196,21 @@ export const createDirectoryTreeWatcher = (input: DirectoryTreeWatcherInput) => 
     input.onEvent(eventType, path);
   };
 
-  if (recursive) addHandle(input.root);
-  else watchFolders(input.root, false);
-
-  return {
-    recursive,
-    close: () => {
-      closed = true;
-      if (rootCheck) clearInterval(rootCheck);
-      for (const folder of folders.values()) folder.handle?.close();
-      folders.clear();
-    },
+  const close = () => {
+    closed = true;
+    if (rootCheck) clearInterval(rootCheck);
+    for (const folder of folders.values()) folder.handle?.close();
+    folders.clear();
   };
+
+  try {
+    if (recursive) addHandle(input.root);
+    else watchFolders(input.root, false);
+  } catch (error) {
+    close();
+    throw error;
+  }
+  return { recursive, close };
 };
 
 export type DirectoryTreeWatcher = ReturnType<typeof createDirectoryTreeWatcher>;

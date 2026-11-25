@@ -433,28 +433,29 @@ describe("artifact mount folder-only notifications", () => {
   });
 });
 
+test.each(["folder", "child"])("reports removals after an originally owned subtree returns (%s hint)", async (hint) => {
+  const ledger = createArtifactMountWriteLedger(() => 0);
+  const { mount, root } = createMount(ledger);
+  const folder = join(root, "sales");
+  const nested = join(folder, "nested");
+  const parked = join(dirname(root), "parked-nested");
+  const returned = hint === "folder" ? nested : join(nested, "a.json");
+  const removed = join(nested, "b.json");
+  const options = { keepMatchedWrites: true };
+  await mount.writeText("sales/nested/a.json", "{}");
+  await mount.writeText("sales/nested/b.json", "{}");
+  renameSync(nested, parked);
+  await mount.delete("sales");
+  expect(ledger.dropEchoes([folder], options)).toEqual([]);
+  await mount.writeText("sales/owned.json", "{}");
+
+  renameSync(parked, nested);
+  expect(ledger.dropEchoes([returned], options)).toEqual([returned]);
+  rmSync(removed);
+  expect(ledger.dropEchoes([removed], options)).toEqual([removed]);
+});
+
 describe("artifact mount restored folder batches", () => {
-  test("reports removals after an originally owned subtree returns to a recreated parent", async () => {
-    const ledger = createArtifactMountWriteLedger(() => 0);
-    const { mount, root } = createMount(ledger);
-    const folder = join(root, "sales");
-    const nested = join(folder, "nested");
-    const parked = join(dirname(root), "parked-nested");
-    const removed = join(nested, "b.json");
-    const options = { keepMatchedWrites: true };
-    await mount.writeText("sales/nested/a.json", "{}");
-    await mount.writeText("sales/nested/b.json", "{}");
-    renameSync(nested, parked);
-    await mount.delete("sales");
-    expect(ledger.dropEchoes([folder], options)).toEqual([]);
-    await mount.writeText("sales/owned.json", "{}");
-
-    renameSync(parked, nested);
-    expect(ledger.dropEchoes([nested], options)).toEqual([nested]);
-    rmSync(removed);
-    expect(ledger.dropEchoes([removed], options)).toEqual([removed]);
-  });
-
   test.each([
     ["folder", true],
     ["child", true],

@@ -125,15 +125,24 @@ test("one watcher cannot suppress another watcher's folder-only notification", a
   expect(relay.changes).toEqual([["sales/first.json"]]);
 });
 
-describe("watchArtifactMount", () => {
-  test("closes the tree and cancels its refresh when flat setup throws", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pstdio-watch-startup-"));
-    cleanups.push(() => rmSync(root, { recursive: true, force: true }));
-    mkdirSync(join(root, "subfolder"));
-    const failure = new Error("cannot start flat watcher");
-    const changes: string[][] = [];
-    let closed = 0;
-    let limited = false;
+test.each([
+  "opening",
+  "walking",
+])("closes all startup handles and cancels the pending refresh when %s the flat watch fails", async (stage) => {
+  const root = mkdtempSync(join(tmpdir(), "pstdio-watch-startup-"));
+  cleanups.push(() => rmSync(root, { recursive: true, force: true }));
+  mkdirSync(join(root, "subfolder"));
+  const failure = new Error("cannot start flat watcher");
+  const changes: string[][] = [];
+  const closed: string[] = [];
+  let limited = false;
+  let flatOpened = false;
+  const readDirectory = fs.readdirSync;
+  const read = spyOn(fs, "readdirSync").mockImplementation((...args) => {
+    if (flatOpened && args[0] === root) throw failure;
+    return Reflect.apply(readDirectory, fs, args);
+  });
+  try {
     expect(() =>
       watchArtifactMount({
         root,
@@ -146,22 +155,24 @@ describe("watchArtifactMount", () => {
           limited = true;
         },
         maxFolders: 1,
-        watch: () => ({
-          close: () => {
-            closed++;
-          },
-        }),
+        watch: () => ({ close: () => closed.push("tree") }),
         watchRoot: () => {
-          throw failure;
+          if (stage === "opening") throw failure;
+          flatOpened = true;
+          return { close: () => closed.push("flat") };
         },
       }),
     ).toThrow(failure);
-    expect(limited).toBe(true);
-    expect(closed).toBe(1);
-    await Bun.sleep(250);
-    expect(changes).toEqual([]);
-  });
+  } finally {
+    read.mockRestore();
+  }
+  expect(limited).toBe(true);
+  expect(closed.sort()).toEqual(stage === "opening" ? ["tree"] : ["flat", "tree"]);
+  await Bun.sleep(250);
+  expect(changes).toEqual([]);
+});
 
+describe("watchArtifactMount", () => {
   test.each(["darwin", "linux", "win32"] as const)("uses the default root watch policy for %s", async (platform) => {
     const nativeWatch = fs.watch;
     const watches = spyOn(fs, "watch").mockImplementation(nativeWatch);
