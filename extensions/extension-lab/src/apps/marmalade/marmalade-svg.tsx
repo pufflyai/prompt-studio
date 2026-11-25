@@ -18,6 +18,7 @@ export const marmaladeSvg = (state: MarmaladeState, imageHref: string) =>
         <g
           key={layer.id}
           opacity={layer.opacity}
+          style={{ mixBlendMode: layer.blendMode }}
           transform={`translate(${layer.x} ${layer.y}) rotate(${layer.rotation ?? 0} ${layer.width / 2} ${layer.height / 2})`}
         >
           <MarmaladeSvgArtwork layer={layer} imageHref={imageHref} />

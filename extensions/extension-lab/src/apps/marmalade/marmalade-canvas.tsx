@@ -1,4 +1,5 @@
 import { Box, Button, HStack, IconButton, Stack } from "@chakra-ui/react";
+import { useWebviewVisibility } from "@pstdio/sdk/extensions/react";
 import { EmptyState, Tooltip } from "@pstdio/ui";
 import { type PointerEvent, useEffect, useRef, useState } from "react";
 import { EditingError } from "../../editing-error";
@@ -13,6 +14,11 @@ import { marmaladeStore, useMarmalade } from "./marmalade-store";
 type DrawingGesture = MarmaladeDrawing & { boundary: ReturnType<typeof marmaladeStore.getGestureBoundary> };
 
 export const MarmaladeCanvas = () => {
+  const visible = useWebviewVisibility();
+  return visible ? <MarmaladeCanvasContent /> : null;
+};
+
+const MarmaladeCanvasContent = () => {
   const state = useMarmalade((projection) => projection.state);
   const error = useMarmalade((projection) => projection.error);
   const gesture = useMarmaladeGesture();

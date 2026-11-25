@@ -1,4 +1,21 @@
 export type MarmaladeTool = "move" | "text" | "rectangle" | "ellipse" | "brush" | "hand" | "zoom";
+export type MarmaladeBlendMode =
+  | "normal"
+  | "multiply"
+  | "screen"
+  | "overlay"
+  | "darken"
+  | "lighten"
+  | "color-dodge"
+  | "color-burn"
+  | "hard-light"
+  | "soft-light"
+  | "difference"
+  | "exclusion"
+  | "hue"
+  | "saturation"
+  | "color"
+  | "luminosity";
 export interface MarmaladeAdjustments {
   brightness: number;
   contrast: number;
@@ -31,6 +48,7 @@ export interface MarmaladeLayer {
   width: number;
   height: number;
   opacity: number;
+  blendMode?: MarmaladeBlendMode;
   text?: string;
   shape?: "rectangle" | "ellipse";
   rotation?: number;
@@ -55,6 +73,7 @@ export interface MarmaladeViewState extends MarmaladeState {
   history: { undo: number; redo: number; boundary: string };
 }
 export type MarmaladeAction =
+  | { type: "selection-properties"; ids: string[]; changes: { opacity?: number; blendMode?: MarmaladeBlendMode } }
   | { type: "select"; ids: string[] }
   | { type: "expand"; id: string }
   | { type: "tool"; tool: MarmaladeTool }

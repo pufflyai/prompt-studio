@@ -56,7 +56,12 @@ const ExampleRoot = (props: ExampleRootProps) => {
       ),
     [bridge, propsStore, store],
   );
-  const input = { host, resource: hostProps.resource ?? hostProps.pageLocation?.resource, t };
+  const input = {
+    host,
+    projectId: hostProps.projectId,
+    resource: hostProps.resource ?? hostProps.pageLocation?.resource,
+    t,
+  };
   return (
     <ViewContext value={input}>
       <Box h="100dvh" w="full" display="flex" flexDirection="column" overflow="hidden" color="fg" bg={background}>

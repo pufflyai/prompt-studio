@@ -1,10 +1,23 @@
 import { Button, HStack, IconButton, Stack, Text, useRecipe } from "@chakra-ui/react";
-import { EmptyState, psTheme, ScrollArea, Tooltip, TreeList, type TreeListNode } from "@pstdio/ui";
+import { useWebviewVisibility } from "@pstdio/sdk/extensions/react";
+import {
+  EmptyState,
+  psTheme,
+  ResizableSplitLayout,
+  ScrollArea,
+  Tooltip,
+  TreeList,
+  type TreeListNode,
+} from "@pstdio/ui";
+import { EditingError } from "../../editing-error";
 import { ExampleIcon } from "../../icon";
+import type { ExampleViewInput } from "../../view-context";
 import type { MarmaladeAction, MarmaladeState } from "./marmalade.types";
+import { useMarmaladeInspectorSize } from "./marmalade-inspector-size";
 import { marmaladeLocked, selectedBlock, selectedRoots } from "./marmalade-layers";
 import { MarmaladePreview } from "./marmalade-preview";
 import { MarmaladeProperties } from "./marmalade-properties";
+import { MarmaladeSelectionProperties } from "./marmalade-selection-properties";
 import { marmaladeStore, useMarmalade } from "./marmalade-store";
 
 const layerNodes = (state: MarmaladeState, dispatch: (action: MarmaladeAction) => void, parentId?: string) => {
@@ -47,7 +60,14 @@ const layerNodes = (state: MarmaladeState, dispatch: (action: MarmaladeAction) =
   return nodes;
 };
 
-export const MarmaladeInspector = () => {
+export const MarmaladeInspector = ({ input }: { input: ExampleViewInput }) => {
+  const visible = useWebviewVisibility();
+  // Retained host views stay mounted offscreen. Retire transient controls when their view leaves.
+  return visible ? <MarmaladeInspectorContent input={input} /> : null;
+};
+
+const MarmaladeInspectorContent = ({ input }: { input: ExampleViewInput }) => {
+  const layout = useMarmaladeInspectorSize(input);
   const state = useMarmalade((projection) => projection.state);
   const error = useMarmalade((projection) => projection.error);
   const buttonRecipe = useRecipe({ recipe: psTheme.getRecipe("button") });
@@ -70,63 +90,94 @@ export const MarmaladeInspector = () => {
   ] as const;
   return (
     <Stack h="full" minH="0" gap="0" bg="bg.panel" aria-label="Marmalade inspector">
-      <ScrollArea flex="1" minH="0">
-        {layer ? <MarmaladeProperties key={layer.id} state={state} layer={layer} /> : null}
-        <HStack px="sm" py="sm" gap="2xs">
-          <Text textStyle="label/S/medium">Layers</Text>
-          <HStack flex="1" justify="flex-end" gap="2xs">
-            <Tooltip content="Add text layer">
-              <IconButton
-                aria-label="Add text layer"
-                variant="ghost"
-                size="xs"
-                onClick={() => dispatch({ type: "create", kind: "text", x: 100, y: 100 })}
-              >
-                <ExampleIcon name="Type" />
-              </IconButton>
-            </Tooltip>
-            {actions.map((action) => (
-              <Tooltip key={action.type} content={action.label}>
-                <IconButton
-                  aria-label={action.label}
-                  size="xs"
-                  variant="ghost"
-                  css={
-                    action.type === "delete" ? buttonRecipe({ variant: "destructive-ghost", size: "xs" }) : undefined
+      {error ? <EditingError error={error} retry={() => marmaladeStore.retry()} /> : null}
+      {layout.error ? <EditingError error={layout.error} retry={layout.retry} /> : null}
+      <ResizableSplitLayout
+        h="full"
+        minH="0"
+        resizableSide="bottom"
+        defaultSizePx={layout.size}
+        minSizePx={96}
+        contentMinSizePx={160}
+        collapsible={false}
+        resizeLabel="Resize layers group"
+        onSizeChange={layout.save}
+        contentPanel={
+          <Stack h="full" minH="0" gap="0">
+            <Text textStyle="label/S/medium" px="sm" py="sm" flexShrink="0">
+              Properties
+            </Text>
+            <ScrollArea flex="1" minH="0">
+              {state.selectedIds.length > 1 ? <MarmaladeSelectionProperties state={state} /> : null}
+              {state.selectedIds.length === 1 && layer ? (
+                <MarmaladeProperties key={layer.id} state={state} layer={layer} />
+              ) : null}
+              {!layer && (
+                <Text px="sm" textStyle="label/XS" color="fg.muted">
+                  Select a layer to edit its properties.
+                </Text>
+              )}
+            </ScrollArea>
+          </Stack>
+        }
+        resizablePanel={
+          <Stack h="full" minH="0" gap="0">
+            <HStack px="sm" py="sm" gap="2xs">
+              <Text textStyle="label/S/medium">Layers</Text>
+              <HStack flex="1" justify="flex-end" gap="2xs">
+                <Tooltip content="Add text layer">
+                  <IconButton
+                    aria-label="Add text layer"
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => dispatch({ type: "create", kind: "text", x: 100, y: 100 })}
+                  >
+                    <ExampleIcon name="Type" />
+                  </IconButton>
+                </Tooltip>
+                {actions.map((action) => (
+                  <Tooltip key={action.type} content={action.label}>
+                    <IconButton
+                      aria-label={action.label}
+                      size="xs"
+                      variant="ghost"
+                      css={
+                        action.type === "delete"
+                          ? buttonRecipe({ variant: "destructive-ghost", size: "xs" })
+                          : undefined
+                      }
+                      disabled={action.disabled}
+                      onClick={() => dispatch({ type: action.type })}
+                    >
+                      <ExampleIcon name={action.icon} />
+                    </IconButton>
+                  </Tooltip>
+                ))}
+              </HStack>
+            </HStack>
+            <ScrollArea flex="1" minH="0">
+              {state.document.layers.length ? (
+                <TreeList
+                  sections={[{ id: "layers", nodes: layerNodes(state, dispatch) }]}
+                  rowVariant="tree"
+                  activeNodeId={state.selectedIds}
+                  expandedNodeIds={state.expandedIds}
+                  onSelectionChange={(ids) => dispatch({ type: "select", ids })}
+                  moveSelection
+                  onToggleNode={(id) => dispatch({ type: "expand", id })}
+                  onMoveNode={(source, target, position = "inside") =>
+                    dispatch({ type: "reorder", source, target, position })
                   }
-                  disabled={action.disabled}
-                  onClick={() => dispatch({ type: action.type })}
-                >
-                  <ExampleIcon name={action.icon} />
-                </IconButton>
-              </Tooltip>
-            ))}
-          </HStack>
-        </HStack>
-        {error ? (
-          <Text role="alert" px="sm" color="fg.error" textStyle="label/XS">
-            {error}
-          </Text>
-        ) : null}
-        {state.document.layers.length ? (
-          <TreeList
-            sections={[{ id: "layers", nodes: layerNodes(state, dispatch) }]}
-            rowVariant="tree"
-            activeNodeId={state.selectedIds}
-            expandedNodeIds={state.expandedIds}
-            onSelectionChange={(ids) => dispatch({ type: "select", ids })}
-            moveSelection
-            onToggleNode={(id) => dispatch({ type: "expand", id })}
-            onMoveNode={(source, target, position = "inside") =>
-              dispatch({ type: "reorder", source, target, position })
-            }
-          />
-        ) : (
-          <EmptyState title="No layers">
-            <Button onClick={() => dispatch({ type: "reset" })}>Restore sample</Button>
-          </EmptyState>
-        )}
-      </ScrollArea>
+                />
+              ) : (
+                <EmptyState title="No layers">
+                  <Button onClick={() => dispatch({ type: "reset" })}>Restore sample</Button>
+                </EmptyState>
+              )}
+            </ScrollArea>
+          </Stack>
+        }
+      />
     </Stack>
   );
 };

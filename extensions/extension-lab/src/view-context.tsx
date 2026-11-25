@@ -24,6 +24,7 @@ export interface ExampleHost {
 export interface ExampleViewInput {
   t?: ExtensionViewRenderContext<ExampleProps>["t"];
   host: ExampleHost;
+  projectId?: string;
   resource?: ResourceRef;
 }
 export const ViewContext = createContext<ExampleViewInput | null>(null);
