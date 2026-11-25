@@ -106,6 +106,24 @@ test("observes a package installed immediately after its new scope is detected",
   }
 }, 12_000);
 
+test.skipIf(process.platform !== "darwin")(
+  "observes scoped package installs missed by native events",
+  async () => {
+    const source = mkdtempSync(join(tmpdir(), "extension-dependency-gap-"));
+    try {
+      const child = Bun.spawn(
+        [process.execPath, join(import.meta.dirname, "extension-source-watcher-dependencies.fixture.ts"), source],
+        { stdout: "ignore", stderr: "pipe" },
+      );
+      const [status, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
+      expect(status, stderr).toBe(0);
+    } finally {
+      rmSync(source, { recursive: true, force: true });
+    }
+  },
+  12_000,
+);
+
 test("a queued dependency notification cannot reopen closed watches", async () => {
   const source = mkdtempSync(join(tmpdir(), "extension-disposed-dependency-watcher-"));
   const dependencyRoot = join(source, "node_modules");
