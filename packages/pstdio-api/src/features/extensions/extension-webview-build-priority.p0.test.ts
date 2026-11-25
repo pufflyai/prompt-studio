@@ -61,24 +61,37 @@ test("a foreground request lends urgency to every overlapping background webview
     expect(observed.map((scope) => scope.requested)).toEqual([true, true]);
     withRequestedPreparation(() => {
       const edit = createPreparationScope();
+      const editOwner = edit.continuation!;
       const lendEdit = caller.request(edit);
       try {
         // The checks were already requested. Joining the edit still adds its continuation to both.
-        expect(edit.continuation).toBeDefined();
-        expect(observed.map((scope) => scope.continuation)).toEqual([edit.continuation, edit.continuation]);
+        expect(editOwner).toBeDefined();
+        expect(observed.map((scope) => scope.continuation)).toEqual([editOwner, editOwner]);
         withRequestedPreparation(() => {
           const otherEdit = createPreparationScope();
-          const lendOtherEdit = caller.request(otherEdit);
+          const otherOwner = otherEdit.continuation!;
+          const check = withBackgroundPreparation(createPreparationScope);
+          const lendCheck = caller.request(check);
           try {
-            expect(caller.continuation).toBe(edit.continuation);
-            expect(otherEdit.continuation).toBeDefined();
+            expect(caller.continuation).toBe(editOwner);
+            expect(otherOwner).toBeDefined();
             for (const scope of observed) {
               expect(scope.continuations).toHaveLength(2);
-              expect(scope.continuations.at(0)).toBe(edit.continuation);
-              expect(scope.continuations.at(1)).toBe(otherEdit.continuation);
+              expect(scope.continuations.at(0)).toBe(editOwner);
+              expect(scope.continuations.at(1)).toBe(otherOwner);
+              expect(scope.requestedContinuations).toEqual([editOwner]);
             }
+            // The same owner can gain or lose urgency without changing membership or the shared rank.
+            const lendOtherEdit = caller.request(otherEdit);
+            try {
+              for (const scope of observed) expect(scope.requestedContinuations).toEqual([editOwner, otherOwner]);
+            } finally {
+              lendOtherEdit();
+            }
+            for (const scope of observed) expect(scope.requestedContinuations).toEqual([editOwner]);
           } finally {
-            lendOtherEdit();
+            lendCheck();
+            check.dispose();
             otherEdit.dispose();
           }
         });

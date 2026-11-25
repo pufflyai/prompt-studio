@@ -8,14 +8,22 @@ interface PreparationPriority {
   continuations?: readonly PreparationPriority[];
   /** Whether this scope's work belongs to `owner`, inherited or lent. `continuation` only names the most urgent one. */
   includes?: (owner: PreparationPriority) => boolean;
+  /** Whether this owner contributes foreground urgency to the scope. */
+  requestedBy?: (owner: PreparationPriority) => boolean;
 }
 
 /** Exact membership, independent of which continuation ranks first. */
 export const preparationIncludes = (scope: PreparationPriority | undefined, owner: PreparationPriority) =>
   scope?.includes ? scope.includes(owner) : scope?.continuation === owner;
 type ContinuationScope = Pick<PreparationPriority, "continuation" | "continuations">;
+type PreparationLoan = ContinuationScope & {
+  requested: boolean;
+  requestedContinuations?: readonly PreparationPriority[];
+};
 export const liveContinuations = (scope?: ContinuationScope) =>
   scope?.continuations ?? (scope?.continuation?.continuing ? [scope.continuation] : []);
+export const preparationRequestedBy = (scope: PreparationPriority | undefined, owner: PreparationPriority) =>
+  scope?.requestedBy?.(owner) ?? (scope?.priority === "requested" && scope.continuation === owner);
 
 export const preparationPriority = new AsyncLocalStorage<PreparationPriority>();
 // Background work inside a scope still belongs to everything that scope belongs to, including
@@ -60,7 +68,7 @@ export const withRequestedPreparation = <T>(work: () => T) => withContinuingPrep
 export const createPreparationScope = () => {
   const parent = preparationPriority.getStore();
   let foregroundLoans = 0;
-  const borrowed = new Map<PreparationPriority, number>();
+  const borrowed = new Map<PreparationPriority, { count: number; foreground: number }>();
   const ownerRank = (owner: PreparationPriority) => {
     if (owner.priority === "restoration") return 0;
     return owner.priority === "requested" ? 1 : 2;
@@ -78,10 +86,19 @@ export const createPreparationScope = () => {
       return (parent?.priority ?? "requested") === "requested" || foregroundLoans ? "requested" : "background";
     },
     includes: (owner) => (borrowed.has(owner) && owner.continuing === true) || preparationIncludes(parent, owner),
+    requestedBy: (owner) => !!borrowed.get(owner)?.foreground || preparationRequestedBy(parent, owner),
     jobs: new Set(),
   };
   const changed = () => {
     for (const refresh of scope.jobs) refresh();
+  };
+  const releaseOwner = (owner: PreparationPriority, foreground: boolean) => {
+    const entry = borrowed.get(owner);
+    if (!entry) return;
+    if (foreground) entry.foreground--;
+    if (--entry.count > 0) return;
+    borrowed.delete(owner);
+    if (owner.jobs !== parent?.jobs) owner.jobs.delete(changed);
   };
   parent?.jobs.add(changed);
   return {
@@ -96,6 +113,9 @@ export const createPreparationScope = () => {
     get continuations() {
       return liveContinuations(scope);
     },
+    get requestedContinuations() {
+      return liveContinuations(scope).filter((owner) => preparationRequestedBy(scope, owner));
+    },
     subscribe: (listener: () => void) => {
       scope.jobs.add(listener);
       return () => scope.jobs.delete(listener);
@@ -104,13 +124,17 @@ export const createPreparationScope = () => {
       return scope.priority === "requested";
     },
     run: <T>(work: () => T) => preparationPriority.run(scope, work),
-    request: (caller?: { requested: boolean } & ContinuationScope) => {
+    request: (caller?: PreparationLoan) => {
       const requested = caller?.requested ?? true;
       const loaned = liveContinuations(caller).filter((owner) => owner.continuing);
       if (!requested && !loaned.length) return () => {};
+      const foreground = new Set(requested ? (caller?.requestedContinuations ?? loaned) : []);
       if (requested) foregroundLoans++;
       for (const owner of loaned) {
-        borrowed.set(owner, (borrowed.get(owner) ?? 0) + 1);
+        const entry = borrowed.get(owner) ?? { count: 0, foreground: 0 };
+        entry.count++;
+        if (foreground.has(owner)) entry.foreground++;
+        borrowed.set(owner, entry);
         if (owner.jobs !== parent?.jobs) owner.jobs.add(changed);
       }
       changed();
@@ -119,14 +143,7 @@ export const createPreparationScope = () => {
         if (released) return;
         released = true;
         if (requested) foregroundLoans--;
-        for (const owner of loaned) {
-          const remaining = (borrowed.get(owner) ?? 1) - 1;
-          if (remaining) borrowed.set(owner, remaining);
-          else {
-            borrowed.delete(owner);
-            if (owner.jobs !== parent?.jobs) owner.jobs.delete(changed);
-          }
-        }
+        for (const owner of loaned) releaseOwner(owner, foreground.has(owner));
         changed();
       };
     },

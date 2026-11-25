@@ -10,10 +10,21 @@ export const joinPreparationDependencies = <T>(
 ) => {
   const leases = new Map<
     CheckOwner,
-    { requested: boolean; continuations: typeof caller.continuations; release: () => void }
+    {
+      requested: boolean;
+      continuations: typeof caller.continuations;
+      requestedContinuations: typeof caller.requestedContinuations;
+      release: () => void;
+    }
   >();
+  const sameOwners = (previous: typeof caller.continuations, next: typeof caller.continuations) =>
+    previous.length === next.length && previous.every((continuation, index) => continuation === next[index]);
   const refresh = () => {
-    const source = { requested: caller.requested, continuations: caller.continuations };
+    const source = {
+      requested: caller.requested,
+      continuations: caller.continuations,
+      requestedContinuations: caller.requestedContinuations,
+    };
     for (const owner of owners) {
       const current = leases.get(owner);
       if (owner.settled || (!source.requested && !source.continuations.length)) {
@@ -21,8 +32,8 @@ export const joinPreparationDependencies = <T>(
         current?.release();
       } else if (
         current?.requested !== source.requested ||
-        current.continuations.length !== source.continuations.length ||
-        current.continuations.some((continuation, index) => continuation !== source.continuations[index])
+        !sameOwners(current.continuations, source.continuations) ||
+        !sameOwners(current.requestedContinuations, source.requestedContinuations)
       ) {
         // Several continuations can wait through the same caller. Keep urgency through a lease transfer.
         leases.set(owner, { ...source, release: owner.scope.request(source) });

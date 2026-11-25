@@ -3,6 +3,7 @@ import {
   liveContinuations,
   preparationIncludes,
   type preparationPriority,
+  preparationRequestedBy,
 } from "./preparation-priority";
 
 export interface PreparationOptions {
@@ -15,24 +16,25 @@ export interface PreparationOptions {
   /** Status inspection yields to live continuations but can interrupt unreserved speculation. */
   preserveActiveContinuation?: boolean;
 }
-export const priorityFor = (options: PreparationOptions, scope: ReturnType<typeof preparationPriority.getStore>) => {
+type Continuation = NonNullable<ReturnType<typeof preparationPriority.getStore>>;
+export const priorityFor = (options: PreparationOptions, scope?: Continuation, owner?: Continuation) => {
+  const continuation = owner ?? scope?.continuation;
   // A primary-worker loss must restore watches before an unrelated speculative
   // peer resumes. Ordinary background continuations still never gain this rank.
-  if (scope?.continuation?.continuing && scope.continuation.priority === "restoration") return 1;
+  if (continuation?.continuing && continuation.priority === "restoration") return 1;
   if (options.priority === "background") return 2;
-  const priority = options.priority ?? scope?.priority;
-  if (priority === undefined || priority === "requested") return 0;
-  return scope?.continuation?.continuing && scope.continuation.priority === "requested" ? 1 : 2;
+  const requested = owner ? preparationRequestedBy(scope, owner) : !scope || scope.priority === "requested";
+  if (options.priority === "requested" || requested) return 0;
+  return continuation?.continuing && continuation.priority === "requested" ? 1 : 2;
 };
 export interface Waiter {
   resolve: (value: unknown) => void;
   reject: (error: unknown) => void;
   removeAbort: () => void;
-  priority: () => number;
+  priority: (owner?: Continuation) => number;
   preserveActiveContinuation?: boolean;
   scope?: ReturnType<typeof preparationPriority.getStore>;
 }
-type Continuation = NonNullable<Waiter["scope"]>;
 export interface Job {
   resources?: readonly string[];
   id: number;
@@ -81,15 +83,21 @@ export const preparationJobMessage = (active: Job) => ({
   env: active.env,
 });
 
+const waiterPriority = (waiter: Waiter, owner?: Continuation) => {
+  if (!owner) return waiter.priority();
+  return preparationIncludes(waiter.scope, owner) ? Math.max(waiter.priority(), waiter.priority(owner)) : Infinity;
+};
+
 export const preparationQueuePriority =
-  (continuations: ReturnType<typeof createPreparationContinuations>) => (job: Job) =>
+  (continuations: ReturnType<typeof createPreparationContinuations>) => (job: Job, owner?: Continuation) =>
     Math.min(
       ...[...job.waiters].map((waiter) =>
         waiter.preserveActiveContinuation && continuations.hasUrgentOtherThan(waiter.scope?.continuation)
           ? Infinity
-          : waiter.priority(),
+          : waiterPriority(waiter, owner),
       ),
     );
+export type PreparationJobPriority = ReturnType<typeof preparationQueuePriority>;
 
 // Retiring a worker for a continuation's job resumes the interrupted job after that
 // continuation, not in its next database gap, where its next job would retire it again.
@@ -132,13 +140,19 @@ export const createYieldClock = (jobs: () => Iterable<Job | undefined>, resume: 
   };
 };
 
-export const yieldPreparation = (job: Job, next: Job) => {
-  for (const waiter of next.waiters) {
-    for (const owner of liveContinuations(waiter.scope)) {
-      if (!owner.continuing) continue;
-      job.yielded ??= new Map();
-      job.yielded.set(owner, {});
-    }
+export const yieldPreparation = (
+  job: Job,
+  next: Job,
+  queuedPriority: PreparationJobPriority,
+  preemptingPriority = queuedPriority,
+) => {
+  const interruptedPriority = activePreparationPriority(job, queuedPriority);
+  const owners = new Set([...next.waiters].flatMap(({ scope }) => liveContinuations(scope)));
+  // A shared job can borrow its rank from one caller without lending it to the others.
+  for (const owner of owners) {
+    if (!owner.continuing || preemptingPriority(next, owner) >= interruptedPriority) continue;
+    job.yielded ??= new Map();
+    job.yielded.set(owner, {});
   }
   return job;
 };
@@ -200,9 +214,10 @@ export const orderPreparationQueue = (
 
 // Closing admission affects queued reads. An already running read keeps its
 // urgency until it replies, rather than becoming infinitely preemptible.
-export const activePreparationPriority = (job: Job, queuedPriority: (job: Job) => number) => {
+export const activePreparationPriority = (job: Job, queuedPriority: PreparationJobPriority, owner?: Continuation) => {
   const priority = queuedPriority(job);
-  return Number.isFinite(priority) ? priority : Math.min(...[...job.waiters].map((waiter) => waiter.priority()));
+  if (Number.isFinite(priority)) return owner ? queuedPriority(job, owner) : priority;
+  return Math.min(...[...job.waiters].map((waiter) => waiterPriority(waiter, owner)));
 };
 
 export const cancelQueuedPreparation = (jobs: Map<string, Job>, queued: Job[], job: Job) => {
@@ -239,7 +254,7 @@ export const waitForPreparation = (
       reject,
       scope,
       preserveActiveContinuation: options.preserveActiveContinuation,
-      priority: () => priorityFor(options, scope),
+      priority: (owner) => priorityFor(options, scope, owner),
       removeAbort: () => options.signal?.removeEventListener("abort", abort),
     };
     job.waiters.add(waiter);

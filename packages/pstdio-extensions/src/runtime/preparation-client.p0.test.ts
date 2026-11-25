@@ -222,6 +222,84 @@ test.each([
   }
 });
 
+test.each([
+  "background check",
+  "background step of an edit",
+] as const)("restoration resumes while a %s sharing the preempting build still has work", async (mode) => {
+  const client = fixture({ workers: 2 });
+  const primary = gate();
+  const background = gate();
+  const watcher = gate();
+  const restart = restartOf(client, "watcher-restoration");
+  const work: Promise<unknown>[] = [];
+  const track = <T>(promise: Promise<T>) => {
+    work.push(promise.catch(() => undefined));
+    return promise;
+  };
+  const build = Promise.withResolvers<unknown>();
+  void build.promise.catch(() => undefined);
+  let dependency: ReturnType<typeof createPreparationScope> | undefined;
+  try {
+    // Occupy the primary so the background check retains only the overflow worker.
+    const primer = track(client.run("wait", { name: "primary", url: primary.url }, { resources: ["/source"] }));
+    await primary.entered.promise;
+    const check = track(
+      client.withContinuation(
+        () =>
+          withBackgroundPreparation(async () => {
+            dependency = createPreparationScope();
+            try {
+              await Promise.all([
+                client.run("wait", { name: "background-check", url: background.url }, { resources: ["/other"] }),
+                build.promise,
+              ]);
+            } finally {
+              dependency.dispose();
+            }
+          }),
+        { priority: mode === "background check" ? "background" : "requested" },
+      ),
+    );
+    await background.entered.promise;
+    primary.release.resolve();
+    await primer;
+    const restore = track(
+      client.withContinuation(
+        () => client.run("wait", { name: "watcher-restoration", url: watcher.url }, { resources: ["/source"] }),
+        { priority: "restoration" },
+      ),
+    );
+    await watcher.entered.promise;
+    const edit = track(
+      client.withContinuation(async () => {
+        const caller = createPreparationScope();
+        const shared = dependency!;
+        const release = shared.request(caller);
+        try {
+          build.resolve(shared.run(() => client.run("value", { name: "shared-build" }, { resources: ["/source"] })));
+          return await build.promise;
+        } finally {
+          release();
+          caller.dispose();
+        }
+      }),
+    );
+    // Sequence one proves the edit retired the primary that was restoring the watch.
+    expect(await edit).toMatchObject({ sequence: 1 });
+    expect(await restartWhileBusy(restart.restarted)).toBe("restarted");
+    watcher.release.resolve();
+    expect(await restore).toMatchObject({ sequence: 2 });
+    background.release.resolve();
+    await check;
+  } finally {
+    restart.unsubscribe();
+    build.reject(new Error("Preparation fixture stopped"));
+    for (const pending of [primary, background, watcher]) pending.release.resolve();
+    await client.stop();
+    await Promise.allSettled(work);
+  }
+});
+
 test("restoration reserves its asynchronous admission gap before background work resumes", async () => {
   const client = fixture();
   const active = gate();

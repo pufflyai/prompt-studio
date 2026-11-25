@@ -3,6 +3,7 @@ import {
   activePreparationPriority,
   createYieldClock,
   type Job,
+  type PreparationJobPriority,
   preparationResourcesOverlap,
   yieldPreparation,
 } from "./preparation-queue";
@@ -11,7 +12,7 @@ import type { createPreparationWorkerSlots, PreparationWorkerSlot } from "./prep
 type PreparationPool = ReturnType<typeof createPreparationWorkerSlots>;
 type PreparationAdmission = {
   idle: (job: Job) => boolean;
-  priority: (job: Job) => number;
+  priority: PreparationJobPriority;
   eligible: (job: Job) => boolean;
 };
 
@@ -51,7 +52,8 @@ const hasPreparationCapacityAfter = (pool: PreparationPool, job: Job, releasing:
 export const hasIdlePreparationSlot = (pool: PreparationPool, job: Job) => hasPreparationCapacityAfter(pool, job, []);
 
 // A slot waiting for build admission retires a less urgent build holder, which then yields like any other.
-export const preemptPreparationBuildBlockers = (pool: PreparationPool, queuedPriority: (job: Job) => number) => {
+export const preemptPreparationBuildBlockers = (pool: PreparationPool, queuedPriority: PreparationJobPriority) => {
+  const runningPriority: PreparationJobPriority = (job, owner) => activePreparationPriority(job, queuedPriority, owner);
   for (const waiting of pool.slots) {
     if (!waiting.dispatched || !waiting.active || !waiting.waitingBuilds) continue;
     for (const holder of pool.slots)
@@ -60,10 +62,9 @@ export const preemptPreparationBuildBlockers = (pool: PreparationPool, queuedPri
         holder.dispatched &&
         holder.active &&
         holder.activeBuilds &&
-        activePreparationPriority(waiting.active, queuedPriority) <
-          activePreparationPriority(holder.active, queuedPriority)
+        runningPriority(waiting.active) < runningPriority(holder.active)
       )
-        pool.replace(holder, yieldPreparation(holder.active, waiting.active));
+        pool.replace(holder, yieldPreparation(holder.active, waiting.active, queuedPriority, runningPriority));
   }
 };
 
@@ -116,7 +117,7 @@ export const createPoolYieldClock = (
   }, resume);
   const yieldTo = (slot: PreparationWorkerSlot, next: Job) => {
     credits.set(slot, next);
-    pool.replace(slot, yieldPreparation(slot.active!, next));
+    pool.replace(slot, yieldPreparation(slot.active!, next, waits.priority));
   };
   return { clock, yieldTo };
 };
