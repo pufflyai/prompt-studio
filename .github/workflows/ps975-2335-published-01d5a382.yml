@@ -1,0 +1,331 @@
+name: PS-975 Marmalade published consumer and source CLI
+
+on:
+  push:
+    branches:
+      - chore/ps975-2335-published-01d5a382
+
+permissions:
+  contents: read
+
+env:
+  SOURCE: 01d5a3823add702c9b01365b5a26a41094735546
+  SOURCE_TREE: 3b7f0bd4ae546940a876876854ee0d7323359b51
+  BASE: 2ae8f11c55991c6894e9252ac4db28a1e542fbea
+  PREVIEW: 0.49.0-preview.sha-26262f1a15dc5c8aaa2d8746197f4b65cfe63547
+  RECEIPTS: test-results/ps975-2335
+
+jobs:
+  published_marmalade:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ env.SOURCE }}
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - name: Verify immutable source and install Extension Lab in isolation
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = refs/heads/chore/ps975-2335-published-01d5a382
+          test "$GITHUB_SHA" = "$GITHUB_WORKFLOW_SHA"
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$SOURCE"
+          test "$(git diff-tree --no-commit-id --name-status -r "$GITHUB_WORKFLOW_SHA")" = "$(printf 'A\t.github/workflows/ps975-2335-published-01d5a382.yml')"
+          test "$(git rev-parse HEAD)" = "$SOURCE"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$SOURCE_TREE"
+          test "$(git rev-parse HEAD^)" = "$BASE"
+          test -z "$(git status --porcelain)"
+          mkdir -p "$RECEIPTS"
+          jq -n --arg sha "$SOURCE" --arg tree "$SOURCE_TREE" --arg base "$BASE" --arg preview "$PREVIEW" --arg workflow "$GITHUB_WORKFLOW_SHA" \
+            '{sha:$sha,tree:$tree,base:$base,preview:$preview,diagnosticCommit:$workflow}' > "$RECEIPTS/published-identity.json"
+          scratch="$(mktemp -d "${RUNNER_TEMP}/ps975-published.XXXXXX")"
+          echo "SCRATCH=$scratch" >> "$GITHUB_ENV"
+          git archive HEAD extensions/extension-lab | tar -x -C "$scratch"
+          lab="$scratch/extensions/extension-lab"
+          (cd "$lab" && bun install --frozen-lockfile) | tee "$RECEIPTS/frozen-install.log"
+          for pkg in sdk ui; do
+            manifest="$lab/node_modules/@pstdio/$pkg/package.json"
+            jq -e --arg version "$PREVIEW" '.version == $version' "$manifest"
+            jq '{name,version,pstdio,sdk:.dependencies["@pstdio/sdk"]}' "$manifest"
+          done | tee "$RECEIPTS/installed-package-versions.jsonl"
+          jq -e --arg version "$PREVIEW" '.dependencies["@pstdio/sdk"] == $version' "$lab/node_modules/@pstdio/ui/package.json"
+      - name: Run the owning published dependency verifier and the standalone typecheck
+        shell: bash
+        run: |
+          bun -e '
+            import { releasedApiBaselines } from "./scripts/verify/extension-api-baselines";
+            import { publishedExtensionDirs, verifyPublishedExtension } from "./scripts/verify/verify-published-extensions";
+            const root = process.cwd();
+            const lab = "extensions/extension-lab";
+            if (!(await publishedExtensionDirs(root)).includes(lab)) throw new Error("Extension Lab not selected");
+            await verifyPublishedExtension(root, lab, await releasedApiBaselines(root));
+          ' 2>&1 | tee "$RECEIPTS/published-verifier.log"
+          (cd "$SCRATCH/extensions/extension-lab" && bun check) 2>&1 | tee "$RECEIPTS/standalone-typecheck.log"
+      - name: Bundle the Extension Lab entry and both affected webviews
+        shell: bash
+        run: |
+          (
+            cd "$SCRATCH/extensions/extension-lab"
+            bun build ./extension.ts --target=bun --outdir="$SCRATCH/build/extension"
+            bun build ./src/views/marmalade-inspector.tsx ./src/views/marmalade-canvas.tsx --target=browser --outdir="$SCRATCH/build/views"
+          ) 2>&1 | tee "$RECEIPTS/published-bundles.log"
+      - name: Exercise the real published number fields in Chromium
+        shell: bash
+        run: |
+          mkdir -p "$SCRATCH/browser-tests"
+          cd "$SCRATCH/browser-tests"
+          printf '%s\n' '{"private":true,"dependencies":{"@playwright/test":"1.60.0"}}' > package.json
+          bun install
+          bun x --no-install playwright install --with-deps chromium
+          lab="$SCRATCH/extensions/extension-lab"
+          cat > "$lab/marmalade-browser.tsx" <<'TSX'
+          import "@pstdio/ui/style.css";
+          import { applyEditingChanges, type GuestHost } from "@pstdio/sdk/extensions";
+          import { ChakraProvider, psTheme } from "@pstdio/ui";
+          import { createRoot } from "react-dom/client";
+          import { createMarmaladeState } from "./src/apps/marmalade/marmalade-data";
+          import { marmaladeEditingState } from "./src/apps/marmalade/marmalade-editing-state";
+          import { MarmaladeProperties } from "./src/apps/marmalade/marmalade-properties";
+          import { marmaladeStore, useMarmalade } from "./src/apps/marmalade/marmalade-store";
+
+          let accepted = marmaladeEditingState({
+            ...createMarmaladeState(),
+            history: { undo: 0, redo: 0, boundary: "initial" },
+          });
+          let version = 0;
+          const calls = { commits: [], cancellations: 0 };
+          const host = {
+            extensionId: "pstdio.extension-lab",
+            onEvent: () => () => {},
+            async call(capability, input) {
+              if (capability !== "editing.session") throw new Error(`Unexpected capability ${capability}`);
+              if (input.operation === "execute") {
+                calls.commits.push(input.params.action);
+                accepted = applyEditingChanges(accepted, input.changes);
+              }
+              if (input.operation === "cancel") calls.cancellations++;
+              return {
+                value: input.operation === "preview" ? applyEditingChanges(accepted, input.changes) : accepted,
+                version: ++version,
+                revision: calls.commits.length,
+                savedRevision: calls.commits.length,
+              };
+            },
+          } satisfies GuestHost;
+          marmaladeStore.connect(host, { get: () => ({}), subscribe: () => () => {} }, (error) => { throw error; });
+
+          function Fixture() {
+            const { ready, state } = useMarmalade((projection) => projection);
+            const title = state.document.layers.find((layer) => layer.id === "title");
+            return ready && title ? (
+              <>
+                <MarmaladeProperties state={state} layer={title} />
+                <output aria-label="Projected width">{title.width}</output>
+                <output aria-label="Projected height">{title.height}</output>
+                <button>Leave input</button>
+              </>
+            ) : null;
+          }
+          Object.assign(window, { marmaladeWitness: calls });
+          createRoot(document.getElementById("root")!).render(<ChakraProvider value={psTheme}><Fixture /></ChakraProvider>);
+          TSX
+          bun build "$lab/marmalade-browser.tsx" --target=browser --outdir="$SCRATCH/browser-tests/public"
+          cat > public/index.html <<'HTML'
+          <!doctype html>
+          <html><head><meta charset="utf-8"><link rel="stylesheet" href="marmalade-browser.css"></head>
+          <body><div id="root"></div><script type="module" src="marmalade-browser.js"></script></body></html>
+          HTML
+          cat > marmalade.spec.ts <<'TS'
+          import { readFile } from "node:fs/promises";
+          import { createServer } from "node:http";
+          import { expect, test } from "@playwright/test";
+
+          const assets = new Map([
+            ["/", ["index.html", "text/html"]],
+            ["/marmalade-browser.js", ["marmalade-browser.js", "text/javascript"]],
+            ["/marmalade-browser.css", ["marmalade-browser.css", "text/css"]],
+          ]);
+          const server = createServer(async (request, response) => {
+            const asset = assets.get(request.url ?? "");
+            if (!asset) {
+              response.writeHead(404).end();
+              return;
+            }
+            const [file, type] = asset;
+            try {
+              response.writeHead(200, { "content-type": type }).end(await readFile("public/" + file));
+            } catch {
+              response.destroy();
+            }
+          });
+          let origin: string;
+          test.beforeAll(async () => {
+            await new Promise<void>((resolve, reject) => {
+              server.once("error", reject);
+              server.listen(0, "127.0.0.1", resolve);
+            });
+            const address = server.address();
+            if (!address || typeof address === "string") throw new Error("No browser fixture port");
+            origin = "http://127.0.0.1:" + address.port;
+          });
+          test.afterAll(async () => {
+            await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+          });
+
+          for (const dimension of ["width", "height"] as const) {
+            test(`invalid ${dimension} discards the prior preview and permits a later valid save`, async ({ page }) => {
+              const runtimeErrors: string[] = [];
+              page.on("pageerror", (error) => runtimeErrors.push(error.message));
+              await page.goto(origin);
+              const field = page.getByRole("spinbutton", { name: `Layer ${dimension}`, exact: true });
+              const projected = page.getByLabel(`Projected ${dimension}`, { exact: true });
+              const original = dimension === "width" ? "630" : "54";
+              await expect(field).toHaveValue(original);
+              await field.fill("1000");
+              await expect(projected).toHaveText("1000");
+              await field.fill("10001");
+              await field.press("Enter");
+              await expect(projected).toHaveText(original);
+              await expect(field).toHaveValue("10001");
+              await expect(field).toHaveAttribute("aria-invalid", "true");
+              const calls = () => page.evaluate(() => (window as typeof window & { marmaladeWitness: unknown }).marmaladeWitness);
+              await expect.poll(calls).toEqual({ commits: [], cancellations: 1 });
+              await field.fill("10000");
+              await field.press("Enter");
+              await expect(projected).toHaveText("10000");
+              await expect.poll(calls).toEqual({
+                commits: [{ type: "properties", id: "title", changes: { [dimension]: 10000 } }],
+                cancellations: 1,
+              });
+              expect(runtimeErrors).toEqual([]);
+            });
+          }
+          TS
+          PLAYWRIGHT_JSON_OUTPUT_FILE="$GITHUB_WORKSPACE/$RECEIPTS/browser-results.json" \
+            bun x --no-install playwright test --reporter=line,json --workers=1 --retries=0 2>&1 | tee "$GITHUB_WORKSPACE/$RECEIPTS/browser.log"
+      - name: Upload published dependency and browser receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps975-2335-published-01d5a382-attempt-${{ github.run_attempt }}
+          path: ${{ env.RECEIPTS }}
+          if-no-files-found: error
+
+  source_cli:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.SOURCE }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - name: Select the complete canonical Linux plan and seal the source CLI residual
+        shell: bash
+        run: |
+          test "$(git show -s --format=%P "$GITHUB_WORKFLOW_SHA")" = "$SOURCE"
+          test "$(git rev-parse HEAD)" = "$SOURCE"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$SOURCE_TREE"
+          test "$(git rev-parse HEAD^)" = "$BASE"
+          test -z "$(git status --porcelain)"
+          mkdir -p "$RECEIPTS"
+          git ls-remote origin refs/heads/main refs/heads/feature/marmalade-backlog > "$RECEIPTS/live-refs.txt"
+          git update-ref refs/remotes/origin/main "$BASE"
+          bun run test:review --base origin/main --list > "$RECEIPTS/linux-plan.json"
+          jq -e --arg sha "$SOURCE" --arg tree "$SOURCE_TREE" --arg base "$BASE" '
+            .head == $sha and .mergeBase == $base
+            and .testPlan.source.sha == $sha and .testPlan.source.tree == $tree and (.testPlan.source.dirty | not)
+            and all(.testPlan.runs[]; .target == {platform:"linux",arch:"x64"})
+            and ([.testPlan.runs[] | select(.job == "local-additions")] | length) == 1
+            and any(.testPlan.runs[]; .job == "local-additions" and .owner == "e2e" and .runner == "cli"
+              and .priority == "P1" and .artifact == "source" and .lane == "stable" and (.files | length) == 10
+              and .requires == ["build-e5b1f54fca1c52cd"])
+          ' "$RECEIPTS/linux-plan.json"
+          jq -c '.testPlan.runs[] | select(.job == "local-additions")' "$RECEIPTS/linux-plan.json" > "$RECEIPTS/cli-assignment.json"
+          scratch="$(mktemp -d /tmp/ps975-cli.XXXXXX)"
+          printf '%s\n' "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT" > "$scratch/owner"
+          echo "REVIEW_SCRATCH=$scratch" >> "$GITHUB_ENV"
+      - name: Install locked dependencies and prepare Firefox
+        shell: bash
+        run: |
+          bun install --frozen-lockfile --concurrent-scripts 1
+          bun run --cwd packages/ui typegen:tokens
+          (cd packages/e2e && bun x --no-install playwright install --with-deps firefox)
+          test -z "$(git status --porcelain)"
+      - name: Execute the exact ten-file source CLI group
+        shell: bash
+        run: |
+          bun --no-orphans - <<'BUN' 2>&1 | tee "$RECEIPTS/cli-console.log"
+          import { resolve } from "node:path";
+          import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+          import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+          import { executePlan } from "./scripts/ci/run-test-plan";
+          import { validateTestPlan } from "./scripts/ci/test-plan";
+
+          const root = process.cwd();
+          const { REVIEW_SCRATCH: scratch, RECEIPTS: relative } = process.env;
+          if (!scratch || !/^\/tmp\/ps975-cli\.[A-Za-z0-9]{6}$/.test(scratch) || !relative) throw new Error("Unexpected review directory");
+          const executionId = process.env.GITHUB_RUN_ID + "/" + process.env.GITHUB_RUN_ATTEMPT;
+          const output = resolve(root, relative);
+          const { testPlan } = await Bun.file(resolve(output, "linux-plan.json")).json();
+          const { id: group } = await Bun.file(resolve(output, "cli-assignment.json")).json();
+          validateTestPlan(testPlan);
+          for (const [key, value] of Object.entries(localReviewEnvironment(scratch))) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+          process.env.CI_PLAN_OUTPUT_DIR = relative + "/native";
+          let passed = false;
+          try {
+            const result = await executePlan(testPlan, {
+              root, runIds: [group], prebuilt: false, executionId,
+              env: { CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+            });
+            passed = result.complete && result.outcome === "success";
+          } finally {
+            const cleanup = await cleanupReviewCompose(scratch);
+            await Bun.write(resolve(output, "compose-cleanup.json"), JSON.stringify(cleanup, null, 2));
+            passed &&= cleanup.every((entry) => entry.outcome === "success");
+            process.exitCode = passed ? 0 : 1;
+          }
+          BUN
+          jq -e --slurpfile selection "$RECEIPTS/linux-plan.json" --slurpfile assignment "$RECEIPTS/cli-assignment.json" '
+            .source == $selection[0].testPlan.source and .planDigest == $selection[0].testPlan.digest
+            and .complete and .outcome == "success" and .errors == [] and .runIds == [$assignment[0].id]
+            and (.results | length) == 1
+            and all(.results[]; .runId == $assignment[0].id and .complete and .outcome == "success"
+              and .exitCode == 0 and .nativeFailure != true and (.reportedFiles | sort) == ($assignment[0].files | sort))
+            and [.phases[] | select(.kind == "build") | [.id,.outcome]] == [["build-e5b1f54fca1c52cd","success"]]
+            and any(.phases[]; .kind == "cleanup" and .outcome == "success")
+          ' "$RECEIPTS/native/execution.json"
+          git diff --exit-code
+      - name: Clean owned temporary files and upload Linux CLI receipts
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${REVIEW_SCRATCH:-}" ]]; then
+            [[ "$REVIEW_SCRATCH" =~ ^/tmp/ps975-cli\.[A-Za-z0-9]{6}$ ]]
+            test "$(cat "$REVIEW_SCRATCH/owner")" = "$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+            rm -rf -- "$REVIEW_SCRATCH"
+            test ! -e "$REVIEW_SCRATCH"
+            printf '%s\n' 'Owned temporary directory removed' > "$RECEIPTS/scratch-cleanup.txt"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ps975-2335-source-cli-01d5a382-attempt-${{ github.run_attempt }}
+          path: ${{ env.RECEIPTS }}
+          if-no-files-found: error
