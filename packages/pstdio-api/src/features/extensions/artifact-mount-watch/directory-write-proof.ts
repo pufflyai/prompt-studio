@@ -112,10 +112,12 @@ const advanceRecordedDirectoryChild = (
   nestedDirectory: OwnedDirectory | undefined,
 ) => {
   const child = parent?.children.get(name);
-  if (!parent || !child) return;
+  if (!child) return;
   if (sameState(child.state, before)) {
-    parent.children.set(name, { state: after, nestedDirectory });
-    return;
+    // An outside edit can have the same directory metadata as the last owned write.
+    // Keep the child record so watchers retain the contents they already reported.
+    child.state = after;
+    child.nestedDirectory = nestedDirectory;
   }
   // Only a watcher that reported the exact pre-write state can suppress its later echo.
   for (const report of child.directoryReports ?? []) {
@@ -132,6 +134,8 @@ const expectedChildren = (directory: OwnedDirectory, reported: ReportedChildren)
   for (const [name, child] of reported.get(directory) ?? []) {
     // A later owned operation replaces the proof that this reported observation depended on.
     if (directory.children.get(name) !== child.forWrite) continue;
+    // Seeing an outside-created directory does not prove that an ancestor hint is an owned echo.
+    if (child.state?.directory && child.state.identity !== child.forWrite.state?.identity) continue;
     if (child.state) expected.set(name, child);
     else expected.delete(name);
   }

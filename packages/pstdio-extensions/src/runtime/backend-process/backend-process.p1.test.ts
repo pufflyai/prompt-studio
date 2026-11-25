@@ -576,8 +576,14 @@ test("hostile or broken workers settle their callers without host errors", async
       surface,
       args: [],
     });
-    await expectRejection(failed).toThrow("boom");
-    expect(await failed.catch((error: unknown) => error)).not.toMatchObject({ code: "backend_unavailable" });
+    // Bun's async toThrow can stall a pending child process response on Windows (ADR 0136).
+    const error = await failed.then(
+      () => undefined,
+      (reason: unknown) => reason,
+    );
+    expect(error).toBeInstanceOf(Error);
+    expect(error).toMatchObject({ message: "boom" });
+    expect(error).not.toMatchObject({ code: "backend_unavailable" });
     await expectRejection(
       worker.invoke({
         handlerId: handlerOf(worker.definition, "save"),
