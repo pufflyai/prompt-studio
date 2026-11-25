@@ -8,7 +8,7 @@ import {
   summarizeBugOrigins,
 } from "./bug-origins";
 import { DEFAULT_COMPLEXITY, type FeatureComplexity, readFeatureComplexity } from "./feature-complexity";
-import { readMergeAnalysis } from "./merge-themes";
+import { type MergeAssignments, readMergeAnalysis } from "./merge-themes";
 import type { PullRequestMergeBucket, PullRequestType } from "./types";
 
 type Context = Pick<ExtensionContextBase, "process">;
@@ -156,14 +156,17 @@ const addMerge = (
   if (weight === undefined) bucket.velocity.estimatedFeatures++;
 };
 
+const assignmentAt = (assignments: MergeAssignments | undefined, number: number, mergedAt: number) =>
+  assignments && mergedAt <= assignments.through ? assignments.byPull[number] : undefined;
+
 export const summarizeMerges = (
   pulls: MergedPull[],
   classified: Record<string, PullRequestType>,
   through: string,
   complexity = DEFAULT_COMPLEXITY,
   audit?: BugOriginAudit,
-  themes?: Record<string, number>,
-  bugFailures?: Record<string, number>,
+  themes?: MergeAssignments,
+  bugFailures?: MergeAssignments,
 ) => {
   const throughDate = through.slice(0, 10);
   const last = Date.parse(throughDate);
@@ -193,7 +196,11 @@ export const summarizeMerges = (
     const ticket = category === "feature" ? ticketOf(pull.title) : undefined;
     // 0 marks a ticket without a rating, which uses the default weight.
     const weight = ticket ? complexity.byTicket[ticket] || undefined : undefined;
-    const analysis = { theme: themes?.[pull.number], failure: bugFailures?.[pull.number] };
+    const mergedAt = Date.parse(pull.mergedAt);
+    const analysis = {
+      theme: assignmentAt(themes, pull.number, mergedAt),
+      failure: assignmentAt(bugFailures, pull.number, mergedAt),
+    };
     addMerge(daily.get(date), category, weight, complexity.defaultPoints, analysis);
     addMerge(weekly.get(utcDate(weekStart(Date.parse(date)))), category, weight, complexity.defaultPoints, analysis);
     addMerge(hourBucket(hourOf(pull.mergedAt)), category, weight, complexity.defaultPoints, analysis);
@@ -261,8 +268,8 @@ export const readMergeTimeline = async (files: ExtensionFiles) => {
       timeline.refreshedAt,
       timeline.featureComplexity,
       audit?.repository === timeline.repository ? audit : undefined,
-      themes.byPull,
-      bugFailures.byPull,
+      themes.assignments,
+      bugFailures.assignments,
     ),
     mergeThemes: themes.coverage,
     mergeThemesError: themes.error,

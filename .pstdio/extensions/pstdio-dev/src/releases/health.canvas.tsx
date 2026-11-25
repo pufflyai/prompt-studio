@@ -33,7 +33,7 @@ const runs: HealthRun[] = Array.from({ length: 6 }, (_, index) => {
       quarantined,
     },
     categories: index === 0 ? undefined : categories,
-    runDurationSeconds: 2700 + index * 120 + (index % 2 ? 45 : 0),
+    runDurationSeconds: index === 5 ? undefined : 2700 + index * 120 + (index % 2 ? 45 : 0),
     testJobs: 40,
     reportedJobs: index === 5 ? 20 : 40,
     pendingJobs: index === 5 ? 20 : 0,
@@ -85,6 +85,8 @@ const pullRequestMerges = Array.from({ length: 30 }, (_, index) => {
   };
 });
 const mergeTotals = pullRequestMerges.map(({ date, count }) => ({ date, count }));
+const hourlyMerges = pullRequestMerges.map((bucket) => ({ ...bucket, date: `${bucket.date}T10:00Z` }));
+const states = ["history", "runs only", "merges only", "totals only", "empty", "refreshing", "error"];
 const publications = [
   { tag: "pstdio@0.46.0", publishedAt: "2026-11-01T02:42:20Z" },
   { tag: "pstdio@0.47.0", publishedAt: "2026-11-12T22:21:28Z" },
@@ -101,10 +103,11 @@ export const ReleaseHealth = () => {
   const refreshing = state === "refreshing";
   const hasHistory = state !== "empty" && !refreshing;
   const merges = state === "totals only" ? mergeTotals : pullRequestMerges;
+  const showMerges = hasHistory && state !== "runs only";
   return (
     <Box w="full" h="100dvh" display="flex" flexDirection="column" minW="0" minH="0">
       <HStack p="sm" flexWrap="wrap">
-        {["history", "merges only", "totals only", "empty", "refreshing", "error"].map((value) => (
+        {states.map((value) => (
           <Button key={value} size="xs" onClick={() => setState(value)}>
             {value}
           </Button>
@@ -114,7 +117,8 @@ export const ReleaseHealth = () => {
         <HealthView
           today="2026-11-18"
           runs={hasHistory && state !== "merges only" ? runs : []}
-          pullRequestMergesDaily={hasHistory ? merges : undefined}
+          pullRequestMergesDaily={showMerges ? merges : undefined}
+          pullRequestMergesHourly={showMerges && state !== "totals only" ? hourlyMerges : undefined}
           mergeThemes={hasHistory && state !== "totals only" ? mergeThemes : undefined}
           bugFailurePatterns={hasHistory && state !== "totals only" ? bugFailurePatterns : undefined}
           bugOriginCoverage={

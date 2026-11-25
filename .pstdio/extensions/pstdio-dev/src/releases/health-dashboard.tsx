@@ -72,6 +72,7 @@ interface HealthDashboardProps {
   runs: ReleaseHealth[];
   aggregation: Aggregation;
   hasRunHistory: boolean;
+  runEmptyTitle: string;
   bugOriginCoverage?: BugOriginCoverage;
   pullRequestMergesError?: string;
   mergeThemes?: MergeThemeCoverage;
@@ -93,6 +94,7 @@ export function HealthDashboard(props: HealthDashboardProps) {
     runs,
     aggregation,
     hasRunHistory,
+    runEmptyTitle,
     bugOriginCoverage,
     pullRequestMergesError,
     mergeThemes,
@@ -128,7 +130,6 @@ export function HealthDashboard(props: HealthDashboardProps) {
           },
         ],
   );
-  const hasMergeThemes = mergeThemes && buckets.some(({ merges }) => merges);
   const sources: DashboardDataSource[] = [
     {
       id: "run-analysis",
@@ -159,16 +160,7 @@ export function HealthDashboard(props: HealthDashboardProps) {
       ...chartSource("merge-themes"),
       colorSettings: mergeThemeColors(mergeThemes, "merges"),
       content: healthChart(
-        hasMergeThemes || mergeThemesError ? (
-          <MergeThemesPlot
-            buckets={buckets}
-            aggregation={aggregation}
-            coverage={mergeThemes}
-            error={mergeThemesError}
-          />
-        ) : (
-          <EmptyState title="No PR merge themes in this range" />
-        ),
+        <MergeThemesPlot buckets={buckets} aggregation={aggregation} coverage={mergeThemes} error={mergeThemesError} />,
       ),
     },
     {
@@ -231,7 +223,9 @@ export function HealthDashboard(props: HealthDashboardProps) {
       ...chartSource("runs"),
       metric: { value: hasRunHistory ? runs.length.toLocaleString() : "—", description: "Selected range" },
       series: hasRunHistory ? buckets.map(({ date, runs }) => ({ label: date, value: runs.length })) : [],
-      content: healthChart(<HealthRuns runs={runs} chosen={chosen} onChoose={onChoose} onOpen={onOpen} />),
+      content: healthChart(
+        <HealthRuns runs={runs} emptyTitle={runEmptyTitle} chosen={chosen} onChoose={onChoose} onOpen={onOpen} />,
+      ),
     },
   ];
   return <DashboardRenderer value={value} sources={sources} onChange={setValue} renderToolbar={renderToolbar} />;

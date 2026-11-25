@@ -56,6 +56,7 @@ export const HealthView = (props: HealthViewProps) => {
     hourlyMerges: pullRequestMergesHourly,
     publications: publications ?? [],
   });
+  const runEmptyTitle = runs.length ? "No release runs in this range" : "No release results yet";
 
   return (
     <Stack gap="0" w="full" h="full" minW="0" minH="0">
@@ -115,6 +116,7 @@ export const HealthView = (props: HealthViewProps) => {
           runs={selectedRuns}
           aggregation={aggregation}
           hasRunHistory={runs.length > 0}
+          runEmptyTitle={refreshing && !runs.length ? "Collecting release results" : runEmptyTitle}
           bugOriginCoverage={bugOriginCoverage}
           pullRequestMergesError={pullRequestMergesError}
           mergeThemes={mergeThemes}

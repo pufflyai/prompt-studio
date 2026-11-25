@@ -7,6 +7,11 @@ interface MergeThemeSnapshot extends MergeThemeCoverage {
   byPull: Record<string, number>;
 }
 
+export interface MergeAssignments {
+  through: number;
+  byPull: Record<string, number>;
+}
+
 type ExtensionFiles = NonNullable<ExtensionContextBase["extensionFiles"]>;
 type Analysis = "merge-themes" | "bug-failure-patterns";
 
@@ -43,7 +48,11 @@ export const readMergeAnalysis = async (files: ExtensionFiles, repository: strin
     const snapshot = await readSnapshot(files, repository, analysis);
     if (!snapshot) return {};
     const { analyzedAt, names, validationIndices, byPull } = snapshot;
-    return { coverage: { analyzedAt, names, validationIndices }, byPull };
+    const through = Date.parse(analyzedAt);
+    return {
+      coverage: { analyzedAt: new Date(through).toISOString(), names, validationIndices },
+      assignments: { through, byPull },
+    };
   } catch (error) {
     return { error: String(error) };
   }

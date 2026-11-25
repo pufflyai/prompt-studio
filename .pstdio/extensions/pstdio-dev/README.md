@@ -37,7 +37,7 @@ Under **Edit dashboard**, add a **Scatterplot** or **Ring chart** with the **Rel
 
 **PR merge themes** shows semantic groups from a project analysis. Choose a theme and switch between merge count and share of all merges. Select **All time** and **Month** to see the full history. Merges without an assignment appear as **Unclassified**.
 
-The chart reads `releases/merge-themes.json` from the `pstdio.dev` extension's project storage. To update it, replace the file with a version 1 snapshot containing `repository` (GitHub owner/name), `analyzedAt` (UTC timestamp), `names` (theme labels in display order), and `byPull` (PR number to zero-based theme index). Refresh Release health to load the snapshot.
+The chart reads `releases/merge-themes.json` from the `pstdio.dev` extension's project storage. To update it, replace the file with a version 1 snapshot containing `repository` (GitHub owner/name), `analyzedAt` (UTC timestamp), `names` (theme labels in display order), and `byPull` (PR number to zero-based theme index). Refresh Release health to load the snapshot. Assignments apply to PRs merged through the snapshot timestamp.
 
 **Bug failure patterns** shows analyzed bug-fix PRs by pattern. View fix counts or each pattern’s share of analyzed fixes, and select a pattern to see its history. The default stack shows **Validation or delivery only** separately. The patterns describe what the fixes addressed, and the date shows the analysis cutoff.
 

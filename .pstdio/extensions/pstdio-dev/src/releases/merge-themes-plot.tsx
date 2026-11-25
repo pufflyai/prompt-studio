@@ -116,16 +116,17 @@ export function MergeThemesPlot({ buckets, aggregation, coverage, error, kind = 
       </AlertMessage>
     );
   }
+  if (!coverage) {
+    return <EmptyState title={isBugPlot ? "No bug failure analysis" : "No PR merge theme analysis"} />;
+  }
   const share = measure === "share";
   const merges = buckets.flatMap(({ date, merges }) => {
     if (!merges) return [];
     if (!isBugPlot) return [merges];
-    return coverage && date.slice(0, 10) <= coverage.analyzedAt.slice(0, 10) ? [analyzedFixes(merges)] : [];
+    return date.slice(0, 10) <= coverage.analyzedAt.slice(0, 10) ? [analyzedFixes(merges)] : [];
   });
-  if (!coverage || !merges.length || (isBugPlot && !merges.some(({ count }) => count > 0))) {
-    return isBugPlot ? (
-      <EmptyState title={coverage ? "No analyzed fixes in this range" : "No bug failure analysis"} />
-    ) : null;
+  if (!merges.some(({ count }) => count > 0)) {
+    return <EmptyState title={isBugPlot ? "No analyzed fixes in this range" : "No PR merges in this range"} />;
   }
 
   const settings = themeGroups(coverage, merges, copy.other);

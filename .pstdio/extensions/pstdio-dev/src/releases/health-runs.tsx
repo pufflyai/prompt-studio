@@ -106,13 +106,14 @@ const RunDetail = (props: { run: ReleaseHealth; onOpen: (url: string) => void })
 
 interface HealthRunsProps {
   runs: ReleaseHealth[];
+  emptyTitle: string;
   chosen?: number;
   onChoose: (id: number) => void;
   onOpen: (url: string) => void;
 }
 
 export function HealthRuns(props: HealthRunsProps) {
-  const { runs, chosen, onChoose, onOpen } = props;
+  const { runs, emptyTitle, chosen, onChoose, onOpen } = props;
   const selected = runs.find((run) => run.id === chosen) ?? runs.at(-1);
   return (
     <Stack gap="md">
@@ -124,7 +125,7 @@ export function HealthRuns(props: HealthRunsProps) {
           <RunDetail run={selected} onOpen={onOpen} />
         </>
       ) : (
-        <EmptyState title="No release runs in this range" />
+        <EmptyState title={emptyTitle} />
       )}
     </Stack>
   );
