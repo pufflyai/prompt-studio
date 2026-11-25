@@ -79,7 +79,6 @@ export const createSharedArtifactMount = (
     packageRoot,
     roots,
     owner,
-    local: createFileMount(packageRoot, input.signal),
     assets,
     beforeWrite: async () => {
       if (input.resolveWriteRoot && resolve(await input.resolveWriteRoot()) !== resolve(input.repoRoot))

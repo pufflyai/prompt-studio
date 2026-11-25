@@ -1,8 +1,7 @@
 import { mkdir, rename, rm, rmdir, stat } from "node:fs/promises";
-import { dirname, join, relative } from "node:path";
+import { join, relative } from "node:path";
 import type { AssetOwner, AssetReference } from "pstdio-api-contracts";
 import { historicalExtensionId } from "pstdio-api-contracts/extension-host";
-import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
 import {
   type ArtifactMountWriteObserver,
   type ArtifactParentWrite,
@@ -45,7 +44,6 @@ export const createFileProjectionIO = (input: {
   packageRoot: string;
   roots: string[];
   owner: AssetOwner;
-  local: ArtifactMount;
   assets: ReturnType<typeof createAssetTransferService>;
   signal?: AbortSignal;
   beforeWrite?: () => Promise<unknown>;
@@ -78,12 +76,19 @@ export const createFileProjectionIO = (input: {
   };
   const unchanged = async (path: string, expected: FileIdentity) =>
     sameFile((await source(path)) ?? absentFile, expected);
-  const clearOldKind = async (path: string, target: FileIdentity, expected: FileIdentity) => {
+  const clearOldKind = async (
+    path: string,
+    target: FileIdentity,
+    expected: FileIdentity,
+    parentWrites: ArtifactParentWrite[],
+  ) => {
     const scoped = boundary(path);
     const existing = await scoped.safe.tryResolveExisting(scoped.path);
-    if (!existing || target.kind === expected.kind) return true;
-    if (expected.kind === "file") await input.local.delete(path);
-    if (expected.kind === "directory") {
+    if (!existing || !expected.kind || target.kind === expected.kind) return true;
+    const parentWrite = input.onWrite && observeArtifactParentWrite(join(input.root, path));
+    if (expected.kind === "file") {
+      await rm(existing.operationPath, { recursive: true, force: true });
+    } else {
       try {
         await rmdir(existing.operationPath);
       } catch (error) {
@@ -91,22 +96,22 @@ export const createFileProjectionIO = (input: {
         throw error;
       }
     }
+    if (parentWrite) parentWrites.push(parentWrite());
     return true;
   };
   const place = async (
     path: string,
     target: FileIdentity,
     temporary: string | undefined,
-    parentWrite?: ReturnType<typeof observeArtifactParentWrite>,
+    parentWrites: ArtifactParentWrite[],
   ) => {
     const scoped = boundary(path);
     const requestedPath = join(input.root, path);
     if (!target.kind) {
-      input.onWrite?.(requestedPath, undefined, parentWrite ? [parentWrite()] : undefined);
+      input.onWrite?.(requestedPath, undefined, parentWrites);
       return;
     }
     const createdDirectories = input.onWrite ? new Map<string, string>() : undefined;
-    const parentWrites: ArtifactParentWrite[] = [];
     const destination = await scoped.safe.resolveForWrite(
       scoped.path,
       createdDirectories &&
@@ -116,10 +121,7 @@ export const createFileProjectionIO = (input: {
         }),
     );
     const changedPath = join(requestedPath, relative(destination.operationPath, destination.realPath));
-    const observedParent =
-      input.onWrite && dirname(requestedPath) !== dirname(changedPath)
-        ? observeArtifactParentWrite(changedPath)
-        : parentWrite;
+    const observedParent = input.onWrite && observeArtifactParentWrite(changedPath);
     const finalParent =
       target.kind === "directory"
         ? await placeDirectory(destination.operationPath, changedPath, createdDirectories, observedParent)
@@ -146,9 +148,9 @@ export const createFileProjectionIO = (input: {
       // A download must not overwrite an editor save made while the transfer was in flight.
       await input.beforeWrite?.();
       if (!(await unchanged(path, expected))) return false;
-      const parentWrite = input.onWrite && observeArtifactParentWrite(join(input.root, path));
-      if (!(await clearOldKind(path, target, expected))) return false;
-      await place(path, target, temporary?.operationPath, parentWrite);
+      const parentWrites: ArtifactParentWrite[] = [];
+      if (!(await clearOldKind(path, target, expected, parentWrites))) return false;
+      await place(path, target, temporary?.operationPath, parentWrites);
       return true;
     } finally {
       if (temporary) await rm(temporary.operationPath, { force: true });

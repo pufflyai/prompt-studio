@@ -1,4 +1,5 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, spyOn, test } from "bun:test";
+import * as fsPromises from "node:fs/promises";
 import { mkdir, readFile, rename, rm, symlink, utimes, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { createArtifactMountWriteLedger } from "../../features/extensions/artifact-mount-watch/write-ledger";
@@ -226,4 +227,39 @@ test.each([
   const paths = folderFirst ? [folder, oldChild] : [oldChild, folder];
   expect(ledger.dropEchoes(paths, options)).toEqual([folder]);
   expect(ledger.dropEchoes([oldChild], options)).toEqual([]);
+});
+
+test("shared projection preserves an outside parent change during placement lookup", async () => {
+  const f = await fixture();
+  const ledger = createArtifactMountWriteLedger(() => 0);
+  const mount = createSharedArtifactMount(f.deps, { ...f.input, onWrite: ledger.record });
+  const folder = f.pathFor("documents/sales");
+  const existing = join(folder, "existing.json");
+  const child = join(folder, "child.json");
+  const outside = f.pathFor("returned-sales");
+  const options = { keepMatchedWrites: true };
+  await mount.writeText("sales/existing.json", "{}");
+  expect(ledger.dropEchoes([folder, existing], options)).toEqual([]);
+
+  const makeDirectory = fsPromises.mkdir;
+  const physicalFolder = await fsPromises.realpath(folder);
+  let edited = false;
+  const editDuringLookup = async (...args: Parameters<typeof makeDirectory>) => {
+    if (!edited && args[0] === physicalFolder && args[1] === undefined) {
+      edited = true;
+      await rename(folder, outside);
+      await writeFile(join(outside, "external.json"), "outside");
+      await utimes(outside, new Date(), new Date(Date.now() + 5_000));
+      await rename(outside, folder);
+    }
+    return Reflect.apply(makeDirectory, fsPromises, args);
+  };
+  const lookup = spyOn(fsPromises, "mkdir").mockImplementation(editDuringLookup as typeof makeDirectory);
+  try {
+    await mount.writeText("sales/child.json", "[]");
+  } finally {
+    lookup.mockRestore();
+  }
+  expect(edited).toBe(true);
+  expect(ledger.dropEchoes([folder, child], options)).toEqual([folder]);
 });
