@@ -34,6 +34,12 @@ const launchDesktop = async (home: string, traceName: string) => {
   return { electronApp, finishTrace };
 };
 
+const waitForReopenedWorkbenchPage = async (lifecycle: Page, origin: string) => {
+  // The lifecycle renderer can keep showing the old alert after the failed page closes.
+  await expect(lifecycle.getByRole("alert")).toBeHidden();
+  return waitForWorkbenchPage(lifecycle, origin);
+};
+
 test.afterEach(async () => {
   for (const action of cleanup.reverse()) await action();
   cleanup.length = 0;
@@ -111,7 +117,7 @@ test("shows each quit confirmation over the workbench and recovers from refused 
   const quitReplacement = window.waitForEvent("close");
   await electronApp.evaluate(({ app }) => app.quit());
   await quitReplacement;
-  window = await waitForWorkbenchPage(lifecycle, descriptor.origin);
+  window = await waitForReopenedWorkbenchPage(lifecycle, descriptor.origin);
   await expect.poll(desktopState).toMatchObject({ kind: "confirming_active_work" });
   await window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.cancelQuit());
   await expect.poll(desktopState).toMatchObject({ kind: "workbench" });
@@ -124,7 +130,7 @@ test("shows each quit confirmation over the workbench and recovers from refused 
   const retryReplacement = window.waitForEvent("close");
   await lifecycle.getByRole("button", { name: "Retry", exact: true }).press("Enter");
   await retryReplacement;
-  window = await waitForWorkbenchPage(lifecycle, descriptor.origin);
+  window = await waitForReopenedWorkbenchPage(lifecycle, descriptor.origin);
   await expect.poll(desktopState).toMatchObject({ kind: "workbench" });
   expect(await workbenchVisible()).toBe(true);
 
@@ -202,7 +208,8 @@ test("keeps startup render failures in the existing recovery screen after the da
       message: "Fixture startup render failed",
     }),
   );
-  await expect(lifecycle.getByRole("alert")).toBeVisible();
+  const recoveryAlert = lifecycle.getByRole("alert");
+  await expect(recoveryAlert).toBeVisible();
   // Retry replaces the failed page, which keeps the runtime origin until it closes.
   await Promise.all([
     window.waitForEvent("close"),
@@ -211,6 +218,8 @@ test("keeps startup render failures in the existing recovery screen after the da
   await expect
     .poll(async () => ({ requests: runtime.dashboardRequests(), state: await startupState(lifecycle) }))
     .toMatchObject({ requests: 2 });
+  // Keep the replacement dashboard loading until the lifecycle renderer leaves recovery.
+  await expect(recoveryAlert).toBeHidden();
   runtime.releaseDashboard();
   const reopened = await waitForWorkbenchPage(lifecycle, runtime.descriptor.origin);
   await expect(reopened.getByText("Owned Prompt Studio dashboard")).toBeVisible();
@@ -287,7 +296,7 @@ test("keeps recovery visible when the quit confirmation replacement fails during
     ...failedPages.map((page) => page.waitForEvent("close")),
     lifecycle.getByRole("button", { name: "Retry", exact: true }).press("Enter"),
   ]);
-  const reopened = await waitForWorkbenchPage(lifecycle, runtime.descriptor.origin);
+  const reopened = await waitForReopenedWorkbenchPage(lifecycle, runtime.descriptor.origin);
   await expect.poll(() => startupState(reopened)).toMatchObject({ kind: "workbench" });
   expect(runtime.shutdownForces).toEqual([false]);
 });
@@ -313,7 +322,7 @@ test("uses existing recovery when the dashboard bundle fails and retries the das
     ...failedPages.map((page) => page.waitForEvent("close")),
     lifecycle.getByRole("button", { name: "Retry", exact: true }).press("Enter"),
   ]);
-  const window = await waitForWorkbenchPage(lifecycle, runtime.descriptor.origin);
+  const window = await waitForReopenedWorkbenchPage(lifecycle, runtime.descriptor.origin);
   await expect(window.getByText("Owned Prompt Studio dashboard")).toBeVisible();
   await expect.poll(() => startupState(window)).toMatchObject({ kind: "workbench" });
 });
