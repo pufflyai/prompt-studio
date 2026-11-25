@@ -1,8 +1,11 @@
 import type { PGlite } from "@electric-sql/pglite";
 import { eq, sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/pglite";
 import type { StorageOwner } from "pstdio-sync";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
+import { attachDatabaseAuthority } from "../../db/database-authority";
+import * as schema from "../../db/schemas.pg";
 import { documents, file_projections, owners } from "../../db/schemas.pg";
 import { exportDocumentFiles } from "./document-file-export";
 import { insertFileDocument, loadFileDocument, readFileDocumentHead } from "./document-file-persistence";
@@ -13,9 +16,19 @@ import {
   withDocumentFileTransaction,
 } from "./document-files";
 import { localDocumentKey } from "./document-kind";
+import { createDocumentStorageDBService } from "./document-storage";
 import { externalRoomId, nativeKeyFromId } from "./native-document-files";
 
 type Client = DbClient | Parameters<Parameters<DbClient["transaction"]>[0]>[0];
+
+/** Write fixture data to a stopped, already-migrated home without running candidate migrations. */
+export const openClosedDocumentStorage = (engine: PGlite, path: string) => {
+  const db = drizzle(engine, { schema });
+  attachDatabaseAuthority(db, path);
+  documentFilesFor(db, path);
+  return createDocumentStorageDBService(db);
+};
+
 /** Inspect only an already-migrated, stopped home; never run admission as part of a packaged assertion. */
 export const readClosedDocumentText = async (db: PGlite, path: string, owner: StorageOwner, key: string) => {
   const { rows } = await db.query<typeof documents.$inferSelect>(
