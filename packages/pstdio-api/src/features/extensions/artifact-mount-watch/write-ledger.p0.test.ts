@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, renameSync, rmSync, utimesSync, writeFileSync }
 import * as fsPromises from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
-import { createArtifactMount, resolveArtifactMountRoot } from "pstdio-extensions";
+import { createArtifactMount, readArtifactFileState, resolveArtifactMountRoot } from "pstdio-extensions";
 import { createArtifactMountWriteLedger } from "./write-ledger";
 
 const roots: string[] = [];
@@ -47,6 +47,23 @@ test.each([
   writeFileSync(nested, "a new outside edit inside a nested directory");
   if (apiWrite) await mount.writeText("sales/archive/owned.json", "{}");
   expect(observer([folder], options)).toEqual([folder]);
+});
+
+test.each([false, true])("reports an ancestor-only edit after one nested create (paired watch: %s)", async (paired) => {
+  const ledger = createArtifactMountWriteLedger();
+  const { mount, root } = createMount(ledger);
+  const folder = join(root, "sales");
+  const archive = join(folder, "archive");
+  const file = join(archive, "note.json");
+  await mount.writeText("sales/archive/note.json", "{}");
+  const folderState = readArtifactFileState(folder);
+  const archiveState = readArtifactFileState(archive);
+
+  writeFileSync(file, "[]");
+  utimesSync(file, new Date(), new Date(Date.now() + 5_000));
+  expect(readArtifactFileState(folder)).toEqual(folderState);
+  expect(readArtifactFileState(archive)).toEqual(archiveState);
+  expect(ledger.dropEchoes([folder], { keepMatchedWrites: paired })).toEqual([folder]);
 });
 
 describe("artifact mount write ledger", () => {

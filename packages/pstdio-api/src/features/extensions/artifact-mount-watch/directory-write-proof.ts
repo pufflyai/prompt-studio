@@ -177,7 +177,7 @@ const matchesOwnedChildren = (
         if ("nestedDirectory" in recorded && recorded.nestedDirectory) {
           return matchesOwnedChildren(childPath, recorded.nestedDirectory, observed, reported);
         }
-        return true;
+        return !recorded.state?.directory;
       })
     );
   } catch {
@@ -205,7 +205,7 @@ export const recordOwnedChild = (directories: ReadonlyMap<string, OwnedDirectory
   }
   const parent = directories.get(parentPath);
   if (!parent) return;
-  parent.children.set(name, { state });
+  parent.children.set(name, { state, nestedDirectory: state?.directory ? directories.get(path) : undefined });
 };
 
 export const advanceParentWrite = (
