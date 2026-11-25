@@ -23,6 +23,7 @@ export function DashboardRenderer(props: DashboardRendererProps) {
   const editButton = useRef<HTMLButtonElement>(null);
   const applyButton = useRef<HTMLButtonElement>(null);
   const [draft, setDraft] = useState<DashboardDefinition | null>(null);
+  const [removedCustomWidgets, setRemovedCustomWidgets] = useState<DashboardWidget[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const [saveError, setSaveError] = useState("");
@@ -30,10 +31,12 @@ export function DashboardRenderer(props: DashboardRendererProps) {
   const editing = draft !== null && Boolean(onChange);
   const definition = editing && draft ? draft : value;
   const { widgets, mode } = definition;
+  const hiddenWidgets = editing ? removedCustomWidgets : [];
   const widgetButton = (id: string) =>
     container.current?.querySelector<HTMLButtonElement>(`[data-configure-widget="${CSS.escape(id)}"]`);
   const finishEditing = () => {
     setDraft(null);
+    setRemovedCustomWidgets([]);
     setSelectedId(null);
     setSaveError("");
     requestAnimationFrame(() => editButton.current?.focus());
@@ -71,6 +74,24 @@ export function DashboardRenderer(props: DashboardRendererProps) {
       setSelectedId(widget.id);
     });
     setAnnouncement(`${widgetLabel(widget, source.name)} added.`);
+  };
+  const remove = (id: string) => {
+    const index = widgets.findIndex((widget) => widget.id === id);
+    const removed = widgets[index];
+    if (!removed) return;
+    if (removed.kind === "custom") setRemovedCustomWidgets((previous) => [...previous, removed]);
+    const next = widgets[index + 1] ?? widgets[index - 1];
+    setDraft({
+      ...definition,
+      widgets: compactWidgets(
+        widgets.filter((widget) => widget.id !== id),
+        mode,
+      ),
+    });
+    setSelectedId(null);
+    const source = sources.find(({ id }) => id === removed.source);
+    setAnnouncement(`${widgetLabel(removed, source?.name)} removed.`);
+    requestAnimationFrame(() => (next ? widgetButton(next.id) : applyButton.current)?.focus());
   };
 
   const controls = (
@@ -144,9 +165,10 @@ export function DashboardRenderer(props: DashboardRendererProps) {
       )}
       <Box css={styles.body}>
         <ScrollArea flex="1" minH="0" minW="0">
-          {widgets.length ? (
+          {(widgets.length > 0 || hiddenWidgets.length > 0) && (
             <DashboardGrid
               widgets={widgets}
+              hiddenWidgets={hiddenWidgets}
               sources={sources}
               editing={editing && !applying}
               mode={mode}
@@ -164,25 +186,11 @@ export function DashboardRenderer(props: DashboardRendererProps) {
                   ),
                 })
               }
-              onRemove={(id) => {
-                const index = widgets.findIndex((widget) => widget.id === id);
-                const next = widgets[index + 1] ?? widgets[index - 1];
-                setDraft({
-                  ...definition,
-                  widgets: compactWidgets(
-                    widgets.filter((widget) => widget.id !== id),
-                    mode,
-                  ),
-                });
-                setSelectedId(null);
-                const removed = widgets[index];
-                const source = sources.find(({ id }) => id === removed.source);
-                setAnnouncement(`${widgetLabel(removed, source?.name)} removed.`);
-                requestAnimationFrame(() => (next ? widgetButton(next.id) : applyButton.current)?.focus());
-              }}
+              onRemove={remove}
               onGestureStart={() => setSelectedId(null)}
             />
-          ) : (
+          )}
+          {!widgets.length && (
             <Text p="xl" textStyle="label/S/regular" color="fg.muted">
               No widgets
             </Text>

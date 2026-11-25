@@ -158,14 +158,7 @@ export const exampleSources = (days: number): DashboardDataSource[] => [
     scatter: {
       xLabel: "Duration (min)",
       yLabel: "Messages",
-      points: [
-        { label: "Open intake", x: 0.0001, y: 1, group: "Unassigned" },
-        { label: "Quick check", x: 0.0003, y: 2 },
-        { label: "Weekly recap", x: 12, y: 6, group: "0" },
-        { label: "Access review", x: 14, y: 8, group: "No group" },
-        { label: "New project", x: 16, y: 10, group: "No group (2)" },
-        ...clusterPoints,
-      ],
+      points: clusterPoints,
     },
     series: clusterPoints.map(({ group }) => ({ label: group, value: 1 })),
   },

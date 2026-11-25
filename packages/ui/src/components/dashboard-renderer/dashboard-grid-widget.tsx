@@ -17,6 +17,7 @@ import type { useDashboardResize } from "./use-dashboard-resize";
 
 interface GridWidgetProps {
   widget: DashboardWidget;
+  hidden: boolean;
   editing: boolean;
   selectedId: string | null;
   sources: DashboardDataSource[];
@@ -38,6 +39,7 @@ const verticalResizeHandles: DashboardResizeHandle[] = ["s"];
 export function GridWidget(props: GridWidgetProps) {
   const {
     widget,
+    hidden,
     editing,
     selectedId,
     sources,
@@ -60,6 +62,7 @@ export function GridWidget(props: GridWidgetProps) {
     <Box
       ref={draggable.setNodeRef}
       css={styles.card}
+      hidden={hidden}
       style={placementStyle(widget.layout)}
       role={editing ? "group" : undefined}
       aria-label={editing ? `Edit ${label}` : undefined}

@@ -6,7 +6,7 @@ import { portal } from "@tanstack/charts/tooltip/portal";
 import { Chart } from "@/components/charts/chart";
 import type { DashboardSeriesPoint } from "./dashboard-types";
 
-const number = new Intl.NumberFormat();
+const number = new Intl.NumberFormat(undefined, { maximumSignificantDigits: 17 });
 const percent = new Intl.NumberFormat(undefined, { style: "percent", maximumFractionDigits: 1 });
 
 export function DashboardRingChart(props: { label: string; series?: DashboardSeriesPoint[] }) {

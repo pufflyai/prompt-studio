@@ -16,6 +16,13 @@ test("shows grouped scatter points and ring shares on the dashboard", async ({ p
   const ringPlot = ring.getByRole("img", { name: "Cluster share", exact: true });
   await expect(ringPlot).toBeVisible();
   await expect(ring.getByText("Short conversations", { exact: true })).toBeVisible();
+  const swatches = (plot: typeof scatterPlot) =>
+    plot
+      .locator(".ts-chart__legend text")
+      .evaluateAll((labels) =>
+        labels.map((label) => [label.textContent, getComputedStyle(label.previousElementSibling!).fill]),
+      );
+  expect(await swatches(scatterPlot)).toEqual(await swatches(ringPlot));
   await ringPlot.press("ArrowRight");
   await expect(preview.getByText(/^(40|60)%$/)).toBeVisible();
 });
@@ -23,9 +30,9 @@ test("shows grouped scatter points and ring shares on the dashboard", async ({ p
 test("distinguishes ungrouped observations from caller-named groups", async ({ page }) => {
   const preview = await openCanvasPreview(
     page,
-    "packages/ui/src/components/dashboard-renderer/dashboard.canvas.tsx#Dashboard",
+    "packages/ui/src/components/dashboard-renderer/dashboard.canvas.tsx#ChartEdgeCases",
   );
-  const scatter = preview.getByRole("article", { name: "Conversation clusters", exact: true });
+  const scatter = preview.getByRole("article", { name: "Scatter precision", exact: true });
   const legend = scatter.locator(".ts-chart__legend");
   for (const name of ["Unassigned", "0", "No group", "No group (2)", "No group (3)"]) {
     await expect(legend.getByText(name, { exact: true })).toBeVisible();
@@ -35,15 +42,27 @@ test("distinguishes ungrouped observations from caller-named groups", async ({ p
 test("reports distinct small coordinates during keyboard navigation", async ({ page }) => {
   const preview = await openCanvasPreview(
     page,
-    "packages/ui/src/components/dashboard-renderer/dashboard.canvas.tsx#Dashboard",
+    "packages/ui/src/components/dashboard-renderer/dashboard.canvas.tsx#ChartEdgeCases",
   );
-  const scatter = preview.getByRole("img", { name: "Conversation clusters", exact: true });
+  const scatter = preview.getByRole("img", { name: "Scatter precision", exact: true });
   await scatter.press("Home");
   await expect(preview.getByText("Open intake", { exact: true })).toBeVisible();
   await expect(preview.getByText("0.0001", { exact: true })).toBeVisible();
   await scatter.press("ArrowRight");
   await expect(preview.getByText("Quick check", { exact: true })).toBeVisible();
   await expect(preview.getByText("0.0003", { exact: true })).toBeVisible();
+});
+
+test("shows a small ring value alongside its share", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/dashboard-renderer/dashboard.canvas.tsx#ChartEdgeCases",
+  );
+  const ring = preview.getByRole("img", { name: "Ring precision", exact: true });
+  await ring.press("Home");
+  await ring.press("ArrowRight");
+  await expect(preview.getByText("40%", { exact: true })).toBeVisible();
+  await expect(preview.getByText("0.0004", { exact: true })).toBeVisible();
 });
 
 // Critical: a page-owned toolbar must still control the dashboard, including widgets with interactive content.
@@ -72,6 +91,38 @@ test("edits custom widgets from the page toolbar", async ({ page }) => {
   await expect(toolbar.getByRole("button", { name: "Edit dashboard", exact: true })).toBeFocused();
   await expect(marker).toHaveAttribute("aria-pressed", "false");
   await expect(preview.getByRole("article", { name: "Additional build history", exact: true })).toBeVisible();
+});
+
+// Critical: removing a card from a draft must preserve its controls if the edit is canceled.
+test("cancel restores the state of a removed custom widget", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/dashboard-renderer/dashboard.canvas.tsx#EmbeddedDashboard",
+  );
+  const widget = preview.locator('[data-widget-id="releases"]');
+  const toolbar = preview.getByRole("toolbar", { name: "Build history controls" });
+  const edit = toolbar.getByRole("button", { name: "Edit dashboard", exact: true });
+  const apply = toolbar.getByRole("button", { name: "Apply", exact: true });
+  const marker = widget.getByRole("button", { name: "Release marker", exact: true });
+  await marker.click();
+  await expect(marker).toHaveAttribute("aria-pressed", "false");
+  const removeWidget = async () => {
+    await edit.click();
+    await widget.hover();
+    await widget.getByRole("button", { name: "Configure Build history", exact: true }).click();
+    await preview.getByRole("button", { name: "Remove widget", exact: true }).click();
+    await expect(apply).toBeFocused();
+    await expect(widget).toBeHidden();
+    await expect(preview.getByText("No widgets", { exact: true })).toBeVisible();
+  };
+  await removeWidget();
+  await toolbar.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(marker).toHaveAttribute("aria-pressed", "false");
+  await removeWidget();
+  await expect(widget.getByRole("button", { name: "Release marker", includeHidden: true })).toHaveCount(1);
+  await apply.click();
+  await expect(edit).toBeFocused();
+  await expect(widget).toHaveCount(0);
 });
 
 // Critical: controlled layout edits must survive live data refresh and failed saves, and Cancel must not publish them.
