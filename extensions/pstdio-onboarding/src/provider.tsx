@@ -19,7 +19,7 @@ export const SetupProvider = ({ children, language = "en" }: { children: ReactNo
     void instance.init({
       lng: language,
       fallbackLng: "en",
-      initImmediate: false,
+      initAsync: false,
       interpolation: { escapeValue: false },
       resources: Object.fromEntries(
         Object.entries({ en, es, fr, ja, ko, "zh-Hans": zhHans, "zh-Hant": zhHant }).map(([key, common]) => [
