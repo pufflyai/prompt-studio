@@ -35,7 +35,7 @@ const prepare = async (root: string) => {
     }
     await documents.flushStatistics();
     const result = await connection.db.execute<{ records: number }>(
-      sql`SELECT count(*)::int AS records FROM storage_resource_identities WHERE workbench_id = ${project.id}`,
+      sql`SELECT count(*)::int AS records FROM resource_numbers WHERE current AND project_id = ${project.id}`,
     );
     assert.equal(result.rows[0]!.records, count);
     await writeFile(join(root, "fixture.json"), JSON.stringify({ projectId: project.id, count }));
@@ -143,7 +143,7 @@ const sample = async (root: string) => {
     const requests = { reads: relay.requests.reads - before.reads, blobs: relay.requests.blobs - before.blobs };
     assert(requests.reads + requests.blobs < 1_000);
     const result = await target.db.execute<{ records: number }>(
-      sql`SELECT count(*)::int AS records FROM storage_resource_identities WHERE workbench_id = ${owner.workbenchId}`,
+      sql`SELECT count(*)::int AS records FROM resource_numbers WHERE current AND project_id = ${owner.workbenchId}`,
     );
     assert.equal(result.rows[0]!.records, count + 3);
     assert.deepEqual(

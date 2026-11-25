@@ -6,34 +6,56 @@ import { fileURLToPath } from "node:url";
 import type { PGlite } from "@electric-sql/pglite";
 import { inArray } from "drizzle-orm";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
-import { migrate } from "drizzle-orm/pglite/migrator";
 import { extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
 import { normalizeEmbeddedFileName, relativeEmbeddedFileName } from "pstdio-paths";
 import type { StorageOwner } from "pstdio-sync";
 import { migrateExtensionIdentities } from "../services/extension-identity-migration";
+import { pruneAllDocumentFiles, pruneDocumentFiles } from "../services/extension-storage/document-file-retention";
+import { attachDocumentCollector, documentFilesFor } from "../services/extension-storage/document-files";
 import {
   attachIndexNodeFiles,
   createIndexNodeFiles,
   createMemoryIndexNodeFiles,
 } from "../services/extension-storage/index-node-files";
 import { upgradeIndexNodesToFiles } from "../services/extension-storage/index-node-upgrade";
+import { pruneRecoveryFiles } from "../services/extension-storage/recovery-file-retention";
+import { recoveryFilesFor } from "../services/extension-storage/recovery-files";
 import { prepareAppPreferencesUpgrade } from "./app-preferences-upgrade";
+import { restoreArtifactProjectionAdmission } from "./artifact-projection-admission";
+import { prepareArtifactProjectionUpgrade } from "./artifact-projection-upgrade";
+import { prepareAssetOwnerUpgrade } from "./asset-owner-upgrade";
 import { prepareAutomationOwnersUpgrade } from "./automation-owners-upgrade";
 import { prepareBoardDefaultsUpgrade } from "./board-defaults-upgrade";
 import { prepareBoardOwnersUpgrade } from "./board-owners-upgrade";
 import { prepareConnectionCredentialsUpgrade } from "./connection-credentials-upgrade";
 import { attachDatabaseAuthority } from "./database-authority";
+import { prepareDocumentOwnerUpgrade } from "./document-owner-upgrade";
 import { prepareExtensionPreferencesUpgrade } from "./extension-preferences-upgrade";
 import { prepareFileOwnersUpgrade } from "./file-owners-upgrade";
+import { prepareHistoryOwnerUpgrade } from "./history-owner-upgrade";
+import { retireLegacyRecordTables } from "./legacy-record-retirement";
+import { type LegacyConversionFailure, upgradeLegacyRecords } from "./legacy-record-upgrade";
+import { prepareLogOwnerUpgrade } from "./log-owner-upgrade";
+import { migratePglite, resumeCurrentPgliteSchema } from "./migrate-pglite";
+import { prepareNativeOwnerUpgrade } from "./native-owner-upgrade";
 import { openPglite } from "./open-pglite";
+import { prepareOrderedOwnerUpgrade } from "./ordered-owner-upgrade";
+import { prepareOwnerIndexUpgrade } from "./owner-index-upgrade";
+import { prepareOwnerProjectionUpgrade } from "./owner-projection-upgrade";
 import { canonicalDbPath, resolveDbPath } from "./paths";
 import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-current-home";
 import { pgliteIdentity } from "./pglite-identity";
 import { acquirePgliteLock } from "./pglite-lock";
 import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
-import { createRetiredStorageCleanup } from "./retired-storage-cleanup";
+import { prepareRecordRowFinalization } from "./record-row-upgrade";
+import { prepareRecoveryOwnerUpgrade } from "./recovery-owner-upgrade";
+import { prepareResourceLinkOwnerUpgrade } from "./resource-link-owner-upgrade";
+import { prepareCanonicalNumberUpgrade } from "./resource-numbers-upgrade";
+import { prepareResourcePrefixUpgrade } from "./resource-prefix-upgrade";
+import { createStorageCleanup } from "./retired-storage-cleanup";
 import * as schema from "./schemas.pg";
 import { prepareSessionWorkspaceUpgrade } from "./session-workspace-upgrade";
+import { resolveSourceEngineModule, sourceStartupOptions } from "./source-startup-image";
 import { type DatabaseMaintenancePhase, invalidateMaintenance, maintainDatabase } from "./startup-maintenance";
 
 type EmbeddedFile = Blob & { name: string };
@@ -114,18 +136,6 @@ const withMigrationsFolder = async (run: (folder: string) => Promise<void>) => {
   }
 };
 
-// PGlite caches code after instantiation. Concurrent cold opens otherwise compile it separately.
-// Share only immutable code; each database still creates its own engine, memory and filesystem.
-let sourceEngineModule: Promise<WebAssembly.Module> | undefined;
-const resolveSourceEngineModule = (wasmPath: string) =>
-  (sourceEngineModule ??= Bun.file(wasmPath)
-    .arrayBuffer()
-    .then((bytes) => WebAssembly.compile(bytes))
-    .catch((error) => {
-      sourceEngineModule = undefined;
-      throw error;
-    }));
-
 export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[] = getEmbeddedFiles()) => {
   const wasmFile = embeddedFiles.find((file) => normalizeEmbeddedFileName(file.name).endsWith(PGLITE_WASM_SUFFIX));
   const dataFile = embeddedFiles.find((file) => normalizeEmbeddedFileName(file.name).endsWith(PGLITE_DATA_SUFFIX));
@@ -182,6 +192,7 @@ export const createDb = async (options?: {
   signal?: AbortSignal;
   /** Folder for encrypted index nodes; defaults to a sibling of the database folder. */
   indexNodesPath?: string;
+  onLegacyConversionError?: (failure: LegacyConversionFailure) => void;
   /** The runtime vacuums in the background and schedules deletion of retired rows. */
   deferCleanup?: boolean;
 }) => {
@@ -201,7 +212,7 @@ export const createDb = async (options?: {
     onPhase("database_locked");
     options?.signal?.throwIfAborted();
     const embedded = getEmbeddedFiles();
-    const pgliteOpts = await resolvePgliteOptions(embedded);
+    const pgliteOpts = await sourceStartupOptions(await resolvePgliteOptions(embedded));
     onPhase("database_engine_loaded");
     if (dbPath !== ":memory:")
       await prepareCurrentPgliteHome({
@@ -220,6 +231,8 @@ export const createDb = async (options?: {
 
     const db = drizzle(openedPglite, { schema });
     attachDatabaseAuthority(db, dbPath);
+    recoveryFilesFor(db, dbPath);
+    documentFilesFor(db, dbPath);
     // The node folder belongs to this database, so another database can never clean it up.
     const indexNodes =
       dbPath === ":memory:"
@@ -227,9 +240,42 @@ export const createDb = async (options?: {
         : createIndexNodeFiles(options?.indexNodesPath ?? `${dbPath}-index-nodes`);
     attachIndexNodeFiles(db, indexNodes);
     let migrated = false;
+    let finishArtifactProjectionUpgrade: (() => Promise<void>) | undefined;
     await withMigrationsFolder(async (migrationsFolder) => {
       if (!fs.existsSync(migrationsFolder)) return;
+      const finishLegacyAdmission = async () => {
+        if (
+          await upgradeLegacyRecords(db, dbPath, { signal: options?.signal, failed: options?.onLegacyConversionError })
+        )
+          await retireLegacyRecordTables(openedPglite, migrationsFolder);
+      };
+      if (
+        await resumeCurrentPgliteSchema({
+          engine: openedPglite,
+          migrationsFolder,
+          path: dbPath,
+          fresh,
+          finishLegacyAdmission,
+        })
+      ) {
+        migrated = true;
+        return;
+      }
+      const finishRecordRows = await prepareRecordRowFinalization(db, dbPath);
       const finishProjectExtensionsUpgrade = await prepareProjectExtensionsUpgrade(db, dbPath);
+      const finishResourceLinkOwnerUpgrade = await prepareResourceLinkOwnerUpgrade(db, dbPath);
+      const finishResourcePrefixUpgrade = await prepareResourcePrefixUpgrade(db, dbPath);
+      const finishOwnerIndexUpgrade = await prepareOwnerIndexUpgrade(db, dbPath);
+      const finishOwnerProjectionUpgrade = await prepareOwnerProjectionUpgrade(db, dbPath);
+      const finishCanonicalNumberUpgrade = await prepareCanonicalNumberUpgrade(db, dbPath);
+      const finishDocumentOwnerUpgrade = await prepareDocumentOwnerUpgrade(db, dbPath);
+      finishArtifactProjectionUpgrade = await prepareArtifactProjectionUpgrade(db, dbPath);
+      const finishNativeOwnerUpgrade = await prepareNativeOwnerUpgrade(db, dbPath);
+      const finishRecoveryOwnerUpgrade = await prepareRecoveryOwnerUpgrade(db, dbPath);
+      const finishOrderedOwnerUpgrade = await prepareOrderedOwnerUpgrade(db, dbPath);
+      const finishAssetOwnerUpgrade = await prepareAssetOwnerUpgrade(db, dbPath);
+      const finishHistoryOwnerUpgrade = await prepareHistoryOwnerUpgrade(db, dbPath);
+      const finishLogOwnerUpgrade = await prepareLogOwnerUpgrade(db, dbPath);
       const finishFileOwnersUpgrade = await prepareFileOwnersUpgrade(db, dbPath);
       const finishPreferencesUpgrade = await prepareAppPreferencesUpgrade(db, dbPath);
       const finishExtensionPreferencesUpgrade = await prepareExtensionPreferencesUpgrade(db, dbPath);
@@ -238,20 +284,35 @@ export const createDb = async (options?: {
       const finishBoardDefaultsUpgrade = await prepareBoardDefaultsUpgrade(db, dbPath);
       const finishAutomationOwnersUpgrade = await prepareAutomationOwnersUpgrade(db, dbPath);
       const finishSessionWorkspaceUpgrade = await prepareSessionWorkspaceUpgrade(db, dbPath);
-      await migrate(db, { migrationsFolder });
+      await migratePglite(openedPglite, migrationsFolder);
       await finishProjectExtensionsUpgrade?.();
+      await finishLogOwnerUpgrade?.();
+      await finishHistoryOwnerUpgrade?.();
+      await finishAssetOwnerUpgrade?.();
+      await finishOrderedOwnerUpgrade?.();
+      await finishRecoveryOwnerUpgrade?.();
+      await finishDocumentOwnerUpgrade?.();
+      await finishNativeOwnerUpgrade?.();
+      await finishCanonicalNumberUpgrade?.();
+      await finishOwnerProjectionUpgrade?.();
+      await finishOwnerIndexUpgrade?.();
       await finishPreferencesUpgrade?.();
       await finishExtensionPreferencesUpgrade?.();
       await finishConnectionCredentialsUpgrade?.();
       await finishBoardOwnersUpgrade?.();
       await finishBoardDefaultsUpgrade?.();
       await finishAutomationOwnersUpgrade?.();
+      await finishResourceLinkOwnerUpgrade?.();
+      await finishResourcePrefixUpgrade?.();
       await finishSessionWorkspaceUpgrade?.();
       await finishFileOwnersUpgrade();
+      await finishLegacyAdmission();
+      await finishRecordRows?.();
       migrated = true;
     });
     // Copy durable receipts before opening. Remove old rows for both sides of an identity
     // rename now so the rename does not copy cache data or see a false conflict.
+    await pruneRecoveryFiles(db);
     onPhase("database_index_nodes");
     // A run that stops after deleting rows must leave offline space reclamation pending.
     const owed = () => invalidateMaintenance(dbPath);
@@ -277,7 +338,13 @@ export const createDb = async (options?: {
           .where(inArray(schema.installed_extension_sources.extension_id, [error.from, error.to]));
       },
     });
-    if (migrated && !deferCleanup) await maintainDatabase(openedPglite, dbPath, fresh, onPhase, movedNodes || renamed);
+    await finishArtifactProjectionUpgrade?.();
+    await restoreArtifactProjectionAdmission(db, dbPath);
+    await pruneAllDocumentFiles(db);
+    // Conversion publishes bounded batches; collect their files once before exposing the database.
+    attachDocumentCollector(db, (projectId, ids) => pruneDocumentFiles(db, projectId, ids));
+    if (migrated && !deferCleanup)
+      await maintainDatabase(openedPglite, db, dbPath, fresh, onPhase, movedNodes || renamed);
     const projectIds = await db.select({ id: schema.projects.id }).from(schema.projects);
     await indexNodes.retainProjects(new Set(projectIds.map((project) => project.id)));
     onPhase("database_migrated");
@@ -301,7 +368,7 @@ export const createDb = async (options?: {
       db,
       path: dbPath,
       pglite: openedPglite,
-      cleanupRetiredRows: deferCleanup ? createRetiredStorageCleanup(db, dbPath, deferredOwners) : async () => {},
+      cleanupRetiredRows: createStorageCleanup(db, dbPath, deferredOwners, !!deferCleanup),
     };
   } catch (error) {
     await pglite?.close();

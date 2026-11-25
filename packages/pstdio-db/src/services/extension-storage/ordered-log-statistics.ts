@@ -7,7 +7,7 @@ const owners = new WeakMap<DbClient, ReturnType<typeof createProjectionStatistic
 export const orderedLogStatistics = (db: DbClient) => {
   let statistics = owners.get(db);
   if (!statistics) {
-    statistics = createProjectionStatistics(db, "storage_log_entries");
+    statistics = createProjectionStatistics(db, "log_entries");
     owners.set(db, statistics);
   }
   return statistics;

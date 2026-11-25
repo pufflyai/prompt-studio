@@ -1,4 +1,5 @@
 import { index, jsonb, pgTable, text, unique } from "drizzle-orm/pg-core";
+import { isoTimestamp } from "./iso-timestamp";
 import { projects } from "./projects";
 export type ExtensionConnectionCheck = { ok: boolean; status: number | null; error: string | null; checkedAt: string };
 
@@ -17,10 +18,10 @@ export const credentials = pgTable(
     auth_header_name: text("auth_header_name"),
     scopes: text("scopes").array().notNull().default([]),
     secret_ref: text("secret_ref").notNull(),
-    expires_at: text("expires_at"),
+    expires_at: isoTimestamp("expires_at"),
     last_check: jsonb("last_check").$type<ExtensionConnectionCheck>(),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
+    created_at: isoTimestamp("created_at").notNull(),
+    updated_at: isoTimestamp("updated_at").notNull(),
   },
   (table) => [
     unique("credentials_owner_uq").on(table.extension_id, table.contribution_id, table.project_id).nullsNotDistinct(),

@@ -1,5 +1,5 @@
 import type { OrderedAdmission, OrderedDecision, OrderedOperation } from "pstdio-sync/records";
-import type { createOrderedReceiptIndex, OrderedReceipt } from "pstdio-sync/relay";
+import type { createOrderedReceiptIndex, OrderedIndexReference, OrderedReceipt } from "pstdio-sync/relay";
 import type { OrderedJournal } from "./ordered-journal";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
 import { operationDependencies } from "./ordered-rebase";
@@ -9,9 +9,20 @@ export const createOrderedReceiptResolver = (
   journal: OrderedJournal,
   root: OrderedReceiptRoots["root"],
   index: ReturnType<typeof createOrderedReceiptIndex>,
+  published: OrderedIndexReference | null = null,
 ) => {
   const cache = async (receipt: OrderedReceipt | undefined) => {
-    if (receipt) await journal.recordDecision(receipt.decision, receipt.admissionFingerprint, { indexed: true });
+    if (receipt) {
+      const proof = published
+        ? await index.receipt(published, receipt.decision.epoch, receipt.decision.operationId)
+        : undefined;
+      const indexed =
+        !!proof &&
+        proof.admissionFingerprint === receipt.admissionFingerprint &&
+        proof.decision.fingerprint === receipt.decision.fingerprint &&
+        proof.decision.state === receipt.decision.state;
+      await journal.recordDecision(receipt.decision, receipt.admissionFingerprint, { indexed });
+    }
     return receipt;
   };
   const exact = async (id: string, epoch: string) =>

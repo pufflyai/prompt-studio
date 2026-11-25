@@ -7,17 +7,15 @@ import { createRecordStreamSync, decodeOrderedEntry, decodeRecordFrame } from "p
 import { createDb } from "../../db/connection.pglite";
 import {
   projects,
-  storage_current_records,
-  storage_documents,
+  records,
   storage_ordered_operations,
-  storage_ordered_owners,
-  storage_ordered_receipts,
-  storage_ordered_records,
-  storage_ordered_touches,
-  storage_record_projections,
+  owners as storage_ordered_owners,
+  owners as storageOwners,
 } from "../../db/schemas.pg";
+import { captureDocumentFiles, restoreDocumentBackup } from "./document-history.fixture";
 import { createDocumentStorageDBService } from "./document-storage";
 import { attachIndexNodeFiles, createIndexNodeFiles } from "./index-node-files";
+import { readOperationReceipts } from "./operation-facts.fixture";
 import { withOrderedOwner } from "./ordered-journal";
 import { createRelay } from "./record-stream-relay.fixture";
 
@@ -94,24 +92,27 @@ const save = (operationId: string, model: string) => ({
 });
 
 const capture = async (db: Awaited<ReturnType<typeof createDb>>["db"]) => ({
-  documents: await db.select().from(storage_documents),
-  owners: await db.select().from(storage_ordered_owners),
-  records: await db.select().from(storage_ordered_records),
+  storageOwners: await db.select().from(storageOwners),
+  files: await captureDocumentFiles(db),
   operations: await db.select().from(storage_ordered_operations),
-  touches: await db.select().from(storage_ordered_touches),
-  receipts: await db.select().from(storage_ordered_receipts),
-  current: await db.select().from(storage_current_records),
-  projections: await db.select().from(storage_record_projections),
+  current: await db.select().from(records),
 });
 const restore = async (db: Awaited<ReturnType<typeof createDb>>["db"], backup: Awaited<ReturnType<typeof capture>>) => {
-  for (const row of backup.documents) await db.insert(storage_documents).values(row);
-  for (const row of backup.owners) await db.insert(storage_ordered_owners).values(row);
-  for (const row of backup.records) await db.insert(storage_ordered_records).values(row);
-  for (const row of backup.operations) await db.insert(storage_ordered_operations).values(row);
-  for (const row of backup.touches) await db.insert(storage_ordered_touches).values(row);
-  for (const row of backup.receipts) await db.insert(storage_ordered_receipts).values(row);
-  for (const row of backup.projections) await db.insert(storage_record_projections).values(row);
-  for (const row of backup.current) await db.insert(storage_current_records).values(row);
+  await db.transaction(async (tx) => {
+    const ownerIds = new Map<number, number>();
+    for (const { id, ...fields } of backup.storageOwners) {
+      const [copied] = await tx.insert(storageOwners).values(fields).returning({ id: storageOwners.id });
+      ownerIds.set(id, copied!.id);
+    }
+    const mapped = <T extends { owner_id: number }>(row: T) => {
+      const id = ownerIds.get(row.owner_id);
+      if (id === undefined) throw new Error("Backup owner is missing");
+      return { ...row, owner_id: id };
+    };
+    await restoreDocumentBackup(tx, backup.files, ownerIds);
+    for (const row of backup.operations) await tx.insert(storage_ordered_operations).values(mapped(row));
+    for (const row of backup.current) await tx.insert(records).values(mapped(row));
+  });
 };
 
 test("ordered latest states retain an encrypted receipt root instead of an inline history", async () => {
@@ -125,7 +126,7 @@ test("ordered latest states retain an encrypted receipt root instead of an inlin
   expect(JSON.stringify(meta).length).toBeLessThan(512);
   const root = (meta as unknown as { receiptRoot: { blobId: string } }).receiptRoot;
   expect(f.relay.latest()!.blobIds).toContain(root.blobId);
-  const rows = await first.db.select().from(storage_ordered_receipts);
+  const rows = await readOperationReceipts(first.db);
   expect(rows.every((row) => row.indexed)).toBe(true);
 });
 
@@ -152,7 +153,7 @@ test("an older pre-admission backup settles a compacted refusal from its exact r
   f.relay.trim();
   const restored = await f.device();
   await restore(restored.db, backup);
-  await restored.db.delete(storage_ordered_receipts);
+  await restored.db.update(storage_ordered_operations).set({ receipt: {}, receipt_epoch: null, receipt_indexed: true });
   const updates = f.relay.requests.updates;
   await restored.sync.synchronize();
   expect((await restored.records.outcome("careful"))?.state).toBe("refused");
@@ -250,7 +251,7 @@ test("a receipt learned while a checkpoint uploads is not marked indexed by that
   };
   await first.records.commit(save("covered", "large"));
   await expect(first.sync.synchronize()).rejects.toThrow("Later checkpoint paused");
-  const cached = await first.db.select().from(storage_ordered_receipts);
+  const cached = await readOperationReceipts(first.db);
   expect(cached.find((row) => row.operation_id === "covered")?.indexed).toBe(true);
   expect(cached.find((row) => row.operation_id === "learned-during-upload")?.indexed).toBe(false);
   expect((await first.records.read("settings")).value).toEqual({ model: "large" });

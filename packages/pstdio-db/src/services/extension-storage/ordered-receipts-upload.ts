@@ -43,7 +43,12 @@ export const nextOrderedUpload = async (
   if (!row.epoch) return [];
   // A returning device decides here, once connected, whether its changes upload or wait for review.
   if ((await evaluateOrderedReturn(journal, tx, owner)) === "held") return [];
-  const resolver = createOrderedReceiptResolver(journal, receiptRoots(row.receipt_root).root, index);
+  const resolver = createOrderedReceiptResolver(
+    journal,
+    receiptRoots(row.receipt_root).root,
+    index,
+    receiptRoots(row.receipt_root).published,
+  );
   const uploads = [];
   // Own saves already sent in this order, or earlier in this upload, reach Cloud before later ones.
   const ordered = new Set<string>();

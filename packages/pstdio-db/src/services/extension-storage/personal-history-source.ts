@@ -4,10 +4,10 @@ import type { StorageLogEntry } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import {
   storage_log_entries as logEntries,
-  storage_personal_history_positions as positions,
+  owners,
   storage_personal_history_sources as sources,
 } from "../../db/schemas.pg";
-import { decodeLogValue } from "./ordered-log-sql";
+import { decodeLogValue, logWhere } from "./ordered-log-sql";
 import type { PersonalIndexAccepted } from "./personal-history-index";
 import {
   applyPersonalIndexRows,
@@ -15,9 +15,8 @@ import {
   personalIndexAddress,
 } from "./personal-history-index-rows";
 import { personalIndexPages } from "./personal-index-pages";
+import { ensureStorageOwner, storageOwnerKey, storageOwnerWhere } from "./storage-owner-key";
 
-const where = (owner: StorageOwner) =>
-  and(eq(positions.workbench_id, owner.workbenchId), eq(positions.extension_id, owner.extensionId));
 const parsePositions = (cursor: string | null | undefined) => {
   if (!cursor) return new Map<string, number>();
   const value = JSON.parse(cursor);
@@ -32,7 +31,7 @@ const parsePositions = (cursor: string | null | undefined) => {
   return new Map(Object.entries(value.sources as Record<string, number>));
 };
 export const readPersonalSourcePosition = async (db: DbClient, owner: StorageOwner, sourceId: string) => {
-  const [row] = await db.select().from(positions).where(where(owner));
+  const [row] = await db.select({ cursor: owners.history_cursor }).from(owners).where(storageOwnerWhere(owner));
   return parsePositions(row?.cursor).get(sourceId) ?? 0;
 };
 export const acceptPersonalSource = async (
@@ -42,8 +41,12 @@ export const acceptPersonalSource = async (
   after: number | null,
   entries: PersonalIndexAccepted[],
 ) => {
-  await tx.insert(positions).values(personalIndexAddress(owner)).onConflictDoNothing();
-  const [position] = await tx.select().from(positions).where(where(owner)).for("update");
+  await ensureStorageOwner(tx, owner);
+  const [position] = await tx
+    .select({ cursor: owners.history_cursor })
+    .from(owners)
+    .where(storageOwnerWhere(owner))
+    .for("update");
   const changes: { delta: PersonalIndexAccepted["delta"]; settledId: string }[] = [];
   for (const page of personalIndexPages(entries)) {
     const updated = await tx
@@ -63,14 +66,7 @@ export const acceptPersonalSource = async (
         })),
       )
       .onConflictDoUpdate({
-        target: [
-          sources.workbench_id,
-          sources.extension_id,
-          sources.source_id,
-          sources.kind,
-          sources.device_id,
-          sources.record_id,
-        ],
+        target: [sources.owner_id, sources.source_id, sources.kind, sources.device_id, sources.record_id],
         set: {
           value: sql`excluded.value`,
           seed_id: sql`excluded.seed_id`,
@@ -98,9 +94,9 @@ export const acceptPersonalSource = async (
     const cursors = parsePositions(position?.cursor);
     cursors.set(sourceId, Math.max(cursors.get(sourceId) ?? 0, after));
     await tx
-      .update(positions)
-      .set({ cursor: JSON.stringify({ version: 2, sources: Object.fromEntries(cursors) }) })
-      .where(where(owner));
+      .update(owners)
+      .set({ history_cursor: JSON.stringify({ version: 2, sources: Object.fromEntries(cursors) }) })
+      .where(storageOwnerWhere(owner));
   }
   return changed;
 };
@@ -115,8 +111,7 @@ export const personalSourcePage = async (
     .from(sources)
     .where(
       and(
-        eq(sources.workbench_id, owner.workbenchId),
-        eq(sources.extension_id, owner.extensionId),
+        eq(sources.owner_id, storageOwnerKey(owner)),
         eq(sources.source_id, sourceId),
         after
           ? sql`(${sources.kind}, ${sources.device_id}, ${sources.record_id}) > (${after.kind}, ${after.deviceId}, ${after.id})`
@@ -144,11 +139,7 @@ export const personalPendingPage = async (db: DbClient, owner: StorageOwner, sou
     .from(logEntries)
     .where(
       and(
-        eq(logEntries.workbench_id, owner.workbenchId),
-        eq(logEntries.extension_id, owner.extensionId),
-        eq(logEntries.log_name, "index"),
-        eq(logEntries.scope, "project"),
-        eq(logEntries.stream, sourceId),
+        logWhere(logEntries, { owner, name: "index", scope: "project", stream: sourceId, writerId: sourceId }),
         eq(logEntries.local, true),
         isNull(logEntries.relay_sequence),
         gt(logEntries.local_sequence, after),

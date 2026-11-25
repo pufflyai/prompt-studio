@@ -3,12 +3,13 @@ import { join } from "node:path";
 import { sql } from "drizzle-orm";
 import { assertBenchmarkWorker, contract, createRow, measure, type Workload } from "storage-scale-fixture";
 import { createDb } from "../../db/connection.pglite";
+import { resourceFoldEvery } from "../../db/legacy-records/resource-records";
 import { runDatabaseScaleEntrypoint } from "./database-scale-entrypoint";
 import { databaseFixtureOwner, databaseFixtureOwners } from "./database-scale-fixture";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createViewReader, type ReadOperation, readOperations } from "./record-read-views";
 import { resourceDocumentId } from "./resource-document-persistence";
-import { resourceFoldEvery } from "./resource-records";
+import { storageOwnerKey } from "./storage-owner-key";
 
 const coldOperations = [...readOperations, "all-owner-burst"] as const;
 type ColdOperation = (typeof coldOperations)[number];
@@ -47,10 +48,10 @@ export const benchmarkReads = async (kind: Workload, count: number, root: string
   const counters = async () => {
     await db.execute(sql`select pg_stat_force_next_flush()`);
     const table = await db.execute<Record<string, string>>(
-      sql`select seq_scan, seq_tup_read, idx_scan, idx_tup_fetch from pg_stat_user_tables where relname = 'storage_current_records'`,
+      sql`select seq_scan, seq_tup_read, idx_scan, idx_tup_fetch from pg_stat_user_tables where relname = 'records'`,
     );
     const indexes = await db.execute<{ read: string }>(
-      sql`select coalesce(sum(idx_tup_read), 0) as read from pg_stat_user_indexes where relname = 'storage_current_records'`,
+      sql`select coalesce(sum(idx_tup_read), 0) as read from pg_stat_user_indexes where relname = 'records'`,
     );
     const row = table.rows[0];
     return {
@@ -140,16 +141,13 @@ export const benchmarkReads = async (kind: Workload, count: number, root: string
 
     // Advance one resource to the write that compacts its checkpoint, outside the measurement.
     const row = createRow(kind, 0, 1, 3);
-    // A resource's revision is its newest update tail; its document row keeps the checkpoint.
+    // The document descriptor records its newest revision and folded checkpoint.
     const history = async () => {
       const result = await db.execute<{ revision: string; folded: string }>(sql`
-        select greatest(saved.revision, (select max(tails.revision) from storage_document_updates tails
-          where tails.workbench_id = saved.workbench_id and tails.extension_id = saved.extension_id
-            and tails.document_id = saved.document_id)) as revision, saved.folded_revision as folded
-        from storage_documents saved
-        where saved.workbench_id = ${databaseFixtureOwner.workbenchId}
-          and saved.extension_id = ${databaseFixtureOwner.extensionId}
-          and saved.document_id = ${resourceDocumentId(row.id)}`);
+        select saved.revision, saved.folded_revision as folded
+        from documents saved
+        where saved.owner_id = ${storageOwnerKey(databaseFixtureOwner)}
+          and saved.key = ${resourceDocumentId(row.id)}`);
       return { revision: Number(result.rows[0].revision), folded: Number(result.rows[0].folded) };
     };
     const write = (title: string) =>
@@ -168,7 +166,7 @@ export const benchmarkReads = async (kind: Workload, count: number, root: string
     emit("projection-size", {
       relations: (
         await db.execute(
-          sql`select relname, pg_total_relation_size(oid) as bytes from pg_class where relname like 'storage_current_records%' or relname like 'storage_query_%'`,
+          sql`select relname, pg_total_relation_size(oid) as bytes from pg_class where relname like 'records%' or relname like 'storage_query_%'`,
         )
       ).rows,
     });

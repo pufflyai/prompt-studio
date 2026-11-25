@@ -34,9 +34,9 @@ export const identityPredicateSql = (
   const values = sql`ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(names)}::jsonb))`;
   const aliases = predicate.field === index.identity.aliasesField;
   return sql`${identityQueryText(id())} IN (
-    SELECT selected_identity.resource_id FROM storage_resource_identities selected_identity
-    ${aliases ? sql`INNER JOIN storage_resource_aliases selected_alias ON selected_alias.workbench_id = selected_identity.workbench_id AND selected_alias.resource_id = selected_identity.resource_id` : sql``}
-    WHERE selected_identity.workbench_id = ${owner.workbenchId} AND selected_identity.extension_id = ${owner.extensionId}
+    SELECT selected_identity.resource_id FROM resource_numbers selected_identity
+    ${aliases ? sql`INNER JOIN resource_numbers selected_alias ON selected_alias.alias AND selected_alias.project_id = selected_identity.project_id AND selected_alias.resource_id = selected_identity.resource_id` : sql``}
+    WHERE selected_identity.current AND selected_identity.project_id = ${owner.workbenchId} AND selected_identity.extension_id = ${owner.extensionId}
       AND selected_identity.kind = ${index.identity.kind}
       AND ${aliases ? sql`selected_alias.shorthand` : sql`selected_identity.shorthand`} = ANY(${values})
   )`;

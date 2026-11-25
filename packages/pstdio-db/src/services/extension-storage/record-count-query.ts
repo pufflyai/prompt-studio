@@ -68,5 +68,5 @@ export const countIndexSource = async (
   if (!supportedPredicate(query.where, new Set()) || !groups.every((field) => supportedField(field, new Set()))) return;
   const table = sql.identifier(`${name}_c`);
   if ((await tx.execute(sql`SELECT 1 FROM ${table} WHERE dims='null'::jsonb`)).rows.length) return;
-  return sql`(SELECT jsonb_build_object(${projectionKey(index.name)}::text, dims) AS query_values, n FROM ${table}) AS storage_current_records WHERE ${predicateSql}`;
+  return sql`(SELECT jsonb_build_object(${projectionKey(index.name)}::text, dims) AS query_values, n FROM ${table}) AS records WHERE ${predicateSql}`;
 };

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { createEncryptedManifestNodes } from "pstdio-sync/relay";
 import { createDb } from "../../db/connection.pglite";
-import { projects, storage_documents } from "../../db/schemas.pg";
+import { projects, documents as storage_documents } from "../../db/schemas.pg";
 import { createIndexNodeFiles } from "./index-node-files";
 import { collectOrderedReceiptNodes, createOrderedManifestCache } from "./ordered-receipts-blobs";
 import { createRelay } from "./record-stream-relay.fixture";

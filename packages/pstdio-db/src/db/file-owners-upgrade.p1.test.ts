@@ -60,15 +60,19 @@ for (const interruption of ["normal", "schema", "restore", "mappings"])
         );
       }
       const bytes = Buffer.alloc(5 * 1024 * 1024, 67);
+      const sharedHash = hash(bytes);
+      const text = Buffer.from("text");
+      const textHash = hash(text);
       const metadata = (id: string, file_kind = "skill") => ({
+        ...(id === "shared" || id === "missing"
+          ? { size_bytes: bytes.length, hash: sharedHash }
+          : { size_bytes: text.length, hash: textHash }),
         id,
         project_id: project.id,
         file_name: `${id}.md`,
         file_kind,
         storage_path: join(root, id),
         mime_type: "text/markdown",
-        size_bytes: bytes.length,
-        hash: hash(bytes),
         created_at: stamp,
         updated_at: stamp,
       });
@@ -79,13 +83,15 @@ for (const interruption of ["normal", "schema", "restore", "mappings"])
         metadata("host", "attachment"),
         metadata("missing", "attachment"),
       ];
-      for (const file of originals) {
-        if (file.id === "missing") continue;
-        if (file.id !== "shared") {
-          file.size_bytes = 4;
-          file.hash = hash(Buffer.from("text"));
-        }
-        await writeFile(file.storage_path, file.id === "shared" ? bytes : "text");
+      const present = originals.filter(({ id }) => id !== "missing");
+      for (let start = 0; start < present.length; start += 16) {
+        const writes = await Promise.allSettled(
+          present
+            .slice(start, start + 16)
+            .map(({ id, storage_path }) => writeFile(storage_path, id === "shared" ? bytes : text)),
+        );
+        const failure = writes.find((result) => result.status === "rejected");
+        if (failure?.status === "rejected") throw failure.reason;
       }
       await store.db.insert(files).values(originals);
       const names = [
@@ -180,7 +186,7 @@ for (const interruption of ["normal", "schema", "restore", "mappings"])
       const fileService = createFilesDBService(store.db);
       for (const id of copies) {
         const file = (await fileService.get(id))!;
-        expect(hash(await readFile(file.storage_path))).toBe(hash(bytes));
+        expect(hash(await readFile(file.storage_path))).toBe(sharedHash);
         expect({ ...file, id: "shared", storage_path: join(root, "shared") }).toEqual(
           originals.find((row) => row.id === "shared")!,
         );
@@ -206,7 +212,7 @@ for (const interruption of ["normal", "schema", "restore", "mappings"])
       const mappings = await readdir(`${path}-migration-exports/file-mappings`);
       expect(mappings).toHaveLength(209);
       await fileService.remove(firstScope[0].id, () => unlink(firstScope[0].storage_path));
-      expect(hash(await readFile(secondScope[0].storage_path))).toBe(hash(bytes));
+      expect(hash(await readFile(secondScope[0].storage_path))).toBe(sharedHash);
       await store.close();
       store = await createDb({ path });
       expect((await createSkillsDBService(store.db).getByName(project.id, "shared-b"))!.files[0].file_id).toBe(second);

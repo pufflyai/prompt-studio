@@ -1,5 +1,6 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { ExtensionSessionQuery } from "pstdio-api-contracts/extension-kernel";
+import { resourceLinkRows } from "../resource-link-rows";
 
 /** Keep both link directions in SQL; neither workspace IDs nor their sessions enter an intermediate app list. */
 const anchorCondition = (
@@ -7,7 +8,7 @@ const anchorCondition = (
   anchor: NonNullable<ExtensionSessionQuery["anchor"]>,
   workspaceIds: SQL,
   kind: string,
-) => sql`exists (select 1 from resource_anchors related where related.project_id = ${projectId}
+) => sql`exists (select 1 from ${resourceLinkRows} related where related.project_id = ${projectId}
   ${anchor.projectId ? sql`and related.project_id = ${anchor.projectId}` : sql``}
   and ((related.source_owner = 'pstdio' and related.source_kind = ${kind} and related.source_id in (${workspaceIds})
     and related.target_kind = ${anchor.type} and related.target_id = ${anchor.id}

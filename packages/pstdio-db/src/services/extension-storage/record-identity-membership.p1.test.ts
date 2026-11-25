@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import type { RecordEdit, StorageRecordIndex } from "pstdio-sync-contracts";
 import { createDb } from "../../db/connection.pglite";
 import * as schema from "../../db/schemas.pg";
+import { attachDocumentFiles, documentFilesFor } from "./document-files";
 import { createDocumentStorageDBService } from "./document-storage";
 import { attachIndexNodeFiles, createMemoryIndexNodeFiles } from "./index-node-files";
 
@@ -14,11 +15,11 @@ test("canonical filtered counts use maintained identity membership without readi
     schema,
     logger: {
       logQuery(query, params) {
-        if (capture && query.includes("AS count") && query.includes("FROM storage_current_records"))
-          statements.push({ query, params });
+        if (capture && query.includes("AS count") && query.includes("FROM records")) statements.push({ query, params });
       },
     },
   });
+  attachDocumentFiles(db, documentFilesFor(connection.db));
   attachIndexNodeFiles(db, createMemoryIndexNodeFiles());
   const owner = { workbenchId: crypto.randomUUID(), extensionId: "membership.example" };
   const store = createDocumentStorageDBService(db);

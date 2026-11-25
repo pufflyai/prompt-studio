@@ -2,23 +2,21 @@ import { and, eq, gt, isNotNull, isNull, or, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_personal_history as rows } from "../../db/schemas.pg";
+import { logStreamKey } from "./ordered-log-sql";
 import type { PersonalIndexDelta } from "./personal-history-index";
 import { personalIndexKey, personalIndexPages } from "./personal-index-pages";
+import { storageOwnerKey } from "./storage-owner-key";
 
 export type PersonalIndexTransaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 export const personalIndexAddress = (owner: StorageOwner) => ({
-  workbench_id: owner.workbenchId,
-  extension_id: owner.extensionId,
+  owner_id: storageOwnerKey(owner),
 });
 const pendingIndexOrder = (owner: StorageOwner, sourceId: string | undefined, pendingId: string) => {
   if (sourceId === undefined) return;
   return sql`NOT EXISTS (
-          SELECT 1 FROM storage_log_entries candidate
-          INNER JOIN storage_log_entries newer
-            ON newer.workbench_id = candidate.workbench_id AND newer.extension_id = candidate.extension_id
-              AND newer.log_name = candidate.log_name AND newer.scope = candidate.scope AND newer.stream = candidate.stream
-          WHERE candidate.workbench_id = ${owner.workbenchId} AND candidate.extension_id = ${owner.extensionId}
-            AND candidate.log_name = 'index' AND candidate.scope = 'project' AND candidate.stream = ${sourceId}
+          SELECT 1 FROM log_entries candidate
+          INNER JOIN log_entries newer ON newer.stream_id = candidate.stream_id
+          WHERE candidate.stream_id = ${logStreamKey({ owner, name: "index", scope: "project", stream: sourceId, writerId: sourceId })}
             AND candidate.entry_id = ${pendingId} AND newer.entry_id = ${rows.pending_id}
             AND newer.local_sequence > candidate.local_sequence
         )`;
@@ -53,7 +51,7 @@ const updatePersonalIndexRow = (
       pending_id: pendingId ?? null,
     })
     .onConflictDoUpdate({
-      target: [rows.workbench_id, rows.extension_id, rows.kind, rows.device_id, rows.record_id],
+      target: [rows.owner_id, rows.kind, rows.device_id, rows.record_id],
       set: { value: delta.value, seed_id: delta.seedId ?? null, pending_id: pendingId ?? null },
       setWhere: and(
         precedence,

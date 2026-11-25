@@ -91,7 +91,8 @@ export const copyFileOwnerBytes = async (
   const temporary = `${target}.${randomUUID()}.tmp`;
   try {
     await copyFile(source.storage_path, temporary, constants.COPYFILE_EXCL);
-    const file = await open(temporary, "r");
+    // Windows requires write access to flush an existing file handle.
+    const file = await open(temporary, process.platform === "win32" ? "r+" : "r");
     try {
       await file.sync();
     } finally {

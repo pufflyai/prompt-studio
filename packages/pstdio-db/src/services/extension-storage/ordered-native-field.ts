@@ -5,8 +5,7 @@ import { readTextDocumentSeed } from "pstdio-sync/text";
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
-import { ensureOrderedOwner } from "./ordered-conversion";
-import { readConversion } from "./ordered-conversion-state";
+import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
 import { withOrderedOwner } from "./ordered-journal";
 import { exposeOrderedTextFrontier, readOrderedTextFrontier } from "./ordered-native-frontier";
 import { type OrderedFieldMarker, orderedFieldMarkerId, readOrderedMarker } from "./ordered-native-metadata";
@@ -48,7 +47,7 @@ export const runOrderedNativeField = async <T>(input: {
   external?: boolean;
   generation?: string;
 }) => {
-  if (await readConversion(input.db, input.owner)) await ensureOrderedOwner(input.db, input.owner);
+  assertStorageOwnerAdmitted(input.db, input.owner);
   if (!(await findOrderedNativeField(input.db, input.owner, input.key))) return undefined;
   return withOrderedOwner(input.db, input.owner, async (journal, tx) => {
     const binding = await findOrderedNativeField(tx, input.owner, input.key);
@@ -121,7 +120,7 @@ export const orderedNativeSnapshot = async (db: DbClient, owner: StorageOwner, k
 };
 
 export const orderedNativeRevision = async (db: DbClient, owner: StorageOwner, key: string) => {
-  if (await readConversion(db, owner)) await ensureOrderedOwner(db, owner);
+  assertStorageOwnerAdmitted(db, owner);
   if (!(await findOrderedNativeField(db, owner, key))) return undefined;
   return (await readOrderedMarker<OrderedFieldMarker>(db, owner, orderedFieldMarkerId(key)))?.revision ?? 0;
 };

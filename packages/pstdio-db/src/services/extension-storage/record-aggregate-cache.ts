@@ -2,7 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { StorageAggregateResult } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_record_sync as legacy, storage_ordered_owners as owners } from "../../db/schemas.pg";
+import { owners } from "../../db/schemas.pg";
 
 /** Local epochs are fresh UUIDs after owner recreation. Joined/restored Cloud owners stay uncached. */
 export const aggregateCacheEpochs = async (
@@ -13,25 +13,25 @@ export const aggregateCacheEpochs = async (
   const extensions = [...new Set([owner.extensionId, ...(identities ? ["pstdio"] : [])])];
   const rows = await connection
     .select({
+      ownerId: owners.id,
       extensionId: owners.extension_id,
       epoch: owners.epoch,
       joined: owners.joined,
-      legacyJoined: legacy.joined,
     })
     .from(owners)
-    .leftJoin(legacy, and(eq(legacy.workbench_id, owners.workbench_id), eq(legacy.extension_id, owners.extension_id)))
-    .where(and(eq(owners.workbench_id, owner.workbenchId), inArray(owners.extension_id, extensions)));
+    .where(and(eq(owners.project_id, owner.workbenchId), inArray(owners.extension_id, extensions)));
   if (
     rows.length !== extensions.length ||
     rows.some(
       (row) =>
-        row.joined ||
-        row.legacyJoined ||
-        !/^local:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(row.epoch ?? ""),
+        row.joined || !/^local:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(row.epoch ?? ""),
     )
   )
     return;
-  return extensions.map((id) => rows.find((row) => row.extensionId === id)!.epoch);
+  return extensions.map((id) => {
+    const row = rows.find((row) => row.extensionId === id)!;
+    return [row.ownerId, row.epoch];
+  });
 };
 
 const maximumEntryBytes = 65_536;
