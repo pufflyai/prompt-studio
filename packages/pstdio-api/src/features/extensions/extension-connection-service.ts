@@ -2,9 +2,9 @@ import type { ConfigureExtensionConnectionInput } from "pstdio-api-contracts";
 import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionConnectionsApi } from "pstdio-api-contracts/extension-kernel";
 import type { ConnectionSecretStore } from "./connection-secret-store";
+import { deleteSecret, prepareProjectConnectionRemoval, reportCleanupError } from "./extension-connection-cleanup";
 import { createExtensionConnectionRequestService } from "./extension-connection-request-service";
 import {
-  type ConnectionCleanupContext,
   type ConnectionKey,
   connectionKey,
   type ExtensionConnectionServiceDeps,
@@ -12,27 +12,6 @@ import {
   toConnectionRecord,
 } from "./extension-connection-service-types";
 import { ConnectionInputError, validateBaseUrl, validateSharedOrigin } from "./extension-connection-transport";
-
-const prepareProjectConnectionRemoval = async (deps: ExtensionConnectionServiceDeps, projectId: string) => {
-  const secretRefs = await deps.connectionsDBService.credentials.projectRefs(projectId);
-  return async () => {
-    for (const secretRef of secretRefs) await deleteSecret(deps, secretRef, "remove_project_secret");
-  };
-};
-
-const reportCleanupError = (deps: ExtensionConnectionServiceDeps, error: unknown, context: ConnectionCleanupContext) =>
-  Promise.resolve()
-    .then(() => deps.onCleanupError?.(error, context))
-    .catch(() => {});
-
-const deleteSecret = async (deps: ExtensionConnectionServiceDeps, secretRef: string, operation: string) => {
-  try {
-    if (await deps.connectionsDBService.credentials.isReferenced(secretRef)) return;
-    await deps.secretStore.delete(secretRef);
-  } catch (error) {
-    await reportCleanupError(deps, error, { operation, secretRef });
-  }
-};
 
 const removeExtensionConnections = async (
   deps: ExtensionConnectionServiceDeps,
