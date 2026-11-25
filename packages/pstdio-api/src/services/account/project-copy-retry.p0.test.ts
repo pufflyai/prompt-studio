@@ -7,9 +7,13 @@ import { createProjectCloudCatalog } from "./project-cloud-catalog";
 import { createProjectCopyStore } from "./project-copy-store";
 
 test.each([
-  true,
-  false,
-])("copy retry keeps the old failure unavailable through native refresh and restart (stored copy: %s)", async (storedCopy) => {
+  [true, "needs-attention"],
+  [false, "needs-attention"],
+  [true, "first-download-incomplete"],
+  [false, "first-download-incomplete"],
+  [true, "offline"],
+  [false, "offline"],
+] as const)("copy retry keeps the old failure unavailable through refresh and restart (stored: %j, state: %s)", async (storedCopy, failedState) => {
   const root = await mkdtemp(join(tmpdir(), "project-copy-retry-"));
   const accountFile = join(root, "account.json");
   const copies = createProjectCopyStore(accountFile);
@@ -82,33 +86,56 @@ test.each([
         phase: "downloading",
         automatic: true,
       });
-    status = { ...status, state: "first-download-incomplete" };
+    status = { ...status, state: failedState === "needs-attention" ? "first-download-incomplete" : failedState };
     expect(await catalog.downloadCloudProject(id)).toEqual({ projectId: id, presence: "downloading" });
     await new Promise<void>((resolve) => setImmediate(resolve));
     expect({ attempts, refreshes }).toEqual({ attempts: 0, refreshes: 1 });
     if (storedCopy) expect((await copies.forAccount(login))[0]?.automatic).toBeUndefined();
-    status = { ...status, state: "needs-attention" };
+    status = {
+      ...status,
+      state: failedState,
+      sources:
+        failedState === "needs-attention"
+          ? undefined
+          : [
+              {
+                id: "core",
+                phase: "retrying",
+                connected: false,
+                busy: false,
+                downloaded: false,
+                error: "Cloud source failed; retry scheduled",
+                files: [],
+              },
+            ],
+    };
     holdRefresh = true;
     expect(await canDownload()).toBe(true);
     expect(await catalog.downloadCloudProject(id)).toEqual({ projectId: id, presence: "downloading" });
     await refreshStarted.promise;
     expect(await canDownload()).toBe(false);
-    expect((await catalog.fenceLocalStatus(id, login, async () => status)).state).toBe("first-download-incomplete");
+    expect((await catalog.fenceLocalStatus(id, login, async () => status)).state).toBe(
+      failedState === "needs-attention" ? "first-download-incomplete" : failedState,
+    );
     expect((await catalog.fenceLocalStatus(id, { ...login, deviceId: "other" }, async () => status)).state).toBe(
-      "needs-attention",
+      failedState,
     );
     await catalog.downloadCloudProject(id);
     expect(attempts).toBe(0);
     finishRefresh.resolve();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(attempts).toBe(1);
     await retryStarted.promise;
     expect(await canDownload()).toBe(false);
-    expect((await catalog.fenceLocalStatus(id, login, async () => status)).state).toBe("first-download-incomplete");
+    expect((await catalog.fenceLocalStatus(id, login, async () => status)).state).toBe(
+      failedState === "needs-attention" ? "first-download-incomplete" : failedState,
+    );
     await catalog.downloadCloudProject(id);
     expect(attempts).toBe(1);
     finishRetry.resolve();
     await new Promise<void>((resolve) => setImmediate(resolve));
     expect(await canDownload()).toBe(true);
-    expect((await catalog.fenceLocalStatus(id, login, async () => status)).state).toBe("needs-attention");
+    expect((await catalog.fenceLocalStatus(id, login, async () => status)).state).toBe(failedState);
 
     if (storedCopy) {
       let preparations = 0;

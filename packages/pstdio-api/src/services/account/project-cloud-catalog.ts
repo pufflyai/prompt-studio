@@ -110,6 +110,9 @@ const createCopyRetries = (
   };
 };
 
+const syncNeedsRetry = (status: ProjectSyncStatus | undefined) =>
+  status?.state === "needs-attention" || Boolean(status?.sources?.some((source) => source.error));
+
 const requestDiscoveredCopy = async (
   input: Pick<CatalogInput, "projects" | "refresh" | "syncStatus">,
   id: string,
@@ -118,7 +121,7 @@ const requestDiscoveredCopy = async (
   const local = await input.projects.get(id);
   const status = local ? await input.syncStatus(id) : undefined;
   if (status?.offlineReady) return { projectId: id, presence: "downloaded" as const };
-  if (status?.state === "needs-attention") await retry();
+  if (syncNeedsRetry(status)) await retry();
   else void input.refresh();
   return { projectId: id, presence: "downloading" as const };
 };
@@ -126,7 +129,7 @@ const requestDiscoveredCopy = async (
 const storedCopyNeedsRetry = async (input: Pick<CatalogInput, "projects" | "syncStatus">, copy: ProjectCopy) => {
   if (copy.phase !== "downloading" || !(await input.projects.get(copy.projectId))) return false;
   const status = await input.syncStatus(copy.projectId).catch(() => undefined);
-  return status?.state === "needs-attention";
+  return syncNeedsRetry(status);
 };
 
 const createCopySyncStatus =
