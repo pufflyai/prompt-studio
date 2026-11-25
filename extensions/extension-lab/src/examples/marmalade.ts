@@ -4,7 +4,7 @@ import { marmaladeShortcuts } from "../apps/marmalade/marmalade-shortcuts";
 import { defineExample, webview } from "../definition";
 
 const views = [
-  webview("marmalade-canvas", "Great Wave"),
+  webview("marmalade-canvas", "Great Wave", ["files.save", "resources.actions.register"]),
   webview("marmalade-inspector", "Properties and layers", ["preferences.get", "preferences.set"]),
   marmaladeActionBar,
   webview("marmalade-nav", "Marmalade"),

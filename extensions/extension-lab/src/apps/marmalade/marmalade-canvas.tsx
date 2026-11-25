@@ -6,6 +6,7 @@ import { EditingError } from "../../editing-error";
 import { ExampleIcon } from "../../icon";
 import { MarmaladeCanvasLayer } from "./marmalade-canvas-layer";
 import { type MarmaladeDrawing, marmaladeDrawingAction } from "./marmalade-drawing";
+import { MarmaladeExport } from "./marmalade-export";
 import { useMarmaladeGesture } from "./marmalade-gesture";
 import { marmaladeLayers } from "./marmalade-layers";
 import { marmaladeStore, useMarmalade } from "./marmalade-store";
@@ -89,6 +90,7 @@ const MarmaladeCanvasContent = () => {
         tabIndex={0}
         onKeyDown={zoomKey}
       >
+        <MarmaladeExport />
         <svg
           ref={svg}
           role="application"

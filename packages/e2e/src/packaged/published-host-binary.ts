@@ -2,10 +2,31 @@ import { createHash, randomUUID } from "node:crypto";
 import { chmod, mkdir, rename, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { setTimeout } from "node:timers/promises";
+
+const DOWNLOAD_ATTEMPTS = 3;
+const DOWNLOAD_TIMEOUT_MS = 120_000;
+const TEMPORARY_DOWNLOAD_STATUSES = new Set([502, 503, 504]);
 
 export const hostBinaryName = () => {
   const platform = process.platform === "win32" ? "win" : process.platform;
   return `pstdio-${platform}-${process.arch}${process.platform === "win32" ? ".exe" : ""}`;
+};
+
+const fetchHostBinary = async (tag: string, name: string) => {
+  const url = `https://github.com/pufflyai/prompt-studio/releases/download/${encodeURIComponent(tag)}/${name}`;
+  const signal = AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS);
+  for (let attempt = 1; ; attempt++) {
+    const response = await fetch(url, { signal });
+    if (response.ok) return response;
+
+    const error = new Error(`Cannot download ${tag} host: HTTP ${response.status}`);
+    await response.body?.cancel();
+    if (attempt === DOWNLOAD_ATTEMPTS || !TEMPORARY_DOWNLOAD_STATUSES.has(response.status)) throw error;
+
+    console.warn(`${error.message}. Retrying release asset download (attempt ${attempt + 1}/${DOWNLOAD_ATTEMPTS})`);
+    await setTimeout(attempt * 1_000, undefined, { signal });
+  }
 };
 
 /** Downloads one published `pstdio` binary into a cache folder once and verifies its checksum. */
@@ -15,9 +36,7 @@ export const downloadHostBinary = async (input: { tag: string; cacheFolder: stri
   await mkdir(directory, { recursive: true });
   const path = join(directory, name);
   if (!(await Bun.file(path).exists())) {
-    const url = `https://github.com/pufflyai/prompt-studio/releases/download/${encodeURIComponent(input.tag)}/${name}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`Cannot download ${input.tag} host: HTTP ${response.status}`);
+    const response = await fetchHostBinary(input.tag, name);
     // An interrupted download must not leave a truncated binary that fails every later run.
     const partial = `${path}.${randomUUID()}.partial`;
     try {
