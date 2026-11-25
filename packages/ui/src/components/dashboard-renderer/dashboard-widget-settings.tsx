@@ -1,4 +1,4 @@
-import { Box, Button, Icon, IconButton, Input, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Box, Button, Icon, IconButton, Input, Stack, Text, Textarea, useSlotRecipe } from "@chakra-ui/react";
 import { Settings2, Trash2 } from "lucide-react";
 import { useId, useRef } from "react";
 import { DisplayMenuSelect } from "@/components/kanban-renderer/display-menu";
@@ -15,6 +15,7 @@ import {
   widgetKinds,
   widgetLabel,
 } from "./dashboard-types";
+import { WidgetColors } from "./dashboard-widget-colors";
 
 interface WidgetSettingsProps {
   widget: DashboardWidget;
@@ -28,6 +29,7 @@ interface WidgetSettingsProps {
 export function WidgetSettings(props: WidgetSettingsProps) {
   const { widget, sources, open, onOpenChange, onChange, onRemove } = props;
   const titleId = useId();
+  const descriptionId = useId();
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
   const input = useRef<HTMLInputElement>(null);
   const source = sources.find(({ id }) => id === widget.source);
@@ -67,7 +69,21 @@ export function WidgetSettings(props: WidgetSettingsProps) {
                     ref={input}
                     id={titleId}
                     value={widget.title}
+                    placeholder={widget.kind === "custom" ? source?.name : undefined}
                     onChange={(event) => onChange({ ...widget, title: event.target.value })}
+                  />
+                </Stack>
+                <Stack gap="xs">
+                  <Text asChild textStyle="label/S/regular">
+                    <label htmlFor={descriptionId}>Description</label>
+                  </Text>
+                  <Textarea
+                    id={descriptionId}
+                    rows={2}
+                    value={
+                      widget.description ?? (widget.kind === "metric" ? source?.metric?.description : undefined) ?? ""
+                    }
+                    onChange={(event) => onChange({ ...widget, description: event.target.value })}
                   />
                 </Stack>
                 <Stack gap="2xs">
@@ -88,9 +104,31 @@ export function WidgetSettings(props: WidgetSettingsProps) {
                     label="Data"
                     value={widget.source}
                     options={availableSources.map(({ id, name }) => ({ value: id, label: name }))}
-                    onSelect={(source) => onChange({ ...widget, source })}
+                    onSelect={(id) => {
+                      if (id === widget.source) return;
+                      const next = availableSources.find(({ id: sourceId }) => sourceId === id);
+                      const defaults = source?.customWidgetDefaults;
+                      const nextDefaults = next?.customWidgetDefaults;
+                      if (widget.kind !== "custom" || (!defaults && !nextDefaults)) {
+                        onChange({ ...widget, source: id });
+                        return;
+                      }
+                      onChange({
+                        ...widget,
+                        source: id,
+                        title: widget.title === (defaults?.title ?? "") ? (nextDefaults?.title ?? "") : widget.title,
+                        description:
+                          widget.description === defaults?.description ? nextDefaults?.description : widget.description,
+                      });
+                    }}
                   />
                 </Stack>
+                <WidgetColors
+                  key={`${widget.kind}:${widget.source}`}
+                  widget={widget}
+                  source={source}
+                  onChange={onChange}
+                />
               </Stack>
             </ScrollArea>
             <Box p="sm" borderTopWidth="1px" borderColor="border.subtle">

@@ -1,5 +1,6 @@
 export { DashboardRenderer } from "./dashboard-renderer";
 export type {
+  DashboardColorSettings,
   DashboardDataSource,
   DashboardDefinition,
   DashboardLayoutMode,
@@ -7,6 +8,8 @@ export type {
   DashboardScatterPoint,
   DashboardSeriesPoint,
   DashboardWidget,
+  DashboardWidgetAppearance,
+  DashboardWidgetColor,
   DashboardWidgetKind,
   GridPlacement,
 } from "./dashboard-types";

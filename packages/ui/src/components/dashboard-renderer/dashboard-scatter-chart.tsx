@@ -1,48 +1,53 @@
 import { Text } from "@chakra-ui/react";
-import { colorLegend, colorLegendItems, defineChart, dot } from "@tanstack/charts";
+import { colorLegend, defineChart, dot } from "@tanstack/charts";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { portal } from "@tanstack/charts/tooltip/portal";
-import { Chart } from "@/components/charts/chart";
-import type { DashboardDataSource } from "./dashboard-types";
+import { Chart, chartColor } from "@/components/charts/chart";
+import { hasCoordinates, resolveWidgetColor, scatterColorGroups, widgetColorRange } from "./dashboard-colors";
+import { type DashboardDataSource, type DashboardWidget, widgetLabel } from "./dashboard-types";
 
 const number = new Intl.NumberFormat(undefined, { maximumSignificantDigits: 17 });
-const ungrouped = 0;
 
-export function DashboardScatterChart(props: { label: string; scatter?: DashboardDataSource["scatter"] }) {
-  const { label, scatter } = props;
+export function DashboardScatterChart(props: { widget: DashboardWidget; scatter?: DashboardDataSource["scatter"] }) {
+  const { widget, scatter } = props;
+  const label = widgetLabel(widget);
   const { points = [], xLabel = "X", yLabel = "Y" } = scatter ?? {};
-  const values = points
-    .filter(({ x, y }) => Number.isFinite(x) && Number.isFinite(y))
-    .map((point) => ({ ...point, colorGroup: point.group ?? ungrouped }));
+  const values = points.filter(hasCoordinates);
   if (!values.length)
     return (
       <Text color="fg.muted" textStyle="label/S/regular">
         No scatterplot data
       </Text>
     );
-  const keys = new Set(values.map(({ colorGroup }) => colorGroup));
-  const groups = Array.from(keys)
-    .filter((key) => typeof key === "string")
-    .sort();
-  const domain = keys.has(ungrouped) ? [...groups, ungrouped] : groups;
-  let ungroupedLabel = "No group";
-  for (let suffix = 2; keys.has(ungroupedLabel); suffix++) ungroupedLabel = `No group (${suffix})`;
-  const legend = colorLegend({
-    placement: "bottom",
-    items: colorLegendItems({ label: { format: (key) => (key === ungrouped ? ungroupedLabel : String(key)) } }),
-  });
+  const { keys: groups, ungroupedLabel } = scatterColorGroups(values);
+  const color = resolveWidgetColor(widget.color) ?? chartColor("vis.categorical.1");
   return (
     <Chart
       ariaLabel={label}
       definition={defineChart(
         {
-          marks: [dot(values, { x: "x", y: "y", color: "colorGroup", r: 4 })],
+          marks: [
+            dot(values, {
+              x: "x",
+              y: "y",
+              r: 4,
+              ...(groups.length ? { color: ({ group }) => group ?? ungroupedLabel } : { fill: color }),
+            }),
+          ],
           scales: {
             x: { scale: scaleLinear, nice: true, axis: { label: xLabel } },
             y: { scale: scaleLinear, nice: true, grid: true, axis: { label: yLabel } },
           },
-          ...(groups.length ? { color: { domain, legend } } : {}),
+          ...(groups.length
+            ? {
+                color: {
+                  domain: groups,
+                  range: widgetColorRange(widget, groups),
+                  legend: colorLegend({ placement: "bottom" }),
+                },
+              }
+            : {}),
         },
         {
           keyboard: true,

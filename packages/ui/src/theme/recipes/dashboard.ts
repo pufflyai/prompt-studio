@@ -12,6 +12,8 @@ export const dashboardRecipe = defineSlotRecipe({
     "guideCell",
     "card",
     "cardHeader",
+    "cardHeading",
+    "cardDescription",
     "widgetToolbar",
     "selectionOutline",
     "plot",
@@ -107,6 +109,8 @@ export const dashboardRecipe = defineSlotRecipe({
       "&[data-moving=true] [data-dashboard-selection]": { opacity: "0" },
     },
     cardHeader: { display: "flex", alignItems: "center", gap: "xs", p: "sm", minW: "0" },
+    cardHeading: { flex: "1", minW: "0", gap: "2xs", overflowWrap: "anywhere" },
+    cardDescription: { textStyle: "label/XS/regular", color: "fg.muted", lineClamp: 2, overflowWrap: "anywhere" },
     widgetToolbar: {
       marginLeft: "auto",
       flexShrink: "0",

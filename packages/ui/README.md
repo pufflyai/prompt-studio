@@ -169,13 +169,24 @@ widget sums positive series values by label and shows each label's share.
 Use the same set of cluster names in the scatter groups and ring series to
 match their colors.
 
+Widget settings let readers edit the title and description, choose an accent
+for a line, bar, or sparkline, and pick a color for each series, cluster, or
+ring slice. Choosing **Default** restores the chart's palette. Widgets without
+a graph show text settings.
+
 For charts with their own marks, legends, or interactions, set the widget's kind
 to `"custom"` and pass its component as `content` on the matching source. Only
 the source ID is saved in the dashboard definition. A blank widget title lets
 the content supply its heading and uses the source name for the card's
-accessible label. The card scrolls when the component is taller than the widget.
+accessible label. To put a custom chart's heading and description in the widget
+editor, set them on the widget definition. Set `customWidgetDefaults` on a
+source to prefill those fields when adding a custom widget. The card scrolls
+when the component is taller than the widget.
 Use the shared `Portal` with `ScopedPopover`, `ScopedMenu`, or `ScopedDialog` from
 `@pstdio/ui` so an overlay closes when its widget is hidden during editing.
+To make a custom chart's colors editable, pass a `content` callback and a
+`colorSettings` label with optional series keys. The callback receives the
+resolved CSS colors plus the edited title and description.
 
 Pass `renderToolbar={(controls) => <PageToolbar>{controls}</PageToolbar>}` to put
 the same Edit, Apply, and Cancel controls in an existing page toolbar. The callback

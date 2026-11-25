@@ -4,6 +4,20 @@ import type { DataTableProps } from "../data-table/types";
 export type DashboardWidgetKind = "metric" | "line" | "bar" | "scatter" | "ring" | "table" | "custom";
 export type DashboardLayoutMode = "vertical" | "horizontal" | "free";
 export type DashboardResizeHandle = "w" | "e" | "s" | "sw" | "se";
+export type DashboardWidgetColor = "blue" | "purple" | "teal" | "green" | "orange" | "red" | "pink" | "gray";
+
+export interface DashboardColorSettings {
+  label: string;
+  series?: { label: string; keys: readonly string[]; names?: Readonly<Record<string, string>> };
+}
+
+/** Custom content receives the edited text and resolved CSS colors. */
+export interface DashboardWidgetAppearance {
+  title?: string;
+  description?: string;
+  color?: string;
+  seriesColors: Readonly<Record<string, string>>;
+}
 
 /** Coordinates in the saved 12-column grid. Narrow layouts are derived without changing these values. */
 export interface GridPlacement {
@@ -16,6 +30,9 @@ export interface GridPlacement {
 export interface DashboardWidget {
   id: string;
   title: string;
+  description?: string;
+  color?: DashboardWidgetColor;
+  seriesColors?: Record<string, DashboardWidgetColor>;
   kind: DashboardWidgetKind;
   /** ID of a caller-supplied data source. */
   source: string;
@@ -51,7 +68,11 @@ export interface DashboardDataSource {
   scatter?: { points: DashboardScatterPoint[]; xLabel?: string; yLabel?: string };
   table?: Pick<DataTableProps, "data" | "columnTypes">;
   /** Caller-owned widget body, such as an interactive chart with its own marks and controls. */
-  content?: ReactNode;
+  content?: ReactNode | ((appearance: DashboardWidgetAppearance) => ReactNode);
+  /** Initial heading and description when a custom widget is added for this source. */
+  customWidgetDefaults?: Pick<DashboardWidget, "title" | "description">;
+  /** Color controls for a custom widget with a content callback. */
+  colorSettings?: DashboardColorSettings;
 }
 
 export interface DashboardRendererProps {
