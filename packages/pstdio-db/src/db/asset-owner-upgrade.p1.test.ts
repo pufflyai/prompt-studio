@@ -13,7 +13,8 @@ import { assetTransfers, owners } from "./schemas.pg";
 for (const interruption of ["normal", "schema", "restore"])
   test(`asset transfers preserve upload identity and cancellation after ${interruption} owner upgrade`, async () => {
     const root = await mkdtemp(join(tmpdir(), "asset-owner-upgrade-"));
-    const previous = await createTextLogOwnerFixture(root);
+    // The preceding format retains its original upgrade contract. The 0.48 cutoff is exercised in batch-reimport.
+    const previous = await createTextLogOwnerFixture(root, 6);
     let previousClosed = false;
     let store: Awaited<ReturnType<typeof createDb>> | undefined;
     try {
@@ -37,12 +38,16 @@ for (const interruption of ["normal", "schema", "restore"])
       if (interruption !== "normal") {
         const finish = await prepareAssetOwnerUpgrade(previous.db, previous.path);
         expect((await previous.pglite.query("SELECT * FROM asset_transfers")).rows).toEqual([]);
-        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
         if (interruption === "restore") {
           await previous.pglite.exec(`CREATE FUNCTION stop_asset_restore() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN IF NEW.operation_id='operation-99' THEN RAISE EXCEPTION 'stop restoration'; END IF; RETURN NEW; END $$;
             CREATE TRIGGER stop_asset_restore BEFORE INSERT ON asset_transfers FOR EACH ROW EXECUTE FUNCTION stop_asset_restore()`);
           await expect(finish!()).rejects.toThrow("Failed query");
+          expect((await previous.pglite.query("SELECT 1 FROM asset_transfers LIMIT 1")).rows).toHaveLength(0);
+          // Reopen the retained snapshot and interrupt its row-by-row recovery after the first batch commits.
+          const resume = await prepareAssetOwnerUpgrade(previous.db, previous.path);
+          await expect(resume!()).rejects.toThrow("Failed query");
           const partial = await previous.pglite.query<{ count: number }>(
             "SELECT count(*)::int AS count FROM asset_transfers",
           );

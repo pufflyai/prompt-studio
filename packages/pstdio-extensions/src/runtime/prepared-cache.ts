@@ -3,8 +3,11 @@ import { join } from "node:path";
 import { withFileMutationLock } from "pstdio-paths";
 import { type PreparedExtensionRevision, preparedCacheRoot } from "./prepared-revision";
 
+export { preparationHostIdentity, preparedCacheRoot, revisionDigest } from "./prepared-revision";
+
 export {
   initializePublishedWebviewRevision,
+  readPublishedWebview,
   readPublishedWebviewRevision,
   recordPublishedWebviewRevision,
 } from "./published-webview-revision";

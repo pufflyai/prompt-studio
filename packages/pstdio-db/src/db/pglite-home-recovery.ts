@@ -2,9 +2,8 @@ import { lstat, mkdir, open, readdir, readFile, rename, rm, rmdir } from "node:f
 import { dirname, join, resolve } from "node:path";
 import { renamePgliteHome } from "./rename-pglite-home";
 
-// The baseline names the schema generation. A home written by any other release is
-// retired instead of upgraded, so no code has to understand older databases.
-export const engineIdentity = { format: 1, engine: "pglite-0.4", baseline: "0.46" };
+// The previous engine-compatible baseline is admitted through its frozen SQL journal.
+export const engineIdentity = { format: 1, engine: "pglite-0.4", baseline: "0.49" };
 export const engineFile = ".pstdio-engine.json";
 type Phase =
   | "home-retired"
@@ -49,6 +48,7 @@ const writeIdentity = async (path: string, value: unknown) => {
   await rename(partial, path);
   await flushDirectory(dirname(path));
 };
+export const markCurrentBaseline = (home: string) => writeIdentity(join(home, engineFile), engineIdentity);
 const hasCurrentIdentity = async (home: string) => {
   const path = join(home, engineFile);
   if (!(await exists(path))) return false;
@@ -57,7 +57,7 @@ const hasCurrentIdentity = async (home: string) => {
     return (
       identity?.format === engineIdentity.format &&
       identity?.engine === engineIdentity.engine &&
-      identity?.baseline === engineIdentity.baseline
+      (identity?.baseline === engineIdentity.baseline || identity?.baseline === "0.46")
     );
   } catch (error) {
     // A truncated marker never names the current baseline; its home is retired, not read.

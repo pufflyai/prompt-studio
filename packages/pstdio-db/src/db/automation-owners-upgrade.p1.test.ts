@@ -89,7 +89,7 @@ for (const interruption of ["normal", "capture", "schema", "partial-restore", "p
       if (interruption !== "normal") {
         await prepareAutomationOwnersUpgrade(store.db, path);
         if (interruption !== "capture") await prepareProjectExtensionsUpgrade(store.db, store.path);
-        await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
         if (interruption.startsWith("partial-")) await restorePart(store, path, interruption === "partial-restore");
         if (interruption === "partial-cleanup") await rm(`${path}-automation-owners-upgrade.jsonl`);
       }

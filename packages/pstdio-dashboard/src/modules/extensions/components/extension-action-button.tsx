@@ -4,6 +4,7 @@ import { ArrowUpCircle, CircleAlert, Clock, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { ExtensionActionState } from "./extension-action-feedback";
+import { ExtensionConflictPopover } from "./extension-conflict-popover";
 
 interface ExtensionActionButtonProps extends Omit<ProgressButtonProps, "onClick"> {
   action?: ExtensionActionState;
@@ -38,6 +39,7 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
   const retry = retryLabel ?? t("projectSettings.extensionsPanel.feedback.retry", "Retry");
   const error = action?.error === action?.label ? undefined : action?.error;
   const name = error ? `${label}: ${error}` : label;
+  if (failed && action.needsReview) return <ExtensionConflictPopover action={action} onResolve={retryAction} />;
   return (
     <ButtonGroup
       attached

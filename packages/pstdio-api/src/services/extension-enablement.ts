@@ -1,8 +1,33 @@
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { createExtensionInstancesDBService, createInstalledExtensionSourcesDBService } from "pstdio-db";
 import {
   AlwaysEnabledExtensionError,
   isAlwaysEnabledExtensionSource,
 } from "../features/extensions/always-on-extensions";
+
+import { ExtensionUpgradeNeedsReviewError } from "../features/extensions/extension-upgrade-baseline";
+import type { EnableInstalledSourceInput } from "./extension-service";
+
+export const assertExpectedExtensionProvider = async (
+  getProjectExtensionInstance: (
+    projectId: string,
+    instanceId: string,
+  ) => Promise<{
+    instance: { enabled: boolean };
+    installedSource: { extension_id: string };
+  } | null>,
+  input: EnableInstalledSourceInput,
+  expectedProvider: string | undefined,
+) => {
+  if (!expectedProvider) return;
+  // The project choice lock held by the facade spans this check, registration and the claim.
+  const expected = await getProjectExtensionInstance(input.projectId, expectedProvider);
+  if (
+    !expected?.instance.enabled ||
+    canonicalExtensionId(expected.installedSource.extension_id) !== canonicalExtensionId(input.extensionId)
+  )
+    throw new ExtensionUpgradeNeedsReviewError("The active extension provider changed. Open a fresh upgrade review.");
+};
 
 type InstalledSource = NonNullable<
   Awaited<ReturnType<ReturnType<typeof createInstalledExtensionSourcesDBService>["get"]>>
@@ -22,7 +47,11 @@ export const createExtensionEnablement = (deps: {
 
   // Check policy and claim as one serialized operation. Discovery and explicit
   // enablement cannot race an optional provider over a required one.
-  const claimExtensionId = (instance: { id: string; scope_id: string }, source: InstalledSource) => {
+  const claimExtensionId = (
+    instance: { id: string; scope_id: string },
+    source: InstalledSource,
+    expectedProvider?: string,
+  ) => {
     const key = JSON.stringify([instance.scope_id, source.extension_id]);
     const claim = (pendingClaims.get(key) ?? Promise.resolve())
       .catch(() => {})
@@ -35,6 +64,7 @@ export const createExtensionEnablement = (deps: {
           extensionId: source.extension_id,
           instanceId: instance.id,
           projectId: instance.scope_id,
+          expectedProvider,
         });
         for (const item of changed) deps.emitExtensionInstance(item);
         return changed.find((item) => item.id === instance.id) ?? null;

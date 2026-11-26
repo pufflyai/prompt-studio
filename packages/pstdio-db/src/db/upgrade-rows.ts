@@ -49,7 +49,7 @@ export async function* readUpgradeRows(db: DbClient, source: UpgradeSource) {
         sql`, `,
       )},
         octet_length(row_to_json(t)::text) AS encoded_bytes
-      FROM (${rows}) t WHERE ${scope} ${boundary} ORDER BY ${sql.join(
+      FROM (${rows}) t WHERE (${scope}) ${boundary} ORDER BY ${sql.join(
         source.keys.map((key) => keyColumn(key, source.nullableKeys)),
         sql`, `,
       )} LIMIT 200
@@ -59,7 +59,7 @@ export async function* readUpgradeRows(db: DbClient, source: UpgradeSource) {
       const lower = group.first ? positions[group.first - 1] : after;
       const start = lower ? sql`${key} > ${positionTuple(source.keys, lower)} AND` : sql``;
       const { rows: batch } = await db.execute<Record<string, unknown>>(sql`SELECT * FROM (${rows}) t
-        WHERE ${scope} AND ${start} ${key} <= ${positionTuple(source.keys, group.last)}
+        WHERE (${scope}) AND ${start} ${key} <= ${positionTuple(source.keys, group.last)}
         ORDER BY ${sql.join(
           source.keys.map((key) => keyColumn(key, source.nullableKeys)),
           sql`, `,

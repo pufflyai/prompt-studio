@@ -61,6 +61,7 @@
         "errorCopied": "エラーをコピーしました"
       },
       "upgrade": {
+        "reviewNeeded": "更新を一時停止しました",
         "waiting": "アップグレード待ち",
         "action": "アップグレード",
         "current": "拡張機能はすでに最新です",
@@ -184,6 +185,7 @@
         "retry": "再試行",
         "dismiss": "閉じる",
         "upgradingButton": "更新中",
+        "batchReviewRequired": "確認が必要（{{count}} 件）",
         "batchFailed": "{{total}} 件中 {{count}} 件の更新に失敗しました",
         "installingButton": "インストール中"
       },

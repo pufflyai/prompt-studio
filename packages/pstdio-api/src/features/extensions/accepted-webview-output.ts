@@ -1,25 +1,36 @@
-import { preparedRevisionState, readAcceptedRevision } from "pstdio-extensions";
-import { readPublishedWebviewRevision } from "pstdio-extensions/prepared-cache";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { type PreparedExtensionRevision, preparedRevisionState, readAcceptedRevision } from "pstdio-extensions";
+import { releaseBundleViews } from "pstdio-extensions/distribution";
+import { readPublishedWebview } from "pstdio-extensions/prepared-cache";
 import { runExtensionPreparation } from "./extension-preparation";
-import { readWebviewBuildSignature, removeUnownedWebviewBuilds } from "./extension-webview-build-cache";
+import {
+  publishedWebviewModule,
+  readWebviewBuildSignature,
+  removeUnownedWebviewBuilds,
+} from "./extension-webview-build-cache";
 import type { CreateExtensionWebviewBuildManagerInput } from "./extension-webview-build-reporters";
 import type { InstalledSourceWithManifest } from "./extension-webview-build-runner";
 import { expectedWebviewBuildSource } from "./extension-webview-build-runner";
 import type { loadCurrentWebviewSource } from "./extension-webview-source-load";
 import { resolveManagedWebviewPaths } from "./extension-webviews";
 
-const isPublished = (distDir: string, artifactId: string) => {
-  const expected = `prepared:${artifactId}`;
-  return readWebviewBuildSignature(distDir) === expected && readPublishedWebviewRevision(distDir) === expected;
+const isPublished = (distDir: string, artifact: { id: string; distDir: string }) => {
+  const expected = `prepared:${artifact.id}`;
+  const published = readPublishedWebview(distDir);
+  if (published?.revision !== expected) return false;
+  return published.distDir === distDir
+    ? readWebviewBuildSignature(distDir) === expected
+    : published.distDir === artifact.distDir && existsSync(publishedWebviewModule(published.distDir));
 };
 
-export const hasAcceptedWebviews = async (
-  row: InstalledSourceWithManifest | null,
+const publishAcceptedWebviews = async (
+  row: InstalledSourceWithManifest,
   cacheRoot: string,
+  accepted: PreparedExtensionRevision,
   webviewId?: string,
 ) => {
-  const accepted = row ? await readAcceptedRevision(row.source_path) : null;
-  if (!row || !accepted?.webviews) return false;
+  if (!accepted.webviews) return false;
   const views = accepted.webviews;
   const ids = webviewId ? [webviewId] : Object.keys(views);
   if (!ids.every((id) => views[id])) return false;
@@ -28,7 +39,7 @@ export const hasAcceptedWebviews = async (
       !isPublished(
         resolveManagedWebviewPaths({ installedExtensionId: row.id, webviewCacheRoot: cacheRoot, webviewId: id })
           .distDir,
-        views[id]!.id,
+        views[id]!,
       ),
   );
   if (!missing.length) return true;
@@ -43,9 +54,44 @@ export const hasAcceptedWebviews = async (
   });
 };
 
-export const hasAcceptedNativeWebviews = async (row: InstalledSourceWithManifest | null) => {
+export const hasAcceptedWebviews = async (
+  row: InstalledSourceWithManifest | null,
+  cacheRoot: string,
+  viewId?: string,
+) => {
   const accepted = row ? await readAcceptedRevision(row.source_path) : null;
-  return accepted?.webviews !== undefined && Object.keys(accepted.webviews).length === 0;
+  return !!(row && accepted && (await publishAcceptedWebviews(row, cacheRoot, accepted, viewId)));
+};
+
+export const matchesAcceptedReleaseWebviews = async (
+  row: InstalledSourceWithManifest,
+  revision: PreparedExtensionRevision,
+) => {
+  if (!revision.prebuiltRelease || !revision.webviews) return false;
+  const bundleViews = join(dirname(revision.packagePath), releaseBundleViews);
+  if (
+    !Object.values(revision.webviews).every(
+      (view) => dirname(view.distDir) === bundleViews && existsSync(publishedWebviewModule(view.distDir)),
+    )
+  )
+    return false;
+  return runExtensionPreparation<boolean>("source.matches-release", {
+    sourcePath: row.source_path,
+    packagePath: revision.packagePath,
+  });
+};
+
+export const retainAcceptedWebviews = async (row: InstalledSourceWithManifest | null, cacheRoot: string) => {
+  if (!row) return;
+  const revision = await readAcceptedRevision(row.source_path);
+  if (!revision?.webviews) return;
+  const views = Object.keys(revision.webviews);
+  if (!views.length) return views;
+  if (
+    (await matchesAcceptedReleaseWebviews(row, revision)) &&
+    (await publishAcceptedWebviews(row, cacheRoot, revision))
+  )
+    return views;
 };
 
 export const notifyAcceptedWebviewPublication = async (
@@ -79,7 +125,7 @@ export const notifyAcceptedWebviewPublication = async (
             webviewCacheRoot: cacheRoot,
             webviewId: id,
           }).distDir,
-          artifact.id,
+          artifact,
         ),
       )
     )

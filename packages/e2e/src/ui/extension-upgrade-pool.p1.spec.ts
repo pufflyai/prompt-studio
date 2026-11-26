@@ -1,15 +1,32 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { expect, type Route, test } from "@playwright/test";
+import { expect, type Locator, type Page, type Route, test } from "@playwright/test";
 import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
+import { extensionUpgradeNeedsReviewCode } from "pstdio-api-contracts/extension-host";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
 
+const completedProposal = (reviewId: string, kind: "local" | "incoming") =>
+  JSON.stringify({ reviewId, revision: "refreshed", resolutions: [{ kind, path: "src/extension.ts" }] });
+
+const openConflictReview = async (page: Page, row: Locator) => {
+  await row.getByRole("button", { name: "Upgrade conflict", exact: true }).click();
+  await page.getByRole("button", { name: "Resolve", exact: true }).click();
+};
+
+const askForCorrection = async (page: Page, review: Locator) => {
+  await review.getByRole("button", { name: "Apply upgrade" }).click();
+  await expect(review).toContainText("Set the manifest version to 2.0.0");
+  await expect(review.getByRole("button", { name: "Ask agent" })).toBeEnabled();
+  const instructions = "Correct the manifest version and preserve our local export.";
+  await review.getByRole("textbox", { name: "Additional instructions (optional)" }).fill(instructions);
+  await review.getByRole("button", { name: "Ask agent" }).click();
+  await expect(review).toHaveCount(0);
+  await expect(page.locator('[contenteditable="true"]').filter({ hasText: instructions })).toBeVisible();
+};
+
 // Critical risks: real queue ownership and directly reachable recovery must survive list/detail navigation.
-test("distinguishes waiting from active upgrades and dismisses grouped results without navigation", async ({
-  page,
-  request,
-}) => {
+test("keeps individual recovery after completed bulk upgrade progress disappears", async ({ page, request }) => {
   const folder = join(process.env.E2E_HOME!, `upgrade-progress-${Date.now()}`);
   mkdirSync(folder, { recursive: true });
   const created = await request.post(`${uiOrigin}/v1/projects`, {
@@ -20,10 +37,15 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
   const inventory = await (await request.get(`${uiOrigin}/v1/projects/${project.id}/extensions`)).json();
   const targets: ProjectExtensionInstance[] = inventory.extensions
     .slice(0, 3)
-    .map((extension: ProjectExtensionInstance) => ({ ...extension, canUpgrade: true }));
+    .map((extension: ProjectExtensionInstance, index: number) => ({
+      ...extension,
+      canUpgrade: index !== 2,
+      ...(index === 2 && { hasPublishedAlternative: true, scope: "repo", enabled: true }),
+    }));
   expect(targets).toHaveLength(3);
   const waiting: { route: Route; extension: ProjectExtensionInstance }[] = [];
   const heldReads: Route[] = [];
+  const releaseComparison = Promise.withResolvers<void>();
   let holdReads = false;
   await page.route(`**/v1/projects/${project.id}/extensions`, async (route) => {
     if (holdReads) {
@@ -47,7 +69,7 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
   const row = (id: string) =>
     page
       .getByTestId("extension-entry")
-      .filter({ hasText: targets.find((extension) => extension.id === id)!.displayName });
+      .filter({ hasText: targets.find((extension) => extension.id === id)!.displayName, visible: true });
   await page.getByTestId("extensions-upgrade-all").click();
   await expect.poll(() => waiting.length).toBe(2);
   await expect(row(targets[2]!.id).getByTestId("extension-row-upgrade")).toHaveText("Waiting");
@@ -88,14 +110,15 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
     await expect(failedButton.getByRole("alert")).toContainText("Registry unavailable");
     await expect(failedButton).toContainText("Retry");
     await expect(failedButton).not.toContainText(/\d+s/);
-    await succeed(waiting[2]!);
+    const local = waiting[2]!.extension;
+    await waiting[2]!.route.fulfill({
+      status: 409,
+      json: { code: extensionUpgradeNeedsReviewCode, error: "This project is using a local copy." },
+    });
     const batchButton = page.getByTestId("extensions-upgrade-all");
-    await expect(batchButton.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "3");
-    await expect(batchButton).toContainText("1 of 3 upgrades failed");
-    await expect(batchButton).not.toContainText(/\d+s/);
-    await batchButton.locator("..").getByTestId("extension-action-dismiss").click();
-    await expect(batchButton).toContainText("Upgrade all");
-    // Batch dismissal preserves the individual failure and its direct retry action.
+    await expect(batchButton).toHaveCount(0);
+    await expect(row(local.id).getByRole("button", { name: "Upgrade conflict", exact: true })).toBeVisible();
+    // Hiding the completed batch preserves individual failures and their recovery actions.
     await failedButton.click();
     await expect.poll(() => waiting.length).toBe(4);
     await expect(failedButton).toHaveAttribute("aria-busy", "true");
@@ -106,7 +129,101 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
     await expect(detail).toBeVisible();
     await expect(detail.getByTestId("extension-upgrade")).toHaveCount(0);
     expect(waiting).toHaveLength(4);
+
+    const reviewId = "1da7f099-0539-49c5-bc98-d5ad8c09ad01";
+    let refreshed = false;
+    await page.route(`**/v1/projects/${project.id}/extensions/*/upgrade-review`, async (route) => {
+      const { action, revision } = route.request().postDataJSON();
+      if (action === "apply")
+        return route.fulfill({
+          status: 400,
+          json: { error: "Set the manifest version to 2.0.0 before applying the upgrade." },
+        });
+      if (action === "begin") await releaseComparison.promise;
+      if (action === "file") {
+        expect(revision).toBe("refreshed");
+        return route.fulfill({
+          json: { action, file: { base: "old", local: "latest local", incoming: "upstream", proposed: null } },
+        });
+      }
+      if (action === "refresh") {
+        expect(revision).toBe("initial");
+        refreshed = true;
+      }
+      return route.fulfill({
+        json: {
+          action,
+          review: {
+            id: reviewId,
+            localPath: local.sourcePath,
+            incomingVersion: "2.0.0",
+            revision: refreshed ? "refreshed" : "initial",
+            createdAt: "2026-01-01T00:00:00Z",
+            separateLocalProvider: true,
+            hasOriginal: true,
+            resolutions: [],
+            changes: refreshed
+              ? [{ path: "src/extension.ts", status: "conflict", localKind: "file", incomingKind: "file" }]
+              : [],
+            changedPaths: refreshed ? undefined : ["src/extension.ts"],
+          },
+        },
+      });
+    });
+    await page.goBack();
+    await openConflictReview(page, row(local.id));
+    const review = page.getByRole("dialog", { name: `Review ${local.displayName} upgrade` });
+    await expect(review.getByRole("textbox", { name: "Additional instructions (optional)" })).toBeVisible();
+    await expect(review.getByRole("button", { name: "Ask agent" })).toBeEnabled();
+    await expect(review.getByRole("button", { name: "Keep my version" })).toBeEnabled();
+    await expect(review.getByRole("button", { name: "Use their version" })).toBeDisabled();
+    releaseComparison.resolve();
+    await expect(review).toContainText("The extension source changed during this review");
+    await review.getByRole("button", { name: "Close review" }).click();
+    await page.getByRole("button", { name: "System activity", exact: true }).click();
+    await page
+      .getByRole("alert")
+      .filter({ hasText: "This project is using a local copy." })
+      .getByRole("button", { name: "Resolve", exact: true })
+      .click();
+    await expect(review).toBeVisible();
+    await expect(review.getByRole("button", { name: "Keep local", exact: true })).toHaveCount(0);
+    await expect(review.getByRole("button", { name: "Apply upgrade" })).toHaveCount(0);
+    await page.route(
+      (url) => url.pathname === `/v1/projects/${project.id}/sessions` && url.searchParams.get("anchorId") === reviewId,
+      (route) => route.fulfill({ json: { items: [{ id: "upgrade-review-session", status: "completed" }] } }),
+    );
+    let reply = JSON.stringify({ reviewId, revision: "initial", resolutions: [] });
+    await page.route("**/v1/sessions/upgrade-review-session/conversation", (route) =>
+      route.fulfill({ json: { messages: [{ role: "assistant", parts: [{ type: "text", text: reply }] }] } }),
+    );
+    await expect(review.getByRole("button", { name: "Apply upgrade" })).toHaveCount(0);
+    await expect(review.getByRole("button", { name: "Import agent proposal" })).toHaveCount(0);
+    const instructions = "Keep the local export for our integration.";
+    await review.getByRole("textbox", { name: "Additional instructions (optional)" }).fill(instructions);
+    await review.getByRole("button", { name: "Ask agent" }).click();
+    await expect(review).toHaveCount(0);
+    await expect(page.locator('[contenteditable="true"]').filter({ hasText: instructions })).toBeVisible();
+    expect(refreshed).toBe(true);
+    reply = completedProposal(reviewId, "local");
+    await openConflictReview(page, row(local.id));
+    await expect(review).toContainText("The agent prepared a resolution.");
+    await expect(review.getByRole("button", { name: "Apply upgrade" })).toBeEnabled();
+    await askForCorrection(page, review);
+    reply = completedProposal(reviewId, "incoming");
+    await openConflictReview(page, row(local.id));
+    await expect(review).toContainText("The agent prepared a resolution.");
+    await expect(review.getByRole("button", { name: "Apply upgrade" })).toBeEnabled();
+    await review.getByRole("button", { name: "Keep my version" }).click();
+    await expect(review).toHaveCount(0);
+    await expect(row(local.id)).toContainText(`v${local.version}`);
+    await expect(row(local.id).getByRole("button", { name: "Upgrade conflict", exact: true })).toHaveCount(0);
+    await page.goBack();
+    await expect(page.getByTestId("extensions-panel").filter({ visible: true })).toBeVisible();
+    await expect(review).toHaveCount(0);
+    expect(waiting).toHaveLength(4);
   } finally {
+    releaseComparison.resolve();
     await Promise.all(heldReads.map((route) => route.abort()));
     await page.unrouteAll({ behavior: "ignoreErrors" });
   }

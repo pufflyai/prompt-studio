@@ -81,7 +81,7 @@ export const knownDependencies = async (journal: OrderedJournal, operation: Orde
   return decisions;
 };
 
-const projectPending = async (
+export const projectPendingOrderedRecords = async (
   journal: OrderedJournal,
   tx: OrderedTransaction,
   owner: StorageOwner,
@@ -142,7 +142,7 @@ export const rebaseOrderedProjection = async (
     tx,
     owner,
     changed,
-    (ids, blocked) => projectPending(journal, tx, owner, ids, blocked, hasPending),
+    (ids, blocked) => projectPendingOrderedRecords(journal, tx, owner, ids, blocked, hasPending),
   );
   const removed = await removeOrderedProjection(
     tx,

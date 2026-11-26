@@ -25,4 +25,5 @@ export * from "./related-resource-opening";
 export * from "./renderers";
 export * from "./settings";
 export * from "./targets";
+export * from "./upgrade-review";
 export * from "./workbench-metadata";

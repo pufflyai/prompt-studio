@@ -8,12 +8,12 @@ import { engineFile, engineIdentity } from "./pglite-home-recovery";
 import * as schema from "./schemas.pg";
 
 /** Build the preceding schema from its unchanged generated migrations. */
-export const createTextLogOwnerFixture = async (root: string) => {
+export const createTextLogOwnerFixture = async (root: string, lastMigration = 10) => {
   const path = join(root, "database");
   const migrationsFolder = join(root, "prior-migrations");
-  const source = join(import.meta.dirname, "../../drizzle");
+  const source = join(import.meta.dirname, "../../drizzle-0.46");
   const journal = JSON.parse(await readFile(join(source, "meta/_journal.json"), "utf8"));
-  journal.entries = journal.entries.filter((entry: { idx: number }) => entry.idx <= 10);
+  journal.entries = journal.entries.filter((entry: { idx: number }) => entry.idx <= lastMigration);
   await mkdir(join(migrationsFolder, "meta"), { recursive: true });
   await writeFile(join(migrationsFolder, "meta/_journal.json"), JSON.stringify(journal));
   for (const entry of journal.entries)
@@ -26,7 +26,7 @@ export const createTextLogOwnerFixture = async (root: string) => {
   const db = drizzle(pglite, { schema });
   try {
     await migratePglite(pglite, migrationsFolder);
-    await writeFile(join(path, engineFile), JSON.stringify(engineIdentity));
+    await writeFile(join(path, engineFile), JSON.stringify({ ...engineIdentity, baseline: "0.46" }));
   } catch (error) {
     await pglite.close();
     throw error;

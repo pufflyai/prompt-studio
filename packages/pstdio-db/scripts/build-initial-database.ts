@@ -4,7 +4,6 @@ import { dirname, join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
-import { retireLegacyRecordTables } from "../src/db/legacy-record-retirement";
 import * as schema from "../src/db/schemas.pg";
 import { startupImageInputs, startupImageManifest } from "../src/db/source-startup-image";
 
@@ -18,7 +17,6 @@ export const buildInitialDatabase = async (destination: string) => {
     const migrationsFolder = join(import.meta.dirname, "../drizzle");
     const inputs = await startupImageInputs(migrationsFolder);
     await migrate(connection, { migrationsFolder });
-    await retireLegacyRecordTables(db, migrationsFolder);
     // The runtime opens only template1. A first start writes every file in the image, which is slow
     // on Windows, and the two unused databases are over half of those files.
     await db.exec("DROP DATABASE postgres");

@@ -1,7 +1,8 @@
 import type { MarketplaceExtension, ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { PstdioApiError } from "@pstdio/sdk/client";
-import { createExtensionUpgradePool } from "pstdio-api-contracts/extension-host";
+import { createExtensionUpgradePool, extensionUpgradeNeedsReviewCode } from "pstdio-api-contracts/extension-host";
 import { useTranslation } from "react-i18next";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import {
   useAddLocalExtensionFolder,
@@ -31,7 +32,10 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
       extension.id,
       {
         running: t("projectSettings.extensionsPanel.feedback.upgradingButton"),
-        failed: t("projectSettings.extensionsPanel.upgrade.failed"),
+        failed: (error) =>
+          error instanceof PstdioApiError && error.code === extensionUpgradeNeedsReviewCode
+            ? t("projectSettings.extensionsPanel.upgrade.reviewNeeded")
+            : t("projectSettings.extensionsPanel.upgrade.failed"),
       },
       (started) =>
         upgrade.mutateAsync({
@@ -48,6 +52,14 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
         queuedLabel: pool && t("projectSettings.extensionsPanel.feedback.queued"),
         draft: { extension: extension.displayName, installName: extension.installName },
         source: extensionSource(`installed:${extension.id}`, extension.displayName),
+        sourceCommand: (error) =>
+          error instanceof PstdioApiError && error.code === extensionUpgradeNeedsReviewCode
+            ? {
+                id: dashboardCommandIds.openExtensions,
+                args: { resolveInstanceId: extension.id, projectId },
+                label: t("projectSettings.extensionsPanel.upgrade.resolve", "Resolve"),
+              }
+            : { id: dashboardCommandIds.openExtensions },
       },
     );
   const handleUpgradeAll = (extensions: ProjectExtensionInstance[]) => {

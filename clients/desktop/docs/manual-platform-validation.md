@@ -93,8 +93,8 @@ This requires two different, compatible signed versions on the target platform. 
 
 1. Install the older signed version and create the test data above.
 2. Record its About version and the bundled CLI version.
-3. Choose **Check for Updates…** and capture the result. Confirm a newer version is downloaded.
-4. Quit normally when the update is ready, then reopen the app.
+3. Choose **Check for Updates…**. Confirm it checks and downloads the newer version. Once the download finishes, verify that **Update available** appears as a left-aligned status widget with the `arrow-down-to-line` icon. Move the widget with its alignment controls and verify the chosen placement survives reopening.
+4. Choose **Update available** and confirm the restart prompt opens. Choose **Later** and reopen the prompt to confirm the widget remains available. Choose **Restart** or press **Y**. If the app asks about active work, confirm stopping the test work. Verify the app reopens automatically.
 5. Confirm About and the bundled CLI both show the new version and all test data survives.
    On macOS and Windows, also run `pst --version` through the installed terminal command. On Windows, confirm it still works after Squirrel removes the previous version folder.
 6. Verify the updated application signature. On Windows, also verify the bundled `resources\bin\pstdio.exe` signature. On macOS, rerun the three application checks above.

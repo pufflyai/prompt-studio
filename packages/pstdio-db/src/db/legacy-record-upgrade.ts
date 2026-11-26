@@ -3,6 +3,7 @@ import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId } from "pstdio-sync/records";
 import { ensureFileDocument } from "../services/extension-storage/document-file-persistence";
 import { documentFilesFor } from "../services/extension-storage/document-files";
+import { releasedNumberOwners } from "../services/extension-storage/number-owner";
 import type { DbClient } from "./connection.pglite";
 import { convertLegacyNumbers } from "./legacy-number-conversion";
 import { prepareLegacyNumberInput } from "./legacy-number-input";
@@ -130,8 +131,15 @@ export const upgradeLegacyRecords = async (
     }
     const owner = { workbenchId: row.workbenchId, extensionId: row.extensionId };
     try {
-      if (present) await convertLegacyOwner(db, owner, options.signal);
-      await convertLegacyNumbers(db, database, owner, options.signal);
+      if (owner.extensionId === coreOwnerId) {
+        const { rows } = await db.execute<{ extension_id: string }>(sql`
+          SELECT extension_id FROM resource_prefixes WHERE project_id=${owner.workbenchId}
+          UNION SELECT extension_id FROM owners WHERE project_id=${owner.workbenchId}`);
+        await releasedNumberOwners.run(new Set(rows.map((row) => row.extension_id)), async () => {
+          if (present) await convertLegacyOwner(db, owner, options.signal);
+          await convertLegacyNumbers(db, database, owner, options.signal);
+        });
+      } else if (present) await convertLegacyOwner(db, owner, options.signal);
     } catch (error) {
       options.signal?.throwIfAborted();
       if (!(await isolateFailedOwner(db, database, owner, row.id, error, failed, present))) {

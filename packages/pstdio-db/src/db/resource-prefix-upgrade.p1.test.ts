@@ -124,7 +124,7 @@ test("interrupted prefix restoration retains its input and refuses to overwrite 
       SELECT 'project','example.'||lpad(n::text,3,'0'),'item','K'||n,n+10,'2026-11-20','2026-11-21'
       FROM generate_series(0,200) n`);
     const finish = await prepareResourcePrefixUpgrade(released.db, released.path);
-    await migrate(released.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+    await migrate(released.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
     await released.pglite.exec(`CREATE FUNCTION stop_prefix_restore() RETURNS trigger LANGUAGE plpgsql AS $$
       BEGIN IF NEW.prefix='K200' THEN RAISE EXCEPTION 'interrupted restoration'; END IF; RETURN NEW; END $$;
       CREATE TRIGGER stop_prefix_restore BEFORE INSERT ON resource_prefixes FOR EACH ROW

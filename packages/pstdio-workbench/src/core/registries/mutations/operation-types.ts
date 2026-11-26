@@ -11,6 +11,7 @@ export type OperationCheck<T> =
 export interface OperationSourceCommand {
   id: string;
   args?: unknown;
+  label?: string;
 }
 
 export type OperationRecoverySource = "cloud-project-picker";
@@ -23,7 +24,7 @@ export interface OperationInput<T> {
   intent?: unknown;
   title: string;
   source?: ResourceRef;
-  sourceCommand?: OperationSourceCommand;
+  sourceCommand?: OperationSourceCommand | ((error: unknown) => OperationSourceCommand | undefined);
   recoverySource?: OperationRecoverySource;
   draft?: unknown;
   describeRecovery?(): string;

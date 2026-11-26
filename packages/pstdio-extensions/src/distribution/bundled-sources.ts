@@ -1,4 +1,5 @@
 import type { PackageIdentity } from "./package";
+import type { ExtensionReleaseBundle } from "./release-bundle";
 
 export interface BundledExtensionSources {
   commit: string;
@@ -8,6 +9,7 @@ export interface BundledExtensionSources {
       installName: string;
       url: string;
       path: string;
+      bundles?: ExtensionReleaseBundle[];
     }
   >;
 }

@@ -1,8 +1,10 @@
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
+import { selectExtensionUpgradeCandidates } from "pstdio-api-contracts/extension-host";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { usePendingExtensionSourceChanges } from "@/shared/extensions/use-extension-mutation";
 import { useProjectExtensions } from "@/shared/extensions/use-project-extensions";
+import { canStartExtensionUpgrade } from "./extension-actions";
 import { ExtensionUpgradeProgress } from "./extension-upgrade-progress";
 import { ExtensionsPanelHeader } from "./extensions-panel-header";
 import { useExtensionPanelActions } from "./use-extension-panel-actions";
@@ -15,8 +17,9 @@ export const ExtensionsPageHeader = ({ input }: { input: WorkbenchPanelRenderInp
   const inventory = useProjectExtensions(projectId);
   const changing = usePendingExtensionSourceChanges(projectId);
   const actions = useExtensionPanelActions(projectId, inventory.data?.upgradeConcurrency);
-  const upgradable =
-    inventory.data?.extensions.filter((extension) => extension.canUpgrade && !changing(extension.id)) ?? [];
+  const upgradable = selectExtensionUpgradeCandidates(inventory.data?.extensions ?? []).filter(
+    ({ id }) => !changing(id) && canStartExtensionUpgrade(actions.actions[id]),
+  );
   return (
     <ExtensionsPanelHeader
       searchId={`extension-search-${input.instance.instanceId}`}
@@ -29,7 +32,7 @@ export const ExtensionsPageHeader = ({ input }: { input: WorkbenchPanelRenderInp
             batch={actions.batch}
             onUpgrade={() => void actions.handleUpgradeAll(upgradable)}
             onDismiss={actions.dismissBatch}
-            canUpgrade={upgradable.length > 0}
+            upgradeCount={upgradable.length}
           />
         )
       }

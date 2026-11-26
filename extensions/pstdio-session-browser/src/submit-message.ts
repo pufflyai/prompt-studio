@@ -1,6 +1,6 @@
 import type { ChatRendererAction, ExtensionContextBase, ResourceRef } from "@pstdio/sdk/extensions";
 import { sessionBrowser } from "../refs";
-import { sessionResource } from "./resource";
+import { sessionResource, upgradeReviewAnchor } from "./resource";
 import { selectedHarness, selectedWorkspace } from "./selection";
 
 export const submitMessage = async (
@@ -30,6 +30,7 @@ export const submitMessage = async (
     workspaceId: selectedWorkspace(action.values),
     deviceId: typeof action.values.device === "string" && action.values.device ? action.values.device : undefined,
     attachments,
+    anchors: upgradeReviewAnchor(ctx.projectId, resource),
   });
   // The host persists its guarded post-submit draft even after this placement unmounts.
   ctx.navigation.open({

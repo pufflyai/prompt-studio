@@ -14,7 +14,6 @@ import {
 import { Portal, ScrollArea, UiScopeActivity } from "@pstdio/ui";
 import { useRef, useState } from "react";
 import type { WorkbenchCore, WorkbenchStatusBarPosition, WorkbenchStatusBarSlot } from "../../core";
-import { systemActivityItemId } from "../notifications/system-errors";
 import { useRetainedViewPlacements } from "../region/use-retained-view-placements";
 import { useWorkbenchActiveModeId } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -76,9 +75,7 @@ export const WorkbenchStatusBarItems = (props: {
   const visibleItems = workbench.statusBar.listVisibleItems();
   const items =
     activeModeId === workbench.modes.getActiveModeId()
-      ? visibleItems.filter(
-          (item) => item.id === systemActivityItemId || chrome === undefined || item.id === chromeItem,
-        )
+      ? visibleItems.filter((item) => item.system || chrome === undefined || item.id === chromeItem)
       : [];
   const placements = useRetainedViewPlacements(
     workbench,
