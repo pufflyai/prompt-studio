@@ -40,4 +40,4 @@ Tools can contribute commands to `editorSlots.selection`. These actions appear i
 - [Renderer edit and refresh](../../references/extensions/0012-renderer-edit-refresh-lifecycle.md) explains how native editors load, save, and refresh.
 - [Projects and workspaces](../concepts/0001-projects-and-workspaces.md#files-and-workspaces-in-the-sidebar) describes **Files**.
 
-*Updated at: 2026-11-22*
+*Updated at: 2026-11-26*
