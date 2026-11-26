@@ -157,7 +157,8 @@ export const createWebviewUsage = (cacheRoot: string) => {
       );
       await Promise.all(
         rows.map(async (row) => {
-          if (opened.has(row.source_path) && !(await hasAcceptedWebviews(row, cacheRoot))) await check(row.id);
+          // Restore missing accepted output even when the webview has never been opened.
+          if (!(await hasAcceptedWebviews(row, cacheRoot)) && opened.has(row.source_path)) await check(row.id);
         }),
       );
     },
