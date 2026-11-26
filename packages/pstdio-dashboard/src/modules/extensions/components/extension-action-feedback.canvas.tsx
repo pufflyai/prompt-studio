@@ -6,11 +6,17 @@ import type { ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionUpgradeProgress } from "./extension-upgrade-progress";
 
 export default { title: "ProjectSettings/Extension action feedback" };
+const feedbackError = (status: ExtensionActionState["status"], conflict: boolean) => {
+  if (status !== "error") return undefined;
+  return conflict ? "This extension has local changes and could not be updated." : "Registry unavailable";
+};
 export const UpgradeFeedback = () => {
   const [status, setStatus] = useState<ExtensionActionState["status"] | undefined>("running");
   const [install, setInstall] = useState(false);
+  const [needsReview, setNeedsReview] = useState(false);
   const [completed, setCompleted] = useState(1);
   const [showBatch, setShowBatch] = useState(true);
+  const conflict = !install && needsReview && status === "error";
   const labels = {
     queued: "Waiting",
     running: install ? "Installing" : "Upgrading",
@@ -25,6 +31,15 @@ export const UpgradeFeedback = () => {
           </Button>
         ))}
         <Button onClick={() => setStatus(undefined)}>Idle</Button>
+        <Button
+          onClick={() => {
+            setNeedsReview((value) => !value);
+            setStatus("error");
+            setInstall(false);
+          }}
+        >
+          Toggle conflict
+        </Button>
         <Button onClick={() => setInstall((value) => !value)}>Toggle fresh install</Button>
         <Button
           onClick={() => {
@@ -43,7 +58,8 @@ export const UpgradeFeedback = () => {
               ? {
                   ids: ["planner", "notes", "tickets"],
                   completed,
-                  failed: status === "error" ? 1 : 0,
+                  failed: status === "error" && !conflict ? 1 : 0,
+                  reviewRequired: Number(conflict),
                   running: completed < 3,
                 }
               : undefined
@@ -53,7 +69,7 @@ export const UpgradeFeedback = () => {
             setCompleted(0);
           }}
           onDismiss={() => setShowBatch(false)}
-          canUpgrade
+          upgradeCount={conflict ? 0 : 3}
         />
       </HStack>
       <HStack borderBottomWidth="1px" borderColor="border.subtle" paddingY="sm" gap="md">
@@ -70,8 +86,9 @@ export const UpgradeFeedback = () => {
             status
               ? {
                   status,
-                  label: labels[status],
-                  error: status === "error" ? "Registry unavailable" : undefined,
+                  needsReview: conflict,
+                  label: conflict ? "Update paused" : labels[status],
+                  error: feedbackError(status, conflict),
                 }
               : undefined
           }

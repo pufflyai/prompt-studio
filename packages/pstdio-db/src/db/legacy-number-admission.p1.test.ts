@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
 import { coreOwnerId, rememberResourceNumber, resourceNumbers, resourceNumbersDocumentId } from "pstdio-sync/records";
 import { fingerprint } from "pstdio-sync-contracts";
 import * as Y from "yjs";
@@ -16,6 +17,52 @@ import { createUnadmittedLegacyFixture } from "./legacy-records/unadmitted.fixtu
 import { resource_numbers } from "./schemas.pg";
 
 const number = (id: string, value: number) => ({ id, extensionId: "example.items", kind: "item", prefix: "IT", value });
+
+test("a direct upgrade keeps a numbered resource and its allocation counter through an extension rename", async () => {
+  const root = await mkdtemp(join(tmpdir(), "legacy-number-owner-"));
+  const path = join(root, "database");
+  const { from, to } = extensionIdentityRenames[0]!;
+  const previous = `${from.publisher}.${from.name}`;
+  const extensionId = `${to.publisher}.${to.name}`;
+  const old = await createUnadmittedLegacyFixture(path);
+  try {
+    let projectId: string;
+    try {
+      const project = await createProjectsDBService(old.db).create({ name: "Numbered project" });
+      projectId = project.id;
+      await ensureStorageOwner(old.db, { workbenchId: projectId, extensionId: previous });
+      await old.pglite.query(
+        "INSERT INTO resource_prefixes(project_id,extension_id,kind,prefix,next_value) VALUES($1,$2,'item','IT',12)",
+        [projectId, previous],
+      );
+      const documents = createDocumentStorageDBService(old.db);
+      await documents.documents
+        .open(resourceNumbersDocumentId)
+        .transaction({ workbenchId: projectId, extensionId: coreOwnerId }, async ({ document }) => {
+          const resource = { ...number("saved", 7), extensionId: previous };
+          resourceNumbers(document).set(resource.id, resource);
+        });
+      await documents.flushStatistics();
+    } finally {
+      await old.close();
+    }
+    const current = await createDb({ path });
+    try {
+      const service = createExtensionResourceSequencesDBService(current.db);
+      const input = { projectId, extensionId, kind: "item", prefix: "IT" };
+      try {
+        expect((await service.identity({ ...input, id: "saved" }))?.shorthand).toBe("IT-7");
+        expect((await service.allocate(input)).shorthand).toBe("IT-12");
+      } finally {
+        await service.flush();
+      }
+    } finally {
+      await current.close();
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test("opening admits legacy numbers before services and retains newer records without reviving deleted ones", async () => {
   const root = await mkdtemp(join(tmpdir(), "legacy-number-admission-"));

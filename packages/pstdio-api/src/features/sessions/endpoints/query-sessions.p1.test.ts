@@ -44,6 +44,20 @@ test("SDK session search includes linked workspace history in one filtered page"
   expect((await client.sessions.query(project.id, { anchor, search: "100%_", limit: 1 })).items).toEqual([]);
 });
 
+test("upgrade review links resolve only through the owning project's session query", async () => {
+  const project = await handle.deps.projectService.create({ name: "Upgrade review project" });
+  const other = await handle.deps.projectService.create({ name: "Other project" });
+  const anchor = { type: "extension-upgrade-review", id: crypto.randomUUID(), extensionId: "pstdio" };
+  const session = await handle.deps.sessionService.create({
+    project_id: project.id,
+    title: "Upgrade review",
+    agent: "worker",
+    anchors: [{ ...anchor, projectId: project.id, role: "context" }],
+  });
+  expect((await client.sessions.query(project.id, { anchor })).items.map(({ id }) => id)).toEqual([session.id]);
+  expect((await client.sessions.query(other.id, { anchor })).items).toEqual([]);
+});
+
 test("SDK iteration reads a live session beyond page one and stops requesting after break", async () => {
   const project = await handle.deps.projectService.create({ name: "Paged sessions" });
   const live = await handle.deps.sessionService.create({ project_id: project.id, title: "Live", agent: "worker" });

@@ -30,6 +30,7 @@ export const useSystemActivityStatusItem = (workbench: WorkbenchCore, visible: b
       id: systemActivityItemId,
       viewId: systemActivityItemId,
       popoverViewId: detailsViewId,
+      system: true,
       slot: "leading",
     });
     return () => {

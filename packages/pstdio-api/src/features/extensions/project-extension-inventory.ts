@@ -43,6 +43,8 @@ export const listProjectExtensionInventory = async (
     installedRecords.map(async ({ instance, installedSource }) =>
       toProjectExtensionInstance(instance, installedSource, hashes.get(key(installedSource)), {
         canUpgrade: await deps.extensionUpgradeService?.canUpgrade(installedSource),
+        hasPublishedAlternative:
+          instance.enabled && (await deps.extensionUpgradeService?.hasPublishedAlternative?.(installedSource)),
       }),
     ),
   );

@@ -15,8 +15,9 @@ export const openPackagedProject = async (page: Page, project: { id: string; nam
   const picker = page
     .getByRole("dialog")
     .filter({ has: page.getByRole("button", { name: "Create project", exact: true }) });
-  if (!(await picker.isVisible()))
-    await page.getByRole("button", { name: /^Open (?:project|\/ create project)$/ }).click();
+  const openPicker = page.getByRole("button", { name: /^Open (?:project|\/ create project)$/ });
+  await picker.or(openPicker).first().waitFor();
+  if (!(await picker.isVisible())) await openPicker.click();
   await picker.getByText(name, { exact: true }).click();
   await expect(page.getByRole("tab", { name, exact: true })).toHaveAttribute("aria-selected", "true");
   // Tab selection precedes project boot, which restores the page and its overlays.

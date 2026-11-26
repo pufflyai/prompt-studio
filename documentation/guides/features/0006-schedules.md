@@ -52,6 +52,8 @@ export default defineExtension({ commands: [writeReport], schedules: [nightlyRep
 
 In cron syntax, `0 2 * * *` means minute 0 of hour 2, every day. A schedule can also pass `params` to the command. Set `disabled: true` to ship the automation turned off.
 
+Require an explicit opt-in before an automation starts or resumes an agent session. Ship the schedule with `disabled: true` unless the workflow already requires the user to enable it.
+
 A scheduled command often writes only to storage. Add a read command if you want to see its results from `pst`. For work that takes longer than one request, have the command start a durable run with `ctx.automation.enqueue`.
 
 If a schedule is missing under automations, check that it is listed in `schedules` and that `pst extensions check` reports no errors.

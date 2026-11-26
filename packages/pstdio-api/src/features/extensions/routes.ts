@@ -93,6 +93,7 @@ import {
   uninstallProjectExtensionHandler,
   uninstallProjectExtensionRoute,
 } from "./endpoints/uninstall-project-extension";
+import { upgradeExtensionReviewHandler, upgradeExtensionReviewRoute } from "./endpoints/upgrade-extension-review";
 import { upgradeProjectExtensionHandler, upgradeProjectExtensionRoute } from "./endpoints/upgrade-project-extension";
 import {
   getGlobalWebviewPreferenceHandler,
@@ -159,6 +160,7 @@ const registerProjectExtensionRoutes = (
   routes.openapi(setExtensionAutomationEnabledRoute, setExtensionAutomationEnabledHandler(deps));
   routes.openapi(reloadProjectExtensionRoute, reloadProjectExtensionHandler(deps));
   routes.openapi(upgradeProjectExtensionRoute, upgradeProjectExtensionHandler(deps));
+  routes.openapi(upgradeExtensionReviewRoute, upgradeExtensionReviewHandler(deps));
   routes.openapi(uninstallProjectExtensionRoute, uninstallProjectExtensionHandler(deps));
 };
 

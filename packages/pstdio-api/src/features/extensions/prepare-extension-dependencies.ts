@@ -1,6 +1,6 @@
 import { existsSync, symlinkSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
-import { hashExtensionDependencyInputs } from "./hash-extension-dependency-inputs";
+import { installedDependencyHash } from "./hash-extension-dependency-inputs";
 import { installDependencies, shouldInstallDependencies } from "./install-extension-dependencies";
 import {
   copyUsableNodeModules,
@@ -11,7 +11,7 @@ import type { InstallExtensionSourceInput } from "./install-extension-source-typ
 
 const linkInstalledDependencies = (sourcePath: string, targetPath: string, installPath: string) => {
   if (!existsSync(targetPath)) return false;
-  if (hashExtensionDependencyInputs(sourcePath) !== hashExtensionDependencyInputs(targetPath)) return false;
+  if (installedDependencyHash(sourcePath) !== installedDependencyHash(targetPath)) return false;
   const installedNodeModules = join(targetPath, "node_modules");
   const stagedNodeModules = join(installPath, "node_modules");
   if (!existsSync(installedNodeModules) || existsSync(stagedNodeModules)) return false;
@@ -51,7 +51,11 @@ export const prepareInstallDependencies = async (input: {
     await installDependencies(source.path, installInput);
     await copyUsableNodeModules(source.path, installPath);
   } else {
-    await installDependencies(installPath, { ...installInput, production: !installInput.reuseInstalledDependencies });
+    const releaseUpgrade = source.kind === "named" && installInput.upgradeFromVersion != null;
+    await installDependencies(installPath, {
+      ...installInput,
+      production: releaseUpgrade || !installInput.reuseInstalledDependencies,
+    });
   }
   return linkedInstalledDependencies;
 };

@@ -1,8 +1,10 @@
 import { expect } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { ExtensionUpgradeReview } from "pstdio-api-contracts";
+import { extensionUpgradeNeedsReviewCode } from "pstdio-api-contracts/extension-host";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -50,14 +52,32 @@ const expectExistingRemoteRecovery = async (input: {
   expect(listed.status).toBe(200);
   const before = (await listed.json()) as { extensions: { id: string; canUpgrade: boolean }[] };
   expect(before.extensions).toContainEqual(expect.objectContaining({ id: instanceId, canUpgrade: true }));
-  const upgraded = await fetch(`${baseUrl}/v1/projects/${projectId}/extensions/${instanceId}/upgrade`, {
-    method: "POST",
-    headers,
+  const instance = `${baseUrl}/v1/projects/${projectId}/extensions/${instanceId}`;
+  const blocked = await fetch(`${instance}/upgrade`, { method: "POST", headers });
+  expect(blocked.status).toBe(409);
+  expect(await blocked.json()).toMatchObject({ code: extensionUpgradeNeedsReviewCode });
+  expect(JSON.parse(readFileSync(join(source, "package.json"), "utf8"))).toEqual(manifest);
+
+  const reviewRequest = (body: object) =>
+    fetch(`${instance}/upgrade-review`, { method: "POST", headers, body: JSON.stringify(body) });
+  const begun = await reviewRequest({ action: "begin" });
+  expect(begun.status).toBe(200);
+  const { review } = (await begun.json()) as { review: ExtensionUpgradeReview };
+  expect(review.hasOriginal).toBe(false);
+  const applied = await reviewRequest({
+    action: "apply",
+    id: review.id,
+    revision: review.revision,
+    resolutions: review.changes.flatMap(({ path, status }) =>
+      status === "conflict" ? [{ path, kind: "incoming" }] : [],
+    ),
   });
-  expect(upgraded.status).toBe(200);
-  expect(await upgraded.json()).toMatchObject({
-    changed: true,
-    extension: { extensionId: "pstdio.remote-workspaces", status: "loaded", canUpgrade: false },
+  expect(applied.status).toBe(200);
+  expect(await applied.json()).toMatchObject({
+    upgrade: {
+      changed: true,
+      extension: { extensionId: "pstdio.remote-workspaces", status: "loaded", canUpgrade: false },
+    },
   });
   expect(JSON.parse(readFileSync(retained, "utf8"))).toEqual({ workspace: "existing" });
 };
@@ -73,9 +93,13 @@ export const expectPackagedGitFreeExtensions = async () => {
   let child: ChildProcess | undefined;
   try {
     const pathKey = Object.keys(process.env).find((key) => key.toUpperCase() === "PATH") ?? "PATH";
+    const isolatedPath = join(root, "git-free-path");
+    mkdirSync(isolatedPath);
+    // On macOS backend workers use ps to manage their child processes.
+    if (process.platform === "darwin") symlinkSync("/bin/ps", join(isolatedPath, "ps"));
     const started = await startPackagedServe(root, {
-      [pathKey]: join(root, "no-executables"),
-      PATH: join(root, "no-executables"),
+      [pathKey]: isolatedPath,
+      PATH: isolatedPath,
       NPM_CONFIG_USERCONFIG: npmConfigPath,
       PSTDIO_EXTENSION_CATALOG: "",
       PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source: "pstdio-skills" }]),

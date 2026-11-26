@@ -6,6 +6,7 @@ import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import { createTestHarnessRegistry } from "../../harnesses/test-harness-registry";
 import { hashExtensionSource, loadExtensionSource } from "../extension-runtime";
+import { ExtensionUpgradeNeedsReviewError } from "../extension-upgrade-baseline";
 import { createTestExtensionSource } from "../test-utils/create-test-extension-source";
 
 type AppHandle = Awaited<ReturnType<typeof createTestApp>>;
@@ -63,14 +64,16 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
       },
       sourceHash: "new-hash",
       targetPath: sourcePath,
-    })) as never;
+    })).mockImplementationOnce(async () => {
+      throw new ExtensionUpgradeNeedsReviewError();
+    });
 
     handle = await createTestApp({
       databasePath: ":memory:",
       storageRoot: join(tempRoot, "storage"),
       harnessRegistry: createTestHarnessRegistry([]),
       release: { source: "git", ref: "f".repeat(40) },
-      installExtensionSource,
+      installExtensionSource: installExtensionSource as never,
     });
     const project = await createProject();
     const enabled = await handle.deps.extensionService.enableInstalledSourceForProject({
@@ -86,6 +89,17 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
       sourcePath,
       version: "1.0.0",
     });
+
+    const review = await handle.app.request(`/v1/projects/${project.id}/extensions/${enabled.instance.id}/upgrade`, {
+      method: "POST",
+    });
+
+    expect(review.status).toBe(409);
+    expect(await review.json()).toMatchObject({ code: "extension_upgrade_needs_review" });
+    expect(
+      (await handle.deps.extensionService.getProjectExtensionInstance(project.id, enabled.instance.id))?.installedSource
+        .version,
+    ).toBe("1.0.0");
 
     const response = await handle.app.request(`/v1/projects/${project.id}/extensions/${enabled.instance.id}/upgrade`, {
       method: "POST",
@@ -109,6 +123,10 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
       installName: "pstdio-planner",
       reuseInstalledDependencies: true,
       upgradeFromVersion: "1.0.0",
+      upgradeBase: {
+        path: sourcePath,
+        ref: `https://github.com/pufflyai/prompt-studio@${"a".repeat(40)}#extensions/pstdio-planner`,
+      },
       retainBackup: true,
       source: "pstdio-planner",
     });

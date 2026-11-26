@@ -90,7 +90,7 @@ for (const interruption of ["normal", "schema", "partial"])
         await prepareSessionWorkspaceUpgrade(store.db, path);
         await prepareResourceLinkOwnerUpgrade(store.db, path);
         await prepareProjectExtensionsUpgrade(store.db, store.path);
-        await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
         if (interruption === "partial")
           await store.db.update(sessions).set({ workspace_id: first.id }).where(eq(sessions.id, "session-000"));
       }

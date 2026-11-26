@@ -13,7 +13,7 @@ export class ResourceProjectMismatchError extends ResourceReferenceError {
   }
 }
 
-const hostKinds = new Set(["project", "workspace", "session"]);
+const hostKinds = new Set(["project", "workspace", "session", "extension-upgrade-review"]);
 const assertProject = (resource: ResourceRef, projectId: string) => {
   if (resource.projectId && resource.projectId !== projectId) throw new ResourceProjectMismatchError();
 };
@@ -22,6 +22,8 @@ const hostProject = async (deps: ExtensionsRouteDeps, resource: ResourceRef, sig
   if (!hostKinds.has(resource.type)) throw new ResourceReferenceError(`Unknown host resource kind "${resource.type}".`);
   if (resource.type === "workspace") return (await read(() => deps.workspaceService.get(resource.id)))?.project_id;
   if (resource.type === "session") return (await read(() => deps.sessionService.get(resource.id)))?.project_id;
+  if (resource.type === "extension-upgrade-review")
+    return read(async () => deps.extensionUpgradeService?.reviews.projectForReview(resource.id));
   return (await read(() => deps.projectService.get(resource.id)))?.id;
 };
 

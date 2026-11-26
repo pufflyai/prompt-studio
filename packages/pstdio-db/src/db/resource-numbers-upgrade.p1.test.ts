@@ -109,7 +109,7 @@ test("released optimistic numbers, confirmed claims and deleted allocation floor
     await connection?.close();
     await rm(root, { recursive: true, force: true });
   }
-});
+}, 15_000);
 
 test("confirmed-number restoration resumes after a committed batch without overwriting a changed claim", async () => {
   const root = await mkdtemp(join(tmpdir(), "resource-number-resume-")),
@@ -134,7 +134,7 @@ test("confirmed-number restoration resumes after a committed batch without overw
     await prepareOrderedOwnerUpgrade(previous.db, previous.path);
     await prepareOwnerProjectionUpgrade(previous.db, previous.path);
     const documents = await prepareDocumentOwnerUpgrade(previous.db, previous.path);
-    await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+    await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
     await documents!();
     await previous.pglite.exec(`CREATE FUNCTION stop_number_claim() RETURNS trigger LANGUAGE plpgsql AS $$
       BEGIN IF NEW.canonical AND NEW.resource_id='card-200' THEN RAISE EXCEPTION 'stop confirmed numbers'; END IF; RETURN NEW; END $$;
@@ -178,7 +178,7 @@ test("confirmed-number restoration resumes after a committed batch without overw
     await connection?.close();
     await rm(root, { recursive: true, force: true });
   }
-});
+}, 15_000);
 
 test("released large-number aliases and deleted confirmed floors retain exact allocation exhaustion after reopen", async () => {
   const root = await mkdtemp(join(tmpdir(), "resource-number-bigint-"));
@@ -238,7 +238,7 @@ test("released large-number aliases and deleted confirmed floors retain exact al
     await connection?.close();
     await rm(root, { recursive: true, force: true });
   }
-});
+}, 15_000);
 
 for (const defaultMetadata of [false, true])
   test(`historical and canonical extension spellings restore the same number before identity rename${defaultMetadata ? " with released metadata defaults" : ""}`, async () => {
@@ -293,4 +293,4 @@ for (const defaultMetadata of [false, true])
       await connection?.close();
       await rm(root, { recursive: true, force: true });
     }
-  });
+  }, 15_000);

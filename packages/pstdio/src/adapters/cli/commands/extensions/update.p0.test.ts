@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import type { ProjectExtensionInstance, UpgradeProjectExtensionResponse } from "@pstdio/sdk/api";
+import { PstdioApiError } from "@pstdio/sdk/client";
+import { extensionUpgradeNeedsReviewCode } from "pstdio-api-contracts/extension-host";
 import type { Arguments } from "yargs";
 import { createHandler, type ExtensionsUpdateArgs } from "./update";
 
@@ -153,6 +155,26 @@ describe("extensions update", () => {
     expect(upgradeProjectExtension).toHaveBeenCalledTimes(2);
     expect(logs).toContain("ERROR: first: download failed");
     expect(logs).toContain("Updated second to 1.0.0.");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("reports preserved local files and continues upgrading other extensions", async () => {
+    const edited = extension("edited", { canUpgrade: false, hasPublishedAlternative: true });
+    const managed = extension("edited", { id: "managed-instance", enabled: false, scope: "global" });
+    const clean = extension("clean");
+    const { deps, logs, upgradeProjectExtension } = makeDeps([managed, edited, clean]);
+    upgradeProjectExtension.mockImplementation(async (_project, instanceId) => {
+      if (instanceId === edited.id)
+        throw new PstdioApiError("Local edits need review.", 409, extensionUpgradeNeedsReviewCode);
+      return { changed: true, extension: clean };
+    });
+
+    await createHandler(deps)(argv());
+
+    expect(upgradeProjectExtension).toHaveBeenCalledTimes(2);
+    expect(upgradeProjectExtension).toHaveBeenCalledWith("project-1", edited.id);
+    expect(upgradeProjectExtension).toHaveBeenCalledWith("project-1", clean.id);
+    expect(logs).toEqual(["LOCAL FILES KEPT: edited: Local edits need review.", "Updated clean to 1.0.0."]);
     expect(process.exitCode).toBe(1);
   });
 

@@ -30,6 +30,7 @@ export interface PreparedExtensionRevision {
   sourceHash: string;
   loadKey: string;
   contentKey?: string;
+  prebuiltRelease?: true;
   /** Host-owned install origin, present only for an adopted catalog retrieval. */
   verifiedInstall?: { sourcePath: string; ref: string | null };
   manifest: PackageManifest;

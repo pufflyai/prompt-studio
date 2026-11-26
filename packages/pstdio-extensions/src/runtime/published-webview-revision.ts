@@ -1,16 +1,30 @@
 import { linkSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { preparedCacheRoot } from "./prepared-revision";
 
 const revisionPath = (distDir: string) => join(dirname(distDir), "published-revision.txt");
+const releaseReference = /^release:([a-f0-9]{64}):(0|[1-9]\d*):([a-f0-9]{64})$/;
 
-// The marker survives staging/replacement of dist and changes only after publication.
-export const readPublishedWebviewRevision = (distDir: string) => {
+// A release publication names immutable bytes. Older publications still live under dist.
+export const readPublishedWebview = (distDir: string) => {
+  let marker: string;
   try {
-    return readFileSync(revisionPath(distDir), "utf8") || null;
+    marker = readFileSync(revisionPath(distDir), "utf8");
   } catch {
     return null;
   }
+  if (!marker) return null;
+  if (!marker.startsWith("release:")) return { distDir, revision: marker };
+  const match = releaseReference.exec(marker);
+  if (!match) return null;
+  const [, releaseId, viewIndex, artifactId] = match;
+  return {
+    distDir: join(preparedCacheRoot(), "revisions", releaseId!, "webviews", viewIndex!),
+    revision: `prepared:${artifactId}`,
+  };
 };
+
+export const readPublishedWebviewRevision = (distDir: string) => readPublishedWebview(distDir)?.revision ?? null;
 
 const writeRevision = (distDir: string, revision: string, mode: "initialize" | "replace") => {
   const target = revisionPath(distDir);
@@ -34,3 +48,14 @@ export const recordPublishedWebviewRevision = (distDir: string, revision: string
   writeRevision(distDir, revision, "replace");
 export const initializePublishedWebviewRevision = (distDir: string, revision: string) =>
   writeRevision(distDir, revision, "initialize");
+
+export const recordPublishedReleaseWebview = (
+  distDir: string,
+  releaseId: string,
+  viewIndex: string,
+  artifactId: string,
+) => {
+  const marker = `release:${releaseId}:${viewIndex}:${artifactId}`;
+  if (!releaseReference.test(marker)) throw new Error("Invalid release webview reference.");
+  writeRevision(distDir, marker, "replace");
+};

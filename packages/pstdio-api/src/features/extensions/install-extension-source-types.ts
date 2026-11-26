@@ -5,18 +5,22 @@ import type { GitExtensionOrigin } from "./extension-catalog";
 import type { ExtensionInstallTransaction } from "./extension-install-transaction";
 import type { ExtensionMetadata } from "./extension-runtime";
 import type { CommandOptions, CommandResult } from "./install-extension-dependencies";
+import type { DownloadedReleaseBundle } from "./prepared-release-bundle";
 
 export type PreparedNamedInstallSource = {
   path: string;
   ref: string;
   /** The selector used for the Git checkout. The stored source ref contains the resolved commit. */
   gitRef?: string;
+  runtimeBundle?: DownloadedReleaseBundle;
+  preparedRelease?: PreparedExtensionRevision;
 };
 
 export type InstallExtensionSourceInput = {
   /** Keep a managed source installed so the dashboard can repair it after an extension API change. */
   allowUnsupportedApiVersion?: boolean;
   retainBackup?: boolean;
+  allocateSeparateSource?: boolean;
   env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
   existsOk?: boolean;
   force?: boolean;
@@ -26,6 +30,9 @@ export type InstallExtensionSourceInput = {
   installedSourcePath?: string;
   /** An Upgrade action may refresh the same version or replace it with a newer one. */
   upgradeFromVersion?: string | null;
+  upgradeBase?: { path: string; ref: string | null };
+  /** Host-internal inputs from a reviewed, pinned, private staging directory. */
+  reviewedUpgrade?: { workingFingerprint: string; stagedFingerprint: string; originalReleasePath: string };
   /** Worker-inspected owner whose destination family was reserved before preparation. */
   expectedIdentity?: string;
   /** The batch can share source reads while retaining exclusive destination ownership. */
@@ -50,6 +57,7 @@ export type InstallExtensionSourceInput = {
   reuseInstalledDependencies?: boolean;
   runCommand?: (command: string, args: string[], options: CommandOptions) => Promise<CommandResult>;
   skipInstall?: boolean;
+  skipRuntimeBundle?: boolean;
   signal?: AbortSignal;
   preparedSource?: PreparedNamedInstallSource;
   originSource?: { kind: "git" | "release"; origin: GitExtensionOrigin };

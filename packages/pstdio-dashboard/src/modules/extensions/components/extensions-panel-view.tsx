@@ -7,12 +7,13 @@ import type {
   WorkbenchExtensionHarnessRecord,
 } from "@pstdio/sdk/api";
 import type { AgentInfo } from "pstdio-api-contracts";
+import { selectExtensionUpgradeCandidates } from "pstdio-api-contracts/extension-host";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
-import { type ExtensionUpgradeBatch, marketplaceActionKey } from "./extension-actions";
+import { canStartExtensionUpgrade, type ExtensionUpgradeBatch, marketplaceActionKey } from "./extension-actions";
 import { defaultExtensionFilters, type ExtensionFilters, matchesExtensionSearch } from "./extension-filters";
 import { ExtensionFolderDropZone } from "./extension-folder-drop-zone";
 import { unavailableExtensionHarnesses } from "./extension-harness-availability";
@@ -115,7 +116,9 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
     { key: "enabled", extensions: visible.filter((extension) => extension.enabled) },
     { key: "installed", extensions: visible.filter((extension) => !extension.enabled) },
   ];
-  const upgradable = extensions.filter((extension) => extension.canUpgrade && !sourceChangingIds?.has(extension.id));
+  const upgradable = selectExtensionUpgradeCandidates(extensions).filter(
+    ({ id }) => !sourceChangingIds?.has(id) && canStartExtensionUpgrade(actionStates[id]),
+  );
   const folderAction = actionStates.$folder;
 
   return (
@@ -135,7 +138,7 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
                       batch={batch}
                       onUpgrade={() => onUpgradeAll?.(upgradable)}
                       onDismiss={onDismissBatch}
-                      canUpgrade={upgradable.length > 0}
+                      upgradeCount={upgradable.length}
                     />
                   )
                 }

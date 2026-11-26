@@ -1,0 +1,133 @@
+{
+  "id": "94b01072-7e8c-4d22-92b9-c1e1953243ff",
+  "prevId": "9eb1dad4-449a-400a-aea1-acf5ec98a927",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.extension_release_bundles": {
+      "name": "extension_release_bundles",
+      "schema": "",
+      "columns": {
+        "extension_id": {
+          "name": "extension_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "host": {
+          "name": "host",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sha256": {
+          "name": "sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "size_bytes": {
+          "name": "size_bytes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "extension_release_bundles_extension_id_version_extension_releases_extension_id_version_fk": {
+          "name": "extension_release_bundles_extension_id_version_extension_releases_extension_id_version_fk",
+          "tableFrom": "extension_release_bundles",
+          "tableTo": "extension_releases",
+          "columnsFrom": ["extension_id", "version"],
+          "columnsTo": ["extension_id", "version"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "extension_release_bundles_extension_id_version_host_pk": {
+          "name": "extension_release_bundles_extension_id_version_host_pk",
+          "columns": ["extension_id", "version", "host"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.extension_releases": {
+      "name": "extension_releases",
+      "schema": "",
+      "columns": {
+        "extension_id": {
+          "name": "extension_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "engines_pstdio": {
+          "name": "engines_pstdio",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sha256": {
+          "name": "sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "withdrawn": {
+          "name": "withdrawn",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "extension_releases_extension_id_version_pk": {
+          "name": "extension_releases_extension_id_version_pk",
+          "columns": ["extension_id", "version"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

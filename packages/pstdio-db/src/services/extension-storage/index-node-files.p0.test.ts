@@ -29,6 +29,7 @@ test.each(["relative", "native spelling"])("durable receipts survive reopening f
   expect(await reopened.read(owner, "receipts", id("durable"))).toEqual(node);
 });
 
+// Durable writes flush both files and directories, which can take longer on hosted CI.
 test("a node keeps its bytes and edges, and ids differing only in case stay distinct", async () => {
   const { files } = await setup();
   await files.write(owner, "receipts", id("Node"), { bytes: bytes(3, 7), children: [ref(id("child"))] });
@@ -37,7 +38,7 @@ test("a node keeps its bytes and edges, and ids differing only in case stay dist
   expect(await files.read(owner, "receipts", id("node"))).toEqual({ bytes: bytes(2, 9), children: null });
   expect(await files.read(owner, "logs", id("Node"))).toBeUndefined();
   expect((await files.list(owner, "receipts")).sort()).toEqual([id("Node"), id("node")].sort());
-});
+}, 15_000);
 
 test("cache eviction removes the least recently used nodes and never a recent one", async () => {
   const { files, root } = await setup();

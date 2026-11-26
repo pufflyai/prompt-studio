@@ -2,7 +2,7 @@ import { Button, HStack, Spinner, Text } from "@chakra-ui/react";
 import { AlertMessage } from "@pstdio/ui";
 import { useSyncExternalStore } from "react";
 import type { WorkbenchCore } from "../../core";
-import type { OperationRecovery } from "../../core/registries/mutations/operation-types";
+import type { OperationRecovery, OperationSourceCommand } from "../../core/registries/mutations/operation-types";
 import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import { getWorkbenchQueries } from "../../core/workbench-queries";
 import { extensionCommandOperation } from "../../extensions/host/workbench-command-operation";
@@ -33,6 +33,23 @@ export const OperationProgressIndicator = ({ title }: { title: string }) => (
     <Spinner size="xs" />
     <Text textStyle="label/XS/medium">{title}</Text>
   </HStack>
+);
+
+const RecoverySourceButton = (props: {
+  workbench: WorkbenchCore;
+  command: OperationSourceCommand;
+  isCurrent: () => boolean;
+  onError: (error: unknown) => void;
+}) => (
+  <Button
+    size="2xs"
+    onClick={() => {
+      if (props.isCurrent())
+        void props.workbench.commands.executeCommand(props.command.id, props.command.args).catch(props.onError);
+    }}
+  >
+    {props.command.label ?? "Return to source"}
+  </Button>
 );
 
 export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: OperationRecovery }) => {
@@ -91,17 +108,12 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
       <Text>{message}</Text>
       <HStack gap="xs" wrap="wrap">
         {sourceCommand && sourceIsCurrent ? (
-          <Button
-            size="2xs"
-            onClick={() => {
-              if (!sourceIsStillCurrent()) return;
-              void workbench.commands
-                .executeCommand(sourceCommand.id, sourceCommand.args)
-                .catch(report("Return to source"));
-            }}
-          >
-            Return to source
-          </Button>
+          <RecoverySourceButton
+            workbench={workbench}
+            command={sourceCommand}
+            isCurrent={sourceIsStillCurrent}
+            onError={report("Return to source")}
+          />
         ) : null}
         {canInspect && (
           <Button

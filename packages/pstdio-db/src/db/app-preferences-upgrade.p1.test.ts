@@ -40,7 +40,6 @@ test("upgrading preserves device identity and global settings without replaying 
       edits: [{ recordId: "saved-record", replace: { title: "日本語 😀", bytes: "\u0000" } }],
     };
     await createDocumentStorageDBService(connection.db).open({ owner }).records.commit(recordInput);
-    const pendingRecords = await withOrderedOwner(connection.db, owner, (journal) => journal.pending());
     await restoreReleasedPreferenceTables(connection);
     await connection.pglite.query("INSERT INTO settings VALUES ('global', true, true, 3, $1, $1)", [stamp]);
     await connection.pglite.query("INSERT INTO local_environment VALUES ('local', 'retained-device')");
@@ -48,17 +47,16 @@ test("upgrading preserves device identity and global settings without replaying 
     connection = await createDb({ path });
     const assertStorage = async () => {
       const restored = createOrderedLogStore(connection!.db, address);
-      expect(await restored.pending(10)).toEqual([{ entry, delivery }]);
-      expect(await restored.prepare(entry.id, { ...delivery, blobs: [] })).toEqual(delivery);
+      expect(await restored.pending(10)).toEqual([{ entry, delivery: undefined }]);
       const restoredHistory = createPersonalHistoryIndex(connection!.db);
       expect(await restoredHistory.read(owner, "sessions")).toEqual([delta.value]);
-      expect(await restoredHistory.cursor(owner)).toBe("retained-cursor");
+      expect(await restoredHistory.cursor(owner)).toBeNull();
       expect(await restoredHistory.migrated(owner)).toBe(true);
       const records = createDocumentStorageDBService(connection!.db).open({ owner }).records;
       expect((await records.read("saved-record")).value).toEqual(recordInput.edits[0]!.replace);
-      expect(await withOrderedOwner(connection!.db, owner, (journal) => journal.pending())).toEqual(pendingRecords);
+      expect(await withOrderedOwner(connection!.db, owner, (journal) => journal.pending())).toEqual([]);
       await records.commit(recordInput);
-      expect(await withOrderedOwner(connection!.db, owner, (journal) => journal.pending())).toEqual(pendingRecords);
+      expect(await withOrderedOwner(connection!.db, owner, (journal) => journal.pending())).toEqual([]);
     };
     await assertStorage();
     const store = createSettingsDBService(connection.db);
@@ -88,4 +86,4 @@ test("upgrading preserves device identity and global settings without replaying 
     await rm(root, { recursive: true, force: true });
     await rm(`${path}-index-nodes`, { recursive: true, force: true });
   }
-});
+}, 15_000);

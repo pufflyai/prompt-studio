@@ -31,7 +31,7 @@ for (const interruption of ["normal", "schema", "restore"])
       const original = (await previous.pglite.query(`SELECT * FROM resource_anchors ORDER BY ${order}`)).rows;
       if (interruption !== "normal") {
         const finish = await prepareResourceLinkOwnerUpgrade(previous.db, previous.path);
-        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
         if (interruption === "restore") {
           await previous.pglite.exec(`CREATE FUNCTION stop_link_restore() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN IF NEW.source_id='source-201' THEN RAISE EXCEPTION 'stop restoration'; END IF; RETURN NEW; END $$;

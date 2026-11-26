@@ -3,7 +3,12 @@ import type {
   ProjectExtensionInstance,
   UpgradeProjectExtensionResponse,
 } from "@pstdio/sdk/api";
-import { createExtensionUpgradePool } from "pstdio-api-contracts/extension-host";
+import { PstdioApiError } from "@pstdio/sdk/client";
+import {
+  createExtensionUpgradePool,
+  extensionUpgradeNeedsReviewCode,
+  selectExtensionUpgradeCandidates,
+} from "pstdio-api-contracts/extension-host";
 import type { Arguments, Argv } from "yargs";
 import { apiClient } from "@/features/api-client";
 import {
@@ -61,7 +66,16 @@ const runUpdates = async (deps: Deps, projectId: string, extensions: ProjectExte
           const result = await deps.upgradeProjectExtension(projectId, extension.id);
           deps.log(formatUpdated(result.extension));
         } catch (error) {
-          deps.log(`ERROR: ${extension.installName}: ${error instanceof Error ? error.message : String(error)}`);
+          const label =
+            error instanceof PstdioApiError && error.code === extensionUpgradeNeedsReviewCode
+              ? "LOCAL FILES KEPT"
+              : "ERROR";
+          const message = error instanceof Error ? error.message : String(error);
+          deps.log(`${label}: ${extension.installName}: ${message}`);
+          if (label === "LOCAL FILES KEPT")
+            (deps.warn ?? console.error)(
+              `Open Extensions to review the upgrade, or run pst extensions review begin ${extension.installName}.`,
+            );
           process.exitCode = 1;
         }
       }),
@@ -81,7 +95,7 @@ export const createHandler =
 
     const notice = argv.name && installed[0] && deprecatedProjectExtensionSelector(installed[0], argv.name);
     if (notice) (deps.warn ?? console.error)(notice);
-    const candidates = installed.filter((extension) => extension.canUpgrade);
+    const candidates = selectExtensionUpgradeCandidates(installed);
     if (candidates.length === 0) {
       deps.log(
         argv.name

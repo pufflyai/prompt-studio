@@ -23,7 +23,7 @@ export const createUnadmittedLegacyFixture = async (path = ":memory:") => {
   await pglite.waitReady;
   const db = drizzle(pglite, { schema });
   try {
-    await migratePglite(pglite, join(import.meta.dirname, "../../../drizzle"));
+    await migratePglite(pglite, join(import.meta.dirname, "../../../drizzle-0.46"));
     attachDatabaseAuthority(db, path);
     documentFilesFor(db, path);
     recoveryFilesFor(db, path);
