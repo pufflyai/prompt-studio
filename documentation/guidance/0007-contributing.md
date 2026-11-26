@@ -30,6 +30,8 @@
 
 7. For the Prompt Studio 0.48 post, commit final PNG banners and JSON recipes under `clients/landing-page/src/content/blog/images/blog-prompt-studio-0-48*`, plus GIF workflows and SVG screenshots under `documentation/images/prompt-studio-0-48-*`. Keep raw captures and site build output excluded.
 
+8. For the Home idea carousel, commit the requested light and dark screenshots under `clients/landing-page/public/images/home-ideas/`. Keep capture builds and raw image-generation outputs excluded.
+
 ## 4. Large changes
 
 1. Changes adding 5,000 or more lines to a PR need human approval before writing code. This includes designs that commit the project to that much code later.
