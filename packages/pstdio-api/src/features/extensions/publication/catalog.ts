@@ -31,6 +31,7 @@ export const openPublishedCatalog = async (
   });
   return createPublicationCatalog({
     records,
+    readPolicy: () => deps.accountService.readManagedProjectPolicy(workbenchId, signal),
     verifyComplete: assets.verifyComplete,
     authorizeWrite: async () => {
       if (!(await deps.accountService.canPublishProjectExtensions(workbenchId, signal)))
@@ -69,7 +70,10 @@ export const publishExtension = async (
   const { installedSource } = source;
   if (installedSource.extension_id === publishedExtensionsId) throw new Error("Reserved platform extension identity");
   const catalog = await openPublishedCatalog(deps, input.projectId);
-  await catalog.requireWrite();
+  await catalog.requireWrite([
+    installedSource.extension_id,
+    ...(input.replacement ? [input.replacement.extensionId] : []),
+  ]);
   const record = await catalog.read(installedSource.extension_id);
   if (record.revision !== input.expectedRevision) throw new PublicationChangedError();
   const bytes = await packExtension(installedSource.source_path);

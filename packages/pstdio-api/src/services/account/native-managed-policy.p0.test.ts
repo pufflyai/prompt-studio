@@ -138,11 +138,27 @@ test("team membership alone cannot activate cached packages after project access
   await expect(f.service.required("project", "fixture.tools")).rejects.toThrow("Current project access");
   f.restart();
   f.offline();
+  await expect(f.service.cachedProjectPolicy("project")).rejects.toThrow("Connect to Cloud");
   await expect(f.service.required("project", "fixture.tools")).rejects.toThrow("Connect to Cloud");
   await f.restoreProject();
   expect(await f.service.required("project", "fixture.tools")).toBe(true);
   f.offline();
   expect(await f.service.required("project", "fixture.tools")).toBe(true);
+});
+
+test("data writes use the admitted native policy snapshot without a manager round trip", async () => {
+  const f = await fixture();
+  await f.service.projectPolicy("project");
+  let requests = 0;
+  f.respond(async () => {
+    requests++;
+    throw new TypeError("Data writes should use the refreshed native policy");
+  });
+  expect(await f.service.cachedProjectPolicy("project")).toEqual(policy);
+  expect(await f.service.cachedProjectPolicy("project")).toEqual(policy);
+  expect(requests).toBe(0);
+  f.signIn({ ...initial, accountId: "another-user", token: "another-credential" });
+  await expect(f.service.cachedProjectPolicy("project")).rejects.toThrow("Connect to Cloud");
 });
 
 test("an unknown or different signed-in user cannot borrow another user's cached team policy", async () => {

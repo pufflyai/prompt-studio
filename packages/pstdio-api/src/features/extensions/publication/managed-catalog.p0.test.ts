@@ -53,7 +53,9 @@ test("required team tools reject ordinary publication and released tools stamp f
     }),
   );
   const removed = await catalog.records.read(extensionId);
-  expect(removed.deleted).toBe(true);
+  expect((await catalog.read(extensionId)).deleted).toBe(true);
+  expect((await catalog.read(extensionId)).value).toBeNull();
+  expect(await catalog.list()).toHaveLength(0);
   expect((removed.value as { teamPolicyRevision: string }).teamPolicyRevision).toBe("next-release-decision");
 
   policy = [

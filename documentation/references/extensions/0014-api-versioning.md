@@ -62,6 +62,12 @@ independent authorities. Connection configuration also accepts optional
 manifests retain their earlier supported ranges and add `^0.6.0` before the host
 adopts this step. This compatibility metadata does not adopt new SDK methods.
 
+The same API 0.6.0 step adds `readTeamMembership` and `writeTeamMembership` to
+the native, process and webview account APIs. Their typed operations cover team
+administration, project grants, desktop invitation codes and managed extension
+decisions. Consumers must pin a published supporting SDK and use the matching
+host; SDK publication alone does not add these operations to an older host.
+
 API 0.6.0 also adds optional session-message `source` attribution and tab
 `tooltip` metadata. Session callers can name a source session or explicitly mark
 a human submission. The host resolves the display identity and exposes it as
@@ -585,12 +591,6 @@ API 0.5.1 also permits `viewMenus.side: "bottom"`. Menu sides define an initial 
 
 `ctx.account.createTeam(name)` creates a team for the signed-in person. Webviews use the same method through `account.manage`. Account status includes `teamAccounts` and a mapping from visible team project IDs to their owning account IDs. Account selection changes the management view and project catalog. Pass the displayed sign-in identity as the second argument to reject a request if the sign-in changed.
 
-`ctx.account.readTeamMembership(request, expected)` reads the roster, pending invitations or the state of an incoming link. `ctx.account.writeTeamMembership(request, expected)` creates and cancels invitations, removes members, leaves a team or accepts an invitation. Webviews use `account.read` and `account.manage` respectively. Keep the returned invitation URL private.
-
 Extensions adopting these fields or commands require `^0.5.1` and a supporting published SDK.
-
-Team owners use `readTeamMembership({ op: "projectAccess", accountId }, expected)` to list projects and grants that they manage. `writeTeamMembership({ op: "setProjectAccess", accountId, workbenchId, userId, granted }, expected)` changes one member's grant. The workbench name is available only when the native device has a matching local team copy. This API returns grant metadata and carries no encryption key or project content.
-
-`readTeamMembership({ op: "ownershipOffer", accountId }, expected)` returns the pending offer for its sender or recipient. `writeTeamMembership` supports `offerOwnership` with `recipientUserId` and `answerOwnership` with `offerId` and a decision of `accept`, `decline`, or `cancel`. The role change adds no project grants.
 
 *Updated at: 2026-11-24*

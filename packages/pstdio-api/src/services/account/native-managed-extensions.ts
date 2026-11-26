@@ -62,7 +62,7 @@ export const createNativeManagedExtensions = (input: {
   const readCache = () => readPrivateFile(file, cacheSchema, { teams: [] });
   const binding = async (projectId: string) =>
     (await input.copies.teamProjects()).find((row) => row.projectId === projectId);
-  const offlinePolicy = async (
+  const admittedCache = async (
     projectId: string,
     owner: { managerOrigin: string; accountId: string },
     login: DeviceLogin,
@@ -77,9 +77,8 @@ export const createNativeManagedExtensions = (input: {
         row.accountId === owner.accountId &&
         row.userId === login.accountId,
     );
-    if (!cached) throw new AccountRequestError("Connect to Cloud to load this team's extension policy first");
     await assertCurrent(login);
-    return cached.policy;
+    return cached?.policy;
   };
   const prune = () =>
     serializeNativeWrite(file, async () => {
@@ -128,8 +127,23 @@ export const createNativeManagedExtensions = (input: {
       await assertCurrent(login);
       if (accessDenied(error)) await input.copies.recordTeamAdmissionAccess(login, projectId, null);
       if (!canUseOfflinePolicy(error)) throw error;
-      return offlinePolicy(projectId, owner, login);
+      const cached = await admittedCache(projectId, owner, login);
+      if (!cached) throw new AccountRequestError("Connect to Cloud to load this team's extension policy first");
+      return cached;
     }
+  };
+  // Account refresh updates this native decision snapshot. Individual data mutations must not
+  // issue manager requests; activation and package downloads still verify current project grants.
+  const cachedProjectPolicy = async (projectId: string) => {
+    input.signal.throwIfAborted();
+    const owner = await binding(projectId);
+    if (!owner) return [];
+    const login = await input.current();
+    if (login.managerOrigin !== owner.managerOrigin)
+      throw new AccountRequestError("Sign in to this project's Cloud service first");
+    const cached = await admittedCache(projectId, owner, login);
+    input.signal.throwIfAborted();
+    return cached ?? projectPolicy(projectId);
   };
   const manage = async (request: Manage, login: DeviceLogin) => {
     if (!exportPackage) throw new AccountRequestError("Extension packaging is unavailable on this host");
@@ -198,6 +212,7 @@ export const createNativeManagedExtensions = (input: {
   };
   return {
     projectPolicy,
+    cachedProjectPolicy,
     download,
     manage,
     prune,
