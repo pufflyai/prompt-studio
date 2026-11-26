@@ -52,7 +52,12 @@ export const HomePromptCarousel = ({ onBuild }: HomePromptCarouselProps) => {
             <Carousel.Item key={id} index={index} minW="0">
               <SimpleCard as="article" aria-label={title} overflow="hidden">
                 <AspectRatio ratio={16 / 10} bg="bg.subtle" borderBottomWidth="1px" borderColor="border">
-                  <Image src={screenshots[id]} alt={`${title} example interface`} objectFit="cover" draggable={false} />
+                  <Image
+                    src={new URL(screenshots[id], import.meta.url).href}
+                    alt={`${title} example interface`}
+                    objectFit="cover"
+                    draggable={false}
+                  />
                 </AspectRatio>
                 <SimpleCardBody display="flex" flexDirection="column" gap="md" p="lg">
                   <Stack gap="xs">

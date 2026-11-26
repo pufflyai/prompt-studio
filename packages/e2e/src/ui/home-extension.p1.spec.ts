@@ -43,6 +43,9 @@ test("Home shows project ideas and reopens recently used resources", async ({ pa
   await expect(homeFrame(page).getByText("Recently Used", { exact: true })).toHaveCount(0);
   await homeFrame(page).getByRole("button", { name: "Next idea", exact: true }).click();
   await expect(homeFrame(page).getByRole("heading", { name: "Release checklist", exact: true })).toBeInViewport();
+  await homeFrame(page)
+    .getByRole("img", { name: "Release checklist example interface", exact: true })
+    .evaluate((image: HTMLImageElement) => image.decode());
   // The selected idea must start real work and open the resulting conversation.
   const building = page.waitForResponse(
     (response) =>
