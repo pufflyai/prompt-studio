@@ -27,7 +27,11 @@ import {
   type CreateExtensionWebviewBuildManagerInput,
   createBuildReporters,
 } from "./extension-webview-build-reporters";
-import { expectedWebviewBuildSource, type InstalledSourceWithManifest } from "./extension-webview-build-runner";
+import {
+  expectedWebviewBuildSource,
+  failedWebviewId,
+  type InstalledSourceWithManifest,
+} from "./extension-webview-build-runner";
 import { buildExtensionWebview } from "./extension-webview-builder";
 import {
   inspectWebviewLoadKey,
@@ -273,8 +277,9 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
   const refreshRow = async (installedExtensionId: string, validatedSource?: LoadedExtensionSnapshot) => {
     if (disposed) return null;
     if (!validatedSource && !input.loadSource && !input.buildWebview) {
-      const retained = await retainAcceptedWebviews(await getInstalledSource(installedExtensionId), webviewCacheRoot);
-      if (retained) return retained;
+      const row = await getInstalledSource(installedExtensionId);
+      const retained = await retainAcceptedWebviews(row, webviewCacheRoot);
+      if (retained && !retained.includes(failedWebviewId(row) ?? "")) return retained;
     }
     let current = await loadCurrentSource(installedExtensionId, validatedSource);
     if (!current || disposed) return null;

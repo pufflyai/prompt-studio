@@ -6,7 +6,11 @@ import {
 } from "pstdio-extensions";
 import type { LoadedExtensionSnapshot } from "./extension-runtime";
 import type { createBuildReporters } from "./extension-webview-build-reporters";
-import { expectedWebviewBuildSource, type InstalledSourceWithManifest } from "./extension-webview-build-runner";
+import {
+  expectedWebviewBuildSource,
+  failedWebviewId,
+  type InstalledSourceWithManifest,
+} from "./extension-webview-build-runner";
 import { type CheckOwner, joinPreparationDependencies } from "./pending-webview-checks";
 import { validateExtensionWebviews } from "./validate-extension-webviews";
 
@@ -47,7 +51,9 @@ const complete = async (input: InitialWebviewInput) => {
     // Initial failures use per-view feedback; a rejected update retains its complete set.
     return reportFailure(error);
   }
-  if (retained && preparedRevisionState(previous) === preparedRevisionState(loaded.preparedRevision)) {
+  const unchanged = retained && preparedRevisionState(previous) === preparedRevisionState(loaded.preparedRevision);
+  const recoveringView = failedWebviewId(row);
+  if (unchanged && !recoveringView) {
     const current = await input.loadCurrent();
     input.signal.throwIfAborted();
     if (!isSameSource(input, current)) return retained;
@@ -56,7 +62,9 @@ const complete = async (input: InitialWebviewInput) => {
   if (
     !(await reportViews(
       input,
-      Object.entries(loaded.preparedRevision.webviews!).map(([id, artifact]) => [id, { status: "success", artifact }]),
+      Object.entries(loaded.preparedRevision.webviews!)
+        .filter(([id]) => !unchanged || id === recoveringView)
+        .map(([id, artifact]) => [id, { status: "success", artifact }]),
     ))
   )
     return retained;
