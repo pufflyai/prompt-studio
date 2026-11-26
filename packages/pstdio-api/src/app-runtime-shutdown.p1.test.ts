@@ -93,6 +93,9 @@ test.each([
       if (dbFails) throw databaseFailure;
     },
     closeSessionHooks: done,
+    closeAccount: async () => {
+      order.push("account");
+    },
     stopQueueReadiness: done,
     sessionQueueLifecycle: { close: done } as never,
     harnessRegistry: { dispose: done } as never,
@@ -101,7 +104,7 @@ test.each([
     textEditing: { dispose: done },
   });
   const failure = await close().catch((error) => error);
-  expect(order).toEqual(["processes", "workers", "database"]);
+  expect(order).toEqual(["processes", "workers", "account", "database"]);
   if (stopFails) {
     expect(failure).toBeInstanceOf(AggregateError);
     expect(failure.cause).toBe(runtimeFailure);

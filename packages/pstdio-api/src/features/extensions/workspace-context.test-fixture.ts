@@ -7,6 +7,7 @@ import { createMemoryDocumentStore, type StorageOwner } from "pstdio-sync";
 import { createDocumentStorage } from "pstdio-sync/records";
 import { createProjectWork } from "../../services/project-work";
 import { createTestExtensionProcessOwners } from "../../test-utils/create-test-extension-process-owners";
+import { createTestLocalAccount } from "../../test-utils/create-test-local-account";
 import { makeWorkspace } from "../workspaces/workspace-provider.test-fixture";
 import type { ExtensionsRouteDeps } from "./deps";
 import type { ExtensionStorageIndexService } from "./extension-storage-indexes";
@@ -102,6 +103,7 @@ export const createWorkspaceContextFixture = async (identity = { name: "context"
     validate?.();
   };
   const deps = {
+    accountService: createTestLocalAccount(),
     workspaceService: { get: async () => workspace, getDefault: async () => workspace, list: async () => [workspace] },
     projectService: {
       work: createProjectWork(),
@@ -134,6 +136,7 @@ export const createWorkspaceContextFixture = async (identity = { name: "context"
     } as unknown as ExtensionsRouteDeps,
     cleanup: async () => {
       await extensionProcessOwners.dispose();
+      await deps.accountService.close();
       await rm(root, { recursive: true, force: true });
     },
   };

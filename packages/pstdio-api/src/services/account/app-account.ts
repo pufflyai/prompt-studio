@@ -63,7 +63,6 @@ export const createAppAccount = (
           stopEvents();
           await accountEventsOwner.close();
           await syncEvents.close();
-          await accountService.close();
           await app.close();
         },
       },

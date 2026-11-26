@@ -27,7 +27,12 @@ export const exportManagedPackage = async (deps: ExtensionsRouteDeps, projectId:
   });
   try {
     await requireAccess();
-    return { extensionId, bytes, name: prepared.loaded.metadata.displayName, version: prepared.loaded.metadata.version };
+    return {
+      extensionId,
+      bytes,
+      name: prepared.loaded.metadata.displayName,
+      version: prepared.loaded.metadata.version,
+    };
   } finally {
     await rm(prepared.path, { recursive: true, force: true });
   }
