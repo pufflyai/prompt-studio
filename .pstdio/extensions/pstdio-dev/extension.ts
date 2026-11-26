@@ -241,6 +241,7 @@ export default defineExtension({
       title: "Daily high-impact issue discovery",
       schedule: "0 12 * * *",
       command: discoverHighImpactIssuesCommand.ref,
+      disabled: true,
     }),
     // Caches new release and run results before GitHub's artifact retention removes them.
     defineSchedule({
