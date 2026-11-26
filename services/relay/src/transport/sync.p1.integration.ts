@@ -530,7 +530,7 @@ test("devices of the same team user share encrypted data under the team's projec
 });
 
 test("two Microsoft work accounts join, share and hand over the private catalogue over Relay", async () => {
-  const relay = await open({ microsoft: fixtureMicrosoftClient });
+  const relay = await open({ microsoft: fixtureMicrosoftClient, accessLifetimeSeconds: 2 });
   const { manager, managerHandler, scope } = relay.context;
   const oauth = await createOAuthCodeFixture();
   const projectId = scope.workbenchId;
@@ -603,17 +603,19 @@ test("two Microsoft work accounts join, share and hand over the private catalogu
         grantId: await grantIdFor(credential),
       });
       expect(result.status).toBe(200);
-      return z.object({ token: z.string() }).parse(await result.json()).token;
+      return z.object({ token: z.string(), expiresAt: z.iso.datetime() }).parse(await result.json());
     };
-    const [ownerToken, memberToken] = await Promise.all([renew(device.token), renew(colleague.token)]);
-    const { project } = await fetchSyncSpaces({
-      managerOrigin,
-      credential: colleague.token,
-      accountId,
-      userId,
-      grantId: await grantIdFor(colleague.token),
-      workbenchId: projectId,
-    });
+    const [ownerLease, { token: memberToken }] = await Promise.all([renew(device.token), renew(colleague.token)]);
+    const colleagueSpaces = async () =>
+      fetchSyncSpaces({
+        managerOrigin,
+        credential: colleague.token,
+        accountId,
+        userId,
+        grantId: await grantIdFor(colleague.token),
+        workbenchId: projectId,
+      });
+    const { project } = await colleagueSpaces();
 
     const bytes = new TextEncoder().encode("Encrypted publication");
     for (const name of publicationDocumentNames) {
@@ -622,7 +624,7 @@ test("two Microsoft work accounts join, share and hand over the private catalogu
       const update = await sealUpdate(project, documentId, bytes, []);
       expect((await relay.post({ ...route, operation: "updates" }, update, memberToken)).status).toBe(403);
       expect((await relay.post({ ...route, operation: "state" }, {}, memberToken)).status).toBe(403);
-      expect((await relay.post({ ...route, operation: "updates" }, update, ownerToken)).status).toBe(200);
+      expect((await relay.post({ ...route, operation: "updates" }, update, ownerLease.token)).status).toBe(200);
       const read = await relay.post({ ...route, operation: "read" }, { after: 0 }, memberToken);
       const result = readResultSchema.parse(await read.json());
       expect(result.status).toBe("updates");
@@ -647,7 +649,7 @@ test("two Microsoft work accounts join, share and hand over the private catalogu
     const privateBytes = new TextEncoder().encode("Former owner's private history");
     const privateUpdate = await sealUpdate(personal, privateId, privateBytes, []);
     const readPrivate = (token: string) => relay.post({ ...privateRoute, operation: "read" }, { after: 0 }, token);
-    expect((await relay.post(privateRoute, privateUpdate, ownerToken)).status).toBe(200);
+    expect((await relay.post(privateRoute, privateUpdate, ownerLease.token)).status).toBe(200);
     expect((await readPrivate(memberToken)).status).toBe(403);
 
     const offer = await managerRequest(device.token, `${teamPath}/ownership`, { recipientUserId: userId });
@@ -656,7 +658,10 @@ test("two Microsoft work accounts join, share and hand over the private catalogu
     expect((await managerRequest(colleague.token, `${teamPath}/ownership/${id}`, { decision: "accept" })).status).toBe(
       200,
     );
-    const [formerOwnerToken, successorToken] = await Promise.all([renew(device.token), renew(colleague.token)]);
+    const [{ token: formerOwnerToken }, { token: successorToken }] = await Promise.all([
+      renew(device.token),
+      renew(colleague.token),
+    ]);
     const catalogId = await project.documentId(publicationDocumentNames[1]);
     const catalog = { ...route, documentId: catalogId };
     const updated = await sealUpdate(project, catalogId, new TextEncoder().encode("Earlier revision selected"), []);
@@ -678,6 +683,25 @@ test("two Microsoft work accounts join, share and hand over the private catalogu
         .status,
     ).toBe(401);
     expect((await relay.post(catalog, updated, formerOwnerToken)).status).toBe(403);
+
+    await Bun.sleep(Math.max(0, Date.parse(ownerLease.expiresAt) - Date.now()) + 50);
+    expect((await managerRequest(device.token, `${teamPath}/leave`, {})).status).toBe(200);
+    const { token: remainingOwnerToken } = await renew(colleague.token);
+    const { project: rotated } = await colleagueSpaces();
+    expect(rotated.generation).toBeGreaterThan(project.generation);
+    const newRevision = new TextEncoder().encode("Successor's revision");
+    const afterCutover = await sealUpdate(rotated, catalogId, newRevision, []);
+    await expect(openUpdate(project, catalogId, afterCutover)).rejects.toBeInstanceOf(UnreadableSyncData);
+    expect((await relay.post(catalog, afterCutover, ownerLease.token)).status).toBe(401);
+    const accepted = await relay.post(catalog, afterCutover, remainingOwnerToken);
+    expect(accepted.status).toBe(200);
+    expect(updateResultSchema.parse(await accepted.json()).duplicate).toBe(false);
+    const currentCatalog = readResultSchema.parse(
+      await (await relay.post({ ...catalog, operation: "read" }, { after: 0 }, remainingOwnerToken)).json(),
+    );
+    if (currentCatalog.status !== "updates") throw new Error("Expected the retained catalogue");
+    expect(await openUpdate(rotated, catalogId, currentCatalog.updates[0]!)).toEqual(bytes);
+    expect(await openUpdate(rotated, catalogId, currentCatalog.updates.at(-1)!)).toEqual(newRevision);
   } finally {
     oauth.close();
     await Promise.all([accountService.stop(true), relay.close()]);
