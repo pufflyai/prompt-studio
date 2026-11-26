@@ -1312,8 +1312,8 @@ test("restoring release source clears a persisted frontend failure after manager
   const rows = [row];
   const deps = {
     installedExtensionSourcesService: sources,
-    emitInstalledSource: (next: typeof row) => {
-      rows[0] = next;
+    emitInstalledSource: (next: unknown) => {
+      Object.assign(rows[0]!, next);
     },
     notifyInstalledSourcesChanged: async () => {},
   };
