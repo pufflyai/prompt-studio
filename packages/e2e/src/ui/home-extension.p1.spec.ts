@@ -114,9 +114,10 @@ test("Home anchors build failures to the selected idea and allows retry", async 
     attempts++;
     if (attempts === 1) {
       await failure.promise;
-      const reason = "Build temporarily unavailable. Try again.";
-      await route.fulfill({
-        json: { outcome: { ok: false, status: "error", reason, error: { message: reason }, notices: [] } },
+      // Let the host reject a real invalid command so its lifecycle settles before retry.
+      const body = route.request().postDataJSON();
+      await route.continue({
+        postData: JSON.stringify({ ...body, params: { ...body.params, idea: null } }),
       });
       return;
     }
@@ -129,18 +130,32 @@ test("Home anchors build failures to the selected idea and allows retry", async 
     const build = home
       .getByRole("article", { name: "Project pulse", exact: true })
       .getByRole("button", { name: "Build this!", exact: true });
+    const rejected = page.waitForResponse(
+      (response) =>
+        response.url().includes("/extensions/commands/pstdio.home.command.build-home/execute") &&
+        response.request().method() === "POST",
+    );
     await build.click();
     await home.getByRole("button", { name: "Next idea", exact: true }).click();
     await expect(home.getByRole("heading", { name: "Release checklist", exact: true })).toBeInViewport();
     failure.resolve();
+    const rejection = await (await rejected).json();
+    expect(rejection.outcome).toMatchObject({ ok: false, status: "rejected" });
     const error = home.getByRole("dialog", { name: "Could not start building", exact: true });
     await expect(error).toBeVisible();
     await expect(home.getByRole("heading", { name: "Project pulse", exact: true })).toBeInViewport();
-    await expect(error.getByRole("alert")).toContainText("Build temporarily unavailable");
+    await expect(error.getByRole("alert")).toContainText(rejection.outcome.reason);
     await page.keyboard.press("Escape");
     await expect(error).toBeHidden();
     await expect(build).toBeFocused();
+    const retry = page.waitForResponse(
+      (response) =>
+        response.url().includes("/extensions/commands/pstdio.home.command.build-home/execute") &&
+        response.request().method() === "POST",
+    );
     await build.press("Enter");
+    const retried = await (await retry).json();
+    expect(retried.outcome.ok, JSON.stringify(retried)).toBe(true);
     await expect(page.getByRole("tab", { name: "Build Home: Project pulse", exact: true })).toBeVisible();
     expect(attempts).toBe(2);
   } finally {
