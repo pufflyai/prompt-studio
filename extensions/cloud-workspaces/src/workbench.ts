@@ -123,7 +123,7 @@ export const deployedPage = definePage({
     "monitoring-name": { type: "string" },
     "monitoring-state": { type: "string" },
   },
-  main: { kind: "panels", landing: "machines" },
+  main: { kind: "panels", landing: "workspace-history" },
   slots: [
     {
       id: "machines",

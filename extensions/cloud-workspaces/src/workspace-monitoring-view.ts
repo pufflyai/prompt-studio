@@ -37,6 +37,12 @@ export const workspaceMonitoringDetailPage = definePage({
   parent: deployedPageRef,
   params: { "monitoring-range": monitoringRangeParam },
   resource: { kinds: [deployedMachineKind.ref] },
-  main: { kind: "view", presentation: "page", cardinality: "one", view: workspaceMonitoringDetailView.ref },
-  slots: [],
+  main: { kind: "panels", landing: "monitoring" },
+  slots: [
+    {
+      id: "monitoring",
+      region: "main",
+      item: { kind: "view", view: workspaceMonitoringDetailView.ref, presence: "fixed" },
+    },
+  ],
 });

@@ -42,7 +42,9 @@ export default defineExtensionView({
                 locale={locale}
                 t={t}
                 openOutput={(resource) =>
-                  void client.navigation.open({ kind: "page", page: deployedMachinePageRef, resource }).catch(showError)
+                  void client.navigation
+                    .open({ kind: "page", page: deployedMachinePageRef, region: "main", resource })
+                    .catch(showError)
                 }
               />
             ) : (
@@ -60,6 +62,7 @@ export default defineExtensionView({
                     .open({
                       kind: "page",
                       page: monitoringDetailPageRef,
+                      region: "main",
                       resource,
                       params: { "monitoring-range": range },
                     })
