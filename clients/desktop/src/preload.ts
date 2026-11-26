@@ -102,6 +102,7 @@ const desktopApi: PromptStudioDesktopApi = Object.freeze({
   revealInFinder: (path: string) => ipcRenderer.invoke(DESKTOP_CHANNELS.revealInFinder, path),
   copyDiagnostics: () => ipcRenderer.invoke(DESKTOP_CHANNELS.copyDiagnostics),
   checkForUpdates: () => ipcRenderer.invoke(DESKTOP_CHANNELS.checkForUpdates),
+  restartToInstallUpdate: () => ipcRenderer.invoke(DESKTOP_CHANNELS.restartToInstallUpdate),
   takeUpdateNotice: () => ipcRenderer.invoke(DESKTOP_CHANNELS.takeUpdateNotice),
   onUpdateNotice: (listener: () => void) => {
     const receive = () => listener();

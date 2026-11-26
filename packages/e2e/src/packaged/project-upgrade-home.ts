@@ -12,7 +12,7 @@ const historical = "pstdio.pstdio-home";
 const canonical = "pstdio.home";
 
 // A released 0.47 record writer authored these two disjoint synthetic quota samples in
-// separate Home streams. Keep the original operations and receipts. The observation date
+// separate Home streams. Seed the original operations and receipts. The observation date
 // is beyond the retention cutoff so opening Home cannot legitimately expire the samples.
 const loadSavedQuota = async (db: PGlite, project: string, owners: string[]) => {
   const tables = [
@@ -119,6 +119,15 @@ const assertSavedQuota = async (db: PGlite, project: string, owners: string[], m
         // local_sequence is assigned by the receiving database on insert.
         const data = { ...entry, extension_id: owner };
         const { from, address, retained } = quotaJournalSql(table, layout!.numeric, layout!.consolidated);
+        if (layout!.consolidated) {
+          const remaining = await db.query(`SELECT 1 FROM ${from} WHERE ${address} AND t.operation_id = $3`, [
+            project,
+            owner,
+            entry.operation_id,
+          ]);
+          assert.equal(remaining.rows.length, 0, "The legacy quota save still has journal history");
+          continue;
+        }
         const matches = await db.query(
           `SELECT 1 FROM ${from} WHERE ${address} AND t.operation_id = $3 AND (${retained}) @> ($4::jsonb - 'local_sequence')`,
           [project, owner, entry.operation_id, JSON.stringify(data)],

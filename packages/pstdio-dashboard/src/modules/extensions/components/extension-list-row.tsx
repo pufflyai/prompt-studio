@@ -136,7 +136,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
       </Box>
 
       <Box flexShrink="0" onClick={stopRowClick} onKeyDown={stopRowClick}>
-        {(extension.canUpgrade || upgradeAction) && (
+        {(extension.canUpgrade || extension.hasPublishedAlternative || upgradeAction) && (
           <ExtensionActionButton
             variant="outline"
             size="2xs"
@@ -147,7 +147,9 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
             disabled={changing}
             data-testid="extension-row-upgrade"
           >
-            {t("projectSettings.extensionsPanel.upgrade.action")}
+            {extension.hasPublishedAlternative
+              ? t("projectSettings.extensionsPanel.upgrade.publishedAlternative", "Review published version")
+              : t("projectSettings.extensionsPanel.upgrade.action")}
           </ExtensionActionButton>
         )}
       </Box>

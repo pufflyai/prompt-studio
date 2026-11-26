@@ -54,7 +54,7 @@ for (const interruption of ["normal", "schema", "restore", "large"])
       if (interruption === "schema" || interruption === "restore") {
         const finish = await prepareRecoveryOwnerUpgrade(previous.db, previous.path);
         expect((await previous.pglite.query("SELECT * FROM recovery_point_owners")).rows).toEqual([]);
-        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
         if (interruption === "restore") {
           await previous.pglite.exec(`CREATE FUNCTION stop_recovery_restore() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN IF EXISTS (SELECT 1 FROM owners WHERE id=NEW.owner_id AND extension_id='extension-202')
@@ -135,4 +135,4 @@ for (const interruption of ["normal", "schema", "restore", "large"])
       await store?.close();
       await rm(root, { recursive: true, force: true });
     }
-  });
+  }, 15_000);

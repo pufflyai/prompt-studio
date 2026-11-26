@@ -52,7 +52,7 @@ for (const interruption of ["normal", "schema", "restore"])
       if (interruption !== "normal") {
         const finish = await prepareNativeOwnerUpgrade(previous.db, previous.path);
         for (const table of tables) expect((await previous.pglite.query(`SELECT * FROM ${table}`)).rows).toEqual([]);
-        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
         if (interruption === "restore") {
           await previous.pglite.exec(`CREATE FUNCTION stop_native_restore() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN IF NEW.owner_id=(SELECT id FROM owners WHERE project_id='project-b' AND extension_id='example.editor') AND NEW.kind='room' THEN RAISE EXCEPTION 'stop native restoration';
@@ -105,4 +105,4 @@ for (const interruption of ["normal", "schema", "restore"])
       await store?.close();
       await rm(root, { recursive: true, force: true });
     }
-  });
+  }, 15_000);

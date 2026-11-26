@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -6,27 +6,12 @@ import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionDiagnostic } from "../types/runtime";
 import { loadExtensionPackage } from "./loader";
 
-const tempDirs: string[] = [];
+let extensionDir: string;
+let homeDir: string | undefined;
 let previousPstdioHome: string | undefined;
 
-const createTempDir = () => {
-  const dir = mkdtempSync(join(tmpdir(), "pstdio-loader-concurrent-"));
-  tempDirs.push(dir);
-  return dir;
-};
-
-afterEach(() => {
-  if (previousPstdioHome === undefined) delete process.env.PSTDIO_HOME;
-  else process.env.PSTDIO_HOME = previousPstdioHome;
-
-  previousPstdioHome = undefined;
-  for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
-  tempDirs.length = 0;
-});
-
-test("concurrent loads of one extension on an empty cache all get its default export", async () => {
-  previousPstdioHome = process.env.PSTDIO_HOME;
-  const extensionDir = createTempDir();
+beforeAll(() => {
+  extensionDir = mkdtempSync(join(tmpdir(), "pstdio-loader-concurrent-"));
   writeFileSync(
     join(extensionDir, "package.json"),
     JSON.stringify({
@@ -41,25 +26,41 @@ test("concurrent loads of one extension on an empty cache all get its default ex
     join(extensionDir, "extension.ts"),
     'export default { commands: [{ id: "check", ref: { kind: "command", id: "check" }, title: "loaded", run: async () => "loaded" }] };',
   );
+});
 
-  // First project setup loads one extension from several places at once. Each round starts
-  // with a new home folder, so every round bundles into an empty cache.
-  for (let round = 0; round < 25; round++) {
-    process.env.PSTDIO_HOME = join(createTempDir(), "pstdio-home");
-    const diagnostics: ExtensionDiagnostic[] = [];
+afterAll(() => {
+  if (extensionDir) rmSync(extensionDir, { recursive: true, force: true });
+});
 
-    // Start each load one event-loop turn after the previous one, so later loads look for the
-    // bundle while the first build is still writing it.
-    const pending: Array<ReturnType<typeof loadExtensionPackage>> = [];
-    for (let load = 0; load < 4; load++) {
-      pending.push(loadExtensionPackage({ path: extensionDir }, diagnostics));
-      await new Promise((resolve) => setImmediate(resolve));
-    }
-    const loads = await Promise.all(pending);
+afterEach(() => {
+  if (previousPstdioHome === undefined) delete process.env.PSTDIO_HOME;
+  else process.env.PSTDIO_HOME = previousPstdioHome;
+  if (homeDir) rmSync(homeDir, { recursive: true, force: true });
+  homeDir = undefined;
+});
 
-    expect(diagnostics).toEqual([]);
-    for (const loaded of loads) {
-      expect(loaded?.definition.commands).toContainEqual(expect.objectContaining({ id: "check", title: "loaded" }));
-    }
+const coldCacheRounds = Array.from({ length: 25 }, (_, index) => index + 1);
+
+// Each cold-cache round has its own deadline, so setup time across rounds cannot fail a healthy load.
+test.each(
+  coldCacheRounds,
+)("concurrent loads of one extension on an empty cache all get its default export (round %i)", async () => {
+  previousPstdioHome = process.env.PSTDIO_HOME;
+  homeDir = mkdtempSync(join(tmpdir(), "pstdio-loader-concurrent-"));
+  process.env.PSTDIO_HOME = join(homeDir, "pstdio-home");
+  const diagnostics: ExtensionDiagnostic[] = [];
+
+  // Start each load one event-loop turn after the previous one, so later loads look for the
+  // bundle while the first build is still writing it.
+  const pending: Array<ReturnType<typeof loadExtensionPackage>> = [];
+  for (let load = 0; load < 4; load++) {
+    pending.push(loadExtensionPackage({ path: extensionDir }, diagnostics));
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  const loads = await Promise.all(pending);
+
+  expect(diagnostics).toEqual([]);
+  for (const loaded of loads) {
+    expect(loaded?.definition.commands).toContainEqual(expect.objectContaining({ id: "check", title: "loaded" }));
   }
 });

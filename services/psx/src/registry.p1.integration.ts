@@ -2,7 +2,7 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { packExtension } from "pstdio-extensions/distribution";
+import { packExtension, packExtensionReleaseBundle } from "pstdio-extensions/distribution";
 import { connectPsx, migratePsx } from "./database";
 import { createPackageObjects } from "./objects";
 import { createPsx } from "./service";
@@ -98,4 +98,32 @@ test.each([
   expect(response.status).toBe(400);
   expect(await response.json()).toEqual({ error: "PSX publishes stable extension versions only" });
   expect(await (await request("/api/pstdio/notes/versions")).json()).toEqual(before);
+});
+
+test("publishes a runtime variant only for the exact immutable source release", async () => {
+  const packed = await pack("export default {};", "0.45.4");
+  expect((await publish(packed.bytes)).status).toBe(201);
+  const makeBundle = (sourceSha256: string, content: string) =>
+    packExtensionReleaseBundle(
+      { extensionId: "pstdio.notes", version: "0.45.4", sourceSha256, webviews: [] },
+      { "runtime.mjs": new TextEncoder().encode(content) },
+    );
+  const bundle = await makeBundle(packed.sha256, "export default {};");
+  const endpoint = "/api/pstdio/notes/0.45.4/bundles";
+  const upload = (bytes: Uint8Array, authorized = true) =>
+    request(endpoint, {
+      method: "POST",
+      headers: authorized ? { authorization: "Bearer integration-publisher" } : {},
+      body: bytes as BodyInit,
+    });
+  expect((await upload(bundle.bytes, false)).status).toBe(401);
+  expect((await upload((await makeBundle("a".repeat(64), "export default {};")).bytes)).status).toBe(400);
+  expect((await upload(bundle.bytes)).status).toBe(201);
+  expect((await upload(bundle.bytes)).status).toBe(200);
+  expect((await upload((await makeBundle(packed.sha256, "export default {edited: true};")).bytes)).status).toBe(409);
+  const { versions } = await (await request("/api/pstdio/notes/versions")).json();
+  expect(versions).toContainEqual(expect.objectContaining({ version: "0.45.4", bundles: [bundle.descriptor] }));
+  const served = await request(`${endpoint}/${bundle.descriptor.sha256}`);
+  expect(served.status).toBe(200);
+  expect(new Uint8Array(await served.arrayBuffer())).toEqual(bundle.bytes);
 });

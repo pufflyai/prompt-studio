@@ -30,10 +30,9 @@ test("a blocked shutdown records its entered phase when ordinary request logs ar
     await (await app.deps.harnessRegistry.get(harness.id))!.capabilities({ projectId: "p1" });
     closing = app.close();
     await entered.promise;
-    const entries = (await readFile(path, "utf8"))
-      .trim()
-      .split("\n")
-      .map((line) => JSON.parse(line));
+    // Other shutdown phases can append while the file is being read.
+    const lines = (await readFile(path, "utf8")).split("\n");
+    const entries = lines.slice(0, -1).map((line) => JSON.parse(line));
     expect(entries).toContainEqual(
       expect.objectContaining({
         event: "runtime.shutdown.phase",

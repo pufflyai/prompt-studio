@@ -6,6 +6,7 @@ export interface ExtensionActionState {
   operation?: "toggle";
   enabled?: boolean;
   retryable?: boolean;
+  needsReview?: boolean;
   status: "queued" | "running" | "error";
   label: string;
   error?: string;
@@ -34,7 +35,9 @@ export const ExtensionActionFeedback = (props: ExtensionActionFeedbackProps) => 
           action.retryable !== false &&
           onRetry && (
             <Button onClick={onRetry} disabled={retryDisabled}>
-              {t("projectSettings.extensionsPanel.feedback.retry", "Retry")}
+              {action.needsReview
+                ? t("projectSettings.extensionsPanel.upgrade.resolve", "Resolve")
+                : t("projectSettings.extensionsPanel.feedback.retry", "Retry")}
             </Button>
           )
         }

@@ -88,11 +88,14 @@ test(
   PACKAGED_TEST_TIMEOUT,
 );
 
-test(
-  "the compiled host converts released pending records before admission and keeps them after restart",
-  async () => {
+test.each([
+  { release: "0.47", lastMigration: 4, retainsSync: true },
+  { release: "0.48", lastMigration: 9, retainsSync: false },
+])(
+  "the compiled host preserves a pending $release edit and its expected sync state across restart",
+  async ({ lastMigration, retainsSync }) => {
     const root = await mkdtemp(join(tmpdir(), "packaged-record-admission-"));
-    const previous = await createTextLogOwnerFixture(root);
+    const previous = await createTextLogOwnerFixture(root, lastMigration);
     let previousClosed = false;
     let host: Awaited<ReturnType<typeof startPackagedServe>> | undefined;
     try {
@@ -151,12 +154,12 @@ test(
             await inspect.query(`SELECT r.value,o.joined,o.epoch FROM records r
             JOIN owners o ON o.id=r.owner_id WHERE o.extension_id='example.upgrade' AND r.revision IS NOT NULL`)
           ).rows;
-          expect(saved).toEqual([{ value: { title: "kept" }, joined: true, epoch: null }]);
+          expect(saved).toEqual([{ value: { title: "kept" }, joined: retainsSync, epoch: null }]);
           const pending = (
             await inspect.query(`SELECT encode(envelope,'hex') AS bytes,operation_id,local_sequence
             FROM operations WHERE envelope IS NOT NULL ORDER BY local_sequence`)
           ).rows;
-          expect(pending).toHaveLength(1);
+          expect(pending).toHaveLength(retainsSync ? 1 : 0);
           if (open === 0) expected = pending;
           else expect(pending).toEqual(expected);
         } finally {

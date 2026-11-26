@@ -3,6 +3,7 @@
   "globs": [
     "packages/pstdio-dashboard/dist/**",
     "packages/pstdio-db/drizzle/**",
+    "packages/pstdio-db/drizzle-0.46/**",
     "packages/pstdio-db/vendor/**",
     "packages/pstdio/files/extension-sources/**"
   ],

@@ -31,6 +31,59 @@ test("prepares uncached runtime inputs once on a new host", async () => {
   }
 });
 
+for (const scenario of ["cached inspection", "first inspection", "failed inspection"] as const)
+  test(`an adopted source replaces an older in-flight ${scenario}`, async () => {
+    const path = createTempDir();
+    writeRuntimeExtension(path, "old");
+    const cache = createExtensionSourceCache({});
+    const row = { source_path: path, source_kind: "git" as const };
+    const captured = Promise.withResolvers<void>();
+    const resume = Promise.withResolvers<void>();
+    try {
+      const first = await prepareExtensionRevision(path);
+      await acceptPreparedRevision(path, first);
+      if (scenario !== "first inspection") await cache.load(row);
+      const read = extensions.readAcceptedRevision;
+      let blocked = false;
+      const check = spyOn(extensions, "readAcceptedRevision").mockImplementation(async (target) => {
+        const accepted = await read(target);
+        if (!blocked) {
+          blocked = true;
+          expect(accepted?.id).toBe(first.id);
+          captured.resolve();
+          await resume.promise;
+          if (scenario === "failed inspection") throw new Error("Older inspection interrupted");
+        }
+        return accepted;
+      });
+      cache.recheck(path);
+      const priorRead = cache.load(row);
+      const priorOutcome = priorRead.catch(() => null);
+      try {
+        await Promise.race([
+          captured.promise,
+          priorRead.then(() => {
+            throw new Error("The older inspection was not held");
+          }),
+        ]);
+        writeRuntimeExtension(path, "new");
+        await acceptPreparedRevision(path, await prepareExtensionRevision(path));
+        if (scenario === "first inspection") cache.recheckAll();
+        else cache.recheck(path);
+        const upgraded = cache.load(row);
+        resume.resolve();
+        expect((await upgraded)?.source.definition.commands?.[0]?.id).toBe("new");
+        expect((await cache.load(row))?.source.definition.commands?.[0]?.id).toBe("new");
+      } finally {
+        resume.resolve();
+        await priorOutcome;
+        check.mockRestore();
+      }
+    } finally {
+      await stopExtensionPreparation();
+    }
+  });
+
 test("refreshes an incompatible tool's displayed identity without importing its code", async () => {
   const path = createTempDir();
   writeRuntimeExtension(path, "hello");

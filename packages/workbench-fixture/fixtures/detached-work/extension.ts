@@ -26,7 +26,13 @@ const detachedProbeCommand = defineCommand({
       process.on("exit", code => record("exit", { code }));
       const timer = setInterval(() => {
         fs.writeFileSync(path + ".tmp", JSON.stringify({ pid: process.pid, tick: ++tick }));
-        fs.renameSync(path + ".tmp", path);
+        try {
+          fs.renameSync(path + ".tmp", path);
+        } catch (error) {
+          // Windows refuses to replace a file while a reader has it open. The next tick writes again.
+          if (!["EPERM", "EBUSY", "EACCES"].includes(error.code)) throw error;
+          record("rename-skipped", { code: error.code });
+        }
       }, 50);
       setTimeout(() => { record("lifetime-ended"); clearInterval(timer); process.exit(0); }, 10000);
     `;

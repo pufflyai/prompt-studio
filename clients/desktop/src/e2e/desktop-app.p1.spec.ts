@@ -61,6 +61,7 @@ const desktopPublicMethods = [
   "reportRendererState",
   "reportSlowFrames",
   "reportWorkbenchError",
+  "restartToInstallUpdate",
   "retainPerformanceCapture",
   "retryRuntime",
   "revealInFinder",

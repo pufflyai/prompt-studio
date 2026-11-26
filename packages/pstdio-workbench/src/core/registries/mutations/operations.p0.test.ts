@@ -89,6 +89,30 @@ test("a rejection withdraws only its own intent and preserves the attempted draf
   await next.result;
 });
 
+test("chooses the source command only when exposing the failure in recovery", async () => {
+  const { operations, subject } = setup();
+  const conflict = new Error("Local changes conflict with the upgrade");
+  const failures: unknown[] = [];
+  const attempted = operations.submit({
+    subjects: [subject],
+    domain: "extensions",
+    title: "Upgrade extension",
+    sourceCommand: (error: unknown) => {
+      failures.push(error);
+      return error === conflict ? { id: "extensions.resolve", label: "Resolve" } : { id: "extensions.open" };
+    },
+    write() {
+      throw conflict;
+    },
+    classify: () => "rejected",
+  });
+
+  expect(failures).toEqual([]);
+  await expect(attempted.result).rejects.toBe(conflict);
+  expect(failures).toEqual([conflict]);
+  expect(operations.getSnapshot().recovery[0]?.sourceCommand).toEqual({ id: "extensions.resolve", label: "Resolve" });
+});
+
 test("a failed read after a handler failure fences later writes until the read succeeds", async () => {
   const { operations, subject } = setup();
   let reads = 0;

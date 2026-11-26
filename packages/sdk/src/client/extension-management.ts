@@ -1,6 +1,8 @@
 import type {
   CreateNotificationInput,
   ExtensionBlobRef,
+  ExtensionUpgradeReviewRequest,
+  ExtensionUpgradeReviewResponse,
   Notification,
   ProjectExtensionInstance,
   WebviewArtifactFile,
@@ -37,6 +39,11 @@ export const createExtensionManagementClient = (request: RequestFn) => ({
     request<WorkbenchExtensionAutomationRecord>(
       `${projectExtensionPath(projectId, instanceId)}/automations/${encodeURIComponent(automationId)}`,
       { method: "PATCH", body: { enabled } },
+    ),
+  reviewUpgrade: <Input extends ExtensionUpgradeReviewRequest>(projectId: string, instanceId: string, input: Input) =>
+    request<Extract<ExtensionUpgradeReviewResponse, { action: Input["action"] }>>(
+      `${projectExtensionPath(projectId, instanceId)}/upgrade-review`,
+      { method: "POST", body: input },
     ),
   reload: (projectId: string, instanceId: string) =>
     request<ProjectExtensionInstance>(`${projectExtensionPath(projectId, instanceId)}/reload`, { method: "POST" }),

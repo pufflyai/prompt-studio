@@ -105,7 +105,7 @@ for (const interruption of ["normal", "schema", "restore"])
         await prepareOwnerProjectionUpgrade(old.db, old.path);
         const documents = await prepareDocumentOwnerUpgrade(old.db, old.path),
           ordered = await prepareOrderedOwnerUpgrade(old.db, old.path);
-        await migrate(old.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        await migrate(old.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
         if (interruption === "restore") {
           await ordered!();
           await old.pglite.exec(`CREATE FUNCTION interrupt_records() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.record_id='z-created' THEN RAISE EXCEPTION 'interrupt records'; END IF; RETURN NEW; END $$;
@@ -121,6 +121,43 @@ for (const interruption of ["normal", "schema", "restore"])
       await old.close();
       closed = true;
       current = await createDb({ path: old.path });
+      if (interruption === "normal") {
+        const verifyLocal = async () => {
+          const service = createDocumentStorageDBService(current!.db);
+          const records = service.open({ owner }).records;
+          const saved = await records.read("pending");
+          expect(saved.value).toEqual({ title: "pending" });
+          expect(JSON.parse(saved.revision!).stamps).toEqual({});
+          expect((await records.read("z-created")).value).toEqual({ title: "new" });
+          expect((await records.read("orphan")).value).toEqual({ title: "query only" });
+          await withOrderedOwner(current!.db, owner, async (journal) => {
+            expect(await journal.pending()).toEqual([]);
+            const visible = await journal.canonical(["pending", "z-created"]);
+            expect(visible.get("pending")).toMatchObject({ value: { value: { title: "pending" } }, stamps: {} });
+            expect(visible.get("z-created")).toMatchObject({ value: { value: { title: "new" } }, stamps: {} });
+          });
+          await service.flushStatistics();
+        };
+        await verifyLocal();
+        await current.close();
+        current = await createDb({ path: old.path });
+        await verifyLocal();
+        const service = createDocumentStorageDBService(current.db);
+        const records = service.open({ owner }).records;
+        await records.commit({
+          operationId: "new-save",
+          edits: [
+            {
+              recordId: "pending",
+              expectedRevision: (await records.read("pending")).revision!,
+              set: { "/done": true },
+            },
+          ],
+        });
+        expect((await records.read("pending")).value).toEqual({ title: "pending", done: true });
+        await service.flushStatistics();
+        return;
+      }
       const verify = async () => {
         await withOrderedOwner(current!.db, owner, async (journal) => {
           expect(await journal.canonical([...confirmed.keys(), "orphan", "z-created"])).toEqual(confirmed);

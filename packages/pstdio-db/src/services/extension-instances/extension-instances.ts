@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, exists, inArray, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { installed_extension_sources, project_extensions } from "../../db/schemas.pg";
 import { type ActivationInput, activateProjectSources as activateProjectSourcesImpl } from "./activate-project-sources";
@@ -89,6 +89,7 @@ export const createExtensionInstancesDBService = (db: DbClient) => {
     extensionId: string;
     instanceId: string;
     projectId: string;
+    expectedProvider?: string;
   }) => {
     const key = parseProjectExtensionId(input.instanceId);
     if (!key || key.projectId !== input.projectId) throw new Error("Extension provider does not belong to project.");
@@ -96,6 +97,24 @@ export const createExtensionInstancesDBService = (db: DbClient) => {
       .select({ id: installed_extension_sources.id })
       .from(installed_extension_sources)
       .where(eq(installed_extension_sources.extension_id, input.extensionId));
+    const expected = input.expectedProvider && parseProjectExtensionId(input.expectedProvider);
+    if (input.expectedProvider && (!expected || expected.projectId !== input.projectId))
+      throw new Error("Expected extension provider does not belong to project.");
+    const active = expected
+      ? exists(
+          db
+            .select({ id: project_extensions.extension_ref })
+            .from(project_extensions)
+            .where(
+              and(
+                eq(project_extensions.project_id, input.projectId),
+                eq(project_extensions.extension_ref, expected.extensionRef),
+                eq(project_extensions.enabled, true),
+                inArray(project_extensions.extension_ref, matchingSources),
+              ),
+            ),
+        )
+      : undefined;
     const rows = await db
       .update(project_extensions)
       .set({
@@ -106,6 +125,7 @@ export const createExtensionInstancesDBService = (db: DbClient) => {
         and(
           eq(project_extensions.project_id, input.projectId),
           inArray(project_extensions.extension_ref, matchingSources),
+          active,
         ),
       )
       .returning();
