@@ -12,7 +12,11 @@ import {
 import { fingerprintUpgradeWorkingTree } from "./extension-upgrade-working-tree";
 import type { InstallExtensionSourceInput } from "./install-extension-source-types";
 import { resolveInstallSource } from "./resolve-install-source";
-import { type ReviewRecord, readExtensionReviewRecord, reviewDirectory } from "./review-extension-source-record";
+import {
+  loadExtensionReviewRecord as loadRecord,
+  type ReviewRecord,
+  reviewDirectory,
+} from "./review-extension-source-record";
 import {
   applyingReviews,
   type ReviewState,
@@ -20,10 +24,11 @@ import {
   readReviewTrees,
   resolutionMap,
   reviewLocalPath,
+  reviewSummary,
   saveReviewState,
+  withReviewSnapshot,
 } from "./review-extension-source-state";
 import {
-  isSameExtensionReviewPath,
   planExtensionReview,
   readExtensionReviewText,
   readExtensionReviewTree,
@@ -35,31 +40,6 @@ import {
   reviewWorkingCopyChanges,
   StaleExtensionUpgradeReview,
 } from "./review-extension-working-copy";
-
-const loadRecord = async (home: string, id: string, projectId: string, instanceId: string) => {
-  const review = await readExtensionReviewRecord(home, id);
-  const record = review?.record;
-  return record?.projectId === projectId && record.instanceId === instanceId ? review : null;
-};
-
-const reviewSummary = (
-  record: ReviewRecord,
-  choices: ReviewState,
-  trees: Awaited<ReturnType<typeof readReviewTrees>>,
-  changedPaths?: string[],
-) => ({
-  id: record.id,
-  incomingVersion: record.incomingVersion,
-  hasOriginal: record.based,
-  separateLocalProvider: record.separateProviderId !== undefined,
-  localPath: record.sourcePath,
-  createdAt: record.createdAt,
-  revision: choices.revision,
-  resolutions: choices.resolutions,
-  previousResolutions: choices.previousResolutions,
-  changedPaths,
-  changes: planExtensionReview(...trees, resolutionMap(choices.resolutions)).changes,
-});
 
 const prepareOriginal = async (ref: string | null, stage: string) => {
   if (!ref) return false;
@@ -132,17 +112,18 @@ export const getExtensionSourceReview = async (home: string, id: string, project
   const review = await loadRecord(home, id, projectId, instanceId);
   if (!review) return null;
   const { record, directory } = review;
-  const state = readReviewState(directory);
-  const [trees, changedPaths] = await Promise.all([
-    readReviewTrees(directory, record, state),
-    reviewWorkingCopyChanges(
-      reviewLocalPath(directory, state.snapshot),
-      record.sourcePath,
-      state.snapshot?.fingerprint ?? record.workingFingerprint,
-      Boolean(record.separateProviderId),
-    ),
-  ]);
-  return reviewSummary(record, state, trees, changedPaths);
+  return withReviewSnapshot(directory, undefined, async (state) => {
+    const [trees, changedPaths] = await Promise.all([
+      readReviewTrees(directory, record, state),
+      reviewWorkingCopyChanges(
+        reviewLocalPath(directory, state.snapshot),
+        record.sourcePath,
+        state.snapshot?.fingerprint ?? record.workingFingerprint,
+        Boolean(record.separateProviderId),
+      ),
+    ]);
+    return reviewSummary(record, state, trees, changedPaths);
+  });
 };
 
 export const findExtensionSourceReview = async (home: string, projectId: string, instanceId: string) => {
@@ -172,58 +153,15 @@ export const saveExtensionSourceReview = async (
   const review = await loadRecord(home, id, projectId, instanceId);
   if (!review) return null;
   const { record, directory } = review;
-  const state = { ...readReviewState(directory, revision), revision: crypto.randomUUID(), resolutions };
-  const summary = reviewSummary(record, state, await readReviewTrees(directory, record, state));
-  saveReviewState(directory, revision, state);
-  return summary;
+  return withReviewSnapshot(directory, revision, async (current) => {
+    const state = { ...current, revision: crypto.randomUUID(), resolutions };
+    const summary = reviewSummary(record, state, await readReviewTrees(directory, record, state));
+    saveReviewState(directory, revision, state);
+    return summary;
+  });
 };
 
-export const refreshExtensionSourceReview = async (
-  home: string,
-  id: string,
-  projectId: string,
-  instanceId: string,
-  source: ExtensionReviewSource,
-  revision: string,
-  draft?: ExtensionUpgradeReviewResolution[],
-) => {
-  const review = await loadRecord(home, id, projectId, instanceId);
-  if (!review) return null;
-  const { directory, record } = review;
-  assertSameReviewSource(record, source);
-  const state = readReviewState(directory, revision);
-  const [base, previousLocal, incoming] = await readReviewTrees(directory, record, state);
-  const options = { ignoreGit: source.separateProviderId !== undefined };
-  const fingerprint = fingerprintUpgradeWorkingTree(source.path, options);
-  const local = await readExtensionReviewTree(source.path, options);
-  const resolutions = draft ?? state.resolutions;
-  planExtensionReview(base, previousLocal, incoming, resolutionMap(resolutions));
-  const remaining = planExtensionReview(base, local, incoming).unresolved;
-  const retained = [];
-  const previous = new Map(state.previousResolutions?.map((choice) => [choice.path, choice]));
-  for (const choice of resolutions) {
-    if (remaining.has(choice.path) && isSameExtensionReviewPath(previousLocal, local, choice.path))
-      retained.push(choice);
-    else previous.set(choice.path, choice);
-  }
-  const next: ReviewState = {
-    revision: crypto.randomUUID(),
-    snapshot: { id: crypto.randomUUID(), fingerprint },
-    resolutions: retained,
-    previousResolutions: [...previous.values()],
-  };
-  const path = reviewLocalPath(directory, next.snapshot);
-  const summary = reviewSummary(record, next, [base, local, incoming]);
-  try {
-    await writeExtensionReviewTree(path, local);
-    assertExtensionUpgradeWorkingTree(source.path, fingerprint, options);
-    saveReviewState(directory, revision, next);
-    return summary;
-  } catch (error) {
-    await rm(path, { recursive: true, force: true });
-    throw error;
-  }
-};
+export { refreshExtensionSourceReview } from "./refresh-extension-source-review";
 
 export const getExtensionSourceReviewFile = async (
   home: string,
@@ -235,17 +173,18 @@ export const getExtensionSourceReviewFile = async (
 ) => {
   const review = await loadRecord(home, id, projectId, instanceId);
   if (!review) return null;
-  const state = readReviewState(review.directory, revision);
-  const trees = await readReviewTrees(review.directory, review.record, state);
-  const { changes, result } = planExtensionReview(...trees, resolutionMap(state.resolutions));
-  if (!changes.some((change) => change.path === path)) return null;
-  const [base, local, incoming] = trees.map((tree) => readExtensionReviewText(tree, path));
-  return {
-    base: base ?? null,
-    local: local ?? null,
-    incoming: incoming ?? null,
-    proposed: readExtensionReviewText(result, path),
-  };
+  return withReviewSnapshot(review.directory, revision, async (state) => {
+    const trees = await readReviewTrees(review.directory, review.record, state);
+    const { changes, result } = planExtensionReview(...trees, resolutionMap(state.resolutions));
+    if (!changes.some((change) => change.path === path)) return null;
+    const [base, local, incoming] = trees.map((tree) => readExtensionReviewText(tree, path));
+    return {
+      base: base ?? null,
+      local: local ?? null,
+      incoming: incoming ?? null,
+      proposed: readExtensionReviewText(result, path),
+    };
+  });
 };
 
 export const useExtensionSourceReview = async <T>(
@@ -268,16 +207,8 @@ export const useExtensionSourceReview = async <T>(
   applyingReviews.add(directory);
   const stage = join(directory, `.applying-${crypto.randomUUID()}`);
   try {
-    const state = readReviewState(directory, options.revision);
-    const result = await applyReviewPlan(
-      record,
-      state,
-      directory,
-      stage,
-      source,
-      choices,
-      options.usePublished === true,
-      apply,
+    const result = await withReviewSnapshot(directory, options.revision, (state) =>
+      applyReviewPlan(record, state, directory, stage, source, choices, options.usePublished === true, apply),
     );
     // A cleanup error must not turn a committed installation into a failed response.
     if (!options.validationOnly) await rm(directory, { recursive: true, force: true }).catch(() => {});

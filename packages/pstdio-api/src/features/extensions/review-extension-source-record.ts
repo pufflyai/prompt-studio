@@ -30,3 +30,9 @@ export const readExtensionReviewRecord = async (home: string, id: string) => {
     throw error;
   }
 };
+
+export const loadExtensionReviewRecord = async (home: string, id: string, projectId: string, instanceId: string) => {
+  const review = await readExtensionReviewRecord(home, id);
+  const record = review?.record;
+  return record?.projectId === projectId && record.instanceId === instanceId ? review : null;
+};

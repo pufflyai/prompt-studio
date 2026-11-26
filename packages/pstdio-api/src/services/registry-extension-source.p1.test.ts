@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -449,4 +449,28 @@ test("switches one project to a separate published provider and preserves the lo
   expect((await service.getProjectExtensionInstance(primary, local.instance.id))?.instance.enabled).toBe(false);
   expect((await service.getProjectExtensionInstance(secondary, other.instance.id))?.instance.enabled).toBe(true);
   expect(await readFile(localNote, "utf8")).toBe("edited during review");
+});
+
+test("refreshing a review reclaims superseded snapshots after concurrent reads", async () => {
+  const f = await fixture();
+  const { installed, recorded } = await f.first();
+  const path = join(installed.targetPath, "extension.ts");
+  const original = await readFile(path, "utf8");
+  await writeFile(path, original.replace('title:"Version"', 'title:"My version"'));
+  await f.publish("0.45.2");
+  const { reviews } = f.upgradeService(recorded);
+  let review = (await reviews.beginReview("test-project", "test-instance"))!;
+  const directory = join(f.root, "host", "extension-upgrade-reviews", review.id);
+  for (let generation = 1; generation <= 3; generation++) {
+    await writeFile(path, `${original}\n// local generation ${generation}`);
+    const reads = Array.from({ length: 4 }, () =>
+      reviews.readReviewFile("test-project", "test-instance", review.id, "extension.ts"),
+    );
+    review = (await reviews.refreshReview("test-project", "test-instance", review.id, review.revision))!;
+    for (const file of await Promise.all(reads)) expect(file?.local).toContain("export default");
+    expect(await reviews.readReviewFile("test-project", "test-instance", review.id, "extension.ts")).toMatchObject({
+      local: `${original}\n// local generation ${generation}`,
+    });
+    expect((await readdir(directory)).filter((name) => name === "local" || name.startsWith("local-"))).toHaveLength(1);
+  }
 });
