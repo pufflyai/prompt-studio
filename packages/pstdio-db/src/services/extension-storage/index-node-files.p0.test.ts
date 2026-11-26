@@ -37,7 +37,7 @@ test("a node keeps its bytes and edges, and ids differing only in case stay dist
   expect(await files.read(owner, "receipts", id("node"))).toEqual({ bytes: bytes(2, 9), children: null });
   expect(await files.read(owner, "logs", id("Node"))).toBeUndefined();
   expect((await files.list(owner, "receipts")).sort()).toEqual([id("Node"), id("node")].sort());
-}, 15_000);
+});
 
 test("cache eviction removes the least recently used nodes and never a recent one", async () => {
   const { files, root } = await setup();
