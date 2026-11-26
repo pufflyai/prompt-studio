@@ -163,7 +163,7 @@ Deploy the manager and its generated migration before exposing code creation in 
 
 ## Team project grant removal
 
-The manager grants team project membership explicitly, including owner content access. Revoke changes are serialized under the owning account lock with key reads and the final renewal check. Removing a member or accepting their request to leave revokes their grants and rotates each affected shared generation in that transaction. Project deletion remains a separate owner action. Restore retains current team authority and the newer generation history.
+The manager grants team project membership explicitly, including owner content access. Revoke changes are serialized under the owning account lock with key reads and the final renewal check. Removing a member or accepting their request to leave revokes their grants and rotates each affected shared generation in that transaction. Project deletion remains a separate explicit action for an owner or an assigned project member. Restore retains current team authority and the newer generation history.
 
 An already issued relay token stays valid until its configured expiry. Team sync sends writes using the lease of its existing shared live connection. Expiry aborts jobs using the old key snapshot and reconnecting fetches current keys before posting. This cutoff leaves downloads and previously issued generations on their devices. Removing a device rotates its user's private keys, reachable shared keys, and previously issued keys for paused projects.
 

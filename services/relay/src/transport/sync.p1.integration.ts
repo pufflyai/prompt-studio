@@ -7,7 +7,7 @@ import {
   fixtureMicrosoftClient,
   oauthBrowserCookie,
 } from "pstdio-account-manager/testing";
-import { openUpdate, sealState, sealUpdate, UnreadableSyncData } from "pstdio-sync/encryption";
+import { openState, openUpdate, sealState, sealUpdate, UnreadableSyncData } from "pstdio-sync/encryption";
 import { fetchSyncSpaces } from "pstdio-sync/relay";
 import {
   createdTeamInviteCodeSchema,
@@ -663,10 +663,11 @@ test("two Microsoft work accounts join, share and hand over the private catalogu
     expect((await managerRequest(colleague.token, `${teamPath}/ownership/${id}`, { decision: "accept" })).status).toBe(
       200,
     );
-    const [{ token: formerOwnerToken }, { token: successorToken }] = await Promise.all([
+    const [formerOwnerLease, { token: successorToken }] = await Promise.all([
       renew(device.token),
       renew(colleague.token),
     ]);
+    const formerOwnerToken = formerOwnerLease.token;
     const catalogId = await project.documentId(publicationDocumentNames[1]);
     const catalog = { ...route, documentId: catalogId };
     const updated = await sealUpdate(project, catalogId, new TextEncoder().encode("Earlier revision selected"), []);
@@ -687,9 +688,9 @@ test("two Microsoft work accounts join, share and hand over the private catalogu
       (await managerRequest(device.token, "/v1/environment-access", { accountId, workbenchId: projectId, grantId }))
         .status,
     ).toBe(401);
-    expect((await relay.post(catalog, updated, formerOwnerToken)).status).toBe(403);
-
-    await Bun.sleep(Math.max(0, Date.parse(ownerLease.expiresAt) - Date.now()) + 50);
+    // Issued leases remain valid until their expiry; renewal above is denied immediately.
+    await Bun.sleep(Math.max(0, Date.parse(formerOwnerLease.expiresAt) - Date.now()) + 50);
+    expect((await relay.post(catalog, updated, formerOwnerToken)).status).toBe(401);
     expect((await managerRequest(device.token, `${teamPath}/leave`, {})).status).toBe(200);
     const { token: remainingOwnerToken } = await renew(colleague.token);
     const { project: rotated } = await colleagueSpaces();
@@ -704,9 +705,29 @@ test("two Microsoft work accounts join, share and hand over the private catalogu
     const currentCatalog = readResultSchema.parse(
       await (await relay.post({ ...catalog, operation: "read" }, { after: 0 }, remainingOwnerToken)).json(),
     );
-    if (currentCatalog.status !== "updates") throw new Error("Expected the retained catalogue");
-    expect(await openUpdate(rotated, catalogId, currentCatalog.updates[0]!)).toEqual(bytes);
-    expect(await openUpdate(rotated, catalogId, currentCatalog.updates.at(-1)!)).toEqual(newRevision);
+    const baseline = currentCatalog.state;
+    if (!baseline) throw new Error("Expected the member's retained catalogue state");
+    const stateBytes = await relay.request(
+      {
+        kind: "state",
+        projectId,
+        spaceOwner: null,
+        documentId: catalogId,
+        stateId: baseline.stateId,
+      },
+      { token: remainingOwnerToken },
+    );
+    expect(stateBytes.status).toBe(200);
+    expect(await openState(rotated, catalogId, baseline, new Uint8Array(await stateBytes.arrayBuffer()))).toEqual(
+      bytes,
+    );
+    const changes = readResultSchema.parse(
+      await (
+        await relay.post({ ...catalog, operation: "read" }, { after: baseline.through }, remainingOwnerToken)
+      ).json(),
+    );
+    if (changes.status !== "updates") throw new Error("Expected the successor's catalogue updates");
+    expect(await openUpdate(rotated, catalogId, changes.updates.at(-1)!)).toEqual(newRevision);
   } finally {
     oauth.close();
     await Promise.all([accountService.stop(true), relay.close()]);
