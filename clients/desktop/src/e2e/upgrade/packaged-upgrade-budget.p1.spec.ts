@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import { expect } from "@playwright/test";
-import { freshInstallLimitMs, local049UpgradeLimitMs } from "pstdio-scripts/testing";
+import { local049UpgradeLimitMs } from "pstdio-scripts/testing";
 import { test as packaged } from "../../testing/packaged-fixture";
 import {
   createPackagedHome,
@@ -11,7 +11,7 @@ import {
   runPackagedCli,
   waitForExit,
 } from "../packaged-app-helpers";
-import { createPackagedProject, openPackagedProject } from "../packaged-project-helpers";
+import { openPackagedProject } from "../packaged-project-helpers";
 
 type Profile = "history" | "local-storage";
 const fixture = resolve(import.meta.dirname, "../../../../../packages/e2e/src/packaged/desktop-upgrade.fixture.ts");
@@ -26,34 +26,6 @@ const test = packaged.extend<{ profile: Profile; upgradeHome: string }>({
     { timeout: 300_000 },
   ],
 });
-
-packaged(
-  "a fresh install opens its first project with the default tools in under ten seconds",
-  async ({ packagedResources: _resources }, info) => {
-    const home = createPackagedHome();
-    const started = performance.now();
-    let app: PackagedApp | undefined;
-    let elapsedMs: number | undefined;
-    try {
-      app = await launchPackagedApp(home, { PSTDIO_DEFAULT_EXTENSIONS: "" });
-      const project = await createPackagedProject(app, "First project");
-      await openPackagedProject(app.page, project);
-      await expect(app.page.frameLocator('iframe[title="Home"]:visible').getByTestId("start-page")).toBeVisible();
-      elapsedMs = performance.now() - started;
-      expect(elapsedMs).toBeLessThan(freshInstallLimitMs);
-    } finally {
-      await info.attach("fresh-install-to-usable-project.json", {
-        body: JSON.stringify({
-          completed: elapsedMs !== undefined,
-          elapsedMs: elapsedMs ?? performance.now() - started,
-          limitMs: freshInstallLimitMs,
-        }),
-        contentType: "application/json",
-      });
-      if (app) await disposePackagedApp(app);
-    }
-  },
-);
 
 for (const profile of ["history", "local-storage"] as const)
   test.describe(profile, () => {

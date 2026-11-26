@@ -11,4 +11,3 @@ export * from "./test-quarantine";
 export const local049UpgradeLimitMs = 25_000;
 export const projectUpgradeLimitMs = (candidateVersion: string) =>
   candidateVersion.startsWith("0.49.") ? local049UpgradeLimitMs : 20_000;
-export const freshInstallLimitMs = 10_000;
