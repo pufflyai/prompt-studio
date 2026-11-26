@@ -79,21 +79,42 @@ export async function exportSettledRecords(source: PGlite, file: string, signal?
   const output = await open(file, "wx", 0o600);
   try {
     await output.writeFile(Buffer.from("5047434f50590aff0d0a000000000000000000", "hex"));
+    let queryTime=0,rowTime=0,writeTime=0,batches=0;
     await source.transaction(async (tx) => {
-      await tx.exec(`SET LOCAL work_mem='96MB'; SET LOCAL cursor_tuple_fraction=1;
+      const owners=(await tx.query('SELECT project_id,extension_id,id FROM reimport_owners')).rows;
+      const byProject=new Map<string,Map<string,number>>();
+      for (const o of owners){let group=byProject.get(o.project_id);if(!group)byProject.set(o.project_id,group=new Map);group.set(o.extension_id,o.id);}
+      await tx.exec(`SET LOCAL work_mem='96MB'; SET LOCAL enable_indexscan=off; SET LOCAL enable_indexonlyscan=off;
         DECLARE export_records NO SCROLL CURSOR FOR
-        SELECT o.id AS owner_id, c.record_id, convert_from(r.state,'UTF8') AS state, c.deleted, c.revision,
-          c.query_values::text,c.native_versions::text,
+        SELECT c.workbench_id,c.extension_id,c.record_id,c.deleted,c.revision,c.query_values::text,c.native_versions::text,
           CASE WHEN NOT c.deleted THEN json_build_object('value',c.value,'asset',c.asset,'shared',c.shared,
             'native_sources',c.native_sources,'record_lifetime',c.record_lifetime)::text END AS live
-        FROM storage_current_records c FULL JOIN storage_ordered_records r USING(workbench_id,extension_id,record_id)
-        LEFT JOIN pg_temp.reimport_owners o ON o.project_id=c.workbench_id AND o.extension_id=c.extension_id`);
+        FROM storage_current_records c;
+        DECLARE export_state NO SCROLL CURSOR FOR SELECT workbench_id,extension_id,record_id,convert_from(state,'UTF8') AS state
+        FROM storage_ordered_records`);
+      const left=new Map<string,any>(),right=new Map<string,any>();let peak=0;
       for (;;) {
-        signal?.throwIfAborted();
-        const { rows } = await tx.query<ReleasedRecord>("FETCH FORWARD 256 FROM export_records");
-        if (!rows.length) break;
-        await output.writeFile(Buffer.concat(rows.map(currentRow)));
+        const a=performance.now();
+        const [l,r]=await tx.exec('FETCH FORWARD 512 FROM export_records; FETCH FORWARD 512 FROM export_state');
+        const b=performance.now();queryTime+=b-a;
+        if(!l.rows.length&&!r.rows.length)break;
+        const outputRows:Buffer[]=[];
+        function consume(rows: any[], projections:boolean){
+          const other=projections?right:left, active=projections?left:right;
+          for(const row of rows){
+            row.owner_id=byProject.get(row.workbench_id)?.get(row.extension_id)??null;
+            if(row.owner_id===null)throw new NeedsRecordAdmission("missing owner");
+            const key=row.owner_id+"\0"+row.record_id, found=other.get(key);
+            if(!found){active.set(key,row);continue;}
+            other.delete(key);const c=projections?row:found;c.state=projections?found.state:row.state;outputRows.push(currentRow(c));
+          }
+        }
+        consume(l.rows,true);consume(r.rows,false);peak=Math.max(peak,left.size+right.size);
+        if(left.size+right.size>8192)throw Error('window');
+        const data=Buffer.concat(outputRows);const c=performance.now();rowTime+=c-b;await output.writeFile(data);writeTime+=performance.now()-c;batches++;
       }
+      if(left.size||right.size)throw new NeedsRecordAdmission('Unpaired records');
+      
     });
     await output.writeFile(Buffer.from([255, 255]));
     await output.sync();
