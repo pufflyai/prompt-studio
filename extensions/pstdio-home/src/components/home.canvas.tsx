@@ -31,11 +31,6 @@ const StartPagePreview = (props: StartPagePreviewProps) => {
     <Stack w="full" maxW="2xl" px="lg" pt="4xl" pb="3xl" gap="2xl" position="relative">
       {setupError && <ProjectSetupStatus error={setupError} onRetry={() => undefined} />}
       <HomeWelcome />
-      <HomePromptCarousel
-        onBuild={async () => {
-          if (buildFails) throw new Error("Build temporarily unavailable. Try again.");
-        }}
-      />
       <StartRecentList
         resources={recentProjectResources(
           (empty ? [] : resources).map(({ id, title, icon, status }) => ({
@@ -50,6 +45,11 @@ const StartPagePreview = (props: StartPagePreviewProps) => {
           })),
         )}
         onOpen={() => undefined}
+      />
+      <HomePromptCarousel
+        onBuild={async () => {
+          if (buildFails) throw new Error("Build temporarily unavailable. Try again.");
+        }}
       />
     </Stack>
   );

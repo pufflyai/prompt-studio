@@ -98,17 +98,17 @@ export const HomeApp = (props: AppProps) => {
         />
       )}
       <HomeWelcome />
-      <HomePromptCarousel
-        onBuild={async (idea) => {
-          await client.commands["build-home"]({ idea });
-        }}
-      />
       <StartRecentList
         resources={recentProjectResources(recent.data ?? [])}
         onOpen={(recent) => {
           void context.host
             .call("navigation.open", { target: recent.target })
             .catch((error) => setNavigationError(String(error)));
+        }}
+      />
+      <HomePromptCarousel
+        onBuild={async (idea) => {
+          await client.commands["build-home"]({ idea });
         }}
       />
     </Stack>
