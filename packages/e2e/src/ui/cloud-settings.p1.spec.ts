@@ -285,3 +285,57 @@ test("a team member can accept an ownership offer through Cloud settings", async
   await expect(settings.getByRole("button", { name: "Project access" })).toBeVisible();
   await expect(settings.getByText("Morgan · Owner")).toBeVisible();
 });
+
+test("a team owner creates a Microsoft directory invitation from Cloud settings", async ({ page, request }) => {
+  const created = await request.post(`${uiOrigin}/v1/projects`, {
+    data: folderProjectInput({ name: "Microsoft invitation" }),
+  });
+  expect(created.ok()).toBe(true);
+  const { id } = await created.json();
+  const expected = { accountId: "fixture-owner", managerOrigin: "https://accounts.example.test" };
+  const team = { accountId: "studio", name: "Studio Team", role: "owner", features: { relay: true } };
+  const microsoft = {
+    tenantId: "5eadc33c-c255-4cb3-8c47-b00cd0486ff0",
+    objectId: "14903586-aaf6-48c1-95bc-c799c8ebd084",
+  };
+  const url = `${expected.managerOrigin}/v1/team-invitation#${"m".repeat(43)}`;
+  await page.route("**/v1/account", (route) =>
+    route.fulfill({
+      json: {
+        login: { ...expected, deviceId: "fixture-device", relayOrigin: "https://relay.example.test" },
+        cloudProjects: [],
+        cloudProjectsLoaded: true,
+        features: { relay: true },
+        teamAccounts: [team],
+      },
+    }),
+  );
+  await page.route(`**/v1/account/projects/${id}/sync*`, (route) =>
+    route.fulfill({ json: { state: "local", offlineReady: false } }),
+  );
+  await page.route("**/v1/account/devices*", (route) => route.fulfill({ json: [] }));
+  await page.route("**/v1/account/team-membership/read", (route) =>
+    route.fulfill({ json: route.request().postDataJSON().request.op === "ownershipOffer" ? null : [] }),
+  );
+  await page.route("**/v1/account/team-membership/write", (route) => {
+    expect(route.request().postDataJSON()).toEqual({
+      request: { op: "invite", accountId: team.accountId, microsoft },
+      expected,
+    });
+    return route.fulfill({ json: { id: "work-invite", url, microsoft, expiresAt: "2030-01-08T10:30:00.000Z" } });
+  });
+
+  await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+  await page.goto(`/projects/${id}/`);
+  await page.locator("footer").getByRole("button", { name: "Prompt Studio Cloud", exact: true }).click();
+  await page.frameLocator('iframe[title="Cloud details"]').getByRole("button", { name: "Cloud settings" }).click();
+  const settings = page.frameLocator('iframe[title="Cloud"]');
+  await settings.getByRole("button", { name: "Studio Team" }).click();
+  await settings.getByRole("button", { name: "Team members" }).click();
+  await settings.getByRole("button", { name: "Microsoft work account" }).click();
+  await settings.getByRole("textbox", { name: "Microsoft Entra tenant ID" }).fill(microsoft.tenantId);
+  await expect(settings.getByRole("button", { name: "Invite person" })).toBeDisabled();
+  await settings.getByRole("textbox", { name: "Microsoft Entra user object ID" }).fill(microsoft.objectId);
+  await settings.getByRole("button", { name: "Invite person" }).click();
+  await expect(settings.getByRole("textbox", { name: "Invitation link to copy" })).toHaveValue(url);
+});
