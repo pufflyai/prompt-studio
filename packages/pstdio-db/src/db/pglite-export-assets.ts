@@ -10,7 +10,7 @@ const required = [
   "pglite-previous/pglite.data",
   "pglite/pglite.wasm",
   "pglite/pglite.data",
-  "pglite/icu.76.tgz",
+  "pglite/icudt76l.dat.zst",
 ];
 
 export const resolveExportWorker = async (embedded: readonly EmbeddedEngineFile[]) => {

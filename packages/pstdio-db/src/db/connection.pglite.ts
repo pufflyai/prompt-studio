@@ -2,24 +2,17 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import type { PGlite } from "@electric-sql/pglite";
-import { inArray } from "drizzle-orm";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
-import { extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
 import { normalizeEmbeddedFileName } from "pstdio-paths";
-import type { StorageOwner } from "pstdio-sync";
-import { migrateExtensionIdentities } from "../services/extension-identity-migration";
-import { pruneAllDocumentFiles, pruneDocumentFiles } from "../services/extension-storage/document-file-retention";
+import { pruneDocumentFiles } from "../services/extension-storage/document-file-retention";
 import { attachDocumentCollector, documentFilesFor } from "../services/extension-storage/document-files";
 import {
   attachIndexNodeFiles,
   createIndexNodeFiles,
   createMemoryIndexNodeFiles,
 } from "../services/extension-storage/index-node-files";
-import { upgradeIndexNodesToFiles } from "../services/extension-storage/index-node-upgrade";
-import { pruneRecoveryFiles } from "../services/extension-storage/recovery-file-retention";
 import { recoveryFilesFor } from "../services/extension-storage/recovery-files";
 import { prepareAppPreferencesUpgrade } from "./app-preferences-upgrade";
-import { restoreArtifactProjectionAdmission } from "./artifact-projection-admission";
 import { prepareArtifactProjectionUpgrade } from "./artifact-projection-upgrade";
 import { prepareAssetOwnerUpgrade } from "./asset-owner-upgrade";
 import { prepareAutomationOwnersUpgrade } from "./automation-owners-upgrade";
@@ -33,27 +26,28 @@ import { importBatchOwners, importBatchRows, stageBatchReimport } from "./batch-
 import { batchBackup, batchPayload, recoverBatchHome } from "./batch-reimport-home";
 import { prepareBoardDefaultsUpgrade } from "./board-defaults-upgrade";
 import { prepareBoardOwnersUpgrade } from "./board-owners-upgrade";
+import { collectUnreferencedFiles } from "./collect-unreferenced-files";
 import { prepareConnectionCredentialsUpgrade } from "./connection-credentials-upgrade";
 import { attachDatabaseAuthority } from "./database-authority";
 import { prepareDocumentOwnerUpgrade } from "./document-owner-upgrade";
 import { prepareExtensionPreferencesUpgrade } from "./extension-preferences-upgrade";
 import { prepareFileOwnersUpgrade } from "./file-owners-upgrade";
 import { prepareHistoryOwnerUpgrade } from "./history-owner-upgrade";
+import { fullIcuData } from "./icu-data";
 import { retireLegacyRecordTables } from "./legacy-record-retirement";
-import { type LegacyConversionFailure, upgradeLegacyRecords } from "./legacy-record-upgrade";
+import { upgradeLegacyRecords } from "./legacy-record-upgrade";
 import { finishLocalUpgrade } from "./local-upgrade-state";
 import { prepareLogOwnerUpgrade } from "./log-owner-upgrade";
 import { migratePglite, resumeCurrentPgliteSchema } from "./migrate-pglite";
 import { type EmbeddedFile, getEmbeddedFiles, withMigrationsFolder } from "./migration-assets";
 import { prepareNativeOwnerUpgrade } from "./native-owner-upgrade";
+import type { DbOpenOptions } from "./open-database";
 import { openPglite } from "./open-pglite";
 import { prepareOrderedOwnerUpgrade } from "./ordered-owner-upgrade";
 import { prepareOwnerIndexUpgrade } from "./owner-index-upgrade";
 import { prepareOwnerProjectionUpgrade } from "./owner-projection-upgrade";
-import { canonicalDbPath, resolveDbPath } from "./paths";
 import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-current-home";
 import { pgliteIdentity } from "./pglite-identity";
-import { acquirePgliteLock } from "./pglite-lock";
 import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
 import { prepareRecordRowFinalization } from "./record-row-upgrade";
 import { prepareRecoveryOwnerUpgrade } from "./recovery-owner-upgrade";
@@ -65,14 +59,16 @@ import { createStorageCleanup } from "./retired-storage-cleanup";
 import * as schema from "./schemas.pg";
 import { prepareSessionWorkspaceUpgrade } from "./session-workspace-upgrade";
 import { resolveSourceEngineModule, sourceStartupOptions } from "./source-startup-image";
-import { type DatabaseMaintenancePhase, invalidateMaintenance, maintainDatabase } from "./startup-maintenance";
+import { openAdmissionProof } from "./startup-admission-proof";
+import { type DatabaseMaintenancePhase, maintainDatabase } from "./startup-maintenance";
+import { admitStorageFiles } from "./storage-file-admission";
 
 export { resolveMigrationsFolder } from "./migration-assets";
 
 const PGLITE_WASM_SUFFIX = "/pstdio-db/vendor/pglite/pglite.wasm";
 const PGLITE_DATA_SUFFIX = "/pstdio-db/vendor/pglite/pglite.data";
 const PGLITE_INITIAL_DATABASE_SUFFIX = "/pstdio-db/vendor/pglite/initial-database.tar.gz";
-const PGLITE_ICU_SUFFIX = "/pstdio-db/vendor/pglite/icu.76.tgz";
+const PGLITE_ICU_SUFFIX = "/pstdio-db/vendor/pglite/icudt76l.dat.zst";
 
 export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[] = getEmbeddedFiles()) => {
   const wasmFile = embeddedFiles.find((file) => normalizeEmbeddedFileName(file.name).endsWith(PGLITE_WASM_SUFFIX));
@@ -109,7 +105,8 @@ export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[
     fsBundle: dataFile,
     pgliteWasmModule: wasmModule,
     loadDataDir: initialDatabase,
-    icuDataDir: icu,
+    icuDataDir: undefined,
+    extensions: { fullIcuData: fullIcuData(icu) },
   };
 };
 
@@ -125,22 +122,9 @@ export type DbOpenPhase =
   | "database_migrated"
   | "database_index_nodes";
 
-export const createDb = async (options?: {
-  path?: string;
-  onPhase?: (phase: DbOpenPhase) => void;
-  signal?: AbortSignal;
-  /** Folder for encrypted index nodes; defaults to a sibling of the database folder. */
-  indexNodesPath?: string;
-  storageRoot?: string;
-  onLegacyConversionError?: (failure: LegacyConversionFailure) => void;
-  /** The runtime vacuums in the background and schedules deletion of retired rows. */
-  deferCleanup?: boolean;
-}) => {
+export { createDb } from "./open-database";
+export const openLockedDatabase = async (dbPath: string, releaseLock: () => void, options?: DbOpenOptions) => {
   const onPhase = options?.onPhase ?? (() => {});
-  const dbPath = canonicalDbPath(resolveDbPath(options?.path));
-
-  const releaseLock = dbPath === ":memory:" ? () => {} : acquirePgliteLock(dbPath);
-
   let pglite: PGlite | undefined;
   let fresh = dbPath === ":memory:";
   const onImageRestored = () => {
@@ -148,7 +132,6 @@ export const createDb = async (options?: {
     onPhase("database_image_restored");
   };
   try {
-    onPhase("database_locked");
     options?.signal?.throwIfAborted();
     const embedded = getEmbeddedFiles();
     const pgliteOpts = await sourceStartupOptions(await resolvePgliteOptions(embedded));
@@ -165,6 +148,9 @@ export const createDb = async (options?: {
       });
     }
     options?.signal?.throwIfAborted();
+    const deferCleanup = !!options?.deferCleanup && dbPath !== ":memory:";
+    const nodesPath = path.resolve(options?.indexNodesPath ?? `${dbPath}-index-nodes`);
+    const proof = deferCleanup ? await openAdmissionProof(dbPath, nodesPath) : undefined;
     pglite = await openPglite(dbPath, pgliteOpts, onImageRestored);
     await pglite.waitReady;
     const releasedJournal = await hasReleasedJournal(pglite);
@@ -193,14 +179,12 @@ export const createDb = async (options?: {
     recoveryFilesFor(db, dbPath);
     documentFilesFor(db, dbPath);
     // The node folder belongs to this database, so another database can never clean it up.
-    const indexNodes =
-      dbPath === ":memory:"
-        ? createMemoryIndexNodeFiles()
-        : createIndexNodeFiles(options?.indexNodesPath ?? `${dbPath}-index-nodes`);
+    const indexNodes = dbPath === ":memory:" ? createMemoryIndexNodeFiles() : createIndexNodeFiles(nodesPath);
     attachIndexNodeFiles(db, indexNodes);
     const finishLocal = () =>
       finishLocalUpgrade(db, openedPglite, options?.storageRoot ?? path.join(path.dirname(dbPath), "storage"));
     let migrated = false;
+    let current = false;
     let finishArtifactProjectionUpgrade: (() => Promise<void>) | undefined;
     await withMigrationsFolder(async (migrationsFolder) => {
       if (!fs.existsSync(migrationsFolder)) return;
@@ -219,6 +203,10 @@ export const createDb = async (options?: {
           path: dbPath,
           fresh,
           finishLegacyAdmission,
+          admitted: !releasedJournal && proof?.matched,
+          onCurrent: () => {
+            current = true;
+          },
         }))
       ) {
         if (releasedJournal) await finishReleasedBaseline(openedPglite, dbPath, migrationsFolder, finishLocal);
@@ -284,43 +272,32 @@ export const createDb = async (options?: {
       if (releasedJournal) await finishReleasedBaseline(openedPglite, dbPath, migrationsFolder, finishLocal);
       migrated = true;
     }, releasedJournal);
-    // Copy durable receipts before opening. Remove old rows for both sides of an identity
-    // rename now so the rename does not copy cache data or see a false conflict.
-    await pruneRecoveryFiles(db);
-    onPhase("database_index_nodes");
-    // A run that stops after deleting rows must leave offline space reclamation pending.
-    const owed = () => invalidateMaintenance(dbPath);
-    const deferredOwners: StorageOwner[] = [];
-    const deferCleanup = options?.deferCleanup && dbPath !== ":memory:";
-    const renamedOwners = new Set(
-      extensionIdentityRenames.flatMap(({ from, to }) => [
-        `${from.publisher}.${from.name}`,
-        `${to.publisher}.${to.name}`,
-      ]),
-    );
-    const movedNodes = await upgradeIndexNodesToFiles(db, indexNodes, undefined, owed, (owner) => {
-      if (!deferCleanup || renamedOwners.has(owner.extensionId)) return false;
-      deferredOwners.push(owner);
-      return true;
+    const storage = await admitStorageFiles({
+      db,
+      dbPath,
+      indexNodes,
+      deferCleanup,
+      onPhase,
+      finishArtifactProjectionUpgrade,
+      current: current && !releasedJournal && proof?.matched === true,
     });
-    const renamed = await migrateExtensionIdentities(db, {
-      beforeChange: owed,
-      onConflict: async (error) => {
-        await db
-          .update(schema.installed_extension_sources)
-          .set({ status: "error", last_error_json: { code: error.code, message: error.message } })
-          .where(inArray(schema.installed_extension_sources.extension_id, [error.from, error.to]));
-      },
-    });
-    await finishArtifactProjectionUpgrade?.();
-    await restoreArtifactProjectionAdmission(db, dbPath);
-    await pruneAllDocumentFiles(db);
-    // Conversion publishes bounded batches; collect their files once before exposing the database.
+    const admissionEvidence = storage.complete ? await proof?.evidence() : undefined;
+    let cleanupFiles = collectUnreferencedFiles(db, indexNodes);
+    const collectWhileIdle = async (stopped: () => boolean) => {
+      while (!stopped()) {
+        try {
+          if ((await cleanupFiles.next()).done) return;
+        } catch (error) {
+          cleanupFiles = collectUnreferencedFiles(db, indexNodes);
+          throw error;
+        }
+        await Bun.sleep(0);
+      }
+    };
+    if (!deferCleanup) await collectWhileIdle(() => false);
+    // Foreground writes still collect their own superseded files after commit.
     attachDocumentCollector(db, (projectId, ids) => pruneDocumentFiles(db, projectId, ids));
-    if (migrated && !deferCleanup)
-      await maintainDatabase(openedPglite, db, dbPath, fresh, onPhase, movedNodes || renamed);
-    const projectIds = await db.select({ id: schema.projects.id }).from(schema.projects);
-    await indexNodes.retainProjects(new Set(projectIds.map((project) => project.id)));
+    if (migrated && !deferCleanup) await maintainDatabase(openedPglite, db, dbPath, fresh, onPhase, storage.changed);
     if (reimport) await fs.promises.rm(payload, { recursive: true, force: true });
     onPhase("database_migrated");
 
@@ -330,7 +307,12 @@ export const createDb = async (options?: {
 
       closed = true;
       try {
-        await openedPglite.close();
+        try {
+          await cleanupFiles.return();
+        } finally {
+          await openedPglite.close();
+        }
+        if (admissionEvidence) await proof?.save(admissionEvidence);
       } finally {
         releaseLock();
       }
@@ -341,11 +323,10 @@ export const createDb = async (options?: {
       db,
       path: dbPath,
       pglite: openedPglite,
-      cleanupRetiredRows: createStorageCleanup(db, dbPath, deferredOwners, !!deferCleanup),
+      cleanupRetiredRows: createStorageCleanup(db, dbPath, storage.deferredOwners, deferCleanup, collectWhileIdle),
     };
   } catch (error) {
     await pglite?.close();
-    releaseLock();
     throw error;
   }
 };

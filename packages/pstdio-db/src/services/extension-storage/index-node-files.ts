@@ -36,8 +36,8 @@ export interface IndexNodeFiles {
   moveExtension(from: string, to: string, retainedProjects?: ReadonlySet<string>): Promise<void>;
   /** Whether any project keeps nodes under this extension id. */
   hasExtension(extensionId: string): Promise<boolean>;
-  /** Removes every project folder whose id is not in `projectIds`. */
-  retainProjects(projectIds: ReadonlySet<string>): Promise<void>;
+  projectIds(): Promise<string[]>;
+  removeProject(projectId: string): Promise<void>;
 }
 
 /** Child order matches the relay's stored order: plain code-unit order, never locale order. */
@@ -245,11 +245,15 @@ export const createIndexNodeFiles = (root: string): IndexNodeFiles => {
       }
       return false;
     },
-    async retainProjects(projectIds) {
-      for (const name of await readdir(root).catch(() => [] as string[])) {
-        if (name.startsWith(".")) continue;
-        if (!projectIds.has(unsegment(name))) await rm(join(root, name), { recursive: true, force: true });
-      }
+    async projectIds() {
+      const names = await readdir(root).catch((error) => {
+        if (missing(error)) return [];
+        throw error;
+      });
+      return names.filter((name) => !name.startsWith(".") && segment(unsegment(name)) === name).map(unsegment);
+    },
+    async removeProject(projectId) {
+      await rm(join(root, segment(projectId)), { recursive: true, force: true });
       directories.clear();
     },
   };
@@ -313,8 +317,11 @@ export const createMemoryIndexNodeFiles = (): IndexNodeFiles => {
       }
     },
     hasExtension: async (extensionId) => select(([, e]) => e === extensionId).length > 0,
-    async retainProjects(projectIds) {
-      for (const entry of select(([w]) => !projectIds.has(w))) nodes.delete(entry);
+    async projectIds() {
+      return [...new Set([...nodes.keys()].map((key) => parse(key)[0]))];
+    },
+    async removeProject(projectId) {
+      for (const entry of select(([w]) => w === projectId)) nodes.delete(entry);
     },
   };
 };

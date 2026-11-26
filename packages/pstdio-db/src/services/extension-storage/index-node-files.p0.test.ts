@@ -104,7 +104,7 @@ test("a renamed extension's nodes merge into the new id and removed projects los
 
   const other = { workbenchId: "project-b", extensionId: "example.records" };
   await files.write(other, "logs", id("c"), { bytes: bytes(1), children: [] });
-  await files.retainProjects(new Set([owner.workbenchId]));
+  for (const id of await files.projectIds()) if (id !== owner.workbenchId) await files.removeProject(id);
   expect(await files.list(other, "logs")).toEqual([]);
   expect(await files.list(renamed, "receipts")).toHaveLength(2);
 });

@@ -89,18 +89,28 @@ export const pruneDocumentFiles = async (db: DbClient, projectId: string, ids: n
 };
 
 /** Startup and owner/project deletion remove unreachable files in bounded batches. */
-export const pruneAllDocumentFiles = async (db: DbClient, project?: string) => {
+export async function* collectDocumentFiles(db: DbClient, project?: string, batchSize = 200) {
   const files = documentFilesFor(db);
   const projects = project === undefined ? files.projects() : [project];
   for await (const projectId of projects) {
     let batch: number[] = [];
     for await (const id of files.documents(projectId)) {
       batch.push(id);
-      if (batch.length === 200) {
+      if (batch.length === batchSize) {
         await pruneDocumentFiles(db, projectId, batch);
         batch = [];
+        yield;
       }
     }
-    await pruneDocumentFiles(db, projectId, batch);
+    if (batch.length) {
+      await pruneDocumentFiles(db, projectId, batch);
+      yield;
+    }
+  }
+}
+
+export const pruneAllDocumentFiles = async (db: DbClient, project?: string) => {
+  for await (const _ of collectDocumentFiles(db, project)) {
+    /* drain all batches */
   }
 };
