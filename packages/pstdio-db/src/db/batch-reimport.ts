@@ -141,19 +141,21 @@ export async function stageBatchReimport(
       (SELECT 1 FROM storage_ordered_owners o WHERE (o.workbench_id,o.extension_id)=(p.workbench_id,p.extension_id))) AS eligible`)
   ).rows;
   if (!eligible) return false;
+  const t=performance.now();
+  const phase=(n:string)=>console.error("Upgrade diagnostic "+n+" "+Math.round(performance.now()-t));
   const candidate = await beginBatchHome(path);
   let sealed = false;
   try {
-    const dest = await openPglite(candidate, options);
+    phase("eligible");const dest=await openPglite(candidate, options); await dest.waitReady;phase("stage open");
     try {
       // Both source builds and packaged apps can start with an image already containing today's schema.
       // Recreate the exact released prefix only in the new, private database.
       await dest.exec(
         "DROP SCHEMA public CASCADE; DROP SCHEMA IF EXISTS drizzle CASCADE; CREATE SCHEMA public AUTHORIZATION pg_database_owner; GRANT USAGE ON SCHEMA public TO PUBLIC",
       );
-      await applyPgliteMigrations(dest, journal.slice(0, history.length));
+      phase("stage reset");await applyPgliteMigrations(dest,journal.slice(0,history.length));phase("stage ddl");
       await copySmallTables(source, path, dest, candidate, signal);
-      const payload = join(candidate, batchPayload);
+      phase("small tables");const payload=join(candidate,batchPayload);
       await mkdir(payload, { mode: 0o700 });
       await source.exec(`CREATE TEMP TABLE reimport_owners AS SELECT row_number() OVER (ORDER BY project_id COLLATE "C",extension_id COLLATE "C")::int AS id, project_id,extension_id
         FROM (SELECT workbench_id AS project_id,extension_id FROM storage_ordered_owners UNION SELECT project_id,extension_id FROM asset_transfers) o; ANALYZE pg_temp.reimport_owners`);
@@ -169,7 +171,7 @@ export async function stageBatchReimport(
         "SELECT o.id,t.operation_id,t.expected,t.cancelled_at::timestamptz,t.created_at::timestamptz FROM asset_transfers t JOIN pg_temp.reimport_owners o USING(project_id,extension_id)",
         join(payload, transferFile),
       );
-      await exportSettledRecords(source, join(payload, recordFile), signal);
+      phase("owners and transfers");await exportSettledRecords(source,join(payload,recordFile),signal);phase("records");
       for (const name of ["owners.copy", transferFile]) {
         const f = await open(join(payload, name), "r+");
         try {
@@ -188,7 +190,7 @@ export async function stageBatchReimport(
     await writeDurably(join(batchWork(path), "ready"), "");
     sealed = true;
     await flushDirectory(batchWork(path));
-    return true;
+    phase("sealed");return true;
   } catch (error) {
     if (error instanceof NeedsRecordAdmission) return false;
     throw error;
