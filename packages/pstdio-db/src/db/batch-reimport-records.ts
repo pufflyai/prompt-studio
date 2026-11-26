@@ -86,7 +86,8 @@ export async function exportSettledRecords(source: PGlite, file: string, signal?
           FULL JOIN storage_ordered_records r USING(workbench_id,extension_id,record_id)
           WHERE NOT c.deleted OR c.record_id IS NULL
         )
-        SELECT o.id AS owner_id, c.record_id, convert_from(r.state,'UTF8') AS state, c.deleted, c.revision,
+        SELECT o.id AS owner_id, c.record_id,
+          CASE WHEN c.record_id IS NOT NULL THEN convert_from(r.state,'UTF8') END AS state, c.deleted, c.revision,
           c.query_values::text, c.native_versions::text,
           json_build_object('value',c.value,'asset',c.asset,'shared',c.shared,
             'native_sources',c.native_sources,'record_lifetime',c.record_lifetime)::text AS live

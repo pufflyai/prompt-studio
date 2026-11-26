@@ -116,6 +116,17 @@ test("reopens the original after an unsupported pair and preserves a projection-
     const old = await createTextLogOwnerFixture(root, 9);
     try {
       await seed(old);
+      await old.pglite.exec(`INSERT INTO storage_ordered_records(workbench_id,extension_id,record_id,state)
+        VALUES ('p','example.records','unpublished',decode('0000','hex'))`);
+      expect(
+        await stageBatchReimport(
+          old.pglite,
+          old.path,
+          await resolvePgliteOptions(),
+          join(import.meta.dirname, "../../drizzle-0.46"),
+        ),
+      ).toBe(false);
+      await old.pglite.exec("DELETE FROM storage_ordered_records WHERE record_id='unpublished'");
       await old.pglite.exec(
         "INSERT INTO storage_current_records(workbench_id,extension_id,record_id,deleted,value,revision,record_lifetime) VALUES ('p','example.records','projection-only',false,'123','7','initial')",
       );
@@ -143,14 +154,19 @@ test("resumes a published batch after interruption between directory renames and
     const old = await createTextLogOwnerFixture(root, 9);
     try {
       await seed(old);
-      expect(
-        await stageBatchReimport(
+      const tryStage = async () =>
+        stageBatchReimport(
           old.pglite,
           old.path,
           await resolvePgliteOptions(),
           join(import.meta.dirname, "../../drizzle-0.46"),
-        ),
-      ).toBe(true);
+        );
+      // An extension can have documents before it has an ordered owner.
+      await old.pglite.exec(`INSERT INTO storage_documents(workbench_id,extension_id,document_id,state)
+        VALUES ('p','document-only','["ordered-conversion"]',decode('0000','hex'))`);
+      expect(await tryStage()).toBe(false);
+      await old.pglite.exec("DELETE FROM storage_documents WHERE extension_id='document-only'");
+      expect(await tryStage()).toBe(true);
     } finally {
       await old.close();
     }

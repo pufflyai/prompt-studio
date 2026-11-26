@@ -3,6 +3,7 @@ import { mkdir, open, readFile, rename, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { PGlite, PGliteOptions, Transaction } from "@electric-sql/pglite";
 import { readMigrationFiles } from "drizzle-orm/migrator";
+import { relativeEmbeddedFileName } from "pstdio-paths";
 import {
   batchBackup,
   batchPayload,
@@ -15,6 +16,7 @@ import { exportSettledRecords, NeedsRecordAdmission } from "./batch-reimport-rec
 import { releasedJournalDocument } from "./local-upgrade-documents";
 import { stageLocalTransfers } from "./local-upgrade-transfers";
 import { applyPgliteMigrations } from "./migrate-pglite";
+import { getEmbeddedFiles } from "./migration-assets";
 import { openPglite } from "./open-pglite";
 import { engineFile, flushDirectory } from "./pglite-home-recovery";
 import { hasUpgradeSnapshots } from "./upgrade-snapshot";
@@ -142,7 +144,17 @@ export async function stageBatchReimport(
     await source.query<{ eligible: boolean }>(`SELECT EXISTS(SELECT 1 FROM storage_ordered_records)
     AND NOT EXISTS(SELECT 1 FROM storage_ordered_operations WHERE settled_epoch IS NULL AND (envelope IS NOT NULL OR admission IS NOT NULL))
     AND NOT EXISTS(SELECT 1 FROM storage_record_outbox)
-    AND NOT EXISTS(SELECT 1 FROM storage_documents WHERE document_id='["ordered-conversion"]')
+    AND NOT EXISTS(
+      -- The document key is indexed within each project and extension. Visit every such prefix,
+      -- including document-only extensions, then look up the conversion marker by its full key.
+      WITH RECURSIVE owners AS (
+        (SELECT workbench_id,extension_id FROM storage_documents ORDER BY workbench_id,extension_id LIMIT 1)
+        UNION ALL SELECT d.* FROM owners o CROSS JOIN LATERAL (
+          SELECT workbench_id,extension_id FROM storage_documents
+          WHERE (workbench_id,extension_id)>(o.workbench_id,o.extension_id)
+          ORDER BY workbench_id,extension_id LIMIT 1) d)
+      SELECT 1 FROM owners o JOIN storage_documents d USING(workbench_id,extension_id)
+      WHERE d.document_id='["ordered-conversion"]')
     AND NOT EXISTS(SELECT 1 FROM storage_record_projections p WHERE NOT EXISTS
       (SELECT 1 FROM storage_ordered_owners o WHERE (o.workbench_id,o.extension_id)=(p.workbench_id,p.extension_id))) AS eligible`)
   ).rows;
@@ -150,13 +162,14 @@ export async function stageBatchReimport(
   const candidate = await beginBatchHome(path);
   let sealed = false;
   try {
-    const dest = await openPglite(candidate, options);
+    // This temporary database starts at the released schema. The empty engine image ships
+    // with the runtime and avoids unpacking and dropping the current schema on every upgrade.
+    const emptyImage =
+      getEmbeddedFiles().find(
+        (file) => relativeEmbeddedFileName(file.name, "pstdio-db/vendor") === "pglite/empty-database.tar.gz",
+      ) ?? Bun.file(join(import.meta.dirname, "../../vendor/pglite/empty-database.tar.gz"));
+    const dest = await openPglite(candidate, { ...options, loadDataDir: emptyImage });
     try {
-      // Both source builds and packaged apps can start with an image already containing today's schema.
-      // Recreate the exact released prefix only in the new, private database.
-      await dest.exec(
-        "DROP SCHEMA public CASCADE; DROP SCHEMA IF EXISTS drizzle CASCADE; CREATE SCHEMA public AUTHORIZATION pg_database_owner; GRANT USAGE ON SCHEMA public TO PUBLIC",
-      );
       await applyPgliteMigrations(dest, journal.slice(0, history.length));
       await stageLocalTransfers(source, storageRoot);
       await copySmallTables(source, path, dest, candidate, signal);
