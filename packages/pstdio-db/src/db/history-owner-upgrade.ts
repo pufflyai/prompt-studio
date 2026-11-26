@@ -1,74 +1,56 @@
 import { isDeepStrictEqual } from "node:util";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
-import { storage_personal_history as history, owners, storage_personal_history_sources as sources } from "./schemas.pg";
+import { prepareOwnedRowUpgrade } from "./owned-row-upgrade";
+import { owners } from "./schemas.pg";
 import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
 
 type Address = { workbench_id: string; extension_id: string };
-type LegacyRow = Address & Omit<typeof history.$inferSelect, "owner_id">;
-type LegacySource = Address & Omit<typeof sources.$inferSelect, "owner_id">;
 type LegacyPosition = Address & { cursor: string | null; migrated: boolean };
 const ownerOf = (row: Address) => ({ workbenchId: row.workbench_id, extensionId: row.extension_id });
 const same = (actual: unknown, expected: unknown) => {
   if (!isDeepStrictEqual(actual, expected)) throw new Error("Private history restoration conflict");
 };
 
-/** Device history is authoritative: capture every contribution and cursor before DDL. */
-export const prepareHistoryOwnerUpgrade = async (db: DbClient, path: string) => {
-  const restoreRows = await prepareUpgradeSnapshot(
-    db,
-    path,
-    {
+/** Preserve device history across the DDL. The 0.48 local-only cutoff retires relay contributions. */
+export const prepareHistoryOwnerUpgrade = async (db: DbClient, path: string, localOnly = false) => {
+  const restoreRows = await prepareOwnedRowUpgrade(db, path, {
+    source: {
       table: "storage_personal_history",
-      keys: ["workbench_id", "extension_id", "kind", "device_id", "record_id"],
       name: "history-row-owners",
       archive: "history-rows",
     },
-    async (input) => {
-      const { workbench_id, extension_id, ...fields } = input as LegacyRow;
-      await db.transaction(async (tx) => {
-        const ownerId = await ensureStorageOwner(tx, ownerOf({ workbench_id, extension_id }));
-        const expected = { ...fields, owner_id: ownerId };
-        const where = and(
-          eq(history.owner_id, ownerId),
-          eq(history.kind, fields.kind),
-          eq(history.device_id, fields.device_id),
-          eq(history.record_id, fields.record_id),
-        );
-        const [existing] = await tx.select().from(history).where(where);
-        if (existing) same(existing, expected);
-        else await tx.insert(history).values(expected);
+    target: "history_rows",
+    projectKey: "workbench_id",
+    conflict: "Private history restoration conflict",
+    keys: ["kind", "device_id", "record_id"],
+    fields: ["device_id", "kind", "record_id", "value", "seed_id", "pending_id"],
+  });
+  const restoreSources = localOnly
+    ? undefined
+    : await prepareOwnedRowUpgrade(db, path, {
+        source: {
+          table: "storage_personal_history_sources",
+          name: "history-source-owners",
+          archive: "history-sources",
+        },
+        target: "history_sources",
+        projectKey: "workbench_id",
+        conflict: "Private history restoration conflict",
+        keys: ["source_id", "kind", "device_id", "record_id"],
+        fields: [
+          "source_id",
+          "kind",
+          "device_id",
+          "record_id",
+          "value",
+          "seed_id",
+          "entry_id",
+          "sequence",
+          "entry_index",
+        ],
       });
-    },
-  );
-  const restoreSources = await prepareUpgradeSnapshot(
-    db,
-    path,
-    {
-      table: "storage_personal_history_sources",
-      keys: ["workbench_id", "extension_id", "source_id", "kind", "device_id", "record_id"],
-      name: "history-source-owners",
-      archive: "history-sources",
-    },
-    async (input) => {
-      const { workbench_id, extension_id, ...fields } = input as LegacySource;
-      await db.transaction(async (tx) => {
-        const ownerId = await ensureStorageOwner(tx, ownerOf({ workbench_id, extension_id }));
-        const expected = { ...fields, owner_id: ownerId, sequence: Number(fields.sequence) };
-        const where = and(
-          eq(sources.owner_id, ownerId),
-          eq(sources.source_id, fields.source_id),
-          eq(sources.kind, fields.kind),
-          eq(sources.device_id, fields.device_id),
-          eq(sources.record_id, fields.record_id),
-        );
-        const [existing] = await tx.select().from(sources).where(where);
-        if (existing) same(existing, expected);
-        else await tx.insert(sources).values(expected);
-      });
-    },
-  );
   const restorePositions = await prepareUpgradeSnapshot(
     db,
     path,
@@ -97,8 +79,8 @@ export const prepareHistoryOwnerUpgrade = async (db: DbClient, path: string) => 
   );
   if (!restoreRows && !restoreSources && !restorePositions) return;
   return async () => {
-    await restoreRows?.(true);
-    await restoreSources?.(true);
+    await restoreRows?.resume();
+    await restoreSources?.resume();
     await restorePositions?.(true);
     await restoreRows?.complete();
     await restoreSources?.complete();

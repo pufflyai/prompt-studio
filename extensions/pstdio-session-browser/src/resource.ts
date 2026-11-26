@@ -1,4 +1,4 @@
-import type { ExtensionSession, ResourceRef } from "@pstdio/sdk/extensions";
+import type { ExtensionSession, ResourceAnchor, ResourceRef } from "@pstdio/sdk/extensions";
 import { sessionBrowser } from "../refs";
 import { sessionDisplayStatus, sessionIndicator } from "./session-indicator";
 
@@ -46,3 +46,19 @@ export const isProjectSessionResource = (resource: ResourceRef, projectId: strin
   resource.type === "session" &&
   (!resource.extensionId || resource.extensionId === "pstdio") &&
   (!resource.projectId || resource.projectId === projectId);
+
+export const upgradeReviewAnchor = (
+  projectId: string,
+  resource: ResourceRef | undefined,
+): ResourceAnchor[] | undefined => {
+  const id = resource?.metadata?.upgradeReviewId;
+  if (
+    resource?.type === "session-draft" &&
+    resource.extensionId === "pstdio" &&
+    resource.projectId === projectId &&
+    typeof id === "string" &&
+    /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id) &&
+    resource.id.startsWith(`new-upgrade-${id}-`)
+  )
+    return [{ type: "extension-upgrade-review", id, extensionId: "pstdio", projectId, role: "context" }];
+};

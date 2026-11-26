@@ -115,3 +115,33 @@ test("a native check that hands off to the browser clears its progress", async (
     await workbench.dispose();
   }
 });
+
+test("a completed download clears the preceding check failure", async () => {
+  const workbench = createWorkbench();
+  let notify = () => {};
+  let downloaded = false;
+  const stop = connectDesktopUpdateNotices(
+    {
+      onUpdateNotice(listener: () => void) {
+        notify = listener;
+        return () => {};
+      },
+      takeUpdateNotice: async () =>
+        downloaded
+          ? { kind: "progress", title: null, upgrade: { version: "0.49.0" } }
+          : { level: "error", title: "The download failed." },
+    },
+    () => workbench,
+  );
+  try {
+    await Promise.resolve();
+    expect(workbench.notifications.listNotifications()).toHaveLength(1);
+    downloaded = true;
+    notify();
+    await Promise.resolve();
+    expect(workbench.notifications.listNotifications()).toEqual([]);
+  } finally {
+    stop?.();
+    await workbench.dispose();
+  }
+});

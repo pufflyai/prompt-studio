@@ -28,6 +28,26 @@ export const deployedSettings = {
       "Operator-managed TypeScript helper on this device that returns an expiring HTTPS preview URL.",
     ),
   },
+  monitoringDefaultHourlyUsd: {
+    type: "string",
+    default: "",
+    title: l10n("cloud-workspaces.monitoring-default-rate", "Default workspace hourly rate (USD)"),
+    scope: "device",
+    description: l10n(
+      "cloud-workspaces.monitoring-default-rate-description",
+      "USD per ready hour. Set a single rate to estimate total cost on any controller with workspace activity.",
+    ),
+  },
+  monitoringHourlyUsd: {
+    type: "string",
+    title: l10n("cloud-workspaces.monitoring-rates", "Workspace hourly rates (USD)"),
+    scope: "device",
+    default: "",
+    description: l10n(
+      "cloud-workspaces.monitoring-rates-description",
+      'Map template names to USD per ready hour, for example {"app-preview": 0.22}. Current rates also apply to retained history.',
+    ),
+  },
   deployedName: {
     type: "string",
     title: l10n("cloud-workspaces.deployed-instance-name", "Deployed instance name"),

@@ -8,18 +8,20 @@ import { DesktopStartupAppearance } from "@/modules/desktop/desktop-startup-appe
 import { DesktopProjectRecovery } from "@/modules/projects/components/desktop-project-recovery";
 import { DesktopProjectTabs } from "@/modules/projects/components/desktop-project-tabs";
 import type { DesktopProjectTabsController } from "@/modules/projects/desktop-project-tabs-controller";
+import { DesktopUpgradeConfirmation, type DesktopUpgradeController } from "@/modules/updates/desktop-upgrade";
 import { DashboardWorkbenchView } from "@/shared/workbench/dashboard-workbench-view";
 
 interface DesktopProjectWorkbenchesProps {
   controller: DesktopProjectTabsController;
   lifecycle: DesktopLifecycleBridge | undefined;
+  upgrade: DesktopUpgradeController | undefined;
   platform: string;
   storage: WorkbenchStorageLike | undefined;
 }
 
 /** Keeps each loaded project tab mounted; the workbench hides the inactive ones. */
 export const DesktopProjectWorkbenches = (props: DesktopProjectWorkbenchesProps) => {
-  const { controller, lifecycle, platform, storage } = props;
+  const { controller, lifecycle, platform, storage, upgrade } = props;
   const { active, workbenches } = useSyncExternalStore(
     controller.subscribeState,
     controller.getState,
@@ -55,6 +57,7 @@ export const DesktopProjectWorkbenches = (props: DesktopProjectWorkbenchesProps)
                 {/* Window-wide parts follow the visible project: one startup theme, one quit dialog. */}
                 {visible && lifecycle && <DesktopStartupAppearance bridge={lifecycle} />}
                 {quitConfirmation}
+                {visible && upgrade && <DesktopUpgradeConfirmation workbench={entry.workbench} upgrade={upgrade} />}
               </>
             }
           />

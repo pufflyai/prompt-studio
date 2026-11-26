@@ -53,6 +53,7 @@ export const projectExtensionInstanceSchema = z.object({
   config: z.record(z.string(), z.unknown()),
   /** A newer pinned release is available for this extension's source. */
   canUpgrade: z.boolean(),
+  hasPublishedAlternative: z.boolean().optional(),
   /** New source is waiting in the extensions root. The project keeps running the adopted version until a person takes it. */
   updateAvailable: z.boolean(),
   /** Host variable names the source requests for the children it starts (`pstdio.processEnvironment`). */

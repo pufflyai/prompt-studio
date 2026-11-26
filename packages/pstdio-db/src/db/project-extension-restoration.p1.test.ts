@@ -36,7 +36,7 @@ test("partial configuration restoration retains its original export and refuses 
     const finish = await prepareProjectExtensionsUpgrade(store.db, store.path);
     const snapshot = `${store.path}-project-extensions-upgrade.jsonl`;
     const originalExport = await readFile(snapshot, "utf8");
-    await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+    await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
     await finish!(true);
     const where = and(eq(project_extensions.project_id, "project-1"), eq(project_extensions.extension_ref, source.id));
     const changed = { text: "x".repeat(5 * 1024 * 1024), unicode: "日本語 😀" };

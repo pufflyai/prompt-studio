@@ -115,7 +115,14 @@ export const prepareReleaseExtensionSource = async (
   signal?: AbortSignal,
 ) => {
   const bundled = await prepareBundledExtensionSource(origin, tempDir, ref, { signal });
-  if (bundled) return { path: bundled.path, ref: namedSourceRef(bundled.commit, origin), gitRef: ref };
+  if (bundled)
+    return {
+      path: bundled.path,
+      ref: namedSourceRef(bundled.commit, origin),
+      gitRef: ref,
+      runtimeBundle: bundled.runtimeBundle,
+      preparedRelease: bundled.preparedRelease,
+    };
   return prepareGitExtensionSource(origin, tempDir, ref, signal);
 };
 

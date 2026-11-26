@@ -1,7 +1,53 @@
 import { expect, test } from "bun:test";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { renderToStaticMarkup } from "react-dom/server";
+import { act, create } from "react-test-renderer";
 import { ExtensionActionButton } from "./extension-action-button";
+import { createExtensionActions } from "./extension-actions";
+import { ExtensionUpgradeProgress } from "./extension-upgrade-progress";
+
+test("hiding a completed batch discards its result so it cannot reappear with later updates", async () => {
+  const actions = createExtensionActions();
+  await actions.runBatch([{ id: "one" }, { id: "two" }], async () => false);
+  expect(actions.getSnapshot().batch).toBeDefined();
+  let renderer: ReturnType<typeof create> | undefined;
+  const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const previousAct = environment.IS_REACT_ACT_ENVIRONMENT;
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  try {
+    await act(async () => {
+      renderer = create(
+        <ChakraProvider value={psTheme}>
+          <ExtensionUpgradeProgress
+            upgradeCount={0}
+            batch={actions.getSnapshot().batch}
+            onUpgrade={() => {}}
+            onDismiss={actions.dismissBatch}
+          />
+        </ChakraProvider>,
+      );
+    });
+    expect(actions.getSnapshot().batch).toBeUndefined();
+  } finally {
+    await act(async () => renderer?.unmount());
+    environment.IS_REACT_ACT_ENVIRONMENT = previousAct;
+  }
+});
+
+test("running batch progress stays visible while its remaining updates are being changed", () => {
+  const html = renderToStaticMarkup(
+    <ChakraProvider value={psTheme}>
+      <ExtensionUpgradeProgress
+        upgradeCount={0}
+        onUpgrade={() => {}}
+        batch={{ ids: ["one", "two"], completed: 1, failed: 0, reviewRequired: 0, running: true }}
+      />
+    </ChakraProvider>,
+  );
+  expect(html).toContain('data-testid="extensions-upgrade-all"');
+  expect(html).toContain('aria-busy="true"');
+  expect(html).toContain('aria-valuenow="1"');
+});
 
 test("an active install shows its label and spinner without elapsed seconds", () => {
   const html = renderToStaticMarkup(

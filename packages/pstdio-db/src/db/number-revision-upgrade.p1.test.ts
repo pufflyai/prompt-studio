@@ -82,7 +82,7 @@ test("a partially restored number generation retains every input and refuses a c
     await prepareOrderedOwnerUpgrade(previous.db, previous.path);
     await prepareOwnerProjectionUpgrade(previous.db, previous.path);
     const finish = await prepareDocumentOwnerUpgrade(previous.db, previous.path);
-    await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+    await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
     await previous.pglite.exec(`CREATE FUNCTION stop_number_restore() RETURNS trigger LANGUAGE plpgsql AS $$
       BEGIN IF NEW.project_id='p-200' THEN RAISE EXCEPTION 'stop number restoration'; END IF; RETURN NEW; END $$;
       CREATE TRIGGER stop_number_restore BEFORE UPDATE OF numbers_revision ON owners

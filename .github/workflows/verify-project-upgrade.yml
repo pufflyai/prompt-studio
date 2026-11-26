@@ -83,15 +83,19 @@ jobs:
             fi
           fi
           platforms=$(bun -e 'import { projectUpgradePlatforms } from "./scripts/ci/production-candidate"; console.log(JSON.stringify(projectUpgradePlatforms()))')
-          baselines=$(jq -cn --arg stable "$from" '[$stable]')
+          baselines=$(jq -cn --arg stable "$from" '[{from: $stable}]')
           if [[ "$INCLUDE_PREVIOUS_NIGHTLY" == "true" ]]; then
             previous=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" |
               jq -r '[.[][] | select(.prerelease and (.draft | not)) | select(.tag_name | test("^pstdio@[0-9]+\\.[0-9]+\\.[0-9]+-nightly\\.[0-9]+$"))] | max_by(.published_at).tag_name // empty')
             if [[ -n "$previous" ]]; then
-              baselines=$(jq -c --arg tag "$previous" '. + [$tag]' <<< "$baselines")
+              baselines=$(jq -c --arg tag "$previous" '. + [{from: $tag}]' <<< "$baselines")
             fi
           fi
-          platforms=$(jq -c --argjson tags "$baselines" '[.[] as $p | $tags[] | $p + {from: .}]' <<< "$platforms")
+          # Direct upgrades cross the 0.49 storage boundary from both earlier stable layouts.
+          if [[ -n "$BUILD_ID" && "$from" == pstdio@0.48.* ]]; then
+            baselines=$(jq -c '. + [{from:"pstdio@0.46.0", profile:"direct"}, {from:"pstdio@0.47.0", profile:"direct"}]' <<< "$baselines")
+          fi
+          platforms=$(jq -c --argjson pairs "$baselines" '[.[] as $p | $pairs[] | $p + .]' <<< "$platforms")
           {
             echo "to=$to"
             echo "run=$run"
@@ -157,8 +161,10 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - name: Install fixture dependencies
-        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Install fixture dependencies and build its SDK client
+        run: |
+          bun install --frozen-lockfile --ignore-scripts
+          bun run --cwd packages/sdk build:js
       - name: Check out the frozen candidate
         uses: actions/checkout@v5
         with:
@@ -239,10 +245,14 @@ jobs:
       - name: Install Chromium for the upgraded workbench
         working-directory: packages/e2e
         run: bun x --no-install playwright install chromium --with-deps --no-shell
-      - name: Upgrade both populated projects
+      - name: Upgrade populated projects from the published host
+        env:
+          PROFILE: ${{ matrix.profile }}
         run: |
+          args=()
+          if [[ -n "$PROFILE" ]]; then args+=(--profile "$PROFILE"); fi
           bun --no-env-file packages/e2e/src/packaged/project-upgrade.ts \
-            --from "$FROM_TAG" --candidate "$CANDIDATE_BINARY" --candidate-ref "$CANDIDATE_REF" --candidate-root __test-tmp__/upgrade-candidate
+            --from "$FROM_TAG" --candidate "$CANDIDATE_BINARY" --candidate-ref "$CANDIDATE_REF" --candidate-root __test-tmp__/upgrade-candidate "${args[@]}"
       # Diagnostics only (maintainer decision 2026-11-20, #2241): a GitHub artifact outage must not fail a
       # passed upgrade. The attested certification evidence below still fails the job if it can't upload.
       - name: Preserve the pair, manifests and startup logs

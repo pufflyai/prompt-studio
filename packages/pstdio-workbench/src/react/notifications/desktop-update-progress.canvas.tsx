@@ -22,7 +22,7 @@ export const DesktopUpdateProgress = () => {
           <Button size="sm" onClick={() => showNotice("Downloading update…")}>
             Start download
           </Button>
-          <Button size="sm" onClick={() => showNotice("Your update is ready to install.")}>
+          <Button size="sm" onClick={() => workbench.notifications.dismiss("desktop.update")}>
             Finish download
           </Button>
           <Button size="sm" onClick={() => showNotice("Prompt Studio couldn't complete the update.", "error")}>

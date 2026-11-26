@@ -3,7 +3,7 @@ import { sessionBrowser } from "../refs";
 import { commandIntent, operationForDraft, withCommandIntent } from "./command-intent";
 import { readNativeState } from "./native-actions";
 import { saveNativeSubmission } from "./native-submission";
-import { sessionResource } from "./resource";
+import { sessionResource, upgradeReviewAnchor } from "./resource";
 import { selectedHarness, selectedWorkspace } from "./selection";
 
 export const submittedInputTag = (recordId: string, draft: ChatDraft) => {
@@ -41,6 +41,7 @@ export const submitNativeDraft = async (
         harness: selectedHarness(action.values),
         workspaceId: selectedWorkspace(action.values),
         deviceId: typeof action.values.device === "string" && action.values.device ? action.values.device : undefined,
+        anchors: upgradeReviewAnchor(ctx.projectId, resource),
       });
   const target = id ?? created!.id;
   const result = id

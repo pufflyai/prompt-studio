@@ -12,7 +12,7 @@ export interface RegistryUpgradeSource {
   version?: string | null;
 }
 export const createRegistryExtensionSource = (
-  deps: Pick<ExtensionUpgradeServiceDeps, "release">,
+  deps: Pick<ExtensionUpgradeServiceDeps, "release" | "prefetchRegistryRelease">,
   install: NonNullable<ExtensionUpgradeServiceDeps["installExtensionSource"]>,
 ) => {
   const registryFor = (source?: RegistryUpgradeSource) => {
@@ -31,7 +31,9 @@ export const createRegistryExtensionSource = (
   const hasNewerRelease = async (registry: string, id: string, installedVersion: string) => {
     try {
       const release = await createRegistryClient(registry).latest(id, EXTENSION_API_VERSION);
-      return Bun.semver.order(release.version, installedVersion) > 0;
+      if (Bun.semver.order(release.version, installedVersion) <= 0) return false;
+      deps.prefetchRegistryRelease?.({ url: registry, id, release });
+      return true;
     } catch {
       // Keep the action available so an explicit request can explain a connection or API mismatch.
       return true;

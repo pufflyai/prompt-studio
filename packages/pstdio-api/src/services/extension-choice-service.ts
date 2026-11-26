@@ -24,7 +24,8 @@ export const serializeExtensionChoices = <T extends object>(
       if (typeof property !== "string" || typeof method !== "function") return method;
       const run = (args: unknown[]) => Promise.resolve(Reflect.apply(method, target, args));
       if (projectArguments.has(property))
-        return (input: { projectId: string }) => wrap([input.projectId], () => run([input]));
+        return (input: { projectId: string }, ...rest: unknown[]) =>
+          wrap([input.projectId], () => run([input, ...rest]));
       if (property === "adoptDefaultSourceForProject")
         return (projectId: string, sourceId: string) => wrap([projectId], () => run([projectId, sourceId]));
       if (instanceArguments.has(property))

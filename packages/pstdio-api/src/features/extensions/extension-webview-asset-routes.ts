@@ -2,7 +2,6 @@ import { dirname } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Context } from "hono";
 import { getExtensionRuntimeScript, renderInlineExtensionRuntimeHtml } from "pstdio-extensions/bridge/webview-runtime";
-import { readPublishedWebviewRevision } from "pstdio-extensions/prepared-cache";
 import { apiLogger } from "../../lib/logger";
 import { ProjectNotFoundError } from "../../services/extension-service";
 import type { AppBindings } from "../../types";
@@ -19,7 +18,6 @@ import {
   renderWebviewBuildErrorModule,
   resolveWebviewAssetFile,
 } from "./extension-webview-assets";
-import { readWebviewBuildSignature } from "./extension-webview-build-cache";
 import { readWebviewEntryStyles } from "./extension-webview-entry-styles";
 
 type WebviewAssetRouteDeps = Pick<
@@ -104,7 +102,7 @@ const serveAuthorizedRequest = async (c: Context<AppBindings>, deps: WebviewAsse
     const [style] = readWebviewEntryStyles(distDir);
     if (!style) return new Response("", { headers: { "content-type": "text/css", "cache-control": "no-store" } });
     // Preserve the base URL of relative fonts, images and imports in the published CSS.
-    const revision = readPublishedWebviewRevision(distDir) ?? readWebviewBuildSignature(distDir) ?? c.req.query("h");
+    const revision = entry.revision ?? c.req.query("h");
     const location = deps.extensionWebviewAccess.assetUrl(authorized, style, revision);
     return new Response(null, { status: 307, headers: { location, "cache-control": "no-store" } });
   }

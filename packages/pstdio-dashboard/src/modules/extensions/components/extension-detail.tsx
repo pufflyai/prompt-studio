@@ -63,6 +63,9 @@ export interface ExtensionDetailProps {
   onUninstall: () => void;
 }
 
+const hasUpgradeControl = (extension: ProjectExtensionInstance, action: ExtensionActionState | undefined) =>
+  extension.canUpgrade || extension.hasPublishedAlternative || Boolean(action);
+
 export const ExtensionDetail = (props: ExtensionDetailProps) => {
   const {
     extension,
@@ -159,7 +162,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                     onUpgrade={onUpgrade}
                   />
                 )}
-                {(extension.canUpgrade || upgradeAction) && (
+                {hasUpgradeControl(extension, upgradeAction) && (
                   <ExtensionActionButton
                     variant="primary"
                     size="2xs"
@@ -170,7 +173,9 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                     disabled={changingSource}
                     data-testid="extension-upgrade"
                   >
-                    {t("projectSettings.extensionsPanel.upgrade.action")}
+                    {extension.hasPublishedAlternative
+                      ? t("projectSettings.extensionsPanel.upgrade.publishedAlternative", "Review published version")
+                      : t("projectSettings.extensionsPanel.upgrade.action")}
                   </ExtensionActionButton>
                 )}
                 {showReload && (

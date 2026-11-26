@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
-import { PstdioConnectionError } from "@pstdio/sdk/client";
+import { PstdioApiError, PstdioConnectionError } from "@pstdio/sdk/client";
 import { createScopedQueryClient } from "@pstdio/sdk/extensions";
 import { getWorkbenchOperations } from "@pstdio/workbench";
+import { extensionUpgradeNeedsReviewCode } from "pstdio-api-contracts/extension-host";
 import { createExtensionActions, getExtensionActions } from "./extension-actions";
 
 const labels = { running: "Upgrading", failed: "Upgrade failed" };
@@ -41,6 +42,37 @@ test("continues a batch after a failure and retains its summary after row dismis
   actions.dismiss("two");
   expect(actions.getSnapshot().batch).toEqual(batch);
 });
+test("keeps a local conflict in the batch review count while other upgrades finish", async () => {
+  const actions = createExtensionActions();
+  await actions.runBatch([{ id: "local" }, { id: "clean" }], ({ id }) =>
+    actions.run(id, labels, async () => {
+      if (id === "local") {
+        throw new PstdioApiError("This project uses a local copy.", 409, extensionUpgradeNeedsReviewCode);
+      }
+    }),
+  );
+  expect(actions.getSnapshot().batch).toMatchObject({ running: false, completed: 2, failed: 0, reviewRequired: 1 });
+  expect(actions.getSnapshot().actions.local?.needsReview).toBe(true);
+  expect(actions.getSnapshot().actions.clean).toBeUndefined();
+});
+
+test("resolving a conflict clears its alert while preserving other failed operations", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
+  const operations = getWorkbenchOperations(queries);
+  const actions = createExtensionActions({ projectId: "project", operations });
+  await actions.run("conflict", labels, async () => {
+    throw new PstdioApiError("Local changes", 409, extensionUpgradeNeedsReviewCode);
+  });
+  await actions.run("offline", labels, async () => {
+    throw new PstdioApiError("Offline", 503);
+  });
+  expect(operations.getSnapshot().recovery).toHaveLength(2);
+  actions.resolveConflict("conflict");
+  expect(actions.getSnapshot().actions.conflict).toBeUndefined();
+  expect(operations.getSnapshot().recovery).toHaveLength(1);
+  expect(operations.getSnapshot().recovery[0]?.status).toBe("unknown");
+});
+
 test("retries failed work, but releases retry callbacks on success and dismissal", async () => {
   const actions = createExtensionActions();
   let calls = 0;

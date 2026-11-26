@@ -263,11 +263,14 @@ describe("background update checks", () => {
     expect(failing.logged.map((error) => error.message)).toEqual(["offline"]);
   });
 
-  test("show the downloaded prompt once per downloaded version", async () => {
+  test("automatically download a newer version and keep it available for installation", async () => {
     const check = createUpdateCheck({ event: "update-downloaded" });
     await check.manager.checkInBackground();
     await check.manager.checkInBackground();
     expect(check.notifications).toEqual(["downloaded:0.33.3"]);
+    expect(check.manager.downloadedVersion).toBe("0.33.3");
+    expect(check.checks()).toBe(1);
+    await check.manager.checkForUpdates();
     expect(check.checks()).toBe(1);
   });
 
@@ -315,4 +318,17 @@ describe("Linux update checks", () => {
     expect(check.opened).toEqual([]);
     expect(check.notifications).toEqual(["up-to-date"]);
   });
+});
+
+test("only exposes an installable update after the native download finishes", async () => {
+  const check = createUpdateCheck();
+  const background = check.manager.checkInBackground();
+  await check.nativeCheckStarted(1);
+  check.events.emit("update-available");
+  expect(check.manager.downloadedVersion).toBeNull();
+  const manual = check.manager.checkForUpdates();
+  expect(check.manager.downloadedVersion).toBeNull();
+  check.events.emit("update-downloaded");
+  await Promise.all([background, manual]);
+  expect(check.manager.downloadedVersion).toBe("0.33.3");
 });

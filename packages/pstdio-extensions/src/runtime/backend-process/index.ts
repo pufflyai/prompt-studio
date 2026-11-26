@@ -1,6 +1,11 @@
 export { runBundleChild } from "../bundle-entry-child";
 export { mapHostContext, markHostContext } from "../runner/host-context";
-export { closeBackendWorkers, readBackendDefinitionReadCount, restartBackendWorker } from "./backend-workers";
+export {
+  closeBackendWorkers,
+  primeAcceptedExtensionBackend,
+  readBackendDefinitionReadCount,
+  restartBackendWorker,
+} from "./backend-workers";
 export { uncoveredContextFunctions } from "./context-surface-coverage";
 export { prepareBackendHandler } from "./hydrate";
 export { backendWorkerCommand, createBackendWorkerPool } from "./pool";

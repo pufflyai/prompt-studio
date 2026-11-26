@@ -359,7 +359,7 @@ export const UpgradingAll: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    batch: { ids: ["pstdio-planner", "extension-lab"], running: true, completed: 0, failed: 0 },
+    batch: { ids: ["pstdio-planner", "extension-lab"], running: true, completed: 0, failed: 0, reviewRequired: 0 },
     actionStates: {
       "planner-instance": { status: "running", label: "Upgrading Project Planner" },
       "lab-instance": { status: "running", label: "Upgrading Extension Lab" },
