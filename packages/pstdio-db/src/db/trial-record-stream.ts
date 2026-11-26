@@ -147,7 +147,7 @@ const fieldBytes = (value: Buffer | number | boolean | null) => {
   if (typeof value === "number") return 4;
   return typeof value === "boolean" ? 1 : 0;
 };
-export async function writeTrialRecords(db: DbClient, path: string) {
+export async function writeTrialRecords(db: DbClient, path: string, sourceSchema = "upgrade_source") {
   const file = await open(path, "wx", 0o600);
   const fields = [
     "owner_id",
@@ -217,7 +217,7 @@ export async function writeTrialRecords(db: DbClient, path: string) {
           c.revision,c.query_values::text,c.native_versions::text,c.deleted,
           CASE WHEN NOT c.deleted THEN json_build_object('value',c.value,'asset',c.asset,'shared',c.shared,
             'native_sources',c.native_sources,'record_lifetime',c.record_lifetime)::text END AS live
-          FROM upgrade_source.storage_current_records c FULL JOIN upgrade_source.storage_ordered_records r USING(workbench_id,extension_id,record_id)`);
+          FROM ${sql.identifier(sourceSchema)}.storage_current_records c FULL JOIN ${sql.identifier(sourceSchema)}.storage_ordered_records r USING(workbench_id,extension_id,record_id)`);
       for (;;) {
         const { rows } = await tx.execute<ReleasedRow>(sql`FETCH FORWARD 256 FROM migration_records`);
         if (!rows.length) break;

@@ -41,9 +41,12 @@ for (const profile of ["history", "storage"] as const)
         const opened = await test.step(
           "Launch, open the existing project and save an edit",
           async () => {
+            if (profile === "storage") {
+              const exporter = resolve(import.meta.dirname, "../../../../packages/pstdio-db/src/db/fresh-batch.diagnostic.ts");
+              execFileSync("bun", [exporter, upgradeHome], { stdio: "inherit" });
+            }
             const opened = await launchPackagedApp(upgradeHome, {
               PSTDIO_DEFAULT_EXTENSIONS: "[]",
-              ...(profile === "storage" ? { PSTDIO_TEST_SETTLED_MIGRATION: "1" } : {}),
             });
             app = opened;
             await openPackagedProject(opened.page, { id: "upgrade-repro", name: "Upgrade fixture" });
