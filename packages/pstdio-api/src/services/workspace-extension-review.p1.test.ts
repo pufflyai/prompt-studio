@@ -104,7 +104,7 @@ test("local review candidates require the running workspace and a separate provi
     const outside = join(root, "outside");
     for (const path of [workspace, outside]) await mkdir(path);
     const link = join(workspace, "linked-extension");
-    await symlink(outside, link, "dir");
+    await symlink(outside, link, process.platform === "win32" ? "junction" : "dir");
     const source = { path: outside, ref: null, separateProviderId: "local-provider" };
     const begin = (path: string, trustedRoot?: string, separateProviderId = source.separateProviderId) =>
       startExtensionSourceReview(
