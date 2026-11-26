@@ -238,8 +238,8 @@ export const createExtensionUpgradeReviewService = (input: {
       getExtensionSourceReview(reviewHome(), id, projectId, instanceId),
     readReviewFile: (projectId: string, instanceId: string, id: string, path: string, revision?: string) =>
       getExtensionSourceReviewFile(reviewHome(), id, projectId, instanceId, path, revision),
-    cancelReview: (projectId: string, instanceId: string, id: string) =>
-      cancelExtensionSourceReview(reviewHome(), id, projectId, instanceId),
+    cancelReview: (projectId: string, instanceId: string, id: string, revision?: string) =>
+      cancelExtensionSourceReview(reviewHome(), id, projectId, instanceId, revision),
     applyReview,
     validateReview,
   };

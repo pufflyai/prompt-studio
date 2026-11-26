@@ -5,8 +5,8 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, write
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { chromium, expect as expectPage, type Locator } from "@playwright/test";
-import type { ListProjectExtensionsResponse } from "pstdio-api-contracts";
+import { chromium, expect as expectPage, type Page } from "@playwright/test";
+import type { ExtensionUpgradeReview, ListProjectExtensionsResponse } from "pstdio-api-contracts";
 import { extensionUpgradeNeedsReviewCode } from "pstdio-api-contracts/extension-host";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
@@ -199,22 +199,25 @@ test("upgrades UI Canvas with its standalone webview dependencies", async () => 
   }
 });
 
-const refreshAdoptedSkillsReview = async (tempRoot: string, review: Locator, apply: Locator) => {
-  const adoptedManifest = join(tempRoot, "extensions", "pstdio-skills", "package.json");
-  const changedManifest = JSON.stringify({
-    ...JSON.parse(readFileSync(adoptedManifest, "utf8")),
-    description: "Skills description edited during review",
+const provideUpgradeAgentReply = async (page: Page, projectId: string) => {
+  const staged = page
+    .waitForResponse(
+      (response) => response.url().endsWith("/upgrade-review") && response.request().postDataJSON().action === "begin",
+    )
+    .then(async (response) => ((await response.json()) as { review: ExtensionUpgradeReview }).review);
+  await page.route(
+    (url) => url.pathname === `/v1/projects/${projectId}/sessions` && url.searchParams.has("anchorId"),
+    (route) => route.fulfill({ json: { items: [{ id: "skills-upgrade-session", status: "completed" }] } }),
+  );
+  await page.route("**/v1/sessions/skills-upgrade-session/conversation", async (route) => {
+    const review = await staged;
+    const resolutions = review.changes
+      .filter(({ status }) => status === "conflict")
+      .map(({ path }) => ({ kind: "incoming", path }));
+    expect(resolutions.length).toBeGreaterThan(0);
+    const text = JSON.stringify({ reviewId: review.id, revision: review.revision, resolutions });
+    return route.fulfill({ json: { messages: [{ role: "assistant", parts: [{ type: "text", text }] }] } });
   });
-  writeFileSync(adoptedManifest, changedManifest);
-  await apply.click();
-  await expectPage(review).toContainText("The extension source changed during this review");
-  await expectPage(apply).toBeDisabled();
-  expect(readFileSync(adoptedManifest, "utf8")).toBe(changedManifest);
-  await review.getByRole("button", { name: "Refresh comparison" }).click();
-  await expectPage(review).toContainText("Skills description edited during review");
-  await review.getByRole("button", { name: "Previous choices" }).click();
-  await expectPage(apply).toBeDisabled();
-  await review.getByRole("button", { name: "Use incoming" }).click();
 };
 
 browserTest("updates an incompatible default extension and reinstalls it from Marketplace", async () => {
@@ -360,14 +363,22 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     expect(adoptedResponse.status()).toBe(409);
     expect(await adoptedResponse.json()).toMatchObject({ code: extensionUpgradeNeedsReviewCode });
     await expectPage(detail).toContainText("v0.3.0");
-    await detail.getByRole("button", { name: /Review upgrade/ }).click();
+    await provideUpgradeAgentReply(page, project.id);
+    await detail.getByRole("button", { name: "Upgrade conflict", exact: true }).click();
+    await page.getByRole("button", { name: "Resolve", exact: true }).click();
     const review = page.getByRole("dialog", { name: "Review Prompt Studio Skills upgrade" });
     await expectPage(review).toContainText("Original release unavailable");
-    const apply = review.getByRole("button", { name: "Apply upgrade" });
-    await expectPage(apply).toBeDisabled();
-    await review.getByRole("button", { name: "Use incoming" }).click();
+    await review.getByRole("button", { name: "Close review" }).click();
+    await expectPage(review).toHaveCount(0);
+    await detail.getByRole("button", { name: "Upgrade conflict", exact: true }).click();
+    await page.getByRole("button", { name: "Resolve", exact: true }).click();
+    await review.press("Escape");
+    await expectPage(review).toHaveCount(0);
+    await detail.getByRole("button", { name: "Upgrade conflict", exact: true }).click();
+    await page.getByRole("button", { name: "Resolve", exact: true }).click();
+    const apply = review.getByRole("button", { name: "Use their version" });
+    await expectPage(review).toContainText("The agent prepared a resolution.");
     await expectPage(apply).toBeEnabled();
-    await refreshAdoptedSkillsReview(tempRoot, review, apply);
     await apply.click();
     await expectPage(review).toHaveCount(0);
     phase("reviewed skills upgrade applied");

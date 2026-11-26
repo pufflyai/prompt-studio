@@ -76,6 +76,12 @@ const runSample = async (variant: Variant, iteration: number, leaveOpen: boolean
     await mkdir(home);
     await mkdir(folder);
     await registry.publishPackage(initialArchive);
+    if (leaveOpen) {
+      for (const tool of catalog.sources) {
+        if (tool.id !== planner.id)
+          await registry.publishPackage(join(archives, `${encodeURIComponent(tool.installName)}.tgz`));
+      }
+    }
     host = await startPackagedServe(home, { PSTDIO_EXTENSION_RELEASE_REF: `psx:${registry.origin}` });
     const { baseUrl, descriptor: runtime } = host;
     const post = async <T>(path: string, body?: unknown) => {
@@ -112,6 +118,11 @@ const runSample = async (variant: Variant, iteration: number, leaveOpen: boolean
       const installedManifest = join(extension.sourcePath, "package.json");
       const edited = { ...(await Bun.file(installedManifest).json()), description: "My local Planner description" };
       await Bun.write(installedManifest, JSON.stringify(edited));
+      for (const extensionId of ["pstdio.session-browser", "pstdio.harness-codex"]) {
+        await post<InstallExtensionResponse>(`${project}/install`, {
+          source: { kind: "catalog", name: extensionId },
+        });
+      }
     }
     if (variant === "warm") await waitForPrefetch(home, `${baseUrl}${project}`, runtimeAuthorization(runtime));
     if (leaveOpen) {

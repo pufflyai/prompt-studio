@@ -68,7 +68,7 @@ export const extensionUpgradeReviewRequestSchema = z.discriminatedUnion("action"
     revision: z.string(),
     resolutions: z.array(extensionUpgradeReviewResolutionSchema).max(20_000),
   }),
-  z.strictObject({ action: z.literal("cancel"), id: reviewId }),
+  z.strictObject({ action: z.literal("cancel"), id: reviewId, revision: z.string().optional() }),
   z.strictObject({
     action: z.literal("apply"),
     id: reviewId,
