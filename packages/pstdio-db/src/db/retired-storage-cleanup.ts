@@ -12,6 +12,7 @@ import { storageOwnerKey } from "../services/extension-storage/storage-owner-key
 import type { DbClient } from "./connection.pglite";
 import { deleteStorageDocuments } from "./delete-storage-documents";
 import { createDependencyMarkerCleanup } from "./dependency-marker-upgrade";
+import { createExtensionIndexCleanup } from "./retire-extension-indexes";
 import { documents } from "./schemas/documents";
 import { invalidateMaintenance, legacyOwnerPrefix } from "./startup-maintenance";
 
@@ -70,16 +71,19 @@ export const createRetiredStorageCleanup = (db: DbClient, path: string, owners: 
 
 export const createStorageCleanup = (db: DbClient, path: string, owners: StorageOwner[], defer: boolean) => {
   const retiredRows = defer ? createRetiredStorageCleanup(db, path, owners) : async () => {};
+  const extensionIndexes = createExtensionIndexCleanup(db);
   const markers = createDependencyMarkerCleanup(db, () => invalidateMaintenance(path));
   const sweep = defer ? createDeferredDocumentSweep(db) : undefined;
   return {
     async prepare() {
       if (defer) return;
+      await extensionIndexes(() => false);
       await markers(() => false);
       await pruneAllDocumentFiles(db);
     },
     async run(stopped: () => boolean) {
       await retiredRows(stopped);
+      await extensionIndexes(stopped);
       await markers(stopped);
       await sweep?.run(stopped);
       if (!stopped()) await compactStorageTombstones(db, stopped);

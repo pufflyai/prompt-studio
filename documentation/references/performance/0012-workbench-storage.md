@@ -28,3 +28,20 @@ On a separate large copy, the marker job started with 538,976 markers and paused
 | Receipt sync nearly caught up | With 100 dirty operations spaced across 100,000, the indexed median was 0.31 ms. Dropping the index raised it to 6.16 ms. The p95 rose from 0.46 to 7.01 ms. | Keep the receipt index. Both variants returned the same page. |
 
 The room and receipt lookup experiments each used 30 measured reads after two warmups. The production-copy retention check also found 294,561 compacted tombstones and zero eligible for purge under the existing retention rules.
+
+## Extension query definitions
+
+Extension manifests and the SDK register query fields, filters and ordering as owner metadata. Physical database indexes belong to the host. The core Resource Activity service uses a fixed host definition. Quiet maintenance also retires legacy physical indexes for extensions that are inactive.
+
+On 2026-11-27, a Planner lookup used the `ticket-review-requests` collection definition to find one request by ticket ID among 5,000 requests in PGlite. Both paths ran the same query and produced the same IDs. The benchmark ran four passes in reverse order for the second pair, analyzed the records table before each pass and discarded four warmups per pass.
+
+| Measurement | Per-project physical indexes | Query metadata |
+| --- | ---: | ---: |
+| Index bytes allocated for this declaration | 1,548,288 | 0 |
+| Registration, two samples | 22.7–36.0 ms | 2.4–4.2 ms |
+| Lookup median, 50 samples | 2.35 ms | 15.65 ms |
+| Lookup p95 | 5.23 ms | 34.48 ms |
+
+The additional lookup time applies to this selective query. Ticket-opening UI, large board aggregates and record write throughput were outside this measurement. Definitions with derived fields can still backfill values on registration.
+
+On a copy with 337,379 records, all six generated indexes (240 KiB) belonged to core Resource Activity. Cleanup and host activation preserved their original database object IDs. This copy had zero extension index bytes to reclaim. After seeding two legacy extension declarations and physical indexes, a forced pause and restart retired both indexes. The record count, digest of saved definitions and host indexes matched before and after retirement.

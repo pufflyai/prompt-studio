@@ -189,7 +189,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
     };
   };
   const api: StorageRecordQueries = {
-    defineIndexes: (definitions) => defineRecordIndexes(db, owner, definitions, "immediate", diagnostics),
+    defineIndexes: (definitions) => defineRecordIndexes(db, owner, definitions, "query", diagnostics),
     query: (query) => db.transaction((tx) => queryIn(tx, query)),
     aggregate: async (input) => {
       const query = structuredClone(input);
