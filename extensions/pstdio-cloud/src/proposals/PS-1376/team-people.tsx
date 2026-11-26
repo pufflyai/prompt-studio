@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Button } from "../../button";
 import { people, type TeamDemo } from "./demo-model";
 
-export const JoinTeam = ({ demo }: { demo: TeamDemo }) => {
+export const JoinTeam = (props: { demo: TeamDemo }) => {
+  const { demo } = props;
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   return (
@@ -41,7 +42,8 @@ export const JoinTeam = ({ demo }: { demo: TeamDemo }) => {
   );
 };
 
-export const TeamPeople = ({ demo }: { demo: TeamDemo }) => {
+export const TeamPeople = (props: { demo: TeamDemo }) => {
+  const { demo } = props;
   const [copied, setCopied] = useState(false);
   return (
     <Stack gap="md">

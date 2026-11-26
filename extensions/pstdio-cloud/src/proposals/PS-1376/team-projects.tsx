@@ -5,7 +5,8 @@ import { Button } from "../../button";
 import { people, type TeamDemo } from "./demo-model";
 import { ProjectTools } from "./project-tools";
 
-export const TeamProjects = ({ demo }: { demo: TeamDemo }) => {
+export const TeamProjects = (props: { demo: TeamDemo }) => {
+  const { demo } = props;
   const [selected, setSelected] = useState("a");
   const visible = demo.projects.filter((project) => demo.owner || project.members.includes(demo.viewer));
   const project = visible.find((entry) => entry.id === selected) ?? visible[0];
