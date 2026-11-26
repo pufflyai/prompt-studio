@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { homedir, tmpdir } from "node:os";
+import { join, sep } from "node:path";
 import {
   defineExtension,
   definePage,
@@ -109,7 +109,7 @@ describe("checkExtensions", () => {
     expect(result.runtime.extensions).toEqual([]);
     expect(result.errorCount).toBe(0);
     expect(result.warningCount).toBe(0);
-    const report = formatCheckReport(result);
+    const report = formatCheckReport(result).replaceAll(`~${sep}`, `${homedir()}${sep}`);
     expect(report).toContain(`Extensions found in ${join(home, "extensions")}: 0`);
     expect(report).toContain("No extensions found in");
   });
@@ -122,7 +122,7 @@ describe("checkExtensions", () => {
       extensionPackages: [{ path: source, sourceKind: "local_path" }],
       extensionRoots: [],
     });
-    const report = formatCheckReport(result);
+    const report = formatCheckReport(result).replaceAll(`~${sep}`, `${homedir()}${sep}`);
     expect(report).toContain(`Extensions found in ${source}: 1`);
     expect(report).not.toContain("Installed");
   });
