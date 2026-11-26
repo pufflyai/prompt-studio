@@ -39,6 +39,8 @@ export const verifyPackagedOpaqueWebview = async (
   expect(await page.locator('iframe[title="Host settings"]').getAttribute("sandbox")).not.toContain(
     "allow-same-origin",
   );
+  // Guest actionability can precede the host's painted iframe hit-test data (lesson 0033).
+  await page.locator('iframe[title="Host settings"]').click({ trial: true });
   await settings.getByRole("spinbutton", { name: "Value" }).fill("7");
   await settings.getByRole("button", { name: "Save", exact: true }).click();
   await expect(settings.getByLabel("Save status")).toHaveText("Saved");
