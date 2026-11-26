@@ -1209,7 +1209,11 @@ test("accepted frontend batches preserve complete output through refresh and sta
   }
 });
 
-test.each(["configuration", "alias"])("release webviews follow changed external %s inputs", async (kind) => {
+test.each([
+  "configuration",
+  "alias",
+  "missing alias",
+])("release webviews follow changed external %s inputs", async (kind) => {
   const { root, source } = fixture();
   mkdirSync(join(root, "shared"));
   const config = join(root, "compiler.json");
@@ -1244,10 +1248,14 @@ test.each(["configuration", "alias"])("release webviews follow changed external 
   const artifact = release.webviews![viewId]!;
   const row = { id: "installed", source_path: source, install_name: installed.installName, updated_at: "initial" };
   const cacheRoot = join(root, "webviews");
+  const failures: unknown[] = [];
   const manager = createExtensionWebviewBuildManager({
     listInstalledSources: async () => [row],
     reportBuildSuccess: async () => "reported",
-    reportBuildFailure: async () => "reported",
+    reportBuildFailure: async (_id, _view, error) => {
+      failures.push(error);
+      return "reported";
+    },
     webviewCacheRoot: cacheRoot,
   });
   try {
@@ -1255,9 +1263,15 @@ test.each(["configuration", "alias"])("release webviews follow changed external 
     await manager.adopt(source);
     if (kind === "configuration")
       writeFileSync(config, JSON.stringify({ compilerOptions: { ...compiler.compilerOptions, jsx: "react" } }));
+    else if (kind === "missing alias") rmSync(shared);
     else writeFileSync(shared, 'export const value = "external two";');
     await manager.refresh(source);
     const current = (await readAcceptedRevision(source))!.webviews![viewId]!;
+    if (kind === "missing alias") {
+      expect(failures).toHaveLength(1);
+      expect(current).toEqual(artifact);
+      return;
+    }
     expect(current.id).not.toBe(artifact.id);
     const app = createApp({ cacheRoot, sourcePath: source, sources: [row] });
     const module = await (
