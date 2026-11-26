@@ -5,6 +5,8 @@ import { useRef } from "react";
 interface UpgradeConfirmationProps {
   version: string;
   open: boolean;
+  ready: boolean;
+  waiting: boolean;
   onOpenChange: (open: boolean) => void;
   onRestart: () => void;
 }
@@ -17,7 +19,7 @@ export const DesktopUpgradeButton = ({ onClick }: { onClick: () => void }) => (
 );
 
 export const DesktopUpgradeDialog = (props: UpgradeConfirmationProps) => {
-  const { version, open, onOpenChange, onRestart } = props;
+  const { version, open, ready, waiting, onOpenChange, onRestart } = props;
   const laterRef = useRef<HTMLButtonElement>(null);
 
   return (
@@ -33,7 +35,14 @@ export const DesktopUpgradeDialog = (props: UpgradeConfirmationProps) => {
         <Dialog.Positioner>
           <Dialog.Content
             onKeyDown={(event) => {
-              if (event.key.toLowerCase() !== "y" || event.altKey || event.ctrlKey || event.metaKey || event.repeat)
+              if (
+                waiting ||
+                event.key.toLowerCase() !== "y" ||
+                event.altKey ||
+                event.ctrlKey ||
+                event.metaKey ||
+                event.repeat
+              )
                 return;
               event.preventDefault();
               event.stopPropagation();
@@ -44,14 +53,23 @@ export const DesktopUpgradeDialog = (props: UpgradeConfirmationProps) => {
               <Dialog.Title>Restart app to install upgrade?</Dialog.Title>
             </Dialog.Header>
             <Dialog.Body>
-              <Dialog.Description>Prompt Studio {version} is ready to install.</Dialog.Description>
+              <Dialog.Description role="status">
+                {ready ? `Prompt Studio ${version} is ready to install.` : `Prompt Studio ${version} is downloading.`}
+              </Dialog.Description>
             </Dialog.Body>
             <Dialog.Footer>
               <Button ref={laterRef} size="sm" onClick={() => onOpenChange(false)}>
-                Later
+                {waiting ? "Cancel restart" : "Later"}
               </Button>
-              <Button size="sm" variant="primary" aria-keyshortcuts="Y" onClick={onRestart}>
-                Restart
+              <Button
+                size="sm"
+                variant="primary"
+                aria-keyshortcuts="Y"
+                loading={waiting}
+                loadingText="Downloading…"
+                onClick={onRestart}
+              >
+                {ready ? "Restart" : "Restart when ready"}
               </Button>
             </Dialog.Footer>
           </Dialog.Content>

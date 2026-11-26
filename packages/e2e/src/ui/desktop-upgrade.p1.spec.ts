@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 
 // Exercise the dashboard with the native updater boundary supplied by the fixture.
-test("shows a ready desktop upgrade and requires confirmation before requesting a restart", async ({
+test("offers an upgrade during download and restarts only after confirmation and download completion", async ({
   page,
   request,
 }) => {
@@ -16,8 +16,9 @@ test("shows a ready desktop upgrade and requires confirmation before requesting 
       let notify: (() => void) | undefined;
       let prompt = false;
       window.addEventListener("desktop-upgrade-fixture", (event) => {
-        sessionStorage.setItem("fixture.upgrade", "0.49.0");
-        prompt = (event as CustomEvent<boolean>).detail;
+        const notice = (event as CustomEvent<{ ready: boolean; prompt?: boolean }>).detail;
+        sessionStorage.setItem("fixture.upgrade", notice.ready ? "ready" : "downloading");
+        prompt = notice.prompt ?? false;
         notify?.();
       });
       Object.assign(window, {
@@ -34,10 +35,10 @@ test("shows a ready desktop upgrade and requires confirmation before requesting 
             };
           },
           takeUpdateNotice: async () => {
-            const version = sessionStorage.getItem("fixture.upgrade");
-            const upgrade = { version, prompt };
+            const status = sessionStorage.getItem("fixture.upgrade");
+            const upgrade = { version: "0.49.0", ready: status === "ready", prompt };
             prompt = false;
-            return version ? { kind: "progress", upgrade } : undefined;
+            return status ? { kind: "progress", upgrade } : undefined;
           },
           restartToInstallUpdate: async () => sessionStorage.setItem("fixture.restart", "requested"),
         },
@@ -49,12 +50,19 @@ test("shows a ready desktop upgrade and requires confirmation before requesting 
     const confirmation = page.getByRole("alertdialog", { name: "Restart app to install upgrade?" });
     await expect(button).toHaveCount(0);
 
-    await page.evaluate(() => window.dispatchEvent(new CustomEvent("desktop-upgrade-fixture", { detail: false })));
+    const publishUpgrade = (ready: boolean, prompt = false) =>
+      page.evaluate((detail) => window.dispatchEvent(new CustomEvent("desktop-upgrade-fixture", { detail })), {
+        ready,
+        prompt,
+      });
+    await publishUpgrade(false);
     await expect(button).toBeVisible();
     await expect(confirmation).toHaveCount(0);
     await button.click();
     await expect(confirmation).toBeVisible();
     await expect(confirmation.getByRole("button", { name: "Later" })).toBeFocused();
+    await page.keyboard.press("y");
+    await expect(confirmation.getByRole("button", { name: "Cancel restart" })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(confirmation).toBeHidden();
     await expect(button).toBeVisible();
@@ -62,10 +70,13 @@ test("shows a ready desktop upgrade and requires confirmation before requesting 
 
     await page.reload();
     await expect(button).toBeVisible();
-    await page.evaluate(() => window.dispatchEvent(new CustomEvent("desktop-upgrade-fixture", { detail: true })));
+    await publishUpgrade(false, true);
     await expect(confirmation).toBeVisible();
     await expect(confirmation.getByRole("button", { name: "Later" })).toBeFocused();
     await page.keyboard.press("y");
+    await expect(confirmation.getByRole("button", { name: "Cancel restart" })).toBeVisible();
+    expect(await page.evaluate(() => sessionStorage.getItem("fixture.restart"))).toBeNull();
+    await publishUpgrade(true);
     await expect.poll(() => page.evaluate(() => sessionStorage.getItem("fixture.restart"))).toBe("requested");
   } finally {
     await request.delete(`/v1/projects/${id}`);

@@ -15,12 +15,12 @@ test("an update completed before the workbench connects stays available without 
     onNotice: () => changed++,
     logError: () => {},
   });
-  notifications.downloaded("2.0.0", false);
+  notifications.downloaded("2.0.0");
   expect(recorded).toEqual(["2.0.0"]);
   expect(changed).toBe(1);
-  const ready = { kind: "progress", upgrade: { version: "2.0.0", prompt: false } };
-  expect(notifications.take("2.0.0")).toMatchObject(ready);
-  expect(notifications.take("2.0.0")).toMatchObject(ready);
+  const ready = { kind: "progress", upgrade: { version: "2.0.0", ready: true, prompt: false } };
+  expect(notifications.take({ version: "2.0.0", ready: true })).toMatchObject(ready);
+  expect(notifications.take({ version: "2.0.0", ready: true })).toMatchObject(ready);
 });
 
 test("completed native results replace progress and survive its cleanup", () => {
@@ -33,14 +33,17 @@ test("completed native results replace progress and survive its cleanup", () => 
   notifications.progress("checking");
   expect(notifications.take()).toMatchObject({ kind: "progress", title: expect.any(String) });
   notifications.progress("downloading");
-  notifications.downloaded("2.0.0", true);
+  notifications.upgradeChanged(true);
+  notifications.downloaded("2.0.0");
   notifications.progress(undefined);
-  expect(notifications.take("2.0.0")).toMatchObject({
+  expect(notifications.take({ version: "2.0.0", ready: true })).toMatchObject({
     kind: "progress",
     title: null,
-    upgrade: { version: "2.0.0", prompt: true },
+    upgrade: { version: "2.0.0", ready: true, prompt: true },
   });
-  expect(notifications.take("2.0.0")).toMatchObject({ upgrade: { version: "2.0.0", prompt: false } });
+  expect(notifications.take({ version: "2.0.0", ready: true })).toMatchObject({
+    upgrade: { version: "2.0.0", ready: true, prompt: false },
+  });
 
   notifications.progress("checking");
   expect(notifications.take()).toBeDefined();

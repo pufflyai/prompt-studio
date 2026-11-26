@@ -6,6 +6,8 @@ interface UpdateNotice {
   message?: string;
 }
 
+export type DesktopUpgradeNotice = { version: string; ready: boolean; prompt: boolean };
+
 type UpdateNoticeEvent =
   | UpdateNotice
   | {
@@ -13,7 +15,7 @@ type UpdateNoticeEvent =
       title?: string | null;
       outcome?: UpdateNotice;
       installed?: UpdateNotice;
-      upgrade?: { version: string; prompt: boolean };
+      upgrade?: DesktopUpgradeNotice | null;
     };
 
 interface DesktopUpdateNoticeBridge {
@@ -39,7 +41,7 @@ export const connectDesktopUpdateNotices = (
   bridge: unknown,
   getWorkbench: () => WorkbenchCore | undefined,
   subscribeWorkbench?: (listener: () => void) => () => void,
-  onUpgradeReady?: (version: string, prompt: boolean) => void,
+  onUpgradeChange?: (notice: DesktopUpgradeNotice | null) => boolean,
 ) => {
   if (!hasUpdateNotices(bridge)) return;
   let connected = true;
@@ -74,7 +76,13 @@ export const connectDesktopUpdateNotices = (
     else if (notice.title === null) clearProgress();
     if (notice.outcome) publish(updateNoticeId, notice.outcome);
     if (notice.installed) publish(installedNoticeId, notice.installed);
-    if (notice.upgrade) onUpgradeReady?.(notice.upgrade.version, notice.upgrade.prompt);
+    if (notice.upgrade !== undefined && onUpgradeChange?.(notice.upgrade) && !notice.outcome) {
+      publish(updateNoticeId, {
+        level: "error",
+        title: "The update download stopped.",
+        message: "Choose Check for Updates to try again.",
+      });
+    }
   };
 
   let receiving = false;

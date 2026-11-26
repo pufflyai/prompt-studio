@@ -1,6 +1,9 @@
 import { createWorkbenchStore, type WorkbenchCore } from "@pstdio/workbench";
 import { useEffect, useSyncExternalStore } from "react";
+import type { DesktopUpgradeNotice } from "@/lib/desktop-update-notices";
 import { DesktopUpgradeButton, DesktopUpgradeDialog } from "./components/desktop-upgrade";
+
+type RestartConsent = "confirm" | "waiting";
 
 export const createDesktopUpgrade = (bridge: unknown) => {
   if (
@@ -11,16 +14,38 @@ export const createDesktopUpgrade = (bridge: unknown) => {
   )
     return;
   const restartToInstallUpdate = bridge.restartToInstallUpdate as () => Promise<void>;
-  const store = createWorkbenchStore({ name: "desktop.upgrade", initialState: { version: "", open: false } });
+  const store = createWorkbenchStore<{
+    availability: DesktopUpgradeNotice | null;
+    dialog: "closed" | RestartConsent;
+  }>({
+    name: "desktop.upgrade",
+    initialState: { availability: null, dialog: "closed" },
+  });
   return {
     getState: store.getState,
     subscribe: store.subscribe,
-    ready: (version: string, prompt: boolean) =>
-      store.setState((current) => ({ version, open: prompt || current.open })),
-    setOpen: (open: boolean) => store.setState({ open }),
-    restart: () => {
-      if (!store.getState().open) return;
-      store.setState({ open: false });
+    update: (availability: DesktopUpgradeNotice | null) => {
+      const current = store.getState();
+      if (!availability) {
+        store.setState({ availability: null, dialog: "closed" });
+        return current.dialog !== "closed";
+      }
+      const dialog = current.availability?.version === availability.version ? current.dialog : "closed";
+      store.setState({
+        availability,
+        dialog: availability.prompt && dialog === "closed" ? "confirm" : dialog,
+      });
+      return false;
+    },
+    setOpen: (open: boolean) => store.setState({ dialog: open ? "confirm" : "closed" }),
+    restart: (consent: RestartConsent) => {
+      const { availability, dialog } = store.getState();
+      if (!availability || dialog !== consent) return;
+      if (!availability.ready) {
+        store.setState({ dialog: "waiting" });
+        return;
+      }
+      store.setState({ dialog: "closed" });
       return restartToInstallUpdate.call(bridge);
     },
   };
@@ -30,12 +55,29 @@ export type DesktopUpgradeController = NonNullable<ReturnType<typeof createDeskt
 
 const upgradeItemId = "desktop.upgrade";
 
+const requestRestart = (workbench: WorkbenchCore, upgrade: DesktopUpgradeController, consent: RestartConsent) => {
+  const errorId = `${upgradeItemId}.error`;
+  workbench.notifications.dismiss(errorId);
+  void upgrade.restart(consent)?.catch(() => {
+    workbench.notifications.show({
+      id: errorId,
+      level: "error",
+      title: "Prompt Studio couldn’t restart.",
+      message: "Choose Upgrade to try again.",
+    });
+  });
+};
+
 export const DesktopUpgradeConfirmation = (props: { workbench: WorkbenchCore; upgrade: DesktopUpgradeController }) => {
   const { workbench, upgrade } = props;
-  const { open, version } = useSyncExternalStore(upgrade.subscribe, upgrade.getState, upgrade.getState);
-  const ready = Boolean(version);
+  const { availability, dialog } = useSyncExternalStore(upgrade.subscribe, upgrade.getState, upgrade.getState);
+  const available = Boolean(availability);
+  const restartAfterDownload = dialog === "waiting" && availability?.ready;
   useEffect(() => {
-    if (!ready) return;
+    if (restartAfterDownload) requestRestart(workbench, upgrade, "waiting");
+  }, [restartAfterDownload, workbench, upgrade]);
+  useEffect(() => {
+    if (!available) return;
     const view = workbench.views.registerView({
       id: upgradeItemId,
       title: "Desktop upgrade",
@@ -51,26 +93,17 @@ export const DesktopUpgradeConfirmation = (props: { workbench: WorkbenchCore; up
       item.dispose();
       view.dispose();
     };
-  }, [workbench, upgrade, ready]);
+  }, [workbench, upgrade, available]);
 
-  if (!ready) return null;
+  if (!availability) return null;
   return (
     <DesktopUpgradeDialog
-      open={open}
-      version={version}
+      open={dialog !== "closed"}
+      version={availability.version}
+      ready={availability.ready}
+      waiting={dialog === "waiting"}
       onOpenChange={upgrade.setOpen}
-      onRestart={() => {
-        const errorId = `${upgradeItemId}.error`;
-        workbench.notifications.dismiss(errorId);
-        void upgrade.restart()?.catch(() => {
-          workbench.notifications.show({
-            id: errorId,
-            level: "error",
-            title: "Prompt Studio couldn’t restart.",
-            message: "Choose Upgrade to try again.",
-          });
-        });
-      }}
+      onRestart={() => requestRestart(workbench, upgrade, "confirm")}
     />
   );
 };

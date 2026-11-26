@@ -33,6 +33,8 @@ export type DesktopUpdatePhase = "checking" | "downloading";
 
 export type DesktopUpdateOutcome = { level: "info" | "error"; title: string; message?: string };
 
+export type DesktopUpgradeAvailability = { version: string; ready: boolean };
+
 export type DesktopUpdateNotice =
   | DesktopUpdateOutcome
   | {
@@ -40,7 +42,7 @@ export type DesktopUpdateNotice =
       title?: string | null;
       outcome?: DesktopUpdateOutcome;
       installed?: DesktopUpdateOutcome;
-      upgrade?: { version: string; prompt: boolean };
+      upgrade?: (DesktopUpgradeAvailability & { prompt: boolean }) | null;
     };
 
 export interface PromptStudioDesktopApi {

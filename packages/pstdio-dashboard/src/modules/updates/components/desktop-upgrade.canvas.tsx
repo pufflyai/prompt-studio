@@ -1,13 +1,23 @@
 import { Box, Button, Flex, Text } from "@chakra-ui/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DesktopUpgradeButton, DesktopUpgradeDialog } from "./desktop-upgrade";
 
 export default { title: "Product/Desktop/Upgrade" };
 
 export const UpgradeEntryPoints = () => {
   const [open, setOpen] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [installed, setInstalled] = useState(false);
+  const [state, setState] = useState<"current" | "downloading" | "ready" | "installed">("current");
+  const [waiting, setWaiting] = useState(false);
+  const available = state === "downloading" || state === "ready";
+  const installed = state === "installed";
+  useEffect(() => {
+    if (state !== "downloading") return;
+    const completeDownload = setTimeout(() => {
+      setState(waiting ? "installed" : "ready");
+      if (waiting) setOpen(false);
+    }, 3000);
+    return () => clearTimeout(completeDownload);
+  }, [state, waiting]);
 
   return (
     <Flex direction="column" height="full" minH="xs" justify="space-between">
@@ -17,7 +27,7 @@ export const UpgradeEntryPoints = () => {
           variant="ghost"
           disabled={installed}
           onClick={() => {
-            setReady(true);
+            if (state === "current") setState("downloading");
             setOpen(true);
           }}
         >
@@ -26,24 +36,32 @@ export const UpgradeEntryPoints = () => {
       </Box>
       <Box p="md">
         <Text>{installed ? "Prompt Studio 0.49.0 is running" : "Prompt Studio 0.48.0 is running"}</Text>
-        {!ready && !installed && (
-          <Button size="sm" variant="outline" mt="sm" onClick={() => setReady(true)}>
-            Simulate background download
+        {state === "current" && (
+          <Button size="sm" variant="outline" mt="sm" onClick={() => setState("downloading")}>
+            Simulate update found
           </Button>
         )}
       </Box>
       <Flex as="footer" align="center" justify="end" px="sm" h="8" borderTopWidth="1px">
-        {ready && (
+        {available && (
           <>
             <DesktopUpgradeButton onClick={() => setOpen(true)} />
             <DesktopUpgradeDialog
               version="0.49.0"
               open={open}
-              onOpenChange={setOpen}
+              ready={state === "ready"}
+              waiting={waiting}
+              onOpenChange={(next) => {
+                setOpen(next);
+                if (!next) setWaiting(false);
+              }}
               onRestart={() => {
+                if (state === "downloading") {
+                  setWaiting(true);
+                  return;
+                }
                 setOpen(false);
-                setReady(false);
-                setInstalled(true);
+                setState("installed");
               }}
             />
           </>

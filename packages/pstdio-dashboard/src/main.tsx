@@ -102,7 +102,7 @@ const renderDashboard = async () => {
     window.promptStudioDesktop,
     workbenches.getActive,
     projectTabs?.controller.subscribeState,
-    desktopUpgrade?.ready,
+    desktopUpgrade?.update,
   );
   if (stopDesktopCommands) window.addEventListener("pagehide", stopDesktopCommands, { once: true });
   if (stopDesktopUpdateNotices) window.addEventListener("pagehide", stopDesktopUpdateNotices, { once: true });

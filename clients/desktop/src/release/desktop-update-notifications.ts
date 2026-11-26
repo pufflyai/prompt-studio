@@ -1,4 +1,9 @@
-import type { DesktopUpdateNotice, DesktopUpdateOutcome, DesktopUpdatePhase } from "../desktop-api";
+import type {
+  DesktopUpdateNotice,
+  DesktopUpdateOutcome,
+  DesktopUpdatePhase,
+  DesktopUpgradeAvailability,
+} from "../desktop-api";
 import type { DesktopUpdateReceipt } from "./desktop-update-receipt";
 
 interface DesktopUpdateNotificationsOptions {
@@ -29,23 +34,27 @@ export const createDesktopUpdateNotifications = (options: DesktopUpdateNotificat
   };
 
   return {
-    take(downloadedVersion?: string | null): DesktopUpdateNotice | undefined {
+    take(availability?: DesktopUpgradeAvailability | null): DesktopUpdateNotice | undefined {
       const outcome = pending;
       const installed = pendingInstallation;
       pending = undefined;
       pendingInstallation = undefined;
       const title = progressTitle;
-      const upgrade = downloadedVersion ? { version: downloadedVersion, prompt: promptForUpgrade } : undefined;
+      const upgrade = availability ? { ...availability, prompt: promptForUpgrade } : availability;
       promptForUpgrade = false;
-      if (title === undefined && !installed && !upgrade) return outcome;
+      if (title === undefined && !installed && upgrade === undefined) return outcome;
       if (title === null) progressTitle = undefined;
       return {
         kind: "progress",
         title,
         ...(outcome ? { outcome } : {}),
         ...(installed ? { installed } : {}),
-        ...(upgrade ? { upgrade } : {}),
+        ...(upgrade === undefined ? {} : { upgrade }),
       };
+    },
+    upgradeChanged(prompt: boolean) {
+      promptForUpgrade = prompt;
+      options.onNotice();
     },
     progress(phase: DesktopUpdatePhase | undefined) {
       if (!phase && !progressTitle) return;
@@ -57,10 +66,13 @@ export const createDesktopUpdateNotifications = (options: DesktopUpdateNotificat
         "You're up to date.",
         `You're running Prompt Studio ${options.currentVersion}. There are no newer updates available for this installation.`,
       ),
-    downloaded: (version: string, interactive: boolean) => {
-      options.receipt.recordDownload(version);
+    downloaded: (version: string) => {
+      try {
+        options.receipt.recordDownload(version);
+      } catch (error) {
+        options.logError(error instanceof Error ? error : new Error(String(error)));
+      }
       if (progressTitle) progressTitle = null;
-      promptForUpgrade ||= interactive;
       options.onNotice();
     },
     installed: () => {

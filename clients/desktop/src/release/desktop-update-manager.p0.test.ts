@@ -44,10 +44,8 @@ const createUpdateCheck = (options: UpdateCheckOptions = {}) => {
     }),
     openExternal: async () => {},
     onUpdateNotAvailable: () => notifications.push("up-to-date"),
-    onUpdateDownloaded: (version: string, interactive: boolean) => {
-      notifications.push(`downloaded:${version}`);
-      upgradePrompts.push(interactive);
-    },
+    onUpgradeChanged: (prompt) => upgradePrompts.push(prompt),
+    onUpdateDownloaded: (version: string) => notifications.push(`downloaded:${version}`),
     onUpdateError: (error: Error) => errors.push(error),
     onUpdateProgress: (phase?: string) => progress.push(phase ?? "finished"),
     logError: (error: Error) => logged.push(error),
@@ -214,7 +212,8 @@ describe("desktop update results", () => {
     await check.manager.checkForUpdates();
     await check.manager.checkForUpdates();
     expect(check.checks()).toBe(1);
-    expect(check.notifications).toEqual(["downloaded:0.33.3", "downloaded:0.33.3"]);
+    expect(check.notifications).toEqual(["downloaded:0.33.3"]);
+    expect(check.upgradePrompts).toEqual([true, true]);
   });
 
   test("switching back to stable on a nightly build never offers an older stable release", async () => {
@@ -273,7 +272,7 @@ describe("background update checks", () => {
     await check.manager.checkInBackground();
     await check.manager.checkInBackground();
     expect(check.notifications).toEqual(["downloaded:0.33.3"]);
-    expect(check.manager.downloadedVersion).toBe("0.33.3");
+    expect(check.manager.upgrade).toEqual({ version: "0.33.3", ready: true });
     expect(check.upgradePrompts).toEqual([false]);
     expect(check.checks()).toBe(1);
     await check.manager.checkForUpdates();
@@ -325,4 +324,18 @@ describe("Linux update checks", () => {
     expect(check.opened).toEqual([]);
     expect(check.notifications).toEqual(["up-to-date"]);
   });
+});
+
+test("exposes a newer version while it downloads and removes it if the download fails", async () => {
+  const check = createUpdateCheck();
+  const pending = check.manager.checkInBackground();
+  await check.nativeCheckStarted(1);
+  expect(check.manager.upgrade).toEqual({ version: "0.33.3", ready: false });
+  expect(check.upgradePrompts).toEqual([false]);
+  const manual = check.manager.checkForUpdates();
+  expect(check.upgradePrompts).toEqual([false, true]);
+  check.events.emit("error", new Error("offline"));
+  await Promise.all([pending, manual]);
+  expect(check.manager.upgrade).toBeNull();
+  expect(check.upgradePrompts).toEqual([false, true, false]);
 });
