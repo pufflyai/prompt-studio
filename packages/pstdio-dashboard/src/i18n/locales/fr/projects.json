@@ -61,6 +61,7 @@
         "errorCopied": "Erreur copiée"
       },
       "upgrade": {
+        "reviewNeeded": "Fichiers locaux conservés",
         "waiting": "En attente de mise à niveau",
         "action": "Mettre à niveau",
         "current": "L'extension est déjà à jour",
@@ -186,6 +187,7 @@
         "retry": "Réessayer",
         "dismiss": "Fermer",
         "upgradingButton": "Mise à niveau",
+        "batchReviewRequired": "À vérifier ({{count}})",
         "batchFailed": "{{count}} mises à niveau sur {{total}} ont échoué",
         "installingButton": "Installation"
       },

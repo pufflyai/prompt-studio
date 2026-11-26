@@ -119,3 +119,47 @@ export const attachUnlessRemoved = async <Source extends { id: string }, Attache
   }
   throw new ProjectNotFoundError(projectId);
 };
+
+export const createExtensionSourceReaders = (
+  deps: Pick<ExtensionServiceDeps, "extensionInstancesService" | "installedExtensionSourcesService" | "projectService">,
+) => {
+  const listEnabledSourcesForProject = async (projectId: string) => {
+    const records = await listProjectInstances(projectId);
+    return records.filter(({ instance }) => instance.enabled);
+  };
+
+  const hasEnabledProjectSource = async (sourcePath: string) => {
+    const source = await deps.installedExtensionSourcesService.getBySourcePath(sourcePath);
+    if (!source) return false;
+    const filters = { installed_extension_id: source.id, scope_type: "project" };
+    return (await deps.extensionInstancesService.list(filters)).some((instance) => instance.enabled);
+  };
+
+  const listProjectInstances = async (projectId: string) => {
+    const project = await deps.projectService.get(projectId);
+    if (!project) throw new ProjectNotFoundError(projectId);
+
+    const instances = await deps.extensionInstancesService.list({ scope_type: "project", scope_id: projectId });
+    const records = [];
+
+    for (const instance of instances) {
+      const installedSource = await deps.installedExtensionSourcesService.get(instance.installed_extension_id);
+      if (installedSource) records.push({ instance, installedSource });
+    }
+
+    return records;
+  };
+
+  const getProjectExtensionInstance = async (projectId: string, instanceId: string) => {
+    const instance = await deps.extensionInstancesService.get(instanceId);
+    if (!instance) return null;
+    if (instance.scope_type !== "project" || instance.scope_id !== projectId) return null;
+
+    const installedSource = await deps.installedExtensionSourcesService.get(instance.installed_extension_id);
+    if (!installedSource) return null;
+
+    return { instance, installedSource };
+  };
+
+  return { listEnabledSourcesForProject, hasEnabledProjectSource, listProjectInstances, getProjectExtensionInstance };
+};

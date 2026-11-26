@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Route, test } from "@playwright/test";
 import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
+import { extensionUpgradeNeedsReviewCode } from "pstdio-api-contracts/extension-host";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
 
@@ -20,7 +21,11 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
   const inventory = await (await request.get(`${uiOrigin}/v1/projects/${project.id}/extensions`)).json();
   const targets: ProjectExtensionInstance[] = inventory.extensions
     .slice(0, 3)
-    .map((extension: ProjectExtensionInstance) => ({ ...extension, canUpgrade: true }));
+    .map((extension: ProjectExtensionInstance, index: number) => ({
+      ...extension,
+      canUpgrade: index !== 2,
+      ...(index === 2 && { hasPublishedAlternative: true, scope: "repo", enabled: true }),
+    }));
   expect(targets).toHaveLength(3);
   const waiting: { route: Route; extension: ProjectExtensionInstance }[] = [];
   const heldReads: Route[] = [];
@@ -88,10 +93,16 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
     await expect(failedButton.getByRole("alert")).toContainText("Registry unavailable");
     await expect(failedButton).toContainText("Retry");
     await expect(failedButton).not.toContainText(/\d+s/);
-    await succeed(waiting[2]!);
+    const local = waiting[2]!.extension;
+    await waiting[2]!.route.fulfill({
+      status: 409,
+      json: { code: extensionUpgradeNeedsReviewCode, error: "This project is using a local copy." },
+    });
     const batchButton = page.getByTestId("extensions-upgrade-all");
     await expect(batchButton.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "3");
     await expect(batchButton).toContainText("1 of 3 upgrades failed");
+    await expect(batchButton).toContainText("Needs review (1)");
+    await expect(row(local.id).getByTestId("extension-row-upgrade")).toContainText("Review upgrade");
     await expect(batchButton).not.toContainText(/\d+s/);
     await batchButton.locator("..").getByTestId("extension-action-dismiss").click();
     await expect(batchButton).toContainText("Upgrade all");
@@ -106,6 +117,48 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
     await expect(detail).toBeVisible();
     await expect(detail.getByTestId("extension-upgrade")).toHaveCount(0);
     expect(waiting).toHaveLength(4);
+
+    const reviewId = "1da7f099-0539-49c5-bc98-d5ad8c09ad01";
+    await page.route(`**/v1/projects/${project.id}/extensions/*/upgrade-review`, (route) =>
+      route.fulfill({
+        json: {
+          action: "begin",
+          review: {
+            id: reviewId,
+            localPath: local.sourcePath,
+            incomingVersion: "2.0.0",
+            revision: "initial",
+            createdAt: "2026-01-01T00:00:00Z",
+            separateLocalProvider: true,
+            hasOriginal: true,
+            resolutions: [],
+            changes: [],
+            changedPaths: ["src/extension.ts"],
+          },
+        },
+      }),
+    );
+    await page.goBack();
+    await row(local.id)
+      .getByRole("button", { name: /Review upgrade/ })
+      .click();
+    const review = page.getByRole("dialog", { name: `Review ${local.displayName} upgrade` });
+    await expect(review).toContainText("The extension source changed during this review");
+    await expect(review).toContainText("src/extension.ts");
+    await expect(review.getByRole("button", { name: "Use published version" })).toBeDisabled();
+    await expect(review.getByRole("button", { name: "Use merged version" })).toBeDisabled();
+    await page.route(
+      (url) => url.pathname === `/v1/projects/${project.id}/sessions` && url.searchParams.get("anchorId") === reviewId,
+      (route) => route.fulfill({ json: { items: [{ id: "upgrade-review-session", status: "completed" }] } }),
+    );
+    const reply = JSON.stringify({ reviewId, revision: "initial", resolutions: [] });
+    await page.route("**/v1/sessions/upgrade-review-session/conversation", (route) =>
+      route.fulfill({ json: { messages: [{ role: "assistant", parts: [{ type: "text", text: reply }] }] } }),
+    );
+    await review.getByRole("button", { name: "Import agent proposal" }).click();
+    await review.getByRole("button", { name: "Load agent reply" }).click();
+    await expect(review.getByRole("textbox", { name: "Agent proposal" })).toHaveValue(reply);
+    await expect(review.getByRole("button", { name: "Stage agent choices" })).toBeDisabled();
   } finally {
     await Promise.all(heldReads.map((route) => route.abort()));
     await page.unrouteAll({ behavior: "ignoreErrors" });

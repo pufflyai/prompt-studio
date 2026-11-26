@@ -151,7 +151,7 @@ for (const interruption of ["normal", "schema", "restore", "mappings"])
       if (interruption !== "normal") {
         const finish = await prepareFileOwnersUpgrade(store.db, store.path);
         await prepareProjectExtensionsUpgrade(store.db, store.path);
-        await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
         if (interruption === "mappings") await interruptMappingExport(store, finish);
         if (interruption === "restore") {
           await store.pglite.exec(

@@ -114,7 +114,25 @@ Explicit Git refs and other repository sources use the system Git executable. Wh
   a different `engines.pstdio`, the previously adopted version keeps running and Reload stays on offer.
 - A catalog extension shows **Upgrade** when its recorded commit differs from the catalog release.
   Upgrade fetches that origin, validates it in staging, replaces the installed source, and adopts it.
-  Healthy local-path extensions stay under local control.
+  Upgrade compares the working copy with the original release, including edits previously adopted
+  through Reload. If the original cannot be verified or local files differ, the host keeps the
+  working copy and reports that local files were kept. A separate local copy selected in a project
+  also takes precedence over automatic replacement of that project's provider.
+- When a compatible prebuilt bundle is available, the host verifies it alongside the editable
+  source. Registry inventory can prefetch both before the user clicks. Those artifacts skip
+  dependency installation and webview builds when they match the selected release and host.
+  Source-only releases still prepare and validate on the device.
+- After a managed upgrade reports **Local files kept**, choose **Review upgrade** to compare
+  the local, original, and incoming files. The review combines independent edits and asks for
+  choices where both versions changed the same content. **Apply upgrade** validates the staged
+  result and checks the live source again before replacing it.
+- **Resolve with agent** opens an unsent session draft containing the staged comparison.
+  Edit and send it, then paste the reply into **Import agent proposal**. The review checks the
+  proposal's revision and lets you inspect or validate it before applying. Closing the
+  review saves your choices. **Keep current version** cancels the review.
+- If an enabled local provider shares a catalog identity, **Review published version** shows
+  its incoming release. **Use published version** switches this project to a separate provider
+  and retains the local folder and the provider selections of other projects.
 - In the extension panel, every row that can take a newer release shows an upgrade button next to
   its switch. The button upgrades only that extension. **Upgrade all** in the panel header runs
   up to four upgrades at once, using the connected host's capacity. Its progress bar counts completed
@@ -129,6 +147,10 @@ Explicit Git refs and other repository sources use the system Git executable. Wh
   current folder, or the one named with `--project-id`. When `name` is omitted, it upgrades every
   instance the host marks as eligible. The command does not replace healthy local sources or change
   whether an extension is enabled.
+- Use `pst extensions review begin <name>` to stage or resume a review from the terminal.
+  Its response includes the review ID and revision for subsequent `read`, `file`, `save`,
+  `validate`, `apply`, or `cancel` operations. Use `--project-id` to select the project
+  outside its folder.
 - Catalog entries marked `default` are installed for new projects. Catalog membership alone does not
   make an extension a default. The packaged catalog defaults to the harnesses, base themes, and
   Prompt Studio skills.

@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { BundledExtensionSources } from "pstdio-extensions/distribution";
+import { buildReleaseRuntimeArtifact } from "./release-runtime-artifact";
 
 export const bundleExtensionSources = async (root: string) => {
   const { packExtensionSource } = await import("pstdio-extensions/distribution");
@@ -31,9 +32,16 @@ export const bundleExtensionSources = async (root: string) => {
     if (entry.bundleSource === false) continue;
     const packed = await packExtensionSource(join(root, entry.origin.path));
     await writeFile(join(destination, `${encodeURIComponent(entry.installName)}.tgz`), packed.bytes);
+    const runtime = await buildReleaseRuntimeArtifact(root, { ...packed.manifest, bytes: packed.bytes, sha256: packed.sha256 });
+    if (runtime) {
+      const dir = join(destination, "runtime");
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, `${runtime.descriptor.sha256}.tgz`), runtime.bytes);
+    }
     manifest.sources.push({
       installName: entry.installName, url: entry.origin.url, path: entry.origin.path,
       id: packed.manifest.id, version: packed.manifest.version, sha256: packed.sha256,
+      ...(runtime ? { bundles: [runtime.descriptor] } : {}),
     });
   }
   await writeFile(join(destination, "manifest.json"), JSON.stringify(manifest));

@@ -88,7 +88,7 @@ const readRestoredTable = async (
   ).rows.map(({ row }) => row);
 };
 for (const interruption of ["normal", "schema", "restore"]) {
-  const name = `document tails, retry identities, records and numbers survive ${interruption} owner upgrade`;
+  const name = `document tails, records and numbers survive ${interruption} owner upgrade with its receipt policy`;
   const check = async () => {
     const phases: Record<string, number> = {};
     let phaseStart = performance.now();
@@ -146,7 +146,7 @@ for (const interruption of ["normal", "schema", "restore"]) {
         await prepareOwnerProjectionUpgrade(previous.db, previous.path);
         const finish = await prepareDocumentOwnerUpgrade(previous.db, previous.path);
         for (const table of tables) expect((await previous.pglite.query(`SELECT * FROM ${table}`)).rows).toEqual([]);
-        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
         markPhase("snapshot export and schema migration");
         if (interruption === "restore") {
           await previous.pglite.exec(`CREATE FUNCTION stop_document_restore() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
@@ -167,7 +167,11 @@ for (const interruption of ["normal", "schema", "restore"]) {
         const fileRows = { ...(await releasedDocumentRows(store!)), ...(await releasedRecordRows(store!.db)) };
         return Promise.all(tables.map((table) => readRestoredTable(store!.pglite, table, fileRows)));
       };
-      expect(sorted(await restored())).toEqual(sorted(original));
+      // Fresh upgrades expire completed save IDs. Previously staged data keeps its original contract.
+      const expected = tables.map((table, i) =>
+        interruption === "normal" && table === "storage_document_operations" ? [] : original[i]!,
+      );
+      expect(sorted(await restored())).toEqual(sorted(expected));
       expect(
         (await store.pglite.query(`SELECT to_regprocedure('${releasedCountIndex}_tr()') AS retired`)).rows,
       ).toEqual([{ retired: null }]);
@@ -179,6 +183,10 @@ for (const interruption of ["normal", "schema", "restore"]) {
         expect(Number(result.rows[0]!.n)).toBeGreaterThan(0);
       }
       for (const [i, table] of tables.entries()) {
+        if (interruption === "normal" && table === "storage_document_operations") {
+          expect(await Bun.file(`${previous.path}-migration-exports/${table}.jsonl`).exists()).toBe(false);
+          continue;
+        }
         expect(
           (await readFile(`${previous.path}-migration-exports/${table}.jsonl`, "utf8")).trim().split("\n"),
         ).toHaveLength(original[i]!.length);
@@ -187,7 +195,7 @@ for (const interruption of ["normal", "schema", "restore"]) {
       markPhase("resume and verify restored data");
       await store.close();
       store = await createDb({ path: previous.path });
-      expect(sorted(await restored())).toEqual(sorted(original));
+      expect(sorted(await restored())).toEqual(sorted(expected));
       markPhase("reopen and verify durable data");
     } finally {
       if (!closed) await previous.close();

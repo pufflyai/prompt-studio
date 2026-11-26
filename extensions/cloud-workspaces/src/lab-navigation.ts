@@ -11,6 +11,7 @@ export const instanceTarget = (projectId: string, instance: Pick<Instance, "id" 
 });
 export const catalogPageRef = qualifyRef(owner, { kind: "page", id: "catalog" });
 export const deployedPageRef = qualifyRef(owner, { kind: "page", id: "deployed" });
+export const monitoringDetailPageRef = qualifyRef(owner, { kind: "page", id: "workspace-monitoring-detail" });
 export const deployedMachinePageRef = qualifyRef(owner, { kind: "page", id: "deployed-machine" });
 export const templatePageRef = qualifyRef(owner, { kind: "page", id: "template" });
 export const templateTarget = (projectId: string, path: string) => ({

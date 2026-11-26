@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import {
   acceptPreparedRevision,
@@ -531,6 +531,41 @@ test("an upgrade prepared before a newer version arrived cannot replace its file
   } finally {
     await settlePreparedInstall(staged.installation!, false);
   }
+});
+
+test("keeps an edit written to the previous source during upgrade publication", async () => {
+  const { source } = fixture();
+  const { activatePreparedInstall, settlePreparedInstall } = await import("./extension-install-transaction");
+  const base = `https://example.com/extension@${"a".repeat(40)}#extension`;
+  const first = await installExtensionSource({
+    source: "prepared-install",
+    preparedSource: { path: source, ref: base },
+    skipInstall: true,
+  });
+  writeFileSync(join(source, "main.ts"), 'console.log("new source");');
+  const next = await installExtensionSource({
+    source: "prepared-install",
+    preparedSource: { path: source, ref: `https://example.com/extension@${"b".repeat(40)}#extension` },
+    skipInstall: true,
+    force: true,
+    retainBackup: true,
+    upgradeBase: { path: first.targetPath, ref: base },
+  });
+
+  const transaction = next.installation!;
+  const { root } = JSON.parse(readFileSync(transaction.intentPath, "utf8"));
+  await activatePreparedInstall(transaction);
+  writeFileSync(join(root, ".previous", "main.ts"), "// edited while the upgrade was publishing");
+  await settlePreparedInstall(transaction, true);
+
+  expect(readFileSync(join(next.targetPath, "main.ts"), "utf8")).toContain("new source");
+  const backup = join(
+    dirname(dirname(next.targetPath)),
+    ".extension-upgrade-recovery",
+    `${basename(next.targetPath)}-${basename(transaction.intentPath, ".json")}`,
+    "main.ts",
+  );
+  expect(readFileSync(backup, "utf8")).toContain("edited while the upgrade was publishing");
 });
 
 test("an older rollback cannot undo a newer committed install with identical bytes", async () => {

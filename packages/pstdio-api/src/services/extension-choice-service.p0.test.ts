@@ -12,7 +12,11 @@ test("source discovery, local toggles and shared adoption wait for the whole pro
       setProjectExtensionEnabled: async (_id: string, _enabled: boolean) => {
         calls.push("toggle");
       },
-      enableInstalledSourceForProject: async (_input: { projectId: string }) => {
+      enableInstalledSourceForProject: async (
+        _input: { projectId: string },
+        options?: { expectedProvider: string },
+      ) => {
+        expect(options).toEqual({ expectedProvider: "old-instance" });
         calls.push("enable");
       },
       syncInstalledSourceForProject: async (_input: { projectId: string }) => {
@@ -25,7 +29,7 @@ test("source discovery, local toggles and shared adoption wait for the whole pro
     async () => "project",
   );
   const handoff = withProjectExtensionChoices(service, "project", async () => {
-    await service.enableInstalledSourceForProject({ projectId: "project" });
+    await service.enableInstalledSourceForProject({ projectId: "project" }, { expectedProvider: "old-instance" });
     started.resolve();
     await release.promise;
     calls.push("handoff");

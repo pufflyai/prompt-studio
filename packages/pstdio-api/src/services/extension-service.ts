@@ -1,5 +1,6 @@
 import {
   attachUnlessRemoved,
+  createExtensionSourceReaders,
   type EnableInstalledSourceInput,
   type ExtensionServiceDeps,
   ProjectNotFoundError,
@@ -25,7 +26,7 @@ import type { LoadedExtensionSnapshot } from "../features/extensions/extension-r
 import { activatePublishedExtensions } from "./activate-published-extension";
 import { createExtensionChoicePolicy } from "./extension-choice-policy";
 import { serializeExtensionChoices } from "./extension-choice-service";
-import { createExtensionEnablement } from "./extension-enablement";
+import { assertExpectedExtensionProvider, createExtensionEnablement } from "./extension-enablement";
 import {
   type PruneProjectExtensionInstancesInput,
   pruneProjectExtensionInstances as pruneProjectExtensionInstancesImpl,
@@ -42,6 +43,8 @@ import { uninstallProjectExtension as uninstallProjectExtensionImpl } from "./ex
 export type { PruneProjectExtensionInstancesInput } from "./extension-prune";
 
 export const createExtensionService = (deps: ExtensionServiceDeps) => {
+  const { listEnabledSourcesForProject, hasEnabledProjectSource, listProjectInstances, getProjectExtensionInstance } =
+    createExtensionSourceReaders(deps);
   const { assertProjectChoice, assertInstalledSourceChoice } = createExtensionChoicePolicy(deps);
   const mutateSource = createExtensionSourceMutations();
   const emitInstalledSource = (source: unknown) => {
@@ -129,11 +132,15 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     }
   };
 
-  const enableInstalledSourceForProject = async (input: EnableInstalledSourceInput) => {
+  const enableInstalledSourceForProject = async (
+    input: EnableInstalledSourceInput,
+    options: { expectedProvider?: string } = {},
+  ) => {
     // Prefix ownership is checked before the source and instance rows exist, so a
     // rejected enable leaves nothing behind to clean up.
     try {
       await assertProjectChoice(input.projectId, input.extensionId);
+      await assertExpectedExtensionProvider(getProjectExtensionInstance, input, options.expectedProvider);
       await deps.validateResourcePrefixes?.(input.projectId, {
         extension_id: input.extensionId,
         source_kind: input.sourceKind ?? "local_path",
@@ -144,7 +151,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
       const installedSource = await registerInstalledSource(input);
       const existing = await findProjectInstanceForSource(input, installedSource);
       const candidate = existing ?? (await createProjectInstance(input, installedSource));
-      const instance = await claimExtensionId(candidate, installedSource);
+      const instance = await claimExtensionId(candidate, installedSource, options.expectedProvider);
       if (!instance) throw new Error(`Failed to enable extension: ${input.name}`);
       // Registration precedes the first enabled owner, so its execution-gated
       // notification cannot finish this source's frontend until the claim exists.
@@ -194,44 +201,6 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
       await assertProjectExists(input.projectId);
       return attachProjectInstance(input.projectId, current);
     });
-  };
-
-  const listEnabledSourcesForProject = async (projectId: string) => {
-    const records = await listProjectInstances(projectId);
-    return records.filter(({ instance }) => instance.enabled);
-  };
-
-  const hasEnabledProjectSource = async (sourcePath: string) => {
-    const source = await deps.installedExtensionSourcesService.getBySourcePath(sourcePath);
-    if (!source) return false;
-    const filters = { installed_extension_id: source.id, scope_type: "project" };
-    return (await deps.extensionInstancesService.list(filters)).some((instance) => instance.enabled);
-  };
-
-  const listProjectInstances = async (projectId: string) => {
-    const project = await deps.projectService.get(projectId);
-    if (!project) throw new ProjectNotFoundError(projectId);
-
-    const instances = await deps.extensionInstancesService.list({ scope_type: "project", scope_id: projectId });
-    const records = [];
-
-    for (const instance of instances) {
-      const installedSource = await deps.installedExtensionSourcesService.get(instance.installed_extension_id);
-      if (installedSource) records.push({ instance, installedSource });
-    }
-
-    return records;
-  };
-
-  const getProjectExtensionInstance = async (projectId: string, instanceId: string) => {
-    const instance = await deps.extensionInstancesService.get(instanceId);
-    if (!instance) return null;
-    if (instance.scope_type !== "project" || instance.scope_id !== projectId) return null;
-
-    const installedSource = await deps.installedExtensionSourcesService.get(instance.installed_extension_id);
-    if (!installedSource) return null;
-
-    return { instance, installedSource };
   };
 
   const removeProjectExtensionInstance = async (instanceId: string) => {

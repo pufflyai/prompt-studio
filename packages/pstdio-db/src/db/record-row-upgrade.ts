@@ -179,7 +179,11 @@ const finalizeRows = async (db: DbClient) => {
     rows = [];
     bytes = 0;
   };
-  for await (const input of readUpgradeRows(db, { table: "records", keys: ["owner_id", "record_id"] })) {
+  // Settled rows already in the final format require no normalization. Pending touches
+  // still need their confirmed base even when their current row has no base yet.
+  const where = sql`base IS NOT NULL OR EXISTS (SELECT 1 FROM operations o WHERE o.owner_id=t.owner_id
+    AND o.envelope IS NOT NULL AND o.settled_epoch IS NULL AND o.touches @> ARRAY[t.record_id])`;
+  for await (const input of readUpgradeRows(db, { table: "records", keys: ["owner_id", "record_id"], where })) {
     const size = Buffer.byteLength(JSON.stringify(input));
     if (rows.length && (rows.length === 100 || bytes + size > 4 * 1024 * 1024)) await flush();
     rows.push(input as Stored);

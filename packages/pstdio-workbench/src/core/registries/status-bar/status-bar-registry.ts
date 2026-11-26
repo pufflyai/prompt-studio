@@ -10,6 +10,8 @@ export interface WorkbenchStatusBarItem {
   popoverViewId?: string;
   slot: WorkbenchStatusBarSlot;
   order?: number;
+  /** Host actions that remain available when a mode supplies its own status chrome. */
+  system?: boolean;
   isVisible?(): boolean;
 }
 

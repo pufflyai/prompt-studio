@@ -22,6 +22,7 @@ type DesktopIpcOptions = {
   appInfo: () => { platform: string; version: string };
   cancelQuit: () => Promise<void>;
   checkForUpdates: () => Promise<void>;
+  restartToInstallUpdate: () => Promise<void>;
   takeUpdateNotice: () => DesktopUpdateNotice | undefined;
   updateChannel: {
     choice: () => UpdateChannel | null;
@@ -102,6 +103,7 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
   });
   handle(DESKTOP_CHANNELS.copyDiagnostics, options.copyDiagnostics);
   handle(DESKTOP_CHANNELS.checkForUpdates, options.checkForUpdates);
+  handle(DESKTOP_CHANNELS.restartToInstallUpdate, options.restartToInstallUpdate);
   handle(DESKTOP_CHANNELS.takeUpdateNotice, options.takeUpdateNotice);
   handle(DESKTOP_CHANNELS.getUpdateChannel, options.updateChannel.choice);
   handle(DESKTOP_CHANNELS.setUpdateChannel, (channel) => {

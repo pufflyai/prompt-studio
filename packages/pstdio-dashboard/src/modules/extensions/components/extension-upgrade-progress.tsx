@@ -15,16 +15,19 @@ interface ExtensionUpgradeProgressProps {
 export const ExtensionUpgradeProgress = (props: ExtensionUpgradeProgressProps) => {
   const { batch, onUpgrade, onDismiss, canUpgrade, compact } = props;
   const { t } = useTranslation("projects");
-  const failure = batch?.failed
-    ? t("projectSettings.extensionsPanel.feedback.batchFailed", { count: batch.failed, total: batch.ids.length })
-    : undefined;
+  const outcomes: string[] = [];
+  if (batch?.reviewRequired)
+    outcomes.push(t("projectSettings.extensionsPanel.feedback.batchReviewRequired", { count: batch.reviewRequired }));
+  if (batch?.failed)
+    outcomes.push(
+      t("projectSettings.extensionsPanel.feedback.batchFailed", { count: batch.failed, total: batch.ids.length }),
+    );
   const action: ExtensionActionState | undefined = batch
     ? {
         status: batch.running ? "running" : "error",
         label: batch.running
           ? t("projectSettings.extensionsPanel.feedback.batch", { count: batch.completed, total: batch.ids.length })
-          : failure!,
-        error: failure,
+          : outcomes.join(" · "),
       }
     : undefined;
   return (

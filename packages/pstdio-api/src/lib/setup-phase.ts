@@ -6,6 +6,7 @@ interface SetupContext {
   workspace_id?: string;
   extension?: string;
   task?: string;
+  warmed?: boolean;
 }
 
 export const traceSetupPhase = async <T>(phase: string, context: SetupContext, run: () => Promise<T>) => {

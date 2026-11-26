@@ -49,11 +49,24 @@ describe("save report", () => {
     await projectFiles.writeText(`${reportFilesDir("review")}/evidence.txt`, "Evidence");
     const args = makeCommandArgs({ storage, params: { name: "review" }, overrides: { projectFiles } });
     await saveReportCommand.run(...args);
-    const first = (await reportsCollection(storage).get(written.reportId))!.files[0]!;
-    expect(allocated).toEqual([first.id]);
+    const reports = reportsCollection(storage);
+    const first = (await reports.get(written.reportId))!;
+    const file = first.files[0]!;
     await saveReportCommand.run(...args);
-    expect((await reportsCollection(storage).get(written.reportId))!.files[0]!.id).toBe(first.id);
-    expect(allocated).toHaveLength(1);
+    const unchanged = (await reports.get(written.reportId))!;
+    expect(unchanged.files[0]!.id).toBe(file.id);
+    expect(unchanged.files[0]!.blobId).toBe(file.blobId);
+    expect(unchanged.bodyBlobId).toBe(first.bodyBlobId);
+
+    await projectFiles.writeText(`${reportFilesDir("review")}/evidence.txt`, "Revised evidence");
+    await saveReportCommand.run(...args);
+    const changed = (await reports.get(written.reportId))!;
+    expect(changed.files[0]!.id).toBe(file.id);
+    expect(changed.files[0]!.blobId).not.toBe(file.blobId);
+    expect(changed.bodyBlobId).toBe(first.bodyBlobId);
+    expect(await reports.attachments(written.reportId).get(file.blobId)).toBeUndefined();
+    expect(await reports.attachments(written.reportId).get(first.bodyBlobId)).toBeDefined();
+    expect(allocated).toEqual([file.id]);
   });
 
   test("preserves the storage write error when rollback blob cleanup fails", async () => {

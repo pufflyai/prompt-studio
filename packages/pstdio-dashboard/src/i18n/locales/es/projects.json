@@ -61,6 +61,7 @@
         "errorCopied": "Error copiado"
       },
       "upgrade": {
+        "reviewNeeded": "Archivos locales conservados",
         "waiting": "En espera de actualización",
         "action": "Actualizar versión",
         "current": "La extensión ya está al día",
@@ -186,6 +187,7 @@
         "retry": "Reintentar",
         "dismiss": "Cerrar",
         "upgradingButton": "Actualizando",
+        "batchReviewRequired": "Requieren revisión ({{count}})",
         "batchFailed": "{{count}} de {{total}} actualizaciones fallaron",
         "installingButton": "Instalando"
       },

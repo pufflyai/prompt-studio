@@ -481,6 +481,7 @@ describe("saved report identity and failures", () => {
       }),
     );
     projectFiles.files.set(`${reportFilesDir("review")}/evidence.txt`, new TextEncoder().encode("details"));
+    await projectFiles.writeText(reportMarkdownPath("review"), "# Changed body");
     const failing = failingWrites(storage, "body");
 
     await expect(

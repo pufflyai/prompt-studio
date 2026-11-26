@@ -7,6 +7,7 @@ import type {
   WorkbenchExtensionHarnessRecord,
 } from "@pstdio/sdk/api";
 import type { AgentInfo } from "pstdio-api-contracts";
+import { selectExtensionUpgradeCandidates } from "pstdio-api-contracts/extension-host";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
@@ -115,7 +116,7 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
     { key: "enabled", extensions: visible.filter((extension) => extension.enabled) },
     { key: "installed", extensions: visible.filter((extension) => !extension.enabled) },
   ];
-  const upgradable = extensions.filter((extension) => extension.canUpgrade && !sourceChangingIds?.has(extension.id));
+  const upgradable = selectExtensionUpgradeCandidates(extensions).filter(({ id }) => !sourceChangingIds?.has(id));
   const folderAction = actionStates.$folder;
 
   return (

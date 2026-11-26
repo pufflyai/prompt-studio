@@ -58,7 +58,7 @@ for (const interrupted of [false, true])
       if (interrupted) {
         await prepareBoardDefaultsUpgrade(store.db, path);
         await prepareProjectExtensionsUpgrade(store.db, store.path);
-        await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
       }
       await store.close();
       store = await createDb({ path });

@@ -23,6 +23,7 @@ export const readDatabaseWorkerOrigin = (value: unknown) => {
 export interface DatabaseWorkerOpenOptions {
   path?: string;
   indexNodesPath?: string;
+  storageRoot?: string;
   deferCleanup?: boolean;
 }
 

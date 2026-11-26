@@ -1,6 +1,7 @@
 import { supportsExtensionApiVersion } from "pstdio-api-contracts/extension-kernel";
 import { z } from "zod";
-import { MAX_EXTENSION_PACKAGE_BYTES, unpackExtension } from "./package";
+import { MAX_EXTENSION_PACKAGE_BYTES, packageSha256, unpackExtension } from "./package";
+import { type ExtensionReleaseBundle, extensionReleaseBundleSchema, releaseBundleHost } from "./release-bundle";
 
 export class ExtensionRegistryError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -17,6 +18,7 @@ const releaseSchema = z.object({
   enginesPstdio: z.string(),
   sha256: z.string().regex(/^[a-f0-9]{64}$/),
   withdrawn: z.boolean(),
+  bundles: z.array(extensionReleaseBundleSchema).max(12).optional(),
 });
 export type RegistryRelease = z.infer<typeof releaseSchema>;
 const sourceSchema = z.object({ registry: z.string().url(), id: identity, version: registryVersionSchema });
@@ -72,28 +74,40 @@ export const createRegistryClient = (registry: string) => {
     if (!release) throw new ExtensionRegistryError(`No released version of ${id} supports extension API ${hostApi}.`);
     return release;
   };
+  const download = async (response: Response, limit = MAX_EXTENSION_PACKAGE_BYTES) => {
+    const chunks: Uint8Array[] = [];
+    let length = 0;
+    if (!response.body) throw new ExtensionRegistryError("Extension package download is empty");
+    for await (const chunk of response.body) {
+      length += chunk.byteLength;
+      if (length > limit) throw new ExtensionRegistryError("Extension package is too large");
+      chunks.push(chunk);
+    }
+    const bytes = new Uint8Array(length);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return bytes;
+  };
+  const releasePath = (release: RegistryRelease) =>
+    `/api/${idPath(release.id)}/${registryVersionSchema.parse(release.version)}`;
   return {
     versions,
     latest,
+    downloadBundle: async (release: RegistryRelease, descriptor: ExtensionReleaseBundle, signal?: AbortSignal) => {
+      const bundle = extensionReleaseBundleSchema.parse(descriptor);
+      if (bundle.host !== releaseBundleHost() || bundle.sourceSha256 !== release.sha256)
+        throw new ExtensionRegistryError("Extension runtime bundle does not match the release and host.");
+      const response = await request(`${releasePath(release)}/bundles/${bundle.sha256}`, signal);
+      const bytes = await download(response, bundle.sizeBytes);
+      if (bytes.byteLength !== bundle.sizeBytes || packageSha256(bytes) !== bundle.sha256)
+        throw new ExtensionRegistryError("Extension runtime bundle checksum or size mismatch.");
+      return bytes;
+    },
     prepare: async (release: RegistryRelease, target: string, signal?: AbortSignal) => {
-      const response = await request(
-        `/api/${idPath(release.id)}/${registryVersionSchema.parse(release.version)}/file`,
-        signal,
-      );
-      const chunks: Uint8Array[] = [];
-      let length = 0;
-      if (!response.body) throw new ExtensionRegistryError("Extension package download is empty");
-      for await (const chunk of response.body) {
-        length += chunk.byteLength;
-        if (length > MAX_EXTENSION_PACKAGE_BYTES) throw new ExtensionRegistryError("Extension package is too large");
-        chunks.push(chunk);
-      }
-      const bytes = new Uint8Array(length);
-      let offset = 0;
-      for (const chunk of chunks) {
-        bytes.set(chunk, offset);
-        offset += chunk.byteLength;
-      }
+      const bytes = await download(await request(`${releasePath(release)}/file`, signal));
       try {
         await unpackExtension(bytes, target, release);
       } catch (error) {

@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { upgradeProjectExtensionResponseSchema } from "pstdio-api-contracts";
-import { createExtensionUpgradePool } from "pstdio-api-contracts/extension-host";
+import { createExtensionUpgradePool, extensionUpgradeNeedsReviewCode } from "pstdio-api-contracts/extension-host";
 import { extensionUpgradeConcurrency } from "pstdio-extensions/preparation-client";
 import { ExtensionUpgradeUnavailableError } from "../../../services/extension-upgrade-unavailable-error";
 import type { AppRouteHandler } from "../../../types";
@@ -10,7 +10,7 @@ import type { ExtensionsRouteDeps } from "../deps";
 import { extensionChangesWorkspaceProvisioning } from "../extension-skill-cleanup";
 import { toProjectExtensionInstance } from "../project-extension-instance";
 
-const errorSchema = z.object({ error: z.string() });
+export const extensionUpgradeErrorSchema = z.object({ error: z.string(), code: z.string().optional() });
 
 export const upgradeProjectExtensionRoute = createRoute({
   method: "post",
@@ -32,33 +32,34 @@ export const upgradeProjectExtensionRoute = createRoute({
     },
     400: {
       description: "Release source failed to install or validate.",
-      content: { "application/json": { schema: errorSchema } },
+      content: { "application/json": { schema: extensionUpgradeErrorSchema } },
     },
     404: {
       description: "Extension instance not found for project.",
-      content: { "application/json": { schema: errorSchema } },
+      content: { "application/json": { schema: extensionUpgradeErrorSchema } },
     },
     409: {
       description: "Extension source cannot be upgraded by this host.",
-      content: { "application/json": { schema: errorSchema } },
+      content: { "application/json": { schema: extensionUpgradeErrorSchema } },
     },
   },
 });
 
-const upgradeInstance = async (
+export const upgradeInstance = async (
   deps: ExtensionsRouteDeps,
   service: NonNullable<ExtensionsRouteDeps["extensionUpgradeService"]>,
   projectId: string,
   instanceId: string,
+  perform = service.upgrade,
 ) => {
   const before = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
   if (!before) return null;
   const hadWorkspaceContributions =
     before.instance.enabled && (await extensionChangesWorkspaceProvisioning(deps, before.installedSource));
-  const result = await service.upgrade(projectId, instanceId);
+  const result = await perform(projectId, instanceId);
   if (!result) return null;
   // A toggle or uninstall may have completed while preparing the source.
-  const current = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
+  const current = await deps.extensionService.getProjectExtensionInstance(projectId, result.instance.id);
   if (!current) return null;
   if (result.changed && current.instance.enabled) {
     const needsWorkspaceRefresh =
@@ -104,6 +105,8 @@ export const upgradeProjectExtensionHandler = (
       return c.json(result, 200);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      if (error instanceof Error && error.name === "ExtensionUpgradeNeedsReviewError")
+        return c.json({ error: message, code: extensionUpgradeNeedsReviewCode }, 409);
       if (error instanceof ExtensionUpgradeUnavailableError || error instanceof AlwaysEnabledExtensionError)
         return c.json({ error: message }, 409);
       return c.json({ error: message }, 400);

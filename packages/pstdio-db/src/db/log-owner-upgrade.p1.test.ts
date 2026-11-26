@@ -13,7 +13,7 @@ import { createTextLogOwnerFixture } from "./log-owner-upgrade.fixture";
 for (const interruption of ["normal", "schema", "restore"])
   test(`integer log ownership preserves bytes and retries after ${interruption} upgrade`, async () => {
     const root = await mkdtemp(join(tmpdir(), "log-owner-upgrade-"));
-    const previous = await createTextLogOwnerFixture(root);
+    const previous = await createTextLogOwnerFixture(root, 6);
     let store: Awaited<ReturnType<typeof createDb>> | undefined;
     let previousClosed = false;
     try {
@@ -59,7 +59,7 @@ for (const interruption of ["normal", "schema", "restore"])
       ).rows;
       if (interruption !== "normal") {
         const finish = await prepareLogOwnerUpgrade(previous.db, previous.path);
-        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
         if (interruption === "restore") {
           await previous.pglite.exec(`CREATE FUNCTION stop_log_restore() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN IF (SELECT project_id FROM owners JOIN log_streams ON owners.id=log_streams.owner_id

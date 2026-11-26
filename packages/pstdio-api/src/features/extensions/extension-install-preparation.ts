@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, mkdtempSync, unlinkSync } from "node:fs";
-import { rm } from "node:fs/promises";
+import { cp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative } from "node:path";
 import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
@@ -12,17 +12,18 @@ import {
 import { parseRegistrySourceRef } from "pstdio-extensions/distribution";
 import { resolvePstdioHome as resolveRuntimePstdioHome } from "pstdio-paths";
 import { traceSetupPhase } from "../../lib/setup-phase";
-import { copyExtensionSource } from "./copy-extension-source";
+import { prepareInstallCandidate, validatePreparedInstall } from "./extension-install-candidate";
 import { assertCanCopy, failIfInvalidSource, isSameDirectory, validateInstallName } from "./extension-install-paths";
 import { retainPreparedInstall } from "./extension-install-transaction";
+import { checkExtensionsRoot, formatExtensionsCheck, hashExtensionSource } from "./extension-runtime";
 import {
-  checkExtensionSource,
-  checkExtensionsRoot,
-  formatExtensionsCheck,
-  hashExtensionSource,
-  type LoadedExtension,
-  readExtensionSourceMetadata,
-} from "./extension-runtime";
+  assertExtensionUpgradeWorkingTree,
+  prepareExtensionUpgradeBaseline,
+  protectUpgradeDestination,
+  rememberExtensionUpgradeBaseline,
+  stageExtensionSource,
+} from "./extension-upgrade-baseline";
+import { fingerprintUpgradeWorkingTree } from "./extension-upgrade-working-tree";
 import type {
   ExtensionEnableInput,
   InstallExtensionSourceInput,
@@ -30,10 +31,8 @@ import type {
 } from "./install-extension-source-types";
 import { installedIdentityPath } from "./installed-identity-path";
 import { trackPreparationStage } from "./preparation-stages";
-import { prepareInstallDependencies } from "./prepare-extension-dependencies";
 import { ExtensionAlreadyInstalledError, promotePreparedSource } from "./promote-extension-source";
 import { resolveInstallSource } from "./resolve-install-source";
-import { validateExtensionWebviews } from "./validate-extension-webviews";
 import { verifiedInstallOrigin } from "./verified-install-origin";
 
 export { dashboardExtensionHostCapabilities } from "pstdio-extensions";
@@ -55,11 +54,7 @@ export const EXTENSION_INSTALLING_MARKER = ".pstdio-installing";
 export { ExtensionValidationFailedError, RepoScopedExtensionNeedsProjectFolderError } from "./extension-install-errors";
 export { ExtensionAlreadyInstalledError } from "./promote-extension-source";
 
-import {
-  checkFailed,
-  ExtensionValidationFailedError,
-  RepoScopedExtensionNeedsProjectFolderError,
-} from "./extension-install-errors";
+import { ExtensionValidationFailedError, RepoScopedExtensionNeedsProjectFolderError } from "./extension-install-errors";
 
 const installedSourceKind = (installed: InstalledExtensionSource) => {
   if (parseRegistrySourceRef(installed.source.ref)) return "registry" as const;
@@ -127,38 +122,6 @@ const resolveExtensionsRoot = (
   return join(pstdioHome, "extensions");
 };
 
-const validatePreparedInstall = async (
-  installPath: string,
-  extensionsRoot: string,
-  allowUnsupportedApiVersion: boolean,
-) => {
-  const { check, loaded: compatibleSource } = await checkExtensionSource(installPath, extensionsRoot);
-  const unsupportedApiOnly =
-    check.errorCount > 0 &&
-    check.diagnostics
-      .filter((diagnostic) => diagnostic.severity === "error")
-      .every((diagnostic) => diagnostic.code === "extension_manifest_unsupported_api_version");
-  const keepForRecovery = allowUnsupportedApiVersion && unsupportedApiOnly;
-  if (check.errorCount > 0 && !keepForRecovery) throw checkFailed(check);
-
-  const loaded: LoadedExtension | null =
-    compatibleSource ?? (keepForRecovery ? readExtensionSourceMetadata(installPath) : null);
-  if (!loaded) throw checkFailed(check);
-
-  if (keepForRecovery && check.extensions.length === 0) {
-    check.extensions.push({
-      id: loaded.metadata.id,
-      name: loaded.metadata.name,
-      displayName: loaded.metadata.displayName,
-      sourcePath: installPath,
-      version: loaded.metadata.version,
-      description: loaded.metadata.description,
-    });
-  }
-
-  return { check, loaded };
-};
-
 const resolveInstallName = (
   input: InstallExtensionSourceInput,
   source: Awaited<ReturnType<typeof resolveInstallSource>>,
@@ -180,6 +143,7 @@ const finishPreparedInstall = async (
     extensionsRoot: string;
     linkedInstalledDependencies: boolean;
     sourceHash: string;
+    upgradeBaseline?: string;
   },
 ) => {
   let { check, loaded, sourceHash } = prepared;
@@ -199,12 +163,23 @@ const finishPreparedInstall = async (
         preserveDependencies,
         replaceExisting: Boolean(input.force),
         upgradeFromVersion: input.upgradeFromVersion,
+        upgradeBaseline: prepared.upgradeBaseline,
         revision: loaded.preparedRevision,
       });
       return { snapshot, loaded, sourceHash, installation };
     }
     try {
-      await promotePreparedSource(installPath, targetPath, Boolean(input.force), preserveDependencies);
+      const { upgradeBaseline } = prepared;
+      await promotePreparedSource(
+        installPath,
+        targetPath,
+        Boolean(input.force),
+        preserveDependencies,
+        undefined,
+        upgradeBaseline
+          ? (previousPath) => assertExtensionUpgradeWorkingTree(previousPath, upgradeBaseline)
+          : undefined,
+      );
       for (const extension of snapshot.check.extensions)
         extension.sourcePath = join(targetPath, relative(installPath, extension.sourcePath));
     } catch (error) {
@@ -223,6 +198,32 @@ const finishPreparedInstall = async (
   return { snapshot, loaded, sourceHash, installation: undefined };
 };
 
+const stageInstallSource = async (
+  source: Awaited<ReturnType<typeof resolveInstallSource>>,
+  installPath: string,
+  home: string,
+  review: InstallExtensionSourceInput["reviewedUpgrade"],
+) => {
+  if (!review) return stageExtensionSource(source, installPath, home);
+  if (source.kind !== "named") throw new Error("A reviewed upgrade requires a pinned release.");
+  await cp(source.path, installPath, { recursive: true, verbatimSymlinks: true });
+  if (fingerprintUpgradeWorkingTree(installPath) !== review.stagedFingerprint)
+    throw new Error("The staged extension changed. Open a fresh upgrade review.");
+  rememberExtensionUpgradeBaseline(home, source.ref, review.originalReleasePath);
+};
+
+const prepareExpectedWorkingTree = (input: InstallExtensionSourceInput, home: string, tempDir: string) => {
+  if (!input.reviewedUpgrade || !input.upgradeBase)
+    return prepareExtensionUpgradeBaseline(home, input.upgradeBase, tempDir, input.signal);
+  assertExtensionUpgradeWorkingTree(input.upgradeBase.path, input.reviewedUpgrade.workingFingerprint);
+  return input.reviewedUpgrade.workingFingerprint;
+};
+
+const targetPathForInstall = (input: InstallExtensionSourceInput, root: string, directory: string, identity: string) =>
+  input.allocateSeparateSource
+    ? join(root, directory)
+    : installedIdentityPath(root, directory, identity, input.installedSourcePath);
+
 export const prepareAndInstallExtensionSource = async (input: InstallExtensionSourceInput) => {
   const pstdioHome = resolvePstdioHome(input);
   const tempDir = mkdtempSync(join(tmpdir(), "pstdio-extension-source-"));
@@ -232,6 +233,7 @@ export const prepareAndInstallExtensionSource = async (input: InstallExtensionSo
 
   try {
     input.signal?.throwIfAborted();
+    const upgradeBaseline = await prepareExpectedWorkingTree(input, pstdioHome, tempDir);
     const resolvedSource = await resolveInstallSource(input, tempDir);
     input.signal?.throwIfAborted();
     failIfInvalidSource(resolvedSource.path);
@@ -249,14 +251,10 @@ export const prepareAndInstallExtensionSource = async (input: InstallExtensionSo
     validateInstallName(installName);
 
     const directoryName = installName === source.manifest.id ? extensionStorageDirectory(installName) : installName;
-    const targetPath = installedIdentityPath(
-      extensionsRoot,
-      directoryName,
-      source.manifest.id,
-      input.installedSourcePath,
-    );
+    const targetPath = targetPathForInstall(input, extensionsRoot, directoryName, source.manifest.id);
     const targetExists = existsSync(targetPath);
     const inPlace = targetExists && isSameDirectory(resolvedSource.path, targetPath);
+    protectUpgradeDestination(input.upgradeBase, targetPath, targetExists && !inPlace);
     if (!inPlace) assertCanCopy(resolvedSource.path, targetPath);
 
     const reuseExisting = inPlace || (targetExists && input.existsOk === true && !input.force);
@@ -272,37 +270,26 @@ export const prepareAndInstallExtensionSource = async (input: InstallExtensionSo
       stage.add(stagingRoot);
       installPath = join(stagingRoot, directoryName);
       await traceSetupPhase("extension.source_copy", { extension: installName }, () =>
-        copyExtensionSource(resolvedSource.path, installPath),
+        stageInstallSource(resolvedSource, installPath, pstdioHome, input.reviewedUpgrade),
       );
     }
 
-    const linkedInstalledDependencies = await traceSetupPhase(
-      "extension.prepare_dependencies",
-      { extension: installName },
-      () =>
-        prepareInstallDependencies({
-          installInput: input,
-          installPath,
-          source: resolvedSource,
-          targetPath,
-        }),
-    );
-    input.signal?.throwIfAborted();
-
-    const { check, loaded } = await traceSetupPhase("extension.validate", { extension: installName }, () =>
-      validatePreparedInstall(installPath, extensionsRoot, input.allowUnsupportedApiVersion === true),
-    );
+    const { check, loaded, sourceHash, linkedInstalledDependencies } = await prepareInstallCandidate({
+      input,
+      installPath,
+      targetPath,
+      extensionsRoot,
+      installName,
+      source: resolvedSource,
+      preserveExistingSource: reuseExisting,
+    });
     assertReservedIdentity(loaded.metadata.id);
-    input.signal?.throwIfAborted();
-
-    // A replacement must activate every managed view before the working source is replaced.
-    await validateExtensionWebviews(loaded, installPath, installName, input.signal);
-    const sourceHash = await traceSetupPhase("extension.source_hash", { extension: installName }, async () =>
-      hashExtensionSource(installPath),
-    );
     await Bun.sleep(0);
     input.signal?.throwIfAborted();
-    const origin = !reuseExisting && verifiedInstallOrigin(input, resolvedSource, loaded.metadata.id, targetPath);
+    const origin =
+      !input.reviewedUpgrade &&
+      !reuseExisting &&
+      verifiedInstallOrigin(input, resolvedSource, loaded.metadata.id, targetPath);
     const trusted =
       origin && loaded.preparedRevision
         ? { ...loaded, preparedRevision: { ...loaded.preparedRevision, verifiedInstall: origin } }
@@ -320,6 +307,7 @@ export const prepareAndInstallExtensionSource = async (input: InstallExtensionSo
       targetPath,
       extensionsRoot,
       linkedInstalledDependencies,
+      upgradeBaseline,
     });
 
     retained = Boolean(installation);

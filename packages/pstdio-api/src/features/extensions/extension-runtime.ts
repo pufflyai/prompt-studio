@@ -65,6 +65,7 @@ export type LoadedExtensionSnapshot = {
 
 type CheckExtensionHostOptions = {
   hostCapabilities?: ExtensionHostCapabilities | null;
+  preparedRevision?: PreparedExtensionRevision;
 };
 
 const manifestSnapshot = (metadata: ExtensionMetadata, definition: UnknownRecord): UnknownRecord => ({
@@ -256,6 +257,7 @@ export const checkExtensionSource = async (
   const diagnostics: RuntimeExtensionDiagnostic[] = [];
   const source = await loadExtensionPackage({ path: sourcePath, sourceKind: "local_path" }, diagnostics, {
     immutableAssets: true,
+    preparedRevision: options.preparedRevision,
   });
 
   if (!source) {

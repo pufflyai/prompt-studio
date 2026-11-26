@@ -3,6 +3,7 @@ import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import extension from "../extension";
 import { copySessionNickname } from "./copy-session-nickname";
 import { newInViewer } from "./navigation";
+import { submitMessage } from "./submit-message";
 import { conversationTab } from "./tab";
 
 test("New session in an existing viewer starts a draft immediately with its workspace and device", async () => {
@@ -74,6 +75,34 @@ test("a draft gets a nickname only after it becomes a saved session", async () =
     conversationTab.query(ctx, { renderer: { rendererId: "conversation", resource: { type, id } } });
   expect((await openTab("session-draft")).tooltip).toBeUndefined();
   expect((await openTab("session")).tooltip).toMatch(/^[a-z]+-[a-z]+$/);
+});
+
+test("sending an upgrade draft links the conversation to that review", async () => {
+  const create = async (input: unknown) => {
+    requests.push(input);
+    return { id: "session", title: "Review changes", status: "in_progress" } as never;
+  };
+  const requests: unknown[] = [];
+  const ctx = makeCommandContext({ storage: createMemoryStorage(), params: {}, overrides: { sessions: { create } } });
+  const id = "0abaa3c9-c145-472d-8e02-88d7bd3e231b";
+  const draft = {
+    type: "session-draft",
+    id: `new-upgrade-${id}-draft`,
+    extensionId: "pstdio",
+    projectId: ctx.projectId,
+    metadata: { upgradeReviewId: id },
+  };
+  const action = { type: "submit" as const, text: "Review changes", values: {}, attachments: [] };
+  await submitMessage(ctx, undefined, draft, action);
+  await submitMessage(ctx, undefined, { ...draft, projectId: "other-project" }, action);
+  expect(requests).toMatchObject([
+    {
+      anchors: [
+        { type: "extension-upgrade-review", id, extensionId: "pstdio", projectId: ctx.projectId, role: "context" },
+      ],
+    },
+    { anchors: undefined },
+  ]);
 });
 
 test.each([

@@ -14,7 +14,11 @@ pst pstdio-dev workspace stop-isolation --workspace-id <id>
 
 Workspace creation does not install dependencies or start a build. Run targeted setup and validation explicitly with the repository’s `bun run test:review` command.
 
-At noon each day, it starts an evidence-gated search for one high-impact issue. It creates a planner ticket only when the search reproduces a valuable, untracked problem.
+## Agent automations
+
+Daily high-impact issue discovery and merge queue repair are off by default. To opt in, open the **Automations** dropdown for **Prompt Studio Dev** in the project's **Extensions** settings and enable the schedules you want.
+
+When enabled, **Daily high-impact issue discovery** starts a search at noon and creates a Planner ticket only when it reproduces a high-impact issue that has yet to be tracked.
 
 ## Performance
 
@@ -120,7 +124,7 @@ Reports go to `.pstdio/extension-storage/pstdio.dev/reports/`.
 
 ## Merge queue repair
 
-Every five minutes, it repairs pull requests that GitHub removed from the merge queue. It lists open pull requests with the `removed-from-queue` label, which the Merge queue removals workflow manages. For each one, it creates a workspace from the pull request's branch and starts a session that reproduces and fixes the failure, then pushes to the same branch. A pull request gets one repair session per queue removal, identified by its latest removal event's timestamp. A repair's own push does not start another session. A later removal after requeueing can start a fresh repair. Session history includes older pages and archived sessions. If one pull request's repair cannot start, the command tries the others before reporting the failed pull requests and their errors. Pull requests from forks are skipped. The command needs an authenticated `gh` CLI.
+When enabled, the automation checks every five minutes for pull requests that GitHub removed from the merge queue. It lists open pull requests with the `removed-from-queue` label, which the Merge queue removals workflow manages. For each one, it creates a workspace from the pull request's branch and starts a session that reproduces and fixes the failure, then pushes to the same branch. A pull request gets one repair session per queue removal, identified by its latest removal event's timestamp. A repair's own push does not start another session. A later removal after requeueing can start a fresh repair. Session history includes older pages and archived sessions. If one pull request's repair cannot start, the command tries the others before reporting the failed pull requests and their errors. Pull requests from forks are skipped. The command needs an authenticated `gh` CLI.
 
 ## Skills
 
