@@ -14,7 +14,7 @@ import {
 import { folderProjectInput } from "../helpers/folder-project";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
-export type ProjectUpgradeProfile = "active" | "aged" | "conflicted" | "cloud";
+export type ProjectUpgradeProfile = "active" | "aged" | "conflicted" | "cloud" | "direct";
 export interface ProjectUpgradeInput {
   home: string;
   profile: ProjectUpgradeProfile;
@@ -399,6 +399,21 @@ export const installUpgradePlanner = async (api: StackApi, projectId: string, ca
   await api.post(`${prefix}/extensions/install`, { source: { kind: "catalog", name: plannerEntry.installName } });
 };
 
+// 0.46 predates Home. Planner uses the same saved ticket and edit commands across all three releases.
+export const seedDirectUpgrade = async (api: StackApi, home: string) => {
+  const folder = join(home, "project");
+  writeLargeProjectFiles(folder, 1);
+  const file = join(folder, "handoff.md");
+  const content = "Written before updating Prompt Studio.";
+  await Bun.write(file, content);
+  const { id } = await api.post<{ id: string }>("/projects", folderProjectInput({ name: "Direct upgrade" }, folder));
+  await installUpgradePlanner(api, id);
+  const commands = await planner(api, id);
+  const ticket = await commands.execute<Ticket>("create-ticket", { title: "Existing ticket", content });
+  assert.equal((await commands.execute<Ticket>("get-ticket", { id: ticket.id })).content, content);
+  return { id, firstTicket: ticket.id, file, content };
+};
+
 export const seedUpgradeProject = async (api: StackApi, input: ProjectUpgradeInput) => {
   const folder = join(input.home, "project");
   const name = `Upgrade ${input.profile}`;
@@ -605,24 +620,27 @@ export const readUpgradeProject = async (api: StackApi, seed: Seed) => {
   };
 };
 
-export const editUpgradeProject = async (api: StackApi, seed: Seed) => {
+type UpgradeTicket = Pick<Seed, "id" | "firstTicket">;
+
+export const editUpgradeProject = async (api: StackApi, seed: UpgradeTicket) => {
   const commands = await planner(api, seed.id);
   await commands.execute("update-ticket", { id: seed.firstTicket, content: `# ${editText}` });
   const saved = await commands.execute<Ticket>("get-ticket", { id: seed.firstTicket });
   assert.equal(saved.content, `# ${editText}`);
 };
 
-export const verifyFirstUpgradeTicketEdit = async (api: StackApi, seed: Seed) => {
+export const verifyFirstUpgradeTicketEdit = async (api: StackApi, seed: UpgradeTicket, expectedContent?: string) => {
   const commands = await planner(api, seed.id);
   const original = await commands.execute<Ticket>("get-ticket", { id: seed.firstTicket });
   assert.equal(original.id, seed.firstTicket);
+  if (expectedContent !== undefined) assert.equal(original.content, expectedContent);
   await editUpgradeProject(api, seed);
   return async () => {
     await commands.execute("update-ticket", { id: seed.firstTicket, content: original.content });
   };
 };
 
-export const assertUpgradeEdit = async (api: StackApi, seed: Seed) => {
+export const assertUpgradeEdit = async (api: StackApi, seed: UpgradeTicket) => {
   const commands = await planner(api, seed.id);
   const saved = await commands.execute<Ticket>("get-ticket", { id: seed.firstTicket });
   assert.equal(saved.content, `# ${editText}`, "A ticket edit failed to survive restart");

@@ -18,6 +18,7 @@ import {
   type ProjectUpgradeInput,
   readUpgradeProject,
   seedConflictedProject,
+  seedDirectUpgrade,
   seedUpgradeProject,
   upgradeApi,
   upgradeCoreProjectTools,
@@ -162,15 +163,21 @@ const verifyRestart = async (
   compare(edited, restarted);
 };
 
-const verifyFirstProjectEdit = async (runtime: Runtime, fixture: Seed, start: number, evidence: string) => {
-  const restoreTicket = await verifyFirstUpgradeTicketEdit(upgradeApi(runtime.descriptor), fixture);
+const verifyFirstProjectEdit = async (
+  runtime: Runtime,
+  fixture: Pick<Seed, "id" | "firstTicket">,
+  start: number,
+  evidence: string,
+  expectedContent?: string,
+) => {
+  const restoreTicket = await verifyFirstUpgradeTicketEdit(upgradeApi(runtime.descriptor), fixture, expectedContent);
   const elapsedMs = performance.now() - start;
   await record(evidence, "upgrade-to-usable-project", { elapsedMs, limitMs: projectUpgradeLimitMs });
   assert(
     elapsedMs <= projectUpgradeLimitMs,
     `Upgrade and first saved project edit took ${elapsedMs.toFixed(0)} ms (limit ${projectUpgradeLimitMs} ms)`,
   );
-  await restoreTicket();
+  return restoreTicket;
 };
 
 const assertCurrentDatabase = async (home: string) => {
@@ -244,6 +251,19 @@ const run = async (
   let runtime: Runtime | undefined;
   try {
     runtime = await launch(baseline, "baseline");
+    if (input.profile === "direct") {
+      const ticket = await seedDirectUpgrade(upgradeApi(runtime.descriptor), input.home);
+      await stopProcess(runtime.child);
+      runtime = undefined;
+      const start = performance.now();
+      runtime = await launch(candidate, "upgrade");
+      await verifyFirstProjectEdit(runtime, ticket, start, input.evidence, ticket.content);
+      await stopProcess(runtime.child);
+      runtime = await launch(candidate, "restart");
+      await assertUpgradeEdit(upgradeApi(runtime.descriptor), ticket);
+      assert.equal(await Bun.file(ticket.file).text(), ticket.content);
+      return;
+    }
     if (input.profile === "conflicted") {
       const id = await seedConflictedProject(upgradeApi(runtime.descriptor), input.home);
       await stopProcess(runtime.child);
@@ -264,7 +284,8 @@ const run = async (
     const home = await checkHomeHistory(input, state.fixture.id);
     const start = performance.now();
     runtime = await launch(candidate, "upgrade");
-    await verifyFirstProjectEdit(runtime, state.fixture, start, input.evidence);
+    const restoreTicket = await verifyFirstProjectEdit(runtime, state.fixture, start, input.evidence);
+    await restoreTicket();
     await assertCurrentDatabase(input.home);
     const edited = await verify(
       runtime.descriptor,
@@ -310,8 +331,9 @@ if (import.meta.main) {
       profile === "active" ||
       profile === "aged" ||
       profile === "conflicted" ||
-      profile === "cloud",
-    "Choose --profile active, aged, conflicted or cloud",
+      profile === "cloud" ||
+      profile === "direct",
+    "Choose --profile active, aged, conflicted, cloud or direct",
   );
   const { from, candidate, "candidate-ref": candidateRef, "baseline-binary": baselinePath } = values;
   assert(from, "Supply the published release tag with --from");
