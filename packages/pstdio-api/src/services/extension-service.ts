@@ -242,6 +242,10 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
       hasEnabledProjectSource,
       listEnabledSourcesForProject,
       listProjectExtensionInstances: listProjectInstances,
+      installedSourceProjectIds: async (sourceId: string) =>
+        (await deps.extensionInstancesService.list({ installed_extension_id: sourceId, scope_type: "project" })).map(
+          ({ scope_id }) => scope_id,
+        ),
       reloadInstalledSourceBySourcePath: (sourcePath: string) =>
         reloadInstalledSourceBySourcePathImpl(reloadDeps, sourcePath),
       removeProjectExtensionInstance,
