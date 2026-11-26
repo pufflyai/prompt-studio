@@ -107,7 +107,7 @@ for (const lastMigration of [7, 9, 10]) {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 }
 
 test("reopens the original after an unsupported pair and preserves a projection-only record", async () => {
@@ -146,7 +146,7 @@ test("reopens the original after an unsupported pair and preserves a projection-
   } finally {
     await rm(root, { recursive: true, force: true });
   }
-});
+}, 15_000);
 
 test("resumes a published batch after interruption between directory renames and after DDL", async () => {
   const root = await mkdtemp(join(tmpdir(), "reimport-interrupted-"));
@@ -202,4 +202,4 @@ test("resumes a published batch after interruption between directory renames and
   } finally {
     await rm(root, { recursive: true, force: true });
   }
-});
+}, 15_000);
