@@ -48,7 +48,12 @@ const pgliteRecoveryHint = (error: unknown, dbPath: string) => {
 
 // The database runs in its own thread (PS-525): PGlite executes and decodes statements synchronously,
 // so a long query or a burst of writes there leaves requests, health checks and cancellation free.
-export const openAppDatabase = async (path: string, lifecycle: AppLifecycle = {}, storageRoot?: string) => {
+export const openAppDatabase = async (
+  path: string,
+  lifecycle: AppLifecycle = {},
+  storageRoot?: string,
+  onReleasedUpgrade?: () => void,
+) => {
   apiLogger.info({ event: "db.open", thread: "worker" }, "Opening the database");
   try {
     return await createDbInWorker({
@@ -64,6 +69,7 @@ export const openAppDatabase = async (path: string, lifecycle: AppLifecycle = {}
         ),
       onPhase: (phase) => {
         logStartupPhase(phase);
+        if (phase === "database_released_upgrade") onReleasedUpgrade?.();
         if (phase === "database_locked") lifecycle.onDatabaseLockAcquired?.();
       },
       // A worker that dies leaves the database unusable and its lock released, so the runtime must stop:

@@ -1,9 +1,10 @@
-import { copyFile, link, mkdir, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { copyFile, link } from "node:fs/promises";
+import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { z } from "zod";
 import { PREPARATION_FORMAT } from "../runtime/prepared-revision";
+import { extractEntries, extractFiles } from "./extract-files";
 import { MAX_EXTENSION_PACKAGE_BYTES, packageSha256 } from "./package";
 import { createPackageArchive } from "./package-archive";
 
@@ -153,16 +154,10 @@ export const unpackExtensionReleaseBundle = async (
     manifest.sourceSha256 !== extension.sha256
   )
     throw new Error("Extension runtime bundle has a different release identity.");
-  for (const [path, file] of files) {
-    const target = join(destination, path);
-    await mkdir(dirname(target), { recursive: true });
-    await writeFile(target, new Uint8Array(await file.arrayBuffer()));
-  }
-  for (const [path, digest] of Object.entries(manifest.assets ?? {})) {
-    const target = join(destination, path);
+  await extractFiles(destination, files);
+  await extractEntries(destination, Object.entries(manifest.assets ?? {}), async (target, digest) => {
     const shared = join(destination, assetPath(digest));
-    await mkdir(dirname(target), { recursive: true });
     await link(shared, target).catch(() => copyFile(shared, target));
-  }
+  });
   return manifest;
 };

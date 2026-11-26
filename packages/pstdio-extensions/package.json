@@ -28,6 +28,8 @@
     "./bridge/diagnostics": "./src/bridge/host/host-diagnostics.ts",
     "./authoring": "./src/authoring/index.ts",
     "./distribution": "./src/distribution/index.ts",
+    "./backend-worker": "./src/runtime/backend-process/worker.ts",
+    "./bundle-child": "./src/runtime/bundle-entry-child.ts",
     "./preparation-worker": "./src/runtime/preparation-tasks.ts",
     "./preparation-server": "./src/runtime/preparation-server.ts",
     "./prepared-cache": "./src/runtime/prepared-cache.ts",
