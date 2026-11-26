@@ -83,7 +83,10 @@ export const MarkdownEditorProvider = (props: {
       value={{
         captureSelection,
         clearHighlight,
-        focus: () => editor.focus(),
+        focus() {
+          if (editor.isEditable()) editor.focus();
+          else editor.getRootElement()?.focus({ preventScroll: true });
+        },
         reveal(anchor) {
           clearHighlight();
           const binding = bindingRef.current;
