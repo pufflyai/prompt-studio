@@ -23,12 +23,14 @@ Retain an operator-only copy of the current ConfigMap, Deployment, IAM policy an
 | --- | --- |
 | `project`, `namespace` | Google project and existing controller namespace |
 | `domain` | Preview DNS suffix resolving to the Gateway |
-| `certificateMap`, `gateway`, `securityPolicy` | Existing certificate map, HTTPS Gateway and Cloud Armor policy names |
+| `certificateMap`, `gateway`, `securityPolicy` | Existing certificate map, HTTPS Gateway and preview-only Cloud Armor policy names |
 | `image` | Approved Bun runtime image pinned by digest |
 | `serviceAccount` | Google Workload Identity service account email |
 | `controller` | Internal controller HTTP origin |
 | `storageBucket`, `signerAccount` | Existing remote-test bucket and signing service account |
 | `keySecret` | Existing Secret containing the workflow key's `hash` |
+
+The preview-only Cloud Armor policy must allow `GET /__preview/health` from the workflow's egress network (or publicly, since this response contains only the workspace ID). Keep the intended viewer-network rules for all other paths. Use a separate policy from the controller API so readiness does not widen controller access. This probe verifies both valid TLS and the correct workspace before an invitation is returned.
 
 3. Build `server.ts` with Bun, install its output as `server.js` in the existing `kito-workflow-code` ConfigMap, then render and apply the deployment. Run commands from this directory; use your operator Kubernetes configuration and private paths.
 
