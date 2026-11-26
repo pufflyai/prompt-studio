@@ -10,6 +10,9 @@ test("Home snapshot updates do not query agent quotas", async () => {
   const originalDocument = Object.getOwnPropertyDescriptor(globalThis, "document"),
     originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
   const originalObserver = Object.getOwnPropertyDescriptor(globalThis, "IntersectionObserver");
+  const originalFrame = Object.getOwnPropertyDescriptor(globalThis, "requestAnimationFrame");
+  const originalCancelFrame = Object.getOwnPropertyDescriptor(globalThis, "cancelAnimationFrame");
+  const frames = new Map<number, ReturnType<typeof setTimeout>>();
   let quotas = 0,
     home = 0;
   const transport = createRetainedExtensionQueryFixture({
@@ -40,6 +43,24 @@ test("Home snapshot updates do not query agent quotas", async () => {
       }),
     });
     Object.defineProperty(globalThis, "window", { configurable: true, value: globalThis });
+    Object.defineProperty(globalThis, "requestAnimationFrame", {
+      configurable: true,
+      value: (callback: FrameRequestCallback) => {
+        const timer = setTimeout(() => {
+          frames.delete(Number(timer));
+          callback(performance.now());
+        }, 0);
+        frames.set(Number(timer), timer);
+        return Number(timer);
+      },
+    });
+    Object.defineProperty(globalThis, "cancelAnimationFrame", {
+      configurable: true,
+      value: (id: number) => {
+        clearTimeout(frames.get(id));
+        frames.delete(id);
+      },
+    });
     Object.defineProperty(globalThis, "IntersectionObserver", {
       configurable: true,
       value: class {
@@ -68,6 +89,11 @@ test("Home snapshot updates do not query agent quotas", async () => {
     });
     createWebviewClient(frame.host).queries.dispose();
     transport.dispose();
+    for (const timer of frames.values()) clearTimeout(timer);
+    if (originalFrame) Object.defineProperty(globalThis, "requestAnimationFrame", originalFrame);
+    else Reflect.deleteProperty(globalThis, "requestAnimationFrame");
+    if (originalCancelFrame) Object.defineProperty(globalThis, "cancelAnimationFrame", originalCancelFrame);
+    else Reflect.deleteProperty(globalThis, "cancelAnimationFrame");
     if (originalDocument) Object.defineProperty(globalThis, "document", originalDocument);
     else Reflect.deleteProperty(globalThis, "document");
     if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
