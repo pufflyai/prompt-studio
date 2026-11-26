@@ -82,8 +82,11 @@ export interface RunSummary {
 const sources = (runId: string) => `sources/${runId}.tar.gz`;
 const logs = (runId: string) => `logs/${runId}.log`;
 
-const previewMetadata = (kind: BranchKind, kitoWorkflow?: boolean) =>
-  kind === "preview" && kitoWorkflow ? { kito_workflow: "true" } : {};
+function previewMetadata(kind: BranchKind, kitoWorkflow?: boolean) {
+  const metadata: Record<string, string> = {};
+  if (kind === "preview" && kitoWorkflow) metadata.kito_workflow = "true";
+  return metadata;
+}
 
 export async function startRun(
   deps: RunDeps,
