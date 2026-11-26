@@ -64,9 +64,10 @@ const verify = async (
   evidence: string,
   state: Awaited<ReturnType<typeof seed>>,
   expectedVersions?: Map<string, string>,
+  expectCompatibleFirstParty = false,
 ) => {
   const upgrade = upgradeApi(descriptor);
-  const changes = await upgradeCoreProjectTools(upgrade, state.fixture.id);
+  const changes = await upgradeCoreProjectTools(upgrade, state.fixture.id, expectCompatibleFirstParty);
   await record(evidence, "extension-upgrades", changes);
   await assertProjectToolsRetained(upgrade, state.fixture.id, state.tools, expectedVersions);
   await assertHomeOpens(upgrade, state.fixture.id);
@@ -265,7 +266,13 @@ const run = async (
     runtime = await launch(candidate, "upgrade");
     await verifyFirstProjectEdit(runtime, state.fixture, start, input.evidence);
     await assertCurrentDatabase(input.home);
-    const edited = await verify(runtime.descriptor, input.evidence, state, pair.expectedVersions);
+    const edited = await verify(
+      runtime.descriptor,
+      input.evidence,
+      state,
+      pair.expectedVersions,
+      pair.from.startsWith("pstdio@0.48.") && candidateVersion.startsWith("0.49."),
+    );
     const routes = await workbenchRoutes(runtime.descriptor, state.fixture);
     await stopProcess(runtime.child);
     runtime = await launch(candidate, "restart");

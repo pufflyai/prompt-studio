@@ -118,11 +118,19 @@ export const assertProjectToolsRetained = async (
   }
 };
 
-export const upgradeCoreProjectTools = async (api: StackApi, project: string) => {
+export const upgradeCoreProjectTools = async (api: StackApi, project: string, expectCompatibleFirstParty = false) => {
   const path = `/projects/${project}/extensions`;
   const { extensions } = await api.get<{ extensions: ProjectExtension[] }>(path);
   const changes: { extension: string; version: string | null; next: string | null }[] = [];
   for (const tool of extensions) {
+    // Check the automatic migration before this fixture exercises the manual Upgrade action.
+    if (expectCompatibleFirstParty && tool.extensionId.startsWith("pstdio."))
+      assert.notEqual(
+        tool.lastError?.code,
+        "extension_manifest_unsupported_api_version",
+        `The 0.49 upgrade left first-party tool ${tool.extensionId} on an incompatible API`,
+      );
+
     if (
       !/^pstdio\.((pstdio-)?(home|planner|session-browser|workspaces)|harness-codex|git-workspaces)$/.test(
         tool.extensionId,

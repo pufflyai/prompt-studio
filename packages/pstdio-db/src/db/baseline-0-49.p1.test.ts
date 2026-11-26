@@ -25,7 +25,8 @@ test("a populated early 0.49 database and a new installation share the compact j
   const root = await mkdtemp(join(tmpdir(), "pstdio-squashed-"));
   try {
     const fresh = await createDb({ path: join(root, "fresh") });
-    let expectedJournal, expectedLayout;
+    let expectedJournal: Awaited<ReturnType<typeof journal>>;
+    let expectedLayout: Awaited<ReturnType<typeof layout>>;
     try {
       expectedJournal = await journal(fresh.pglite);
       expect(expectedJournal).toHaveLength(1);

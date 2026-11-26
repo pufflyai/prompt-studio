@@ -78,11 +78,26 @@ const installFromRecordedOrigin = (input: {
     reuseInstalledDependencies: true,
   });
 
-const repoForSource = async (deps: ExtensionUpgradeServiceDeps, projectId: string, sourcePath: string) => {
-  const workspace = await deps.workspaceService.getDefault(projectId);
-  const root = workspace?.root_path;
-  return root && resolve(root, ".pstdio/extensions") === resolve(sourcePath, "..") ? root : undefined;
-};
+type InstalledSource = NonNullable<Awaited<ReturnType<ExtensionService["getInstalledSource"]>>>;
+const projectUpgrade =
+  (
+    deps: ExtensionUpgradeServiceDeps,
+    replace: (
+      source: InstalledSource,
+      repoPath?: string,
+    ) => Promise<{ changed: boolean; installedSource: InstalledSource }>,
+  ) =>
+  async (projectId: string, instanceId: string) => {
+    const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
+    if (!existing) return null;
+    const workspace = await deps.workspaceService.getDefault(projectId);
+    const root = workspace?.root_path;
+    const repo =
+      root && resolve(root, ".pstdio/extensions") === resolve(existing.installedSource.source_path, "..")
+        ? root
+        : undefined;
+    return { ...(await replace(existing.installedSource, repo)), instance: existing.instance };
+  };
 const matchesCatalogOrigin = (
   entry: ExtensionCatalogEntry | undefined,
   source: ReturnType<typeof parseExtensionSourceRef>,
@@ -265,10 +280,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
 
   const installSource = createExtensionSourceInstaller({ deps, install, catalogEntry, releaseRefFor });
 
-  const upgradeInstalled = async (
-    source: NonNullable<Awaited<ReturnType<ExtensionService["getInstalledSource"]>>>,
-    repoPath?: string,
-  ) => {
+  const upgradeInstalled = async (source: InstalledSource, repoPath?: string) => {
     const entry = await catalogEntry(source.install_name);
     const parsed = parseExtensionSourceRef(source.source_ref);
     // Select once for this operation; the worker downloads and validates that exact release.
@@ -327,13 +339,6 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     };
   };
 
-  const upgrade = async (projectId: string, instanceId: string) => {
-    const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
-    if (!existing) return null;
-    const repoPath = await repoForSource(deps, projectId, existing.installedSource.source_path);
-    return { ...(await upgradeInstalled(existing.installedSource, repoPath)), instance: existing.instance };
-  };
-
   return {
     canUpgrade,
     enabled: true,
@@ -341,7 +346,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     prepareMarketplaceExtensionSource,
     releaseRef: deps.release?.ref,
     registry: deps.release?.source === "registry" ? deps.release.ref.slice(4) : undefined,
-    upgrade,
+    upgrade: projectUpgrade(deps, upgradeInstalled),
     upgradeInstalled,
   };
 };

@@ -34,7 +34,7 @@ export const captureToolUpgradeSources = async (tx: Transaction) => {
   // Capture only sources present at upgrade. Device preferences survive an interrupted tool install.
   await tx.exec(`INSERT INTO preferences(scope,scope_id,extension_id,key,sync,value,updated_at)
         SELECT 'global','global','','upgrade_0_49_first_party_tools','device',jsonb_agg(id ORDER BY id),now()
-        FROM extensions WHERE source_kind IN ('git','registry') AND manifest_json ? 'enginesPstdio'
+        FROM extensions WHERE source_ref IS NOT NULL AND manifest_json ? 'enginesPstdio'
         HAVING count(*)>0 ON CONFLICT DO NOTHING`);
 };
 

@@ -1,10 +1,9 @@
 import { basename, dirname, join, resolve } from "node:path";
-import { createExtensionUpgradePool } from "pstdio-api-contracts/extension-host";
 import type { createInstalledExtensionSourcesDBService, createPreferencesDBService } from "pstdio-db";
 import { parseRegistrySourceRef } from "pstdio-extensions/distribution";
-import { extensionUpgradeConcurrency } from "pstdio-extensions/preparation-client";
 import { resolvePstdioHome } from "pstdio-paths";
 import {
+  type ExtensionCatalog,
   getExtensionCatalog,
   packagedExtensionCatalog,
   selectExtensionCatalogEntry,
@@ -22,6 +21,31 @@ const pending = {
 } as const;
 type Source = NonNullable<Awaited<ReturnType<ReturnType<typeof createInstalledExtensionSourcesDBService>["get"]>>>;
 
+const isManagedSource = (source: Source, catalog: ExtensionCatalog, registryUrl?: string) => {
+  const trusted = selectExtensionCatalogEntry(packagedExtensionCatalog, source.install_name);
+  const selected = selectExtensionCatalogEntry(catalog, source.install_name);
+  if (
+    !trusted ||
+    !selected ||
+    trusted.origin.url !== "https://github.com/pufflyai/prompt-studio" ||
+    trusted.origin.ref !== "{hostRelease}" ||
+    selected.origin.url !== trusted.origin.url ||
+    selected.origin.path !== trusted.origin.path ||
+    selected.origin.ref !== trusted.origin.ref ||
+    source.extension_id !== (trusted.extensionId ?? `pstdio.${trusted.installName}`)
+  )
+    return false;
+  const registry = parseRegistrySourceRef(source.source_ref);
+  // 0.48 recorded some catalog tools in project folders as local_path with their official Git ref.
+  const git = parseExtensionSourceRef(source.source_ref);
+  if (
+    !(git?.url === trusted.origin.url && git.path === trusted.origin.path) &&
+    !(source.source_kind === "registry" && registry?.id === source.extension_id && registry.registry === registryUrl)
+  )
+    return false;
+  return true;
+};
+
 /** The embedded first-party catalog and the recorded origin must name the same source. */
 export async function upgrade049Tools(
   preferences: Pick<ReturnType<typeof createPreferencesDBService>, "get" | "remove">,
@@ -35,30 +59,7 @@ export async function upgrade049Tools(
   const catalog = await getExtensionCatalog();
   const upgrade = async (source: Source) => {
     if (!compatibilityError(source)) return;
-    const trusted = selectExtensionCatalogEntry(packagedExtensionCatalog, source.install_name);
-    const selected = selectExtensionCatalogEntry(catalog, source.install_name);
-    if (
-      !trusted ||
-      !selected ||
-      trusted.origin.url !== "https://github.com/pufflyai/prompt-studio" ||
-      trusted.origin.ref !== "{hostRelease}" ||
-      selected.origin.url !== trusted.origin.url ||
-      selected.origin.path !== trusted.origin.path ||
-      selected.origin.ref !== trusted.origin.ref ||
-      source.extension_id !== (trusted.extensionId ?? `pstdio.${trusted.installName}`)
-    )
-      return;
-    const registry = parseRegistrySourceRef(source.source_ref);
-    const git = parseExtensionSourceRef(source.source_ref);
-    if (
-      !(source.source_kind === "git" && git?.url === trusted.origin.url && git.path === trusted.origin.path) &&
-      !(
-        source.source_kind === "registry" &&
-        registry?.id === source.extension_id &&
-        registry.registry === service.registry
-      )
-    )
-      return;
+    if (!isManagedSource(source, catalog, service.registry)) return;
     if (!service.releaseRef) throw new Error("A host release is required to upgrade first-party tools");
     const parent = dirname(resolve(source.source_path));
     const global = join(resolvePstdioHome({ env: process.env }), "extensions");
@@ -68,14 +69,13 @@ export async function upgrade049Tools(
     if (compatibilityError(result.installedSource))
       throw new Error(`Updated tool is still incompatible: ${source.extension_id}`);
   };
-  const pool = createExtensionUpgradePool(extensionUpgradeConcurrency);
+  // The preparation worker pool schedules bounded installs. Keep it fed while earlier
+  // tools register and dispose of their previous sources.
   const results = await Promise.allSettled(
-    row.value.map((id) =>
-      pool(async () => {
-        const source = await sources.get(id);
-        if (source) await upgrade(source);
-      }),
-    ),
+    row.value.map(async (id) => {
+      const source = await sources.get(id);
+      if (source) await upgrade(source);
+    }),
   );
   const failed = results.find((r) => r.status === "rejected");
   if (failed?.status === "rejected") throw failed.reason;
