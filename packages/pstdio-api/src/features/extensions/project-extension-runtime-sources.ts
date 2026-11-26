@@ -98,11 +98,16 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
     // An ownership conflict is an activation gate, not a recoverable source-load failure.
     if (installedSource.last_error_json?.code === "extension_identity_conflict") return Promise.resolve(null);
     const key = canonicalSourcePath(installedSource.source_path);
+    const pending = inspections.get(key);
+    if (pending) {
+      if (!uncheckedPaths.has(key)) return pending;
+      // A source change must survive an inspection that captured the previous revision.
+      const refresh = () => load(installedSource);
+      return pending.then(refresh, refresh);
+    }
     const cached = sourcesByPath.get(key);
     if (cached && !uncheckedPaths.has(key)) return cached.loading;
     uncheckedPaths.delete(key);
-    const pending = inspections.get(key);
-    if (pending) return pending;
     const loading: Promise<CachedSource | null> = (async () => {
       const accepted = await readAcceptedRevision(installedSource.source_path);
       const inspect = input.loadSources ? hashExtensionSourceAsync : inspectExtensionLoadKey;
@@ -158,10 +163,11 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
     },
     recheck: (sourcePath: string) => {
       const key = canonicalSourcePath(sourcePath);
-      if (sourcesByPath.has(key)) uncheckedPaths.add(key);
+      if (sourcesByPath.has(key) || inspections.has(key)) uncheckedPaths.add(key);
     },
     recheckAll: () => {
       for (const key of sourcesByPath.keys()) uncheckedPaths.add(key);
+      for (const key of inspections.keys()) uncheckedPaths.add(key);
     },
 
     collect: async (enabledSources: readonly EnabledExtensionSource[]) => {
