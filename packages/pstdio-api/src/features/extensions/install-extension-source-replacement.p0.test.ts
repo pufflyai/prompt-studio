@@ -192,7 +192,9 @@ describe("installExtensionSource replacement", () => {
     const runCommand = mock(async () => ({ exitCode: 0, stderr: "", stdout: "" }));
 
     await installExtensionSource({
-      source,
+      source: "source-extension",
+      preparedSource: { path: source, ref: "release" },
+      upgradeFromVersion: previous.version,
       force: true,
       reuseInstalledDependencies: true,
       env: { PSTDIO_HOME: pstdioHome },

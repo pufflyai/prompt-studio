@@ -31,9 +31,7 @@ export const prepareInstallDependencies = async (input: {
 }) => {
   const { installInput, installPath, source, targetPath } = input;
   let linkedInstalledDependencies =
-    installInput.reuseInstalledDependencies ||
-    installInput.skipInstall ||
-    (source.kind === "named" && installInput.upgradeFromVersion != null)
+    installInput.reuseInstalledDependencies || installInput.skipInstall
       ? linkInstalledDependencies(source.path, targetPath, installPath)
       : false;
 
@@ -53,7 +51,11 @@ export const prepareInstallDependencies = async (input: {
     await installDependencies(source.path, installInput);
     await copyUsableNodeModules(source.path, installPath);
   } else {
-    await installDependencies(installPath, { ...installInput, production: !installInput.reuseInstalledDependencies });
+    const releaseUpgrade = source.kind === "named" && installInput.upgradeFromVersion != null;
+    await installDependencies(installPath, {
+      ...installInput,
+      production: releaseUpgrade || !installInput.reuseInstalledDependencies,
+    });
   }
   return linkedInstalledDependencies;
 };

@@ -231,7 +231,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
       ...options,
       ...(workspaceSource ? { skipInstall: true } : { hostReleaseRef: deps.release?.ref }),
       ...(!workspaceSource && entry.origin.url.startsWith("https:") ? { expectedIdentity: identity } : {}),
-      reuseInstalledDependencies: workspaceSource,
+      reuseInstalledDependencies: true,
     });
   };
 
