@@ -4,6 +4,7 @@ import {
   createRuntimeCollections,
   getCollection,
   getIndexedRows,
+  getRuntimeCollections,
   getWriter,
   releaseRuntimeCollections,
   retainRuntimeCollections,
@@ -21,6 +22,18 @@ test("an effect remount retains its collection store until the last connection c
   expect(remounted.getCollection("projects").get("project")).toEqual({ id: "project" });
   await releaseRuntimeCollections(connection);
   expect(initial.getWriter("projects")).toBeUndefined();
+});
+
+test("a disposed shared store is replaced for the next caller on the same connection", async () => {
+  const connection = { baseUrl: "http://disposed-shared-store", token: "" };
+  const disposed = getRuntimeCollections(connection);
+  await disposed.dispose();
+  const replacement = getRuntimeCollections(connection);
+  expect(replacement).not.toBe(disposed);
+  expect(replacement.isDisposed()).toBe(false);
+  replacement.getWriter("workspaces")!.upsert({ id: "workspace" });
+  expect(replacement.getCollection("workspaces").get("workspace")).toEqual({ id: "workspace" });
+  await replacement.dispose();
 });
 
 test("runtime collections isolate overlapping IDs, indexes, readiness, and subscriptions", async () => {
