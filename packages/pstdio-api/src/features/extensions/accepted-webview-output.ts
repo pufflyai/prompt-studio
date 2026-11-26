@@ -157,7 +157,7 @@ export const createWebviewUsage = (cacheRoot: string) => {
       );
       await Promise.all(
         rows.map(async (row) => {
-          if (!(await hasAcceptedWebviews(row, cacheRoot)) && opened.has(row.source_path)) await check(row.id);
+          if (opened.has(row.source_path) && !(await hasAcceptedWebviews(row, cacheRoot))) await check(row.id);
         }),
       );
     },
