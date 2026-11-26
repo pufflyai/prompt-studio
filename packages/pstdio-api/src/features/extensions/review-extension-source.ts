@@ -1,6 +1,6 @@
 import { readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { mkdir, mkdtemp, realpath, rename, rm, writeFile } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative, sep } from "node:path";
 import type { ExtensionUpgradeReviewResolution } from "pstdio-api-contracts";
 import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import { readPackageManifest } from "pstdio-extensions";
@@ -106,6 +106,7 @@ export const startExtensionSourceReview = async (
   expectedIdentity: string,
   source: ExtensionReviewSource,
   input: InstallExtensionSourceInput,
+  workspaceRoot?: string,
 ) => {
   const id = crypto.randomUUID();
   const directory = reviewDirectory(home, id);
@@ -119,7 +120,12 @@ export const startExtensionSourceReview = async (
     await writeExtensionReviewTree(join(stage, "local"), local);
     const download = join(stage, "release-download");
     const incoming = await resolveInstallSource({ ...input, skipRuntimeBundle: true }, download);
-    if (incoming.kind !== "named") throw new Error("A review requires a pinned upstream release.");
+    if (incoming.kind !== "named") {
+      if (!source.separateProviderId || !workspaceRoot) throw new Error("A review requires a pinned upstream release.");
+      const path = relative(await realpath(workspaceRoot), await realpath(incoming.path));
+      if (!path || isAbsolute(path) || path === ".." || path.startsWith(`..${sep}`))
+        throw new Error("The review candidate must belong to the running workspace.");
+    }
     const incomingPath = join(stage, "incoming");
     await copyExtensionSource(incoming.path, incomingPath);
     await rm(download, { recursive: true, force: true });
@@ -135,7 +141,7 @@ export const startExtensionSourceReview = async (
       sourcePath: source.path,
       sourceRef: source.ref,
       separateProviderId: source.separateProviderId,
-      incomingRef: incoming.ref,
+      incomingRef: incoming.kind === "named" ? incoming.ref : null,
       incomingVersion: manifest.version,
       based: await prepareOriginal(source.ref, stage),
       createdAt: new Date().toISOString(),
@@ -239,7 +245,7 @@ export const useExtensionSourceReview = async <T>(
   choices: ExtensionUpgradeReviewResolution[],
   options: { usePublished?: boolean; revision: string; validationOnly?: boolean },
   apply: (review: {
-    source: { path: string; ref: string };
+    source: { path: string; ref: string | null };
     upgrade: NonNullable<InstallExtensionSourceInput["reviewedUpgrade"]>;
   }) => Promise<T>,
 ) => {
@@ -277,7 +283,7 @@ const applyReviewPlan = async <T>(
   choices: ExtensionUpgradeReviewResolution[],
   usePublished: boolean,
   apply: (review: {
-    source: { path: string; ref: string };
+    source: { path: string; ref: string | null };
     upgrade: NonNullable<InstallExtensionSourceInput["reviewedUpgrade"]>;
   }) => Promise<T>,
 ) => {

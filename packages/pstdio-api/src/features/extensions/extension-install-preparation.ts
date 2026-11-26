@@ -203,13 +203,15 @@ const stageInstallSource = async (
   installPath: string,
   home: string,
   review: InstallExtensionSourceInput["reviewedUpgrade"],
+  separateSource: boolean,
 ) => {
   if (!review) return stageExtensionSource(source, installPath, home);
-  if (source.kind !== "named") throw new Error("A reviewed upgrade requires a pinned release.");
+  if (source.kind !== "named" && !separateSource)
+    throw new Error("A reviewed local snapshot requires a separate provider.");
   await cp(source.path, installPath, { recursive: true, verbatimSymlinks: true });
   if (fingerprintUpgradeWorkingTree(installPath) !== review.stagedFingerprint)
     throw new Error("The staged extension changed. Open a fresh upgrade review.");
-  rememberExtensionUpgradeBaseline(home, source.ref, review.originalReleasePath);
+  if (source.kind === "named") rememberExtensionUpgradeBaseline(home, source.ref, review.originalReleasePath);
 };
 
 const prepareExpectedWorkingTree = (input: InstallExtensionSourceInput, home: string, tempDir: string) => {
@@ -270,7 +272,13 @@ export const prepareAndInstallExtensionSource = async (input: InstallExtensionSo
       stage.add(stagingRoot);
       installPath = join(stagingRoot, directoryName);
       await traceSetupPhase("extension.source_copy", { extension: installName }, () =>
-        stageInstallSource(resolvedSource, installPath, pstdioHome, input.reviewedUpgrade),
+        stageInstallSource(
+          resolvedSource,
+          installPath,
+          pstdioHome,
+          input.reviewedUpgrade,
+          input.allocateSeparateSource === true,
+        ),
       );
     }
 
