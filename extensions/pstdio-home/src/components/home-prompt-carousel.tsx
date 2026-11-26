@@ -21,9 +21,16 @@ interface HomePromptCarouselProps {
 }
 
 export const HomePromptCarousel = ({ onBuild }: HomePromptCarouselProps) => {
-  const carousel = useCarousel({ slideCount: homeIdeas.length, slidesPerPage: 1, loop: true });
   const [pending, setPending] = useState<HomeIdeaId>();
   const [error, setError] = useState<{ idea: HomeIdeaId; message: string }>();
+  const carousel = useCarousel({
+    slideCount: homeIdeas.length,
+    slidesPerPage: 1,
+    loop: true,
+    onPageChange: ({ page }) => {
+      if (error && homeIdeas[page]?.id !== error.idea) setError(undefined);
+    },
+  });
   const build = async (id: HomeIdeaId) => {
     if (pending) return;
     setPending(id);

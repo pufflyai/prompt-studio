@@ -114,7 +114,10 @@ test("Home anchors build failures to the selected idea and allows retry", async 
     attempts++;
     if (attempts === 1) {
       await failure.promise;
-      await route.fulfill({ status: 503, json: { error: "Build temporarily unavailable. Try again." } });
+      const reason = "Build temporarily unavailable. Try again.";
+      await route.fulfill({
+        json: { outcome: { ok: false, status: "error", reason, error: { message: reason }, notices: [] } },
+      });
       return;
     }
     await route.continue();
@@ -141,6 +144,7 @@ test("Home anchors build failures to the selected idea and allows retry", async 
     await expect(page.getByRole("tab", { name: "Build Home: Project pulse", exact: true })).toBeVisible();
     expect(attempts).toBe(2);
   } finally {
+    failure.resolve();
     await page.unrouteAll({ behavior: "ignoreErrors" });
   }
 });
