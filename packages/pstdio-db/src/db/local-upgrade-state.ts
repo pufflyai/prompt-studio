@@ -6,6 +6,7 @@ import { projectPendingOrderedRecords } from "../services/extension-storage/orde
 import { orderedRecordMetadata } from "../services/extension-storage/ordered-record-row";
 import type { OrderedTransaction } from "../services/extension-storage/ordered-sql";
 import type { DbClient } from "./connection.pglite";
+import { resetReleasedRevisions } from "./local-upgrade-revisions";
 import { stageLocalTransfers } from "./local-upgrade-transfers";
 
 const emptyMetadata = {
@@ -58,6 +59,7 @@ export async function finishLocalUpgrade(db: DbClient, engine: PGlite, storageRo
   await stageLocalTransfers(engine, storageRoot);
   await db.transaction(async (tx) => {
     await settleVisibleEdits(tx);
+    await resetReleasedRevisions(tx);
     await tx.execute(sql`DELETE FROM records WHERE deleted`);
     await tx.execute(sql`TRUNCATE operations`);
     await tx.execute(sql`DELETE FROM documents WHERE starts_with(key,'["ordered-')`);

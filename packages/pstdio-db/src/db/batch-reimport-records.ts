@@ -5,6 +5,8 @@ import type { OrderedRecord } from "pstdio-sync/records";
 import { canonicalRecordFromRow, orderedRecordMetadata } from "../services/extension-storage/ordered-record-row";
 import { encodeProjectionValue } from "../services/extension-storage/record-projection-codec";
 
+import { localRevision } from "./local-upgrade-revisions";
+
 // The ordinary migration can admit optimistic or unpaired representations independently.
 export class NeedsRecordAdmission extends Error {}
 
@@ -64,7 +66,7 @@ function currentRow(input: ReleasedRecord) {
     jsonValue(columns.native_sources),
     jsonField(input.native_versions),
     textField(columns.record_lifetime),
-    textField(input.revision),
+    textField(localRevision(input.revision)),
     jsonValue({ ...columns.meta, stamps: [] }),
   ]);
 }
@@ -74,8 +76,7 @@ export async function exportSettledRecords(source: PGlite, file: string, signal?
   try {
     await output.writeFile(Buffer.from("5047434f50590aff0d0a000000000000000000", "hex"));
     await source.transaction(async (tx) => {
-      // Check for unpublished canonical rows using keys alone. Joining their entire payloads
-      // before filtering deleted projections made PostgreSQL spill obsolete file bodies to disk.
+      // Check unpublished canonical rows by key so the payload join can filter deleted rows up front.
       const {
         rows: [unpaired],
       } = await tx.query<{ found: boolean }>(`SELECT EXISTS (
