@@ -250,10 +250,9 @@ export const createDb = async (options?: {
       const finishSessionWorkspaceUpgrade = await prepareSessionWorkspaceUpgrade(db, dbPath);
       await migratePglite(openedPglite, migrationsFolder, async (tx) => {
         if (reimport) await importBatchOwners(tx);
-        if (localUpgrade) {
-          await tx.exec("CREATE SCHEMA pstdio_local_upgrade_049");
-          await captureToolUpgradeSources(tx);
-        }
+        if (localUpgrade) await tx.exec("CREATE SCHEMA pstdio_local_upgrade_049");
+        // Every supported source crossing the 0.49 schema can have tools built against an older API.
+        await captureToolUpgradeSources(tx);
       });
       await finishProjectExtensionsUpgrade?.();
       await finishLogOwnerUpgrade?.();

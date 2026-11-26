@@ -271,7 +271,7 @@ const run = async (
       input.evidence,
       state,
       pair.expectedVersions,
-      pair.from.startsWith("pstdio@0.48.") && candidateVersion.startsWith("0.49."),
+      /^pstdio@0\.(46|47|48)\./.test(pair.from) && candidateVersion.startsWith("0.49."),
     );
     const routes = await workbenchRoutes(runtime.descriptor, state.fixture);
     await stopProcess(runtime.child);

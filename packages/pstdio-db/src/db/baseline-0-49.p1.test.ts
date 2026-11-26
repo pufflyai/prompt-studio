@@ -21,6 +21,35 @@ const layout = async (db: PGlite) =>
     ].map(async (sql) => (await db.query(sql)).rows),
   );
 
+test.each([
+  ["0.46.0", 2],
+  ["0.47.0", 4],
+] as const)("a direct upgrade from %s includes previously installed tools in the compatibility check", async (_, lastMigration) => {
+  const root = await mkdtemp(join(tmpdir(), "pstdio-direct-upgrade-"));
+  try {
+    const old = await createTextLogOwnerFixture(root, lastMigration);
+    try {
+      await old.pglite.exec(`INSERT INTO installed_extension_sources
+        (id,install_name,extension_id,display_name,source_kind,source_path,source_ref,manifest_json,created_at,updated_at)
+        VALUES ('saved-source','sample','example.sample','Sample','local_path','/sample','example-ref',
+          '{"enginesPstdio":"^0.3.0"}',now(),now())`);
+    } finally {
+      await old.close();
+    }
+    const current = await createDb({ path: old.path });
+    try {
+      const result = await current.pglite.query(
+        "SELECT value FROM preferences WHERE key='upgrade_0_49_first_party_tools'",
+      );
+      expect(result.rows).toEqual([{ value: ["saved-source"] }]);
+    } finally {
+      await current.close();
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("a populated early 0.49 database and a new installation share the compact journal and schema", async () => {
   const root = await mkdtemp(join(tmpdir(), "pstdio-squashed-"));
   try {
