@@ -1,5 +1,4 @@
 import { join, resolve } from "node:path";
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import { GitUnavailableError, isGitAvailable } from "pstdio-wt";
 import type { ExtensionRelease } from "../app-config";
 import { findBundledExtensionSource } from "../features/extensions/bundled-extension-source";
@@ -15,13 +14,13 @@ import {
   installExtensionSource as installExtensionSourceDefault,
   toExtensionEnableInput,
 } from "../features/extensions/install-extension-source";
-import { isManagedCatalogSource } from "../features/extensions/managed-catalog-source";
 import { compatibilityError } from "../features/extensions/project-extension-instance";
 import type { BundledReleaseTarget, RegistryReleaseTarget } from "../features/extensions/warm-extension-release";
 import { createExtensionMarketplacePreview } from "./extension-marketplace-preview";
 import type { createExtensionService } from "./extension-service";
 import { createExtensionSourceInstaller } from "./extension-source-installer";
 import { parseExtensionSourceRef, resolveExtensionReleaseCommit } from "./extension-source-ref";
+import { findLocalUpgradeProvider, type UpgradeInstance } from "./extension-upgrade-local-provider";
 import { createExtensionUpgradeReviewService } from "./extension-upgrade-review-service";
 import { ExtensionUpgradeUnavailableError } from "./extension-upgrade-unavailable-error";
 import { createPublishedExtensionAlternative } from "./published-extension-alternative";
@@ -104,29 +103,6 @@ const extensionUpgradeDestination = async (
   };
 };
 
-type UpgradeInstance = NonNullable<Awaited<ReturnType<ExtensionService["getProjectExtensionInstance"]>>>;
-const findLocalProvider = async (
-  catalog: Promise<ExtensionCatalog>,
-  service: ExtensionService,
-  projectId: string,
-  current: UpgradeInstance,
-) => {
-  if (current.instance.enabled && current.installedSource.source_kind === "local_path") {
-    // Older hosts rediscovered catalog installs as local paths. The normal install
-    // still verifies their exact original working tree before replacing any files.
-    if (isManagedCatalogSource(current.installedSource, await catalog)) return undefined;
-    return current;
-  }
-  if (current.instance.enabled !== false) return undefined;
-  const id = canonicalExtensionId(current.installedSource.extension_id);
-  return (await service.listProjectExtensionInstances(projectId)).find(
-    ({ instance, installedSource }) =>
-      instance.enabled &&
-      installedSource.source_kind === "local_path" &&
-      canonicalExtensionId(installedSource.extension_id) === id,
-  );
-};
-
 const matchesCatalogOrigin = (
   entry: ExtensionCatalogEntry | undefined,
   source: ReturnType<typeof parseExtensionSourceRef>,
@@ -193,7 +169,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   const registry = createRegistryExtensionSource(deps, install);
   const catalog = deps.catalog ? Promise.resolve(deps.catalog) : getExtensionCatalog();
   const separateLocalProvider = (projectId: string, current: UpgradeInstance) =>
-    findLocalProvider(catalog, deps.extensionService, projectId, current);
+    findLocalUpgradeProvider(catalog, deps.extensionService, projectId, current);
   const publishedAlternative = createPublishedExtensionAlternative(catalog, deps.release);
   const releaseCommits = createReleaseCommitCache(deps.resolveReleaseCommit ?? resolveExtensionReleaseCommit);
   const catalogEntry = async (installName: string) => selectExtensionCatalogEntry(await catalog, installName);
