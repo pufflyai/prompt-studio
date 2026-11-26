@@ -257,19 +257,52 @@ try {
   const updatedProject = retirement
     ? await createInstalledProject(active.page, join(home, "Windows updated project"))
     : project;
-  // Sessions moved from core into a separately installed tool. Updating the host
-  // preserves existing extension choices; install its compatible viewer explicitly.
-  await active.page.evaluate(async (projectId) => {
-    const response = await fetch(`/v1/projects/${projectId}/extensions/install`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${localStorage.getItem("pstdio.browserSession")}`,
-      },
-      body: JSON.stringify({ source: { kind: "catalog", name: "pstdio-session-browser" }, force: true }),
-    });
-    if (!response.ok) throw new Error(`Sessions installation failed: ${response.status} ${await response.text()}`);
-  }, updatedProject.id);
+  if (retirement) {
+    // Sessions moved from core into a separately installed tool; a replacement project installs it explicitly.
+    await active.page.evaluate(async (projectId) => {
+      const response = await fetch(`/v1/projects/${projectId}/extensions/install`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${localStorage.getItem("pstdio.browserSession")}`,
+        },
+        body: JSON.stringify({ source: { kind: "catalog", name: "pstdio-session-browser" }, force: true }),
+      });
+      if (!response.ok) throw new Error(`Sessions installation failed: ${response.status} ${await response.text()}`);
+    }, updatedProject.id);
+  } else {
+    // A breaking extension API step leaves the tools installed by the baseline without
+    // contributions until they are upgraded. Follow Extensions > Upgrade all through its
+    // per-tool endpoint; opening Extensions would replace the saved page this check restores.
+    const upgrades = await active.page.evaluate(async (projectId) => {
+      const request = async (path: string, method = "GET") => {
+        const response = await fetch(`/v1/projects/${projectId}/extensions${path}`, {
+          method,
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${localStorage.getItem("pstdio.browserSession")}`,
+          },
+          body: method === "POST" ? "{}" : undefined,
+        });
+        if (!response.ok)
+          throw new Error(`${method} extensions${path} failed: ${response.status} ${await response.text()}`);
+        return response.json();
+      };
+      type Tool = { id: string; name: string; version: string; enabled: boolean; status: string; canUpgrade: boolean };
+      const { extensions } = (await request("")) as { extensions: Tool[] };
+      const changes = [];
+      for (const tool of extensions.filter((item) => item.enabled && item.canUpgrade)) {
+        const { extension } = (await request(`/${encodeURIComponent(tool.id)}/upgrade`, "POST")) as {
+          extension: Tool;
+        };
+        changes.push({ name: tool.name, from: tool.version, to: extension.version, status: extension.status });
+      }
+      const after = (await request("")) as { extensions: Tool[] };
+      return { changes, failed: after.extensions.filter((item) => item.enabled && item.status === "error") };
+    }, updatedProject.id);
+    writeFileSync(join(evidence, "extension-upgrades.json"), `${JSON.stringify(upgrades, null, 2)}\n`);
+    assert.deepEqual(upgrades.failed, [], "Every enabled project tool must load after Upgrade all");
+  }
   await openPackagedProject(active.page, updatedProject);
   // Preserved projects restore the Sessions page. A replacement project opens it from the root.
   if (retirement) {
