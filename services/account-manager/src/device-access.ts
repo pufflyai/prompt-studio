@@ -96,10 +96,13 @@ export const createDeviceAccess = (
         readDeviceSigningKey(transaction, device.accountId, identitySchema.parse(deviceId)),
       ),
     account: (token: string, selected?: string) =>
-      scoped(token, selected, async (transaction, accountId, userId) => ({
-        features: await readAccountFeatures(transaction, accountId),
-        profile: await readProfile(transaction, userId),
-      })),
+      scoped(token, selected, async (transaction, accountId, userId) => {
+        const profile = await readProfile(transaction, userId);
+        return {
+          features: await readAccountFeatures(transaction, accountId),
+          ...(profile && { profile }),
+        };
+      }),
     heartbeat: (token: string) =>
       apply(token, (transaction, device) => heartbeatDeviceInTransaction(transaction, device)),
     devices: (token: string) =>
