@@ -234,7 +234,7 @@ export const createPlannerUi = (baseUrl: string) => {
         owner: editor.ref,
         view: properties.ref,
         side: "right",
-        priority: 200,
+        placement: "first",
       }),
     ],
     navigationItems: [
