@@ -174,7 +174,11 @@ export async function stageBatchReimport(
         join(payload, "owners.copy"),
       );
       mark("created owners");
-      await exportSettledRecords(source, join(payload, recordFile), signal);
+      // Diagnostic on generated fixtures only: measure the lower bound with no per-record codec work.
+      await copyBinary(source,path,`SELECT o.id,c.record_id,c.deleted,c.value,c.query_values,c.asset,c.shared,c.native_sources,c.native_versions,c.record_lifetime,c.revision,
+        '{"order":[],"stamps":[],"body":{"keys":["value"],"extra":{},"nativeLifetimes":{}}}'::jsonb
+        FROM storage_current_records c JOIN pg_temp.reimport_owners o ON o.project_id=c.workbench_id AND o.extension_id=c.extension_id
+        WHERE NOT c.deleted`,join(payload,recordFile));
       {
         const f = await open(join(payload, "owners.copy"), "r+");
         try {
