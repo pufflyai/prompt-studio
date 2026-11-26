@@ -18,6 +18,31 @@ const readFixtureFiles = async (folder: string | undefined) => {
   return files;
 };
 
+const boundedText = (value: unknown) => (typeof value === "string" ? value.slice(0, 256) : undefined);
+
+type PaletteQueryParams = {
+  query?: unknown;
+  limit?: unknown;
+  activeResource?: { type?: unknown; id?: unknown; extensionId?: unknown; projectId?: unknown };
+};
+
+const describePaletteQuery = (params: PaletteQueryParams | undefined, startTime: number) => {
+  const resource = params?.activeResource;
+  return {
+    query: boundedText(params?.query),
+    limit: typeof params?.limit === "number" && Number.isFinite(params.limit) ? params.limit : undefined,
+    activeResource: resource
+      ? {
+          type: boundedText(resource.type),
+          id: boundedText(resource.id),
+          extensionId: boundedText(resource.extensionId),
+          projectId: boundedText(resource.projectId),
+        }
+      : undefined,
+    startTime,
+  };
+};
+
 /** Observe the fixture without submitting an edit, requesting a flush, or refreshing its tree. */
 export const observePackagedNotes = async (page: Page) => {
   const began = performance.now();
@@ -34,8 +59,12 @@ export const observePackagedNotes = async (page: Page) => {
       return;
     const request = reply.request();
     let operation: unknown;
+    let queryRequest: ReturnType<typeof describePaletteQuery> | undefined;
     try {
-      operation = request.postDataJSON()?.request?.operation;
+      const input = request.postDataJSON();
+      operation = input?.request?.operation;
+      if (path.endsWith(".commandPaletteResource.query/execute"))
+        queryRequest = describePaletteQuery(input?.params, request.timing().startTime);
     } catch {}
     const work = (async () => {
       const body = (await reply.text().catch(() => "response body unavailable")).slice(0, 8192);
@@ -43,6 +72,7 @@ export const observePackagedNotes = async (page: Page) => {
         elapsedMs: Math.round(performance.now() - began),
         path,
         operation,
+        queryRequest,
         status: reply.status(),
         body,
       });
