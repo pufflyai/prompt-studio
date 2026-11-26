@@ -32,7 +32,14 @@ export const matchesPreparedReleaseSource = (input: { sourcePath: string; packag
     if (
       dependencies.size !== 1 ||
       [...dependencies.get(source)!.files].some((path) => !insideSource(resolve(source, path))) ||
-      [...dependencies.compilerInputs].some(([path, input]) => !insideSource(path) || input.opaque)
+      [...dependencies.compilerInputs].some(([path, input]) => {
+        if (!insideSource(path) || input.opaque) return true;
+        // Alias targets can disappear, leaving no resolved owner in the graph.
+        // Keep canonical validation for configured aliases, including inherited ones.
+        const config = Bun.JSON5.parse(input.contents.toString()) as { compilerOptions?: unknown };
+        const options = config.compilerOptions;
+        return !!options && typeof options === "object" && ("baseUrl" in options || "paths" in options);
+      })
     )
       return false;
     return sourceHash === hashRevisionSource(input.packagePath, (path) => path !== ".pstdio-release-runtime.mjs");

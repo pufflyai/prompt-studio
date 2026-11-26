@@ -63,20 +63,35 @@ export const hasAcceptedWebviews = async (
   return !!(row && accepted && (await publishAcceptedWebviews(row, cacheRoot, accepted, viewId)));
 };
 
+export const matchesAcceptedReleaseWebviews = async (
+  row: InstalledSourceWithManifest,
+  revision: PreparedExtensionRevision,
+) => {
+  if (!revision.prebuiltRelease || !revision.webviews) return false;
+  const bundleViews = join(dirname(revision.packagePath), releaseBundleViews);
+  if (
+    !Object.values(revision.webviews).every(
+      (view) => dirname(view.distDir) === bundleViews && existsSync(publishedWebviewModule(view.distDir)),
+    )
+  )
+    return false;
+  return runExtensionPreparation<boolean>("source.matches-release", {
+    sourcePath: row.source_path,
+    packagePath: revision.packagePath,
+  });
+};
+
 export const retainAcceptedWebviews = async (row: InstalledSourceWithManifest | null, cacheRoot: string) => {
   if (!row) return;
   const revision = await readAcceptedRevision(row.source_path);
   if (!revision?.webviews) return;
   const views = Object.keys(revision.webviews);
   if (!views.length) return views;
-  if (!revision.prebuiltRelease) return;
-  const bundleViews = join(dirname(revision.packagePath), releaseBundleViews);
-  if (!Object.values(revision.webviews).every((view) => dirname(view.distDir) === bundleViews)) return;
-  const matches = await runExtensionPreparation<boolean>("source.matches-release", {
-    sourcePath: row.source_path,
-    packagePath: revision.packagePath,
-  });
-  if (matches && (await publishAcceptedWebviews(row, cacheRoot, revision))) return views;
+  if (
+    (await matchesAcceptedReleaseWebviews(row, revision)) &&
+    (await publishAcceptedWebviews(row, cacheRoot, revision))
+  )
+    return views;
 };
 
 export const notifyAcceptedWebviewPublication = async (

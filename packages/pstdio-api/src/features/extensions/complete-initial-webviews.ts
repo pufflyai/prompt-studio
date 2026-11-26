@@ -4,6 +4,7 @@ import {
   preparedRevisionState,
   readAcceptedRevision,
 } from "pstdio-extensions";
+import { matchesAcceptedReleaseWebviews } from "./accepted-webview-output";
 import type { LoadedExtensionSnapshot } from "./extension-runtime";
 import type { createBuildReporters } from "./extension-webview-build-reporters";
 import {
@@ -45,8 +46,13 @@ const complete = async (input: InitialWebviewInput) => {
     return retained;
   };
   const loaded = { ...snapshot.loaded, preparedRevision: { ...previous } };
+  const validate = async () => {
+    if (await matchesAcceptedReleaseWebviews(row, previous))
+      loaded.preparedRevision.webviews = { ...previous.webviews };
+    else await validateExtensionWebviews(loaded, row.source_path, row.install_name, input.signal);
+  };
   try {
-    await validateExtensionWebviews(loaded, row.source_path, row.install_name, input.signal);
+    await validate();
   } catch (error) {
     // Initial failures use per-view feedback; a rejected update retains its complete set.
     return reportFailure(error);
@@ -73,7 +79,7 @@ const complete = async (input: InitialWebviewInput) => {
   // external dependency edit during that wait cannot complete the earlier identity.
   const state = preparedRevisionState(loaded.preparedRevision);
   try {
-    await validateExtensionWebviews(loaded, row.source_path, row.install_name, input.signal);
+    await validate();
   } catch (error) {
     return reportFailure(error);
   }
