@@ -1,6 +1,6 @@
 import type { UpdateChannel } from "pstdio-paths";
 import { gt } from "semver";
-import type { DesktopUpdatePhase, DesktopUpgradeAvailability } from "../desktop-api";
+import type { DesktopUpdatePhase } from "../desktop-api";
 import {
   desktopReleasesUrl,
   type GitHubRelease,
@@ -29,7 +29,6 @@ type DesktopUpdateManagerOptions = {
   updater: NativeUpdater;
   openExternal: (url: string) => Promise<unknown>;
   onUpdateProgress?: (phase: DesktopUpdatePhase | undefined) => void;
-  onUpgradeChanged?: (prompt: boolean) => void;
   onUpdateNotAvailable: () => void;
   onUpdateDownloaded: (version: string) => void;
   onUpdateError: (error: Error) => void;
@@ -44,7 +43,7 @@ export class DesktopUpdateManager {
   #interactive = false;
   #phase: DesktopUpdatePhase | undefined;
   #download: ReturnType<typeof Promise.withResolvers<"downloaded" | "not-available">> | null = null;
-  #upgrade: DesktopUpgradeAvailability | null = null;
+  #downloadedVersion: string | null = null;
 
   constructor(options: DesktopUpdateManagerOptions) {
     this.#options = options;
@@ -56,14 +55,14 @@ export class DesktopUpdateManager {
     options.updater.on("error", (error) => this.#download?.reject(error));
   }
 
-  get upgrade() {
-    return this.#upgrade;
+  get downloadedVersion() {
+    return this.#downloadedVersion;
   }
 
   checkForUpdates() {
-    if (this.#upgrade) {
-      this.#options.onUpgradeChanged?.(true);
-      if (this.#upgrade.ready) return Promise.resolve();
+    if (this.#downloadedVersion) {
+      this.#options.onUpdateDownloaded(this.#downloadedVersion);
+      return Promise.resolve();
     }
     if (!this.#interactive) {
       this.#interactive = true;
@@ -78,7 +77,7 @@ export class DesktopUpdateManager {
     if (!this.#options.packaged || resolveDesktopUpdateStrategy(this.#options.platform).kind === "manual") {
       return Promise.resolve();
     }
-    if (this.#upgrade?.ready && !this.#checkInProgress) return Promise.resolve();
+    if (this.#downloadedVersion && !this.#checkInProgress) return Promise.resolve();
     return this.#run();
   }
 
@@ -96,10 +95,6 @@ export class DesktopUpdateManager {
         else this.#options.logError(failure);
       })
       .finally(() => {
-        if (this.#upgrade && !this.#upgrade.ready) {
-          this.#upgrade = null;
-          this.#options.onUpgradeChanged?.(false);
-        }
         this.#setPhase(undefined);
         this.#download = null;
         this.#checkInProgress = null;
@@ -133,8 +128,6 @@ export class DesktopUpdateManager {
       return;
     }
 
-    this.#upgrade = { version: release.version, ready: false };
-    this.#options.onUpgradeChanged?.(this.#interactive);
     this.#download = Promise.withResolvers();
     this.#options.updater.setFeedURL({ url: release.url });
     this.#options.updater.checkForUpdates();
@@ -144,7 +137,7 @@ export class DesktopUpdateManager {
       return;
     }
 
-    this.#upgrade = { version: release.version, ready: true };
+    this.#downloadedVersion = release.version;
     this.#options.onUpdateDownloaded(release.version);
   }
 }

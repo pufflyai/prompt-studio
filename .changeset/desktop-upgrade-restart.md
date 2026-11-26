@@ -3,4 +3,4 @@
 "@pstdio/workbench": patch
 ---
 
-Install a ready desktop upgrade from the footer or Check for Updates and reopen Prompt Studio automatically.
+Offer downloaded desktop updates through a movable status-bar widget and confirm before installing and reopening Prompt Studio.

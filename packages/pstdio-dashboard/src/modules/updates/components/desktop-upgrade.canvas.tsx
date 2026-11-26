@@ -1,72 +1,52 @@
 import { Box, Button, Flex, Text } from "@chakra-ui/react";
+import { createWorkbench } from "@pstdio/workbench";
+import { Workbench } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
-import { DesktopUpgradeButton, DesktopUpgradeDialog } from "./desktop-upgrade";
+import { createDesktopUpgrade, DesktopUpgradeConfirmation } from "../desktop-upgrade";
 
-export default { title: "Product/Desktop/Upgrade" };
+export default { title: "Product/Desktop/Upgrade", fullscreen: true };
 
 export const UpgradeEntryPoints = () => {
-  const [open, setOpen] = useState(false);
   const [state, setState] = useState<"current" | "downloading" | "ready" | "installed">("current");
-  const [waiting, setWaiting] = useState(false);
-  const available = state === "downloading" || state === "ready";
-  const installed = state === "installed";
+  const [workbench] = useState(() => createWorkbench());
+  const [upgrade] = useState(
+    () =>
+      createDesktopUpgrade({
+        restartToInstallUpdate: async () => setState("installed"),
+      })!,
+  );
   useEffect(() => {
+    upgrade.update(state === "ready" ? { version: "0.49.0" } : null);
     if (state !== "downloading") return;
-    const completeDownload = setTimeout(() => {
-      setState(waiting ? "installed" : "ready");
-      if (waiting) setOpen(false);
-    }, 3000);
+    const completeDownload = setTimeout(() => setState("ready"), 3000);
     return () => clearTimeout(completeDownload);
-  }, [state, waiting]);
+  }, [state, upgrade]);
 
   return (
-    <Flex direction="column" height="full" minH="xs" justify="space-between">
-      <Box as="header" p="sm" borderBottomWidth="1px">
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={installed}
-          onClick={() => {
-            if (state === "current") setState("downloading");
-            setOpen(true);
-          }}
-        >
-          Check for Updates…
-        </Button>
-      </Box>
-      <Box p="md">
-        <Text>{installed ? "Prompt Studio 0.49.0 is running" : "Prompt Studio 0.48.0 is running"}</Text>
-        {state === "current" && (
-          <Button size="sm" variant="outline" mt="sm" onClick={() => setState("downloading")}>
-            Simulate update found
-          </Button>
-        )}
-      </Box>
-      <Flex as="footer" align="center" justify="end" px="sm" h="8" borderTopWidth="1px">
-        {available && (
-          <>
-            <DesktopUpgradeButton onClick={() => setOpen(true)} />
-            <DesktopUpgradeDialog
-              version="0.49.0"
-              open={open}
-              ready={state === "ready"}
-              waiting={waiting}
-              onOpenChange={(next) => {
-                setOpen(next);
-                if (!next) setWaiting(false);
+    <Box h="full" minH="xs">
+      <DesktopUpgradeConfirmation workbench={workbench} upgrade={upgrade} />
+      <Workbench
+        workbench={workbench}
+        titleBar={
+          <Flex as="header" p="sm" gap="sm" align="center">
+            <Button
+              size="sm"
+              variant="ghost"
+              loading={state === "downloading"}
+              loadingText="Downloading update…"
+              onClick={() => {
+                if (state === "current") setState("downloading");
               }}
-              onRestart={() => {
-                if (state === "downloading") {
-                  setWaiting(true);
-                  return;
-                }
-                setOpen(false);
-                setState("installed");
-              }}
-            />
-          </>
-        )}
-      </Flex>
-    </Flex>
+            >
+              Check for Updates…
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setState("downloading")}>
+              Simulate automatic check
+            </Button>
+            <Text>{state === "installed" ? "Prompt Studio 0.49.0 is running" : "Prompt Studio 0.48.0 is running"}</Text>
+          </Flex>
+        }
+      />
+    </Box>
   );
 };

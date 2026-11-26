@@ -34,7 +34,6 @@ export const createDesktopUpdates = (logger: ReturnType<typeof createLogger>, on
     updater: autoUpdater,
     openExternal: (url) => shell.openExternal(url),
     onUpdateProgress: updateNotifications.progress,
-    onUpgradeChanged: updateNotifications.upgradeChanged,
     onUpdateNotAvailable: updateNotifications.notAvailable,
     onUpdateDownloaded: updateNotifications.downloaded,
     onUpdateError: updateNotifications.failed,
@@ -48,8 +47,8 @@ export const createDesktopUpdates = (logger: ReturnType<typeof createLogger>, on
 
   return {
     check: () => updateManager.checkForUpdates(),
-    takeNotice: () => updateNotifications.take(updateManager.upgrade),
-    canInstall: () => updateManager.upgrade?.ready ?? false,
+    takeNotice: () => updateNotifications.take(updateManager.downloadedVersion),
+    canInstall: () => Boolean(updateManager.downloadedVersion),
     notifyInstalled: () => {
       if (app.isPackaged) updateNotifications.installed();
     },

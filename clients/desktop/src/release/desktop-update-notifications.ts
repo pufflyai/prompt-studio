@@ -1,9 +1,4 @@
-import type {
-  DesktopUpdateNotice,
-  DesktopUpdateOutcome,
-  DesktopUpdatePhase,
-  DesktopUpgradeAvailability,
-} from "../desktop-api";
+import type { DesktopUpdateNotice, DesktopUpdateOutcome, DesktopUpdatePhase } from "../desktop-api";
 import type { DesktopUpdateReceipt } from "./desktop-update-receipt";
 
 interface DesktopUpdateNotificationsOptions {
@@ -21,7 +16,6 @@ const progressTitles = {
 export const createDesktopUpdateNotifications = (options: DesktopUpdateNotificationsOptions) => {
   let pending: DesktopUpdateOutcome | undefined;
   let pendingInstallation: DesktopUpdateOutcome | undefined;
-  let promptForUpgrade = false;
   // Keep the current phase available after a reload. Null delivers the clear once.
   let progressTitle: string | null | undefined;
   const show = (title: string, message: string, level: DesktopUpdateOutcome["level"] = "info") => {
@@ -34,14 +28,13 @@ export const createDesktopUpdateNotifications = (options: DesktopUpdateNotificat
   };
 
   return {
-    take(availability?: DesktopUpgradeAvailability | null): DesktopUpdateNotice | undefined {
+    take(downloadedVersion?: string | null): DesktopUpdateNotice | undefined {
       const outcome = pending;
       const installed = pendingInstallation;
       pending = undefined;
       pendingInstallation = undefined;
       const title = progressTitle;
-      const upgrade = availability ? { ...availability, prompt: promptForUpgrade } : availability;
-      promptForUpgrade = false;
+      const upgrade = downloadedVersion == null ? downloadedVersion : { version: downloadedVersion };
       if (title === undefined && !installed && upgrade === undefined) return outcome;
       if (title === null) progressTitle = undefined;
       return {
@@ -51,10 +44,6 @@ export const createDesktopUpdateNotifications = (options: DesktopUpdateNotificat
         ...(installed ? { installed } : {}),
         ...(upgrade === undefined ? {} : { upgrade }),
       };
-    },
-    upgradeChanged(prompt: boolean) {
-      promptForUpgrade = prompt;
-      options.onNotice();
     },
     progress(phase: DesktopUpdatePhase | undefined) {
       if (!phase && !progressTitle) return;
@@ -67,6 +56,7 @@ export const createDesktopUpdateNotifications = (options: DesktopUpdateNotificat
         `You're running Prompt Studio ${options.currentVersion}. There are no newer updates available for this installation.`,
       ),
     downloaded: (version: string) => {
+      pending = undefined;
       try {
         options.receipt.recordDownload(version);
       } catch (error) {
