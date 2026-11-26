@@ -20,7 +20,7 @@ import type {
 import type { EventBus } from "../features/sync/event-bus";
 import { activatePublishedExtensions } from "./activate-published-extension";
 import { serializeExtensionChoices } from "./extension-choice-service";
-import { createExtensionEnablement } from "./extension-enablement";
+import { assertExpectedExtensionProvider, createExtensionEnablement } from "./extension-enablement";
 import {
   type PruneProjectExtensionInstancesInput,
   pruneProjectExtensionInstances as pruneProjectExtensionInstancesImpl,
@@ -225,10 +225,14 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     }
   };
 
-  const enableInstalledSourceForProject = async (input: EnableInstalledSourceInput) => {
+  const enableInstalledSourceForProject = async (
+    input: EnableInstalledSourceInput,
+    options: { expectedProvider?: string } = {},
+  ) => {
     // Prefix ownership is checked before the source and instance rows exist, so a
     // rejected enable leaves nothing behind to clean up.
     try {
+      await assertExpectedExtensionProvider(getProjectExtensionInstance, input, options.expectedProvider);
       await deps.validateResourcePrefixes?.(input.projectId, {
         extension_id: input.extensionId,
         source_kind: input.sourceKind ?? "local_path",
@@ -239,7 +243,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
       const installedSource = await registerInstalledSource(input);
       const existing = await findProjectInstanceForSource(input, installedSource);
       const candidate = existing ?? (await createProjectInstance(input, installedSource));
-      const instance = await claimExtensionId(candidate, installedSource);
+      const instance = await claimExtensionId(candidate, installedSource, options.expectedProvider);
       if (!instance) throw new Error(`Failed to enable extension: ${input.name}`);
       // Registration precedes the first enabled owner, so its execution-gated
       // notification cannot finish this source's frontend until the claim exists.

@@ -7,6 +7,7 @@ import * as installBrowserCommand from "./install-browser";
 import * as packCommand from "./pack";
 import * as permissionsCommand from "./permissions";
 import * as publicationCommand from "./publication";
+import * as reviewCommand from "./review";
 import * as testCommand from "./test";
 import * as updateCommand from "./update";
 
@@ -18,6 +19,7 @@ export const { command, describe, subcommands, builder, handler } = defineComman
   devCommand,
   installBrowserCommand,
   updateCommand,
+  reviewCommand,
   publicationCommand,
   testCommand,
   packCommand,

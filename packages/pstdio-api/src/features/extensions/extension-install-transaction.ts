@@ -25,8 +25,9 @@ import {
   resolvePstdioHome,
   withFileMutationLock,
 } from "pstdio-paths";
-import { setupLogger } from "../../lib/logger";
+import { apiLogger, setupLogger } from "../../lib/logger";
 import { runExtensionPreparation } from "./extension-preparation";
+import { assertExtensionUpgradeWorkingTree } from "./extension-upgrade-baseline";
 import { readPreparationRecord } from "./preparation-record";
 import { promotePreparedSource } from "./promote-extension-source";
 
@@ -41,6 +42,7 @@ interface InstallationIntent {
   preserveDependencies: boolean;
   replaceExisting: boolean;
   upgradeFromVersion?: string | null;
+  upgradeBaseline?: string;
   revision?: PreparedExtensionRevision;
   owner: { pid: number; threadId: number; worker?: string };
   ownership?: { ownerPath: string; token: string; previousToken: string | null };
@@ -103,6 +105,7 @@ export const activatePreparedInstall = async (transaction: ExtensionInstallTrans
     return runExtensionPreparation<void>("install.activate", { transaction }, { priority: "requested" });
   const intent = readIntent(transaction);
   if (intent.ownership) return assertPreparedInstallOwned(transaction);
+  const { upgradeBaseline } = intent;
   await promotePreparedSource(
     intent.installPath,
     intent.targetPath,
@@ -121,10 +124,36 @@ export const activatePreparedInstall = async (transaction: ExtensionInstallTrans
       intent.ownership = ownership;
       writeIntent(transaction.intentPath, intent);
     },
+    upgradeBaseline ? (previousPath) => assertExtensionUpgradeWorkingTree(previousPath, upgradeBaseline) : undefined,
   );
 };
+const oldDependencies = (intent: InstallationIntent) => join(intent.root, ".previous", "node_modules");
+const dependencyGarbage = (intent: InstallationIntent) => `${intent.root}.old-dependencies`;
+
+const detachOldDependencies = (intent: InstallationIntent) => {
+  const previous = oldDependencies(intent);
+  const garbage = dependencyGarbage(intent);
+  if (existsSync(previous)) renameSync(previous, garbage);
+  return existsSync(garbage) ? garbage : undefined;
+};
+
+const removeDetachedDependencies = (path: string) => {
+  // Let the first action use the new extension before starting package-tree maintenance.
+  // The committed receipt keeps the directory discoverable if the host exits first.
+  setTimeout(() => {
+    void rm(path, { recursive: true, force: true }).catch((error) =>
+      apiLogger.warn(
+        { event: "extension.upgrade.dependency_cleanup_failed", err: error },
+        "Could not remove old dependencies",
+      ),
+    );
+  }, 1_000).unref();
+};
+
 const restorePreviousInstall = (intent: InstallationIntent) => {
   const previous = join(intent.root, ".previous");
+  const detached = dependencyGarbage(intent);
+  if (existsSync(detached) && !existsSync(oldDependencies(intent))) renameSync(detached, oldDependencies(intent));
   if (
     intent.preserveDependencies &&
     existsSync(previous) &&
@@ -137,9 +166,41 @@ const restorePreviousInstall = (intent: InstallationIntent) => {
   if (intent.ownership!.previousToken) writeFileSync(intent.ownership!.ownerPath, intent.ownership!.previousToken!);
   else rmSync(intent.ownership!.ownerPath, { force: true });
 };
+const preserveChangedUpgradeBackup = (intent: InstallationIntent, transaction: ExtensionInstallTransaction) => {
+  const previous = join(intent.root, ".previous");
+  if (!intent.upgradeBaseline || !existsSync(previous)) return;
+  try {
+    assertExtensionUpgradeWorkingTree(previous, intent.upgradeBaseline);
+    return;
+  } catch {
+    // An editor can still write to the moved directory while the host publishes the new revision.
+  }
+  const directory = join(dirname(dirname(intent.targetPath)), ".extension-upgrade-recovery");
+  mkdirSync(directory, { recursive: true });
+  const id = basename(transaction.intentPath, ".json");
+  const recoveryPath = join(directory, `${basename(intent.targetPath)}-${id}`);
+  renameSync(previous, recoveryPath);
+  apiLogger.warn(
+    { event: "extension.upgrade.recovered_edits", sourcePath: intent.targetPath, recoveryPath },
+    "Preserved local extension edits written during an upgrade",
+  );
+};
+
 export const settlePreparedInstall = async (transaction: ExtensionInstallTransaction, commit: boolean) => {
-  if (isPreparationHost)
-    return runExtensionPreparation<void>("install.settle", { transaction, commit }, { priority: "requested" });
+  if (!isPreparationHost) {
+    const detached = settlePreparedInstallOnWorker(transaction, commit);
+    if (detached) removeDetachedDependencies(detached);
+    return;
+  }
+  const detached = await runExtensionPreparation<string | undefined>(
+    "install.settle",
+    { transaction, commit },
+    { priority: "requested" },
+  );
+  if (detached) removeDetachedDependencies(detached);
+};
+
+export const settlePreparedInstallOnWorker = (transaction: ExtensionInstallTransaction, commit: boolean) => {
   let intent: InstallationIntent;
   try {
     intent = JSON.parse(readFileSync(transaction.intentPath, "utf8"));
@@ -149,8 +210,9 @@ export const settlePreparedInstall = async (transaction: ExtensionInstallTransac
   }
   const extensionsRoot = realpathSync.native(dirname(intent.targetPath));
   const lock = join(dirname(extensionsRoot), ".extension-source-locks", basename(intent.targetPath));
-  withFileMutationLock(lock, () => {
+  const detached = withFileMutationLock(lock, () => {
     if (!existsSync(transaction.intentPath)) return;
+    let detached: string | undefined;
     const owns = ownsTarget(intent);
     if (commit && !owns) throw new Error("A newer installation replaced this prepared extension.");
     if (!commit && ownsClaim(intent)) {
@@ -162,6 +224,10 @@ export const settlePreparedInstall = async (transaction: ExtensionInstallTransac
       else rmSync(intent.ownership!.ownerPath, { force: true });
     }
     if (commit) {
+      preserveChangedUpgradeBackup(intent, transaction);
+      // A committed upgrade retains authored backup changes at this point. Generated
+      // dependencies can be removed asynchronously without delaying activation.
+      if (intent.upgradeBaseline) detached = detachOldDependencies(intent);
       const completed = completedPath(transaction);
       mkdirSync(dirname(completed), { recursive: true });
       writeIntent(completed, intent);
@@ -169,13 +235,13 @@ export const settlePreparedInstall = async (transaction: ExtensionInstallTransac
       rmSync(intent.root, { recursive: true, force: true });
     }
     rmSync(transaction.intentPath, { force: true });
+    return detached;
   });
-  // The replacement is active and the completion record owns the retired directory.
-  // Shutdown or the next launch retries cleanup if this worker exits before it finishes.
   if (commit)
     void rm(intent.root, { recursive: true, force: true }).catch((err) =>
       setupLogger.warn({ err, event: "extension.installation.cleanup" }, "Retired extension cleanup will retry"),
     );
+  return detached;
 };
 const recoverInstall = async (intentPath: string, disposing: boolean) => {
   const transaction = { intentPath };
@@ -203,8 +269,13 @@ export const recoverPreparedInstalls = async (disposing = false) => {
       const intent = readPreparationRecord<InstallationIntent>(path);
       if (!intent) continue;
       if (!isFileMutationOwnerAlive(intent.owner) || (disposing && intent.owner.pid === process.pid)) {
-        await rm(intent.root, { recursive: true, force: true });
-        rmSync(path, { force: true });
+        // A process can exit after committing the new revision but before removing old dependencies.
+        // Keep the recovery receipt if cleanup fails so the next run can retry.
+        try {
+          await rm(intent.root, { recursive: true, force: true });
+          await rm(dependencyGarbage(intent), { recursive: true, force: true });
+          rmSync(path, { force: true });
+        } catch {}
       }
     }
   for (const name of readdirSync(root).filter((name) => name.endsWith(".json")))

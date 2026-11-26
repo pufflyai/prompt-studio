@@ -296,6 +296,41 @@ describe("extension upgrade service", () => {
   });
 });
 
+test("requires review when the project is using a separate local copy with the same ID", async () => {
+  const installExtensionSource = mock(async () => installed as never);
+  const service = createExtensionUpgradeService({
+    extensionService: {
+      ...idleExtensionService,
+      getProjectExtensionInstance: async () =>
+        ({
+          instance: { ...instance, enabled: false },
+          installedSource: {
+            ...installedSource,
+            source_ref: namedSourceRef("d".repeat(40), installedSource.install_name),
+          },
+        }) as never,
+      listProjectExtensionInstances: async () =>
+        [
+          {
+            instance: { ...instance, id: "local", enabled: true },
+            installedSource: {
+              ...installedSource,
+              source_kind: "local_path",
+              display_name: "Local Planner",
+            },
+          },
+        ] as never,
+    },
+    installExtensionSource,
+    release: { source: "git", ref: "pstdio@0.27.0" },
+    resolveReleaseCommit: async () => "e".repeat(40),
+    workspaceService: emptyWorkspaceService,
+  });
+
+  await expect(service.upgrade("project-1", "instance-1")).rejects.toThrow("using a local copy of Local Planner");
+  expect(installExtensionSource).not.toHaveBeenCalled();
+});
+
 describe("catalog extension installation and upgrades", () => {
   test("replaces a named extension with the source from the host release", async () => {
     const installExtensionSource = mock(async () => installed as never);
@@ -378,7 +413,7 @@ describe("catalog extension installation and upgrades", () => {
     expect(await second).toBe(installed);
   });
 
-  test("replaces a marketplace source that was adopted without provenance", async () => {
+  test("requires review before switching an active copy with no provenance", async () => {
     const installExtensionSource = mock(async () => installed as never);
     const registerInstalledSource = mock(async () => ({ ...installedSource, source_hash: "new-hash" }) as never);
     const service = createExtensionUpgradeService({
@@ -401,17 +436,9 @@ describe("catalog extension installation and upgrades", () => {
       workspaceService: emptyWorkspaceService,
     });
 
-    const result = await service.upgrade("project-1", "instance-1");
-
-    expect(installExtensionSource).toHaveBeenCalledWith(
-      expect.objectContaining({
-        force: true,
-        installName: "pstdio-planner",
-        hostReleaseRef: "pstdio@0.27.0",
-        source: "pstdio-planner",
-      }),
-    );
-    expect(result?.changed).toBe(true);
+    await expectRejection(service.upgrade("project-1", "instance-1")).toThrow("local copy");
+    expect(installExtensionSource).not.toHaveBeenCalled();
+    expect(registerInstalledSource).not.toHaveBeenCalled();
   });
 
   test("refuses a Git extension that is not in the marketplace", async () => {

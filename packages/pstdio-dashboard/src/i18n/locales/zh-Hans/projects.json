@@ -61,6 +61,7 @@
         "errorCopied": "错误已复制"
       },
       "upgrade": {
+        "reviewNeeded": "已保留本地文件",
         "waiting": "等待升级",
         "action": "升级",
         "current": "扩展已是最新",
@@ -184,6 +185,7 @@
         "retry": "重试",
         "dismiss": "关闭",
         "upgradingButton": "正在升级",
+        "batchReviewRequired": "需要审核（{{count}}）",
         "batchFailed": "{{total}} 个升级中有 {{count}} 个失败",
         "installingButton": "正在安装"
       },

@@ -201,6 +201,8 @@
       "entry": [
         // The API and compiled CLI start preparation in an isolated worker by path.
         "src/features/extensions/extension-preparation-worker.ts",
+        // The release build starts bundle preparation in its own application home.
+        "scripts/prepare-release-bundle.ts",
         "package.json",
         "src/index.ts",
         "src/server.ts",

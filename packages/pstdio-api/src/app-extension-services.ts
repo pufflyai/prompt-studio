@@ -18,6 +18,7 @@ import {
 } from "./features/extensions/extension-connection-service";
 import { subscribeExtensionEnablementInvalidation } from "./features/extensions/extension-enablement-invalidation";
 import { createExtensionProcessOwners } from "./features/extensions/extension-process-owners";
+import { createExtensionReleasePrefetcher } from "./features/extensions/extension-release-prefetch";
 import type { LoadedExtensionSnapshot } from "./features/extensions/extension-runtime";
 import { createExtensionTargets } from "./features/extensions/extension-targets";
 import { installExtensionSource } from "./features/extensions/install-extension-source";
@@ -92,10 +93,13 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
     validateResourcePrefixes: (projectId, source) =>
       extensionRuntimeCatalog.validateResourcePrefixes(projectId, source),
   });
+  const prefetchRelease = createExtensionReleasePrefetcher();
   const extensionUpgradeService = createExtensionUpgradeService({
     extensionService,
     installExtensionSource: input.dependencies.installExtensionSource,
     release: input.config.release,
+    prefetchRegistryRelease: prefetchRelease,
+    prefetchBundledRelease: prefetchRelease,
     workspaceService: input.workspaceService,
   });
   installCatalog = createCatalogInstaller({

@@ -5,7 +5,12 @@ import {
   matchesExtensionInstallName,
 } from "pstdio-api-contracts/extension-host";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
-import { acceptPreparedRevision, preparedRevisionState, readAcceptedRevision } from "pstdio-extensions";
+import {
+  acceptPreparedRevision,
+  preparedRevisionState,
+  primeAcceptedExtensionBackend,
+  readAcceptedRevision,
+} from "pstdio-extensions";
 import {
   activatePreparedInstall,
   assertPreparedInstallOwned,
@@ -234,6 +239,8 @@ export const createInstalledSourceRegistrar =
       if (notification.changed) await notify(notification.path);
       if (input.installation) await settlePreparedInstall(input.installation, true);
       deps.emitInstalledSource(state.registered);
+      if (input.preparedRevision?.prebuiltRelease && input.installation && previousRevision)
+        void primeAcceptedExtensionBackend(input.sourcePath, input.preparedRevision).catch(() => {});
       return { installedSource, created };
     } catch (error) {
       await rollbackRegistration(deps, input, state, notify);

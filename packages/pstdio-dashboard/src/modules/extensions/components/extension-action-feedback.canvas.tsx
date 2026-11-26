@@ -44,6 +44,7 @@ export const UpgradeFeedback = () => {
                   ids: ["planner", "notes", "tickets"],
                   completed,
                   failed: status === "error" ? 1 : 0,
+                  reviewRequired: 0,
                   running: completed < 3,
                 }
               : undefined

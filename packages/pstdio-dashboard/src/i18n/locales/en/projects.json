@@ -61,6 +61,7 @@
         "errorCopied": "Error copied"
       },
       "upgrade": {
+        "reviewNeeded": "Local files kept",
         "waiting": "Waiting to upgrade",
         "action": "Upgrade",
         "current": "Extension is already current",
@@ -186,6 +187,7 @@
         "retry": "Retry",
         "dismiss": "Dismiss",
         "upgradingButton": "Upgrading",
+        "batchReviewRequired": "Needs review ({{count}})",
         "batchFailed": "{{count}} of {{total}} upgrades failed",
         "installingButton": "Installing"
       },

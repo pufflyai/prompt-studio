@@ -99,7 +99,7 @@ export const toProjectExtensionInstance = (
   instance: InstanceLike,
   installedSource: InstalledSourceLike,
   diskSourceHash?: string | null,
-  options: { canUpgrade?: boolean } = {},
+  options: { canUpgrade?: boolean; hasPublishedAlternative?: boolean } = {},
 ): ProjectExtensionInstance => {
   const manifest = (installedSource.manifest_json ?? {}) as Record<string, unknown>;
   const incompatible = compatibilityError(installedSource, { upgradable: options.canUpgrade });
