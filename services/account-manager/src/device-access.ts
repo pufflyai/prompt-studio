@@ -28,6 +28,7 @@ import { readProviderIdentity } from "./provider-identity";
 import { DeviceAccessDenied } from "./renewal-errors";
 import { accounts, projectMembers, teams } from "./schema";
 import { hasProjectKeyHistory, spaceKeysInTransaction } from "./space-keys";
+import { resolveTeamCapabilities } from "./team-capabilities";
 import {
   acceptTeamInvitation,
   cancelTeamInvitation,
@@ -157,11 +158,18 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
       team(token, id, (transaction, accountId, userId) =>
         finishOwnershipOffer(transaction, accountId, userId, identitySchema.parse(offerId), decision),
       ),
-    projectAccess: (token: string, id: string) => owner(token, id, listTeamProjectAccess),
-    updateProjectAccess: (token: string, id: string, project: string, userId: string, granted: boolean) =>
-      owner(token, id, (transaction, accountId) =>
-        updateTeamProjectGrant(transaction, accountId, identitySchema.parse(project), userId, granted),
+    withTeam: team,
+    projectAccess: (token: string, id: string) =>
+      team(token, id, (transaction, accountId, userId, role) =>
+        listTeamProjectAccess(transaction, accountId, role === "owner" ? undefined : userId),
       ),
+    updateProjectAccess: (token: string, id: string, project: string, userId: string, granted: boolean) =>
+      team(token, id, async (transaction, accountId, actorId) => {
+        const workbenchId = identitySchema.parse(project);
+        const capabilities = await resolveTeamCapabilities(transaction, accountId, actorId, workbenchId);
+        if (!capabilities.manageProjectAccess) throw new TeamMembershipDenied("Project access is required");
+        return updateTeamProjectGrant(transaction, accountId, workbenchId, userId, granted);
+      }),
     invitations: (token: string, id: string) => owner(token, id, listTeamInvitations),
     inviteCodes: (token: string, id: string) => owner(token, id, listTeamInviteCodes),
     inviteCode: (token: string, id: string) => owner(token, id, createTeamInviteCode),

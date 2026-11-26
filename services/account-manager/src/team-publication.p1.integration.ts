@@ -11,7 +11,7 @@ const fixture = createAuthorityFixture(implementation);
 beforeAll(() => fixture.initialize());
 afterAll(() => fixture.close());
 
-test("the team owner and a project member get different publication permissions on the same encrypted catalog", async () => {
+test("every assigned member can publish ordinary extensions across team ownership changes", async () => {
   const manager = fixture.owner();
   const connection = connectManager(fixture.databaseUrl);
   const config = authenticationConfig(fixture.databaseUrl);
@@ -81,8 +81,8 @@ test("the team owner and a project member get different publication permissions 
     );
     expect(first).toMatchObject({ grants: { publication: { documents, canWrite: true } }, canPublish: true });
     expect(await access(colleague.token)).toMatchObject({
-      grants: { publication: { documents, canWrite: false } },
-      canPublish: false,
+      grants: { publication: { documents, canWrite: true } },
+      canPublish: true,
     });
 
     const ownership = `/v1/teams/${accountId}/ownership`;
@@ -90,7 +90,7 @@ test("the team owner and a project member get different publication permissions 
     expect(offer.status).toBe(201);
     const { id } = teamOwnershipOfferSchema.parse(await offer.json());
     expect((await request(colleague.token, `${ownership}/${id}`, { decision: "accept" })).status).toBe(200);
-    expect((await access(owner.token)).canPublish).toBe(false);
+    expect((await access(owner.token)).canPublish).toBe(true);
     expect((await access(colleague.token)).canPublish).toBe(true);
     expect((await request(colleague.token, projectAccess, { userId: ownerId, granted: false })).status).toBe(200);
     expect((await renewal(owner.token)).status).toBe(401);

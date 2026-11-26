@@ -68,7 +68,9 @@ test("team project access is explicit and revocation rotates only the affected s
     expect((await grant("project-a", morgan.accountId, true, morgan.token)).status).toBe(403);
     expect((await grant("project-a", "outsider", true)).status).toBe(403);
     expect((await grant("project-a", morgan.accountId, true)).status).toBe(200);
-    expect((await request(morgan.token, `${team}/projects`)).status).toBe(403);
+    expect(await (await request(morgan.token, `${team}/projects`)).json()).toEqual([
+      { workbenchId: "project-a", userIds: [alex.accountId, morgan.accountId].sort() },
+    ]);
     expect(await (await request(alex.token, `${team}/projects`)).json()).toEqual([
       { workbenchId: "project-a", userIds: [alex.accountId, morgan.accountId].sort() },
       { workbenchId: "project-b", userIds: [alex.accountId] },

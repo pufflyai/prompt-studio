@@ -3,25 +3,17 @@ import { deriveDocumentNamingKey, publicationDocumentNames, syncDocumentId } fro
 import type { ManagerTransaction } from "./database";
 import { findDeviceAccess } from "./devices";
 import { EnvironmentAccessDenied } from "./renewal-errors";
-import { spaceKeys, teamMembers } from "./schema";
+import { spaceKeys } from "./schema";
 import { spaceKeysInTransaction } from "./space-keys";
+import { resolveTeamCapabilities } from "./team-capabilities";
 import { lockAccount, withAccountTransaction } from "./transactions";
 
 type DeviceAccess = NonNullable<Awaited<ReturnType<typeof findDeviceAccess>>>;
 type Database = Parameters<typeof withAccountTransaction>[0];
 
 export const canPublishForTeam = async (transaction: ManagerTransaction, access: DeviceAccess) => {
-  const [owner] = await transaction
-    .select({ userId: teamMembers.userId })
-    .from(teamMembers)
-    .where(
-      and(
-        eq(teamMembers.accountId, access.accountId),
-        eq(teamMembers.userId, access.userId),
-        eq(teamMembers.role, "owner"),
-      ),
-    );
-  return owner !== undefined;
+  const capabilities = await resolveTeamCapabilities(transaction, access.accountId, access.userId, access.workbenchId);
+  return capabilities.publishProjectExtensions;
 };
 
 export const sameDeviceAccess = (expected: DeviceAccess, current: DeviceAccess | null): current is DeviceAccess =>

@@ -12,7 +12,7 @@ export type Publication = z.infer<typeof publicationSchema>;
 
 export class PublicationAccessDenied extends Error {
   constructor() {
-    super("Only the team owner can change published extensions. Verify your Cloud access and try again.");
+    super("Project access is required to change published extensions. Verify your Cloud access and try again.");
   }
 }
 

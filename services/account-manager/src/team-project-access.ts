@@ -2,7 +2,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import type { ManagerTransaction } from "./database";
 import { accounts, projectMembers, teamMembers, workbenches } from "./schema";
 import { rotateProjectSharedKeys } from "./space-keys";
-import { TeamMembershipDenied } from "./teams";
+import { canUseTeamProject, TeamMembershipDenied } from "./teams";
 
 const teamProject = (accountId: string, workbenchId: string) =>
   and(eq(projectMembers.accountId, accountId), eq(projectMembers.workbenchId, workbenchId));
@@ -29,7 +29,7 @@ export const teamProjectGrant = async (
 };
 
 // Owners can manage grant metadata even after removing their own content access.
-export const listTeamProjectAccess = (transaction: ManagerTransaction, accountId: string) =>
+export const listTeamProjectAccess = (transaction: ManagerTransaction, accountId: string, assignedUserId?: string) =>
   transaction
     .select({
       workbenchId: workbenches.id,
@@ -41,7 +41,14 @@ export const listTeamProjectAccess = (transaction: ManagerTransaction, accountId
       projectMembers,
       and(eq(projectMembers.accountId, workbenches.accountId), eq(projectMembers.workbenchId, workbenches.id)),
     )
-    .where(eq(workbenches.accountId, accountId))
+    .where(
+      and(
+        eq(workbenches.accountId, accountId),
+        assignedUserId === undefined
+          ? undefined
+          : canUseTeamProject(transaction, accountId, workbenches.id, assignedUserId),
+      ),
+    )
     .groupBy(workbenches.id)
     .orderBy(asc(workbenches.id));
 
