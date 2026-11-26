@@ -76,22 +76,24 @@ export async function exportSettledRecords(source: PGlite, file: string, signal?
   try {
     await output.writeFile(Buffer.from("5047434f50590aff0d0a000000000000000000", "hex"));
     await source.transaction(async (tx) => {
-      // Check unpublished canonical rows by key so the payload join can filter deleted rows up front.
-      const {
-        rows: [unpaired],
-      } = await tx.query<{ found: boolean }>(`SELECT EXISTS (
-        SELECT 1 FROM storage_ordered_records r WHERE NOT EXISTS(SELECT 1 FROM storage_current_records c
-        WHERE (c.workbench_id,c.extension_id,c.record_id)=(r.workbench_id,r.extension_id,r.record_id))) AS found`);
-      if (unpaired?.found) throw new NeedsRecordAdmission("Released record has no published representation");
+      // Match every key before reading bodies. A missing side stays in the cursor so the
+      // ordinary admission path can recover it. Tuple locations live only in this snapshot.
       await tx.exec(`SET LOCAL work_mem='96MB';
+        SET LOCAL enable_mergejoin=off;
         DECLARE export_records NO SCROLL CURSOR FOR
+        WITH live AS MATERIALIZED (
+          SELECT c.ctid AS current_tid, r.ctid AS canonical_tid FROM storage_current_records c
+          FULL JOIN storage_ordered_records r USING(workbench_id,extension_id,record_id)
+          WHERE NOT c.deleted OR c.record_id IS NULL
+        )
         SELECT o.id AS owner_id, c.record_id, convert_from(r.state,'UTF8') AS state, c.deleted, c.revision,
-          c.query_values::text,c.native_versions::text,
-          CASE WHEN NOT c.deleted THEN json_build_object('value',c.value,'asset',c.asset,'shared',c.shared,
-            'native_sources',c.native_sources,'record_lifetime',c.record_lifetime)::text END AS live
-        FROM storage_current_records c LEFT JOIN storage_ordered_records r USING(workbench_id,extension_id,record_id)
-        LEFT JOIN pg_temp.reimport_owners o ON o.project_id=c.workbench_id AND o.extension_id=c.extension_id
-        WHERE NOT c.deleted`);
+          c.query_values::text, c.native_versions::text,
+          json_build_object('value',c.value,'asset',c.asset,'shared',c.shared,
+            'native_sources',c.native_sources,'record_lifetime',c.record_lifetime)::text AS live
+        FROM live l
+        LEFT JOIN LATERAL (SELECT * FROM storage_current_records WHERE ctid=l.current_tid OFFSET 0) c ON true
+        LEFT JOIN LATERAL (SELECT state FROM storage_ordered_records WHERE ctid=l.canonical_tid OFFSET 0) r ON true
+        LEFT JOIN pg_temp.reimport_owners o ON o.project_id=c.workbench_id AND o.extension_id=c.extension_id`);
       for (;;) {
         signal?.throwIfAborted();
         const { rows } = await tx.query<ReleasedRecord>("FETCH FORWARD 256 FROM export_records");
