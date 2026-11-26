@@ -10,7 +10,7 @@ export const connection = defineConnection({
   transport: "http",
   auth: { type: "bearer" },
   allowedMethods: ["GET", "POST"],
-  allowedPathPrefixes: ["/v1/templates", "/v1/workspaces"],
+  allowedPathPrefixes: ["/v1/templates", "/v1/workspaces", "/v1/kito-workflow"],
   check: { method: "GET", path: "/v1/templates?limit=1" },
 });
 

@@ -30,6 +30,7 @@ export interface RunDeps {
   recoverRun?(runId: string): Promise<unknown>;
   publishTemplate?(kind: BranchKind, source: BranchSource, signal?: AbortSignal): Promise<TemplateRef>;
   storage: RunStorage;
+  kitoWorkflow?: boolean;
   store: ExtensionStorageApi;
   process: ExtensionProcessApi;
   settings: Settings;
@@ -81,6 +82,9 @@ export interface RunSummary {
 const sources = (runId: string) => `sources/${runId}.tar.gz`;
 const logs = (runId: string) => `logs/${runId}.log`;
 
+const previewMetadata = (kind: BranchKind, kitoWorkflow?: boolean) =>
+  kind === "preview" && kitoWorkflow ? { kito_workflow: "true" } : {};
+
 export async function startRun(
   deps: RunDeps,
   input: {
@@ -129,6 +133,7 @@ export async function startRun(
         {
           pstdio_project_id: deps.projectId,
           purpose: kind === "preview" ? "pstdio-preview" : "remote-testing",
+          ...previewMetadata(kind, deps.kitoWorkflow),
           revision,
           source_sha256: sha256,
         },
