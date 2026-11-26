@@ -12,6 +12,7 @@ import {
   writeDurably,
 } from "./batch-reimport-home";
 import { exportSettledRecords, NeedsRecordAdmission } from "./batch-reimport-records";
+import { releasedJournalDocument } from "./local-upgrade-documents";
 import { stageLocalTransfers } from "./local-upgrade-transfers";
 import { applyPgliteMigrations } from "./migrate-pglite";
 import { openPglite } from "./open-pglite";
@@ -31,7 +32,7 @@ const skipped = new Set([
   "storage_ordered_receipts",
   "storage_document_operations",
 ]);
-const retainedDocument = `NOT starts_with(document_id,'["ordered-')
+const retainedDocument = `NOT ${releasedJournalDocument("document_id")}
   AND (NOT starts_with(document_id,'["resource",') OR (workbench_id,extension_id) NOT IN
     (SELECT o.workbench_id,o.extension_id FROM storage_ordered_owners o WHERE NOT EXISTS
       (SELECT 1 FROM storage_documents d WHERE d.workbench_id=o.workbench_id AND d.extension_id=o.extension_id

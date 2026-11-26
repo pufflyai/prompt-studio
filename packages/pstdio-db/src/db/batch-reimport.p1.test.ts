@@ -43,7 +43,8 @@ async function seed(old: Awaited<ReturnType<typeof createTextLogOwnerFixture>>) 
             VALUES ('p','example.records','laptop','sessions','laptop','recent','{}','old-entry',3,0);
           INSERT INTO storage_documents(workbench_id,extension_id,document_id,state)
             VALUES ('p','example.records','["ordered-directory"]',decode('0000','hex')),
-                   ('p','example.records','["ordered-native-field","old"]',decode('0000','hex'));
+                   ('p','example.records','["ordered-native-field","old"]',decode('0000','hex')),
+                   ('p','example.records','["ordered-shopping-list","draft"]',decode('0000','hex'));
           INSERT INTO storage_ordered_operations(workbench_id,extension_id,operation_id,fingerprint) VALUES ('p','example.records','obsolete','fp');
           INSERT INTO storage_ordered_receipts(workbench_id,extension_id,epoch,operation_id,admission_fingerprint,state,indexed)
           VALUES ('p','example.records','local:p','obsolete','fp','accepted',true);`);
@@ -81,7 +82,9 @@ for (const lastMigration of [7, 9, 10]) {
           { value: { title: "local session" }, pending_id: null },
         ]);
         expect((await db.pglite.query("SELECT 1 FROM history_sources")).rows).toEqual([]);
-        expect((await db.pglite.query(`SELECT 1 FROM documents WHERE starts_with(key,'["ordered-')`)).rows).toEqual([]);
+        expect((await db.pglite.query(`SELECT key FROM documents WHERE starts_with(key,'["ordered-')`)).rows).toEqual([
+          { key: '["ordered-shopping-list","draft"]' },
+        ]);
         await db.pglite.exec("UPDATE projects SET name='After' WHERE id='p'");
       } finally {
         await db.close();
