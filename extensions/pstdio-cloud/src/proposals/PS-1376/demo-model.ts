@@ -21,7 +21,7 @@ const catalog: Record<string, DemoTool> = {
   pulse: { id: "pulse", name: "Onefin Pulse", enabled: true },
   notes: { id: "notes", name: "Notes", enabled: true },
 };
-const initialTools = (): Record<string, DemoTool[]> => ({
+const initialTools = () => ({
   a: [catalog.pulse, catalog.notes],
   b: [catalog.notes],
 });
@@ -30,7 +30,7 @@ export const useTeamDemo = () => {
   const [viewer, setViewer] = useState("alex");
   const [members, setMembers] = useState(["alex", "morgan"]);
   const [projects, setProjects] = useState(initialProjects);
-  const [tools, setTools] = useState(initialTools);
+  const [tools, setTools] = useState<Record<string, DemoTool[]>>(initialTools);
   const [invitation, setInvitation] = useState<string>();
   const [managedPreview, setManagedPreviewState] = useState(false);
   const [requirements, setRequirements] = useState<Record<string, string[]>>({ a: ["pulse"], b: [] });
@@ -91,16 +91,13 @@ export const useTeamDemo = () => {
     },
     toggleAccess(projectId: string, id: string) {
       setProjects((current) =>
-        current.map((project) =>
-          project.id !== projectId
-            ? project
-            : {
-                ...project,
-                members: project.members.includes(id)
-                  ? project.members.filter((member) => member !== id)
-                  : [...project.members, id],
-              },
-        ),
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+          const members = project.members.includes(id)
+            ? project.members.filter((member) => member !== id)
+            : [...project.members, id];
+          return { ...project, members };
+        }),
       );
     },
     updateTool,
