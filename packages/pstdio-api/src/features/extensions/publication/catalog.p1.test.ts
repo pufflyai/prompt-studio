@@ -111,12 +111,24 @@ test("an ordinary team member can adopt a private package and cannot change the 
   const root = await mkdtemp(join(tmpdir(), "team-extension-publication-"));
   const app = await createTestApp();
   let canPublish = false;
+  let workbenchId: string;
+  let grantId = "active-project-grant";
+  let rotateGrant = false;
   const manager = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
     async fetch(request) {
-      if (new URL(request.url).pathname !== "/v1/environment-access") return new Response(null, { status: 404 });
+      const address = new URL(request.url);
       if (request.headers.get("authorization") !== "Bearer team-device-credential")
+        return new Response(null, { status: 401 });
+      if (address.pathname === "/v1/workbenches" && address.searchParams.get("accountId") === "team") {
+        const list = [{ workbenchId, grantId }];
+        if (rotateGrant) grantId = "new-project-grant";
+        return Response.json(list);
+      }
+      if (address.pathname !== "/v1/environment-access") return new Response(null, { status: 404 });
+      const renewal = (await request.json()) as { accountId: string; workbenchId: string; grantId?: string };
+      if (renewal.accountId !== "team" || renewal.workbenchId !== workbenchId || renewal.grantId !== grantId)
         return new Response(null, { status: 401 });
       return Response.json({ canPublish });
     },
@@ -130,6 +142,7 @@ test("an ordinary team member can adopt a private package and cannot change the 
   try {
     const managerOrigin = manager.url.origin;
     const project = await app.deps.projectService.create(folderProjectInput({ name: "Private team tools" }));
+    workbenchId = project.id;
     await createNativeStore(file).save({
       managerOrigin,
       relayOrigin: managerOrigin,
@@ -182,6 +195,10 @@ test("an ordinary team member can adopt a private package and cannot change the 
     expect(await read()).toEqual(initial);
 
     canPublish = true;
+    rotateGrant = true;
+    expect((await publish(initial.revision)).status).toBe(403);
+    expect(await read()).toEqual(initial);
+    rotateGrant = false;
     expect((await publish(initial.revision)).status).toBe(200);
     const selected = await read();
     expect(selected.value?.enabled).toBe(true);

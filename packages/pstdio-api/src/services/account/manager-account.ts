@@ -5,7 +5,9 @@ import { ManagerRequestDenied, managerRequest } from "./manager-client";
 import { matchesDeviceAccount } from "./native-device-read";
 import { type DeviceLogin, type ScopedDeviceLogin, scopedAccountId, signedInIdentity } from "./native-store";
 
-const workbenchesSchema = z.array(z.object({ workbenchId: identitySchema, grantId: identitySchema.optional() }));
+export const managerWorkbenchesSchema = z.array(
+  z.object({ workbenchId: identitySchema, grantId: identitySchema.optional() }),
+);
 const accountSchema = z.object({
   features: z.object({ relay: z.boolean() }),
   projectDeletion: z.boolean().optional(),
@@ -32,7 +34,7 @@ export const readManagerAccount = async (login: ScopedDeviceLogin, signal?: Abor
       accountSchema.parse(data),
     ),
     managerRequest(login.managerOrigin, path("/v1/workbenches"), login.token, undefined, signal).then((data) =>
-      workbenchesSchema.parse(data),
+      managerWorkbenchesSchema.parse(data),
     ),
   ]);
   const deletions =
