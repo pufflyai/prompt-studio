@@ -1,6 +1,11 @@
 import { defineCommand, l10n } from "@pstdio/sdk/extensions";
 
 export const cloudCommands = {
+  "project-name": defineCommand({
+    id: "project-name",
+    title: l10n("commands.projectName", "Read project name"),
+    run: (ctx) => ctx.project.name,
+  }),
   "project-state": defineCommand({
     id: "project-state",
     title: l10n("commands.projectState", "Read project preparation"),

@@ -1,4 +1,5 @@
 {
+  "commands.projectName": "Lire le nom du projet",
   "commands.projectState": "Lire la préparation du projet",
   "status.preparing": "Préparation du projet",
   "views.status": "Prompt Studio Cloud",
@@ -48,7 +49,7 @@
   "project.makeLocal": "Rendre ce projet local",
   "project.makeLocalButton": "Rendre local",
   "project.localEffect": "La synchronisation s’arrête sur tous les appareils. Chaque appareil conserve sa copie.",
-  "project.confirmLocal": "Rendre ce projet local ?",
+  "project.confirmNamedLocal": "Rendre {{name}} local ?",
   "project.confirmEffect": "La synchronisation s’arrête sur tous les appareils. Chaque appareil conserve sa copie. Une nouvelle synchronisation fusionne les copies ; si les deux copies ont modifié la même chose, une modification est conservée.",
   "status.uploading": "Envoi",
   "status.checking": "Synchronisation des données",
