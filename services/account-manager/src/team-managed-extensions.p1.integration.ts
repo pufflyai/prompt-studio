@@ -74,7 +74,7 @@ test("only the owner selects immutable team packages; project grants gate packag
     };
     const upload = (token: string, descriptor = metadata, payload = bytes) =>
       handler(
-        new Request(authentication.config.origin + `${policy}/packages`, {
+        new Request(`${authentication.config.origin}${policy}/packages`, {
           method: "POST",
           headers: {
             authorization: `Bearer ${token}`,

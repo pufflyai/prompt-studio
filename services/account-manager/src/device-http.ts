@@ -11,6 +11,8 @@ import { AccountFeatureDenied } from "./account-features";
 import type { createManagerAuthentication } from "./manager-authentication";
 import { ProjectRetired } from "./project-deletion";
 import { DeviceAccessDenied } from "./renewal-errors";
+import { ManagedPackageError } from "./team-managed-extensions";
+import { teamManagedHttp } from "./team-managed-http";
 import { TeamMembershipDenied } from "./teams";
 
 type Authentication = ReturnType<typeof createManagerAuthentication>;
@@ -222,6 +224,7 @@ export const deviceHttp = async (auth: Authentication, address: string, request:
   try {
     return (
       (path === "/v1/teams" ? await teamRoute(auth.devices, request) : null) ??
+      (await teamManagedHttp(auth, request, path)) ??
       (await teamInviteCodeRoute(auth.devices, request, path)) ??
       (await teamMembershipRoute(auth, address, request, path)) ??
       (await teamInvitationRoute(auth.devices, request, path)) ??
@@ -232,6 +235,7 @@ export const deviceHttp = async (auth: Authentication, address: string, request:
       json({ error: "Method not allowed" }, 405)
     );
   } catch (error) {
+    if (error instanceof ManagedPackageError) return json({ error: error.message }, error.status);
     if (error instanceof ProjectRetired) return json({ error: error.message }, 410);
     if (error instanceof TeamMembershipDenied) return json({ error: error.message }, 403);
     if (error instanceof AccountFeatureDenied) return json({ error: error.message }, 403);

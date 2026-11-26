@@ -1,5 +1,5 @@
 {
-  "id": "b11a4431-8b26-47b1-869c-a91c60a5b691",
+  "id": "73bd94e9-b36a-414b-892e-868db808fef2",
   "prevId": "b129b098-0936-4776-82ef-91e39f365522",
   "version": "7",
   "dialect": "postgresql",
@@ -1616,6 +1616,187 @@
         }
       },
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.manager_team_extension_policies": {
+      "name": "manager_team_extension_policies",
+      "schema": "",
+      "columns": {
+        "accountId": {
+          "name": "accountId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "extensionId": {
+          "name": "extensionId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "selectionId": {
+          "name": "selectionId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "packageId": {
+          "name": "packageId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "manager_team_extension_policies_accountId_manager_teams_accountId_fk": {
+          "name": "manager_team_extension_policies_accountId_manager_teams_accountId_fk",
+          "tableFrom": "manager_team_extension_policies",
+          "tableTo": "manager_teams",
+          "columnsFrom": [
+            "accountId"
+          ],
+          "columnsTo": [
+            "accountId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "manager_team_extension_policies_packageId_accountId_manager_team_managed_packages_id_accountId_fk": {
+          "name": "manager_team_extension_policies_packageId_accountId_manager_team_managed_packages_id_accountId_fk",
+          "tableFrom": "manager_team_extension_policies",
+          "tableTo": "manager_team_managed_packages",
+          "columnsFrom": [
+            "packageId",
+            "accountId"
+          ],
+          "columnsTo": [
+            "id",
+            "accountId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "manager_team_extension_policies_accountId_extensionId_pk": {
+          "name": "manager_team_extension_policies_accountId_extensionId_pk",
+          "columns": [
+            "accountId",
+            "extensionId"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.manager_team_managed_packages": {
+      "name": "manager_team_managed_packages",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "accountId": {
+          "name": "accountId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "descriptor": {
+          "name": "descriptor",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "uploadId": {
+          "name": "uploadId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "clock_timestamp()"
+        }
+      },
+      "indexes": {
+        "manager_team_package_cleanup": {
+          "name": "manager_team_package_cleanup",
+          "columns": [
+            {
+              "expression": "createdAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "manager_team_package_owner": {
+          "name": "manager_team_package_owner",
+          "columns": [
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "accountId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "manager_team_managed_packages_accountId_manager_teams_accountId_fk": {
+          "name": "manager_team_managed_packages_accountId_manager_teams_accountId_fk",
+          "tableFrom": "manager_team_managed_packages",
+          "tableTo": "manager_teams",
+          "columnsFrom": [
+            "accountId"
+          ],
+          "columnsTo": [
+            "accountId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},

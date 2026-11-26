@@ -12,6 +12,7 @@ import { digestCredential } from "./credential";
 import { connectManager } from "./database";
 import { createDeviceAccess, createDeviceLogin, createPersonalAccountAccess } from "./device-access";
 import { findDeviceAccess } from "./devices";
+import type { ManagedPackageObjects } from "./managed-package-objects";
 import { microsoftSignIn } from "./microsoft-provider";
 import { type NativeLoginAttempt, nativeApprovalId, nativeLoginApproval } from "./native-login-approval";
 import { acknowledgeProjectDeletion, listProjectDeletionJobs } from "./project-deletion";
@@ -19,10 +20,11 @@ import { readProviderIdentity } from "./provider-identity";
 import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
 import { devices, googleIdentityClaims, microsoftIdentityClaims } from "./schema";
 import { acceptTeamInvitation, inspectTeamInvitation, teamInvitationProvider } from "./team-invitations";
+import { createTeamManagedExtensions } from "./team-managed-extensions";
 import { canPublishForTeam, prepareTeamPublicationGrant, sameDeviceAccess } from "./team-publication-access";
 import { lockAccount, withAccountTransaction } from "./transactions";
 
-export const createManagerAuthentication = (input: ManagerAuthConfig) => {
+export const createManagerAuthentication = (input: ManagerAuthConfig, objects?: ManagedPackageObjects) => {
   const config = parseManagerAuthConfig(input);
   const connection = connectManager(config.databaseUrl, config.databasePoolMax);
   const rememberDirectoryClaim: Parameters<typeof microsoftSignIn>[1] = async (claim) => {
@@ -101,6 +103,8 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
   const readSession = (headers: Headers) => auth.api.getSession({ headers, query: { disableCookieCache: true } });
   const withPersonalAccount = createPersonalAccountAccess(connection.db, readSession);
   const deviceLogin = createDeviceLogin(withPersonalAccount);
+  const devicesAccess = createDeviceAccess(connection.db);
+  const managedExtensions = createTeamManagedExtensions(connection.db, devicesAccess.withTeam, objects);
   const relayDigest = config.projectDeletionRelayToken
     ? Buffer.from(digestCredential(config.projectDeletionRelayToken), "hex")
     : null;
@@ -119,7 +123,8 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
       ...(await deviceLogin(headers, input)),
       relayOrigin: config.audience,
     }),
-    devices: createDeviceAccess(connection.db),
+    devices: devicesAccess,
+    managedExtensions,
     teamInvitation: {
       provider: (secret: string) => teamInvitationProvider(connection.db, secret),
       inspect: (headers: Headers, secret: string) =>
@@ -193,6 +198,9 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
         throw new EnvironmentAccessFailure(category);
       }
     },
-    close: connection.close,
+    close: async () => {
+      await managedExtensions.close();
+      await connection.close();
+    },
   };
 };

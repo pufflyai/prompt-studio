@@ -25,6 +25,14 @@ import {
   teams,
   workbenches,
 } from "./schema";
+import {
+  assertManagedSnapshotFits,
+  captureManagedPackages,
+  managedSnapshotShape,
+  restoreManagedPackages,
+  validateManagedSnapshot,
+} from "./team-managed-recovery";
+import { assertTeamUsersMatch } from "./team-recovery-users";
 import { teamNameSchema } from "./teams";
 
 const spaceKeyIdentity = (row: {
@@ -36,6 +44,7 @@ const spaceKeyIdentity = (row: {
 }) => canonicalJson([row.accountId, row.workbenchId, row.space, row.ownerId ?? "", row.generation]);
 
 const snapshotShape = z.strictObject({
+  ...managedSnapshotShape,
   // Version 3 adds encryption keys, so losing the key store never makes relay data unreadable.
   version: z.literal(3),
   accounts: z.array(
@@ -86,7 +95,7 @@ const snapshotShape = z.strictObject({
 });
 
 type InvalidSnapshot = (path: (string | number)[], message: string) => void;
-type Snapshot = z.infer<typeof snapshotShape>;
+export type Snapshot = z.infer<typeof snapshotShape>;
 
 const validateTeamAccounts = (snapshot: Snapshot, accountIds: Set<string>, invalid: InvalidSnapshot) => {
   const teamIds = new Set((snapshot.teams ?? []).map((team) => team.accountId));
@@ -165,6 +174,7 @@ const snapshotSchema = snapshotShape.superRefine((snapshot, context) => {
   if (accountIds.size !== snapshot.accounts.length) invalid(["accounts"], "Duplicate account identity");
   if (memberships.size !== snapshot.workbenches.length) invalid(["workbenches"], "Duplicate workbench identity");
   const { teamIds, users } = validateTeamAccounts(snapshot, accountIds, invalid);
+  validateManagedSnapshot(snapshot, teamIds, invalid);
   const teamGrants = validateTeamGrants(snapshot, teamIds, users, invalid);
   validateProjectGrants(snapshot, memberships, teamGrants, invalid);
   validateDeletionReceipts(snapshot.deletions ?? [], accountIds, invalid);
@@ -216,6 +226,7 @@ export const captureManager = (db: ManagerDatabase) =>
         .from(projectMembers)
         .orderBy(asc(projectMembers.accountId), asc(projectMembers.workbenchId), asc(projectMembers.userId));
       return snapshotSchema.parse({
+        ...(await captureManagedPackages(transaction)),
         version: 3,
         accounts: accountRows,
         ...(deletions.length ? { deletions } : {}),
@@ -227,19 +238,6 @@ export const captureManager = (db: ManagerDatabase) =>
     },
     { isolationLevel: "repeatable read", accessMode: "read only" },
   );
-
-const assertTeamUsersMatch = async (transaction: ManagerTransaction, snapshot: Snapshot) => {
-  const users = new Set((snapshot.teamMembers ?? []).map(({ userId }) => userId));
-  for (const key of snapshot.keys) if (key.ownerId) users.add(key.ownerId);
-  if (!users.size) return;
-  const known = new Map((await transaction.select().from(accounts)).map((account) => [account.id, account]));
-  for (const account of snapshot.accounts) {
-    if (!users.has(account.id)) continue;
-    const current = known.get(account.id);
-    if (current && (current.ownerIssuer !== account.ownerIssuer || current.ownerSubject !== account.ownerSubject))
-      throw new Error("Manager snapshot conflicts with a verified team user");
-  }
-};
 
 // A restore may add missing rows but never change a stored outcome or key.
 const assertSnapshotFits = async (transaction: ManagerTransaction, snapshot: Snapshot) => {
@@ -285,6 +283,7 @@ export const restoreManager = async (db: ManagerDatabase, requestId: string, inp
       return;
     }
     await assertSnapshotFits(transaction, snapshot);
+    await assertManagedSnapshotFits(transaction, snapshot);
     await assertTeamUsersMatch(transaction, snapshot);
     await transaction.delete(verification);
     await transaction.delete(session);
@@ -311,6 +310,7 @@ export const restoreManager = async (db: ManagerDatabase, requestId: string, inp
       snapshot.accounts.map((account) => ({ ...account, state: "disabled" as const })),
     );
     await insertBatches(transaction, teams, newTeams);
+    await restoreManagedPackages(transaction, snapshot, newTeamIds);
     await insertBatches(
       transaction,
       teamMembers,
