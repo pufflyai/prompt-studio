@@ -34,6 +34,8 @@ const compactDropZone = {
 } as const;
 
 export const layerStyles = defineLayerStyles({
+  // Compact navigation text needs an optical drop beside centered icons.
+  navigationLabel: { value: { position: "relative", top: "navigation-label-offset" } },
   documentContent: { value: { width: "full", minWidth: "0", maxWidth: "document-content", marginInline: "auto" } },
   resourceActivityNotice: {
     value: { minWidth: "0", color: "fg.muted", bg: "bg.muted", padding: "xs", borderRadius: "xs" },

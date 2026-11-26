@@ -102,6 +102,7 @@ export const windowTabsRecipe = defineSlotRecipe({
       _icon: { width: "icon-xs", height: "icon-xs", flexShrink: 0 },
     },
     label: {
+      layerStyle: "navigationLabel",
       minWidth: 0,
       maxWidth: "tab-label-max",
       overflow: "hidden",

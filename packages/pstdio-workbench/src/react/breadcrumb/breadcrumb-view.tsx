@@ -69,7 +69,7 @@ const WorkbenchBreadcrumbTitle = (props: { item: WorkbenchBreadcrumbItem; dragga
         }
       >
         <WorkbenchBreadcrumbIcon item={item} />
-        <Text asChild minW="0" maxW="15rem" lineHeight="1.25rem" truncate>
+        <Text asChild layerStyle="navigationLabel" minW="0" maxW="15rem" lineHeight="1.25rem" truncate>
           <span ref={labelRef}>{title}</span>
         </Text>
       </HStack>
