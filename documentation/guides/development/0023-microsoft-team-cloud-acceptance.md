@@ -41,6 +41,8 @@ First grant the colleague a second project and revoke just that grant. Check the
 
 With an eligible successor in the test team, try leaving while the original owner is the sole owner, then offer ownership. Verify a stale or cancelled offer is denied. Have the successor explicitly accept, confirm that the original owner loses management authority, then have the original owner leave. Check the same team and project still open with the same package and records. Verify that the former owner's private data and devices did not move.
 
+Before transfer, create a private transcript and a folder copy for each employee. Verify that a second device signed in as the original owner can open that owner’s transcript and restore the folder. Have the colleague try the transcript ID and folder source ID directly before and after accepting ownership. Verify the transcript stays hidden, the folder requests are denied, and the original owner can still open their local copies after leaving.
+
 If Onefin disables an Entra identity, use the agreed offboarding procedure to remove the member and revoke their grants in Prompt Studio. Verify the cutover using a previously enrolled device. Record whether the tenant policy also denies new sign-ins. See [device and Relay credential lifetimes](0007-account-manager.md).
 
 ## Triage

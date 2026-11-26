@@ -634,6 +634,22 @@ test("two Microsoft work accounts join, share and hand over the private catalogu
     const route = { kind: "document", projectId, spaceOwner: null, documentId, operation: "updates" } as const;
     expect((await relay.post(route, await sealUpdate(project, documentId, bytes, []), memberToken)).status).toBe(200);
 
+    const { personal } = await fetchSyncSpaces({
+      managerOrigin,
+      credential: device.token,
+      accountId,
+      userId: device.accountId,
+      grantId: await grantIdFor(device.token),
+      workbenchId: projectId,
+    });
+    const privateId = await personal.documentId("private-session-history");
+    const privateRoute = { ...route, spaceOwner: device.accountId, documentId: privateId };
+    const privateBytes = new TextEncoder().encode("Former owner's private history");
+    const privateUpdate = await sealUpdate(personal, privateId, privateBytes, []);
+    const readPrivate = (token: string) => relay.post({ ...privateRoute, operation: "read" }, { after: 0 }, token);
+    expect((await relay.post(privateRoute, privateUpdate, ownerToken)).status).toBe(200);
+    expect((await readPrivate(memberToken)).status).toBe(403);
+
     const offer = await managerRequest(device.token, `${teamPath}/ownership`, { recipientUserId: userId });
     expect(offer.status).toBe(201);
     const { id } = teamOwnershipOfferSchema.parse(await offer.json());
@@ -646,6 +662,11 @@ test("two Microsoft work accounts join, share and hand over the private catalogu
     const updated = await sealUpdate(project, catalogId, new TextEncoder().encode("Earlier revision selected"), []);
     expect((await relay.post(catalog, updated, formerOwnerToken)).status).toBe(403);
     expect((await relay.post(catalog, updated, successorToken)).status).toBe(200);
+    expect((await readPrivate(successorToken)).status).toBe(403);
+    expect((await relay.post(privateRoute, privateUpdate, successorToken)).status).toBe(403);
+    const retained = readResultSchema.parse(await (await readPrivate(formerOwnerToken)).json());
+    if (retained.status !== "updates") throw new Error("Expected the original owner's private history");
+    expect(await openUpdate(personal, privateId, retained.updates[0]!)).toEqual(privateBytes);
 
     const grantId = await grantIdFor(device.token);
     expect(
