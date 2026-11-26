@@ -55,7 +55,15 @@ export class DesktopUpdateManager {
     options.updater.on("error", (error) => this.#download?.reject(error));
   }
 
+  get downloadedVersion() {
+    return this.#downloadedVersion;
+  }
+
   checkForUpdates() {
+    if (this.#downloadedVersion) {
+      this.#options.onUpdateDownloaded(this.#downloadedVersion);
+      return Promise.resolve();
+    }
     if (!this.#interactive) {
       this.#interactive = true;
       if (this.#phase) this.#options.onUpdateProgress?.(this.#phase);
@@ -108,11 +116,6 @@ export class DesktopUpdateManager {
       return;
     }
     const manual = resolveDesktopUpdateStrategy(this.#options.platform).kind === "manual";
-    if (!manual && this.#downloadedVersion) {
-      this.#options.onUpdateDownloaded(this.#downloadedVersion);
-      return;
-    }
-
     const release = await (manual ? resolveDesktopReleasePage : resolveDesktopUpdateFeed)(lookup);
     // Never offer an older version, even after switching from nightly back to stable.
     // An older app would run on a database that newer migrations already changed.
