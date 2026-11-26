@@ -89,7 +89,8 @@ env:
 jobs:
   isolated_review:
     if: github.event_name == 'workflow_dispatch' && inputs.review
-    runs-on: ubuntu-latest
+    # Playwright 1.60 supports 24.04; ubuntu-latest has moved to 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v5
