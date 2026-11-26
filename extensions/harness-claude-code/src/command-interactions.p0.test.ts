@@ -12,8 +12,16 @@ test.each([
   const prepared = prepareClaudeOperation(
     { sessionId: "session", cwd: "/workspace/project", agentSessionId },
     { kind: "command", text: "/plan Add a greeting" },
-    "project",
-    { spawnProcess: () => child },
+    {
+      projectId: "project",
+      requireCommand: async () => "/tools/claude",
+      spawnDeps: {
+        spawnProcess: (_args, options) => {
+          expect(options?.command).toBe("/tools/claude");
+          return child;
+        },
+      },
+    },
   );
   const pending = prepared.invoke({
     events: recordingSink().sink,

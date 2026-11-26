@@ -1,9 +1,8 @@
 import { join } from "node:path";
 import type { ExtensionDefinition, ExtensionSourceKind } from "@pstdio/sdk/extensions";
-import { finishRuntimeOperation, startRuntimeOperation } from "pstdio-diagnostics";
 import { remapPackageAssets } from "../artifacts/remap-package-assets";
 import type { ExtensionDiagnostic } from "../types/runtime";
-import { acquireBackendWorker } from "./backend-process/backend-workers";
+import { loadBackendDefinition } from "./backend-process/backend-workers";
 import { hydrateBackendDefinition } from "./backend-process/hydrate";
 import { createDiagnostic } from "./diagnostics";
 import { discoverExtensionPackages } from "./discovery";
@@ -54,12 +53,13 @@ export type LoadExtensionSourcesOptions = {
   definitionOnly?: boolean;
 };
 
+let loadCounter = 0;
+// Counts definition loads, whether the revision's cache or a worker supplied the definition. Worker
+// reads alone are counted by readBackendDefinitionReadCount.
+export const readExtensionLoadCount = () => loadCounter;
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
-
-let importCounter = 0;
-// The import identity already increments for real module loads; reads add no disabled work.
-export const readRuntimeImportCount = () => importCounter;
 
 const formatImportError = (error: unknown, fallback: string) => {
   if (error instanceof Error) return error.message;
@@ -70,17 +70,11 @@ const formatImportError = (error: unknown, fallback: string) => {
   return message === "[object Object]" ? fallback : message;
 };
 
-// Bun 1.4.4 retains failed evaluation for file-URL queries. Absolute-path imports
-// preserve the per-load identity without rebuilding immutable output (ADR 0151).
-const importWithCacheKey = (filePath: string) => import(`${filePath}?pstdio_cache=${process.pid}-${importCounter++}`);
-
-// The host never imports a process-mode entry; the worker reports data and handler references.
-const loadInWorker = async (packagePath: string, revision: PreparedExtensionRevision, definitionOnly?: boolean) => {
-  const started = startRuntimeOperation("extension.backend.start");
-  const { definition: reported, acquire } = await acquireBackendWorker(packagePath, revision, definitionOnly);
-  finishRuntimeOperation(started, { extensionId: revision.manifest.id });
-  const definition = hydrateBackendDefinition(reported, acquire) as Record<string, unknown>;
-  return { default: definition };
+// The host never imports an entry. A worker evaluates it and reports data and handler references.
+const loadDefinition = async (packagePath: string, revision: PreparedExtensionRevision, definitionOnly?: boolean) => {
+  loadCounter += 1;
+  const { definition: reported, acquire } = await loadBackendDefinition(packagePath, revision, definitionOnly);
+  return hydrateBackendDefinition(reported, acquire) as Record<string, unknown>;
 };
 
 // Synchronous authoring API. The running host uses inspectExtensionLoadKey in its worker.
@@ -145,31 +139,19 @@ export const loadExtensionPackage = async (
       priority: "requested",
     });
     retainPreparedRevision(preparedRevision);
-    const imported =
-      manifest.pstdio?.backendRuntime === "process"
-        ? await loadInWorker(pkg.path, preparedRevision, options.definitionOnly)
-        : await importWithCacheKey(preparedRevision.entryPath);
-    const mod = (
-      options.immutableAssets ? imported : remapPackageAssets(imported, preparedRevision.packagePath, pkg.path)
-    ) as Record<string, unknown>;
-    if (!("default" in mod) || mod.default === undefined || !isRecord(mod.default)) {
-      diagnostics.push(
-        createDiagnostic({
-          code: "invalid_default_export",
-          message: "Extension entry must export a default contributions object",
-          sourcePath: entryPath,
-          extensionId: manifest.id,
-        }),
-      );
-    } else {
-      definition = mod.default as unknown as ExtensionDefinition;
-    }
+    const loaded = await loadDefinition(pkg.path, preparedRevision, options.definitionOnly);
+    definition = (
+      options.immutableAssets ? loaded : remapPackageAssets(loaded, preparedRevision.packagePath, pkg.path)
+    ) as ExtensionDefinition;
   } catch (error) {
     if (error instanceof PreparationUnavailableError) throw error;
+    const invalidExport = isRecord(error) && error.code === "invalid_default_export";
     diagnostics.push(
       createDiagnostic({
-        code: "extension_import_failed",
-        message: `Extension entry failed to import: ${formatImportError(error, entryPath)}`,
+        code: invalidExport ? "invalid_default_export" : "extension_import_failed",
+        message: invalidExport
+          ? formatImportError(error, entryPath)
+          : `Extension entry failed to import: ${formatImportError(error, entryPath)}`,
         sourcePath: entryPath,
         extensionId: manifest.id,
       }),

@@ -53,10 +53,13 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
     await dialog.getByRole("textbox", { name: "Source template" }).fill(params.source);
     await dialog.getByRole("textbox", { name: "Environment profile" }).fill(params.provider_id);
     await dialog.getByRole("button", { name: "Create workspace", exact: true }).click();
-    await expect.poll(async () => (await (await request.get(workspacesUrl)).json()).length).toBe(2);
-    const workspace = (await (await request.get(workspacesUrl)).json()).find(
-      (row: { id: string }) => row.id !== homeWorkspace.id,
-    );
+    const cloudWorkspace = async () =>
+      ((await (await request.get(workspacesUrl)).json()) as { id: string; provider_state: string }[]).find(
+        (row) => row.id !== homeWorkspace.id,
+      );
+    // The row appears while its provider still provisions it.
+    await expect.poll(async () => (await cloudWorkspace())?.provider_state).toBe("ready");
+    const workspace = await cloudWorkspace();
     const anchors = [
       {
         type: "ticket",

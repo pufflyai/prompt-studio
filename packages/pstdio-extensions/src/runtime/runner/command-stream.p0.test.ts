@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createCommandStreamWriter } from "./command-stream";
 
 test("writes preserve order and wait for the reader", async () => {
@@ -28,7 +29,7 @@ test("oversized chunks reject without closing the writer", async () => {
   const stream = createCommandStreamWriter(async (chunk) => {
     received.push(chunk);
   }, new AbortController().signal);
-  await expect(stream.write("x".repeat(65536))).rejects.toMatchObject({ code: "command_stream_chunk_too_large" });
+  await expectRejection(stream.write("x".repeat(65536))).toMatchObject({ code: "command_stream_chunk_too_large" });
   await stream.write("ok");
   expect(received).toEqual(["ok"]);
 });
@@ -38,8 +39,8 @@ test("cancellation releases a blocked writer and rejects later writes", async ()
   const stream = createCommandStreamWriter(() => new Promise(() => {}), controller.signal);
   const pending = stream.write("line");
   controller.abort();
-  await expect(pending).rejects.toMatchObject({ code: "command_stream_closed" });
-  await expect(stream.write("late")).rejects.toMatchObject({ code: "command_stream_closed" });
+  await expectRejection(pending).toMatchObject({ code: "command_stream_closed" });
+  await expectRejection(stream.write("late")).toMatchObject({ code: "command_stream_closed" });
 });
 
 test("ordinary calls discard chunks immediately", async () => {
@@ -94,6 +95,6 @@ test("the invocation closes its writer before returning the final outcome", asyn
     },
   });
   expect(result).toMatchObject({ ok: true, value: "done" });
-  await expect(writer.write("late")).rejects.toMatchObject({ code: "command_stream_closed" });
+  await expectRejection(writer.write("late")).toMatchObject({ code: "command_stream_closed" });
   expect(chunks).toEqual([]);
 });

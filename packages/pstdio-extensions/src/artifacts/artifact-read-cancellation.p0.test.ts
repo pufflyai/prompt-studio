@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { createFileMount } from "./artifact-mount";
 
 test("aborted mount reads stop while writes keep their independent lifecycle", async () => {
@@ -11,8 +12,8 @@ test("aborted mount reads stop while writes keep their independent lifecycle", a
     const mount = createFileMount(root, controller.signal);
     await mount.writeText("document.md", "saved");
     controller.abort();
-    await expect(mount.readText("document.md")).rejects.toThrow();
-    await expect(mount.list()).rejects.toThrow();
+    await expectRejection(mount.readText("document.md")).toThrow();
+    await expectRejection(mount.list()).toThrow();
     await mount.writeText("document.md", "still saved");
     expect(await createFileMount(root).readText("document.md")).toBe("still saved");
   } finally {

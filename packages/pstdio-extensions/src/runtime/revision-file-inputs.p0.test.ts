@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectRejection } from "../test-utils/expect-rejection";
 import { copyRevisionFiles, copyRevisionSource, visitRevisionFiles } from "./revision-file-inputs";
 
 test("snapshots both directory aliases while blocking ancestor cycles", async () => {
@@ -33,13 +34,13 @@ test("a conflicting snapshot input stops new copies and drains the admitted writ
   try {
     writeFileSync(accepted, "accepted bytes");
     writeFileSync(conflicting, "separate bytes");
-    await expect(
+    await expectRejection(
       copyRevisionFiles([
         { source: accepted, target },
         { source: conflicting, target },
         { source: accepted, target: next },
       ]),
-    ).rejects.toThrow("Snapshot file has conflicting source owners.");
+    ).toThrow("Snapshot file has conflicting source owners.");
     expect(readFileSync(target, "utf8")).toBe("accepted bytes");
     expect(existsSync(next)).toBe(false);
   } finally {

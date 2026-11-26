@@ -76,8 +76,8 @@ for await (const event of child.events()) {
   for a later lifecycle cleanup attempt.
 - `events()` yields `stdout` and `stderr` chunks as `Uint8Array` and always ends with one `exit`
   event. It has one consumer. Order is kept within each stream, but not between the two streams.
-- `id` identifies the handle to your code. It is not an OS pid, and no host API accepts it. In the
-  [process runtime](0002-manifest-and-installation.md#process-runtime) the worker creates its own id.
+- `id` identifies the handle to your code. It is not an OS pid, and no host API accepts it. The
+  backend's [worker](0002-manifest-and-installation.md#process-runtime) creates its own id.
 
 The host keeps at most 8 MiB of unread output per child, shared by both streams. At that point it
 stops reading, so the child blocks on its next write until you read more. Stopping the iteration
@@ -144,6 +144,52 @@ fails with `target_file_unsupported`; the host never reads a local file instead.
 belong to the calling project. It reads with the same access as other extension file APIs and is
 not a sandbox.
 
+## Host diagnostics
+
+On `main`, after 0.48.0 (extension API 0.5.1), `ctx.diagnostics.capture(input)` profiles the
+Prompt Studio API process, which runs the host's routes and services. It also collects the
+[runtime operations](0027-performance-diagnostics.md#backend-operation-instrumentation) the host
+publishes during the capture, such as database queries. Extension backends run in their own
+[workers](0002-manifest-and-installation.md#process-runtime), so profiling inside a handler, or
+subscribing to the operation channel there, sees only that worker. Publish the supporting host and
+SDK before a separately released extension adopts it.
+
+```ts
+const { summary, data } = await ctx.diagnostics.capture({ kind: "cpu", durationMs: 15_000, signal: ctx.signal });
+
+await ctx.diagnostics.capture({
+  kind: "armed",
+  durationMs: 60 * 60_000,
+  cpuPercent: 60,
+  checkpoint: (data) => ctx.extensionFiles.writeText("spike.json", JSON.stringify(data)),
+});
+```
+
+| `kind` | Records | Limit |
+| --- | --- | --- |
+| `cpu` | A V8 CPU profile in `data.profile`. `summary.unit` is `samples`. | `durationMs` up to 60,000 |
+| `coverage` | Function-call counts in `data.coverage`. `summary.unit` is `calls`. | `durationMs` up to 60,000 |
+| `armed` | Samples host CPU every 2 seconds while profiling in windows of about 30 seconds. It stops when one sample reaches `cpuPercent` (a percentage of one core, up to 10,000) or when `durationMs` passes. `data.profiles` keeps the latest two windows. | `durationMs` up to 24 hours |
+
+- `summary` lists the 20 most frequent functions with memory before and after. `data` holds the
+  complete evidence, the host pid and the operation trace: the latest 60 seconds, at most 1,000
+  events and 512 KiB, with `dropped` counting the rest.
+- `checkpoint(data)` runs after each armed window and at the end, so evidence survives a host that
+  stops mid-capture. One write runs at a time; a newer checkpoint replaces one still waiting, and
+  `data.skippedCheckpoints` counts them. The host releases the profiler and operation subscription
+  when recording ends. A rejected checkpoint fails the capture. Final checkpoint writes have 30 seconds
+  to finish after recording ends, then the capture rejects with `diagnostics_checkpoint_timeout`.
+- Aborting `signal`, cancelling the invocation, or the invocation ending stops the profiler and
+  rejects with the abort reason.
+- One recording uses the host profiler at a time. An overlapping recording rejects with `diagnostics_busy`. Invalid input or a
+  duration above the limit rejects with `diagnostics_invalid_input`.
+- Only first-party extensions may capture: an id with the `pstdio.` publisher that is listed in
+  the packaged extension catalog. It must run from the host's checkout or an adopted revision the installer
+  verified from the catalog's Git release, the host's release registry, or the host's checkout. Update or
+  reinstall a catalog extension whose current revision predates install verification before using this API.
+  Other sources reject with `diagnostics_forbidden`. Profiles contain host source paths, call stacks and
+  runtime identifiers, so keep them in extension-owned local storage.
+
 ## Host environment values
 
 A child started with `ctx.process` gets a small set of runtime variables, such as `PATH` and
@@ -174,7 +220,10 @@ availability check or a model list, get the names the user allowed for that exte
 that project without asking. A name the host environment does not have is left out. Outside a
 project, for example at startup, they get none.
 
-The value goes into the child's environment only, and no `ctx` API returns it. The host replaces it
+The value goes into the child's environment, and no `ctx` API returns it. The backend's own
+`process.env` is a separate matter: the worker receives the host environment without reserved names,
+so a provider key that starts Prompt Studio is visible there too. See
+[Process runtime](0002-manifest-and-installation.md#process-runtime). The host replaces it
 with `[Redacted]` in the child's `stdout` and `stderr` before returning them. That only prevents
 accidental output: the extension chooses the command, so it can still pass the value on. Allowing a
 name lets the extension use its value. When the user revokes the grant or narrows it, the host first stops the running children that

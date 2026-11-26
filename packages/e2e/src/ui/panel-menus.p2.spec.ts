@@ -24,6 +24,7 @@ const createSession = async (
     },
   });
   expect(response.ok()).toBe(true);
+  return (await response.json()) as { id: string };
 };
 
 test("preserves browser Forward history between extension pages after refresh", async ({ page, request }) => {
@@ -195,7 +196,7 @@ test("renames a moved session and restores its destination after reload", async 
     data: folderProjectInput({ name: "Arrange session" }),
   });
   const project = await response.json();
-  await createSession(request, project.id, "Session to rename");
+  const session = await createSession(request, project.id, "Session to rename");
   await page.addInitScript((id) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("dashboard-wb2:selected-project:global", id);
@@ -221,15 +222,19 @@ test("renames a moved session and restores its destination after reload", async 
   await openTabCustomMenu(moved);
   await page.getByRole("menuitem", { name: "Rename session", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Rename session", exact: true });
-  await dialog.getByRole("textbox").fill("Renamed session");
+  const title = "Renamed session";
+  await dialog.getByRole("textbox").fill(title);
   await dialog.getByRole("button", { name: "Run", exact: true }).click();
-  await expect(bottom.getByRole("tab", { name: "Renamed session", exact: true })).toBeVisible();
+  const renamed = bottom.getByRole("tab", { name: title, exact: true });
+  await expect(renamed).toBeVisible();
+  // The tab updates optimistically while the rename is still being saved.
+  await expect
+    .poll(async () => {
+      const response = await request.get(`${apiBase}/v1/sessions/${session.id}`);
+      return response.ok() ? ((await response.json()) as { title: string }).title : undefined;
+    })
+    .toBe(title);
   await page.reload();
-  await expect(bottom.getByRole("tab", { name: "Renamed session", exact: true })).toBeVisible();
-  expect(
-    await bottom
-      .getByRole("tab", { name: "Renamed session", exact: true })
-      .locator("..")
-      .getAttribute("data-workbench-tab"),
-  ).toBe(instance);
+  await expect(renamed).toBeVisible();
+  expect(await renamed.locator("..").getAttribute("data-workbench-tab")).toBe(instance);
 });

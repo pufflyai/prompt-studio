@@ -39,10 +39,11 @@ const identifyRevisionInputs = (
   dependencyHash: string,
 ) => {
   const sourceHash = hashExtensionSource(sourcePath);
-  const id = revisionDigest(`${hashRevisionSource(sourcePath)}:${dependencyHash}:${preparationHostIdentity()}`);
+  const contentKey = `${hashRevisionSource(sourcePath)}:${dependencyHash}`;
+  const id = revisionDigest(`${contentKey}:${preparationHostIdentity()}`);
   // Every input that can change the accepted runtime also changes its live load identity.
   const loadKey = id;
-  return { ...read, sourceHash, loadKey, id };
+  return { ...read, sourceHash, loadKey, id, contentKey };
 };
 export const inspectRevisionInputs = (sourcePath: string, apiProvider?: ExtensionApiProvider) => {
   const read = readRevisionInputs(sourcePath, apiProvider);
@@ -76,7 +77,7 @@ export const prepareRevision = async (
     const cached: PreparedExtensionRevision = JSON.parse(readFileSync(descriptorPath, "utf8"));
     if (cached.host === preparationHostIdentity() && existsSync(cached.entryPath)) {
       retainPreparedRevision(cached);
-      return cached;
+      return { ...cached, contentKey: inputs.contentKey };
     }
   } catch {}
   // Unique immutable paths also keep Bun's resolver from retaining a replaced package's exports.
@@ -102,6 +103,7 @@ export const prepareRevision = async (
       entryPath,
       sourceHash: inputs.sourceHash,
       loadKey: inputs.loadKey,
+      contentKey: inputs.contentKey,
       manifest: inputs.manifest,
       diagnostics: inputs.diagnostics,
     };
@@ -136,6 +138,11 @@ export const acceptRevision = (
     try {
       current = JSON.parse(readFileSync(path, "utf8"));
     } catch {}
+    // A host update may rebuild the same package. Keep verified origin only when all preparation
+    // inputs match, so a locally edited replacement never inherits it.
+    const verifiedInstall =
+      revision.verifiedInstall ??
+      (revision.contentKey && current?.contentKey === revision.contentKey ? current.verifiedInstall : undefined);
     // Reads treat an earlier host/format as absent. Its replacement uses that same guard;
     // a compatible revision accepted in the meantime still participates in the CAS below.
     if (current?.host !== preparationHostIdentity()) current = null;
@@ -149,7 +156,7 @@ export const acceptRevision = (
     if (expectedId !== undefined && (current?.id ?? null) !== expectedId && current?.id !== revision.id)
       throw new Error("Accepted extension revision changed before activation.");
     const temporary = `${path}.${crypto.randomUUID()}.tmp`;
-    writeFileSync(temporary, JSON.stringify(revision));
+    writeFileSync(temporary, JSON.stringify({ ...revision, verifiedInstall }));
     renameSync(temporary, path);
   });
 };

@@ -1,6 +1,7 @@
 import { expect, spyOn, test } from "bun:test";
 import { contributionRefId, sessionBrowser, workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
+import { markHostContext } from "pstdio-extensions";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { createSessionsModule } from "./module";
 
@@ -201,11 +202,14 @@ test("legacy saved panel and page use the installed provider's title and New/Swi
   const { createMemoryStorage, makeCommandContext } = await import("@pstdio/sdk/testing");
   const wb = createWorkbench();
   const module = wb.registerModule(createSessionsModule());
-  const ctx = makeCommandContext({
-    storage: createMemoryStorage(),
-    params: {},
-    overrides: { sessions: { get: async () => ({ id: "saved", title: "Saved", status: "completed" }) as never } },
-  });
+  // Handlers run in extension workers, which give a host-marked ctx its surface.
+  const ctx = markHostContext(
+    makeCommandContext({
+      storage: createMemoryStorage(),
+      params: {},
+      overrides: { sessions: { get: async () => ({ id: "saved", title: "Saved", status: "completed" }) as never } },
+    }),
+  );
   const provider = registerWorkbenchExtensionContributions({
     workbench: wb,
     projectId: "p",
@@ -239,7 +243,8 @@ test("legacy saved panel and page use the installed provider's title and New/Swi
     const subscriptions = [tab!.subscribe?.(() => {})];
     try {
       tab!.getSnapshot(instance);
-      await new Promise((resolve) => setImmediate(resolve));
+      // The provider's handler answers from its extension worker, which may need to start first.
+      for (let attempt = 0; !tab!.getSnapshot(instance).label && attempt < 200; attempt++) await Bun.sleep(25);
       for (const presentation of [tab, main?.kind === "view" ? main.tab : undefined]) {
         const snapshot = presentation!.getSnapshot(instance);
         expect(snapshot).toMatchObject({ label: "Saved" });

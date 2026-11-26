@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import * as contractTypes from "pstdio-api-contracts/extension-kernel";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import {
   ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
   createHostCapabilityGate,
@@ -20,9 +21,9 @@ test("native resource action registration requires its explicit capability", asy
     method: "resources.actions.register",
     params: { operation: "unregister", registrationId: crypto.randomUUID() },
   };
-  await expect(
+  await expectRejection(
     createHostCapabilityGate({ capabilities, declaredCapabilities: ["resources.actions"] }).call(request),
-  ).rejects.toThrow("did not declare");
+  ).toThrow("did not declare");
   await createHostCapabilityGate({ capabilities, declaredCapabilities: ["resources.actions.register"] }).call(request);
   expect(calls).toBe(1);
 });
@@ -47,10 +48,10 @@ describe("createHostCapabilityGate", () => {
     };
     const request = { method: "files.download", params: { name: "page.html", data: new Uint8Array([1, 2, 3]) } };
     const denied = createHostCapabilityGate({ capabilities, declaredCapabilities: ["files.upload"] });
-    await expect(denied.call(request)).rejects.toThrow("Webview did not declare host capability: files.download");
+    await expectRejection(denied.call(request)).toThrow("Webview did not declare host capability: files.download");
     expect(calls).toEqual([]);
     const allowed = createHostCapabilityGate({ capabilities, declaredCapabilities: ["files.download"] });
-    await expect(allowed.call(request)).resolves.toBeUndefined();
+    await expect(await allowed.call(request)).toBeUndefined();
     expect(calls).toEqual([request.params]);
   });
   test("allows declared v1 capabilities", async () => {
@@ -65,7 +66,7 @@ describe("createHostCapabilityGate", () => {
       declaredCapabilities: [`commands.execute@${WEBVIEW_HOST_CAPABILITY_VERSION}`],
     });
 
-    await expect(gate.call({ method: "commands.execute", params: { commandId: "lab.hello" } })).resolves.toEqual({
+    await expect(await gate.call({ method: "commands.execute", params: { commandId: "lab.hello" } })).toEqual({
       ok: true,
     });
     expect(calls).toEqual([{ commandId: "lab.hello" }]);
@@ -86,7 +87,7 @@ describe("createHostCapabilityGate", () => {
       onDiagnostic: (diagnostic) => diagnostics.push(diagnostic),
     });
 
-    await expect(gate.call({ method: "commands.execute", params: { commandId: "lab.hello" } })).rejects.toThrow(
+    await expectRejection(gate.call({ method: "commands.execute", params: { commandId: "lab.hello" } })).toThrow(
       "Webview did not declare host capability: commands.execute",
     );
     expect(diagnostics).toMatchObject([
@@ -109,17 +110,17 @@ describe("createHostCapabilityGate", () => {
     });
 
     await expect(
-      gate.call({ method: "artifacts.read", params: { op: "list", mount: "runs", prefix: "a/" } }),
-    ).resolves.toEqual({ params: { op: "list", mount: "runs", prefix: "a/" } });
+      await gate.call({ method: "artifacts.read", params: { op: "list", mount: "runs", prefix: "a/" } }),
+    ).toEqual({ params: { op: "list", mount: "runs", prefix: "a/" } });
     await expect(
-      gate.call({ method: "artifacts.read", params: { op: "readText", mount: "reports", path: "r.json" } }),
-    ).resolves.toEqual({ params: { op: "readText", mount: "reports", path: "r.json" } });
+      await gate.call({ method: "artifacts.read", params: { op: "readText", mount: "reports", path: "r.json" } }),
+    ).toEqual({ params: { op: "readText", mount: "reports", path: "r.json" } });
     expect(gate.diagnostics).toEqual([]);
 
     // The denial names the exact missing declaration.
-    await expect(
+    await expectRejection(
       gate.call({ method: "artifacts.read", params: { op: "readText", mount: "secrets", path: "s.txt" } }),
-    ).rejects.toThrow("Webview did not declare host capability: artifacts.read:secrets");
+    ).toThrow("Webview did not declare host capability: artifacts.read:secrets");
     expect(diagnostics).toMatchObject([
       {
         capability: "artifacts.read:secrets",
@@ -137,7 +138,7 @@ describe("createHostCapabilityGate", () => {
       declaredCapabilities: ["artifacts.read:runs"],
     });
 
-    await expect(gate.call({ method: "artifacts.read", params: { op: "list" } })).rejects.toThrow(
+    await expectRejection(gate.call({ method: "artifacts.read", params: { op: "list" } })).toThrow(
       "Unsupported webview capability: artifacts.read",
     );
   });

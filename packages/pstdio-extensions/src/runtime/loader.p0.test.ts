@@ -8,7 +8,6 @@ import type { ExtensionDiagnostic } from "../types/runtime";
 import { loadExtensionPackage } from "./loader";
 
 const tempDirs: string[] = [];
-let previousPackagePath: string | undefined;
 let previousPstdioHome: string | undefined;
 
 const createTempDir = () => {
@@ -62,12 +61,9 @@ const writeSdkDependency = (dir: string) => {
 };
 
 afterEach(() => {
-  if (previousPackagePath === undefined) delete process.env.PSTDIO_LOADER_TEST_PACKAGE_PATH;
-  else process.env.PSTDIO_LOADER_TEST_PACKAGE_PATH = previousPackagePath;
   if (previousPstdioHome === undefined) delete process.env.PSTDIO_HOME;
   else process.env.PSTDIO_HOME = previousPstdioHome;
 
-  previousPackagePath = undefined;
   previousPstdioHome = undefined;
   for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
   tempDirs.length = 0;
@@ -107,8 +103,7 @@ test("loads a fresh entry without writing runtime files into the source package"
       import { join } from "node:path";
       import { marker } from "./src/marker";
 
-      const packagePath = process.env.PSTDIO_LOADER_TEST_PACKAGE_PATH;
-      if (!packagePath) throw new Error("Missing test package path");
+      const packagePath = ${JSON.stringify(dir)};
 
       const runtimeEntries = readdirSync(packagePath).filter((name) => name.startsWith(".pstdio-runtime-"));
       writeFileSync(join(packagePath, "runtime-entries.json"), JSON.stringify(runtimeEntries));
@@ -130,9 +125,6 @@ test("loads a fresh entry without writing runtime files into the source package"
       };
     `,
   );
-
-  previousPackagePath = process.env.PSTDIO_LOADER_TEST_PACKAGE_PATH;
-  process.env.PSTDIO_LOADER_TEST_PACKAGE_PATH = dir;
 
   const diagnostics: ExtensionDiagnostic[] = [];
   const loaded = await loadExtensionPackage({ path: dir }, diagnostics);

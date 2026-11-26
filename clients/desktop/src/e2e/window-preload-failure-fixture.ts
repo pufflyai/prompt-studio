@@ -21,7 +21,7 @@ void app.whenReady().then(async () => {
     appVersion: app.getVersion(),
     startedAt: new Date().toISOString(),
   };
-  const startup = controller.prepareWorkbench(descriptor);
+  const startup = controller.prepareWorkbench(descriptor, Promise.resolve());
   void startup.then(
     () => process.send!({ rejected: false, workbenchCreated: controller.window.contentView.children.length > 0 }),
     (error: Error) =>

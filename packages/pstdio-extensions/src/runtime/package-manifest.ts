@@ -27,8 +27,6 @@ export interface PackageManifest {
   pstdio?: {
     scope?: ExtensionLoadScope;
     projectFiles?: { tracked: boolean };
-    /** "process" runs the backend in its own worker process instead of the API process (ADR 0058). */
-    backendRuntime?: "process";
     /** Host variable names the extension may ask the host to pass to the children it starts. */
     processEnvironment?: string[];
   };
@@ -130,18 +128,8 @@ const validatePstdioMetadata = (
     }
   }
 
-  const backendRuntime = value.backendRuntime;
-  if (backendRuntime !== undefined && backendRuntime !== "process") {
-    diagnostics.push(
-      createDiagnostic({
-        code: "extension_manifest_invalid_value",
-        message: `pstdio.backendRuntime "${String(backendRuntime)}" must be "process"`,
-        sourcePath: packagePath,
-      }),
-    );
-    return null;
-  }
-
+  // Every backend runs in its worker. `backendRuntime` chose that before it became the only
+  // runtime, so packages that still carry it load unchanged.
   const processEnvironment =
     value.processEnvironment === undefined ? undefined : parseProcessEnvironmentDeclaration(value.processEnvironment);
   if (processEnvironment?.error) {
@@ -155,11 +143,9 @@ const validatePstdioMetadata = (
     return null;
   }
 
-  if (scope === undefined && projectFiles === undefined && backendRuntime === undefined && !processEnvironment)
-    return undefined;
+  if (scope === undefined && projectFiles === undefined && !processEnvironment) return undefined;
   return {
     ...(scope ? { scope } : {}),
-    ...(backendRuntime ? { backendRuntime } : {}),
     ...(processEnvironment ? { processEnvironment: processEnvironment.names } : {}),
     ...(projectFiles ? { projectFiles: { tracked: projectFiles.tracked as boolean } } : {}),
   };

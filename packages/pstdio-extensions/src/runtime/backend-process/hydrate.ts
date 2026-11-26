@@ -4,6 +4,17 @@ import { HANDLER_MARKER, isBackendHandlerRef } from "./protocol";
 import { withSnapshotSinks } from "./remote-markers";
 import type { BackendWorker } from "./supervisor";
 
+const PREPARE = Symbol.for("pstdio.backendHandler.prepare");
+
+/**
+ * Starts the worker a handler runs in, if it is a worker handler and its worker is not running.
+ * Callers with a short deadline, such as harness detection, wait for this before starting the clock.
+ */
+export const prepareBackendHandler = async (handler: unknown) => {
+  const prepare = (handler as { [PREPARE]?: () => Promise<unknown> } | null | undefined)?.[PREPARE];
+  if (typeof prepare === "function") await prepare();
+};
+
 /**
  * Turns the worker's definition back into one the host can normalize. Each handler reference
  * becomes a host function that runs the handler in the worker. A runner context passed first is
@@ -14,7 +25,7 @@ export const hydrateBackendDefinition = (definition: unknown, acquire: () => Pro
   const hydrate = (value: unknown): unknown => {
     if (isBackendHandlerRef(value)) {
       const handlerId = value[HANDLER_MARKER];
-      return async (first: unknown, ...rest: unknown[]) => {
+      const handler = async (first: unknown, ...rest: unknown[]) => {
         const hasContext = isHostContext(first);
         if (hasContext) first.signal?.throwIfAborted();
         const worker = await acquire();
@@ -28,6 +39,7 @@ export const hydrateBackendDefinition = (definition: unknown, acquire: () => Pro
             })
           : worker.invoke({ handlerId, context: {}, surface: emptySurface, args: [first, ...rest] });
       };
+      return Object.assign(handler, { [PREPARE]: acquire });
     }
     if (value === null || typeof value !== "object") return value;
     if (value instanceof Uint8Array || value instanceof Date || value instanceof RegExp) return value;

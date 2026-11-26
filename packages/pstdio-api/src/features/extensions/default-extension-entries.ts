@@ -4,7 +4,12 @@ import { basename, isAbsolute, join, resolve } from "node:path";
 import { readPackageManifestMetadata } from "pstdio-extensions";
 import { traceSetupPhase } from "../../lib/setup-phase";
 import type { DefaultExtensionEntry, DefaultExtensionsConfig } from "./default-extensions-config";
-import { type ExtensionCatalog, findExtensionCatalogEntry, selectExtensionCatalogEntry } from "./extension-catalog";
+import {
+  type ExtensionCatalog,
+  findExtensionCatalogEntry,
+  hostCheckoutPath,
+  selectExtensionCatalogEntry,
+} from "./extension-catalog";
 import {
   createSharedNamedSourceCheckout,
   type InstallExtensionSourceInput,
@@ -43,7 +48,7 @@ export const sourceModeDefaultEntry = async (
   const catalogEntry =
     (catalog && selectExtensionCatalogEntry(catalog, entry)) ?? (await findExtensionCatalogEntry(entry));
   if (!catalogEntry) throw new Error(`No catalog entry for extension: ${entry}`);
-  const localSource = join(import.meta.dirname, "../../../../../", catalogEntry.origin.path);
+  const localSource = hostCheckoutPath(catalogEntry);
   if (existsSync(localSource)) return { source: localSource, installName: entry, force, skipInstall: true };
   return entry;
 };

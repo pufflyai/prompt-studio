@@ -6,6 +6,13 @@ import type { ExtensionInstallTransaction } from "./extension-install-transactio
 import type { ExtensionMetadata } from "./extension-runtime";
 import type { CommandOptions, CommandResult } from "./install-extension-dependencies";
 
+export type PreparedNamedInstallSource = {
+  path: string;
+  ref: string;
+  /** The selector used for the Git checkout. The stored source ref contains the resolved commit. */
+  gitRef?: string;
+};
+
 export type InstallExtensionSourceInput = {
   /** Keep a managed source installed so the dashboard can repair it after an extension API change. */
   allowUnsupportedApiVersion?: boolean;
@@ -36,7 +43,7 @@ export type InstallExtensionSourceInput = {
     ref?: string,
     signal?: AbortSignal,
     hostReleaseRef?: string,
-  ) => Promise<{ path: string; ref: string }>;
+  ) => Promise<PreparedNamedInstallSource>;
   /** Git ref for a named source. Omitting it takes the default branch, which only development does. */
   ref?: string;
   processExecPath?: string;
@@ -44,7 +51,7 @@ export type InstallExtensionSourceInput = {
   runCommand?: (command: string, args: string[], options: CommandOptions) => Promise<CommandResult>;
   skipInstall?: boolean;
   signal?: AbortSignal;
-  preparedSource?: { path: string; ref: string };
+  preparedSource?: PreparedNamedInstallSource;
   originSource?: { kind: "git" | "release"; origin: GitExtensionOrigin };
   registrySource?: { url: string; id: string; release?: RegistryRelease };
   source: string;

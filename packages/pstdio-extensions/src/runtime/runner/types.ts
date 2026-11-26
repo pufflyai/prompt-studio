@@ -10,6 +10,7 @@ import type {
   ExtensionAutomationApi,
   ExtensionConnectionsApi,
   ExtensionContextBase,
+  ExtensionDiagnosticsApi,
   ExtensionFilesApi,
   ExtensionLoggerApi,
   ExtensionManagementApi,
@@ -61,6 +62,7 @@ export type ScopedHostApis = Pick<
   | "settings"
   | "extensions"
   | "account"
+  | "diagnostics"
 >;
 
 export interface CommandRunnerEnvironment {
@@ -92,6 +94,8 @@ export interface CommandRunnerEnvironment {
   account?: ExtensionAccountApi;
   /** Host PTY supervisor; absent when the host does not support terminals. */
   terminal?: ExtensionTerminalApi;
+  /** Host process profiling; absent when the host does not offer it. */
+  diagnostics?: ExtensionDiagnosticsApi;
   settings: ExtensionSettingsApi;
   /** Rebinds every resource-creating host helper to the invocation that uses it. */
   withScope: (scope: InvocationScope) => ScopedHostApis;

@@ -148,6 +148,10 @@ test("the first selected snapshot retires every session alias after the resolver
   const provider = registerSessionProvider(w, { projectId, sessions: { get } });
   const stop = registerSessionResourceSync(w);
   const writer = getWriter("sessions")!;
+  const removed = Promise.withResolvers<void>();
+  const watchRemoval = w.resources.onDidRemove((resource) => {
+    if (resource.type === "session" && resource.id === id) removed.resolve();
+  });
   const resolver = watchOpenExtensionResource(w, {
     projectId,
     metadata: localizeExtensionMetadata(sessionProviderMetadata),
@@ -165,7 +169,7 @@ test("the first selected snapshot retires every session alias after the resolver
     writer.truncateAndWrite([row]);
     selectDashboardProject(w, { id: projectId, name: "Restored" });
     expect(w.pageLocations.boot(projectId).ok).toBe(true);
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await removed.promise;
     expect(get).toHaveBeenCalledWith(id);
     const retiredSince = (version: number) => aliases.map((ref) => w.resources.wasRemovedSince(ref, version));
     expect(retiredSince(0)).toEqual([true, false, false, false]);
@@ -177,6 +181,7 @@ test("the first selected snapshot retires every session alias after the resolver
     writer.truncateAndWrite([row]);
     expect(w.resources.getRemovalVersion()).toBe(afterSync);
   } finally {
+    watchRemoval.dispose();
     resolver.dispose();
     stop();
     writer.remove(id);

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { expectRejection } from "../../test-utils/expect-rejection";
 import { createGuestHost } from "./define-extension-view";
 
 describe("createGuestHost", () => {
@@ -8,7 +9,7 @@ describe("createGuestHost", () => {
       () => () => {},
     );
 
-    await expect(host.call("artifacts.read", { op: "list", mount: "runs" })).resolves.toEqual([
+    await expect(await host.call("artifacts.read", { op: "list", mount: "runs" })).toEqual([
       { path: "result.json", size: 12, mediaType: "application/json" },
     ]);
   });
@@ -22,8 +23,8 @@ describe("createGuestHost", () => {
     );
 
     const failure = host.call("artifacts.read", { op: "readText", mount: "secrets", path: "s.txt" });
-    await expect(failure).rejects.toBeInstanceOf(Error);
-    await expect(failure).rejects.toThrow("Webview did not declare host capability: artifacts.read:secrets");
+    await expectRejection(failure).toBeInstanceOf(Error);
+    await expectRejection(failure).toThrow("Webview did not declare host capability: artifacts.read:secrets");
   });
 
   test("keeps real errors intact", async () => {
@@ -33,6 +34,6 @@ describe("createGuestHost", () => {
       () => () => {},
     );
 
-    await expect(host.call("commands.execute", { commandId: "test" })).rejects.toBe(original);
+    await expectRejection(host.call("commands.execute", { commandId: "test" })).toBe(original);
   });
 });
