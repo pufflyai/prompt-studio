@@ -91,8 +91,6 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.review
     runs-on: ubuntu-latest
     timeout-minutes: 360
-    env:
-      TMPDIR: ${{ runner.temp }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -111,6 +109,8 @@ jobs:
           docker compose version
           bunx playwright@1.60.0 install --with-deps chromium
       - name: Run every check selected by the isolated review gate
+        env:
+          TMPDIR: ${{ runner.temp }}
         run: xvfb-run -a bun run test:review --base origin/main
       - name: Preserve review reports, logs and traces
         if: always()
