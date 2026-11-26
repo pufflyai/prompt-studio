@@ -25,9 +25,11 @@ Check publication through the UI, command/API, and shared-record write path. A p
 
 Keep the last known good package digest. Exercise an incompatible engine, unavailable dependency, interrupted package download and failed activation. Check that the previous usable tool opens. From an authorized device, select the last working digest using `pst extensions publication rollback <extension-id> --revision <package-sha256> --project-id <project-id>`. Verify the selected digest and working tool on both devices. Before a rollback, check whether the old revision can read data migrated by the newer revision. Rollback selects older code and leaves data migrations applied. See [extension publication](../../references/extensions/0002-manifest-and-installation.md#extension-versions-in-cloud-projects).
 
-With the `account.read` capability, an extension can read the signed-in person’s stable Cloud account ID from `(await ctx.account.status()).login?.accountId`. Confirm it differs for the two employees and stays the same across devices for one employee. Device credentials stay in the host.
+An extension command can read the signed-in person’s stable Cloud account ID from `(await ctx.account.status()).login?.accountId`. Confirm it differs for the two employees and stays the same across devices for one employee. Device credentials stay in the host.
 
-Assign a schedule to one authorized company device and verify that the colleague can read its shared output without a source-system connection. Verify that remote commands remain scoped to authorized devices. If employees can request a refresh, exercise that request with their actual permissions.
+Configure the named source connection on one authorized company device and leave the colleague’s connection unconfigured. Run `pst extensions automations assign <schedule-id> --device-id <device-id> --project-id <project-id>`, then use `pst extensions automations list --project-id <project-id>` on both devices to verify the assignment. Wait for a scheduled occurrence. Use `pst extensions automations runs --project-id <project-id>` to confirm the occurrence completed on the assigned device and that its run history stays there. Verify that the colleague sees the same timestamped report through the published tool. Record when the source request succeeded and when the new report appeared on each device. See [scheduled automations](../../references/cli/0010-scheduled-automations.md).
+
+Verify that remote commands remain scoped to authorized devices. If employees can request a refresh, exercise that request with their actual permissions and confirm that a rejected request leaves the source untouched.
 
 ## Revoke access and hand over the team
 
