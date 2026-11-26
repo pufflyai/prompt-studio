@@ -13,8 +13,8 @@ const same = (actual: unknown, expected: unknown) => {
   if (!isDeepStrictEqual(actual, expected)) throw new Error("Private history restoration conflict");
 };
 
-/** Device history is authoritative: capture every contribution and cursor before DDL. */
-export const prepareHistoryOwnerUpgrade = async (db: DbClient, path: string) => {
+/** Preserve device history across the DDL. The 0.48 local-only cutoff retires relay contributions. */
+export const prepareHistoryOwnerUpgrade = async (db: DbClient, path: string, localOnly = false) => {
   const restoreRows = await prepareOwnedRowUpgrade(db, path, {
     source: {
       table: "storage_personal_history",
@@ -27,18 +27,30 @@ export const prepareHistoryOwnerUpgrade = async (db: DbClient, path: string) => 
     keys: ["kind", "device_id", "record_id"],
     fields: ["device_id", "kind", "record_id", "value", "seed_id", "pending_id"],
   });
-  const restoreSources = await prepareOwnedRowUpgrade(db, path, {
-    source: {
-      table: "storage_personal_history_sources",
-      name: "history-source-owners",
-      archive: "history-sources",
-    },
-    target: "history_sources",
-    projectKey: "workbench_id",
-    conflict: "Private history restoration conflict",
-    keys: ["source_id", "kind", "device_id", "record_id"],
-    fields: ["source_id", "kind", "device_id", "record_id", "value", "seed_id", "entry_id", "sequence", "entry_index"],
-  });
+  const restoreSources = localOnly
+    ? undefined
+    : await prepareOwnedRowUpgrade(db, path, {
+        source: {
+          table: "storage_personal_history_sources",
+          name: "history-source-owners",
+          archive: "history-sources",
+        },
+        target: "history_sources",
+        projectKey: "workbench_id",
+        conflict: "Private history restoration conflict",
+        keys: ["source_id", "kind", "device_id", "record_id"],
+        fields: [
+          "source_id",
+          "kind",
+          "device_id",
+          "record_id",
+          "value",
+          "seed_id",
+          "entry_id",
+          "sequence",
+          "entry_index",
+        ],
+      });
   const restorePositions = await prepareUpgradeSnapshot(
     db,
     path,
