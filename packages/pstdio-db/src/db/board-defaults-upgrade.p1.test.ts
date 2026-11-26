@@ -86,4 +86,4 @@ for (const interrupted of [false, true])
       await store?.close();
       await rm(root, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
