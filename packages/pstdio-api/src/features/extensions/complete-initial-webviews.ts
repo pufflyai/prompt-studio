@@ -4,9 +4,14 @@ import {
   preparedRevisionState,
   readAcceptedRevision,
 } from "pstdio-extensions";
+import { matchesAcceptedReleaseWebviews } from "./accepted-webview-output";
 import type { LoadedExtensionSnapshot } from "./extension-runtime";
 import type { createBuildReporters } from "./extension-webview-build-reporters";
-import { expectedWebviewBuildSource, type InstalledSourceWithManifest } from "./extension-webview-build-runner";
+import {
+  expectedWebviewBuildSource,
+  failedWebviewId,
+  type InstalledSourceWithManifest,
+} from "./extension-webview-build-runner";
 import { type CheckOwner, joinPreparationDependencies } from "./pending-webview-checks";
 import { validateExtensionWebviews } from "./validate-extension-webviews";
 
@@ -41,13 +46,20 @@ const complete = async (input: InitialWebviewInput) => {
     return retained;
   };
   const loaded = { ...snapshot.loaded, preparedRevision: { ...previous } };
+  const validate = async () => {
+    if (await matchesAcceptedReleaseWebviews(row, previous))
+      loaded.preparedRevision.webviews = { ...previous.webviews };
+    else await validateExtensionWebviews(loaded, row.source_path, row.install_name, input.signal);
+  };
   try {
-    await validateExtensionWebviews(loaded, row.source_path, row.install_name, input.signal);
+    await validate();
   } catch (error) {
     // Initial failures use per-view feedback; a rejected update retains its complete set.
     return reportFailure(error);
   }
-  if (retained && preparedRevisionState(previous) === preparedRevisionState(loaded.preparedRevision)) {
+  const unchanged = retained && preparedRevisionState(previous) === preparedRevisionState(loaded.preparedRevision);
+  const recoveringView = failedWebviewId(row);
+  if (unchanged && !recoveringView) {
     const current = await input.loadCurrent();
     input.signal.throwIfAborted();
     if (!isSameSource(input, current)) return retained;
@@ -56,7 +68,9 @@ const complete = async (input: InitialWebviewInput) => {
   if (
     !(await reportViews(
       input,
-      Object.entries(loaded.preparedRevision.webviews!).map(([id, artifact]) => [id, { status: "success", artifact }]),
+      Object.entries(loaded.preparedRevision.webviews!)
+        .filter(([id]) => !unchanged || id === recoveringView)
+        .map(([id, artifact]) => [id, { status: "success", artifact }]),
     ))
   )
     return retained;
@@ -65,7 +79,7 @@ const complete = async (input: InitialWebviewInput) => {
   // external dependency edit during that wait cannot complete the earlier identity.
   const state = preparedRevisionState(loaded.preparedRevision);
   try {
-    await validateExtensionWebviews(loaded, row.source_path, row.install_name, input.signal);
+    await validate();
   } catch (error) {
     return reportFailure(error);
   }
