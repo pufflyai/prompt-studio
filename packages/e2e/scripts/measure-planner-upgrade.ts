@@ -76,6 +76,12 @@ const runSample = async (variant: Variant, iteration: number, leaveOpen: boolean
     await mkdir(home);
     await mkdir(folder);
     await registry.publishPackage(initialArchive);
+    if (leaveOpen) {
+      for (const tool of catalog.sources) {
+        if (tool.id !== planner.id)
+          await registry.publishPackage(join(archives, `${encodeURIComponent(tool.installName)}.tgz`));
+      }
+    }
     host = await startPackagedServe(home, { PSTDIO_EXTENSION_RELEASE_REF: `psx:${registry.origin}` });
     const { baseUrl, descriptor: runtime } = host;
     const post = async <T>(path: string, body?: unknown) => {
@@ -113,9 +119,6 @@ const runSample = async (variant: Variant, iteration: number, leaveOpen: boolean
       const edited = { ...(await Bun.file(installedManifest).json()), description: "My local Planner description" };
       await Bun.write(installedManifest, JSON.stringify(edited));
       for (const extensionId of ["pstdio.session-browser", "pstdio.harness-codex"]) {
-        const tool = catalog.sources.find(({ id }) => id === extensionId);
-        if (!tool) throw new Error(`The conflict demo requires the packaged ${extensionId} source.`);
-        await registry.publishPackage(join(archives, `${encodeURIComponent(tool.installName)}.tgz`));
         await post<InstallExtensionResponse>(`${project}/install`, {
           source: { kind: "catalog", name: extensionId },
         });

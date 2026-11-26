@@ -29,6 +29,7 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
   expect(targets).toHaveLength(3);
   const waiting: { route: Route; extension: ProjectExtensionInstance }[] = [];
   const heldReads: Route[] = [];
+  const releaseComparison = Promise.withResolvers<void>();
   let holdReads = false;
   await page.route(`**/v1/projects/${project.id}/extensions`, async (route) => {
     if (holdReads) {
@@ -120,8 +121,9 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
 
     const reviewId = "1da7f099-0539-49c5-bc98-d5ad8c09ad01";
     let refreshed = false;
-    await page.route(`**/v1/projects/${project.id}/extensions/*/upgrade-review`, (route) => {
+    await page.route(`**/v1/projects/${project.id}/extensions/*/upgrade-review`, async (route) => {
       const { action, revision } = route.request().postDataJSON();
+      if (action === "begin") await releaseComparison.promise;
       if (action === "file") {
         expect(revision).toBe("refreshed");
         return route.fulfill({
@@ -157,8 +159,10 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
       .getByRole("button", { name: /Review upgrade/ })
       .click();
     const review = page.getByRole("dialog", { name: `Review ${local.displayName} upgrade` });
-    await expect(review).toContainText("The extension source changed during this review");
     await expect(review.getByRole("textbox", { name: "Additional instructions (optional)" })).toBeVisible();
+    await expect(review.getByRole("button", { name: "Resolve with agent" })).toBeEnabled();
+    releaseComparison.resolve();
+    await expect(review).toContainText("The extension source changed during this review");
     await expect(review.getByRole("button", { name: "Keep local", exact: true })).toHaveCount(0);
     await expect(review.getByRole("button", { name: "Apply upgrade" })).toHaveCount(0);
     await page.route(
@@ -188,6 +192,7 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
     await expect(review).toContainText("The agent prepared a resolution.");
     await expect(review.getByRole("button", { name: "Apply upgrade" })).toBeEnabled();
   } finally {
+    releaseComparison.resolve();
     await Promise.all(heldReads.map((route) => route.abort()));
     await page.unrouteAll({ behavior: "ignoreErrors" });
   }

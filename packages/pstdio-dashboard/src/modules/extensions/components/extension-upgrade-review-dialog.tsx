@@ -1,6 +1,6 @@
 import { Button, CloseButton, Dialog, Field, Portal, Stack, Text, Textarea } from "@chakra-ui/react";
 import { PstdioApiError } from "@pstdio/sdk/client";
-import { AlertMessage, LoadingState } from "@pstdio/ui";
+import { AlertMessage } from "@pstdio/ui";
 import {
   type ExtensionUpgradeReview,
   type ProjectExtensionInstance,
@@ -70,6 +70,7 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
   );
   const busy = apply.isPending || starting;
   const working = reply.data?.state === "working";
+  const showAgentAction = onCompose && !ready;
 
   useEffect(() => {
     let current = true;
@@ -89,17 +90,17 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
   }, [target]);
 
   const startAgent = async () => {
-    if (!review || !onCompose || busy || working) return;
+    if (!onCompose || busy || working) return;
     setError(undefined);
     setStarting(true);
     try {
-      let current = review;
-      if (stale) {
+      let current = review ?? (await target.load);
+      if (stale || current.changedPaths) {
         const result = await getApiClient().extensions.reviewUpgrade(projectId, instanceId, {
           action: "refresh",
-          id: review.id,
-          revision: review.revision,
-          resolutions: review.resolutions,
+          id: current.id,
+          revision: current.revision,
+          resolutions: current.resolutions,
         });
         current = result.review;
         setReview(current);
@@ -164,7 +165,9 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
                     {error}
                   </AlertMessage>
                 )}
-                {!review && !error && <LoadingState />}
+                {!review && (
+                  <Text>{t("currentStaysActive", "Your extension stays active until you apply the upgrade.")}</Text>
+                )}
                 {review && (
                   <>
                     <Text>
@@ -189,22 +192,22 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
                       </AlertMessage>
                     )}
                     <AgentReplyStatus ready={ready} stale={stale} reply={reply} />
-                    {!onCompose && !ready && (
-                      <Text>{t("agentUnavailable", "The session composer is unavailable in this project.")}</Text>
-                    )}
-                    {!ready && onCompose && !working && (
-                      <Field.Root>
-                        <Field.Label>{t("agentInstructions", "Additional instructions (optional)")}</Field.Label>
-                        <Textarea
-                          rows={3}
-                          value={instructions}
-                          maxLength={4000}
-                          disabled={busy}
-                          onChange={(event) => setInstructions(event.target.value)}
-                        />
-                      </Field.Root>
-                    )}
                   </>
+                )}
+                {!onCompose && !ready && (
+                  <Text>{t("agentUnavailable", "The session composer is unavailable in this project.")}</Text>
+                )}
+                {showAgentAction && !working && (
+                  <Field.Root>
+                    <Field.Label>{t("agentInstructions", "Additional instructions (optional)")}</Field.Label>
+                    <Textarea
+                      rows={3}
+                      value={instructions}
+                      maxLength={4000}
+                      disabled={busy}
+                      onChange={(event) => setInstructions(event.target.value)}
+                    />
+                  </Field.Root>
                 )}
               </Stack>
             </Dialog.Body>
@@ -214,8 +217,12 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
                   {t("apply", "Apply upgrade")}
                 </Button>
               )}
-              {onCompose && !ready && (
-                <Button loading={starting} disabled={!review || busy || working} onClick={() => void startAgent()}>
+              {showAgentAction && (
+                <Button
+                  loading={starting}
+                  disabled={busy || working || (!review && Boolean(error))}
+                  onClick={() => void startAgent()}
+                >
                   {t("askAgent", "Resolve with agent")}
                 </Button>
               )}
