@@ -13,4 +13,4 @@
 "skills": patch
 ---
 
-Explore Home customization prompts, see quotas in project navigation, preview linked resources in Side, inspect chat link destinations on hover, use Markdown Find and passage comments, and read workbench context from an attached agent.
+Build a custom Home from screenshot ideas, see quotas in project navigation, preview linked resources in Side, inspect chat link destinations on hover, use Markdown Find and passage comments, and read workbench context from an attached agent.

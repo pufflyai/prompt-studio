@@ -43,6 +43,24 @@ test("Home shows project ideas and reopens recently used resources", async ({ pa
   await expect(homeFrame(page).getByText("Recently Used", { exact: true })).toHaveCount(0);
   await homeFrame(page).getByRole("button", { name: "Next idea", exact: true }).click();
   await expect(homeFrame(page).getByRole("heading", { name: "Release checklist", exact: true })).toBeInViewport();
+  // The selected idea must start real work and open the resulting conversation.
+  const building = page.waitForResponse(
+    (response) =>
+      response.url().includes("/extensions/commands/pstdio.home.command.build-home/execute") &&
+      response.request().method() === "POST",
+  );
+  await homeFrame(page)
+    .getByRole("article", { name: "Release checklist", exact: true })
+    .getByRole("button", { name: "Build this!", exact: true })
+    .click();
+  const built = await building;
+  expect(built.ok()).toBe(true);
+  const result = (await built.json()) as { outcome: { ok: boolean; value: { sessionId: string } } };
+  expect(result.outcome.ok).toBe(true);
+  const created = await request.get(`/v1/sessions/${result.outcome.value.sessionId}`);
+  expect(created.ok()).toBe(true);
+  expect(await created.json()).toMatchObject({ project_id: project.id, title: "Build Home: Release checklist" });
+  await expect(page.getByRole("tab", { name: "Build Home: Release checklist", exact: true })).toBeVisible();
   const session = sessions[6];
   await page.goto(
     `/projects/${project.id}/session?resource=${encodeURIComponent(`pstdio://extension-resource/session/${session.id}`)}`,

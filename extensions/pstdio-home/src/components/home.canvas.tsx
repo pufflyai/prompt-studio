@@ -27,7 +27,7 @@ interface StartPagePreviewProps {
 const StartPagePreview = (props: StartPagePreviewProps) => {
   const { setupError, empty } = props;
   return (
-    <Stack w="full" maxW="52rem" pt="4xl" pb="3xl" gap="3xl" position="relative">
+    <Stack w="full" maxW="2xl" px="lg" pt="4xl" pb="3xl" gap="2xl" position="relative">
       {setupError && <ProjectSetupStatus error={setupError} onRetry={() => undefined} />}
       <HomeWelcome />
       <StartRecentList
@@ -45,7 +45,7 @@ const StartPagePreview = (props: StartPagePreviewProps) => {
         )}
         onOpen={() => undefined}
       />
-      <HomePromptCarousel />
+      <HomePromptCarousel onBuild={async () => undefined} />
     </Stack>
   );
 };

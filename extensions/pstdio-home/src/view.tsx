@@ -62,11 +62,12 @@ export const HomeApp = (props: AppProps) => {
   return (
     <Stack
       w="full"
-      maxW="52rem"
+      maxW="2xl"
       mx="auto"
       px={{ base: "md", md: "lg" }}
-      py="lg"
-      gap="md"
+      pt="4xl"
+      pb="3xl"
+      gap="2xl"
       position="relative"
       data-testid="start-page"
     >
@@ -105,7 +106,11 @@ export const HomeApp = (props: AppProps) => {
             .catch((error) => setNavigationError(String(error)));
         }}
       />
-      <HomePromptCarousel />
+      <HomePromptCarousel
+        onBuild={async (idea) => {
+          await client.commands["build-home"]({ idea });
+        }}
+      />
     </Stack>
   );
 };

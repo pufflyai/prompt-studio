@@ -1,100 +1,108 @@
-import { Button, Carousel, Heading, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
-import { useRef, useState } from "react";
+import { AspectRatio, Button, Carousel, Heading, HStack, IconButton, Image, Stack, Text } from "@chakra-ui/react";
+import { AlertMessage, SimpleCard, SimpleCardBody } from "@pstdio/ui";
+import { useState } from "react";
+import launchpad from "../assets/launchpad.png";
+import projectPulse from "../assets/project-pulse.png";
+import releaseChecklist from "../assets/release-checklist.png";
+import teamHandoff from "../assets/team-handoff.png";
+import { type HomeIdeaId, homeIdeas } from "../home-ideas";
 import { HomeIcon } from "./home-icon";
 
-const ideas = [
-  {
-    title: "Project pulse",
-    prompt:
-      "Customize this Home page with a project dashboard. Summarize recent activity, work in progress, and the next three things I should look at. Link each item to its source.",
-  },
-  {
-    title: "Release checklist",
-    prompt:
-      "Turn this Home page into a release checklist. Show the current release, open blockers, and status of the checks I need before shipping. Link to the relevant tickets and pull requests.",
-  },
-  {
-    title: "Team handoff",
-    prompt:
-      "Build a handoff view for this Home page. Show what changed since the last handoff, decisions still open, and the people or tickets to follow up with.",
-  },
-  {
-    title: "Launchpad",
-    prompt:
-      "Make this Home page a launchpad for the work I repeat. Inspect this project, identify useful commands and views, and add shortcuts to run or open them.",
-  },
-];
+const screenshots = {
+  "project-pulse": projectPulse,
+  "release-checklist": releaseChecklist,
+  "team-handoff": teamHandoff,
+  launchpad,
+};
 
-const HomePromptIdea = (props: { title: string; prompt: string }) => {
-  const { title, prompt } = props;
-  const text = useRef<HTMLParagraphElement>(null);
-  const [copyStatus, setCopyStatus] = useState<"copied" | "selected">();
-  const copyPrompt = async () => {
+interface HomePromptCarouselProps {
+  onBuild: (idea: HomeIdeaId) => Promise<void>;
+}
+
+export const HomePromptCarousel = ({ onBuild }: HomePromptCarouselProps) => {
+  const [pending, setPending] = useState<HomeIdeaId>();
+  const [error, setError] = useState<string>();
+  const build = async (id: HomeIdeaId) => {
+    if (pending) return;
+    setPending(id);
+    setError(undefined);
     try {
-      await navigator.clipboard.writeText(prompt);
-      setCopyStatus("copied");
-      return;
-    } catch {
-      // The text remains copyable in webviews where the browser denies the clipboard API.
+      await onBuild(id);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setPending(undefined);
     }
-    const element = text.current;
-    const selection = element?.ownerDocument.getSelection();
-    if (!element || !selection) return;
-    const range = element.ownerDocument.createRange();
-    range.selectNodeContents(element);
-    selection.removeAllRanges();
-    selection.addRange(range);
-    setCopyStatus("selected");
   };
   return (
-    <Stack gap="xs">
-      <HStack justify="space-between">
-        <Heading as="h3" textStyle="label/M/medium">
-          {title}
-        </Heading>
-        <Button variant="ghost" size="xs" onClick={() => void copyPrompt()}>
-          Copy prompt
-        </Button>
-      </HStack>
-      <Text ref={text} textStyle="paragraph/S/regular" color="fg.muted" userSelect="text">
-        {prompt}
-      </Text>
-      {copyStatus && (
-        <Text role="status" textStyle="label/S/regular" color="fg.muted">
-          {copyStatus === "copied" ? "Prompt copied." : "Prompt selected. Press Cmd+C or Ctrl+C to copy it."}
-        </Text>
+    <Stack gap="md" minW="0" w="full">
+      <Heading as="h2" textStyle="label/L/regular">
+        Turn this page into something else
+      </Heading>
+      <Carousel.Root
+        aria-label="Home page ideas"
+        slideCount={homeIdeas.length}
+        slidesPerPage={1}
+        loop
+        w="full"
+        minW="0"
+      >
+        <Carousel.ItemGroup>
+          {homeIdeas.map(({ id, title, description }, index) => (
+            <Carousel.Item key={id} index={index} minW="0">
+              <SimpleCard as="article" aria-label={title} overflow="hidden">
+                <AspectRatio ratio={16 / 10} bg="bg.subtle" borderBottomWidth="1px" borderColor="border">
+                  <Image src={screenshots[id]} alt={`${title} example interface`} objectFit="cover" draggable={false} />
+                </AspectRatio>
+                <SimpleCardBody display="flex" flexDirection="column" gap="md" p="lg">
+                  <Stack gap="xs">
+                    <Heading as="h3" textStyle="label/L/medium">
+                      {title}
+                    </Heading>
+                    <Text textStyle="paragraph/S/regular" color="fg.muted">
+                      {description}
+                    </Text>
+                  </Stack>
+                  <Button
+                    variant="solid"
+                    alignSelf="flex-start"
+                    size="sm"
+                    loading={pending === id}
+                    disabled={Boolean(pending)}
+                    onClick={() => void build(id)}
+                  >
+                    Build this!
+                  </Button>
+                </SimpleCardBody>
+              </SimpleCard>
+            </Carousel.Item>
+          ))}
+        </Carousel.ItemGroup>
+        <Carousel.Control justifyContent="space-between" gap="sm">
+          <Carousel.IndicatorGroup>
+            {homeIdeas.map(({ id, title }, index) => (
+              <Carousel.Indicator key={id} index={index} aria-label={`Show ${title}`} />
+            ))}
+          </Carousel.IndicatorGroup>
+          <HStack gap="xs">
+            <Carousel.PrevTrigger asChild>
+              <IconButton variant="ghost" size="sm" aria-label="Previous idea">
+                <HomeIcon name="chevron-left" />
+              </IconButton>
+            </Carousel.PrevTrigger>
+            <Carousel.NextTrigger asChild>
+              <IconButton variant="ghost" size="sm" aria-label="Next idea">
+                <HomeIcon name="chevron-right" />
+              </IconButton>
+            </Carousel.NextTrigger>
+          </HStack>
+        </Carousel.Control>
+      </Carousel.Root>
+      {error && (
+        <AlertMessage status="error" title="Could not start building" onClose={() => setError(undefined)}>
+          {error}
+        </AlertMessage>
       )}
     </Stack>
   );
 };
-
-export const HomePromptCarousel = () => (
-  <Carousel.Root aria-label="Ideas for your Home page" slideCount={ideas.length} loop>
-    <Stack gap="sm" minW="0">
-      <HStack justify="space-between">
-        <Heading as="h2" textStyle="label/L/regular">
-          Ideas for your Home page
-        </Heading>
-        <Carousel.Control gap="xs" flexShrink={0}>
-          <Carousel.PrevTrigger asChild>
-            <IconButton variant="ghost" size="sm" aria-label="Previous idea">
-              <HomeIcon name="chevron-left" size={16} />
-            </IconButton>
-          </Carousel.PrevTrigger>
-          <Carousel.NextTrigger asChild>
-            <IconButton variant="ghost" size="sm" aria-label="Next idea">
-              <HomeIcon name="chevron-right" size={16} />
-            </IconButton>
-          </Carousel.NextTrigger>
-        </Carousel.Control>
-      </HStack>
-      <Carousel.ItemGroup rounded="sm" borderWidth="1px" borderColor="border.subtle" bg="bg.subtle">
-        {ideas.map(({ title, prompt }, index) => (
-          <Carousel.Item key={title} index={index} p="md">
-            <HomePromptIdea title={title} prompt={prompt} />
-          </Carousel.Item>
-        ))}
-      </Carousel.ItemGroup>
-    </Stack>
-  </Carousel.Root>
-);

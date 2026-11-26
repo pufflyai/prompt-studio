@@ -1,7 +1,9 @@
 import { defineCommand, l10n } from "@pstdio/sdk/extensions";
+import { buildHome } from "./build-home";
 import { readHome } from "./data";
 
 export const commands = {
+  "build-home": buildHome,
   // The Sessions extension can read earlier samples until their existing retention period expires.
   quotaHistory: defineCommand({
     id: "quota-history",
