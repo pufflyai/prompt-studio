@@ -1,4 +1,4 @@
-import { HStack, Input, Stack, Text } from "@chakra-ui/react";
+import { Field, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import type { DeviceLogin, TeamAccount, TeamInvitation, TeamMember, TeamMembershipWrite } from "@pstdio/sdk/extensions";
 import { DeleteConfirmationModal } from "@pstdio/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -15,7 +15,10 @@ export const TeamMembers = (props: { team: TeamAccount; login: DeviceLogin; refr
   const [roster, setRoster] = useState<TeamMember[]>();
   const [invitations, setInvitations] = useState<TeamInvitation[]>([]);
   const inFlight = useRef<AbortController>(undefined);
+  const [provider, setProvider] = useState<"google" | "microsoft">("google");
   const [email, setEmail] = useState("");
+  const [tenantId, setTenantId] = useState("");
+  const [objectId, setObjectId] = useState("");
   const [link, setLink] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -60,6 +63,8 @@ export const TeamMembers = (props: { team: TeamAccount; login: DeviceLogin; refr
       if ("url" in result) {
         setLink(result.url);
         setEmail("");
+        setTenantId("");
+        setObjectId("");
       }
       setConfirm(undefined);
       await load();
@@ -71,6 +76,12 @@ export const TeamMembers = (props: { team: TeamAccount; login: DeviceLogin; refr
       setBusy(false);
     }
   };
+
+  const recipient =
+    provider === "microsoft"
+      ? { microsoft: { tenantId: tenantId.trim(), objectId: objectId.trim() } }
+      : { email: email.trim() };
+  const inviteReady = provider === "microsoft" ? !!tenantId.trim() && !!objectId.trim() : !!email.trim();
 
   return (
     <Stack gap="sm">
@@ -109,27 +120,80 @@ export const TeamMembers = (props: { team: TeamAccount; login: DeviceLogin; refr
           <Text color="fg.muted">
             {t("members.separateProjects", "Joining the team does not grant access to projects.")}
           </Text>
-          <HStack
-            as="form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (email.trim()) void mutate({ op: "invite", accountId: teamId, email: email.trim() });
-            }}
-          >
-            <Input
+          <HStack gap="xs" role="group" aria-label={t("members.recipientProvider", "Invitation sign-in provider")}>
+            <Button
               size="sm"
-              type="email"
-              required
-              value={email}
+              variant="outline"
+              aria-pressed={provider === "google"}
               disabled={busy}
-              maxLength={254}
-              aria-label={t("members.email", "Verified Google email")}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-            <Button size="sm" variant="outline" type="submit" disabled={busy || !email.trim()}>
-              {t("members.invite", "Invite person")}
+              onClick={() => setProvider("google")}
+            >
+              {t("members.google", "Google")}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              aria-pressed={provider === "microsoft"}
+              disabled={busy}
+              onClick={() => setProvider("microsoft")}
+            >
+              {t("members.microsoft", "Microsoft work account")}
             </Button>
           </HStack>
+          <Stack
+            as="form"
+            gap="xs"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (inviteReady) void mutate({ op: "invite", accountId: teamId, ...recipient });
+            }}
+          >
+            {provider === "microsoft" ? (
+              <>
+                <Field.Root>
+                  <Field.Label>{t("members.tenantId", "Microsoft Entra tenant ID")}</Field.Label>
+                  <Input
+                    size="sm"
+                    required
+                    value={tenantId}
+                    disabled={busy}
+                    maxLength={36}
+                    onChange={(event) => setTenantId(event.target.value)}
+                  />
+                </Field.Root>
+                <Field.Root>
+                  <Field.Label>{t("members.objectId", "Microsoft Entra user object ID")}</Field.Label>
+                  <Input
+                    size="sm"
+                    required
+                    value={objectId}
+                    disabled={busy}
+                    maxLength={36}
+                    onChange={(event) => setObjectId(event.target.value)}
+                  />
+                  <Field.HelperText>
+                    {t("members.directoryIdentity", "Get both IDs for the recipient from your Entra administrator.")}
+                  </Field.HelperText>
+                </Field.Root>
+              </>
+            ) : (
+              <Field.Root>
+                <Field.Label>{t("members.email", "Verified Google email")}</Field.Label>
+                <Input
+                  size="sm"
+                  type="email"
+                  required
+                  value={email}
+                  disabled={busy}
+                  maxLength={254}
+                  onChange={(event) => setEmail(event.target.value)}
+                />
+              </Field.Root>
+            )}
+            <Button size="sm" variant="outline" type="submit" alignSelf="flex-start" disabled={busy || !inviteReady}>
+              {t("members.invite", "Invite person")}
+            </Button>
+          </Stack>
           {link && (
             <Input
               size="sm"
@@ -142,7 +206,15 @@ export const TeamMembers = (props: { team: TeamAccount; login: DeviceLogin; refr
           {invitations.map((invitation) => (
             <HStack key={invitation.id} justify="space-between" flexWrap="wrap">
               <Text>{t("members.pending", "Pending")}</Text>
-              <Text>{invitation.email}</Text>
+              <Text overflowWrap="anywhere">
+                {invitation.email ??
+                  (invitation.microsoft &&
+                    t(
+                      "members.microsoftRecipient",
+                      "Microsoft {{objectId}} (tenant {{tenantId}})",
+                      invitation.microsoft,
+                    ))}
+              </Text>
               <Text>{new Date(invitation.expiresAt).toLocaleString()}</Text>
               <Button
                 size="2xs"

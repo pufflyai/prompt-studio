@@ -45,7 +45,10 @@ export const TeamJoin = (props: { login: DeviceLogin; close: () => void; joined:
     consumed: t("join.consumed", "This invitation has already been used."),
     canceled: t("join.canceled", "This invitation was canceled."),
     expired: t("join.expired", "This invitation expired."),
-    "wrong-identity": t("join.wrongIdentity", "Sign in with the Google account that received this invitation."),
+    "wrong-identity":
+      view?.provider === "microsoft"
+        ? t("join.wrongMicrosoftIdentity", "Sign in with the Microsoft work account that received this invitation.")
+        : t("join.wrongIdentity", "Sign in with the Google account that received this invitation."),
     unknown: t("join.unknown", "This invitation is unavailable."),
   };
   return (

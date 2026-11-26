@@ -141,9 +141,6 @@ export const CloudSettings = (props: { projectId?: string }) => {
   const local = data?.sync.state === "local";
   const earlyAccess = account?.features?.relay;
   const signingOut = account?.login && !account.signInRequired;
-  let accessLabel = t("access.comingSoon", "Coming soon");
-  if (earlyAccess) accessLabel = t("access.enabled", "Early access enabled");
-  if (account?.features === null) accessLabel = t("access.loading", "Checking Cloud access…");
   return (
     <Stack h="full" minH="0" gap="0">
       <ScrollArea flex="1" minH="0">
@@ -209,19 +206,6 @@ export const CloudSettings = (props: { projectId?: string }) => {
               login={account.login}
               refresh={refresh}
             />
-          )}
-          {account?.login && (
-            <SimpleCard>
-              <SimpleCardBody>
-                <Stack gap="sm">
-                  <SectionTitle icon="shield-check">{t("access.title", "Cloud access")}</SectionTitle>
-                  <HStack gap="xs" color="fg.muted">
-                    <CloudIcon name={earlyAccess ? "circle-check" : "cloud"} />
-                    <Text>{accessLabel}</Text>
-                  </HStack>
-                </Stack>
-              </SimpleCardBody>
-            </SimpleCard>
           )}
           {earlyAccess && account?.login && data && (
             <>
