@@ -1,4 +1,4 @@
-import type { PGlite } from "@electric-sql/pglite";
+import type { PGlite, Transaction } from "@electric-sql/pglite";
 import { readMigrationFiles } from "drizzle-orm/migrator";
 import { retireLegacyRecordTables } from "./legacy-record-retirement";
 import { hasUpgradeSnapshots } from "./upgrade-snapshot";
@@ -60,8 +60,17 @@ export const resumeCurrentPgliteSchema = async (input: {
 /** Keep Drizzle's generated SQL, hashes, ordering and all-pending transaction.
  * PGlite can execute each migration in one simple-protocol batch instead of
  * crossing the JavaScript/WASM boundary for every generated statement. */
-export const migratePglite = async (db: PGlite, migrationsFolder: string) => {
-  const migrations = readMigrationFiles({ migrationsFolder });
+export const migratePglite = (
+  db: PGlite,
+  migrationsFolder: string,
+  layoutImport?: (tx: Transaction) => Promise<void>,
+) => applyPgliteMigrations(db, readMigrationFiles({ migrationsFolder }), layoutImport);
+
+export const applyPgliteMigrations = async (
+  db: PGlite,
+  migrations: ReturnType<typeof readMigrationFiles>,
+  layoutImport?: (tx: Transaction) => Promise<void>,
+) => {
   await db.exec('CREATE SCHEMA IF NOT EXISTS "drizzle"');
   await db.exec(`CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
     id SERIAL PRIMARY KEY, hash text NOT NULL, created_at bigint
@@ -74,6 +83,8 @@ export const migratePglite = async (db: PGlite, migrationsFolder: string) => {
     for (const migration of migrations) {
       if (previous && Number(previous.created_at) >= migration.folderMillis) continue;
       await tx.exec(migration.sql.join("\n"));
+      // Install released owner IDs when 0011 creates the identity column.
+      if (migration.folderMillis === 1795380506774) await layoutImport?.(tx);
       await tx.query('INSERT INTO "drizzle"."__drizzle_migrations" (hash,created_at) VALUES ($1,$2)', [
         migration.hash,
         migration.folderMillis,

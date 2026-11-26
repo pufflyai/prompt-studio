@@ -1,13 +1,11 @@
 import fs from "node:fs";
 import { createRequire } from "node:module";
-import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import type { PGlite } from "@electric-sql/pglite";
 import { inArray } from "drizzle-orm";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
-import { normalizeEmbeddedFileName, relativeEmbeddedFileName } from "pstdio-paths";
+import { normalizeEmbeddedFileName } from "pstdio-paths";
 import type { StorageOwner } from "pstdio-sync";
 import { migrateExtensionIdentities } from "../services/extension-identity-migration";
 import { pruneAllDocumentFiles, pruneDocumentFiles } from "../services/extension-storage/document-file-retention";
@@ -25,6 +23,8 @@ import { restoreArtifactProjectionAdmission } from "./artifact-projection-admiss
 import { prepareArtifactProjectionUpgrade } from "./artifact-projection-upgrade";
 import { prepareAssetOwnerUpgrade } from "./asset-owner-upgrade";
 import { prepareAutomationOwnersUpgrade } from "./automation-owners-upgrade";
+import { importBatchOwners, importBatchRows, stageBatchReimport } from "./batch-reimport";
+import { batchBackup, batchPayload, recoverBatchHome } from "./batch-reimport-home";
 import { prepareBoardDefaultsUpgrade } from "./board-defaults-upgrade";
 import { prepareBoardOwnersUpgrade } from "./board-owners-upgrade";
 import { prepareConnectionCredentialsUpgrade } from "./connection-credentials-upgrade";
@@ -37,6 +37,7 @@ import { retireLegacyRecordTables } from "./legacy-record-retirement";
 import { type LegacyConversionFailure, upgradeLegacyRecords } from "./legacy-record-upgrade";
 import { prepareLogOwnerUpgrade } from "./log-owner-upgrade";
 import { migratePglite, resumeCurrentPgliteSchema } from "./migrate-pglite";
+import { type EmbeddedFile, getEmbeddedFiles, withMigrationsFolder } from "./migration-assets";
 import { prepareNativeOwnerUpgrade } from "./native-owner-upgrade";
 import { openPglite } from "./open-pglite";
 import { prepareOrderedOwnerUpgrade } from "./ordered-owner-upgrade";
@@ -59,83 +60,12 @@ import { prepareSessionWorkspaceUpgrade } from "./session-workspace-upgrade";
 import { resolveSourceEngineModule, sourceStartupOptions } from "./source-startup-image";
 import { type DatabaseMaintenancePhase, invalidateMaintenance, maintainDatabase } from "./startup-maintenance";
 
-type EmbeddedFile = Blob & { name: string };
-// Bun's embedded file objects are runtime-specific; narrowing the contract keeps extraction testable
-// without depending on full Blob behavior that unit tests do not control.
-type EmbeddedMigrationFile = Pick<EmbeddedFile, "name" | "size" | "arrayBuffer">;
+export { resolveMigrationsFolder } from "./migration-assets";
 
-const DRIZZLE_EXTRACT_DIR = "pstdio-drizzle";
 const PGLITE_WASM_SUFFIX = "/pstdio-db/vendor/pglite/pglite.wasm";
 const PGLITE_DATA_SUFFIX = "/pstdio-db/vendor/pglite/pglite.data";
 const PGLITE_INITIAL_DATABASE_SUFFIX = "/pstdio-db/vendor/pglite/initial-database.tar.gz";
 const PGLITE_ICU_SUFFIX = "/pstdio-db/vendor/pglite/icu.76.tgz";
-
-const getEmbeddedFiles = (): EmbeddedFile[] => {
-  try {
-    const files = (Bun as Record<string, unknown>).embeddedFiles;
-    if (Array.isArray(files)) return files as EmbeddedFile[];
-  } catch {
-    // not available
-  }
-  return [];
-};
-
-const extractEmbeddedMigrations = async (
-  embeddedFiles: readonly { file: EmbeddedMigrationFile; relativePath: string }[],
-  root: string,
-  logger: (message: string) => void,
-) => {
-  for (const { file, relativePath } of embeddedFiles) {
-    const outPath = path.join(root, relativePath);
-    fs.mkdirSync(path.dirname(outPath), { recursive: true });
-    logger(`[drizzle] extracting ${relativePath} (${file.size} bytes)`);
-    const buf = await file.arrayBuffer();
-    fs.writeFileSync(outPath, Buffer.from(buf));
-  }
-};
-
-export const resolveMigrationsFolder = async (
-  options: {
-    embeddedFiles?: readonly EmbeddedMigrationFile[];
-    tmpDir?: string;
-    logger?: (message: string) => void;
-  } = {},
-) => {
-  const embeddedSource = options.embeddedFiles ?? getEmbeddedFiles();
-  // Schema snapshots belong to migration generation; extracting them delays packaged startup.
-  const embedded = embeddedSource.flatMap((file) => {
-    const relativePath = relativeEmbeddedFileName(file.name, "pstdio-db/drizzle");
-    return relativePath !== undefined && (relativePath.endsWith(".sql") || relativePath === "meta/_journal.json")
-      ? [{ file, relativePath }]
-      : [];
-  });
-
-  if (embedded.length > 0) {
-    const root = fs.mkdtempSync(path.join(options.tmpDir ?? os.tmpdir(), `${DRIZZLE_EXTRACT_DIR}-`));
-    const dispose = () => fs.rmSync(root, { recursive: true, force: true });
-    try {
-      await extractEmbeddedMigrations(embedded, root, options.logger ?? console.log);
-      return { path: root, dispose };
-    } catch (error) {
-      dispose();
-      throw error;
-    }
-  }
-
-  return {
-    path: path.join(path.dirname(fileURLToPath(import.meta.url)), "../../drizzle"),
-    dispose: () => {},
-  };
-};
-
-const withMigrationsFolder = async (run: (folder: string) => Promise<void>) => {
-  const migrations = await resolveMigrationsFolder();
-  try {
-    await run(migrations.path);
-  } finally {
-    migrations.dispose();
-  }
-};
 
 export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[] = getEmbeddedFiles()) => {
   const wasmFile = embeddedFiles.find((file) => normalizeEmbeddedFileName(file.name).endsWith(PGLITE_WASM_SUFFIX));
@@ -215,7 +145,8 @@ export const createDb = async (options?: {
     const embedded = getEmbeddedFiles();
     const pgliteOpts = await sourceStartupOptions(await resolvePgliteOptions(embedded));
     onPhase("database_engine_loaded");
-    if (dbPath !== ":memory:")
+    if (dbPath !== ":memory:") {
+      await recoverBatchHome(dbPath);
       await prepareCurrentPgliteHome({
         activePath: dbPath,
         runtime: pgliteOpts,
@@ -224,10 +155,33 @@ export const createDb = async (options?: {
         onImageRestored,
         onPhase,
       });
+    }
     options?.signal?.throwIfAborted();
     pglite = await openPglite(dbPath, pgliteOpts, onImageRestored);
+    await pglite.waitReady;
+    if (!fresh && dbPath !== ":memory:" && !fs.existsSync(batchBackup(dbPath))) {
+      const source = pglite;
+      const {
+        rows: [state],
+      } = await source.query<{ released: boolean }>(`SELECT to_regclass('public.storage_ordered_owners') IS NOT NULL
+        AND to_regclass('public.owners') IS NULL AND to_regclass('drizzle.__drizzle_migrations') IS NOT NULL AS released`);
+      if (state?.released) {
+        let staged = false;
+        await withMigrationsFolder(async (folder) => {
+          staged = await stageBatchReimport(source, dbPath, pgliteOpts, folder, options?.signal);
+        });
+        if (staged) {
+          await source.close();
+          pglite = undefined;
+          await recoverBatchHome(dbPath);
+          pglite = await openPglite(dbPath, pgliteOpts);
+          await pglite.waitReady;
+        }
+      }
+    }
     const openedPglite = pglite;
-    await openedPglite.waitReady;
+    const payload = path.join(dbPath, batchPayload);
+    const reimport = dbPath !== ":memory:" && fs.existsSync(payload);
     onPhase("database_opened");
 
     const db = drizzle(openedPglite, { schema });
@@ -251,13 +205,14 @@ export const createDb = async (options?: {
           await retireLegacyRecordTables(openedPglite, migrationsFolder);
       };
       if (
-        await resumeCurrentPgliteSchema({
+        !reimport &&
+        (await resumeCurrentPgliteSchema({
           engine: openedPglite,
           migrationsFolder,
           path: dbPath,
           fresh,
           finishLegacyAdmission,
-        })
+        }))
       ) {
         migrated = true;
         return;
@@ -286,7 +241,7 @@ export const createDb = async (options?: {
       const finishBoardDefaultsUpgrade = await prepareBoardDefaultsUpgrade(db, dbPath);
       const finishAutomationOwnersUpgrade = await prepareAutomationOwnersUpgrade(db, dbPath);
       const finishSessionWorkspaceUpgrade = await prepareSessionWorkspaceUpgrade(db, dbPath);
-      await migratePglite(openedPglite, migrationsFolder);
+      await migratePglite(openedPglite, migrationsFolder, reimport ? importBatchOwners : undefined);
       await finishProjectExtensionsUpgrade?.();
       await finishLogOwnerUpgrade?.();
       await finishHistoryOwnerUpgrade?.();
@@ -299,6 +254,7 @@ export const createDb = async (options?: {
       await finishCanonicalNumberUpgrade?.();
       await finishOwnerProjectionUpgrade?.();
       await finishOwnerIndexUpgrade?.();
+      if (reimport) await importBatchRows(openedPglite);
       await finishPreferencesUpgrade?.();
       await finishExtensionPreferencesUpgrade?.();
       await finishConnectionCredentialsUpgrade?.();
@@ -350,6 +306,7 @@ export const createDb = async (options?: {
       await maintainDatabase(openedPglite, db, dbPath, fresh, onPhase, movedNodes || renamed);
     const projectIds = await db.select({ id: schema.projects.id }).from(schema.projects);
     await indexNodes.retainProjects(new Set(projectIds.map((project) => project.id)));
+    if (reimport) await fs.promises.rm(payload, { recursive: true, force: true });
     onPhase("database_migrated");
 
     let closed = false;
