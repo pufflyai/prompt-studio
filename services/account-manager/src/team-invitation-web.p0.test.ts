@@ -4,11 +4,16 @@ import { teamInvitationWeb } from "./team-invitation-web";
 
 test("invitation failure can be retried and terminal outcomes clear the link", async () => {
   const origin = "https://accounts.example.test";
-  const page = "/v1/team-invitation";
+  const page = "/accounts/v1/team-invitation";
   const secret = "a".repeat(43);
   const url = origin + page;
   // Serving this page needs no human session. Its POST requests are exercised separately by the authority integration.
-  const html = await teamInvitationWeb({} as Parameters<typeof teamInvitationWeb>[0], origin, new Request(url), page);
+  const html = await teamInvitationWeb(
+    {} as Parameters<typeof teamInvitationWeb>[0],
+    origin,
+    new Request(url),
+    "/v1/team-invitation",
+  );
   const script = (await html.text()).match(/<script>([\s\S]+)<\/script>/)?.[1];
   if (!script) throw new Error("Invitation script missing");
   const button = { hidden: true, disabled: false, textContent: "", onclick: null as (() => Promise<void>) | null };
@@ -21,6 +26,7 @@ test("invitation failure can be retried and terminal outcomes clear the link", a
   const location = {
     pathname: page,
     hash: `#${secret}`,
+    search: "",
     origin,
     assign: (target: URL) => (navigation = target),
   };
@@ -32,20 +38,30 @@ test("invitation failure can be retried and terminal outcomes clear the link", a
   });
   let status = 503;
   const fetch = async (path: string, init: RequestInit) => {
-    if (path === "/api/auth/sign-in/social") {
-      expect(JSON.parse(String(init.body))).toEqual({ provider: "microsoft", callbackURL: url });
+    if (path === "/accounts/api/auth/sign-in/social") {
+      expect(JSON.parse(String(init.body))).toEqual({
+        provider: "microsoft",
+        callbackURL: url,
+        errorCallbackURL: `${url}/sign-in-error`,
+      });
       return Response.json({ url: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?state=test" });
     }
     const replies = {
-      "/v1/team-invitation/inspect": () => inspection.clone(),
-      "/v1/team-invitation/accept": () => new Response(null, { status }),
+      "/accounts/v1/team-invitation/inspect": () => inspection.clone(),
+      "/accounts/v1/team-invitation/accept": () => new Response(null, { status }),
     };
     return replies[path as keyof typeof replies]();
   };
   await runInNewContext(script, {
     URL,
+    URLSearchParams,
     location,
-    history: { replaceState: () => (location.hash = "") },
+    history: {
+      replaceState: () => {
+        location.hash = "";
+        location.search = "";
+      },
+    },
     window: { addEventListener: (_event: string, listener: () => Promise<void>) => (hashChanged = listener) },
     document: { querySelector: (name: keyof typeof nodes) => nodes[name] },
     sessionStorage: {
@@ -82,6 +98,15 @@ test("invitation failure can be retried and terminal outcomes clear the link", a
   await button.onclick?.();
   expect(navigation?.hostname).toBe("login.microsoftonline.com");
   expect(location.hash).toBe("");
+
+  location.search = "?sign-in=retry";
+  await hashChanged?.();
+  expect(location.search).toBe("");
+  expect(message.textContent).toBe("Sign-in did not complete. Try again.");
+  expect(button.textContent).toBe("Sign in with Microsoft");
+  expect(storage.get(page)).toBe("m".repeat(43));
+  await button.onclick?.();
+  expect(navigation?.hostname).toBe("login.microsoftonline.com");
 
   inspection = Response.json({ state: "expired" });
   location.hash = `#${"c".repeat(43)}`;

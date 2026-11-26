@@ -48,9 +48,11 @@ const providers = {
 
 async function signIn(changeAccount, provider, invitation) {
   if (changeAccount && !(await post("/api/auth/sign-out", {})).ok) throw new Error();
+  const callbackURL = new URL(page, location.origin).href;
   const result = await post("/api/auth/sign-in/social", {
     provider,
-    callbackURL: new URL(page, location.origin).href,
+    callbackURL,
+    errorCallbackURL: callbackURL + "/sign-in-error",
   });
   if (!result.ok) throw new Error();
   const url = new URL((await result.json()).url);
@@ -91,7 +93,7 @@ async function acceptInvitation() {
   }
 }
 
-async function readInvitation(invitation = secret) {
+async function readInvitation(invitation = secret, signInFailed = false) {
   const result = await post("/v1/team-invitation/inspect", { secret: invitation });
   if (invitation !== secret) return;
   if (result.status === 401) {
@@ -101,7 +103,9 @@ async function readInvitation(invitation = secret) {
     const label = providers[provider].label;
     title.textContent = "Team invitation";
     identity.textContent = "";
-    message.textContent = "Sign in with " + label + " to see the invitation.";
+    message.textContent = signInFailed
+      ? "Sign-in did not complete. Try again."
+      : "Sign in with " + label + " to see the invitation.";
     action("Sign in with " + label, () => signIn(false, provider, invitation));
     return;
   }
@@ -127,8 +131,9 @@ async function readInvitation(invitation = secret) {
 
 function loadInvitation() {
   const fragment = location.hash.slice(1);
+  const signInFailed = new URLSearchParams(location.search).get("sign-in") === "retry";
+  if (fragment || signInFailed) history.replaceState(null, "", page);
   if (fragment) {
-    history.replaceState(null, "", page);
     if (/^[A-Za-z0-9_-]{43}$/.test(fragment)) sessionStorage.setItem(key, fragment);
     else sessionStorage.removeItem(key);
   }
@@ -144,7 +149,7 @@ function loadInvitation() {
   }
   message.textContent = "Checking invitation…";
   const invitation = secret;
-  return readInvitation(invitation).catch(() => {
+  return readInvitation(invitation, signInFailed).catch(() => {
     if (invitation !== secret) return;
     message.textContent = "The invitation could not be loaded. Try again.";
     action("Try again", () => readInvitation(invitation));
@@ -177,12 +182,17 @@ const headers = {
 };
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers });
 
-export const teamInvitationWeb = async (auth: Authentication, origin: string, request: Request, path: string) => {
+export const teamInvitationWeb = async (auth: Authentication, address: string, request: Request, path: string) => {
+  if (path === "/v1/team-invitation/sign-in-error" && request.method === "GET")
+    return new Response(null, {
+      status: 303,
+      headers: { ...headers, location: `${address}/v1/team-invitation?sign-in=retry` },
+    });
   if (path === "/v1/team-invitation" && request.method === "GET")
     return new Response(html, { headers: { ...headers, "content-type": "text/html; charset=utf-8" } });
   const action = /^\/v1\/team-invitation\/(inspect|accept)$/.exec(path)?.[1];
   if (!action || request.method !== "POST") return json({ error: "Method not allowed" }, 405);
-  if (request.headers.get("origin") !== origin) return json({ error: "Origin denied" }, 403);
+  if (request.headers.get("origin") !== new URL(address).origin) return json({ error: "Origin denied" }, 403);
 
   try {
     const { secret } = z.strictObject({ secret: teamInviteSecretSchema }).parse(await request.json());

@@ -13,19 +13,27 @@ beforeAll(() => fixture.initialize());
 afterAll(() => fixture.close());
 
 test("a Microsoft work invitation is bound to a verified directory object before the employee enrolls a device", async () => {
-  const config = { ...authenticationConfig(fixture.databaseUrl), microsoft: fixtureMicrosoftClient };
+  const defaults = authenticationConfig(fixture.databaseUrl);
+  const config = { ...defaults, origin: `${defaults.origin}/accounts`, microsoft: fixtureMicrosoftClient };
+  const address = new URL(config.origin);
   const manager = fixture.owner();
   const auth = implementation.createManagerAuthentication(config);
   const connection = connectManager(fixture.databaseUrl);
   const oauth = await createOAuthCodeFixture();
-  const handle = implementation.createManagerHandler(auth, config.origin);
+  const managerHandler = implementation.createManagerHandler(auth, config.origin);
+  const handle = (request: Request) => {
+    const upstream = new URL(request.url);
+    expect(upstream.pathname.startsWith(`${address.pathname}/`)).toBe(true);
+    upstream.pathname = upstream.pathname.slice(address.pathname.length);
+    return managerHandler(new Request(upstream.href, request));
+  };
   const post = (path: string, body: unknown, headers?: HeadersInit) =>
     handle(
       new Request(config.origin + path, {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          origin: config.origin,
+          origin: address.origin,
           ...Object.fromEntries(new Headers(headers)),
         },
         body: JSON.stringify(body),
@@ -39,7 +47,9 @@ test("a Microsoft work invitation is bound to a verified directory object before
     });
     expect(begin.status).toBe(200);
     const { url } = (await begin.json()) as { url: string };
-    const callback = await oauth.complete(provider, new URL(url), {
+    const authorize = new URL(url);
+    expect(authorize.searchParams.get("redirect_uri")).toBe(`${config.origin}/api/auth/callback/${provider}`);
+    const callback = await oauth.complete(provider, authorize, {
       claims: provider === "microsoft" ? { tid: workTenant, ...claims } : claims,
     });
     const completed = await handle(new Request(callback, { headers: { cookie: oauthBrowserCookie(begin) } }));
@@ -63,7 +73,9 @@ test("a Microsoft work invitation is bound to a verified directory object before
       const result = await post(invitationPath, recipient, credentials);
       expect(result.status).toBe(201);
       const invitation = (await result.json()) as { id: string; url: string };
-      return { id: invitation.id, secret: new URL(invitation.url).hash.slice(1) };
+      const link = new URL(invitation.url);
+      expect(link.origin + link.pathname).toBe(`${config.origin}/v1/team-invitation`);
+      return { id: invitation.id, secret: link.hash.slice(1) };
     };
     const old = await create();
     const choice = await create();
@@ -74,6 +86,20 @@ test("a Microsoft work invitation is bound to a verified directory object before
     const challenge = await browser("inspect", choice);
     expect(challenge.status).toBe(401);
     expect(await challenge.json()).toMatchObject({ provider: "microsoft" });
+
+    const signInPath = `${config.origin}/v1/team-invitation`;
+    const signInStart = await post("/api/auth/sign-in/social", {
+      provider: "microsoft",
+      callbackURL: signInPath,
+      errorCallbackURL: `${signInPath}/sign-in-error`,
+    });
+    const { url: deniedUrl } = (await signInStart.json()) as { url: string };
+    const deniedCallback = await oauth.complete("microsoft", new URL(deniedUrl), { deny: true });
+    const denied = await handle(new Request(deniedCallback, { headers: { cookie: oauthBrowserCookie(signInStart) } }));
+    const retry = await handle(new Request(denied.headers.get("location")!));
+    expect(retry.status).toBe(303);
+    expect(retry.headers.get("location")).toBe(`${signInPath}?sign-in=retry`);
+    expect(retry.headers.get("referrer-policy")).toBe("no-referrer");
 
     const other = await signIn("microsoft", { sub: "wrong-work-account", oid: crypto.randomUUID() });
     const anotherTenant = await signIn("microsoft", { tid: "b8cf818a-09e1-4b19-95b4-2f416fb0c607", oid: objectId });
