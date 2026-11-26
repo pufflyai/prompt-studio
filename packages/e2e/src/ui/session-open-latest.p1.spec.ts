@@ -16,7 +16,7 @@ test("opens and reselects a session at the bottom of its conversation", async ({
     const prompt =
       title === "Long conversation"
         ? "Replay __fake_long_stream__"
-        : `[Open long conversation](pstdio://extension-resource/session/${longSessionId})`;
+        : `[Open long conversation](/projects/${project.id}/session?resource=${encodeURIComponent(`pstdio://extension-resource/session/${longSessionId}`)})`;
     const response = await request.post(`${apiBase}/v1/sessions`, {
       data: { project_id: project.id, title, prompt, agent: fakeHarnessId },
     });
@@ -71,11 +71,12 @@ test("opens and reselects a session at the bottom of its conversation", async ({
   await page.getByRole("button", { name: "Hide Side Panel", exact: true }).click();
   await expect(viewport).toBeHidden();
   await page.getByRole("option", { name: "Another conversation", exact: true }).click();
-  await page
+  const link = page
     .locator('[data-workbench-panel="main"]')
     .getByRole("link", { name: /long conversation/i })
-    .last()
-    .click();
+    .last();
+  await expect(link).toBeVisible();
+  await link.click();
   await expect(side.getByText(/^Step 30\./)).toBeInViewport();
   await expect.poll(gap).toBeLessThanOrEqual(2);
 });
