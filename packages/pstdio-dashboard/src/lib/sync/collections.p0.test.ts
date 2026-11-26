@@ -36,6 +36,17 @@ test("a disposed shared store is replaced for the next caller on the same connec
   await replacement.dispose();
 });
 
+test("a replaced shared store keeps its retained connection and closes with it", async () => {
+  const connection = { baseUrl: "http://disposed-retained-store", token: "" };
+  const retained = retainRuntimeCollections(connection);
+  await retained.dispose();
+  const replacement = getRuntimeCollections(connection);
+  expect(replacement).not.toBe(retained);
+  await releaseRuntimeCollections(connection);
+  expect(replacement.isDisposed()).toBe(true);
+  expect(getRuntimeCollections(connection)).not.toBe(replacement);
+});
+
 test("runtime collections isolate overlapping IDs, indexes, readiness, and subscriptions", async () => {
   const first = createRuntimeCollections();
   const second = createRuntimeCollections();
