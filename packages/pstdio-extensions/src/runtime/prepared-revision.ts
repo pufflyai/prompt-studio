@@ -29,6 +29,9 @@ export interface PreparedExtensionRevision {
   entryPath: string;
   sourceHash: string;
   loadKey: string;
+  contentKey?: string;
+  /** Host-owned install origin, present only for an adopted catalog retrieval. */
+  verifiedInstall?: { sourcePath: string; ref: string | null };
   manifest: PackageManifest;
   diagnostics: ExtensionDiagnostic[];
   webviews?: Record<string, { id: string; distDir: string }>;

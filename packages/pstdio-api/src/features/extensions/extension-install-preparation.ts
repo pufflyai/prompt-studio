@@ -34,6 +34,7 @@ import { prepareInstallDependencies } from "./prepare-extension-dependencies";
 import { ExtensionAlreadyInstalledError, promotePreparedSource } from "./promote-extension-source";
 import { resolveInstallSource } from "./resolve-install-source";
 import { validateExtensionWebviews } from "./validate-extension-webviews";
+import { verifiedInstallOrigin } from "./verified-install-origin";
 
 export { dashboardExtensionHostCapabilities } from "pstdio-extensions";
 export {
@@ -301,6 +302,11 @@ export const prepareAndInstallExtensionSource = async (input: InstallExtensionSo
     );
     await Bun.sleep(0);
     input.signal?.throwIfAborted();
+    const origin = !reuseExisting && verifiedInstallOrigin(input, resolvedSource, loaded.metadata.id, targetPath);
+    const trusted =
+      origin && loaded.preparedRevision
+        ? { ...loaded, preparedRevision: { ...loaded.preparedRevision, verifiedInstall: origin } }
+        : loaded;
     const {
       snapshot,
       loaded: installedSource,
@@ -308,7 +314,7 @@ export const prepareAndInstallExtensionSource = async (input: InstallExtensionSo
       installation,
     } = await finishPreparedInstall(input, {
       check,
-      loaded,
+      loaded: trusted,
       sourceHash,
       installPath,
       targetPath,

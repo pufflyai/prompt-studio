@@ -48,8 +48,10 @@ test("a later edit supersedes stalled candidate evaluation and completed content
     await entered[0]!.promise;
     writeFileSync(entry, `await fetch(${JSON.stringify(`${gate.url.href}?version=1`)});\n${definition}`);
     work.push(inspector.inspect(source));
+    // The replacement must reach its gate while the original response is still held.
+    // Reaching it includes preparation and evaluator startup on the CI runner.
     expect(
-      await Promise.race([entered[1]!.promise.then(() => "superseded"), Bun.sleep(1000).then(() => "stalled")]),
+      await Promise.race([entered[1]!.promise.then(() => "superseded"), Bun.sleep(5_000).then(() => "stalled")]),
     ).toBe("superseded");
     expect((await readAcceptedRevision(source))?.id).toBe(accepted.preparedRevision!.id);
     release.resolve();
@@ -67,7 +69,7 @@ test("a later edit supersedes stalled candidate evaluation and completed content
     else process.env.PSTDIO_HOME = previousHome;
     rmSync(root, { recursive: true, force: true });
   }
-});
+}, 10_000);
 
 test("background inspection detects dependency-only replacement without adopting it", async () => {
   const root = mkdtempSync(join(tmpdir(), "runtime-candidate-dependency-"));

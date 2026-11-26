@@ -1,7 +1,7 @@
 import type { WebContents } from "electron";
 import { LIFECYCLE_URL } from "./lifecycle-protocol";
 
-export const waitForStartupReadiness = (shown: Promise<void>, documentReady: Promise<void>, signal: AbortSignal) =>
+export const waitForStartupReadiness = (signal: AbortSignal, ...conditions: Promise<unknown>[]) =>
   new Promise<void>((resolve, reject) => {
     // Runtime cancellation must release its caller without closing the shared document.
     const aborted = () => {
@@ -9,7 +9,7 @@ export const waitForStartupReadiness = (shown: Promise<void>, documentReady: Pro
       reject(signal.reason);
     };
     signal.addEventListener("abort", aborted, { once: true });
-    void Promise.all([shown, documentReady]).then(
+    void Promise.all(conditions).then(
       () => {
         signal.removeEventListener("abort", aborted);
         resolve();

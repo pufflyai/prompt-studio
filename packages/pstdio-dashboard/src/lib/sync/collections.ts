@@ -228,8 +228,9 @@ const stores = new Map<string, { collections: ReturnType<typeof createRuntimeCol
 const runtimeStore = (connection: ReturnType<typeof apiClientOptions>) => {
   const key = JSON.stringify(connection);
   let store = stores.get(key);
-  if (!store) {
-    store = { collections: createRuntimeCollections(connection), connections: 0 };
+  // A caller may dispose a shared store directly. Never hand that store out again.
+  if (!store || store.collections.isDisposed()) {
+    store = { collections: createRuntimeCollections(connection), connections: store?.connections ?? 0 };
     stores.set(key, store);
   }
   return store;

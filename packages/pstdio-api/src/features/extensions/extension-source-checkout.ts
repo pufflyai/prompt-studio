@@ -14,6 +14,7 @@ import {
 } from "./extension-catalog";
 import { runExtensionPreparation } from "./extension-preparation";
 import { type CommandOptions, type CommandResult, runCommand } from "./install-extension-dependencies";
+import type { PreparedNamedInstallSource } from "./install-extension-source-types";
 import { trackPreparationStage } from "./preparation-stages";
 
 // Extension sources come from https remotes, or from local repositories that a catalog file names.
@@ -92,13 +93,8 @@ export const prepareNamedSource = async (
     return registry.prepare(release, join(tempDir, "extension-source"), signal);
   }
   const ref = originRef(entry.origin, explicitRef, hostReleaseRef);
-  if (!explicitRef) return prepareReleaseExtensionSource(entry.origin, tempDir, ref, signal);
-  const checkoutPath = join(tempDir, "extension-source");
-  const commit = await cloneRepoSparse(checkoutPath, [entry.origin.path], runCommand, entry.origin.url, ref, signal);
-  return {
-    path: join(checkoutPath, entry.origin.path),
-    ref: namedSourceRef(commit, entry.origin),
-  };
+  const prepare = explicitRef ? prepareGitExtensionSource : prepareReleaseExtensionSource;
+  return prepare(entry.origin, tempDir, ref, signal);
 };
 
 export const prepareGitExtensionSource = async (
@@ -109,7 +105,7 @@ export const prepareGitExtensionSource = async (
 ) => {
   const checkoutPath = join(tempDir, "extension-source");
   const commit = await cloneRepoSparse(checkoutPath, [origin.path], runCommand, origin.url, releaseRef, signal);
-  return { path: join(checkoutPath, origin.path), ref: namedSourceRef(commit, origin) };
+  return { path: join(checkoutPath, origin.path), ref: namedSourceRef(commit, origin), gitRef: releaseRef };
 };
 
 export const prepareReleaseExtensionSource = async (
@@ -119,7 +115,7 @@ export const prepareReleaseExtensionSource = async (
   signal?: AbortSignal,
 ) => {
   const bundled = await prepareBundledExtensionSource(origin, tempDir, ref, { signal });
-  if (bundled) return { path: bundled.path, ref: namedSourceRef(bundled.commit, origin) };
+  if (bundled) return { path: bundled.path, ref: namedSourceRef(bundled.commit, origin), gitRef: ref };
   return prepareGitExtensionSource(origin, tempDir, ref, signal);
 };
 
@@ -134,7 +130,7 @@ const prepareSharedCheckoutInWorker = async (names: string[], options: SharedChe
   const { signal, ...data } = options;
   const checkout = await runExtensionPreparation<{
     id: string;
-    sources: Record<string, { path: string; ref: string }>;
+    sources: Record<string, PreparedNamedInstallSource>;
   }>("checkout.shared", { names, options: data, id: crypto.randomUUID() }, { signal });
   return {
     retain: () => {},
@@ -199,7 +195,7 @@ export const createSharedNamedSourceCheckout = async (
     groups.set(key, group);
   }
 
-  const preparedByName = new Map<string, { path: string; ref: string }>();
+  const preparedByName = new Map<string, PreparedNamedInstallSource>();
   try {
     let index = 0;
     for (const group of groups.values()) {
@@ -214,6 +210,7 @@ export const createSharedNamedSourceCheckout = async (
           preparedByName.set(entry.installName, {
             path: bundled.path,
             ref: namedSourceRef(bundled.commit, entry.origin),
+            gitRef: group.ref,
           });
         else remaining.push(entry);
       }
@@ -230,6 +227,7 @@ export const createSharedNamedSourceCheckout = async (
         preparedByName.set(entry.installName, {
           path: join(checkoutPath, entry.origin.path),
           ref: namedSourceRef(commit, entry.origin),
+          gitRef: group.ref,
         });
       }
     }

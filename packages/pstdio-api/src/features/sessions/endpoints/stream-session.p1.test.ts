@@ -3,7 +3,13 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import type { HarnessExit, HarnessSession, JsonPatch, SessionMessage } from "pstdio-api-contracts";
+import {
+  applyConversationPatch,
+  type HarnessExit,
+  type HarnessSession,
+  type JsonPatch,
+  type SessionMessage,
+} from "pstdio-api-contracts";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
@@ -150,11 +156,25 @@ const createSSEReader = (response: Response) => {
   return { readEvents, close };
 };
 
+const readReplayEvents = async (sse: ReturnType<typeof createSSEReader>, count: number) => {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      sse.readEvents(count),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error(`Timed out waiting for ${count} replay stream events`)), 3_000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
 const createHistoryReplayRecord = (input: {
   initialPatches: JsonPatch[];
   livePatch: JsonPatch;
-  liveDelayMs: number;
-  exitDelayMs: number;
+  readyForLivePatch: Promise<void>;
+  done: Promise<HarnessExit>;
 }) =>
   createTestHarnessRecord("fake", {
     provider: {
@@ -163,16 +183,9 @@ const createHistoryReplayRecord = (input: {
           startInput.events.push(patch);
         }
 
-        setTimeout(() => {
-          startInput.events.push(input.livePatch);
-        }, input.liveDelayMs);
-
-        return { ...delayedExit(input.exitDelayMs), agentSessionId: `history-${crypto.randomUUID()}` };
+        void input.readyForLivePatch.then(() => startInput.events.push(input.livePatch));
+        return { agentSessionId: `history-${crypto.randomUUID()}`, done: input.done, stop: () => {} };
       },
-      resume: (_ctx, resumeInput) => ({
-        ...delayedExit(input.exitDelayMs),
-        agentSessionId: resumeInput.agentSessionId,
-      }),
       getMessages: () => [],
     },
   });
@@ -315,6 +328,9 @@ describe("session stream", () => {
 describe("session stream active session replay", () => {
   test("replays active session history as a single snapshot before live patches", async () => {
     const replayRoot = mkdtempSync(join(tmpdir(), "pstdio-api-stream-history-test-"));
+    const readyForLivePatch = Promise.withResolvers<void>();
+    const exit = Promise.withResolvers<HarnessExit>();
+    const liveMessage: SessionMessage = { id: "m3", role: "assistant", parts: [{ type: "text", text: "LIVE" }] };
     const initialPatches: JsonPatch[] = [
       {
         op: "add",
@@ -341,61 +357,74 @@ describe("session stream active session replay", () => {
           livePatch: {
             op: "add",
             path: "/messages/2",
-            value: { id: "m3", role: "assistant", parts: [{ type: "text", text: "LIVE" }] },
+            value: liveMessage,
           },
-          liveDelayMs: 50,
-          exitDelayMs: 300,
+          readyForLivePatch: readyForLivePatch.promise,
+          done: exit.promise,
         }),
       ]),
     });
 
-    const projectRes = await replayApp.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(folderProjectInput({ name: "History Replay Project" })),
-    });
-    const project = await projectRes.json();
+    let sse: ReturnType<typeof createSSEReader> | undefined;
+    try {
+      const projectRes = await replayApp.request("/v1/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(folderProjectInput({ name: "History Replay Project" })),
+      });
+      const project = await projectRes.json();
 
-    const createRes = await replayApp.request("/v1/sessions", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        project_id: project.id,
-        title: "History replay session",
-        prompt: "hello",
-        agent: FAKE_ID,
-      }),
-    });
-    const session = await createRes.json();
+      const createRes = await replayApp.request("/v1/sessions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          project_id: project.id,
+          title: "History replay session",
+          prompt: "hello",
+          agent: FAKE_ID,
+        }),
+      });
+      const session = await createRes.json();
 
-    await waitForMessages(replayApp, session.id, 2);
-    const streamRes = await openSessionStream(replayApp, session.id);
-    expect(streamRes.status).toBe(200);
+      await waitForMessages(replayApp, session.id, 2);
+      const streamRes = await openSessionStream(replayApp, session.id);
+      expect(streamRes.status).toBe(200);
 
-    const sse = createSSEReader(streamRes);
-    const events = await sse.readEvents(4);
-    sse.close();
+      sse = createSSEReader(streamRes);
+      const events = await readReplayEvents(sse, 3);
 
-    expect(events[0]?.event).toBe("ready");
+      expect(events[0]?.event).toBe("ready");
 
-    const snapshotPatch = events[1]?.data as JsonPatch;
-    expect(snapshotPatch).toMatchObject({
-      op: "replace",
-      path: "/messages",
-    });
-    expect(getPatchTextParts(snapshotPatch)).toEqual(["FIRST", "DONE"]);
+      const snapshotPatch = events[1]?.data as JsonPatch;
+      expect(snapshotPatch).toMatchObject({
+        op: "replace",
+        path: "/messages",
+      });
+      expect(getPatchTextParts(snapshotPatch)).toEqual(["FIRST", "DONE"]);
 
-    expect(events[2]?.data).toEqual({ op: "replace", path: "/approval_requests", value: [] });
-    const livePatch = events[3]?.data as JsonPatch;
-    expect(livePatch).toMatchObject({
-      op: "add",
-      path: "/messages/2",
-    });
+      expect(events[2]?.data).toEqual({ op: "replace", path: "/approval_requests", value: [] });
+      // The fixture must stay active until the client has received its initial snapshot.
+      readyForLivePatch.resolve();
+      const [liveEvent] = await readReplayEvents(sse, 1);
+      expect(liveEvent?.event).toBe("patch");
+      const initialMessages = snapshotPatch.value as SessionMessage[];
+      // A paused consumer may receive a coalesced snapshot instead of an incremental patch.
+      const updatedMessages = applyConversationPatch([...initialMessages], liveEvent?.data as JsonPatch);
+      expect(updatedMessages).toEqual([...initialMessages, liveMessage]);
 
-    expect(await waitForSessionStatus(replayEventBus, session.id, "completed")).toBeDefined();
-
-    await closeReplayApp();
-    rmSync(replayRoot, { recursive: true, force: true });
+      const completed = waitForSessionStatus(replayEventBus, session.id, "completed");
+      exit.resolve({ status: "completed" });
+      expect(await completed).toBeDefined();
+    } finally {
+      readyForLivePatch.resolve();
+      exit.resolve({ status: "completed" });
+      try {
+        await sse?.close();
+      } finally {
+        await closeReplayApp();
+        rmSync(replayRoot, { recursive: true, force: true });
+      }
+    }
   });
 
   test("preserves native-unavailable resume offsets after the initial snapshot", async () => {

@@ -20,7 +20,7 @@ test("a failed login releases its document navigation before Retry can start", a
     stop: () => navigation.reject(new Error("Navigation stopped")),
   };
   try {
-    await expect(prepareWorkbenchDocument(contents, runtime(server.url.origin))).rejects.toThrow(
+    await expect(prepareWorkbenchDocument(contents, runtime(server.url.origin), Promise.resolve())).rejects.toThrow(
       "Runtime browser login failed with status 500",
     );
     expect(navigating).toBe(false);
@@ -61,7 +61,9 @@ test("a failed document releases its login request and retains the navigation er
     }
   };
   try {
-    await expect(prepareWorkbenchDocument(contents, runtime(server.url.origin), fetcher)).rejects.toBe(failure);
+    await expect(
+      prepareWorkbenchDocument(contents, runtime(server.url.origin), Promise.resolve(), fetcher),
+    ).rejects.toBe(failure);
     expect(requesting).toBe(false);
   } finally {
     response.resolve(new Response(null, { status: 500 }));
@@ -92,10 +94,73 @@ test("a synchronously destroyed document releases its login request", async () =
     }
   };
   try {
-    await expect(prepareWorkbenchDocument(contents, runtime(server.url.origin), fetcher)).rejects.toBe(failure);
+    await expect(
+      prepareWorkbenchDocument(contents, runtime(server.url.origin), Promise.resolve(), fetcher),
+    ).rejects.toBe(failure);
     expect(requesting).toBe(false);
   } finally {
     response.resolve(new Response(null, { status: 500 }));
     server.stop(true);
   }
+});
+
+test("loads static assets during an upgrade and requests browser login only after runtime readiness", async () => {
+  const ready = Promise.withResolvers<void>();
+  const navigated = Promise.withResolvers<void>();
+  let migrated = false;
+  const calls: string[] = [];
+  const origin = "http://127.0.0.1:43127";
+  const contents = {
+    async loadURL(url: string) {
+      calls.push(url);
+      navigated.resolve();
+    },
+    async executeJavaScript(script: string) {
+      calls.push(script);
+    },
+    stop() {},
+  };
+  const fetcher = async (url: string) => {
+    calls.push(url);
+    if (!migrated) throw new TypeError("fetch failed");
+    return Response.json({ url: `${origin}/#browser-login=fixture` });
+  };
+  const startup = prepareWorkbenchDocument(contents, runtime(origin), ready.promise, fetcher);
+  try {
+    await navigated.promise;
+    expect(calls).toEqual([`${origin}/?desktop-startup=1`]);
+  } finally {
+    migrated = true;
+    ready.resolve();
+    await startup;
+  }
+  expect(calls).toEqual([
+    `${origin}/?desktop-startup=1`,
+    `${origin}/runtime/browser-login`,
+    'void (window.location.hash = "#browser-login=fixture")',
+  ]);
+});
+
+test("an early navigation failure releases preparation while the database is still migrating", async () => {
+  const ready = Promise.withResolvers<void>();
+  const failure = new Error("Workbench navigation failed");
+  let loginRequests = 0;
+  const contents = {
+    async loadURL() {
+      throw failure;
+    },
+    async executeJavaScript() {},
+    stop() {},
+  };
+  const startup = prepareWorkbenchDocument(contents, runtime("http://127.0.0.1:43127"), ready.promise, async () => {
+    loginRequests++;
+    throw new Error("Unexpected login");
+  });
+  try {
+    await expect(startup).rejects.toBe(failure);
+  } finally {
+    ready.resolve();
+  }
+  await Promise.resolve();
+  expect(loginRequests).toBe(0);
 });

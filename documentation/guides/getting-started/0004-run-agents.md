@@ -10,7 +10,7 @@ Each new project has a harness extension for each supported agent. A harness con
 
 | Agent | Command Prompt Studio looks for | Supported versions | Harness docs |
 | --- | --- | --- | --- |
-| Claude Code | `claude` | 2.1.203 and newer | [Claude Code](../../../extensions/harness-claude-code/README.md) |
+| Claude Code | `claude` | 2.1.251 and newer | [Claude Code](../../../extensions/harness-claude-code/README.md) |
 | Codex | `codex` | 0.157.0 and newer | [Codex](../../../extensions/harness-codex/README.md) |
 | OpenCode | `opencode` | 2.2.5 and newer | [OpenCode](../../../extensions/harness-open-code/README.md) |
 

@@ -106,15 +106,14 @@ type SpawnedChild = {
   onExit: Promise<{ code: number | null; signal: string | null }>;
 };
 
+type SpawnOptions = { command?: string; cwd?: string; env?: Record<string, string> };
+
 export type SpawnDeps = {
-  spawnProcess: (args: string[], options?: { cwd?: string; env?: Record<string, string> }) => SpawnedChild;
+  spawnProcess: (args: string[], options?: SpawnOptions) => SpawnedChild;
 };
 
-const defaultSpawnProcess = (
-  args: string[],
-  options?: { cwd?: string; env?: Record<string, string> },
-): SpawnedChild => {
-  const command = resolveClaudeCommand();
+const defaultSpawnProcess = (args: string[], options?: SpawnOptions): SpawnedChild => {
+  const command = options?.command ?? resolveClaudeCommand();
   const child = spawn(command, args, {
     stdio: ["pipe", "pipe", "pipe"],
     cwd: options?.cwd,
@@ -157,6 +156,7 @@ const stopClaude =
   };
 
 export type StartSpawnInput = {
+  command?: string;
   signal?: AbortSignal;
   nativeCommand?: boolean;
   prompt: string;
@@ -174,7 +174,7 @@ export type StartSpawnInput = {
 export const startClaudeCodeSession = async (input: StartSpawnInput, deps: SpawnDeps = defaultDeps) => {
   input.signal?.throwIfAborted();
   const args = buildStartSessionArgs(input);
-  const child = deps.spawnProcess(args, { cwd: input.cwd, env: input.env });
+  const child = deps.spawnProcess(args, { command: input.command, cwd: input.cwd, env: input.env });
   // Keep diagnostics from filling the pipe and blocking the executable.
   child.stderr.resume();
   const abort = () => {
@@ -246,7 +246,7 @@ export const resumeClaudeCodeSession = (input: ResumeSpawnInput, deps: SpawnDeps
   closeOpenQuestions(input.events);
   input.signal?.throwIfAborted();
   const args = buildResumeArgs(input);
-  const child = deps.spawnProcess(args, { cwd: input.cwd, env: input.env });
+  const child = deps.spawnProcess(args, { command: input.command, cwd: input.cwd, env: input.env });
   child.stderr.resume();
   const abort = () => {
     sessionInput.stop();

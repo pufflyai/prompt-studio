@@ -25,6 +25,7 @@ import {
 import { buildExtensionWebview } from "./extension-webview-builder";
 import { inspectWebviewLoadKeyInWorker, inspectWebviewSourceInWorker } from "./extension-webview-source-inspection";
 import { installExtensionSource } from "./install-extension-source";
+import type { PreparedNamedInstallSource } from "./install-extension-source-types";
 import { disposePreparationStage, recoverPreparationStages } from "./preparation-stages";
 import {
   disposePreparationWatcher,
@@ -44,7 +45,7 @@ const prepareCheckout = async (
 ) => {
   const checkout = await createSharedNamedSourceCheckout(input.names, { ...input.options, signal, leaseId: input.id });
   try {
-    const sources: Record<string, { path: string; ref: string }> = {};
+    const sources: Record<string, PreparedNamedInstallSource> = {};
     for (const name of input.names)
       sources[name] = await checkout.prepareNamedSource(name, "", input.options.ref, signal);
     checkout.retain?.();

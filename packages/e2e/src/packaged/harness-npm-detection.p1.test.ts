@@ -16,7 +16,7 @@ beforeAll(buildBinary, 180_000);
 const harnesses = [
   { command: "opencode", extension: "harness-open-code", id: "opencode", version: "2.2.5" },
   { command: "codex", extension: "harness-codex", id: "codex", version: "codex-cli 0.157.0" },
-  { command: "claude", extension: "harness-claude-code", id: "claude-code", version: "2.1.203 (Claude Code)" },
+  { command: "claude", extension: "harness-claude-code", id: "claude-code", version: "2.1.251 (Claude Code)" },
   { command: "pi", extension: "harness-pi", id: "pi", version: "0.79.0" },
 ];
 const harnessId = (harness: (typeof harnesses)[number]) => `pstdio.${harness.extension}.harness.${harness.id}`;

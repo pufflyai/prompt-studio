@@ -44,8 +44,11 @@ export const claudeCommandState = (input: HarnessCommandDiscoveryContext): Harne
 export const prepareClaudeOperation = (
   input: HarnessCommandContext,
   operation: HarnessOperation,
-  projectId?: string,
-  spawnDeps?: SpawnDeps,
+  options: {
+    projectId?: string;
+    requireCommand: (signal?: AbortSignal) => Promise<string>;
+    spawnDeps?: SpawnDeps;
+  },
 ): PreparedHarnessOperation => {
   if (operation.kind === "mode-action") {
     if (operation.modeId !== "planning" || operation.actionId !== "default")
@@ -63,6 +66,7 @@ export const prepareClaudeOperation = (
     invoke: async ({ events, questions, approvals, signal }) => {
       const params = plan ? { ...input.params, permission_mode: "plan" } : input.params;
       const run = {
+        command: await options.requireCommand(signal),
         nativeCommand: !plan,
         signal,
         ...input,
@@ -71,7 +75,10 @@ export const prepareClaudeOperation = (
         events,
         questions,
         approvals,
-        env: { PSTDIO_SESSION_ID: input.sessionId, ...(projectId ? { PSTDIO_PROJECT_ID: projectId } : {}) },
+        env: {
+          PSTDIO_SESSION_ID: input.sessionId,
+          ...(options.projectId ? { PSTDIO_PROJECT_ID: options.projectId } : {}),
+        },
       };
       const session = input.agentSessionId
         ? resumeClaudeCodeSession(
@@ -80,9 +87,9 @@ export const prepareClaudeOperation = (
               agentSessionId: input.agentSessionId,
               messageOffset: events.getMessages().length,
             },
-            spawnDeps,
+            options.spawnDeps,
           )
-        : await startClaudeCodeSession(run, spawnDeps);
+        : await startClaudeCodeSession(run, options.spawnDeps);
       return { kind: "started", session, ...(plan ? { params: { permission_mode: "plan" } } : {}) };
     },
   };

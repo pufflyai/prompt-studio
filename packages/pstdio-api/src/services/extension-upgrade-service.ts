@@ -56,7 +56,8 @@ type InstallExtension = (input: InstallExtensionSourceInput) => ReturnType<typeo
 const installFromRecordedOrigin = (input: {
   install: InstallExtension;
   installName: string;
-  origin: { kind: "git"; url: string; path: string; ref: string };
+  origin: { url: string; path: string };
+  hostReleaseRef: string;
   identity: string;
   upgradeFromVersion: string | null;
   installedSourcePath: string;
@@ -69,9 +70,10 @@ const installFromRecordedOrigin = (input: {
     upgradeFromVersion: input.upgradeFromVersion,
     force: true,
     retainBackup: true,
-    ref: input.origin.ref,
+    ref: input.hostReleaseRef,
+    hostReleaseRef: input.hostReleaseRef,
     ...(input.origin.url.startsWith("https:") ? { expectedIdentity: input.identity } : {}),
-    originSource: { kind: "release", origin: input.origin },
+    originSource: { kind: "release", origin: { kind: "git", ...input.origin, ref: input.hostReleaseRef } },
     ...(input.repoPath ? { repoPath: input.repoPath } : {}),
     reuseInstalledDependencies: true,
   });
@@ -313,11 +315,11 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
         repoPath,
       );
     } else if (parsed && deps.release?.ref) {
-      const origin = { kind: "git" as const, url: parsed.url, path: parsed.path, ref: deps.release.ref };
       installed = await installFromRecordedOrigin({
         install,
         installName: existing.installedSource.install_name,
-        origin,
+        origin: { url: parsed.url, path: parsed.path },
+        hostReleaseRef: deps.release.ref,
         identity: existing.installedSource.extension_id,
         installedSourcePath: existing.installedSource.source_path,
         upgradeFromVersion,

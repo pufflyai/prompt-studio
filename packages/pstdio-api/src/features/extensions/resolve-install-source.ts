@@ -49,5 +49,5 @@ export const resolveInstallSource = async (input: InstallExtensionSourceInput, t
     input.signal,
     input.hostReleaseRef,
   );
-  return { kind: "named" as const, name: input.source, path: named.path, ref: named.ref };
+  return { kind: "named" as const, name: input.source, ...named };
 };
