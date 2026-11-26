@@ -367,6 +367,12 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     await detail.getByRole("button", { name: /Review upgrade/ }).click();
     const review = page.getByRole("dialog", { name: "Review Prompt Studio Skills upgrade" });
     await expectPage(review).toContainText("Original release unavailable");
+    await review.getByRole("button", { name: "Close review" }).click();
+    await expectPage(review).toHaveCount(0);
+    await detail.getByRole("button", { name: /Review upgrade/ }).click();
+    await review.press("Escape");
+    await expectPage(review).toHaveCount(0);
+    await detail.getByRole("button", { name: /Review upgrade/ }).click();
     const apply = review.getByRole("button", { name: "Apply upgrade" });
     await expectPage(review).toContainText("The agent prepared a resolution.");
     await expectPage(apply).toBeEnabled();

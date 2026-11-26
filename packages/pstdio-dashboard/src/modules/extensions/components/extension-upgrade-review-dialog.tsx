@@ -1,4 +1,4 @@
-import { Button, Dialog, Field, Portal, Stack, Text, Textarea } from "@chakra-ui/react";
+import { Button, CloseButton, Dialog, Field, Portal, Stack, Text, Textarea } from "@chakra-ui/react";
 import { PstdioApiError } from "@pstdio/sdk/client";
 import { AlertMessage, LoadingState } from "@pstdio/ui";
 import {
@@ -137,7 +137,14 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
   };
 
   return (
-    <Dialog.Root open closeOnInteractOutside={false} onOpenChange={({ open }) => !open && !busy && onClose()}>
+    <Dialog.Root
+      open
+      placement="center"
+      size="sm"
+      scrollBehavior="inside"
+      closeOnInteractOutside={false}
+      onOpenChange={({ open }) => !open && !busy && onClose()}
+    >
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
@@ -146,12 +153,10 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
               <Dialog.Title>
                 {t("title", "Review {{name}} upgrade", { name: target.extension.displayName })}
               </Dialog.Title>
+              <Dialog.CloseTrigger asChild>
+                <CloseButton size="sm" aria-label={t("close", "Close review")} disabled={busy} />
+              </Dialog.CloseTrigger>
             </Dialog.Header>
-            <Dialog.CloseTrigger asChild>
-              <Button variant="ghost" size="sm" disabled={busy}>
-                {t("close", "Close review")}
-              </Button>
-            </Dialog.CloseTrigger>
             <Dialog.Body>
               <Stack gap="sm">
                 {error && (
