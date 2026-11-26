@@ -36,6 +36,8 @@ export interface ControllerMachine extends Machine {
   connected_at?: string | null;
   external_id: string;
   created_at: string;
+  ready_at?: string | null;
+  terminal_at?: string | null;
   template: { name: string; version: string; digest: string };
   metadata: Record<string, string>;
   persistence: {

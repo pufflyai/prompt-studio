@@ -35,7 +35,13 @@ import { tableCommands } from "./src/table-commands";
 import { deleteTemplateRow, openCatalog, saveTemplate, viewTemplateRow } from "./src/template-commands";
 import { templateFileView, templatePage } from "./src/template-view";
 import { catalogPage, deployedPage, instancePage, instancesPage, navigation } from "./src/workbench";
-import { workspaceHistoryCommands, workspaceHistoryView } from "./src/workspace-history-view";
+import { workspaceHistoryCommands } from "./src/workspace-history-view";
+import { monitoringCommands } from "./src/workspace-monitoring-commands";
+import {
+  workspaceMonitoringDetailPage,
+  workspaceMonitoringDetailView,
+  workspaceMonitoringView,
+} from "./src/workspace-monitoring-view";
 
 export default defineExtension({
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
@@ -66,6 +72,7 @@ export default defineExtension({
     openDeployed,
     readDeployed,
     ...Object.values(workspaceHistoryCommands),
+    ...Object.values(monitoringCommands),
     openDeployedMachine,
     openDeployedPreview,
     ...deployedSelectionCommands,
@@ -98,9 +105,18 @@ export default defineExtension({
     deployedTemplatesView,
     deployedTestOutputView,
     deployedWorkspaceLogsView,
-    workspaceHistoryView,
+    workspaceMonitoringView,
+    workspaceMonitoringDetailView,
   ],
-  pages: [instancesPage, instancePage, deployedPage, deployedMachinePage, catalogPage, templatePage],
+  pages: [
+    instancesPage,
+    instancePage,
+    deployedPage,
+    deployedMachinePage,
+    workspaceMonitoringDetailPage,
+    catalogPage,
+    templatePage,
+  ],
   navigationItems: [navigation],
   keybindings: [
     defineKeybinding({ id: "go-cloud-workspaces", layer: "go", key: "C", sticky: true, action: navigation.action }),

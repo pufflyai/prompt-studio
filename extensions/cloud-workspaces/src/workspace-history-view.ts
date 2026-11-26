@@ -1,4 +1,4 @@
-import { defineCommand, defineView, l10n, packageAsset, params } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { deployedName, getDeployed } from "./deployed-controller";
 import type { WorkspaceActivity } from "./workspace-history";
 import { defaultHistoryRange, historyRanges, workspaceHistoryCommandId } from "./workspace-history-range";
@@ -10,7 +10,7 @@ const read = defineCommand({
   params: {
     range: params.select({
       label: l10n("cloud-workspaces.time-range", "Time range"),
-      options: historyRanges,
+      options: [...historyRanges],
     }),
   },
   async run(ctx, input) {
@@ -28,14 +28,3 @@ const read = defineCommand({
 });
 
 export const workspaceHistoryCommands = { [workspaceHistoryCommandId]: read };
-
-export const workspaceHistoryView = defineView({
-  id: "workspace-history",
-  title: l10n("cloud-workspaces.workspace-activity", "Workspace activity"),
-  icon: "chart-line",
-  body: {
-    kind: "webview",
-    entry: packageAsset("./workspace-history-webview.ts", import.meta.url),
-    capabilities: ["commands.query"],
-  },
-});
