@@ -30,7 +30,7 @@ import { type NativeChatPresentation, useNativeChatPresentation } from "./use-na
 import { useNativeChatTranscript } from "./use-native-chat-transcript";
 
 interface NativeChatViewProps extends NativeChatHostServices {
-  workbench?: import("../../../core").WorkbenchModuleContext;
+  workbench?: import("../../../core").WorkbenchCore;
   resource?: import("@pstdio/sdk/extensions").ResourceRef;
   Host?: ComponentType<NativeChatHostProps>;
   extensionId?: string;
