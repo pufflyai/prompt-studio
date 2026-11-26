@@ -1,1 +1,0 @@
-ALTER TABLE "manager_project_members" ADD COLUMN "grantId" uuid DEFAULT gen_random_uuid() NOT NULL;

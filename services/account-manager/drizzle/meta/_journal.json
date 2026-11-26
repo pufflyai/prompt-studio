@@ -61,36 +61,8 @@
     {
       "idx": 8,
       "version": "7",
-      "when": 1795524431964,
-      "tag": "0008_team_invitations",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1795526488692,
-      "tag": "0009_team_project_grant_identity",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1795527058847,
-      "tag": "0010_team_ownership",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "7",
-      "when": 1795656297292,
-      "tag": "0011_microsoft_team_invitation",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "7",
-      "when": 1795711165894,
-      "tag": "0012_team_management",
+      "when": 1795713826220,
+      "tag": "0008_team_management",
       "breakpoints": true
     }
   ]
