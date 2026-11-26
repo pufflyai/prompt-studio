@@ -108,7 +108,7 @@ jobs:
         run: |
           docker info
           docker compose version
-          bunx playwright@1.60.0 install --with-deps chromium
+          bunx playwright@1.60.0 install --with-deps chromium firefox
       - name: Run every check selected by the isolated review gate
         env:
           TMPDIR: ${{ runner.temp }}
