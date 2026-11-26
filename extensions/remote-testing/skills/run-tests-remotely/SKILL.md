@@ -69,3 +69,5 @@ Environments expire at the approved template's deadline. Stop the ones you start
 ## Agent branch workspaces
 
 Pass `--path` for the target worktree. Use `--ref <branch-or-commit>` to test an exact commit, or `--branch-template true` to publish a version for the current worktree including uncommitted edits. For a Prompt Studio instance, use `pst pocketcoder.remote-testing preview run --path <worktree> [--ref <branch-or-commit>]`. When it returns a workspace ID, run `pst pocketcoder.remote-testing preview open --workspace-id <id>` to obtain a browser link on the configured operator device. Share the expiring link only with the intended viewer.
+
+Each Kito preview receives an independent HTTPS origin, invitation, browser session and app state. Multiple previews can stay open together within actual cloud capacity; never stop another session's preview to open yours. New certificates may take several minutes to become ready. Save `workspaceId`, `url` and `expiresAt` separately for each preview; keep the invitation URLs private. Reopening does not extend the preview lifetime.

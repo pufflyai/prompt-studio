@@ -5,6 +5,7 @@ import { collectRun } from "./collection";
 import { connectionApi } from "./connection";
 import { enqueueEnvironmentCleanup, resumeEnvironmentCleanups } from "./environment-cleanup";
 import { changed } from "./events";
+import { kitoStorage, kitoWorkflowPath } from "./kito-workflow";
 import { enqueueRunLog } from "./run-log";
 import type { RunDeps } from "./runs";
 import { readSettings } from "./settings";
@@ -37,8 +38,13 @@ export async function readSavedLog(ctx: ExtensionContextBase, runId: string) {
   return ctx.extensionFiles.readText(`runs/${runId}.log`);
 }
 
+export async function checkAccess(ctx: ExtensionContextBase, kitoWorkflow: boolean) {
+  if (kitoWorkflow) await connectionApi(ctx.connections)({ method: "GET", path: `${kitoWorkflowPath}/status` });
+  else await googleToken(ctx);
+}
+
 export async function runDeps(ctx: ExtensionContextBase, options: { recover?: boolean } = {}): Promise<RunDeps> {
-  const { settings, problems } = readSettings(await ctx.settings.all());
+  const { settings, problems, kitoWorkflow } = readSettings(await ctx.settings.all());
   if (problems.length) throw new Error(`Remote testing is not configured. ${problems.join(" ")}`);
   if (options.recover !== false) await resumeEnvironmentCleanups(ctx);
   return {
@@ -58,11 +64,14 @@ export async function runDeps(ctx: ExtensionContextBase, options: { recover?: bo
           throw error;
         }),
     publishTemplate: (kind, source, signal) => publishBranchTemplate(ctx, kind, source, signal),
-    storage: gcsStorage({
-      bucket: settings.storageBucket,
-      signer: settings.signerAccount,
-      token: () => googleToken(ctx),
-    }),
+    kitoWorkflow,
+    storage: kitoWorkflow
+      ? kitoStorage(connectionApi(ctx.connections))
+      : gcsStorage({
+          bucket: settings.storageBucket,
+          signer: settings.signerAccount,
+          token: () => googleToken(ctx),
+        }),
     store: ctx.storage,
     process: ctx.process,
     settings,
