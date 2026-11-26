@@ -1,16 +1,22 @@
-import { defineCommand, params, sessionBrowser } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, params, sessionBrowser } from "@pstdio/sdk/extensions";
 import { homeIdeaScreenshotUrl, homeIdeas } from "./home-ideas";
+
+const ideaLabels = {
+  "release-checklist": l10n("ideas.releaseChecklist", "Release checklist"),
+  "virtual-office": l10n("ideas.virtualOffice", "Virtual office"),
+  "something-different": l10n("ideas.somethingDifferent", "Something different"),
+};
 
 export const buildHome = defineCommand({
   id: "build-home",
-  title: "Start a Home page idea",
+  title: l10n("commands.buildHome", "Start a Home page idea"),
   cli: true,
   mutating: true,
   params: {
     idea: params.select({
       required: true,
-      label: "Home page idea",
-      options: homeIdeas.map(({ id, title }) => ({ value: id, label: title })),
+      label: l10n("params.homeIdea", "Home page idea"),
+      options: homeIdeas.map(({ id, title }) => ({ value: id, label: title, localizedLabel: ideaLabels[id] })),
     }),
   },
   async run(ctx, { idea: id }) {
