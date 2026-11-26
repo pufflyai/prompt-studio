@@ -16,6 +16,7 @@ import {
 } from "./extension-install-preparation";
 import { extensionInstallSourceResources, type inspectExtensionInstallResources } from "./extension-install-resources";
 import { claimPreparedInstall } from "./extension-install-transaction";
+import { ExtensionUpgradeNeedsReviewError } from "./extension-upgrade-baseline";
 import type { InstallExtensionSourceInput, InstalledExtensionSource } from "./install-extension-source-types";
 
 export {
@@ -89,6 +90,7 @@ export const installExtensionSource = async (
       const type = [
         ExtensionAlreadyInstalledError,
         ExtensionValidationFailedError,
+        ExtensionUpgradeNeedsReviewError,
         RepoScopedExtensionNeedsProjectFolderError,
         ExtensionRegistryError,
         GitUnavailableError,

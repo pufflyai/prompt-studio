@@ -61,6 +61,7 @@
         "errorCopied": "오류를 복사했습니다"
       },
       "upgrade": {
+        "reviewNeeded": "로컬 파일을 보존했습니다",
         "waiting": "업그레이드 대기 중",
         "action": "업그레이드",
         "current": "확장이 이미 최신입니다",
@@ -184,6 +185,7 @@
         "retry": "다시 시도",
         "dismiss": "닫기",
         "upgradingButton": "업그레이드 중",
+        "batchReviewRequired": "검토 필요 ({{count}}개)",
         "batchFailed": "업그레이드 {{total}}개 중 {{count}}개 실패",
         "installingButton": "설치 중"
       },

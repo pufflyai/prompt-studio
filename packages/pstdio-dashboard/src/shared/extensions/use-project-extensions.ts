@@ -1,6 +1,7 @@
 import type { CommandExecuteRequest, UpgradeProjectExtensionResponse } from "@pstdio/sdk/api";
 import type { ScopedQuery } from "@pstdio/sdk/extensions";
 import { useScopedQuery } from "@pstdio/sdk/extensions/react";
+import type { ExtensionUpgradeReviewResolution } from "pstdio-api-contracts";
 import { useEffect, useSyncExternalStore } from "react";
 import { addLocalExtensionFolder, type DroppedExtensionFolder } from "./api";
 import { getAutomationPreferences } from "./automation-preferences";
@@ -106,6 +107,33 @@ export const useUpgradeProjectExtension = (projectId: string | undefined) =>
       return schedule ? schedule(send) : send();
     },
     accept: (result, _value, cache) => cache.acceptUpgrade(result.extension),
+  });
+export const useApplyExtensionUpgradeReview = (projectId: string | undefined) =>
+  useExtensionMutation(projectId, "apply-upgrade-review", {
+    run: (
+      input: {
+        instanceId: string;
+        id: string;
+        resolutions: ExtensionUpgradeReviewResolution[];
+        usePublished?: boolean;
+        revision: string;
+        title: string;
+      },
+      target,
+    ) =>
+      trackExtensionSourceChange(target, { instanceId: input.instanceId, title: input.title }, () =>
+        target.api.extensions.reviewUpgrade(target.projectId, input.instanceId, {
+          action: "apply",
+          id: input.id,
+          resolutions: input.resolutions,
+          usePublished: input.usePublished,
+          revision: input.revision,
+        }),
+      ),
+    accept: (result, value, cache) =>
+      value.instanceId === result.upgrade.extension.id
+        ? cache.acceptUpgrade(result.upgrade.extension)
+        : cache.refresh(),
   });
 export const useUpdateProjectExtensionSetting = (projectId: string | undefined) =>
   useExtensionMutation(projectId, "setting", {

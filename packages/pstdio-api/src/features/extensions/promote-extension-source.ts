@@ -44,6 +44,7 @@ export const promotePreparedSource = async (
   replaceExisting: boolean,
   preserveDependencies: boolean,
   onClaim?: (ownership: { ownerPath: string; token: string; previousToken: string | null }) => void,
+  verifyPrevious?: (path: string) => void,
 ) => {
   const backupPath = join(dirname(preparedPath), ".previous");
   const relocateNodeModules = await prepareNodeModulesRelocation(preparedPath, targetPath);
@@ -67,6 +68,7 @@ export const promotePreparedSource = async (
         renameSync(targetPath, backupPath);
         backedUp = true;
       }
+      verifyPrevious?.(backupPath);
       renameSync(preparedPath, targetPath);
       promoted = true;
       relocateNodeModules();

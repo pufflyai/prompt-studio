@@ -1,8 +1,10 @@
 import { Stack, Text } from "@chakra-ui/react";
+import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { LoadingState } from "@pstdio/ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { getApiClient } from "@/lib/api";
 import { useAgents } from "@/shared/agents/use-agents";
 import { dashboardExtensionDetailPage, dashboardExtensionsPage } from "@/shared/app/resources";
 import { useProjectedAutomationPreferences } from "@/shared/extensions/automation-preferences";
@@ -18,6 +20,8 @@ import { marketplaceActionKey } from "./extension-actions";
 import { ExtensionDetailContainer } from "./extension-detail-container";
 
 import { ExtensionReplacementConfirmation } from "./extension-replacement-confirmation";
+import { extensionUpgradeAgentAvailable, openExtensionUpgradeAgentDraft } from "./extension-upgrade-agent-draft";
+import { ExtensionUpgradeReviewDialog, type ReviewTarget } from "./extension-upgrade-review-dialog";
 import { ExtensionsPanelView } from "./extensions-panel-view";
 import { SavedExtensionSignIns } from "./saved-extension-sign-ins";
 import { useExtensionPanelActions } from "./use-extension-panel-actions";
@@ -29,6 +33,54 @@ interface ExtensionsPanelProps {
 
 const selectedExtension = (id: string | undefined, kind: string) =>
   id?.startsWith(`${kind}:`) ? id.slice(kind.length + 1) : null;
+
+const useUpgradeReviewTarget = (
+  projectId: string | undefined,
+  extensions: ProjectExtensionInstance[] | undefined,
+  actions: ReturnType<typeof useExtensionPanelActions>,
+) => {
+  const [reviewTarget, setReviewTarget] = useState<ReviewTarget | null>(null);
+  const retryOrReview = (id: string, upgrade = false) => {
+    const extension = extensions?.find((entry) => entry.id === id);
+    if (!projectId || !extension) return;
+    if (!extension.hasPublishedAlternative && !actions.actions[id]?.needsReview)
+      return upgrade ? void actions.handleUpgrade(extension) : actions.retry(id);
+    const load = getApiClient()
+      .extensions.reviewUpgrade(projectId, id, { action: "begin" })
+      .then(({ review }) => review);
+    setReviewTarget({ extension, load });
+  };
+  return { reviewTarget, setReviewTarget, retryOrReview };
+};
+
+const ActiveExtensionUpgradeReview = ({
+  projectId,
+  reviewTarget,
+  actions,
+  settingsInput,
+  close,
+}: {
+  projectId: string | undefined;
+  reviewTarget: ReviewTarget | null;
+  actions: ReturnType<typeof useExtensionPanelActions>;
+  settingsInput: WorkbenchPanelRenderInput;
+  close: () => void;
+}) => {
+  if (!projectId || !reviewTarget) return null;
+  return (
+    <ExtensionUpgradeReviewDialog
+      projectId={projectId}
+      target={reviewTarget}
+      onClose={close}
+      onApplied={() => actions.dismiss(reviewTarget.extension.id)}
+      onCompose={
+        extensionUpgradeAgentAvailable(settingsInput.workbench)
+          ? (review) => openExtensionUpgradeAgentDraft(settingsInput, projectId, reviewTarget.extension.id, review)
+          : undefined
+      }
+    />
+  );
+};
 
 export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const { projectId, settingsInput } = props;
@@ -45,6 +97,11 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const automationPreferences = useProjectedAutomationPreferences(projectId, metadataQuery.data?.automations);
   const actions = useExtensionPanelActions(projectId, extensionsQuery.data?.upgradeConcurrency);
   const { filters, setFilters } = actions;
+  const { reviewTarget, setReviewTarget, retryOrReview } = useUpgradeReviewTarget(
+    projectId,
+    extensionsQuery.data?.extensions,
+    actions,
+  );
   const returnFocus = useRef<{ id: string; left: boolean } | undefined>(undefined);
   const focusTargets = useRef(new Map<string, HTMLElement>());
   // React Activity disconnects effects while a cached page is hidden. Its cleanup
@@ -100,7 +157,19 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
     else focusTargets.current.delete(id);
   };
   const replacementDialog = settingsInput.visible !== false && (
-    <ExtensionReplacementConfirmation replacement={actions.replacement} onClose={() => actions.setReplacement(null)} />
+    <>
+      <ExtensionReplacementConfirmation
+        replacement={actions.replacement}
+        onClose={() => actions.setReplacement(null)}
+      />
+      <ActiveExtensionUpgradeReview
+        projectId={projectId}
+        reviewTarget={reviewTarget}
+        actions={actions}
+        settingsInput={settingsInput}
+        close={() => setReviewTarget(null)}
+      />
+    </>
   );
   const marketplaceContributions = useMarketplaceExtensionContributions(
     projectId,
@@ -146,10 +215,10 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
           settingsInput={settingsInput}
           action={action}
           sourceChanging={sourceChangingIds.has(selected.id)}
-          onUpgrade={() => void actions.handleUpgrade(selected)}
+          onUpgrade={() => retryOrReview(selected.id, true)}
           onToggle={(enabled) => void actions.handleToggle(selected, enabled)}
           onDismissAction={(expected) => actions.dismiss(selected.id, expected)}
-          onRetryAction={() => actions.retry(selected.id)}
+          onRetryAction={() => retryOrReview(selected.id)}
         />
       </>
     );
@@ -198,14 +267,14 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         sourceChangingIds={sourceChangingIds}
         onDismissAction={actions.dismiss}
         onDismissBatch={actions.dismissBatch}
-        onRetryAction={actions.retry}
+        onRetryAction={(id) => retryOrReview(id)}
         batch={actions.batch}
         togglingAutomation={automationPreferences.instances}
         onToggle={(extension, enabled) => void actions.handleToggle(extension, enabled)}
         onToggleAutomation={(extension, automation, enabled) =>
           setAutomationEnabled.mutateAsync({ instanceId: extension.id, automationId: automation.id, enabled })
         }
-        onUpgrade={(extension) => void actions.handleUpgrade(extension)}
+        onUpgrade={(extension) => retryOrReview(extension.id, true)}
         onOpen={(extension) => openDetail(`installed:${extension.id}`, extension.displayName)}
         onInstallMarketplace={(extension) => void actions.handleInstall(extension)}
         onOpenMarketplace={(extension) => openDetail(`marketplace:${extension.installName}`, extension.displayName)}

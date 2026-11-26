@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { constants, cpSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { withFileMutationLock } from "pstdio-paths";
 import { acceptedRevisionPath, type PreparedExtensionRevision, preparedRevisionState } from "./prepared-revision";
@@ -19,7 +19,7 @@ export const publishAcceptedWebviews = (input: {
       const stage = `${output.distDir}.staging-${crypto.randomUUID()}`;
       try {
         mkdirSync(dirname(stage), { recursive: true });
-        cpSync(artifact.distDir, stage, { recursive: true });
+        cpSync(artifact.distDir, stage, { recursive: true, mode: constants.COPYFILE_FICLONE });
         writeFileSync(join(stage, "build-signature.txt"), `prepared:${artifact.id}`);
         rmSync(output.distDir, { recursive: true, force: true });
         renameSync(stage, output.distDir);
