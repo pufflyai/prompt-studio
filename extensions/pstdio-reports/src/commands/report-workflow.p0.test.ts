@@ -5,7 +5,6 @@ import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing"
 import { reportsCollection } from "../data/collections";
 import { reportFilesDir, reportMarkdownPath } from "../data/draft-storage";
 import { parseReportFrontmatter, stripFrontmatter } from "../data/frontmatter";
-import { reportLookupIndex } from "../data/report-lookup";
 import { saveReportTemplate } from "../data/template-store";
 import type { StoredReport } from "../data/types";
 import { defaultProjectRoot, makeCommandArgs } from "./command-context.fixture";
@@ -15,7 +14,7 @@ import { saveReportCommand } from "./save-report";
 import { writeReportCommand } from "./write-report";
 
 const setup = () => ({
-  storage: createMemoryStorage({ indexes: [reportLookupIndex] }),
+  storage: createMemoryStorage(),
   projectFiles: createMemoryRepoFiles(),
   events: [] as Array<{ event: string; payload: Record<string, unknown> }>,
 });

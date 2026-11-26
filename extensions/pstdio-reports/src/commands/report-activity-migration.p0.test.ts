@@ -2,13 +2,12 @@ import { expect, test } from "bun:test";
 import { createMemoryActivity, createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
 import { putReport, reportsCollection } from "../data/collections";
 import { readReportWithBody, reportBodyFile } from "../data/report-body";
-import { reportLookupIndex } from "../data/report-lookup";
 import { makeCommandContext } from "./command-context.fixture";
 import { exportReportCommand, redirectReportCommand } from "./export-report";
 import { readReportCommand } from "./read-report";
 
 test("historical RP references retain bodies and evidence after a verified, resumable Activity redirect", async () => {
-  const storage = createMemoryStorage({ indexes: [reportLookupIndex] });
+  const storage = createMemoryStorage();
   const activity = createMemoryActivity();
   const ctx = makeCommandContext({
     storage,
@@ -114,7 +113,7 @@ test("historical RP references retain bodies and evidence after a verified, resu
 });
 
 test("a report save admitted before migration retains the new evidence", async () => {
-  const storage = createMemoryStorage({ indexes: [reportLookupIndex] });
+  const storage = createMemoryStorage();
   const activity = createMemoryActivity();
   const projectFiles = createMemoryRepoFiles();
   const ctx = makeCommandContext({

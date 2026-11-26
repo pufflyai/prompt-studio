@@ -3,7 +3,6 @@ import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
 import { REPORTS_COLLECTION, reportsCollection } from "../data/collections";
 import { reportFilesDir } from "../data/draft-storage";
-import { reportLookupIndex } from "../data/report-lookup";
 import { makeCommandArgs } from "./command-context.fixture";
 import { saveReportCommand } from "./save-report";
 import { writeReportCommand } from "./write-report";
@@ -35,7 +34,7 @@ const failReportPutAndBlobDeletes = (storage: ExtensionStorageApi): ExtensionSto
 
 describe("save report", () => {
   test("new evidence files use core IDs and keep them on later saves", async () => {
-    const storage = createMemoryStorage({ indexes: [reportLookupIndex] });
+    const storage = createMemoryStorage();
     const projectFiles = createMemoryRepoFiles();
     const written = await writeReportCommand.run(
       ...makeCommandArgs({ storage, params: { name: "review", template: "review" }, overrides: { projectFiles } }),
@@ -71,7 +70,7 @@ describe("save report", () => {
   });
 
   test("preserves the storage write error when rollback blob cleanup fails", async () => {
-    const storage = createMemoryStorage({ indexes: [reportLookupIndex] });
+    const storage = createMemoryStorage();
     const projectFiles = createMemoryRepoFiles();
     await writeReportCommand.run(
       ...makeCommandArgs({

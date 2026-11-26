@@ -5,7 +5,6 @@ import { dirname, join, resolve } from "node:path";
 import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
 import { reportsCollection } from "../data/collections";
 import { reportMarkdownPath } from "../data/draft-storage";
-import { reportLookupIndex } from "../data/report-lookup";
 import { makeCommandArgs } from "./command-context.fixture";
 import { deleteReportCommand } from "./delete-report";
 import { writeReportCommand } from "./write-report";
@@ -18,7 +17,7 @@ afterEach(async () => {
 test("report paths and creation events identify files in the default folder, independent of the selected workspace", async () => {
   const root = await mkdtemp(join(tmpdir(), "report-draft-location-"));
   roots.push(root);
-  const storage = createMemoryStorage({ indexes: [reportLookupIndex] });
+  const storage = createMemoryStorage();
   const memory = createMemoryRepoFiles();
   const projectRoot = join(root, "project");
   const events: unknown[] = [];
@@ -57,7 +56,7 @@ test("report paths and creation events identify files in the default folder, ind
 });
 
 test("deleting a report preserves another workspace's draft and evidence in the shared directory", async () => {
-  const storage = createMemoryStorage({ indexes: [reportLookupIndex] });
+  const storage = createMemoryStorage();
   const projectFiles = createMemoryRepoFiles();
   const overrides = {
     projectFiles,
@@ -86,7 +85,7 @@ test("deleting a report preserves another workspace's draft and evidence in the 
 });
 
 test.each(["remote", "missing"])("report creation rejects a %s default target before changing data", async (target) => {
-  const storage = createMemoryStorage({ indexes: [reportLookupIndex] });
+  const storage = createMemoryStorage();
   const projectFiles = createMemoryRepoFiles();
   await expect(
     writeReportCommand.run(

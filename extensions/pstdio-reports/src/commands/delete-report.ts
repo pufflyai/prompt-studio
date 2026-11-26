@@ -1,9 +1,8 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { reportsCollection } from "../data/collections";
 import { reportDir, reportFilesDirFor, reportMarkdownPathFor, requireReportDraftFiles } from "../data/draft-storage";
-import { findReport } from "../data/report-lookup";
 import { withReportWrite } from "../data/report-write";
-import { resolveWorkspace } from "../data/resolve";
+import { findReport, resolveWorkspace } from "../data/resolve";
 import { assertSafeReportName } from "../data/validation";
 
 export const deleteReportCommand = defineCommand({
