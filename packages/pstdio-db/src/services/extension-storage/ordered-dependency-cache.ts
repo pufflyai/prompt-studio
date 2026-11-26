@@ -2,12 +2,10 @@ import { and, eq, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { OrderedDecision } from "pstdio-sync/records";
 import { storage_ordered_operations as operations, owners } from "../../db/schemas.pg";
-import { readOrderedMarker } from "./ordered-native-metadata";
 import type { OrderedTransaction } from "./ordered-sql";
 import type { RetainedOperation } from "./retained-operations";
 import { storageOwnerWhere } from "./storage-owner-key";
 
-const marker = (id: string) => JSON.stringify(["ordered-dependency", id]);
 type Coordinates = Pick<typeof operations.$inferSelect, "admission_epoch" | "settled_epoch" | "receipt_epoch"> & {
   pending: boolean;
 };
@@ -33,9 +31,6 @@ export const createOrderedDependencyCache = (
       if (admitted) return admitted;
     }
     if (row?.receipt_epoch) return exact(id, row.receipt_epoch);
-    // Released homes retain the original selector until their document archive is restored.
-    const remembered = await readOrderedMarker<{ epoch: string }>(tx, owner, marker(id));
-    return remembered ? exact(id, remembered.value.epoch) : undefined;
   };
   return {
     async remember(decision: OrderedDecision) {

@@ -170,6 +170,19 @@ POSIX directory flushes qualify the publication order. Windows process replay is
 supported; Windows power-loss durability remains unqualified under
 [ADR 0104](../../adrs/0104-temporary-windows-database-publication-retries.md).
 
+### Legacy dependency markers
+
+After restoring the journals, startup retires the old local
+`["ordered-dependency", operationId]` documents in batches. For an operation
+without a settled or selected receipt epoch, it copies the marker’s epoch into
+the journal. A journal selection already present takes precedence. Selectors
+without a current operation row expire, as do missing or malformed selector
+values. This can end legacy dependency lookup for an operation whose only
+selection was in that marker. The upgrade preserves operation receipts and
+pending saves. Each batch commits the selection and marker removal together.
+On restart the host resumes from surviving markers and collects unreferenced
+document files.
+
 ### Cleanup and disk maintenance
 
 Startup applies schema migrations, copies reachable receipt nodes into files, and

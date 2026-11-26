@@ -35,6 +35,7 @@ import { prepareBoardDefaultsUpgrade } from "./board-defaults-upgrade";
 import { prepareBoardOwnersUpgrade } from "./board-owners-upgrade";
 import { prepareConnectionCredentialsUpgrade } from "./connection-credentials-upgrade";
 import { attachDatabaseAuthority } from "./database-authority";
+import { retireDependencyMarkers } from "./dependency-marker-upgrade";
 import { prepareDocumentOwnerUpgrade } from "./document-owner-upgrade";
 import { prepareExtensionPreferencesUpgrade } from "./extension-preferences-upgrade";
 import { prepareFileOwnersUpgrade } from "./file-owners-upgrade";
@@ -288,6 +289,7 @@ export const createDb = async (options?: {
     onPhase("database_index_nodes");
     // A run that stops after deleting rows must leave offline space reclamation pending.
     const owed = () => invalidateMaintenance(dbPath);
+    await retireDependencyMarkers(db, owed);
     const deferredOwners: StorageOwner[] = [];
     const deferCleanup = options?.deferCleanup && dbPath !== ":memory:";
     const renamedOwners = new Set(
