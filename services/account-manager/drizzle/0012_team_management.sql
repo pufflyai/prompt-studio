@@ -17,10 +17,12 @@ CREATE TABLE "manager_team_managed_packages" (
 );
 --> statement-breakpoint
 ALTER TABLE "manager_team_invitations" DROP CONSTRAINT "manager_team_invitation_recipient";--> statement-breakpoint
+ALTER TABLE "manager_project_deletions" ADD COLUMN "requestedBy" text;--> statement-breakpoint
 ALTER TABLE "manager_team_extension_policies" ADD CONSTRAINT "manager_team_extension_policies_accountId_manager_teams_accountId_fk" FOREIGN KEY ("accountId") REFERENCES "public"."manager_teams"("accountId") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "manager_team_extension_policies" ADD CONSTRAINT "manager_team_policy_package_owner_fk" FOREIGN KEY ("packageId","accountId") REFERENCES "public"."manager_team_managed_packages"("id","accountId") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "manager_team_managed_packages" ADD CONSTRAINT "manager_team_managed_packages_accountId_manager_teams_accountId_fk" FOREIGN KEY ("accountId") REFERENCES "public"."manager_teams"("accountId") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "manager_team_package_cleanup" ON "manager_team_managed_packages" USING btree ("createdAt","id");--> statement-breakpoint
+ALTER TABLE "manager_project_deletions" ADD CONSTRAINT "manager_project_deletions_requestedBy_manager_accounts_id_fk" FOREIGN KEY ("requestedBy") REFERENCES "public"."manager_accounts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "manager_team_invitations" ADD CONSTRAINT "manager_team_invitation_recipient" CHECK (("manager_team_invitations"."email" is not null and "manager_team_invitations"."microsoftTenantId" is null and "manager_team_invitations"."microsoftObjectId" is null)
         or ("manager_team_invitations"."email" is null and "manager_team_invitations"."microsoftTenantId" is not null and "manager_team_invitations"."microsoftObjectId" is not null)
         or ("manager_team_invitations"."email" is null and "manager_team_invitations"."microsoftTenantId" is null and "manager_team_invitations"."microsoftObjectId" is null));

@@ -16,6 +16,7 @@ test("assigned members manage their projects without gaining team administration
   });
   const manager = fixture.owner();
   const recovered = createAuthorityFixture(implementation);
+  const completedRecovery = createAuthorityFixture(implementation);
   const handler = implementation.createManagerHandler(auth, config.origin);
   const device = async () => {
     const login = await authentication.login(crypto.randomUUID());
@@ -125,8 +126,17 @@ test("assigned members manage their projects without gaining team administration
       requestedBy: member.accountId,
     });
     await recovered.initialize();
+    const legacy = {
+      ...saved,
+      deletions: saved.deletions?.map((row) => {
+        const receipt = { ...row };
+        delete receipt.requestedBy;
+        return receipt;
+      }),
+    };
     const restore = recovered.owner();
     try {
+      await restore.restore("legacy-member-deletion-receipt", legacy);
       await restore.restore("member-deletion-receipt", saved);
       expect((await restore.snapshot()).deletions?.find((row) => row.accountId === accountId)).toMatchObject({
         requestedBy: member.accountId,
@@ -134,10 +144,38 @@ test("assigned members manage their projects without gaining team administration
     } finally {
       await restore.close();
     }
+    await completedRecovery.initialize();
+    const complete = completedRecovery.owner();
+    try {
+      await complete.restore("completed-legacy-receipt", {
+        ...legacy,
+        deletions: legacy.deletions?.map((row) => ({
+          ...row,
+          state: "completed" as const,
+          completedAt: new Date().toISOString(),
+        })),
+      });
+      await complete.restore("older-receipt-with-requester", saved);
+      const replayed = await complete.snapshot();
+      expect(replayed.deletions?.find((row) => row.accountId === accountId)).toMatchObject({
+        requestedBy: member.accountId,
+        state: "completed",
+        delivery: 1,
+      });
+      expect(replayed.keys.some((row) => row.accountId === accountId && row.workbenchId === "assigned")).toBe(false);
+    } finally {
+      await complete.close();
+    }
     expect((await request(owner.token, `${team}/members/${member.accountId}/remove`, {})).status).toBe(200);
     expect((await request(member.token, receipt)).status).toBe(401);
     expect((await request(member.token, "/v1/account")).status).toBe(200);
   } finally {
-    await Promise.all([authentication.close(), auth.close(), manager.close(), recovered.close()]);
+    await Promise.all([
+      authentication.close(),
+      auth.close(),
+      manager.close(),
+      recovered.close(),
+      completedRecovery.close(),
+    ]);
   }
 });

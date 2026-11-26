@@ -148,6 +148,14 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
       return action(transaction, accountId, userId);
     });
 
+  const canManageProject = async (
+    transaction: ManagerTransaction,
+    accountId: string,
+    userId: string,
+    workbenchId: string,
+  ) =>
+    accountId === userId || (await resolveTeamCapabilities(transaction, accountId, userId, workbenchId)).manageProject;
+
   return {
     members: (token: string, id: string) => team(token, id, listTeamMembers),
     ownershipOffer: (token: string, id: string) => team(token, id, readOwnershipOffer),
@@ -230,19 +238,26 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
     workbenches: (token: string, selected?: string) =>
       scoped(token, selected, (transaction, accountId, userId) => listWorkbenches(transaction, accountId, userId)),
     outstandingProjectDeletions: (token: string, selected?: string) =>
-      scoped(token, selected, async (transaction, accountId, _userId, owner) => {
-        if (!owner) return [];
-        return listOutstandingProjectDeletions(transaction, accountId);
-      }),
+      scoped(token, selected, (transaction, accountId, userId, owner) =>
+        listOutstandingProjectDeletions(transaction, accountId, owner ? undefined : userId),
+      ),
     projectDeletion: (token: string, workbenchId: string, selected?: string) =>
-      scoped(token, selected, async (transaction, accountId, _userId, owner) => {
-        if (!owner) throw new DeviceAccessDenied();
-        return readProjectDeletion(transaction, { accountId, workbenchId: identitySchema.parse(workbenchId) });
+      scoped(token, selected, async (transaction, accountId, userId) => {
+        const input = { accountId, workbenchId: identitySchema.parse(workbenchId) };
+        const allowed = await canManageProject(transaction, accountId, userId, input.workbenchId);
+        const receipt = await readProjectDeletion(transaction, input, allowed ? undefined : userId);
+        if (!allowed && !receipt) throw new DeviceAccessDenied();
+        return receipt;
       }),
     startProjectDeletion: (token: string, workbenchId: string, selected?: string) =>
-      scoped(token, selected, async (transaction, accountId, _userId, owner) => {
-        if (!owner) throw new DeviceAccessDenied();
-        return startProjectDeletion(transaction, { accountId, workbenchId: identitySchema.parse(workbenchId) });
+      scoped(token, selected, async (transaction, accountId, userId) => {
+        const input = { accountId, workbenchId: identitySchema.parse(workbenchId) };
+        if (
+          !(await canManageProject(transaction, accountId, userId, input.workbenchId)) &&
+          !(await readProjectDeletion(transaction, input, userId))
+        )
+          throw new DeviceAccessDenied();
+        return startProjectDeletion(transaction, input, accountId === userId ? undefined : userId);
       }),
     keys: (token: string, value: string, selected?: string, expectedGrant?: string, managedHost = false) =>
       scoped(token, selected, async (transaction, accountId, userId) => {
@@ -269,9 +284,10 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
         await transaction.insert(projectMembers).values({ accountId, workbenchId, userId });
       }),
     removeWorkbench: (token: string, workbenchId: string, selected?: string) =>
-      scoped(token, selected, async (transaction, accountId, _userId, owner) => {
-        if (!owner) throw new DeviceAccessDenied();
-        await removeWorkbenchInTransaction(transaction, { accountId, workbenchId: identitySchema.parse(workbenchId) });
+      scoped(token, selected, async (transaction, accountId, userId) => {
+        const id = identitySchema.parse(workbenchId);
+        if (!(await canManageProject(transaction, accountId, userId, id))) throw new DeviceAccessDenied();
+        await removeWorkbenchInTransaction(transaction, { accountId, workbenchId: id });
       }),
   };
 };

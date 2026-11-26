@@ -1,5 +1,5 @@
 {
-  "id": "3362dcb1-927b-4d76-b9cd-7d1c457ac927",
+  "id": "19ff3b2b-0790-46e1-923e-de6b29be8c0a",
   "prevId": "b129b098-0936-4776-82ef-91e39f365522",
   "version": "7",
   "dialect": "postgresql",
@@ -322,6 +322,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "requestedBy": {
+          "name": "requestedBy",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "delivery": {
           "name": "delivery",
           "type": "integer",
@@ -380,6 +386,19 @@
           "tableTo": "manager_accounts",
           "columnsFrom": [
             "accountId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "manager_project_deletions_requestedBy_manager_accounts_id_fk": {
+          "name": "manager_project_deletions_requestedBy_manager_accounts_id_fk",
+          "tableFrom": "manager_project_deletions",
+          "tableTo": "manager_accounts",
+          "columnsFrom": [
+            "requestedBy"
           ],
           "columnsTo": [
             "id"

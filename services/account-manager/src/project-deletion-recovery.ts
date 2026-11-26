@@ -5,7 +5,7 @@ import type { ManagerTransaction } from "./database";
 import { projectDeletions, spaceKeys, workbenches } from "./schema";
 
 export const deletionReceiptSchema = projectDeletionStatusSchema
-  .extend({ accountId: identitySchema, delivery: z.int().positive() })
+  .extend({ accountId: identitySchema, delivery: z.int().positive(), requestedBy: identitySchema.optional() })
   .refine((row) => (row.state === "completed") === (row.completedAt !== null), {
     path: ["completedAt"],
     message: "Only a completed deletion has a completion time",
@@ -23,6 +23,8 @@ export const validateDeletionReceipts = (
   for (const [index, row] of receipts.entries()) {
     const scope = projectScope(row.accountId, row.workbenchId);
     if (!accountIds.has(row.accountId)) invalid(["deletions", index], "Unknown deletion account");
+    if (row.requestedBy !== undefined && !accountIds.has(row.requestedBy))
+      invalid(["deletions", index, "requestedBy"], "Unknown deletion requester");
     if (scopes.has(scope)) invalid(["deletions", index], "Duplicate project deletion");
     scopes.add(scope);
   }
@@ -33,8 +35,9 @@ export const captureProjectDeletionReceipts = async (tx: ManagerTransaction) => 
     .select()
     .from(projectDeletions)
     .orderBy(asc(projectDeletions.accountId), asc(projectDeletions.workbenchId));
-  return rows.map((row) => ({
+  return rows.map(({ requestedBy, ...row }) => ({
     ...row,
+    ...(requestedBy && { requestedBy }),
     startedAt: row.startedAt.toISOString(),
     completedAt: row.completedAt?.toISOString() ?? null,
   }));
@@ -46,6 +49,7 @@ export const restoreProjectDeletionReceipts = async (tx: ManagerTransaction, rec
     workbenchId: projectDeletions.workbenchId,
     operationId: projectDeletions.operationId,
     state: projectDeletions.state,
+    requestedBy: projectDeletions.requestedBy,
   };
   const known = await tx.select(fields).from(projectDeletions);
   const retired = new Map(known.map((row) => [projectScope(row.accountId, row.workbenchId), row]));
@@ -53,6 +57,8 @@ export const restoreProjectDeletionReceipts = async (tx: ManagerTransaction, rec
     const current = retired.get(projectScope(row.accountId, row.workbenchId));
     if (current && current.operationId !== row.operationId)
       throw new Error("Manager snapshot conflicts with a deletion operation");
+    if (current?.requestedBy && row.requestedBy && current.requestedBy !== row.requestedBy)
+      throw new Error("Manager snapshot conflicts with a deletion requester");
   }
   const batchSize = 1_000;
   for (let offset = 0; offset < receipts.length; offset += batchSize) {
@@ -71,6 +77,7 @@ export const restoreProjectDeletionReceipts = async (tx: ManagerTransaction, rec
           state: sql`excluded.state`,
           completedAt: sql`excluded."completedAt"`,
           delivery: sql`greatest(excluded.delivery, ${projectDeletions.delivery})`,
+          requestedBy: sql`coalesce(${projectDeletions.requestedBy}, excluded."requestedBy")`,
         },
         // A failure closes its delivery until an explicit retry advances the number.
         setWhere: sql`${projectDeletions.state} <> 'completed' AND (
