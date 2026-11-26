@@ -558,7 +558,9 @@ test("two Microsoft work accounts join, share and hand over the private catalogu
     expect(start.status).toBe(200);
     const { url } = z.object({ url: z.url() }).parse(await start.json());
     const callback = await oauth.complete("microsoft", new URL(url), { claims: { tid: tenantId, sub, oid } });
-    const signedIn = await managerHandler(new Request(callback.href, { headers: { cookie: oauthBrowserCookie(start) } }));
+    const signedIn = await managerHandler(
+      new Request(callback.href, { headers: { cookie: oauthBrowserCookie(start) } }),
+    );
     expect(signedIn.headers.get("location")).toBe(callbackURL);
     return oauthBrowserCookie(signedIn);
   };
@@ -661,7 +663,7 @@ test("two Microsoft work accounts join, share and hand over the private catalogu
   }
 });
 
-test("different team users share encrypted records and revocation cuts off the old lease and key", async () => {
+test("removing a disconnected team member cuts off the old lease and a replacement owner device recovers", async () => {
   const relay = await open({ accessLifetimeSeconds: 2 });
   const { manager, managerHandler, device, scope } = relay.context;
   const identity = createAuthenticationFixture(fixture.managerDatabaseUrl);
@@ -688,32 +690,33 @@ test("different team users share encrypted records and revocation cuts off the o
     const { url } = createdTeamInvitationSchema.parse(await invite.json());
     const redeemed = await request(member.token, "/v1/team-invitations/accept", { secret: new URL(url).hash.slice(1) });
     expect(redeemed.status).toBe(200);
-    const grant = (granted: boolean) =>
-      request(device.token, `${team}/projects/${projectId}/access`, { userId: member.accountId, granted });
-    expect((await grant(true)).status).toBe(200);
+    expect(
+      (await request(device.token, `${team}/projects/${projectId}/access`, { userId: member.accountId, granted: true }))
+        .status,
+    ).toBe(200);
 
     const grantIdFor = async (credential: string) => {
       const roster = await request(credential, `/v1/workbenches?accountId=${accountId}`);
       const candidates = z.array(z.object({ grantId: z.string() })).parse(await roster.json());
       return candidates[0]?.grantId;
     };
-    const renew = async (credential: string) =>
+    const renew = async (credential: string, grantId?: string) =>
       request(credential, "/v1/environment-access", {
         accountId,
         workbenchId: projectId,
-        grantId: await grantIdFor(credential),
+        grantId: grantId ?? (await grantIdFor(credential)),
       });
     const access = async (credential: string) => {
       const issued = await renew(credential);
       expect(issued.status).toBe(200);
       return z.object({ token: z.string(), expiresAt: z.iso.datetime() }).parse(await issued.json());
     };
-    const spaces = async (user: { token: string; accountId: string }) =>
+    const spaces = async (user: { token: string; accountId: string }, grantId?: string) =>
       fetchSyncSpaces({
         managerOrigin,
         credential: user.token,
         accountId,
-        grantId: await grantIdFor(user.token),
+        grantId: grantId ?? (await grantIdFor(user.token)),
         userId: user.accountId,
         workbenchId: projectId,
       });
@@ -764,9 +767,12 @@ test("different team users share encrypted records and revocation cuts off the o
     );
     expect(await openUpdate(ownerSpaces.project, documentId, (await read(ownerLease.token))[1])).toEqual(reply.bytes);
 
-    expect((await grant(false)).status).toBe(200);
-    expect((await renew(member.token)).status).toBe(401);
-    await expect(spaces(member)).rejects.toThrow("Sync keys unavailable");
+    const removedGrant = z.string().parse(await grantIdFor(member.token));
+    const staleEdit = await sealUpdate(memberSpaces.project, documentId, new TextEncoder().encode("offline edit"), []);
+    const removeMember = `${team}/members/${member.accountId}/remove`;
+    expect((await request(device.token, removeMember, {})).status).toBe(200);
+    expect((await renew(member.token, removedGrant)).status).toBe(401);
+    await expect(spaces(member, removedGrant)).rejects.toThrow("Sync keys unavailable");
     const lock = new Client({ connectionString: fixture.relayDatabaseUrl });
     await lock.connect();
     try {
@@ -783,10 +789,19 @@ test("different team users share encrypted records and revocation cuts off the o
       await lock.end();
     }
     expect((await relay.post({ ...route, operation: "read" }, { after: 0 }, memberLease.token)).status).toBe(401);
+    expect((await relay.post({ ...route, operation: "updates" }, staleEdit, memberLease.token)).status).toBe(401);
     const rotated = await spaces(device);
     const current = await send(rotated.project, "after cutoff", (await access(device.token)).token);
     expect(await openUpdate(rotated.project, documentId, current.update)).toEqual(current.bytes);
     await expect(openUpdate(memberSpaces.project, documentId, current.update)).rejects.toThrow(UnreadableSyncData);
+
+    const replacement = await manager.registerDevice({ accountId: device.accountId, ...deviceProfile() });
+    const replacementSpaces = await spaces(replacement);
+    const updates = await read((await access(replacement.token)).token);
+    const recovered = await Promise.all(
+      updates.map((update) => openUpdate(replacementSpaces.project, documentId, update)),
+    );
+    expect(recovered).toEqual([initial.bytes, reply.bytes, current.bytes]);
   } finally {
     await Promise.all([managerServer.stop(true), identity.close(), relay.close()]);
   }
