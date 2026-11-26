@@ -26,6 +26,7 @@ export const ResourceMarkdownSelectionActions = (props: {
   const [publishing, setPublishing] = useState(false);
   const [draft, setDraft] = useState<PassageCommentDraft>();
   const [actionError, setActionError] = useState<{ message: string; rect: DOMRect }>();
+  const returnFocus = useRef(false);
   const content = useRef<HTMLDivElement>(null);
   useEffect(() => activity?.registerReveal(editor.reveal), [activity?.registerReveal, editor.reveal]);
   const actions = resolveMenuEntries({
@@ -33,9 +34,15 @@ export const ResourceMarkdownSelectionActions = (props: {
     menuPath: editorSelectionMenuPath,
     context: { resource: placement?.resource, placement: placement?.placementIdentity },
   });
-  const close = () => {
+  const close = (restoreFocus = false) => {
+    if (restoreFocus) returnFocus.current = true;
     setDraft(undefined);
     editor.clearHighlight();
+  };
+  const restoreEditorFocus = () => {
+    if (!returnFocus.current) return;
+    returnFocus.current = false;
+    editor.focus();
   };
   return (
     <>
@@ -83,6 +90,7 @@ export const ResourceMarkdownSelectionActions = (props: {
           open={Boolean(draft)}
           onEscapeKeyDown={(event) => {
             if (publishing) event.preventDefault();
+            else returnFocus.current = true;
           }}
           onInteractOutside={(event) => {
             if (publishing) event.preventDefault();
@@ -95,7 +103,7 @@ export const ResourceMarkdownSelectionActions = (props: {
             editor.reveal(selection.anchor);
             setDraft({ selection: editor.captureSelection() ?? selection, body: "", key: crypto.randomUUID() });
           }}
-          onExitComplete={() => editor.focus()}
+          onExitComplete={restoreEditorFocus}
           initialFocusEl={() => content.current?.querySelector<HTMLElement>('[role="textbox"]') ?? null}
           positioning={{
             placement: "bottom-start",
@@ -125,7 +133,8 @@ export const ResourceMarkdownSelectionActions = (props: {
                     busy={publishing}
                     onBusyChange={setPublishing}
                     onChange={setDraft}
-                    onClose={close}
+                    onClose={() => close(true)}
+                    onPosted={() => close()}
                     publish={activity.publish}
                   />
                 )}
@@ -137,7 +146,7 @@ export const ResourceMarkdownSelectionActions = (props: {
       {actionError && (
         <Popover.Root
           open
-          onExitComplete={() => editor.focus()}
+          onExitComplete={restoreEditorFocus}
           positioning={{ placement: "bottom-start", strategy: "fixed", getAnchorRect: () => actionError.rect }}
           onOpenChange={({ open }) => {
             if (!open) setActionError(undefined);

@@ -3,12 +3,13 @@ import { LazyMarkdownEditor } from "../rich-text/lazy-markdown-editor";
 
 interface ActivityRichInputProps {
   value: string;
+  autoFocus?: boolean;
   disabled: boolean;
   placeholder: string;
   onChange: (value: string) => void;
 }
 
-export const ActivityRichInput = ({ value, disabled, placeholder, onChange }: ActivityRichInputProps) => {
+export const ActivityRichInput = ({ value, autoFocus, disabled, placeholder, onChange }: ActivityRichInputProps) => {
   const [editor, setEditor] = useState({ value, key: 0 });
   // Preserve selection while the parent echoes edits; remount only for external
   // draft replacement (for example, clearing a successfully submitted comment).
@@ -16,6 +17,7 @@ export const ActivityRichInput = ({ value, disabled, placeholder, onChange }: Ac
   return (
     <LazyMarkdownEditor
       ariaLabel={placeholder}
+      autoFocus={autoFocus}
       key={editor.key}
       defaultState={value}
       isEditable={!disabled}

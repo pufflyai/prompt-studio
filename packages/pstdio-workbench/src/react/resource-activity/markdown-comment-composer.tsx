@@ -16,9 +16,10 @@ export const MarkdownCommentComposer = (props: {
   onBusyChange(busy: boolean): void;
   onChange(draft: PassageCommentDraft): void;
   onClose(): void;
+  onPosted(): void;
   publish: NonNullable<ReturnType<typeof useMarkdownActivity>>["publish"];
 }) => {
-  const { draft, busy, onBusyChange, onChange, onClose, publish } = props;
+  const { draft, busy, onBusyChange, onChange, onClose, onPosted, publish } = props;
   const pending = useRef(false);
   const [error, setError] = useState<string>();
   const submit = async () => {
@@ -28,7 +29,7 @@ export const MarkdownCommentComposer = (props: {
     setError(undefined);
     try {
       await publish({ body: draft.body, key: draft.key, quote: draft.selection.text, anchor: draft.selection.anchor });
-      onClose();
+      onPosted();
     } catch (error) {
       setError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -47,6 +48,7 @@ export const MarkdownCommentComposer = (props: {
         </IconButton>
       </HStack>
       <Activity.Composer
+        autoFocus
         variant="compact"
         placeholder="Write a comment…"
         value={draft.body}

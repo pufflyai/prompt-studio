@@ -9,6 +9,7 @@ import {
   REMOVE_LIST_COMMAND,
 } from "@lexical/list";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { useLexicalEditable } from "@lexical/react/useLexicalEditable";
 import { $createHeadingNode, $createQuoteNode, type HeadingTagType } from "@lexical/rich-text";
 import { $setBlocksType } from "@lexical/selection";
 import { $findMatchingParent, mergeRegister } from "@lexical/utils";
@@ -63,6 +64,7 @@ function FloatingTextToolbar({
   isToolbarActive: boolean;
   setIsToolbarActive: Dispatch<boolean>;
 }): React.JSX.Element {
+  const editable = useLexicalEditable();
   const surfaceActive = useUiScope()?.active ?? true;
   const editorRef = useRef<HTMLDivElement | null>(null);
   const [blockType, setBlockType] = useState<BlockType>("paragraph");
@@ -277,7 +279,7 @@ function FloatingTextToolbar({
       zIndex="tooltip"
       className={`floating-text-format-toolbar ${isToolbarActive ? "active" : ""}`}
     >
-      {editor.isEditable() ? (
+      {editable ? (
         <FloatingToolbarButtons
           editor={editor}
           blockType={blockType}

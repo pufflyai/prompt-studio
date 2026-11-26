@@ -31,6 +31,7 @@ export interface ActivityComposerProps extends Omit<HTMLChakraProps<"form">, "on
 export const ActivityComposer = (props: ActivityComposerProps) => {
   const {
     actor,
+    autoFocus = false,
     value,
     defaultValue = "",
     placeholder = "Leave a comment...",
@@ -82,6 +83,7 @@ export const ActivityComposer = (props: ActivityComposerProps) => {
           <Box css={styles.input} minH={`${minRows}lh`}>
             <ActivityRichInput
               value={currentValue}
+              autoFocus={autoFocus}
               disabled={disabled}
               placeholder={placeholder}
               onChange={handleChange}

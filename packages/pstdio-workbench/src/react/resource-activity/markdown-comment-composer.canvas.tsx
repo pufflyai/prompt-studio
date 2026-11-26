@@ -54,6 +54,7 @@ const SelectionCommentExample = ({ failPost = false }: { failPost?: boolean }) =
                   onBusyChange={setBusy}
                   onChange={setDraft}
                   onClose={() => setOpen(false)}
+                  onPosted={() => setOpen(false)}
                   publish={async ({ body }) => {
                     if (failPost) throw new Error("Your text is kept. Try again.");
                     setPosted(body);
