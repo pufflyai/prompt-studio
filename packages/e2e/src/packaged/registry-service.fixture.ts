@@ -113,6 +113,15 @@ export const startRegistryService = async () => {
     return {
       origin,
       close,
+      publishBundle: async (version: string, bytes: Uint8Array) => {
+        const response = await fetch(`${origin}/api/pstdio/notes/${version}/bundles`, {
+          method: "POST",
+          headers: { authorization: `Bearer ${environment.PSX_PUBLISH_TOKEN}` },
+          body: bytes as BodyInit,
+        });
+        if (!response.ok)
+          throw new Error(`PSX runtime publication failed: ${response.status} ${await response.text()}`);
+      },
       publish: async (path: string) => {
         const response = await fetch(`${origin}/api/-/publish`, {
           method: "POST",

@@ -1,13 +1,11 @@
 import fs from "node:fs";
 import { createRequire } from "node:module";
-import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import type { PGlite } from "@electric-sql/pglite";
 import { inArray } from "drizzle-orm";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
-import { normalizeEmbeddedFileName, relativeEmbeddedFileName } from "pstdio-paths";
+import { normalizeEmbeddedFileName } from "pstdio-paths";
 import type { StorageOwner } from "pstdio-sync";
 import { migrateExtensionIdentities } from "../services/extension-identity-migration";
 import { pruneAllDocumentFiles, pruneDocumentFiles } from "../services/extension-storage/document-file-retention";
@@ -25,6 +23,14 @@ import { restoreArtifactProjectionAdmission } from "./artifact-projection-admiss
 import { prepareArtifactProjectionUpgrade } from "./artifact-projection-upgrade";
 import { prepareAssetOwnerUpgrade } from "./asset-owner-upgrade";
 import { prepareAutomationOwnersUpgrade } from "./automation-owners-upgrade";
+import {
+  captureToolUpgradeSources,
+  finishReleasedBaseline,
+  hasReleasedJournal,
+  verifyReleasedJournal,
+} from "./baseline-0-49";
+import { importBatchOwners, importBatchRows, stageBatchReimport } from "./batch-reimport";
+import { batchBackup, batchPayload, recoverBatchHome } from "./batch-reimport-home";
 import { prepareBoardDefaultsUpgrade } from "./board-defaults-upgrade";
 import { prepareBoardOwnersUpgrade } from "./board-owners-upgrade";
 import { prepareConnectionCredentialsUpgrade } from "./connection-credentials-upgrade";
@@ -35,8 +41,10 @@ import { prepareFileOwnersUpgrade } from "./file-owners-upgrade";
 import { prepareHistoryOwnerUpgrade } from "./history-owner-upgrade";
 import { retireLegacyRecordTables } from "./legacy-record-retirement";
 import { type LegacyConversionFailure, upgradeLegacyRecords } from "./legacy-record-upgrade";
+import { finishLocalUpgrade } from "./local-upgrade-state";
 import { prepareLogOwnerUpgrade } from "./log-owner-upgrade";
 import { migratePglite, resumeCurrentPgliteSchema } from "./migrate-pglite";
+import { type EmbeddedFile, getEmbeddedFiles, withMigrationsFolder } from "./migration-assets";
 import { prepareNativeOwnerUpgrade } from "./native-owner-upgrade";
 import { openPglite } from "./open-pglite";
 import { prepareOrderedOwnerUpgrade } from "./ordered-owner-upgrade";
@@ -49,6 +57,7 @@ import { acquirePgliteLock } from "./pglite-lock";
 import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
 import { prepareRecordRowFinalization } from "./record-row-upgrade";
 import { prepareRecoveryOwnerUpgrade } from "./recovery-owner-upgrade";
+import { prepareReleasedSaveReceipts } from "./released-save-receipts";
 import { prepareResourceLinkOwnerUpgrade } from "./resource-link-owner-upgrade";
 import { prepareCanonicalNumberUpgrade } from "./resource-numbers-upgrade";
 import { prepareResourcePrefixUpgrade } from "./resource-prefix-upgrade";
@@ -58,83 +67,12 @@ import { prepareSessionWorkspaceUpgrade } from "./session-workspace-upgrade";
 import { resolveSourceEngineModule, sourceStartupOptions } from "./source-startup-image";
 import { type DatabaseMaintenancePhase, invalidateMaintenance, maintainDatabase } from "./startup-maintenance";
 
-type EmbeddedFile = Blob & { name: string };
-// Bun's embedded file objects are runtime-specific; narrowing the contract keeps extraction testable
-// without depending on full Blob behavior that unit tests do not control.
-type EmbeddedMigrationFile = Pick<EmbeddedFile, "name" | "size" | "arrayBuffer">;
+export { resolveMigrationsFolder } from "./migration-assets";
 
-const DRIZZLE_EXTRACT_DIR = "pstdio-drizzle";
 const PGLITE_WASM_SUFFIX = "/pstdio-db/vendor/pglite/pglite.wasm";
 const PGLITE_DATA_SUFFIX = "/pstdio-db/vendor/pglite/pglite.data";
 const PGLITE_INITIAL_DATABASE_SUFFIX = "/pstdio-db/vendor/pglite/initial-database.tar.gz";
 const PGLITE_ICU_SUFFIX = "/pstdio-db/vendor/pglite/icu.76.tgz";
-
-const getEmbeddedFiles = (): EmbeddedFile[] => {
-  try {
-    const files = (Bun as Record<string, unknown>).embeddedFiles;
-    if (Array.isArray(files)) return files as EmbeddedFile[];
-  } catch {
-    // not available
-  }
-  return [];
-};
-
-const extractEmbeddedMigrations = async (
-  embeddedFiles: readonly { file: EmbeddedMigrationFile; relativePath: string }[],
-  root: string,
-  logger: (message: string) => void,
-) => {
-  for (const { file, relativePath } of embeddedFiles) {
-    const outPath = path.join(root, relativePath);
-    fs.mkdirSync(path.dirname(outPath), { recursive: true });
-    logger(`[drizzle] extracting ${relativePath} (${file.size} bytes)`);
-    const buf = await file.arrayBuffer();
-    fs.writeFileSync(outPath, Buffer.from(buf));
-  }
-};
-
-export const resolveMigrationsFolder = async (
-  options: {
-    embeddedFiles?: readonly EmbeddedMigrationFile[];
-    tmpDir?: string;
-    logger?: (message: string) => void;
-  } = {},
-) => {
-  const embeddedSource = options.embeddedFiles ?? getEmbeddedFiles();
-  // Schema snapshots belong to migration generation; extracting them delays packaged startup.
-  const embedded = embeddedSource.flatMap((file) => {
-    const relativePath = relativeEmbeddedFileName(file.name, "pstdio-db/drizzle");
-    return relativePath !== undefined && (relativePath.endsWith(".sql") || relativePath === "meta/_journal.json")
-      ? [{ file, relativePath }]
-      : [];
-  });
-
-  if (embedded.length > 0) {
-    const root = fs.mkdtempSync(path.join(options.tmpDir ?? os.tmpdir(), `${DRIZZLE_EXTRACT_DIR}-`));
-    const dispose = () => fs.rmSync(root, { recursive: true, force: true });
-    try {
-      await extractEmbeddedMigrations(embedded, root, options.logger ?? console.log);
-      return { path: root, dispose };
-    } catch (error) {
-      dispose();
-      throw error;
-    }
-  }
-
-  return {
-    path: path.join(path.dirname(fileURLToPath(import.meta.url)), "../../drizzle"),
-    dispose: () => {},
-  };
-};
-
-const withMigrationsFolder = async (run: (folder: string) => Promise<void>) => {
-  const migrations = await resolveMigrationsFolder();
-  try {
-    await run(migrations.path);
-  } finally {
-    migrations.dispose();
-  }
-};
 
 export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[] = getEmbeddedFiles()) => {
   const wasmFile = embeddedFiles.find((file) => normalizeEmbeddedFileName(file.name).endsWith(PGLITE_WASM_SUFFIX));
@@ -192,13 +130,13 @@ export const createDb = async (options?: {
   signal?: AbortSignal;
   /** Folder for encrypted index nodes; defaults to a sibling of the database folder. */
   indexNodesPath?: string;
+  storageRoot?: string;
   onLegacyConversionError?: (failure: LegacyConversionFailure) => void;
   /** The runtime vacuums in the background and schedules deletion of retired rows. */
   deferCleanup?: boolean;
 }) => {
   const onPhase = options?.onPhase ?? (() => {});
-  const requestedPath = resolveDbPath(options?.path);
-  const dbPath = canonicalDbPath(requestedPath);
+  const dbPath = canonicalDbPath(resolveDbPath(options?.path));
 
   const releaseLock = dbPath === ":memory:" ? () => {} : acquirePgliteLock(dbPath);
 
@@ -214,7 +152,8 @@ export const createDb = async (options?: {
     const embedded = getEmbeddedFiles();
     const pgliteOpts = await sourceStartupOptions(await resolvePgliteOptions(embedded));
     onPhase("database_engine_loaded");
-    if (dbPath !== ":memory:")
+    if (dbPath !== ":memory:") {
+      await recoverBatchHome(dbPath);
       await prepareCurrentPgliteHome({
         activePath: dbPath,
         runtime: pgliteOpts,
@@ -223,10 +162,28 @@ export const createDb = async (options?: {
         onImageRestored,
         onPhase,
       });
+    }
     options?.signal?.throwIfAborted();
     pglite = await openPglite(dbPath, pgliteOpts, onImageRestored);
+    await pglite.waitReady;
+    const releasedJournal = await hasReleasedJournal(pglite);
+    if (releasedJournal && !fresh && dbPath !== ":memory:" && !fs.existsSync(batchBackup(dbPath))) {
+      const source = pglite;
+      let staged = false;
+      await withMigrationsFolder(async (folder) => {
+        staged = await stageBatchReimport(source, dbPath, pgliteOpts, folder, options?.signal, options?.storageRoot);
+      }, true);
+      if (staged) {
+        await source.close();
+        pglite = undefined;
+        await recoverBatchHome(dbPath);
+        pglite = await openPglite(dbPath, pgliteOpts);
+        await pglite.waitReady;
+      }
+    }
     const openedPglite = pglite;
-    await openedPglite.waitReady;
+    const payload = path.join(dbPath, batchPayload);
+    const reimport = dbPath !== ":memory:" && fs.existsSync(payload);
     onPhase("database_opened");
 
     const db = drizzle(openedPglite, { schema });
@@ -239,10 +196,13 @@ export const createDb = async (options?: {
         ? createMemoryIndexNodeFiles()
         : createIndexNodeFiles(options?.indexNodesPath ?? `${dbPath}-index-nodes`);
     attachIndexNodeFiles(db, indexNodes);
+    const finishLocal = () =>
+      finishLocalUpgrade(db, openedPglite, options?.storageRoot ?? path.join(path.dirname(dbPath), "storage"));
     let migrated = false;
     let finishArtifactProjectionUpgrade: (() => Promise<void>) | undefined;
     await withMigrationsFolder(async (migrationsFolder) => {
       if (!fs.existsSync(migrationsFolder)) return;
+      const prefix = releasedJournal ? (await verifyReleasedJournal(openedPglite, migrationsFolder)).applied : 0;
       const finishLegacyAdmission = async () => {
         if (
           await upgradeLegacyRecords(db, dbPath, { signal: options?.signal, failed: options?.onLegacyConversionError })
@@ -250,17 +210,21 @@ export const createDb = async (options?: {
           await retireLegacyRecordTables(openedPglite, migrationsFolder);
       };
       if (
-        await resumeCurrentPgliteSchema({
+        !reimport &&
+        (await resumeCurrentPgliteSchema({
           engine: openedPglite,
           migrationsFolder,
           path: dbPath,
           fresh,
           finishLegacyAdmission,
-        })
+        }))
       ) {
+        if (releasedJournal) await finishReleasedBaseline(openedPglite, dbPath, migrationsFolder, finishLocal);
         migrated = true;
         return;
       }
+      const localUpgrade = prefix >= 8 && prefix <= 11;
+      const receipts = await prepareReleasedSaveReceipts(db, dbPath, localUpgrade);
       const finishRecordRows = await prepareRecordRowFinalization(db, dbPath);
       const finishProjectExtensionsUpgrade = await prepareProjectExtensionsUpgrade(db, dbPath);
       const finishResourceLinkOwnerUpgrade = await prepareResourceLinkOwnerUpgrade(db, dbPath);
@@ -268,13 +232,13 @@ export const createDb = async (options?: {
       const finishOwnerIndexUpgrade = await prepareOwnerIndexUpgrade(db, dbPath);
       const finishOwnerProjectionUpgrade = await prepareOwnerProjectionUpgrade(db, dbPath);
       const finishCanonicalNumberUpgrade = await prepareCanonicalNumberUpgrade(db, dbPath);
-      const finishDocumentOwnerUpgrade = await prepareDocumentOwnerUpgrade(db, dbPath);
+      const finishDocumentOwnerUpgrade = await prepareDocumentOwnerUpgrade(db, dbPath, receipts);
       finishArtifactProjectionUpgrade = await prepareArtifactProjectionUpgrade(db, dbPath);
       const finishNativeOwnerUpgrade = await prepareNativeOwnerUpgrade(db, dbPath);
       const finishRecoveryOwnerUpgrade = await prepareRecoveryOwnerUpgrade(db, dbPath);
-      const finishOrderedOwnerUpgrade = await prepareOrderedOwnerUpgrade(db, dbPath);
+      const finishOrderedOwnerUpgrade = await prepareOrderedOwnerUpgrade(db, dbPath, receipts);
       const finishAssetOwnerUpgrade = await prepareAssetOwnerUpgrade(db, dbPath);
-      const finishHistoryOwnerUpgrade = await prepareHistoryOwnerUpgrade(db, dbPath);
+      const finishHistoryOwnerUpgrade = await prepareHistoryOwnerUpgrade(db, dbPath, localUpgrade);
       const finishLogOwnerUpgrade = await prepareLogOwnerUpgrade(db, dbPath);
       const finishFileOwnersUpgrade = await prepareFileOwnersUpgrade(db, dbPath);
       const finishPreferencesUpgrade = await prepareAppPreferencesUpgrade(db, dbPath);
@@ -284,7 +248,12 @@ export const createDb = async (options?: {
       const finishBoardDefaultsUpgrade = await prepareBoardDefaultsUpgrade(db, dbPath);
       const finishAutomationOwnersUpgrade = await prepareAutomationOwnersUpgrade(db, dbPath);
       const finishSessionWorkspaceUpgrade = await prepareSessionWorkspaceUpgrade(db, dbPath);
-      await migratePglite(openedPglite, migrationsFolder);
+      await migratePglite(openedPglite, migrationsFolder, async (tx) => {
+        if (reimport) await importBatchOwners(tx);
+        if (localUpgrade) await tx.exec("CREATE SCHEMA pstdio_local_upgrade_049");
+        // Every supported source crossing the 0.49 schema can have tools built against an older API.
+        await captureToolUpgradeSources(tx);
+      });
       await finishProjectExtensionsUpgrade?.();
       await finishLogOwnerUpgrade?.();
       await finishHistoryOwnerUpgrade?.();
@@ -292,10 +261,12 @@ export const createDb = async (options?: {
       await finishOrderedOwnerUpgrade?.();
       await finishRecoveryOwnerUpgrade?.();
       await finishDocumentOwnerUpgrade?.();
+      await receipts?.complete();
       await finishNativeOwnerUpgrade?.();
       await finishCanonicalNumberUpgrade?.();
       await finishOwnerProjectionUpgrade?.();
       await finishOwnerIndexUpgrade?.();
+      if (reimport) await importBatchRows(openedPglite);
       await finishPreferencesUpgrade?.();
       await finishExtensionPreferencesUpgrade?.();
       await finishConnectionCredentialsUpgrade?.();
@@ -308,8 +279,9 @@ export const createDb = async (options?: {
       await finishFileOwnersUpgrade();
       await finishLegacyAdmission();
       await finishRecordRows?.();
+      if (releasedJournal) await finishReleasedBaseline(openedPglite, dbPath, migrationsFolder, finishLocal);
       migrated = true;
-    });
+    }, releasedJournal);
     // Copy durable receipts before opening. Remove old rows for both sides of an identity
     // rename now so the rename does not copy cache data or see a false conflict.
     await pruneRecoveryFiles(db);
@@ -347,13 +319,12 @@ export const createDb = async (options?: {
       await maintainDatabase(openedPglite, db, dbPath, fresh, onPhase, movedNodes || renamed);
     const projectIds = await db.select({ id: schema.projects.id }).from(schema.projects);
     await indexNodes.retainProjects(new Set(projectIds.map((project) => project.id)));
+    if (reimport) await fs.promises.rm(payload, { recursive: true, force: true });
     onPhase("database_migrated");
 
     let closed = false;
     const close = async () => {
-      if (closed) {
-        return;
-      }
+      if (closed) return;
 
       closed = true;
       try {

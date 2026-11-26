@@ -4,6 +4,7 @@ import type { PsxDatabase } from "./database";
 import type { createPackageObjects } from "./objects";
 import { publishPackage } from "./publishing";
 import { getRelease, objectKey } from "./releases";
+import { downloadRuntimeBundle, listRuntimeBundles, publishRuntimeBundle } from "./runtime-bundles";
 import { extensionReleases } from "./schema";
 
 export interface PsxOptions {
@@ -17,7 +18,10 @@ const authorised = (request: Request, token: string) => {
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 };
 const listVersions = async (database: PsxDatabase, id: string) => {
-  const rows = await database.select().from(extensionReleases).where(eq(extensionReleases.extensionId, id));
+  const [rows, bundles] = await Promise.all([
+    database.select().from(extensionReleases).where(eq(extensionReleases.extensionId, id)),
+    listRuntimeBundles(database, id),
+  ]);
   return Response.json({
     versions: rows.map((row) => ({
       id,
@@ -26,15 +30,28 @@ const listVersions = async (database: PsxDatabase, id: string) => {
       sha256: row.sha256,
       withdrawn: row.withdrawn,
       publishedAt: row.publishedAt.toISOString(),
+      bundles: bundles
+        .filter((bundle) => bundle.version === row.version)
+        .map(({ host, sha256, sizeBytes }) => ({
+          host,
+          sha256,
+          sizeBytes,
+          sourceSha256: row.sha256,
+        })),
     })),
   });
 };
 const releaseRequest = async (options: PsxOptions, request: Request, match: RegExpExecArray) => {
-  const [, publisher, name, version, action] = match;
+  const [, publisher, name, version, action, bundleHash] = match;
+  if (bundleHash && action !== "bundles") return Response.json({ error: "Not found" }, { status: 404 });
   const id = `${publisher}.${name}`;
   if (request.method === "GET" && version === "versions" && !action) return listVersions(options.database, id);
   const release = await getRelease(options.database, id, version);
   if (!release) return Response.json({ error: "Release not found" }, { status: 404 });
+  if (action === "bundles") {
+    if (request.method === "GET" && bundleHash) return downloadRuntimeBundle(options, release, bundleHash);
+    if (request.method === "POST" && !bundleHash) return publishRuntimeBundle(options, release, request);
+  }
   if (request.method === "GET" && action === "file") {
     return new Response(new Uint8Array(await options.objects.get(objectKey(release))), {
       headers: {
@@ -68,7 +85,9 @@ export const createPsx = (options: PsxOptions) => {
       }
       if (request.method === "POST" && path === "/api/-/publish") return await publishPackage(options, request);
       const match =
-        /^\/api\/([a-z][a-z0-9-]*)\/([a-z][a-z0-9-]*)\/(versions|\d+\.\d+\.\d+)(?:\/(file|withdraw))?$/.exec(path);
+        /^\/api\/([a-z][a-z0-9-]*)\/([a-z][a-z0-9-]*)\/(versions|\d+\.\d+\.\d+)(?:\/(file|withdraw|bundles)(?:\/([a-f0-9]{64}))?)?$/.exec(
+          path,
+        );
       if (!match) return Response.json({ error: "Not found" }, { status: 404 });
       return await releaseRequest(options, request, match);
     } catch (error) {

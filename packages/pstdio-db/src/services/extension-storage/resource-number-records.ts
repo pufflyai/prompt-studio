@@ -1,5 +1,4 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId, type NumberedResource, retainedResourceValue } from "pstdio-sync/records";
 import type { StorageRecord } from "pstdio-sync-contracts";
@@ -10,6 +9,7 @@ import {
   resource_prefixes as sequences,
 } from "../../db/schemas.pg";
 import { jsonBatches } from "./json-batches";
+import { numberOwner } from "./number-owner";
 import { loadResourceDocuments, resourceDocumentId } from "./resource-document-persistence";
 import { writeResourceQueryValues } from "./resource-query-values";
 import { storageOwnerKey } from "./storage-owner-key";
@@ -55,7 +55,7 @@ export const isNumberRecord = (record: StorageRecord) => !record.deleted && hasN
 
 export const numberValue = (record: StorageRecord) => {
   const value = record.value as unknown as NumberRecord;
-  return { ...value, extensionId: canonicalExtensionId(value.extensionId) };
+  return { ...value, extensionId: numberOwner(value.extensionId) };
 };
 
 /** Both indexes include numeric values: a large former alias must never be allocated again. */

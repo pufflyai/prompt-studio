@@ -28,15 +28,22 @@ export const createDesktopUpdateNotifications = (options: DesktopUpdateNotificat
   };
 
   return {
-    take(): DesktopUpdateNotice | undefined {
+    take(downloadedVersion?: string | null): DesktopUpdateNotice | undefined {
       const outcome = pending;
       const installed = pendingInstallation;
       pending = undefined;
       pendingInstallation = undefined;
       const title = progressTitle;
-      if (title === undefined && !installed) return outcome;
+      const upgrade = downloadedVersion == null ? downloadedVersion : { version: downloadedVersion };
+      if (title === undefined && !installed && upgrade === undefined) return outcome;
       if (title === null) progressTitle = undefined;
-      return { kind: "progress", title, ...(outcome ? { outcome } : {}), ...(installed ? { installed } : {}) };
+      return {
+        kind: "progress",
+        title,
+        ...(outcome ? { outcome } : {}),
+        ...(installed ? { installed } : {}),
+        ...(upgrade === undefined ? {} : { upgrade }),
+      };
     },
     progress(phase: DesktopUpdatePhase | undefined) {
       if (!phase && !progressTitle) return;
@@ -49,11 +56,14 @@ export const createDesktopUpdateNotifications = (options: DesktopUpdateNotificat
         `You're running Prompt Studio ${options.currentVersion}. There are no newer updates available for this installation.`,
       ),
     downloaded: (version: string) => {
-      options.receipt.recordDownload(version);
-      settle(
-        "Your update is ready to install.",
-        `Prompt Studio ${version} has been downloaded. Quit and reopen Prompt Studio to install it.`,
-      );
+      pending = undefined;
+      try {
+        options.receipt.recordDownload(version);
+      } catch (error) {
+        options.logError(error instanceof Error ? error : new Error(String(error)));
+      }
+      if (progressTitle) progressTitle = null;
+      options.onNotice();
     },
     installed: () => {
       try {

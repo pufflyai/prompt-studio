@@ -13,7 +13,7 @@ import {
   activatePreparedInstall,
   assertPreparedInstallOwned,
   recoverPreparedInstalls,
-  settlePreparedInstall,
+  settlePreparedInstallOnWorker,
 } from "./extension-install-transaction";
 import { checkExtensionSource, checkExtensionsRoot } from "./extension-runtime";
 import { createSharedNamedSourceCheckout } from "./extension-source-checkout";
@@ -34,6 +34,7 @@ import {
 } from "./preparation-watchers";
 import { prepareWebviewArtifact, prepareWebviewArtifacts } from "./prepared-webview";
 import { type PreparePublishedInput, preparePublishedExtension } from "./publication/prepare";
+import { warmExtensionRelease } from "./warm-extension-release";
 
 const prepareCheckout = async (
   input: {
@@ -66,6 +67,7 @@ const handle = createPreparationHandler({
     runtimePreparationTasks["runtime.forget"](input);
     removeInstalledSourceFiles(input.sourcePath);
   },
+  "release.prefetch": warmExtensionRelease,
   "install.resources": inspectExtensionInstallResources,
   "published.prepare": async (
     input: Omit<PreparePublishedInput, "bytes" | "signal"> & { bytes: ArrayBuffer },
@@ -95,8 +97,8 @@ const handle = createPreparationHandler({
   },
   "watch.update": updatePreparationWatcher,
   "watch.dispose": (input: { id: string }) => disposePreparationWatcher(input.id),
-  "install.settle": (input: { transaction: Parameters<typeof settlePreparedInstall>[0]; commit: boolean }) =>
-    settlePreparedInstall(input.transaction, input.commit),
+  "install.settle": (input: { transaction: Parameters<typeof settlePreparedInstallOnWorker>[0]; commit: boolean }) =>
+    settlePreparedInstallOnWorker(input.transaction, input.commit),
   "install.activate": (input: { transaction: Parameters<typeof activatePreparedInstall>[0] }) =>
     activatePreparedInstall(input.transaction),
   "install.assert": (input: { transaction: Parameters<typeof assertPreparedInstallOwned>[0] }) =>

@@ -4,10 +4,11 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { isDeepStrictEqual, parseArgs } from "node:util";
 import { chromium, expect, type Page } from "@playwright/test";
-import { describeProductionPayload } from "pstdio-scripts/testing";
+import { describeProductionPayload, projectUpgradeLimitMs } from "pstdio-scripts/testing";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
+import { checkCloudProjectUpgrade } from "./project-upgrade-cloud";
 import {
   assertProjectToolsRetained,
   assertUpgradeEdit,
@@ -17,9 +18,11 @@ import {
   type ProjectUpgradeInput,
   readUpgradeProject,
   seedConflictedProject,
+  seedDirectUpgrade,
   seedUpgradeProject,
   upgradeApi,
   upgradeCoreProjectTools,
+  verifyFirstUpgradeTicketEdit,
 } from "./project-upgrade-fixture";
 import { assertHomeConflict, assertHomeOpens, checkHomeHistory } from "./project-upgrade-home";
 import { captureUpgradeLayouts } from "./project-upgrade-layout";
@@ -62,9 +65,10 @@ const verify = async (
   evidence: string,
   state: Awaited<ReturnType<typeof seed>>,
   expectedVersions?: Map<string, string>,
+  expectCompatibleFirstParty = false,
 ) => {
   const upgrade = upgradeApi(descriptor);
-  const changes = await upgradeCoreProjectTools(upgrade, state.fixture.id);
+  const changes = await upgradeCoreProjectTools(upgrade, state.fixture.id, expectCompatibleFirstParty);
   await record(evidence, "extension-upgrades", changes);
   await assertProjectToolsRetained(upgrade, state.fixture.id, state.tools, expectedVersions);
   await assertHomeOpens(upgrade, state.fixture.id);
@@ -160,6 +164,24 @@ const verifyRestart = async (
   compare(edited, restarted);
 };
 
+const verifyFirstProjectEdit = async (
+  runtime: Runtime,
+  fixture: Pick<Seed, "id" | "firstTicket">,
+  start: number,
+  evidence: string,
+  limitMs: number,
+  expectedContent?: string,
+) => {
+  const restoreTicket = await verifyFirstUpgradeTicketEdit(upgradeApi(runtime.descriptor), fixture, expectedContent);
+  const elapsedMs = performance.now() - start;
+  await record(evidence, "upgrade-to-usable-project", { elapsedMs, limitMs });
+  assert(
+    elapsedMs <= limitMs,
+    `Upgrade and first saved project edit took ${elapsedMs.toFixed(0)} ms (limit ${limitMs} ms)`,
+  );
+  return restoreTicket;
+};
+
 const assertCurrentDatabase = async (home: string) => {
   const backups = new Bun.Glob("backups/pre-*-pstdio.db");
   assert.equal(
@@ -200,6 +222,9 @@ const run = async (
     platform: process.platform,
     arch: process.arch,
   });
+  const limitMs = projectUpgradeLimitMs(candidateVersion);
+  if (input.profile === "cloud")
+    return checkCloudProjectUpgrade(input.home, input.evidence, baseline, candidate, limitMs);
   const launch = async (binary: string, phase: string) => {
     console.log(`[project upgrade ${input.profile}] ${phase}`);
     const controller = new AbortController();
@@ -230,6 +255,19 @@ const run = async (
   let runtime: Runtime | undefined;
   try {
     runtime = await launch(baseline, "baseline");
+    if (input.profile === "direct") {
+      const ticket = await seedDirectUpgrade(upgradeApi(runtime.descriptor), input.home);
+      await stopProcess(runtime.child);
+      runtime = undefined;
+      const start = performance.now();
+      runtime = await launch(candidate, "upgrade");
+      await verifyFirstProjectEdit(runtime, ticket, start, input.evidence, limitMs, ticket.content);
+      await stopProcess(runtime.child);
+      runtime = await launch(candidate, "restart");
+      await assertUpgradeEdit(upgradeApi(runtime.descriptor), ticket);
+      assert.equal(await Bun.file(ticket.file).text(), ticket.content);
+      return;
+    }
     if (input.profile === "conflicted") {
       const id = await seedConflictedProject(upgradeApi(runtime.descriptor), input.home);
       await stopProcess(runtime.child);
@@ -248,9 +286,18 @@ const run = async (
     await stopProcess(runtime.child);
     runtime = undefined;
     const home = await checkHomeHistory(input, state.fixture.id);
+    const start = performance.now();
     runtime = await launch(candidate, "upgrade");
+    const restoreTicket = await verifyFirstProjectEdit(runtime, state.fixture, start, input.evidence, limitMs);
+    await restoreTicket();
     await assertCurrentDatabase(input.home);
-    const edited = await verify(runtime.descriptor, input.evidence, state, pair.expectedVersions);
+    const edited = await verify(
+      runtime.descriptor,
+      input.evidence,
+      state,
+      pair.expectedVersions,
+      /^pstdio@0\.(46|47|48)\./.test(pair.from) && candidateVersion.startsWith("0.49."),
+    );
     const routes = await workbenchRoutes(runtime.descriptor, state.fixture);
     await stopProcess(runtime.child);
     runtime = await launch(candidate, "restart");
@@ -284,8 +331,13 @@ if (import.meta.main) {
   });
   const profile = values.profile;
   assert(
-    profile === undefined || profile === "active" || profile === "aged" || profile === "conflicted",
-    "Choose --profile active, aged or conflicted",
+    profile === undefined ||
+      profile === "active" ||
+      profile === "aged" ||
+      profile === "conflicted" ||
+      profile === "cloud" ||
+      profile === "direct",
+    "Choose --profile active, aged, conflicted, cloud or direct",
   );
   const { from, candidate, "candidate-ref": candidateRef, "baseline-binary": baselinePath } = values;
   assert(from, "Supply the published release tag with --from");
@@ -301,7 +353,7 @@ if (import.meta.main) {
   const expectedVersions = values["candidate-root"] ? await candidateToolVersions(values["candidate-root"]) : undefined;
   const pair = { from, candidateRef, baseline, candidate: resolve(candidate), expectedVersions };
   const failures: unknown[] = [];
-  const profiles: ProjectUpgradeInput["profile"][] = profile ? [profile] : ["active", "aged"];
+  const profiles: ProjectUpgradeInput["profile"][] = profile ? [profile] : ["active", "aged", "cloud"];
   if (!profile && from === "pstdio@0.47.0") profiles.push("conflicted");
   for (const variant of profiles) {
     const output = join(evidence, variant);

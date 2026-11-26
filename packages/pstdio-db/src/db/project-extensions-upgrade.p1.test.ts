@@ -51,7 +51,7 @@ for (const interruption of ["normal", "schema", "restore"])
       ).rows;
       if (interruption !== "normal") {
         const finish = await prepareProjectExtensionsUpgrade(store.db, store.path);
-        await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
         if (interruption === "restore") {
           await store.pglite.exec(
             "CREATE FUNCTION stop_project_extension_restore() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.project_id='project-100' THEN RAISE EXCEPTION 'stop restoration'; END IF; RETURN NEW; END $$; CREATE TRIGGER stop_project_extension_restore BEFORE INSERT ON project_extensions FOR EACH ROW EXECUTE FUNCTION stop_project_extension_restore()",

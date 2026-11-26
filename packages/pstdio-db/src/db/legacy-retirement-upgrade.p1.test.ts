@@ -84,12 +84,12 @@ for (const resumeEpoch of [null, "local:released"])
       expect(
         (await connection.pglite.query("SELECT joined,epoch FROM owners WHERE extension_id=$1", [owner.extensionId]))
           .rows,
-      ).toEqual([{ joined: true, epoch: resumeEpoch }]);
-      // Legacy Cloud admission must survive without skipping the first ordered transport join.
+      ).toEqual([{ joined: false, epoch: null }]);
+      // A subsequent explicit first sync publishes the upgraded local data.
       expect((await store.open()).joined).toBe(false);
       if (resumeEpoch) {
         await service.cloudReturn.signOut();
-        expect((await service.cloudReturn.status(owner.workbenchId)).state).toBe("signed-out");
+        expect((await service.cloudReturn.status(owner.workbenchId)).state).toBeNull();
         await service.cloudReturn.release([owner.workbenchId]);
       }
       await records.commit({ operationId: "after-upgrade", edits: [{ recordId: "card", set: { "/note": "new" } }] });

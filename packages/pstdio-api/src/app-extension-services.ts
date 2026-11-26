@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import type { createPreferencesDBService } from "pstdio-db";
 import {
   type createExtensionConnectionsDBService,
   type createExtensionInstancesDBService,
@@ -17,6 +18,7 @@ import {
 } from "./features/extensions/extension-connection-service";
 import { subscribeExtensionEnablementInvalidation } from "./features/extensions/extension-enablement-invalidation";
 import { createExtensionProcessOwners } from "./features/extensions/extension-process-owners";
+import { createExtensionReleasePrefetcher } from "./features/extensions/extension-release-prefetch";
 import type { LoadedExtensionSnapshot } from "./features/extensions/extension-runtime";
 import { createExtensionTargets } from "./features/extensions/extension-targets";
 import { installExtensionSource } from "./features/extensions/install-extension-source";
@@ -36,8 +38,10 @@ import { createExtensionUpgradeService } from "./services/extension-upgrade-serv
 import type { createFileService } from "./services/file-service";
 import type { createProjectService } from "./services/project-service";
 import type { createWorkspaceService } from "./services/workspace-service";
+import { upgrade049Tools } from "./startup/upgrade-0-49-tools";
 
 interface WireExtensionServicesInput {
+  preferences: ReturnType<typeof createPreferencesDBService>;
   config: AppConfig["extensions"];
   db: DbClient;
   dependencies: AppDependencies;
@@ -61,7 +65,7 @@ export const productionAppDependencies: AppDependencies = {
   installExtensionSource,
 };
 
-export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
+export const wireAppExtensionServices = async (input: WireExtensionServicesInput) => {
   let installCatalog: ReturnType<typeof createCatalogInstaller>;
   const extensionInstallations = createExtensionInstallations({
     path: join(input.storageRoot, "extension-installations.json"),
@@ -89,10 +93,13 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
     validateResourcePrefixes: (projectId, source) =>
       extensionRuntimeCatalog.validateResourcePrefixes(projectId, source),
   });
+  const prefetchRelease = createExtensionReleasePrefetcher();
   const extensionUpgradeService = createExtensionUpgradeService({
     extensionService,
     installExtensionSource: input.dependencies.installExtensionSource,
     release: input.config.release,
+    prefetchRegistryRelease: prefetchRelease,
+    prefetchBundledRelease: prefetchRelease,
     workspaceService: input.workspaceService,
   });
   installCatalog = createCatalogInstaller({
@@ -202,6 +209,14 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
     processEnvironment: extensionProcessEnvironment,
     targets: createExtensionTargets(input.getTargetDeps),
   });
+  // Upgrade the old sources once, before watchers and the project catalog start preparing them.
+  await upgrade049Tools(input.preferences, input.installedExtensionSourcesDBService, extensionUpgradeService).catch(
+    (err) =>
+      apiLogger.warn(
+        { err, event: "extensions.upgrade_0_49.pending" },
+        "First-party tool upgrade will retry on restart",
+      ),
+  );
   const extensionRuntime = createInstalledExtensionRuntime({
     eventBus: input.eventBus,
     extensionService,

@@ -61,6 +61,7 @@
         "errorCopied": "錯誤已複製"
       },
       "upgrade": {
+        "reviewNeeded": "已保留本機檔案",
         "waiting": "等待升級",
         "action": "升級",
         "current": "擴充功能已是最新",
@@ -184,6 +185,7 @@
         "retry": "重試",
         "dismiss": "關閉",
         "upgradingButton": "正在升級",
+        "batchReviewRequired": "需要審查（{{count}}）",
         "batchFailed": "{{total}} 個升級中有 {{count}} 個失敗",
         "installingButton": "正在安裝"
       },

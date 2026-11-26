@@ -54,7 +54,7 @@ const readReportFiles = async (projectFiles: ArtifactMount, report: StoredReport
         file: {
           id: existing?.id ?? ids.create(),
           name,
-          blobId: "",
+          blobId: existing?.blobId ?? "",
           mimeType: mimeTypeFor(name),
           size: bytes.byteLength,
           hash: await hashBytes(bytes),
@@ -106,7 +106,16 @@ export const saveReportCommand = defineCommand({
       const fileInputs = await readReportFiles(projectFiles, report, ctx.storage.ids);
       const blobs = reportsCollection(ctx.storage).attachments(report.id);
       const uploaded: string[] = [];
-      const upload = async (input: ExtensionBlobInput) => {
+      const storeChangedBlob = async (id: string, input: ExtensionBlobInput, hash: string) => {
+        const stored = id ? await blobs.get(id) : undefined;
+        if (
+          stored &&
+          stored.name === input.name &&
+          stored.size === input.data.byteLength &&
+          (!input.mimeType || input.mimeType === stored.mimeType) &&
+          (stored.hash ?? (await hashBytes(await blobs.getBytes(id)))) === hash
+        )
+          return id;
         const blob = await blobs.put(input);
         uploaded.push(blob.id);
         return blob.id;
@@ -117,13 +126,18 @@ export const saveReportCommand = defineCommand({
         for (const { bytes, file } of fileInputs)
           nextFiles.push({
             ...file,
-            blobId: await upload({ name: file.name, data: bytes, mimeType: file.mimeType ?? undefined }),
+            blobId: await storeChangedBlob(
+              file.blobId,
+              { name: file.name, data: bytes, mimeType: file.mimeType },
+              file.hash,
+            ),
           });
+        const markdown = reportBodyFile(body);
         next = await replaceReport(ctx.storage, snapshot.revision, {
           ...report,
           kind: frontmatter.kind ?? report.kind,
           source: frontmatter.source ?? report.source,
-          bodyBlobId: await upload(reportBodyFile(body)),
+          bodyBlobId: await storeChangedBlob(report.bodyBlobId, markdown, await hashBytes(markdown.data)),
           files: nextFiles,
           draft: false,
           updatedAt: new Date().toISOString(),
@@ -134,6 +148,8 @@ export const saveReportCommand = defineCommand({
       }
       const nextFiles = next.files;
       const oldBlobIds = new Set([report.bodyBlobId, ...report.files.map((file) => file.blobId)]);
+      oldBlobIds.delete(next.bodyBlobId);
+      for (const file of nextFiles) oldBlobIds.delete(file.blobId);
       await Promise.allSettled([...oldBlobIds].map((blobId) => blobs.delete(blobId)));
       await projectFiles.writeText(reportMarkdownPathFor(next), reportToMarkdown(next, body));
 

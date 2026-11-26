@@ -168,6 +168,15 @@ export const loadBackendDefinition = async (packagePath: string, revision: Revis
   return { definition, acquire };
 };
 
+/** Start the committed backend without switching the previous worker away from its calls. */
+export const primeAcceptedExtensionBackend = async (packagePath: string, revision: Revision) => {
+  if (!isMainThread || closing) return;
+  const loadedIn = epoch;
+  if ((await readAcceptedRevision(packagePath))?.id !== revision.id) return;
+  assertOpen(loadedIn);
+  await pool.acquire(keyOf(revision));
+};
+
 /** Give a reloaded folder fresh worker state for its unchanged active generation. */
 export const restartBackendWorker = async (packagePath: string, revision: DefinitionRevision) => {
   const source = sources.get(packagePath);

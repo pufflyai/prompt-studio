@@ -1,9 +1,11 @@
+import { PstdioApiError } from "@pstdio/sdk/client";
 import {
   classifyApiWrite,
   type OperationRecovery,
   type ResourceRef,
   type WorkbenchOperations,
 } from "@pstdio/workbench";
+import { extensionUpgradeNeedsReviewCode } from "pstdio-api-contracts/extension-host";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { extensionInventorySubject } from "@/shared/extensions/use-extension-mutation";
 import type { ExtensionActionState } from "./extension-action-feedback";
@@ -14,7 +16,14 @@ export interface ExtensionUpgradeBatch {
   running: boolean;
   completed: number;
   failed: number;
+  reviewRequired: number;
 }
+
+const failureLabel = (label: string | ((error: unknown) => string), error: unknown) =>
+  typeof label === "function" ? label(error) : label;
+
+const needsUpgradeReview = (error: unknown) =>
+  error instanceof PstdioApiError && error.code === extensionUpgradeNeedsReviewCode;
 
 const domain = "extension.inventory";
 const unresolvedHint = "Inspect Extensions or discard this attempt in System activity.";
@@ -88,7 +97,7 @@ export const createExtensionActions = (tracker?: InventoryTracker) => {
   };
   const run = async <T>(
     id: string,
-    labels: { running: string; failed: string },
+    labels: { running: string; failed: string | ((error: unknown) => string) },
     work: (started: () => void) => Promise<T>,
     options: ActionOptions<T> = {},
   ) => {
@@ -157,7 +166,8 @@ export const createExtensionActions = (tracker?: InventoryTracker) => {
       setAction(id, {
         operation,
         status: "error",
-        label: labels.failed,
+        label: failureLabel(labels.failed, error),
+        needsReview: needsUpgradeReview(error),
         error: error instanceof Error ? error.message : String(error),
       });
       return false;
@@ -172,7 +182,7 @@ export const createExtensionActions = (tracker?: InventoryTracker) => {
     batchRunning = true;
     publish({
       ...snapshot,
-      batch: { ids: pending.map(({ id }) => id), running: true, completed: 0, failed: 0 },
+      batch: { ids: pending.map(({ id }) => id), running: true, completed: 0, failed: 0, reviewRequired: 0 },
     });
     try {
       await Promise.all(
@@ -184,9 +194,15 @@ export const createExtensionActions = (tracker?: InventoryTracker) => {
             failed = true;
           } finally {
             const batch = snapshot.batch!;
+            const reviewRequired = failed && snapshot.actions[target.id]?.needsReview === true;
             publish({
               ...snapshot,
-              batch: { ...batch, completed: batch.completed + 1, failed: batch.failed + Number(failed) },
+              batch: {
+                ...batch,
+                completed: batch.completed + 1,
+                failed: batch.failed + Number(failed && !reviewRequired),
+                reviewRequired: batch.reviewRequired + Number(reviewRequired),
+              },
             });
           }
         }),
@@ -194,7 +210,7 @@ export const createExtensionActions = (tracker?: InventoryTracker) => {
     } finally {
       batchRunning = false;
       const batch = snapshot.batch!;
-      publish({ ...snapshot, batch: batch.failed ? { ...batch, running: false } : undefined });
+      publish({ ...snapshot, batch: batch.failed || batch.reviewRequired ? { ...batch, running: false } : undefined });
     }
   };
   return {

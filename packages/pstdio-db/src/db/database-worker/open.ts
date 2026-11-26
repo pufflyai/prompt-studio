@@ -60,6 +60,7 @@ export const createDbInWorker = async (
   const {
     path: requestedPath,
     indexNodesPath,
+    storageRoot,
     deferCleanup,
     onPhase,
     onLegacyConversionError,
@@ -120,7 +121,7 @@ export const createDbInWorker = async (
   try {
     worker.postMessage({
       type: "open",
-      options: { path: requestedPath, indexNodesPath, deferCleanup },
+      options: { path: requestedPath, indexNodesPath, storageRoot, deferCleanup },
       reportLegacyConversionErrors: onLegacyConversionError !== undefined,
     } satisfies DatabaseWorkerRequest);
     if (signal?.aborted) abort();

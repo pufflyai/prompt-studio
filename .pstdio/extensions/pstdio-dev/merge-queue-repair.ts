@@ -111,4 +111,5 @@ export const repairRemovedSchedule = defineSchedule({
   title: "Repair pull requests removed from the merge queue",
   schedule: "*/5 * * * *",
   command: repairRemovedCommand.ref,
+  disabled: true,
 });

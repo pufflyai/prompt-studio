@@ -7,6 +7,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { chromium, expect as expectPage } from "@playwright/test";
 import type { ListProjectExtensionsResponse } from "pstdio-api-contracts";
+import { extensionUpgradeNeedsReviewCode } from "pstdio-api-contracts/extension-host";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
@@ -94,8 +95,7 @@ const createMarketplaceRepository = (root: string) => {
   return repo;
 };
 
-// A stale extension already on disk whose database row is created by discovery, so it carries
-// no install provenance. The marketplace upgrade must still recover it.
+// Discovery registers the existing source without install provenance. Recovery requires review.
 const seedAdoptedSkills = (tempRoot: string) => {
   writeExtension(join(tempRoot, "extensions", "pstdio-skills"), {
     displayName: "Prompt Studio Skills",
@@ -338,8 +338,20 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
       (response) => response.url().endsWith("/upgrade") && response.request().method() === "POST",
     );
     await detail.getByTestId("extension-upgrade").click();
-    expect((await adoptedUpgradeResponse).status()).toBe(200);
-    phase("adopted skills upgrade response");
+    const adoptedResponse = await adoptedUpgradeResponse;
+    expect(adoptedResponse.status()).toBe(409);
+    expect(await adoptedResponse.json()).toMatchObject({ code: extensionUpgradeNeedsReviewCode });
+    await expectPage(detail).toContainText("v0.3.0");
+    await detail.getByRole("button", { name: /Review upgrade/ }).click();
+    const review = page.getByRole("dialog", { name: "Review Prompt Studio Skills upgrade" });
+    await expectPage(review).toContainText("Original release unavailable");
+    const apply = review.getByRole("button", { name: "Apply upgrade" });
+    await expectPage(apply).toBeDisabled();
+    await review.getByRole("button", { name: "Use incoming" }).click();
+    await expectPage(apply).toBeEnabled();
+    await apply.click();
+    await expectPage(review).toHaveCount(0);
+    phase("reviewed skills upgrade applied");
     await expectPage(detail).toContainText("v0.4.0");
     phase("adopted skills version displayed");
     await expectPage(detail.getByTestId("extension-detail-health")).toHaveCount(0);

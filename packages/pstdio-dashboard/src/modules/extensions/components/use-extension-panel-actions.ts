@@ -1,6 +1,6 @@
 import type { MarketplaceExtension, ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { PstdioApiError } from "@pstdio/sdk/client";
-import { createExtensionUpgradePool } from "pstdio-api-contracts/extension-host";
+import { createExtensionUpgradePool, extensionUpgradeNeedsReviewCode } from "pstdio-api-contracts/extension-host";
 import { useTranslation } from "react-i18next";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import {
@@ -31,7 +31,10 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
       extension.id,
       {
         running: t("projectSettings.extensionsPanel.feedback.upgradingButton"),
-        failed: t("projectSettings.extensionsPanel.upgrade.failed"),
+        failed: (error) =>
+          error instanceof PstdioApiError && error.code === extensionUpgradeNeedsReviewCode
+            ? t("projectSettings.extensionsPanel.upgrade.reviewNeeded")
+            : t("projectSettings.extensionsPanel.upgrade.failed"),
       },
       (started) =>
         upgrade.mutateAsync({

@@ -62,6 +62,7 @@ export default defineExtension({
       title: "Social radar daily digest",
       schedule: "0 7 * * *",
       command: commands["run-daily"].ref,
+      disabled: true,
     }),
   ],
   hooks: [

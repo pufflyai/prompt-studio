@@ -1,5 +1,6 @@
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
+import { selectExtensionUpgradeCandidates } from "pstdio-api-contracts/extension-host";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { usePendingExtensionSourceChanges } from "@/shared/extensions/use-extension-mutation";
 import { useProjectExtensions } from "@/shared/extensions/use-project-extensions";
@@ -15,8 +16,9 @@ export const ExtensionsPageHeader = ({ input }: { input: WorkbenchPanelRenderInp
   const inventory = useProjectExtensions(projectId);
   const changing = usePendingExtensionSourceChanges(projectId);
   const actions = useExtensionPanelActions(projectId, inventory.data?.upgradeConcurrency);
-  const upgradable =
-    inventory.data?.extensions.filter((extension) => extension.canUpgrade && !changing(extension.id)) ?? [];
+  const upgradable = selectExtensionUpgradeCandidates(inventory.data?.extensions ?? []).filter(
+    ({ id }) => !changing(id),
+  );
   return (
     <ExtensionsPanelHeader
       searchId={`extension-search-${input.instance.instanceId}`}

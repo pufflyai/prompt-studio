@@ -35,7 +35,11 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
   const failed = action?.status === "error";
   const retryAction = action?.retryable === false ? undefined : onRetry;
   const label = action?.label;
-  const retry = retryLabel ?? t("projectSettings.extensionsPanel.feedback.retry", "Retry");
+  const retry =
+    retryLabel ??
+    (action?.needsReview
+      ? t("projectSettings.extensionsPanel.upgrade.review", "Review upgrade")
+      : t("projectSettings.extensionsPanel.feedback.retry", "Retry"));
   const error = action?.error === action?.label ? undefined : action?.error;
   const name = error ? `${label}: ${error}` : label;
   return (
