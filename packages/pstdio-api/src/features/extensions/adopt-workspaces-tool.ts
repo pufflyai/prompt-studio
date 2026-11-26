@@ -93,6 +93,9 @@ const findFreshSource = async (fresh: FreshWorkspaceSource[], path: string) => {
 export const adoptWorkspacesTool = (deps: ExtensionsRouteDeps, projectId: string, fresh: FreshWorkspaceSource[] = []) =>
   withProjectExtensionChoices(deps.extensionService, projectId, () => adopt(deps, projectId, fresh));
 
+const canRetireSharedProvider = (deps: ExtensionsRouteDeps, projectId: string, published: boolean) =>
+  published ? deps.accountService.canPublishProjectExtensions(projectId) : Promise.resolve(true);
+
 const adopt = async (deps: ExtensionsRouteDeps, projectId: string, fresh: FreshWorkspaceSource[]) => {
   const records = await deps.extensionService.listProjectExtensionInstances(projectId);
   const legacy = records.filter(({ installedSource }) => installedSource.extension_id === "pstdio.git-workspaces");
@@ -112,6 +115,7 @@ const adopt = async (deps: ExtensionsRouteDeps, projectId: string, fresh: FreshW
   const legacyToken = token(records, "pstdio.git-workspaces");
   const catalog = await openPublishedCatalog(deps, projectId);
   const oldSelection = await catalog.read("pstdio.git-workspaces");
+  if (!(await canRetireSharedProvider(deps, projectId, Boolean(oldSelection.value)))) return;
   const previous = await catalog.read("pstdio.workspaces");
   const prepared = await prepareSuccessor(deps, projectId, records);
   if (!prepared) return;

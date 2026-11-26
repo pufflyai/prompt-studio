@@ -95,6 +95,13 @@ const recordFiles = (input: RecordStreamInput) =>
     progress: input.fileProgress,
   });
 
+// Checkpoint only a complete copy whose retained tail would cost more to replay.
+const checkpointDue = (cursor: RecordStreamCursor, limits: typeof latestStateLimits) =>
+  !cursor.skipped &&
+  cursor.after > cursor.through &&
+  (cursor.pendingBytes > Math.max(limits.bytes, cursor.stateBytes) ||
+    (cursor.after - cursor.through > limits.updates && cursor.stateBytes <= limits.bytes));
+
 const isCompleteCopy = (cursor: RecordStreamCursor, incomplete: boolean) => !incomplete && !cursor.skipped;
 
 /**
@@ -108,6 +115,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
   const files = recordFiles(input);
   let incomplete = false;
   let downloaded = false;
+  let writable = true;
   const rejected = new Set<string>();
   const quarantine = async (failure: Parameters<RecordStreamInput["quarantine"]>[0]) => {
     incomplete = true;
@@ -283,7 +291,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
   const join = async (cursor: RecordStreamCursor) => {
     let first = await relay.read(0);
     if (!first.state && first.lastSequence === 0) {
-      if (!isCompleteCopy(cursor, incomplete) || !(await store.hasRecords())) return null;
+      if (!writable || !isCompleteCopy(cursor, incomplete) || !(await store.hasRecords())) return null;
       const founded = await publish(cursor, true);
       if (founded) return founded;
       // The winning founding state was published after our empty read.
@@ -317,16 +325,6 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     return saved;
   };
 
-  // Updates after the latest state outgrew it; a device that has them all replaces it (R18, R23).
-  // Small owners also replace a long tail, so a new device does not replay thousands of updates.
-  // A device that skipped data would claim to cover it, so only a complete one replaces the state.
-  const due = (cursor: RecordStreamCursor) =>
-    !incomplete &&
-    !cursor.skipped &&
-    cursor.after > cursor.through &&
-    (cursor.pendingBytes > Math.max(limits.bytes, cursor.stateBytes) ||
-      (cursor.after - cursor.through > limits.updates && cursor.stateBytes <= limits.bytes));
-
   /** One pass after reading: restart a lost stream, send saved changes, then compact. Null when done. */
   const send = async (cursor: RecordStreamCursor | null, previous: RecordStreamCursor) => {
     // The relay lost this stream. Any device with a full copy uploads it again (R3).
@@ -334,23 +332,25 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     if (await push()) return cursor;
     // A device that set data aside never claims to cover it, even to republish its receipts.
     if (incomplete || cursor.skipped) return null;
-    if (!due(cursor) && !(await store.checkpointPending?.())) return null;
+    if (!checkpointDue(cursor, limits) && !(await store.checkpointPending?.())) return null;
     return publish(cursor, false);
   };
 
   return {
     async synchronize() {
+      writable = (await input.canWrite?.()) ?? true;
       await store.connect?.(space, relay);
       let cursor: RecordStreamCursor | null = await store.open();
       if (cursor.skipped) incomplete = true;
       if (!cursor.joined) cursor = await join(cursor);
       while (cursor) {
-        const next: RecordStreamCursor | null = await send(await read(cursor), cursor);
+        const received = await read(cursor);
+        const next: RecordStreamCursor | null = writable ? await send(received, cursor) : null;
         if (!next) break;
         cursor = next;
       }
       downloaded = !incomplete;
     },
-    status: async () => ({ downloaded, pending: await store.pending(), needsAttention: incomplete }),
+    status: async () => ({ downloaded, pending: writable && (await store.pending()), needsAttention: incomplete }),
   };
 };

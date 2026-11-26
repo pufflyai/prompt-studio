@@ -7,6 +7,7 @@ import {
   liveProtocolHeader,
   liveProtocolVersion,
   liveServerMessageSchema,
+  publicationDocumentNames,
   readResultSchema,
   type SyncRoute,
   stateResultSchema,
@@ -508,5 +509,103 @@ test("devices of the same team user share encrypted data under the team's projec
   } finally {
     await accountService.stop(true);
     await relay.close();
+  }
+});
+
+test("only the team owner can write the shared extension catalog over Relay", async () => {
+  const relay = await open();
+  const { manager, managerHandler, device, scope } = relay.context;
+  const control = new Client({ connectionString: fixture.managerDatabaseUrl });
+  const projectId = scope.workbenchId;
+  const accountService = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: managerHandler });
+  const managerOrigin = accountService.url.origin;
+  const managerRequest = (token: string, path: string, body: unknown) =>
+    fetch(managerOrigin + path, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  try {
+    const team = await managerRequest(device.token, "/v1/teams", { name: "Private Tool Team" });
+    expect(team.status).toBe(201);
+    const { accountId } = teamAccountSchema.parse(await team.json());
+    await manager.setFeature({ accountId, feature: "relay", enabled: true });
+    expect((await managerRequest(device.token, `/v1/workbenches/${projectId}?accountId=${accountId}`, {})).status).toBe(
+      200,
+    );
+    const userId = crypto.randomUUID();
+    await manager.provision({
+      requestId: "publication-reader",
+      accountId: userId,
+      owner: { issuer: "https://accounts.google.com", subject: userId },
+    });
+    const colleague = await manager.registerDevice({
+      accountId: userId,
+      deviceId: crypto.randomUUID(),
+      name: "Project member",
+      platform: "linux",
+    });
+    await control.connect();
+    await control.query('INSERT INTO manager_team_members ("accountId", "userId", role) VALUES ($1,$2,$3)', [
+      accountId,
+      userId,
+      "member",
+    ]);
+    await control.query(
+      'INSERT INTO manager_project_members ("accountId", "workbenchId", "userId") VALUES ($1,$2,$3)',
+      [accountId, projectId, userId],
+    );
+    const renew = async (credential: string) => {
+      const result = await managerRequest(credential, "/v1/environment-access", { accountId, workbenchId: projectId });
+      expect(result.status).toBe(200);
+      return z.object({ token: z.string() }).parse(await result.json()).token;
+    };
+    const [ownerToken, memberToken] = await Promise.all([renew(device.token), renew(colleague.token)]);
+    const { project } = await fetchSyncSpaces({
+      managerOrigin,
+      credential: colleague.token,
+      accountId,
+      userId,
+      workbenchId: projectId,
+    });
+
+    const bytes = new TextEncoder().encode("Encrypted publication");
+    for (const name of publicationDocumentNames) {
+      const documentId = await project.documentId(name);
+      const route = { kind: "document", projectId, spaceOwner: null, documentId } as const;
+      const update = await sealUpdate(project, documentId, bytes, []);
+      expect((await relay.post({ ...route, operation: "updates" }, update, memberToken)).status).toBe(403);
+      expect((await relay.post({ ...route, operation: "state" }, {}, memberToken)).status).toBe(403);
+      expect((await relay.post({ ...route, operation: "updates" }, update, ownerToken)).status).toBe(200);
+      const read = await relay.post({ ...route, operation: "read" }, { after: 0 }, memberToken);
+      const result = readResultSchema.parse(await read.json());
+      expect(result.status).toBe("updates");
+      if (result.status !== "updates") throw new Error("Expected the owner’s publication");
+      expect(await openUpdate(project, documentId, result.updates[0]!)).toEqual(bytes);
+    }
+
+    const documentId = await project.documentId("ordinary-shared-project-data");
+    const route = { kind: "document", projectId, spaceOwner: null, documentId, operation: "updates" } as const;
+    expect((await relay.post(route, await sealUpdate(project, documentId, bytes, []), memberToken)).status).toBe(200);
+
+    await control.query(
+      'DELETE FROM manager_project_members WHERE "accountId"=$1 AND "workbenchId"=$2 AND "userId"=$3',
+      [accountId, projectId, userId],
+    );
+    expect(
+      (await managerRequest(colleague.token, "/v1/environment-access", { accountId, workbenchId: projectId })).status,
+    ).toBe(401);
+    const catalogId = await project.documentId(publicationDocumentNames[1]);
+    expect(
+      (
+        await relay.post(
+          { ...route, documentId: catalogId },
+          await sealUpdate(project, catalogId, bytes, []),
+          memberToken,
+        )
+      ).status,
+    ).toBe(403);
+  } finally {
+    await Promise.all([control.end(), accountService.stop(true), relay.close()]);
   }
 });

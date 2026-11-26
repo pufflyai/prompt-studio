@@ -25,8 +25,10 @@ export interface CatalogRecords {
 export const createPublicationCatalog = (input: {
   records: CatalogRecords;
   verifyComplete: (assets: Asset[]) => Promise<void>;
+  authorizeWrite?: () => Promise<void>;
 }) => {
   const records = canonicalPublicationRecords(input.records);
+  const requireWrite = async () => input.authorizeWrite?.();
   // A selection without its matching package reads as unpublished, so one bad entry cannot break callers.
   // Activation still refuses it and keeps the current set.
   const resolve = async (selected: StorageRecord, reader: Pick<CatalogRecords, "read">) => {
@@ -54,20 +56,23 @@ export const createPublicationCatalog = (input: {
     read: async (id: string) => resolve(await reader.read(id), reader),
   });
   // Reads and the following commit share one owner lock, so a stale caller cannot overwrite a newer choice.
-  const change = <T>(
+  const change = async <T>(
     id: string,
     expectedRevision: string | undefined,
     action: (catalog: ReturnType<typeof view> & { records: CatalogLockedRecords }) => Promise<T>,
-  ) =>
-    records.transaction(async (locked) => {
+  ) => {
+    await requireWrite();
+    return records.transaction(async (locked) => {
       const record = await locked.read(id);
       if (expectedRevision !== undefined && record.revision !== expectedRevision) throw new PublicationChangedError();
       return action({ ...view(locked), records: locked });
     });
+  };
   return {
     ...view(records),
     records,
     change,
+    requireWrite,
     list: async () =>
       Promise.all(
         (await records.list())

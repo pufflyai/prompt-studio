@@ -16,6 +16,28 @@ export const latestStateLimits = { bytes: 1_048_576, updates: 1_000 };
 const hasExternalBytes = (input: DocumentSyncInput, document: Y.Doc) =>
   !!input.references || hasDocumentAssets(document);
 
+const replaceRelayDocument = async (
+  input: Pick<DocumentSyncInput, "space" | "documentId" | "relay">,
+  document: Y.Doc,
+  baseStateId: string | null,
+  through: number,
+  blobIds: string[],
+) => {
+  const state = await sealState(input.space, input.documentId, {
+    baseStateId,
+    through,
+    state: Y.encodeStateAsUpdate(document),
+    summary: Y.encodeStateVector(document),
+    blobIds,
+  });
+  return (await input.relay.replace(state)) ? state.stateId : undefined;
+};
+
+const acknowledgeDocument = (input: Pick<DocumentSyncInput, "store" | "owner">, remote: Y.Doc) =>
+  input.store.transaction(input.owner, async ({ document, revision }) =>
+    missingUpdate(document, remote) ? undefined : revision,
+  );
+
 export const createDocumentSync = (input: DocumentSyncInput) => {
   const { owner, store, space, documentId, relay } = input;
   const limits = input.limits ?? latestStateLimits;
@@ -27,6 +49,7 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
   let updates = 0;
   let incomplete = false;
   let downloaded = false;
+  let writable = true;
   let acknowledgedRevision = 0;
   const rejected = new Set<string>();
   const quarantine = async (failure: SyncFailure) => {
@@ -117,18 +140,12 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
     // A large local diff uses the state channel too. Keep rejected updates in the tail rather than
     // claiming to cover them, so publishing healthy local data never deletes unreadable envelopes.
     const covered = incomplete ? through : after;
-    const state = await sealState(space, documentId, {
-      baseStateId: stateId,
-      through: covered,
-      state: Y.encodeStateAsUpdate(document),
-      summary: Y.encodeStateVector(document),
-      blobIds,
-    });
-    if (!(await relay.replace(state))) return false;
+    const publishedStateId = await replaceRelayDocument(input, document, stateId, covered, blobIds);
+    if (!publishedStateId) return false;
     const next = cloneDocument(document);
     remote.destroy();
     remote = next;
-    stateId = state.stateId;
+    stateId = publishedStateId;
     through = covered;
     if (!incomplete) {
       bytes = 0;
@@ -216,6 +233,13 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
     }
   };
   const synchronize = async () => {
+    writable = (await input.canWrite?.()) ?? true;
+    if (!writable) {
+      await read();
+      (await mergeLocal())?.destroy();
+      downloaded = !incomplete;
+      return;
+    }
     while (true) {
       await read();
       // Reading invalidates downloaded whenever the relay changed. An acknowledged local
@@ -226,11 +250,7 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
     }
   };
   const acknowledge = async () => {
-    if (!store.revision) return;
-    const acknowledged = await store.transaction(owner, async ({ document, revision }) =>
-      missingUpdate(document, remote) ? undefined : revision,
-    );
-    if (acknowledged !== undefined) acknowledgedRevision = acknowledged;
+    if (store.revision) acknowledgedRevision = (await acknowledgeDocument(input, remote)) ?? acknowledgedRevision;
   };
   return {
     /** Format upgrades read the old stream without publishing into it. */
@@ -243,9 +263,11 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
     // Compare against the relay replica, including delete-only edits. A durable local
     // transaction after synchronization must immediately stop reporting synced.
     status: async () => {
-      const pending = store.revision
-        ? (await store.revision(owner)) !== acknowledgedRevision
-        : await store.transaction(owner, async ({ document }) => !!missingUpdate(document, remote));
+      const pending =
+        writable &&
+        (store.revision
+          ? (await store.revision(owner)) !== acknowledgedRevision
+          : await store.transaction(owner, async ({ document }) => !!missingUpdate(document, remote)));
       return { downloaded, pending, needsAttention: incomplete };
     },
     close: () => remote.destroy(),

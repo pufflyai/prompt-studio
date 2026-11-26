@@ -18,6 +18,7 @@ import { acknowledgeProjectDeletion, listProjectDeletionJobs } from "./project-d
 import { readProviderIdentity } from "./provider-identity";
 import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
 import { devices } from "./schema";
+import { canPublishForTeam, prepareTeamPublicationGrant, sameDeviceAccess } from "./team-publication-access";
 import { lockAccount, withAccountTransaction } from "./transactions";
 
 export const createManagerAuthentication = (input: ManagerAuthConfig) => {
@@ -97,6 +98,7 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
       try {
         const access = await findDeviceAccess(connection.db, token, workbenchId, accountId);
         if (!access) throw new EnvironmentAccessDenied();
+        const publication = await prepareTeamPublicationGrant(connection.db, access, token);
         const iat = Math.floor(Date.now() / 1000);
         const exp = iat + config.accessLifetimeSeconds;
         category = "signing";
@@ -107,6 +109,7 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
               tokenType: "pstdio-environment-access",
               accountId: access.accountId,
               userId: access.userId,
+              ...(publication && { publication }),
               workbenchId: access.workbenchId,
               environmentId: access.deviceId,
               sub: access.deviceId,
@@ -120,11 +123,8 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
           if (access.accountId !== access.userId) await lockAccount(transaction, access.accountId);
           const current = await findDeviceAccess(transaction, token, workbenchId, accountId);
           if (
-            !current ||
-            current.accountId !== access.accountId ||
-            current.userId !== access.userId ||
-            current.deviceId !== access.deviceId ||
-            current.workbenchId !== access.workbenchId
+            !sameDeviceAccess(access, current) ||
+            (publication && (await canPublishForTeam(transaction, current)) !== publication.canWrite)
           )
             throw new EnvironmentAccessDenied();
           await transaction
@@ -134,7 +134,11 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
         });
         category = "signing";
         if (Date.now() >= exp * 1000) throw new Error("Prepared access expired before issuance");
-        return { token: signed.token, expiresAt: new Date(exp * 1000).toISOString() };
+        return {
+          token: signed.token,
+          expiresAt: new Date(exp * 1000).toISOString(),
+          ...(publication && { canPublish: publication.canWrite }),
+        };
       } catch (error) {
         if (error instanceof EnvironmentAccessDenied) throw error;
         throw new EnvironmentAccessFailure(category);
