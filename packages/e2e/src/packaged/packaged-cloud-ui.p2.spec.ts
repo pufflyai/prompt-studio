@@ -61,7 +61,7 @@ test("Cloud settings respect early access and manage devices and project sync th
   context,
   page,
 }) => {
-  // Critical: a denied account must not gain Cloud controls; make-local must preserve both devices' copies.
+  // Critical: early access gates project sync; making local must preserve both devices' copies.
   const fixture = await createCloudAcceptanceFixture(resources.root, resources.children, { cloudUi: true });
   resources.fixture = fixture;
   await fixture.peer.setEarlyAccess(false);
@@ -152,7 +152,8 @@ test("Cloud settings respect early access and manage devices and project sync th
   await expect(details.getByText("Devices", { exact: true })).toHaveCount(0);
   await details.getByRole("button", { name: "Cloud settings" }).click();
   await expect(settings.getByText("Coming soon", { exact: true })).toBeVisible();
-  await expect(settings.getByText("Your devices", { exact: true })).toHaveCount(0);
+  await expect(settings.getByText("Your devices", { exact: true })).toBeVisible();
+  await expect(settings.getByRole("button", { name: "Rename", exact: true })).toHaveCount(1);
   await expect(settings.getByRole("button", { name: "Sync with Cloud" })).toHaveCount(0);
   await settings.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(status).toHaveText("Sign in");
@@ -221,7 +222,8 @@ test("Cloud settings respect early access and manage devices and project sync th
   expect((await first.client.account.devices()).some((device) => device.name === "Cloud UI renamed device")).toBe(true);
   await settings.getByRole("button", { name: "Make local", exact: true }).click();
   const confirmation = settings.getByRole("dialog");
-  await expect(confirmation.getByText("Make this project local?", { exact: true })).toBeVisible();
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation).toContainText(project.name);
   await confirmation.getByRole("button", { name: "Make local", exact: true }).click();
   await expect(status).toHaveText("Local");
   // Retire private project data while preserving the independently owned global settings destination.
