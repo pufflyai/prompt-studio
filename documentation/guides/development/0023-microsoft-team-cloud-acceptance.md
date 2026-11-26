@@ -1,12 +1,12 @@
 # Qualify a Microsoft team on Cloud
 
-Run this procedure for PS-1373 in an approved environment with a disposable team, two distinct employee accounts, and isolated devices. Use a minimal private extension and synthetic records, files, and session data. Repeat the business workflow with Onefin only after it approves the tenant and guest policy, participants, and dataset.
+Run this procedure for PS-1373 on the existing hosted test environment with a disposable team, two distinct Microsoft test accounts, and isolated devices. The deployment uses the existing Terraform environment key `production`. Use a minimal private extension and synthetic records, files, and session data. Repeat the business workflow with Onefin only after it approves the tenant and guest policy, participants, and dataset.
 
 ## Record the candidate
 
 Record the deployed account-manager and Relay image digests, applied migration versions, HTTPS origins, token issuer and audience, and signing key IDs. Record the desktop version and channel, Cloud extension and SDK/API version, selected package digest, and the team’s Relay entitlement. Check the exact Microsoft Web callback and application registration against the [account-manager guide](0007-account-manager.md#microsoft-web-application-registration). Keep the existing registration across secret rotations.
 
-Before opening Cloud settings on each isolated device, set `PSTDIO_ACCOUNT_MANAGER_ORIGIN` in the Prompt Studio host's environment to the approved manager address, including its path. For the dedicated acceptance deployment, use `https://acceptance.base.prompt.studio/accounts`. Restart the host when changing this setting. Confirm the test manager advertises Microsoft at `/v1/sign-in-providers` under that address before starting the first browser sign-in. After signing in, compare `login.managerOrigin` in the host's `GET /v1/account` response with the approved address. See [device login development](0011-device-login.md).
+Use the existing test manager at `https://base.prompt.studio/accounts`, which is the host's default. Before opening Cloud settings on each isolated device, check whether `PSTDIO_ACCOUNT_MANAGER_ORIGIN` overrides that address. Include the `/accounts` path when setting an explicit address, and restart the host when changing this setting. Confirm the test manager advertises Microsoft at `/v1/sign-in-providers` under that address before starting the first browser sign-in. After signing in, compare `login.managerOrigin` in the host's `GET /v1/account` response with the test manager address. See [device login development](0011-device-login.md).
 
 Use aliases for accounts, devices, and projects in the evidence. Keep credentials, invitation links, personal data, and authorization URLs out of logs and screenshots. Record when each check ran, its result, and the relevant versions. Keep fixture and hosted results distinct.
 
