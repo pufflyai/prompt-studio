@@ -4,7 +4,7 @@ import {
   managedPackageDescriptorSchema,
   managedPackageMaxBytes,
 } from "pstdio-sync-contracts";
-import { extensionPackageMediaType } from "../../features/extensions/publication/package";
+import { extensionPackageMediaType } from "../../features/extensions/publication/media-type";
 
 const digest = (bytes: Uint8Array) => new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
 const packageSpace = (

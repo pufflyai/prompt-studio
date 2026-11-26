@@ -90,11 +90,9 @@ test("only the owner selects immutable team packages; project grants gate packag
     const installed = await upload(owner.token);
     expect(installed.status).toBe(201);
     const selection = await installed.json();
-    expect(selection).toMatchObject({
-      extensionId: metadata.extensionId,
-      revision: metadata.revision,
-      selectionId: expect.any(String),
-    });
+    expect(selection.extensionId).toBe(metadata.extensionId);
+    expect(selection.revision).toBe(metadata.revision);
+    expect(typeof selection.selectionId).toBe("string");
     const publicPolicy = await (await request(member.token, policy)).json();
     expect(publicPolicy).toEqual([selection]);
     expect(JSON.stringify(publicPolicy)).not.toContain(metadata.secret);
@@ -104,17 +102,6 @@ test("only the owner selects immutable team packages; project grants gate packag
     const packagePath = `${policy}/${metadata.extensionId}/package?workbenchId=recipient&grantId=${grantId}&selectionId=${selection.selectionId}`;
     expect((await request(outsider.token, packagePath)).status).toBe(401);
     const download = await request(member.token, packagePath);
-    if (!download.ok) {
-      const policies = await authentication.connection.db.execute(
-        sql`select "accountId", "extensionId", "selectionId", "packageId" from manager_team_extension_policies`,
-      );
-      console.error("Managed fixture download denied", {
-        response: await download.clone().text(),
-        packagePath,
-        selection,
-        policies: policies.rows,
-      });
-    }
     expect(download.status).toBe(200);
     expect(new Uint8Array(await download.arrayBuffer())).toEqual(bytes);
     const descriptor = JSON.parse(Buffer.from(download.headers.get("x-pstdio-package")!, "base64url").toString());
