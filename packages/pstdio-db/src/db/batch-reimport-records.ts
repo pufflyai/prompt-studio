@@ -74,15 +74,23 @@ export async function exportSettledRecords(source: PGlite, file: string, signal?
   try {
     await output.writeFile(Buffer.from("5047434f50590aff0d0a000000000000000000", "hex"));
     await source.transaction(async (tx) => {
+      // Check for unpublished canonical rows using keys alone. Joining their entire payloads
+      // before filtering deleted projections made PostgreSQL spill obsolete file bodies to disk.
+      const {
+        rows: [unpaired],
+      } = await tx.query<{ found: boolean }>(`SELECT EXISTS (
+        SELECT 1 FROM storage_ordered_records r WHERE NOT EXISTS(SELECT 1 FROM storage_current_records c
+        WHERE (c.workbench_id,c.extension_id,c.record_id)=(r.workbench_id,r.extension_id,r.record_id))) AS found`);
+      if (unpaired?.found) throw new NeedsRecordAdmission("Released record has no published representation");
       await tx.exec(`SET LOCAL work_mem='96MB';
         DECLARE export_records NO SCROLL CURSOR FOR
         SELECT o.id AS owner_id, c.record_id, convert_from(r.state,'UTF8') AS state, c.deleted, c.revision,
           c.query_values::text,c.native_versions::text,
           CASE WHEN NOT c.deleted THEN json_build_object('value',c.value,'asset',c.asset,'shared',c.shared,
             'native_sources',c.native_sources,'record_lifetime',c.record_lifetime)::text END AS live
-        FROM storage_current_records c FULL JOIN storage_ordered_records r USING(workbench_id,extension_id,record_id)
+        FROM storage_current_records c LEFT JOIN storage_ordered_records r USING(workbench_id,extension_id,record_id)
         LEFT JOIN pg_temp.reimport_owners o ON o.project_id=c.workbench_id AND o.extension_id=c.extension_id
-        WHERE c.deleted IS NOT TRUE`);
+        WHERE NOT c.deleted`);
       for (;;) {
         signal?.throwIfAborted();
         const { rows } = await tx.query<ReleasedRecord>("FETCH FORWARD 256 FROM export_records");
