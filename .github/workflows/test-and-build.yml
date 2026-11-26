@@ -115,6 +115,16 @@ jobs:
       - name: Install native Chromium for packaged CLI UI
         if: steps.native_plan.outputs.chromium == 'true'
         run: bunx playwright@1.60.0 install chromium
+      - name: Start the virtual display for the Linux desktop diagnostic
+        if: runner.os == 'Linux'
+        run: |
+          Xvfb :99 -screen 0 1280x900x24 -nolisten tcp > "$RUNNER_TEMP/xvfb.log" 2>&1 &
+          for attempt in {1..100}; do
+            test -S /tmp/.X11-unix/X99 && break
+            sleep 0.1
+          done
+          test -S /tmp/.X11-unix/X99
+          echo "DISPLAY=:99" >> "$GITHUB_ENV"
       # Direct argv preserves the native shell's signal behavior and keeps the input out of shell syntax.
       - name: Run the selected native file with its owning runner
         run: >-
