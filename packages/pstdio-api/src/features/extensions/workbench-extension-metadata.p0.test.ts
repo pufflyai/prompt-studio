@@ -210,7 +210,7 @@ describe("buildWorkbenchExtensionMetadata", () => {
     const basePath = webviewUrlIssuer
       .runtimeUrl({ installedExtensionId: "installed-lab", webviewId: "pstdio.lab.view.page" })
       .replace(/\/runtime$/, "");
-    expect(view.body.webview.runtimeUrl).toBe(`${basePath}/runtime`);
+    expect(view.body.webview.runtimeUrl).toBe(`${basePath}/runtime?h=build-2`);
     expect(view.body.webview.moduleUrl).toBe(`${basePath}/assets/module.js?h=build-2`);
     expect(view.body.webview.capabilities).toEqual(["commands.execute", "preferences.set@1"]);
   });

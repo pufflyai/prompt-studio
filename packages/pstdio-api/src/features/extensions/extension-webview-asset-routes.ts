@@ -12,7 +12,7 @@ import {
   resolveExtensionArtifactMount,
   safeArtifactPath,
 } from "./extension-artifact-assets";
-import type { AuthorizedExtensionWebviewRequest } from "./extension-webview-access";
+import { type AuthorizedExtensionWebviewRequest, withWebviewAssetRevision } from "./extension-webview-access";
 import {
   findWebviewBuildError,
   renderWebviewBuildErrorModule,
@@ -76,7 +76,9 @@ const serveAuthorizedRequest = async (c: Context<AppBindings>, deps: WebviewAsse
   if (!authorized) return notFound(c);
 
   if (authorized.kind === "runtime") {
-    return new Response(renderInlineExtensionRuntimeHtml(getExtensionRuntimeScript()), {
+    // Preload in the opaque iframe's own module map. A relative URL retains any proxy prefix.
+    const moduleUrl = withWebviewAssetRevision("./assets/module.js", c.req.query("h"));
+    return new Response(renderInlineExtensionRuntimeHtml(getExtensionRuntimeScript(), moduleUrl), {
       headers: { "content-type": "text/html; charset=utf-8" },
     });
   }

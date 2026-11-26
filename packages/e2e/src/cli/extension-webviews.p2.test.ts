@@ -102,9 +102,8 @@ describe("extension webview setup", () => {
       )?.installedExtensionId;
       expect(installedExtensionId).toBeString();
       const scopePath = `${installedExtensionId}/test.webview-host.view.page`;
-      expect(hostView.body.webview.runtimeUrl).toMatch(
-        new RegExp(`^/v1/extensions/webviews/[A-Za-z0-9_-]+/${scopePath}/runtime$`),
-      );
+      const runtimeUrl = new URL(hostView.body.webview.runtimeUrl, api.url);
+      expect(runtimeUrl.pathname).toMatch(new RegExp(`^/v1/extensions/webviews/[A-Za-z0-9_-]+/${scopePath}/runtime$`));
       expect(hostView.body.webview.moduleUrl).toMatch(
         new RegExp(`^/v1/extensions/webviews/[A-Za-z0-9_-]+/${scopePath}/assets/module\\.js\\?h=.+$`),
       );
@@ -112,7 +111,7 @@ describe("extension webview setup", () => {
       const module = await waitForOk(`${api.url}${hostView.body.webview.moduleUrl}`);
       expect(module.headers.get("content-type")).toContain("application/javascript");
 
-      const runtimeHtml = await waitForOk(`${api.url}${hostView.body.webview.runtimeUrl}`);
+      const runtimeHtml = await waitForOk(runtimeUrl.href);
       expect(runtimeHtml.headers.get("content-type")).toContain("text/html");
       const runtimeContent = await runtimeHtml.text();
       const runtimeScripts = [...runtimeContent.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)];

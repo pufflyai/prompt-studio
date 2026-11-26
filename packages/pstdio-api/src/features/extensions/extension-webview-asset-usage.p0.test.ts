@@ -2,9 +2,68 @@ import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { loadExtensionSource } from "./extension-runtime";
+import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { createApp, webviewBasePath, writeExtension } from "./test-utils/webview-asset-app";
 
 for (const method of ["GET", "HEAD"]) {
+  test(`serves published ${method} assets while freshness inspection is blocked`, async () => {
+    const root = mkdtempSync(join(tmpdir(), "webview-published-access-"));
+    const sourcePath = join(root, "extension");
+    const cacheRoot = join(root, "cache");
+    const dist = join(cacheRoot, "installed-lab", "pstdio.lab.view.labPage", "dist");
+    writeExtension(sourcePath, "./src/main.tsx");
+    mkdirSync(dist, { recursive: true });
+    writeFileSync(join(dist, "module.js"), 'export { ready } from "./chunk.js";');
+    writeFileSync(join(dist, "chunk.js"), "export const ready = true;");
+    writeFileSync(join(dist, "entry-style.txt"), "panel.css");
+    writeFileSync(join(dist, "panel.css"), ".panel{color:red}");
+    const started = Promise.withResolvers<void>();
+    const released = Promise.withResolvers<void>();
+    const loaded = await loadExtensionSource(sourcePath);
+    const manager = createExtensionWebviewBuildManager({
+      listInstalledSources: async () => [
+        { id: "installed-lab", install_name: "extension-lab", source_path: sourcePath, updated_at: "initial" },
+      ],
+      loadSource: async () => {
+        started.resolve();
+        await released.promise;
+        return loaded;
+      },
+      buildWebview: async () => ({ success: false, details: "Replacement failed" }),
+      reportBuildFailure: async () => "reported",
+      reportBuildSuccess: async () => "reported",
+      webviewCacheRoot: cacheRoot,
+    });
+    const inspection = manager.refresh(sourcePath);
+    await started.promise;
+    const app = createApp({
+      cacheRoot,
+      sourcePath,
+      ensureWebviews: manager.ensure,
+    });
+    const requests = Promise.all(
+      ["assets/module.js", "assets/chunk.js", "stylesheet"].map((path) =>
+        app.request(`${webviewBasePath}/${path}`, { method }),
+      ),
+    );
+    try {
+      const result = await Promise.race([requests, Bun.sleep(1000).then(() => "blocked" as const)]);
+      expect(result).not.toBe("blocked");
+      if (result === "blocked") return;
+      expect(result.map((response) => response.status)).toEqual([200, 200, 307]);
+      expect(result[2]!.headers.get("location")).toBe(`${webviewBasePath}/assets/panel.css`);
+      expect(await result[0]!.text()).toBe(method === "HEAD" ? "" : 'export { ready } from "./chunk.js";');
+      expect(await result[1]!.text()).toBe(method === "HEAD" ? "" : "export const ready = true;");
+    } finally {
+      released.resolve();
+      await requests;
+      await inspection;
+      manager.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test(`waits for a first-use build before serving ${method} assets`, async () => {
     const root = mkdtempSync(join(tmpdir(), "webview-first-use-"));
     const sourcePath = join(root, "extension");

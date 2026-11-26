@@ -5,11 +5,12 @@ const escapeAttribute = (value: string) =>
 
 const escapeScriptContent = (value: string) => value.replaceAll("</script", "<\\/script").replaceAll("<!--", "<\\!--");
 
-const renderRuntimeHostDocument = (scriptTag: string) => `<!doctype html>
+const renderRuntimeHostDocument = (scriptTag: string, moduleUrl?: string) => `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    ${moduleUrl ? `<link rel="modulepreload" href="${escapeAttribute(moduleUrl)}" crossorigin="anonymous" />` : ""}
     <style>
       html, body {
         height: 100%;
@@ -41,5 +42,5 @@ export const getExtensionRuntimeScriptUrl = () => new URL("./runtime.bundle.js",
 export const renderExtensionRuntimeHtml = (scriptUrl: string) =>
   renderRuntimeHostDocument(`<script type="text/javascript" src="${escapeAttribute(scriptUrl)}"></script>`);
 
-export const renderInlineExtensionRuntimeHtml = (runtimeScript: string) =>
-  renderRuntimeHostDocument(`<script type="text/javascript">${escapeScriptContent(runtimeScript)}</script>`);
+export const renderInlineExtensionRuntimeHtml = (runtimeScript: string, moduleUrl?: string) =>
+  renderRuntimeHostDocument(`<script type="text/javascript">${escapeScriptContent(runtimeScript)}</script>`, moduleUrl);
