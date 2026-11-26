@@ -57,7 +57,7 @@ test("keeps a local conflict in the batch review count while other upgrades fini
 });
 
 test("resolving a conflict clears its alert while preserving other failed operations", async () => {
-  const queries = createScopedQueryClient();
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
   const operations = getWorkbenchOperations(queries);
   const actions = createExtensionActions({ projectId: "project", operations });
   await actions.run("conflict", labels, async () => {
