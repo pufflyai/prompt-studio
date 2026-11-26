@@ -1,3 +1,4 @@
+import { contributionRefId, sessionBrowser } from "@pstdio/sdk/extensions";
 import type { WorkbenchPanelRenderInput } from "../../core";
 import {
   type ExecuteWorkbenchExtensionCommandInput,
@@ -23,15 +24,22 @@ export const createChatCommandBinding = (
     invocation: { placement: "visible" },
   };
   const slot = { id: viewId, kind: "renderer" as const, context: { projectId: input.projectId, rendererId: viewId } };
-  const run = (commandId: string, params: Record<string, unknown>, signal?: AbortSignal) =>
-    executeWorkbenchExtensionCommand(input, commandId, {
+  const run = (commandId: string, params: Record<string, unknown>, signal?: AbortSignal) => {
+    const origin =
+      viewId === contributionRefId(sessionBrowser.views.conversation) &&
+      (params.action as { type?: string } | undefined)?.type === "submit"
+        ? input.captureChatContext?.(render.workbench, render.instance.instanceId)
+        : undefined;
+    return executeWorkbenchExtensionCommand(input, commandId, {
       params: { renderer, draftKey, ...params },
       resource,
       slot,
       signal,
       placement: render.instance.placementIdentity,
+      metadata: origin ? { workbenchOrigin: origin } : undefined,
       onViewerReplace: replace(params),
     });
+  };
   const required = captureRequiredChatWork(render.workbench);
   return {
     renderer,

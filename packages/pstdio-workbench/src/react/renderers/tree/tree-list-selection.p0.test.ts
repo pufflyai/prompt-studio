@@ -43,6 +43,45 @@ test("preserves declared selection in a tree without navigation targets", () => 
   ).toBe("start");
 });
 
+test("page-slot rows follow the active tab when they share a page", () => {
+  const page = { kind: "page", extensionId: "author.radar", id: "radar" } as const;
+  const sections: TreeViewSection[] = [
+    {
+      id: "pages",
+      nodes: ["overview", "threads", "settings"].map((id) => ({
+        id,
+        label: id,
+        target: {
+          kind: "compound",
+          targets: [
+            { kind: "page", page },
+            {
+              kind: "panel",
+              panel: { kind: "page-slot", page, id },
+              resource: id === "settings" ? { type: "section", id: "research" } : undefined,
+            },
+          ],
+        },
+      })),
+    },
+  ];
+  const input = { sections, childrenByNodeId: {}, activeLocation: { page } };
+  expect(resolveTreeListSelection({ ...input, activeSlot: { page, id: "overview" }, selectedNodeId: "threads" })).toBe(
+    "overview",
+  );
+  expect(resolveTreeListSelection({ ...input, activeSlot: { page, id: "threads" }, selectedNodeId: "overview" })).toBe(
+    "threads",
+  );
+  expect(
+    resolveTreeListSelection({
+      ...input,
+      activeSlot: { page, id: "settings" },
+      activeResource: { type: "section", id: "voice" },
+    }),
+  ).toBe("settings");
+  expect(resolveTreeListSelection(input)).toBeUndefined();
+});
+
 const notesPage = { kind: "page", extensionId: "author.notes", id: "notes" } as const;
 const noteResource = (id: string) => ({ type: "note", id, extensionId: "author.notes", projectId: "project" });
 const notePanel = (id: string) => ({

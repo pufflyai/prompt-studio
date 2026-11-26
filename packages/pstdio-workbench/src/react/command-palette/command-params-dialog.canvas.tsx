@@ -229,11 +229,11 @@ export const EmptyOptions: Story = {
   ...DependentOptions,
   args: { request: dynamicRequest, executeOptionCommand: async () => [] },
 };
-// The planner's "Run attempt": when the ticket cannot start, Run keeps the dialog open
+// The planner's "Implement ticket": when the ticket cannot start, Run keeps the dialog open
 // and shows the command's reason above the actions.
 const runAttemptCommand = registerCommand({
   id: "pstdio-planner.run-attempt",
-  label: "Run attempt",
+  label: "Implement ticket",
   params: {
     model: {
       type: "select",
@@ -253,7 +253,7 @@ export const RunFailed: Story = {
   id: "pstdio-workbench-guides-command-parameters--run-failed",
   render: (args) => <CommandParameterExample {...args} />,
   args: {
-    request: { label: "Run attempt", record: runAttemptCommand },
+    request: { label: "Implement ticket", record: runAttemptCommand },
     onRun: async () => {
       throw new Error("PS-458 can't start: it waits on PS-457, which is not done and has no attempt to build on.");
     },

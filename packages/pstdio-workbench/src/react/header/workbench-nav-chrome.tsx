@@ -94,12 +94,15 @@ const MainHeaderIdentity = (props: {
   );
 };
 
-const MainPageControls = (props: { workbench: WorkbenchCore; tabbed: boolean }) =>
-  props.tabbed ? null : (
+const MainPageControls = (props: { workbench: WorkbenchCore; tabbed: boolean; fillTabSpace: boolean }) => {
+  const { workbench, tabbed, fillTabSpace } = props;
+  if (tabbed) return fillTabSpace ? <Box flex="1" minW="0" /> : null;
+  return (
     <Box flex="1" minW="0" h="full">
-      <WorkbenchContentHeader workbench={props.workbench} panel="main" inlinePage />
+      <WorkbenchContentHeader workbench={workbench} panel="main" inlinePage />
     </Box>
   );
+};
 
 export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
   const {
@@ -160,8 +163,7 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
         <Box display={chrome !== undefined || fullscreen ? "none" : "contents"}>
           <MainHeaderIdentity workbench={workbench} tabbed={tabbed} hasNav={hasNav} hasMainHeader={hasMainHeader} />
         </Box>
-        <MainPageControls workbench={workbench} tabbed={tabbed} />
-        {fullscreen || chrome === false ? <Box flex="1" minW="0" /> : null}
+        <MainPageControls workbench={workbench} tabbed={tabbed} fillTabSpace={fullscreen || chrome === false} />
         <WorkbenchPresence workbench={workbench} />
         {panelControls && !fullscreen ? <WorkbenchPanelToggles workbench={workbench} /> : null}
         {!fullscreenControlsInTitleBar && (panelControls || fullscreen) ? (

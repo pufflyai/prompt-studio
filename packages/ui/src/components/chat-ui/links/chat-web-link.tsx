@@ -2,6 +2,7 @@ import { Box, Icon, Image, Link } from "@chakra-ui/react";
 import { Globe } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import { ResourceBadge } from "@/components/primitives/resource-badge";
+import { Tooltip } from "@/components/primitives/tooltip";
 import { resolveMarkdownUrl } from "@/components/rich-text/shared/markdown-url";
 import { ChatLinkStreamingContext, useChatLinkHandler } from "./chat-link-context";
 
@@ -39,10 +40,12 @@ export const ChatWebLink = (props: ChatWebLinkProps) => {
   const href = resolveMarkdownUrl(source, "link");
   if (!href) return label;
   return (
-    <Box as="span" display="inline-block" verticalAlign="middle" maxW="full">
-      <Link variant="resource" href={href} target="_blank" rel="noopener noreferrer">
-        <ResourceBadge fileName={label} icon={<SiteIcon href={href} />} tooltip={false} size="sm" cursor="pointer" />
-      </Link>
-    </Box>
+    <Tooltip content={href}>
+      <Box as="span" display="inline-block" verticalAlign="middle" maxW="full">
+        <Link variant="resource" href={href} target="_blank" rel="noopener noreferrer">
+          <ResourceBadge fileName={label} icon={<SiteIcon href={href} />} tooltip={false} size="sm" cursor="pointer" />
+        </Link>
+      </Box>
+    </Tooltip>
   );
 };

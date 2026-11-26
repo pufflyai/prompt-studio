@@ -91,6 +91,7 @@ export const registerResourcePageMenus = (input: InternalRegisterWorkbenchExtens
                   workbench={workbench}
                   binding={binding}
                   resource={resource}
+                  ownerInstanceId={instance.menuOwnerWidgetId}
                   visible={visible !== false}
                   menu
                 />

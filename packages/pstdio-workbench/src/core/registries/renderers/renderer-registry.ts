@@ -22,6 +22,8 @@ export interface WorkbenchPanelRenderInput {
   visible?: boolean;
   /** Whether the placement is still open while its presentation is retained. */
   placementOpen?: boolean;
+  /** Selection within the owning region, independent of whether that region is visible. */
+  placementSelected?: boolean;
   /** Source selected by the host for a custom text presentation. Never read from guest props. */
   textTarget?: NativeDocumentTarget;
   /** Intrinsic sizing for embedded surfaces such as status details. */

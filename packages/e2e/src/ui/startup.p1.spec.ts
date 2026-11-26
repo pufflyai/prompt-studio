@@ -94,6 +94,7 @@ test("creating the first folder project opens Home", async ({ page, request }) =
   await page.getByRole("dialog", { name: "Open project folder", exact: true }).waitFor({ state: "hidden" });
   await expect(page.getByRole("option", { name: "Home", exact: true })).toBeVisible();
   await expect(homePage(page)).toBeVisible();
+  await expect(page.getByTestId("workbench-side-panel-floating")).toBeVisible();
 });
 
 test("dashboard selects the only project on first load", async ({ page, request }) => {
@@ -123,6 +124,7 @@ test("switching projects never reopens the picker while restoring the landing vi
 
   const picker = page.getByRole("dialog", { name: "Projects", exact: true });
   await expect(picker).toBeVisible();
+  await expect(picker.getByRole("heading", { name: "Projects", exact: true })).toHaveCount(1);
   await page.evaluate(() => {
     const dashboardWindow = window as unknown as {
       __projectPickerOpenedAfterSelection?: boolean;

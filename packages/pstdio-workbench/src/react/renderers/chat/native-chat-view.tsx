@@ -27,9 +27,10 @@ import { NativeChatWorkspace } from "./native-chat-workspace";
 import { useNativeChatActions } from "./use-native-chat-actions";
 import { useNativeChatObservation } from "./use-native-chat-observation";
 import { type NativeChatPresentation, useNativeChatPresentation } from "./use-native-chat-presentation";
+import { useNativeChatTranscript } from "./use-native-chat-transcript";
 
 interface NativeChatViewProps extends NativeChatHostServices {
-  workbench?: import("../../../core").WorkbenchModuleContext;
+  workbench?: import("../../../core").WorkbenchCore;
   resource?: import("@pstdio/sdk/extensions").ResourceRef;
   Host?: ComponentType<NativeChatHostProps>;
   extensionId?: string;
@@ -44,6 +45,7 @@ interface NativeChatViewProps extends NativeChatHostServices {
   /** Hidden retained presentations must not request composer focus. */
   visible?: boolean;
   placementOpen?: boolean;
+  placementSelected?: boolean;
   emptyTitle?: string;
   emptyDescription?: string;
   renderParamField?: CommandParamFieldRenderer;
@@ -99,12 +101,7 @@ export const NativeChatView = (props: NativeChatViewProps) => (
 );
 
 const NativeChatContent = (props: NativeChatViewProps) => {
-  const open = props.placementOpen !== false;
-  const [transcript, setTranscript] = useState({ open, revision: 0 });
-  if (transcript.open !== open) {
-    // Closed placements may keep their React state. Reopen with a fresh viewport.
-    setTranscript({ open, revision: transcript.revision + Number(open) });
-  }
+  const transcriptRevision = useNativeChatTranscript(props);
   const { key, ...presentation } = useNativeChatPresentation({
     initial: {
       session: props.session,
@@ -123,7 +120,7 @@ const NativeChatContent = (props: NativeChatViewProps) => {
       {...props}
       {...presentation}
       conversationKey={key}
-      transcriptRevision={transcript.revision}
+      transcriptRevision={transcriptRevision}
       unresolved={unresolved}
     />
   );

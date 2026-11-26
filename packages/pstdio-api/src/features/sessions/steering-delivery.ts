@@ -8,6 +8,7 @@ import { persistSessionMessages } from "./session-messages";
 import { withSchedulingLock } from "./session-scheduler-internals";
 import type { ActiveSession } from "./session-store";
 import { submittedMessageSender } from "./submitted-message-identity";
+import type { WorkbenchSender } from "./workbench-context";
 
 export type SteeringQueueEntry = NonNullable<
   Awaited<ReturnType<SessionsRouteDeps["sessionQueueEntriesService"]["get"]>>
@@ -105,7 +106,11 @@ export const deliverSteering = async (
       sender: entry.sender_json ?? undefined,
     });
     const cancelAttribution = conversation.attributePrompt(entry.prompt, sender, deliveryId);
+    const previousOrigin = owner.workbenchOrigin;
+    const idle = Boolean(owner.idleTurn);
+    if (idle) owner.workbenchOrigin = (entry.sender_json as WorkbenchSender | null)?.workbenchOrigin;
     const result = await steer({ deliveryId, prompt: entry.prompt, attachments, signal: control.abort.signal });
+    if (idle && result.status === "rejected") owner.workbenchOrigin = previousOrigin;
     if (result.status === "rejected") {
       cancelAttribution();
       await target.reject(entry, deliveryId);

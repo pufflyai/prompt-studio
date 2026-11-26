@@ -15,7 +15,9 @@ export const useSessionLinks = (
   provider: ChatLinkHandler | undefined,
   source?: Pick<NativeChatHostProps, "sourceRegion" | "sourcePlacement">,
 ) => {
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; fallback?: { label: string; open(): Promise<void> } } | null>(
+    null,
+  );
   // Messages can render before the workspace syncs. A new row makes a new handler, so paths resolve again.
   const { data } = useLiveQuery(
     (q) =>
@@ -34,14 +36,28 @@ export const useSessionLinks = (
     workspace,
     origin: window.location.origin,
     ...source,
-    onError: setError,
+    onError: (message, fallback) => setError({ message, fallback }),
   });
   return {
     handler: composeNativeChatLinks(provider, host),
     notice: error ? (
       <AlertMessage status="error" title="Could not open link" onClose={() => setError(null)}>
-        {error}
+        {error.message}
+        {error.fallback && (
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={() => {
+              setError(null);
+              void error.fallback?.open();
+            }}
+          >
+            {error.fallback.label}
+          </Button>
+        )}
       </AlertMessage>
     ) : null,
   };
 };
+
+import { Button } from "@chakra-ui/react";

@@ -6,7 +6,7 @@ Product interaction and styling requirements live in the Workbench and interacti
 
 Find the relevant records:
 
-- RB 4.A.4 — 3. Styling rules
+- RB 4.A.4 — 3. Styling rules, including shared empty-state components
 - RB 4.A.5 — 4. Navigation and tabs
 - RB 4.A.6 — 5. Feedback
 - RB 4.A.7 — 6. Interaction

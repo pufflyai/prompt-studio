@@ -1,5 +1,5 @@
 import type { Locator, Page, TestInfo } from "@playwright/test";
-import { homeFrame } from "../../helpers/home-loading";
+import { homePage } from "../../helpers/home-loading";
 import { expect } from "../../scripts/session-test";
 
 const verifySnapCorner = async (
@@ -141,7 +141,7 @@ export const verifyFreeFloatingSidePanel = async (page: Page, info: TestInfo) =>
   await expect.poll(() => panel.boundingBox()).toEqual(saved);
   await panel.getByRole("button", { name: "Close Side Panel", exact: true }).click();
   await page.reload();
-  await expect(homeFrame(page).getByText("Free floating Side Panel", { exact: true })).toBeVisible();
+  await expect(homePage(page)).toBeVisible();
   await expect(bubble).toBeVisible();
   await bubble.click();
   await expect(panel).toBeVisible();

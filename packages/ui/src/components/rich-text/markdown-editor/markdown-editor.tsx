@@ -32,9 +32,15 @@ import { joinFrontmatter, splitFrontmatter } from "../utils/markdown";
 import { MarkdownSectionNavigationPlugin } from "./plugins/MarkdownSectionNavigationPlugin";
 import { MarkdownSlashCommandPlugin } from "./plugins/MarkdownSlashCommandPlugin";
 import { type MarkdownCollaboration, MarkdownCollaborationPlugin } from "./plugins/markdown-collaboration-plugin";
+import { type MarkdownCommentActions, MarkdownCommentPlugin } from "./plugins/markdown-comment-plugin";
+import { MarkdownFindPlugin } from "./plugins/markdown-find-plugin";
 import { MarkdownHistoryPlugin } from "./plugins/markdown-history-plugin";
 import { MarkdownPresencePlugin } from "./plugins/markdown-presence-plugin";
 import type { MarkdownSectionNavigation } from "./plugins/markdown-section-navigation";
+import {
+  type MarkdownSourceSelection,
+  MarkdownSourceSelectionPlugin,
+} from "./plugins/markdown-source-selection-plugin";
 
 const INITIAL_IMPORT_TAG = "markdown-initial-import";
 
@@ -53,7 +59,28 @@ export interface MarkdownEditorProps {
   onActiveSectionChange?: (sectionId: string | null) => void;
   onChange?: (value: string) => void;
   collaboration?: MarkdownCollaboration;
+  commentActions?: MarkdownCommentActions;
+  onSourceSelection?: (selection: MarkdownSourceSelection | null) => void;
 }
+
+const MarkdownIntentPlugins = (props: {
+  source: ReturnType<typeof createMarkdownSourceDocument>;
+  frontmatter: string;
+  onSelection?: MarkdownEditorProps["onSourceSelection"];
+  actions?: MarkdownCommentActions;
+  binding: import("react").RefObject<MarkdownDocumentBinding | null>;
+}) => {
+  const { source, frontmatter, onSelection, actions, binding } = props;
+  return (
+    <>
+      <MarkdownFindPlugin />
+      {onSelection ? (
+        <MarkdownSourceSelectionPlugin source={source} frontmatter={frontmatter} onSelection={onSelection} />
+      ) : null}
+      {actions ? <MarkdownCommentPlugin actions={actions} bindingRef={binding} /> : null}
+    </>
+  );
+};
 
 export function MarkdownEditor(props: MarkdownEditorProps) {
   const {
@@ -71,6 +98,8 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
     onActiveSectionChange,
     onChange,
     collaboration,
+    commentActions,
+    onSourceSelection,
   } = props;
   const sharedText = collaboration?.session?.getSnapshot().text ?? collaboration?.document?.getText("content");
   const { frontmatter, body } = splitFrontmatter(sharedText?.toString() ?? defaultState);
@@ -139,10 +168,18 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
             <ImportCodeBlocksPlugin />
             <CodeBlockActionsPlugin anchorElem={floatingToolbarAnchorElem} />
             <EquationPlugin />
+            <MarkdownIntentPlugins
+              source={sourceDocument}
+              frontmatter={frontmatter}
+              onSelection={onSourceSelection}
+              actions={collaboration ? commentActions : undefined}
+              binding={collaborationRef}
+            />
             <RichTextPlugin
               contentEditable={
                 <ContentEditable
                   ariaLabel={ariaLabel}
+                  tabIndex={0}
                   fullWidth={fullWidth}
                   padding={padding}
                   layerStyle="markdownEditorInset"

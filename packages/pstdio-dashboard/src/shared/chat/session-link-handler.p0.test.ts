@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { type ResourceRef, sessionBrowser } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { createWorkbench } from "@pstdio/workbench";
@@ -310,6 +310,49 @@ test("chat paths use the session workspace while another workspace is selected",
   } finally {
     await server.stop(true);
     delete runtime.__PSTDIO_CONFIG__;
+  }
+});
+
+test("a chat link offers explicit Main navigation when Side rejects its preview", async () => {
+  const runtime = globalThis as typeof globalThis & { __PSTDIO_CONFIG__?: { apiBaseUrl?: string } };
+  const previous = runtime.__PSTDIO_CONFIG__;
+  const server = Bun.serve({ port: 0, fetch: openingResponse });
+  runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: server.url.origin };
+  const workbench = projectWorkbench();
+  const navigate = workbench.navigation.openTarget;
+  const open = spyOn(workbench.navigation, "openTarget").mockImplementation(async (target, invocation) => {
+    if (target.kind === "page" && target.region === "side") throw new Error("Panel cannot open: side");
+    return navigate(target, invocation);
+  });
+  const errors: Array<{ message: string; fallback?: { label: string; open(): Promise<void> } }> = [];
+  try {
+    workbench.pageLocations.navigate({
+      kind: "page",
+      page: workspacePages.workspace,
+      resource: { type: "workspace", id: "workspace-b" },
+    });
+    const before = workbench.pages.store.getState().location;
+    const handler = createSessionLinkHandler({
+      workbench,
+      projectId,
+      workspace: workspace("workspace-a"),
+      origin: "http://local",
+      onError: (message, fallback) => errors.push({ message, fallback }),
+    });
+    await handler.open({ source: "src/app.ts:12", origin: "markdown" });
+    expect(workbench.pages.store.getState().location).toBe(before);
+    expect(errors[0]?.fallback?.label).toBe("Open in Main");
+    await errors[0]?.fallback?.open();
+    expect(workbench.layout.getActivePanel("main")?.resource).toMatchObject({
+      id: "workspace-a",
+      metadata: { workspaceFilePath: "src/app.ts" },
+    });
+    expect(errors).toHaveLength(1);
+  } finally {
+    open.mockRestore();
+    workbench.dispose();
+    runtime.__PSTDIO_CONFIG__ = previous;
+    await server.stop(true);
   }
 });
 

@@ -70,6 +70,7 @@ export const createCommandEnvironment = (
     settings?: RuntimeExtensionSettingRecord[];
     workspaceDir?: string;
     workspaceId?: string;
+    workbenchOrigin?: import("pstdio-api-contracts").WorkbenchOrigin;
   },
   runtimeDeps: CommandEnvironmentRuntimeDeps = { runWorkspaceProvisioning },
 ): CommandRunnerEnvironment => {

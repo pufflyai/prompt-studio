@@ -7,7 +7,7 @@ import {
   KanbanRendererSkeleton,
   useKanbanRendererStore,
 } from "@pstdio/ui/kanban-renderer";
-import { type ReactNode, useRef, useSyncExternalStore } from "react";
+import { type ReactNode, useEffect, useRef, useSyncExternalStore } from "react";
 import type {
   KanbanRendererRow,
   RegisteredKanbanRendererContribution,
@@ -20,6 +20,7 @@ import { bindKanbanRendererContribution } from "../../../core/registries/rendere
 import type { KanbanRendererCreateRequest } from "../../../core/registries/renderers/kanban-renderer-registry";
 import { rendererResourceDependency } from "../../../core/registries/renderers/renderer-refresh-key";
 import { reportUserActionError, runUserAction } from "../../../core/shared/run-user-action";
+import { boundedResource, setWorkbenchSelection } from "../../../core/workbench-context";
 import type { BoardCreationIntent } from "../../../extensions/host/workbench-create-operation";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
@@ -131,6 +132,7 @@ const createRowWithRefreshHold = (
 
 export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const { workbench, placement, Renderer = KanbanRenderer } = props;
+  useEffect(() => () => setWorkbenchSelection(workbench, placement.instanceId), [workbench, placement.instanceId]);
   const createDraftAuthority = useOperationAuthority(workbench);
   const pageParams = usePageParams(workbench, placement);
   // Queries, writes and metadata belong to this placement's resource, not to the page routed in Main.
@@ -228,6 +230,13 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const { mutate, holdRefresh } = read;
 
   const handleOpenRow = (row: KanbanRendererRow) => {
+    const projectId = workbench.pages.store.getState().projectId;
+    const selected = projectId && isKanbanRowResource(row.resource) && boundedResource(row.resource, projectId);
+    setWorkbenchSelection(
+      workbench,
+      placement.instanceId,
+      selected ? { kind: "resources", items: [selected] } : { kind: "none" },
+    );
     if (row.target) {
       void runUserAction(workbench, "Open row", () => workbench.navigation.openTarget(row.target!));
       return;

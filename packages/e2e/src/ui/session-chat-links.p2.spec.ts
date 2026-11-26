@@ -174,6 +174,8 @@ test("retains Side chat and the editor draft during repeated file-position navig
       await Promise.allSettled(opening);
     }
     const side = page.getByTestId("workbench-side-panel-attached");
+    const conversation = side.getByRole("tab", { name: session.title, exact: true });
+    const mainUrl = page.url();
     const composer = side.locator('[data-testid="content-editable"][contenteditable="true"]').last();
     await composer.fill("Keep this reply draft");
     const composerNode = await composer.elementHandle();
@@ -186,7 +188,7 @@ test("retains Side chat and the editor draft during repeated file-position navig
     expect(page.url()).not.toContain("document=");
     await newTab.close();
     await side.getByRole("link", { name: "Second", exact: true }).last().click();
-    const editor = page.locator(".monaco-editor:visible");
+    const editor = side.locator(".monaco-editor:visible");
     await expect(editor).toContainText("secondLine");
     const editorNode = await editor.elementHandle();
     await expect(composer).toHaveText("Keep this reply draft");
@@ -203,12 +205,17 @@ test("retains Side chat and the editor draft during repeated file-position navig
     await page.keyboard.press("ControlOrMeta+End");
     await page.keyboard.insertText("// retainedDraft");
     await expect(editor).toContainText("retainedDraft");
+    await conversation.click();
+    await expect(composer).toHaveText("Keep this reply draft");
     await first.click();
-    await expect(page).toHaveURL(/line=1/);
+    await expect(page).toHaveURL(mainUrl);
+    await expect(editor.locator(".line-numbers.active-line-number")).toHaveText("1");
     await expect(editor).toContainText("retainedDraft");
     expect(await editor.evaluate((node, original) => node === original, editorNode)).toBe(true);
+    await conversation.click();
     await first.click();
     await expect(editor).toContainText("retainedDraft");
+    await conversation.click();
     await page.getByRole("button", { name: "Hide Side Panel", exact: true }).click();
     await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
     const floating = page.getByTestId("workbench-side-panel-floating");
@@ -218,6 +225,7 @@ test("retains Side chat and the editor draft during repeated file-position navig
     expect(await composerNode!.evaluate((node) => node.isConnected)).toBe(true);
     await floating.getByRole("link", { name: "Missing", exact: true }).last().click();
     await expect(page.getByText(/not found/i).first()).toBeVisible();
+    await floating.getByRole("tab", { name: session.title, exact: true }).click();
     await expect(floating.getByRole("link", { name: "First", exact: true }).last()).toBeVisible();
     const beforeInvalidPage = page.url();
     await floating.getByRole("button", { name: "Invalid page", exact: true }).last().click();

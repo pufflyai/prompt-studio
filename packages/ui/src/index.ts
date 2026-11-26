@@ -89,11 +89,12 @@ export {
   getTreeListVisibilityStore,
   useTreeListVisibilityStore,
 } from "@/components/tree-list/tree-list-visibility.store";
-export type { TreeVisibilityMenuItems } from "@/components/tree-list/tree-list-visibility-filter";
+export type { TreeVisibilityItem, TreeVisibilityMenuItems } from "@/components/tree-list/tree-list-visibility-filter";
 export {
   buildTreeVisibilityMenuActions,
   filterVisibleNodes,
   filterVisibleSections,
+  listTreeVisibilityItems,
   resolveVisibility,
 } from "@/components/tree-list/tree-list-visibility-filter";
 export { TreeRowTags, type TreeRowTagsProps } from "@/components/tree-list/tree-row-tags";

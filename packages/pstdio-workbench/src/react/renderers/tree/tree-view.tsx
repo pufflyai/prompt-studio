@@ -4,7 +4,7 @@ export { createTreeNavigator } from "./tree-navigator";
 
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { type ResourceContextAction, ScrollArea, TreeList, TreeListDragProvider } from "@pstdio/ui";
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ComponentProps, type ReactNode, useEffect, useRef, useState } from "react";
 import type { ResourceRef, TreeViewSection, WorkbenchCore, WorkbenchPanelInstance } from "../../../core";
 import { getWorkbenchRenderers } from "../../../core";
 import type { TreeGroupScope } from "../../../core/registries/renderers/tree-renderer-types";
@@ -25,6 +25,8 @@ import { createTreeTabDropHandler } from "./tree-tab-drop";
 import { TreeViewBody } from "./tree-view-body";
 import { createToggleTreeNode, createToggleTreeSection } from "./tree-view-navigation";
 import { TreeViewSearch } from "./tree-view-search";
+import { TreeVisibilityDialog } from "./tree-visibility-dialog";
+import { useTreeWorkbenchContext } from "./tree-workbench-context";
 import { useTreeData } from "./use-tree-data";
 import { useTreeSelection } from "./use-tree-selection";
 import { useTreeViewCustomization } from "./use-tree-view-customization";
@@ -43,11 +45,22 @@ interface WorkbenchTreeViewProps {
   onSidenavContextActionsChange?: SidenavContextActionsChange;
 }
 
-const treeCustomizationOptions = (sections: TreeViewSection[], isSidenav: boolean, groupScope?: TreeGroupScope) => ({
+const treeVisibilityIcons = {
+  visibleIcon: <WorkbenchIcon name="eye" size={14} />,
+  hiddenIcon: <WorkbenchIcon name="eye-off" size={14} />,
+};
+
+const treeCustomizationOptions = (
+  sections: TreeViewSection[],
+  isSidenav: boolean,
+  groupScope: TreeGroupScope | undefined,
+  openVisibility: () => void,
+) => ({
   suppressNodeContextMenus: isSidenav,
   pinnedOnlyNodeIds: pinnedOnlyNodeIds(sections),
   allowGroups: isSidenav,
   groupScope,
+  openVisibility,
 });
 
 const useSidenavContextActions = (
@@ -77,23 +90,18 @@ const useSidenavContextActions = (
 };
 
 export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
-  const {
-    workbench,
-    treeViewId,
-    activeNodeId,
-    resource,
-    viewId,
-    renderParamField,
-    onOpenResourceError,
-    onSidenavContextActionsChange,
-  } = props;
+  const { workbench, treeViewId, activeNodeId, resource, viewId } = props;
+  const { renderParamField, onOpenResourceError, onSidenavContextActionsChange } = props;
   const isSidenav = Boolean(onSidenavContextActionsChange);
+  const treeRef = useRef<HTMLDivElement>(null);
+  const [visibilityOpen, setVisibilityOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const treeRenderer = getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId);
   const {
     projectId,
     activeLocation,
     activeResource,
+    activeSlot,
     hostRegion,
     owner,
     stateScope,
@@ -131,6 +139,8 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     visibleFooterSections,
     backgroundContextActions,
     customizationRevision,
+    visibilityItems,
+    resetCustomization,
     onReorderSections,
     onReorderNodes,
     onMoveSection,
@@ -141,12 +151,8 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
       sections: adaptSections(body),
       footerSections: adaptSections(footer),
     },
-    {
-      visibleIcon: <WorkbenchIcon name="eye" size={14} />,
-      hiddenIcon: <WorkbenchIcon name="eye-off" size={14} />,
-      resetIcon: <WorkbenchIcon name="rotate-ccw" size={14} />,
-    },
-    treeCustomizationOptions([...header, ...body, ...footer], isSidenav, groupScope),
+    treeVisibilityIcons,
+    treeCustomizationOptions([...header, ...body, ...footer], isSidenav, groupScope, () => setVisibilityOpen(true)),
   );
   useSidenavContextActions(
     props.placement?.instanceId ?? treeViewId,
@@ -163,10 +169,17 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
       activeNodeId,
       activeLocation,
       activeResource,
+      activeSlot,
       selectedNodeId: treeState.selectedNodeId,
     },
     stateScope,
   );
+
+  useTreeWorkbenchContext(workbench, props.placement?.instanceId, projectId, {
+    selectedId: treeState.selectedNodeId,
+    sections: [...header, ...body, ...footer],
+    childrenByNodeId,
+  });
 
   useTreeScrollRestoration(scrollRef, presentationKey, query, presentation.scrollTop, loading);
 
@@ -211,6 +224,8 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     >
       <Flex
         as="section"
+        ref={treeRef}
+        tabIndex={-1}
         direction="column"
         h="full"
         minH="0"
@@ -218,16 +233,11 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
         aria-label={treeRenderer.title}
         aria-busy={loading}
       >
-        {visibleHeaderSections.length > 0 ? (
-          <Flex bg={workbenchBackgrounds.sidenav} flexShrink={0}>
-            <TreeList
-              {...pinnedTreeProps}
-              sections={visibleHeaderSections}
-              sectionGap="1px"
-              onReorderSections={(nextSectionIds) => onReorderSections("header", nextSectionIds)}
-            />
-          </Flex>
-        ) : null}
+        <PinnedTree
+          slot="header"
+          tree={{ ...pinnedTreeProps, sections: visibleHeaderSections }}
+          onReorderSections={onReorderSections}
+        />
         {isSidenav ? <TreeModeReturn workbench={workbench} /> : null}
         <TreeViewSearch
           visible={Boolean(treeRenderer.searchable)}
@@ -236,57 +246,48 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
           onChange={presentation.setFilter}
         />
         {error && !isSidenav ? <RendererReadNotice error={error} retry={retry} /> : null}
-        <ScrollArea
-          flex="1"
-          minH="0"
-          w="full"
-          viewportRef={scrollRef}
-          viewportProps={{
-            display: "block",
-            style: { overflowX: "hidden" },
-            onScroll: (event) => {
-              if (!loading) presentation.update({ scrollTop: event.currentTarget.scrollTop });
-            },
-          }}
-          contentProps={{
-            style: { minWidth: "100%", width: "100%", minHeight: "100%", display: "flex", flexDirection: "column" },
+        <TreeViewport
+          scrollRef={scrollRef}
+          onScroll={(scrollTop) => {
+            if (!loading) presentation.update({ scrollTop });
           }}
         >
-          <Box w="full" minW="0" flex="1 0 auto" display="flex" flexDirection="column">
-            <TreeViewBody
-              loadingContent={props.loadingContent}
-              error={error}
-              loading={loading}
-              moduleLoading={treeState.loading}
-              sections={visibleSections}
-              backgroundContextActions={
-                isSidenav ? undefined : createTreeBackgroundActions(visibleSections, backgroundContextActions)
-              }
-              draggable={isSidenav}
-              customizationAvailable={isSidenav}
-              activeNodeId={activeNodeSelection}
-              expandedNodeIds={actionInput.expandedNodeIds}
-              expandedSectionIds={treeState.expandedSectionIds}
-              scrollRef={scrollRef}
-              onToggleSection={toggleSection}
-              onToggleNode={toggleNode}
-              onReorderSections={(nextSectionIds) => onReorderSections("content", nextSectionIds)}
-              onReorderNodes={onReorderNodes}
-              canMove={treeRenderer.canMove}
-              onMoveNode={moveNode}
-              onNavigate={navigate}
-            />
-          </Box>
-        </ScrollArea>
-        {visibleFooterSections.length > 0 ? (
-          <Flex bg={workbenchBackgrounds.sidenav} flexShrink={0}>
-            <TreeList
-              {...pinnedTreeProps}
-              sections={visibleFooterSections}
-              sectionGap="md"
-              onReorderSections={(nextSectionIds) => onReorderSections("footer", nextSectionIds)}
-            />
-          </Flex>
+          <TreeViewBody
+            loadingContent={props.loadingContent}
+            error={error}
+            loading={loading}
+            moduleLoading={treeState.loading}
+            sections={visibleSections}
+            backgroundContextActions={
+              isSidenav ? undefined : createTreeBackgroundActions(visibleSections, backgroundContextActions)
+            }
+            draggable={isSidenav}
+            customizationAvailable={isSidenav}
+            activeNodeId={activeNodeSelection}
+            expandedNodeIds={actionInput.expandedNodeIds}
+            expandedSectionIds={treeState.expandedSectionIds}
+            scrollRef={scrollRef}
+            onToggleSection={toggleSection}
+            onToggleNode={toggleNode}
+            onReorderSections={(nextSectionIds) => onReorderSections("content", nextSectionIds)}
+            onReorderNodes={onReorderNodes}
+            canMove={treeRenderer.canMove}
+            onMoveNode={moveNode}
+            onNavigate={navigate}
+          />
+        </TreeViewport>
+        <PinnedTree
+          slot="footer"
+          tree={{ ...pinnedTreeProps, sections: visibleFooterSections }}
+          onReorderSections={onReorderSections}
+        />
+        {visibilityOpen ? (
+          <TreeVisibilityDialog
+            items={visibilityItems}
+            onReset={resetCustomization}
+            onClose={() => setVisibilityOpen(false)}
+            returnFocus={() => treeRef.current}
+          />
         ) : null}
         <TreeParamsDialog
           request={actionInput.request}
@@ -300,6 +301,53 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     </TreeListDragProvider>
   );
 };
+
+const PinnedTree = (props: {
+  slot: "header" | "footer";
+  tree: ComponentProps<typeof TreeList>;
+  onReorderSections(slot: "header" | "footer", ids: string[]): void;
+}) => {
+  const { slot, tree, onReorderSections } = props;
+  if (!tree.sections.length) return null;
+  return (
+    <Flex bg={workbenchBackgrounds.sidenav} flexShrink={0}>
+      <TreeList
+        {...tree}
+        sectionGap={slot === "header" ? "1px" : "md"}
+        onReorderSections={(ids) => onReorderSections(slot, ids)}
+      />
+    </Flex>
+  );
+};
+
+const TreeViewport = ({
+  scrollRef,
+  onScroll,
+  children,
+}: {
+  scrollRef: import("react").RefObject<HTMLDivElement | null>;
+  onScroll(scrollTop: number): void;
+  children: ReactNode;
+}) => (
+  <ScrollArea
+    flex="1"
+    minH="0"
+    w="full"
+    viewportRef={scrollRef}
+    viewportProps={{
+      display: "block",
+      style: { overflowX: "hidden" },
+      onScroll: (event) => onScroll(event.currentTarget.scrollTop),
+    }}
+    contentProps={{
+      style: { minWidth: "100%", width: "100%", minHeight: "100%", display: "flex", flexDirection: "column" },
+    }}
+  >
+    <Box w="full" minW="0" flex="1 0 auto" display="flex" flexDirection="column">
+      {children}
+    </Box>
+  </ScrollArea>
+);
 
 const MissingTreeRenderer = () => (
   <Text textStyle="paragraph/S/regular" color="fg.muted" p="sm">

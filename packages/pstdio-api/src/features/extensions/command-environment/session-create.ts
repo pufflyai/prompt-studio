@@ -104,6 +104,7 @@ export const createScopedSession = async (
         sessionInput.operation,
         onCreated,
         input.signal,
+        input.workbenchOrigin,
       ).then((session) => ({ session, operationResult: session.operation_result }))
     : await withResolvedSubmittingSessionAttachments(
         deps,
@@ -117,7 +118,9 @@ export const createScopedSession = async (
             title: sessionInput.title,
             agentId,
             prompt,
-            sender: await read(() => resolveMessageSender(deps, input.projectId, sessionInput.source)),
+            sender: await read(() =>
+              resolveMessageSender(deps, input.projectId, sessionInput.source, input.workbenchOrigin),
+            ),
             attachments,
             attachmentRefs: sessionInput.attachments,
             model,
