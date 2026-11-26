@@ -196,7 +196,14 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     notify: Parameters<typeof registerSource>[1],
   ) => {
     const existing = await deps.installedExtensionSourcesService.getBySourcePath(input.sourcePath);
-    if (existing && input.sourceHash && existing.source_hash && input.sourceHash !== existing.source_hash) {
+    // Discovery reads metadata and hashes separately. An explicit install can replace
+    // the folder between them, pairing the old manifest with the newly accepted hash.
+    // A loaded, versioned source already owns its metadata. Only attach its instance.
+    if (
+      existing?.source_hash &&
+      input.sourceHash &&
+      (input.sourceHash !== existing.source_hash || (existing.status === "loaded" && existing.version !== null))
+    ) {
       return { installedSource: existing, created: false };
     }
 
