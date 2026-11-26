@@ -1,10 +1,8 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { sql } from "drizzle-orm";
 import { createAuthorityFixture, deviceProfile } from "./authority.fixture";
 import * as implementation from "./index";
+import { createManagedPackageObjectFixture } from "./managed-package-objects.fixture";
 import { createAuthenticationFixture } from "./manager-authentication.fixture";
 
 const fixture = createAuthorityFixture(implementation);
@@ -12,19 +10,9 @@ beforeAll(() => fixture.initialize());
 afterAll(() => fixture.close());
 
 test("only the owner selects immutable team packages; project grants gate package keys and bytes", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "team-packages-"));
-  // Real filesystem bytes exercise the object boundary here; deployed E2E also covers S3.
-  const objects = {
-    reserve: async (id: string) => id,
-    write: async (id: string, _uploadId: string, bytes: Uint8Array) => {
-      await writeFile(join(directory, id), bytes, { flag: "wx" });
-    },
-    read: async (id: string) => new Uint8Array(await Bun.file(join(directory, id)).arrayBuffer()),
-    remove: (id: string) => rm(join(directory, id), { force: true }),
-    close: () => {},
-  };
+  const storage = await createManagedPackageObjectFixture();
   const authentication = createAuthenticationFixture(fixture.databaseUrl);
-  const auth = implementation.createManagerAuthentication(authentication.config, objects);
+  const auth = implementation.createManagerAuthentication(authentication.config, storage.objects);
   const manager = fixture.owner();
   const handler = implementation.createManagerHandler(auth, authentication.config.origin);
   const request = (token: string, path: string, body?: unknown, headers?: HeadersInit) =>
@@ -153,6 +141,6 @@ test("only the owner selects immutable team packages; project grants gate packag
     ).toBe(200);
   } finally {
     await Promise.all([auth.close(), authentication.close(), manager.close()]);
-    await rm(directory, { recursive: true, force: true });
+    await storage.close();
   }
 });
