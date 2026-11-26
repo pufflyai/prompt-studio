@@ -13,7 +13,7 @@ import {
 import { notifyRunChange } from "./events";
 import { persistResult } from "./result-persistence";
 import { readCollectionReceipt, readCollectionState } from "./run-collection-state";
-import { TRANSFER_ALLOWANCE_SECONDS } from "./run-deadline";
+import { runTimeoutSeconds, TRANSFER_ALLOWANCE_SECONDS } from "./run-deadline";
 import { type Receipt, receiptSummary, summarize, timeoutSummary } from "./run-result";
 import { isDefinitiveSubmissionRejection, saveSubmissionFailure } from "./run-submission";
 import { saveTimedOutRun } from "./run-timeout";
@@ -105,7 +105,7 @@ export async function startRun(
 ) {
   const runId = crypto.randomUUID();
   const command = input.command?.trim() || deps.settings.testCommand;
-  const timeoutSeconds = Math.round((input.timeoutMinutes ?? deps.settings.timeoutMinutes) * 60);
+  const timeoutSeconds = runTimeoutSeconds(input.timeoutMinutes ?? deps.settings.timeoutMinutes, deps.kitoWorkflow);
   const kind = input.kind ?? "tests";
   const publish = kind === "preview" || input.branchTemplate || input.ref !== undefined;
   if (publish && input.environmentId) throw new Error("A branch template needs a new environment.");

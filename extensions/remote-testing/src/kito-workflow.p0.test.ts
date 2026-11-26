@@ -36,7 +36,11 @@ test("Kito signs a source upload and a log read through the controller connectio
 });
 
 test("Kito opens previews through the controller connection", async () => {
-  const preview = { workspaceId: runId, url: "https://preview.example.test/", expiresAt: "2027-01-01T00:00:00.000Z" };
+  const preview = {
+    workspaceId: runId,
+    url: "https://preview.example.test/",
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+  };
   const api: Api = async <T>(input: Parameters<Api>[0]) => {
     expect(input.method).toBe("POST");
     expect(input.path).toBe(`${kitoWorkflowPath}/previews/${runId}`);

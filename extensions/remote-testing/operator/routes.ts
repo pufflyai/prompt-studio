@@ -1,4 +1,5 @@
 import { createHash, timingSafeEqual } from "node:crypto";
+import { KITO_LOG_UPLOAD_MAX_SECONDS } from "../src/kito-workflow-limits";
 
 export const basePath = "/v1/kito-workflow";
 export const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
@@ -20,7 +21,7 @@ type Dependencies = {
 const actions = {
   "upload-source": { method: "PUT", prefix: "sources", suffix: ".tar.gz", max: 300 },
   "read-source": { method: "GET", prefix: "sources", suffix: ".tar.gz", max: 1800 },
-  "upload-log": { method: "PUT", prefix: "logs", suffix: ".log", max: 9000 },
+  "upload-log": { method: "PUT", prefix: "logs", suffix: ".log", max: KITO_LOG_UPLOAD_MAX_SECONDS },
   "read-log": { method: "GET", prefix: "logs", suffix: ".log", max: 300 },
 } as const;
 

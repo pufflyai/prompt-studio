@@ -8,6 +8,7 @@ const forwardHeaders = [
   "if-none-match",
   "if-modified-since",
   "range",
+  "x-file-name",
 ];
 export async function forwardHttp(destination: URL, request: Request, local: string) {
   const origin = request.headers.get("origin");

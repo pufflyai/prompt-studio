@@ -19,11 +19,13 @@ async function preview(id: string) {
   await Bun.write(directory + "/.pstdio/runtime.json", JSON.stringify({ token: "runtime-" + id }));
   const app = Bun.serve({
     port: 0,
-    fetch(request) {
+    async fetch(request) {
       if (new URL(request.url).pathname === "/runtime/browser-login") {
         expect(request.headers.get("authorization")).toBe("Bearer runtime-" + id);
         return Response.json({ url: new URL(request.url).origin + "/#browser-login=" + id });
       }
+      if (new URL(request.url).pathname === "/v1/attachments")
+        return Response.json({ fileName: request.headers.get("x-file-name"), body: await request.text() });
       return new Response("app-" + id);
     },
   });
@@ -72,4 +74,19 @@ test("two browser invitations establish isolated host sessions without replacing
     ).status,
   ).toBe(403);
   expect(await (await a.request("/", { headers: { Cookie: cookieA } })).text()).toBe("app-a");
+});
+
+test("an authenticated preview upload preserves the attachment filename", async () => {
+  const { request, invite } = await preview("a");
+  const login = await request("/__preview/login", { method: "POST", body: invite });
+  const response = await request("/v1/attachments", {
+    method: "POST",
+    headers: {
+      Cookie: login.headers.get("set-cookie")!,
+      "Content-Type": "application/octet-stream",
+      "X-File-Name": "notes.txt",
+    },
+    body: "attachment contents",
+  });
+  expect(await response.json()).toEqual({ fileName: "notes.txt", body: "attachment contents" });
 });
