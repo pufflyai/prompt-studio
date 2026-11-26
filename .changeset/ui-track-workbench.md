@@ -13,4 +13,4 @@
 "skills": patch
 ---
 
-Build a custom Home from hosted light and dark screenshot ideas, including a pixel-art virtual office, or ask an agent for project-specific Home ideas, recover build failures beside the action, see quotas in project navigation, preview linked resources in Side, inspect chat link destinations on hover, use Markdown Find and passage comments, and read workbench context from an attached agent.
+Build a custom Home from hosted light and dark screenshot ideas, including a pixel-art virtual office, or ask an agent for project-specific Home ideas, recover build failures beside the action, see quotas in project navigation, preview linked resources in Side, inspect chat link destinations on hover, use Markdown Find and passage comments, read workbench context from an attached agent, load consistent breadcrumb and tab fonts, and open selected sessions at the latest message.

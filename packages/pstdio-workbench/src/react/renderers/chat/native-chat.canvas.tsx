@@ -199,6 +199,7 @@ export const ConversationFailure = () => {
 
 export const ReopenSession = () => {
   const [open, setOpen] = useState(true);
+  const [selected, setSelected] = useState(true);
   const [panelVisible, setPanelVisible] = useState(true);
   const [session] = useState(() =>
     createChatSession({
@@ -227,14 +228,18 @@ export const ReopenSession = () => {
         <Button disabled={!open} onClick={() => setPanelVisible((current) => !current)}>
           {panelVisible ? "Hide panel" : "Show panel"}
         </Button>
+        <Button disabled={!open || !panelVisible} onClick={() => setSelected((current) => !current)}>
+          {selected ? "Select another session" : "Return to session"}
+        </Button>
       </HStack>
-      <Box flex="1" minH="0" display={open && panelVisible ? "block" : "none"}>
+      <Box flex="1" minH="0" display={open && panelVisible && selected ? "block" : "none"}>
         <NativeChatView
           session={session}
           conversationKey="reopen-session"
           action={undefined}
           placementOpen={open}
-          visible={open && panelVisible}
+          placementSelected={selected}
+          visible={open && panelVisible && selected}
         />
       </Box>
     </Stack>

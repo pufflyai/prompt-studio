@@ -282,6 +282,7 @@ export const createChatRendererOwner = (
                 resolve: slot.resolve,
                 visible: render.visible,
                 placementOpen: render.placementOpen,
+                placementSelected: render.placementSelected,
                 workbench: render.workbench,
                 resource: render.instance.resource,
                 extensionId: view.extensionId,
