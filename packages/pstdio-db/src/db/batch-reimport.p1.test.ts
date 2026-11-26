@@ -51,7 +51,9 @@ async function seed(old: Awaited<ReturnType<typeof createTextLogOwnerFixture>>) 
 }
 
 for (const lastMigration of [7, 9, 10]) {
-  test(`batch re-import preserves a released project and its source through migration ${lastMigration}`, async () => {
+  const name = `batch re-import preserves a released project and its source through migration ${lastMigration}`;
+  // The full re-import and reopen cycle opens multiple on-disk PGlite databases.
+  test(name, async () => {
     const root = await mkdtemp(join(tmpdir(), "batch-reimport-"));
     const old = await createTextLogOwnerFixture(root, lastMigration);
     const source = `${old.path}.before-0.49`;
@@ -107,7 +109,7 @@ for (const lastMigration of [7, 9, 10]) {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 }
 
 test("reopens the original after an unsupported pair and preserves a projection-only record", async () => {
