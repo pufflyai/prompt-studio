@@ -2,6 +2,8 @@ import { z } from "zod";
 import { fingerprintSchema, identitySchema } from "./wire";
 
 export const managedPackageMaxBytes = 64 * 1024 * 1024;
+export const managedExtensionHostHeader = "x-pstdio-managed-extensions";
+export const managedExtensionHostVersion = "1";
 export const managedExtensionIdentity = z
   .string()
   .regex(/^[a-z0-9]+(?:[.-][a-z0-9]+)+$/)

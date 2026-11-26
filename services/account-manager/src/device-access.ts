@@ -23,6 +23,7 @@ import {
   removeWorkbenchInTransaction,
   renameDeviceInTransaction,
 } from "./devices";
+import { admitsManagedHost } from "./managed-host-admission";
 import { listOutstandingProjectDeletions, readProjectDeletion, startProjectDeletion } from "./project-deletion";
 import { readProviderIdentity } from "./provider-identity";
 import { DeviceAccessDenied } from "./renewal-errors";
@@ -243,12 +244,14 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
         if (!owner) throw new DeviceAccessDenied();
         return startProjectDeletion(transaction, { accountId, workbenchId: identitySchema.parse(workbenchId) });
       }),
-    keys: (token: string, value: string, selected?: string, expectedGrant?: string) =>
+    keys: (token: string, value: string, selected?: string, expectedGrant?: string, managedHost = false) =>
       scoped(token, selected, async (transaction, accountId, userId) => {
         const workbenchId = identitySchema.parse(value);
         if (accountId !== userId) {
           const grant = await teamProjectGrant(transaction, accountId, workbenchId, userId);
           if (!grant || expectedGrant !== grant) return null;
+          if (!(await admitsManagedHost(transaction, accountId, managedHost)))
+            throw new TeamMembershipDenied("Update Prompt Studio to use this team's managed extensions");
         }
         return spaceKeysInTransaction(transaction, { accountId, workbenchId }, userId);
       }),

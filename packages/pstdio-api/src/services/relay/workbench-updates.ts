@@ -1,7 +1,8 @@
-import { createLiveConnection, createRelayAccess, type LiveConnection } from "pstdio-sync/relay";
+import { createLiveConnection, type LiveConnection } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
 import type { RelayDeps } from "./deps";
 import type { startRelayExtension } from "./extension-owner";
+import { createNativeRelayAccess } from "./native-relay-access";
 import type { RelayWorkbench } from "./runtime";
 
 type ExtensionConnection = Awaited<ReturnType<typeof startRelayExtension>>;
@@ -14,7 +15,7 @@ export const drainOwnerStarts = async (starts: Promise<void>[]) => {
 export const createWorkbenchAccess = (input: RelayWorkbench, runtime: AbortSignal, denied?: () => void) => {
   const owner = new AbortController();
   const signal = AbortSignal.any([runtime, owner.signal]);
-  const renew = createRelayAccess({ ...input, signal, denied });
+  const renew = createNativeRelayAccess({ ...input, signal, denied });
   let socketLease: Awaited<ReturnType<typeof renew>> | undefined;
   const connect = async () => {
     socketLease = await renew();

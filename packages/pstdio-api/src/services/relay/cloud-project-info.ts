@@ -1,6 +1,7 @@
 import { createMemoryDocumentStore } from "pstdio-sync";
 import { coreOwnerId, projectInfoDocumentId, projectInfoState, readProjectInfo } from "pstdio-sync/records";
-import { createDocumentRelay, createDocumentSync, createRelayAccess, fetchSyncSpaces } from "pstdio-sync/relay";
+import { createDocumentRelay, createDocumentSync } from "pstdio-sync/relay";
+import { createNativeRelayAccess, fetchNativeSyncSpaces } from "./native-relay-access";
 import type { RelayWorkbench } from "./runtime";
 
 /**
@@ -9,10 +10,14 @@ import type { RelayWorkbench } from "./runtime";
  */
 export const readCloudProjectInfo = async (config: RelayWorkbench, signal: AbortSignal) => {
   const owner = { workbenchId: config.workbenchId, extensionId: coreOwnerId };
-  const access = await createRelayAccess({ ...config, signal })();
+  const access = await createNativeRelayAccess({ ...config, signal })();
   const remaining = Math.max(0, Date.parse(access.expiresAt) - Date.now());
   const attempt = AbortSignal.any([signal, AbortSignal.timeout(remaining)]);
-  const { project: space } = await fetchSyncSpaces({ ...config, credential: config.renewalGrant, signal: attempt });
+  const { project: space } = await fetchNativeSyncSpaces({
+    ...config,
+    credential: config.renewalGrant,
+    signal: attempt,
+  });
   const documentId = await space.documentId(JSON.stringify([coreOwnerId, projectInfoDocumentId]));
   const store = createMemoryDocumentStore();
   const sync = createDocumentSync({

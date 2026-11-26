@@ -1,9 +1,10 @@
 import type { DocumentStore, StorageOwner } from "pstdio-sync";
 import type { SyncSpace } from "pstdio-sync/encryption";
-import { createDocumentRelay, createDocumentSync, fetchSyncSpaces, type SubscribeDocument } from "pstdio-sync/relay";
+import { createDocumentRelay, createDocumentSync, type SubscribeDocument } from "pstdio-sync/relay";
 import { personalIndexLogName } from "../personal-history/index-projection-sync";
 import { historyReferenceName } from "../personal-history/references";
 import { documentProgress } from "./document-progress";
+import { fetchNativeSyncSpaces } from "./native-relay-access";
 import type { createPersonalContext } from "./personal-context";
 import { createSyncQuarantine } from "./quarantine";
 import type { RelayWorkbench } from "./runtime";
@@ -23,7 +24,7 @@ export const createPersonalDocuments = (input: {
   const teamAttempts = new WeakMap<SyncSpace, AbortSignal>();
   let keyRevision = 0;
   let preparedRevision = -1;
-  let spaces: Awaited<ReturnType<typeof fetchSyncSpaces>> | undefined;
+  let spaces: Awaited<ReturnType<typeof fetchNativeSyncSpaces>> | undefined;
   let records: ReturnType<typeof createDocumentSync> | undefined;
   let shared: ReturnType<typeof createDocumentSync> | undefined;
   let ids: string[] = [];
@@ -103,7 +104,7 @@ export const createPersonalDocuments = (input: {
       const revision = keyRevision;
       if (!renewed && preparedRevision === revision)
         return { personal: spaces!.personal, renewed: false, recreated: false };
-      const keys = await fetchSyncSpaces({ ...config, credential: config.renewalGrant, signal });
+      const keys = await fetchNativeSyncSpaces({ ...config, credential: config.renewalGrant, signal });
       signal.throwIfAborted();
       if (config.userId) {
         teamAttempts.set(keys.project, signal);

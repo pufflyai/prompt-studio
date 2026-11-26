@@ -12,6 +12,7 @@ import { digestCredential } from "./credential";
 import { connectManager } from "./database";
 import { createDeviceAccess, createDeviceLogin, createPersonalAccountAccess } from "./device-access";
 import { findDeviceAccess } from "./devices";
+import { admitsManagedHost } from "./managed-host-admission";
 import type { ManagedPackageObjects } from "./managed-package-objects";
 import { microsoftSignIn } from "./microsoft-provider";
 import { type NativeLoginAttempt, nativeApprovalId, nativeLoginApproval } from "./native-login-approval";
@@ -146,13 +147,13 @@ export const createManagerAuthentication = (input: ManagerAuthConfig, objects?: 
       return auth.api.generateOneTimeToken({ headers });
     },
     jwks: () => auth.api.getJwks(),
-    async renew(token: string, workbenchId: string, accountId?: string, grantId?: string) {
+    async renew(token: string, workbenchId: string, accountId?: string, grantId?: string, managedHost = false) {
       identitySchema.parse(workbenchId);
       let category: "database" | "signing" = "database";
       try {
         const access = await findDeviceAccess(connection.db, token, workbenchId, accountId);
         if (!access || access.grantId !== grantId) throw new EnvironmentAccessDenied();
-        const publication = await prepareTeamPublicationGrant(connection.db, access, token);
+        const publication = await prepareTeamPublicationGrant(connection.db, access, token, managedHost);
         const iat = Math.floor(Date.now() / 1000);
         const exp = iat + config.accessLifetimeSeconds;
         category = "signing";
@@ -179,6 +180,11 @@ export const createManagerAuthentication = (input: ManagerAuthConfig, objects?: 
           if (
             !sameDeviceAccess(access, current) ||
             (publication && (await canPublishForTeam(transaction, current)) !== publication.canWrite)
+          )
+            throw new EnvironmentAccessDenied();
+          if (
+            access.accountId !== access.userId &&
+            !(await admitsManagedHost(transaction, access.accountId, managedHost))
           )
             throw new EnvironmentAccessDenied();
           await transaction
