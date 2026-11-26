@@ -84,23 +84,26 @@ test("Home snapshot updates do not query agent quotas", async () => {
     expect(home).toBe(2);
     expect(quotas).toBe(0);
   } finally {
-    await act(async () => {
-      tree?.unmount();
-    });
-    createWebviewClient(frame.host).queries.dispose();
-    transport.dispose();
-    for (const timer of frames.values()) clearTimeout(timer);
-    if (originalFrame) Object.defineProperty(globalThis, "requestAnimationFrame", originalFrame);
-    else Reflect.deleteProperty(globalThis, "requestAnimationFrame");
-    if (originalCancelFrame) Object.defineProperty(globalThis, "cancelAnimationFrame", originalCancelFrame);
-    else Reflect.deleteProperty(globalThis, "cancelAnimationFrame");
-    if (originalDocument) Object.defineProperty(globalThis, "document", originalDocument);
-    else Reflect.deleteProperty(globalThis, "document");
-    if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
-    else Reflect.deleteProperty(globalThis, "window");
-    if (originalObserver) Object.defineProperty(globalThis, "IntersectionObserver", originalObserver);
-    else Reflect.deleteProperty(globalThis, "IntersectionObserver");
-    if (original) Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", original);
-    else Reflect.deleteProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT");
+    try {
+      await act(async () => {
+        tree?.unmount();
+      });
+      createWebviewClient(frame.host).queries.dispose();
+      transport.dispose();
+    } finally {
+      for (const timer of frames.values()) clearTimeout(timer);
+      if (originalFrame) Object.defineProperty(globalThis, "requestAnimationFrame", originalFrame);
+      else Reflect.deleteProperty(globalThis, "requestAnimationFrame");
+      if (originalCancelFrame) Object.defineProperty(globalThis, "cancelAnimationFrame", originalCancelFrame);
+      else Reflect.deleteProperty(globalThis, "cancelAnimationFrame");
+      if (originalDocument) Object.defineProperty(globalThis, "document", originalDocument);
+      else Reflect.deleteProperty(globalThis, "document");
+      if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
+      else Reflect.deleteProperty(globalThis, "window");
+      if (originalObserver) Object.defineProperty(globalThis, "IntersectionObserver", originalObserver);
+      else Reflect.deleteProperty(globalThis, "IntersectionObserver");
+      if (original) Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", original);
+      else Reflect.deleteProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT");
+    }
   }
 });
