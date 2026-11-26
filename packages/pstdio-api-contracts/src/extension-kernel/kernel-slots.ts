@@ -85,6 +85,19 @@ export const projectSlots = {
   settingsPanels: defineSlot<Struct, "settings">("project.settings", { kind: "settings" }),
 };
 
+/** Context captured when a person invokes an action on selected editor text. */
+export type EditorSelectionContext = {
+  selection: {
+    text: string;
+    start: { line: number; column: number };
+    end: { line: number; column: number };
+    documentPath?: string;
+  };
+};
+export const editorSlots = {
+  selection: defineSlot<EditorSelectionContext, "menu">("editor.selection", { kind: "menu" }),
+};
+
 export const sessionSlots = {
   headerPrimary: resourceMenuSlotRef(workbenchResourceKinds.session, "headerPrimary"),
   headerOverflow: resourceMenuSlotRef(workbenchResourceKinds.session, "headerOverflow"),

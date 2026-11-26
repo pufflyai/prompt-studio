@@ -1,6 +1,7 @@
-import { workbenchResourceKindDefinitions } from "@pstdio/sdk/extensions";
+import { editorSlots, workbenchResourceKindDefinitions } from "@pstdio/sdk/extensions";
 import {
   createWorkbenchStore,
+  editorSelectionMenuPath,
   type MenuItem,
   type MenuPath,
   resourceContextMenuPath,
@@ -128,6 +129,7 @@ const menuSlotConfig = (
 export const buildDashboardMenuSlotRegistry = (metadata: DashboardExtensionMetadata) => {
   const menuSlotsById = new Map<string, WorkbenchExtensionMenuSlotConfig>([
     [projectCommandPanelSlotId, { menuPath: workbenchCommandPaletteMenuPath }],
+    [editorSlots.selection.id, { menuPath: editorSelectionMenuPath }],
   ]);
   const resourceKindsBySlotId = new Map<string, string>();
   const resourceOwnersBySlotId = new Map<string, string>();

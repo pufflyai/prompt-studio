@@ -20,7 +20,7 @@ export interface FileRendererContentViewProps {
   editorKey: string;
   errorNotice: ReactNode;
   contributionCanSave: boolean;
-  commentActions?: MarkdownEditorProps["commentActions"];
+  selectionToolbar?: MarkdownEditorProps["selectionToolbar"];
   onSourceSelection?: MarkdownEditorProps["onSourceSelection"];
   onActiveSectionChange?: (sectionId: string | null) => void;
   onChange: (value: string) => void;

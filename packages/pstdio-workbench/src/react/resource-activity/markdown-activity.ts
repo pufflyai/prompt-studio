@@ -1,12 +1,10 @@
-import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
-import type { MarkdownEditorProps } from "@pstdio/ui/rich-text";
+import type { ResourceRef } from "@pstdio/sdk/extensions";
+import type { MarkdownSelectionAnchor } from "@pstdio/ui/rich-text";
 import { useEffect, useState } from "react";
 import type { WorkbenchCore, WorkbenchPanelInstance } from "../../core";
 import { openOwnedViewMenu } from "../../core/controllers/panel-menus/open-view-menu";
-import { resourceActivityDraft } from "./resource-activity-drafts";
 
-type CommentActions = NonNullable<MarkdownEditorProps["commentActions"]>;
-type Reveal = Parameters<CommentActions["registerReveal"]>[0];
+type Reveal = (anchor: MarkdownSelectionAnchor) => boolean;
 const editors = new WeakMap<WorkbenchCore, Map<string, Reveal>>();
 
 export const revealActivityPassage = (
@@ -48,19 +46,18 @@ export const useMarkdownActivity = (
   if (!owner || !menu || !activity || !resource || allowed !== resource) return;
   const key = JSON.stringify([owner, document]);
   return {
-    comment({ quote, start, end }) {
-      const draft = resourceActivityDraft(workbench, resourceKey(resource));
-      if (draft.busy()) return;
-      draft.set({
-        ...draft.get(),
-        key: crypto.randomUUID(),
-        quote,
-        passage: { document, start, end },
-        replyToId: undefined,
+    async publish(input: { body: string; key: string; quote: string; anchor: MarkdownSelectionAnchor }) {
+      await activity.api.publish(resource, {
+        kind: "comment",
+        key: input.key,
+        body: input.body,
+        quote: input.quote,
+        passage: { document, ...input.anchor },
+        attachmentIds: [],
       });
       openOwnedViewMenu(workbench, owner, menu.id);
     },
-    registerReveal(reveal) {
+    registerReveal(reveal: Reveal) {
       let views = editors.get(workbench);
       if (!views) {
         views = new Map();
@@ -71,5 +68,5 @@ export const useMarkdownActivity = (
         if (views.get(key) === reveal) views.delete(key);
       };
     },
-  } satisfies CommentActions;
+  };
 };

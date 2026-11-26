@@ -61,6 +61,7 @@ export {
 } from "./contributions/file-renderer-contributions";
 export type { WorkbenchExtensionKanbanRendererAdapter } from "./contributions/kanban-renderer-adapter";
 export { registerWorkbenchExtensionKanbanRenderers } from "./contributions/kanban-renderer-contributions";
+export { seedChatBrowserDraft } from "./contributions/seed-chat-browser-draft";
 export { createWorkbenchExtensionTerminalRendererOwners } from "./contributions/terminal-renderer-contributions";
 export {
   type RegisterWorkbenchExtensionTreeRenderersInput,

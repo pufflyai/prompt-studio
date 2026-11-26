@@ -38,6 +38,7 @@ export { homePages } from "./home-refs";
 export type {
   CommitPayload,
   ConflictPayload,
+  EditorSelectionContext,
   MergePayload,
   RebasePayload,
   SessionLifecyclePayload,
@@ -47,6 +48,7 @@ export type {
 } from "./kernel-slots";
 export {
   accountEvents,
+  editorSlots,
   gitEvents,
   projectEvents,
   projectSlots,

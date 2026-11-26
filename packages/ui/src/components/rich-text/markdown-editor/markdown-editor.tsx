@@ -12,7 +12,7 @@ import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
 import { $addUpdateTag, $getRoot } from "lexical";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { ContentEditable } from "../shared/components/content-editable";
 import { editorNodes, editorTheme, editorTransformers } from "../shared/editor-config";
 import { type MarkdownDocumentBinding, MarkdownDocumentContext } from "../shared/markdown-document-context";
@@ -29,10 +29,10 @@ import { ListMarkerWidthPlugin } from "../shared/plugins/list-marker-width-plugi
 import ToggleEditablePlugin from "../shared/plugins/ToggleEditablePlugin";
 import { TreeViewPlugin } from "../shared/plugins/TreeViewPlugin/TreeViewPlugin";
 import { joinFrontmatter, splitFrontmatter } from "../utils/markdown";
+import { MarkdownEditorProvider } from "./markdown-editor-context";
 import { MarkdownSectionNavigationPlugin } from "./plugins/MarkdownSectionNavigationPlugin";
 import { MarkdownSlashCommandPlugin } from "./plugins/MarkdownSlashCommandPlugin";
 import { type MarkdownCollaboration, MarkdownCollaborationPlugin } from "./plugins/markdown-collaboration-plugin";
-import { type MarkdownCommentActions, MarkdownCommentPlugin } from "./plugins/markdown-comment-plugin";
 import { MarkdownFindPlugin } from "./plugins/markdown-find-plugin";
 import { MarkdownHistoryPlugin } from "./plugins/markdown-history-plugin";
 import { MarkdownPresencePlugin } from "./plugins/markdown-presence-plugin";
@@ -59,7 +59,10 @@ export interface MarkdownEditorProps {
   onActiveSectionChange?: (sectionId: string | null) => void;
   onChange?: (value: string) => void;
   collaboration?: MarkdownCollaboration;
-  commentActions?: MarkdownCommentActions;
+  /** Additional Lexical plugins, scoped to this editor instance. */
+  plugins?: ReactNode;
+  /** Actions appended to the floating text selection toolbar. */
+  selectionToolbar?: ReactNode;
   onSourceSelection?: (selection: MarkdownSourceSelection | null) => void;
 }
 
@@ -67,17 +70,25 @@ const MarkdownIntentPlugins = (props: {
   source: ReturnType<typeof createMarkdownSourceDocument>;
   frontmatter: string;
   onSelection?: MarkdownEditorProps["onSourceSelection"];
-  actions?: MarkdownCommentActions;
-  binding: import("react").RefObject<MarkdownDocumentBinding | null>;
 }) => {
-  const { source, frontmatter, onSelection, actions, binding } = props;
+  const { source, frontmatter, onSelection } = props;
   return (
     <>
       <MarkdownFindPlugin />
       {onSelection ? (
         <MarkdownSourceSelectionPlugin source={source} frontmatter={frontmatter} onSelection={onSelection} />
       ) : null}
-      {actions ? <MarkdownCommentPlugin actions={actions} bindingRef={binding} /> : null}
+    </>
+  );
+};
+
+const MarkdownFloatingPlugins = (props: { editable: boolean; anchor: HTMLElement | null; actions?: ReactNode }) => {
+  const { editable, anchor, actions } = props;
+  if (!anchor || (!editable && !actions)) return null;
+  return (
+    <>
+      <FloatingTextFormatToolbarPlugin anchorElem={anchor}>{actions}</FloatingTextFormatToolbarPlugin>
+      {editable ? <LinkEditorPlugin anchorElem={anchor} /> : null}
     </>
   );
 };
@@ -98,7 +109,8 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
     onActiveSectionChange,
     onChange,
     collaboration,
-    commentActions,
+    plugins,
+    selectionToolbar,
     onSourceSelection,
   } = props;
   const sharedText = collaboration?.session?.getSnapshot().text ?? collaboration?.document?.getText("content");
@@ -147,109 +159,109 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
       <MarkdownUrlProvider resolver={resolveMarkdownUrl}>
         <MarkdownDocumentContext.Provider value={collaboration ? collaborationRef : null}>
           <LexicalComposer initialConfig={initialConfig}>
-            {isEditable ? <MarkdownSlashCommandPlugin /> : null}
-            {sectionNavigation ? (
-              <MarkdownSectionNavigationPlugin
-                anchors={sectionNavigation.anchors}
-                targetId={sectionNavigation.targetId}
-                onActiveSectionChange={onActiveSectionChange}
-              />
-            ) : null}
-            {autoFocus ? <AutoFocusPlugin /> : null}
-            {!collaboration && <MarkdownHistoryPlugin />}
-            <LinkPlugin />
-            <ListPlugin />
-            <ListMarkerWidthPlugin />
-            {isEditable ? <TabIndentationPlugin maxIndent={7} /> : null}
-            <CheckListPlugin />
-            {isEditable ? <MarkdownShortcutPlugin transformers={editorTransformers} /> : null}
-            <HorizontalRulePlugin />
-            <CodeHighlightingPlugin />
-            <ImportCodeBlocksPlugin />
-            <CodeBlockActionsPlugin anchorElem={floatingToolbarAnchorElem} />
-            <EquationPlugin />
-            <MarkdownIntentPlugins
-              source={sourceDocument}
-              frontmatter={frontmatter}
-              onSelection={onSourceSelection}
-              actions={collaboration ? commentActions : undefined}
-              binding={collaborationRef}
-            />
-            <RichTextPlugin
-              contentEditable={
-                <ContentEditable
-                  ariaLabel={ariaLabel}
-                  tabIndex={0}
-                  fullWidth={fullWidth}
-                  padding={padding}
-                  layerStyle="markdownEditorInset"
-                  scrollable={scrollable}
+            <MarkdownEditorProvider source={sourceDocument} frontmatter={frontmatter} bindingRef={collaborationRef}>
+              {plugins}
+              {isEditable ? <MarkdownSlashCommandPlugin /> : null}
+              {sectionNavigation ? (
+                <MarkdownSectionNavigationPlugin
+                  anchors={sectionNavigation.anchors}
+                  targetId={sectionNavigation.targetId}
+                  onActiveSectionChange={onActiveSectionChange}
                 />
-              }
-              placeholder={
-                placeholder ? (
-                  <Flex
-                    position="absolute"
-                    layerStyle="markdownEditorInset"
+              ) : null}
+              {autoFocus ? <AutoFocusPlugin /> : null}
+              {!collaboration && <MarkdownHistoryPlugin />}
+              <LinkPlugin />
+              <ListPlugin />
+              <ListMarkerWidthPlugin />
+              {isEditable ? <TabIndentationPlugin maxIndent={7} /> : null}
+              <CheckListPlugin />
+              {isEditable ? <MarkdownShortcutPlugin transformers={editorTransformers} /> : null}
+              <HorizontalRulePlugin />
+              <CodeHighlightingPlugin />
+              <ImportCodeBlocksPlugin />
+              <CodeBlockActionsPlugin anchorElem={floatingToolbarAnchorElem} />
+              <EquationPlugin />
+              <MarkdownIntentPlugins
+                source={sourceDocument}
+                frontmatter={frontmatter}
+                onSelection={onSourceSelection}
+              />
+              <RichTextPlugin
+                contentEditable={
+                  <ContentEditable
+                    ariaLabel={ariaLabel}
+                    tabIndex={0}
+                    fullWidth={fullWidth}
                     padding={padding}
-                    top="0"
-                    left="0"
-                    right="0"
-                    pointerEvents="none"
-                    userSelect="none"
-                    justifyContent="center"
-                  >
-                    <Box width="100%" maxWidth="45rem" color="fg.muted" textStyle="paragraph/M/regular">
-                      {placeholder}
-                    </Box>
-                  </Flex>
-                ) : null
-              }
-              ErrorBoundary={LexicalErrorBoundary}
-            />
-            {isEditable && floatingToolbarAnchorElem ? (
-              <>
-                <FloatingTextFormatToolbarPlugin anchorElem={floatingToolbarAnchorElem} />
-                <LinkEditorPlugin anchorElem={floatingToolbarAnchorElem} />
-              </>
-            ) : null}
-            {shouldTrackChanges ? (
-              <OnChangePlugin
-                ignoreSelectionChange
-                ignoreHistoryMergeTagChange={false}
-                onChange={(editorState, _editor, tags) => {
-                  // Reporting the mount-time import as a change makes every mount
-                  // look like an edit and schedules a save of content the user
-                  // never touched.
-                  if (tags.has(INITIAL_IMPORT_TAG)) return;
-                  editorState.read(() => {
-                    const root = $getRoot();
-                    const markdownBody = sourceDocument.exportFromLexical(root);
-                    onChange?.(joinFrontmatter(frontmatter, markdownBody));
-                  });
-                }}
+                    layerStyle="markdownEditorInset"
+                    scrollable={scrollable}
+                  />
+                }
+                placeholder={
+                  placeholder ? (
+                    <Flex
+                      position="absolute"
+                      layerStyle="markdownEditorInset"
+                      padding={padding}
+                      top="0"
+                      left="0"
+                      right="0"
+                      pointerEvents="none"
+                      userSelect="none"
+                      justifyContent="center"
+                    >
+                      <Box width="100%" maxWidth="45rem" color="fg.muted" textStyle="paragraph/M/regular">
+                        {placeholder}
+                      </Box>
+                    </Flex>
+                  ) : null
+                }
+                ErrorBoundary={LexicalErrorBoundary}
               />
-            ) : null}
-            <ToggleEditablePlugin isEditable={editable} />
-            {collaboration && (
-              <MarkdownPresencePlugin
-                collaboration={collaboration}
-                source={sourceDocument}
-                bindingRef={collaborationRef}
-                containerRef={editorContainerRef}
-              />
-            )}
-            {debug && <TreeViewPlugin />}
-            {collaboration && (
-              <MarkdownCollaborationPlugin
-                collaboration={collaboration}
-                source={sourceDocument}
+              <MarkdownFloatingPlugins
                 editable={isEditable}
-                onChange={onChange}
-                bindingRef={collaborationRef}
-                onFinishingChange={setFinishing}
+                anchor={floatingToolbarAnchorElem}
+                actions={selectionToolbar}
               />
-            )}
+              {shouldTrackChanges ? (
+                <OnChangePlugin
+                  ignoreSelectionChange
+                  ignoreHistoryMergeTagChange={false}
+                  onChange={(editorState, _editor, tags) => {
+                    // Reporting the mount-time import as a change makes every mount
+                    // look like an edit and schedules a save of content the user
+                    // never touched.
+                    if (tags.has(INITIAL_IMPORT_TAG)) return;
+                    editorState.read(() => {
+                      const root = $getRoot();
+                      const markdownBody = sourceDocument.exportFromLexical(root);
+                      onChange?.(joinFrontmatter(frontmatter, markdownBody));
+                    });
+                  }}
+                />
+              ) : null}
+              <ToggleEditablePlugin isEditable={editable} />
+              {collaboration && (
+                <MarkdownPresencePlugin
+                  collaboration={collaboration}
+                  source={sourceDocument}
+                  bindingRef={collaborationRef}
+                  containerRef={editorContainerRef}
+                />
+              )}
+              {debug && <TreeViewPlugin />}
+              {collaboration && (
+                <MarkdownCollaborationPlugin
+                  collaboration={collaboration}
+                  source={sourceDocument}
+                  editable={isEditable}
+                  onChange={onChange}
+                  bindingRef={collaborationRef}
+                  onFinishingChange={setFinishing}
+                />
+              )}
+            </MarkdownEditorProvider>
           </LexicalComposer>
         </MarkdownDocumentContext.Provider>
       </MarkdownUrlProvider>

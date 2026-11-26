@@ -38,7 +38,7 @@ export const MarkdownFileContent = (props: MarkdownFileContentProps) => {
           open={open}
           placeholder={content.placeholder ?? "Write…"}
           sectionNavigation={sectionNavigation}
-          commentActions={props.commentActions}
+          selectionToolbar={props.selectionToolbar}
           onSourceSelection={props.onSourceSelection}
           onActiveSectionChange={onActiveSectionChange}
           errorNotice={errorNotice}
@@ -57,7 +57,7 @@ export const MarkdownFileContent = (props: MarkdownFileContentProps) => {
           open={open}
           placeholder={content.placeholder ?? "Write…"}
           sectionNavigation={sectionNavigation}
-          commentActions={props.commentActions}
+          selectionToolbar={props.selectionToolbar}
           onSourceSelection={props.onSourceSelection}
           onActiveSectionChange={onActiveSectionChange}
           errorNotice={errorNotice}
@@ -71,6 +71,7 @@ export const MarkdownFileContent = (props: MarkdownFileContentProps) => {
       <Box flex="1" minH="0" overflowY="auto">
         <LazyMarkdownEditor
           key={editorKey}
+          selectionToolbar={props.selectionToolbar}
           defaultState={content.content ?? ""}
           isEditable={editable}
           sectionNavigation={sectionNavigation}

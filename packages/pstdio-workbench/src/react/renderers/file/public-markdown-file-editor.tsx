@@ -13,7 +13,7 @@ interface PublicMarkdownFileEditorProps {
   open: boolean;
   placeholder?: string;
   sectionNavigation?: MarkdownEditorProps["sectionNavigation"];
-  commentActions?: MarkdownEditorProps["commentActions"];
+  selectionToolbar?: MarkdownEditorProps["selectionToolbar"];
   onSourceSelection?: MarkdownEditorProps["onSourceSelection"];
   onActiveSectionChange?: MarkdownEditorProps["onActiveSectionChange"];
   errorNotice?: ReactNode;
@@ -52,7 +52,7 @@ export const PublicMarkdownFileEditor = (props: PublicMarkdownFileEditorProps) =
             defaultState=""
             placeholder={placeholder}
             sectionNavigation={sectionNavigation}
-            commentActions={props.commentActions}
+            selectionToolbar={props.selectionToolbar}
             onSourceSelection={props.onSourceSelection}
             onActiveSectionChange={onActiveSectionChange}
             isEditable={open && presentation.owns(session) && state.editable && !state.closing}
