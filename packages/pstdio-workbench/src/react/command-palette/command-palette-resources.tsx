@@ -1,5 +1,5 @@
 import type { PaletteEntry } from "@pstdio/ui";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import { runUserAction } from "../../core/shared/run-user-action";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -23,6 +23,11 @@ export const useWorkbenchCommandPaletteResourceEntries = (input: UseWorkbenchCom
   const { workbench, query, open, onClose } = input;
   const refreshToken = useWorkbenchStore(workbench.commandPaletteResources.store, (state) => state.refreshToken);
   const [entries, setEntries] = useState<PaletteEntry[]>([]);
+  const closeRef = useRef(onClose);
+
+  useLayoutEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) {
@@ -56,7 +61,7 @@ export const useWorkbenchCommandPaletteResourceEntries = (input: UseWorkbenchCom
               onActivate: () => {
                 void runUserAction(workbench, result.label, () => result.activate(), {
                   inlineTarget: "command-palette",
-                  onSuccess: onClose,
+                  onSuccess: closeRef.current,
                 });
               },
             })),
@@ -69,7 +74,7 @@ export const useWorkbenchCommandPaletteResourceEntries = (input: UseWorkbenchCom
       cancelled = true;
       clearTimeout(handle);
     };
-  }, [workbench, query, open, refreshToken, onClose]);
+  }, [workbench, query, open, refreshToken]);
 
   return entries;
 };

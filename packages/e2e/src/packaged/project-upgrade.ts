@@ -72,7 +72,7 @@ const verify = async (
   await record(evidence, "extension-upgrades", changes);
   await assertProjectToolsRetained(upgrade, state.fixture.id, state.tools, expectedVersions);
   await assertHomeOpens(upgrade, state.fixture.id);
-  const after = await readUpgradeProject(upgrade, state.fixture);
+  const after = await readUpgradeProject(upgrade, state.fixture, state.manifest.files);
   await record(evidence, "after", after);
   compare(state.manifest, after);
   await editUpgradeProject(upgrade, state.fixture);

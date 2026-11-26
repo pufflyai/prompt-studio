@@ -1,7 +1,9 @@
 import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { publishBranchTemplate } from "./branch-templates";
 import { startCollection } from "./collection";
+import { connectionApi } from "./connection";
 import { projectRoot, runDeps } from "./context";
+import { openKitoPreview } from "./kito-workflow";
 import { requirePreviewBridge } from "./preview-bridge";
 import { previewCommand } from "./prompt-studio-preview";
 import { startRun } from "./runs";
@@ -63,7 +65,7 @@ export const runPromptStudio = defineCommand({
   async run(ctx, input) {
     const timeoutMinutes = input.timeoutMinutes ?? 60;
     if (timeoutMinutes < 1 || timeoutMinutes > 90) throw new Error("Choose a preview duration from 1 to 90 minutes.");
-    await requirePreviewBridge(ctx);
+    if ((await ctx.settings.all()).kitoWorkflow !== true) await requirePreviewBridge(ctx);
     const { record } = await startRun(
       await runDeps(ctx),
       {
@@ -95,12 +97,14 @@ export const openPromptStudio = defineCommand({
     }),
   },
   async run(ctx, { workspaceId }) {
+    if ((await ctx.settings.all()).kitoWorkflow === true)
+      return openKitoPreview(connectionApi(ctx.connections), workspaceId, ctx.signal);
     const bridge = await requirePreviewBridge(ctx);
     const result = await ctx.process.run({
       command: ["bun", bridge, workspaceId],
       timeoutMs: 10 * 60_000,
     });
     if (result.exitCode !== 0) throw new Error(result.stderr.trim() || "Could not open the preview.");
-    return JSON.parse(result.stdout) as { url: string; expiresAt: string };
+    return { ...(JSON.parse(result.stdout) as { url: string; expiresAt: string }), workspaceId };
   },
 });

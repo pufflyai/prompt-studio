@@ -1,7 +1,7 @@
 import { defineCommand, l10n, params, workbenchPages } from "@pstdio/sdk/extensions";
 import { collectRun, startCollection, waitForCollection } from "./collection";
 import { connectionApi } from "./connection";
-import { changed, googleToken, projectRoot, runDeps } from "./context";
+import { changed, checkAccess, projectRoot, runDeps } from "./context";
 import { cleanupEnvironmentCommand, recoverEnvironmentCleanup } from "./environment-cleanup";
 import { createEnvironment, isBusy, listEnvironments, stopEnvironment } from "./environments";
 import { collectRunLog } from "./run-log";
@@ -31,11 +31,11 @@ export const status = defineCommand({
     ),
   },
   async run(ctx) {
-    const { settings, problems } = readSettings(await ctx.settings.all());
+    const { settings, problems, kitoWorkflow } = readSettings(await ctx.settings.all());
     if (problems.length) return { available: false, problems };
     try {
       const environments = await listEnvironments(connectionApi(ctx.connections), ctx.projectId);
-      await googleToken(ctx);
+      await checkAccess(ctx, kitoWorkflow);
       return {
         available: true,
         template: `${settings.templateName}@${settings.templateVersion}`,

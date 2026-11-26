@@ -121,7 +121,7 @@ const sourceInputFor = (
     name: loaded.metadata.name,
     projectId: source.projectId,
     sourceHash: source.sourceHash,
-    sourceKind: "local_path",
+    sourceKind: existing?.installedSource.source_kind ?? "local_path",
     sourcePath: source.sourcePath,
     version: loaded.metadata.version,
   }) satisfies SyncInstalledSourceInput;
