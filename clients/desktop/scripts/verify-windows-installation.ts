@@ -126,7 +126,10 @@ const launchInstalled = async (version: string) => {
     .contexts()[0]!
     .pages()
     .find((item) => item.url().startsWith(runtime.origin))!;
-  await expect(page.locator("#root")).not.toBeEmpty();
+  // The workbench document loads while the runtime starts and renders once startup completes.
+  // The first launch after an update first upgrades the previous release's tools, which took
+  // over 45 s on the hosted Windows runner while the startup screen stayed visible.
+  await expect(page.locator("#root")).not.toBeEmpty({ timeout: 180_000 });
   const processes = JSON.parse(
     await powershell(`
     Get-CimInstance Win32_Process -Filter "Name='Prompt Studio.exe'" |
