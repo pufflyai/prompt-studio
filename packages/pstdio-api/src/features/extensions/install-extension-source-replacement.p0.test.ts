@@ -181,6 +181,29 @@ describe("installExtensionSource replacement", () => {
     expect(lstatSync(join(target, "node_modules")).isSymbolicLink()).toBe(false);
   });
 
+  test("reuses a locked tree across release and host API changes", async () => {
+    writeExistingInstall();
+    const previous = JSON.parse(readFileSync(join(source, "package.json"), "utf8"));
+    previous.version = "0.48.0";
+    previous.engines.pstdio = "^0.5.0";
+    writeFileSync(join(target, "package.json"), JSON.stringify(previous));
+    for (const directory of [target, source]) writeFileSync(join(directory, "bun.lock"), "same locked tree");
+    mkdirSync(join(target, "node_modules", "example"), { recursive: true });
+    const runCommand = mock(async () => ({ exitCode: 0, stderr: "", stdout: "" }));
+
+    await installExtensionSource({
+      source,
+      force: true,
+      reuseInstalledDependencies: true,
+      env: { PSTDIO_HOME: pstdioHome },
+      runCommand,
+    });
+
+    expect(runCommand).not.toHaveBeenCalled();
+    expect(JSON.parse(readFileSync(join(target, "package.json"), "utf8")).version).toBe("1.0.0");
+    expect(lstatSync(join(target, "node_modules")).isDirectory()).toBe(true);
+  });
+
   test("reinstalls dependencies when package inputs changed", async () => {
     writeExistingInstall();
     mkdirSync(join(target, "node_modules", "example"), { recursive: true });

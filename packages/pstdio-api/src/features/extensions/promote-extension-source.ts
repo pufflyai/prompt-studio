@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { withFileMutationLock } from "pstdio-paths";
-import { hashExtensionDependencyInputs } from "./hash-extension-dependency-inputs";
+import { installedDependencyHash } from "./hash-extension-dependency-inputs";
 import { prepareNodeModulesRelocation } from "./install-extension-source-node-modules";
 
 export class ExtensionAlreadyInstalledError extends Error {
@@ -24,8 +24,7 @@ const readPreviousOwner = (ownerPath: string) => {
 const assertReusableDependencies = (prepared: string, target: string, preserve: boolean) => {
   if (
     preserve &&
-    (!existsSync(join(target, "node_modules")) ||
-      hashExtensionDependencyInputs(prepared) !== hashExtensionDependencyInputs(target))
+    (!existsSync(join(target, "node_modules")) || installedDependencyHash(prepared) !== installedDependencyHash(target))
   )
     throw new Error("Installed extension dependencies changed while preparing the replacement");
 };
