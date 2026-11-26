@@ -3,14 +3,19 @@ import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { expect } from "@playwright/test";
 import { createClient } from "@pstdio/sdk/client";
-import { projectUpgradeLimitMs } from "pstdio-scripts/testing";
 import { signInDevice, writeCertificate } from "./packaged-folder-recovery.fixture";
 import { startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { createPackagedSyncPeer } from "./packaged-sync-relay.fixture";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 import { installUpgradePlanner, planner, seedUpgradeProject, upgradeApi } from "./project-upgrade-fixture";
 
-export const checkCloudProjectUpgrade = async (home: string, evidence: string, baseline: string, candidate: string) => {
+export const checkCloudProjectUpgrade = async (
+  home: string,
+  evidence: string,
+  baseline: string,
+  candidate: string,
+  limitMs: number,
+) => {
   const certificate = writeCertificate(home);
   const peer = createPackagedSyncPeer({ key: Bun.file(certificate.key), cert: Bun.file(certificate.cert) });
   const running = new Set<Awaited<ReturnType<typeof startPackagedServe>>>();
@@ -84,8 +89,8 @@ export const checkCloudProjectUpgrade = async (home: string, evidence: string, b
       const started = performance.now();
       const controller = new AbortController();
       const timeout = setTimeout(
-        () => controller.abort(new Error(`Cloud upgrade exceeded the ${projectUpgradeLimitMs} ms limit`)),
-        projectUpgradeLimitMs,
+        () => controller.abort(new Error(`Cloud upgrade exceeded the ${limitMs} ms limit`)),
+        limitMs,
       );
       let completed = false;
       try {
@@ -101,12 +106,9 @@ export const checkCloudProjectUpgrade = async (home: string, evidence: string, b
         const elapsedMs = performance.now() - started;
         await Bun.write(
           join(evidence, `${phase}-to-usable-project.json`),
-          JSON.stringify({ completed, elapsedMs, limitMs: projectUpgradeLimitMs }),
+          JSON.stringify({ completed, elapsedMs, limitMs }),
         );
-        assert(
-          elapsedMs <= projectUpgradeLimitMs,
-          `${phase} Cloud upgrade and saved edit took ${Math.round(elapsedMs)} ms`,
-        );
+        assert(elapsedMs <= limitMs, `${phase} Cloud upgrade and saved edit took ${Math.round(elapsedMs)} ms`);
       }
     };
     a = await timedEdit("a", "offline", offlineEdit);

@@ -168,14 +168,15 @@ const verifyFirstProjectEdit = async (
   fixture: Pick<Seed, "id" | "firstTicket">,
   start: number,
   evidence: string,
+  limitMs: number,
   expectedContent?: string,
 ) => {
   const restoreTicket = await verifyFirstUpgradeTicketEdit(upgradeApi(runtime.descriptor), fixture, expectedContent);
   const elapsedMs = performance.now() - start;
-  await record(evidence, "upgrade-to-usable-project", { elapsedMs, limitMs: projectUpgradeLimitMs });
+  await record(evidence, "upgrade-to-usable-project", { elapsedMs, limitMs });
   assert(
-    elapsedMs <= projectUpgradeLimitMs,
-    `Upgrade and first saved project edit took ${elapsedMs.toFixed(0)} ms (limit ${projectUpgradeLimitMs} ms)`,
+    elapsedMs <= limitMs,
+    `Upgrade and first saved project edit took ${elapsedMs.toFixed(0)} ms (limit ${limitMs} ms)`,
   );
   return restoreTicket;
 };
@@ -220,7 +221,9 @@ const run = async (
     platform: process.platform,
     arch: process.arch,
   });
-  if (input.profile === "cloud") return checkCloudProjectUpgrade(input.home, input.evidence, baseline, candidate);
+  const limitMs = projectUpgradeLimitMs(candidateVersion);
+  if (input.profile === "cloud")
+    return checkCloudProjectUpgrade(input.home, input.evidence, baseline, candidate, limitMs);
   const launch = async (binary: string, phase: string) => {
     console.log(`[project upgrade ${input.profile}] ${phase}`);
     const controller = new AbortController();
@@ -257,7 +260,7 @@ const run = async (
       runtime = undefined;
       const start = performance.now();
       runtime = await launch(candidate, "upgrade");
-      await verifyFirstProjectEdit(runtime, ticket, start, input.evidence, ticket.content);
+      await verifyFirstProjectEdit(runtime, ticket, start, input.evidence, limitMs, ticket.content);
       await stopProcess(runtime.child);
       runtime = await launch(candidate, "restart");
       await assertUpgradeEdit(upgradeApi(runtime.descriptor), ticket);
@@ -284,7 +287,7 @@ const run = async (
     const home = await checkHomeHistory(input, state.fixture.id);
     const start = performance.now();
     runtime = await launch(candidate, "upgrade");
-    const restoreTicket = await verifyFirstProjectEdit(runtime, state.fixture, start, input.evidence);
+    const restoreTicket = await verifyFirstProjectEdit(runtime, state.fixture, start, input.evidence, limitMs);
     await restoreTicket();
     await assertCurrentDatabase(input.home);
     const edited = await verify(
