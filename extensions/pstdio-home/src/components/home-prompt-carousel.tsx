@@ -1,4 +1,16 @@
-import { AspectRatio, Box, Button, Carousel, Heading, HStack, IconButton, Image, Stack, Text } from "@chakra-ui/react";
+import {
+  AspectRatio,
+  Box,
+  Button,
+  Carousel,
+  Heading,
+  HStack,
+  IconButton,
+  Image,
+  Stack,
+  Text,
+  useCarousel,
+} from "@chakra-ui/react";
 import { AlertMessage, ScopedPopover as Popover, Portal, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { useState } from "react";
 import { type HomeIdeaId, homeIdeaScreenshotUrl, homeIdeas } from "../home-ideas";
@@ -9,6 +21,7 @@ interface HomePromptCarouselProps {
 }
 
 export const HomePromptCarousel = ({ onBuild }: HomePromptCarouselProps) => {
+  const carousel = useCarousel({ slideCount: homeIdeas.length, slidesPerPage: 1, loop: true });
   const [pending, setPending] = useState<HomeIdeaId>();
   const [error, setError] = useState<{ idea: HomeIdeaId; message: string }>();
   const build = async (id: HomeIdeaId) => {
@@ -18,6 +31,10 @@ export const HomePromptCarousel = ({ onBuild }: HomePromptCarouselProps) => {
     try {
       await onBuild(id);
     } catch (error) {
+      carousel.scrollTo(
+        homeIdeas.findIndex((idea) => idea.id === id),
+        true,
+      );
       setError({ idea: id, message: error instanceof Error ? error.message : String(error) });
     } finally {
       setPending(undefined);
@@ -28,14 +45,7 @@ export const HomePromptCarousel = ({ onBuild }: HomePromptCarouselProps) => {
       <Heading as="h2" textStyle="label/L/regular">
         Turn this page into something else
       </Heading>
-      <Carousel.Root
-        aria-label="Home page ideas"
-        slideCount={homeIdeas.length}
-        slidesPerPage={1}
-        loop
-        w="full"
-        minW="0"
-      >
+      <Carousel.RootProvider value={carousel} aria-label="Home page ideas" w="full" minW="0">
         <Carousel.ItemGroup>
           {homeIdeas.map(({ id, title, description }, index) => (
             <Carousel.Item key={id} index={index} minW="0">
@@ -73,7 +83,7 @@ export const HomePromptCarousel = ({ onBuild }: HomePromptCarouselProps) => {
                     }}
                     positioning={{ placement: "bottom-start" }}
                   >
-                    <Popover.Anchor asChild>
+                    <Popover.Trigger asChild>
                       <Button
                         variant="solid"
                         alignSelf="flex-start"
@@ -84,7 +94,7 @@ export const HomePromptCarousel = ({ onBuild }: HomePromptCarouselProps) => {
                       >
                         Build this!
                       </Button>
-                    </Popover.Anchor>
+                    </Popover.Trigger>
                     <Portal>
                       <Popover.Positioner>
                         <Popover.Content aria-label="Could not start building" p="0" w="popover-panel" maxW="90vw">
@@ -124,7 +134,7 @@ export const HomePromptCarousel = ({ onBuild }: HomePromptCarouselProps) => {
             </Carousel.NextTrigger>
           </HStack>
         </Carousel.Control>
-      </Carousel.Root>
+      </Carousel.RootProvider>
     </Stack>
   );
 };

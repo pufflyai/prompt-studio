@@ -38,9 +38,9 @@ export const homeIdeas = [
 
 export type HomeIdeaId = (typeof homeIdeas)[number]["id"];
 
-// Immutable landing-site assets stay available independently of website deployments.
+// The assets/home-idea-screenshots-v1 tag retains this immutable landing-site asset revision.
 const screenshotBase =
-  "https://raw.githubusercontent.com/pufflyai/prompt-studio/0ed498bdcc975d1a0fc30c206cee904f50286f41/clients/landing-page/public/images/home-ideas";
+  "https://raw.githubusercontent.com/pufflyai/prompt-studio/0ed498bdcc/clients/landing-page/public/images/home-ideas";
 
 export const homeIdeaScreenshotUrl = (idea: HomeIdeaId, mode: "light" | "dark") =>
   `${screenshotBase}/${idea}-${mode}.png`;

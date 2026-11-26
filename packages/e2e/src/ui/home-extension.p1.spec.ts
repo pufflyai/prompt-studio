@@ -109,9 +109,11 @@ test("Home anchors build failures to the selected idea and allows retry", async 
   expect(created.ok()).toBe(true);
   const project = (await created.json()) as { id: string };
   let attempts = 0;
+  const failure = Promise.withResolvers<void>();
   await page.route("**/extensions/commands/pstdio.home.command.build-home/execute", async (route) => {
     attempts++;
     if (attempts === 1) {
+      await failure.promise;
       await route.fulfill({ status: 503, json: { error: "Build temporarily unavailable. Try again." } });
       return;
     }
@@ -125,12 +127,17 @@ test("Home anchors build failures to the selected idea and allows retry", async 
       .getByRole("article", { name: "Project pulse", exact: true })
       .getByRole("button", { name: "Build this!", exact: true });
     await build.click();
+    await home.getByRole("button", { name: "Next idea", exact: true }).click();
+    await expect(home.getByRole("heading", { name: "Release checklist", exact: true })).toBeInViewport();
+    failure.resolve();
     const error = home.getByRole("dialog", { name: "Could not start building", exact: true });
     await expect(error).toBeVisible();
+    await expect(home.getByRole("heading", { name: "Project pulse", exact: true })).toBeInViewport();
     await expect(error.getByRole("alert")).toContainText("Build temporarily unavailable");
     await page.keyboard.press("Escape");
     await expect(error).toBeHidden();
-    await build.click();
+    await expect(build).toBeFocused();
+    await build.press("Enter");
     await expect(page.getByRole("tab", { name: "Build Home: Project pulse", exact: true })).toBeVisible();
     expect(attempts).toBe(2);
   } finally {
