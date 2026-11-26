@@ -11,3 +11,5 @@ For React consumers, `MarkdownEditor` exposes two composition points: `plugins` 
 Activity composes an anchored comment popover outside the editor package. It uses the shared Activity composer and resource activity API, and keeps the popup's unsent text separate from the feed's draft. Successful publication opens the document's Activity menu. A failed publication preserves the body and idempotency key for retry. Source anchors use relative document positions, so posted quotes remain revealable after surrounding edits. Comments are available only when the resource grants comment capability and the document has a shared text binding.
 
 The selection slot and draft command require the SDK and host revision that introduces them. Extensions must declare the published SDK version before shipping; candidate package fixtures are development validation, not proof of published compatibility.
+
+*Updated at: 2026-11-26*
