@@ -1,12 +1,13 @@
 import { Box, Button, HStack, IconButton, Separator, Stack, Text } from "@chakra-ui/react";
 import type { ResourceActivityEntry, ResourceRef } from "@pstdio/sdk/extensions";
-import { Activity, AlertMessage, LazyRichMessage } from "@pstdio/ui";
+import { Activity, AlertMessage, EmptyState, LazyRichMessage } from "@pstdio/ui";
 import { X } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import type { ResourceActivityBinding } from "../../core/registries/resources/resource-activity";
 import { activityActorName, activityChangeSummary, activityTime } from "./activity-presentation";
 import { revealActivityPassage } from "./markdown-activity";
+import { ResourceActivityComposer, ResourceActivityReplyComposer } from "./resource-activity-composer";
 import { useActivityHistory } from "./use-activity-history";
 import { useResourceActivity } from "./use-resource-activity";
 
@@ -118,25 +119,6 @@ const EntryBody = (props: {
           Open session
         </Button>
       )}
-      {entry.kind === "comment" && !entry.replyToId && controller.capabilities.comments ? (
-        <Button
-          size="xs"
-          variant="ghost"
-          alignSelf="start"
-          disabled={controller.busy}
-          onClick={() =>
-            controller.changeDraft({
-              ...controller.draft,
-              quote: undefined,
-              passage: undefined,
-              replyToId: entry.id,
-              key: crypto.randomUUID(),
-            })
-          }
-        >
-          Reply
-        </Button>
-      ) : null}
       {entry.handoffError && (
         <AlertMessage
           status="error"
@@ -162,11 +144,12 @@ const EntryBody = (props: {
   );
 };
 const ActivityEntries = (props: {
+  binding: ResourceActivityBinding;
   controller: ReturnType<typeof useResourceActivity>;
   workbench: WorkbenchCore;
   ownerInstanceId?: string;
 }) => {
-  const { controller, workbench, ownerInstanceId } = props;
+  const { binding, controller, workbench, ownerInstanceId } = props;
   const replies = new Map<string, ResourceActivityEntry[]>();
   for (const entry of controller.items) {
     if (!entry.replyToId) continue;
@@ -193,6 +176,27 @@ const ActivityEntries = (props: {
               actor={{ name: activityActorName(entry) }}
               timestamp={activityTime(entry.createdAt)}
               tone={entry.author.type === "user" ? "sent" : "default"}
+              replies={replies.get(entry.id)?.map((reply) => (
+                <Activity.Reply
+                  key={reply.id}
+                  data-activity-entry={reply.id}
+                  actor={{ name: activityActorName(reply) }}
+                  timestamp={activityTime(reply.createdAt)}
+                >
+                  <EntryBody entry={reply} controller={controller} workbench={workbench} />
+                </Activity.Reply>
+              ))}
+              composer={
+                entry.kind === "comment" && !entry.replyToId && controller.capabilities.comments ? (
+                  <ResourceActivityReplyComposer
+                    workbench={workbench}
+                    binding={binding}
+                    resource={controller.resource}
+                    replyToId={entry.id}
+                    onPublished={() => controller.refresh()}
+                  />
+                ) : undefined
+              }
             >
               <EntryBody
                 entry={entry}
@@ -200,20 +204,10 @@ const ActivityEntries = (props: {
                 workbench={workbench}
                 ownerInstanceId={ownerInstanceId}
               />
-              {replies.get(entry.id)?.map((reply) => (
-                <Activity.Comment
-                  key={reply.id}
-                  data-activity-entry={reply.id}
-                  actor={{ name: activityActorName(reply) }}
-                  timestamp={activityTime(reply.createdAt)}
-                >
-                  <EntryBody entry={reply} controller={controller} workbench={workbench} />
-                </Activity.Comment>
-              ))}
             </Activity.Comment>
           ),
         )}
-      {!controller.items.length && !controller.error && <Text color="fg.muted">No activity yet</Text>}
+      {!controller.items.length && !controller.error && <EmptyState title="No activity yet" py="md" />}
     </Activity.Feed>
   );
 };
@@ -231,7 +225,6 @@ export const WorkbenchResourceActivity = (props: {
     controller.refresh(true),
   );
   const error = controller.error ?? (history.failed ? "Cannot retrieve earlier activity." : undefined);
-  const upload = useRef<HTMLInputElement>(null);
   return (
     <Box layerStyle={props.menu ? undefined : "markdownEditorInset"} p={props.menu ? "sm" : undefined} flexShrink="0">
       <Activity.Root
@@ -275,93 +268,13 @@ export const WorkbenchResourceActivity = (props: {
         {controller.cursor && (
           <Box ref={history.boundary} role="status" aria-label="Loading earlier activity" minH="px" />
         )}
-        <ActivityEntries controller={controller} workbench={workbench} ownerInstanceId={props.ownerInstanceId} />
-        {controller.draft.quote || controller.draft.replyToId ? (
-          <HStack gap="xs" align="start">
-            <Text color="fg.muted" lineClamp={3}>
-              {controller.draft.quote ? `“${controller.draft.quote}”` : "Replying to a comment"}
-            </Text>
-            <IconButton
-              size="2xs"
-              variant="ghost"
-              aria-label="Clear comment reference"
-              disabled={controller.busy}
-              onClick={() =>
-                controller.changeDraft({
-                  ...controller.draft,
-                  passage: undefined,
-                  quote: undefined,
-                  replyToId: undefined,
-                  key: crypto.randomUUID(),
-                })
-              }
-            >
-              <X />
-            </IconButton>
-          </HStack>
-        ) : null}
-        {controller.capabilities.comments && (
-          <Activity.Composer
-            variant="compact"
-            value={controller.draft.body}
-            placeholder="Leave a comment…"
-            disabled={controller.busy}
-            hasAttachments={controller.draft.attachments.length > 0}
-            onChange={(body) => controller.changeDraft({ ...controller.draft, body, key: crypto.randomUUID() })}
-            onSubmit={() => {
-              if (!controller.busy) void controller.publish();
-            }}
-            onAttach={() => upload.current?.click()}
-            attachmentList={
-              (controller.uploading || controller.draft.attachments.length > 0) && (
-                <Stack gap="xs">
-                  {controller.uploading && (
-                    <Text role="status" color="fg.muted" textStyle="label/S/regular">
-                      Uploading {controller.uploading}…
-                    </Text>
-                  )}
-                  {controller.draft.attachments.length > 0 && (
-                    <HStack gap="xs" flexWrap="wrap" aria-label="Comment attachments">
-                      {controller.draft.attachments.map((file) => (
-                        <HStack key={file.id} gap="2xs" minW="0" maxW="full">
-                          <Text textStyle="label/S/regular" truncate title={file.name}>
-                            {file.name}
-                          </Text>
-                          <IconButton
-                            size="2xs"
-                            variant="ghost"
-                            aria-label={`Remove ${file.name}`}
-                            disabled={controller.busy}
-                            onClick={() =>
-                              controller.changeDraft({
-                                ...controller.draft,
-                                attachments: controller.draft.attachments.filter((item) => item.id !== file.id),
-                                key: crypto.randomUUID(),
-                              })
-                            }
-                          >
-                            <X />
-                          </IconButton>
-                        </HStack>
-                      ))}
-                    </HStack>
-                  )}
-                </Stack>
-              )
-            }
-          />
-        )}
-        <input
-          hidden
-          multiple
-          type="file"
-          ref={upload}
-          onChange={(event) => {
-            const files = Array.from(event.currentTarget.files ?? []);
-            event.currentTarget.value = "";
-            void controller.attach(files);
-          }}
+        <ActivityEntries
+          binding={binding}
+          controller={controller}
+          workbench={workbench}
+          ownerInstanceId={props.ownerInstanceId}
         />
+        {controller.capabilities.comments && <ResourceActivityComposer controller={controller.composer} />}
       </Activity.Root>
     </Box>
   );

@@ -1,7 +1,6 @@
-import { HStack, IconButton, Stack, Text } from "@chakra-ui/react";
+import { Stack } from "@chakra-ui/react";
 import { Activity, AlertMessage } from "@pstdio/ui";
 import type { MarkdownEditorSelection } from "@pstdio/ui/rich-text";
-import { X } from "lucide-react";
 import { useRef, useState } from "react";
 import type { useMarkdownActivity } from "./markdown-activity";
 
@@ -15,11 +14,10 @@ export const MarkdownCommentComposer = (props: {
   busy: boolean;
   onBusyChange(busy: boolean): void;
   onChange(draft: PassageCommentDraft): void;
-  onClose(): void;
   onPosted(): void;
   publish: NonNullable<ReturnType<typeof useMarkdownActivity>>["publish"];
 }) => {
-  const { draft, busy, onBusyChange, onChange, onClose, onPosted, publish } = props;
+  const { draft, busy, onBusyChange, onChange, onPosted, publish } = props;
   const pending = useRef(false);
   const [error, setError] = useState<string>();
   const submit = async () => {
@@ -38,15 +36,7 @@ export const MarkdownCommentComposer = (props: {
     }
   };
   return (
-    <Stack gap="sm" p="sm">
-      <HStack justifyContent="space-between">
-        <Text color="fg.muted" textStyle="label/S/regular" lineClamp={2}>
-          {draft.selection.text}
-        </Text>
-        <IconButton size="xs" variant="ghost" aria-label="Cancel comment" disabled={busy} onClick={onClose}>
-          <X />
-        </IconButton>
-      </HStack>
+    <Stack gap="xs">
       <Activity.Composer
         autoFocus
         variant="compact"

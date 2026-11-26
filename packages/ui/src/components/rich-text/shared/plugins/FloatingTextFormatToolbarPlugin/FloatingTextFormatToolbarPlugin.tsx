@@ -1,6 +1,6 @@
 import "./FloatingTextFormatToolbarPlugin.css";
 
-import { Box } from "@chakra-ui/react";
+import { Box, HStack, Separator } from "@chakra-ui/react";
 import { $isAutoLinkNode, $isLinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
 import {
   INSERT_CHECK_LIST_COMMAND,
@@ -294,7 +294,20 @@ function FloatingTextToolbar({
           insertLink={insertLink}
         />
       ) : null}
-      {children}
+      {children ? (
+        <HStack gap="0.5" role="group" aria-label="Selection actions">
+          {editable && (
+            <Separator
+              orientation="vertical"
+              height="4"
+              mx="xs"
+              borderColor="border.subtle"
+              css={{ "&:only-child": { display: "none" } }}
+            />
+          )}
+          {children}
+        </HStack>
+      ) : null}
     </Box>
   );
 }

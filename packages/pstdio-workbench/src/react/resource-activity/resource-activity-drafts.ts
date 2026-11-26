@@ -1,16 +1,13 @@
-import type { PublishResourceActivity, ResourceActivityAttachment } from "@pstdio/sdk/extensions";
+import type { ResourceActivityAttachment } from "@pstdio/sdk/extensions";
 import type { WorkbenchCore } from "../../core";
 
 export interface ActivityDraft {
   body: string;
   key: string;
   attachments: ResourceActivityAttachment[];
-  quote?: string;
-  passage?: PublishResourceActivity["passage"];
-  replyToId?: string;
 }
 export const emptyActivityDraft = (): ActivityDraft => ({ body: "", key: crypto.randomUUID(), attachments: [] });
-const caches = new WeakMap<WorkbenchCore, Map<string, ReturnType<typeof createDraft>>>();
+const caches = new WeakMap<WorkbenchCore, Map<string, Map<string, ReturnType<typeof createDraft>>>>();
 const createDraft = () => {
   let value = emptyActivityDraft();
   const listeners = new Set<() => void>();
@@ -54,17 +51,29 @@ const createDraft = () => {
     },
   };
 };
-/** Pending operations notify any remounted consumer of the same complete resource identity. */
-export const resourceActivityDraft = (workbench: WorkbenchCore, identity: string) => {
+/** Drafts and pending work survive remounts per resource/thread and retire with the workbench. */
+export const peekResourceActivityDraft = (workbench: WorkbenchCore, identity: string, replyToId?: string) =>
+  caches
+    .get(workbench)
+    ?.get(identity)
+    ?.get(replyToId ?? "");
+
+export const resourceActivityDraft = (workbench: WorkbenchCore, identity: string, replyToId?: string) => {
   let cache = caches.get(workbench);
   if (!cache) {
     cache = new Map();
     caches.set(workbench, cache);
   }
-  let draft = cache.get(identity);
+  let drafts = cache.get(identity);
+  if (!drafts) {
+    drafts = new Map();
+    cache.set(identity, drafts);
+  }
+  const scope = replyToId ?? "";
+  let draft = drafts.get(scope);
   if (!draft) {
     draft = createDraft();
-    cache.set(identity, draft);
+    drafts.set(scope, draft);
   }
   return draft;
 };
