@@ -60,6 +60,12 @@ export const restoreProjectDeletionReceipts = async (tx: ManagerTransaction, rec
     if (current?.requestedBy && row.requestedBy && current.requestedBy !== row.requestedBy)
       throw new Error("Manager snapshot conflicts with a deletion requester");
   }
+  const advances = sql`${projectDeletions.state} <> 'completed' AND (
+    excluded.state = 'completed'
+    OR excluded.delivery > ${projectDeletions.delivery}
+    OR (excluded.delivery = ${projectDeletions.delivery}
+      AND excluded.state = 'needs-attention' AND ${projectDeletions.state} = 'deleting')
+  )`;
   const batchSize = 1_000;
   for (let offset = 0; offset < receipts.length; offset += batchSize) {
     const changed = await tx
@@ -74,18 +80,13 @@ export const restoreProjectDeletionReceipts = async (tx: ManagerTransaction, rec
       .onConflictDoUpdate({
         target: [projectDeletions.accountId, projectDeletions.workbenchId],
         set: {
-          state: sql`excluded.state`,
-          completedAt: sql`excluded."completedAt"`,
-          delivery: sql`greatest(excluded.delivery, ${projectDeletions.delivery})`,
+          state: sql`case when ${advances} then excluded.state else ${projectDeletions.state} end`,
+          completedAt: sql`case when ${advances} then excluded."completedAt" else ${projectDeletions.completedAt} end`,
+          delivery: sql`case when ${advances} then greatest(excluded.delivery, ${projectDeletions.delivery}) else ${projectDeletions.delivery} end`,
           requestedBy: sql`coalesce(${projectDeletions.requestedBy}, excluded."requestedBy")`,
         },
-        // A failure closes its delivery until an explicit retry advances the number.
-        setWhere: sql`${projectDeletions.state} <> 'completed' AND (
-          excluded.state = 'completed'
-          OR excluded.delivery > ${projectDeletions.delivery}
-          OR (excluded.delivery = ${projectDeletions.delivery}
-            AND excluded.state = 'needs-attention' AND ${projectDeletions.state} = 'deleting')
-        )`,
+        // Requester recovery is independent of monotonic deletion progress, including completed receipts.
+        setWhere: sql`${advances} OR (${projectDeletions.requestedBy} IS NULL AND excluded."requestedBy" IS NOT NULL)`,
       })
       .returning(fields);
     for (const row of changed) retired.set(projectScope(row.accountId, row.workbenchId), row);
