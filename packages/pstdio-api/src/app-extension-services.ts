@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import type { createPreferencesDBService } from "pstdio-db";
 import {
   type createExtensionConnectionsDBService,
   type createExtensionInstancesDBService,
@@ -36,8 +37,10 @@ import { createExtensionUpgradeService } from "./services/extension-upgrade-serv
 import type { createFileService } from "./services/file-service";
 import type { createProjectService } from "./services/project-service";
 import type { createWorkspaceService } from "./services/workspace-service";
+import { upgrade049Tools } from "./startup/upgrade-0-49-tools";
 
 interface WireExtensionServicesInput {
+  preferences: ReturnType<typeof createPreferencesDBService>;
   config: AppConfig["extensions"];
   db: DbClient;
   dependencies: AppDependencies;
@@ -61,7 +64,7 @@ export const productionAppDependencies: AppDependencies = {
   installExtensionSource,
 };
 
-export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
+export const wireAppExtensionServices = async (input: WireExtensionServicesInput) => {
   let installCatalog: ReturnType<typeof createCatalogInstaller>;
   const extensionInstallations = createExtensionInstallations({
     path: join(input.storageRoot, "extension-installations.json"),
@@ -202,6 +205,14 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
     processEnvironment: extensionProcessEnvironment,
     targets: createExtensionTargets(input.getTargetDeps),
   });
+  // Upgrade the old sources once, before watchers and the project catalog start preparing them.
+  await upgrade049Tools(input.preferences, input.installedExtensionSourcesDBService, extensionUpgradeService).catch(
+    (err) =>
+      apiLogger.warn(
+        { err, event: "extensions.upgrade_0_49.pending" },
+        "First-party tool upgrade will retry on restart",
+      ),
+  );
   const extensionRuntime = createInstalledExtensionRuntime({
     eventBus: input.eventBus,
     extensionService,

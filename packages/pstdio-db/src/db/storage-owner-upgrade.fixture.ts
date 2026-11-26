@@ -132,7 +132,7 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     storage_personal_history_positions: positions,
   };
   const tables = Object.keys(data);
-  const folder = join(import.meta.dirname, "../../drizzle");
+  const folder = join(import.meta.dirname, "../../drizzle-0.46");
   const files = (await readdir(folder)).filter((name) => /^(000\d|0010)_.*\.sql$/u.test(name)).sort();
   const constraints: string[] = [];
   for (const file of files)

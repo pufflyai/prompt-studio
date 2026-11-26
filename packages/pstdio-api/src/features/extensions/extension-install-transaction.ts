@@ -8,6 +8,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { rm } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { threadId } from "node:worker_threads";
 import {
@@ -24,6 +25,7 @@ import {
   resolvePstdioHome,
   withFileMutationLock,
 } from "pstdio-paths";
+import { setupLogger } from "../../lib/logger";
 import { runExtensionPreparation } from "./extension-preparation";
 import { readPreparationRecord } from "./preparation-record";
 import { promotePreparedSource } from "./promote-extension-source";
@@ -148,6 +150,7 @@ export const settlePreparedInstall = async (transaction: ExtensionInstallTransac
   const extensionsRoot = realpathSync.native(dirname(intent.targetPath));
   const lock = join(dirname(extensionsRoot), ".extension-source-locks", basename(intent.targetPath));
   withFileMutationLock(lock, () => {
+    if (!existsSync(transaction.intentPath)) return;
     const owns = ownsTarget(intent);
     if (commit && !owns) throw new Error("A newer installation replaced this prepared extension.");
     if (!commit && ownsClaim(intent)) {
@@ -162,10 +165,17 @@ export const settlePreparedInstall = async (transaction: ExtensionInstallTransac
       const completed = completedPath(transaction);
       mkdirSync(dirname(completed), { recursive: true });
       writeIntent(completed, intent);
+    } else {
+      rmSync(intent.root, { recursive: true, force: true });
     }
-    rmSync(intent.root, { recursive: true, force: true });
     rmSync(transaction.intentPath, { force: true });
   });
+  // The replacement is active and the completion record owns the retired directory.
+  // Shutdown or the next launch retries cleanup if this worker exits before it finishes.
+  if (commit)
+    void rm(intent.root, { recursive: true, force: true }).catch((err) =>
+      setupLogger.warn({ err, event: "extension.installation.cleanup" }, "Retired extension cleanup will retry"),
+    );
 };
 const recoverInstall = async (intentPath: string, disposing: boolean) => {
   const transaction = { intentPath };
@@ -192,8 +202,10 @@ export const recoverPreparedInstalls = async (disposing = false) => {
       const path = join(completed, name);
       const intent = readPreparationRecord<InstallationIntent>(path);
       if (!intent) continue;
-      if (!isFileMutationOwnerAlive(intent.owner) || (disposing && intent.owner.pid === process.pid))
+      if (!isFileMutationOwnerAlive(intent.owner) || (disposing && intent.owner.pid === process.pid)) {
+        await rm(intent.root, { recursive: true, force: true });
         rmSync(path, { force: true });
+      }
     }
   for (const name of readdirSync(root).filter((name) => name.endsWith(".json")))
     await recoverInstall(join(root, name), disposing);

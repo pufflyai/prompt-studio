@@ -20,7 +20,7 @@ export const verifyWindowsUpdateData = (input: {
   }
   assert.deepEqual(input.projects, [], "The 0.46 database baseline must start empty");
   const marker = JSON.parse(readFileSync(join(input.home, "pstdio.db", ".pstdio-engine.json"), "utf8"));
-  assert.equal(marker.baseline, "0.46");
+  assert.equal(marker.baseline, gte(input.candidateVersion, "0.49.0-0") ? "0.49" : "0.46");
   const backups = join(input.home, "backups");
   const retired = readdirSync(backups, { withFileTypes: true }).filter(
     (entry) => entry.isDirectory() && entry.name.startsWith("pre-0.46-") && entry.name.endsWith("-pstdio.db"),

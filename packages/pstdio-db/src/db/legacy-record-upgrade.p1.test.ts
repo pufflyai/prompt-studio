@@ -371,7 +371,7 @@ test("released text-owner records convert before the upgraded database opens", a
         await connection.pglite.query(`SELECT o.extension_id FROM operations p
       JOIN owners o ON o.id=p.owner_id`)
       ).rows,
-    ).toEqual([{ extension_id: "example.healthy" }]);
+    ).toEqual([]);
     expect(
       (
         await connection.pglite.query(`SELECT o.extension_id,r.value FROM records r
