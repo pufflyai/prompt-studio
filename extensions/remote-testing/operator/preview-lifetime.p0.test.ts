@@ -77,15 +77,25 @@ test("repeated concurrent opens and cleanup retain the other preview's route and
   expect(Number(expiry) * 1000).toBeLessThan(Date.now() + 70_000);
   await routes.cleanup();
   expect(resources.size).toBe(10);
+  const foreign = "pstdio-preview-cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+  certificates.set(foreign, {
+    name: foreign,
+    labels: {
+      "managed-by": "pstdio-isolated-preview",
+      "preview-deployment": "another-deployment",
+      "preview-expires": "1",
+    },
+  });
   running.delete(ids[0]);
   await routes.cleanup();
   expect(resources.size).toBe(5);
-  expect(certificates.size).toBe(1);
+  expect(certificates.size).toBe(2);
   expect(entries.size).toBe(1);
   expect([...resources.values()].every((r) => r.metadata.labels["pocketcoder.workspace"] === ids[1])).toBe(true);
   certificates.get("pstdio-preview-" + ids[1]).labels["preview-expires"] = "1";
   await routes.cleanup();
   expect(resources.size).toBe(0);
-  expect(certificates.size).toBe(0);
+  expect(certificates.size).toBe(1);
+  expect(certificates.has(foreign)).toBe(true);
   expect(entries.size).toBe(0);
 });

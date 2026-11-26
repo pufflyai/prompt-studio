@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { checked, googleClient, kubernetesClient } from "./cloud";
 import { uuid, WorkflowError } from "./routes";
 
@@ -19,6 +20,10 @@ const certificateName = (id: string) => "pstdio-preview-" + id;
 const expiryLabel = "preview-expires";
 
 export function createPreviewRoutes(config: PreviewIngress, kube = kubernetesClient(), google = googleClient()) {
+  const scope = createHash("sha256")
+    .update(JSON.stringify([config.namespace, config.certificateMap, config.gateway]))
+    .digest("hex")
+    .slice(0, 24);
   const ns = "/namespaces/" + config.namespace;
   const parent = `projects/${config.project}/locations/global`;
   const map = `${parent}/certificateMaps/${config.certificateMap}`;
@@ -122,14 +127,18 @@ export function createPreviewRoutes(config: PreviewIngress, kube = kubernetesCli
       },
     });
     const certificate = await google(`${parent}/certificates?certificateId=${name}`, "POST", {
-      labels: { "managed-by": manager, [expiryLabel]: String(Math.floor(expiresAt / 1000)) },
+      labels: {
+        "managed-by": manager,
+        "preview-deployment": scope,
+        [expiryLabel]: String(Math.floor(expiresAt / 1000)),
+      },
       managed: { domains: [new URL(origin(id)).hostname] },
     });
     await operation(certificate);
     const entry = await google(`${map}/certificateMapEntries?certificateMapEntryId=${name}`, "POST", {
       hostname: new URL(origin(id)).hostname,
       certificates: [`${parent}/certificates/${name}`],
-      labels: { "managed-by": manager },
+      labels: { "managed-by": manager, "preview-deployment": scope },
     });
     await operation(entry);
   }
@@ -137,7 +146,8 @@ export function createPreviewRoutes(config: PreviewIngress, kube = kubernetesCli
   async function cleanupCertificate(cert: NonNullable<Certificates["certificates"]>[number]) {
     const name = cert.name.split("/").at(-1) as string;
     const id = name.slice("pstdio-preview-".length);
-    if (!uuid.test(id) || cert.labels?.["managed-by"] !== manager) return;
+    if (!uuid.test(id) || cert.labels?.["managed-by"] !== manager || cert.labels["preview-deployment"] !== scope)
+      return;
     const pod = await checked<Pods>(
       await kube("/api/v1" + ns + "/pods?labelSelector=" + encodeURIComponent("pocketcoder.workspace=" + id)),
     );
