@@ -141,6 +141,16 @@ const attachUnlessRemoved = async <Source extends { id: string }, Attached exten
   throw new ProjectNotFoundError(projectId);
 };
 
+// Discovery reads metadata and hashes separately. A folder swap can pair stale
+// metadata with the new hash. A loaded, versioned source owns its accepted metadata.
+const keepDiscoveredRegistration = (
+  existing: { source_hash: string | null; status: string; version: string | null },
+  input: RegisterInstalledSourceInput,
+) =>
+  existing.source_hash &&
+  input.sourceHash &&
+  (existing.source_hash !== input.sourceHash || (existing.status === "loaded" && existing.version !== null));
+
 export const createExtensionService = (deps: ExtensionServiceDeps) => {
   const mutateSource = createExtensionSourceMutations();
   const emitInstalledSource = (source: unknown) => {
@@ -196,14 +206,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     notify: Parameters<typeof registerSource>[1],
   ) => {
     const existing = await deps.installedExtensionSourcesService.getBySourcePath(input.sourcePath);
-    // Discovery reads metadata and hashes separately. An explicit install can replace
-    // the folder between them, pairing the old manifest with the newly accepted hash.
-    // A loaded, versioned source already owns its metadata. Only attach its instance.
-    if (
-      existing?.source_hash &&
-      input.sourceHash &&
-      (input.sourceHash !== existing.source_hash || (existing.status === "loaded" && existing.version !== null))
-    ) {
+    if (existing && keepDiscoveredRegistration(existing, input)) {
       return { installedSource: existing, created: false };
     }
 
