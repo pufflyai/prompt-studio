@@ -393,7 +393,7 @@
         "package.json",
         "extension.ts",
         "src/**/*.test.{ts,tsx}",
-        "src/workspace-history-webview.ts",
+        "src/workspace-monitoring-webview.tsx",
         // The operator runs prepare.ts, and the image starts start.ts by path.
         "src/codex-template/{prepare,start}.ts"
       ],

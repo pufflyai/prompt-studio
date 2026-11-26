@@ -15,7 +15,8 @@ import { labCommands } from "./lab-commands";
 import { instancesPageRef } from "./lab-navigation";
 import { instancesView, machinesView, templatesView } from "./native-tables";
 import { changed, instanceKind } from "./resources";
-import { workspaceHistoryView } from "./workspace-history-view";
+import { monitoringRangeParam } from "./workspace-monitoring-range";
+import { workspaceMonitoringView } from "./workspace-monitoring-view";
 
 const instanceTab = (label: Localizable<string>) =>
   ({
@@ -117,6 +118,11 @@ export const deployedPage = definePage({
   path: "pocketcoder-deployed",
   mode: workbenchModes.project,
   parent: instancesPage.ref,
+  params: {
+    "monitoring-range": monitoringRangeParam,
+    "monitoring-name": { type: "string" },
+    "monitoring-state": { type: "string" },
+  },
   main: { kind: "panels", landing: "machines" },
   slots: [
     {
@@ -135,7 +141,7 @@ export const deployedPage = definePage({
       id: "workspace-history",
       region: "main",
       order: 2,
-      item: { kind: "view", view: workspaceHistoryView.ref, presence: "open" },
+      item: { kind: "view", view: workspaceMonitoringView.ref, presence: "open" },
     },
   ],
 });

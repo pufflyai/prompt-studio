@@ -14,6 +14,7 @@ const labels: Record<Machine["state"], string> = {
   expired: "Expired",
   preserved: "Preserved",
 };
+export const machineStates = Object.entries(labels).map(([value, label]) => ({ value, label }));
 export const machineStateLabel = (state: Machine["state"]) => labels[state];
 
 export function unavailableMachineMessage(

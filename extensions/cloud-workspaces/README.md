@@ -21,6 +21,20 @@ Use `templates:read`, `workspaces:read`, `conversations:read`, and `logs:read` t
 
 Deployment endpoints and credentials belong in host-managed connection settings. Keep Google authentication, provider credentials, operator helpers, and deployment configuration outside the repository. Shared packages contain source and dependency manifests. Workspace credentials must be scoped to that workspace and expire with it.
 
+## Workspace Monitoring
+
+Open **Cloud Workspaces → Deployed PocketCoder → Workspace Monitoring**. The overview covers the last hour, 24 hours, or seven days. Search by exact workspace name or filter by state, then select a workspace to see its timeline, ready time, and estimate. Use **Open output and logs** to inspect its operational details.
+
+Set **Default workspace hourly rate (USD)** in the extension settings to apply one rate across the controller. To enter different rates on controllers that report activity by template, use **Workspace hourly rates (USD)**. Enter a JSON object with template names and USD per ready hour, for example `{"app-preview": 0.22, "test-runner": 0.55}`. A rate applies to every version of that template and to retained activity. The estimate covers ready time. The dashboard labels unpriced usage and shows a partial subtotal when some rates are missing. Aggregate estimates with different template rates require activity by template.
+
+Read the same data through the CLI:
+
+```sh
+pst pocketcoder.pocketcoder deployed monitoring-summary --range week
+pst pocketcoder.pocketcoder deployed monitoring-workspaces --state failed
+pst pocketcoder.pocketcoder deployed monitoring-workspace --machine-id <workspace-id>
+```
+
 ## Tests and demos
 
 The bundled `run-cloud-tests` and `launch-cloud-demo` skills explain branch selection, explicit commands, full logs, source revisions, expiring links, and cleanup. Configure the companion's global runner and template-publisher connections, approved runtime templates, storage bucket, and URL signer. Run:
