@@ -25,6 +25,7 @@ import {
   resolvePstdioHome,
   withFileMutationLock,
 } from "pstdio-paths";
+import { setupLogger } from "../../lib/logger";
 import { runExtensionPreparation } from "./extension-preparation";
 import { readPreparationRecord } from "./preparation-record";
 import { promotePreparedSource } from "./promote-extension-source";
@@ -169,9 +170,12 @@ export const settlePreparedInstall = async (transaction: ExtensionInstallTransac
     }
     rmSync(transaction.intentPath, { force: true });
   });
-  // The durable completion record owns this private stage. Deleting an old dependency tree
-  // can take seconds. Release the source lock and let other workers finish their installs.
-  if (commit) await rm(intent.root, { recursive: true, force: true });
+  // The replacement is active and the completion record owns the retired directory.
+  // Shutdown or the next launch retries cleanup if this worker exits before it finishes.
+  if (commit)
+    void rm(intent.root, { recursive: true, force: true }).catch((err) =>
+      setupLogger.warn({ err, event: "extension.installation.cleanup" }, "Retired extension cleanup will retry"),
+    );
 };
 const recoverInstall = async (intentPath: string, disposing: boolean) => {
   const transaction = { intentPath };
