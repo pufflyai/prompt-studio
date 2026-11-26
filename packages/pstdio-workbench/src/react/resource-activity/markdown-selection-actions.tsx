@@ -34,8 +34,7 @@ export const ResourceMarkdownSelectionActions = (props: {
     menuPath: editorSelectionMenuPath,
     context: { resource: placement?.resource, placement: placement?.placementIdentity },
   });
-  const close = (restoreFocus = false) => {
-    if (restoreFocus) returnFocus.current = true;
+  const close = () => {
     setDraft(undefined);
     editor.clearHighlight();
   };
@@ -126,14 +125,20 @@ export const ResourceMarkdownSelectionActions = (props: {
           </Tooltip>
           <Portal>
             <Popover.Positioner>
-              <Popover.Content ref={content} aria-label="Comment on selection" w="popover-panel" maxW="full">
+              <Popover.Content
+                ref={content}
+                aria-label="Comment on selection"
+                w="popover-panel"
+                maxW="full"
+                p="0"
+                borderWidth="0"
+              >
                 {draft && (
                   <MarkdownCommentComposer
                     draft={draft}
                     busy={publishing}
                     onBusyChange={setPublishing}
                     onChange={setDraft}
-                    onClose={() => close(true)}
                     onPosted={() => close()}
                     publish={activity.publish}
                   />

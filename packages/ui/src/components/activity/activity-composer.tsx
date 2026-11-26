@@ -128,6 +128,7 @@ export const ActivityComposer = (props: ActivityComposerProps) => {
           <Box minH={`${minRows}lh`}>
             <ActivityRichInput
               value={currentValue}
+              autoFocus={autoFocus}
               disabled={disabled}
               placeholder={placeholder}
               onChange={handleChange}
@@ -137,7 +138,14 @@ export const ActivityComposer = (props: ActivityComposerProps) => {
             {actions}
             <Spacer />
             <Tooltip content={attachLabel}>
-              <IconButton size="2xs" variant="ghost" aria-label={attachLabel} type="button" onClick={onAttach}>
+              <IconButton
+                size="2xs"
+                variant="ghost"
+                aria-label={attachLabel}
+                type="button"
+                onClick={onAttach}
+                disabled={disabled}
+              >
                 <Icon as={Paperclip} boxSize="14px" />
               </IconButton>
             </Tooltip>

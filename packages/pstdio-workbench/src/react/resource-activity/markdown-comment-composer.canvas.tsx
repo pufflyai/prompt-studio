@@ -25,7 +25,7 @@ const SelectionCommentExample = ({ failPost = false }: { failPost?: boolean }) =
     <Stack p="lg" gap="md" maxW="document-content">
       <Text textStyle="heading/S">Running e2e benchmarks</Text>
       <Text>
-        <Text as="mark" bg="bg.drop/20">
+        <Text as="mark" bg="bg.accent-primary.medium" color="text.selectable.primary">
           {quote}
         </Text>
       </Text>
@@ -47,13 +47,12 @@ const SelectionCommentExample = ({ failPost = false }: { failPost?: boolean }) =
           </Tooltip>
           <Portal>
             <Popover.Positioner>
-              <Popover.Content ref={content} aria-label="Comment on selection" w="popover-panel">
+              <Popover.Content ref={content} aria-label="Comment on selection" w="popover-panel" p="0" borderWidth="0">
                 <MarkdownCommentComposer
                   draft={draft}
                   busy={busy}
                   onBusyChange={setBusy}
                   onChange={setDraft}
-                  onClose={() => setOpen(false)}
                   onPosted={() => setOpen(false)}
                   publish={async ({ body }) => {
                     if (failPost) throw new Error("Your text is kept. Try again.");

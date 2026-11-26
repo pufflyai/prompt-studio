@@ -8,8 +8,10 @@ Sessions owns the `Ask agent` contribution and converts the selection into draft
 
 For React consumers, `MarkdownEditor` exposes two composition points: `plugins` for components within its Lexical context, and `selectionToolbar` for additional floating toolbar content. `useMarkdownEditor()` is scoped to that editor and exposes selection capture, durable anchor reveal, highlight cleanup, and focus. Capture the selection before moving focus to another control. The generic UI package does not import Activity APIs or session commands.
 
-Activity composes an anchored comment popover outside the editor package. It uses the shared Activity composer and resource activity API, and keeps the popup's unsent text separate from the feed's draft. Successful publication opens the document's Activity menu. A failed publication preserves the body and idempotency key for retry. Source anchors use relative document positions, so posted quotes remain revealable after surrounding edits. Comments are available only when the resource grants comment capability and the document has a shared text binding.
+Activity composes an anchored comment popover outside the editor package. It contains only the shared Activity comment input, while the selected source passage remains highlighted. It uses the resource activity API and keeps the popup's unsent text separate from the feed's draft. Successful publication opens the document's Activity menu. A failed publication preserves the body and idempotency key for retry. Source anchors use relative document positions, so posted quotes remain revealable after surrounding edits. Comments are available only when the resource grants comment capability and the document has a shared text binding.
+
+Activity threads use the shared comment/reply components with an inline reply composer. Each thread owns its draft, attachments, pending operation and retry state independently from the standalone comment input. These composers share the existing feed subscription rather than opening a reader for every reply input.
 
 The selection slot and draft command require the SDK and host revision that introduces them. Extensions must declare the published SDK version before shipping; candidate package fixtures are development validation, not proof of published compatibility.
 
-*Updated at: 2026-11-26*
+*Updated at: 2026-11-27*
