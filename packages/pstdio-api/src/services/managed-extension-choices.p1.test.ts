@@ -87,6 +87,12 @@ test("team policy protects a required tool from disable, removal and provider re
     AlwaysEnabledExtensionError,
   );
   expect((await sources.get(installed.installedSource.id))?.source_hash).toBe("original");
+  await expect(
+    service.uninstallProjectExtension({ projectId: personal.id, instanceId: personalInstance.instance.id }),
+  ).rejects.toBeInstanceOf(AlwaysEnabledExtensionError);
+  await expect(service.reloadInstalledSourceBySourcePath(source.sourcePath)).rejects.toBeInstanceOf(
+    AlwaysEnabledExtensionError,
+  );
 
   // A shared source cannot be changed through a personal project's upgrade either.
   await expect(service.assertInstalledSourceChoice(installed.installedSource.id)).rejects.toBeInstanceOf(
