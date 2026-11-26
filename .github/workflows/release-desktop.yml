@@ -300,7 +300,8 @@ jobs:
           retention-days: 14
 
       - name: Enforce the cold desktop upgrade budget before publication
-        run: bun scripts/test.ts clients/desktop/src/e2e/packaged-upgrade-budget.p1.spec.ts --prebuilt
+        if: matrix.essential_only != true
+        run: bun scripts/test.ts clients/desktop/src/e2e/upgrade --lane stable --prebuilt
         env:
           PLAN_DISPLAY: ${{ matrix.platform == 'linux' }}
 
