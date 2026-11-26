@@ -3,8 +3,10 @@ import {
   activePreparationPriority,
   createYieldClock,
   type Job,
+  needsExclusivePreparation,
   type PreparationJobPriority,
   preparationResourcesOverlap,
+  readsRevisionInputs,
   yieldPreparation,
 } from "./preparation-queue";
 import type { createPreparationWorkerSlots, PreparationWorkerSlot } from "./preparation-worker-slot";
@@ -20,6 +22,7 @@ export const preparationStartingReservation = ({ active, ready, worker }: Prepar
   worker && !ready ? active : undefined;
 
 const preparationJobsConflict = (left: Job, right: Job) => {
+  if (readsRevisionInputs(left) && readsRevisionInputs(right) && !left.resources && !right.resources) return false;
   const a = left.resources;
   const b = right.resources;
   return !a || !b || a.some((key) => b.some((other) => preparationResourcesOverlap(key, other)));
@@ -31,7 +34,7 @@ export const preparationSlotCompatible = (
   slot: PreparationWorkerSlot,
   releasing: readonly PreparationWorkerSlot[] = [],
 ) => {
-  if (!job.resources && slot.index !== 0) return false;
+  if (needsExclusivePreparation(job) && slot.index !== 0) return false;
   return pool.slots.every((other) => {
     if (other === slot || releasing.includes(other)) return true;
     const owner = other.dispatched ? other.active : (preparationStartingReservation(other) ?? other.retiring);
@@ -150,6 +153,6 @@ export const preparationPreemptionTarget = (pool: PreparationPool, pending: Job[
       // Starting and retiring owners still hold resources. Retire only when this set can make room.
       if (slots.length && hasPreparationCapacityAfter(pool, job, slots)) return { job, slots };
     }
-    if (!job.resources) return;
+    if (needsExclusivePreparation(job)) return;
   }
 };

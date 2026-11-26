@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
-import { lstat, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { lstat, readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { parseExtensionApiDeclaration } from "pstdio-api-contracts/extension-kernel";
 import { extensionStorageDirectory } from "../artifacts/extension-storage-path";
 import { createExtensionIgnoreMatcher } from "../authoring/extension-ignore";
 import { MAX_EXTENSION_ICON_BYTES } from "../runtime/extension-icon";
+import { extractFiles } from "./extract-files";
 import { createPackageArchive } from "./package-archive";
 
 export const packageSha256 = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
@@ -80,11 +81,7 @@ export const unpackExtension = async (bytes: Uint8Array, target: string, expecte
     throw new Error("Extension package identity does not match its release");
   }
   // Writing only inspected regular files prevents archive links from escaping the staging directory.
-  for (const [path, file] of contents.files) {
-    const destination = join(target, path);
-    await mkdir(dirname(destination), { recursive: true });
-    await writeFile(destination, new Uint8Array(await file.arrayBuffer()));
-  }
+  await extractFiles(target, contents.files);
   return contents.manifest;
 };
 

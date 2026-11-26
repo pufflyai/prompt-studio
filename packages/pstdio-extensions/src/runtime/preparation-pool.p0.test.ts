@@ -52,6 +52,26 @@ test("two independent preparations enter before either is released, and a third 
   }
 });
 
+test("revision builds and inspections share slots while source writes wait for both", async () => {
+  const client = fixture();
+  const a = gate(),
+    b = gate(),
+    writer = gate();
+  const jobs = [client.run("runtime.prepare", { url: a.url }), client.run("runtime.key", { url: b.url })];
+  try {
+    await Promise.all([a.entered.promise, b.entered.promise]);
+    jobs.push(client.run("wait", { url: writer.url }, { resources: ["install"] }));
+    a.release.resolve();
+    await jobs[0];
+    expect(await Promise.race([writer.entered.promise.then(() => true), Bun.sleep(30).then(() => false)])).toBe(false);
+    b.release.resolve();
+    await writer.entered.promise;
+  } finally {
+    for (const item of [a, b, writer]) item.release.resolve();
+    await Promise.allSettled(jobs);
+  }
+});
+
 test("an individual requested job can preempt a background slot in a full four-worker pool", async () => {
   const client = fixture(4);
   const gates = Array.from({ length: 4 }, gate);

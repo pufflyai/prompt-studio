@@ -4,6 +4,9 @@ import { upgradeWorkerCount } from "./upgrade-concurrency";
 const hosts: [number, number, ReturnType<typeof upgradeWorkerCount>][] = [
   [1, 2, 1],
   [2, 16, 1],
+  [3, 5, 1],
+  [3, 6, 2],
+  [3, 7, 2],
   [4, 16, 2],
   [6, 12, 3],
   [16, 4, 1],
