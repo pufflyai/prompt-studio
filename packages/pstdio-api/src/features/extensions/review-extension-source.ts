@@ -120,14 +120,16 @@ export const startExtensionSourceReview = async (
     await writeExtensionReviewTree(join(stage, "local"), local);
     const download = join(stage, "release-download");
     const incoming = await resolveInstallSource({ ...input, skipRuntimeBundle: true }, download);
+    let candidatePath = incoming.path;
     if (incoming.kind !== "named") {
       if (!source.separateProviderId || !workspaceRoot) throw new Error("A review requires a pinned upstream release.");
-      const path = relative(await realpath(workspaceRoot), await realpath(incoming.path));
+      candidatePath = await realpath(incoming.path);
+      const path = relative(await realpath(workspaceRoot), candidatePath);
       if (!path || isAbsolute(path) || path === ".." || path.startsWith(`..${sep}`))
         throw new Error("The review candidate must belong to the running workspace.");
     }
     const incomingPath = join(stage, "incoming");
-    await copyExtensionSource(incoming.path, incomingPath);
+    await copyExtensionSource(candidatePath, incomingPath);
     await rm(download, { recursive: true, force: true });
     const { manifest } = readPackageManifest(incomingPath);
     if (!manifest || canonicalExtensionId(manifest.id) !== canonicalExtensionId(expectedIdentity))
