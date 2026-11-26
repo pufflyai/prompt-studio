@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { expect } from "@playwright/test";
-import { createClient } from "@pstdio/sdk/client";
+import { createClient, PstdioConnectionError } from "@pstdio/sdk/client";
 import { signInDevice, writeCertificate } from "./packaged-folder-recovery.fixture";
 import { startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { createPackagedSyncPeer } from "./packaged-sync-relay.fixture";
@@ -73,7 +73,15 @@ export const checkCloudProjectUpgrade = async (
         timeout: PACKAGED_TEST_TIMEOUT,
       })
       .toBe(true);
-    await b.client.projects.open(seed.id);
+    try {
+      await b.client.projects.open(seed.id);
+    } catch (error) {
+      // Released hosts can close the idle HTTP socket while the synced folder is still
+      // provisioning. Reopening the same project resumes that idempotent operation.
+      if (!(error instanceof PstdioConnectionError) || (error.cause as NodeJS.ErrnoException)?.code !== "ECONNRESET")
+        throw error;
+      await b.client.projects.open(seed.id);
+    }
     await installUpgradePlanner(upgradeApi(b.host.descriptor), seed.id);
     await seen(b, await content(a));
     console.log("[Cloud upgrade] Second released device read the saved ticket");
