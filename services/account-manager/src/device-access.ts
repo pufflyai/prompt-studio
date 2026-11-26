@@ -58,7 +58,10 @@ export const createDeviceLogin =
   };
 
 // Every other request carries the device credential. Devices of one account manage each other.
-export const createDeviceAccess = (db: ManagerDatabase) => {
+export const createDeviceAccess = (
+  db: ManagerDatabase,
+  readProfile: (db: ManagerTransaction, accountId: string) => Promise<{ email: string } | undefined>,
+) => {
   const apply = async <T>(token: string, action: (transaction: ManagerTransaction, device: Device) => Promise<T>) => {
     const accountId = await accountOfCredential(db, token);
     if (!accountId) throw new DeviceAccessDenied();
@@ -93,8 +96,9 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
         readDeviceSigningKey(transaction, device.accountId, identitySchema.parse(deviceId)),
       ),
     account: (token: string, selected?: string) =>
-      scoped(token, selected, async (transaction, accountId) => ({
+      scoped(token, selected, async (transaction, accountId, userId) => ({
         features: await readAccountFeatures(transaction, accountId),
+        profile: await readProfile(transaction, userId),
       })),
     heartbeat: (token: string) =>
       apply(token, (transaction, device) => heartbeatDeviceInTransaction(transaction, device)),
