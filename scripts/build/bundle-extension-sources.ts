@@ -4,6 +4,13 @@ import { join } from "node:path";
 import type { BundledExtensionSources } from "pstdio-extensions/distribution";
 import { buildReleaseRuntimeArtifact } from "./release-runtime-artifact";
 
+// These built-in tools can be needed before existing 0.46–0.48 projects are usable.
+const upgradeTools = new Set([
+  "pstdio.planner", "pstdio.home", "pstdio.onboarding", "pstdio.session-browser",
+  "pstdio.workspaces", "pstdio.pstdio-terminal", "pstdio.base-themes", "pstdio.skills",
+  "pstdio.performance", "pstdio.harness-codex", "pstdio.harness-claude-code", "pstdio.harness-open-code",
+]);
+
 export const bundleExtensionSources = async (root: string) => {
   const { packExtensionSource } = await import("pstdio-extensions/distribution");
   const { readExtensionIcon, extensionIconAssetName } = await import("pstdio-extensions");
@@ -32,7 +39,9 @@ export const bundleExtensionSources = async (root: string) => {
     if (entry.bundleSource === false) continue;
     const packed = await packExtensionSource(join(root, entry.origin.path));
     await writeFile(join(destination, `${encodeURIComponent(entry.installName)}.tgz`), packed.bytes);
-    const runtime = await buildReleaseRuntimeArtifact(root, { ...packed.manifest, bytes: packed.bytes, sha256: packed.sha256 });
+    const prebuild = packed.manifest.id === "pstdio.planner" ||
+      (process.env.PSTDIO_PREBUILD_UPGRADE_TOOLS === "1" && upgradeTools.has(packed.manifest.id));
+    const runtime = prebuild && await buildReleaseRuntimeArtifact(root, { ...packed.manifest, bytes: packed.bytes, sha256: packed.sha256 });
     if (runtime) {
       const dir = join(destination, "runtime");
       await mkdir(dir, { recursive: true });

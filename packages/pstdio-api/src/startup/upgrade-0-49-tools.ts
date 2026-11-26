@@ -1,16 +1,10 @@
 import { basename, dirname, join, resolve } from "node:path";
 import type { createInstalledExtensionSourcesDBService, createPreferencesDBService } from "pstdio-db";
-import { parseRegistrySourceRef } from "pstdio-extensions/distribution";
 import { resolvePstdioHome } from "pstdio-paths";
-import {
-  type ExtensionCatalog,
-  getExtensionCatalog,
-  packagedExtensionCatalog,
-  selectExtensionCatalogEntry,
-} from "../features/extensions/extension-catalog";
+import { getExtensionCatalog } from "../features/extensions/extension-catalog";
 import { hashExtensionSourceAsync } from "../features/extensions/extension-runtime";
+import { isManagedCatalogSource } from "../features/extensions/managed-catalog-source";
 import { compatibilityError } from "../features/extensions/project-extension-instance";
-import { parseExtensionSourceRef } from "../services/extension-source-ref";
 import type { createExtensionUpgradeService } from "../services/extension-upgrade-service";
 
 const pending = {
@@ -20,31 +14,6 @@ const pending = {
   key: "upgrade_0_49_first_party_tools",
 } as const;
 type Source = NonNullable<Awaited<ReturnType<ReturnType<typeof createInstalledExtensionSourcesDBService>["get"]>>>;
-
-const isManagedSource = (source: Source, catalog: ExtensionCatalog, registryUrl?: string) => {
-  const trusted = selectExtensionCatalogEntry(packagedExtensionCatalog, source.install_name);
-  const selected = selectExtensionCatalogEntry(catalog, source.install_name);
-  if (
-    !trusted ||
-    !selected ||
-    trusted.origin.url !== "https://github.com/pufflyai/prompt-studio" ||
-    trusted.origin.ref !== "{hostRelease}" ||
-    selected.origin.url !== trusted.origin.url ||
-    selected.origin.path !== trusted.origin.path ||
-    selected.origin.ref !== trusted.origin.ref ||
-    source.extension_id !== (trusted.extensionId ?? `pstdio.${trusted.installName}`)
-  )
-    return false;
-  const registry = parseRegistrySourceRef(source.source_ref);
-  // 0.48 recorded some catalog tools in project folders as local_path with their official Git ref.
-  const git = parseExtensionSourceRef(source.source_ref);
-  if (
-    !(git?.url === trusted.origin.url && git.path === trusted.origin.path) &&
-    !(source.source_kind === "registry" && registry?.id === source.extension_id && registry.registry === registryUrl)
-  )
-    return false;
-  return true;
-};
 
 /** The embedded first-party catalog and the recorded origin must name the same source. */
 export async function upgrade049Tools(
@@ -59,7 +28,7 @@ export async function upgrade049Tools(
   const catalog = await getExtensionCatalog();
   const upgrade = async (source: Source) => {
     if (!compatibilityError(source)) return;
-    if (!isManagedSource(source, catalog, service.registry)) return;
+    if (!isManagedCatalogSource(source, catalog, service.registry)) return;
     if (!service.releaseRef) throw new Error("A host release is required to upgrade first-party tools");
     const parent = dirname(resolve(source.source_path));
     const global = join(resolvePstdioHome({ env: process.env }), "extensions");
