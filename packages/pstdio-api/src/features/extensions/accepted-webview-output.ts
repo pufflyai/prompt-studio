@@ -1,16 +1,25 @@
+import { existsSync } from "node:fs";
 import { preparedRevisionState, readAcceptedRevision } from "pstdio-extensions";
-import { readPublishedWebviewRevision } from "pstdio-extensions/prepared-cache";
+import { readPublishedWebview } from "pstdio-extensions/prepared-cache";
 import { runExtensionPreparation } from "./extension-preparation";
-import { readWebviewBuildSignature, removeUnownedWebviewBuilds } from "./extension-webview-build-cache";
+import {
+  publishedWebviewModule,
+  readWebviewBuildSignature,
+  removeUnownedWebviewBuilds,
+} from "./extension-webview-build-cache";
 import type { CreateExtensionWebviewBuildManagerInput } from "./extension-webview-build-reporters";
 import type { InstalledSourceWithManifest } from "./extension-webview-build-runner";
 import { expectedWebviewBuildSource } from "./extension-webview-build-runner";
 import type { loadCurrentWebviewSource } from "./extension-webview-source-load";
 import { resolveManagedWebviewPaths } from "./extension-webviews";
 
-const isPublished = (distDir: string, artifactId: string) => {
-  const expected = `prepared:${artifactId}`;
-  return readWebviewBuildSignature(distDir) === expected && readPublishedWebviewRevision(distDir) === expected;
+const isPublished = (distDir: string, artifact: { id: string; distDir: string }) => {
+  const expected = `prepared:${artifact.id}`;
+  const published = readPublishedWebview(distDir);
+  if (published?.revision !== expected) return false;
+  return published.distDir === distDir
+    ? readWebviewBuildSignature(distDir) === expected
+    : published.distDir === artifact.distDir && existsSync(publishedWebviewModule(published.distDir));
 };
 
 export const hasAcceptedWebviews = async (
@@ -28,7 +37,7 @@ export const hasAcceptedWebviews = async (
       !isPublished(
         resolveManagedWebviewPaths({ installedExtensionId: row.id, webviewCacheRoot: cacheRoot, webviewId: id })
           .distDir,
-        views[id]!.id,
+        views[id]!,
       ),
   );
   if (!missing.length) return true;
@@ -79,7 +88,7 @@ export const notifyAcceptedWebviewPublication = async (
             webviewCacheRoot: cacheRoot,
             webviewId: id,
           }).distDir,
-          artifact.id,
+          artifact,
         ),
       )
     )
