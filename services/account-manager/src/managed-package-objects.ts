@@ -5,6 +5,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   ListMultipartUploadsCommand,
+  NoSuchUpload,
   S3Client,
   type S3ClientConfig,
   UploadPartCommand,
@@ -23,6 +24,14 @@ export const createManagedPackageObjects = (bucket: string, config: S3ClientConf
   const client = new S3Client({ ...config, maxAttempts: 1 });
   const target = (id: string) => ({ Bucket: bucket, Key: `managed-packages/${id}` });
   const options = () => ({ abortSignal: AbortSignal.timeout(30_000) });
+  const abortUpload = async (id: string, uploadId: string) => {
+    try {
+      await client.send(new AbortMultipartUploadCommand({ ...target(id), UploadId: uploadId }), options());
+    } catch (error) {
+      // Completion or another cleanup can win after the listing was read.
+      if (!(error instanceof NoSuchUpload)) throw error;
+    }
+  };
   return {
     async reserve(id: string) {
       const result = await client.send(
@@ -64,7 +73,7 @@ export const createManagedPackageObjects = (bucket: string, config: S3ClientConf
         );
         for (const upload of uploads.Uploads ?? []) {
           if (upload.Key !== Key || !upload.UploadId) continue;
-          await client.send(new AbortMultipartUploadCommand({ ...target(id), UploadId: upload.UploadId }), options());
+          await abortUpload(id, upload.UploadId);
         }
         KeyMarker = uploads.IsTruncated ? uploads.NextKeyMarker : undefined;
         UploadIdMarker = uploads.NextUploadIdMarker;
