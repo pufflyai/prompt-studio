@@ -8,8 +8,8 @@ import { MonitoringError, monitoringFormat, type Translate } from "./workspace-m
 interface InventoryProps {
   client: MonitoringClient;
   range: string;
-  state?: string;
-  name?: string;
+  allowedStates: string[];
+  name: string;
   open(resource: ResourceRef): void;
   locale: string;
   t: Translate;
@@ -19,7 +19,7 @@ type PageState = MonitoringList & { cursor?: string };
 const empty: PageState = { nextCursor: null, rows: [] };
 
 export function WorkspaceMonitoringInventory(props: InventoryProps) {
-  const { client, range, state, name, open, locale, t } = props;
+  const { client, range, allowedStates, name, open, locale, t } = props;
   const sentinel = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState<PageState>(empty);
   const [cursor, setCursor] = useState<string>();
@@ -28,9 +28,16 @@ export function WorkspaceMonitoringInventory(props: InventoryProps) {
   const [dismissed, setDismissed] = useState(false);
   const [initial, setInitial] = useState(true);
   const format = monitoringFormat(locale, t);
+  const hasEligibleStates = allowedStates.length > 0;
+  const state = allowedStates.length === 1 ? allowedStates[0] : undefined;
+  const stateKey = allowedStates.join(",");
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: The retry counter explicitly starts a fresh read.
   useEffect(() => {
+    if (!hasEligibleStates) {
+      setInitial(false);
+      return;
+    }
     const abort = new AbortController();
     setError(undefined);
     setDismissed(false);
@@ -43,10 +50,12 @@ export function WorkspaceMonitoringInventory(props: InventoryProps) {
     void query.refresh(abort.signal).then(
       (next) => {
         if (abort.signal.aborted) return;
+        const eligible = new Set(stateKey.split(","));
+        const rows = next.rows.filter((row) => eligible.has(row.state));
         setPage((previous) => ({
           cursor,
           nextCursor: next.nextCursor === cursor ? null : next.nextCursor,
-          rows: cursor ? [...previous.rows, ...next.rows] : next.rows,
+          rows: cursor ? [...previous.rows, ...rows] : rows,
         }));
         setInitial(false);
       },
@@ -56,7 +65,7 @@ export function WorkspaceMonitoringInventory(props: InventoryProps) {
       },
     );
     return () => abort.abort();
-  }, [client, range, state, name, cursor, retry]);
+  }, [client, range, name, state, stateKey, cursor, retry, hasEligibleStates]);
 
   useEffect(() => {
     if (!sentinel.current || !page.nextCursor || cursor !== page.cursor || error) return;
@@ -123,12 +132,12 @@ export function WorkspaceMonitoringInventory(props: InventoryProps) {
             dismiss={() => setDismissed(true)}
           />
         )}
-        {!error && (initial || cursor !== page.cursor) && (
+        {!error && (initial || cursor !== page.cursor || (page.nextCursor && page.rows.length === 0)) && (
           <Text role="status" color="fg.muted">
             {t("cloud-workspaces.monitoring-loading", "Loading workspace monitoring…")}
           </Text>
         )}
-        {!initial && page.rows.length === 0 && (
+        {!initial && !page.nextCursor && page.rows.length === 0 && (
           <Text color="fg.muted">
             {t("cloud-workspaces.monitoring-no-workspaces", "No workspaces match these filters.")}
           </Text>

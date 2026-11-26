@@ -121,7 +121,7 @@ export const deployedPage = definePage({
   params: {
     "monitoring-range": monitoringRangeParam,
     "monitoring-name": { type: "string" },
-    "monitoring-state": { type: "string" },
+    "monitoring-filter": { type: "string" },
   },
   main: { kind: "panels", landing: "workspace-history" },
   slots: [

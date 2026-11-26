@@ -1,10 +1,11 @@
-import { Button, Flex, Grid, Stack, Text } from "@chakra-ui/react";
+import { Flex, Grid, Stack, Text } from "@chakra-ui/react";
 import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { ScrollArea, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { MonitoringClient, MonitoringDetail } from "./workspace-monitoring-client";
 import {
   Metric,
+  MonitoringAction,
   MonitoringError,
   MonitoringRangeControl,
   monitoringFormat,
@@ -75,14 +76,18 @@ export function WorkspaceMonitoringDetail(props: DetailProps) {
         <MonitoringRangeControl range={range} onChange={changeRange} t={t} />
         <Flex gap="xs" wrap="wrap">
           {detail && (
-            <Button size="sm" variant="ghost" onClick={() => setRetry((value) => value + 1)}>
-              {t("cloud-workspaces.refresh", "Refresh")}
-            </Button>
+            <MonitoringAction
+              icon="refresh"
+              label={t("cloud-workspaces.refresh", "Refresh")}
+              onClick={() => setRetry((value) => value + 1)}
+            />
           )}
           {detail && (
-            <Button size="sm" onClick={() => openOutput(detail.resource)}>
-              {t("cloud-workspaces.monitoring-open-output", "Open output and logs")}
-            </Button>
+            <MonitoringAction
+              icon="file-text"
+              label={t("cloud-workspaces.monitoring-open-output", "Open output and logs")}
+              onClick={() => openOutput(detail.resource)}
+            />
           )}
         </Flex>
       </Flex>

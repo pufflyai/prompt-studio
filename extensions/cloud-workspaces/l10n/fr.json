@@ -171,10 +171,6 @@
   "cloud-workspaces.monitoring-estimate-short": "Coût estimé sur la période",
   "cloud-workspaces.monitoring-loading": "Chargement du suivi des espaces de travail…",
   "cloud-workspaces.monitoring-no-workspaces": "Aucun espace de travail ne correspond à ces filtres.",
-  "cloud-workspaces.monitoring-all-states": "Tous les états",
-  "cloud-workspaces.monitoring-search": "Rechercher",
-  "cloud-workspaces.monitoring-clear": "Effacer la recherche",
-  "cloud-workspaces.monitoring-filter-state": "Filtrer par état de l’espace de travail",
   "cloud-workspaces.monitoring-estimate-partial": "Coût de calcul estimé · partiel",
   "cloud-workspaces.monitoring-estimate": "Coût de calcul estimé",
   "cloud-workspaces.monitoring-cost-unavailable": "Configurez un tarif horaire par défaut. Des tarifs différents par modèle nécessitent l’activité par modèle du contrôleur.",
@@ -185,5 +181,6 @@
   "cloud-workspaces.monitoring-hourly-rate": "Tarif par heure à l’état prêt",
   "cloud-workspaces.monitoring-open-output": "Ouvrir la sortie et les journaux",
   "cloud-workspaces.monitoring-default-rate": "Tarif horaire par défaut des espaces de travail (USD)",
-  "cloud-workspaces.monitoring-default-rate-description": "Tarif horaire en USD à l’état prêt. Un tarif unique permet d’estimer le coût total sur tout contrôleur qui fournit l’activité des espaces de travail."
+  "cloud-workspaces.monitoring-default-rate-description": "Tarif horaire en USD à l’état prêt. Un tarif unique permet d’estimer le coût total sur tout contrôleur qui fournit l’activité des espaces de travail.",
+  "cloud-workspaces.monitoring-search-exact": "Nom exact"
 }

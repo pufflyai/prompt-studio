@@ -1,6 +1,6 @@
-import { Button, Flex, Stack, Text } from "@chakra-ui/react";
+import { Button, Flex, Icon, IconButton, Stack, Text } from "@chakra-ui/react";
 import { isLocalizedString } from "@pstdio/sdk/extensions";
-import { SegmentedControl, SimpleCard, SimpleCardBody } from "@pstdio/ui";
+import { createGlyphIcon, getIconComponent, SegmentedControl, SimpleCard, SimpleCardBody, Tooltip } from "@pstdio/ui";
 import { historyRanges } from "./workspace-history-range";
 
 export type Translate = (key: string, fallback: string, args?: Record<string, unknown>) => string;
@@ -74,5 +74,18 @@ export function MonitoringError(props: { message: string; retry?: () => void; di
         </Flex>
       )}
     </Stack>
+  );
+}
+
+const RefreshIcon = createGlyphIcon("refresh");
+
+export function MonitoringAction(props: { icon: "refresh" | "file-text"; label: string; onClick(): void }) {
+  const { icon, label, onClick } = props;
+  return (
+    <Tooltip content={label}>
+      <IconButton aria-label={label} variant="ghost" size="2xs" onClick={onClick}>
+        <Icon as={icon === "refresh" ? RefreshIcon : getIconComponent(icon)} />
+      </IconButton>
+    </Tooltip>
   );
 }

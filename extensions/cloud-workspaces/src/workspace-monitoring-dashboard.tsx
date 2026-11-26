@@ -1,13 +1,16 @@
-import { Button, createListCollection, Flex, Grid, Input, Portal, Select, Stack, Text } from "@chakra-ui/react";
+import { Flex, Grid, Stack, Text } from "@chakra-ui/react";
 import type { PageParams, ResourceRef } from "@pstdio/sdk/extensions";
 import { ScrollArea, SimpleCard, SimpleCardBody } from "@pstdio/ui";
-import { useEffect, useState } from "react";
+import { CollectionViewBar, useCollectionViewStore, type ViewFilterGroup } from "@pstdio/ui/collection-view";
+import { useEffect, useEffectEvent, useId, useState } from "react";
 import { machineStates } from "./machine-status";
 import { ActivityChart, CostChart } from "./workspace-monitoring-chart";
 import type { MonitoringClient, MonitoringSummary } from "./workspace-monitoring-client";
+import { allowedWorkspaceStates, readWorkspaceFilter, workspaceFilterFields } from "./workspace-monitoring-filters";
 import { WorkspaceMonitoringInventory } from "./workspace-monitoring-inventory";
 import {
   Metric,
+  MonitoringAction,
   MonitoringError,
   MonitoringRangeControl,
   monitoringFormat,
@@ -17,82 +20,12 @@ import {
 interface DashboardProps {
   client: MonitoringClient;
   range: string;
-  state?: string;
+  filterValue?: string;
   name?: string;
   update(params: PageParams): void;
   open(resource: ResourceRef): void;
   locale: string;
   t: Translate;
-}
-
-function WorkspaceFilters(props: Pick<DashboardProps, "state" | "name" | "update" | "t">) {
-  const { state, name, update, t } = props;
-  const [query, setQuery] = useState(name ?? "");
-  const collection = createListCollection({
-    items: [{ value: "all", label: t("cloud-workspaces.monitoring-all-states", "All states") }, ...machineStates],
-  });
-  const label = t("cloud-workspaces.monitoring-name", "Exact workspace name");
-  return (
-    <Flex gap="xs" wrap="wrap" align="center">
-      <Flex
-        as="form"
-        gap="xs"
-        wrap="wrap"
-        onSubmit={(event: React.FormEvent) => {
-          event.preventDefault();
-          update({ "monitoring-name": query.trim() });
-        }}
-      >
-        <Input
-          aria-label={label}
-          placeholder={label}
-          size="sm"
-          w="2xs"
-          maxW="full"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <Button type="submit" size="sm">
-          {t("cloud-workspaces.monitoring-search", "Search")}
-        </Button>
-        {name && (
-          <Button type="button" size="sm" variant="ghost" onClick={() => update({ "monitoring-name": "" })}>
-            {t("cloud-workspaces.monitoring-clear", "Clear search")}
-          </Button>
-        )}
-      </Flex>
-      <Select.Root
-        size="sm"
-        w="2xs"
-        maxW="full"
-        collection={collection}
-        value={[state || "all"]}
-        onValueChange={({ value }) => update({ "monitoring-state": value[0] === "all" ? "" : (value[0] ?? "") })}
-      >
-        <Select.HiddenSelect aria-label={t("cloud-workspaces.state", "State")} />
-        <Select.Control>
-          <Select.Trigger aria-label={t("cloud-workspaces.monitoring-filter-state", "Filter by workspace state")}>
-            <Select.ValueText />
-          </Select.Trigger>
-          <Select.IndicatorGroup>
-            <Select.Indicator />
-          </Select.IndicatorGroup>
-        </Select.Control>
-        <Portal>
-          <Select.Positioner>
-            <Select.Content>
-              {collection.items.map((item) => (
-                <Select.Item key={item.value} item={item}>
-                  <Select.ItemText>{item.label}</Select.ItemText>
-                  <Select.ItemIndicator />
-                </Select.Item>
-              ))}
-            </Select.Content>
-          </Select.Positioner>
-        </Portal>
-      </Select.Root>
-    </Flex>
-  );
 }
 
 function Overview(props: { summary: MonitoringSummary; range: string; locale: string; t: Translate }) {
@@ -166,11 +99,28 @@ function Overview(props: { summary: MonitoringSummary; range: string; locale: st
 }
 
 export function WorkspaceMonitoringDashboard(props: DashboardProps) {
-  const { client, range, state, name, update, open, locale, t } = props;
+  const { client, range, filterValue, name, update, open, locale, t } = props;
   const [summary, setSummary] = useState<MonitoringSummary>();
   const [error, setError] = useState<string>();
   const [dismissed, setDismissed] = useState(false);
   const [refresh, setRefresh] = useState(0);
+  const [search, setSearch] = useState(name ?? "");
+  const [query, setQuery] = useState(() => search.trim());
+  useEffect(() => setSearch(name ?? ""), [name]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setQuery(search.trim()), 200);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+  const storageKey = useId();
+  const [initialState] = useState(() => ({ settings: {}, filter: readWorkspaceFilter(filterValue) }));
+  const filter = useCollectionViewStore(storageKey, initialState, (state) => state.filter);
+  const fields = workspaceFilterFields(t("cloud-workspaces.state", "State"));
+  const allowedStates = allowedWorkspaceStates(filter, fields);
+  const persistFilter = useEffectEvent((next: ViewFilterGroup) => {
+    const value = next.rules.length || next.groups?.length ? JSON.stringify(next) : "";
+    if (value !== (filterValue ?? "")) update({ "monitoring-filter": value });
+  });
+  useEffect(() => persistFilter(filter), [filter]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: The retry counter explicitly starts a fresh read.
   useEffect(() => {
@@ -214,20 +164,38 @@ export function WorkspaceMonitoringDashboard(props: DashboardProps) {
           </Text>
           <Flex align="center" gap="xs" wrap="wrap">
             <MonitoringRangeControl range={range} onChange={(value) => update({ "monitoring-range": value })} t={t} />
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setDismissed(false);
-                setRefresh((value) => value + 1);
-              }}
-            >
-              {t("cloud-workspaces.refresh", "Refresh")}
-            </Button>
           </Flex>
         </Flex>
-        <WorkspaceFilters key={name} state={state} name={name} update={update} t={t} />
       </Stack>
+      <CollectionViewBar
+        storageKey={storageKey}
+        initialState={initialState}
+        views={[]}
+        fields={fields}
+        optionsFor={() => machineStates}
+        search={search}
+        searchResultLabel={search ? t("cloud-workspaces.monitoring-search-exact", "Exact name") : undefined}
+        onSearchChange={(value) => {
+          setSearch(value);
+          update({ "monitoring-name": value });
+        }}
+        leading={
+          <Text hideBelow="sm" textStyle="label/S/medium">
+            {t("cloud-workspaces.monitoring-inventory", "Workspaces")}
+          </Text>
+        }
+        displayControl={null}
+        actions={
+          <MonitoringAction
+            label={t("cloud-workspaces.refresh", "Refresh")}
+            icon="refresh"
+            onClick={() => {
+              setDismissed(false);
+              setRefresh((value) => value + 1);
+            }}
+          />
+        }
+      />
       <ScrollArea flex="1" minH="0">
         <Stack p="md" gap="md">
           {error && !dismissed && (
@@ -244,15 +212,12 @@ export function WorkspaceMonitoringDashboard(props: DashboardProps) {
             </Text>
           )}
           {summary && <Overview summary={summary} range={range} locale={locale} t={t} />}
-          <Text as="h2" textStyle="heading/S">
-            {t("cloud-workspaces.monitoring-inventory", "Workspaces")}
-          </Text>
           <WorkspaceMonitoringInventory
-            key={JSON.stringify([state, name, refresh])}
+            key={JSON.stringify([allowedStates, query, refresh])}
             client={client}
             range={range}
-            state={state}
-            name={name}
+            allowedStates={allowedStates}
+            name={query}
             open={open}
             locale={locale}
             t={t}

@@ -23,7 +23,7 @@ Deployment endpoints and credentials belong in host-managed connection settings.
 
 ## Workspace Monitoring
 
-Open **Cloud Workspaces → Deployed PocketCoder → Workspace Monitoring**. The overview covers the last hour, 24 hours, or seven days. Search by exact workspace name or filter by state, then select a workspace to see its timeline, ready time, and estimate. Use **Open output and logs** to inspect its operational details.
+Open **Cloud Workspaces → Deployed PocketCoder → Workspace Monitoring**. The overview covers the last hour, 24 hours, or seven days. Use the shared search and filter controls to find workspaces by exact name or state, then select a workspace to see its timeline, ready time, and estimate. Use **Open output and logs** to inspect its operational details.
 
 Set **Default workspace hourly rate (USD)** in the extension settings to apply one rate across the controller. To enter different rates on controllers that report activity by template, use **Workspace hourly rates (USD)**. Enter a JSON object with template names and USD per ready hour, for example `{"app-preview": 0.22, "test-runner": 0.55}`. A rate applies to every version of that template and to retained activity. The estimate covers ready time. The dashboard labels unpriced usage and shows a partial subtotal when some rates are missing. Aggregate estimates with different template rates require activity by template.
 

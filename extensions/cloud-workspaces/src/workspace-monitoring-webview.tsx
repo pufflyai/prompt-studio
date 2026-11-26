@@ -53,7 +53,9 @@ export default defineExtensionView({
                 locale={locale}
                 t={t}
                 update={update}
-                state={typeof params?.["monitoring-state"] === "string" ? params["monitoring-state"] : undefined}
+                filterValue={
+                  typeof params?.["monitoring-filter"] === "string" ? params["monitoring-filter"] : undefined
+                }
                 name={typeof params?.["monitoring-name"] === "string" ? params["monitoring-name"] : undefined}
                 open={(resource) =>
                   void client.navigation
