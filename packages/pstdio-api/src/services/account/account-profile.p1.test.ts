@@ -29,7 +29,7 @@ test("an already signed-in device displays its current provider email without si
   const account = createNativeAccount({
     file,
     environment: { get: async () => ({ environmentId: "device" }) },
-    projects: { get: async () => undefined },
+    projects: { get: async () => null },
   });
   try {
     await account.refresh();
