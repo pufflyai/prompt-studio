@@ -44,7 +44,10 @@ export const createExtensionUpgradeReviewService = (input: {
     projectId: string,
     existing: ExistingInstance,
   ) => Promise<ExistingInstance | undefined>;
-  resolvePublishedInput: (extensionId: string) => Promise<InstallExtensionSourceInput>;
+  resolvePublishedInput: (
+    extensionId: string,
+    source: ExistingInstance["installedSource"],
+  ) => Promise<InstallExtensionSourceInput>;
   extensionUpgradeDestination: (
     deps: ExtensionUpgradeServiceDeps,
     projectId: string,
@@ -83,7 +86,7 @@ export const createExtensionUpgradeReviewService = (input: {
     const identity = existing.installedSource.extension_id;
     const input =
       source.separateProviderId === instanceId && existing.installedSource.source_kind === "local_path"
-        ? await resolvePublishedInput(identity)
+        ? await resolvePublishedInput(identity, existing.installedSource)
         : await resolveUpgradeInput(projectId, existing);
     return startExtensionSourceReview(reviewHome(), projectId, instanceId, identity, source, input);
   };
