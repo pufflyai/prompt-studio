@@ -12,6 +12,10 @@ on:
       - test/ci-reliability/**
   workflow_dispatch:
     inputs:
+      review:
+        type: boolean
+        default: false
+        description: Run the complete isolated test:review gate on an Ubuntu Docker host
       profile:
         type: choice
         options:
@@ -83,8 +87,47 @@ concurrency:
 env:
   NX_DAEMON: "false"
 jobs:
+  isolated_review:
+    if: github.event_name == 'workflow_dispatch' && inputs.review
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      TMPDIR: ${{ runner.temp }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: ./.github/actions/setup-ci-cache
+      - name: Prepare Docker and browser prerequisites
+        run: |
+          docker info
+          docker compose version
+          bunx playwright@1.60.0 install --with-deps chromium
+      - name: Run every check selected by the isolated review gate
+        run: xvfb-run -a bun run test:review --base origin/main
+      - name: Preserve review reports, logs and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-review-${{ github.run_attempt }}
+          path: |
+            test-results/local-review
+            ${{ runner.temp }}/pstdio-local-review-*/checks.json
+            ${{ runner.temp }}/pstdio-local-review-*/logs
+            ${{ runner.temp }}/pstdio-local-review-*/compose-projects.jsonl
+            ${{ runner.temp }}/pstdio-local-review-*/source/test-results
+            ${{ runner.temp }}/pstdio-local-review-*/source/packages/e2e/test-results
+            ${{ runner.temp }}/pstdio-local-review-*/source/clients/desktop/test-results
+          if-no-files-found: error
   native_file:
-    if: inputs.test_file != ''
+    if: inputs.test_file != '' && !inputs.review
     runs-on: ${{ inputs.test_os || 'windows-latest' }}
     timeout-minutes: 20
     env:
@@ -130,7 +173,7 @@ jobs:
             clients/desktop/test-results
           if-no-files-found: error
   scope:
-    if: inputs.test_file == ''
+    if: inputs.test_file == '' && !inputs.review
     permissions:
       contents: read
       pull-requests: read
@@ -1417,7 +1460,7 @@ jobs:
           path: test-results/coverage/*.json
           if-no-files-found: error
   ci_passed:
-    if: ${{ !cancelled() && inputs.test_file == '' }}
+    if: ${{ !cancelled() && inputs.test_file == '' && !inputs.review }}
     needs:
       - scope
       - validation_results
@@ -1539,7 +1582,7 @@ jobs:
       - packaged_toolchain
       - source_coverage
       - sdk_api_report
-    if: ${{ !cancelled() && inputs.test_file == '' }}
+    if: ${{ !cancelled() && inputs.test_file == '' && !inputs.review }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
