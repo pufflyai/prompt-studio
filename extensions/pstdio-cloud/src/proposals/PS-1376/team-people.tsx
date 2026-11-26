@@ -18,7 +18,10 @@ export const JoinTeam = (props: { demo: TeamDemo }) => {
           {demo.invitation && code.trim() === demo.invitation && (
             <Stack gap="xs">
               <Text textStyle="label/M/medium">Studio Team</Text>
-              <Text color="fg.muted">Join as Riley Chen. Project access is granted separately.</Text>
+              <Text color="fg.muted">
+                Join as {people.find((person) => person.id === demo.viewer)!.name}. Project access is granted
+                separately.
+              </Text>
             </Stack>
           )}
           {error && (

@@ -18,7 +18,7 @@ export const ProjectTools = (props: { demo: TeamDemo; projectId: string }) => {
             )}
           </HStack>
           {demo.tools[projectId].map((tool) => {
-            const required = demo.managedPreview && tool.required;
+            const required = demo.managedPreview && demo.requirements[projectId].includes(tool.id);
             return (
               <Stack key={tool.id} gap="sm">
                 <HStack gap="sm" justify="space-between" flexWrap="wrap">
@@ -50,10 +50,8 @@ export const ProjectTools = (props: { demo: TeamDemo; projectId: string }) => {
                 </HStack>
                 {demo.managedPreview && demo.owner && (
                   <Checkbox
-                    checked={tool.required}
-                    onCheckedChange={({ checked }) =>
-                      demo.updateTool(projectId, tool.id, { required: checked === true })
-                    }
+                    checked={demo.requirements[projectId].includes(tool.id)}
+                    onCheckedChange={({ checked }) => demo.setRequired(projectId, tool.id, checked === true)}
                   >
                     Require {tool.name} in this project
                   </Checkbox>

@@ -15,15 +15,15 @@ export interface DemoTool {
   id: string;
   name: string;
   enabled: boolean;
-  required: boolean;
 }
 
+const catalog: Record<string, DemoTool> = {
+  pulse: { id: "pulse", name: "Onefin Pulse", enabled: true },
+  notes: { id: "notes", name: "Notes", enabled: true },
+};
 const initialTools = (): Record<string, DemoTool[]> => ({
-  a: [
-    { id: "pulse", name: "Onefin Pulse", enabled: true, required: true },
-    { id: "notes", name: "Notes", enabled: true, required: false },
-  ],
-  b: [{ id: "notes", name: "Notes", enabled: true, required: false }],
+  a: [catalog.pulse, catalog.notes],
+  b: [catalog.notes],
 });
 
 export const useTeamDemo = () => {
@@ -32,7 +32,8 @@ export const useTeamDemo = () => {
   const [projects, setProjects] = useState(initialProjects);
   const [tools, setTools] = useState(initialTools);
   const [invitation, setInvitation] = useState<string>();
-  const [managedPreview, setManagedPreview] = useState(false);
+  const [managedPreview, setManagedPreviewState] = useState(false);
+  const [requirements, setRequirements] = useState<Record<string, string[]>>({ a: ["pulse"], b: [] });
   const owner = viewer === "alex";
   const joined = members.includes(viewer);
   const updateTool = (project: string, id: string, change: Partial<DemoTool>) =>
@@ -48,7 +49,30 @@ export const useTeamDemo = () => {
     tools,
     invitation,
     managedPreview,
-    setManagedPreview,
+    requirements,
+    setManagedPreview(checked: boolean) {
+      setManagedPreviewState(checked);
+      if (!checked) return;
+      setTools((current) =>
+        Object.fromEntries(
+          Object.entries(current).map(([project, installed]) => [
+            project,
+            [
+              ...installed,
+              ...requirements[project]
+                .filter((id) => !installed.some((tool) => tool.id === id))
+                .map((id) => catalog[id]),
+            ],
+          ]),
+        ),
+      );
+    },
+    setRequired(project: string, id: string, checked: boolean) {
+      setRequirements((current) => ({
+        ...current,
+        [project]: checked ? [...new Set([...current[project], id])] : current[project].filter((entry) => entry !== id),
+      }));
+    },
     owner,
     joined,
     invite: () => setInvitation(`STUDIO-${crypto.randomUUID().slice(0, 8).toUpperCase()}`),
@@ -86,7 +110,7 @@ export const useTeamDemo = () => {
     restoreNotes(project: string) {
       setTools((current) => ({
         ...current,
-        [project]: [...current[project], { id: "notes", name: "Notes", enabled: true, required: false }],
+        [project]: [...current[project], catalog.notes],
       }));
     },
   };
