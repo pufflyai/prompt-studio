@@ -8,19 +8,23 @@ import { findUpgradeAgentProposal } from "./import-upgrade-agent-proposal";
 export const UpgradeAgentProposalImport = (props: {
   projectId: string;
   reviewId: string;
+  revision: string;
   onImport: (content: string) => Promise<void>;
   disabled: boolean;
 }) => {
   const { t } = useTranslation("projects", { keyPrefix: "projectSettings.extensionsPanel.upgradeReview" });
   const [content, setContent] = useState("");
+  const [replyRevision, setReplyRevision] = useState<string>();
   const [error, setError] = useState<string>();
   const [pending, setPending] = useState<"find" | "stage">();
+  const obsolete = replyRevision !== undefined && replyRevision !== props.revision;
   const stage = async () => {
     setError(undefined);
     setPending("stage");
     try {
       await props.onImport(content);
       setContent("");
+      setReplyRevision(undefined);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : String(failure));
     } finally {
@@ -47,7 +51,8 @@ export const UpgradeAgentProposalImport = (props: {
       const conversation = await api.sessions.getConversation(session.id);
       const proposal = findUpgradeAgentProposal(conversation.messages, reviewId);
       if (!proposal) throw new Error(t("noAgentReply", "The session has no proposal for this review yet."));
-      setContent(proposal);
+      setContent(proposal.text);
+      setReplyRevision(proposal.revision);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : String(failure));
     } finally {
@@ -71,13 +76,21 @@ export const UpgradeAgentProposalImport = (props: {
               {error}
             </AlertMessage>
           )}
+          {obsolete && (
+            <AlertMessage status="warning" title={t("outdatedProposal", "This reply is for an earlier comparison")}>
+              {t("outdatedProposalDescription", "Use it as a reference while reviewing the current files.")}
+            </AlertMessage>
+          )}
           <Field.Root>
             <Field.Label>{t("agentProposal", "Agent proposal")}</Field.Label>
             <Textarea
               value={content}
               rows={4}
               disabled={Boolean(pending)}
-              onChange={(event) => setContent(event.target.value)}
+              onChange={(event) => {
+                setContent(event.target.value);
+                setReplyRevision(undefined);
+              }}
             />
           </Field.Root>
           <HStack justify="end">
@@ -93,7 +106,7 @@ export const UpgradeAgentProposalImport = (props: {
               variant="outline"
               onClick={() => void stage()}
               loading={pending === "stage"}
-              disabled={!content.trim() || props.disabled || Boolean(pending)}
+              disabled={!content.trim() || props.disabled || obsolete || Boolean(pending)}
             >
               {t("saveAgentChoices", "Stage agent choices")}
             </Button>

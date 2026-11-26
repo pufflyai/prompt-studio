@@ -5,7 +5,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, write
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { chromium, expect as expectPage } from "@playwright/test";
+import { chromium, expect as expectPage, type Locator } from "@playwright/test";
 import type { ListProjectExtensionsResponse } from "pstdio-api-contracts";
 import { extensionUpgradeNeedsReviewCode } from "pstdio-api-contracts/extension-host";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -199,6 +199,24 @@ test("upgrades UI Canvas with its standalone webview dependencies", async () => 
   }
 });
 
+const refreshAdoptedSkillsReview = async (tempRoot: string, review: Locator, apply: Locator) => {
+  const adoptedManifest = join(tempRoot, "extensions", "pstdio-skills", "package.json");
+  const changedManifest = JSON.stringify({
+    ...JSON.parse(readFileSync(adoptedManifest, "utf8")),
+    description: "Skills description edited during review",
+  });
+  writeFileSync(adoptedManifest, changedManifest);
+  await apply.click();
+  await expectPage(review).toContainText("The extension source changed during this review");
+  await expectPage(apply).toBeDisabled();
+  expect(readFileSync(adoptedManifest, "utf8")).toBe(changedManifest);
+  await review.getByRole("button", { name: "Refresh comparison" }).click();
+  await expectPage(review).toContainText("Skills description edited during review");
+  await review.getByRole("button", { name: "Previous choices" }).click();
+  await expectPage(apply).toBeDisabled();
+  await review.getByRole("button", { name: "Use incoming" }).click();
+};
+
 browserTest("updates an incompatible default extension and reinstalls it from Marketplace", async () => {
   const startedAt = Date.now();
   const phase = (name: string) => logTestPhase(`Marketplace upgrade: ${name} (+${Date.now() - startedAt}ms)`);
@@ -349,6 +367,7 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     await expectPage(apply).toBeDisabled();
     await review.getByRole("button", { name: "Use incoming" }).click();
     await expectPage(apply).toBeEnabled();
+    await refreshAdoptedSkillsReview(tempRoot, review, apply);
     await apply.click();
     await expectPage(review).toHaveCount(0);
     phase("reviewed skills upgrade applied");

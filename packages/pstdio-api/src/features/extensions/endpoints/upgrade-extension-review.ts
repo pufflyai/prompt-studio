@@ -22,7 +22,7 @@ const conflictContent = {
 export const upgradeExtensionReviewRoute = createRoute({
   method: "post",
   path: "/projects/{projectId}/extensions/{instanceId}/upgrade-review",
-  description: "Stage, inspect, cancel, or explicitly apply an extension upgrade review on this device.",
+  description: "Stage, inspect, refresh, cancel, or explicitly apply an extension upgrade review on this device.",
   tags: ["Extensions"],
   request: {
     params: z.strictObject({ projectId: z.string(), instanceId: z.string() }),
@@ -87,8 +87,12 @@ const runReview = async (
       return review && { action, review };
     }
     case "file": {
-      const file = await api.readReviewFile(projectId, instanceId, input.id, input.path);
+      const file = await api.readReviewFile(projectId, instanceId, input.id, input.path, input.revision);
       return file && { action, file };
+    }
+    case "refresh": {
+      const review = await api.refreshReview(projectId, instanceId, input.id, input.revision, input.resolutions);
+      return review && { action, review };
     }
     case "save": {
       const review = await api.saveReview(projectId, instanceId, input.id, input.revision, input.resolutions);

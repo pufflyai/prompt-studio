@@ -1,4 +1,4 @@
-import { Box, Button, Dialog, Grid, Portal, Stack, Text } from "@chakra-ui/react";
+import { Button, Dialog, Grid, Portal, Stack, Text } from "@chakra-ui/react";
 import { PstdioApiError } from "@pstdio/sdk/client";
 import { AlertMessage, LoadingState } from "@pstdio/ui";
 import {
@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { getApiClient } from "@/lib/api";
 import { useApplyExtensionUpgradeReview } from "@/shared/extensions/use-project-extensions";
 import { ExtensionUpgradeReviewFileView } from "./extension-upgrade-review-file-view";
+import { PreviousReviewChoices, ReviewSourceSummary, StaleReviewNotice } from "./extension-upgrade-review-notices";
 import { importUpgradeAgentProposal } from "./import-upgrade-agent-proposal";
 import { UpgradeAgentProposalImport } from "./upgrade-agent-proposal-import";
 
@@ -36,12 +37,13 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
   const [changedPaths, setChangedPaths] = useState<string[]>();
   const [preparingAgent, setPreparingAgent] = useState(false);
   const [validating, setValidating] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [validated, setValidated] = useState<Map<string, ExtensionUpgradeReviewResolution>>();
   const [selected, setSelected] = useState<string>();
   const [choices, setChoices] = useState(new Map<string, ExtensionUpgradeReviewResolution>());
   const apply = useApplyExtensionUpgradeReview(projectId);
   const instanceId = target.extension.id;
-  const busy = apply.isPending || preparingAgent || validating;
+  const busy = apply.isPending || preparingAgent || validating || refreshing;
   useEffect(() => {
     let current = true;
     target.load.then(
@@ -132,6 +134,27 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
       setValidating(false);
     }
   };
+  const refresh = async () => {
+    if (!review || busy) return;
+    setRefreshing(true);
+    setError(undefined);
+    try {
+      const { review: updated } = await getApiClient().extensions.reviewUpgrade(projectId, instanceId, {
+        action: "refresh",
+        id: review.id,
+        revision: review.revision,
+        resolutions: [...choices.values()],
+      });
+      setReview(updated);
+      setChangedPaths(updated.changedPaths);
+      setChoices(new Map(updated.resolutions.map((choice) => [choice.path, choice])));
+      setSelected((updated.changes.find(({ status }) => status === "conflict") ?? updated.changes[0])?.path);
+    } catch (failure) {
+      setError(messageFrom(failure));
+    } finally {
+      setRefreshing(false);
+    }
+  };
   const submit = async (usePublished = false) => {
     if (!review) return;
     setError(undefined);
@@ -155,7 +178,6 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
       (choices.size !== review.resolutions.length ||
         review.resolutions.some((choice) => choices.get(choice.path) !== choice)),
   );
-  const active = review?.changes.find(({ path }) => path === selected);
   const count = review?.changes.filter(({ path, status }) => status === "conflict" && !choices.has(path)).length ?? 0;
   return (
     <Dialog.Root
@@ -186,11 +208,16 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
                     {error}
                   </AlertMessage>
                 )}
-                {changedPaths && <StaleReviewNotice paths={changedPaths} />}
+                {review && changedPaths && (
+                  <StaleReviewNotice paths={changedPaths} busy={busy} onRefresh={() => void refresh()} />
+                )}
                 {!review && !error && <LoadingState />}
                 {review && (
                   <>
                     <ReviewSourceSummary review={review} />
+                    {Boolean(review.previousResolutions?.length) && (
+                      <PreviousReviewChoices choices={review.previousResolutions ?? []} />
+                    )}
                     {count > 0 && (
                       <Text role="status">{t("conflicts", "{{count}} conflicts need a choice", { count })}</Text>
                     )}
@@ -209,6 +236,7 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
                     <UpgradeAgentProposalImport
                       projectId={projectId}
                       reviewId={review.id}
+                      revision={review.revision}
                       onImport={importProposal}
                       disabled={busy || Boolean(changedPaths)}
                     />
@@ -218,40 +246,16 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
                         title={t("validationPassed", "Staged extension passed validation")}
                       />
                     )}
-                    <Grid
-                      templateColumns={{ base: "minmax(0, 1fr)", md: "minmax(10rem, 1fr) minmax(0, 3fr)" }}
-                      gap="md"
-                    >
-                      <Stack gap="xs" maxH="22rem" overflowY="auto">
-                        {review.changes.map((change) => (
-                          <Button
-                            key={change.path}
-                            variant={change.path === selected ? "outline" : "ghost"}
-                            justifyContent="start"
-                            whiteSpace="normal"
-                            h="auto"
-                            py="xs"
-                            overflowWrap="anywhere"
-                            aria-pressed={change.path === selected}
-                            onClick={() => setSelected(change.path)}
-                          >
-                            {change.path}
-                            {change.status === "conflict" && !choices.has(change.path) ? " •" : ""}
-                          </Button>
-                        ))}
-                      </Stack>
-                      {active && (
-                        <ExtensionUpgradeReviewFileView
-                          key={active.path}
-                          projectId={projectId}
-                          instanceId={instanceId}
-                          id={review.id}
-                          change={active}
-                          choice={choices.get(active.path)}
-                          onChoose={(choice) => setChoices((current) => new Map(current).set(choice.path, choice))}
-                        />
-                      )}
-                    </Grid>
+                    <ReviewFileComparison
+                      review={review}
+                      selected={selected}
+                      onSelect={setSelected}
+                      choices={choices}
+                      onChoose={(choice) => setChoices((current) => new Map(current).set(choice.path, choice))}
+                      projectId={projectId}
+                      instanceId={instanceId}
+                      busy={busy}
+                    />
                   </>
                 )}
               </Stack>
@@ -288,51 +292,51 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
   );
 };
 
-const ReviewSourceSummary = ({ review }: { review: ExtensionUpgradeReview }) => {
-  const { t } = useTranslation("projects", { keyPrefix: "projectSettings.extensionsPanel.upgradeReview" });
+const ReviewFileComparison = (props: {
+  review: ExtensionUpgradeReview;
+  selected: string | undefined;
+  onSelect: (path: string) => void;
+  choices: ReadonlyMap<string, ExtensionUpgradeReviewResolution>;
+  onChoose: (choice: ExtensionUpgradeReviewResolution) => void;
+  projectId: string;
+  instanceId: string;
+  busy: boolean;
+}) => {
+  const { review, selected, onSelect, choices, onChoose, projectId, instanceId, busy } = props;
+  const active = review.changes.find(({ path }) => path === selected);
   return (
-    <>
-      <Text>
-        {t("summary", "Incoming version {{version}}. Your extension stays active until you apply.", {
-          version: review.incomingVersion,
-        })}
-      </Text>
-      {review.separateLocalProvider && (
-        <AlertMessage status="info" title={t("localActive", "This project uses your local copy")}>
-          {t(
-            "separateProviderDescription",
-            "Applying uses a separate provider for this project. Your local folder stays at {{path}}.",
-            { path: review.localPath },
-          )}
-        </AlertMessage>
+    <Grid templateColumns={{ base: "minmax(0, 1fr)", md: "minmax(10rem, 1fr) minmax(0, 3fr)" }} gap="md">
+      <Stack gap="xs" maxH="22rem" overflowY="auto">
+        {review.changes.map((change) => (
+          <Button
+            key={change.path}
+            variant={change.path === selected ? "outline" : "ghost"}
+            justifyContent="start"
+            whiteSpace="normal"
+            h="auto"
+            py="xs"
+            overflowWrap="anywhere"
+            aria-pressed={change.path === selected}
+            onClick={() => onSelect(change.path)}
+          >
+            {change.path}
+            {change.status === "conflict" && !choices.has(change.path) ? " •" : ""}
+          </Button>
+        ))}
+      </Stack>
+      {active && (
+        <ExtensionUpgradeReviewFileView
+          key={`${review.revision}:${active.path}`}
+          projectId={projectId}
+          instanceId={instanceId}
+          id={review.id}
+          revision={review.revision}
+          disabled={busy}
+          change={active}
+          choice={choices.get(active.path)}
+          onChoose={onChoose}
+        />
       )}
-      {!review.hasOriginal && (
-        <AlertMessage status="warning" title={t("unknownOriginal", "Original release unavailable")}>
-          {t(
-            "unknownOriginalDescription",
-            "Choose how to handle each difference between your copy and the incoming release.",
-          )}
-        </AlertMessage>
-      )}
-    </>
-  );
-};
-
-const StaleReviewNotice = ({ paths }: { paths: string[] }) => {
-  const { t } = useTranslation("projects", { keyPrefix: "projectSettings.extensionsPanel.upgradeReview" });
-  return (
-    <AlertMessage status="warning" title={t("sourceChanged", "The extension source changed during this review")}>
-      <Text>{t("outdatedComparison", "Your choices are still available in this comparison.")}</Text>
-      {paths.length > 0 && (
-        <Box as="ul" ps="lg" overflowWrap="anywhere">
-          {paths.slice(0, 10).map((path) => (
-            <li key={path}>{path}</li>
-          ))}
-        </Box>
-      )}
-      {paths.length > 10 && (
-        <Text>{t("otherChangedPaths", "{{count}} more changed paths", { count: paths.length - 10 })}</Text>
-      )}
-    </AlertMessage>
+    </Grid>
   );
 };

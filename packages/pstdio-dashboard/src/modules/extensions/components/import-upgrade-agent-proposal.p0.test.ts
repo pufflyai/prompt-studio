@@ -29,7 +29,7 @@ test("loads the newest structured assistant reply for the requested review", () 
       ],
       review.id,
     ),
-  ).toBe(current);
+  ).toEqual({ text: current, revision: review.revision });
 });
 
 test("imports a staged proposal alongside previously recorded choices", () => {

@@ -13,11 +13,13 @@ export const ExtensionUpgradeReviewFileView = (props: {
   projectId: string;
   instanceId: string;
   id: string;
+  revision: string;
+  disabled: boolean;
   change: ExtensionUpgradeReview["changes"][number];
   choice: ExtensionUpgradeReviewResolution | undefined;
   onChoose: (choice: ExtensionUpgradeReviewResolution) => void;
 }) => {
-  const { projectId, instanceId, id, change, choice, onChoose } = props;
+  const { projectId, instanceId, id, revision, disabled, change, choice, onChoose } = props;
   const { path } = change;
   const { t } = useTranslation("projects", { keyPrefix: "projectSettings.extensionsPanel.upgradeReview" });
   const [file, setFile] = useState<ExtensionUpgradeReviewFile>();
@@ -25,7 +27,7 @@ export const ExtensionUpgradeReviewFileView = (props: {
   useEffect(() => {
     let current = true;
     getApiClient()
-      .extensions.reviewUpgrade(projectId, instanceId, { action: "file", id, path })
+      .extensions.reviewUpgrade(projectId, instanceId, { action: "file", id, path, revision })
       .then(
         ({ file: result }) => {
           if (current) setFile(result);
@@ -37,7 +39,7 @@ export const ExtensionUpgradeReviewFileView = (props: {
     return () => {
       current = false;
     };
-  }, [projectId, instanceId, id, path]);
+  }, [projectId, instanceId, id, path, revision]);
   if (error)
     return (
       <AlertMessage status="error" title={path}>
@@ -55,12 +57,14 @@ export const ExtensionUpgradeReviewFileView = (props: {
         <HStack wrap="wrap">
           <Button
             variant={choice?.kind === "local" ? "outline" : "ghost"}
+            disabled={disabled}
             onClick={() => onChoose({ path, kind: "local" })}
           >
             {t("local", "Keep local")}
           </Button>
           <Button
             variant={choice?.kind === "incoming" ? "outline" : "ghost"}
+            disabled={disabled}
             onClick={() => onChoose({ path, kind: "incoming" })}
           >
             {t("incoming", "Use incoming")}
@@ -68,6 +72,7 @@ export const ExtensionUpgradeReviewFileView = (props: {
           {textFile && (
             <Button
               variant={choice?.kind === "text" ? "outline" : "ghost"}
+              disabled={disabled}
               onClick={() => onChoose({ path, kind: "text", text: file.local ?? file.incoming ?? "" })}
             >
               {t("edit", "Edit result")}
@@ -82,6 +87,7 @@ export const ExtensionUpgradeReviewFileView = (props: {
             value={choice.text}
             fontFamily="mono"
             rows={8}
+            disabled={disabled}
             onChange={(event) => onChoose({ path, kind: "text", text: event.target.value })}
           />
         </Field.Root>
