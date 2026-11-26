@@ -272,8 +272,9 @@ try {
     }, updatedProject.id);
   } else {
     // A breaking extension API step leaves the tools installed by the baseline without
-    // contributions until they are upgraded. Follow Extensions > Upgrade all through its
-    // per-tool endpoint; opening Extensions would replace the saved page this check restores.
+    // contributions until they are upgraded. Upgrade every enabled tool through the per-tool
+    // endpoint that Extensions > Upgrade all uses (the UI also upgrades disabled tools, which
+    // contribute nothing). Opening Extensions would replace the saved page this check restores.
     const upgrades = await active.page.evaluate(async (projectId) => {
       const request = async (path: string, method = "GET") => {
         const response = await fetch(`/v1/projects/${projectId}/extensions${path}`, {
