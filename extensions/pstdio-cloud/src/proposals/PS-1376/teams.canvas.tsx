@@ -1,15 +1,25 @@
 import { TeamDashboard } from "./team-dashboard";
 
 export default {
-  title: "Proposals/PS-1376 Cloud team dashboard",
-  description:
-    "Desktop invitation and project access demo. Sample data only. Managed extension controls preview a later policy layer.",
+  title: "Proposals/PS-1376 Cloud team settings",
+  description: "Settings → Team and Settings → Managed extensions. Synthetic demo; no live team or extension changes.",
   fullscreen: true,
 };
 
 export const TeamsDashboard = {
-  name: "Team management demo",
+  name: "Team settings",
   description:
-    "Create an invitation as Alex, accept as Riley, then grant Project A. Switch to Morgan to try full project rights. Preview managed extensions to explore required tools.",
+    "Open Team to invite or remove members. Open Managed extensions to select owner-controlled tools, automatically installed in team projects. Use the Viewer parameter to preview a member or invite recipient.",
+  args: { viewer: "alex" },
+  controls: {
+    viewer: {
+      type: "select",
+      options: [
+        { value: "alex", label: "Team owner" },
+        { value: "morgan", label: "Team member" },
+        { value: "riley", label: "Invite recipient" },
+      ],
+    },
+  },
   render: TeamDashboard,
 };
