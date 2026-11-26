@@ -41,6 +41,7 @@ export const tabsSlotRecipe = defineSlotRecipe({
       // Keep bare-text labels on one line instead of wrapping.
       whiteSpace: "nowrap",
       "& [data-tab-label]": {
+        layerStyle: "navigationLabel",
         minW: "0",
         maxW: "tab-label-max",
         overflow: "hidden",
