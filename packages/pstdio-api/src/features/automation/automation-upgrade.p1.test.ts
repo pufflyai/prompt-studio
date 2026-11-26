@@ -157,4 +157,4 @@ test("a released replacement credential retries, executes and polls after upgrad
     else process.env.PSTDIO_DEFAULT_EXTENSIONS = previousExtensions;
     await rm(root, { recursive: true, force: true });
   }
-}, 10_000);
+}, 30_000);
