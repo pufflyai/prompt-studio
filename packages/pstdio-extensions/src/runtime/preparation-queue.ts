@@ -47,6 +47,10 @@ export interface Job {
   /** Live continuations this job's worker was retired for, with when each owner went idle. */
   yielded?: Map<Continuation, { idleSince?: number }>;
 }
+// These jobs read live inputs and only write into unique immutable generations.
+// An install may change arbitrary dependency paths, so reads share slots only with other reads.
+export const readsRevisionInputs = (job: Job) => job.task === "runtime.prepare" || job.task === "runtime.key";
+export const needsExclusivePreparation = (job: Job) => !job.resources && !readsRevisionInputs(job);
 export const createJob = (
   id: number,
   key: string,

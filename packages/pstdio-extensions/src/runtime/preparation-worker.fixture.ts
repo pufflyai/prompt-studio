@@ -47,7 +47,7 @@ startPreparationWorker(async (task, data, signal) => {
   }
   if (task === "reject") throw new Error("preparation failed");
   if (task === "exit") process.exit(9);
-  if (task === "wait") {
+  if (task === "wait" || task === "runtime.prepare" || task === "runtime.key") {
     publishPreparationEvent({ entered: input.name });
     await fetch(input.url, { signal });
   }
