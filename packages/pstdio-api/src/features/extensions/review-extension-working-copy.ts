@@ -1,6 +1,12 @@
-import { join } from "node:path";
 import { assertExtensionUpgradeWorkingTree, ExtensionUpgradeNeedsReviewError } from "./extension-upgrade-baseline";
+import type { ReviewRecord } from "./review-extension-source-record";
 import { diffExtensionReviewPaths, readExtensionReviewTree } from "./review-extension-source-tree";
+
+export type ExtensionReviewSource = {
+  path: string;
+  ref: string | null;
+  separateProviderId?: string;
+};
 
 export class StaleExtensionUpgradeReview extends ExtensionUpgradeNeedsReviewError {
   constructor(
@@ -11,8 +17,17 @@ export class StaleExtensionUpgradeReview extends ExtensionUpgradeNeedsReviewErro
   }
 }
 
+export const assertSameReviewSource = (record: ReviewRecord, source: ExtensionReviewSource) => {
+  if (
+    source.path !== record.sourcePath ||
+    source.ref !== record.sourceRef ||
+    source.separateProviderId !== record.separateProviderId
+  )
+    throw new StaleExtensionUpgradeReview("The active extension source changed while this review was open.");
+};
+
 export const reviewWorkingCopyChanges = async (
-  directory: string,
+  snapshotPath: string,
   path: string,
   fingerprint: string,
   ignoreGit: boolean,
@@ -25,7 +40,7 @@ export const reviewWorkingCopyChanges = async (
   }
   try {
     const [snapshot, current] = await Promise.all([
-      readExtensionReviewTree(join(directory, "local")),
+      readExtensionReviewTree(snapshotPath),
       readExtensionReviewTree(path, { ignoreGit }),
     ]);
     return diffExtensionReviewPaths(snapshot, current);

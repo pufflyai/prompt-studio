@@ -19,15 +19,20 @@ const argument = (name: string) =>
     .slice(2)
     .find((arg) => arg.startsWith(`--${name}=`))
     ?.split("=")[1];
-const requestedVariant = argument("variant");
+const inBrowser = Bun.argv.includes("--browser");
+const requestedVariant = argument("variant") ?? (inBrowser ? "warm" : undefined);
 const variants = requestedVariant ? allVariants.filter((variant) => variant === requestedVariant) : allVariants;
 if (!variants.length) throw new Error("Use --variant=source, --variant=bundle, or --variant=warm.");
-const interactive = argument("interactive");
+const requestedInteractive = argument("interactive");
+const interactive = allVariants.find((variant) => variant === requestedInteractive);
+if (requestedInteractive && !interactive)
+  throw new Error("Use --interactive=source, --interactive=bundle, or --interactive=warm.");
+if (inBrowser && (requestedVariant !== "warm" || interactive)) {
+  throw new Error("--browser measures warm upgrades and cannot be combined with --interactive.");
+}
 const seedConflict = Bun.argv.includes("--conflict");
 if (seedConflict && !interactive) throw new Error("--conflict requires --interactive.");
 const samples = Number(argument("samples") ?? "1");
-if (interactive && interactive !== "source" && interactive !== "bundle" && interactive !== "warm")
-  throw new Error("Use --interactive=source, --interactive=bundle, or --interactive=warm.");
 if (!Number.isInteger(samples) || samples < 1 || samples > 30) throw new Error("Use --samples=1 through --samples=30.");
 
 const archives = resolve(import.meta.dir, "../../../packages/pstdio/files/extension-sources");
@@ -71,6 +76,12 @@ const runSample = async (variant: Variant, iteration: number, leaveOpen: boolean
     await mkdir(home);
     await mkdir(folder);
     await registry.publishPackage(initialArchive);
+    if (leaveOpen) {
+      for (const tool of catalog.sources) {
+        if (tool.id !== planner.id)
+          await registry.publishPackage(join(archives, `${encodeURIComponent(tool.installName)}.tgz`));
+      }
+    }
     host = await startPackagedServe(home, { PSTDIO_EXTENSION_RELEASE_REF: `psx:${registry.origin}` });
     const { baseUrl, descriptor: runtime } = host;
     const post = async <T>(path: string, body?: unknown) => {
@@ -107,6 +118,11 @@ const runSample = async (variant: Variant, iteration: number, leaveOpen: boolean
       const installedManifest = join(extension.sourcePath, "package.json");
       const edited = { ...(await Bun.file(installedManifest).json()), description: "My local Planner description" };
       await Bun.write(installedManifest, JSON.stringify(edited));
+      for (const extensionId of ["pstdio.session-browser", "pstdio.harness-codex"]) {
+        await post<InstallExtensionResponse>(`${project}/install`, {
+          source: { kind: "catalog", name: extensionId },
+        });
+      }
     }
     if (variant === "warm") await waitForPrefetch(home, `${baseUrl}${project}`, runtimeAuthorization(runtime));
     if (leaveOpen) {
@@ -123,13 +139,26 @@ const runSample = async (variant: Variant, iteration: number, leaveOpen: boolean
       return;
     }
     const started = performance.now();
-    const result = await post<UpgradeProjectExtensionResponse>(`${project}/${extension.id}/upgrade`);
-    const upgradeMs = Math.round(performance.now() - started);
-    if (result.extension.version !== version) throw new Error("The upgrade did not activate the published version.");
-    await listTickets();
-    const usableMs = Math.round(performance.now() - started);
+    const { upgradeMs, usableMs } = inBrowser
+      ? await (await import("./measure-planner-upgrade-browser")).measurePlannerBrowserUpgrade({
+          runtime,
+          projectId: id,
+          extensionId: extension.id,
+          displayName: extension.displayName,
+          previousVersion: oldVersion,
+          version,
+        })
+      : await (async () => {
+          const result = await post<UpgradeProjectExtensionResponse>(`${project}/${extension.id}/upgrade`);
+          const upgradeMs = Math.round(performance.now() - started);
+          if (result.extension.version !== version)
+            throw new Error("The upgrade did not activate the published version.");
+          await listTickets();
+          return { upgradeMs, usableMs: Math.round(performance.now() - started) };
+        })();
     const sample = {
       variant,
+      measurement: inBrowser ? "browser" : "api",
       iteration,
       upgradeMs,
       usableMs,
@@ -169,6 +198,7 @@ try {
       console.log(
         JSON.stringify({
           variant,
+          measurement: inBrowser ? "browser" : "api",
           count: values.length,
           p95UpgradeMs: p95(values.map((result) => result.upgradeMs)),
           p95UsableMs: p95(values.map((result) => result.usableMs)),

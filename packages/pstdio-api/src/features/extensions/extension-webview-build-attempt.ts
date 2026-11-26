@@ -2,7 +2,7 @@ import { existsSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { cp, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { inspectExtensionLoadKey } from "pstdio-extensions";
-import { recordPublishedWebviewRevision } from "pstdio-extensions/prepared-cache";
+import { readPublishedWebview, recordPublishedWebviewRevision } from "pstdio-extensions/prepared-cache";
 import { runExtensionPreparation } from "./extension-preparation";
 import type { LoadedExtensionSnapshot } from "./extension-runtime";
 import { signatureFor } from "./extension-webview-build-backoff";
@@ -97,7 +97,7 @@ export const findCurrentBuildSource = async (
 
 export const isWebviewPublished = (webviewCacheRoot: string, installedExtensionId: string, webviewId: string) => {
   const { distDir } = resolveManagedWebviewPaths({ installedExtensionId, webviewCacheRoot, webviewId });
-  return existsSync(publishedWebviewModule(distDir));
+  return existsSync(publishedWebviewModule(readPublishedWebview(distDir)?.distDir ?? distDir));
 };
 
 interface BuildContext {

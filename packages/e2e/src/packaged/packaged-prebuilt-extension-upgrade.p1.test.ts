@@ -51,6 +51,9 @@ test("activates a prebuilt package through the same packaged upgrade API as a so
     expect(created.status).toBe(201);
     const { id } = (await created.json()) as { id: string };
     const project = `/v1/projects/${id}/extensions`;
+    const unavailable = await post(`${project}/install`, { source: { kind: "catalog", name: "pstdio.artifacts" } });
+    expect(unavailable.status).toBe(400);
+    expect(await unavailable.json()).toMatchObject({ error: expect.any(String) });
     const installed = await post(`${project}/install`, { source: { kind: "catalog", name: "pstdio.notes" } });
     expect(installed.status).toBe(201);
     const { extension } = (await installed.json()) as InstallExtensionResponse;

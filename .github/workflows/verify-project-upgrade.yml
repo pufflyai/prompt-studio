@@ -161,8 +161,10 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - name: Install fixture dependencies
-        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Install fixture dependencies and build its SDK client
+        run: |
+          bun install --frozen-lockfile --ignore-scripts
+          bun run --cwd packages/sdk build:js
       - name: Check out the frozen candidate
         uses: actions/checkout@v5
         with:

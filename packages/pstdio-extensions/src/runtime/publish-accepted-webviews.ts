@@ -1,8 +1,13 @@
-import { constants, cpSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { constants, cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 import { withFileMutationLock } from "pstdio-paths";
-import { acceptedRevisionPath, type PreparedExtensionRevision, preparedRevisionState } from "./prepared-revision";
-import { recordPublishedWebviewRevision } from "./published-webview-revision";
+import {
+  acceptedRevisionPath,
+  type PreparedExtensionRevision,
+  preparedCacheRoot,
+  preparedRevisionState,
+} from "./prepared-revision";
+import { recordPublishedReleaseWebview, recordPublishedWebviewRevision } from "./published-webview-revision";
 
 export const publishAcceptedWebviews = (input: {
   sourcePath: string;
@@ -13,9 +18,17 @@ export const publishAcceptedWebviews = (input: {
   return withFileMutationLock(pointer, () => {
     const accepted: PreparedExtensionRevision = JSON.parse(readFileSync(pointer, "utf8"));
     if (preparedRevisionState(accepted) !== input.expectedState) return false;
+    const releaseViews = join(preparedCacheRoot(), "revisions", accepted.id, "webviews");
     for (const output of input.outputs) {
       const artifact = accepted.webviews?.[output.id];
       if (!artifact) return false;
+      const viewIndex = relative(releaseViews, artifact.distDir);
+      if (accepted.prebuiltRelease && /^(0|[1-9]\d*)$/.test(viewIndex)) {
+        if (!existsSync(join(artifact.distDir, "module.js"))) return false;
+        mkdirSync(dirname(output.distDir), { recursive: true });
+        recordPublishedReleaseWebview(output.distDir, accepted.id, viewIndex, artifact.id);
+        continue;
+      }
       const stage = `${output.distDir}.staging-${crypto.randomUUID()}`;
       try {
         mkdirSync(dirname(stage), { recursive: true });
