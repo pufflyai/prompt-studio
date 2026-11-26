@@ -21,7 +21,7 @@ const CloudStatusIcon = (props: { status?: ReturnType<typeof cloudStatus>; activ
 export const CloudLabel = (props: { data: ReturnType<typeof useCloud>["data"]; online: boolean; error?: string }) => {
   const { data, online, error } = props;
   const { t } = useCloudContext();
-  const status = cloudStatus(data?.account, data?.sync, data?.project, online, data?.projectRelay);
+  const status = cloudStatus(data?.account, data?.sync, data?.project, online);
   let label = t("status.loading", "Cloud");
   if (status?.key === "offline") label = t("status.offline", "Connection lost");
   else if (error) label = t("status.attention", "Needs attention");

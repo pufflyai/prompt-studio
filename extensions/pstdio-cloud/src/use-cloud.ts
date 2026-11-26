@@ -1,4 +1,3 @@
-import type { AccountStatus } from "@pstdio/sdk/extensions";
 import {
   useScopedQueries,
   useWebviewCommandQuery,
@@ -19,20 +18,6 @@ const subscribeConnectivity = (listener: () => void) => {
   };
 };
 const isOnline = () => navigator.onLine;
-
-const cloudProjectAccount = (account: AccountStatus | undefined, projectId: string | undefined) => {
-  const owningTeamId = projectId
-    ? (account?.teamProjectOwners?.[projectId] ?? account?.teamProjects?.[projectId])
-    : undefined;
-  const owningTeam = account?.teamAccounts?.find((team) => team.accountId === owningTeamId);
-  const projectRelay = owningTeamId ? Boolean(owningTeam?.features.relay) : account?.features?.relay;
-  return {
-    owningTeamId,
-    owningTeamName: owningTeam?.name,
-    projectRelay,
-    canManageProject: projectRelay && (!owningTeamId || owningTeam?.role === "owner"),
-  };
-};
 
 export const useCloud = (projectId: string | undefined, includeDevices: boolean) => {
   const { client } = useCloudContext();
@@ -73,7 +58,6 @@ export const useCloud = (projectId: string | undefined, includeDevices: boolean)
       account.data && sync.data
         ? {
             account: account.data,
-            ...cloudProjectAccount(account.data, projectId),
             sync: online ? sync.data : { ...sync.data, state: "offline" as const },
             signingIn: account.data.loginAttempt?.status === "pending",
             devices: devices?.data ?? [],

@@ -7,7 +7,6 @@ import { Button } from "./button";
 import { useCloudContext } from "./cloud-context";
 import { CloudError } from "./cloud-error";
 import { CloudIcon, CloudLabel } from "./cloud-label";
-import { TeamAccounts } from "./team-accounts";
 import { useCloud } from "./use-cloud";
 
 const SectionTitle = (props: { icon: string; children: ReactNode }) => {
@@ -105,129 +104,11 @@ const DeviceRow = (props: { device: AccountDevice; onChange: () => void }) => {
   );
 };
 
-const CloudProjectSettings = (props: {
-  projectId: string;
-  data: NonNullable<ReturnType<typeof useCloud>["data"]>;
-  online: boolean;
-  refresh: () => void;
-}) => {
-  const { projectId, data, online, refresh } = props;
-  const { client, t } = useCloudContext();
-  const [confirmation, setConfirmation] = useState<{ name: string; owner: string; scope: string }>();
-  const [busy, setBusy] = useState(false);
-  const [actionError, setActionError] = useState<ActionError>();
-  const local = data.sync.state === "local";
-  const { account, canManageProject, owningTeamId, owningTeamName } = data;
-  const projectOwner = owningTeamId
-    ? (owningTeamName ?? t("teams.teamProject", "Team project"))
-    : t("teams.personal", "Personal");
-  const scope = JSON.stringify([projectId, account.login?.managerOrigin, account.login?.accountId, owningTeamId]);
-  const run = async (action: () => Promise<unknown>) => {
-    setBusy(true);
-    setActionError(undefined);
-    try {
-      await action();
-      refresh();
-    } catch (cause) {
-      setActionError({ section: "project", message: String(cause) });
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <>
-      <SimpleCard>
-        <SimpleCardBody>
-          <Stack gap="sm" position="relative">
-            <HStack justify="space-between">
-              <SectionTitle icon="folder">{t("project.title", "This project")}</SectionTitle>
-              <CloudLabel data={data} online={online} />
-            </HStack>
-            <Text color="fg.muted">{t("teams.projectOwner", "Owning account {{name}}", { name: projectOwner })}</Text>
-            {local && canManageProject && (
-              <>
-                <Text textStyle="paragraph/S/regular" color="fg.muted">
-                  {t(
-                    "project.merge",
-                    "Syncing again merges the copies. Where both copies changed the same thing, one change is kept.",
-                  )}
-                </Text>
-                <Button
-                  size="sm"
-                  variant="primary"
-                  alignSelf="flex-start"
-                  loading={busy}
-                  disabled={busy}
-                  onClick={() => void run(() => client.account.syncProject(projectId))}
-                >
-                  <CloudIcon name="cloud-upload" />
-                  {t("project.sync", "Sync with Cloud")}
-                </Button>
-              </>
-            )}
-            <ActionFailure section="project" error={actionError} onClose={() => setActionError(undefined)} />
-          </Stack>
-        </SimpleCardBody>
-      </SimpleCard>
-      {!local && canManageProject && (
-        <AlertMessage
-          status="warning"
-          title={t("project.makeLocal", "Make this project local")}
-          endElement={
-            <Button
-              size="2xs"
-              variant="ghost"
-              disabled={busy}
-              onClick={() =>
-                void run(async () => {
-                  const name = await client.commands["project-name"]();
-                  setConfirmation({ name, owner: projectOwner, scope });
-                })
-              }
-            >
-              <CloudIcon name="cloud-off" />
-              {t("project.makeLocalButton", "Make local")}
-            </Button>
-          }
-        >
-          {t("project.localEffect", "Syncing stops on all devices. Each device keeps its copy.")}
-        </AlertMessage>
-      )}
-      {!local && canManageProject && confirmation?.scope === scope && (
-        <DeleteConfirmationModal
-          open
-          onClose={() => setConfirmation(undefined)}
-          headline={t("project.confirmNamedLocal", "Make {{name}} local?", { name: confirmation.name })}
-          buttonText={t("project.makeLocalButton", "Make local")}
-          notificationText={t(
-            "project.confirmEffect",
-            "Syncing stops on all devices. Each device keeps its copy. Syncing again merges the copies; where both copies changed the same thing, one change is kept.",
-          )}
-          onDelete={async () => {
-            setActionError(undefined);
-            try {
-              await client.account.stopProjectSync(projectId);
-              refresh();
-            } catch (cause) {
-              setActionError({ section: "confirmation", message: String(cause) });
-              throw cause;
-            }
-          }}
-        >
-          <Stack position="relative">
-            <Text>{t("teams.projectOwner", "Owning account {{name}}", { name: confirmation.owner })}</Text>
-            <ActionFailure section="confirmation" error={actionError} onClose={() => setActionError(undefined)} />
-          </Stack>
-        </DeleteConfirmationModal>
-      )}
-    </>
-  );
-};
-
 export const CloudSettings = (props: { projectId?: string }) => {
   const { projectId } = props;
   const { client, t } = useCloudContext();
   const { data, online, error, refresh } = useCloud(projectId, true);
+  const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState<string>();
   const [actionError, setActionError] = useState<ActionError>();
   const run = async (section: string, action: () => Promise<unknown>) => {
@@ -256,7 +137,12 @@ export const CloudSettings = (props: { projectId?: string }) => {
     if (id) await client.account.cancelLogin(id);
   };
   const account = data?.account;
+  const local = data?.sync.state === "local";
+  const earlyAccess = account?.features?.relay;
   const signingOut = account?.login && !account.signInRequired;
+  let accessLabel = t("access.comingSoon", "Coming soon");
+  if (earlyAccess) accessLabel = t("access.enabled", "Early access enabled");
+  if (account?.features === null) accessLabel = t("access.loading", "Checking Cloud access…");
   return (
     <Stack h="full" minH="0" gap="0">
       <ScrollArea flex="1" minH="0">
@@ -315,15 +201,20 @@ export const CloudSettings = (props: { projectId?: string }) => {
               </Stack>
             </SimpleCardBody>
           </SimpleCard>
-          {account?.login && !account.signInRequired && (
-            <TeamAccounts
-              key={JSON.stringify([account.login.managerOrigin, account.login.accountId])}
-              account={account}
-              login={account.login}
-              refresh={refresh}
-            />
+          {account?.login && (
+            <SimpleCard>
+              <SimpleCardBody>
+                <Stack gap="sm">
+                  <SectionTitle icon="shield-check">{t("access.title", "Cloud access")}</SectionTitle>
+                  <HStack gap="xs" color="fg.muted">
+                    <CloudIcon name={earlyAccess ? "circle-check" : "cloud"} />
+                    <Text>{accessLabel}</Text>
+                  </HStack>
+                </Stack>
+              </SimpleCardBody>
+            </SimpleCard>
           )}
-          {signingOut && data && (
+          {earlyAccess && account?.login && data && (
             <>
               <SimpleCard>
                 <SimpleCardBody>
@@ -336,12 +227,88 @@ export const CloudSettings = (props: { projectId?: string }) => {
                 </SimpleCardBody>
               </SimpleCard>
               {projectId && (
-                <CloudProjectSettings projectId={projectId} data={data} online={online} refresh={refresh} />
+                <>
+                  <SimpleCard>
+                    <SimpleCardBody>
+                      <Stack gap="sm" position="relative">
+                        <HStack justify="space-between">
+                          <SectionTitle icon="folder">{t("project.title", "This project")}</SectionTitle>
+                          <CloudLabel data={data} online={online} />
+                        </HStack>
+                        {local && (
+                          <>
+                            <Text textStyle="paragraph/S/regular" color="fg.muted">
+                              {t(
+                                "project.merge",
+                                "Syncing again merges the copies. Where both copies changed the same thing, one change is kept.",
+                              )}
+                            </Text>
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              alignSelf="flex-start"
+                              loading={busy === "project"}
+                              disabled={!!busy}
+                              onClick={() => void run("project", () => client.account.syncProject(projectId))}
+                            >
+                              <CloudIcon name="cloud-upload" />
+                              {t("project.sync", "Sync with Cloud")}
+                            </Button>
+                          </>
+                        )}
+                        <ActionFailure
+                          section="project"
+                          error={actionError}
+                          onClose={() => setActionError(undefined)}
+                        />
+                      </Stack>
+                    </SimpleCardBody>
+                  </SimpleCard>
+                  {!local && (
+                    <AlertMessage
+                      status="warning"
+                      title={t("project.makeLocal", "Make this project local")}
+                      endElement={
+                        <Button size="2xs" variant="ghost" disabled={!!busy} onClick={() => setConfirming(true)}>
+                          <CloudIcon name="cloud-off" />
+                          {t("project.makeLocalButton", "Make local")}
+                        </Button>
+                      }
+                    >
+                      {t("project.localEffect", "Syncing stops on all devices. Each device keeps its copy.")}
+                    </AlertMessage>
+                  )}
+                </>
               )}
             </>
           )}
         </Stack>
       </ScrollArea>
+      <DeleteConfirmationModal
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        headline={t("project.confirmLocal", "Make this project local?")}
+        buttonText={t("project.makeLocalButton", "Make local")}
+        notificationText={t(
+          "project.confirmEffect",
+          "Syncing stops on all devices. Each device keeps its copy. Syncing again merges the copies; where both copies changed the same thing, one change is kept.",
+        )}
+        onDelete={async () => {
+          if (!projectId) return;
+          setActionError(undefined);
+          try {
+            await client.account.stopProjectSync(projectId);
+            refresh();
+          } catch (cause) {
+            setActionError({ section: "confirmation", message: String(cause) });
+            throw cause;
+          }
+        }}
+      >
+        <Stack position="relative">
+          <ActionFailure section="confirmation" error={actionError} onClose={() => setActionError(undefined)} />
+        </Stack>
+      </DeleteConfirmationModal>
     </Stack>
   );
 };

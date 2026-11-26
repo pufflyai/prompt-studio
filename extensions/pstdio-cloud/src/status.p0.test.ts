@@ -46,11 +46,6 @@ describe("Cloud status", () => {
     expect(cloudStatus({ ...account, features: null }, synced).key).toBe("signedIn");
   });
 
-  test("uses the project's owning account's Cloud access", () => {
-    expect(cloudStatus({ ...account, features: { relay: false } }, synced, undefined, true, true).key).toBe("synced");
-    expect(cloudStatus(account, synced, undefined, true, false).key).toBe("signedIn");
-  });
-
   test("shows actual pending document counts and leaves unknown counts unspecified", () => {
     expect(cloudStatus(account, { ...synced, state: "waiting-to-sync", pendingItems: 3 }).count).toBe(3);
     expect(cloudStatus(account, { ...synced, state: "waiting-to-sync" }).count).toBeUndefined();

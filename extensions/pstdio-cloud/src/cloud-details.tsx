@@ -29,7 +29,7 @@ export const CloudDetails = (props: { projectId?: string }) => {
       setNavigationError(String(cause));
     }
   };
-  const earlyAccess = data?.projectRelay;
+  const earlyAccess = data?.account.features?.relay;
   const connected =
     data && earlyAccess && ["synced", "waiting-to-sync", "first-download-incomplete"].includes(data.sync.state);
   return (

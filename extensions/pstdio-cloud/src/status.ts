@@ -19,13 +19,12 @@ export const cloudStatus = (
   sync: ProjectSyncStatus | undefined,
   project?: CloudProjectState,
   online = true,
-  relay = account?.features?.relay,
 ) => {
   if (!online || sync?.state === "offline") return { key: "offline", icon: "wifi-off", warning: true };
   if (!account || !sync) return { key: "loading", icon: "cloud" };
   if (account.signInRequired) return { key: "signInAgain", icon: "user-round-key", warning: true };
   if (!account.login) return { key: "signIn", icon: "user-round-key" };
-  if (!relay) return { key: "signedIn", icon: "cloud" };
+  if (!account.features?.relay) return { key: "signedIn", icon: "cloud" };
   if (sync.state === "local") return { key: "local", icon: "cloud-off" };
   if (sync.state === "needs-attention") return { key: "attention", icon: "triangle-alert", warning: true };
   const source = sourceStatus(sync);
