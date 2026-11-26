@@ -103,7 +103,7 @@ const runReview = async (
       return result && { action, ...result };
     }
     case "cancel":
-      return (await api.cancelReview(projectId, instanceId, input.id)) ? { action } : null;
+      return (await api.cancelReview(projectId, instanceId, input.id, input.revision)) ? { action } : null;
     case "apply": {
       const upgrade = await upgradeInstance(deps, service, projectId, instanceId, () =>
         api.applyReview(projectId, instanceId, input.id, input.resolutions, {

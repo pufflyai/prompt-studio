@@ -259,6 +259,13 @@ test("reviews an overlapping edit against the original release and applies user-
   await expectRejection(reviews.saveReview("test-project", "test-instance", review.id, review.revision, [])).toThrow(
     "Another view saved resolutions",
   );
+  await expectRejection(reviews.cancelReview("test-project", "test-instance", review.id, review.revision)).toThrow(
+    "Another view saved resolutions",
+  );
+  expect(await reviews.readReview("test-project", "test-instance", review.id)).toMatchObject({
+    revision: saved.revision,
+    resolutions: choices,
+  });
   await expectRejection(
     reviews.applyReview("test-project", "test-instance", review.id, choices, { revision: review.revision }),
   ).toThrow("Another view saved resolutions");
@@ -319,6 +326,24 @@ test("reviews an overlapping edit against the original release and applies user-
     }),
   ).toThrow("local changes");
   expect(await readFile(path, "utf8")).toBe(merged);
+});
+
+test("explicitly replaces a conflicting managed copy with the incoming release", async () => {
+  const f = await fixture();
+  const { installed, recorded } = await f.first();
+  const entry = join(installed.targetPath, "extension.ts");
+  await writeFile(entry, (await readFile(entry, "utf8")).replace('title:"Version"', 'title:"My version"'));
+  await writeFile(join(installed.targetPath, "local-only.txt"), "local notes");
+  await f.publish("0.45.2");
+  const { reviews } = f.upgradeService(recorded);
+  const review = (await reviews.beginReview("test-project", "test-instance"))!;
+  const applied = await reviews.applyReview("test-project", "test-instance", review.id, [], {
+    revision: review.revision,
+    usePublished: true,
+  });
+  expect(applied?.installedSource.version).toBe("0.45.2");
+  expect(await readFile(entry, "utf8")).toContain('title:"Version"');
+  expect(await Bun.file(join(installed.targetPath, "local-only.txt")).exists()).toBe(false);
 });
 
 test("prefetches source and runtime without installing, then reuses the exact verified pair", async () => {

@@ -25,7 +25,6 @@ export const ExtensionUpgradeProgress = (props: ExtensionUpgradeProgressProps) =
   const action: ExtensionActionState | undefined = batch
     ? {
         status: batch.running ? "running" : "error",
-        needsReview: Boolean(batch.reviewRequired && !batch.failed),
         label: batch.running
           ? t("projectSettings.extensionsPanel.feedback.batch", { count: batch.completed, total: batch.ids.length })
           : outcomes.join(" · "),

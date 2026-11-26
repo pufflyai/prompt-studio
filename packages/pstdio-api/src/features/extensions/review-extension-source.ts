@@ -233,7 +233,6 @@ const applyReviewPlan = async <T>(
   }) => Promise<T>,
 ) => {
   assertSameReviewSource(record, source);
-  if (usePublished && !record.separateProviderId) throw new Error("This upgrade replaces a managed working copy.");
   const workingFingerprint = state.snapshot?.fingerprint ?? record.workingFingerprint;
   const changedPaths = await reviewWorkingCopyChanges(
     reviewLocalPath(directory, state.snapshot),
@@ -265,13 +264,20 @@ const applyReviewPlan = async <T>(
   });
 };
 
-export const cancelExtensionSourceReview = async (home: string, id: string, projectId: string, instanceId: string) => {
+export const cancelExtensionSourceReview = async (
+  home: string,
+  id: string,
+  projectId: string,
+  instanceId: string,
+  revision?: string,
+) => {
   const review = await loadRecord(home, id, projectId, instanceId);
   if (!review) return false;
   if (applyingReviews.has(review.directory))
     throw new ExtensionUpgradeNeedsReviewError("This upgrade is already applying.");
   applyingReviews.add(review.directory);
   try {
+    readReviewState(review.directory, revision);
     await rm(review.directory, { recursive: true, force: true });
     return true;
   } finally {

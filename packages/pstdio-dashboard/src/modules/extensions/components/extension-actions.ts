@@ -41,6 +41,7 @@ interface ActionOptions<T> {
   installedId?: (result: T) => string;
   draft?: unknown;
   source?: ResourceRef;
+  sourceCommand?: Parameters<WorkbenchOperations["submit"]>[0]["sourceCommand"];
 }
 
 const marketplaceActionPrefix = "marketplace:";
@@ -108,7 +109,7 @@ export const createExtensionActions = (tracker?: InventoryTracker) => {
       subject && entry.subjects.includes(subject) && (entry.status === "unknown" || entry.status === "unconfirmed");
     const blocked =
       operationSnapshot?.pending.some(unresolvedSubject) || operationSnapshot?.recovery.some(unresolvedSubject);
-    const { operation, enabled, queuedLabel } = options;
+    const { operation, enabled, queuedLabel, sourceCommand = { id: dashboardCommandIds.openExtensions } } = options;
     const unresolved = () =>
       setAction(id, {
         operation,
@@ -136,7 +137,7 @@ export const createExtensionActions = (tracker?: InventoryTracker) => {
               domain,
               title: labels.running,
               source: options.source,
-              sourceCommand: { id: dashboardCommandIds.openExtensions },
+              sourceCommand,
               draft: options.draft,
               releaseOnDiscard: true,
               onDiscard: () => dismiss(id),
@@ -223,6 +224,18 @@ export const createExtensionActions = (tracker?: InventoryTracker) => {
     },
     setFilters: (filters: ExtensionFilters) => publish({ ...snapshot, filters }),
     dismiss,
+    resolveConflict: (id: string) => {
+      const subject = tracker && extensionInventorySubject(tracker.projectId, id);
+      for (const entry of tracker?.operations.getSnapshot().recovery ?? [])
+        if (
+          subject &&
+          entry.subjects.includes(subject) &&
+          entry.status === "rejected" &&
+          needsUpgradeReview(entry.error)
+        )
+          tracker!.operations.discard(entry.id);
+      dismiss(id);
+    },
     setReplacement: (replacement: ActionSnapshot["replacement"]) => publish({ ...snapshot, replacement }),
     dismissBatch: (expected = snapshot.batch) => {
       if (batchRunning || snapshot.batch !== expected) return;

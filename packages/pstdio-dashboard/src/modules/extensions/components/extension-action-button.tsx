@@ -1,9 +1,10 @@
 import { ButtonGroup, IconButton, Spinner, Text } from "@chakra-ui/react";
 import { ProgressButton, type ProgressButtonProps } from "@pstdio/ui";
-import { ArrowUpCircle, CircleAlert, Clock, GitCompareArrows, X } from "lucide-react";
+import { ArrowUpCircle, CircleAlert, Clock, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { ExtensionActionState } from "./extension-action-feedback";
+import { ExtensionConflictPopover } from "./extension-conflict-popover";
 
 interface ExtensionActionButtonProps extends Omit<ProgressButtonProps, "onClick"> {
   action?: ExtensionActionState;
@@ -35,13 +36,10 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
   const failed = action?.status === "error";
   const retryAction = action?.retryable === false ? undefined : onRetry;
   const label = action?.label;
-  const retry =
-    retryLabel ??
-    (action?.needsReview
-      ? t("projectSettings.extensionsPanel.upgrade.review", "Review upgrade")
-      : t("projectSettings.extensionsPanel.feedback.retry", "Retry"));
+  const retry = retryLabel ?? t("projectSettings.extensionsPanel.feedback.retry", "Retry");
   const error = action?.error === action?.label ? undefined : action?.error;
   const name = error ? `${label}: ${error}` : label;
+  if (failed && action.needsReview) return <ExtensionConflictPopover action={action} onResolve={retryAction} />;
   return (
     <ButtonGroup
       attached
@@ -63,7 +61,7 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
         progress={progress}
         onClick={failed ? retryAction : onAction}
       >
-        <ActionIcon status={action?.status} needsReview={action?.needsReview} icon={icon} />
+        <ActionIcon status={action?.status} icon={icon} />
         <Text as="span" truncate={compact} title={compact ? name : undefined}>
           {label ?? children}
           {error && (
@@ -90,18 +88,9 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
   );
 };
 
-const ActionIcon = ({
-  status,
-  needsReview,
-  icon,
-}: {
-  status?: ExtensionActionState["status"];
-  needsReview?: boolean;
-  icon: ReactNode;
-}) => {
+const ActionIcon = ({ status, icon }: { status?: ExtensionActionState["status"]; icon: ReactNode }) => {
   if (status === "running") return <Spinner size="xs" />;
   if (status === "queued") return <Clock />;
-  if (needsReview) return <GitCompareArrows />;
   if (status === "error") return <CircleAlert />;
   return icon;
 };

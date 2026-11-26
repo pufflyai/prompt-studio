@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
 import { createWorkbench } from "@pstdio/workbench";
 import { getDashboardQueryClient } from "@/lib/query-client";
+import { dashboardCommandIds } from "@/shared/app/commands";
+import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { dashboardExtensionsPage } from "@/shared/app/resources";
 import { getProjectExtensionQueries } from "@/shared/extensions/project-extension-queries";
 import { registerExtensionsPage } from "./extensions-page";
@@ -18,6 +20,29 @@ const setup = () => {
   workbench.pageLocations.setProject("project-1");
   return workbench;
 };
+
+test("opens conflict resolution from an alert only in its owning project", async () => {
+  const workbench = setup();
+  try {
+    workbench.context.set(dashboardSelectedProjectIdContextKey, "project-1");
+    await workbench.commands.executeCommand(dashboardCommandIds.openExtensions, {
+      projectId: "project-1",
+      resolveInstanceId: "conflicting-instance",
+    });
+    expect(workbench.pages.store.getState().location).toMatchObject({
+      page: { id: "extension-detail" },
+      resource: { id: "resolve:conflicting-instance" },
+    });
+    await workbench.commands.executeCommand(dashboardCommandIds.openExtensions, {
+      projectId: "another-project",
+      resolveInstanceId: "conflicting-instance",
+    });
+    expect(workbench.pages.store.getState().location?.page).toEqual(dashboardExtensionsPage);
+    expect(workbench.pages.store.getState().location?.resource).toBeUndefined();
+  } finally {
+    workbench.dispose();
+  }
+});
 
 test("keeps Extensions reachable in the pinned navigation footer", async () => {
   const workbench = setup();

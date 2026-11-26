@@ -60,6 +60,8 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
   const [stale, setStale] = useState(false);
   const [instructions, setInstructions] = useState("");
   const [starting, setStarting] = useState(false);
+  const [keeping, setKeeping] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const apply = useApplyExtensionUpgradeReview(projectId);
   const reply = useUpgradeAgentReply(projectId, review);
   const instanceId = target.extension.id;
@@ -68,7 +70,7 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
   const ready = Boolean(
     review && !stale && review.changes.every(({ status, path }) => status !== "conflict" || resolvedPaths.has(path)),
   );
-  const busy = apply.isPending || starting;
+  const busy = submitting || starting || keeping;
   const working = reply.data?.state === "working";
   const showAgentAction = onCompose && !ready;
 
@@ -115,15 +117,49 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
     }
   };
 
-  const submit = async () => {
-    if (!review || !ready || busy) return;
+  const keepCurrent = async () => {
+    if (busy) return;
+    setKeeping(true);
     setError(undefined);
     try {
+      if (review)
+        await getApiClient().extensions.reviewUpgrade(projectId, instanceId, {
+          action: "cancel",
+          id: review.id,
+          revision: review.revision,
+        });
+      onApplied();
+      onClose();
+    } catch (failure) {
+      setError(messageFrom(failure));
+    } finally {
+      setKeeping(false);
+    }
+  };
+
+  const submit = async (usePublished = false) => {
+    if (!review || (!ready && !usePublished) || busy) return;
+    setError(undefined);
+    setSubmitting(true);
+    try {
+      const current =
+        usePublished && stale
+          ? (
+              await getApiClient().extensions.reviewUpgrade(projectId, instanceId, {
+                action: "refresh",
+                id: review.id,
+                revision: review.revision,
+              })
+            ).review
+          : review;
+      setReview(current);
+      setStale(Boolean(current.changedPaths));
       await apply.mutateAsync({
         instanceId,
-        id: review.id,
-        resolutions,
-        revision: review.revision,
+        id: current.id,
+        resolutions: usePublished ? [] : resolutions,
+        usePublished,
+        revision: current.revision,
         title: t("applying", "Applying extension upgrade"),
       });
       onApplied();
@@ -134,6 +170,8 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
       );
       if (details.success) setStale(true);
       else setError(messageFrom(failure));
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -211,9 +249,20 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
                 )}
               </Stack>
             </Dialog.Body>
-            <Dialog.Footer>
+            <Dialog.Footer flexWrap="wrap">
+              <Button variant="outline" loading={keeping} disabled={busy} onClick={() => void keepCurrent()}>
+                {t("keepMyVersion", "Keep my version")}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={!review || busy}
+                loading={submitting}
+                onClick={() => void submit(true)}
+              >
+                {t("useTheirVersion", "Use their version")}
+              </Button>
               {ready && (
-                <Button loading={apply.isPending} disabled={busy || working} onClick={() => void submit()}>
+                <Button loading={submitting} disabled={busy || working} onClick={() => void submit()}>
                   {t("apply", "Apply upgrade")}
                 </Button>
               )}
@@ -223,7 +272,7 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
                   disabled={busy || working || (!review && Boolean(error))}
                   onClick={() => void startAgent()}
                 >
-                  {t("askAgent", "Resolve with agent")}
+                  {t("askAgentAction", "Ask agent")}
                 </Button>
               )}
             </Dialog.Footer>
