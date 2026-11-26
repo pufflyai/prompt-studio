@@ -40,7 +40,10 @@ Fresh databases use one generated schema migration. The SQL and checksums in
 `pstdio-db/drizzle-0.46` are frozen inputs for the one-time upgrade. A settled
 0.48 database is batch re-imported and its source is retained at
 `<database>.before-0.49`. A database with pending edits uses the existing
-conversion. A fully converted early 0.49 installation adopts the new journal
+conversion to materialize those edits. At this one-time boundary every project is local.
+The active database retains live records, document contents, local history, attachment references and
+uploads with staged bytes. Old save IDs, deleted records and sync positions expire together.
+The attachment byte store remains available by content hash. A fully converted early 0.49 installation adopts the new journal
 in place. Future schema changes build on the single 0.49 migration.
 
 During this upgrade the host refreshes incompatible release-managed first-party
