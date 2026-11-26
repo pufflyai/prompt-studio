@@ -156,7 +156,7 @@ export async function stageBatchReimport(
       const payload = join(candidate, batchPayload);
       await mkdir(payload, { mode: 0o700 });
       await source.exec(`CREATE TEMP TABLE reimport_owners AS SELECT row_number() OVER (ORDER BY project_id COLLATE "C",extension_id COLLATE "C")::int AS id, project_id,extension_id
-        FROM (SELECT workbench_id AS project_id,extension_id FROM storage_ordered_owners UNION SELECT project_id,extension_id FROM asset_transfers) o`);
+        FROM (SELECT workbench_id AS project_id,extension_id FROM storage_ordered_owners UNION SELECT project_id,extension_id FROM asset_transfers) o; ANALYZE pg_temp.reimport_owners`);
       await copyBinary(
         source,
         path,

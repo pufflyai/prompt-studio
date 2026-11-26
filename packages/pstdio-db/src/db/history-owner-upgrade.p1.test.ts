@@ -39,7 +39,7 @@ for (const interruption of ["normal", "schema", "restore", "conflict"])
       const originalPositions = await released("storage_personal_history_positions", "workbench_id");
       if (interruption !== "normal") {
         const finish = await prepareHistoryOwnerUpgrade(previous.db, previous.path);
-        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
         if (interruption === "conflict") {
           await finish!();
           // Replay a retained group beside a row edited by a different writer.

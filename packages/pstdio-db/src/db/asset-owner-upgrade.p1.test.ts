@@ -37,7 +37,7 @@ for (const interruption of ["normal", "schema", "restore"])
       if (interruption !== "normal") {
         const finish = await prepareAssetOwnerUpgrade(previous.db, previous.path);
         expect((await previous.pglite.query("SELECT * FROM asset_transfers")).rows).toEqual([]);
-        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
         if (interruption === "restore") {
           await previous.pglite.exec(`CREATE FUNCTION stop_asset_restore() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN IF NEW.operation_id='operation-99' THEN RAISE EXCEPTION 'stop restoration'; END IF; RETURN NEW; END $$;

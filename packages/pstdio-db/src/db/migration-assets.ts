@@ -38,14 +38,16 @@ const extractEmbeddedMigrations = async (
 export const resolveMigrationsFolder = async (
   options: {
     embeddedFiles?: readonly EmbeddedMigrationFile[];
+    released?: boolean;
     tmpDir?: string;
     logger?: (message: string) => void;
   } = {},
 ) => {
   const embeddedSource = options.embeddedFiles ?? getEmbeddedFiles();
   // Schema snapshots belong to migration generation; extracting them delays packaged startup.
+  const directory = options.released ? "drizzle-0.46" : "drizzle";
   const embedded = embeddedSource.flatMap((file) => {
-    const relativePath = relativeEmbeddedFileName(file.name, "pstdio-db/drizzle");
+    const relativePath = relativeEmbeddedFileName(file.name, `pstdio-db/${directory}`);
     return relativePath !== undefined && (relativePath.endsWith(".sql") || relativePath === "meta/_journal.json")
       ? [{ file, relativePath }]
       : [];
@@ -64,13 +66,13 @@ export const resolveMigrationsFolder = async (
   }
 
   return {
-    path: path.join(path.dirname(fileURLToPath(import.meta.url)), "../../drizzle"),
+    path: path.join(path.dirname(fileURLToPath(import.meta.url)), "../..", directory),
     dispose: () => {},
   };
 };
 
-export const withMigrationsFolder = async (run: (folder: string) => Promise<void>) => {
-  const migrations = await resolveMigrationsFolder();
+export const withMigrationsFolder = async (run: (folder: string) => Promise<void>, released = false) => {
+  const migrations = await resolveMigrationsFolder({ released });
   try {
     await run(migrations.path);
   } finally {

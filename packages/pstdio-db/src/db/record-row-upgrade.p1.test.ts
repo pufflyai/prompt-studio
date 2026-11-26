@@ -105,7 +105,7 @@ for (const interruption of ["normal", "schema", "restore"])
         await prepareOwnerProjectionUpgrade(old.db, old.path);
         const documents = await prepareDocumentOwnerUpgrade(old.db, old.path),
           ordered = await prepareOrderedOwnerUpgrade(old.db, old.path);
-        await migrate(old.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        await migrate(old.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
         if (interruption === "restore") {
           await ordered!();
           await old.pglite.exec(`CREATE FUNCTION interrupt_records() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.record_id='z-created' THEN RAISE EXCEPTION 'interrupt records'; END IF; RETURN NEW; END $$;

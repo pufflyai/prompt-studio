@@ -134,7 +134,7 @@ test("confirmed-number restoration resumes after a committed batch without overw
     await prepareOrderedOwnerUpgrade(previous.db, previous.path);
     await prepareOwnerProjectionUpgrade(previous.db, previous.path);
     const documents = await prepareDocumentOwnerUpgrade(previous.db, previous.path);
-    await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+    await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
     await documents!();
     await previous.pglite.exec(`CREATE FUNCTION stop_number_claim() RETURNS trigger LANGUAGE plpgsql AS $$
       BEGIN IF NEW.canonical AND NEW.resource_id='card-200' THEN RAISE EXCEPTION 'stop confirmed numbers'; END IF; RETURN NEW; END $$;

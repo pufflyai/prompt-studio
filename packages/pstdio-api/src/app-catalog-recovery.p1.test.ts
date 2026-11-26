@@ -21,7 +21,7 @@ test("restored catalog work completes after deferred app dependencies are ready"
   const entered = Promise.withResolvers<void>();
   const createSettings = domain.createAppSettingsService;
   const wire = extensions.wireAppExtensionServices;
-  let services: ReturnType<typeof wire> | undefined;
+  let services: Awaited<ReturnType<typeof wire>> | undefined;
   let settingsSpy: ReturnType<typeof spyOn> | undefined;
   let wiringSpy: ReturnType<typeof spyOn> | undefined;
   let opening: ReturnType<typeof createTestApp> | undefined;
@@ -59,8 +59,8 @@ test("restored catalog work completes after deferred app dependencies are ready"
       await release.promise;
       return createSettings(input);
     });
-    wiringSpy = spyOn(extensions, "wireAppExtensionServices").mockImplementation((input) => {
-      services = wire(input);
+    wiringSpy = spyOn(extensions, "wireAppExtensionServices").mockImplementation(async (input) => {
+      services = await wire(input);
       return services;
     });
     opening = createTestApp({ databasePath, storageRoot });

@@ -198,7 +198,8 @@ const buildApp = async (
   await fileService.recoverRemovals();
   let deps!: RouteDeps;
   const { extensionRuntime, extensionStartup, extensionRuntimeCatalog, unsubscribeExtensionEvents, ...extensionDeps } =
-    wireAppExtensionServices({
+    await wireAppExtensionServices({
+      preferences: dbs.preferencesDBService,
       config: input.config.extensions,
       db,
       dependencies,

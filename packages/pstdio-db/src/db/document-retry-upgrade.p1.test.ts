@@ -30,7 +30,7 @@ test("retry history coalesces small saves, bounds large batches and keeps only t
     await prepareOwnerIndexUpgrade(previous.db, previous.path);
     await prepareOwnerProjectionUpgrade(previous.db, previous.path);
     const finish = await prepareDocumentOwnerUpgrade(previous.db, previous.path);
-    await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+    await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
     const files = documentFilesFor(previous.db);
     const writes = spyOn(files, "put");
     try {
@@ -96,7 +96,7 @@ test("resource documents stay archived and only owners needing conversion restor
         ('project','pstdio','resource-identities',decode('0000','hex')),
         ('project','converted','my-document',decode('0000','hex'))`);
     const finish = await prepareDocumentOwnerUpgrade(old.db, old.path);
-    await migrate(old.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+    await migrate(old.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
     const archiveFolder = `${old.path}-migration-exports`;
     const blockedArchive = join(archiveFolder, "storage_document_updates.jsonl");
     await mkdir(blockedArchive, { recursive: true });

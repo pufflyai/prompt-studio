@@ -80,7 +80,8 @@ export async function exportSettledRecords(source: PGlite, file: string, signal?
   try {
     await output.writeFile(Buffer.from("5047434f50590aff0d0a000000000000000000", "hex"));
     await source.transaction(async (tx) => {
-      await tx.exec(`DECLARE export_records NO SCROLL CURSOR FOR
+      await tx.exec(`SET LOCAL work_mem='96MB';
+        DECLARE export_records NO SCROLL CURSOR FOR
         SELECT o.id AS owner_id, c.record_id, convert_from(r.state,'UTF8') AS state, c.deleted, c.revision,
           c.query_values::text,c.native_versions::text,
           CASE WHEN NOT c.deleted THEN json_build_object('value',c.value,'asset',c.asset,'shared',c.shared,

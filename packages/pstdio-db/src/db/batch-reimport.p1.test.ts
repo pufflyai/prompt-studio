@@ -109,7 +109,7 @@ test("resumes a published batch after interruption between directory renames and
           old.pglite,
           old.path,
           await resolvePgliteOptions(),
-          join(import.meta.dirname, "../../drizzle"),
+          join(import.meta.dirname, "../../drizzle-0.46"),
         ),
       ).toBe(true);
     } finally {

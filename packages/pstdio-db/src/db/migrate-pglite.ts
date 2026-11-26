@@ -1,6 +1,5 @@
 import type { PGlite, Transaction } from "@electric-sql/pglite";
 import { readMigrationFiles } from "drizzle-orm/migrator";
-import { retireLegacyRecordTables } from "./legacy-record-retirement";
 import { hasUpgradeSnapshots } from "./upgrade-snapshot";
 
 /** Generated DDL and owner admission finish separately. A held conversion
@@ -49,7 +48,6 @@ export const resumeCurrentPgliteSchema = async (input: {
   if (await hasUpgradeSnapshots(path)) return false;
   if (fresh) {
     await migratePglite(engine, migrationsFolder);
-    await retireLegacyRecordTables(engine, migrationsFolder);
     return true;
   }
   const state = await currentPgliteSchemaState(engine, migrationsFolder);

@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { type SQL, sql } from "drizzle-orm";
+import { readMigrationFiles } from "drizzle-orm/migrator";
 import { projectExtensionRow } from "../services/extension-instances/project-extension-row";
 import type { createDb } from "./connection.pglite";
 import { project_extensions } from "./schemas.pg";
@@ -44,7 +45,7 @@ const restoreReleasedInstances = async (
 // released schema. The release stored ISO text, including on tables it kept.
 const restoreReleasedTimestampColumns = async (connection: Awaited<ReturnType<typeof createDb>>) => {
   const preceding = JSON.parse(
-    await readFile(join(import.meta.dirname, "../../drizzle/meta/0010_snapshot.json"), "utf8"),
+    await readFile(join(import.meta.dirname, "../../drizzle-0.46/meta/0010_snapshot.json"), "utf8"),
   );
   const { rows } = await connection.db.execute<{ table_name: string; column_name: string }>(sql`
     SELECT table_name,column_name FROM information_schema.columns
@@ -68,7 +69,7 @@ const restoreReleasedTimestampColumns = async (connection: Awaited<ReturnType<ty
 // the candidate schema. Exercise the actual released data shapes before upgrading.
 export const restoreReleasedPreferenceTables = async (connection: Awaited<ReturnType<typeof createDb>>) => {
   await restoreTextStorageOwners(connection);
-  const folder = join(import.meta.dirname, "../../drizzle");
+  const folder = join(import.meta.dirname, "../../drizzle-0.46");
   const files = (await readdir(folder)).filter((name) => /^000[0-9]_.*\.sql$/.test(name)).sort();
   await restoreReleasedInstances(connection, folder, files);
   await connection.pglite.exec(`
@@ -150,9 +151,12 @@ export const restoreReleasedPreferenceTables = async (connection: Awaited<Return
   );
   await connection.pglite.exec("ALTER TABLE session_queue_entries DROP COLUMN sender_json");
   await restoreReleasedTimestampColumns(connection);
-  const journal = JSON.parse(await readFile(join(folder, "meta/_journal.json"), "utf8"));
-  const appUpgrade = journal.entries.find((entry: { idx: number }) => entry.idx === 10);
-  await connection.pglite.query("DELETE FROM drizzle.__drizzle_migrations WHERE created_at >= $1", [appUpgrade.when]);
+  await connection.pglite.exec("DELETE FROM drizzle.__drizzle_migrations");
+  for (const m of readMigrationFiles({ migrationsFolder: folder }).slice(0, 10))
+    await connection.pglite.query("INSERT INTO drizzle.__drizzle_migrations(hash,created_at) VALUES($1,$2)", [
+      m.hash,
+      m.folderMillis,
+    ]);
 };
 
 export {

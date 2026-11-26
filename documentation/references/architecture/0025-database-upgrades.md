@@ -2,14 +2,14 @@
 
 Prompt Studio keeps local data in an embedded PGlite database. This page explains which databases a release opens and what happens to the others.
 
-## The 0.46 baseline
+## The 0.49 baseline
 
-The schema starts at one generated migration in `pstdio-db/drizzle`, the 0.46 baseline. A new schema change adds a generated migration on top of it with `bun run --cwd packages/pstdio-db db:generate`. Never edit migration SQL by hand.
+The schema starts at one generated migration in `pstdio-db/drizzle`, the 0.49 baseline. A new schema change adds a generated migration on top of it with `bun run --cwd packages/pstdio-db db:generate`. Never edit migration SQL by hand.
 
 Every database folder carries `.pstdio-engine.json`. It names the PGlite engine and the baseline:
 
 ```json
-{ "format": 1, "engine": "pglite-0.4", "baseline": "0.46" }
+{ "format": 1, "engine": "pglite-0.4", "baseline": "0.49" }
 ```
 
 ## Homes from older releases
@@ -19,7 +19,8 @@ At startup, `prepareCurrentPgliteHome` (`pstdio-db/src/db/pglite-current-home.ts
 | Data folder | What happens |
 | --- | --- |
 | Missing or empty | Restore the built empty database and mark it. |
-| Marked with the current baseline | Open it and apply newer migrations. |
+| Marked 0.49 | Open it and apply later migrations. |
+| Marked 0.46 by a supported older host | Verify the released journal, convert the saved project data, and adopt the 0.49 baseline. |
 | Anything else | Retire it, then create an empty database. |
 
 Retiring writes `backups/pre-0.46-<time>-<folder>/` next to the database:
@@ -32,6 +33,20 @@ Retiring writes `backups/pre-0.46-<time>-<folder>/` next to the database:
 The export runs in a separate worker (`pglite-export-worker.ts`) with the engine that wrote the folder. If it fails, startup writes `export-error.txt` and still moves the folder aside. Desktop shows the `retiring` phase while this runs. Startup emits `database_retiring` and `database_retired`.
 
 Core has no import code. To restore old data, ask an agent to read the export and recreate what you need with the `pst` CLI.
+
+## Upgrading existing projects to 0.49
+
+Fresh databases use one generated schema migration. The SQL and checksums in
+`pstdio-db/drizzle-0.46` are frozen inputs for the one-time upgrade. A settled
+0.48 database is batch re-imported and its source is retained at
+`<database>.before-0.49`. A database with pending edits uses the existing
+conversion. A fully converted early 0.49 installation adopts the new journal
+in place. Future schema changes build on the single 0.49 migration.
+
+During this upgrade the host refreshes incompatible release-managed first-party
+tools from its catalog. The installer preserves project selections, installation
+IDs and settings. Local and third-party sources stay under the user's control.
+The complete upgrade includes a successful saved project edit within 20 seconds.
 
 ## Changing the schema later
 

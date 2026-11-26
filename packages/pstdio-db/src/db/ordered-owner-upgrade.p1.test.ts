@@ -58,7 +58,7 @@ for (const interruption of ["normal", "schema", "restore"])
         for (const table of tables.slice(1))
           expect((await old.pglite.query(`SELECT * FROM ${table}`)).rows).toEqual([]);
         expect((await old.pglite.query("SELECT * FROM storage_ordered_owners")).rows).toHaveLength(3);
-        await migrate(old.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        await migrate(old.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
         if (interruption === "restore") {
           await old.pglite.exec(`CREATE FUNCTION stop_ordered_restore() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN IF NEW.operation_id='operation-99' THEN RAISE EXCEPTION 'stop restoration'; END IF; RETURN NEW; END $$;

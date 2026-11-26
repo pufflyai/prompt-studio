@@ -23,6 +23,12 @@ import { restoreArtifactProjectionAdmission } from "./artifact-projection-admiss
 import { prepareArtifactProjectionUpgrade } from "./artifact-projection-upgrade";
 import { prepareAssetOwnerUpgrade } from "./asset-owner-upgrade";
 import { prepareAutomationOwnersUpgrade } from "./automation-owners-upgrade";
+import {
+  captureToolUpgradeSources,
+  finishReleasedBaseline,
+  hasReleasedJournal,
+  verifyReleasedJournal,
+} from "./baseline-0-49";
 import { importBatchOwners, importBatchRows, stageBatchReimport } from "./batch-reimport";
 import { batchBackup, batchPayload, recoverBatchHome } from "./batch-reimport-home";
 import { prepareBoardDefaultsUpgrade } from "./board-defaults-upgrade";
@@ -159,24 +165,19 @@ export const createDb = async (options?: {
     options?.signal?.throwIfAborted();
     pglite = await openPglite(dbPath, pgliteOpts, onImageRestored);
     await pglite.waitReady;
-    if (!fresh && dbPath !== ":memory:" && !fs.existsSync(batchBackup(dbPath))) {
+    const releasedJournal = await hasReleasedJournal(pglite);
+    if (releasedJournal && !fresh && dbPath !== ":memory:" && !fs.existsSync(batchBackup(dbPath))) {
       const source = pglite;
-      const {
-        rows: [state],
-      } = await source.query<{ released: boolean }>(`SELECT to_regclass('public.storage_ordered_owners') IS NOT NULL
-        AND to_regclass('public.owners') IS NULL AND to_regclass('drizzle.__drizzle_migrations') IS NOT NULL AS released`);
-      if (state?.released) {
-        let staged = false;
-        await withMigrationsFolder(async (folder) => {
-          staged = await stageBatchReimport(source, dbPath, pgliteOpts, folder, options?.signal);
-        });
-        if (staged) {
-          await source.close();
-          pglite = undefined;
-          await recoverBatchHome(dbPath);
-          pglite = await openPglite(dbPath, pgliteOpts);
-          await pglite.waitReady;
-        }
+      let staged = false;
+      await withMigrationsFolder(async (folder) => {
+        staged = await stageBatchReimport(source, dbPath, pgliteOpts, folder, options?.signal);
+      }, true);
+      if (staged) {
+        await source.close();
+        pglite = undefined;
+        await recoverBatchHome(dbPath);
+        pglite = await openPglite(dbPath, pgliteOpts);
+        await pglite.waitReady;
       }
     }
     const openedPglite = pglite;
@@ -198,6 +199,7 @@ export const createDb = async (options?: {
     let finishArtifactProjectionUpgrade: (() => Promise<void>) | undefined;
     await withMigrationsFolder(async (migrationsFolder) => {
       if (!fs.existsSync(migrationsFolder)) return;
+      const prefix = releasedJournal ? (await verifyReleasedJournal(openedPglite, migrationsFolder)).applied : 0;
       const finishLegacyAdmission = async () => {
         if (
           await upgradeLegacyRecords(db, dbPath, { signal: options?.signal, failed: options?.onLegacyConversionError })
@@ -214,6 +216,7 @@ export const createDb = async (options?: {
           finishLegacyAdmission,
         }))
       ) {
+        if (releasedJournal) await finishReleasedBaseline(openedPglite, dbPath, migrationsFolder);
         migrated = true;
         return;
       }
@@ -241,7 +244,10 @@ export const createDb = async (options?: {
       const finishBoardDefaultsUpgrade = await prepareBoardDefaultsUpgrade(db, dbPath);
       const finishAutomationOwnersUpgrade = await prepareAutomationOwnersUpgrade(db, dbPath);
       const finishSessionWorkspaceUpgrade = await prepareSessionWorkspaceUpgrade(db, dbPath);
-      await migratePglite(openedPglite, migrationsFolder, reimport ? importBatchOwners : undefined);
+      await migratePglite(openedPglite, migrationsFolder, async (tx) => {
+        if (reimport) await importBatchOwners(tx);
+        if (prefix >= 8 && prefix <= 11) await captureToolUpgradeSources(tx);
+      });
       await finishProjectExtensionsUpgrade?.();
       await finishLogOwnerUpgrade?.();
       await finishHistoryOwnerUpgrade?.();
@@ -267,8 +273,9 @@ export const createDb = async (options?: {
       await finishFileOwnersUpgrade();
       await finishLegacyAdmission();
       await finishRecordRows?.();
+      if (releasedJournal) await finishReleasedBaseline(openedPglite, dbPath, migrationsFolder);
       migrated = true;
-    });
+    }, releasedJournal);
     // Copy durable receipts before opening. Remove old rows for both sides of an identity
     // rename now so the rename does not copy cache data or see a false conflict.
     await pruneRecoveryFiles(db);

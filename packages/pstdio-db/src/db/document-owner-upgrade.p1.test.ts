@@ -146,7 +146,7 @@ for (const interruption of ["normal", "schema", "restore"]) {
         await prepareOwnerProjectionUpgrade(previous.db, previous.path);
         const finish = await prepareDocumentOwnerUpgrade(previous.db, previous.path);
         for (const table of tables) expect((await previous.pglite.query(`SELECT * FROM ${table}`)).rows).toEqual([]);
-        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
         markPhase("snapshot export and schema migration");
         if (interruption === "restore") {
           await previous.pglite.exec(`CREATE FUNCTION stop_document_restore() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN

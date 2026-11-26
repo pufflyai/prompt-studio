@@ -105,7 +105,7 @@ for (const interrupted of [false, true])
       if (interrupted) {
         await prepareExtensionPreferencesUpgrade(connection.db, path);
         await prepareProjectExtensionsUpgrade(connection.db, connection.path);
-        await migrate(connection.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        await migrate(connection.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
         // Exit after schema commit, without running the returned value-restoration callback.
       }
       await connection.close();

@@ -59,7 +59,7 @@ for (const interruption of ["normal", "schema", "restore"])
       ).rows;
       if (interruption !== "normal") {
         const finish = await prepareLogOwnerUpgrade(previous.db, previous.path);
-        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
         if (interruption === "restore") {
           await previous.pglite.exec(`CREATE FUNCTION stop_log_restore() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN IF (SELECT project_id FROM owners JOIN log_streams ON owners.id=log_streams.owner_id
