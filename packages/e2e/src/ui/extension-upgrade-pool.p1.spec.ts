@@ -1,10 +1,29 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { expect, type Route, test } from "@playwright/test";
+import { expect, type Locator, type Page, type Route, test } from "@playwright/test";
 import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { extensionUpgradeNeedsReviewCode } from "pstdio-api-contracts/extension-host";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
+
+const completedProposal = (reviewId: string, kind: "local" | "incoming") =>
+  JSON.stringify({ reviewId, revision: "refreshed", resolutions: [{ kind, path: "src/extension.ts" }] });
+
+const openConflictReview = async (page: Page, row: Locator) => {
+  await row.getByRole("button", { name: "Upgrade conflict", exact: true }).click();
+  await page.getByRole("button", { name: "Resolve", exact: true }).click();
+};
+
+const askForCorrection = async (page: Page, review: Locator) => {
+  await review.getByRole("button", { name: "Apply upgrade" }).click();
+  await expect(review).toContainText("Set the manifest version to 2.0.0");
+  await expect(review.getByRole("button", { name: "Ask agent" })).toBeEnabled();
+  const instructions = "Correct the manifest version and preserve our local export.";
+  await review.getByRole("textbox", { name: "Additional instructions (optional)" }).fill(instructions);
+  await review.getByRole("button", { name: "Ask agent" }).click();
+  await expect(review).toHaveCount(0);
+  await expect(page.locator('[contenteditable="true"]').filter({ hasText: instructions })).toBeVisible();
+};
 
 // Critical risks: real queue ownership and directly reachable recovery must survive list/detail navigation.
 test("keeps individual recovery after completed bulk upgrade progress disappears", async ({ page, request }) => {
@@ -115,6 +134,11 @@ test("keeps individual recovery after completed bulk upgrade progress disappears
     let refreshed = false;
     await page.route(`**/v1/projects/${project.id}/extensions/*/upgrade-review`, async (route) => {
       const { action, revision } = route.request().postDataJSON();
+      if (action === "apply")
+        return route.fulfill({
+          status: 400,
+          json: { error: "Set the manifest version to 2.0.0 before applying the upgrade." },
+        });
       if (action === "begin") await releaseComparison.promise;
       if (action === "file") {
         expect(revision).toBe("refreshed");
@@ -147,8 +171,7 @@ test("keeps individual recovery after completed bulk upgrade progress disappears
       });
     });
     await page.goBack();
-    await row(local.id).getByRole("button", { name: "Upgrade conflict", exact: true }).click();
-    await page.getByRole("button", { name: "Resolve", exact: true }).click();
+    await openConflictReview(page, row(local.id));
     const review = page.getByRole("dialog", { name: `Review ${local.displayName} upgrade` });
     await expect(review.getByRole("textbox", { name: "Additional instructions (optional)" })).toBeVisible();
     await expect(review.getByRole("button", { name: "Ask agent" })).toBeEnabled();
@@ -182,13 +205,13 @@ test("keeps individual recovery after completed bulk upgrade progress disappears
     await expect(review).toHaveCount(0);
     await expect(page.locator('[contenteditable="true"]').filter({ hasText: instructions })).toBeVisible();
     expect(refreshed).toBe(true);
-    reply = JSON.stringify({
-      reviewId,
-      revision: "refreshed",
-      resolutions: [{ kind: "local", path: "src/extension.ts" }],
-    });
-    await row(local.id).getByRole("button", { name: "Upgrade conflict", exact: true }).click();
-    await page.getByRole("button", { name: "Resolve", exact: true }).click();
+    reply = completedProposal(reviewId, "local");
+    await openConflictReview(page, row(local.id));
+    await expect(review).toContainText("The agent prepared a resolution.");
+    await expect(review.getByRole("button", { name: "Apply upgrade" })).toBeEnabled();
+    await askForCorrection(page, review);
+    reply = completedProposal(reviewId, "incoming");
+    await openConflictReview(page, row(local.id));
     await expect(review).toContainText("The agent prepared a resolution.");
     await expect(review.getByRole("button", { name: "Apply upgrade" })).toBeEnabled();
     await review.getByRole("button", { name: "Keep my version" }).click();

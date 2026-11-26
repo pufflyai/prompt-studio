@@ -72,7 +72,7 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
   );
   const busy = submitting || starting || keeping;
   const working = reply.data?.state === "working";
-  const showAgentAction = onCompose && !ready;
+  const showAgentAction = Boolean(onCompose);
 
   useEffect(() => {
     let current = true;
