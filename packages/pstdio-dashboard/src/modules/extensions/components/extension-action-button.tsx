@@ -1,6 +1,6 @@
 import { ButtonGroup, IconButton, Spinner, Text } from "@chakra-ui/react";
 import { ProgressButton, type ProgressButtonProps } from "@pstdio/ui";
-import { ArrowUpCircle, CircleAlert, Clock, X } from "lucide-react";
+import { ArrowUpCircle, CircleAlert, Clock, GitCompareArrows, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { ExtensionActionState } from "./extension-action-feedback";
@@ -63,7 +63,7 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
         progress={progress}
         onClick={failed ? retryAction : onAction}
       >
-        <ActionIcon status={action?.status} icon={icon} />
+        <ActionIcon status={action?.status} needsReview={action?.needsReview} icon={icon} />
         <Text as="span" truncate={compact} title={compact ? name : undefined}>
           {label ?? children}
           {error && (
@@ -90,9 +90,18 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
   );
 };
 
-const ActionIcon = ({ status, icon }: { status?: ExtensionActionState["status"]; icon: ReactNode }) => {
+const ActionIcon = ({
+  status,
+  needsReview,
+  icon,
+}: {
+  status?: ExtensionActionState["status"];
+  needsReview?: boolean;
+  icon: ReactNode;
+}) => {
   if (status === "running") return <Spinner size="xs" />;
   if (status === "queued") return <Clock />;
+  if (needsReview) return <GitCompareArrows />;
   if (status === "error") return <CircleAlert />;
   return icon;
 };

@@ -9,8 +9,10 @@ export default { title: "ProjectSettings/Extension action feedback" };
 export const UpgradeFeedback = () => {
   const [status, setStatus] = useState<ExtensionActionState["status"] | undefined>("running");
   const [install, setInstall] = useState(false);
+  const [needsReview, setNeedsReview] = useState(false);
   const [completed, setCompleted] = useState(1);
   const [showBatch, setShowBatch] = useState(true);
+  const conflict = !install && needsReview && status === "error";
   const labels = {
     queued: "Waiting",
     running: install ? "Installing" : "Upgrading",
@@ -25,6 +27,15 @@ export const UpgradeFeedback = () => {
           </Button>
         ))}
         <Button onClick={() => setStatus(undefined)}>Idle</Button>
+        <Button
+          onClick={() => {
+            setNeedsReview((value) => !value);
+            setStatus("error");
+            setInstall(false);
+          }}
+        >
+          Toggle conflict
+        </Button>
         <Button onClick={() => setInstall((value) => !value)}>Toggle fresh install</Button>
         <Button
           onClick={() => {
@@ -43,8 +54,8 @@ export const UpgradeFeedback = () => {
               ? {
                   ids: ["planner", "notes", "tickets"],
                   completed,
-                  failed: status === "error" ? 1 : 0,
-                  reviewRequired: 0,
+                  failed: status === "error" && !conflict ? 1 : 0,
+                  reviewRequired: Number(conflict),
                   running: completed < 3,
                 }
               : undefined
@@ -71,8 +82,9 @@ export const UpgradeFeedback = () => {
             status
               ? {
                   status,
-                  label: labels[status],
-                  error: status === "error" ? "Registry unavailable" : undefined,
+                  needsReview: conflict,
+                  label: conflict ? "Local files kept" : labels[status],
+                  error: status === "error" && !conflict ? "Registry unavailable" : undefined,
                 }
               : undefined
           }
