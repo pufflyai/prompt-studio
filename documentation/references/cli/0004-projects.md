@@ -82,6 +82,12 @@ Pass `--team <team-account-id>` for team-scoped `delete-local` and `delete-cloud
 
 ## Team invitations
 
+For a desktop invitation without email, use `pst teams invite-code <team-account-id>`. Share the returned code privately; it is displayed once, expires after 24 hours and admits one signed-in person. Use `pst teams invite-codes <team-account-id>` to list IDs and expiry without retrieving secrets. Cancel one with the existing `pst teams cancel-invitation <team-account-id> <invitation-id>` command.
+
+Pass a code on standard input to `pst teams inspect-invite-code`, check the named team and current identity, then pass it to `pst teams join-code` to accept. Do not put codes in command arguments or shell history. A code is transferable: anyone holding it may accept while signed in. Joining never grants project access. Removing a member invalidates all outstanding desktop codes; issue fresh codes for deliberate re-admission.
+
+Recipient-bound invitations remain available:
+
 Use `pst teams members <team-account-id>` for the roster. For a Google recipient, run `pst teams invite <team-account-id> <verified-email>`. For a Microsoft work account, run `pst teams invite-microsoft <team-account-id> <tenant-id> <object-id>` with the recipient’s Entra tenant and user object IDs. Share the returned link privately. Use `pst teams invitations <team-account-id>` to see outstanding invitations and `pst teams cancel-invitation <team-account-id> <invitation-id>` to cancel one.
 
 Open the link in a browser or pass it on standard input to `pst teams inspect-invitation`. After checking the team and signed-in address, pass the link on standard input to `pst teams join` to accept. Avoid storing the link in shell history. Membership gives access to the roster and does not grant projects.

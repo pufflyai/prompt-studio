@@ -110,6 +110,17 @@ const teamRoute = async (devices: Authentication["devices"], request: Request) =
   return null;
 };
 
+const teamInviteCodeRoute = async (devices: Authentication["devices"], request: Request, path: string) => {
+  const match = /^\/v1\/teams\/([^/]+)\/invite-codes$/.exec(path);
+  if (!match) return null;
+  const token = bearer(request);
+  const id = decodeURIComponent(match[1]);
+  if (request.method === "GET") return json(await devices.inviteCodes(token, id));
+  if (request.method !== "POST") return null;
+  z.strictObject({}).parse(await request.json());
+  return json(await devices.inviteCode(token, id), 201);
+};
+
 const teamMembershipRoute = async (auth: Authentication, address: string, request: Request, path: string) => {
   const { devices } = auth;
   const operation = /^\/v1\/teams\/([^/]+)\/(invitations|members|leave)(?:\/([^/]+)\/(cancel|remove))?$/.exec(path);
@@ -211,6 +222,7 @@ export const deviceHttp = async (auth: Authentication, address: string, request:
   try {
     return (
       (path === "/v1/teams" ? await teamRoute(auth.devices, request) : null) ??
+      (await teamInviteCodeRoute(auth.devices, request, path)) ??
       (await teamMembershipRoute(auth, address, request, path)) ??
       (await teamInvitationRoute(auth.devices, request, path)) ??
       (await teamProjectAccessRoute(auth.devices, request, path)) ??

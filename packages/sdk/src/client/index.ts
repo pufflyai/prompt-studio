@@ -2,6 +2,7 @@ export type {
   CloudProjectCatalog,
   CloudProjectCatalogEntry,
   CloudProjectDeletion,
+  CreatedTeamInviteCode,
   DeleteCloudProjectInput,
   DeleteExtensionConnectionInput,
   DownloadCloudProjectResult,
@@ -18,6 +19,7 @@ export type {
   ProjectSyncStatus,
   RemoveLocalProjectInput,
   RemoveLocalProjectResult,
+  TeamInviteCode,
   TextEditingConnectionInput,
 } from "pstdio-api-contracts";
 export {

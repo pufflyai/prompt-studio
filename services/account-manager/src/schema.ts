@@ -103,7 +103,8 @@ export const teamInvitations = pgTable(
     check(
       "manager_team_invitation_recipient",
       sql`(${table.email} is not null and ${table.microsoftTenantId} is null and ${table.microsoftObjectId} is null)
-        or (${table.email} is null and ${table.microsoftTenantId} is not null and ${table.microsoftObjectId} is not null)`,
+        or (${table.email} is null and ${table.microsoftTenantId} is not null and ${table.microsoftObjectId} is not null)
+        or (${table.email} is null and ${table.microsoftTenantId} is null and ${table.microsoftObjectId} is null)`,
     ),
   ],
 );

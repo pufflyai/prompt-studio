@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, isNotNull, or, sql } from "drizzle-orm";
 import {
   type JoinedTeam,
   type TeamInvitationView,
@@ -18,6 +18,7 @@ import {
   teams,
 } from "./schema";
 import { rotateProjectSharedKeys } from "./space-keys";
+import { cancelTeamInviteCodes } from "./team-invite-codes";
 import { cancelOwnershipOnRemoval } from "./team-ownership";
 import { teamUserProjectIds } from "./team-project-access";
 import { TeamMembershipDenied } from "./teams";
@@ -111,7 +112,13 @@ export const listTeamInvitations = async (transaction: ManagerTransaction, accou
       microsoftObjectId: teamInvitations.microsoftObjectId,
     })
     .from(teamInvitations)
-    .where(and(pendingFor(accountId), gt(teamInvitations.expiresAt, new Date())))
+    .where(
+      and(
+        pendingFor(accountId),
+        gt(teamInvitations.expiresAt, new Date()),
+        or(isNotNull(teamInvitations.email), isNotNull(teamInvitations.microsoftObjectId)),
+      ),
+    )
     .orderBy(asc(teamInvitations.expiresAt), asc(teamInvitations.id));
   return rows.map((row) => ({ id: row.id, expiresAt: row.expiresAt.toISOString(), ...recipientOf(row) }));
 };
@@ -179,6 +186,7 @@ export const removeTeamMember = async (transaction: ManagerTransaction, accountI
     .where(and(eq(teamMembers.accountId, accountId), eq(teamMembers.userId, userId), eq(teamMembers.role, "member")))
     .returning({ userId: teamMembers.userId });
   if (!removed) return;
+  await cancelTeamInviteCodes(transaction, accountId);
   await cancelOwnershipOnRemoval(transaction, accountId, userId);
   if (projects.length) await rotateProjectSharedKeys(transaction, accountId, projects);
 
@@ -238,7 +246,7 @@ const describeInvitation = async (
     const directory = await verifiedMicrosoftRecipient(transaction, userId);
     if (directory?.tenantId !== invitation.microsoftTenantId || directory?.objectId !== invitation.microsoftObjectId)
       return "wrong-identity";
-  } else if (!signedInEmail || invitation.email !== signedInEmail) {
+  } else if (invitation.email !== null && (!signedInEmail || invitation.email !== signedInEmail)) {
     return "wrong-identity";
   }
   const [revoked] = await transaction

@@ -17,6 +17,13 @@ const invitation = async () => {
 
 const print = (result: unknown) => console.log(JSON.stringify(result));
 
+const inviteCode = async () => {
+  if (process.stdin.isTTY) throw new Error("Pass the team invite code on standard input");
+  const code = (await Bun.stdin.text()).trim();
+  if (!/^[A-Za-z0-9_-]{43}$/.test(code)) throw new Error("Pass a valid team invite code on standard input");
+  return code;
+};
+
 export const teamsCommand = {
   command: "teams",
   describe: "Create and manage Cloud teams",
@@ -38,6 +45,17 @@ export const teamsCommand = {
       })
       .command("invitations <accountId>", "List a team's outstanding invitations", team, async ({ accountId }) => {
         print(await apiClient().account.readTeamMembership({ op: "invitations", accountId }));
+      })
+      .command(
+        "invite-codes <accountId>",
+        "List outstanding desktop invitation codes without their secrets",
+        team,
+        async ({ accountId }) => {
+          print(await apiClient().account.readTeamMembership({ op: "inviteCodes", accountId }));
+        },
+      )
+      .command("invite-code <accountId>", "Create a desktop invitation without email", team, async ({ accountId }) => {
+        print(await apiClient().account.writeTeamMembership({ op: "inviteCode", accountId }));
       })
       .command(
         "invite <accountId> <email>",
@@ -147,6 +165,12 @@ export const teamsCommand = {
       })
       .command("inspect-invitation", "Inspect an invitation link read from standard input", {}, async () => {
         print(await apiClient().account.readTeamMembership({ op: "inspectInvitation", url: await invitation() }));
+      })
+      .command("inspect-invite-code", "Inspect a desktop invitation code read from standard input", {}, async () => {
+        print(await apiClient().account.readTeamMembership({ op: "inspectInviteCode", code: await inviteCode() }));
+      })
+      .command("join-code", "Accept a desktop invitation code read from standard input", {}, async () => {
+        print(await apiClient().account.writeTeamMembership({ op: "acceptInviteCode", code: await inviteCode() }));
       })
       .command("join", "Accept an invitation link read from standard input", {}, async () => {
         print(await apiClient().account.writeTeamMembership({ op: "acceptInvitation", url: await invitation() }));

@@ -1,6 +1,7 @@
 import { serviceUrl } from "pstdio-sync/relay";
 import {
   createdTeamInvitationSchema,
+  createdTeamInviteCodeSchema,
   joinedTeamSchema,
   type TeamMembershipRead,
   type TeamMembershipReadResult,
@@ -8,6 +9,7 @@ import {
   type TeamMembershipWriteResult,
   teamInvitationSchema,
   teamInvitationViewSchema,
+  teamInviteCodeSchema,
   teamInviteSecretSchema,
   teamMemberSchema,
   teamOwnershipOfferSchema,
@@ -83,6 +85,8 @@ export const createNativeTeamMembership = (input: {
               return z.array(teamMemberSchema).parse(await call(`${teamPath(request.accountId)}/members`));
             case "invitations":
               return z.array(teamInvitationSchema).parse(await call(`${teamPath(request.accountId)}/invitations`));
+            case "inviteCodes":
+              return z.array(teamInviteCodeSchema).parse(await call(`${teamPath(request.accountId)}/invite-codes`));
             case "projectAccess": {
               const access = z
                 .array(teamProjectAccessSchema)
@@ -98,6 +102,10 @@ export const createNativeTeamMembership = (input: {
                   secret: invitationSecret(request.url, login.managerOrigin),
                 }),
               );
+            case "inspectInviteCode":
+              return teamInvitationViewSchema.parse(
+                await call("/v1/team-invitations/inspect", { secret: request.code }),
+              );
           }
         },
         signal,
@@ -107,6 +115,10 @@ export const createNativeTeamMembership = (input: {
         expected,
         async (login, call) => {
           switch (request.op) {
+            case "inviteCode":
+              return createdTeamInviteCodeSchema.parse(await call(`${teamPath(request.accountId)}/invite-codes`, {}));
+            case "acceptInviteCode":
+              return joinedTeamSchema.parse(await call("/v1/team-invitations/accept", { secret: request.code }));
             case "invite":
               return createdTeamInvitationSchema.parse(
                 await call(`${teamPath(request.accountId)}/invitations`, {

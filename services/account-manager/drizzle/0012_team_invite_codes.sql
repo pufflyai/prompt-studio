@@ -1,0 +1,4 @@
+ALTER TABLE "manager_team_invitations" DROP CONSTRAINT "manager_team_invitation_recipient";--> statement-breakpoint
+ALTER TABLE "manager_team_invitations" ADD CONSTRAINT "manager_team_invitation_recipient" CHECK (("manager_team_invitations"."email" is not null and "manager_team_invitations"."microsoftTenantId" is null and "manager_team_invitations"."microsoftObjectId" is null)
+        or ("manager_team_invitations"."email" is null and "manager_team_invitations"."microsoftTenantId" is not null and "manager_team_invitations"."microsoftObjectId" is not null)
+        or ("manager_team_invitations"."email" is null and "manager_team_invitations"."microsoftTenantId" is null and "manager_team_invitations"."microsoftObjectId" is null));

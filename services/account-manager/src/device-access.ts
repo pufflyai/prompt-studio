@@ -37,6 +37,7 @@ import {
   listTeamMembers,
   removeTeamMember,
 } from "./team-invitations";
+import { createTeamInviteCode, listTeamInviteCodes } from "./team-invite-codes";
 import { createOwnershipOffer, finishOwnershipOffer, readOwnershipOffer } from "./team-ownership";
 import { listTeamProjectAccess, teamProjectGrant, updateTeamProjectGrant } from "./team-project-access";
 import { createTeam, listTeams, requireTeamMember, TeamMembershipDenied } from "./teams";
@@ -162,6 +163,8 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
         updateTeamProjectGrant(transaction, accountId, identitySchema.parse(project), userId, granted),
       ),
     invitations: (token: string, id: string) => owner(token, id, listTeamInvitations),
+    inviteCodes: (token: string, id: string) => owner(token, id, listTeamInviteCodes),
+    inviteCode: (token: string, id: string) => owner(token, id, createTeamInviteCode),
     invite: (token: string, id: string, recipient: TeamInviteRecipient) =>
       owner(token, id, (transaction, accountId) => createTeamInvitation(transaction, accountId, recipient)),
     cancelInvitation: (token: string, id: string, inviteId: string) =>
