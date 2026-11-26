@@ -1,143 +1,116 @@
-import { HStack, NativeSelect, Stack, Text } from "@chakra-ui/react";
-import type { DeviceLogin, TeamMember, TeamProjectAccess } from "@pstdio/sdk/extensions";
-import { DeleteConfirmationModal } from "@pstdio/ui";
-import { useCallback, useEffect, useState } from "react";
+import { Avatar, HStack, Stack, Text } from "@chakra-ui/react";
+import type { DeviceLogin, TeamMember } from "@pstdio/sdk/extensions";
+import { Checkbox, DeleteConfirmationModal } from "@pstdio/ui";
+import { useRef, useState } from "react";
 import { Button } from "./button";
 import { useCloudContext } from "./cloud-context";
 import { CloudError } from "./cloud-error";
+import { useTeamQuery } from "./team-query";
 
-export const TeamProjectSharing = (props: { accountId: string; login: DeviceLogin; refresh: () => void }) => {
-  const { accountId, refresh, login } = props;
+interface TeamProjectSharingProps {
+  accountId: string;
+  projectId: string;
+  login: DeviceLogin;
+  refresh: () => void;
+}
+
+export const TeamProjectSharing = (props: TeamProjectSharingProps) => {
+  const { accountId, projectId, refresh, login } = props;
   const { client, t } = useCloudContext();
-  const { accountId: userId, managerOrigin } = login;
-  const [model, setModel] = useState<{ projects: TeamProjectAccess[]; members: TeamMember[] }>();
-  const [projectId, setProjectId] = useState<string>();
+  const expected = { accountId: login.accountId, managerOrigin: login.managerOrigin };
+  const projects = useTeamQuery({ op: "projectAccess", accountId }, login);
+  const members = useTeamQuery({ op: "members", accountId }, login);
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
-  const [confirmation, setConfirmation] = useState<{ member: TeamMember; project: TeamProjectAccess }>();
-
-  const read = useCallback(async () => {
-    const expected = { accountId: userId, managerOrigin };
-    const [projects, members] = await Promise.all([
-      client.account.readTeamMembership({ op: "projectAccess", accountId }, expected),
-      client.account.readTeamMembership({ op: "members", accountId }, expected),
-    ]);
-    return { projects, members };
-  }, [accountId, client, managerOrigin, userId]);
-
-  useEffect(() => {
-    const owner = new AbortController();
-    void read().then(
-      (data) => {
-        if (!owner.signal.aborted) setModel(data);
-      },
-      (cause: unknown) => {
-        if (!owner.signal.aborted) setError(String(cause));
-      },
-    );
-    return () => owner.abort();
-  }, [read]);
-
-  const run = async (change?: { project: TeamProjectAccess; member: TeamMember; granted: boolean }) => {
+  const working = useRef(false);
+  const [confirmation, setConfirmation] = useState<TeamMember>();
+  const project = projects.data?.find(({ workbenchId }) => workbenchId === projectId);
+  const reload = () => {
+    projects.refresh();
+    members.refresh();
+    refresh();
+  };
+  const change = async (member: TeamMember, granted: boolean) => {
+    if (working.current) return;
+    working.current = true;
     setBusy(true);
     setError(undefined);
     try {
-      if (change) {
-        await client.account.writeTeamMembership(
-          {
-            op: "setProjectAccess",
-            accountId,
-            workbenchId: change.project.workbenchId,
-            userId: change.member.userId,
-            granted: change.granted,
-          },
-          { accountId: userId, managerOrigin },
-        );
-        refresh();
-      }
-      setModel(await read());
-    } catch (cause) {
-      setError(String(cause));
-    } finally {
-      setBusy(false);
+      await client.account.writeTeamMembership(
+        { op: "setProjectAccess", accountId, workbenchId: projectId, userId: member.userId, granted },
+        expected,
+      );
       setConfirmation(undefined);
+      reload();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+      throw cause;
+    } finally {
+      working.current = false;
+      setBusy(false);
     }
   };
-
-  const selected = projectId ?? model?.projects[0]?.workbenchId;
-  const project = model?.projects.find(({ workbenchId }) => workbenchId === selected);
+  const failure = error ?? projects.error?.message ?? members.error?.message;
   return (
-    <Stack gap="xs">
-      {error && (
+    <Stack gap="sm">
+      <Text textStyle="label/M/medium">{t("sharing.title", "Project access")}</Text>
+      {(!projects.data || !members.data) && !failure && (
+        <Text role="status">{t("sharing.loading", "Loading project access…")}</Text>
+      )}
+      {project &&
+        members.data?.map((member) => {
+          const granted = project.userIds.includes(member.userId);
+          return (
+            <HStack key={member.userId} justify="space-between">
+              <HStack gap="sm">
+                <Avatar.Root size="xs">
+                  <Avatar.Fallback name={member.name} />
+                </Avatar.Root>
+                <Text>{member.name}</Text>
+              </HStack>
+              <Checkbox
+                checked={granted}
+                disabled={busy}
+                inputProps={{
+                  "aria-label": t("sharing.accessNamed", "Project access for {{name}}", { name: member.name }),
+                }}
+                onCheckedChange={({ checked }) => {
+                  if (checked) void change(member, true).catch(() => {});
+                  else setConfirmation(member);
+                }}
+              />
+            </HStack>
+          );
+        })}
+      {projects.data && members.data && !project && (
+        <Text color="fg.muted">{t("sharing.unavailable", "This project is no longer available to your account.")}</Text>
+      )}
+      {!confirmation && failure && (
         <CloudError
-          message={error}
-          onClose={() => setError(undefined)}
+          inline
+          message={failure}
+          onClose={error ? () => setError(undefined) : undefined}
           action={
-            <Button size="sm" disabled={busy} onClick={() => void run()}>
+            <Button size="sm" disabled={busy} onClick={reload}>
               {t("actions.retry", "Retry")}
             </Button>
           }
         />
       )}
-      {!model && !error && <Text role="status">{t("sharing.loading", "Loading project access…")}</Text>}
-      {model?.projects.length === 0 && <Text color="fg.muted">{t("teams.noProjects", "No cloud projects yet")}</Text>}
-      {!!model?.projects.length && (
-        <NativeSelect.Root size="sm" disabled={busy}>
-          <NativeSelect.Field
-            aria-label={t("sharing.project", "Team project")}
-            value={project?.workbenchId ?? ""}
-            onChange={(event) => setProjectId(event.target.value)}
-          >
-            <option value="" disabled>
-              {t("sharing.select", "Choose a project")}
-            </option>
-            {model.projects.map(({ workbenchId, name }) => (
-              <option key={workbenchId} value={workbenchId}>
-                {name ?? workbenchId}
-              </option>
-            ))}
-          </NativeSelect.Field>
-          <NativeSelect.Indicator />
-        </NativeSelect.Root>
-      )}
-      {project &&
-        model?.members.map((member) => {
-          const shared = project.userIds.includes(member.userId);
-          return (
-            <HStack key={member.userId} justify="space-between">
-              <Text>{member.name}</Text>
-              <Button
-                size="sm"
-                variant={shared ? "destructive-ghost" : "outline"}
-                disabled={busy}
-                aria-label={
-                  shared
-                    ? t("sharing.revokeNamed", "Revoke access for {{name}}", { name: member.name })
-                    : t("sharing.grantNamed", "Grant access to {{name}}", { name: member.name })
-                }
-                onClick={() => {
-                  if (shared) setConfirmation({ project, member });
-                  else void run({ project, member, granted: true });
-                }}
-              >
-                {shared ? t("sharing.revoke", "Revoke access") : t("sharing.grant", "Grant access")}
-              </Button>
-            </HStack>
-          );
-        })}
       {confirmation && (
         <DeleteConfirmationModal
           open
           onClose={() => setConfirmation(undefined)}
-          onDelete={() => run({ ...confirmation, granted: false })}
-          headline={t("sharing.revokeNamed", "Revoke access for {{name}}", { name: confirmation.member.name })}
+          confirmDisabled={busy}
+          onDelete={() => change(confirmation, false)}
+          headline={t("sharing.revokeNamed", "Revoke access for {{name}}", { name: confirmation.name })}
           buttonText={t("sharing.revoke", "Revoke access")}
           notificationText={t(
             "sharing.revokeEffect",
             "New activity will stop syncing to this person after their current access expires. They keep downloaded copies.",
           )}
         >
-          <Text>{confirmation.project.name ?? confirmation.project.workbenchId}</Text>
+          {error && <CloudError inline message={error} onClose={() => setError(undefined)} />}
         </DeleteConfirmationModal>
       )}
     </Stack>

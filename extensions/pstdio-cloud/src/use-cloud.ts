@@ -30,7 +30,11 @@ const cloudProjectAccount = (account: AccountStatus | undefined, projectId: stri
     owningTeamId,
     owningTeamName: owningTeam?.name,
     projectRelay,
-    canManageProject: projectRelay && (!owningTeamId || owningTeam?.role === "owner"),
+    canManageProject:
+      projectRelay &&
+      (!owningTeamId ||
+        owningTeam?.role === "owner" ||
+        Boolean(projectId && account?.teamProjects?.[projectId] === owningTeamId)),
   };
 };
 

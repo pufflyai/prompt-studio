@@ -1,6 +1,8 @@
 import { AlertMessage } from "@pstdio/ui";
 import { type ReactNode, useState } from "react";
 
+export const cloudErrorMessage = (cause: unknown) => (cause instanceof Error ? cause.message : String(cause));
+
 export const CloudError = (props: { message: string; action?: ReactNode; onClose?: () => void; inline?: boolean }) => {
   const { message, action, onClose } = props;
   const [dismissed, setDismissed] = useState<string>();

@@ -8,6 +8,7 @@ import { useCloudContext } from "./cloud-context";
 import { CloudError } from "./cloud-error";
 import { CloudIcon, CloudLabel } from "./cloud-label";
 import { TeamAccounts } from "./team-accounts";
+import { TeamProjectSharing } from "./team-project-sharing";
 import { useCloud } from "./use-cloud";
 
 const SectionTitle = (props: { icon: string; children: ReactNode }) => {
@@ -165,6 +166,15 @@ const CloudProjectSettings = (props: {
                 </Button>
               </>
             )}
+            {!local && canManageProject && owningTeamId && account.login && (
+              <TeamProjectSharing
+                key={JSON.stringify([projectId, owningTeamId, account.login.accountId])}
+                accountId={owningTeamId}
+                projectId={projectId}
+                login={account.login}
+                refresh={refresh}
+              />
+            )}
             <ActionFailure section="project" error={actionError} onClose={() => setActionError(undefined)} />
           </Stack>
         </SimpleCardBody>
@@ -319,8 +329,6 @@ export const CloudSettings = (props: { projectId?: string }) => {
             <TeamAccounts
               key={JSON.stringify([account.login.managerOrigin, account.login.accountId])}
               account={account}
-              login={account.login}
-              refresh={refresh}
             />
           )}
           {signingOut && data && (

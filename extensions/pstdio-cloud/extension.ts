@@ -39,11 +39,31 @@ const cloudSettings = defineView({
     capabilities: ["account.read", "account.manage", "navigation.open", "commands.execute", "commands.query"],
   },
 });
+const teamSettings = defineView({
+  id: "team-settings",
+  title: l10n("views.teamSettings", "Team"),
+  icon: "users",
+  body: {
+    kind: "webview",
+    entry: packageAsset("./src/team-settings-view.tsx", import.meta.url),
+    capabilities: ["account.read", "account.manage", "clipboard.write"],
+  },
+});
+const managedSettings = defineView({
+  id: "managed-settings",
+  title: l10n("views.managedSettings", "Managed extensions"),
+  icon: "package-check",
+  body: {
+    kind: "webview",
+    entry: packageAsset("./src/managed-settings-view.tsx", import.meta.url),
+    capabilities: ["account.read", "account.manage", "commands.execute", "commands.query"],
+  },
+});
 
 export default defineExtension({
   defaultLocale: "en",
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
-  views: [status, details, cloudSettings],
+  views: [status, details, cloudSettings, teamSettings, managedSettings],
   commands: Object.values(cloudCommands),
   statusBarItems: [
     defineStatusBarItem({
@@ -53,5 +73,9 @@ export default defineExtension({
       slot: workbenchSlots.statusBarTrailing,
     }),
   ],
-  settingsPanels: [defineSettingsPanel({ id: "cloud", view: cloudSettings.ref, slot: workbenchSlots.globalSettings })],
+  settingsPanels: [
+    defineSettingsPanel({ id: "cloud", view: cloudSettings.ref, slot: workbenchSlots.globalSettings }),
+    defineSettingsPanel({ id: "team", view: teamSettings.ref, slot: workbenchSlots.globalSettings }),
+    defineSettingsPanel({ id: "managed-extensions", view: managedSettings.ref, slot: workbenchSlots.globalSettings }),
+  ],
 });

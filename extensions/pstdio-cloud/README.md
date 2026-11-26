@@ -8,6 +8,23 @@ Open it for details, then choose **Cloud settings** to sign in, manage your devi
 or make this project local. Making a project local stops syncing on every device;
 each keeps its copy. Syncing again merges those copies.
 
+Open **Settings → Team** to create or join a team, inspect its members, and invite
+someone with a single-use desktop code. Owners remove members through the row's
+trash action. Joining does not grant project access; assigned project members manage
+access in the project's Cloud settings. Team actions include ownership transfer and
+leaving a team.
+
+In **Settings → Managed extensions**, the owner selects an installed tool from the
+current project. Its verified package becomes required in every authorized team
+project and on newly joined devices. Members see the policy read-only. Clear the
+checkbox to restore ordinary control while keeping the tool installed. Use **Update
+from this project** to select a newly prepared source revision. Team policy applies
+to the team's projects; personal projects remain independent.
+
+These settings require host extension API 0.6.0 and its supporting published SDK.
+Production presentation states are in `src/team-settings.canvas.tsx`; the Canvas uses
+synthetic people and policy and makes no account changes.
+
 See the [Cloud sync guide](../../documentation/guides/concepts/0007-cloud-sync.md) for sign-in, status and project controls.
 
 Accounts without early access stay signed in and see **Coming soon**. **Offline**

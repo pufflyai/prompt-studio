@@ -1,5 +1,6 @@
-import { HStack, NativeSelect, Stack, Text } from "@chakra-ui/react";
+import { HStack, Stack, Text } from "@chakra-ui/react";
 import type { TeamAccount, TeamMember, TeamMembershipWrite, TeamOwnershipOffer } from "@pstdio/sdk/extensions";
+import { SearchableMenu } from "@pstdio/ui";
 import { useState } from "react";
 import { Button } from "./button";
 import { useCloudContext } from "./cloud-context";
@@ -69,23 +70,21 @@ export const TeamOwnership = (props: {
     <Stack gap="xs" align="flex-start">
       <Text textStyle="label/M/medium">{t("ownership.title", "Transfer ownership")}</Text>
       <HStack align="flex-end">
-        <NativeSelect.Root size="sm" disabled={busy}>
-          <NativeSelect.Field
-            aria-label={t("ownership.recipient", "New owner")}
-            value={target?.userId ?? ""}
-            onChange={(event) => select(event.target.value)}
-          >
-            <option value="" disabled>
-              {t("ownership.choose", "Choose a member")}
-            </option>
-            {choices.map(({ userId, name }) => (
-              <option key={userId} value={userId}>
-                {name}
-              </option>
-            ))}
-          </NativeSelect.Field>
-          <NativeSelect.Indicator />
-        </NativeSelect.Root>
+        <SearchableMenu
+          trigger={
+            <Button size="sm" variant="outline" disabled={busy} aria-label={t("ownership.recipient", "New owner")}>
+              {target?.name ?? t("ownership.choose", "Choose a member")}
+            </Button>
+          }
+          items={choices.map(({ userId, name }) => ({
+            id: userId,
+            label: name,
+            isSelected: selected === userId,
+            onSelect: () => select(userId),
+          }))}
+          searchPlaceholder={t("ownership.search", "Search members")}
+          emptyState={t("ownership.noMembers", "No eligible members")}
+        />
         <Button
           size="sm"
           variant="outline"

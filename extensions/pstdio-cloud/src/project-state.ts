@@ -1,6 +1,23 @@
 import { defineCommand, l10n } from "@pstdio/sdk/extensions";
 
 export const cloudCommands = {
+  "extension-sources": defineCommand({
+    id: "extension-sources",
+    title: l10n("commands.extensionSources", "List installed tools for team management"),
+    cli: true,
+    async run(ctx) {
+      const { extensions } = await ctx.extensions.list();
+      return extensions
+        .filter((extension) => extension.enabled && extension.status === "loaded")
+        .map((extension) => ({
+          instanceId: extension.id,
+          extensionId: extension.extensionId,
+          name: extension.displayName,
+          version: extension.version,
+          icon: extension.icon,
+        }));
+    },
+  }),
   "project-name": defineCommand({
     id: "project-name",
     title: l10n("commands.projectName", "Read project name"),

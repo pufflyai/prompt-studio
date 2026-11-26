@@ -5,97 +5,121 @@ import { Button } from "./button";
 import { useCloudContext } from "./cloud-context";
 import { CloudError } from "./cloud-error";
 
-export const TeamJoin = (props: { login: DeviceLogin; close: () => void; joined: (accountId?: string) => void }) => {
+interface TeamJoinProps {
+  login: DeviceLogin;
+  close: () => void;
+  joined: (accountId?: string) => void;
+}
+
+export const TeamJoin = (props: TeamJoinProps) => {
+  const { login, close, joined } = props;
   const { client, t } = useCloudContext();
-  const [url, setUrl] = useState("");
-  const [view, setView] = useState<TeamInvitationView>();
+  const expected = { accountId: login.accountId, managerOrigin: login.managerOrigin };
+  const [code, setCode] = useState("");
+  const [inspection, setInspection] = useState<{ code: string; view: TeamInvitationView }>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
-  const expected = { accountId: props.login.accountId, managerOrigin: props.login.managerOrigin };
-  const inspect = () => client.account.readTeamMembership({ op: "inspectInvitation", url: url.trim() }, expected);
-
+  const view = inspection?.code === code.trim() ? inspection.view : undefined;
+  const inspect = (code: string) => client.account.readTeamMembership({ op: "inspectInviteCode", code }, expected);
   const run = async (accept = false) => {
+    if (busy || (accept && view?.state !== "pending")) return;
+    const submitted = code.trim();
     setBusy(true);
     setError(undefined);
     try {
-      if (accept) {
-        const joined = await client.account
-          .writeTeamMembership({ op: "acceptInvitation", url: url.trim() }, expected)
-          .catch(async (cause: unknown) => {
-            // The authority could have committed the join before the native response was lost.
-            const current = await inspect();
-            setView(current);
-            if (current.state === "joined") return undefined;
-            throw cause;
-          });
-        props.joined(joined?.accountId);
-      } else {
-        setView(await inspect());
+      if (!accept) {
+        const current = await inspect(submitted);
+        setInspection({ code: submitted, view: current });
+        if (current.state === "joined") joined();
+        return;
       }
+      const result = await client.account
+        .writeTeamMembership({ op: "acceptInviteCode", code: submitted }, expected)
+        .catch(async (cause: unknown) => {
+          const current = await inspect(submitted);
+          setInspection({ code: submitted, view: current });
+          if (current.state === "joined") return undefined;
+          throw cause;
+        });
+      joined(result?.accountId);
     } catch (cause) {
-      setError(String(cause));
+      setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
       setBusy(false);
     }
   };
-
   const states = {
     pending: t("members.separateProjects", "Joining the team does not grant access to projects."),
     joined: t("join.joined", "You already joined this team."),
     consumed: t("join.consumed", "This invitation has already been used."),
     canceled: t("join.canceled", "This invitation was canceled."),
     expired: t("join.expired", "This invitation expired."),
-    "wrong-identity":
-      view?.provider === "microsoft"
-        ? t("join.wrongMicrosoftIdentity", "Sign in with the Microsoft work account that received this invitation.")
-        : t("join.wrongIdentity", "Sign in with the Google account that received this invitation."),
+    "wrong-identity": t("join.unavailable", "This invitation is unavailable for this account."),
     unknown: t("join.unknown", "This invitation is unavailable."),
   };
   return (
-    <Stack gap="xs">
-      <HStack
+    <Stack gap="md" position="relative">
+      <Stack
         as="form"
+        gap="sm"
         onSubmit={(event) => {
           event.preventDefault();
-          if (url.trim()) void run();
+          if (code.trim()) void run();
         }}
       >
         <Input
-          size="sm"
-          type="url"
-          required
-          value={url}
-          maxLength={2048}
-          disabled={busy}
-          aria-label={t("join.link", "Team invitation link")}
+          aria-label={t("join.code", "Invite code")}
+          value={code}
+          autoComplete="off"
+          autoFocus
+          maxLength={128}
           onChange={(event) => {
-            setUrl(event.target.value);
-            setView(undefined);
+            setCode(event.target.value);
+            setInspection(undefined);
             setError(undefined);
           }}
         />
-        <Button size="sm" variant="outline" type="submit" disabled={busy || !url.trim()}>
-          {t("join.inspect", "Check link")}
-        </Button>
-        <Button size="sm" variant="ghost" disabled={busy} onClick={props.close}>
-          {t("teams.cancel", "Cancel")}
-        </Button>
-      </HStack>
+        <HStack justify="end">
+          <Button size="sm" variant="ghost" onClick={close}>
+            {t("teams.cancel", "Cancel")}
+          </Button>
+          <Button
+            size="sm"
+            variant="primary"
+            type="submit"
+            loading={busy}
+            disabled={busy || !/^[A-Za-z0-9_-]{43}$/.test(code.trim())}
+          >
+            {t("join.inspectCode", "Check code")}
+          </Button>
+        </HStack>
+      </Stack>
       {view && (
-        <Stack gap="xs">
+        <Stack gap="sm">
           {view.teamName && <Text textStyle="label/M/medium">{view.teamName}</Text>}
-          {view.signedInEmail && (
-            <Text>{t("join.identity", "Signed in as {{email}}", { email: view.signedInEmail })}</Text>
-          )}
-          <Text role="status">{states[view.state]}</Text>
+          <Text>
+            {t("join.identity", "Signed in as {{identity}}", {
+              identity: view.signedInEmail ?? login.email ?? login.accountId,
+            })}
+          </Text>
+          <Text role="status" color="fg.muted">
+            {states[view.state]}
+          </Text>
           {view.state === "pending" && (
-            <Button size="sm" variant="primary" alignSelf="flex-start" disabled={busy} onClick={() => void run(true)}>
+            <Button
+              size="sm"
+              variant="primary"
+              alignSelf="start"
+              loading={busy}
+              disabled={busy}
+              onClick={() => void run(true)}
+            >
               {t("join.accept", "Join team")}
             </Button>
           )}
         </Stack>
       )}
-      {error && <CloudError message={error} onClose={() => setError(undefined)} />}
+      {error && <CloudError inline message={error} onClose={() => setError(undefined)} />}
     </Stack>
   );
 };
