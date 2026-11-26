@@ -125,7 +125,9 @@ for (const interruption of ["normal", "schema", "restore"])
         const verifyLocal = async () => {
           const service = createDocumentStorageDBService(current!.db);
           const records = service.open({ owner }).records;
-          expect((await records.read("pending")).value).toEqual({ title: "pending" });
+          const saved = await records.read("pending");
+          expect(saved.value).toEqual({ title: "pending" });
+          expect(JSON.parse(saved.revision!).stamps).toEqual({});
           expect((await records.read("z-created")).value).toEqual({ title: "new" });
           expect((await records.read("orphan")).value).toEqual({ title: "query only" });
           await withOrderedOwner(current!.db, owner, async (journal) => {
@@ -142,7 +144,16 @@ for (const interruption of ["normal", "schema", "restore"])
         await verifyLocal();
         const service = createDocumentStorageDBService(current.db);
         const records = service.open({ owner }).records;
-        await records.commit({ operationId: "new-save", edits: [{ recordId: "pending", set: { "/done": true } }] });
+        await records.commit({
+          operationId: "new-save",
+          edits: [
+            {
+              recordId: "pending",
+              expectedRevision: (await records.read("pending")).revision!,
+              set: { "/done": true },
+            },
+          ],
+        });
         expect((await records.read("pending")).value).toEqual({ title: "pending", done: true });
         await service.flushStatistics();
         return;
