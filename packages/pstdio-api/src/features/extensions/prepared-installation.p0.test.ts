@@ -14,6 +14,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { createDb, createInstalledExtensionSourcesDBService } from "pstdio-db";
 import {
   acceptPreparedRevision,
   createPreparationScope,
@@ -25,6 +26,7 @@ import {
   withBackgroundPreparation,
 } from "pstdio-extensions";
 import { readPublishedWebviewRevision, recordPublishedWebviewRevision } from "pstdio-extensions/prepared-cache";
+import { reportWebviewBuildFailure, reportWebviewBuildSuccess } from "../../services/extension-reload";
 import { expectRejection } from "../../test-utils/expect-rejection";
 import { checkCandidateSource } from "./extension-candidate";
 import { createExtensionInstallBatch } from "./extension-install-batch";
@@ -1204,5 +1206,143 @@ test("accepted frontend batches preserve complete output through refresh and sta
   } finally {
     releaseReport.resolve();
     manager.dispose();
+  }
+});
+
+test.each(["configuration", "alias"])("release webviews follow changed external %s inputs", async (kind) => {
+  const { root, source } = fixture();
+  mkdirSync(join(root, "shared"));
+  const config = join(root, "compiler.json");
+  const compiler = { compilerOptions: { baseUrl: ".", paths: { "@shared/*": ["./shared/*"] } } };
+  writeFileSync(config, JSON.stringify(compiler));
+  writeFileSync(
+    join(source, "tsconfig.json"),
+    JSON.stringify(
+      kind === "configuration"
+        ? { extends: "../compiler.json" }
+        : { compilerOptions: { baseUrl: root, paths: { "@shared/*": [join(root, "shared", "*")] } } },
+    ),
+  );
+  const shared = join(root, "shared", "value.ts");
+  writeFileSync(shared, 'export const value = "external one";');
+  writeFileSync(
+    join(source, "main.ts"),
+    kind === "configuration"
+      ? 'console.log("external one");'
+      : 'import { value } from "@shared/value"; console.log(value);',
+  );
+  const installed = await installExtensionSource({ source, skipInstall: true });
+  const archive = await exportPreparedReleaseBundle(installed.preparedRevision!, installed.sourceHash);
+  const path = join(root, "runtime.tgz");
+  await Bun.write(path, archive.bytes);
+  const release = await importPreparedReleaseBundle(
+    { path, descriptor: archive.descriptor, sourceSha256: installed.sourceHash },
+    source,
+    installed.sourceHash,
+  );
+  const viewId = "test.prepared-install.view.page";
+  const artifact = release.webviews![viewId]!;
+  const row = { id: "installed", source_path: source, install_name: installed.installName, updated_at: "initial" };
+  const cacheRoot = join(root, "webviews");
+  const manager = createExtensionWebviewBuildManager({
+    listInstalledSources: async () => [row],
+    reportBuildSuccess: async () => "reported",
+    reportBuildFailure: async () => "reported",
+    webviewCacheRoot: cacheRoot,
+  });
+  try {
+    await acceptPreparedRevision(source, release);
+    await manager.adopt(source);
+    if (kind === "configuration")
+      writeFileSync(config, JSON.stringify({ compilerOptions: { ...compiler.compilerOptions, jsx: "react" } }));
+    else writeFileSync(shared, 'export const value = "external two";');
+    await manager.refresh(source);
+    const current = (await readAcceptedRevision(source))!.webviews![viewId]!;
+    expect(current.id).not.toBe(artifact.id);
+    const app = createApp({ cacheRoot, sourcePath: source, sources: [row] });
+    const module = await (
+      await app.request(webviewAccess.assetUrl({ installedExtensionId: row.id, webviewId: viewId }, "module.js"))
+    ).text();
+    expect(module).toContain(kind === "alias" ? "external two" : "external one");
+  } finally {
+    manager.dispose();
+  }
+});
+
+test("restoring release source clears a persisted frontend failure after manager restart", async () => {
+  const { root, source } = fixture();
+  const original = readFileSync(join(source, "main.ts"), "utf8");
+  const installed = await installExtensionSource({ source, skipInstall: true });
+  const archive = await exportPreparedReleaseBundle(installed.preparedRevision!, installed.sourceHash);
+  const path = join(root, "runtime.tgz");
+  await Bun.write(path, archive.bytes);
+  const release = await importPreparedReleaseBundle(
+    { path, descriptor: archive.descriptor, sourceSha256: installed.sourceHash },
+    source,
+    installed.sourceHash,
+  );
+  const database = await createDb({ path: ":memory:" });
+  const sources = createInstalledExtensionSourcesDBService(database.db);
+  const row = await sources.register({
+    install_name: installed.installName,
+    display_name: installed.metadata.displayName,
+    extension_id: installed.metadata.id,
+    manifest_json: installed.manifest,
+    source_path: source,
+    source_hash: installed.sourceHash,
+    source_kind: "local_path",
+    source_ref: null,
+    status: "loaded",
+    version: "1.0.0",
+  });
+  const rows = [row];
+  const deps = {
+    installedExtensionSourcesService: sources,
+    emitInstalledSource: (next: typeof row) => {
+      rows[0] = next;
+    },
+    notifyInstalledSourcesChanged: async () => {},
+  };
+  const createManager = () =>
+    createExtensionWebviewBuildManager({
+      listInstalledSources: sources.list,
+      getInstalledSource: sources.get,
+      reportBuildFailure: async (id, view, error, expected) =>
+        (await reportWebviewBuildFailure(deps, id, view, error, expected)).status,
+      reportBuildSuccess: async (id, view, expected) =>
+        (await reportWebviewBuildSuccess(deps, id, view, expected)).status,
+      webviewCacheRoot: join(root, "webviews"),
+    });
+  let manager = createManager();
+  const viewId = "test.prepared-install.view.page";
+  const artifact = release.webviews![viewId]!;
+  const app = createApp({ cacheRoot: join(root, "webviews"), sourcePath: source, sources: rows });
+  const url = webviewAccess.assetUrl({ installedExtensionId: row.id, webviewId: viewId }, "module.js");
+  try {
+    await acceptPreparedRevision(source, release);
+    await manager.adopt(source);
+    const healthy = (await sources.get(row.id))!.loaded_revision;
+    await manager.refresh(source);
+    expect((await sources.get(row.id))!.loaded_revision).toBe(healthy);
+    writeFileSync(join(source, "main.ts"), "const invalid = ;");
+    await manager.refresh(source);
+    expect((await sources.get(row.id))!.last_error_json).toMatchObject({
+      code: "extension_webview_build_failed",
+      webviewId: viewId,
+    });
+    expect(await (await app.request(url)).text()).toContain("Extension webview build failed");
+    manager.dispose();
+    writeFileSync(join(source, "main.ts"), original);
+    manager = createManager();
+    await manager.refresh(source);
+    expect((await sources.get(row.id))!.last_error_json).toBeNull();
+    expect(await (await app.request(url)).text()).toContain("prepared UI");
+    expect((await readAcceptedRevision(source))!.webviews![viewId]).toEqual(artifact);
+    const recovered = (await sources.get(row.id))!.loaded_revision;
+    await manager.refresh(source);
+    expect((await sources.get(row.id))!.loaded_revision).toBe(recovered);
+  } finally {
+    manager.dispose();
+    await database.close();
   }
 });
