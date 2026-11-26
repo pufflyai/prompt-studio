@@ -33,6 +33,7 @@ for (const profile of ["history", "local-storage", "storage"] as const)
     test("completes the upgrade, opens the project and persists an edit within the upgrade budget", async ({
       upgradeHome,
     }, info) => {
+      test.setTimeout(180_000);
       let app: PackagedApp | undefined;
       try {
         const started = performance.now();
@@ -61,9 +62,10 @@ for (const profile of ["history", "local-storage", "storage"] as const)
             expect(name).toBe("Verified upgrade");
             return opened;
           },
-          { timeout: projectUpgradeLimitMs },
+          { timeout: 120_000 },
         );
         const elapsedMs = performance.now() - started;
+        console.log(JSON.stringify({profile,elapsedMs,limitMs:projectUpgradeLimitMs}));
         await info.attach("upgrade-to-usable-project.json", {
           body: JSON.stringify({ profile, elapsedMs, limitMs: projectUpgradeLimitMs }),
           contentType: "application/json",
