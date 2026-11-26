@@ -90,6 +90,7 @@ jobs:
     env:
       # Packaged apps install default extensions from this ref. A nightly uses its main commit,
       # because older nightly tags are deleted.
+      PSTDIO_PREBUILD_UPGRADE_TOOLS: ${{ (matrix.target == 'darwin-arm64' || matrix.target == 'linux-x64') && '1' || '0' }}
       PSTDIO_EXTENSION_RELEASE_REF: ${{ inputs.extension_ref || inputs.tag }}
     strategy:
       fail-fast: false
