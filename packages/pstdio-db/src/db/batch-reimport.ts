@@ -146,19 +146,23 @@ export async function stageBatchReimport(
       (SELECT 1 FROM storage_ordered_owners o WHERE (o.workbench_id,o.extension_id)=(p.workbench_id,p.extension_id))) AS eligible`)
   ).rows;
   if (!eligible) return false;
+  const started=performance.now();const mark=(phase:string)=>console.log("Upgrade diagnostic",phase,Math.round(performance.now()-started));
   const candidate = await beginBatchHome(path);
   let sealed = false;
   try {
     const dest = await openPglite(candidate, options);
     try {
+      mark("opened candidate");
       // Both source builds and packaged apps can start with an image already containing today's schema.
       // Recreate the exact released prefix only in the new, private database.
       await dest.exec(
         "DROP SCHEMA public CASCADE; DROP SCHEMA IF EXISTS drizzle CASCADE; CREATE SCHEMA public AUTHORIZATION pg_database_owner; GRANT USAGE ON SCHEMA public TO PUBLIC",
       );
       await applyPgliteMigrations(dest, journal.slice(0, history.length));
+      mark("prefix created");
       await stageLocalTransfers(source, storageRoot);
       await copySmallTables(source, path, dest, candidate, signal);
+      mark("copied tables");
       const payload = join(candidate, batchPayload);
       await mkdir(payload, { mode: 0o700 });
       await source.exec(`CREATE TEMP TABLE reimport_owners AS SELECT row_number() OVER (ORDER BY project_id COLLATE "C",extension_id COLLATE "C")::int AS id, project_id,extension_id
@@ -169,6 +173,7 @@ export async function stageBatchReimport(
         "SELECT id,project_id,extension_id FROM pg_temp.reimport_owners",
         join(payload, "owners.copy"),
       );
+      mark("created owners");
       await exportSettledRecords(source, join(payload, recordFile), signal);
       {
         const f = await open(join(payload, "owners.copy"), "r+");
@@ -180,6 +185,7 @@ export async function stageBatchReimport(
       }
       await flushDirectory(payload);
       await writeDurably(join(candidate, engineFile), await readFile(join(path, engineFile), "utf8"));
+      mark("wrote records");
     } finally {
       await dest.close();
     }
