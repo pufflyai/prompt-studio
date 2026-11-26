@@ -7,6 +7,7 @@ import { getWorkbenchQueries } from "../../core/workbench-queries";
 import { runTrackedCreate } from "../host/workbench-create-operation";
 import type { RegisterWorkbenchExtensionContributionsInput } from "../host/workbench-extension-host-types";
 import { createChatActionOperations } from "./chat-action-operations";
+import { chatBrowserDraftKey } from "./chat-browser-draft-key";
 import type { createChatCommandBinding } from "./chat-command-binding";
 import { createChatDraftPersistence } from "./chat-draft-persistence";
 import { transferLegacyChatDraft } from "./chat-legacy-draft";
@@ -174,7 +175,11 @@ export const createChatSessionProvider = (source: {
         }
       : undefined,
   });
-  const storageKey = JSON.stringify([input.chatDraftStorageScope, ...session.query.key.slice(2, 6), key]);
+  const storageKey = chatBrowserDraftKey(
+    input.chatDraftStorageScope,
+    { ...queries.getScope(), projectId: input.projectId, extensionId: view.extensionId },
+    key,
+  );
   const localDrafts = local ? createLocalChatDrafts(storageKey, readLegacy) : undefined;
   drafts = providerSave
     ? createChatDraftPersistence({

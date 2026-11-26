@@ -36,12 +36,28 @@ import { shouldShowFloatingToolbar } from "./should-show-floating-toolbar";
 // Increase the vertical gap (negative places it below the selection) to avoid overlap
 const GAP = -4;
 
+const selectionFlags = (selection: ReturnType<typeof $getSelection>, native: Selection | null, nativeOnly: boolean) => {
+  if (nativeOnly)
+    return {
+      hasSelection: Boolean(native?.rangeCount),
+      isRangeSelection: Boolean(native?.rangeCount),
+      isCollapsed: Boolean(native?.isCollapsed),
+    };
+  return {
+    hasSelection: selection !== null,
+    isRangeSelection: $isRangeSelection(selection),
+    isCollapsed: $isRangeSelection(selection) && selection.isCollapsed(),
+  };
+};
+
 function FloatingTextToolbar({
   editor,
   anchorElem,
   isToolbarActive,
   setIsToolbarActive,
+  children,
 }: {
+  children?: React.ReactNode;
   editor: LexicalEditor;
   anchorElem: HTMLElement;
   isToolbarActive: boolean;
@@ -139,17 +155,16 @@ function FloatingTextToolbar({
     const rootElement = editor.getRootElement();
     const hasNativeSelection = nativeSelection !== null;
     const hasNativeRange = hasNativeSelection && nativeSelection.rangeCount > 0;
+    const nativeOnly = !editor.isEditable() && Boolean(children);
     const isAnchorInsideEditor = Boolean(rootElement?.contains(hasNativeSelection ? nativeSelection.anchorNode : null));
 
     if (
       shouldShowFloatingToolbar({
-        hasSelection: selection !== null,
-        isRangeSelection: $isRangeSelection(selection),
-        isCollapsed: $isRangeSelection(selection) ? selection.isCollapsed() : false,
+        ...selectionFlags(selection, nativeSelection, nativeOnly),
         hasNativeSelection,
         hasNativeRange,
         isAnchorInsideEditor,
-        isEditorEditable: editor.isEditable(),
+        isEditorEditable: editor.isEditable() || Boolean(children),
         isPointerSelecting: isPointerSelectingRef.current,
       }) &&
       nativeSelection
@@ -214,11 +229,13 @@ function FloatingTextToolbar({
     };
 
     window.addEventListener("resize", update);
+    ownerDocument.addEventListener("selectionchange", update);
     // Scroll does not bubble; capture it from the editor and its scrollable ancestors.
     ownerDocument.addEventListener("scroll", update, true);
 
     return () => {
       window.removeEventListener("resize", update);
+      ownerDocument.removeEventListener("selectionchange", update);
       ownerDocument.removeEventListener("scroll", update, true);
     };
   }, [anchorElem, editor]);
@@ -255,31 +272,37 @@ function FloatingTextToolbar({
   return (
     <Box
       hidden={!surfaceActive}
+      inert={!isToolbarActive}
       ref={editorRef}
       zIndex="tooltip"
       className={`floating-text-format-toolbar ${isToolbarActive ? "active" : ""}`}
     >
-      <FloatingToolbarButtons
-        editor={editor}
-        blockType={blockType}
-        isBold={isBold}
-        isItalic={isItalic}
-        isUnderline={isUnderline}
-        isCode={isCode}
-        isLink={isLink}
-        formatHeading={formatHeading}
-        formatList={formatList}
-        formatQuote={formatQuote}
-        insertLink={insertLink}
-      />
+      {editor.isEditable() ? (
+        <FloatingToolbarButtons
+          editor={editor}
+          blockType={blockType}
+          isBold={isBold}
+          isItalic={isItalic}
+          isUnderline={isUnderline}
+          isCode={isCode}
+          isLink={isLink}
+          formatHeading={formatHeading}
+          formatList={formatList}
+          formatQuote={formatQuote}
+          insertLink={insertLink}
+        />
+      ) : null}
+      {children}
     </Box>
   );
 }
 
 export function FloatingTextFormatToolbarPlugin({
   anchorElem = document.body,
+  children,
 }: {
   anchorElem?: HTMLElement;
+  children?: React.ReactNode;
 }): React.JSX.Element | null {
   const [editor] = useLexicalComposerContext();
   const [isToolbarActive, setIsToolbarActive] = useState(false);
@@ -290,7 +313,9 @@ export function FloatingTextFormatToolbarPlugin({
       anchorElem={anchorElem}
       isToolbarActive={isToolbarActive}
       setIsToolbarActive={setIsToolbarActive}
-    />,
+    >
+      {children}
+    </FloatingTextToolbar>,
     document.body,
   );
 }

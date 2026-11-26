@@ -299,6 +299,7 @@ export {
   type NativeDocumentSessionInput,
   type NativeDocumentSessionSnapshot,
 } from "./core/native-documents/native-document-session";
+export { editorSelectionMenuPath } from "./core/registries/menus/workbench-menu-paths";
 export { classifyApiWrite } from "./core/registries/mutations/operation-failures";
 export type { OperationRecovery, OperationSourceCommand } from "./core/registries/mutations/operation-types";
 export {

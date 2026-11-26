@@ -5,14 +5,14 @@ import type { MarkdownDocumentBinding } from "../../shared/markdown-document-con
 import { createMarkdownSourcePoints } from "../../shared/markdown-source-points";
 import { splitFrontmatter } from "../../utils/markdown";
 
-export interface MarkdownPassage {
+export interface MarkdownSelectionAnchor {
   start: string;
   end: string;
 }
 const encode = (position: Y.RelativePosition) => btoa(String.fromCharCode(...Y.encodeRelativePosition(position)));
 const decode = (position: string) => Y.decodeRelativePosition(Uint8Array.from(atob(position), (c) => c.charCodeAt(0)));
 
-export const captureMarkdownPassage = (editor: LexicalEditor, binding: MarkdownDocumentBinding) => {
+export const captureMarkdownSelectionAnchor = (editor: LexicalEditor, binding: MarkdownDocumentBinding) => {
   const root = editor.getRootElement();
   const selection = root?.ownerDocument.getSelection();
   if (
@@ -39,7 +39,6 @@ export const captureMarkdownPassage = (editor: LexicalEditor, binding: MarkdownD
       const last = Math.max(anchor, focus);
       if (first === last) return;
       return {
-        quote,
         start: encode(Y.createRelativePositionFromTypeIndex(text, first, 0)),
         end: encode(Y.createRelativePositionFromTypeIndex(text, last, -1)),
       };
@@ -48,10 +47,10 @@ export const captureMarkdownPassage = (editor: LexicalEditor, binding: MarkdownD
   );
 };
 
-export const resolveMarkdownPassage = (
+export const resolveMarkdownSelectionAnchor = (
   editor: LexicalEditor,
   binding: MarkdownDocumentBinding,
-  passage: MarkdownPassage,
+  passage: MarkdownSelectionAnchor,
 ) => {
   const text = binding.text;
   if (!text.doc) return;

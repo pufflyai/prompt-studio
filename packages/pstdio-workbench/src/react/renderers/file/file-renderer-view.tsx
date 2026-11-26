@@ -16,6 +16,7 @@ import {
 } from "../../../core/registries/renderers/file-section-navigation";
 import { boundedResource, setWorkbenchSelection } from "../../../core/workbench-context";
 import { useMarkdownActivity } from "../../resource-activity/markdown-activity";
+import { ResourceMarkdownSelectionActions } from "../../resource-activity/markdown-selection-actions";
 import { useOpenPlacementIds } from "../../shared/use-open-placement-ids";
 import { usePageParams } from "../use-page-params";
 import { getNativeMarkdownConnection, getPublicMarkdownConnection } from "./file-renderer-connections";
@@ -211,7 +212,14 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           position={position}
           editorKey={editorKey}
           errorNotice={errorNotice}
-          commentActions={commentActions}
+          selectionToolbar={
+            <ResourceMarkdownSelectionActions
+              workbench={workbench}
+              placement={props.placement}
+              activity={commentActions}
+              documentPath={currentLoaded?.filePath}
+            />
+          }
           onSourceSelection={(selection) => reportSelection(selection, currentLoaded?.filePath)}
           contributionCanSave={Boolean(contribution.save)}
           onActiveSectionChange={

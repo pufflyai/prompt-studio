@@ -2,7 +2,7 @@ import { chatMessageRowLayoutCss } from "./chat-message-row-layout";
 
 export const globalCss = {
   "::highlight(markdown-find)": { backgroundColor: "bg.warning", color: "fg" },
-  "::highlight(markdown-comment)": { backgroundColor: "bg.accent-subtle", color: "fg" },
+  "::highlight(markdown-annotation)": { backgroundColor: "bg.accent-subtle", color: "fg" },
   "::highlight(markdown-find-active)": { backgroundColor: "bg.accent-primary.default", color: "blacks.800" },
   ...chatMessageRowLayoutCss,
   "@property --split-size": { syntax: '"<length>"', inherits: "true", initialValue: "0px" },
