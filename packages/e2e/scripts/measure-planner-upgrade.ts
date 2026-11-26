@@ -112,6 +112,14 @@ const runSample = async (variant: Variant, iteration: number, leaveOpen: boolean
       const installedManifest = join(extension.sourcePath, "package.json");
       const edited = { ...(await Bun.file(installedManifest).json()), description: "My local Planner description" };
       await Bun.write(installedManifest, JSON.stringify(edited));
+      for (const extensionId of ["pstdio.session-browser", "pstdio.harness-codex"]) {
+        const tool = catalog.sources.find(({ id }) => id === extensionId);
+        if (!tool) throw new Error(`The conflict demo requires the packaged ${extensionId} source.`);
+        await registry.publishPackage(join(archives, `${encodeURIComponent(tool.installName)}.tgz`));
+        await post<InstallExtensionResponse>(`${project}/install`, {
+          source: { kind: "catalog", name: extensionId },
+        });
+      }
     }
     if (variant === "warm") await waitForPrefetch(home, `${baseUrl}${project}`, runtimeAuthorization(runtime));
     if (leaveOpen) {

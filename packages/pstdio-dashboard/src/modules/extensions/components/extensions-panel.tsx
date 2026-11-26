@@ -75,7 +75,8 @@ const ActiveExtensionUpgradeReview = ({
       onApplied={() => actions.dismiss(reviewTarget.extension.id)}
       onCompose={
         extensionUpgradeAgentAvailable(settingsInput.workbench)
-          ? (review) => openExtensionUpgradeAgentDraft(settingsInput, projectId, reviewTarget.extension.id, review)
+          ? (review, instructions) =>
+              openExtensionUpgradeAgentDraft(settingsInput, projectId, reviewTarget.extension.id, review, instructions)
           : undefined
       }
     />

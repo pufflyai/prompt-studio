@@ -119,6 +119,7 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
     expect(waiting).toHaveLength(4);
 
     const reviewId = "1da7f099-0539-49c5-bc98-d5ad8c09ad01";
+    let refreshed = false;
     await page.route(`**/v1/projects/${project.id}/extensions/*/upgrade-review`, (route) => {
       const { action, revision } = route.request().postDataJSON();
       if (action === "file") {
@@ -127,8 +128,10 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
           json: { action, file: { base: "old", local: "latest local", incoming: "upstream", proposed: null } },
         });
       }
-      const fresh = action === "refresh";
-      if (fresh) expect(revision).toBe("initial");
+      if (action === "refresh") {
+        expect(revision).toBe("initial");
+        refreshed = true;
+      }
       return route.fulfill({
         json: {
           action,
@@ -136,18 +139,15 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
             id: reviewId,
             localPath: local.sourcePath,
             incomingVersion: "2.0.0",
-            revision: fresh ? "refreshed" : "initial",
+            revision: refreshed ? "refreshed" : "initial",
             createdAt: "2026-01-01T00:00:00Z",
             separateLocalProvider: true,
             hasOriginal: true,
             resolutions: [],
-            changes: fresh
+            changes: refreshed
               ? [{ path: "src/extension.ts", status: "conflict", localKind: "file", incomingKind: "file" }]
               : [],
-            previousResolutions: fresh
-              ? [{ kind: "text", path: "src/extension.ts", text: "earlier draft text" }]
-              : undefined,
-            changedPaths: fresh ? undefined : ["src/extension.ts"],
+            changedPaths: refreshed ? undefined : ["src/extension.ts"],
           },
         },
       });
@@ -158,30 +158,35 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
       .click();
     const review = page.getByRole("dialog", { name: `Review ${local.displayName} upgrade` });
     await expect(review).toContainText("The extension source changed during this review");
-    await expect(review).toContainText("src/extension.ts");
-    await expect(review.getByRole("button", { name: "Use published version" })).toBeDisabled();
-    await expect(review.getByRole("button", { name: "Use merged version" })).toBeDisabled();
+    await expect(review.getByRole("textbox", { name: "Additional instructions (optional)" })).toBeVisible();
+    await expect(review.getByRole("button", { name: "Keep local", exact: true })).toHaveCount(0);
+    await expect(review.getByRole("button", { name: "Apply upgrade" })).toHaveCount(0);
     await page.route(
       (url) => url.pathname === `/v1/projects/${project.id}/sessions` && url.searchParams.get("anchorId") === reviewId,
       (route) => route.fulfill({ json: { items: [{ id: "upgrade-review-session", status: "completed" }] } }),
     );
-    const reply = JSON.stringify({ reviewId, revision: "initial", resolutions: [] });
+    let reply = JSON.stringify({ reviewId, revision: "initial", resolutions: [] });
     await page.route("**/v1/sessions/upgrade-review-session/conversation", (route) =>
       route.fulfill({ json: { messages: [{ role: "assistant", parts: [{ type: "text", text: reply }] }] } }),
     );
-    await review.getByRole("button", { name: "Import agent proposal" }).click();
-    await review.getByRole("button", { name: "Load agent reply" }).click();
-    await expect(review.getByRole("textbox", { name: "Agent proposal" })).toHaveValue(reply);
-    await expect(review.getByRole("button", { name: "Stage agent choices" })).toBeDisabled();
-    await review.getByRole("button", { name: "Refresh comparison" }).click();
-    await expect(review).toContainText("latest local");
-    await expect(review).toContainText("This reply is for an earlier comparison");
-    await expect(review.getByRole("textbox", { name: "Agent proposal" })).toHaveValue(reply);
-    await expect(review.getByRole("button", { name: "Stage agent choices" })).toBeDisabled();
-    await review.getByRole("button", { name: "Previous choices" }).click();
-    await expect(review).toContainText("earlier draft text");
-    await review.getByRole("button", { name: "Keep local" }).click();
-    await expect(review.getByRole("button", { name: "Use merged version" })).toBeEnabled();
+    await expect(review.getByRole("button", { name: "Apply upgrade" })).toHaveCount(0);
+    await expect(review.getByRole("button", { name: "Import agent proposal" })).toHaveCount(0);
+    const instructions = "Keep the local export for our integration.";
+    await review.getByRole("textbox", { name: "Additional instructions (optional)" }).fill(instructions);
+    await review.getByRole("button", { name: "Resolve with agent" }).click();
+    await expect(review).toHaveCount(0);
+    await expect(page.locator('[contenteditable="true"]').filter({ hasText: instructions })).toBeVisible();
+    expect(refreshed).toBe(true);
+    reply = JSON.stringify({
+      reviewId,
+      revision: "refreshed",
+      resolutions: [{ kind: "local", path: "src/extension.ts" }],
+    });
+    await row(local.id)
+      .getByRole("button", { name: /Review upgrade/ })
+      .click();
+    await expect(review).toContainText("The agent prepared a resolution.");
+    await expect(review.getByRole("button", { name: "Apply upgrade" })).toBeEnabled();
   } finally {
     await Promise.all(heldReads.map((route) => route.abort()));
     await page.unrouteAll({ behavior: "ignoreErrors" });
