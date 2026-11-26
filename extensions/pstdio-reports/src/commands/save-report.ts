@@ -16,8 +16,9 @@ import {
 } from "../data/draft-storage";
 import { parseReportFrontmatter, stripFrontmatter } from "../data/frontmatter";
 import { reportBodyFile } from "../data/report-body";
+import { findReport } from "../data/report-lookup";
 import { replaceReport, withReportWrite } from "../data/report-write";
-import { findReport, resolveWorkspace } from "../data/resolve";
+import { resolveWorkspace } from "../data/resolve";
 import type { StoredReport, StoredReportFile } from "../data/types";
 import { assertSafeReportFileName, assertSafeReportName } from "../data/validation";
 
@@ -79,19 +80,12 @@ export const saveReportCommand = defineCommand({
   async run(ctx, commandParams) {
     const { projectFiles } = await requireReportDraftFiles(ctx);
     const { workspace, workspaceShorthand } = await resolveWorkspace(ctx, commandParams.workspace);
-    let name = commandParams.name;
-
-    if (!name) {
-      const reports = (await reportsCollection(ctx.storage).list()).filter(
-        (report) => report.workspaceShorthand === workspaceShorthand,
-      );
-      if (reports.length !== 1) throw new Error("Pass --name when the workspace has zero or multiple reports.");
-      name = reports[0]!.name;
-    }
-
+    const requestedName = commandParams.name || undefined;
+    if (requestedName) assertSafeReportName(requestedName);
+    const found = await findReport(ctx.storage, workspaceShorthand, requestedName);
+    if (!found) throw new Error(`Unknown report "${requestedName}" in workspace "${workspaceShorthand}"`);
+    const name = found.name;
     assertSafeReportName(name);
-    const found = await findReport(ctx.storage, workspaceShorthand, name);
-    if (!found) throw new Error(`Unknown report "${name}" in workspace "${workspaceShorthand}"`);
     return withReportWrite(ctx, found.id, async () => {
       const snapshot = await reportsCollection(ctx.storage).read(found.id);
       if (!snapshot) throw new Error("Report was deleted before saving.");

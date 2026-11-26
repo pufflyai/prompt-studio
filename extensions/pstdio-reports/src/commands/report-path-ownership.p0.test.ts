@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
 import { reportsCollection } from "../data/collections";
 import { reportDir, reportFilesDirFor, reportMarkdownPathFor } from "../data/draft-storage";
+import { reportLookupIndex } from "../data/report-lookup";
 import { makeCommandArgs } from "./command-context.fixture";
 import { deleteReportCommand } from "./delete-report";
 import { writeReportCommand } from "./write-report";
@@ -11,7 +12,7 @@ test.each([
   "retained",
 ])("report names stay reserved across workspaces with a missing local draft and %s evidence", async (evidence) => {
   const keepEvidence = evidence === "retained";
-  const storage = createMemoryStorage();
+  const storage = createMemoryStorage({ indexes: [reportLookupIndex] });
   const projectFiles = createMemoryRepoFiles();
   const first = await writeReportCommand.run(
     ...makeCommandArgs({
@@ -49,7 +50,7 @@ test.each([
 });
 
 test("deleting a legacy duplicate report keeps shared paths until their last stored reference is removed", async () => {
-  const storage = createMemoryStorage();
+  const storage = createMemoryStorage({ indexes: [reportLookupIndex] });
   const projectFiles = createMemoryRepoFiles();
   const first = await writeReportCommand.run(
     ...makeCommandArgs({

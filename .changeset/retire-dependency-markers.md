@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Reclaim storage on upgrade by moving legacy dependency selections into the operation journal and removing their old document files.
+Open the workbench before cleaning up legacy dependency markers and unused document files. Keep document room indexes small by indexing only linked rooms.

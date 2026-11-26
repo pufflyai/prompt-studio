@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { existsSync } from "node:fs";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
@@ -8,7 +8,7 @@ import { createExtensionStorageFixture } from "../services/extension-storage/ext
 import { withOrderedOwner } from "../services/extension-storage/ordered-journal";
 import { saveOrderedMarker } from "../services/extension-storage/ordered-native-metadata";
 import { createDb } from "./connection.pglite";
-import { retireDependencyMarkers } from "./dependency-marker-upgrade";
+import { createDependencyMarkerCleanup } from "./dependency-marker-upgrade";
 
 test("reopening a consolidated home moves the exact dependency selector and collects only retired files", async () => {
   const root = await mkdtemp(join(tmpdir(), "dependency-selectors-"));
@@ -60,13 +60,27 @@ test("reopening a consolidated home moves the exact dependency selector and coll
     );
     await close();
     close = undefined;
+    const orphan = join(`${path}-documents`, `p-${Buffer.from(owner.workbenchId).toString("hex")}`, "787878787");
+    await mkdir(orphan, { recursive: true });
+    await writeFile(join(orphan, "state-orphan.bin"), "unreferenced");
     for (let open = 0; open < 2; open++) {
       const next = await createDb({ path, deferCleanup: true });
       close = next.close;
+      if (open === 0) {
+        expect(existsSync(head)).toBe(true);
+        await withOrderedOwner(next.db, owner, async (journal) => {
+          expect((await journal.knownDependency(foreign))?.state).toBe("accepted");
+        });
+        await next.cleanupRetiredRows(() => true);
+        expect(existsSync(orphan)).toBe(true);
+        expect(existsSync(head)).toBe(true);
+      }
+      await next.cleanupRetiredRows(() => false);
       expect(
         (await next.pglite.query("SELECT key FROM documents WHERE starts_with(key,'[\"ordered-dependency\",')")).rows,
       ).toEqual([{ key: '["ordered-dependency","extra","component"]' }]);
       expect(existsSync(head)).toBe(false);
+      expect(existsSync(join(orphan, "state-orphan.bin"))).toBe(false);
       await withOrderedOwner(next.db, owner, async (journal) => {
         expect((await journal.knownDependency(foreign))?.state).toBe("accepted");
         expect((await journal.knownDependency("modern"))?.state).toBe("refused");
@@ -105,7 +119,8 @@ test("an interrupted page keeps its original selector and resumes after earlier 
       'BEGIN RAISE EXCEPTION ''interrupted marker cleanup''; END'`);
     await f.db.execute(sql`CREATE TRIGGER interrupt_marker BEFORE DELETE ON documents
       FOR EACH ROW WHEN (OLD.key='["ordered-dependency","last"]') EXECUTE FUNCTION pg_temp.interrupt_marker()`);
-    const cleanup = () => retireDependencyMarkers(f.db, async () => {});
+    const run = createDependencyMarkerCleanup(f.db, async () => {});
+    const cleanup = () => run(() => false);
     await expect(cleanup()).rejects.toThrow();
     const remaining = await f.db.execute<{ n: number }>(
       sql`SELECT count(*)::int n FROM documents WHERE starts_with(key,'["ordered-dependency",')`,

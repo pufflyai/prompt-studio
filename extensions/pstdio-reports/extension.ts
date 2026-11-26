@@ -12,6 +12,7 @@ import { readReportCommand } from "./src/commands/read-report";
 import { saveReportCommand } from "./src/commands/save-report";
 import { reportTemplateCommands } from "./src/commands/template-commands";
 import { writeReportCommand } from "./src/commands/write-report";
+import { reportLookupIndex } from "./src/data/report-lookup";
 
 const reportTemplateCommandRefs = {
   list: reportTemplateCommands.list.ref,
@@ -21,6 +22,7 @@ const reportTemplateCommandRefs = {
 };
 
 export default defineExtension({
+  storageIndexes: [reportLookupIndex],
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
   resourceKinds: [defineResourceKind({ id: "report", prefix: "RP" })],
   commands: [

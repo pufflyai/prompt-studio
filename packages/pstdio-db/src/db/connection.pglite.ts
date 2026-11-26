@@ -8,7 +8,7 @@ import { extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
 import { normalizeEmbeddedFileName } from "pstdio-paths";
 import type { StorageOwner } from "pstdio-sync";
 import { migrateExtensionIdentities } from "../services/extension-identity-migration";
-import { pruneAllDocumentFiles, pruneDocumentFiles } from "../services/extension-storage/document-file-retention";
+import { pruneDocumentFiles } from "../services/extension-storage/document-file-retention";
 import { attachDocumentCollector, documentFilesFor } from "../services/extension-storage/document-files";
 import {
   attachIndexNodeFiles,
@@ -35,7 +35,6 @@ import { prepareBoardDefaultsUpgrade } from "./board-defaults-upgrade";
 import { prepareBoardOwnersUpgrade } from "./board-owners-upgrade";
 import { prepareConnectionCredentialsUpgrade } from "./connection-credentials-upgrade";
 import { attachDatabaseAuthority } from "./database-authority";
-import { retireDependencyMarkers } from "./dependency-marker-upgrade";
 import { prepareDocumentOwnerUpgrade } from "./document-owner-upgrade";
 import { prepareExtensionPreferencesUpgrade } from "./extension-preferences-upgrade";
 import { prepareFileOwnersUpgrade } from "./file-owners-upgrade";
@@ -289,7 +288,6 @@ export const createDb = async (options?: {
     onPhase("database_index_nodes");
     // A run that stops after deleting rows must leave offline space reclamation pending.
     const owed = () => invalidateMaintenance(dbPath);
-    await retireDependencyMarkers(db, owed);
     const deferredOwners: StorageOwner[] = [];
     const deferCleanup = options?.deferCleanup && dbPath !== ":memory:";
     const renamedOwners = new Set(
@@ -314,8 +312,8 @@ export const createDb = async (options?: {
     });
     await finishArtifactProjectionUpgrade?.();
     await restoreArtifactProjectionAdmission(db, dbPath);
-    await pruneAllDocumentFiles(db);
-    // Conversion publishes bounded batches; collect their files once before exposing the database.
+    const cleanup = createStorageCleanup(db, dbPath, deferredOwners, !!deferCleanup);
+    await cleanup.prepare();
     attachDocumentCollector(db, (projectId, ids) => pruneDocumentFiles(db, projectId, ids));
     if (migrated && !deferCleanup)
       await maintainDatabase(openedPglite, db, dbPath, fresh, onPhase, movedNodes || renamed);
@@ -330,7 +328,7 @@ export const createDb = async (options?: {
 
       closed = true;
       try {
-        await openedPglite.close();
+        await cleanup.close().finally(() => openedPglite.close());
       } finally {
         releaseLock();
       }
@@ -341,7 +339,7 @@ export const createDb = async (options?: {
       db,
       path: dbPath,
       pglite: openedPglite,
-      cleanupRetiredRows: createStorageCleanup(db, dbPath, deferredOwners, !!deferCleanup),
+      cleanupRetiredRows: cleanup.run,
     };
   } catch (error) {
     await pglite?.close();

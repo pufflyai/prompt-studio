@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { OrderedDecision } from "pstdio-sync/records";
+import { readLegacyEpoch } from "../../db/dependency-marker-upgrade";
 import { storage_ordered_operations as operations, owners } from "../../db/schemas.pg";
 import type { OrderedTransaction } from "./ordered-sql";
 import type { RetainedOperation } from "./retained-operations";
@@ -8,6 +9,7 @@ import { storageOwnerWhere } from "./storage-owner-key";
 
 type Coordinates = Pick<typeof operations.$inferSelect, "admission_epoch" | "settled_epoch" | "receipt_epoch"> & {
   pending: boolean;
+  ownerId?: number;
 };
 
 /** Foreign receipts need a selected epoch without claiming ownership of another host's command. */
@@ -31,6 +33,10 @@ export const createOrderedDependencyCache = (
       if (admitted) return admitted;
     }
     if (row?.receipt_epoch) return exact(id, row.receipt_epoch);
+    if (row && row.ownerId !== undefined) {
+      const legacy = await readLegacyEpoch(tx, { ...owner, id: row.ownerId }, id);
+      if (legacy) return exact(id, legacy);
+    }
   };
   return {
     async remember(decision: OrderedDecision) {
@@ -43,6 +49,7 @@ export const createOrderedDependencyCache = (
       const [current] = await tx
         .select({
           epoch: owners.epoch,
+          ownerId: owners.id,
           id: operations.operation_id,
           pending: sql<boolean>`${operations.envelope} IS NOT NULL`,
           admission_epoch: operations.admission_epoch,

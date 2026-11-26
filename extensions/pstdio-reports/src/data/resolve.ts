@@ -1,11 +1,5 @@
 import type { CommandContext, ExtensionWorkspace } from "@pstdio/sdk/extensions";
-import { reportsCollection } from "./collections";
 import { assertSafeReportName, assertSafeWorkspaceShorthand } from "./validation";
-
-export const findReport = async (storage: CommandContext["storage"], workspaceShorthand: string, name: string) =>
-  (await reportsCollection(storage).list()).find(
-    (report) => report.workspaceShorthand === workspaceShorthand && report.name === name,
-  ) ?? null;
 
 export const resolveWorkspace = async (
   ctx: CommandContext<Record<string, unknown>>,

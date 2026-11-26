@@ -1,13 +1,14 @@
 import { expect, test } from "bun:test";
 import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
 import { reportsCollection } from "../data/collections";
+import { reportLookupIndex } from "../data/report-lookup";
 import { makeCommandContext } from "./command-context.fixture";
 import { readReportCommand } from "./read-report";
 import { saveReportCommand } from "./save-report";
 import { writeReportCommand } from "./write-report";
 
 const setup = () => {
-  const storage = createMemoryStorage();
+  const storage = createMemoryStorage({ indexes: [reportLookupIndex] });
   const projectFiles = createMemoryRepoFiles();
   const ctx = makeCommandContext({ storage, params: {}, overrides: { projectFiles } });
   const write = () => writeReportCommand.run(ctx, { kind: "review", template: "review" });
