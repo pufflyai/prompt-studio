@@ -26,7 +26,7 @@ The list shows each harness, its full ID, and whether its command is installed.
 
 ## Start a session
 
-A session is one conversation with an agent. Open **Sessions** or the chat bubble to start one. Pick a harness and a model, type your request, and send it. Home has prompts you can copy into a conversation if you want ideas for customizing the workbench.
+A session is one conversation with an agent. Open **Sessions** or the chat bubble to start one. Pick a harness and a model, type your request, and send it. On Home, choose **Build this!** to start a conversation for a suggested transformation, or **Get ideas** to ask an agent for project-specific suggestions.
 
 If no enabled harness is available, a single **No agent available** alert replaces the message field and its controls. The workspace container and header stay visible. Choose **Browse extensions** in the alert to open the project's Extensions page. An enabled harness extension that is unavailable shows the warning indicator in its list row and detail page. Open that indicator to read the reason supplied by the extension. The composer returns after the next successful availability check. Your draft text and attachments stay saved while it is hidden.
 
