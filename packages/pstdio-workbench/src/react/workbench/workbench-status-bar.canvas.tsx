@@ -225,3 +225,9 @@ export const DetailPopover: Story = {
     ),
   ],
 };
+
+export const Empty: Story = {
+  ...SeveralOwnersInOrder,
+  id: "pstdio-workbench-reference-core-api-status-bar--empty",
+  args: { workbench: createWorkbench() },
+};

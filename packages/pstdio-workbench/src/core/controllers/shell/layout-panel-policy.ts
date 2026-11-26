@@ -1,10 +1,17 @@
 import { resourceKey } from "@pstdio/sdk/extensions";
 import type { CreateLayoutModelInput } from "../../registries/layout/layout-model-types";
-import type { WorkbenchCore } from "../../workbench-core-types";
+import type { createWorkbenchInput, WorkbenchCore } from "../../workbench-core-types";
 
 /** Structural mode reconciliation uses restoreLayout; direct edits use these guards. */
-export const layoutPanelGuards = (resolve: () => WorkbenchCore) =>
+export const layoutPanelGuards = (
+  resolve: () => WorkbenchCore,
+  regionSettings?: createWorkbenchInput["regionSettings"],
+) =>
   ({
+    getRegionSettings(regionId, activeModeId = resolve()?.modes.getActiveModeId()) {
+      const activeMode = activeModeId ? resolve()?.modes.getMode(activeModeId) : undefined;
+      return { ...regionSettings?.[regionId], ...activeMode?.regionSettings?.[regionId] };
+    },
     validateRegionChange(region, action) {
       const core = resolve();
       if (!core || core.modes.isTransitioning()) return;
@@ -23,4 +30,4 @@ export const layoutPanelGuards = (resolve: () => WorkbenchCore) =>
       if (receivesTab && !policy.acceptsTabs) throw new Error(`Panel cannot accept tabs: ${region}`);
       if (!policy.open && !policy.canOpen) throw new Error(`Panel cannot open: ${region}`);
     },
-  }) satisfies Pick<CreateLayoutModelInput, "validateRegionChange" | "validateWidgetOpen">;
+  }) satisfies Pick<CreateLayoutModelInput, "getRegionSettings" | "validateRegionChange" | "validateWidgetOpen">;

@@ -22,8 +22,11 @@ import type {
   WorkbenchRegion,
   WorkbenchWidgetPlacement,
 } from "./layout-types";
+import { selectOwnedPanelMenus } from "./owned-panel-menu-selection";
 
 interface CreateWidgetOpenersInput {
+  setLayout(layout: WorkbenchLayout): void;
+  getPanelMenuOpen?: CreateLayoutModelInput["getPanelMenuOpen"];
   resolvePanelMenuSide?: CreateLayoutModelInput["resolvePanelMenuSide"];
   getLayout(): WorkbenchLayout;
   validateOpen?(region: WorkbenchRegion, existing: WorkbenchWidgetPlacement | undefined, target: OpenWidgetInput): void;
@@ -35,12 +38,17 @@ interface CreateWidgetOpenersInput {
   ): WorkbenchWidgetPlacement;
 }
 const openOwnedPanelMenus = (input: {
+  setLayout(layout: WorkbenchLayout): void;
+  getPanelMenuOpen?: CreateLayoutModelInput["getPanelMenuOpen"];
+  getLayout(): WorkbenchLayout;
   openWidget(id: string, openInput?: OpenWidgetInput): WorkbenchWidgetPlacement;
   placement: WorkbenchWidgetPlacement;
   requireWidget(id: string): RegisteredWidgetContribution;
   widget: RegisteredWidgetContribution;
   resolvePanelMenuSide?: CreateLayoutModelInput["resolvePanelMenuSide"];
 }) => {
+  const before = input.getLayout();
+  const opened: string[] = [];
   for (const panelMenuId of input.widget.ownedPanelMenuIds ?? []) {
     const panelMenu = input.requireWidget(panelMenuId);
     const side = input.resolvePanelMenuSide?.(input.placement, panelMenu);
@@ -48,7 +56,7 @@ const openOwnedPanelMenus = (input: {
       side && isWorkbenchPanelMenuRegion(panelMenu.region)
         ? workbenchPanelMenuRegions[getWorkbenchPanelForMenuRegion(panelMenu.region)][side]
         : undefined;
-    input.openWidget(panelMenuId, {
+    const placement = input.openWidget(panelMenuId, {
       region,
       pinned: true,
       role: "panel-menu",
@@ -58,7 +66,18 @@ const openOwnedPanelMenus = (input: {
       resource: input.placement.resource,
       title: panelMenu.region === "main-left-menu" ? input.placement.resource?.label : panelMenu.title,
     });
+    opened.push(placement.widgetId);
   }
+  const layout = input.getLayout();
+  const selected = selectOwnedPanelMenus(
+    before,
+    layout,
+    input.placement.widgetId,
+    opened,
+    input.requireWidget,
+    input.getPanelMenuOpen,
+  );
+  if (selected !== layout) input.setLayout(selected);
 };
 const findReusablePlacement = (
   widget: RegisteredWidgetContribution,
@@ -279,6 +298,9 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
       placement = insertWidget(widget, regionId, replacementIndex, placementInput);
     }
     openOwnedPanelMenus({
+      setLayout: input.setLayout,
+      getPanelMenuOpen: input.getPanelMenuOpen,
+      getLayout,
       openWidget,
       placement,
       requireWidget,
