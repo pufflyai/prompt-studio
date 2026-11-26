@@ -99,6 +99,16 @@ test("only the owner selects immutable team packages; project grants gate packag
     expect(JSON.stringify(publicPolicy)).not.toContain(metadata.blobId);
     expect(JSON.stringify(publicPolicy)).not.toContain("source");
     const [{ grantId }] = await (await request(member.token, `/v1/workbenches?accountId=${accountId}`)).json();
+    const access = { accountId, workbenchId: "recipient", grantId };
+    const nativeHeaders = { "x-pstdio-managed-extensions": "1" };
+    const keyPath = `/v1/workbenches/recipient/keys?accountId=${accountId}&grantId=${grantId}`;
+    expect((await request(member.token, keyPath)).status).toBe(403);
+    expect((await request(member.token, "/v1/environment-access", access)).status).toBe(401);
+    expect((await request(member.token, keyPath, undefined, nativeHeaders)).status).toBe(200);
+    expect((await request(member.token, "/v1/environment-access", access, nativeHeaders)).status).toBe(200);
+    await manager.setFeature({ accountId: member.accountId, feature: "relay", enabled: true });
+    await request(member.token, "/v1/workbenches/personal", {});
+    expect((await request(member.token, "/v1/environment-access", { workbenchId: "personal" })).status).toBe(200);
     const packagePath = `${policy}/${metadata.extensionId}/package?workbenchId=recipient&grantId=${grantId}&selectionId=${selection.selectionId}`;
     expect((await request(outsider.token, packagePath)).status).toBe(401);
     const download = await request(member.token, packagePath);
@@ -136,6 +146,11 @@ test("only the owner selects immutable team packages; project grants gate packag
       ).status,
     ).toBe(200);
     expect(await (await request(member.token, policy)).json()).toEqual([]);
+    await request(owner.token, `${team}/projects/recipient/access`, { userId: member.accountId, granted: true });
+    const [returned] = await (await request(member.token, `/v1/workbenches?accountId=${accountId}`)).json();
+    expect(
+      (await request(member.token, "/v1/environment-access", { ...access, grantId: returned.grantId })).status,
+    ).toBe(200);
   } finally {
     await Promise.all([auth.close(), authentication.close(), manager.close()]);
     await rm(directory, { recursive: true, force: true });
