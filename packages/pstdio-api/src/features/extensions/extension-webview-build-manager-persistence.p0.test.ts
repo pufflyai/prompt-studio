@@ -25,8 +25,42 @@ test("retries a repaired cache's unwritten result without rebuilding", async () 
     expect((await fixture.sources.get(fixture.id))?.loaded_revision).toBe(revision);
 
     fixture.setReportingUnavailable(false);
-    await fixture.manager.ensure(fixture.id, "pstdio.lab.view.page");
+    // Full-source reconciliation waits for persistence; panel access can use the published bundle.
+    await fixture.manager.ensure(fixture.id);
 
+    expect((await fixture.sources.get(fixture.id))?.loaded_revision).not.toBe(revision);
+    expect(fixture.state.builds).toBe(2);
+  } finally {
+    await fixture.dispose();
+  }
+});
+
+test("panel access retries an unwritten result in the background", async () => {
+  const fixture = await setup();
+  try {
+    await fixture.manager.ensure(fixture.id);
+    const revision = (await fixture.sources.get(fixture.id))?.loaded_revision;
+    rmSync(join(fixture.sourcePath, "..", "cache", fixture.id, "pstdio.lab.view.page", "dist"), {
+      recursive: true,
+      force: true,
+    });
+    fixture.setReportingUnavailable(true);
+    const error = await fixture.manager.ensure(fixture.id, "pstdio.lab.view.page").catch((error: Error) => error);
+    expect(error).toBeInstanceOf(Error);
+    fixture.setReportingUnavailable(false);
+    fixture.pauseSuccessReport();
+
+    await fixture.manager.ensure(fixture.id, "pstdio.lab.view.page");
+    expect(
+      await Promise.race([
+        fixture.successReporting.promise.then(() => "reporting"),
+        Bun.sleep(1000).then(() => "not-started"),
+      ]),
+    ).toBe("reporting");
+    expect(fixture.module()).toContain("original bundle");
+    expect((await fixture.sources.get(fixture.id))?.loaded_revision).toBe(revision);
+    fixture.releaseSuccessReport.resolve();
+    await fixture.manager.ensure(fixture.id);
     expect((await fixture.sources.get(fixture.id))?.loaded_revision).not.toBe(revision);
     expect(fixture.state.builds).toBe(2);
   } finally {

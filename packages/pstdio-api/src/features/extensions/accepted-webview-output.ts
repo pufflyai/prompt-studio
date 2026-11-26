@@ -147,12 +147,11 @@ export const createWebviewUsage = (cacheRoot: string) => {
       opened.add(row.source_path);
       // Repair the selected accepted publication first. A legacy serving bundle can
       // still open while its source/dependency fingerprints are checked in the background.
-      if (
-        !(await hasAcceptedWebviews(row, cacheRoot, viewId)) &&
-        !(viewId && isWebviewPublished(cacheRoot, row.id, viewId))
-      )
-        return false;
-      if (firstUse && viewId) check();
+      const accepted = await hasAcceptedWebviews(row, cacheRoot, viewId);
+      if (!accepted && !(viewId && isWebviewPublished(cacheRoot, row.id, viewId))) return false;
+      // An earlier check may have finished without persisting its result. Retry that
+      // result in the background on access, including after this source's first use.
+      if (viewId && (firstUse || !accepted)) check();
       return true;
     },
     reconcile: async (rows: InstalledSourceWithManifest[], check: (id: string) => Promise<unknown>) => {

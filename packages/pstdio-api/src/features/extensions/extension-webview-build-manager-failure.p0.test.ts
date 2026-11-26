@@ -149,11 +149,11 @@ test("keeps an unwritten failure incomplete and reports its finished result with
     await fixture.manager.refresh(fixture.sourcePath);
     const adoptionError = await fixture.manager.adopt(fixture.sourcePath).catch((error: Error) => error);
     expect((adoptionError as Error).message).toContain("Could not record");
-    const buildError = await fixture.manager.ensure(fixture.id, "pstdio.lab.view.page").catch((error: Error) => error);
+    const buildError = await fixture.manager.ensure(fixture.id).catch((error: Error) => error);
     expect(buildError).toBeInstanceOf(Error);
     expect(await fixture.error()).toBeNull();
     fixture.setReportingUnavailable(false);
-    await fixture.manager.ensure(fixture.id, "pstdio.lab.view.page");
+    await fixture.manager.ensure(fixture.id);
     expect(await fixture.error()).not.toBeNull();
     expect(fixture.state.builds).toBe(2);
   } finally {
