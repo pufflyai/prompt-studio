@@ -42,8 +42,10 @@ import { normalizePageRuntimeState } from "./page-runtime-normalization";
 import { toWidgetPlacement } from "./page-view-instance";
 import { registerPortablePagePanel } from "./portable-page-panel";
 import { selectedMainLayout } from "./selected-main-layout";
+import { syncOwnedPanelMenus } from "./sync-owned-panel-menus";
 import { connectTrayPreviewRemoval } from "./tray-preview-removal";
 export interface ConnectWorkbenchPageRuntimeInput {
+  getPanelMenuOpen?(widgetId: string): boolean | undefined;
   isResourceViewer?(identity: PlacementIdentity): boolean;
   resourceViewerKey?(resource: ResourceRef, identity: PlacementIdentity): string;
   loadPageLayout?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): WorkbenchLayout | undefined;
@@ -60,28 +62,6 @@ export interface ConnectWorkbenchPageRuntimeInput {
   modes: WorkbenchModeRegistry;
   registry: WorkbenchPageRegistry<WorkbenchWidgetPlacement>;
 }
-const syncOwnedPanelMenus = (layout: LayoutModel, pageContent: WorkbenchWidgetPlacement | undefined) => {
-  const ownedPlacements = [
-    ...Object.values(layout.getLayout().regions).flatMap((region) => region.widgets),
-    ...(pageContent ? [pageContent] : []),
-  ].filter((placement) => Boolean(placement.placementIdentity));
-  for (const placement of ownedPlacements) {
-    const owner = layout.getWidget(placement.contributionId);
-    for (const menuId of owner?.ownedPanelMenuIds ?? []) {
-      const menu = layout.getWidget(menuId);
-      if (!menu) continue;
-      layout.openWidget(menuId, {
-        pinned: true,
-        role: "panel-menu",
-        viewId: menu.rendererId,
-        resource: placement.resource,
-        pageContext: placement.pageContext ?? placement.pageOwnerLocation,
-        title: menu.region.endsWith("-left-menu") ? placement.resource?.label : menu.title,
-      });
-    }
-  }
-  layout.reconcilePanelMenus();
-};
 const bindPlacementsToActivePageLocation = (state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>) => {
   const ownerResourceKey = resourceKey(state.location?.resource);
   if (!ownerResourceKey) return state.placements;
@@ -192,7 +172,7 @@ const applyPageState = (
       input.layout.getRegionSettings(region, mode?.id),
     );
     input.layout.restoreLayout(clampPanelSizes(availableLayout, input.layout.getRegionSize));
-    syncOwnedPanelMenus(input.layout, resolvePageContent(latest));
+    syncOwnedPanelMenus(input.layout, resolvePageContent(latest), input.getPanelMenuOpen);
     if (source !== "scope-restore") revealPagePlacements(input, layout, activation);
   });
   return restoresMode ? ("restore-mode" as const) : ("open-page" as const);
@@ -223,6 +203,7 @@ export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeIn
   });
 };
 export interface CreateLiveWorkbenchPageRegistryInput {
+  getPanelMenuOpen?: ConnectWorkbenchPageRuntimeInput["getPanelMenuOpen"];
   isResourceViewer?: ConnectWorkbenchPageRuntimeInput["isResourceViewer"];
   resourceViewerKey?: ConnectWorkbenchPageRuntimeInput["resourceViewerKey"];
   loadPageLayout?: ConnectWorkbenchPageRuntimeInput["loadPageLayout"];
@@ -331,6 +312,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
           ),
         );
     },
+    getPanelMenuOpen: input.getPanelMenuOpen,
     revealRegion: input.revealRegion,
     layout: input.layout,
     modes: input.modes,
