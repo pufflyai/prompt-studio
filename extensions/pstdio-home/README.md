@@ -12,10 +12,14 @@ Recent uses the host’s project-scoped navigation history through `workbenchCom
 
 The Canvas baseline is `src/components/home.canvas.tsx`: `Default`, `SetupDidNotFinish`, and `NoRecentResources`.
 
-Home pins the published SDK and UI nightly `0.47.0-nightly.20261104030253` and includes a standalone `bun.lock`. Its public API prerequisite landed in [PR #1687](https://github.com/pufflyai/prompt-studio/pull/1687). Dependency updates must use real published versions and regenerate the extension lockfile through the [supported release workflow](../../documentation/guides/development/0014-sdk-ui-previews.md).
+Home pins published SDK and UI versions in `package.json` and includes a standalone `bun.lock`. Its public API prerequisite landed in [PR #1687](https://github.com/pufflyai/prompt-studio/pull/1687). Dependency updates must use real published versions and regenerate the extension lockfile through the [supported release workflow](../../documentation/guides/development/0014-sdk-ui-previews.md).
 
 ## Customize Home
 
-Browse the ideas on Home and copy a prompt into an agent conversation to get started. Open a new conversation from **Sessions** or the chat bubble. Open **Quotas** from the main project navigation to check provider usage.
+Choose **Release checklist** or **Virtual office** and select **Build this!** to start a project session and open its conversation in Side. Their example screenshots load from hosted assets and follow the workbench’s light or dark theme.
 
-*Updated at: 2026-11-25*
+Choose the question-mark card, **Something different**, and select **Get ideas** to ask an agent to inspect the project and suggest ways to transform Home. The agent proposes useful and imaginative directions and waits for your choice before making changes.
+
+Recently Used appears below the ideas when it has entries. Open a new conversation from **Sessions** or the chat bubble. Open **Quotas** from the main project navigation to check provider usage.
+
+*Updated at: 2026-11-26*

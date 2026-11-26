@@ -1,20 +1,9 @@
-import {
-  AspectRatio,
-  Box,
-  Button,
-  Carousel,
-  Heading,
-  HStack,
-  IconButton,
-  Image,
-  Stack,
-  Text,
-  useCarousel,
-} from "@chakra-ui/react";
+import { AspectRatio, Button, Carousel, Heading, HStack, IconButton, Stack, Text, useCarousel } from "@chakra-ui/react";
 import { AlertMessage, ScopedPopover as Popover, Portal, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { useState } from "react";
-import { type HomeIdeaId, homeIdeaScreenshotUrl, homeIdeas } from "../home-ideas";
+import { type HomeIdeaId, homeIdeas } from "../home-ideas";
 import { HomeIcon } from "./home-icon";
+import { HomeIdeaPreview } from "./home-idea-preview";
 
 interface HomePromptCarouselProps {
   onBuild: (idea: HomeIdeaId) => Promise<void>;
@@ -54,73 +43,63 @@ export const HomePromptCarousel = ({ onBuild }: HomePromptCarouselProps) => {
       </Heading>
       <Carousel.RootProvider value={carousel} aria-label="Home page ideas" w="full" minW="0">
         <Carousel.ItemGroup>
-          {homeIdeas.map(({ id, title, description }, index) => (
-            <Carousel.Item key={id} index={index} minW="0">
-              <SimpleCard as="article" aria-label={title} overflow="hidden">
-                <AspectRatio ratio={16 / 10} bg="bg.subtle" borderBottomWidth="1px" borderColor="border">
-                  <Box>
-                    {(["light", "dark"] as const).map((mode) => (
-                      <Image
-                        key={mode}
-                        src={homeIdeaScreenshotUrl(id, mode)}
-                        display={mode === "dark" ? { base: "none", _dark: "block" } : { base: "block", _dark: "none" }}
-                        alt={`${title} example interface`}
-                        w="full"
-                        h="full"
-                        objectFit="cover"
-                        draggable={false}
-                        loading="lazy"
-                      />
-                    ))}
-                  </Box>
-                </AspectRatio>
-                <SimpleCardBody display="flex" flexDirection="column" gap="md" p="lg">
-                  <Stack gap="xs">
-                    <Heading as="h3" textStyle="label/L/medium">
-                      {title}
-                    </Heading>
-                    <Text textStyle="paragraph/S/regular" color="fg.muted">
-                      {description}
-                    </Text>
-                  </Stack>
-                  <Popover.Root
-                    open={error?.idea === id}
-                    onOpenChange={({ open }) => {
-                      if (!open) setError(undefined);
-                    }}
-                    positioning={{ placement: "bottom-start" }}
-                  >
-                    <Popover.Trigger asChild>
-                      <Button
-                        variant="solid"
-                        alignSelf="flex-start"
-                        size="sm"
-                        loading={pending === id}
-                        disabled={Boolean(pending)}
-                        onClick={() => void build(id)}
-                      >
-                        Build this!
-                      </Button>
-                    </Popover.Trigger>
-                    <Portal>
-                      <Popover.Positioner>
-                        <Popover.Content aria-label="Could not start building" p="0" w="popover-panel" maxW="90vw">
-                          <AlertMessage
-                            role="alert"
-                            status="error"
-                            title="Could not start building"
-                            onClose={() => setError(undefined)}
-                          >
-                            {error?.idea === id ? error.message : undefined}
-                          </AlertMessage>
-                        </Popover.Content>
-                      </Popover.Positioner>
-                    </Portal>
-                  </Popover.Root>
-                </SimpleCardBody>
-              </SimpleCard>
-            </Carousel.Item>
-          ))}
+          {homeIdeas.map((idea, index) => {
+            const { id, title, description, kind } = idea;
+            const errorTitle = kind === "explore" ? "Could not explore ideas" : "Could not start building";
+            return (
+              <Carousel.Item key={id} index={index} minW="0">
+                <SimpleCard as="article" aria-label={title} overflow="hidden">
+                  <AspectRatio ratio={16 / 10} bg="bg.subtle" borderBottomWidth="1px" borderColor="border">
+                    <HomeIdeaPreview idea={idea} />
+                  </AspectRatio>
+                  <SimpleCardBody display="flex" flexDirection="column" gap="md" p="lg">
+                    <Stack gap="xs">
+                      <Heading as="h3" textStyle="label/L/medium">
+                        {title}
+                      </Heading>
+                      <Text textStyle="paragraph/S/regular" color="fg.muted">
+                        {description}
+                      </Text>
+                    </Stack>
+                    <Popover.Root
+                      open={error?.idea === id}
+                      onOpenChange={({ open }) => {
+                        if (!open) setError(undefined);
+                      }}
+                      positioning={{ placement: "bottom-start" }}
+                    >
+                      <Popover.Trigger asChild>
+                        <Button
+                          variant="solid"
+                          alignSelf="flex-start"
+                          size="sm"
+                          loading={pending === id}
+                          disabled={Boolean(pending)}
+                          onClick={() => void build(id)}
+                        >
+                          {kind === "explore" ? "Get ideas" : "Build this!"}
+                        </Button>
+                      </Popover.Trigger>
+                      <Portal>
+                        <Popover.Positioner>
+                          <Popover.Content aria-label={errorTitle} p="0" w="popover-panel" maxW="90vw">
+                            <AlertMessage
+                              role="alert"
+                              status="error"
+                              title={errorTitle}
+                              onClose={() => setError(undefined)}
+                            >
+                              {error?.idea === id ? error.message : undefined}
+                            </AlertMessage>
+                          </Popover.Content>
+                        </Popover.Positioner>
+                      </Portal>
+                    </Popover.Root>
+                  </SimpleCardBody>
+                </SimpleCard>
+              </Carousel.Item>
+            );
+          })}
         </Carousel.ItemGroup>
         <Carousel.Control justifyContent="space-between" gap="sm">
           <Carousel.IndicatorGroup>

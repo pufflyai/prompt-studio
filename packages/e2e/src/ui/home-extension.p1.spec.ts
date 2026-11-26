@@ -47,12 +47,11 @@ test("Home shows project ideas and reopens recently used resources", async ({ pa
     await palette.getByRole("textbox").fill(">Choose color theme");
     await palette.getByRole("option", { name: /Choose color theme/ }).click();
     await palette.getByRole("option", { name: mode === "dark" ? "Prompt Dark" : "Prompt Light", exact: true }).click();
-    const screenshot = homeFrame(page).getByRole("img", { name: "Project pulse example interface", exact: true });
+    const screenshot = homeFrame(page).getByRole("img", { name: "Release checklist example interface", exact: true });
     await expect(screenshot).toHaveCount(1);
-    await expect(screenshot).toHaveAttribute("src", new RegExp(`/project-pulse-${mode}\\.png$`));
+    await expect(screenshot).toHaveAttribute("src", new RegExp(`/release-checklist-${mode}\\.png$`));
     await screenshot.evaluate((image: HTMLImageElement) => image.decode());
   }
-  await homeFrame(page).getByRole("button", { name: "Next idea", exact: true }).click();
   await expect(homeFrame(page).getByRole("heading", { name: "Release checklist", exact: true })).toBeInViewport();
   await homeFrame(page)
     .getByRole("img", { name: "Release checklist example interface", exact: true })
@@ -75,6 +74,36 @@ test("Home shows project ideas and reopens recently used resources", async ({ pa
   expect(created.ok()).toBe(true);
   expect(await created.json()).toMatchObject({ project_id: project.id, title: "Build Home: Release checklist" });
   await expect(page.getByRole("tab", { name: "Build Home: Release checklist", exact: true })).toBeVisible();
+  // Exploration must start a project-aware conversation rather than launch a preset build.
+  await homeFrame(page).getByRole("button", { name: "Show Something different", exact: true }).click();
+  const different = homeFrame(page).getByRole("article", { name: "Something different", exact: true });
+  await expect(different.getByRole("img", { name: "Question mark", exact: true })).toBeVisible();
+  const exploring = page.waitForResponse(
+    (response) =>
+      response.url().includes("/extensions/commands/pstdio.home.command.build-home/execute") &&
+      response.request().method() === "POST",
+  );
+  await different.getByRole("button", { name: "Get ideas", exact: true }).click();
+  const explored = await (await exploring).json();
+  expect(explored.outcome.ok, JSON.stringify(explored)).toBe(true);
+  const exploration = await request.get(`/v1/sessions/${explored.outcome.value.sessionId}`);
+  expect(await exploration.json()).toMatchObject({ project_id: project.id, title: "Explore Home ideas" });
+  await expect(page.getByRole("tab", { name: "Explore Home ideas", exact: true })).toBeVisible();
+  const conversationUrl = `/v1/sessions/${explored.outcome.value.sessionId}/conversation`;
+  await expect
+    .poll(async () => {
+      const conversation = await (await request.get(conversationUrl)).json();
+      return conversation.messages.some(
+        (message: { role: string; parts: { type: string; text?: string }[] }) =>
+          message.role === "user" && message.parts.some((part) => part.type === "text" && Boolean(part.text?.trim())),
+      );
+    })
+    .toBe(true);
+  await test.info().attach("home-exploration-conversation", {
+    body: await (await request.get(conversationUrl)).body(),
+    contentType: "application/json",
+  });
+
   const session = sessions[6];
   await page.goto(
     `/projects/${project.id}/session?resource=${encodeURIComponent(`pstdio://extension-resource/session/${session.id}`)}`,
@@ -128,7 +157,7 @@ test("Home anchors build failures to the selected idea and allows retry", async 
     const home = homeFrame(page);
     await expect(homePage(page)).toBeVisible();
     const build = home
-      .getByRole("article", { name: "Project pulse", exact: true })
+      .getByRole("article", { name: "Release checklist", exact: true })
       .getByRole("button", { name: "Build this!", exact: true });
     const rejected = page.waitForResponse(
       (response) =>
@@ -137,13 +166,13 @@ test("Home anchors build failures to the selected idea and allows retry", async 
     );
     await build.click();
     await home.getByRole("button", { name: "Next idea", exact: true }).click();
-    await expect(home.getByRole("heading", { name: "Release checklist", exact: true })).toBeInViewport();
+    await expect(home.getByRole("heading", { name: "Virtual office", exact: true })).toBeInViewport();
     failure.resolve();
     const rejection = await (await rejected).json();
     expect(rejection.outcome).toMatchObject({ ok: false, status: "rejected" });
     const error = home.getByRole("dialog", { name: "Could not start building", exact: true });
     await expect(error).toBeVisible();
-    await expect(home.getByRole("heading", { name: "Project pulse", exact: true })).toBeInViewport();
+    await expect(home.getByRole("heading", { name: "Release checklist", exact: true })).toBeInViewport();
     await expect(error.getByRole("alert")).toContainText(rejection.outcome.reason);
     await page.keyboard.press("Escape");
     await expect(error).toBeHidden();
@@ -156,7 +185,7 @@ test("Home anchors build failures to the selected idea and allows retry", async 
     await build.press("Enter");
     const retried = await (await retry).json();
     expect(retried.outcome.ok, JSON.stringify(retried)).toBe(true);
-    await expect(page.getByRole("tab", { name: "Build Home: Project pulse", exact: true })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Build Home: Release checklist", exact: true })).toBeVisible();
     expect(attempts).toBe(2);
   } finally {
     failure.resolve();
