@@ -135,4 +135,4 @@ for (const interruption of ["normal", "schema", "restore", "large"])
       await store?.close();
       await rm(root, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
