@@ -41,6 +41,7 @@ export const createOAuthCodeFixture = async () => {
   >();
   const original = globalThis.fetch;
   let keyIssuer = `${microsoft}/{tenantid}/v2.0`;
+  const clientSecrets = { microsoft: fixtures.microsoft.clientSecret, google: fixtures.google.clientSecret };
   let exchanged = 0;
   globalThis.fetch = Object.assign(
     async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
@@ -63,7 +64,7 @@ export const createOAuthCodeFixture = async () => {
           createHash("sha256").update(verifier).digest("base64url") !== issued.challenge ||
           form.get("redirect_uri") !== issued.redirect ||
           form.get("client_id") !== fixture.clientId ||
-          form.get("client_secret") !== fixture.clientSecret
+          form.get("client_secret") !== clientSecrets[provider]
         )
           return Response.json({ error: "invalid_grant" }, { status: 400 });
         exchanged++;
@@ -79,6 +80,9 @@ export const createOAuthCodeFixture = async () => {
     exchanged: () => exchanged,
     setMicrosoftKeyIssuer: (issuer: string) => {
       keyIssuer = issuer;
+    },
+    setMicrosoftClientSecret: (secret: string) => {
+      clientSecrets.microsoft = secret;
     },
     async complete(
       provider: AccountSignInProvider,

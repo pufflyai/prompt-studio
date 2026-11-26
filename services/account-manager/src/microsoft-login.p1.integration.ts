@@ -8,10 +8,11 @@ const fixture = createAuthorityFixture(implementation);
 beforeAll(() => fixture.initialize());
 afterAll(() => fixture.close());
 
-test("Microsoft uses the browser code flow and owns only its tenant-scoped account", async () => {
+test("Microsoft uses the browser code flow and keeps its tenant-scoped account across secret rotation", async () => {
   const config = { ...authenticationConfig(fixture.databaseUrl), microsoft: fixtureMicrosoftClient };
   let auth = implementation.createManagerAuthentication(config);
   const oauth = await createOAuthCodeFixture();
+  const manager = fixture.owner();
   let handler = implementation.createManagerHandler(auth, config.origin);
   const fetchManager = (url: URL, headers?: HeadersInit) => handler(new Request(url, { headers }));
   try {
@@ -75,7 +76,7 @@ test("Microsoft uses the browser code flow and owns only its tenant-scoped accou
       expect((await connect(provider === "google" ? "microsoft" : "google")).status).toBe(401);
       const device = await connect(provider);
       expect(device.status).toBe(201);
-      const enrolled = (await device.json()) as { accountId: string; deviceId: string };
+      const enrolled = (await device.json()) as { accountId: string; deviceId: string; token: string };
       expect(enrolled.deviceId).toBe(profile.deviceId);
       return enrolled;
     };
@@ -83,6 +84,26 @@ test("Microsoft uses the browser code flow and owns only its tenant-scoped accou
     const google = await deviceLogin("google");
     const microsoft = await deviceLogin("microsoft");
     expect(google.accountId).not.toBe(microsoft.accountId);
+    for (const accountId of [google.accountId, microsoft.accountId]) {
+      await manager.setFeature({ accountId, feature: "relay", enabled: true });
+    }
+    const requestDevice = (token: string, path: string, body?: object) =>
+      handler(
+        new Request(`${config.origin}${path}`, {
+          headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+          ...(body ? { method: "POST", body: JSON.stringify(body) } : {}),
+        }),
+      );
+    const googleProject = crypto.randomUUID();
+    const microsoftProject = crypto.randomUUID();
+    expect((await requestDevice(google.token, `/v1/workbenches/${googleProject}`, {})).status).toBe(200);
+    expect((await requestDevice(microsoft.token, `/v1/workbenches/${microsoftProject}`, {})).status).toBe(200);
+    const signingKeys = await auth.jwks();
+    const verifyAccess = implementation.createEnvironmentAccessVerifier({
+      issuer: config.origin,
+      audience: config.audience,
+      jwks: signingKeys,
+    });
     const colleague = await deviceLogin("microsoft", { claims: { sub: "another-employee" } });
     expect(colleague.accountId).not.toBe(microsoft.accountId);
     const otherTenant = await deviceLogin("microsoft", { claims: { tid: "b8cf818a-09e1-4b19-95b4-2f416fb0c607" } });
@@ -114,16 +135,39 @@ test("Microsoft uses the browser code flow and owns only its tenant-scoped accou
     expect(error.searchParams.get("error")).toBe("provider-denied");
     expect(error.searchParams.has("error_description")).toBe(false);
 
-    await auth.close();
-    auth = implementation.createManagerAuthentication(config);
-    handler = implementation.createManagerHandler(auth, config.origin);
     oauth.setMicrosoftKeyIssuer("https://login.microsoftonline.com/{tenantid}/v2.0");
+    const clientSecret = "rotated-microsoft-oauth-fixture-only";
+    oauth.setMicrosoftClientSecret(clientSecret);
+    const retired = await browserLogin("microsoft");
+    expect(new URL(retired.headers.get("location")!).pathname).toBe("/v1/native-error");
+    await auth.close();
+    auth = implementation.createManagerAuthentication({ ...config, microsoft: { ...config.microsoft, clientSecret } });
+    handler = implementation.createManagerHandler(auth, config.origin);
+    expect(await auth.jwks()).toEqual(signingKeys);
 
     const returned = await deviceLogin("microsoft", { claims: { email: undefined, name: "Updated display name" } });
     expect(returned.accountId).toBe(microsoft.accountId);
     expect(returned.deviceId).not.toBe(microsoft.deviceId);
+    for (const device of [microsoft, returned]) {
+      expect(await (await requestDevice(device.token, "/v1/workbenches")).json()).toEqual([
+        { workbenchId: microsoftProject },
+      ]);
+      const access = await requestDevice(device.token, "/v1/environment-access", { workbenchId: microsoftProject });
+      expect(access.status).toBe(200);
+      const { token } = (await access.json()) as { token: string };
+      expect(await verifyAccess(token)).toMatchObject({
+        accountId: microsoft.accountId,
+        environmentId: device.deviceId,
+        workbenchId: microsoftProject,
+      });
+    }
+    const returnedGoogle = await deviceLogin("google");
+    expect(returnedGoogle.accountId).toBe(google.accountId);
+    expect(await (await requestDevice(returnedGoogle.token, "/v1/workbenches")).json()).toEqual([
+      { workbenchId: googleProject },
+    ]);
   } finally {
     oauth.close();
-    await auth.close();
+    await Promise.all([manager.close(), auth.close()]);
   }
 });

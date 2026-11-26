@@ -17,6 +17,10 @@ Confirm the database recovery point and rehearse the upgrade on a disposable tea
 3. Check that the colleague sees the team roster and neither project. Grant access to one project. Open it on a clean device and confirm the selected private tool and its enabled dependencies install. Confirm the other project is absent from discovery and denied through its direct link, project APIs, key issuance, and Relay subscriptions.
 4. Confirm the two employee devices receive the same shared records and file hashes. Confirm each employee’s private sessions, transcripts, device commands, and folder copies remain inaccessible to the other.
 
+## Rotate the Microsoft sign-in secret
+
+In the approved test environment, replace the Microsoft Web app’s client secret on the existing Entra registration. Keep the client ID, account-manager database, and manager authentication secret. Deploy the new client secret and check sign-in before retiring the previous one. Verify another sign-in after retirement. Confirm the returning employee keeps the same account and project grants, and can enroll a fresh device. Check that a previously enrolled device can still renew access and that the manager advertises the same Relay signing key IDs. Repeat the Google sign-in and project discovery check.
+
 ## Collaborate and recover a private tool
 
 Make independent edits on the two devices. Disconnect one device and make another edit while offline. Interrupt an encrypted upload and download during catch-up. Restart the receiving client while it has a backlog. Verify that both devices keep the independent edits and agree on record values and file hashes. Shut down the source device and recover on a clean device. Exercise a representative approved snapshot and a small interactive edit. Record the times for locally saved, waiting, syncing, synced, stale, and failed observations.
