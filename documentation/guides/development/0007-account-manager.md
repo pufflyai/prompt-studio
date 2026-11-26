@@ -147,7 +147,7 @@ Snapshots keep team ownership, project grants and key history. Restoring an exis
 
 ## Team invitations and member authority
 
-Invitations are bound to a verified Google email. The manager stores a digest and resolves the accepting person through their existing Google subject. The link carries the secret in the URL fragment. The landing page exchanges it in same-origin POST bodies after sign-in. Team membership operations take the team account lock, the same lock used before issuing scoped renewal and keys.
+A Google invitation matches the verified email associated with the signed-in Google subject. A Microsoft invitation matches the Entra tenant and user object IDs from a verified Microsoft ID token. The manager stores a digest of each invitation secret. Microsoft sign-in still uses issuer and subject as the stable Prompt Studio account identity. The link carries the secret in the URL fragment. The landing page exchanges it in same-origin POST bodies after sign-in. Team membership operations take the team account lock, the same lock used before issuing scoped renewal and keys.
 
 Snapshots capture the current team members. Invitation links are excluded from backups, and a restore cancels outstanding invitations on the surviving manager. A historical snapshot leaves the current roster on surviving teams intact.
 

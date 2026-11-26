@@ -17,11 +17,17 @@ import {
   syncProtocolHeader,
   syncProtocolVersion,
   teamAccountSchema,
+  teamOwnershipOfferSchema,
   updateResultSchema,
 } from "pstdio-sync-contracts";
 import { z } from "zod";
 import { deviceProfile } from "../../../account-manager/src/authority.fixture";
 import { createAuthenticationFixture } from "../../../account-manager/src/manager-authentication.fixture";
+import {
+  createOAuthCodeFixture,
+  fixtureMicrosoftClient,
+  oauthBrowserCookie,
+} from "../../../account-manager/src/oauth-code.fixture";
 import { defaultRelayLimits } from "../limits";
 import { startRelay } from "../service";
 import { projectKey } from "../storage/accounts";
@@ -523,20 +529,46 @@ test("devices of the same team user share encrypted data under the team's projec
   }
 });
 
-test("only the team owner can write the shared extension catalog over Relay", async () => {
-  const relay = await open();
-  const { manager, managerHandler, device, scope } = relay.context;
-  const control = new Client({ connectionString: fixture.managerDatabaseUrl });
+test("two Microsoft work accounts join, share and hand over the private catalogue over Relay", async () => {
+  const relay = await open({ microsoft: fixtureMicrosoftClient });
+  const { manager, managerHandler, scope } = relay.context;
+  const oauth = await createOAuthCodeFixture();
   const projectId = scope.workbenchId;
   const accountService = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: managerHandler });
   const managerOrigin = accountService.url.origin;
-  const managerRequest = (token: string, path: string, body: unknown) =>
+  const managerRequest = (token: string, path: string, body?: unknown) =>
     fetch(managerOrigin + path, {
-      method: "POST",
+      method: body === undefined ? "GET" : "POST",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-      body: JSON.stringify(body),
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
+  const browserOrigin = relay.context.managerOrigin;
+  const browserRequest = (path: string, body: unknown, cookie = "") =>
+    managerHandler(
+      new Request(browserOrigin + path, {
+        method: "POST",
+        headers: { origin: browserOrigin, "content-type": "application/json", cookie },
+        body: JSON.stringify(body),
+      }),
+    );
+  const tenantId = "354e60fc-fe06-4e97-aea7-664289bdd555";
+  const microsoftSession = async (sub: string, oid: string) => {
+    const callbackURL = `${browserOrigin}/v1/team-invitation`;
+    const start = await browserRequest("/api/auth/sign-in/social", { provider: "microsoft", callbackURL });
+    expect(start.status).toBe(200);
+    const { url } = z.object({ url: z.url() }).parse(await start.json());
+    const callback = await oauth.complete("microsoft", new URL(url), { claims: { tid: tenantId, sub, oid } });
+    const signedIn = await managerHandler(new Request(callback.href, { headers: { cookie: oauthBrowserCookie(start) } }));
+    expect(signedIn.headers.get("location")).toBe(callbackURL);
+    return oauthBrowserCookie(signedIn);
+  };
+  const enroll = async (cookie: string) => {
+    const enrolled = await browserRequest("/v1/device-login", { ...deviceProfile(), provider: "microsoft" }, cookie);
+    expect(enrolled.status).toBe(201);
+    return z.object({ accountId: z.string(), token: z.string() }).parse(await enrolled.json());
+  };
   try {
+    const device = await enroll(await microsoftSession("private-team-owner", crypto.randomUUID()));
     const team = await managerRequest(device.token, "/v1/teams", { name: "Private Tool Team" });
     expect(team.status).toBe(201);
     const { accountId } = teamAccountSchema.parse(await team.json());
@@ -544,30 +576,30 @@ test("only the team owner can write the shared extension catalog over Relay", as
     expect((await managerRequest(device.token, `/v1/workbenches/${projectId}?accountId=${accountId}`, {})).status).toBe(
       200,
     );
-    const userId = crypto.randomUUID();
-    await manager.provision({
-      requestId: "publication-reader",
-      accountId: userId,
-      owner: { issuer: "https://accounts.google.com", subject: userId },
-    });
-    const colleague = await manager.registerDevice({
-      accountId: userId,
-      deviceId: crypto.randomUUID(),
-      name: "Project member",
-      platform: "linux",
-    });
-    await control.connect();
-    await control.query('INSERT INTO manager_team_members ("accountId", "userId", role) VALUES ($1,$2,$3)', [
-      accountId,
-      userId,
-      "member",
-    ]);
-    await control.query(
-      'INSERT INTO manager_project_members ("accountId", "workbenchId", "userId") VALUES ($1,$2,$3)',
-      [accountId, projectId, userId],
-    );
+    const objectId = crypto.randomUUID();
+    const colleagueSession = await microsoftSession("private-team-colleague", objectId);
+    const teamPath = `/v1/teams/${accountId}`;
+    const invite = await managerRequest(device.token, `${teamPath}/invitations`, { microsoft: { tenantId, objectId } });
+    expect(invite.status).toBe(201);
+    const { url } = createdTeamInvitationSchema.parse(await invite.json());
+    const secret = new URL(url).hash.slice(1);
+    expect((await browserRequest("/v1/team-invitation/accept", { secret }, colleagueSession)).status).toBe(200);
+    const colleague = await enroll(colleagueSession);
+    const userId = colleague.accountId;
+    const projectList = (token: string) => managerRequest(token, `/v1/workbenches?accountId=${accountId}`);
+    expect(await (await projectList(colleague.token)).json()).toEqual([]);
+    const projectAccess = `${teamPath}/projects/${projectId}/access`;
+    expect((await managerRequest(device.token, projectAccess, { userId, granted: true })).status).toBe(200);
+    const grantIdFor = async (credential: string) => {
+      const list = await projectList(credential);
+      return z.array(z.object({ grantId: z.string() })).parse(await list.json())[0]?.grantId;
+    };
     const renew = async (credential: string) => {
-      const result = await managerRequest(credential, "/v1/environment-access", { accountId, workbenchId: projectId });
+      const result = await managerRequest(credential, "/v1/environment-access", {
+        accountId,
+        workbenchId: projectId,
+        grantId: await grantIdFor(credential),
+      });
       expect(result.status).toBe(200);
       return z.object({ token: z.string() }).parse(await result.json()).token;
     };
@@ -577,6 +609,7 @@ test("only the team owner can write the shared extension catalog over Relay", as
       credential: colleague.token,
       accountId,
       userId,
+      grantId: await grantIdFor(colleague.token),
       workbenchId: projectId,
     });
 
@@ -599,25 +632,32 @@ test("only the team owner can write the shared extension catalog over Relay", as
     const route = { kind: "document", projectId, spaceOwner: null, documentId, operation: "updates" } as const;
     expect((await relay.post(route, await sealUpdate(project, documentId, bytes, []), memberToken)).status).toBe(200);
 
-    await control.query(
-      'DELETE FROM manager_project_members WHERE "accountId"=$1 AND "workbenchId"=$2 AND "userId"=$3',
-      [accountId, projectId, userId],
+    const offer = await managerRequest(device.token, `${teamPath}/ownership`, { recipientUserId: userId });
+    expect(offer.status).toBe(201);
+    const { id } = teamOwnershipOfferSchema.parse(await offer.json());
+    expect((await managerRequest(colleague.token, `${teamPath}/ownership/${id}`, { decision: "accept" })).status).toBe(
+      200,
     );
-    expect(
-      (await managerRequest(colleague.token, "/v1/environment-access", { accountId, workbenchId: projectId })).status,
-    ).toBe(401);
+    const [formerOwnerToken, successorToken] = await Promise.all([renew(device.token), renew(colleague.token)]);
     const catalogId = await project.documentId(publicationDocumentNames[1]);
+    const catalog = { ...route, documentId: catalogId };
+    const updated = await sealUpdate(project, catalogId, new TextEncoder().encode("Earlier revision selected"), []);
+    expect((await relay.post(catalog, updated, formerOwnerToken)).status).toBe(403);
+    expect((await relay.post(catalog, updated, successorToken)).status).toBe(200);
+
+    const grantId = await grantIdFor(device.token);
     expect(
-      (
-        await relay.post(
-          { ...route, documentId: catalogId },
-          await sealUpdate(project, catalogId, bytes, []),
-          memberToken,
-        )
-      ).status,
-    ).toBe(403);
+      (await managerRequest(colleague.token, projectAccess, { userId: device.accountId, granted: false })).status,
+    ).toBe(200);
+    expect(await (await projectList(device.token)).json()).toEqual([]);
+    expect(
+      (await managerRequest(device.token, "/v1/environment-access", { accountId, workbenchId: projectId, grantId }))
+        .status,
+    ).toBe(401);
+    expect((await relay.post(catalog, updated, formerOwnerToken)).status).toBe(403);
   } finally {
-    await Promise.all([control.end(), accountService.stop(true), relay.close()]);
+    oauth.close();
+    await Promise.all([accountService.stop(true), relay.close()]);
   }
 });
 

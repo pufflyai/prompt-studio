@@ -1,12 +1,11 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { createHmac, hkdfSync } from "node:crypto";
-import { and, eq } from "drizzle-orm";
-import { spaceKeysSchema } from "pstdio-sync-contracts";
+import { spaceKeysSchema, teamOwnershipOfferSchema } from "pstdio-sync-contracts";
 import { createAuthorityFixture, deviceProfile, provisionAccount } from "./authority.fixture";
 import { connectManager } from "./database";
 import * as implementation from "./index";
 import { authenticationConfig } from "./manager-authentication.fixture";
-import { projectMembers, teamMembers } from "./schema";
+import { teamMembers } from "./schema";
 
 const fixture = createAuthorityFixture(implementation);
 beforeAll(() => fixture.initialize());
@@ -40,17 +39,21 @@ test("the team owner and a project member get different publication permissions 
     await manager.setFeature({ accountId, feature: "relay", enabled: true });
     expect((await request(owner.token, `${projectPath}?accountId=${accountId}`, {})).status).toBe(200);
     // Set up a colleague's explicit grant without using a pending invitation delivery.
-    await connection.db.transaction(async (transaction) => {
-      await transaction.insert(teamMembers).values({ accountId, userId: colleagueId, role: "member" });
-      await transaction.insert(projectMembers).values({ ...scope, userId: colleagueId });
-    });
+    await connection.db.insert(teamMembers).values({ accountId, userId: colleagueId, role: "member" });
+    const projectAccess = `/v1/teams/${accountId}/projects/${workbenchId}/access`;
+    expect((await request(owner.token, projectAccess, { userId: colleagueId, granted: true })).status).toBe(200);
+    const grantId = async (token: string) => {
+      const roster = await (await request(token, `/v1/workbenches?accountId=${accountId}`)).json();
+      return Array.isArray(roster) ? roster[0]?.grantId : undefined;
+    };
 
     const verify = implementation.createEnvironmentAccessVerifier({
       issuer: config.origin,
       audience: config.audience,
       jwks: await auth.jwks(),
     });
-    const renewal = (token: string) => request(token, "/v1/environment-access", scope);
+    const renewal = async (token: string) =>
+      request(token, "/v1/environment-access", { ...scope, grantId: await grantId(token) });
     const access = async (token: string) => {
       const result = await renewal(token);
       expect(result.status).toBe(200);
@@ -60,9 +63,8 @@ test("the team owner and a project member get different publication permissions 
 
     // The owner can renew before any device requests project keys.
     const first = await access(owner.token);
-    const keys = spaceKeysSchema.parse(
-      await (await request(colleague.token, `${projectPath}/keys?accountId=${accountId}`)).json(),
-    );
+    const keyPath = `${projectPath}/keys?accountId=${accountId}&grantId=${await grantId(colleague.token)}`;
+    const keys = spaceKeysSchema.parse(await (await request(colleague.token, keyPath)).json());
     const naming = hkdfSync(
       "sha256",
       Buffer.from(keys.project[0]!.secret, "base64url"),
@@ -83,22 +85,14 @@ test("the team owner and a project member get different publication permissions 
       canPublish: false,
     });
 
-    const membership = (userId: string) => and(eq(teamMembers.accountId, accountId), eq(teamMembers.userId, userId));
-    await connection.db.transaction(async (transaction) => {
-      await transaction.update(teamMembers).set({ role: "member" }).where(membership(ownerId));
-      await transaction.update(teamMembers).set({ role: "owner" }).where(membership(colleagueId));
-    });
+    const ownership = `/v1/teams/${accountId}/ownership`;
+    const offer = await request(owner.token, ownership, { recipientUserId: colleagueId });
+    expect(offer.status).toBe(201);
+    const { id } = teamOwnershipOfferSchema.parse(await offer.json());
+    expect((await request(colleague.token, `${ownership}/${id}`, { decision: "accept" })).status).toBe(200);
     expect((await access(owner.token)).canPublish).toBe(false);
     expect((await access(colleague.token)).canPublish).toBe(true);
-    await connection.db
-      .delete(projectMembers)
-      .where(
-        and(
-          eq(projectMembers.accountId, accountId),
-          eq(projectMembers.workbenchId, workbenchId),
-          eq(projectMembers.userId, ownerId),
-        ),
-      );
+    expect((await request(colleague.token, projectAccess, { userId: ownerId, granted: false })).status).toBe(200);
     expect((await renewal(owner.token)).status).toBe(401);
   } finally {
     await Promise.all([auth.close(), manager.close(), connection.close()]);

@@ -78,6 +78,13 @@
       "when": 1795527058847,
       "tag": "0010_team_ownership",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795656297292,
+      "tag": "0011_microsoft_team_invitation",
+      "breakpoints": true
     }
   ]
 }
