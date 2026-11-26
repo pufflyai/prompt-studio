@@ -19,6 +19,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { sessionBrowser } from "./refs";
 import { act } from "./src/actions";
+import { askAgent } from "./src/ask-agent";
 import { browse, browsePage, search } from "./src/browse";
 import { changeHeads, readChange } from "./src/changes";
 import { connectionRefresh } from "./src/controls";
@@ -200,6 +201,7 @@ export default defineExtension({
     }),
   ],
   commands: [
+    askAgent,
     quotas,
     changeHeads,
     readChange,

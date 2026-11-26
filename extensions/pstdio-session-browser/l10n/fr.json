@@ -1,4 +1,5 @@
 {
+  "commands.askAgent": "Demander à l’agent",
   "conversation.title": "Conversation",
   "commands.new": "Nouvelle conversation",
   "sessions.title": "Conversations",

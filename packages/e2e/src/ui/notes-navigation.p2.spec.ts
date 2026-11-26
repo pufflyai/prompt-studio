@@ -173,10 +173,11 @@ test("keeps note titles independent of the body and renames them through the con
       selection.addRange(range);
     });
     await page.getByRole("button", { name: "Comment", exact: true }).click();
+    const composer = page.getByRole("dialog", { name: "Comment on selection" });
+    await expect(composer).toContainText("Body text");
+    await composer.getByRole("textbox", { name: "Write a comment…" }).fill("Keep this sentence.");
+    await composer.getByRole("button", { name: "Submit comment" }).click();
     const discussion = page.getByLabel("Resource activity", { exact: true });
-    await expect(discussion).toContainText("“Body text”");
-    await discussion.getByRole("textbox", { name: "Leave a comment…" }).fill("Keep this sentence.");
-    await discussion.getByRole("button", { name: "Submit comment" }).click();
     await expect(discussion.getByText("Keep this sentence.", { exact: true })).toBeVisible();
     await discussion.getByRole("button", { name: "“Body text”" }).click();
     await expect(discussion.getByText("Passage unavailable")).toHaveCount(0);
