@@ -69,7 +69,7 @@ export const UpgradeFeedback = () => {
             setCompleted(0);
           }}
           onDismiss={() => setShowBatch(false)}
-          canUpgrade
+          upgradeCount={conflict ? 0 : 3}
         />
       </HStack>
       <HStack borderBottomWidth="1px" borderColor="border.subtle" paddingY="sm" gap="md">

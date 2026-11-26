@@ -7,10 +7,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
 
 // Critical risks: real queue ownership and directly reachable recovery must survive list/detail navigation.
-test("distinguishes waiting from active upgrades and dismisses grouped results without navigation", async ({
-  page,
-  request,
-}) => {
+test("keeps individual recovery after completed bulk upgrade progress disappears", async ({ page, request }) => {
   const folder = join(process.env.E2E_HOME!, `upgrade-progress-${Date.now()}`);
   mkdirSync(folder, { recursive: true });
   const created = await request.post(`${uiOrigin}/v1/projects`, {
@@ -100,14 +97,9 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
       json: { code: extensionUpgradeNeedsReviewCode, error: "This project is using a local copy." },
     });
     const batchButton = page.getByTestId("extensions-upgrade-all");
-    await expect(batchButton.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "3");
-    await expect(batchButton).toContainText("1 of 3 upgrades failed");
-    await expect(batchButton).toContainText("Needs review (1)");
+    await expect(batchButton).toHaveCount(0);
     await expect(row(local.id).getByRole("button", { name: "Upgrade conflict", exact: true })).toBeVisible();
-    await expect(batchButton).not.toContainText(/\d+s/);
-    await batchButton.locator("..").getByTestId("extension-action-dismiss").click();
-    await expect(batchButton).toContainText("Upgrade all");
-    // Batch dismissal preserves the individual failure and its direct retry action.
+    // Hiding the completed batch preserves individual failures and their recovery actions.
     await failedButton.click();
     await expect.poll(() => waiting.length).toBe(4);
     await expect(failedButton).toHaveAttribute("aria-busy", "true");

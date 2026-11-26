@@ -28,6 +28,9 @@ const needsUpgradeReview = (error: unknown) =>
 const domain = "extension.inventory";
 const unresolvedHint = "Inspect Extensions or discard this attempt in System activity.";
 
+export const canStartExtensionUpgrade = (action?: ExtensionActionState) =>
+  !action?.needsReview && action?.status !== "running" && action?.status !== "queued" && action?.retryable !== false;
+
 interface InventoryTracker {
   projectId: string;
   operations: WorkbenchOperations;
