@@ -1,5 +1,5 @@
 {
-  "id": "73bd94e9-b36a-414b-892e-868db808fef2",
+  "id": "3362dcb1-927b-4d76-b9cd-7d1c457ac927",
   "prevId": "b129b098-0936-4776-82ef-91e39f365522",
   "version": "7",
   "dialect": "postgresql",
@@ -1666,8 +1666,8 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "manager_team_extension_policies_packageId_accountId_manager_team_managed_packages_id_accountId_fk": {
-          "name": "manager_team_extension_policies_packageId_accountId_manager_team_managed_packages_id_accountId_fk",
+        "manager_team_policy_package_owner_fk": {
+          "name": "manager_team_policy_package_owner_fk",
           "tableFrom": "manager_team_extension_policies",
           "tableTo": "manager_team_managed_packages",
           "columnsFrom": [
@@ -1759,27 +1759,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "manager_team_package_owner": {
-          "name": "manager_team_package_owner",
-          "columns": [
-            {
-              "expression": "id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "accountId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -1798,7 +1777,16 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "manager_team_package_owner": {
+          "name": "manager_team_package_owner",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "accountId"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

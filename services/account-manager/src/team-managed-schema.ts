@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { foreignKey, index, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { foreignKey, index, jsonb, pgTable, primaryKey, text, timestamp, unique } from "drizzle-orm/pg-core";
 import type { ManagedPackageDescriptor } from "pstdio-sync-contracts";
 import { teams } from "./schema";
 
@@ -18,7 +18,7 @@ export const teamManagedPackages = pgTable(
   },
   (table) => [
     index("manager_team_package_cleanup").on(table.createdAt, table.id),
-    uniqueIndex("manager_team_package_owner").on(table.id, table.accountId),
+    unique("manager_team_package_owner").on(table.id, table.accountId),
   ],
 );
 
@@ -36,6 +36,7 @@ export const teamExtensionPolicies = pgTable(
   (table) => [
     primaryKey({ columns: [table.accountId, table.extensionId] }),
     foreignKey({
+      name: "manager_team_policy_package_owner_fk",
       columns: [table.packageId, table.accountId],
       foreignColumns: [teamManagedPackages.id, teamManagedPackages.accountId],
     }),
