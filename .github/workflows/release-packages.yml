@@ -251,16 +251,18 @@ jobs:
             echo "commit=$(git rev-parse HEAD)"
           } >> "$GITHUB_OUTPUT"
 
-  release_build:
+  # Prepared extension runtimes include the native Bun/OS/architecture identity.
+  # Cross-compiling the CLI on Linux alone leaves Apple Silicon doing cold builds.
+  release_mac_cli:
     needs: plan
     if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.release == 'true' }}
-    runs-on: ubuntu-24.04
+    runs-on: macos-15
     timeout-minutes: 30
     outputs:
-      artifact_attempt: ${{ steps.identity.outputs.attempt }}
-      build_artifact_id: ${{ steps.archive.outputs.artifact-id }}
+      artifact_id: ${{ steps.archive.outputs.artifact-id }}
     env:
       PSTDIO_EXTENSION_RELEASE_REF: ${{ needs.plan.outputs.extension_ref }}
+      PSTDIO_PREBUILD_UPGRADE_TOOLS: "1"
     steps:
       - uses: actions/checkout@v5
         with:
@@ -272,8 +274,47 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: "26.7.0"
+      - run: bun scripts/ci/install-native-dependencies.ts
+      - run: bun run build -- --scope pstdio --include-dependencies
+      - uses: actions/upload-artifact@v4
+        id: archive
+        with:
+          name: native-mac-cli-attempt-${{ github.run_attempt }}
+          path: dist/pstdio
+          if-no-files-found: error
+
+  release_build:
+    needs: [plan, release_mac_cli]
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.release_mac_cli.result == 'success' && needs.plan.outputs.release == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      artifact_attempt: ${{ steps.identity.outputs.attempt }}
+      build_artifact_id: ${{ steps.archive.outputs.artifact-id }}
+    env:
+      PSTDIO_EXTENSION_RELEASE_REF: ${{ needs.plan.outputs.extension_ref }}
+      PSTDIO_PREBUILD_UPGRADE_TOOLS: "1"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.plan.outputs.commit }}
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - name: Download the native Apple Silicon CLI from this candidate
+        uses: ./.github/actions/download-artifact-by-id
+        with:
+          artifact-ids: ${{ needs.release_mac_cli.outputs.artifact_id }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/native-mac-cli
       - name: Build and verify immutable publication artifacts
         uses: ./.github/actions/build-release
+        env:
+          PSTDIO_NATIVE_MAC_CLI: ${{ runner.temp }}/native-mac-cli/pstdio
       - name: Record source and build identity
         id: identity
         env:

@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { chmodSync, copyFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { $ } from "bun";
 import { resolveBuildTargets } from "./build-targets";
@@ -74,8 +74,13 @@ for (const { target, pkg, bin } of buildTargets) {
   mkdirSync(outDir, { recursive: true });
 
   const outfile = join(outDir, bin);
-  console.log(`\nCompiling for ${target}...`);
-await $`bun build ${CLI_ENTRY} ${PREPARATION_ENTRIES} --compile --splitting --root . --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} ${recoveryWorkerDefine(target)} --outfile ${outfile}`;
+  if (pkg === "cli-darwin-arm64" && process.env.PSTDIO_NATIVE_MAC_CLI) {
+    copyFileSync(process.env.PSTDIO_NATIVE_MAC_CLI, outfile);
+    chmodSync(outfile, 0o755);
+  } else {
+    console.log(`\nCompiling for ${target}...`);
+    await $`bun build ${CLI_ENTRY} ${PREPARATION_ENTRIES} --compile --splitting --root . --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} ${recoveryWorkerDefine(target)} --outfile ${outfile}`;
+  }
   assertCoreBinarySize(outfile);
   console.log(`  → ${relative(".", outfile)}`);
 }

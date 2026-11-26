@@ -1,4 +1,6 @@
 {
+  "remote-testing.kito-workflow.title": "Clé API Kito",
+  "remote-testing.kito-workflow.description": "Utiliser Kito pour le stockage des sources et les liens d’aperçu.",
   "remote-testing.preview-helper.title": "Assistant d’URL d’aperçu",
   "remote-testing.preview-helper.description": "Script TypeScript géré par l’opérateur sur cet appareil qui renvoie une URL HTTPS temporaire.",
   "remote-testing.run-tests-remotely": "Exécuter les tests à distance",
@@ -82,6 +84,5 @@
   "remote-testing.remote-tests": "Tests à distance",
   "remote-testing.runs": "Exécutions",
   "remote-testing.environments": "Environnements",
-  "remote-testing.recover-interrupted-setup": "Récupérer la préparation interrompue",
   "remote-testing.resume-environment-cleanup": "Reprendre le nettoyage des environnements"
 }

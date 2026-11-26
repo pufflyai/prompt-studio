@@ -45,11 +45,7 @@ export const createExtensionUpgradeReviewService = (input: {
   install: (input: InstallExtensionSourceInput) => Promise<InstalledExtensionSource>;
   resolveUpgradeInput: (projectId: string, existing: ExistingInstance) => Promise<InstallExtensionSourceInput>;
   registerUpgrade: (existing: ExistingInstance, installed: InstalledExtensionSource) => Promise<UpgradeResult>;
-  separateLocalProvider: (
-    service: ExtensionService,
-    projectId: string,
-    existing: ExistingInstance,
-  ) => Promise<ExistingInstance | undefined>;
+  separateLocalProvider: (projectId: string, existing: ExistingInstance) => Promise<ExistingInstance | undefined>;
   resolvePublishedInput: (
     extensionId: string,
     source: ExistingInstance["installedSource"],
@@ -71,7 +67,7 @@ export const createExtensionUpgradeReviewService = (input: {
   } = input;
   const reviewHome = () => deps.home ?? resolvePstdioHome({ env: process.env });
   const getReviewSource = async (projectId: string, existing: ExistingInstance): Promise<ExtensionReviewSource> => {
-    const local = await separateLocalProvider(deps.extensionService, projectId, existing);
+    const local = await separateLocalProvider(projectId, existing);
     if (local)
       return {
         path: local.installedSource.source_path,

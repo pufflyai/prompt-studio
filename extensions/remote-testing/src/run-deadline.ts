@@ -1,10 +1,20 @@
 import { type Api, canRetryControllerRequest, readControllerWithRetry } from "./connection";
+import { KITO_LOG_UPLOAD_MAX_SECONDS } from "./kito-workflow-limits";
 import type { RunRecord } from "./runs";
 
 // Source transfer and result collection already share this allowance in the signed URLs.
 // The command timer starts after source installation, not at request submission.
 export const TRANSFER_ALLOWANCE_SECONDS = 1800;
 const RECEIPT_READ_MS = 30_000;
+
+export function runTimeoutSeconds(minutes: number, kitoWorkflow?: boolean) {
+  const seconds = Math.round(minutes * 60);
+  if (kitoWorkflow && seconds + TRANSFER_ALLOWANCE_SECONDS > KITO_LOG_UPLOAD_MAX_SECONDS) {
+    const maxMinutes = (KITO_LOG_UPLOAD_MAX_SECONDS - TRANSFER_ALLOWANCE_SECONDS) / 60;
+    throw new Error(`Kito test runs can last at most ${maxMinutes} minutes.`);
+  }
+  return seconds;
+}
 
 export const runDeadline = (record: RunRecord) =>
   Date.parse(record.startedAt) + (record.timeoutSeconds + TRANSFER_ALLOWANCE_SECONDS) * 1000;

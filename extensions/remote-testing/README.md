@@ -81,7 +81,17 @@ pst pocketcoder.remote-testing templates branch --kind tests --path /path/to/wor
 
 `templates branch` registers the version and returns its name. The launch commands also upload the source and start a workspace.
 
-**preview open** uses an operator-managed helper configured in the device setting **Preview URL helper**. Provision this helper on the host before launching previews. It accepts one workspace ID as a command argument and prints JSON containing `url` and `expiresAt`. It must verify the target workspace, use HTTPS and bounded authentication, support extension assets, and expire sessions with the workspace. Keep ingress addresses, credentials and provider configuration outside the repository. The launcher checks for this helper before allocating a preview. Check the bridge capacity before opening concurrent previews.
+**preview open** uses an operator-managed helper configured in the device setting **Preview URL helper**. Provision this helper on the host before launching previews. It accepts one workspace ID as a command argument and prints JSON containing `url` and `expiresAt`. It must verify the target workspace, use HTTPS and bounded authentication, support extension assets, and expire sessions with the workspace. Keep ingress addresses, credentials and provider configuration outside the repository. The launcher checks for this helper before allocating a preview. The helper must provide an independent browser origin for each workspace. Opening one preview must preserve the routes and sessions of every other live preview.
+
+## Kito previews
+
+Enable **Kito API key** in Remote Testing settings on a configured Kito deployment. The **PocketCoder remote tests** connection publishes approved branch templates, signs run-specific source and log URLs, and opens previews. Host credentials stay outside cloud workspaces.
+
+Each preview gets its own HTTPS hostname, cookie, dashboard login and application data. Run and open previews independently; there is no configured preview-count limit. Capacity depends on the deployment's compute, Gateway and certificate quotas. Opening the same workspace again creates a fresh one-use invitation without extending its existing session deadline. A new hostname can take several minutes to provision its certificate; `preview open` waits for verified HTTPS readiness and supports cancellation.
+
+`preview run` returns `runId`, `workspaceId` and `template`. `preview open` returns `workspaceId`, `url` and `expiresAt`. Keep complete invitation URLs in private task evidence and share them only with the intended viewer. Invitation fragments disappear on sign-in. Session access ends at its recorded deadline or when its workspace stops. Kubernetes removes workspace-owned routes, Services and policies with the Pod; a durable certificate sweep also removes expired ingress and certificates after service restarts. Stop only an owned preview with `runs cancel --run-id <runId>` or `environments stop --environment <workspaceId>`.
+
+Operators maintain the Kito bridge from this repository's [operator sources](operator/README.md). Existing previews using the old shared hostname can finish on that route; new previews use independent routes. A workspace launched with the old template must be relaunched to use isolated origins. Never reassign the shared route while a preview is running.
 
 ## Set up
 
