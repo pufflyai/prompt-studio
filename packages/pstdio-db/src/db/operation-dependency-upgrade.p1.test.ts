@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { applyOrderedOperation, prepareOrderedOperation, projectOrderedOperation } from "pstdio-sync/records";
+import { prepareOrderedOperation, projectOrderedOperation } from "pstdio-sync/records";
 import { readDocumentRetry, rememberDocumentRetry } from "../services/extension-storage/document-retries";
 import { withOrderedOwner } from "../services/extension-storage/ordered-journal";
 import { encodeOrderedJson } from "../services/extension-storage/ordered-sql";
@@ -69,7 +69,7 @@ test("the upgrade forgets historical save receipts and remembers decisions learn
   }
 });
 
-test("an offline edit resolves its exact predecessor after an interrupted upgrade", async () => {
+test("a local upgrade expires the old save IDs even with an interrupted delivery queue", async () => {
   const root = await mkdtemp(join(tmpdir(), "pending-receipt-upgrade-"));
   const old = await createTextLogOwnerFixture(root);
   let current: Awaited<ReturnType<typeof createDb>> | undefined;
@@ -122,24 +122,11 @@ test("an offline edit resolves its exact predecessor after an interrupted upgrad
     await old.close();
     oldClosed = true;
     current = await createDb({ path: old.path });
-    expect(await readDocumentRetry(current.db, owner, "local-note", "save")).toBe("old-binding");
+    expect(await readDocumentRetry(current.db, owner, "local-note", "save")).toBeUndefined();
     await withOrderedOwner(current.db, owner, async (journal) => {
       expect(await journal.knownDependency("unrelated")).toBeUndefined();
-      const decision = await journal.knownDependency("first");
-      expect(decision).toMatchObject({ epoch: "previous", state: "accepted", fingerprint: first.fingerprint });
-      const [queued] = await journal.pending();
-      expect(queued?.operation).toEqual(second);
-      const canonical = new Map(
-        applyOrderedOperation(new Map(), first, "previous").records.map((record) => [record.recordId, record]),
-      );
-      const applied = applyOrderedOperation(
-        canonical,
-        queued!.operation,
-        "cloud",
-        undefined,
-        new Map([["first", decision!]]),
-      );
-      expect(applied.records[0]?.value).toEqual({ title: "two" });
+      expect(await journal.knownDependency("first")).toBeUndefined();
+      expect(await journal.pending()).toEqual([]);
     });
     expect(await Bun.file(`${old.path}-ordered-queue-dependencies-upgrade.jsonl`).exists()).toBe(false);
   } finally {

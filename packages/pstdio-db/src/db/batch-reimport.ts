@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { mkdir, open, readFile, rename, rm } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { PGlite, PGliteOptions, Transaction } from "@electric-sql/pglite";
 import { readMigrationFiles } from "drizzle-orm/migrator";
 import {
@@ -12,24 +12,26 @@ import {
   writeDurably,
 } from "./batch-reimport-home";
 import { exportSettledRecords, NeedsRecordAdmission } from "./batch-reimport-records";
+import { stageLocalTransfers } from "./local-upgrade-transfers";
 import { applyPgliteMigrations } from "./migrate-pglite";
 import { openPglite } from "./open-pglite";
 import { engineFile, flushDirectory } from "./pglite-home-recovery";
 import { hasUpgradeSnapshots } from "./upgrade-snapshot";
 
 const quote = (id: string) => `"${id.replaceAll('"', '""')}"`;
-const transferFile = "transfers.copy";
 const recordFile = "records.copy";
 const skipped = new Set([
   "storage_current_records",
   "storage_ordered_records",
-  "asset_transfers",
+  "storage_personal_history_sources",
+  "storage_record_sync",
+  "storage_record_outbox",
   "storage_ordered_operations",
   "storage_ordered_touches",
   "storage_ordered_receipts",
   "storage_document_operations",
 ]);
-const retainedDocument = `document_id NOT LIKE '["ordered-dependency",%' AND document_id NOT LIKE '["ordered-index-blob",%'
+const retainedDocument = `NOT starts_with(document_id,'["ordered-')
   AND (NOT starts_with(document_id,'["resource",') OR (workbench_id,extension_id) NOT IN
     (SELECT o.workbench_id,o.extension_id FROM storage_ordered_owners o WHERE NOT EXISTS
       (SELECT 1 FROM storage_documents d WHERE d.workbench_id=o.workbench_id AND d.extension_id=o.extension_id
@@ -79,9 +81,11 @@ async function copySmallTables(source: PGlite, path: string, dest: PGlite, candi
       if (skipped.has(next)) continue;
       signal?.throwIfAborted();
       const table = quote(next);
-      const where = ["storage_documents", "storage_document_updates"].includes(next)
-        ? ` WHERE ${retainedDocument}`
-        : "";
+      let where = "";
+      if (next === "asset_transfers")
+        where =
+          " WHERE cancelled_at IS NULL AND (project_id,extension_id,operation_id) IN (SELECT * FROM pg_temp.local_upgrade_transfers)";
+      if (["storage_documents", "storage_document_updates"].includes(next)) where = ` WHERE ${retainedDocument}`;
       if (
         !(await source.query<{ present: boolean }>(`SELECT EXISTS(SELECT 1 FROM ${table}${where}) AS present`)).rows[0]!
           .present
@@ -112,6 +116,7 @@ export async function stageBatchReimport(
   options: PGliteOptions,
   folder: string,
   signal?: AbortSignal,
+  storageRoot = join(dirname(path), "storage"),
 ) {
   if (
     existsSync(batchBackup(path)) ||
@@ -152,26 +157,21 @@ export async function stageBatchReimport(
         "DROP SCHEMA public CASCADE; DROP SCHEMA IF EXISTS drizzle CASCADE; CREATE SCHEMA public AUTHORIZATION pg_database_owner; GRANT USAGE ON SCHEMA public TO PUBLIC",
       );
       await applyPgliteMigrations(dest, journal.slice(0, history.length));
+      await stageLocalTransfers(source, storageRoot);
       await copySmallTables(source, path, dest, candidate, signal);
       const payload = join(candidate, batchPayload);
       await mkdir(payload, { mode: 0o700 });
       await source.exec(`CREATE TEMP TABLE reimport_owners AS SELECT row_number() OVER (ORDER BY project_id COLLATE "C",extension_id COLLATE "C")::int AS id, project_id,extension_id
-        FROM (SELECT workbench_id AS project_id,extension_id FROM storage_ordered_owners UNION SELECT project_id,extension_id FROM asset_transfers) o; ANALYZE pg_temp.reimport_owners`);
+        FROM (SELECT workbench_id AS project_id,extension_id FROM storage_ordered_owners UNION SELECT project_id,extension_id FROM pg_temp.local_upgrade_transfers) o; ANALYZE pg_temp.reimport_owners`);
       await copyBinary(
         source,
         path,
         "SELECT id,project_id,extension_id FROM pg_temp.reimport_owners",
         join(payload, "owners.copy"),
       );
-      await copyBinary(
-        source,
-        path,
-        "SELECT o.id,t.operation_id,t.expected,t.cancelled_at::timestamptz,t.created_at::timestamptz FROM asset_transfers t JOIN pg_temp.reimport_owners o USING(project_id,extension_id)",
-        join(payload, transferFile),
-      );
       await exportSettledRecords(source, join(payload, recordFile), signal);
-      for (const name of ["owners.copy", transferFile]) {
-        const f = await open(join(payload, name), "r+");
+      {
+        const f = await open(join(payload, "owners.copy"), "r+");
         try {
           await f.sync();
         } finally {
@@ -217,15 +217,11 @@ export async function importBatchRows(db: PGlite) {
     await tx.exec(`
     SET LOCAL maintenance_work_mem='96MB';
     ALTER TABLE records DROP CONSTRAINT records_owner_id_owners_id_fk, DROP CONSTRAINT records_owner_id_record_id_pk;
-    ALTER TABLE asset_transfers DROP CONSTRAINT asset_transfers_owner_id_owners_id_fk, DROP CONSTRAINT asset_transfers_owner_id_operation_id_pk;
     DROP INDEX records_native_sources_idx;
     COPY records(owner_id,record_id,deleted,value,query_values,asset,shared,native_sources,native_versions,record_lifetime,revision,meta)
       FROM '/pglite/data/${batchPayload}/${recordFile}' WITH (FORMAT binary);
-    COPY asset_transfers(owner_id,operation_id,expected,cancelled_at,created_at) FROM '/pglite/data/${batchPayload}/${transferFile}' WITH (FORMAT binary);
     ALTER TABLE records ADD CONSTRAINT records_owner_id_record_id_pk PRIMARY KEY(owner_id,record_id),
       ADD CONSTRAINT records_owner_id_owners_id_fk FOREIGN KEY(owner_id) REFERENCES owners(id) ON DELETE CASCADE;
-    ALTER TABLE asset_transfers ADD CONSTRAINT asset_transfers_owner_id_operation_id_pk PRIMARY KEY(owner_id,operation_id),
-      ADD CONSTRAINT asset_transfers_owner_id_owners_id_fk FOREIGN KEY(owner_id) REFERENCES owners(id) ON DELETE CASCADE;
     CREATE INDEX records_native_sources_idx ON records USING gin(native_sources);
     DROP SCHEMA pstdio_import_048`);
   });

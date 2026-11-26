@@ -41,6 +41,7 @@ import { prepareFileOwnersUpgrade } from "./file-owners-upgrade";
 import { prepareHistoryOwnerUpgrade } from "./history-owner-upgrade";
 import { retireLegacyRecordTables } from "./legacy-record-retirement";
 import { type LegacyConversionFailure, upgradeLegacyRecords } from "./legacy-record-upgrade";
+import { finishLocalUpgrade } from "./local-upgrade-state";
 import { prepareLogOwnerUpgrade } from "./log-owner-upgrade";
 import { migratePglite, resumeCurrentPgliteSchema } from "./migrate-pglite";
 import { type EmbeddedFile, getEmbeddedFiles, withMigrationsFolder } from "./migration-assets";
@@ -129,13 +130,13 @@ export const createDb = async (options?: {
   signal?: AbortSignal;
   /** Folder for encrypted index nodes; defaults to a sibling of the database folder. */
   indexNodesPath?: string;
+  storageRoot?: string;
   onLegacyConversionError?: (failure: LegacyConversionFailure) => void;
   /** The runtime vacuums in the background and schedules deletion of retired rows. */
   deferCleanup?: boolean;
 }) => {
   const onPhase = options?.onPhase ?? (() => {});
-  const requestedPath = resolveDbPath(options?.path);
-  const dbPath = canonicalDbPath(requestedPath);
+  const dbPath = canonicalDbPath(resolveDbPath(options?.path));
 
   const releaseLock = dbPath === ":memory:" ? () => {} : acquirePgliteLock(dbPath);
 
@@ -170,7 +171,7 @@ export const createDb = async (options?: {
       const source = pglite;
       let staged = false;
       await withMigrationsFolder(async (folder) => {
-        staged = await stageBatchReimport(source, dbPath, pgliteOpts, folder, options?.signal);
+        staged = await stageBatchReimport(source, dbPath, pgliteOpts, folder, options?.signal, options?.storageRoot);
       }, true);
       if (staged) {
         await source.close();
@@ -195,6 +196,8 @@ export const createDb = async (options?: {
         ? createMemoryIndexNodeFiles()
         : createIndexNodeFiles(options?.indexNodesPath ?? `${dbPath}-index-nodes`);
     attachIndexNodeFiles(db, indexNodes);
+    const finishLocal = () =>
+      finishLocalUpgrade(db, openedPglite, options?.storageRoot ?? path.join(path.dirname(dbPath), "storage"));
     let migrated = false;
     let finishArtifactProjectionUpgrade: (() => Promise<void>) | undefined;
     await withMigrationsFolder(async (migrationsFolder) => {
@@ -216,11 +219,12 @@ export const createDb = async (options?: {
           finishLegacyAdmission,
         }))
       ) {
-        if (releasedJournal) await finishReleasedBaseline(openedPglite, dbPath, migrationsFolder);
+        if (releasedJournal) await finishReleasedBaseline(openedPglite, dbPath, migrationsFolder, finishLocal);
         migrated = true;
         return;
       }
-      const receipts = await prepareReleasedSaveReceipts(db, dbPath);
+      const localUpgrade = prefix >= 8 && prefix <= 11;
+      const receipts = await prepareReleasedSaveReceipts(db, dbPath, localUpgrade);
       const finishRecordRows = await prepareRecordRowFinalization(db, dbPath);
       const finishProjectExtensionsUpgrade = await prepareProjectExtensionsUpgrade(db, dbPath);
       const finishResourceLinkOwnerUpgrade = await prepareResourceLinkOwnerUpgrade(db, dbPath);
@@ -246,7 +250,10 @@ export const createDb = async (options?: {
       const finishSessionWorkspaceUpgrade = await prepareSessionWorkspaceUpgrade(db, dbPath);
       await migratePglite(openedPglite, migrationsFolder, async (tx) => {
         if (reimport) await importBatchOwners(tx);
-        if (prefix >= 8 && prefix <= 11) await captureToolUpgradeSources(tx);
+        if (localUpgrade) {
+          await tx.exec("CREATE SCHEMA pstdio_local_upgrade_049");
+          await captureToolUpgradeSources(tx);
+        }
       });
       await finishProjectExtensionsUpgrade?.();
       await finishLogOwnerUpgrade?.();
@@ -273,7 +280,7 @@ export const createDb = async (options?: {
       await finishFileOwnersUpgrade();
       await finishLegacyAdmission();
       await finishRecordRows?.();
-      if (releasedJournal) await finishReleasedBaseline(openedPglite, dbPath, migrationsFolder);
+      if (releasedJournal) await finishReleasedBaseline(openedPglite, dbPath, migrationsFolder, finishLocal);
       migrated = true;
     }, releasedJournal);
     // Copy durable receipts before opening. Remove old rows for both sides of an identity

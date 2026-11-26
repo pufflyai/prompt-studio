@@ -19,7 +19,8 @@ const tables = [
 for (const interruption of ["normal", "schema", "restore"])
   test(`ordered owner upgrade preserves exact state, retries and sequence positions after ${interruption}`, async () => {
     const root = await mkdtemp(join(tmpdir(), "ordered-owner-upgrade-"));
-    const old = await createTextLogOwnerFixture(root);
+    // The preceding format retains its original upgrade contract. The 0.48 cutoff is exercised in batch-reimport.
+    const old = await createTextLogOwnerFixture(root, 6);
     let oldClosed = false;
     let current: Awaited<ReturnType<typeof createDb>> | undefined;
     try {

@@ -39,13 +39,19 @@ export const captureToolUpgradeSources = async (tx: Transaction) => {
 };
 
 /** Adopt the compact journal only after generated DDL and legacy data admission finish. */
-export const finishReleasedBaseline = async (db: PGlite, path: string, releasedFolder: string) => {
+export const finishReleasedBaseline = async (
+  db: PGlite,
+  path: string,
+  releasedFolder: string,
+  finishLocal: () => Promise<void>,
+) => {
   const { journal, applied } = await verifyReleasedJournal(db, releasedFolder);
   if (applied !== journal.length) throw new Error("Incomplete released schema");
   const { rows } = await db.query<{ held: boolean }>(
     "SELECT to_regclass('public.storage_ordered_owners') IS NOT NULL OR to_regclass('public.storage_record_sync') IS NOT NULL OR to_regclass('public.storage_record_outbox') IS NOT NULL AS held",
   );
   if (rows[0]!.held) return;
+  await finishLocal();
   await withMigrationsFolder(async (folder) => {
     const [baseline] = readMigrationFiles({ migrationsFolder: folder });
     if (!baseline) throw new Error("Missing 0.49 database baseline");

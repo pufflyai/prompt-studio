@@ -39,6 +39,7 @@ export type ReleasedSaveReceipts = {
 export const prepareReleasedSaveReceipts = async (
   db: DbClient,
   path: string,
+  localUpgrade = false,
 ): Promise<ReleasedSaveReceipts | undefined> => {
   const {
     rows: [schema],
@@ -88,12 +89,17 @@ export const prepareReleasedSaveReceipts = async (
   const opaque = sql`(workbench_id,extension_id) IN (SELECT workbench_id,extension_id FROM upgrade_pending_owners WHERE opaque)`;
   // Document operation rows only bind prior save IDs to fingerprints. An outstanding
   // edit in either released queue keeps its original retry behavior across conversion.
-  const expireDocumentRetries = Boolean(
-    schema?.released &&
-      !hasQueuedSaves &&
-      (await db.execute<{ settled: boolean }>(sql`SELECT NOT EXISTS (SELECT 1 FROM storage_record_outbox) AS settled`))
-        .rows[0]?.settled,
-  );
+  const expireDocumentRetries =
+    localUpgrade ||
+    Boolean(
+      schema?.released &&
+        !hasQueuedSaves &&
+        (
+          await db.execute<{ settled: boolean }>(
+            sql`SELECT NOT EXISTS (SELECT 1 FROM storage_record_outbox) AS settled`,
+          )
+        ).rows[0]?.settled,
+    );
   return {
     expireDocumentRetries,
     operations: sql`${opaque} OR (workbench_id,extension_id,operation_id) IN

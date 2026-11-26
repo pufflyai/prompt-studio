@@ -11,7 +11,8 @@ import { createTextLogOwnerFixture } from "./log-owner-upgrade.fixture";
 for (const interruption of ["normal", "schema", "restore", "conflict"])
   test(`private history and its covered cursor survive ${interruption} ownership upgrade`, async () => {
     const root = await mkdtemp(join(tmpdir(), "history-owner-upgrade-"));
-    const previous = await createTextLogOwnerFixture(root);
+    // The preceding format retains its original upgrade contract. The 0.48 cutoff is exercised in batch-reimport.
+    const previous = await createTextLogOwnerFixture(root, 6);
     let previousClosed = false;
     let store: Awaited<ReturnType<typeof createDb>> | undefined;
     try {

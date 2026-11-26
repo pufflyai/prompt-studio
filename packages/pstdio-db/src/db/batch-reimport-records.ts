@@ -2,11 +2,7 @@ import { open } from "node:fs/promises";
 import { isDeepStrictEqual } from "node:util";
 import type { PGlite } from "@electric-sql/pglite";
 import type { OrderedRecord } from "pstdio-sync/records";
-import {
-  canonicalRecordFromRow,
-  orderedRecordMetadata,
-  stableRecordColumns,
-} from "../services/extension-storage/ordered-record-row";
+import { canonicalRecordFromRow, orderedRecordMetadata } from "../services/extension-storage/ordered-record-row";
 import { encodeProjectionValue } from "../services/extension-storage/record-projection-codec";
 
 // The ordinary migration can admit optimistic or unpaired representations independently.
@@ -54,11 +50,9 @@ function currentRow(input: ReleasedRecord) {
   if (canonical.recordId !== input.record_id || canonical.deleted !== input.deleted)
     throw new NeedsRecordAdmission("Released record identity or deletion state differs");
 
-  const columns = canonical.deleted ? stableRecordColumns(canonical) : JSON.parse(input.live!);
-  if (!canonical.deleted) {
-    columns.native_sources = encodeProjectionValue(columns.native_sources);
-    columns.meta = orderedRecordMetadata(canonical);
-  }
+  const columns = JSON.parse(input.live!);
+  columns.native_sources = encodeProjectionValue(columns.native_sources);
+  columns.meta = orderedRecordMetadata(canonical);
   const stored = { ...columns, deleted: input.deleted, record_id: input.record_id, base: null };
   if (!isDeepStrictEqual(canonicalRecordFromRow(stored), canonical))
     throw new NeedsRecordAdmission("Released record has an outstanding projection");
@@ -71,7 +65,7 @@ function currentRow(input: ReleasedRecord) {
     jsonField(input.native_versions),
     textField(columns.record_lifetime),
     textField(input.revision),
-    jsonValue(columns.meta),
+    jsonValue({ ...columns.meta, stamps: [] }),
   ]);
 }
 
@@ -87,7 +81,8 @@ export async function exportSettledRecords(source: PGlite, file: string, signal?
           CASE WHEN NOT c.deleted THEN json_build_object('value',c.value,'asset',c.asset,'shared',c.shared,
             'native_sources',c.native_sources,'record_lifetime',c.record_lifetime)::text END AS live
         FROM storage_current_records c FULL JOIN storage_ordered_records r USING(workbench_id,extension_id,record_id)
-        LEFT JOIN pg_temp.reimport_owners o ON o.project_id=c.workbench_id AND o.extension_id=c.extension_id`);
+        LEFT JOIN pg_temp.reimport_owners o ON o.project_id=c.workbench_id AND o.extension_id=c.extension_id
+        WHERE c.deleted IS NOT TRUE`);
       for (;;) {
         signal?.throwIfAborted();
         const { rows } = await tx.query<ReleasedRecord>("FETCH FORWARD 256 FROM export_records");

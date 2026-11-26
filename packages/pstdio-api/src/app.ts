@@ -352,7 +352,7 @@ const buildApp = async (
 };
 
 export const createApp = async (input: CreateAppInput, dependencies: AppDependencies = productionAppDependencies) => {
-  const database = await openAppDatabase(input.config.database.path, input.lifecycle);
+  const database = await openAppDatabase(input.config.database.path, input.lifecycle, input.config.storage.root);
   try {
     const app = await buildApp(input, dependencies, database);
     logStartupPhase("app_ready");

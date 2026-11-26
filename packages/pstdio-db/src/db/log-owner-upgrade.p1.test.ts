@@ -13,7 +13,7 @@ import { createTextLogOwnerFixture } from "./log-owner-upgrade.fixture";
 for (const interruption of ["normal", "schema", "restore"])
   test(`integer log ownership preserves bytes and retries after ${interruption} upgrade`, async () => {
     const root = await mkdtemp(join(tmpdir(), "log-owner-upgrade-"));
-    const previous = await createTextLogOwnerFixture(root);
+    const previous = await createTextLogOwnerFixture(root, 6);
     let store: Awaited<ReturnType<typeof createDb>> | undefined;
     let previousClosed = false;
     try {

@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import { existsSync } from "node:fs";
-import { mkdtemp, rename, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { stageBatchReimport } from "./batch-reimport";
 import { batchBackup, batchPayload, recoverBatchHome } from "./batch-reimport-home";
 import { createDb, resolvePgliteOptions } from "./connection.pglite";
@@ -10,6 +10,17 @@ import { createTextLogOwnerFixture } from "./log-owner-upgrade.fixture";
 import { openPglite } from "./open-pglite";
 
 async function seed(old: Awaited<ReturnType<typeof createTextLogOwnerFixture>>) {
+  const encoded = (value: string) => Buffer.from(value).toString("base64url");
+  const uploads = join(
+    dirname(old.path),
+    "storage",
+    "asset-bytes",
+    encoded("p"),
+    encoded("example.records"),
+    "transfers",
+  );
+  await mkdir(uploads, { recursive: true });
+  await writeFile(join(uploads, encoded("transfer")), "partial");
   await old.pglite.exec(`INSERT INTO projects (id,name,shorthand,created_at,updated_at)
           VALUES ('p','Before','P','2026-11-01','2026-11-01');
           INSERT INTO storage_ordered_owners(workbench_id,extension_id,epoch) VALUES ('p','example.records','local:p');
@@ -19,7 +30,20 @@ async function seed(old: Awaited<ReturnType<typeof createTextLogOwnerFixture>>) 
           VALUES ('p','example.records','r',false,'{"title":"saved"}','42','initial');
           INSERT INTO storage_ordered_records VALUES ('p','example.records','r',
           convert_to('{"recordId":"r","value":{"value":{"title":"saved"}},"deleted":false,"lifetime":"initial","stamps":{}}','UTF8'));
-          INSERT INTO asset_transfers VALUES ('p','example.records','transfer','{"byteLength":10}',NULL,'2026-11-01');
+          INSERT INTO asset_transfers VALUES ('p','example.records','transfer','{"byteLength":10}',NULL,'2026-11-01'),
+            ('p','example.records','finished','{"byteLength":9}',NULL,'2026-11-01');
+          INSERT INTO storage_current_records(workbench_id,extension_id,record_id,deleted,revision,record_lifetime)
+            VALUES ('p','example.records','deleted-file',true,'41','initial');
+          INSERT INTO storage_ordered_records VALUES ('p','example.records','deleted-file',
+            convert_to('{"recordId":"deleted-file","value":null,"deleted":true,"lifetime":"initial","stamps":{}}','UTF8'));
+          UPDATE storage_ordered_owners SET joined=true,"after"=23,state_id='old-cloud' WHERE workbench_id='p';
+          INSERT INTO storage_personal_history (workbench_id,extension_id,device_id,kind,record_id,value,pending_id)
+            VALUES ('p','example.records','laptop','sessions','recent','{"title":"local session"}','old-save');
+          INSERT INTO storage_personal_history_sources(workbench_id,extension_id,source_id,kind,device_id,record_id,value,entry_id,sequence,entry_index)
+            VALUES ('p','example.records','laptop','sessions','laptop','recent','{}','old-entry',3,0);
+          INSERT INTO storage_documents(workbench_id,extension_id,document_id,state)
+            VALUES ('p','example.records','["ordered-directory"]',decode('0000','hex')),
+                   ('p','example.records','["ordered-native-field","old"]',decode('0000','hex'));
           INSERT INTO storage_ordered_operations(workbench_id,extension_id,operation_id,fingerprint) VALUES ('p','example.records','obsolete','fp');
           INSERT INTO storage_ordered_receipts(workbench_id,extension_id,epoch,operation_id,admission_fingerprint,state,indexed)
           VALUES ('p','example.records','local:p','obsolete','fp','accepted',true);`);
@@ -46,6 +70,18 @@ for (const lastMigration of [7, 9, 10]) {
           { operation_id: "transfer" },
         ]);
         expect((await db.pglite.query("SELECT count(*)::int n FROM operations")).rows).toEqual([{ n: 0 }]);
+        expect(
+          (
+            await db.pglite.query(
+              "SELECT epoch,joined,\"after\",state_id FROM owners WHERE extension_id='example.records'",
+            )
+          ).rows,
+        ).toEqual([{ epoch: null, joined: false, after: 0, state_id: null }]);
+        expect((await db.pglite.query("SELECT value,pending_id FROM history_rows")).rows).toEqual([
+          { value: { title: "local session" }, pending_id: null },
+        ]);
+        expect((await db.pglite.query("SELECT 1 FROM history_sources")).rows).toEqual([]);
+        expect((await db.pglite.query(`SELECT 1 FROM documents WHERE starts_with(key,'["ordered-')`)).rows).toEqual([]);
         await db.pglite.exec("UPDATE projects SET name='After' WHERE id='p'");
       } finally {
         await db.close();

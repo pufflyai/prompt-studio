@@ -13,7 +13,8 @@ import { assetTransfers, owners } from "./schemas.pg";
 for (const interruption of ["normal", "schema", "restore"])
   test(`asset transfers preserve upload identity and cancellation after ${interruption} owner upgrade`, async () => {
     const root = await mkdtemp(join(tmpdir(), "asset-owner-upgrade-"));
-    const previous = await createTextLogOwnerFixture(root);
+    // The preceding format retains its original upgrade contract. The 0.48 cutoff is exercised in batch-reimport.
+    const previous = await createTextLogOwnerFixture(root, 6);
     let previousClosed = false;
     let store: Awaited<ReturnType<typeof createDb>> | undefined;
     try {

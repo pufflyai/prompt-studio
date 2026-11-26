@@ -7,12 +7,13 @@ export const storageScale = {
   updates: 79_996,
   retries: 169_894,
   records: 337_379,
+  liveRecords: 39_458,
   operations: 538_976,
   transfers: 398_882,
   resourceDocuments: 89_267,
 } as const;
 
-export const seedReleasedStorage = async (db: PGlite) => {
+export const seedReleasedStorage = async (db: PGlite, liveRecords: number) => {
   const { projects, documents, updates, retries, records, operations, transfers, resourceDocuments } = storageScale;
   await db.exec(`CREATE TEMP VIEW upgrade_projects AS SELECT n,CASE WHEN n=0 THEN 'upgrade-repro' ELSE 'fixture-'||n END AS id
     FROM generate_series(0,${projects - 1}) n;
@@ -21,7 +22,7 @@ export const seedReleasedStorage = async (db: PGlite) => {
     INSERT INTO storage_documents(workbench_id,extension_id,document_id,state)
       SELECT id,'fixture.records','records',decode('0000','hex') FROM upgrade_projects;
     INSERT INTO storage_record_projections(workbench_id,extension_id,document_id,revision,live_count)
-      SELECT id,'fixture.records','records',1,(${records}+n)/${projects} FROM upgrade_projects;`);
+      SELECT id,'fixture.records','records',1,(${liveRecords} + (${projects} - n) % ${projects})/${projects} FROM upgrade_projects;`);
   const populate = async (count: number, statement: string) => {
     for (let start = 1; start <= count; start += 5000) {
       const end = Math.min(start + 4999, count);
@@ -69,13 +70,13 @@ export const seedReleasedStorage = async (db: PGlite) => {
   await populate(
     records,
     `INSERT INTO storage_current_records(workbench_id,extension_id,record_id,deleted,value,query_values,revision,record_lifetime)
-    SELECT project,'fixture.records',key,false,${value},'{}'::jsonb,'1','initial' FROM page`,
+    SELECT project,'fixture.records',key,i>${liveRecords},${value},'{}'::jsonb,'1','initial' FROM page`,
   );
   await populate(
     records,
     `INSERT INTO storage_ordered_records(workbench_id,extension_id,record_id,state)
     SELECT project,'fixture.records',key,convert_to(jsonb_build_object('recordId',key,'value',jsonb_build_object('value',${value}),
-      'deleted',false,'lifetime','initial','stamps','{}'::jsonb)::text,'UTF8') FROM page`,
+      'deleted',i>${liveRecords},'lifetime','initial','stamps','{}'::jsonb)::text,'UTF8') FROM page`,
   );
   await populate(
     transfers,

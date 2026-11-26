@@ -121,6 +121,32 @@ for (const interruption of ["normal", "schema", "restore"])
       await old.close();
       closed = true;
       current = await createDb({ path: old.path });
+      if (interruption === "normal") {
+        const verifyLocal = async () => {
+          const service = createDocumentStorageDBService(current!.db);
+          const records = service.open({ owner }).records;
+          expect((await records.read("pending")).value).toEqual({ title: "pending" });
+          expect((await records.read("z-created")).value).toEqual({ title: "new" });
+          expect((await records.read("orphan")).value).toEqual({ title: "query only" });
+          await withOrderedOwner(current!.db, owner, async (journal) => {
+            expect(await journal.pending()).toEqual([]);
+            const visible = await journal.canonical(["pending", "z-created"]);
+            expect(visible.get("pending")).toMatchObject({ value: { value: { title: "pending" } }, stamps: {} });
+            expect(visible.get("z-created")).toMatchObject({ value: { value: { title: "new" } }, stamps: {} });
+          });
+          await service.flushStatistics();
+        };
+        await verifyLocal();
+        await current.close();
+        current = await createDb({ path: old.path });
+        await verifyLocal();
+        const service = createDocumentStorageDBService(current.db);
+        const records = service.open({ owner }).records;
+        await records.commit({ operationId: "new-save", edits: [{ recordId: "pending", set: { "/done": true } }] });
+        expect((await records.read("pending")).value).toEqual({ title: "pending", done: true });
+        await service.flushStatistics();
+        return;
+      }
       const verify = async () => {
         await withOrderedOwner(current!.db, owner, async (journal) => {
           expect(await journal.canonical([...confirmed.keys(), "orphan", "z-created"])).toEqual(confirmed);
