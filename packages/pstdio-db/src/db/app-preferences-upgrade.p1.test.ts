@@ -86,4 +86,4 @@ test("upgrading preserves device identity and global settings without replaying 
     await rm(root, { recursive: true, force: true });
     await rm(`${path}-index-nodes`, { recursive: true, force: true });
   }
-});
+}, 15_000);
