@@ -13,8 +13,9 @@ export const storageScale = {
   resourceDocuments: 89_267,
 } as const;
 
-export const seedReleasedStorage = async (db: PGlite, liveRecords: number) => {
-  const { projects, documents, updates, retries, records, operations, transfers, resourceDocuments } = storageScale;
+export const seedReleasedStorage = async (db: PGlite) => {
+  const { projects, documents, updates, retries, records, liveRecords, operations, transfers, resourceDocuments } =
+    storageScale;
   await db.exec(`CREATE TEMP VIEW upgrade_projects AS SELECT n,CASE WHEN n=0 THEN 'upgrade-repro' ELSE 'fixture-'||n END AS id
     FROM generate_series(0,${projects - 1}) n;
     INSERT INTO projects(id,name,shorthand,created_at,updated_at) SELECT id,'Fixture '||n,'F'||n,'2026-11-20','2026-11-20' FROM upgrade_projects WHERE n>0;

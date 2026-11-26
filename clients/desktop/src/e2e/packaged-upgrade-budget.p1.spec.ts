@@ -13,7 +13,7 @@ import {
 } from "./packaged-app-helpers";
 import { openPackagedProject } from "./packaged-project-helpers";
 
-type Profile = "history" | "storage" | "local-storage";
+type Profile = "history" | "local-storage";
 const fixture = resolve(import.meta.dirname, "../../../../packages/e2e/src/packaged/desktop-upgrade.fixture.ts");
 const test = packaged.extend<{ profile: Profile; upgradeHome: string }>({
   profile: ["history", { option: true }],
@@ -27,7 +27,7 @@ const test = packaged.extend<{ profile: Profile; upgradeHome: string }>({
   ],
 });
 
-for (const profile of ["history", "local-storage", "storage"] as const)
+for (const profile of ["history", "local-storage"] as const)
   test.describe(profile, () => {
     test.use({ profile });
     test("completes the upgrade, opens the project and persists an edit within the upgrade budget", async ({

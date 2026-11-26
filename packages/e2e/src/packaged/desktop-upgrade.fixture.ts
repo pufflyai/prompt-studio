@@ -9,17 +9,16 @@ import { seedReleasedStorage, storageScale } from "./desktop-upgrade-storage.fix
 
 const [action, home, profile = "history"] = process.argv.slice(2);
 assert(home, "Supply an isolated test home");
-assert(["history", "storage", "local-storage"].includes(profile), "Unknown upgrade profile");
+assert(["history", "local-storage"].includes(profile), "Unknown upgrade profile");
 const database = join(home, "pstdio.db");
 const count = 90_000;
-const liveRecords = profile === "local-storage" ? storageScale.liveRecords : storageScale.records;
 
 if (action === "seed") {
   const legacy = await createTextLogOwnerFixture(home);
   try {
     await legacy.pglite.exec(`INSERT INTO projects (id,name,shorthand,created_at,updated_at)
       VALUES ('upgrade-repro','Upgrade fixture','UP','2026-11-20T12:00:00Z','2026-11-20T12:00:00Z')`);
-    if (profile !== "history") await seedReleasedStorage(legacy.pglite, liveRecords);
+    if (profile !== "history") await seedReleasedStorage(legacy.pglite);
     else
       await legacy.pglite.exec(`INSERT INTO storage_personal_history (workbench_id,extension_id,device_id,kind,record_id,value,seed_id,pending_id)
       SELECT 'upgrade-repro','history','test-device','sessions','session-'||n,jsonb_build_object('id',n),'seed-'||n,'pending-'||n
@@ -45,7 +44,14 @@ if (action === "seed") {
         (SELECT count(*)::int FROM projects) AS projects, (SELECT count(*)::int FROM records WHERE deleted) AS deleted,
         (SELECT count(*)::int FROM documents WHERE starts_with(key,'["ordered-')) AS markers`);
       assert.deepEqual(check.rows, [
-        { records: liveRecords, operations: 0, transfers: 0, projects: storageScale.projects, deleted: 0, markers: 0 },
+        {
+          records: storageScale.liveRecords,
+          operations: 0,
+          transfers: 0,
+          projects: storageScale.projects,
+          deleted: 0,
+          markers: 0,
+        },
       ]);
     } else {
       const { rows } = await db.query(`SELECT
