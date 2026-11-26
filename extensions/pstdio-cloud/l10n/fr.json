@@ -37,6 +37,8 @@
   "account.cancelLogin": "Annuler la connexion",
   "account.signOut": "Se déconnecter",
   "account.signInGoogle": "Se connecter avec Google",
+  "account.signIn": "Se connecter",
+  "account.closeSignIn": "Fermer la connexion",
   "account.signInMicrosoft": "Se connecter avec Microsoft",
   "account.providerUnavailable": "Ce service Cloud n’a pas activé ce fournisseur de connexion.",
   "account.providerDenied": "La connexion a été refusée. Vérifiez la politique de consentement de votre fournisseur et réessayez.",

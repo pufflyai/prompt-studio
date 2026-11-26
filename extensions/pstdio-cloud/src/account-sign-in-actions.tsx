@@ -1,34 +1,69 @@
-import { HStack } from "@chakra-ui/react";
+import { CloseButton, Stack } from "@chakra-ui/react";
 import type { AccountSignInProvider, AccountStatus } from "@pstdio/sdk/extensions";
+import { Portal, ScopedDialog as Dialog } from "@pstdio/ui";
+import { useState } from "react";
 import { Button } from "./button";
 import { useCloudContext } from "./cloud-context";
 import { CloudError } from "./cloud-error";
+import { GoogleIcon, MicrosoftIcon } from "./sign-in-provider-icons";
 
-export const AccountSignInActions = (props: {
+interface AccountSignInActionsProps {
   pending: boolean;
   busy?: boolean;
   disabled?: boolean;
   signIn(provider: AccountSignInProvider): void;
   cancel(): void;
-}) => {
+}
+
+export const AccountSignInActions = (props: AccountSignInActionsProps) => {
+  const { pending, busy, disabled: unavailable, signIn, cancel } = props;
   const { t } = useCloudContext();
-  const disabled = props.disabled || props.busy;
-  if (props.pending) {
+  const [open, setOpen] = useState(false);
+  const disabled = unavailable || busy;
+  const choose = (provider: AccountSignInProvider) => {
+    setOpen(false);
+    signIn(provider);
+  };
+  if (pending) {
     return (
-      <Button size="sm" variant="outline" disabled={disabled} onClick={props.cancel}>
+      <Button size="sm" variant="outline" disabled={disabled} onClick={cancel}>
         {t("account.cancelLogin", "Cancel sign-in")}
       </Button>
     );
   }
   return (
-    <HStack gap="xs" flexWrap="wrap">
-      <Button size="sm" variant="outline" disabled={disabled} onClick={() => props.signIn("google")}>
-        {t("account.signInGoogle", "Sign in with Google")}
-      </Button>
-      <Button size="sm" variant="outline" disabled={disabled} onClick={() => props.signIn("microsoft")}>
-        {t("account.signInMicrosoft", "Sign in with Microsoft")}
-      </Button>
-    </HStack>
+    <Dialog.Root open={open} onOpenChange={({ open }) => setOpen(open)} size="sm" placement="center">
+      <Dialog.Trigger asChild>
+        <Button size="sm" variant="outline" disabled={disabled}>
+          {t("account.signIn", "Sign in")}
+        </Button>
+      </Dialog.Trigger>
+      <Portal>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.Header>
+              <Dialog.Title>{t("account.signIn", "Sign in")}</Dialog.Title>
+              <Dialog.CloseTrigger asChild>
+                <CloseButton size="sm" aria-label={t("account.closeSignIn", "Close sign-in")} />
+              </Dialog.CloseTrigger>
+            </Dialog.Header>
+            <Dialog.Body>
+              <Stack gap="sm">
+                <Button variant="outline" disabled={disabled} justifyContent="start" onClick={() => choose("google")}>
+                  <GoogleIcon />
+                  {t("account.signInGoogle", "Sign in with Google")}
+                </Button>
+                <Button variant="outline" disabled={disabled} justifyContent="start" onClick={() => choose("microsoft")}>
+                  <MicrosoftIcon />
+                  {t("account.signInMicrosoft", "Sign in with Microsoft")}
+                </Button>
+              </Stack>
+            </Dialog.Body>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Portal>
+    </Dialog.Root>
   );
 };
 

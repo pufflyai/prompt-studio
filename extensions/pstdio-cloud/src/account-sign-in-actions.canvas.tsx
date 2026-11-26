@@ -1,4 +1,4 @@
-import { HStack, Stack, Text } from "@chakra-ui/react";
+import { Checkbox, HStack, Stack, Text } from "@chakra-ui/react";
 import type { AccountSignInProvider } from "@pstdio/sdk/extensions";
 import { createWebviewClient } from "@pstdio/sdk/extensions";
 import { SimpleCard, SimpleCardBody } from "@pstdio/ui";
@@ -16,16 +16,22 @@ const client = createWebviewClient<typeof cloudCommands>({
   onEvent: () => () => {},
 });
 
-export default { title: "Cloud/Account sign-in" };
+export default { title: "Cloud/Account sign-in", description: "One sign-in action opens a provider list with Google and Microsoft icons." };
 
 export const AccountSignIn = () => {
   const [provider, setProvider] = useState<AccountSignInProvider>();
   const [failed, setFailed] = useState(false);
+  const [disabled, setDisabled] = useState(false);
   return (
     <CloudContext value={{ client, t: (key, fallback = key) => fallback }}>
       <SimpleCard>
         <SimpleCardBody>
           <Stack gap="sm" position="relative">
+            <Checkbox.Root checked={disabled} onCheckedChange={({ checked }) => setDisabled(checked === true)}>
+              <Checkbox.HiddenInput />
+              <Checkbox.Control />
+              <Checkbox.Label>Disable sign-in</Checkbox.Label>
+            </Checkbox.Root>
             <HStack gap="xs">
               <CloudIcon name="user-round" />
               <Text textStyle="label/M/medium">Account</Text>
@@ -34,6 +40,7 @@ export const AccountSignIn = () => {
               <Text>{provider ? "Waiting for sign-in…" : "Not signed in"}</Text>
               <AccountSignInActions
                 pending={!!provider}
+                disabled={disabled}
                 signIn={(selected) => {
                   setFailed(false);
                   setProvider(selected);
