@@ -3,6 +3,8 @@ import { type SQL, sql } from "drizzle-orm";
 import type { RecordEdit, StorageRecordIndex } from "pstdio-sync-contracts";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { firstRecordByField } from "./record-first-match";
+import { defineRecordIndexes } from "./record-index-definition";
 import { readQueryOwner } from "./record-query-owner";
 import { recordFieldSql, recordPageSql, recordScopeSql } from "./record-query-sql";
 import { relatedRecordPredicateSql } from "./record-related-query";
@@ -105,15 +107,36 @@ const visits = (nodes: Record<string, unknown>[]) =>
   );
 
 test("lookup probes the target equality key instead of scanning all placements per resource", async () => {
-  const targets = (
-    await explain(recordFieldSql(indexes[0], "group", undefined, resolve, await readQueryOwner(f.db, owner)))
-  ).filter((node) => node.Alias === "records_lookup");
-  expect(visits(targets)).toBeLessThanOrEqual(600);
+  const plan = await explain(
+    recordFieldSql(indexes[0], "group", undefined, resolve, await readQueryOwner(f.db, owner)),
+  );
+  const targets = plan.filter((node) => node.Alias === "records_lookup");
+  const map = plan.filter((node) => node.Alias === "candidate_row");
+  expect(map.map((node) => node["Actual Loops"])).toEqual([1]);
+  expect(visits([...targets, ...map])).toBeLessThanOrEqual(600);
   expect(targets.some((node) => node["Index Cond"])).toBe(true);
   expect((await records.aggregate({ index: "resources", groupBy: "group", groupLimit: 10 })).groups).toContainEqual({
     value: "release",
     count: 1,
   });
+});
+
+test("an oversized statement lookup preserves duplicate ordering and skips null and missing keys", async () => {
+  const match = firstRecordByField(
+    indexes[0],
+    "id",
+    "target",
+    sql`src.keys`,
+    true,
+    (alias) => sql`${sql.identifier(alias)}.value`,
+    () => sql`true`,
+  );
+  const result = await f.db.execute(sql`WITH records(record_id, value) AS MATERIALIZED (
+    SELECT n::text, to_jsonb(repeat('x', 32768) || n::text) FROM generate_series(1, 260) n
+    UNION ALL VALUES ('a', 'null'::jsonb), ('z', '"one"'::jsonb), ('b', '"one"'::jsonb), ('c', '"two"'::jsonb)
+  ), src(keys) AS (VALUES ('[null, "one", "two", "missing"]'::jsonb))
+  SELECT target.record_id FROM src CROSS JOIN records target WHERE ${match} ORDER BY target.record_id LIMIT 1`);
+  expect(result.rows).toEqual([{ record_id: "b" }]);
 });
 
 test("dependency membership probes only referenced targets including empty source arrays", async () => {
@@ -219,17 +242,21 @@ test("core identity lookups probe the resource ID instead of every same-kind ide
     name: "identified-ordered",
     orderBy: [{ field: "title", direction: "asc" }],
   };
-  await records.defineIndexes([...indexes, ordered]);
-  const plan = await f.db.execute(
-    sql`EXPLAIN (ANALYZE, FORMAT JSON) ${recordPageSql(ordered, [], recordScopeSql(await readQueryOwner(f.db, owner), ordered), 1, 0, resolve, await readQueryOwner(f.db, owner))}`,
-  );
-  const identityVisits = (value: unknown): number => {
-    if (!value || typeof value !== "object") return 0;
-    const node = value as Record<string, unknown>;
-    return (
-      (node.Alias === "identity" ? visits([node]) : 0) +
-      Object.values(node).reduce<number>((sum, child) => sum + identityVisits(child), 0)
+  // An extension-defined order must consider every candidate's identity before sorting.
+  // A host-maintained ordering can stop after filling the page.
+  for (const mode of ["query", "host-index"] as const) {
+    await defineRecordIndexes(f.db, owner, [...indexes, ordered], mode);
+    const plan = await f.db.execute(
+      sql`EXPLAIN (ANALYZE, FORMAT JSON) ${recordPageSql(ordered, [], recordScopeSql(await readQueryOwner(f.db, owner), ordered), 1, 0, resolve, await readQueryOwner(f.db, owner))}`,
     );
-  };
-  expect(identityVisits(plan.rows)).toBeLessThanOrEqual(10);
+    const identityVisits = (value: unknown): number => {
+      if (!value || typeof value !== "object") return 0;
+      const node = value as Record<string, unknown>;
+      return (
+        (node.Alias === "identity" ? visits([node]) : 0) +
+        Object.values(node).reduce<number>((sum, child) => sum + identityVisits(child), 0)
+      );
+    };
+    expect(identityVisits(plan.rows)).toBeLessThanOrEqual(mode === "host-index" ? 10 : 300);
+  }
 });

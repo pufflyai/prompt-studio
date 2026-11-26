@@ -3,6 +3,7 @@ import { loadQueryIndexDependencies } from "pstdio-sync/records";
 import type { StoragePredicate, StorageRecordIndex } from "pstdio-sync-contracts";
 import { queryExpressionSql } from "./query-expression-sql";
 import { expressionArray, expressionComparable } from "./query-expression-values";
+import { firstRecordByField } from "./record-first-match";
 import { predicateSql, recordEqualitySql, recordFieldSql, recordScopeSql } from "./record-query-sql";
 import { relatedScalarMembershipSql } from "./record-related-membership";
 import { relatedReferenceCandidatesSql } from "./record-related-reference-candidates";
@@ -84,6 +85,25 @@ export const relatedRecordPredicateSql = (
           // Null/missing joins have no relationship. JSON comparisons preserve encoded strings.
           return sql`(${left} IS NOT NULL AND ${left} <> 'null'::jsonb AND ${right} IS NOT NULL AND ${right} <> 'null'::jsonb AND ${matches})`;
         });
+        const [join] = selection.on;
+        if (
+          typeof owner.workbenchId === "string" &&
+          selection.on.length === 1 &&
+          join.op === "contains" &&
+          !selection.every &&
+          !selection.where
+        ) {
+          const probe = firstRecordByField(
+            target,
+            join.relatedField,
+            targetAlias,
+            recordFieldSql(outer, join.sourceField, alias, indexFor, owner),
+            true,
+            (candidate) => recordFieldSql(target, join.relatedField, candidate, indexFor, owner),
+            (candidate) => recordScopeSql(owner, target, candidate),
+          );
+          joins.push(probe ?? sql`true`);
+        }
         const each = selection.every;
         const itemAlias = sql.identifier(`related_item_${statement}_${depth}`);
         const names = each ? new Map(variables).set(each.as, sql`${itemAlias}.value`) : variables;

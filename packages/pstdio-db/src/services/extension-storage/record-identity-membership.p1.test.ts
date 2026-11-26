@@ -6,8 +6,12 @@ import * as schema from "../../db/schemas.pg";
 import { attachDocumentFiles, documentFilesFor } from "./document-files";
 import { createDocumentStorageDBService } from "./document-storage";
 import { attachIndexNodeFiles, createMemoryIndexNodeFiles } from "./index-node-files";
+import { defineRecordIndexes } from "./record-index-definition";
 
-test("canonical filtered counts use maintained identity membership without reading each core document", async () => {
+test.each([
+  "query",
+  "host-index",
+] as const)("canonical filtered counts bound identity reads for each storage mode (%s)", async (mode) => {
   const connection = await createDb({ path: ":memory:" });
   let capture = false;
   const statements: { query: string; params: unknown[] }[] = [];
@@ -75,7 +79,7 @@ test("canonical filtered counts use maintained identity membership without readi
         }),
       });
     }
-    await rows.defineIndexes([definition, { ...definition, name: "reference", countBy: undefined }]);
+    await defineRecordIndexes(db, owner, [definition, { ...definition, name: "reference", countBy: undefined }], mode);
     await rows.query({ index: "items", fields: ["id"], limit: 1 });
     capture = true;
     const counted = await rows.aggregate({
@@ -100,7 +104,8 @@ test("canonical filtered counts use maintained identity membership without readi
           : 0;
       return visits + Object.values(node).reduce<number>((sum, child) => sum + coreVisits(child), 0);
     };
-    expect(coreVisits(explained.rows)).toBeLessThanOrEqual(1);
+    // Without a materialized membership table the aggregate checks each matching identity once.
+    expect(coreVisits(explained.rows)).toBeLessThanOrEqual(mode === "host-index" ? 1 : 300);
     expect(
       (
         await rows.aggregate({
