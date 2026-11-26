@@ -31,7 +31,13 @@ await runScenario("B2", (capture) =>
     assert(descriptor && descriptor.instanceId === seeded.runtime.instanceId, "Missing seed runtime");
     const shutdown = await requestRuntimeShutdown(descriptor, true, fetch, context.signal);
     assert.equal(shutdown.state, "accepted");
-    await wait(async () => !isRuntimePidAlive(descriptor.pid), "clean seed runtime exit", context.signal);
+    // The desktop quits in response to the runtime's intentional shutdown. Both
+    // exits must finish before closeApp releases the browser and process handles.
+    await wait(
+      async () => seeded.desktopExited() && !isRuntimePidAlive(descriptor.pid),
+      "clean seed desktop and runtime exit",
+      context.signal,
+    );
     await context.closeApp();
     const app = await context.launch();
     assert.notEqual(app.runtime.instanceId, seeded.runtime.instanceId);
