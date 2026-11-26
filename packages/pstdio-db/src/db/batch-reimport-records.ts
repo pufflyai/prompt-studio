@@ -82,6 +82,7 @@ export async function exportSettledRecords(source: PGlite, file: string, signal?
       } = await tx.query<{ found: boolean }>(`SELECT EXISTS (
         SELECT 1 FROM storage_ordered_records r WHERE NOT EXISTS(SELECT 1 FROM storage_current_records c
         WHERE (c.workbench_id,c.extension_id,c.record_id)=(r.workbench_id,r.extension_id,r.record_id))) AS found`);
+      console.log("upgrade-profile",Date.now(),"checked pairs");
       if (unpaired?.found) throw new NeedsRecordAdmission("Released record has no published representation");
       await tx.exec(`SET LOCAL work_mem='96MB';
         DECLARE export_records NO SCROLL CURSOR FOR
@@ -92,11 +93,15 @@ export async function exportSettledRecords(source: PGlite, file: string, signal?
         FROM storage_current_records c LEFT JOIN storage_ordered_records r USING(workbench_id,extension_id,record_id)
         LEFT JOIN pg_temp.reimport_owners o ON o.project_id=c.workbench_id AND o.extension_id=c.extension_id
         WHERE NOT c.deleted`);
+      let rowMs=0, fetchMs=0,writeMs=0,n=0;
       for (;;) {
+        const t=performance.now();
         signal?.throwIfAborted();
         const { rows } = await tx.query<ReleasedRecord>("FETCH FORWARD 256 FROM export_records");
-        if (!rows.length) break;
-        await output.writeFile(Buffer.concat(rows.map(currentRow)));
+        fetchMs+=performance.now()-t;
+        if (!rows.length) {console.log("upgrade-profile",Date.now(),"exported",JSON.stringify({fetchMs,rowMs,writeMs,n}));break;}
+        const r=performance.now();const buf=Buffer.concat(rows.map(currentRow));rowMs+=performance.now()-r;
+        const b=performance.now();await output.writeFile(buf);writeMs+=performance.now()-b;n+=rows.length;
       }
     });
     await output.writeFile(Buffer.from([255, 255]));

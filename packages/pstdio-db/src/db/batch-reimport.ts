@@ -148,6 +148,7 @@ export async function stageBatchReimport(
   ).rows;
   if (!eligible) return false;
   const candidate = await beginBatchHome(path);
+    console.log("upgrade-profile",Date.now(),'eligible');
   let sealed = false;
   try {
     const dest = await openPglite(candidate, options);
@@ -158,8 +159,10 @@ export async function stageBatchReimport(
         "DROP SCHEMA public CASCADE; DROP SCHEMA IF EXISTS drizzle CASCADE; CREATE SCHEMA public AUTHORIZATION pg_database_owner; GRANT USAGE ON SCHEMA public TO PUBLIC",
       );
       await applyPgliteMigrations(dest, journal.slice(0, history.length));
+    console.log("upgrade-profile",Date.now(),'prefix');
       await stageLocalTransfers(source, storageRoot);
       await copySmallTables(source, path, dest, candidate, signal);
+    console.log("upgrade-profile",Date.now(),'tables');
       const payload = join(candidate, batchPayload);
       await mkdir(payload, { mode: 0o700 });
       await source.exec(`CREATE TEMP TABLE reimport_owners AS SELECT row_number() OVER (ORDER BY project_id COLLATE "C",extension_id COLLATE "C")::int AS id, project_id,extension_id
@@ -171,6 +174,7 @@ export async function stageBatchReimport(
         join(payload, "owners.copy"),
       );
       await exportSettledRecords(source, join(payload, recordFile), signal);
+    console.log("upgrade-profile",Date.now(),'records');
       {
         const f = await open(join(payload, "owners.copy"), "r+");
         try {
@@ -183,12 +187,14 @@ export async function stageBatchReimport(
       await writeDurably(join(candidate, engineFile), await readFile(join(path, engineFile), "utf8"));
     } finally {
       await dest.close();
+    console.log("upgrade-profile",Date.now(),'closed candidate');
     }
     signal?.throwIfAborted();
     await flushDirectory(candidate);
     await writeDurably(join(batchWork(path), "ready"), "");
     sealed = true;
     await flushDirectory(batchWork(path));
+    console.log("upgrade-profile",Date.now(),'sealed');
     return true;
   } catch (error) {
     if (error instanceof NeedsRecordAdmission) return false;

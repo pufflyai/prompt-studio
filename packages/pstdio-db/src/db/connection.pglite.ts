@@ -175,10 +175,12 @@ export const createDb = async (options?: {
       }, true);
       if (staged) {
         await source.close();
+        console.log("upgrade-profile",Date.now(),'closed original');
         pglite = undefined;
         await recoverBatchHome(dbPath);
         pglite = await openPglite(dbPath, pgliteOpts);
         await pglite.waitReady;
+        console.log("upgrade-profile",Date.now(),'opened compact');
       }
     }
     const openedPglite = pglite;
