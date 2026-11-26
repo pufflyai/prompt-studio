@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Reserve changes to a team's shared extension set for the team owner.
+Allow project members to publish ordinary shared extensions while reserving required extension policies for the team owner.

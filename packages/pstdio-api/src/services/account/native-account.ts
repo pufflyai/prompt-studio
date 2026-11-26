@@ -2,17 +2,15 @@ import { dirname, join } from "node:path";
 import type {
   AccountSignInProvider,
   AccountStatus,
-  DeviceCommand,
   ProjectReturnAction,
   ProjectSyncStatus,
 } from "pstdio-api-contracts";
-import type { Json } from "pstdio-sync-contracts";
-import { identitySchema } from "pstdio-sync-contracts";
 import type { RouteDeps } from "../../features/deps";
 import { apiLogger } from "../../lib/logger";
 import type { startFolderRecovery } from "../relay/folder-recovery";
 import type { ProjectSyncRetry } from "../relay/project-sync-retry";
 import type { RelayWorkbench } from "../relay/runtime";
+import { AccountRequestError } from "./account-errors";
 import { createAccountRefresh, createAccountWatch } from "./account-refresh";
 import { readAccountStatus } from "./account-status";
 import { createDeviceIdentity } from "./device-identity";
@@ -20,16 +18,12 @@ import { managerOriginSchema, supportsMicrosoftSignIn } from "./manager-client";
 import { createMissingProjectRecovery } from "./missing-project-recovery";
 import { type CloudReturn, createNativeCloudReturn } from "./native-cloud-return";
 import { createNativeCloudState } from "./native-cloud-state";
-import { createNativeDeviceReader, finalizeDeviceLogin, readDeviceLogin } from "./native-device-read";
+import { finalizeDeviceLogin } from "./native-device-read";
 import { createNativeLoginRequests } from "./native-login-requests";
 import { createNativeLogout } from "./native-logout";
 import { createNativeManagerCall } from "./native-manager-call";
 import { createNativePresence } from "./native-presence";
-import {
-  connectionSyncStatus,
-  createFolderRecoveryReader,
-  createNativeProjectSyncReader,
-} from "./native-project-sync-read";
+import { connectionSyncStatus } from "./native-project-sync-read";
 import { createNativeStore, type DeviceLogin } from "./native-store";
 import { createNativeTeamMembership } from "./native-team-membership";
 import { createNativeTeams } from "./native-teams";
@@ -39,46 +33,21 @@ import { canPublishProjectExtensions } from "./project-publication-access";
 import { initialProjectSyncStatus, recoveringProjectSyncStatus } from "./project-sync-readiness";
 import { createTeamSyncAdmission } from "./team-sync-admission";
 
+export { AccountRequestError, accountUnavailableMessage } from "./account-errors";
+
+import {
+  createAccountPoller,
+  createDeviceCommandSender,
+  createNativeDeviceActions,
+  retryProjectSync,
+  type SendDeviceCommand,
+} from "./native-account-commands";
+import { createNativeAccountReader, createNativeProjectReaders } from "./native-account-readers";
+import { createNativeManagedExtensions } from "./native-managed-extensions";
+
 type FolderRecoveryOwners = (projectId: string) => ReturnType<typeof startFolderRecovery> | undefined;
 
 const RETRY_MS = 60_000;
-// Messages that are safe to show; other account failures stay generic.
-export class AccountRequestError extends Error {}
-export const accountUnavailableMessage = "Account request unavailable. Check the login and the account service.";
-
-type SendDeviceCommand = (
-  projectId: string,
-  deviceId: string,
-  command: DeviceCommand,
-  signal: AbortSignal,
-) => Promise<Json>;
-const createDeviceCommandSender = () => {
-  let send: SendDeviceCommand = async () => {
-    throw new AccountRequestError("This project is not connected to Cloud");
-  };
-  return {
-    send: (...args: Parameters<SendDeviceCommand>) => send(...args),
-    connect: (next: SendDeviceCommand) => {
-      send = next;
-    },
-  };
-};
-
-const devicePath = (id: string) => `/v1/devices/${encodeURIComponent(identitySchema.parse(id))}`;
-
-const retryProjectSync = async (
-  projectId: string,
-  projects: Pick<RouteDeps["projectService"], "get">,
-  refresh: () => Promise<void>,
-  retry: ProjectSyncRetry,
-  sourceId?: string,
-) => {
-  if (!(await projects.get(projectId))) throw new AccountRequestError("Unknown project");
-  await refresh();
-  await retry(projectId, sourceId);
-  return { ok: true };
-};
-
 const retryFailedProjectSync = async (
   projectId: string,
   retry: ProjectSyncRetry,
@@ -170,17 +139,12 @@ export const createNativeAccount = (input: {
   });
   // Until the relay runtime starts, no sync owner has downloaded anything in this run.
   let projectStatus: (projectId: string) => Promise<ProjectSyncStatus> = initialProjectSyncStatus;
-  let retry: ReturnType<typeof setTimeout> | undefined;
+  const poller = createAccountPoller(() => void refresh(), RETRY_MS);
   let closed = false;
   const shutdown = new AbortController();
 
   // A login saved by another database in the same folder belongs to another device.
-  const readLogin = (deviceId?: string) => readDeviceLogin(store, input.environment, deviceId);
-  const current = async () => {
-    const login = await readLogin();
-    if (!login) throw new AccountRequestError("Log in first with pst login");
-    return login;
-  };
+  const { readLogin, current } = createNativeAccountReader(store, input.environment);
   const call = createNativeManagerCall({
     current,
     shutdown: shutdown.signal,
@@ -188,6 +152,16 @@ export const createNativeAccount = (input: {
     refresh: () => refresh(),
     changed: () => new AccountRequestError("The account changed before the device read completed"),
     removed: () => new AccountRequestError("This device was removed from your account. Log in again with pst login"),
+  });
+  const managed = createNativeManagedExtensions({
+    file: input.file,
+    current,
+    readLogin,
+    copies,
+    call,
+    signal: shutdown.signal,
+    refresh: () => refresh(),
+    retryProject: (projectId) => retryProject(projectId),
   });
 
   const readProjectStatus = (id: string, login: DeviceLogin | null) =>
@@ -235,7 +209,7 @@ export const createNativeAccount = (input: {
     await away.settle(login, projectsFor);
   };
   const load = async () => {
-    clearTimeout(retry);
+    poller.clear();
     if (closed) return;
     const login = await readLogin();
     await cloud.load({
@@ -246,12 +220,10 @@ export const createNativeAccount = (input: {
       teams,
       signal: shutdown.signal,
     });
+    await managed.prune();
     // Another device can enable or disable a project while this host is idle.
     // Refresh successful lists too; local database events cannot announce remote membership changes.
-    if (login && !closed) {
-      retry = setTimeout(() => void refresh(), RETRY_MS);
-      retry.unref?.();
-    }
+    if (login && !closed) poller.schedule();
     await publish(await readLogin());
     if (!closed) changes.notify();
   };
@@ -268,7 +240,13 @@ export const createNativeAccount = (input: {
     },
   });
   const refresh = refreshes.refresh;
-  const membership = createNativeTeamMembership({ current, call, refresh, localProjectNames: teams.localProjectNames });
+  const membership = createNativeTeamMembership({
+    current,
+    call,
+    refresh,
+    localProjectNames: teams.localProjectNames,
+    managed,
+  });
   const logout = createNativeLogout({ logins, readLogin, store, refresh });
 
   return {
@@ -277,6 +255,10 @@ export const createNativeAccount = (input: {
     createTeam: teams.create,
     readTeamMembership: membership.read,
     writeTeamMembership: membership.write,
+    readManagedProjectPolicy: managed.projectPolicy,
+    downloadManagedPackage: managed.download,
+    isExtensionManaged: managed.required,
+    connectManagedPackageSource: managed.connect,
     prepareTeamProject: teams.prepareProject,
     canPublishProjectExtensions: canPublishProjectExtensions({ copies, readLogin, call }),
     ...createDeviceIdentity({ current, store, call }),
@@ -307,38 +289,20 @@ export const createNativeAccount = (input: {
     cancelLogin: logins.cancel,
     status: () =>
       readNativeStatus({ environment: input.environment, readLogin, logins, store, cloud, catalog, copies }),
-    projectSyncStatus: createNativeProjectSyncReader({
+    ...createNativeProjectReaders({
       login: readLogin,
       exists: (id) => input.projects.get(id),
       read: (id, login) => catalog.fenceLocalStatus(id, login, () => readProjectStatus(id, login)),
       away: (id) => away.status(id),
-      changed: () => new AccountRequestError("The account changed before the project sync read completed"),
-      unknown: () => new AccountRequestError("Unknown project"),
+      projectsFor,
+      folder: (id) => folders(id),
     }),
     resolveReturnedChanges: (id: string, action: ProjectReturnAction) =>
       away.resolve(id, action, input.projects, refresh),
     retryProjectSync: (projectId: string, sourceId?: string) =>
       retryProjectSync(projectId, input.projects, refresh, retryProject, sourceId),
-    /** The project's folder capture, download and restore owner on this device. */
-    folderRecovery: createFolderRecoveryReader({
-      exists: input.projects.get,
-      login: readLogin,
-      projectsFor,
-      folder: (id) => folders(id),
-    }),
     logout,
-    devices: createNativeDeviceReader({
-      current,
-      call,
-      changed: () => new AccountRequestError("The account changed before the device read completed"),
-    }),
-    renameDevice: (id: string, name: string) => call(`${devicePath(id)}/rename`, { name }).then(() => ({ ok: true })),
-    async removeDevice(id: string) {
-      const login = await current();
-      if (id === login.deviceId) return logout();
-      await call(`${devicePath(id)}/remove`, {});
-      return { ok: true };
-    },
+    ...createNativeDeviceActions({ current, call, logout }),
     async syncProject(projectId: string) {
       if (!(await input.projects.get(projectId))) throw new AccountRequestError("Unknown project");
       return teams.changeMembership(projectId);
@@ -348,7 +312,7 @@ export const createNativeAccount = (input: {
       closed = true;
       shutdown.abort();
       presence.close();
-      clearTimeout(retry);
+      poller.clear();
       update = async () => {};
       changes.close();
       // Startup account reads can still use the database; its owner closes only after they drain.

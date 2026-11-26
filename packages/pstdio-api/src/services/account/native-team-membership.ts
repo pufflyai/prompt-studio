@@ -7,6 +7,7 @@ import {
   type TeamMembershipReadResult,
   type TeamMembershipWrite,
   type TeamMembershipWriteResult,
+  teamExtensionPolicySchema,
   teamInvitationSchema,
   teamInvitationViewSchema,
   teamInviteCodeSchema,
@@ -16,9 +17,10 @@ import {
   teamProjectAccessSchema,
 } from "pstdio-sync-contracts";
 import { z } from "zod";
+import { AccountRequestError } from "./account-errors";
 import { ManagerRequestDenied } from "./manager-client";
-import { AccountRequestError } from "./native-account";
 import { type DeviceReadIdentity, matchesDeviceAccount } from "./native-device-read";
+import type { createNativeManagedExtensions } from "./native-managed-extensions";
 import type { createNativeManagerCall } from "./native-manager-call";
 import type { DeviceLogin } from "./native-store";
 
@@ -47,6 +49,7 @@ export const createNativeTeamMembership = (input: {
   call: ReturnType<typeof createNativeManagerCall>;
   refresh: () => Promise<void>;
   localProjectNames: (managerOrigin: string, accountId: string) => Promise<Map<string, string>>;
+  managed?: Pick<ReturnType<typeof createNativeManagedExtensions>, "manage" | "changed">;
 }) => {
   const assertCurrent = async (previous: DeviceLogin) => {
     const login = await input.current();
@@ -81,6 +84,10 @@ export const createNativeTeamMembership = (input: {
         expected,
         async (login, call) => {
           switch (request.op) {
+            case "extensionPolicy":
+              return z
+                .array(teamExtensionPolicySchema)
+                .parse(await call(`${teamPath(request.accountId)}/managed-extensions/policy`));
             case "members":
               return z.array(teamMemberSchema).parse(await call(`${teamPath(request.accountId)}/members`));
             case "invitations":
@@ -115,6 +122,19 @@ export const createNativeTeamMembership = (input: {
         expected,
         async (login, call) => {
           switch (request.op) {
+            case "manageExtension":
+              if (!input.managed) throw new AccountRequestError("Managed extensions are unavailable on this host");
+              return input.managed.manage(request, login);
+            case "unmanageExtension": {
+              const result = ok.parse(
+                await call(
+                  `${teamPath(request.accountId)}/managed-extensions/${encodeURIComponent(request.extensionId)}/remove`,
+                  { expectedSelection: request.expectedSelection },
+                ),
+              );
+              await input.managed?.changed(request.accountId);
+              return result;
+            }
             case "inviteCode":
               return createdTeamInviteCodeSchema.parse(await call(`${teamPath(request.accountId)}/invite-codes`, {}));
             case "acceptInviteCode":

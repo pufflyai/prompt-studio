@@ -11,6 +11,7 @@ export type {
   HarnessAuthenticationPrompt,
   HarnessAuthenticationQuestion,
   LocalRemovalPreflight,
+  ManagedExtension,
   ProjectCopyAccount,
   ProjectCopyDevice,
   ProjectSyncFile,
@@ -19,6 +20,7 @@ export type {
   ProjectSyncStatus,
   RemoveLocalProjectInput,
   RemoveLocalProjectResult,
+  TeamExtensionPolicy,
   TeamInviteCode,
   TextEditingConnectionInput,
 } from "pstdio-api-contracts";

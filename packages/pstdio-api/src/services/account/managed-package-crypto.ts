@@ -25,7 +25,9 @@ export const sealManagedPackage = async (
   if (source.size > managedPackageMaxBytes - 33) throw new Error("Managed package exceeds 64 MiB");
   const plain = new Uint8Array(await source.arrayBuffer());
   const descriptor = {
-    ...metadata,
+    extensionId: metadata.extensionId,
+    name: metadata.name,
+    version: metadata.version,
     revision: digest(plain),
     secret: Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url"),
   };

@@ -53,6 +53,7 @@ const createService = (overrides: Partial<ExtensionUpgradeServiceDeps> = {}) =>
       listProjectExtensionInstances: async () => [],
       getProjectExtensionInstance: async () =>
         ({ instance, installedSource: source("canvas", "d".repeat(40)) }) as never,
+      assertInstalledSourceChoice: async () => {},
       registerInstalledSource: async () => canvas as never,
       enableInstalledSourceForProject: async () => {
         throw new Error("Must retain enablement");

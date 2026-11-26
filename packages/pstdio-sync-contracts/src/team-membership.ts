@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { accountSignInProviderSchema } from "./account-sign-in";
 import { teamAccountSchema } from "./identity";
+import { type ManagedExtension, managedExtensionIdentity, type TeamExtensionPolicy } from "./managed-extensions";
 import { identitySchema } from "./wire";
 
 export const teamInviteEmailSchema = z.string().trim().toLowerCase().pipe(z.email().max(254));
@@ -68,6 +69,7 @@ export type JoinedTeam = z.infer<typeof joinedTeamSchema>;
 const teamTarget = z.strictObject({ accountId: identitySchema });
 const invitationLink = z.strictObject({ url: z.url().max(2048) });
 export const teamMembershipReadSchema = z.discriminatedUnion("op", [
+  teamTarget.extend({ op: z.literal("extensionPolicy") }),
   teamTarget.extend({ op: z.literal("members") }),
   teamTarget.extend({ op: z.literal("invitations") }),
   teamTarget.extend({ op: z.literal("inviteCodes") }),
@@ -77,6 +79,17 @@ export const teamMembershipReadSchema = z.discriminatedUnion("op", [
   z.strictObject({ op: z.literal("inspectInviteCode"), code: teamInviteSecretSchema }),
 ]);
 export const teamMembershipWriteSchema = z.discriminatedUnion("op", [
+  teamTarget.extend({
+    op: z.literal("manageExtension"),
+    projectId: identitySchema,
+    instanceId: identitySchema,
+    expectedSelection: identitySchema.nullable(),
+  }),
+  teamTarget.extend({
+    op: z.literal("unmanageExtension"),
+    extensionId: managedExtensionIdentity,
+    expectedSelection: identitySchema,
+  }),
   teamTarget.extend({ op: z.literal("invite"), ...recipientFields.shape }).refine(hasRecipient),
   teamTarget.extend({ op: z.literal("inviteCode") }),
   teamTarget.extend({ op: z.literal("cancelInvitation"), invitationId: identitySchema }),
@@ -96,6 +109,7 @@ export const teamMembershipWriteSchema = z.discriminatedUnion("op", [
 export type TeamMembershipRead = z.infer<typeof teamMembershipReadSchema>;
 export type TeamMembershipWrite = z.infer<typeof teamMembershipWriteSchema>;
 export type TeamMembershipReadResult<Request extends TeamMembershipRead> = {
+  extensionPolicy: TeamExtensionPolicy[];
   members: TeamMember[];
   invitations: TeamInvitation[];
   inviteCodes: TeamInviteCode[];
@@ -105,6 +119,8 @@ export type TeamMembershipReadResult<Request extends TeamMembershipRead> = {
   inspectInviteCode: TeamInvitationView;
 }[Request["op"]];
 export type TeamMembershipWriteResult<Request extends TeamMembershipWrite> = {
+  manageExtension: ManagedExtension;
+  unmanageExtension: { ok: true };
   invite: CreatedTeamInvitation;
   inviteCode: CreatedTeamInviteCode;
   cancelInvitation: { ok: true };

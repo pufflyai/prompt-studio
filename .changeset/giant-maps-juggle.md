@@ -3,4 +3,4 @@
 "@pstdio/sdk": minor
 ---
 
-Add desktop team invitation codes to the public account APIs and CLI.
+Add desktop team invitation codes and owner-managed extension policies to the public account APIs.

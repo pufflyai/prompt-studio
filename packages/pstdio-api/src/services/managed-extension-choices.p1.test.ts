@@ -82,6 +82,11 @@ test("team policy protects a required tool from disable, removal and provider re
   expect((await instances.get(installed.instance.id))?.enabled).toBe(true);
   expect((await instances.get(alternateInstance.id))?.enabled).toBe(false);
   expect(await instances.hasProjectDefaultChoice(project.id, source.extensionId)).toBe(false);
+  expect(await service.adoptDefaultSourceForProject(project.id, alternate.id)).toBeNull();
+  await expect(service.registerInstalledSource({ ...source, sourceHash: "substitute" })).rejects.toBeInstanceOf(
+    AlwaysEnabledExtensionError,
+  );
+  expect((await sources.get(installed.installedSource.id))?.source_hash).toBe("original");
 
   // A shared source cannot be changed through a personal project's upgrade either.
   await expect(service.assertInstalledSourceChoice(installed.installedSource.id)).rejects.toBeInstanceOf(

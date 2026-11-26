@@ -134,6 +134,7 @@ export const registrationValues = (
 type RegistrarDeps = {
   sources: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   emitInstalledSource: (source: unknown) => void;
+  authorizeChange?: (sourceId: string) => Promise<void>;
 };
 const registerRow = async (
   deps: RegistrarDeps,
@@ -225,6 +226,8 @@ export const createInstalledSourceRegistrar =
     const previousRevision = input.preparedRevision ? await readAcceptedRevision(input.sourcePath) : null;
     const state = { existing, values, previousRevision, registered: null as typeof existing, published: false };
     try {
+      if (existing && (input.installation || !hasUnchangedInstalledSourceRegistration(existing, values)))
+        await deps.authorizeChange?.(existing.id);
       if (input.installation) await activatePreparedInstall(input.installation);
       const { installedSource, created } = await registerRow(deps, input, existing, values);
       if (!installedSource) throw new Error(`Installed extension not found: ${input.installName}`);

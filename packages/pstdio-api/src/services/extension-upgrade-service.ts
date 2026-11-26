@@ -28,6 +28,7 @@ export type ExtensionService = Pick<
   | "getProjectExtensionInstance"
   | "listProjectExtensionInstances"
   | "registerInstalledSource"
+  | "assertInstalledSourceChoice"
 >;
 
 type WorkspaceService = {
@@ -117,6 +118,12 @@ const upgradeRef = (entry: ExtensionCatalogEntry | undefined, release: Extension
 
 const releaseCommitKey = (origin: { url: string; path: string }, ref: string) =>
   `${origin.url}\0${origin.path}\0${ref}`;
+
+const mutableProjectExtension = async (service: ExtensionService, projectId: string, instanceId: string) => {
+  const existing = await service.getProjectExtensionInstance(projectId, instanceId);
+  if (existing) await service.assertInstalledSourceChoice(existing.installedSource.id);
+  return existing;
+};
 
 export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps) => {
   const install = deps.installExtensionSource ?? installExtensionSourceDefault;
@@ -266,7 +273,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   const installSource = createExtensionSourceInstaller({ deps, install, catalogEntry, releaseRefFor });
 
   const upgrade = async (projectId: string, instanceId: string) => {
-    const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
+    const existing = await mutableProjectExtension(deps.extensionService, projectId, instanceId);
     if (!existing) return null;
     const entry = await catalogEntry(existing.installedSource.install_name);
     const parsed = parseExtensionSourceRef(existing.installedSource.source_ref);

@@ -16,6 +16,7 @@ test("extension startup failure still drains another branch before disposal comp
   let disposed = false;
   let readsAfterDisposal = 0;
   const services = wireAppExtensionServices({
+    accountService: { isExtensionManaged: async () => false },
     config: { buildWebviews: false, release: null },
     db: {} as never,
     eventBus: new EventBus(),

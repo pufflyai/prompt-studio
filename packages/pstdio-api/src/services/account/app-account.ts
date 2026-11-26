@@ -2,6 +2,7 @@ import { accountEvents } from "pstdio-api-contracts/extension-kernel";
 import type { AppConfig } from "../../app-config";
 import type { RouteDeps } from "../../features/deps";
 import { fireExtensionEventAsync } from "../../features/extensions/extension-event-runtime";
+import { exportManagedPackage } from "../../features/extensions/publication/managed-package-source";
 import { evictProjectCopy, summarizeProjectCopyCleanup } from "../../features/projects/cleanup-project";
 import { recoverCloudProject } from "../../features/projects/cloud-project-recovery";
 import { openProject } from "../../features/projects/open-project";
@@ -28,6 +29,9 @@ export const createAppAccount = (
   let stopRecovery = async () => {};
   let stopAccount = () => {};
   const connectAccountRelay = <T extends { deps: RouteDeps; close: () => Promise<void> }>(app: T) => {
+    accountService.connectManagedPackageSource((projectId, instanceId) =>
+      exportManagedPackage(app.deps, projectId, instanceId),
+    );
     const accountEventsOwner = createStatusEvents({
       status: () => accountService.status(),
       publish: async (_id, status) => {

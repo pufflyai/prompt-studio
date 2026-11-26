@@ -30,6 +30,7 @@ import type { EventBus } from "./features/sync/event-bus";
 import type { WorkspacesRouteDeps } from "./features/workspaces/deps";
 import { apiLogger } from "./lib/logger";
 import { logStartupPhase } from "./lib/startup-phase";
+import type { createNativeAccount } from "./services/account/native-account";
 import { createExtensionInstallations } from "./services/extension-installations";
 import { createExtensionService, ProjectNotFoundError } from "./services/extension-service";
 import { createExtensionUpgradeService } from "./services/extension-upgrade-service";
@@ -38,6 +39,7 @@ import type { createProjectService } from "./services/project-service";
 import type { createWorkspaceService } from "./services/workspace-service";
 
 interface WireExtensionServicesInput {
+  accountService: Pick<ReturnType<typeof createNativeAccount>, "isExtensionManaged">;
   config: AppConfig["extensions"];
   db: DbClient;
   dependencies: AppDependencies;
@@ -78,6 +80,7 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
     await refreshInstalledExtensionProcesses(sourcePath, validatedSource);
   };
   const extensionService = createExtensionService({
+    isProjectExtensionManaged: input.accountService.isExtensionManaged,
     extensionInstancesService: input.extensionInstancesDBService,
     installedExtensionSourcesService: input.installedExtensionSourcesDBService,
     extensionUserDataService: createExtensionUserDataDBService(input.db),
