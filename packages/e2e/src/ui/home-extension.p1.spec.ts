@@ -117,7 +117,7 @@ test("Home shows project ideas and reopens recently used resources", async ({ pa
   const ideas = await homeFrame(page).getByRole("region", { name: "Home page ideas", exact: true }).boundingBox();
   const recentBounds = await recent.boundingBox();
   expect(ideas).not.toBeNull();
-  expect(recentBounds!.y).toBeGreaterThan(ideas!.y + ideas!.height);
+  expect(recentBounds!.y + recentBounds!.height).toBeLessThan(ideas!.y);
   await recent.click();
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/session\\?`));
   await page.reload();
