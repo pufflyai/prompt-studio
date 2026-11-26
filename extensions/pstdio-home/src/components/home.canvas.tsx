@@ -57,7 +57,8 @@ const StartPagePreview = (props: StartPagePreviewProps) => {
 const meta: CanvasMeta<typeof StartPagePreview> = {
   title: "Extensions/Home/Project home",
   component: StartPagePreview,
-  argTypes: { buildFails: { control: "boolean" } },
+  args: { buildFails: false },
+  controls: { buildFails: { type: "boolean", label: "Fail session startup" } },
 };
 export default meta;
 type Story = CanvasFrame<typeof StartPagePreview>;

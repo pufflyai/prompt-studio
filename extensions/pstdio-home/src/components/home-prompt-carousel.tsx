@@ -80,20 +80,22 @@ export const HomePromptCarousel = ({ onBuild }: HomePromptCarouselProps) => {
                           {kind === "explore" ? "Get ideas" : "Build this!"}
                         </Button>
                       </Popover.Trigger>
-                      <Portal>
-                        <Popover.Positioner>
-                          <Popover.Content aria-label={errorTitle} p="0" w="popover-panel" maxW="90vw">
-                            <AlertMessage
-                              role="alert"
-                              status="error"
-                              title={errorTitle}
-                              onClose={() => setError(undefined)}
-                            >
-                              {error?.idea === id ? error.message : undefined}
-                            </AlertMessage>
-                          </Popover.Content>
-                        </Popover.Positioner>
-                      </Portal>
+                      {error?.idea === id && (
+                        <Portal>
+                          <Popover.Positioner>
+                            <Popover.Content aria-label={errorTitle} p="0" w="popover-panel" maxW="90vw">
+                              <AlertMessage
+                                role="alert"
+                                status="error"
+                                title={errorTitle}
+                                onClose={() => setError(undefined)}
+                              >
+                                {error?.idea === id ? error.message : undefined}
+                              </AlertMessage>
+                            </Popover.Content>
+                          </Popover.Positioner>
+                        </Portal>
+                      )}
                     </Popover.Root>
                   </SimpleCardBody>
                 </SimpleCard>
