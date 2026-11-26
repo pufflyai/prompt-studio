@@ -65,6 +65,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   };
 
   const reloadDeps = {
+    authorizeChange: assertInstalledSourceChoice,
     installedExtensionSourcesService: deps.installedExtensionSourcesService,
     emitInstalledSource,
     notifyInstalledSourcesChanged,
@@ -287,9 +288,10 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
         if (!record) return null;
         await assertProjectChoice(input.projectId, record.installedSource.extension_id);
         await assertOptional(record.installedSource);
-        return mutateSourceAndRefresh(record.installedSource.source_path, (notify) =>
-          uninstallProjectExtensionImpl({ ...deps, notifyInstalledSourcesChanged: notify }, input),
-        );
+        return mutateSourceAndRefresh(record.installedSource.source_path, async (notify) => {
+          await assertInstalledSourceChoice(record.installedSource.id);
+          return uninstallProjectExtensionImpl({ ...deps, notifyInstalledSourcesChanged: notify }, input);
+        });
       },
     },
     (instanceId) => projectOfInstance(deps.extensionInstancesService, instanceId),
