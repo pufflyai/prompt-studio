@@ -43,6 +43,23 @@ export const teamsCommand = {
         },
       )
       .command(
+        "invite-microsoft <accountId> <tenantId> <objectId>",
+        "Create a private invitation for a Microsoft Entra user",
+        (command) =>
+          team(command)
+            .positional("tenantId", { type: "string", demandOption: true })
+            .positional("objectId", { type: "string", demandOption: true }),
+        async ({ accountId, tenantId, objectId }) => {
+          print(
+            await apiClient().account.writeTeamMembership({
+              op: "invite",
+              accountId,
+              microsoft: { tenantId, objectId },
+            }),
+          );
+        },
+      )
+      .command(
         "cancel-invitation <accountId> <invitationId>",
         "Cancel an invitation",
         (command) => team(command).positional("invitationId", { type: "string", demandOption: true }),

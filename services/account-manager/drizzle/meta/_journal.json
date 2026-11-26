@@ -64,6 +64,13 @@
       "when": 1795524431964,
       "tag": "0008_team_invitations",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795656028946,
+      "tag": "0009_special_wind_dancer",
+      "breakpoints": true
     }
   ]
 }

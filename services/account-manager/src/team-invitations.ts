@@ -2,13 +2,21 @@ import { and, asc, desc, eq, gt, gte, or, sql } from "drizzle-orm";
 import {
   type JoinedTeam,
   type TeamInvitationView,
-  teamInviteEmailSchema,
+  type TeamInviteRecipient,
   teamInviteSecretSchema,
 } from "pstdio-sync-contracts";
 import { account, user } from "./auth-schema";
 import { createCredential, digestCredential } from "./credential";
-import type { ManagerTransaction } from "./database";
-import { accounts, googleIdentityClaims, teamInvitations, teamMemberRevocations, teamMembers, teams } from "./schema";
+import type { ManagerDatabase, ManagerTransaction } from "./database";
+import {
+  accounts,
+  googleIdentityClaims,
+  microsoftIdentityClaims,
+  teamInvitations,
+  teamMemberRevocations,
+  teamMembers,
+  teams,
+} from "./schema";
 import { lockAccount } from "./transactions";
 
 const google = "https://accounts.google.com";
@@ -17,8 +25,24 @@ type Invitation = typeof teamInvitations.$inferSelect;
 
 export class TeamMembershipDenied extends Error {}
 
-const googleAccount = and(eq(account.providerId, "google"), eq(account.accountId, accounts.ownerSubject));
-const verifiedUser = and(eq(user.id, account.userId), eq(user.emailVerified, true));
+const googleAccount = and(
+  eq(accounts.ownerIssuer, google),
+  eq(account.providerId, "google"),
+  eq(account.accountId, accounts.ownerSubject),
+);
+const microsoftAccount = and(
+  sql`${accounts.ownerIssuer} like 'https://login.microsoftonline.com/%/v2.0'`,
+  eq(account.providerId, "microsoft"),
+  eq(account.accountId, sql`split_part(${accounts.ownerIssuer}, '/', 4) || ':' || ${accounts.ownerSubject}`),
+);
+const microsoftClaimsForAccount = and(
+  eq(microsoftIdentityClaims.issuer, accounts.ownerIssuer),
+  eq(microsoftIdentityClaims.subject, accounts.ownerSubject),
+);
+const rosterUser = and(
+  eq(user.id, account.userId),
+  or(eq(account.providerId, "microsoft"), eq(user.emailVerified, true)),
+);
 
 export const verifiedGoogleEmail = async (transaction: ManagerTransaction, userId: string) => {
   const [claim] = await transaction
@@ -30,6 +54,16 @@ export const verifiedGoogleEmail = async (transaction: ManagerTransaction, userI
   return claim?.email ?? undefined;
 };
 
+const verifiedMicrosoftRecipient = async (transaction: ManagerTransaction, userId: string) => {
+  const [claim] = await transaction
+    .select({ tenantId: microsoftIdentityClaims.tenantId, objectId: microsoftIdentityClaims.objectId })
+    .from(accounts)
+    .innerJoin(microsoftIdentityClaims, microsoftClaimsForAccount)
+    .where(and(eq(accounts.id, userId), eq(accounts.state, "active")))
+    .for("share", { of: microsoftIdentityClaims });
+  return claim;
+};
+
 export const listTeamMembers = (transaction: ManagerTransaction, accountId: string) =>
   transaction
     .select({
@@ -39,8 +73,8 @@ export const listTeamMembers = (transaction: ManagerTransaction, accountId: stri
     })
     .from(teamMembers)
     .innerJoin(accounts, eq(accounts.id, teamMembers.userId))
-    .leftJoin(account, googleAccount)
-    .leftJoin(user, verifiedUser)
+    .leftJoin(account, or(googleAccount, microsoftAccount))
+    .leftJoin(user, rosterUser)
     .where(eq(teamMembers.accountId, accountId))
     .groupBy(teamMembers.userId, teamMembers.role)
     .orderBy(desc(teamMembers.role), asc(teamMembers.userId));
@@ -48,27 +82,62 @@ export const listTeamMembers = (transaction: ManagerTransaction, accountId: stri
 const pendingFor = (accountId: string) =>
   and(eq(teamInvitations.accountId, accountId), eq(teamInvitations.state, "pending"));
 
+type RecipientColumns = Pick<Invitation, "email" | "microsoftTenantId" | "microsoftObjectId">;
+const recipientOf = ({ email, microsoftTenantId, microsoftObjectId }: RecipientColumns): TeamInviteRecipient =>
+  microsoftTenantId !== null && microsoftObjectId !== null
+    ? { microsoft: { tenantId: microsoftTenantId, objectId: microsoftObjectId } }
+    : { email: email ?? undefined };
+
+const invitationTargets = ({ email, microsoft }: TeamInviteRecipient) => {
+  if (microsoft) {
+    return and(
+      eq(teamInvitations.microsoftTenantId, microsoft.tenantId),
+      eq(teamInvitations.microsoftObjectId, microsoft.objectId),
+    );
+  }
+  if (email !== undefined) return eq(teamInvitations.email, email);
+  return sql`false`;
+};
+
 export const listTeamInvitations = async (transaction: ManagerTransaction, accountId: string) => {
   const rows = await transaction
-    .select({ id: teamInvitations.id, email: teamInvitations.email, expiresAt: teamInvitations.expiresAt })
+    .select({
+      id: teamInvitations.id,
+      expiresAt: teamInvitations.expiresAt,
+      email: teamInvitations.email,
+      microsoftTenantId: teamInvitations.microsoftTenantId,
+      microsoftObjectId: teamInvitations.microsoftObjectId,
+    })
     .from(teamInvitations)
     .where(and(pendingFor(accountId), gt(teamInvitations.expiresAt, new Date())))
     .orderBy(asc(teamInvitations.expiresAt), asc(teamInvitations.id));
-  return rows.map(({ expiresAt, ...row }) => ({ ...row, expiresAt: expiresAt.toISOString() }));
+  return rows.map((row) => ({ id: row.id, expiresAt: row.expiresAt.toISOString(), ...recipientOf(row) }));
 };
 
-export const createTeamInvitation = async (transaction: ManagerTransaction, accountId: string, address: unknown) => {
-  const email = teamInviteEmailSchema.parse(address);
+export const createTeamInvitation = async (
+  transaction: ManagerTransaction,
+  accountId: string,
+  recipient: TeamInviteRecipient,
+) => {
+  const { email, microsoft } = recipient;
   const [member] = await transaction
     .select({ userId: teamMembers.userId })
     .from(teamMembers)
     .innerJoin(accounts, eq(accounts.id, teamMembers.userId))
-    .innerJoin(googleIdentityClaims, eq(googleIdentityClaims.subject, accounts.ownerSubject))
+    .leftJoin(
+      googleIdentityClaims,
+      and(eq(accounts.ownerIssuer, google), eq(googleIdentityClaims.subject, accounts.ownerSubject)),
+    )
+    .leftJoin(microsoftIdentityClaims, microsoftClaimsForAccount)
     .where(
       and(
         eq(teamMembers.accountId, accountId),
-        eq(accounts.ownerIssuer, google),
-        eq(googleIdentityClaims.verifiedEmail, email),
+        microsoft
+          ? and(
+              eq(microsoftIdentityClaims.tenantId, microsoft.tenantId),
+              eq(microsoftIdentityClaims.objectId, microsoft.objectId),
+            )
+          : eq(googleIdentityClaims.verifiedEmail, email ?? ""),
       ),
     )
     .limit(1);
@@ -77,7 +146,7 @@ export const createTeamInvitation = async (transaction: ManagerTransaction, acco
   await transaction
     .update(teamInvitations)
     .set({ state: "canceled" })
-    .where(and(pendingFor(accountId), eq(teamInvitations.email, email)));
+    .where(and(pendingFor(accountId), invitationTargets(recipient)));
   const id = crypto.randomUUID();
   const secret = createCredential();
   const expiresAt = new Date(Date.now() + invitationLifetimeMs);
@@ -85,11 +154,13 @@ export const createTeamInvitation = async (transaction: ManagerTransaction, acco
     id,
     accountId,
     email,
+    microsoftTenantId: microsoft?.tenantId,
+    microsoftObjectId: microsoft?.objectId,
     digest: digestCredential(secret),
     expiresAt,
     state: "pending",
   });
-  return { id, email, secret, expiresAt: expiresAt.toISOString() };
+  return { id, ...recipient, secret, expiresAt: expiresAt.toISOString() };
 };
 
 export const cancelTeamInvitation = async (transaction: ManagerTransaction, accountId: string, id: string) => {
@@ -115,21 +186,19 @@ export const removeTeamMember = async (transaction: ManagerTransaction, accountI
       set: { revokedAt },
     });
   const email = await verifiedGoogleEmail(transaction, userId);
+  const microsoft = await verifiedMicrosoftRecipient(transaction, userId);
   await transaction
     .update(teamInvitations)
     .set({ state: "canceled", acceptedBy: null })
     .where(
       and(
         eq(teamInvitations.accountId, accountId),
-        or(
-          eq(teamInvitations.acceptedBy, userId),
-          email ? and(pendingFor(accountId), eq(teamInvitations.email, email)) : undefined,
-        ),
+        or(eq(teamInvitations.acceptedBy, userId), and(pendingFor(accountId), invitationTargets({ email, microsoft }))),
       ),
     );
 };
 
-const readInvitation = async (transaction: ManagerTransaction, digest: string) =>
+const readInvitation = async (transaction: Pick<ManagerDatabase, "select">, digest: string) =>
   (
     await transaction
       .select({ invitation: teamInvitations, teamName: teams.name })
@@ -138,6 +207,11 @@ const readInvitation = async (transaction: ManagerTransaction, digest: string) =
       .innerJoin(accounts, eq(accounts.id, teams.accountId))
       .where(and(eq(teamInvitations.digest, digest), eq(accounts.state, "active")))
   )[0];
+
+export const teamInvitationProvider = async (db: ManagerDatabase, secret: string) => {
+  const row = await readInvitation(db, digestCredential(secret));
+  return row?.invitation.microsoftObjectId == null ? undefined : "microsoft";
+};
 
 const describeInvitation = async (
   transaction: ManagerTransaction,
@@ -155,7 +229,13 @@ const describeInvitation = async (
     return member ? "joined" : "consumed";
   }
   if (invitation.expiresAt.getTime() <= Date.now()) return "expired";
-  if (invitation.email !== signedInEmail) return "wrong-identity";
+  if (invitation.microsoftObjectId !== null) {
+    const directory = await verifiedMicrosoftRecipient(transaction, userId);
+    if (directory?.tenantId !== invitation.microsoftTenantId || directory?.objectId !== invitation.microsoftObjectId)
+      return "wrong-identity";
+  } else if (!signedInEmail || invitation.email !== signedInEmail) {
+    return "wrong-identity";
+  }
   const [revoked] = await transaction
     .select({ userId: teamMemberRevocations.userId })
     .from(teamMemberRevocations)
@@ -180,7 +260,12 @@ export const inspectTeamInvitation = async (
   const row = await readInvitation(transaction, digest);
   if (!row) return { state: "unknown", signedInEmail };
   const state = await describeInvitation(transaction, row.invitation, userId, signedInEmail);
-  return { state, teamName: row.teamName, signedInEmail };
+  return {
+    state,
+    teamName: row.teamName,
+    signedInEmail,
+    ...(row.invitation.microsoftObjectId !== null && { provider: "microsoft" }),
+  };
 };
 
 export const acceptTeamInvitation = async (

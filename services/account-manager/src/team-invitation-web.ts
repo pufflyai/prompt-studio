@@ -41,15 +41,21 @@ function action(label, execute) {
   button.onclick = invoke;
 }
 
-async function signIn(changeAccount) {
+const providers = {
+  google: { label: "Google", endpoint: "https://accounts.google.com/o/oauth2/v2/auth" },
+  microsoft: { label: "Microsoft", endpoint: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize" },
+};
+
+async function signIn(changeAccount, provider, invitation) {
   if (changeAccount && !(await post("/api/auth/sign-out", {})).ok) throw new Error();
   const result = await post("/api/auth/sign-in/social", {
-    provider: "google",
+    provider,
     callbackURL: new URL(page, location.origin).href,
   });
   if (!result.ok) throw new Error();
   const url = new URL((await result.json()).url);
-  if (url.origin !== "https://accounts.google.com") throw new Error();
+  if (url.origin + url.pathname !== providers[provider].endpoint) throw new Error();
+  if (invitation !== secret) return;
   if (changeAccount) url.searchParams.set("prompt", "select_account");
   location.assign(url);
 }
@@ -89,10 +95,14 @@ async function readInvitation(invitation = secret) {
   const result = await post("/v1/team-invitation/inspect", { secret: invitation });
   if (invitation !== secret) return;
   if (result.status === 401) {
+    const challenge = await result.json().catch(() => null);
+    if (invitation !== secret) return;
+    const provider = challenge?.provider === "microsoft" ? "microsoft" : "google";
+    const label = providers[provider].label;
     title.textContent = "Team invitation";
     identity.textContent = "";
-    message.textContent = "Sign in with Google to see the invitation.";
-    action("Sign in with Google", () => signIn(false));
+    message.textContent = "Sign in with " + label + " to see the invitation.";
+    action("Sign in with " + label, () => signIn(false, provider, invitation));
     return;
   }
   if (!result.ok) throw new Error();
@@ -101,8 +111,10 @@ async function readInvitation(invitation = secret) {
   title.textContent = view.teamName ? "Join " + view.teamName : "Team invitation";
   identity.textContent = view.signedInEmail ? "Signed in as " + view.signedInEmail : "";
   if (view.state === "wrong-identity") {
-    message.textContent = "This invitation was sent to a different verified Google account.";
-    action("Switch Google account", () => signIn(true));
+    const provider = view.provider === "microsoft" ? "microsoft" : "google";
+    const label = providers[provider].label;
+    message.textContent = "This invitation was sent to a different verified " + label + " account.";
+    action("Switch " + label + " account", () => signIn(true, provider, invitation));
     return;
   }
   if (view.state === "pending") {
@@ -175,9 +187,14 @@ export const teamInvitationWeb = async (auth: Authentication, origin: string, re
   try {
     const { secret } = z.strictObject({ secret: teamInviteSecretSchema }).parse(await request.json());
     const operation = action === "inspect" ? auth.teamInvitation.inspect : auth.teamInvitation.accept;
-    return json(await operation(request.headers, secret));
+    try {
+      return json(await operation(request.headers, secret));
+    } catch (error) {
+      if (!(error instanceof DeviceAccessDenied)) throw error;
+      const provider = action === "inspect" ? await auth.teamInvitation.provider(secret) : undefined;
+      return json({ error: "Sign in first", provider }, 401);
+    }
   } catch (error) {
-    if (error instanceof DeviceAccessDenied) return json({ error: "Sign in first" }, 401);
     if (error instanceof TeamMembershipDenied) return json({ error: error.message }, 403);
     if (error instanceof z.ZodError || error instanceof SyntaxError) return json({ error: "Invalid request" }, 400);
     throw error;

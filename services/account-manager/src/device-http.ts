@@ -1,4 +1,4 @@
-import { startProjectDeletionSchema, teamInviteSecretSchema } from "pstdio-sync-contracts";
+import { startProjectDeletionSchema, teamInviteRecipientSchema, teamInviteSecretSchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import { AccountFeatureDenied } from "./account-features";
 import type { createManagerAuthentication } from "./manager-authentication";
@@ -100,12 +100,8 @@ const teamRoute = async (devices: Authentication["devices"], request: Request) =
   return null;
 };
 
-const teamMembershipRoute = async (
-  devices: Authentication["devices"],
-  address: string,
-  request: Request,
-  path: string,
-) => {
+const teamMembershipRoute = async (auth: Authentication, address: string, request: Request, path: string) => {
+  const { devices } = auth;
   const operation = /^\/v1\/teams\/([^/]+)\/(invitations|members|leave)(?:\/([^/]+)\/(cancel|remove))?$/.exec(path);
   if (!operation) return null;
   const token = bearer(request);
@@ -118,8 +114,10 @@ const teamMembershipRoute = async (
   }
   if (request.method !== "POST") return null;
   if (section === "invitations" && !target) {
-    const { email } = z.strictObject({ email: z.string() }).parse(await request.json());
-    const { secret, ...invitation } = await devices.invite(token, id, email);
+    const recipient = teamInviteRecipientSchema.parse(await request.json());
+    if (recipient.microsoft && !auth.supportsSignIn("microsoft"))
+      return json({ error: "Microsoft sign-in is unavailable" }, 409);
+    const { secret, ...invitation } = await devices.invite(token, id, recipient);
     return json({ ...invitation, url: `${address}/v1/team-invitation#${secret}` }, 201);
   }
   if (section === "invitations" && target && action === "cancel")
@@ -176,7 +174,7 @@ export const deviceHttp = async (auth: Authentication, address: string, request:
   try {
     return (
       (path === "/v1/teams" ? await teamRoute(auth.devices, request) : null) ??
-      (await teamMembershipRoute(auth.devices, address, request, path)) ??
+      (await teamMembershipRoute(auth, address, request, path)) ??
       (await teamInvitationRoute(auth.devices, request, path)) ??
       (await deletionRoute(auth, request, path, accountId)) ??
       (await route(auth, new URL(address).origin, request, path, accountId)) ??

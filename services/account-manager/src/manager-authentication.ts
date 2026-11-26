@@ -17,14 +17,26 @@ import { type NativeLoginAttempt, nativeApprovalId, nativeLoginApproval } from "
 import { acknowledgeProjectDeletion, listProjectDeletionJobs } from "./project-deletion";
 import { readProviderIdentity } from "./provider-identity";
 import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
-import { devices, googleIdentityClaims } from "./schema";
-import { acceptTeamInvitation, inspectTeamInvitation } from "./team-invitations";
+import { devices, googleIdentityClaims, microsoftIdentityClaims } from "./schema";
+import { acceptTeamInvitation, inspectTeamInvitation, teamInvitationProvider } from "./team-invitations";
 import { canPublishForTeam, prepareTeamPublicationGrant, sameDeviceAccess } from "./team-publication-access";
 import { lockAccount, withAccountTransaction } from "./transactions";
 
 export const createManagerAuthentication = (input: ManagerAuthConfig) => {
   const config = parseManagerAuthConfig(input);
   const connection = connectManager(config.databaseUrl, config.databasePoolMax);
+  const rememberDirectoryClaim: Parameters<typeof microsoftSignIn>[1] = async (claim) => {
+    const [stored] = await connection.db
+      .insert(microsoftIdentityClaims)
+      .values(claim)
+      .onConflictDoUpdate({
+        target: [microsoftIdentityClaims.issuer, microsoftIdentityClaims.subject],
+        set: { objectId: claim.objectId },
+        setWhere: eq(microsoftIdentityClaims.objectId, claim.objectId),
+      })
+      .returning({ objectId: microsoftIdentityClaims.objectId });
+    return stored !== undefined;
+  };
   const auth = betterAuth({
     // Better Auth adds /api/auth only to a bare origin, so name the full path for addresses with a path.
     baseURL: `${config.origin}/api/auth`,
@@ -75,7 +87,7 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
     logger: { disabled: true },
     disabledPaths: ["/token"],
     plugins: [
-      ...(config.microsoft ? [microsoftSignIn(config.microsoft.clientId)] : []),
+      ...(config.microsoft ? [microsoftSignIn(config.microsoft.clientId, rememberDirectoryClaim)] : []),
       bearer(),
       nativeLoginApproval,
       oneTimeToken({ storeToken: "hashed", disableClientRequest: true }),
@@ -109,6 +121,7 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
     }),
     devices: createDeviceAccess(connection.db),
     teamInvitation: {
+      provider: (secret: string) => teamInvitationProvider(connection.db, secret),
       inspect: (headers: Headers, secret: string) =>
         withPersonalAccount(headers, (transaction, userId) => inspectTeamInvitation(transaction, userId, secret)),
       accept: (headers: Headers, secret: string) =>

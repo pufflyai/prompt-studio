@@ -97,7 +97,10 @@ export const createNativeTeamMembership = (input: {
           switch (request.op) {
             case "invite":
               return createdTeamInvitationSchema.parse(
-                await call(`${teamPath(request.accountId)}/invitations`, { email: request.email }),
+                await call(`${teamPath(request.accountId)}/invitations`, {
+                  email: request.email,
+                  microsoft: request.microsoft,
+                }),
               );
             case "cancelInvitation":
               return ok.parse(

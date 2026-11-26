@@ -17,7 +17,13 @@ test("invitation failure can be retried and terminal outcomes clear the link", a
   const identity = { textContent: "" };
   const nodes = { button, "#message": message, h1: title, "#identity": identity, "#handoff": { hidden: true } };
   const storage = new Map<string, string>();
-  const location = { pathname: page, hash: `#${secret}` };
+  let navigation: URL | undefined;
+  const location = {
+    pathname: page,
+    hash: `#${secret}`,
+    origin,
+    assign: (target: URL) => (navigation = target),
+  };
   let hashChanged: (() => Promise<void>) | undefined;
   let inspection = Response.json({
     state: "pending",
@@ -25,7 +31,11 @@ test("invitation failure can be retried and terminal outcomes clear the link", a
     signedInEmail: "recipient@example.test",
   });
   let status = 503;
-  const fetch = async (path: string) => {
+  const fetch = async (path: string, init: RequestInit) => {
+    if (path === "/api/auth/sign-in/social") {
+      expect(JSON.parse(String(init.body))).toEqual({ provider: "microsoft", callbackURL: url });
+      return Response.json({ url: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?state=test" });
+    }
     const replies = {
       "/v1/team-invitation/inspect": () => inspection.clone(),
       "/v1/team-invitation/accept": () => new Response(null, { status }),
@@ -33,6 +43,7 @@ test("invitation failure can be retried and terminal outcomes clear the link", a
     return replies[path as keyof typeof replies]();
   };
   await runInNewContext(script, {
+    URL,
     location,
     history: { replaceState: () => (location.hash = "") },
     window: { addEventListener: (_event: string, listener: () => Promise<void>) => (hashChanged = listener) },
@@ -62,6 +73,14 @@ test("invitation failure can be retried and terminal outcomes clear the link", a
   expect(button.textContent).toBe("Sign in with Google");
   expect(title.textContent).toBe("Team invitation");
   expect(identity.textContent).toBe("");
+  expect(location.hash).toBe("");
+
+  inspection = Response.json({ provider: "microsoft" }, { status: 401 });
+  location.hash = `#${"m".repeat(43)}`;
+  await hashChanged?.();
+  expect(button.textContent).toBe("Sign in with Microsoft");
+  await button.onclick?.();
+  expect(navigation?.hostname).toBe("login.microsoftonline.com");
   expect(location.hash).toBe("");
 
   inspection = Response.json({ state: "expired" });

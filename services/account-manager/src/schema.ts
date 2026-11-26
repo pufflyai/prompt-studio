@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  check,
   foreignKey,
   index,
   integer,
@@ -24,6 +25,19 @@ export const googleIdentityClaims = pgTable("manager_google_identity_claims", {
   issuedAt: integer().notNull(),
   verifiedEmail: text(),
 });
+export const microsoftIdentityClaims = pgTable(
+  "manager_microsoft_identity_claims",
+  {
+    issuer: text().notNull(),
+    subject: text().notNull(),
+    tenantId: text().notNull(),
+    objectId: text().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.issuer, table.subject] }),
+    index("manager_microsoft_identity_by_directory_object").on(table.tenantId, table.objectId),
+  ],
+);
 export const teams = pgTable("manager_teams", {
   accountId: text()
     .primaryKey()
@@ -69,14 +83,28 @@ export const teamInvitations = pgTable(
     accountId: text()
       .notNull()
       .references(() => teams.accountId),
-    email: text().notNull(),
+    email: text(),
+    microsoftTenantId: text(),
+    microsoftObjectId: text(),
     digest: text().notNull().unique(),
     issuedAt: timestamp({ withTimezone: true }).notNull().default(sql`clock_timestamp()`),
     expiresAt: timestamp({ withTimezone: true }).notNull(),
     state: text({ enum: ["pending", "accepted", "canceled"] }).notNull(),
     acceptedBy: text().references(() => accounts.id),
   },
-  (table) => [index("manager_team_invitations_by_team").on(table.accountId, table.email)],
+  (table) => [
+    index("manager_team_invitations_by_team").on(table.accountId, table.email),
+    index("manager_team_invitations_by_microsoft_recipient").on(
+      table.accountId,
+      table.microsoftTenantId,
+      table.microsoftObjectId,
+    ),
+    check(
+      "manager_team_invitation_recipient",
+      sql`(${table.email} is not null and ${table.microsoftTenantId} is null and ${table.microsoftObjectId} is null)
+        or (${table.email} is null and ${table.microsoftTenantId} is not null and ${table.microsoftObjectId} is not null)`,
+    ),
+  ],
 );
 export const accountFeatures = pgTable(
   "manager_account_features",

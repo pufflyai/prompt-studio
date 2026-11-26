@@ -1,5 +1,10 @@
 import { and, asc, eq } from "drizzle-orm";
-import { type AccountSignInProvider, accountSignInProviderSchema, identitySchema } from "pstdio-sync-contracts";
+import {
+  type AccountSignInProvider,
+  accountSignInProviderSchema,
+  identitySchema,
+  type TeamInviteRecipient,
+} from "pstdio-sync-contracts";
 import { readAccountFeatures, requireRelay } from "./account-features";
 import { deviceNameSchema, deviceProfileSchema } from "./contracts";
 import { digestCredential } from "./credential";
@@ -71,8 +76,14 @@ export const createPersonalAccountAccess =
 
 export const createDeviceLogin =
   (withAccount: ReturnType<typeof createPersonalAccountAccess>) => (headers: Headers, input: unknown) => {
-    const { provider, ...profile } = deviceProfileSchema.extend({ provider: accountSignInProviderSchema.optional() }).parse(input);
-    return withAccount(headers, (transaction, accountId) => registerDeviceInTransaction(transaction, { accountId, ...profile }), provider);
+    const { provider, ...profile } = deviceProfileSchema
+      .extend({ provider: accountSignInProviderSchema.optional() })
+      .parse(input);
+    return withAccount(
+      headers,
+      (transaction, accountId) => registerDeviceInTransaction(transaction, { accountId, ...profile }),
+      provider,
+    );
   };
 
 // Every other native request carries the device credential. Devices of one account manage each other.
@@ -135,8 +146,8 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
   return {
     members: (token: string, id: string) => team(token, id, listTeamMembers),
     invitations: (token: string, id: string) => owner(token, id, listTeamInvitations),
-    invite: (token: string, id: string, email: unknown) =>
-      owner(token, id, (transaction, accountId) => createTeamInvitation(transaction, accountId, email)),
+    invite: (token: string, id: string, recipient: TeamInviteRecipient) =>
+      owner(token, id, (transaction, accountId) => createTeamInvitation(transaction, accountId, recipient)),
     cancelInvitation: (token: string, id: string, inviteId: string) =>
       owner(token, id, (transaction, accountId) =>
         cancelTeamInvitation(transaction, accountId, identitySchema.parse(inviteId)),
