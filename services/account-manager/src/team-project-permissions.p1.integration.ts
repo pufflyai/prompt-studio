@@ -9,8 +9,13 @@ afterAll(() => fixture.close());
 
 test("assigned members manage their projects without gaining team administration or other projects", async () => {
   const authentication = createAuthenticationFixture(fixture.databaseUrl);
-  const { auth, config } = authentication;
+  const { config } = authentication;
+  const auth = implementation.createManagerAuthentication({
+    ...config,
+    projectDeletionRelayToken: "team-permissions-disposable-relay-token",
+  });
   const manager = fixture.owner();
+  const recovered = createAuthorityFixture(implementation);
   const handler = implementation.createManagerHandler(auth, config.origin);
   const device = async () => {
     const login = await authentication.login(crypto.randomUUID());
@@ -76,7 +81,63 @@ test("assigned members manage their projects without gaining team administration
     ]);
     expect((await request(member.token, `${team}/invite-codes`, {})).status).toBe(403);
     expect((await request(member.token, `${team}/members/${owner.accountId}/remove`, {})).status).toBe(403);
+
+    expect((await request(member.token, `/v1/workbenches/assigned/remove?accountId=${accountId}`, {})).status).toBe(
+      200,
+    );
+    expect(
+      (await request(owner.token, `/v1/workbenches/assigned?accountId=${accountId}`, { grantSelf: true })).status,
+    ).toBe(200);
+    expect((await grant(owner.token, "assigned", member.accountId, true)).status).toBe(200);
+    const receipt = `/v1/workbenches/assigned/deletion?accountId=${accountId}`;
+    expect(
+      (await request(peer.token, `/v1/workbenches/private/deletion?accountId=${accountId}`, { confirm: true })).status,
+    ).toBe(401);
+    const deleted = await request(member.token, receipt, { confirm: true });
+    expect(deleted.status).toBe(202);
+    const operation = await deleted.json();
+    expect(await (await request(member.token, receipt)).json()).toEqual(operation);
+    expect(await (await request(member.token, `/v1/project-deletions?accountId=${accountId}`)).json()).toEqual([
+      operation,
+    ]);
+    expect((await request(peer.token, receipt)).status).toBe(401);
+    expect(await (await request(peer.token, `/v1/project-deletions?accountId=${accountId}`)).json()).toEqual([]);
+    const restarted = implementation.createManagerAuthentication({
+      ...config,
+      projectDeletionRelayToken: "team-permissions-disposable-relay-token",
+    });
+    try {
+      const restartedHandler = implementation.createManagerHandler(restarted, config.origin);
+      expect(
+        await (
+          await restartedHandler(
+            new Request(config.origin + receipt, {
+              headers: { authorization: `Bearer ${member.token}` },
+            }),
+          )
+        ).json(),
+      ).toEqual(operation);
+    } finally {
+      await restarted.close();
+    }
+    const saved = await manager.snapshot();
+    expect(saved.deletions?.find((row) => row.accountId === accountId)).toMatchObject({
+      requestedBy: member.accountId,
+    });
+    await recovered.initialize();
+    const restore = recovered.owner();
+    try {
+      await restore.restore("member-deletion-receipt", saved);
+      expect((await restore.snapshot()).deletions?.find((row) => row.accountId === accountId)).toMatchObject({
+        requestedBy: member.accountId,
+      });
+    } finally {
+      await restore.close();
+    }
+    expect((await request(owner.token, `${team}/members/${member.accountId}/remove`, {})).status).toBe(200);
+    expect((await request(member.token, receipt)).status).toBe(401);
+    expect((await request(member.token, "/v1/account")).status).toBe(200);
   } finally {
-    await Promise.all([authentication.close(), manager.close()]);
+    await Promise.all([authentication.close(), auth.close(), manager.close(), recovered.close()]);
   }
 });
