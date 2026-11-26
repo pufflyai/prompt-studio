@@ -1,5 +1,12 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { Client } from "pg";
+import {
+  createAuthenticationFixture,
+  createOAuthCodeFixture,
+  deviceProfile,
+  fixtureMicrosoftClient,
+  oauthBrowserCookie,
+} from "pstdio-account-manager/testing";
 import { openUpdate, sealUpdate, UnreadableSyncData } from "pstdio-sync/encryption";
 import { fetchSyncSpaces } from "pstdio-sync/relay";
 import {
@@ -21,13 +28,6 @@ import {
   updateResultSchema,
 } from "pstdio-sync-contracts";
 import { z } from "zod";
-import { deviceProfile } from "../../../account-manager/src/authority.fixture";
-import { createAuthenticationFixture } from "../../../account-manager/src/manager-authentication.fixture";
-import {
-  createOAuthCodeFixture,
-  fixtureMicrosoftClient,
-  oauthBrowserCookie,
-} from "../../../account-manager/src/oauth-code.fixture";
 import { defaultRelayLimits } from "../limits";
 import { startRelay } from "../service";
 import { projectKey } from "../storage/accounts";
