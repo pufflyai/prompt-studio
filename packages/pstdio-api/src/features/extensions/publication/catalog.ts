@@ -6,13 +6,19 @@ import type { ExtensionsRouteDeps } from "../deps";
 import { createPublicationCatalog } from "./catalog-store";
 import { packExtension } from "./package";
 import { preparePublishedExtension } from "./prepare";
-import { type Publication, PublicationChangedError, publicationSchema, publishedExtensionsId } from "./types";
+import {
+  type Publication,
+  PublicationAccessDenied,
+  PublicationChangedError,
+  publicationSchema,
+  publishedExtensionsId,
+} from "./types";
 
 export { type Publication, publicationSchema, publishedExtensionsId } from "./types";
 
 export const publishedOwner = (workbenchId: string) => ({ workbenchId, extensionId: publishedExtensionsId });
 export const openPublishedCatalog = async (
-  deps: Pick<ExtensionsRouteDeps, "extensionStorageService" | "assetTransferService">,
+  deps: Pick<ExtensionsRouteDeps, "extensionStorageService" | "assetTransferService" | "accountService">,
   workbenchId: string,
   signal?: AbortSignal,
 ) => {
@@ -23,7 +29,14 @@ export const openPublishedCatalog = async (
     owner,
     assets: { ...assets, verifyComplete: async () => {} },
   });
-  return createPublicationCatalog({ records, verifyComplete: assets.verifyComplete });
+  return createPublicationCatalog({
+    records,
+    verifyComplete: assets.verifyComplete,
+    authorizeWrite: async () => {
+      if (!(await deps.accountService.canPublishProjectExtensions(workbenchId, signal)))
+        throw new PublicationAccessDenied();
+    },
+  });
 };
 
 /** The activation input for a listed set; a selection without its package stops the whole set. */
@@ -56,6 +69,7 @@ export const publishExtension = async (
   const { installedSource } = source;
   if (installedSource.extension_id === publishedExtensionsId) throw new Error("Reserved platform extension identity");
   const catalog = await openPublishedCatalog(deps, input.projectId);
+  await catalog.requireWrite();
   const record = await catalog.read(installedSource.extension_id);
   if (record.revision !== input.expectedRevision) throw new PublicationChangedError();
   const bytes = await packExtension(installedSource.source_path);

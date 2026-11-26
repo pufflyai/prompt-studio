@@ -1,6 +1,8 @@
 import { fetchWithBackoff, serviceAddress, serviceUrl } from "./http";
 import { fetchWithInactivity } from "./inactivity-response";
 
+export type RelayAccess = { token: string; expiresAt: string; canPublish?: boolean };
+
 export const createRelayAccess = (input: {
   managerOrigin: string;
   renewalGrant: string;
@@ -12,8 +14,8 @@ export const createRelayAccess = (input: {
   denied?: () => void;
 }) => {
   const address = serviceAddress(input.managerOrigin);
-  let access: { token: string; expiresAt: string } | undefined;
-  let renewing: Promise<{ token: string; expiresAt: string }> | undefined;
+  let access: RelayAccess | undefined;
+  let renewing: Promise<RelayAccess> | undefined;
   const renew = async () => {
     const response = await fetchWithBackoff(
       () =>
@@ -37,12 +39,16 @@ export const createRelayAccess = (input: {
       if (response.status === 401) input.denied?.();
       throw new Error("Environment renewal unavailable");
     }
-    const body = (await response.json()) as { token?: unknown; expiresAt?: unknown };
+    const body = (await response.json()) as { token?: unknown; expiresAt?: unknown; canPublish?: unknown };
     if (typeof body.token !== "string" || !body.token || typeof body.expiresAt !== "string")
       throw new Error("Invalid environment access");
     const expires = Date.parse(body.expiresAt);
     if (!Number.isFinite(expires) || expires <= Date.now()) throw new Error("Expired environment access");
-    return { token: body.token, expiresAt: body.expiresAt };
+    return {
+      token: body.token,
+      expiresAt: body.expiresAt,
+      ...(typeof body.canPublish === "boolean" && { canPublish: body.canPublish }),
+    };
   };
   return async () => {
     input.signal.throwIfAborted();

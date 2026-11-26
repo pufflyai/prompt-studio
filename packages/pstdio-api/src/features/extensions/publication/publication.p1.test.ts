@@ -134,11 +134,12 @@ test("three devices discover encrypted packages, preserve private overrides and 
     const stop = apps[index]!.deps.eventBus.subscribe((event) => {
       if (event.table === "extension_instances") ready.resolve();
     });
+    const memberConfig = index === 2 ? { ...config, userId: "colleague" } : config;
     const connection = startPublishedExtensions({
-      config,
+      config: memberConfig,
       deps: apps[index]!.deps,
-      access,
-      live: projectRelay(config),
+      access: async () => ({ ...(await access()), canPublish: index !== 2 }),
+      live: projectRelay(memberConfig),
       signal: controller.signal,
     });
     publications.push(connection);

@@ -2,6 +2,9 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createNativeAccount } from "../../../services/account/native-account";
+import { createNativeStore } from "../../../services/account/native-store";
+import { createProjectCopyStore } from "../../../services/account/project-copy-store";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import { loadExtensionSource } from "../extension-runtime";
@@ -103,3 +106,120 @@ test("publication is explicit, captures package bytes, and checks the observed c
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("an ordinary team member can adopt a private package and cannot change the shared extension selection", async () => {
+  const root = await mkdtemp(join(tmpdir(), "team-extension-publication-"));
+  const app = await createTestApp();
+  let canPublish = false;
+  const manager = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    async fetch(request) {
+      if (new URL(request.url).pathname !== "/v1/environment-access") return new Response(null, { status: 404 });
+      if (request.headers.get("authorization") !== "Bearer team-device-credential")
+        return new Response(null, { status: 401 });
+      return Response.json({ canPublish });
+    },
+  });
+  const file = join(root, "account.json");
+  const account = createNativeAccount({
+    file,
+    environment: app.deps.environmentService,
+    projects: app.deps.projectService,
+  });
+  try {
+    const managerOrigin = manager.url.origin;
+    const project = await app.deps.projectService.create(folderProjectInput({ name: "Private team tools" }));
+    await createNativeStore(file).save({
+      managerOrigin,
+      relayOrigin: managerOrigin,
+      accountId: "employee",
+      deviceId: (await app.deps.environmentService.get()).environmentId,
+      token: "team-device-credential",
+    });
+    await createProjectCopyStore(file).bindTeamProject(
+      { managerOrigin, accountId: "team", projectId: project.id },
+      async () => true,
+    );
+    app.deps.accountService.canPublishProjectExtensions = account.canPublishProjectExtensions;
+
+    const source = createTestExtensionSource({
+      root,
+      installName: "team-tool",
+      name: "team-tool",
+      displayName: "Private team tool",
+    });
+    const loaded = await loadExtensionSource(source);
+    const extensionId = loaded.metadata.id;
+    const { instance } = await app.deps.extensionService.enableInstalledSourceForProject({
+      projectId: project.id,
+      sourcePath: source,
+      extensionId,
+      installName: "team-tool",
+      name: "team-tool",
+      displayName: "Private team tool",
+      manifest: loaded.manifest,
+    });
+    const path = `/v1/projects/${project.id}/extension-publications`;
+    const post = (body: unknown) =>
+      app.app.request(path, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    const read = async () => {
+      const response = await app.app.request(path);
+      expect(response.status).toBe(200);
+      const [record] = (await response.json()) as {
+        revision: string;
+        value: { revision: string; enabled: boolean } | null;
+      }[];
+      return record!;
+    };
+    const publish = (expectedRevision: string) => post({ kind: "publish", instanceId: instance.id, expectedRevision });
+    const initial = await read();
+    expect((await publish(initial.revision)).status).toBe(403);
+    expect(await read()).toEqual(initial);
+
+    canPublish = true;
+    expect((await publish(initial.revision)).status).toBe(200);
+    const selected = await read();
+    expect(selected.value?.enabled).toBe(true);
+
+    canPublish = false;
+    expect((await post({ kind: "adopt", extensionId })).status).toBe(200);
+    expect(
+      (
+        await post({
+          kind: "rollback",
+          extensionId,
+          revision: selected.value!.revision,
+          expectedRevision: selected.revision,
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (await post({ kind: "enabled", extensionId, enabled: false, expectedRevision: selected.revision })).status,
+    ).toBe(403);
+    const [adopted] = await app.deps.extensionService.listProjectExtensionInstances(project.id);
+    const installed = `/v1/projects/${project.id}/extensions/${adopted!.instance.id}`;
+    expect(
+      (
+        await app.app.request(installed, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ enabled: false }),
+        })
+      ).status,
+    ).toBe(403);
+    expect((await app.app.request(installed, { method: "DELETE" })).status).toBe(403);
+    expect(await read()).toEqual(selected);
+    expect(
+      (await app.deps.extensionService.getProjectExtensionInstance(project.id, adopted!.instance.id))?.instance.enabled,
+    ).toBe(true);
+  } finally {
+    account.close();
+    await Promise.all([manager.stop(true), app.close()]);
+    await rm(root, { recursive: true, force: true });
+  }
+}, 20_000);

@@ -1,7 +1,7 @@
-import { identitySchema } from "pstdio-sync-contracts";
+import { identitySchema, publishedExtensionsId } from "pstdio-sync-contracts";
 import { z } from "zod";
 
-export const publishedExtensionsId = "pstdio.published-extensions";
+export { publishedExtensionsId };
 export const packageMetadataSchema = z.strictObject({
   extensionId: identitySchema.refine((id) => id !== publishedExtensionsId),
   version: z.string(),
@@ -9,6 +9,12 @@ export const packageMetadataSchema = z.strictObject({
 export const selectionSchema = z.strictObject({ revision: z.string().regex(/^[a-f0-9]{64}$/), enabled: z.boolean() });
 export const publicationSchema = packageMetadataSchema.extend(selectionSchema.shape);
 export type Publication = z.infer<typeof publicationSchema>;
+
+export class PublicationAccessDenied extends Error {
+  constructor() {
+    super("Only the team owner can change published extensions. Verify your Cloud access and try again.");
+  }
+}
 
 export class PublicationUpdateRequiredError extends Error {
   constructor() {

@@ -34,6 +34,7 @@ import { createNativeStore, type DeviceLogin } from "./native-store";
 import { createNativeTeams } from "./native-teams";
 import { createProjectCloudCatalog } from "./project-cloud-catalog";
 import { createProjectCopyStore } from "./project-copy-store";
+import { canPublishProjectExtensions } from "./project-publication-access";
 import { initialProjectSyncStatus, recoveringProjectSyncStatus } from "./project-sync-readiness";
 
 type FolderRecoveryOwners = (projectId: string) => ReturnType<typeof startFolderRecovery> | undefined;
@@ -271,6 +272,7 @@ export const createNativeAccount = (input: {
     listTeams: teams.list,
     createTeam: teams.create,
     prepareTeamProject: teams.prepareProject,
+    canPublishProjectExtensions: canPublishProjectExtensions({ copies, readLogin, call }),
     ...createDeviceIdentity({ current, store, call }),
     sendDeviceCommand: commands.send,
     start(

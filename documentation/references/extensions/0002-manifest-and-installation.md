@@ -504,6 +504,8 @@ sync through the owner's encrypted record stream
 blob before the save that uses it. The relay cannot read extension names, versions or
 code.
 
+In a team Cloud project, the team owner can publish, roll back, enable, disable, or remove an extension from the shared set. This requires an active device and project grant. Project members can install and adopt the shared package, use it, and keep private source overrides.
+
 Installing, editing and reloading a source stay local. Explicitly publish a portable
 source when other devices should use it:
 

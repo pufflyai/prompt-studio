@@ -7,7 +7,7 @@ export const publishedRevisionOf = (reference: string | null) =>
   reference?.startsWith("pstdio-published:") ? reference.slice("pstdio-published:".length) : null;
 
 export const publishedSourceBaseline = async (
-  deps: Pick<ExtensionsRouteDeps, "extensionStorageService" | "assetTransferService">,
+  deps: Pick<ExtensionsRouteDeps, "extensionStorageService" | "assetTransferService" | "accountService">,
   projectId: string,
   reference: string | null,
   incoming: Asset,

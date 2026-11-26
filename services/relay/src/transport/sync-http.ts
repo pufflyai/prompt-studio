@@ -97,6 +97,15 @@ export const handleSyncRequest = async (
     route.spaceOwner !== userId
   )
     return syncFailure(403, "forbidden");
+  if (
+    route.kind === "document" &&
+    route.operation !== "read" &&
+    route.spaceOwner === null &&
+    userId !== identity.accountId &&
+    (!identity.publication ||
+      (!identity.publication.canWrite && identity.publication.documents.includes(route.documentId)))
+  )
+    return syncFailure(403, "forbidden");
   if (!owners.allow(identity.environmentId)) return syncFailure(429, "rate-limited", { "retry-after": "1" });
   const key = projectKey(identity.accountId, route.projectId);
   const caller: SyncCaller = { accountId: identity.accountId, deviceId: identity.environmentId };

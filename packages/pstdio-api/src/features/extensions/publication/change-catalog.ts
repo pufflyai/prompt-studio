@@ -58,7 +58,8 @@ export const changePublishedCatalog = async (
   input: CatalogChange,
   signal?: AbortSignal,
 ) => {
-  const catalog = await openPublishedCatalog(deps, projectId);
+  const catalog = await openPublishedCatalog(deps, projectId, signal);
+  await catalog.requireWrite();
   const proposed = await proposedEntry(catalog, input);
   const others = (await catalog.list()).filter((record) => record.recordId !== input.extensionId);
   await activatePublishedSet(deps, projectId, [...publishedEntries(others), proposed], signal, false, async () => {
@@ -100,6 +101,7 @@ export const shareEnabledChoice = async (
   enabled: boolean,
 ) => {
   const catalog = await openPublishedCatalog(deps, projectId);
+  if (!(await catalog.read(extensionId)).value) return;
   // The local choice does not depend on an observed revision, so it applies on top of the latest selection.
   await catalog.change(extensionId, undefined, async ({ read, records }) => {
     const current = await read(extensionId);
@@ -119,6 +121,8 @@ export const shareEnabledChoice = async (
 
 /** Deletes the shared selection and returns an undo that never overwrites a newer shared choice. */
 export const removeSharedSelection = async (catalog: Catalog, extensionId: string) => {
+  const selection = await catalog.records.read(extensionId);
+  if (!selection.exists || selection.deleted) return;
   const removed = await catalog.change(extensionId, undefined, async ({ records }) => {
     const current = await records.read(extensionId);
     if (!current.exists || current.deleted) return undefined;
