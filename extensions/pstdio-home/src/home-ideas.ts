@@ -27,6 +27,20 @@ export const homeIdeas = [
     prompt:
       "Make this project's Home extension a launchpad for the work I repeat. Inspect this project, identify useful commands and views, and add shortcuts to run or open them. Use existing public extension commands and shared UI components.",
   },
+  {
+    id: "virtual-office",
+    title: "Virtual office",
+    description: "A tiny pixel-art world where your agents work, meet, and bring your project to life.",
+    prompt:
+      "Turn this project's Home extension into an original top-down isometric pixel-art virtual office inspired by classic handheld RPGs. Give active coding-agent sessions their own characters and desks. Show working, waiting, and finished states in the scene. Let me select a character or desk to open the real session. Add a cozy meeting area, plants, and a garden. Support light and dark themes, keyboard navigation, and reduced motion. Use the project's real sessions and public extension APIs. Create original art without existing game characters or assets.",
+  },
 ] as const;
 
 export type HomeIdeaId = (typeof homeIdeas)[number]["id"];
+
+// Immutable landing-site assets stay available independently of website deployments.
+const screenshotBase =
+  "https://raw.githubusercontent.com/pufflyai/prompt-studio/0ed498bdcc975d1a0fc30c206cee904f50286f41/clients/landing-page/public/images/home-ideas";
+
+export const homeIdeaScreenshotUrl = (idea: HomeIdeaId, mode: "light" | "dark") =>
+  `${screenshotBase}/${idea}-${mode}.png`;

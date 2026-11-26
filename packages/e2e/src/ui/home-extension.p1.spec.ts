@@ -41,6 +41,17 @@ test("Home shows project ideas and reopens recently used resources", async ({ pa
   await expect(homePage(page)).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio.home/home$`));
   await expect(homeFrame(page).getByText("Recently Used", { exact: true })).toHaveCount(0);
+  for (const mode of ["light", "dark"]) {
+    await page.keyboard.press("Alt+Shift+K");
+    const palette = page.getByRole("dialog", { name: "Command palette", exact: true });
+    await palette.getByRole("textbox").fill(">Choose color theme");
+    await palette.getByRole("option", { name: /Choose color theme/ }).click();
+    await palette.getByRole("option", { name: mode === "dark" ? "Prompt Dark" : "Prompt Light", exact: true }).click();
+    const screenshot = homeFrame(page).getByRole("img", { name: "Project pulse example interface", exact: true });
+    await expect(screenshot).toHaveCount(1);
+    await expect(screenshot).toHaveAttribute("src", new RegExp(`/project-pulse-${mode}\\.png$`));
+    await screenshot.evaluate((image: HTMLImageElement) => image.decode());
+  }
   await homeFrame(page).getByRole("button", { name: "Next idea", exact: true }).click();
   await expect(homeFrame(page).getByRole("heading", { name: "Release checklist", exact: true })).toBeInViewport();
   await homeFrame(page)
@@ -74,6 +85,10 @@ test("Home shows project ideas and reopens recently used resources", async ({ pa
   const recent = homeFrame(page).getByRole("button", { name: session.title, exact: true });
   await expect(recent).toBeVisible();
   await expect(recent.getByLabel(/Session status/)).toBeVisible();
+  const ideas = await homeFrame(page).getByRole("region", { name: "Home page ideas", exact: true }).boundingBox();
+  const recentBounds = await recent.boundingBox();
+  expect(ideas).not.toBeNull();
+  expect(recentBounds!.y).toBeGreaterThan(ideas!.y + ideas!.height);
   await recent.click();
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/session\\?`));
   await page.reload();
@@ -84,6 +99,43 @@ test("Home shows project ideas and reopens recently used resources", async ({ pa
   await page.getByRole("option", { name: "Quotas", exact: true }).click();
   await expect(page).toHaveURL(/\/quotas$/);
   await expect(page.locator('iframe[title="Quotas"]')).toBeVisible();
+});
+
+// Critical risk: a failed primary action must explain recovery without shifting the Home content.
+test("Home anchors build failures to the selected idea and allows retry", async ({ page, request }) => {
+  const created = await request.post("/v1/projects", {
+    data: folderProjectInput({ name: "Home build recovery", agents: ["pstdio.workbench-fixture.harness.fake"] }),
+  });
+  expect(created.ok()).toBe(true);
+  const project = (await created.json()) as { id: string };
+  let attempts = 0;
+  await page.route("**/extensions/commands/pstdio.home.command.build-home/execute", async (route) => {
+    attempts++;
+    if (attempts === 1) {
+      await route.fulfill({ status: 503, json: { error: "Build temporarily unavailable. Try again." } });
+      return;
+    }
+    await route.continue();
+  });
+  try {
+    await page.goto(`/projects/${project.id}`);
+    const home = homeFrame(page);
+    await expect(homePage(page)).toBeVisible();
+    const build = home
+      .getByRole("article", { name: "Project pulse", exact: true })
+      .getByRole("button", { name: "Build this!", exact: true });
+    await build.click();
+    const error = home.getByRole("dialog", { name: "Could not start building", exact: true });
+    await expect(error).toBeVisible();
+    await expect(error.getByRole("alert")).toContainText("Build temporarily unavailable");
+    await page.keyboard.press("Escape");
+    await expect(error).toBeHidden();
+    await build.click();
+    await expect(page.getByRole("tab", { name: "Build Home: Project pulse", exact: true })).toBeVisible();
+    expect(attempts).toBe(2);
+  } finally {
+    await page.unrouteAll({ behavior: "ignoreErrors" });
+  }
 });
 
 test("disabling Home exposes the existing empty panel and enabling it restores one page", async ({ page, request }) => {

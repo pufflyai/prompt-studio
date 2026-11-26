@@ -23,13 +23,19 @@ const missingGitError =
 interface StartPagePreviewProps {
   setupError?: string;
   empty?: boolean;
+  buildFails?: boolean;
 }
 const StartPagePreview = (props: StartPagePreviewProps) => {
-  const { setupError, empty } = props;
+  const { setupError, empty, buildFails } = props;
   return (
     <Stack w="full" maxW="2xl" px="lg" pt="4xl" pb="3xl" gap="2xl" position="relative">
       {setupError && <ProjectSetupStatus error={setupError} onRetry={() => undefined} />}
       <HomeWelcome />
+      <HomePromptCarousel
+        onBuild={async () => {
+          if (buildFails) throw new Error("Build temporarily unavailable. Try again.");
+        }}
+      />
       <StartRecentList
         resources={recentProjectResources(
           (empty ? [] : resources).map(({ id, title, icon, status }) => ({
@@ -45,13 +51,13 @@ const StartPagePreview = (props: StartPagePreviewProps) => {
         )}
         onOpen={() => undefined}
       />
-      <HomePromptCarousel onBuild={async () => undefined} />
     </Stack>
   );
 };
 const meta: CanvasMeta<typeof StartPagePreview> = {
   title: "Extensions/Home/Project home",
   component: StartPagePreview,
+  argTypes: { buildFails: { control: "boolean" } },
 };
 export default meta;
 type Story = CanvasFrame<typeof StartPagePreview>;

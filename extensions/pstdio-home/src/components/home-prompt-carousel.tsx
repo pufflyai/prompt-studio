@@ -1,19 +1,8 @@
-import { AspectRatio, Button, Carousel, Heading, HStack, IconButton, Image, Stack, Text } from "@chakra-ui/react";
-import { AlertMessage, SimpleCard, SimpleCardBody } from "@pstdio/ui";
+import { AspectRatio, Box, Button, Carousel, Heading, HStack, IconButton, Image, Stack, Text } from "@chakra-ui/react";
+import { AlertMessage, ScopedPopover as Popover, Portal, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { useState } from "react";
-import launchpad from "../assets/launchpad.png";
-import projectPulse from "../assets/project-pulse.png";
-import releaseChecklist from "../assets/release-checklist.png";
-import teamHandoff from "../assets/team-handoff.png";
-import { type HomeIdeaId, homeIdeas } from "../home-ideas";
+import { type HomeIdeaId, homeIdeaScreenshotUrl, homeIdeas } from "../home-ideas";
 import { HomeIcon } from "./home-icon";
-
-const screenshots = {
-  "project-pulse": projectPulse,
-  "release-checklist": releaseChecklist,
-  "team-handoff": teamHandoff,
-  launchpad,
-};
 
 interface HomePromptCarouselProps {
   onBuild: (idea: HomeIdeaId) => Promise<void>;
@@ -21,7 +10,7 @@ interface HomePromptCarouselProps {
 
 export const HomePromptCarousel = ({ onBuild }: HomePromptCarouselProps) => {
   const [pending, setPending] = useState<HomeIdeaId>();
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<{ idea: HomeIdeaId; message: string }>();
   const build = async (id: HomeIdeaId) => {
     if (pending) return;
     setPending(id);
@@ -29,7 +18,7 @@ export const HomePromptCarousel = ({ onBuild }: HomePromptCarouselProps) => {
     try {
       await onBuild(id);
     } catch (error) {
-      setError(error instanceof Error ? error.message : String(error));
+      setError({ idea: id, message: error instanceof Error ? error.message : String(error) });
     } finally {
       setPending(undefined);
     }
@@ -52,12 +41,21 @@ export const HomePromptCarousel = ({ onBuild }: HomePromptCarouselProps) => {
             <Carousel.Item key={id} index={index} minW="0">
               <SimpleCard as="article" aria-label={title} overflow="hidden">
                 <AspectRatio ratio={16 / 10} bg="bg.subtle" borderBottomWidth="1px" borderColor="border">
-                  <Image
-                    src={new URL(screenshots[id], import.meta.url).href}
-                    alt={`${title} example interface`}
-                    objectFit="cover"
-                    draggable={false}
-                  />
+                  <Box>
+                    {(["light", "dark"] as const).map((mode) => (
+                      <Image
+                        key={mode}
+                        src={homeIdeaScreenshotUrl(id, mode)}
+                        display={mode === "dark" ? { base: "none", _dark: "block" } : { base: "block", _dark: "none" }}
+                        alt={`${title} example interface`}
+                        w="full"
+                        h="full"
+                        objectFit="cover"
+                        draggable={false}
+                        loading="lazy"
+                      />
+                    ))}
+                  </Box>
                 </AspectRatio>
                 <SimpleCardBody display="flex" flexDirection="column" gap="md" p="lg">
                   <Stack gap="xs">
@@ -68,16 +66,40 @@ export const HomePromptCarousel = ({ onBuild }: HomePromptCarouselProps) => {
                       {description}
                     </Text>
                   </Stack>
-                  <Button
-                    variant="solid"
-                    alignSelf="flex-start"
-                    size="sm"
-                    loading={pending === id}
-                    disabled={Boolean(pending)}
-                    onClick={() => void build(id)}
+                  <Popover.Root
+                    open={error?.idea === id}
+                    onOpenChange={({ open }) => {
+                      if (!open) setError(undefined);
+                    }}
+                    positioning={{ placement: "bottom-start" }}
                   >
-                    Build this!
-                  </Button>
+                    <Popover.Anchor asChild>
+                      <Button
+                        variant="solid"
+                        alignSelf="flex-start"
+                        size="sm"
+                        loading={pending === id}
+                        disabled={Boolean(pending)}
+                        onClick={() => void build(id)}
+                      >
+                        Build this!
+                      </Button>
+                    </Popover.Anchor>
+                    <Portal>
+                      <Popover.Positioner>
+                        <Popover.Content aria-label="Could not start building" p="0" w="popover-panel" maxW="90vw">
+                          <AlertMessage
+                            role="alert"
+                            status="error"
+                            title="Could not start building"
+                            onClose={() => setError(undefined)}
+                          >
+                            {error?.idea === id ? error.message : undefined}
+                          </AlertMessage>
+                        </Popover.Content>
+                      </Popover.Positioner>
+                    </Portal>
+                  </Popover.Root>
                 </SimpleCardBody>
               </SimpleCard>
             </Carousel.Item>
@@ -103,11 +125,6 @@ export const HomePromptCarousel = ({ onBuild }: HomePromptCarouselProps) => {
           </HStack>
         </Carousel.Control>
       </Carousel.Root>
-      {error && (
-        <AlertMessage status="error" title="Could not start building" onClose={() => setError(undefined)}>
-          {error}
-        </AlertMessage>
-      )}
     </Stack>
   );
 };

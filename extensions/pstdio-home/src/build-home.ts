@@ -1,5 +1,5 @@
 import { defineCommand, params, sessionBrowser } from "@pstdio/sdk/extensions";
-import { homeIdeas } from "./home-ideas";
+import { homeIdeaScreenshotUrl, homeIdeas } from "./home-ideas";
 
 export const buildHome = defineCommand({
   id: "build-home",
@@ -18,7 +18,7 @@ export const buildHome = defineCommand({
     if (!idea) throw new Error("Choose a Home page idea.");
     const session = await ctx.sessions.create({
       title: `Build Home: ${idea.title}`,
-      prompt: `${idea.prompt}\nRead the existing Home extension and use its "${idea.id}.png" screenshot as a layout reference.`,
+      prompt: `${idea.prompt}\nRead the existing Home extension. Use these example interfaces as design references, adapting sample content to this project.\nLight: ${homeIdeaScreenshotUrl(idea.id, "light")}\nDark: ${homeIdeaScreenshotUrl(idea.id, "dark")}`,
       workspaceId: ctx.workspaceId,
     });
     ctx.navigation.open({
