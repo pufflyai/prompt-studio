@@ -1,7 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { betterAuth } from "better-auth/minimal";
-import { decryptOAuthToken } from "better-auth/oauth2";
 import { bearer } from "better-auth/plugins/bearer";
 import { jwt } from "better-auth/plugins/jwt";
 import { oneTimeToken } from "better-auth/plugins/one-time-token";
@@ -78,12 +77,7 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
       ...(await deviceLogin(headers, input)),
       relayOrigin: config.audience,
     }),
-    devices: createDeviceAccess(
-      connection.db,
-      createAccountProfileReader(config.microsoft?.clientId, async (token) =>
-        decryptOAuthToken(token, await auth.$context),
-      ),
-    ),
+    devices: createDeviceAccess(connection.db, createAccountProfileReader(config.microsoft?.clientId)),
     supportsSignIn: (provider: AccountSignInProvider) => provider === "google" || !!config.microsoft,
     nativeLogin: (provider: AccountSignInProvider, callbackURL: string, errorCallbackURL: string) =>
       auth.api.signInSocial({ body: { provider, callbackURL, errorCallbackURL }, asResponse: true }),

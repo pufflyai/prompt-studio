@@ -8,8 +8,7 @@ import { accounts } from "./schema";
 
 /** Display metadata only. Account ownership and feature grants never use these mutable claims. */
 export const createAccountProfileReader =
-  (clientId: string | undefined, decrypt: (token: string) => Promise<string>) =>
-  async (db: Pick<ManagerDatabase, "select">, accountId: string) => {
+  (clientId: string | undefined) => async (db: Pick<ManagerDatabase, "select">, accountId: string) => {
     if (!clientId) return undefined;
     const [owner] = await db.select().from(accounts).where(eq(accounts.id, accountId));
     if (!owner || !microsoftIssuerSchema.safeParse(owner.ownerIssuer).success || !owner.ownerSubject) return undefined;
@@ -21,7 +20,7 @@ export const createAccountProfileReader =
     if (!provider?.idToken) return undefined;
     try {
       // The provider validated this token before storage. Read it only for display, bound to its original owner.
-      const profile = decodeJwt(await decrypt(provider.idToken));
+      const profile = decodeJwt(provider.idToken);
       if (profile.iss !== owner.ownerIssuer || profile.sub !== owner.ownerSubject || profile.aud !== clientId)
         return undefined;
       for (const candidate of [profile.email, profile.preferred_username]) {
