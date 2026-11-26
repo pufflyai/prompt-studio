@@ -12,7 +12,7 @@ import type { InstallExtensionSourceInput } from "./install-extension-source-typ
 import type { resolveInstallSource } from "./resolve-install-source";
 
 export class ExtensionUpgradeNeedsReviewError extends Error {
-  constructor(message = "This extension has local changes. Its working copy was kept.") {
+  constructor(message = "This extension has local changes and could not be updated.") {
     super(message);
     this.name = "ExtensionUpgradeNeedsReviewError";
   }

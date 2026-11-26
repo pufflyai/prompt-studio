@@ -6,6 +6,10 @@ import type { ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionUpgradeProgress } from "./extension-upgrade-progress";
 
 export default { title: "ProjectSettings/Extension action feedback" };
+const feedbackError = (status: ExtensionActionState["status"], conflict: boolean) => {
+  if (status !== "error") return undefined;
+  return conflict ? "This extension has local changes and could not be updated." : "Registry unavailable";
+};
 export const UpgradeFeedback = () => {
   const [status, setStatus] = useState<ExtensionActionState["status"] | undefined>("running");
   const [install, setInstall] = useState(false);
@@ -83,8 +87,8 @@ export const UpgradeFeedback = () => {
               ? {
                   status,
                   needsReview: conflict,
-                  label: conflict ? "Local files kept" : labels[status],
-                  error: status === "error" && !conflict ? "Registry unavailable" : undefined,
+                  label: conflict ? "Update paused" : labels[status],
+                  error: feedbackError(status, conflict),
                 }
               : undefined
           }
