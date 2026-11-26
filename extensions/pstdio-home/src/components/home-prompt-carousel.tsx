@@ -39,7 +39,7 @@ export const HomePromptCarousel = ({ onBuild }: HomePromptCarouselProps) => {
   return (
     <Stack gap="md" minW="0" w="full">
       <Heading as="h2" textStyle="label/L/regular">
-        Turn this page into something better
+        Turn this page into the tool you need
       </Heading>
       <Carousel.RootProvider value={carousel} aria-label="Home page ideas" w="full" minW="0">
         <Carousel.ItemGroup>

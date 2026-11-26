@@ -70,6 +70,48 @@ test("selected text opens an editable comment popover and publishes the authored
     await expect(activity.getByText("Clarify the retry behavior.", { exact: true })).toBeVisible();
     await expect(activity).toContainText("Discuss this passage");
     await expect(editor).toHaveText("Discuss this passage before changing it.");
+
+    // A thread reply must never consume or redirect the independent top-level draft.
+    const thread = activity.locator("article[data-activity-entry]").filter({
+      has: page.getByText("Clarify the retry behavior.", { exact: true }),
+    });
+    await expect(thread).toBeVisible();
+    const commentInput = activity.getByRole("textbox", { name: "Leave a comment…", exact: true });
+    await commentInput.fill("Keep my top-level draft.");
+    await thread.getByRole("button", { name: "Leave a reply…", exact: true }).click();
+    const replyInput = thread.getByRole("textbox", { name: "Leave a reply…", exact: true });
+    await expect(replyInput).toBeFocused();
+    await replyInput.fill("Clarify the timeout budget.");
+    const receivedReply = Promise.withResolvers<void>();
+    const releaseReply = Promise.withResolvers<void>();
+    await page.route(
+      "**/activity/publish",
+      async (route) => {
+        receivedReply.resolve();
+        await releaseReply.promise;
+        await route.fulfill({ status: 503, json: { error: "Temporarily unavailable" } });
+      },
+      { times: 1 },
+    );
+    await thread.getByRole("button", { name: "Submit reply", exact: true }).click();
+    await receivedReply.promise;
+    try {
+      await expect(commentInput).toBeEditable();
+      await commentInput.fill("Independent top-level draft.");
+    } finally {
+      releaseReply.resolve();
+    }
+    await expect(thread.getByRole("alert")).toBeVisible();
+    await expect(replyInput).toHaveText("Clarify the timeout budget.");
+    await expect(commentInput).toHaveText("Independent top-level draft.");
+    await thread.getByRole("button", { name: "Submit reply", exact: true }).click();
+    await expect(thread.getByText("Clarify the timeout budget.", { exact: true })).toBeVisible();
+    await expect(thread.getByRole("button", { name: "Leave a reply…", exact: true })).toBeVisible();
+    await expect(commentInput).toHaveText("Independent top-level draft.");
+    await activity.getByRole("button", { name: "Submit comment", exact: true }).click();
+    await expect(activity.locator("article[data-activity-entry]")).toHaveCount(2);
+    await expect(thread.getByText("Independent top-level draft.", { exact: true })).toHaveCount(0);
+
     await editor.evaluate((element) => {
       const text = document.createTreeWalker(element, NodeFilter.SHOW_TEXT).nextNode()!;
       const range = document.createRange();
