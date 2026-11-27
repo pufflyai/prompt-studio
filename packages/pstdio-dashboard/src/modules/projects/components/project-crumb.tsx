@@ -41,8 +41,7 @@ interface ProjectCrumbProps {
   workbench: WorkbenchCore;
 }
 
-// The project avatar and title, leading the breadcrumb. It takes the user back to the last page
-// outside every Sidenav level, so a level page such as Sessions always has a way out.
+// The project breadcrumb returns the Sidenav to the project's navigation root.
 export const ProjectCrumb = (props: ProjectCrumbProps) => {
   const { workbench } = props;
   const projectName = useDashboardProjectName(workbench);

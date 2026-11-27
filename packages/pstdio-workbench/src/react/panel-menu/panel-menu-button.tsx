@@ -131,7 +131,7 @@ export const WorkbenchPanelMenuButton = (props: {
                   css={
                     floatingMenu.size.height
                       ? {
-                          "& iframe, & [data-scope=scroll-area][data-part=viewport]": {
+                          "& iframe, & [data-workbench-region-scroll] > [data-part=viewport]": {
                             maxHeight: `${Math.max(0, floatingMenu.size.height - 2)}px`,
                           },
                         }
