@@ -51,19 +51,23 @@ test("a blocked shutdown records its entered phase when ordinary request logs ar
   }
 });
 
-test.each([
+const harnessShutdownCases: Array<
+  [
+    string,
+    { runtimeFails?: boolean; stopFails?: boolean; dbFails?: boolean; harnessOutcome?: "rejected" | "timed_out" },
+  ]
+> = [
   ["the runtime stops cleanly", {}],
   ["the runtime fails to stop", { runtimeFails: true }],
   ["runtime, process, and worker cleanup fail", { runtimeFails: true, stopFails: true }],
   ["runtime, process, worker, and database cleanup fail", { runtimeFails: true, stopFails: true, dbFails: true }],
   ["harness cleanup fails", { harnessOutcome: "rejected" }],
   ["harness cleanup misses its deadline", { harnessOutcome: "timed_out" }],
-] satisfies Array<
-  [
-    string,
-    { runtimeFails?: boolean; stopFails?: boolean; dbFails?: boolean; harnessOutcome?: "rejected" | "timed_out" },
-  ]
->)("shutdown keeps backend workers available during the harness cleanup allowance when %s", async (_, options) => {
+];
+
+test.each(
+  harnessShutdownCases,
+)("shutdown keeps backend workers available during the harness cleanup allowance when %s", async (_, options) => {
   const { runtimeFails, stopFails, dbFails, harnessOutcome } = options;
   const runtimeFailure = new Error("extension runtime did not stop");
   const processFailure = new Error("process cleanup failed");
