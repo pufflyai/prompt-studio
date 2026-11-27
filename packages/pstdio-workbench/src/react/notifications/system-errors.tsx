@@ -1,10 +1,11 @@
-import { Button, HStack, Icon, Stack, Tag, Text } from "@chakra-ui/react";
+import { Button, HStack, Icon, IconButton, Stack, Tag, Text } from "@chakra-ui/react";
 import { AlertMessage, PopoverHeader, ScrollArea } from "@pstdio/ui";
-import { Bell, TriangleAlert } from "lucide-react";
+import { Bell, TriangleAlert, X } from "lucide-react";
 import { useLayoutEffect } from "react";
 import type { WorkbenchCore } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchActionErrors } from "./action-errors";
+import { useDismissedRecovery } from "./dismissed-recovery";
 import { OperationProgressIndicator, OperationRecoveryItem, useOperationActivity } from "./operation-recovery";
 import { isSystemNotice } from "./system-error-state";
 
@@ -12,8 +13,9 @@ export const systemActivityItemId = "workbench.system-activity";
 const detailsViewId = `${systemActivityItemId}.details`;
 
 export const useSystemActivityStatusItem = (workbench: WorkbenchCore, visible: boolean) => {
-  const { summary, label } = useSystemNotices(workbench);
+  const { summary, label, hasDismissedRecovery } = useSystemNotices(workbench);
   const hasNotices = Boolean(summary);
+  useDismissedRecovery(workbench, hasDismissedRecovery);
   useLayoutEffect(() => {
     if (!visible || !hasNotices) return;
     const view = workbench.views.registerView({
@@ -44,18 +46,23 @@ export const useSystemActivityStatusItem = (workbench: WorkbenchCore, visible: b
 
 const useSystemNotices = (workbench: WorkbenchCore) => {
   const notifications = useWorkbenchStore(workbench.notifications.store, (state) => state.notifications);
-  const { pending, recovery } = useOperationActivity(workbench);
+  const { pending, recovery, dismissProgress, dismissRecovery } = useOperationActivity(workbench);
   const notices = Object.values(notifications)
     .filter(isSystemNotice)
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
-  const error = notices.find((notice) => notice.level === "error") ?? recovery[0];
-  const errorOnly = Boolean(error) && notices.every((notice) => notice.level === "error");
+  const recoveryAlerts = recovery.filter((entry) => !entry.dismissed);
+  const error = notices.find((notice) => notice.level === "error") ?? recoveryAlerts[0];
+  const errorOnly = Boolean(error) && pending.length === 0 && notices.every((notice) => notice.level === "error");
   const normalLabel = notices.length ? "System notices" : "System activity";
+  const summary = error ?? notices[0] ?? pending[0];
   return {
     notices,
     pending,
-    recovery,
-    summary: error ?? notices[0] ?? pending[0],
+    recoveryAlerts,
+    dismissProgress,
+    dismissRecovery,
+    summary,
+    hasDismissedRecovery: recovery.length > recoveryAlerts.length,
     label: errorOnly ? "System errors" : normalLabel,
     error,
     errorOnly,
@@ -76,8 +83,10 @@ const SystemNoticeIndicator = ({ workbench }: { workbench: WorkbenchCore }) => {
 };
 
 const WorkbenchSystemNotices = ({ workbench }: { workbench: WorkbenchCore }) => {
-  const { notices, pending, recovery, label, error, errorOnly } = useSystemNotices(workbench);
-  const count = notices.length + recovery.length + pending.length;
+  const { notices, pending, recoveryAlerts, dismissProgress, dismissRecovery, label, error, errorOnly } =
+    useSystemNotices(workbench);
+  const count = notices.length + recoveryAlerts.length + pending.length;
+  if (!count) return null;
   return (
     <>
       <PopoverHeader
@@ -95,10 +104,11 @@ const WorkbenchSystemNotices = ({ workbench }: { workbench: WorkbenchCore }) => 
             </Tag.Root>
             <Button
               size="2xs"
-              disabled={notices.length === 0}
               variant="ghost"
               onClick={() => {
                 for (const notice of notices) workbench.notifications.dismiss(notice.id);
+                for (const entry of pending) dismissProgress(entry.id);
+                for (const entry of recoveryAlerts) dismissRecovery(entry.id);
               }}
             >
               Clear all
@@ -117,9 +127,19 @@ const WorkbenchSystemNotices = ({ workbench }: { workbench: WorkbenchCore }) => 
       >
         <Stack gap="sm" minW="0">
           {pending.map((entry) => (
-            <OperationProgressIndicator key={entry.id.description} title={entry.title} />
+            <HStack key={entry.id.description} justify="space-between">
+              <OperationProgressIndicator title={entry.title} />
+              <IconButton
+                size="2xs"
+                variant="ghost"
+                aria-label={`Dismiss ${entry.title}`}
+                onClick={() => dismissProgress(entry.id)}
+              >
+                <X />
+              </IconButton>
+            </HStack>
           ))}
-          {recovery.map((entry) => (
+          {recoveryAlerts.map((entry) => (
             <OperationRecoveryItem key={entry.id.description} workbench={workbench} entry={entry} />
           ))}
           {notices.map((notice) => (

@@ -2,7 +2,11 @@ import { Button, HStack, Spinner, Text } from "@chakra-ui/react";
 import { AlertMessage } from "@pstdio/ui";
 import { useSyncExternalStore } from "react";
 import type { WorkbenchCore } from "../../core";
-import type { OperationRecovery, OperationSourceCommand } from "../../core/registries/mutations/operation-types";
+import type {
+  OperationPreview,
+  OperationRecovery,
+  OperationSourceCommand,
+} from "../../core/registries/mutations/operation-types";
 import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import { getWorkbenchQueries } from "../../core/workbench-queries";
 import { extensionCommandOperation } from "../../extensions/host/workbench-command-operation";
@@ -12,19 +16,40 @@ import { WorkbenchActionErrors } from "./action-errors";
 const inProject = (entry: { projectId?: string }, projectId?: string) =>
   entry.projectId === undefined || entry.projectId === projectId;
 
+const isVisibleRecovery = (entry: OperationRecovery, projectId?: string) =>
+  entry.projectUnavailable || inProject(entry, projectId);
+
+const isVisibleProgress = (entry: OperationPreview, projectId?: string) =>
+  entry.showPending && inProject(entry, projectId) && entry.status !== "unknown" && entry.status !== "unconfirmed";
+
+const findVisibleRecovery = (workbench: WorkbenchCore, id: symbol) => {
+  const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
+  const projectId = workbench.pages.store.getState().projectId;
+  return operations.getSnapshot().recovery.find((entry) => entry.id === id && isVisibleRecovery(entry, projectId));
+};
+
+const dismissVisibleRecovery = (workbench: WorkbenchCore, id: symbol) => {
+  if (findVisibleRecovery(workbench, id)) getWorkbenchOperations(getWorkbenchQueries(workbench)).dismiss(id);
+};
+
+const recoveryMessage = ({ status, description, error }: OperationRecovery) => {
+  if (status === "unknown") return description ?? "The result could not be confirmed.";
+  return error instanceof Error ? error.message : "The change could not be confirmed.";
+};
+
 export const useOperationActivity = (workbench: WorkbenchCore) => {
   const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
   const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
   const snapshot = useSyncExternalStore(operations.subscribe, operations.getSnapshot, operations.getSnapshot);
   return {
-    pending: snapshot.pending.filter(
-      (entry) =>
-        entry.showPending &&
-        inProject(entry, projectId) &&
-        entry.status !== "unknown" &&
-        entry.status !== "unconfirmed",
-    ),
-    recovery: snapshot.recovery.filter((entry) => entry.projectUnavailable || inProject(entry, projectId)),
+    pending: snapshot.pending.filter((entry) => isVisibleProgress(entry, projectId)),
+    recovery: snapshot.recovery.filter((entry) => isVisibleRecovery(entry, projectId)),
+    dismissProgress: (id: symbol) => {
+      const currentProject = workbench.pages.store.getState().projectId;
+      if (operations.getSnapshot().pending.some((entry) => entry.id === id && isVisibleProgress(entry, currentProject)))
+        operations.dismissProgress(id);
+    },
+    dismissRecovery: (id: symbol) => dismissVisibleRecovery(workbench, id),
   };
 };
 
@@ -58,13 +83,7 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
   const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
   const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
   const sourceIsCurrent = !entry.projectUnavailable && inProject(entry, projectId);
-  const currentRecovery = () =>
-    operations
-      .getSnapshot()
-      .recovery.find(
-        (item) =>
-          item.id === id && (item.projectUnavailable || inProject(item, workbench.pages.store.getState().projectId)),
-      );
+  const currentRecovery = () => findVisibleRecovery(workbench, id);
   const sourceIsStillCurrent = () => {
     const current = currentRecovery();
     return Boolean(current && !current.projectUnavailable);
@@ -89,8 +108,6 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
-  const failure = entry.error instanceof Error ? entry.error.message : "The change could not be confirmed.";
-  const message = status === "unknown" ? (entry.description ?? "The result could not be confirmed.") : failure;
   const canInspect =
     sourceIsCurrent &&
     status === "unknown" &&
@@ -99,13 +116,13 @@ export const OperationRecoveryItem = (props: { workbench: WorkbenchCore; entry: 
       (!sourceCommand && entry.source));
   return (
     <AlertMessage
-      status="error"
+      status={entry.dismissed ? "info" : "error"}
       title={entry.title}
       compact
-      onClose={entry.dismissed ? undefined : () => currentRecovery() && operations.dismiss(id)}
+      onClose={entry.dismissed ? undefined : () => dismissVisibleRecovery(workbench, id)}
       closeLabel={`Dismiss alert for ${entry.title}`}
     >
-      <Text>{message}</Text>
+      <Text>{recoveryMessage(entry)}</Text>
       <HStack gap="xs" wrap="wrap">
         {sourceCommand && sourceIsCurrent ? (
           <RecoverySourceButton
