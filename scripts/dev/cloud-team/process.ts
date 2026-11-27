@@ -6,11 +6,16 @@ export const setExecutionSignal = (signal?: AbortSignal) => {
   executionSignal = signal;
 };
 export const pause = (milliseconds: number) => delay(milliseconds, undefined, { signal: executionSignal });
-export const command = (args: string[], input?: string, finishProvisioning = false) =>
+export const command = (
+  args: string[],
+  input?: string | Uint8Array,
+  finishProvisioning = false,
+  timeoutMs = 20 * 60_000,
+) =>
   new Promise<string>((resolve, reject) => {
     const signal = finishProvisioning ? undefined : executionSignal;
     signal?.throwIfAborted();
-    const child = spawn(args[0]!, args.slice(1), { stdio: ["pipe", "pipe", "pipe"], signal, timeout: 20 * 60_000 });
+    const child = spawn(args[0]!, args.slice(1), { stdio: ["pipe", "pipe", "pipe"], signal, timeout: timeoutMs });
     const stdout: Buffer[] = [];
     const stderr: Buffer[] = [];
     child.stdout.on("data", (chunk: Buffer) => stdout.push(chunk));

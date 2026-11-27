@@ -1,16 +1,16 @@
 import { command, until } from "./process";
 import type { Actor, Pair } from "./types";
 
-export const kube = (pair: Pair, args: string[], input?: string) =>
+export const kube = (pair: Pair, args: string[], input?: string | Uint8Array) =>
   command([pair.kubectl, "--namespace", pair.namespace, ...args], input);
-export const exec = (pair: Pair, actor: Actor, args: string[], input?: string) =>
+export const exec = (pair: Pair, actor: Actor, args: string[], input?: string | Uint8Array) =>
   kube(pair, ["exec", "-i", actor.pod, "--", ...args], input);
 export const request = async <T>(pair: Pair, actor: Actor, path: string, body?: unknown, method?: string) =>
   JSON.parse(
     await exec(
       pair,
       actor,
-      ["bun", "/workspace/repo/scripts/dev/cloud-team/actor.ts"],
+      ["bun", "/workspace/cloud-team/repo/scripts/dev/cloud-team/actor.ts"],
       JSON.stringify({ path, body, method: method ?? (body === undefined ? "GET" : "POST") }),
     ),
   ) as {
@@ -28,7 +28,7 @@ export const control = async <T>(pair: Pair, path: string, body: unknown) =>
     await exec(
       pair,
       pair.owner!,
-      ["bun", "/workspace/repo/scripts/dev/cloud-team/actor.ts"],
+      ["bun", "/workspace/cloud-team/repo/scripts/dev/cloud-team/actor.ts"],
       JSON.stringify({ control: true, path, body, method: "POST" }),
     ),
   ) as T;
@@ -126,7 +126,7 @@ export const provision = async (pair: Pair, secrets: { database: string; access:
   ]);
 };
 
-export const findActor = async (pair: Pair, workspaceId: string, runId: string) => {
+export const findActor = async (pair: Pair, workspaceId: string, runId?: string) => {
   const pod = await until("Cloud workspace pod", async () => {
     const result = JSON.parse(
       await kube(pair, ["get", "pods", "-l", `pocketcoder.workspace=${workspaceId}`, "-o", "json"]),
@@ -189,4 +189,29 @@ export const configureActorNetwork = async (pair: Pair, actor: Actor, role: "own
       },
     }),
   );
+};
+
+export const assertActorReservation = async (actor: Actor) => {
+  const runs = JSON.parse(await command(["pst", "pocketcoder.remote-testing", "runs", "list"])) as Array<{
+    environmentId: string;
+    runId: string;
+    status: string;
+  }>;
+  const environments = JSON.parse(
+    await command(["pst", "pocketcoder.remote-testing", "environments", "list"]),
+  ) as Array<{ id: string; busy: boolean }>;
+  const environment = environments.find((item) => item.id === actor.workspaceId);
+  const own = runs.find((run) => run.runId === actor.runId && run.environmentId === actor.workspaceId);
+  const conflict = runs.some(
+    (run) => run.environmentId === actor.workspaceId && run.status === "running" && run.runId !== actor.runId,
+  );
+  // The companion exposes only recent runs. Absence never proves that a busy workspace is free.
+  if (conflict || (environment?.busy && own?.status !== "running"))
+    throw new Error(`Cannot prove ownership of busy workspace ${actor.workspaceId}; leaving it untouched`);
+  return { holding: Boolean(environment?.busy && own?.status === "running") };
+};
+export const assertPairReservations = async (pair: Pair) => {
+  for (const actor of [pair.owner!, pair.member!])
+    if (!(await assertActorReservation(actor)).holding)
+      throw new Error(`Workspace ${actor.workspaceId} lost its provable companion reservation`);
 };

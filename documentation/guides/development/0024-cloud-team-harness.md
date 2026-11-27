@@ -1,8 +1,7 @@
 # Two Cloud Workspaces team harness
 
 Run this explicitly from a local operator machine. Nothing registers it with CI or test discovery.
-It uses the configured Cloud Workspaces / Remote Testing companion to upload the selected checkout
-and start **two independent Cloud Workspaces**, each with its own native process, home, database,
+It uses the configured Cloud Workspaces / Remote Testing companion to provision and reserve **two independent Cloud Workspaces**, each with its own native process, home, database,
 account and device identity. A disposable Kubernetes Job supplies PostgreSQL and RustFS; the owner
 workspace runs the source checkout's actual account manager and Relay. The member downloads its
 required extension through that manager and object storage, rather than sharing the owner's files.
@@ -16,7 +15,7 @@ server build. Credentials stay in private local state or the owned pods, outside
 
 Each run installs narrow network policies for its two pods and storage. This is required on
 [GKE Dataplane V2](https://docs.cloud.google.com/kubernetes-engine/docs/how-to/network-policy#ipblock_behavior_in_gke_dataplane_v2),
-where broad IP rules exclude pod traffic. The member can reach the manager/Relay; only the owner
+where broad IP rules exclude pod traffic. A bounded companion holder keeps each workspace busy and prevents ordinary reuse while the app runs. The member can reach the manager/Relay; only the owner
 receives database/object-store credentials and storage access. Cleanup removes these policies too.
 
 ## Prerequisites
@@ -27,7 +26,7 @@ receives database/object-store credentials and storage access. Cleanup removes t
   needs permission to create/delete its own Job, Services, Secret and NetworkPolicies, and exec into the two workspace
   pods. It does not change controller deployments or use the shared browser preview bridge.
 - Network access from both workspace pods to the namespace's disposable services and the package
-  registry. The source build installs the frozen monorepo dependencies and builds the dashboard.
+  registry. The runner copies a checksummed Git archive through the configured Kubernetes transport, then bootstraps a detached app process in a separate source directory with a finite workspace Job deadline. The source build installs the frozen monorepo dependencies and builds the dashboard.
 
 ## Run the complete scenario
 
@@ -36,7 +35,7 @@ bun scripts/dev/cloud-team.ts run --kubectl /path/to/configured-kubectl-wrapper
 ```
 
 Default namespace is `pocketcoder`; use `--namespace NAME` when the controller uses another namespace.
-Use `--source /absolute/checkout` to select another checkout, including its non-ignored working files.
+Use `--source /absolute/checkout` to select another clean committed checkout. Working changes must be committed first.
 The runner prints a private evidence directory. Use a directory outside source when supplying
 `--directory`, and do not publish its contents wholesale: it contains a disposable TLS private key.
 
@@ -69,6 +68,8 @@ bun scripts/dev/cloud-team.ts down --directory /absolute/printed/private-directo
 managed. `test` is destructive: it releases policy and removes the member. Start a fresh pair for
 another complete run. `down` can also clean a partially provisioned pair using its saved state.
 Default lifetime is 60 minutes (`--minutes 10..120`). Do not copy real device credentials into it.
+
+[ADR0169](../../adrs/0169-temporary-cloud-team-bootstrap.md) records why this local app lifecycle currently uses operator bootstrap rather than generic test-command dispatch. No controller deployment or credentials change is required.
 
 The native apps listen on port 3030 inside their separate pods. This runner qualifies public host APIs
 and extension commands; it does not provide simultaneous browser preview links or automate clicks in

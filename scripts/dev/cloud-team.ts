@@ -1,11 +1,12 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { configureActorNetwork, exec, exposeServices, findActor, kube, provision } from "./cloud-team/infra";
+import { assertActorReservation, assertPairReservations, kube, provision } from "./cloud-team/infra";
+import { createActorLauncher } from "./cloud-team/launch";
 import { command, setExecutionSignal, until } from "./cloud-team/process";
 import { evidence, setup, verify } from "./cloud-team/scenario";
-import type { Pair, WorkspaceConfig } from "./cloud-team/types";
+import type { Pair } from "./cloud-team/types";
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -77,40 +78,31 @@ await save();
 console.log(`Cloud team run: ${pair.id}\nPrivate state: ${pair.directory}`);
 const down = async () => {
   setExecutionSignal();
-  const cancellationWarnings: string[] = [];
+  await Promise.all([pair.owner, pair.member].filter((actor) => actor !== undefined).map(assertActorReservation));
   const results = await Promise.allSettled(
     [pair.owner, pair.member]
       .filter((actor) => actor !== undefined)
       .map(async (actor) => {
-        try {
-          await command(["pst", "pocketcoder.remote-testing", "runs", "cancel", "--run-id", actor.runId]);
-        } catch (error) {
-          cancellationWarnings.push(String(error));
-        }
-        // Stop is independent of whether cancellation succeeded, including an already ended run.
-        return command([
-          "pst",
-          "pocketcoder.remote-testing",
-          "environments",
-          "stop",
-          "--environment",
-          actor.workspaceId,
-        ]);
+        if (!actor.runId) throw new Error(`No holding run for ${actor.workspaceId}; refusing unguarded stop`);
+        await command(["pst", "pocketcoder.remote-testing", "runs", "cancel", "--run-id", actor.runId]);
+        // stopAfterRun=true collection stops the environment while retaining the run's exact claim.
+        // Do not release then call environments.stop: an explicit reuse could claim it between those steps.
+        return command(
+          ["pst", "pocketcoder.remote-testing", "runs", "show", "--run-id", actor.runId],
+          undefined,
+          false,
+          120_000,
+        );
       }),
   );
-  results.push(
-    ...(await Promise.allSettled([
-      kube(pair, [
-        "delete",
-        "job,service,secret,networkpolicy",
-        "-l",
-        `pstdio.cloud-team-run=${pair.id}`,
-        "--ignore-not-found=true",
-        "--wait=true",
-      ]),
-    ])),
-  );
-  const errors = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+  const actorErrors = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+  if (actorErrors.length) {
+    await evidence(pair, "cleanup", { passed: false, errors: actorErrors.map(String) });
+    throw new AggregateError(
+      actorErrors,
+      "Workspace cleanup is uncertain; backend retained until ownership is resolved",
+    );
+  }
   try {
     await until(
       "owned Cloud workspace pods removed",
@@ -125,17 +117,29 @@ const down = async () => {
       90,
     );
   } catch (error) {
-    errors.push(error);
+    await evidence(pair, "cleanup", { passed: false, errors: [String(error)] });
+    throw new Error("Owned workspace pods remain; backend retained", { cause: error });
   }
-  await evidence(pair, "cleanup", { passed: errors.length === 0, errors: errors.map(String), cancellationWarnings });
+  results.push(
+    ...(await Promise.allSettled([
+      kube(pair, [
+        "delete",
+        "job,service,secret,networkpolicy",
+        "-l",
+        `pstdio.cloud-team-run=${pair.id}`,
+        "--ignore-not-found=true",
+        "--wait=true",
+      ]),
+    ])),
+  );
+  const errors = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+  await evidence(pair, "cleanup", { passed: errors.length === 0, errors: errors.map(String) });
   if (errors.length) throw new AggregateError(errors, "Cleanup incomplete; repeat down using the saved state");
 };
 const cancellation = new AbortController();
 setExecutionSignal(cancellation.signal);
-let interrupted = false;
 for (const signal of ["SIGINT", "SIGTERM"] as const)
   process.once(signal, () => {
-    interrupted = true;
     cancellation.abort(new Error("Operator interrupted the Cloud team run"));
   });
 let success = false;
@@ -145,6 +149,21 @@ try {
     success = true;
   } else {
     if (mode !== "test") {
+      if (pair.sourceDirty) throw new Error("Commit source changes before launching an immutable Cloud pair");
+      await command([
+        "git",
+        "-C",
+        pair.source,
+        "archive",
+        "--format=tar.gz",
+        "-o",
+        `${pair.directory}/source.tar.gz`,
+        pair.sourceCommit,
+      ]);
+      pair.sourceArchiveSha256 = createHash("sha256")
+        .update(await readFile(`${pair.directory}/source.tar.gz`))
+        .digest("hex");
+      await save();
       const status = JSON.parse(await command(["pst", "pocketcoder.remote-testing", "status"]));
       if (!status.available)
         throw new Error("Configure Cloud Workspaces / Remote Testing on the operator device first");
@@ -185,85 +204,22 @@ try {
         cert: await readFile(certificate, "utf8"),
         deadline: pair.deadline,
       };
-      const launch = async (role: "owner" | "member") => {
-        if (interrupted) throw new Error("Interrupted before workspace launch");
-        await evidence(pair, `provisioning ${role} Cloud Workspace`);
-        const result = JSON.parse(
-          await command(
-            [
-              "pst",
-              "pocketcoder.remote-testing",
-              "run",
-              "--path",
-              pair.source,
-              "--command",
-              "bun install --frozen-lockfile && bun run build -- --scope pstdio-dashboard --include-dependencies && bun scripts/dev/cloud-team/workspace.ts",
-              "--timeout-minutes",
-              String(minutes),
-              "--wait",
-              "false",
-              "--keep-environment",
-              String(values.keep),
-            ],
-            undefined,
-            true,
-          ),
-        );
-        // Save IDs before pod discovery so partial setup can still be cleaned up.
-        pair[role] = { workspaceId: result.environmentId, runId: result.runId, pod: "" };
-        await save();
-        pair[role] = await findActor(pair, result.environmentId, result.runId);
-        await save();
-        await configureActorNetwork(pair, pair[role]!, role);
-        if (role === "owner") await exposeServices(pair);
-        const config: WorkspaceConfig =
-          role === "owner"
-            ? { ...backend, role, key: await readFile(key, "utf8") }
-            : {
-                role,
-                managerOrigin: backend.managerOrigin,
-                relayOrigin: backend.relayOrigin,
-                cert: backend.cert,
-                deadline: backend.deadline,
-              };
-        await exec(
-          pair,
-          pair[role]!,
-          [
-            "bun",
-            "-e",
-            'const fs=await import("node:fs/promises");await fs.mkdir("/workspace/cloud-team",{recursive:true,mode:448});await fs.writeFile("/workspace/cloud-team/config.json",await Bun.stdin.text(),{mode:384});',
-          ],
-          JSON.stringify(config),
-        );
-        await until(
-          `${role} runtime ready`,
-          async () => {
-            if (interrupted) throw new Error("Interrupted");
-            return (
-              (
-                await exec(pair, pair[role]!, [
-                  "bun",
-                  "-e",
-                  'console.log(await Bun.file("/workspace/cloud-team/ready").exists())',
-                ])
-              ).trim() === "true"
-            );
-          },
-          900,
-        );
-        await evidence(pair, `${role} Cloud workspace ready`, {
-          workspaceId: result.environmentId,
-          runId: result.runId,
-        });
-      };
-      // Owner starts shared real services. Member starts concurrently once they have an address.
-      const launched = await Promise.allSettled([launch("owner"), launch("member")]);
-      const errors = launched.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
-      if (errors.length) throw new AggregateError(errors, "Cloud workspace setup failed");
+      const launch = createActorLauncher(
+        pair,
+        { ...backend, role: "owner", key: await readFile(key, "utf8") },
+        minutes,
+        save,
+      );
+      await launch("owner");
+      await launch("member");
+      await assertPairReservations(pair);
       await setup(pair, save);
     }
-    if (mode !== "up") await verify(pair);
+    if (mode !== "up") {
+      await assertPairReservations(pair);
+      await verify(pair);
+    }
+    await assertPairReservations(pair);
     success = true;
     await evidence(
       pair,

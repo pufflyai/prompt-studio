@@ -71,7 +71,12 @@ export const setup = async (pair: Pair, save: () => Promise<void>) => {
       provider: "microsoft",
     });
     const completed = await control<{ callback: string }>(pair, "/sign-in", { url: attempt.url, role });
-    await exec(pair, actor, ["bun", "/workspace/repo/scripts/dev/cloud-team/actor.ts"], JSON.stringify(completed));
+    await exec(
+      pair,
+      actor,
+      ["bun", "/workspace/cloud-team/repo/scripts/dev/cloud-team/actor.ts"],
+      JSON.stringify(completed),
+    );
     const login = await until(`${role} signed in`, async () => {
       const value = await status(pair, actor);
       return value.login ? value : undefined;

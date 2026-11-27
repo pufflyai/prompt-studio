@@ -1,6 +1,6 @@
 export interface Actor {
   workspaceId: string;
-  runId: string;
+  runId?: string;
   pod: string;
 }
 export interface Pair {
@@ -9,6 +9,7 @@ export interface Pair {
   source: string;
   sourceCommit: string;
   sourceDirty: boolean;
+  sourceArchiveSha256?: string;
   kubectl: string;
   namespace: string;
   name: string;
