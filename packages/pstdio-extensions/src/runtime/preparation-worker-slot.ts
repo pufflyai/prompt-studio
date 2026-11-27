@@ -23,6 +23,27 @@ interface Message {
   error?: { message: string };
   value?: unknown;
 }
+
+const closeWorkerWatches = async (worker: Worker) => {
+  const closed = Promise.withResolvers<void>();
+  const onMessage = (message: Message) => {
+    if (message.kind === "stopping") closed.resolve();
+  };
+  const onExit = () => closed.resolve();
+  worker.ref();
+  worker.on("message", onMessage);
+  worker.once("exit", onExit);
+  const deadline = setTimeout(onExit, 1_000);
+  try {
+    worker.postMessage({ kind: "shutdown" });
+    await closed.promise;
+  } finally {
+    clearTimeout(deadline);
+    worker.off("message", onMessage);
+    worker.off("exit", onExit);
+  }
+};
+
 export const createPreparationWorkerSlots = (
   count: number,
   input: {
@@ -41,26 +62,29 @@ export const createPreparationWorkerSlots = (
     activeBuilds: 0,
   }));
   const retirements = new WeakMap<Worker, () => Promise<void>>();
-  const retire = async (worker: Worker) => {
+  const retire = async (worker: Worker, closeWatches: boolean) => {
     await retirements.get(worker)?.();
+    if (closeWatches) await closeWorkerWatches(worker).catch(() => {});
     await worker.terminate();
   };
-  const replace = (slot: PreparationWorkerSlot, resume?: Job, notify = true) => {
+  const replace = (slot: PreparationWorkerSlot, resume?: Job, stopping = false) => {
     const worker = slot.worker;
     if (!worker) return;
+    // Slot zero owns the watches. Let it close them on shutdown before forcing the thread to exit.
+    const closeWatches = stopping && slot.index === 0 && slot.ready;
     slot.retiring = slot.active;
     slot.worker = undefined;
     slot.ready = false;
     slot.active = resume;
     slot.dispatched = false;
     slot.restarting = Promise.resolve()
-      .then(() => retire(worker))
+      .then(() => retire(worker, closeWatches))
       .finally(() => {
         slot.restarting = undefined;
         slot.retiring = undefined;
         input.pump();
       });
-    if (notify) input.event(slot, { kind: "worker-lost" });
+    if (!stopping) input.event(slot, { kind: "worker-lost" });
   };
   const start = (slot: PreparationWorkerSlot) => {
     if (slot.worker || slot.restarting) return;
@@ -119,7 +143,7 @@ export const createPreparationWorkerSlots = (
     replace,
     async stop() {
       const pending = slots.map((slot) => {
-        replace(slot, undefined, false);
+        replace(slot, undefined, true);
         return slot.restarting;
       });
       await Promise.all(pending);
