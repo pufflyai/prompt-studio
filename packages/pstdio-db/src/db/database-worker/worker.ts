@@ -1,7 +1,7 @@
 import type { PGlite, Transaction } from "@electric-sql/pglite";
 import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
 import { artifactProjectionRefusals } from "../artifact-projection-admission";
-import { createDb } from "../connection.pglite";
+import { createDb } from "../open-database";
 import { unadmittedStorageOwnerFailures } from "../storage-admission";
 import {
   type DatabaseWorkerMessage,

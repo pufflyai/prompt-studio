@@ -92,10 +92,8 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
       createRootWatcher: async () =>
         createProcess(async () => {
           rootRefreshCount++;
-          if (rootRefreshCount > 1) {
-            unexpectedRoot.resolve();
-            await unexpectedRootRefreshReleased;
-          }
+          unexpectedRoot.resolve();
+          await unexpectedRootRefreshReleased;
         }),
       createWebviewBuildManager: () =>
         createProcess(async (sourcePath) => {
@@ -110,7 +108,7 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
         await Promise.race([targetedRefresh.then(() => "targeted"), unexpectedRoot.promise.then(() => "root")]),
       ).toBe("targeted");
 
-      expect(rootRefreshCount).toBe(1);
+      expect(rootRefreshCount).toBe(0);
       expect(webviewRefreshes).toEqual([undefined, "/extensions/lab"]);
     } finally {
       releaseUnexpectedRootRefresh();

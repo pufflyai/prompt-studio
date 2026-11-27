@@ -1,5 +1,6 @@
 import { and, eq, like, type SQL, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
+import { createAutomationDBService, RUN_RETENTION_MS } from "../services/automation/automation";
 import { compactStorageTombstones } from "../services/extension-storage/compact-tombstones";
 import {
   createDeferredDocumentSweep,
@@ -69,7 +70,13 @@ export const createRetiredStorageCleanup = (db: DbClient, path: string, owners: 
   };
 };
 
-export const createStorageCleanup = (db: DbClient, path: string, owners: StorageOwner[], defer: boolean) => {
+export const createStorageCleanup = (
+  db: DbClient,
+  path: string,
+  owners: StorageOwner[],
+  defer: boolean,
+  collectFiles: (stopped: () => boolean) => Promise<void>,
+) => {
   const retiredRows = defer ? createRetiredStorageCleanup(db, path, owners) : async () => {};
   const extensionIndexes = createExtensionIndexCleanup(db);
   const markers = createDependencyMarkerCleanup(db, () => invalidateMaintenance(path));
@@ -80,12 +87,19 @@ export const createStorageCleanup = (db: DbClient, path: string, owners: Storage
       await extensionIndexes(() => false);
       await markers(() => false);
       await pruneAllDocumentFiles(db);
+      await collectFiles(() => false);
     },
     async run(stopped: () => boolean) {
       await retiredRows(stopped);
       await extensionIndexes(stopped);
       await markers(stopped);
       await sweep?.run(stopped);
+      await collectFiles(stopped);
+      const before = new Date(Date.now() - RUN_RETENTION_MS).toISOString();
+      const automation = createAutomationDBService(db);
+      while (!stopped() && (await automation.pruneTerminalRuns(before, BATCH_SIZE)).length === BATCH_SIZE) {
+        await Bun.sleep(0);
+      }
       if (!stopped()) await compactStorageTombstones(db, stopped);
       if (!stopped()) await purgeStorageTombstones(db, stopped);
       if (!stopped()) await pruneStorageOperations(db, stopped);

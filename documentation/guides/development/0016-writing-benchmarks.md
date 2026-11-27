@@ -40,7 +40,7 @@ Timing and average-memory targets use strict **<**, including equality as a fail
 | Scenario | Targets |
 | --- | --- |
 | B1 | Window <1,200ms; shell <3,000ms; usable <5,000ms; first interaction <1,200ms |
-| B2 | Usable <5,000ms; first interaction <250ms |
+| B2 | Extensions ready <1,800ms from runtime start after a clean shutdown; usable <5,000ms; first interaction <250ms |
 | B3 | Runtime attachment <1,800ms; usable <5,000ms; first interaction <250ms |
 | B4 | Input/history/stream-to-paint <250ms; file <1,500ms; terminal <250ms; panel <500ms; project/session switch <2,000ms; longest stall <200ms; completion <10,000ms; cancellation <500ms |
 | B5 | Average native memory <2.5GB on Linux, <2GB on macOS, <3GB on Windows; complete ten-minute coverage, no missing samples, maximum gap ≤1,000ms |

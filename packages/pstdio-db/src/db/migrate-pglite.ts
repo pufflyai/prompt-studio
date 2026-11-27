@@ -4,7 +4,7 @@ import { hasUpgradeSnapshots } from "./upgrade-snapshot";
 
 /** Generated DDL and owner admission finish separately. A held conversion
  * may need to resume even after the complete migration history is present. */
-const currentPgliteSchemaState = async (db: PGlite, migrationsFolder: string) => {
+const currentPgliteSchemaState = async (db: PGlite, migrationsFolder: string, admitted: boolean) => {
   const {
     rows: [state],
   } = await db.query<{ history: string | null; legacy: boolean }>(`
@@ -26,6 +26,7 @@ const currentPgliteSchemaState = async (db: PGlite, migrationsFolder: string) =>
   )
     return "upgrade";
   if (state.legacy) return "admission";
+  if (admitted) return "current";
   // Number-only owners can still need admission after stream-table retirement.
   const {
     rows: [pending],
@@ -42,6 +43,8 @@ export const resumeCurrentPgliteSchema = async (input: {
   path: string;
   fresh: boolean;
   finishLegacyAdmission: () => Promise<void>;
+  admitted?: boolean;
+  onCurrent?: () => void;
 }) => {
   const { engine, migrationsFolder, path, fresh, finishLegacyAdmission } = input;
   // Durable conversion inputs always resume, including beside a fresh image.
@@ -50,7 +53,8 @@ export const resumeCurrentPgliteSchema = async (input: {
     await migratePglite(engine, migrationsFolder);
     return true;
   }
-  const state = await currentPgliteSchemaState(engine, migrationsFolder);
+  const state = await currentPgliteSchemaState(engine, migrationsFolder, !!input.admitted);
+  if (state === "current") input.onCurrent?.();
   if (state === "admission") await finishLegacyAdmission();
   return state !== "upgrade";
 };

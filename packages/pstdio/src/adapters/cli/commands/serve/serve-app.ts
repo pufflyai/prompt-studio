@@ -3,10 +3,10 @@ import {
   assertListenHostAllowed,
   closeBeforeFatalExit,
   createApp,
+  disableExtensionPreparationTimeout,
   resolveAppConfig,
 } from "pstdio-api/app";
 import type { RuntimeHost, RuntimeOwnerType } from "pstdio-api/runtime";
-import { disableExtensionPreparationTimeout } from "pstdio-api/runtime";
 import { createLogger } from "pstdio-logging";
 import { CLI_VERSION } from "@/features/cli-version";
 import { DEFAULT_EXTENSION_RELEASE_REF } from "@/features/extension-release-ref";

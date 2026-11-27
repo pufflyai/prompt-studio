@@ -141,6 +141,7 @@ export const launchMemoryDesktop = async (
     return {
       browser,
       runtime,
+      desktopExited: () => child.exitCode !== null || child.signalCode !== null,
       close: async () => {
         signal.removeEventListener("abort", abort);
         await close();

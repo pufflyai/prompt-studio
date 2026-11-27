@@ -29,6 +29,15 @@ if (rawArgs.length === 1 && rawArgs[0] === "extension-input-inspector") {
   // commands, the API, and embedded extension assets alongside the starting app.
   const { runProcessObserver } = await import("./features/performance/process-observer");
   await runProcessObserver();
+} else if (rawArgs[0] === "serve") {
+  const { exit } = bindCliOutput();
+  const { shouldLoadEmbedManifest } = await import("./features/should-load-embed-manifest");
+  if (shouldLoadEmbedManifest()) await import("./_embed-manifest.generated");
+  const [{ createCliParser, parseCli }, serve] = await Promise.all([
+    import("./cli-parser"),
+    import("./adapters/cli/commands/serve"),
+  ]);
+  await parseCli(createCliParser(rawArgs).command(serve), exit);
 } else {
   // Bind before importing commands: their defaults capture `console.log` when they load.
   const { exit } = bindCliOutput();

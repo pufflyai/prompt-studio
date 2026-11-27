@@ -42,6 +42,7 @@ import type { createWorkspaceService } from "./services/workspace-service";
 import { upgrade049Tools } from "./startup/upgrade-0-49-tools";
 
 interface WireExtensionServicesInput {
+  whenQuiet?: (run: () => void) => () => void;
   accountService: Pick<ReturnType<typeof createNativeAccount>, "isExtensionManaged">;
   preferences: ReturnType<typeof createPreferencesDBService>;
   config: AppConfig["extensions"];
@@ -96,13 +97,13 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
     validateResourcePrefixes: (projectId, source) =>
       extensionRuntimeCatalog.validateResourcePrefixes(projectId, source),
   });
-  const prefetchRelease = createExtensionReleasePrefetcher();
+  const releasePrefetch = createExtensionReleasePrefetcher(input.whenQuiet);
   const extensionUpgradeService = createExtensionUpgradeService({
     extensionService,
     installExtensionSource: input.dependencies.installExtensionSource,
     release: input.config.release,
-    prefetchRegistryRelease: prefetchRelease,
-    prefetchBundledRelease: prefetchRelease,
+    prefetchRegistryRelease: releasePrefetch.prefetch,
+    prefetchBundledRelease: releasePrefetch.prefetch,
     workspaceService: input.workspaceService,
   });
   installCatalog = createCatalogInstaller({
@@ -221,6 +222,7 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
       ),
   );
   const extensionRuntime = createInstalledExtensionRuntime({
+    whenQuiet: input.whenQuiet,
     eventBus: input.eventBus,
     extensionService,
     harnessRegistry,
@@ -270,6 +272,7 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
     extensionUpgradeService,
     harnessRegistry,
     unsubscribeExtensionEvents: () => {
+      releasePrefetch.dispose();
       unsubscribeProjectWorkspaceRefresh();
       unsubscribeEnablementInvalidation();
       unsubscribeProcessOwners();

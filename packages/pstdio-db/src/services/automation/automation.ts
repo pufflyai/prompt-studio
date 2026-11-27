@@ -16,6 +16,7 @@ import { createAutomationTokenDBService } from "./automation-tokens";
 import { createExtensionAutomationDBService } from "./extension-automation";
 
 const nowTimestamp = () => new Date().toISOString();
+export const RUN_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const terminalStatuses = new Set<AutomationRunStatus>(["succeeded", "failed", "cancelled", "rejected"]);
 const MAX_EVENT_PAYLOAD_BYTES = 16 * 1024;
 const textEncoder = new TextEncoder();
@@ -225,11 +226,20 @@ const createAutomationRunDBService = (db: DbClient) => {
       .from(automation_runs)
       .where(and(eq(automation_runs.project_id, id), inArray(automation_runs.status, ["queued", "running"])));
 
-  const pruneTerminalRuns = (before: string) =>
-    db
-      .delete(automation_runs)
-      .where(and(inArray(automation_runs.status, [...terminalStatuses]), lt(automation_runs.finished_at, before)))
-      .returning({ id: automation_runs.id });
+  const pruneTerminalRuns = (before: string, limit?: number) => {
+    const expired = and(
+      inArray(automation_runs.status, [...terminalStatuses]),
+      lt(automation_runs.finished_at, before),
+    );
+    const where =
+      limit === undefined
+        ? expired
+        : inArray(
+            automation_runs.id,
+            db.select({ id: automation_runs.id }).from(automation_runs).where(expired).limit(limit),
+          );
+    return db.delete(automation_runs).where(where).returning({ id: automation_runs.id });
+  };
 
   return {
     claimQueuedRun,

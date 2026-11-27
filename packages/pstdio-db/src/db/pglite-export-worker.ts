@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { PGlite as CurrentPGlite } from "@electric-sql/pglite";
 import { PGlite } from "pglite-previous";
 import { exportDatabaseAsJson } from "./database-json-export";
+import { fullIcuData } from "./icu-data";
 import { pgliteIdentity } from "./pglite-identity";
 
 // This worker only reads a home that startup is about to move aside. A home without an engine
@@ -21,7 +22,7 @@ const db = marked
       ...pgliteIdentity,
       pgliteWasmModule: options.wasmModule,
       fsBundle: options.fsBundle,
-      ...(engine && { icuDataDir: Bun.file(join(engine, "icu.76.tgz")) }),
+      ...(engine && { extensions: { fullIcuData: fullIcuData(Bun.file(join(engine, "icudt76l.dat.zst"))) } }),
     })
   : await PGlite.create(database, { ...pgliteIdentity, ...options });
 try {

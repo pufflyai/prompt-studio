@@ -1,6 +1,6 @@
 import type { Argv } from "yargs";
-import { ensureApi } from "@/features/ensure-api";
-import { promoteRuntime } from "@/features/runtime/runtime-client";
+import type { ensureApi } from "@/features/ensure-api";
+import type { promoteRuntime } from "@/features/runtime/runtime-client";
 import { serveApp } from "./serve-app";
 
 export const command = "serve";
@@ -34,8 +34,8 @@ type ServeDeps = {
 };
 
 const defaultDeps: ServeDeps = {
-  ensureApi,
-  promoteRuntime,
+  ensureApi: async (...args) => (await import("@/features/ensure-api")).ensureApi(...args),
+  promoteRuntime: async (...args) => (await import("@/features/runtime/runtime-client")).promoteRuntime(...args),
   serveApp,
   log: (message) => process.stdout.write(`${message}\n`),
 };

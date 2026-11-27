@@ -19,7 +19,3 @@ export const pruneRecoveryProject = (db: DbClient, projectId: string) =>
     }
     await recoveryFilesFor(db).retain(projectId, references);
   });
-
-export const pruneRecoveryFiles = async (db: DbClient) => {
-  for await (const projectId of recoveryFilesFor(db).projects()) await pruneRecoveryProject(db, projectId);
-};
