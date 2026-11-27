@@ -32,6 +32,10 @@ const createProbe = () => {
     logger: { info: log, warn: log, error: log },
     net: { findFreePort: async () => 0 },
     connections: {
+      oauthStatus: async () => ({ status: "disconnected" }),
+      callTool: async () => {
+        throw new Error("No test connection configured.");
+      },
       request: async () => undefined as never,
       stream: async function* () {},
     },
@@ -179,6 +183,10 @@ test("availability waits for process work started by its detection provider", as
     },
     net: { findFreePort: async () => 0 },
     connections: {
+      oauthStatus: async () => ({ status: "disconnected" }),
+      callTool: async () => {
+        throw new Error("No test connection configured.");
+      },
       request: async () => {
         throw new Error("Unused");
       },

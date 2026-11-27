@@ -28,6 +28,10 @@ const buildContext = (record: RuntimeHarnessRecord, options?: { projectId?: stri
   },
   net: { findFreePort: async () => 0 },
   connections: {
+    oauthStatus: async () => ({ status: "disconnected" }),
+    callTool: async () => {
+      throw new Error("No test connection configured.");
+    },
     request: async () => {
       throw new Error("No test connection configured.");
     },

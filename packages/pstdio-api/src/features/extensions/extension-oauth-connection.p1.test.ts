@@ -52,7 +52,7 @@ const writeOAuthFixture = (root: string, providerUrl: URL) => {
       }
     }],
     schedules: ["first", "second"].map(id => ({
-      id, title: id, ref: { kind: "schedule", id }, schedule: "* * * * *", command: { kind: "command", id: "read" }
+      id, title: id, ref: { kind: "schedule", id }, schedule: "0 0 1 1 *", command: { kind: "command", id: "read" }
     }))
   };`,
   );
@@ -205,6 +205,7 @@ test("browser consent enables a named REST connection and a restarted host refre
       listProjectIds: async () => [projectId],
       watermarkPath: join(root, "test-scheduler-watermarks.json"),
       cron: cron.factory,
+      now: () => new Date("2028-01-01T00:00:00Z"),
     });
     await scheduler.refresh();
     expect(cron.size()).toBe(2);
