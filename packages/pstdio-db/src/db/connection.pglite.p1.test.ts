@@ -164,14 +164,14 @@ describe("resolvePgliteOptions", () => {
     const opts = await resolvePgliteOptions([]);
     expect(opts.database).toBe("template1");
     expect(opts.username).toBe("postgres");
-    expect(opts.icuDataDir.size).toBeGreaterThan(0);
+    expect(opts.icuDataDir!.size).toBeGreaterThan(0);
   });
 
   it("loads the embedded engine and initial database image", async () => {
     const wasmFile = toEmbedded("../../pstdio-db/vendor/pglite/pglite.wasm", EMPTY_WASM);
     const dataFile = toEmbedded("../../pstdio-db/vendor/pglite/pglite.data", new Uint8Array([1, 2, 3]));
     const initialDatabase = toEmbedded("../../pstdio-db/vendor/pglite/initial-database.tar.gz", new Uint8Array([4]));
-    const icu = toEmbedded("../../pstdio-db/vendor/pglite/icu.76.tgz", new Uint8Array([5]));
+    const icu = toEmbedded("../../pstdio-db/vendor/pglite/icudt76l.dat.zst", new Uint8Array([5]));
 
     const opts = (await resolvePgliteOptions([
       wasmFile as never,
@@ -196,7 +196,7 @@ describe("resolvePgliteOptions", () => {
       "..\\..\\pstdio-db\\vendor\\pglite\\initial-database.tar.gz",
       new Uint8Array([4]),
     );
-    const icu = toEmbedded("..\\..\\pstdio-db\\vendor\\pglite\\icu.76.tgz", new Uint8Array([5]));
+    const icu = toEmbedded("..\\..\\pstdio-db\\vendor\\pglite\\icudt76l.dat.zst", new Uint8Array([5]));
 
     const opts = (await resolvePgliteOptions([
       wasmFile as never,

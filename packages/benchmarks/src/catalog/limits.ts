@@ -40,6 +40,11 @@ export const meetsLimit = (value: number, budget: number, unit: BenchmarkUnit) =
   unit === "share" ? Number.isFinite(value) && value <= budget : isBelowBudget(value, budget);
 
 export const retainedLimit = (scenario: string, metric: string, platform: string = process.platform) => {
+  if (scenario === "B2" && metric === "extensions-ready")
+    return {
+      value: 1_800,
+      evidence: "User-approved 2026-11-27: retain the 1,800 ms ordinary restart target on all three desktop platforms",
+    };
   const desktop = desktopBudgets();
   if (scenario === "B1" && metric === "window") return desktop.startupWindowMs;
   if (scenario === "B1" && metric === "shell") return desktop.coldStartMs;

@@ -81,6 +81,7 @@ export const createRecoveryFiles = (root?: string) => {
     return join(projectPath(projectId), String(hours), `${sha256}.json.gz`);
   };
   return {
+    directory: (projectId: string) => (root ? projectPath(projectId) : undefined),
     async put(projectId: string, hours: number, prepared: PreparedRecoveryBytes) {
       const { data: bytes, ...reference } = prepared;
       if (!root) {

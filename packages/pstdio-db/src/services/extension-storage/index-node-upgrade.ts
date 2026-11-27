@@ -96,6 +96,7 @@ export const upgradeIndexNodesToFiles = async (
   beforeChange: () => Promise<void> = async () => {},
   /** Only owners whose reachable receipts have been copied are eligible for deferred deletion. */
   deferDeletion?: (owner: StorageOwner) => boolean,
+  onIncomplete?: () => void,
 ) => {
   const result = await db.execute(
     sql`SELECT DISTINCT o.project_id AS workbench_id, o.extension_id FROM ${documents} d JOIN owners o ON d.owner_id=o.id WHERE d.key LIKE ${legacyNodeRows}
@@ -113,6 +114,7 @@ export const upgradeIndexNodesToFiles = async (
       removed ||= deleted > 0;
       report({ owner, kept, removed: deleted });
     } catch (error) {
+      onIncomplete?.();
       console.warn("Index nodes of one storage owner stay in the database until the next start.", owner, error);
     }
   }

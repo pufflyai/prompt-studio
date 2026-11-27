@@ -13,7 +13,7 @@ test.each([
     "pglite-previous/pglite.data",
     "pglite/pglite.wasm",
     "pglite/pglite.data",
-    "pglite/icu.76.tgz",
+    "pglite/icudt76l.dat.zst",
   ];
   const worker = await resolveExportWorker(names.map((name) => new File([name], `${prefix}${name}`)));
   try {

@@ -1,15 +1,23 @@
 import { join } from "node:path";
-import { getExtensionApiVersionError, retainExtensionPreparation } from "pstdio-extensions";
-import { releaseBundleHost } from "pstdio-extensions/distribution";
+import type { retainExtensionPreparation } from "pstdio-extensions";
 import { resolvePstdioHome } from "pstdio-paths";
 import type { ExtensionRelease } from "../app-config";
-import { readBundledExtensionSources } from "../features/extensions/bundled-extension-source";
-import { runExtensionPreparation } from "../features/extensions/extension-preparation";
 import { apiLogger } from "../lib/logger";
 
 // Only unpack the host's own verified bytes. Source ownership, edits, scope, and
 // runtime validation are checked by the installer after the database is ready.
 export const warmInstalledUpgradeBundles = async (ref: string, signal: AbortSignal) => {
+  const [
+    { getExtensionApiVersionError },
+    { releaseBundleHost },
+    { readBundledExtensionSources },
+    { runExtensionPreparation },
+  ] = await Promise.all([
+    import("pstdio-extensions"),
+    import("pstdio-extensions/distribution"),
+    import("../features/extensions/bundled-extension-source"),
+    import("../features/extensions/extension-preparation"),
+  ]);
   const bundle = await readBundledExtensionSources();
   if (!bundle || (ref !== bundle.ref && ref !== bundle.commit)) return;
   const root = join(resolvePstdioHome(), "extensions");
@@ -41,19 +49,27 @@ export const warmInstalledUpgradeBundles = async (ref: string, signal: AbortSign
 
 export const createUpgradeBundleWarmup = (release: ExtensionRelease | null) => {
   const controller = new AbortController();
+  let starting: Promise<void> | undefined;
   let releasePreparation: ReturnType<typeof retainExtensionPreparation> | undefined;
   const stop = () => controller.abort();
+  const report = (err: unknown) => {
+    if (!controller.signal.aborted) apiLogger.debug({ err }, "Bundled tools will be prepared during installation");
+  };
   return {
     start() {
-      if (release?.source !== "git" || !Bun.embeddedFiles.length || releasePreparation) return;
-      releasePreparation = retainExtensionPreparation();
-      void warmInstalledUpgradeBundles(release.ref, controller.signal).catch((err) => {
-        if (!controller.signal.aborted) apiLogger.debug({ err }, "Bundled tools will be prepared during installation");
-      });
+      if (release?.source !== "git" || !Bun.embeddedFiles.length || starting) return;
+      starting = import("pstdio-extensions")
+        .then(({ retainExtensionPreparation }) => {
+          if (controller.signal.aborted) return;
+          releasePreparation = retainExtensionPreparation();
+          void warmInstalledUpgradeBundles(release.ref, controller.signal).catch(report);
+        })
+        .catch(report);
     },
     stop,
     async close() {
       stop();
+      await starting;
       await releasePreparation?.();
     },
   };

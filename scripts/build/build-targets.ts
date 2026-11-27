@@ -17,3 +17,10 @@ export const resolveBuildTargets = (
 
   return [buildTarget];
 };
+
+// The release pipeline builds the Apple Silicon sidecar on a Mac. Emit JavaScriptCore
+// bytecode there so the CLI and its workers can load compiled modules on every launch.
+export const nativeMacBytecodeFlags = (target: string) =>
+  target === "bun-darwin-arm64" && process.platform === "darwin" && process.arch === "arm64"
+    ? ["--bytecode", "--format=esm"]
+    : [];

@@ -30,6 +30,7 @@ export const selectExistingSources = <T extends { source_path: string }>(
 ) => rows.filter((row) => exists(row.source_path) && !exists(join(row.source_path, EXTENSION_INSTALLING_MARKER)));
 
 export const createInstalledExtensionRuntime = (input: {
+  whenQuiet?: (run: () => void) => () => void;
   createRootWatcher?: typeof createExtensionRootWatcher;
   createSourceWatcher?: typeof createExtensionSourceWatcher;
   createWebviewBuildManager?: typeof createExtensionWebviewBuildManager;
@@ -243,19 +244,27 @@ export const createInstalledExtensionRuntime = (input: {
   };
   triggerRuntimeRefresh = refresh;
 
-  // Watchers scan extension folders at startup. The app owns this work, but readiness
-  // must not depend on how many extensions are installed or how long their checks take.
-  const ready = Promise.all([rootWatcher, sourceWatcher])
-    .then(refreshWatchers)
-    .then(() => {
-      reconcileWebviewsInBackground();
-      void runExtensionPreparation("runtime.maintain", {}, { priority: "background" }).catch(reportError);
-    });
+  const maintain = () => {
+    reconcileWebviewsInBackground();
+    void runExtensionPreparation("runtime.maintain", {}, { priority: "background" }).catch(reportError);
+  };
+  let disposing = false;
+  let cancelMaintenance: (() => void) | undefined;
+  // Each constructor registers its initial snapshot. Changes during registration
+  // enqueue their own refresh. The first offline request can use accepted code
+  // as soon as the watchers are attached.
+  const ready = Promise.all([rootWatcher, sourceWatcher]).then(() => {
+    if (disposing) return;
+    if (input.whenQuiet) cancelMaintenance = input.whenQuiet(maintain);
+    else maintain();
+  });
 
   return {
     ready,
     stopPreparation,
     dispose: async () => {
+      disposing = true;
+      cancelMaintenance?.();
       unsubscribeEnablement?.();
       await candidateInspection.dispose();
       await webviewSourceInspection.dispose();
