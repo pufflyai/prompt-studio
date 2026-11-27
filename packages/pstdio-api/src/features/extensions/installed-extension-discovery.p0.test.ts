@@ -10,6 +10,7 @@ test("checks independent installed sources while another source read is pending"
   const root = mkdtempSync(join(tmpdir(), "pstdio-installed-source-admission-"));
   for (const name of ["a-paused", "b-ready", "c-ready"]) writeExtension(join(root, name), name);
   const firstStarted = Promise.withResolvers<void>();
+  const lastStarted = Promise.withResolvers<void>();
   const releaseFirst = Promise.withResolvers<void>();
   const started: string[] = [];
   const registered: string[] = [];
@@ -25,6 +26,7 @@ test("checks independent installed sources while another source read is pending"
     loadExtension: async (path) => {
       const name = basename(path);
       started.push(name);
+      if (name === "c-ready") lastStarted.resolve();
       if (name === "a-paused") {
         firstStarted.resolve();
         await releaseFirst.promise;
@@ -34,7 +36,7 @@ test("checks independent installed sources while another source read is pending"
   });
   try {
     await firstStarted.promise;
-    await Bun.sleep(0);
+    await lastStarted.promise;
     expect(started).toContain("b-ready");
     expect(registered).toEqual([]);
     releaseFirst.resolve();
@@ -118,12 +120,12 @@ test("failed discovery preserves the first source error in listing order", async
     extensionsRoot: root,
     projectId: "project-1",
     extensionService: { syncInstalledSourceForProject: async () => ({}) },
-    loadExtension: async (path) => {
-      if (basename(path) === "b-first-error") await releaseFirst.promise;
-      return loadExtensionSource(path, { accepted: true });
-    },
-    hashExtension: (path) => {
-      if (basename(path) === "b-first-error") throw firstFailure;
+    loadExtension: (path) => loadExtensionSource(path, { accepted: true }),
+    hashExtension: async (path) => {
+      if (basename(path) === "b-first-error") {
+        await releaseFirst.promise;
+        throw firstFailure;
+      }
       if (basename(path) === "c-later-error") {
         laterFailed.resolve();
         throw laterFailure;

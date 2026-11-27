@@ -6,12 +6,7 @@ import {
   type SyncInstalledSourceInput,
 } from "../../services/extension-service";
 import { listExtensionSources } from "./discover-extension-sources";
-import {
-  type hashExtensionSource,
-  hashExtensionSourceAsync,
-  loadExtensionSource,
-  readExtensionSourceMetadata,
-} from "./extension-runtime";
+import { hashExtensionSourceAsync, loadExtensionSource, readExtensionSourceMetadata } from "./extension-runtime";
 import { resolvePstdioHome } from "./install-extension-source";
 
 type InstalledExtensionDiscoveryDeps = {
@@ -19,7 +14,7 @@ type InstalledExtensionDiscoveryDeps = {
   extensionsRoot?: string;
   homedir?: () => string;
   loadExtension?: typeof loadExtensionSource;
-  hashExtension?: typeof hashExtensionSource;
+  hashExtension?: (sourcePath: string) => string | Promise<string>;
   onLoadFailure?: (failure: { error: unknown; installName: string; sourcePath: string }) => void;
 };
 
@@ -74,6 +69,9 @@ const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps
 
   const read = async (sourcePath: string): Promise<DiscoveredInstalledExtension | undefined> => {
     const installName = basename(sourcePath);
+    // An upgrade can replace the folder while discovery reads it. Hashing before reading
+    // metadata from disk keeps the hash from describing a newer release than the metadata.
+    const folderHash = await hash(sourcePath);
     let loaded: Awaited<ReturnType<typeof loadExtensionSource>>;
     try {
       loaded = await load(sourcePath);
@@ -103,7 +101,9 @@ const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps
       extensionId: loaded.metadata.id,
       manifest: loaded.manifest,
       name: loaded.metadata.name,
-      sourceHash: await hash(sourcePath),
+      // A prepared load comes from the accepted revision, which can be older than the folder.
+      // Its own hash names the content its metadata describes.
+      sourceHash: loaded.preparedRevision?.sourceHash ?? folderHash,
       sourcePath,
       version: loaded.metadata.version,
     };
@@ -154,7 +154,7 @@ const syncSnapshotForProject = async (
       projectId: deps.projectId,
     });
     if (result === null) continue;
-    // The hash of the folder as it is on disk, which the caller compares against the adopted hash.
+    // The hash of the content this discovery read for the source.
     synced.push({ installName: extension.installName, sourceHash: extension.sourceHash ?? null });
   }
 

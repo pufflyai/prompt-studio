@@ -5,8 +5,8 @@ import type { createExtensionService, SyncInstalledSourceInput } from "../../ser
 import { AlwaysEnabledExtensionError } from "./always-on-extensions";
 import { listExtensionSources } from "./discover-extension-sources";
 import {
-  type hashExtensionSource,
   hashExtensionSourceAsync,
+  type LoadedExtension,
   loadExtensionSource,
   readExtensionSourceMetadata,
 } from "./extension-runtime";
@@ -31,7 +31,7 @@ type SyncRepoExtensionsForProjectInput = {
    */
   enable?: (name: string) => boolean;
   extensionService: ExtensionService;
-  hashExtension?: typeof hashExtensionSource;
+  hashExtension?: (sourcePath: string) => string | Promise<string>;
   installedExtensionSourcesService: InstalledSourcesService;
   loadExtension?: typeof loadExtensionSource;
   projectId: string;
@@ -95,14 +95,28 @@ const keepsOff = (input: Pick<SyncRepoExtensionsForProjectInput, "enable">, name
   !existing && !!input.enable && !input.enable(name);
 
 /** A folder that stays off is read from its manifest only, so its code is never imported. */
-const readRepoExtension = async (sourcePath: string, manifestOnly: boolean, load: typeof loadExtensionSource) => {
+const readRepoExtension = async (
+  sourcePath: string,
+  manifestOnly: boolean,
+  load: typeof loadExtensionSource,
+  hash: (sourcePath: string) => string | Promise<string>,
+) => {
+  // An upgrade can replace the folder while discovery reads it. Hashing before reading
+  // metadata from disk keeps the hash from describing a newer release than the metadata.
+  const folderHash = await hash(sourcePath);
+  let loaded: LoadedExtension;
   try {
-    if (!manifestOnly) return await load(sourcePath);
-    const accepted = await readAcceptedRevision(sourcePath);
-    return readExtensionSourceMetadata(accepted?.packagePath ?? sourcePath);
+    if (manifestOnly) {
+      const accepted = await readAcceptedRevision(sourcePath);
+      loaded = accepted
+        ? { ...readExtensionSourceMetadata(accepted.packagePath), preparedRevision: accepted }
+        : readExtensionSourceMetadata(sourcePath);
+    } else loaded = await load(sourcePath);
   } catch {
     return null;
   }
+  // Metadata from a prepared or accepted revision describes that revision's content.
+  return { loaded, sourceHash: loaded.preparedRevision?.sourceHash ?? folderHash };
 };
 
 const sourceInputFor = (
@@ -148,14 +162,14 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
     const existing = instancesBySourcePath.get(sourcePath);
     const register = keepsOff(input, name, existing);
 
-    const loaded = await readRepoExtension(sourcePath, register || existing?.instance.enabled === false, load);
-    if (!loaded) {
+    const read = await readRepoExtension(sourcePath, register || existing?.instance.enabled === false, load, hash);
+    if (!read) {
       skipped.push(name);
       continue;
     }
 
     presentSourcePaths.add(sourcePath);
-    const sourceHash = await hash(sourcePath);
+    const { loaded, sourceHash } = read;
     const source = sourceInputFor(loaded, { name, projectId: input.projectId, sourceHash, sourcePath }, existing);
     const synced = await input.extensionService.syncInstalledSourceForProject(source);
     if (!synced) continue;
