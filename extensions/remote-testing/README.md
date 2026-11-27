@@ -34,9 +34,14 @@ command there, stops the environment when the run finishes, and saves the full l
   Without an assigned schedule, other recovery starts on the next launch or Runs access;
   reuse stays blocked until its asynchronous cleanup finishes. Workspace ownership
   remains held until cleanup accepts the stop; elapsed time never makes it reusable.
+  Remote Testing records the workspace identity before asking PocketCoder to create it.
+  If the reply is lost or the launcher exits before recording ownership, recovery looks
+  up that exact workspace in this project and stops it. An interrupted lookup or stop
+  is retried on the next recovery pass. Controller expiry still applies if Prompt Studio
+  stays offline.
   Expired claims saved by older versions without a run record are reconciled against this
   project's managed workspace inventory and stopped before ownership is released. Recovery
-  prioritizes cleanup and logs and admits at most 20 background jobs per rolling minute
+  prioritizes cleanup and logs and admits at most 20 per-run background jobs per rolling minute
   (8 cleanup, 8 log, 4 collection), leaving room within the host's 60-job limit for launches.
   Durable sweep cursors rotate admission so failing earlier intents cannot starve later work.
   An explicitly kept environment stays open; collection
