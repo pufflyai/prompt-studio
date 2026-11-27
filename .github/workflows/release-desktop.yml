@@ -329,6 +329,7 @@ jobs:
         shell: bash
         env:
           PLAN_DISPLAY: ${{ matrix.platform == 'linux' }}
+          CI_PLAN_OUTPUT_DIR: test-results/ci/critical-workflows
         run: |
           set -euo pipefail
           suite=clients/desktop/src/e2e/release
@@ -338,14 +339,29 @@ jobs:
           cp -R "$workflow/$suite/." "$suite/"
           fixture=packages/e2e/src/packaged/packaged-codex.fixture.ts
           cp "$workflow/$fixture" "$fixture"
-          bun scripts/test.ts "$suite" --lane stable --prebuilt
+          mkdir -p "$CI_PLAN_OUTPUT_DIR"
+          bun scripts/test.ts "$suite" --lane stable --prebuilt --out "$CI_PLAN_OUTPUT_DIR/plan.json"
+          bun -e '
+            import { join } from "node:path";
+            const root = process.env.CI_PLAN_OUTPUT_DIR;
+            const { runs } = await Bun.file(join(root, "plan.json")).json();
+            for (const run of runs) {
+              const { cases } = await Bun.file(join(root, run.id, "browser.json")).json();
+              const reportedFiles = new Set(cases.map(({ file }) => file));
+              if (run.quarantineIds.length || !run.files.every((file) => reportedFiles.has(file)) ||
+                  cases.some(({ outcome }) => outcome !== "passed")) {
+                throw new Error(`Critical workflow cases must all pass in ${run.files.join(", ")}`);
+              }
+            }'
 
       - name: Preserve critical packaged workflow evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: critical-workflows-${{ matrix.target }}-attempt-${{ github.run_attempt }}
-          path: clients/desktop/test-results/packaged
+          path: |
+            test-results/ci/critical-workflows
+            clients/desktop/test-results/packaged
           if-no-files-found: warn
 
       - name: Smoke test packaged native harnesses before publication

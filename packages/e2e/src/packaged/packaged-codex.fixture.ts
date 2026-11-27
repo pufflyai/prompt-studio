@@ -1,12 +1,14 @@
-import { appendFileSync } from "node:fs";
+import { appendFileSync, existsSync, unwatchFile, watchFile } from "node:fs";
+import { join } from "node:path";
 import { createInterface } from "node:readline";
 
 const log = process.env.PSTDIO_CODEX_PEER_LOG!;
-const completesTurns = process.env.PSTDIO_CODEX_PEER_COMPLETE_TURNS === "1";
+const replySignals = process.env.PSTDIO_CODEX_PEER_REPLY_SIGNALS;
 const emit = (message: unknown) => process.stdout.write(`${JSON.stringify(message)}\n`);
 const threads = new Map<string, { id: string; turns: Array<{ id: string; status: string; items: unknown[] }> }>();
 const goals = new Map<string, { status: string }>();
 let sequence = 0;
+let replySequence = 0;
 if (process.argv.includes("--version")) {
   console.log("codex-cli 0.157.0");
   process.exit(0);
@@ -20,7 +22,7 @@ for await (const line of createInterface({ input: process.stdin })) {
   let startedTurn = false;
   if (message.method === "model/list")
     result = {
-      data: completesTurns ? [{ id: "fixture", displayName: "Fixture model", isDefault: true }] : [],
+      data: replySignals ? [{ id: "fixture", displayName: "Fixture model", isDefault: true }] : [],
       nextCursor: null,
     };
   if (message.method === "account/read") result = { account: null, requiresOpenaiAuth: false };
@@ -84,24 +86,33 @@ for await (const line of createInterface({ input: process.stdin })) {
     const turn = threads.get(params.threadId)!.turns.at(-1)!;
     if (startedTurn) emit({ method: "turn/started", params: { threadId: params.threadId, turn } });
     const prompt = params.input[0].text;
-    const item = {
-      id: completesTurns ? `answer-${turn.id}` : "answer",
-      type: "agentMessage",
-      text: completesTurns ? `Codex replied to "${prompt}"` : prompt,
+    const publishItem = (item: { id: string; type: string }) => {
+      turn.items.push(item);
+      emit({ method: "item/completed", params: { threadId: params.threadId, turnId: turn.id, item } });
     };
-    turn.items.push(item);
-    emit({
-      method: "item/completed",
-      params: {
-        threadId: params.threadId,
-        turnId: turn.id,
-        item,
-      },
-    });
-    if (completesTurns) {
+    if (!replySignals) {
+      const item = { id: "answer", type: "agentMessage", text: prompt };
+      publishItem(item);
+      continue;
+    }
+    const user = {
+      id: `user-${turn.id}`,
+      type: "userMessage",
+      clientId: params.clientUserMessageId,
+      content: params.input,
+    };
+    publishItem(user);
+    const signal = join(replySignals, String(++replySequence));
+    const replyWhenReleased = () => {
+      if (!existsSync(signal)) return;
+      unwatchFile(signal, replyWhenReleased);
+      const answer = { id: `answer-${turn.id}`, type: "agentMessage", text: `Codex replied to "${prompt}"` };
+      publishItem(answer);
       turn.status = "completed";
       emit({ method: "turn/completed", params: { threadId: params.threadId, turn } });
-    }
+    };
+    watchFile(signal, { interval: 50, persistent: false }, replyWhenReleased);
+    replyWhenReleased();
   }
   if (message.method === "turn/interrupt") {
     const turn = threads.get(params.threadId)!.turns.find((turn) => turn.id === params.turnId)!;
