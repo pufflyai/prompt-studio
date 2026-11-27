@@ -271,7 +271,12 @@ test("a remote launch retains the prepared workspace after the session response 
 test("admits the board draft before transport and only reconciles with the returned identity", async () => {
   const queries = createScopedQueryClient({ runtimeId: "desktop", extensionId: "pstdio" });
   const operations = getWorkbenchOperations(queries);
-  const board: BoardCreationIntent = { viewKey: "filtered-board", columnId: "todo", title: "Same title" };
+  const board: BoardCreationIntent = {
+    viewKey: "filtered-board",
+    columnId: "todo",
+    title: "Same title",
+    openCreatedRow: false,
+  };
   const response = Promise.withResolvers<{ id: string }>();
   const read = Promise.withResolvers<void>();
   const reconciling = Promise.withResolvers<void>();

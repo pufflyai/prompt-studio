@@ -18,12 +18,10 @@ export const toCreateRowHandler = (
     params: Record<string, unknown>,
     feedback?: CreateOperationFeedback,
   ) => Promise<unknown>,
-  activateCreatedRow:
-    | ((
-        row: KanbanRendererRow,
-        invocation: Pick<ExecuteWorkbenchExtensionCommandInput, "signal" | "isViewerCurrent">,
-      ) => Promise<void> | void)
-    | undefined,
+  activateCreatedRow: (
+    row: KanbanRendererRow,
+    invocation: Pick<ExecuteWorkbenchExtensionCommandInput, "signal" | "isViewerCurrent">,
+  ) => Promise<boolean>,
 ) => {
   const contribution = record.createRow;
   if (!contribution) return undefined;
@@ -33,22 +31,22 @@ export const toCreateRowHandler = (
       contribution.columnParam && submission.columnId ? { [contribution.columnParam]: submission.columnId } : undefined,
       contribution.attributesParam ? { [contribution.attributesParam]: submission.attributeValues } : undefined,
     );
-    const openCreatedRow = (created: unknown, signal?: AbortSignal) => {
+    const openCreatedRow = async (created: unknown, signal?: AbortSignal) => {
       if (
         signal?.aborted ||
         submission.openCreatedRow === false ||
         submission.canOpenCreatedRow?.() === false ||
-        !activateCreatedRow ||
         typeof created !== "object" ||
         created === null
       )
         return;
       const row = created as Partial<KanbanRendererRow>;
       if (typeof row.id !== "string" || typeof row.title !== "string") return;
-      return activateCreatedRow(
+      const attemptedOpen = await activateCreatedRow(
         { ...row, id: row.id, title: row.title, attributes: row.attributes ?? {} },
         { signal, isViewerCurrent: submission.canOpenCreatedRow },
       );
+      if (attemptedOpen) submission.onOpenSettled?.();
     };
     let opening: Promise<{ error: unknown } | undefined> | undefined;
     let attaching: Promise<void> | undefined;
@@ -68,7 +66,7 @@ export const toCreateRowHandler = (
         });
     };
     const settleAttachment = () => {
-      void attaching?.then(() => submission.onSettled?.(attachmentFailure));
+      if (attaching) void Promise.all([attaching, opening]).then(() => submission.onSettled?.(attachmentFailure));
     };
     const feedback = prepareKanbanCreationFeedback(submission);
     const created = await runMutation(record, contribution.commandId, params, {

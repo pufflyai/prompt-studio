@@ -8,6 +8,7 @@ import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { ticketTagsForIds } from "../data/tag-cardinality";
 import { allocateTicketIdentity } from "../data/ticket-identity";
 import { withTicketOrder } from "../data/ticket-order";
+import { ticketPageTarget } from "../data/ticket-page-target";
 import { plannerOwnerFor, readTicketParentLookup, ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import { withTicketTagIds } from "../data/ticket-tags";
 import type { StoredTicketAttachment } from "../data/types";
@@ -101,17 +102,20 @@ export const createTicketCommand = defineCommand({
       return ticket;
     });
     await emitPlannerTicketsChanged(ctx, { ticketId: ticket.id });
+    const extensionId = plannerOwnerFor(ctx);
+    const resource = {
+      ...ticketResourceReference(
+        ticket,
+        await readTicketParentLookup(ctx, new Map([[ticket.id, ticket]])),
+        extensionId,
+      ),
+      projectId: ctx.projectId,
+      icon: TICKET_RESOURCE_ICON,
+    };
     return {
       ...withTicketTagIds(ticket),
-      resource: {
-        ...ticketResourceReference(
-          ticket,
-          await readTicketParentLookup(ctx, new Map([[ticket.id, ticket]])),
-          plannerOwnerFor(ctx),
-        ),
-        projectId: ctx.projectId,
-        icon: TICKET_RESOURCE_ICON,
-      },
+      resource,
+      target: ticketPageTarget({ ...resource, extensionId }),
     };
   },
 });

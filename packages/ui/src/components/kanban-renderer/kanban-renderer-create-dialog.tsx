@@ -1,6 +1,6 @@
 import { Button, CloseButton, HStack, Stack, Text } from "@chakra-ui/react";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { handleDialogAcceptShortcut } from "@/components/overlays/dialog-accept-shortcut";
 import type { Param, ParamValueMap } from "@/components/param-editor/param-editor.types";
 import { ParamEditorHorizontal } from "@/components/param-editor/param-editor-horizontal";
@@ -122,12 +122,14 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
   const [submitting, setSubmitting] = useState(false);
   const waiting = submitting || Boolean(draft?.pending);
   const [error, setError] = useState("");
+  const dismissPending = useRef<(() => void) | undefined>(undefined);
   const editableAttributes = editableCreateAttributes(attributes);
+  const needsDraft = open && !draft;
 
   // Reopening restores the board's draft, including markdown and attachments.
   // Cancel and Escape must never reset it: only X and successful submission do.
   useEffect(() => {
-    if (!open) return;
+    if (!needsDraft) return;
     setDraft(
       (current) =>
         current ?? {
@@ -135,7 +137,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
           attributeValues: getCreateAttributeValues(attributes, columnAttributeId, columnId, filter),
         },
     );
-  }, [attributes, columnAttributeId, columnId, config.fields, filter, open, setDraft]);
+  }, [attributes, columnAttributeId, columnId, config.fields, filter, needsDraft, setDraft]);
 
   useEffect(() => {
     if (open) setError("");
@@ -184,6 +186,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
   }, [attributes, open, columnId, columnAttributeId, filter, setDraft]);
 
   const close = () => {
+    if (draft?.pending && dismissPending.current) return dismissPending.current();
     if (!submitting) onClose();
   };
 
@@ -202,7 +205,17 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
     if (!canSubmit) return;
     setSubmitting(true);
     setError("");
-    let admitted = false;
+    let closed = false;
+    let dismissed = false;
+    const closeAfterSubmit = () => {
+      if (closed) return;
+      closed = true;
+      onClose();
+    };
+    dismissPending.current = () => {
+      dismissed = true;
+      closeAfterSubmit();
+    };
     const pending = Symbol("create row");
     const updateSubmittedDraft = (result: (current: NonNullable<typeof draft>) => NonNullable<typeof draft> | null) =>
       setDraft((current) =>
@@ -215,11 +228,12 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
         ...splitCreateFields(config.fields, values),
         attributeValues,
         openCreatedRow: shouldOpen,
+        canOpenCreatedRow: () => !dismissed,
         onAdmitted: () => {
-          admitted = true;
           updateSubmittedDraft((current) => ({ ...current, pending: true, submission: pending }));
-          onClose();
+          if (!shouldOpen || !columnId) closeAfterSubmit();
         },
+        onOpenSettled: closeAfterSubmit,
         onDiscard: () => updateSubmittedDraft(() => null),
         onSettled: (attachmentError?: unknown) =>
           updateSubmittedDraft((current) =>
@@ -237,13 +251,14 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
     try {
       await onSubmit(submission());
       updateSubmittedDraft(() => null);
-      if (!admitted) onClose();
+      closeAfterSubmit();
     } catch (caught) {
       const unresolved = caught instanceof UnresolvedSubmissionError ? caught : undefined;
       updateSubmittedDraft((current) => ({ ...current, pending: false, unresolved }));
-      if (!unresolved && !admitted) setError(caught instanceof Error ? caught.message : config.labels.submitError);
+      if (!unresolved && !closed) setError(caught instanceof Error ? caught.message : config.labels.submitError);
     } finally {
-      if (!admitted) setSubmitting(false);
+      dismissPending.current = undefined;
+      if (!closed) setSubmitting(false);
     }
   };
 
@@ -262,7 +277,11 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
           <Dialog.Header>
             <Dialog.Title>{config.title}</Dialog.Title>
             <Dialog.CloseTrigger asChild>
-              <CloseButton size="sm" disabled={waiting} onClick={unresolved ? close : discard} />
+              <CloseButton
+                size="sm"
+                disabled={waiting && !draft.pending}
+                onClick={unresolved || draft.pending ? close : discard}
+              />
             </Dialog.CloseTrigger>
           </Dialog.Header>
           <ScrollArea flex="1" minH="0" height="auto">

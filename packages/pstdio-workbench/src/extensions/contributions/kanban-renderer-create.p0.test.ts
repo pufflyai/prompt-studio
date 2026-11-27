@@ -103,6 +103,53 @@ test.each([
 });
 
 describe("registerWorkbenchExtensionKanbanRenderers create forms", () => {
+  test("settles the form and reports an opening failure after the row has saved", async () => {
+    const workbench = createWorkbench();
+    workbench.pageLocations.setProject("project");
+    let settled = 0;
+    registerWorkbenchExtensionKanbanRenderers(
+      {
+        projectId: "project",
+        workbench,
+        executeCommand: () => ({
+          id: "saved",
+          title: "Saved ticket",
+          target: {
+            kind: "page",
+            page: { kind: "page", id: "missing", extensionId: "planner" },
+            resource: { type: "ticket", id: "saved", projectId: "project" },
+          },
+        }),
+      },
+      [
+        {
+          id: "tickets",
+          title: "Tickets",
+          extensionId: "planner",
+          queryHandlerId: "query",
+          createRow: { commandId: "create" },
+        },
+      ],
+    );
+    try {
+      await getWorkbenchRenderers(workbench).getKanbanRenderer("tickets")!.onCreateRow!({
+        columnId: "backlog",
+        values: {},
+        attributeValues: {},
+        files: [],
+        onOpenSettled: () => {
+          settled++;
+        },
+      });
+      expect(settled).toBe(1);
+      expect(workbench.notifications.listNotifications()).toMatchObject([
+        { level: "error", title: "Open command result failed" },
+      ]);
+    } finally {
+      await workbench.dispose();
+    }
+  });
+
   test("creates and finishes attachments without activating when opening is declined", async () => {
     const workbench = createWorkbench();
     const calls: string[] = [];

@@ -1,4 +1,7 @@
-import type { KanbanRendererBoardColumnConfig as WireBoardColumnConfig } from "@pstdio/sdk/extensions";
+import {
+  isNavigationTarget,
+  type KanbanRendererBoardColumnConfig as WireBoardColumnConfig,
+} from "@pstdio/sdk/extensions";
 import { renderBadgeListDisplay } from "@pstdio/ui/kanban-renderer";
 import { kanbanBuiltInViews, type WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
 import { text } from "pstdio-extensions/workbench";
@@ -244,12 +247,29 @@ export const registerWorkbenchExtensionKanbanRenderers = (
           ? (move: import("@pstdio/sdk/extensions").KanbanRendererMove) =>
               mutate(record, record.moveHandlerId!, { ...move }).then(() => undefined)
           : undefined,
-        onCreateRow: toCreateRowHandler(
-          record,
-          adapter,
-          mutate,
-          record.rowActivationHandlerId ? onRowActivate : undefined,
-        ),
+        onCreateRow: toCreateRowHandler(record, adapter, mutate, async (row, invocation) => {
+          const target = row.target;
+          if (
+            isNavigationTarget(target) &&
+            target.kind === "page" &&
+            target.resource?.id === row.id &&
+            (!target.resource.projectId || target.resource.projectId === context.projectId)
+          ) {
+            await runUserAction(context.workbench, "Open command result", () =>
+              context.workbench.navigation.openTarget(
+                toWorkbenchNavigationTarget(target, {
+                  extensionId: record.extensionId,
+                  projectId: context.projectId,
+                }),
+                { projectId: context.projectId, isViewerCurrent: invocation.isViewerCurrent },
+              ),
+            );
+            return true;
+          }
+          if (!record.rowActivationHandlerId || !onRowActivate) return false;
+          await runUserAction(context.workbench, "Open command result", () => onRowActivate(row, invocation));
+          return true;
+        }),
         onColumnAction: record.columnActionHandlerId
           ? async (columnId: string, actionId: string) => {
               await mutate(record, record.columnActionHandlerId!, { columnId, actionId });

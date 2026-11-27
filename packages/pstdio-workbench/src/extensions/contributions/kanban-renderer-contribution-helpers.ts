@@ -225,7 +225,7 @@ const createKanbanRendererSlot = (
 export const prepareKanbanCreationFeedback = (
   submission: import("../../core/registries/renderers/kanban-renderer-registry").KanbanRendererCreateRequest,
 ): import("../host/workbench-create-operation").CreateOperationFeedback => {
-  const { originatingRead, columnId, values } = submission;
+  const { originatingRead, columnId, values, openCreatedRow } = submission;
   const { title, content } = values;
   const label =
     typeof title === "string" ? title : deriveMarkdownTitle(typeof content === "string" ? content : "", "New item");
@@ -233,7 +233,10 @@ export const prepareKanbanCreationFeedback = (
     onAdmitted: submission.onAdmitted,
     onDiscard: submission.onDiscard,
     originatingRead,
-    board: originatingRead && columnId ? { viewKey: originatingRead.key, columnId, title: label } : undefined,
+    board:
+      originatingRead && columnId
+        ? { viewKey: originatingRead.key, columnId, title: label, openCreatedRow: openCreatedRow !== false }
+        : undefined,
   };
 };
 
