@@ -20,3 +20,7 @@ Read and follow this document before starting work:
 
 - Cite product intent by its stable RB (Core) or RBE (Extensions) identity. Guidance procedure references use `document.section.rule`.
 - Follow the [numbering format](documentation/guidance/0008-planning.md#5-rule-references).
+
+## Review handoffs
+
+- Post handoffs for review or delivery as comments in the ticket’s Activity. Use [Action, Status, and Evidence](documentation/guidance/0008-planning.md#7-review-handoff-comments) and keep the comment to 80 words, excluding evidence links. Reserve Planner review requests for unresolved decisions that need an answer.

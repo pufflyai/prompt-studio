@@ -51,3 +51,23 @@
 2. Use short sections and bullets: when to use, failure, prevention, and evidence. Link current source or focused tests; remove ticket metadata, long timelines, and outdated instructions.
 3. Merge overlapping lessons. Put rules already covered by guidance or references in those documents, preserving useful causes and limitations.
 4. Preserve surviving numbers, never reuse removed numbers, and update incoming links when merging or removing lessons.
+
+## 7. Review handoff comments
+
+Post the handoff in the ticket’s Activity. When using the CLI, publish an entry with `kind: "comment"` to the ticket through `pst resources activity publish`. Reserve Planner review requests for unresolved decisions that need an answer.
+
+Use these three lines in order. Keep the comment to 80 words, excluding evidence links.
+
+1. **Action** — Ask for one concrete next step. Name the person or team when known.
+2. **Status** — State what is ready and what still blocks progress. Call out failed or blocked checks that affect the handoff.
+3. **Evidence** — Link the relevant PR, report, or CI run. Keep full revisions, test logs, and failure details in those sources.
+
+Before posting, read the action and status on their own. The recipient should know what to do and why without opening a link.
+
+### Example release handoff
+
+**Action** — Publish the SDK from #2522 through the normal release process.
+
+**Status** — The SDK passed independent review. Extension PR #2487 needs the release to update its dependency and lockfile, then rerun failed and blocked checks. Candidate checks passed. Published-dependency checks still fail, and other packaged failures need triage.
+
+**Evidence** — [SDK PR #2522](https://github.com/pufflyai/prompt-studio/pull/2522), [extensions PR #2487](https://github.com/pufflyai/prompt-studio/pull/2487), RP-888, and independent review RP-895.

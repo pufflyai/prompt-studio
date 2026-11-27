@@ -2,11 +2,13 @@
 
 **Needs attention** collects decisions a person needs to make. Use a request only for an unresolved choice that the agent cannot settle from existing instructions or authority.
 
+Post handoffs for review or delivery as comments in the ticket’s Activity. Use the [review handoff format](../../../documentation/guidance/0008-planning.md#7-review-handoff-comments).
+
 Identify the ticket in the title and keep request text to at most 80 words, excluding document links. Prefer **Problem**, **Solution**, and **Downside**, with one short sentence per part; use another structure when it makes the decision clearer. Include each choice’s main cost and a marked recommendation. Keep question and option labels short, without repeating the summary.
 
 Use descriptive Markdown links to relevant documents or exact sections, such as the proposal, ADR, design, or report. Include as many relevant links as needed. Reuse existing documents and link evidence, background, and implementation detail instead of copying them into the request. The choice and essential trade-offs should be clear without opening the links.
 
-Missing resources, credentials, access, reproduction details and non-decision actions use **Blocked** and a specific blocked reason: what is missing and what allows work to continue. Clear the reason when resolved. Dependency waiting belongs in dependency links. Routine assumptions, risk checklists and handing in work do not by themselves need a request.
+Missing resources, credentials, access, reproduction details and non-decision actions use **Blocked** and a specific blocked reason: what is missing and what allows work to continue. Clear the reason when resolved. Dependency waiting belongs in dependency links. Routine assumptions and risk checklists do not by themselves need a request.
 
 Planner owns the saved requests and answers used by Auto Build, card and milestone modals, and the ticket page. Each request card shows its original creation date and time beneath the title, in your local time zone. This timestamp stays visible after the request is answered or cancelled. The numbered **Needs attention** bubble counts open or unreadable requests. “Review” here means a person's answer. Code reviews use `run-review` and `submit-review`; see [Attempts](0002-attempts.md).
 
