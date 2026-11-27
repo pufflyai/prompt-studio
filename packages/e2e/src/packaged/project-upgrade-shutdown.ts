@@ -1,5 +1,5 @@
 import type { ChildProcess } from "node:child_process";
-import { ownedDescendants, signalDescendants } from "../../../../scripts/ci/owned-process-tree";
+import { ownedDescendants, signalDescendants } from "pstdio-scripts/owned-process-tree";
 import { stopProcess } from "./packaged-serve-helpers";
 
 const stops = new WeakMap<ChildProcess, Promise<void>>();
