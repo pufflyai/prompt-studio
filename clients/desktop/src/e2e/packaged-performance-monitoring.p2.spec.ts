@@ -96,6 +96,8 @@ test("a local extension control highlights workbench renders and releases the ca
       name: "Highlight workbench renders",
     });
     const canvas = app.page.locator("canvas[data-react-scan]");
+    // The desktop snapshot can exist before this workbench starts reporting frames.
+    await expect.poll(async () => (await readSnapshot(app!.page))?.frameRate.length ?? 0).toBeGreaterThan(0);
     await expect(canvas).toHaveCount(0);
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-pressed", "true");
