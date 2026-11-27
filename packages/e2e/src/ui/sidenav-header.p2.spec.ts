@@ -130,10 +130,12 @@ test("removes and restores owner-scoped collections across project and session p
   await expectSidenavSections(sidenav, allSectionRowNames);
   expect(await stableProjectButton!.evaluate((node) => node.isConnected)).toBe(true);
 
+  const workspacesUrl = page.url();
   await row(sidenav, "Sessions").click();
   await expect(
-    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
+    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Workspaces", { exact: true }),
   ).toBeVisible();
+  await expect(page).toHaveURL(workspacesUrl);
   await expect(sidenav.locator('[data-tree-list-node-id="sessions"]')).toHaveCount(0);
   await expect(sidenav.locator("[data-tree-list-node-id]").first()).toHaveAccessibleName("Search");
   await expect(row(sidenav, "Home")).toBeVisible();
@@ -143,6 +145,7 @@ test("removes and restores owner-scoped collections across project and session p
   await expect(sidenav.getByRole("option", { name: "Settings", exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Navigate back" }).click();
+  await expect(page).toHaveURL(/\/tickets$/);
   await expectSidenavSections(sidenav, allSectionRowNames);
   await row(sidenav, "Tickets").click();
   await expect(row(sidenav, "Tickets")).toHaveAttribute("aria-selected", "true");
