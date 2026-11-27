@@ -1,4 +1,4 @@
-import type { LiveConnection } from "pstdio-sync/relay";
+import type { LiveConnection, RelayAccess } from "pstdio-sync/relay";
 import { createDocumentRelayConnection } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
@@ -17,7 +17,7 @@ export const startPublishedExtensions = (input: {
   config: RelayWorkbench;
   deps: ExtensionsRouteDeps;
   signal: AbortSignal;
-  access: () => Promise<{ token: string; expiresAt: string }>;
+  access: () => Promise<RelayAccess>;
   statusChanged?: () => void;
 }) => {
   const { config, deps } = input;
@@ -40,6 +40,7 @@ export const startPublishedExtensions = (input: {
     owner,
     deps,
     access,
+    canWrite: async () => !config.userId || config.userId === config.accountId || (await access()).canPublish === true,
     subscribe: (space, id) => connection.subscribe(space, id),
     statusChanged: input.statusChanged,
   });

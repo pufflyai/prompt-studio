@@ -6,7 +6,7 @@ import type { OperationReceipt } from "./schemas/storage-ordered-records";
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
 /** Inspect only the incoming facts, never payloads or accumulated per-operation history.
- * Merge each bounded archive page in SQL; released dependency markers retain epoch selection. */
+ * Merge each bounded archive page in SQL; dependency epoch selection is restored after the document and operation archives. */
 export const restoreOperationFacts = async (
   tx: Transaction,
   kind: "storage_ordered_touches" | "storage_ordered_receipts",

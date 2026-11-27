@@ -243,7 +243,9 @@ service, not part of the local API host or the CLI bundle. It consumes the share
 private `pstdio-sync` encrypted document clients. Its production
 access verification uses only the database-free `pstdio-account-manager/access` entry;
 the relay receives public issuer/audience/JWKS trust, without the manager database role, signing secret or device credentials. Isolated integration fixtures may
-use the manager's operator exports to create disposable accounts and devices. Production
+use the manager's operator exports to create disposable accounts and devices. Relay
+integration tests import the manager's OAuth and device fixtures through
+`pstdio-account-manager/testing`. Production
 modules have no grouped conformance implementation. It must not import the API
 host, UI, clients, database implementation, or prototype. PostgreSQL persistence
 belongs to the relay; the real local adapter belongs to `pstdio-db`.
@@ -281,7 +283,8 @@ access check must preserve that authority boundary. See the
   package, so they type-check against the released SDK they declare.
 - Every layer-map allowance matches a declared dependency. Remove an allowance
   when the package stops declaring it.
-- Private packages have at most two `exports` entries. `pstdio-api`,
+- Private packages have at most two `exports` entries by default. `pstdio-account-manager`
+  has three for operator access, token verification, and isolated service tests. `pstdio-api`,
   `pstdio-api-contracts`, and `pstdio-extensions` have frozen higher limits.
   `pstdio-sync` has exactly seven owned module exports, including the approved
   append-only logs API. New module contracts require an explicit architecture

@@ -1,12 +1,18 @@
 import { and, eq, like, type SQL, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { compactStorageTombstones } from "../services/extension-storage/compact-tombstones";
+import {
+  createDeferredDocumentSweep,
+  pruneAllDocumentFiles,
+} from "../services/extension-storage/document-file-retention";
 import { legacyNodeRows } from "../services/extension-storage/index-node-upgrade";
 import { pruneStorageOperations } from "../services/extension-storage/prune-operations";
 import { purgeStorageTombstones } from "../services/extension-storage/purge-tombstones";
 import { storageOwnerKey } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
 import { deleteStorageDocuments } from "./delete-storage-documents";
+import { createDependencyMarkerCleanup } from "./dependency-marker-upgrade";
+import { createExtensionIndexCleanup } from "./retire-extension-indexes";
 import { documents } from "./schemas/documents";
 import { invalidateMaintenance, legacyOwnerPrefix } from "./startup-maintenance";
 
@@ -65,10 +71,27 @@ export const createRetiredStorageCleanup = (db: DbClient, path: string, owners: 
 
 export const createStorageCleanup = (db: DbClient, path: string, owners: StorageOwner[], defer: boolean) => {
   const retiredRows = defer ? createRetiredStorageCleanup(db, path, owners) : async () => {};
-  return async (stopped: () => boolean) => {
-    await retiredRows(stopped);
-    if (!stopped()) await compactStorageTombstones(db, stopped);
-    if (!stopped()) await purgeStorageTombstones(db, stopped);
-    if (!stopped()) await pruneStorageOperations(db, stopped);
+  const extensionIndexes = createExtensionIndexCleanup(db);
+  const markers = createDependencyMarkerCleanup(db, () => invalidateMaintenance(path));
+  const sweep = defer ? createDeferredDocumentSweep(db) : undefined;
+  return {
+    async prepare() {
+      if (defer) return;
+      await extensionIndexes(() => false);
+      await markers(() => false);
+      await pruneAllDocumentFiles(db);
+    },
+    async run(stopped: () => boolean) {
+      await retiredRows(stopped);
+      await extensionIndexes(stopped);
+      await markers(stopped);
+      await sweep?.run(stopped);
+      if (!stopped()) await compactStorageTombstones(db, stopped);
+      if (!stopped()) await purgeStorageTombstones(db, stopped);
+      if (!stopped()) await pruneStorageOperations(db, stopped);
+    },
+    async close() {
+      await sweep?.close();
+    },
   };
 };

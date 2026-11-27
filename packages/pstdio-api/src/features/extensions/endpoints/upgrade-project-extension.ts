@@ -5,6 +5,7 @@ import { extensionUpgradeConcurrency } from "pstdio-extensions/preparation-clien
 import { ExtensionUpgradeUnavailableError } from "../../../services/extension-upgrade-unavailable-error";
 import type { AppRouteHandler } from "../../../types";
 import { scheduleProjectWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
+import { AlwaysEnabledExtensionError } from "../always-on-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { extensionChangesWorkspaceProvisioning } from "../extension-skill-cleanup";
 import { toProjectExtensionInstance } from "../project-extension-instance";
@@ -129,6 +130,9 @@ const upgradeFailure = (error: unknown) => {
     return { body: { error: message, code: extensionUpgradeNeedsReviewCode }, status: 409 as const };
   return {
     body: { error: message },
-    status: error instanceof ExtensionUpgradeUnavailableError ? (409 as const) : (400 as const),
+    status:
+      error instanceof ExtensionUpgradeUnavailableError || error instanceof AlwaysEnabledExtensionError
+        ? (409 as const)
+        : (400 as const),
   };
 };

@@ -1,4 +1,10 @@
-import { accountScopedPath, spaceKeysPath, spaceKeysSchema } from "pstdio-sync-contracts";
+import {
+  accountScopedPath,
+  managedExtensionHostHeader,
+  type managedExtensionHostVersion,
+  spaceKeysPath,
+  spaceKeysSchema,
+} from "pstdio-sync-contracts";
 import { createSyncSpace } from "../encryption";
 import { fetchWithBackoff, serviceUrl } from "./http";
 import { fetchWithInactivity } from "./inactivity-response";
@@ -13,6 +19,8 @@ export const fetchSyncSpaces = async (input: {
   credential: string;
   accountId: string;
   userId?: string;
+  grantId?: string;
+  managedExtensions?: typeof managedExtensionHostVersion;
   workbenchId: string;
   signal?: AbortSignal;
 }) => {
@@ -21,10 +29,16 @@ export const fetchSyncSpaces = async (input: {
   const response = await fetchWithBackoff(
     () =>
       fetchWithInactivity(
-        serviceUrl(input.managerOrigin, accountScopedPath(spaceKeysPath(input.workbenchId), teamAccountId)),
+        serviceUrl(
+          input.managerOrigin,
+          accountScopedPath(spaceKeysPath(input.workbenchId), teamAccountId, input.grantId),
+        ),
         {
           signal,
-          headers: { authorization: `Bearer ${input.credential}` },
+          headers: {
+            authorization: `Bearer ${input.credential}`,
+            ...(input.managedExtensions && { [managedExtensionHostHeader]: input.managedExtensions }),
+          },
         },
         { signal, inactivityMs: 30_000 },
       ),

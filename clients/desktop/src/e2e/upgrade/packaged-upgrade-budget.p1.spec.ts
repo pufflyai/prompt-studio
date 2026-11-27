@@ -33,6 +33,8 @@ for (const profile of ["history", "local-storage"] as const)
     test("completes the upgrade, opens the project and persists an edit within the upgrade budget", async ({
       upgradeHome,
     }, info) => {
+      // The measurement may use the whole upgrade limit; closing and verifying the fixture follow it.
+      test.setTimeout(local049UpgradeLimitMs + 60_000);
       let app: PackagedApp | undefined;
       try {
         const started = performance.now();

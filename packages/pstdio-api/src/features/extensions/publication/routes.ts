@@ -3,6 +3,7 @@ import type { AppBindings, AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
 import { openPublishedCatalog, publicationSchema, publishExtension } from "./catalog";
 import { adoptPublishedExtension, changePublishedCatalog } from "./change-catalog";
+import { PublicationAccessDenied } from "./types";
 
 const params = z.strictObject({ projectId: z.string() });
 const body = z.discriminatedUnion("kind", [
@@ -25,6 +26,10 @@ const responses = {
   200: {
     description: "Publication state or locally saved outcome.",
     content: { "application/json": { schema: z.unknown() } },
+  },
+  403: {
+    description: "This device cannot change the shared extension catalog.",
+    content: { "application/json": { schema: z.object({ error: z.string() }) } },
   },
   404: {
     description: "Project not found.",
@@ -82,6 +87,7 @@ export const publicationRoutes = (deps: ExtensionsRouteDeps) => {
         return c.json(await adoptPublishedExtension(deps, projectId, input.extensionId, c.req.raw.signal), 200);
       return c.json(await changePublishedCatalog(deps, projectId, input, c.req.raw.signal), 200);
     } catch (error) {
+      if (error instanceof PublicationAccessDenied) return c.json({ error: error.message }, 403);
       return c.json({ error: error instanceof Error ? error.message : "Publication failed" }, 409);
     }
   };

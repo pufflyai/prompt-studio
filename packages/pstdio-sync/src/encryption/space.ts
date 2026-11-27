@@ -1,4 +1,4 @@
-import { type SpaceKey, spaceKeySchema } from "pstdio-sync-contracts";
+import { deriveDocumentNamingKey, type SpaceKey, spaceKeySchema, syncDocumentId } from "pstdio-sync-contracts";
 import { decodeBytes, encodeBytes } from "../shared";
 
 const encoder = new TextEncoder();
@@ -36,9 +36,7 @@ export const createSyncSpace = async (input: { projectId: string; spaceOwner: st
     ),
   );
   // Document IDs come from the first generation, so a rotation never moves a document.
-  const naming = await deriveKey(keys[0].secret, "pstdio-sync document id v1", { name: "HMAC", hash: "SHA-256" }, [
-    "sign",
-  ]);
+  const naming = await deriveDocumentNamingKey(keys[0].secret);
   return spaceFromKeys({
     projectId: input.projectId,
     spaceOwner: input.spaceOwner,
@@ -65,10 +63,7 @@ const spaceFromKeys = (input: SyncSpaceTransfer) => {
     generation: input.generation,
     key: (generation: number) => encryption.get(generation),
     /** The relay document ID for a local document name. Every device of the space derives the same ID. */
-    async documentId(name: string) {
-      const digest = new Uint8Array(await crypto.subtle.sign("HMAC", input.naming, encoder.encode(name)));
-      return toBase64url(digest.subarray(0, 16));
-    },
+    documentId: (name: string) => syncDocumentId(input.naming, name),
     /** For a worker in this process; the keys stay non-extractable on both sides. */
     transfer: (): SyncSpaceTransfer => ({ ...input, encryption: [...encryption] }),
   };

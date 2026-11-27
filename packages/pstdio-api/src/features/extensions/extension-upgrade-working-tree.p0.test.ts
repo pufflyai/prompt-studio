@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { legacyCatalogFingerprint } from "../../services/extension-upgrade-provider";
+import { legacyCatalogFingerprint } from "../../services/extension-upgrade-local-provider";
 import { packagedExtensionCatalog } from "./extension-catalog";
 import { prepareExtensionUpgradeBaseline, rememberExtensionUpgradeBaseline } from "./extension-upgrade-baseline";
 import { fingerprintUpgradeWorkingTree } from "./extension-upgrade-working-tree";

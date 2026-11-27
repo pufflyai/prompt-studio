@@ -99,6 +99,8 @@ export interface RecordStreamInput {
   space: SyncSpace;
   documentId: string;
   relay: DocumentRelay;
+  /** A team publication reader may download but cannot found, push or checkpoint this stream. */
+  canWrite?: () => Promise<boolean>;
   store: RecordStreamStore;
   assets?: AssetStore;
   quarantine(failure: SyncFailure): Promise<void>;

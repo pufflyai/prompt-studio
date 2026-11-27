@@ -33,6 +33,7 @@ describe("marketplace extension installation", () => {
         getInstalledSource: async () => null as never,
         getProjectExtensionInstance: async () => null as never,
         listProjectExtensionInstances: async () => [],
+        assertInstalledSourceChoice: async () => {},
         registerInstalledSource: async () => null as never,
       },
       installExtensionSource,
@@ -105,6 +106,7 @@ describe("marketplace extension installation", () => {
         getInstalledSource: async () => null as never,
         getProjectExtensionInstance: async () => null as never,
         listProjectExtensionInstances: async () => [],
+        assertInstalledSourceChoice: async () => {},
         registerInstalledSource: async () => {
           throw new Error("should not register");
         },
@@ -148,6 +150,7 @@ describe("marketplace extension installation", () => {
         getInstalledSource: async () => null as never,
         getProjectExtensionInstance: async () => null as never,
         listProjectExtensionInstances: async () => [],
+        assertInstalledSourceChoice: async () => {},
         registerInstalledSource: async () => null as never,
       },
       installExtensionSource: async () => {

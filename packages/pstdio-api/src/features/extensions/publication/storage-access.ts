@@ -1,6 +1,6 @@
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
-import { openPublishedCatalog, publicationSchema } from "./catalog";
+import { cachedManagedPublicationAsset, readEffectivePublicationSelection } from "./effective-set";
 import { publishedRevisionOf, publishedSourceBaseline, sourceMatchesPublication } from "./source";
 import { PublicationUpdateRequiredError } from "./types";
 
@@ -19,11 +19,7 @@ export const createPublicationStorageAccess = (
     (source ??= (await deps.extensionService.getProjectExtensionInstance(input.projectId, input.extensionInstanceId))
       ?.installedSource);
   // A selection whose package cannot be read is `damaged`: it blocks writes and migrations until repaired.
-  const selection = async () => {
-    const record = await (await openPublishedCatalog(deps, input.projectId)).read(input.extensionId);
-    if (record.damaged) return "damaged" as const;
-    return record.value && !record.deleted ? { record, publication: publicationSchema.parse(record.value) } : null;
-  };
+  const selection = () => readEffectivePublicationSelection(deps, input.projectId, input.extensionId);
   return {
     async write() {
       const selected = await selection();
@@ -33,13 +29,12 @@ export const createPublicationStorageAccess = (
       if (!invoking?.version || Bun.semver.order(invoking.version, selected.publication.version) < 0)
         throw new PublicationUpdateRequiredError();
       const revision = publishedRevisionOf(invoking.source_ref);
-      if (revision && revision !== selected.publication.revision && selected.record.asset) {
-        const baseline = await publishedSourceBaseline(
-          deps,
-          input.projectId,
-          invoking.source_ref,
-          selected.record.asset,
-        );
+      if (selected.managed) {
+        if (revision !== selected.publication.revision) throw new PublicationUpdateRequiredError();
+        return;
+      }
+      if (revision && revision !== selected.publication.revision && selected.asset) {
+        const baseline = await publishedSourceBaseline(deps, input.projectId, invoking.source_ref, selected.asset);
         if (!baseline || (await sourceMatchesPublication(invoking.source_path, baseline)))
           throw new PublicationUpdateRequiredError();
       }
@@ -51,15 +46,15 @@ export const createPublicationStorageAccess = (
       if (selected === "damaged") return false;
       if (!selected) return true;
       const { cloudProjects, cloudProjectsLoaded } = await deps.accountService.status();
-      if (cloudProjectsLoaded && !(cloudProjects as string[]).includes(input.projectId)) return true;
+      if (!selected.managed && cloudProjectsLoaded && !(cloudProjects as string[]).includes(input.projectId))
+        return true;
       const invoking = await getSource();
-      if (
-        !invoking ||
-        publishedRevisionOf(invoking.source_ref) !== selected.publication.revision ||
-        !selected.record.asset
-      )
-        return false;
-      const baseline = await publishedSourceBaseline(deps, input.projectId, invoking.source_ref, selected.record.asset);
+      if (!invoking || publishedRevisionOf(invoking.source_ref) !== selected.publication.revision) return false;
+      const asset = selected.managed
+        ? await cachedManagedPublicationAsset(deps, input.projectId, selected.publication.revision)
+        : selected.asset;
+      if (!asset) return false;
+      const baseline = await publishedSourceBaseline(deps, input.projectId, invoking.source_ref, asset);
       return sourceMatchesPublication(invoking.source_path, baseline);
     },
   };

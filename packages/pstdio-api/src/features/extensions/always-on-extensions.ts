@@ -4,8 +4,8 @@ import { apiLogger } from "../../lib/logger";
 import { getExtensionCatalog } from "./extension-catalog";
 
 export class AlwaysEnabledExtensionError extends Error {
-  constructor() {
-    super("This extension is required by the host and must stay enabled in every project.");
+  constructor(message = "This extension is required by the host and must stay enabled in every project.") {
+    super(message);
     this.name = "AlwaysEnabledExtensionError";
   }
 }

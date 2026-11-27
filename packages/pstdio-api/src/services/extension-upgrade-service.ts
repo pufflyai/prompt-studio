@@ -20,7 +20,7 @@ import { createExtensionMarketplacePreview } from "./extension-marketplace-previ
 import type { createExtensionService } from "./extension-service";
 import { createExtensionSourceInstaller } from "./extension-source-installer";
 import { parseExtensionSourceRef, resolveExtensionReleaseCommit } from "./extension-source-ref";
-import { findLocalProvider, legacyCatalogFingerprint, type UpgradeInstance } from "./extension-upgrade-provider";
+import { findLocalProvider, legacyCatalogFingerprint, type UpgradeInstance } from "./extension-upgrade-local-provider";
 import { createExtensionUpgradeReviewService } from "./extension-upgrade-review-service";
 import { ExtensionUpgradeUnavailableError } from "./extension-upgrade-unavailable-error";
 import { createPublishedExtensionAlternative } from "./published-extension-alternative";
@@ -33,6 +33,7 @@ export type ExtensionService = Pick<
   | "getProjectExtensionInstance"
   | "listProjectExtensionInstances"
   | "registerInstalledSource"
+  | "assertInstalledSourceChoice"
 >;
 
 type WorkspaceService = {
@@ -264,6 +265,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     repoPath?: string,
   ): Promise<InstallExtensionSourceInput> => {
     const { installedSource } = existing;
+    await deps.extensionService.assertInstalledSourceChoice(installedSource.id);
     const entry = await catalogEntry(installedSource.install_name);
     const parsed = parseExtensionSourceRef(installedSource.source_ref);
     const registrySource = await registry.upgradeTarget(
@@ -324,6 +326,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   const upgrade = async (projectId: string, instanceId: string) => {
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return null;
+    await deps.extensionService.assertInstalledSourceChoice(existing.installedSource.id);
     const local = await separateLocalProvider(projectId, existing);
     const fingerprint =
       !local || local.instance.id === instanceId

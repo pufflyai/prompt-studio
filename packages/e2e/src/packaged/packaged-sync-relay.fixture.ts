@@ -44,7 +44,7 @@ type BlobPart = Uint8Array | { path: string };
 const createBlobStore = (directory?: string) => {
   const blobs = new Map<string, { parts: Map<number, BlobPart>; complete: boolean; children?: string[] }>();
   const served: { deviceId: string; blobId: string }[] = [];
-  let failReads: (deviceId: string) => boolean = () => false;
+  let failReads: (deviceId: string, blobId: string) => boolean = () => false;
   const partBytes = (part: BlobPart) => ("path" in part ? readFileSync(part.path) : part);
   const bytes = (blob: { parts: Map<number, BlobPart> }) =>
     Buffer.concat([...blob.parts].sort(([a], [b]) => a - b).map(([, part]) => partBytes(part)));
@@ -86,7 +86,7 @@ const createBlobStore = (directory?: string) => {
     }
     if (path.endsWith("/read")) {
       // A simulated outage asks for an immediate retry, so clients exhaust their bounded backoff without waiting.
-      if (failReads(deviceId))
+      if (failReads(deviceId, id))
         return Response.json({ error: "unavailable" }, { status: 503, headers: { "retry-after": "0" } });
       if (!blob?.complete) return new Response(null, { status: 404 });
       const offset = blobReadSchema.safeParse(await request.json().catch(() => null));
@@ -108,7 +108,7 @@ const createBlobStore = (directory?: string) => {
     complete: (id: string) => !!blobs.get(id)?.complete,
     contents: () => [...blobs.values()].map(bytes),
     served: () => [...served],
-    failReads(value: (deviceId: string) => boolean) {
+    failReads(value: (deviceId: string, blobId: string) => boolean) {
       failReads = value;
     },
   };
@@ -154,14 +154,18 @@ export const createPackagedSyncPeer = (
 
     return null;
   };
-  const storedRequest = (request: Request, path: string, access: { deviceId: string; accountId: string }) => {
+  const storedRequest = (
+    request: Request,
+    path: string,
+    access: { deviceId: string; accountId: string; projectId: string },
+  ) => {
     if (path.endsWith("/capabilities")) return json({ protocolVersion: 1, features: [syncBlobReferencesFeature] });
     const parts = path.split("/");
     const spaceOwner = privateSpaceOwner(parts);
     // A private space is readable and writable only by its own account's devices.
     if (spaceOwner !== null && spaceOwner !== access.accountId) return new Response(null, { status: 403 });
     if (parts[4] === "blobs") return blobs.request(request, path, parts, access.deviceId);
-    return documentRequest(request, path, parts, spaceOwner, access.deviceId);
+    return documentRequest(request, path, parts, spaceOwner, access.deviceId, access);
   };
   const upgradeLive = (
     request: Request,

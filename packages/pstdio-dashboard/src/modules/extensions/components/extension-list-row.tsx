@@ -14,6 +14,7 @@ import { ExtensionIcon } from "./extension-icon";
 import { ExtensionIdentity } from "./extension-identity";
 import { ExtensionAuthorBadge, ExtensionScopeBadge } from "./extension-labels";
 import { wideExtensionPanel } from "./extension-layout";
+import { ExtensionManagementNotice } from "./extension-management-notice";
 import { ExtensionToggle } from "./extension-toggle";
 
 export interface ExtensionListRowProps {
@@ -118,6 +119,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         <Text textStyle="label/XS" color="fg.muted" truncate>
           {extension.description ?? t("projectSettings.extensionsPanel.noDescription")}
         </Text>
+        <ExtensionManagementNotice extension={extension} />
       </Stack>
 
       <Box
@@ -144,7 +146,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
             onAction={onUpgrade}
             onDismiss={onDismissAction}
             onRetry={upgradeAction?.status === "error" ? onRetryAction : undefined}
-            disabled={changing}
+            disabled={changing || Boolean(extension.sourceRestriction)}
             data-testid="extension-row-upgrade"
           >
             {extension.hasPublishedAlternative
@@ -174,13 +176,13 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
           action={toggleAction}
           onDismiss={toggleAction && (() => onDismissAction?.(toggleAction))}
           onRetry={onRetryAction}
-          retryDisabled={changing}
+          retryDisabled={changing || Boolean(extension.choiceRestriction)}
         />
         <ExtensionToggle
           name={extension.displayName}
           enabled={extension.enabled}
           action={toggleAction}
-          disabled={changing}
+          disabled={changing || Boolean(extension.choiceRestriction)}
           onToggle={onToggle}
         />
       </Box>

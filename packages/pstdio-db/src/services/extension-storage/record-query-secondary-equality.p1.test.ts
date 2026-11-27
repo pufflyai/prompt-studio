@@ -4,6 +4,7 @@ import type { StorageRecordIndex } from "pstdio-sync-contracts";
 import { analyzeRecordProjection } from "../../db/record-projection-statistics";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { defineRecordIndexes } from "./record-index-definition";
 import { readQueryOwner } from "./record-query-owner";
 import { predicateSql, recordPageSql, recordScopeSql } from "./record-query-sql";
 
@@ -22,7 +23,7 @@ test("an empty page seeks a nonleading equality field instead of walking every o
       equality: ["id", "status"],
       orderBy: [{ field: "rank", direction: "asc" }],
     };
-    await records.defineIndexes([index]);
+    await defineRecordIndexes(f.db, owner, [index], "host-index");
     await records.commit({
       operationId: "seed",
       edits: Array.from({ length: 5000 }, (_, rank) => ({
@@ -54,7 +55,7 @@ test("an empty page seeks a nonleading equality field instead of walking every o
     expect(plan).toContain("Index Cond");
     await records.defineIndexes([]);
     expect(
-      (await f.db.execute(sql`SELECT indexname FROM pg_indexes WHERE indexname LIKE 'storage_query_%'`)).rows,
+      (await f.db.execute(sql`SELECT indexname FROM pg_indexes WHERE indexname LIKE 'storage_host_%'`)).rows,
     ).toEqual([]);
   } finally {
     await f.close();

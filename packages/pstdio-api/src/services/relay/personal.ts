@@ -50,6 +50,13 @@ const personalConnection = (input: RelayPersonalInput, signal: AbortSignal) =>
     signal,
   });
 
+type PersonalLiveMessage = Parameters<ReturnType<typeof createPersonalLive>["send"]>[0];
+
+const progressChanged = (progress: { invalidate(): void }, notify?: () => void) => {
+  progress.invalidate();
+  notify?.();
+};
+
 export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
   const { config, deps } = input;
   const activity = createSourceActivity(input.statusChanged);
@@ -70,6 +77,7 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
     admit: (work) => connection.admit(work),
   });
   const { history } = context;
+  const liveIn = documents.bindLiveSend<PersonalLiveMessage>((message) => channel.send(message));
   let firstDownloaded = false;
   const { liveReceiver, readLogs, catchUp, requestLog } = readers;
 
@@ -90,14 +98,15 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
     owned: () => index.owned,
     space: () => documents.space,
     sessions: deps.sessionService.store,
-    publish: (id, space) => publisher.live(id, space, channel.send),
+    publish: (id, space) => publisher.live(id, space, liveIn(space)),
     wake: () => connection.wake(),
   });
   const announcements = createPersonalAnnouncements(deps, config.workbenchId, signal);
   const prepare = async (attemptSignal: AbortSignal) => {
     const prepared = await activity.run("loading-keys", () => documents.prepare(attemptSignal), attemptSignal);
     await channel.prepare(prepared.personal, index.streaming);
-    publisher.prepare(prepared.personal, channel.send);
+    attemptSignal.throwIfAborted();
+    publisher.prepare(prepared.personal, liveIn(prepared.personal));
     if (prepared.renewed || prepared.recreated) {
       liveReceiver.reset();
       readAll = true;
@@ -198,7 +207,7 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
       watchReaders: deps.personalHistoryService.watchReaders,
     },
     logSource: history.logSource,
-    watchingChanged: (id, active) => publisher.watch(id, active, channel.send),
+    watchingChanged: (id, active) => publisher.watch(id, active, liveIn(documents.space)),
     logChanged: (id, format) => {
       requestLog(id, format);
       if (!documents.space) return;
@@ -215,8 +224,7 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
     changed: (id) => {
       documents.changed(id);
       remoteIndexChanged = true;
-      progress.invalidate();
-      input.statusChanged?.();
+      progressChanged(progress, input.statusChanged);
       connection.wake();
     },
   });
@@ -232,8 +240,7 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
         index.changed(id);
       } else index.changed();
       localIndexChanged = true;
-      progress.invalidate();
-      input.statusChanged?.();
+      progressChanged(progress, input.statusChanged);
       connection.wake();
     },
     conversationChanged: (id) => {
