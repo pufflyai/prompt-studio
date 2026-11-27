@@ -9,7 +9,7 @@ const compatibleDescriptor = (source: EmbeddedSource) =>
   source.bundles?.find((part) => part.host === releaseBundleHost() && part.sourceSha256 === source.sha256);
 
 const assetName = (file: Blob) => (file as Blob & { name?: string }).name?.replaceAll("\\", "/") ?? "";
-const readBundle = async (files = Bun.embeddedFiles) => {
+export const readBundledExtensionSources = async (files = Bun.embeddedFiles) => {
   const manifest = files.find((file) => assetName(file).endsWith("extension-sources/manifest.json"));
   return manifest ? (JSON.parse(await manifest.text()) as BundledExtensionSources) : null;
 };
@@ -17,7 +17,7 @@ const readBundle = async (files = Bun.embeddedFiles) => {
 const matchesRelease = (bundle: BundledExtensionSources, ref: string) => bundle.ref === ref || bundle.commit === ref;
 
 export const findBundledExtensionSource = async (origin: { url: string; path: string }, ref: string) => {
-  const bundle = await readBundle();
+  const bundle = await readBundledExtensionSources();
   if (!bundle || !matchesRelease(bundle, ref)) return null;
   const source = bundle.sources.find((entry) => entry.url === origin.url && entry.path === origin.path);
   if (!source) return null;
@@ -38,7 +38,7 @@ export const prepareBundledExtensionSource = async (
 > => {
   options.signal?.throwIfAborted();
   const files = options.files ?? Bun.embeddedFiles;
-  const bundle = await readBundle(files);
+  const bundle = await readBundledExtensionSources(files);
   if (!bundle || !matchesRelease(bundle, ref)) return null;
   const source = bundle.sources.find((entry) => entry.url === origin.url && entry.path === origin.path);
   if (!source) return null;

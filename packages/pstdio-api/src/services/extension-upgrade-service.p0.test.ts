@@ -333,7 +333,10 @@ test("requires review when the project is using a separate local copy with the s
 });
 
 describe("catalog extension installation and upgrades", () => {
-  test("replaces a named extension with the source from the host release", async () => {
+  test.each([
+    "git",
+    "local_path",
+  ])("upgrades a catalog install recorded as %s using its original release", async (sourceKind) => {
     const installExtensionSource = mock(async () => installed as never);
     const registerInstalledSource = mock(async () => ({ ...installedSource, source_hash: "new-hash" }) as never);
     const service = createExtensionUpgradeService({
@@ -344,6 +347,7 @@ describe("catalog extension installation and upgrades", () => {
             instance,
             installedSource: {
               ...installedSource,
+              source_kind: sourceKind,
               source_ref: namedSourceRef("d".repeat(40), installedSource.install_name),
             },
           }) as never,
@@ -360,6 +364,10 @@ describe("catalog extension installation and upgrades", () => {
     expect(installExtensionSource).toHaveBeenCalledWith(
       expect.objectContaining({
         force: true,
+        upgradeBase: {
+          path: installedSource.source_path,
+          ref: namedSourceRef("d".repeat(40), installedSource.install_name),
+        },
         installName: "pstdio-planner",
         hostReleaseRef: "pstdio@0.27.0",
         source: "pstdio-planner",

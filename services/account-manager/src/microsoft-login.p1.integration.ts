@@ -84,6 +84,24 @@ test("Microsoft uses the browser code flow and keeps its tenant-scoped account a
     const google = await deviceLogin("google");
     const microsoft = await deviceLogin("microsoft");
     expect(google.accountId).not.toBe(microsoft.accountId);
+    const profile = async (token: string) => {
+      const response = await handler(
+        new Request(`${config.origin}/v1/account`, {
+          headers: { authorization: `Bearer ${token}` },
+        }),
+      );
+      expect(response.status).toBe(200);
+      return response.json();
+    };
+    expect(await profile(microsoft.token)).toMatchObject({ profile: { email: "owner@fixture.test" } });
+    expect(await profile(google.token)).not.toHaveProperty("profile");
+    const renamed = await deviceLogin("microsoft", {
+      claims: { email: undefined, preferred_username: "renamed@company.test" },
+    });
+    expect(renamed.accountId).toBe(microsoft.accountId);
+    expect(await profile(microsoft.token)).toMatchObject({ profile: { email: "renamed@company.test" } });
+    expect((await deviceLogin("microsoft", { claims: { email: undefined } })).accountId).toBe(microsoft.accountId);
+    expect(await profile(microsoft.token)).not.toHaveProperty("profile");
     for (const accountId of [google.accountId, microsoft.accountId]) {
       await manager.setFeature({ accountId, feature: "relay", enabled: true });
     }

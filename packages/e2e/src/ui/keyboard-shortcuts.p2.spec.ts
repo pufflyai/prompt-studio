@@ -315,6 +315,9 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   request,
   causalEvidence,
 }) => {
+  // Creating the project prepares its default tools cold, which took up to 58 s in release runs.
+  // The journey then visits five destinations and opens three creation forms.
+  test.setTimeout(180_000);
   causalEvidence.mark("project-create:started");
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "Shortcut defaults" }),

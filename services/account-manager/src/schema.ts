@@ -175,6 +175,7 @@ export const projectDeletions = pgTable(
       .references(() => accounts.id),
     workbenchId: text().notNull(),
     operationId: text().notNull(),
+    requestedBy: text().references(() => accounts.id),
     delivery: integer().notNull().default(1),
     startedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     state: text({ enum: ["deleting", "needs-attention", "completed"] }).notNull(),

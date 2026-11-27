@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { deriveDocumentNamingKey, publicationDocumentNames, syncDocumentId } from "pstdio-sync-contracts";
 import type { ManagerTransaction } from "./database";
 import { findDeviceAccess } from "./devices";
+import { admitsManagedHost } from "./managed-host-admission";
 import { EnvironmentAccessDenied } from "./renewal-errors";
 import { spaceKeys } from "./schema";
 import { spaceKeysInTransaction } from "./space-keys";
@@ -24,13 +25,19 @@ export const sameDeviceAccess = (expected: DeviceAccess, current: DeviceAccess |
   current.workbenchId === expected.workbenchId &&
   current.grantId === expected.grantId;
 
-export const prepareTeamPublicationGrant = async (db: Database, access: DeviceAccess, token: string) => {
+export const prepareTeamPublicationGrant = async (
+  db: Database,
+  access: DeviceAccess,
+  token: string,
+  managedHost = false,
+) => {
   const { accountId, workbenchId, userId } = access;
   if (accountId === userId) return undefined;
   const { secret, canWrite } = await withAccountTransaction(db, userId, async (transaction) => {
     await lockAccount(transaction, accountId);
     const current = await findDeviceAccess(transaction, token, workbenchId, accountId);
     if (!sameDeviceAccess(access, current)) throw new EnvironmentAccessDenied();
+    if (!(await admitsManagedHost(transaction, accountId, managedHost))) throw new EnvironmentAccessDenied();
     const [first] = await transaction
       .select({ secret: spaceKeys.secret })
       .from(spaceKeys)

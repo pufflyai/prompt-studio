@@ -1,7 +1,9 @@
 import { existsSync, statSync } from "node:fs";
 import { extname, join, resolve, sep } from "node:path";
 import { canonicalRuntimeId } from "pstdio-extensions";
+import { readPublishedWebview } from "pstdio-extensions/prepared-cache";
 import type { createExtensionService } from "../../services/extension-service";
+import { readWebviewBuildSignature } from "./extension-webview-build-cache";
 import { classifyWebviewEntry, resolveManagedWebviewPaths } from "./extension-webviews";
 import { resolvePstdioHome } from "./install-extension-source";
 import type { ProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
@@ -85,11 +87,13 @@ export const resolveWebviewAssetFile = async (
   if (classification.kind === "unsupported") return null;
 
   const requested = input.assetPath?.replace(/^\/+/, "") ?? "";
-  const root = resolveManagedWebviewPaths({
+  const { distDir } = resolveManagedWebviewPaths({
     installedExtensionId: source.id,
     webviewCacheRoot: deps.webviewCacheRoot ?? defaultWebviewCacheRoot(),
     webviewId: input.webviewId,
-  }).distDir;
+  });
+  const published = readPublishedWebview(distDir);
+  const root = published?.distDir ?? distDir;
   const defaultPath = "module.js";
   const filePath = safeResolve(root, requested || defaultPath);
   if (!filePath || !existsSync(filePath)) return null;
@@ -100,5 +104,6 @@ export const resolveWebviewAssetFile = async (
   return {
     filePath,
     mimeType: resolveMimeType(filePath),
+    revision: published?.revision ?? readWebviewBuildSignature(distDir),
   };
 };

@@ -14,6 +14,7 @@ import { AccountRequestError } from "./account-errors";
 import { createAccountRefresh, createAccountWatch } from "./account-refresh";
 import { readAccountStatus } from "./account-status";
 import { createDeviceIdentity } from "./device-identity";
+import { createManagedProjectCopies } from "./managed-project-copies";
 import { managerOriginSchema, supportsMicrosoftSignIn } from "./manager-client";
 import { createMissingProjectRecovery } from "./missing-project-recovery";
 import { type CloudReturn, createNativeCloudReturn } from "./native-cloud-return";
@@ -256,6 +257,8 @@ export const createNativeAccount = (input: {
     readTeamMembership: membership.read,
     writeTeamMembership: membership.write,
     readManagedProjectPolicy: managed.projectPolicy,
+    readCachedManagedProjectPolicy: managed.cachedProjectPolicy,
+    managedProjectCopies: createManagedProjectCopies({ copies, login: readLogin, exists: input.projects.get }),
     downloadManagedPackage: managed.download,
     isExtensionManaged: managed.required,
     connectManagedPackageSource: managed.connect,

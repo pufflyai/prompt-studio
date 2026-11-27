@@ -1,4 +1,6 @@
 import {
+  managedExtensionHostHeader,
+  managedExtensionHostVersion,
   startProjectDeletionSchema,
   teamInviteRecipientSchema,
   teamInviteSecretSchema,
@@ -70,7 +72,13 @@ const workbenchRoute = async (
   const keys = /^\/v1\/workbenches\/([^/]+)\/keys$/.exec(path);
   if (keys && method === "GET") {
     const grantId = new URL(request.url).searchParams.get("grantId") ?? undefined;
-    const found = await devices.keys(bearer(request), decodeURIComponent(keys[1]), accountId, grantId);
+    const found = await devices.keys(
+      bearer(request),
+      decodeURIComponent(keys[1]),
+      accountId,
+      grantId,
+      request.headers.get(managedExtensionHostHeader) === managedExtensionHostVersion,
+    );
     return found ? json(found) : json({ error: "Unknown workbench" }, 404);
   }
   const workbench = /^\/v1\/workbenches\/([^/]+?)(\/remove)?$/.exec(path);

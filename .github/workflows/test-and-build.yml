@@ -89,7 +89,8 @@ env:
 jobs:
   isolated_review:
     if: github.event_name == 'workflow_dispatch' && inputs.review
-    runs-on: ubuntu-latest
+    # Playwright 1.60 supports 24.04; ubuntu-latest has moved to 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v5
@@ -107,7 +108,15 @@ jobs:
         run: |
           docker info
           docker compose version
-          bunx playwright@1.60.0 install --with-deps chromium
+          bunx playwright@1.60.0 install --with-deps chromium firefox
+      - name: Prepare the pinned Electron sandbox for disposable review checkouts
+        run: |
+          bun clients/desktop/node_modules/electron/install.js
+          sandbox="$(cd clients/desktop && bun -e 'console.log(require("node:path").join(require("node:path").dirname(require("electron")), "chrome-sandbox"))')"
+          sudo chown root:root "$sandbox"
+          sudo chmod 4755 "$sandbox"
+          test "$(stat -c '%U:%G %a' "$sandbox")" = "root:root 4755"
+          printf 'CHROME_DEVEL_SANDBOX=%s\n' "$sandbox" >> "$GITHUB_ENV"
       - name: Run every check selected by the isolated review gate
         env:
           TMPDIR: ${{ runner.temp }}
@@ -705,7 +714,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        group: [process-security, filesystem-storage-1, filesystem-storage-2]
+        group: [process-security, filesystem-storage-1, filesystem-storage-2, filesystem-storage-3]
     env:
       CI_PROFILE: production
       CI_PRIORITY: P2

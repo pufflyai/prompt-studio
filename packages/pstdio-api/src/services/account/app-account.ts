@@ -3,6 +3,7 @@ import type { AppConfig } from "../../app-config";
 import type { RouteDeps } from "../../features/deps";
 import { fireExtensionEventAsync } from "../../features/extensions/extension-event-runtime";
 import { exportManagedPackage } from "../../features/extensions/publication/managed-package-source";
+import { startManagedProjectUpdates } from "../../features/extensions/publication/managed-reconciliation";
 import { evictProjectCopy, summarizeProjectCopyCleanup } from "../../features/projects/cleanup-project";
 import { recoverCloudProject } from "../../features/projects/cloud-project-recovery";
 import { openProject } from "../../features/projects/open-project";
@@ -29,6 +30,7 @@ export const createAppAccount = (
   let stopRecovery = async () => {};
   let stopAccount = () => {};
   const connectAccountRelay = <T extends { deps: RouteDeps; close: () => Promise<void> }>(app: T) => {
+    const managedUpdates = startManagedProjectUpdates(app.deps);
     accountService.connectManagedPackageSource((projectId, instanceId) =>
       exportManagedPackage(app.deps, projectId, instanceId),
     );
@@ -55,12 +57,12 @@ export const createAppAccount = (
       {
         ...app,
         close: async () => {
+          stopAccount();
+          await managedUpdates.close();
           await stopRecovery();
           stopEvents();
-          stopAccount();
           await accountEventsOwner.close();
           await syncEvents.close();
-          await accountService.close();
           await app.close();
         },
       },
@@ -80,7 +82,10 @@ export const createAppAccount = (
         },
         ready: async (relay) => {
           await accountEventsOwner.changed("account");
-          stopAccount = accountService.watch(() => void accountEventsOwner.changed("account"));
+          stopAccount = accountService.watch(() => {
+            void accountEventsOwner.changed("account");
+            void managedUpdates.changed();
+          });
           // A project created or bound here may already be a cloud project of this account.
           stopEvents = app.deps.eventBus.subscribe((event) => {
             if (event.table === "projects") void accountService.refresh();

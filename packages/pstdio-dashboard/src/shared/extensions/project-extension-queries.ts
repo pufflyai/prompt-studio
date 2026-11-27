@@ -1,5 +1,5 @@
 import type { ListExtensionAppearanceResponse, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { type ScopedQueryClient, viewDataEvents } from "@pstdio/sdk/extensions";
+import { accountEvents, type ScopedQueryClient, viewDataEvents } from "@pstdio/sdk/extensions";
 import { getRuntimeApiClient } from "@/lib/api";
 import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { getRuntimeCollections, type RuntimeCollections } from "@/lib/sync/collections";
@@ -43,7 +43,7 @@ export const getProjectExtensionQueries = (projectId: string | undefined, input:
     get extensions() {
       return queries.query({
         id: "extensions.list",
-        dependsOn,
+        dependsOn: [...dependsOn, accountEvents.changed.id],
         dependency,
         read: (signal) => client.listProject(projectId!, { signal }),
       });

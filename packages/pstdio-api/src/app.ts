@@ -44,6 +44,7 @@ import { createSessionQueueService } from "./services/session-queue-service";
 import { createSkillService } from "./services/skill-service";
 import { createTextEditingService } from "./services/text-editing/service";
 import { createWorkspaceCapacityService } from "./services/workspace-capacity-service";
+import { createUpgradeBundleWarmup } from "./startup/warm-installed-upgrade-bundles";
 import type { AppBindings } from "./types";
 
 const AUTOMATION_RUN_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -353,14 +354,25 @@ const buildApp = async (
 };
 
 export const createApp = async (input: CreateAppInput, dependencies: AppDependencies = productionAppDependencies) => {
-  const database = await openAppDatabase(input.config.database.path, input.lifecycle, input.config.storage.root);
+  const warming = createUpgradeBundleWarmup(input.config.extensions.release);
   try {
-    const app = await buildApp(input, dependencies, database);
-    logStartupPhase("app_ready");
-    return app;
-  } catch (error) {
-    // Nothing else owns the database until startup returns its close function.
-    await database.close();
-    throw error;
+    const database = await openAppDatabase(
+      input.config.database.path,
+      input.lifecycle,
+      input.config.storage.root,
+      warming.start,
+    );
+    // Installs now take priority. Keep completed cache entries and stop speculative work.
+    warming.stop();
+    try {
+      const app = await buildApp(input, dependencies, database);
+      logStartupPhase("app_ready");
+      return app;
+    } catch (error) {
+      await database.close();
+      throw error;
+    }
+  } finally {
+    await warming.close();
   }
 };

@@ -26,8 +26,19 @@ export const registerExtensionsPage = (ctx: WorkbenchModuleContext) => {
   ctx.commands.registerCommand(
     { id: dashboardCommandIds.openExtensions, label: "Open extensions", category: "Extensions" },
     {
-      execute: () => {
-        ctx.pageLocations.navigate({ kind: "page", page: dashboardExtensionsPage });
+      execute: (args) => {
+        const input = args as { resolveInstanceId?: string; projectId?: string } | undefined;
+        const resolveInstanceId =
+          input?.projectId === ctx.context.get(dashboardSelectedProjectIdContextKey)
+            ? input?.resolveInstanceId
+            : undefined;
+        ctx.pageLocations.navigate({
+          kind: "page",
+          page: typeof resolveInstanceId === "string" ? dashboardExtensionDetailPage : dashboardExtensionsPage,
+          ...(typeof resolveInstanceId === "string" && {
+            resource: { type: "extension", extensionId: "pstdio", id: `resolve:${resolveInstanceId}` },
+          }),
+        });
       },
     },
   );

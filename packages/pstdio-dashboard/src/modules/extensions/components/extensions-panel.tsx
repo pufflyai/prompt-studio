@@ -72,10 +72,11 @@ const ActiveExtensionUpgradeReview = ({
       projectId={projectId}
       target={reviewTarget}
       onClose={close}
-      onApplied={() => actions.dismiss(reviewTarget.extension.id)}
+      onApplied={() => actions.resolveConflict(reviewTarget.extension.id)}
       onCompose={
         extensionUpgradeAgentAvailable(settingsInput.workbench)
-          ? (review) => openExtensionUpgradeAgentDraft(settingsInput, projectId, reviewTarget.extension.id, review)
+          ? (review, instructions) =>
+              openExtensionUpgradeAgentDraft(settingsInput, projectId, reviewTarget.extension.id, review, instructions)
           : undefined
       }
     />
@@ -115,6 +116,19 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const selection = settingsInput.instance.resource?.id;
   const selectedInstanceId = selectedExtension(selection, "installed");
   const selectedMarketplaceName = selectedExtension(selection, "marketplace");
+  const resolveInstanceId = selectedExtension(selection, "resolve");
+  const openedResolution = useRef<string | null>(null);
+  useEffect(() => {
+    if (!resolveInstanceId) {
+      openedResolution.current = null;
+      return;
+    }
+    if (openedResolution.current === resolveInstanceId || !extensionsQuery.data || settingsInput.visible === false)
+      return;
+    if (!actions.actions[resolveInstanceId]?.needsReview) return;
+    openedResolution.current = resolveInstanceId;
+    retryOrReview(resolveInstanceId);
+  }, [resolveInstanceId, extensionsQuery.data, settingsInput.visible, retryOrReview, actions.actions]);
   const openList = () => {
     settingsInput.workbench.pageLocations.navigate({ kind: "page", page: dashboardExtensionsPage });
   };
@@ -167,7 +181,10 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         reviewTarget={reviewTarget}
         actions={actions}
         settingsInput={settingsInput}
-        close={() => setReviewTarget(null)}
+        close={() => {
+          setReviewTarget(null);
+          if (resolveInstanceId) openList();
+        }}
       />
     </>
   );

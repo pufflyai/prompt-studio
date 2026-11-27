@@ -1,3 +1,4 @@
+import { managedExtensionHostHeader, type managedExtensionHostVersion } from "pstdio-sync-contracts";
 import { fetchWithBackoff, serviceAddress, serviceUrl } from "./http";
 import { fetchWithInactivity } from "./inactivity-response";
 
@@ -10,6 +11,7 @@ export const createRelayAccess = (input: {
   accountId?: string;
   userId?: string;
   grantId?: string;
+  managedExtensions?: typeof managedExtensionHostVersion;
   signal: AbortSignal;
   /** Called when the manager rejects the renewal credential. */
   denied?: () => void;
@@ -25,7 +27,11 @@ export const createRelayAccess = (input: {
           {
             method: "POST",
             signal: input.signal,
-            headers: { authorization: `Bearer ${input.renewalGrant}`, "content-type": "application/json" },
+            headers: {
+              authorization: `Bearer ${input.renewalGrant}`,
+              "content-type": "application/json",
+              ...(input.managedExtensions && { [managedExtensionHostHeader]: input.managedExtensions }),
+            },
             body: JSON.stringify({
               workbenchId: input.workbenchId,
               ...(input.userId && input.userId !== input.accountId && { accountId: input.accountId }),

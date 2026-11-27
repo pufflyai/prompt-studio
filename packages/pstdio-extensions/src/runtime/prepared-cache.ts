@@ -7,6 +7,7 @@ export { preparationHostIdentity, preparedCacheRoot, revisionDigest } from "./pr
 
 export {
   initializePublishedWebviewRevision,
+  readPublishedWebview,
   readPublishedWebviewRevision,
   recordPublishedWebviewRevision,
 } from "./published-webview-revision";

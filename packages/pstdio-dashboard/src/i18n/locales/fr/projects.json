@@ -61,7 +61,7 @@
         "errorCopied": "Erreur copiée"
       },
       "upgrade": {
-        "reviewNeeded": "Fichiers locaux conservés",
+        "reviewNeeded": "Mise à jour en pause",
         "waiting": "En attente de mise à niveau",
         "action": "Mettre à niveau",
         "current": "L'extension est déjà à jour",
@@ -202,7 +202,12 @@
         "enabled": "Activée"
       },
       "noMatches": "Aucune extension ne correspond à votre recherche.",
-      "clearSearch": "Effacer la recherche"
+      "clearSearch": "Effacer la recherche",
+      "management": {
+        "required": "Requise par le propriétaire de votre équipe. Gérez les obligations dans Paramètres → Extensions gérées.",
+        "source": "Cette source est requise par un projet d’équipe. Son propriétaire gère les mises à jour et la suppression.",
+        "unavailable": "Connectez-vous au Cloud pour vérifier les actions disponibles."
+      }
     }
   },
   "list": {

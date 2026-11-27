@@ -59,8 +59,10 @@ export const changePublishedCatalog = async (
   signal?: AbortSignal,
 ) => {
   const catalog = await openPublishedCatalog(deps, projectId, signal);
-  await catalog.requireWrite();
+  await catalog.requireWrite([input.extensionId]);
   const proposed = await proposedEntry(catalog, input);
+  const decision = (await catalog.readPolicy()).find((row) => row.extensionId === input.extensionId);
+  if (decision) Object.assign(proposed.publication, { teamPolicyRevision: decision.selectionId });
   const others = (await catalog.list()).filter((record) => record.recordId !== input.extensionId);
   await activatePublishedSet(deps, projectId, [...publishedEntries(others), proposed], signal, false, async () => {
     if ((await catalog.records.read(input.extensionId)).revision !== input.expectedRevision)

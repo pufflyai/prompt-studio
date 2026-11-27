@@ -9,6 +9,11 @@ import { preparePublishedExtension } from "./prepare";
 import { publishedExtensionsId } from "./types";
 
 export const exportManagedPackage = async (deps: ExtensionsRouteDeps, projectId: string, instanceId: string) => {
+  const requireAccess = async () => {
+    if (!(await deps.accountService.canPublishProjectExtensions(projectId)))
+      throw new AccountRequestError("Current project access is required to share this project's tools");
+  };
+  await requireAccess();
   const source = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
   if (!source) throw new AccountRequestError("Choose an installed extension from this project");
   const extensionId = canonicalExtensionId(source.installedSource.extension_id);
@@ -21,7 +26,13 @@ export const exportManagedPackage = async (deps: ExtensionsRouteDeps, projectId:
     root: join(tmpdir(), "pstdio-managed-check"),
   });
   try {
-    return { extensionId, bytes, name: prepared.loaded.metadata.name, version: prepared.loaded.metadata.version };
+    await requireAccess();
+    return {
+      extensionId,
+      bytes,
+      name: prepared.loaded.metadata.displayName,
+      version: prepared.loaded.metadata.version,
+    };
   } finally {
     await rm(prepared.path, { recursive: true, force: true });
   }

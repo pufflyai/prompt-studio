@@ -16,8 +16,12 @@ export const publishedSourceBaseline = async (
   if (!revision) return null;
   let asset: Asset | undefined = incoming.sha256 === revision ? incoming : undefined;
   if (!asset) {
+    const managed = await deps.assetTransferService.get(publishedOwner(projectId), `team-managed:${revision}`);
+    if (managed?.status === "complete" && managed.asset.sha256 === revision) asset = managed.asset;
+  }
+  if (!asset) {
     const record = await (await openPublishedCatalog(deps, projectId)).records.read(`package:${revision}`);
-    asset = record.asset ?? undefined;
+    if (!record.deleted && record.asset?.sha256 === revision) asset = record.asset;
   }
   if (!asset) return null;
   return new Response(await deps.assetTransferService.read(publishedOwner(projectId), asset)).blob();

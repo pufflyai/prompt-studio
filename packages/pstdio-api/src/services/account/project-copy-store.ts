@@ -33,6 +33,7 @@ const teamAdmissionSchema = teamProjectSchema.extend({
   userId: identitySchema,
   deviceId: identitySchema,
   grantId: identitySchema,
+  revoked: z.boolean().optional(),
 });
 export type TeamAdmission = z.infer<typeof teamAdmissionSchema>;
 
@@ -83,6 +84,30 @@ export const createProjectCopyStore = (accountFile: string) => {
           ...current,
           teamAdmissions: [...previous, ...admitted.map((row) => teamAdmissionSchema.parse(row))],
         });
+      }),
+    recordTeamAdmissionAccess: (
+      login: Pick<ScopedDeviceLogin, "managerOrigin" | "accountId" | "deviceId">,
+      projectId: string,
+      grantId: string | null,
+    ) =>
+      serializeNativeWrite(path, async () => {
+        const current = await read();
+        let changed = false;
+        const teamAdmissions = current.teamAdmissions.map((row) => {
+          if (
+            row.managerOrigin !== login.managerOrigin ||
+            row.userId !== login.accountId ||
+            row.deviceId !== login.deviceId ||
+            row.projectId !== projectId
+          )
+            return row;
+          // Keep the old grant identity so returning access still requires normal sync admission.
+          const revoked = grantId !== row.grantId;
+          if (Boolean(row.revoked) === revoked) return row;
+          changed = true;
+          return { ...row, revoked };
+        });
+        if (changed) await writePrivateFile(path, { ...current, teamAdmissions });
       }),
     bindTeamProject: (binding: TeamProject, canClaim: () => Promise<boolean>) =>
       serializeNativeWrite(path, async () => {

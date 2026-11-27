@@ -22,7 +22,7 @@ export const readAccountStatus = async (
   const known = matchesManagerLogin(cloudProjects, login) ? cloudProjects : undefined;
   const ids = known?.ids ?? (await cached?.(login));
   return {
-    login: device,
+    login: { ...device, ...(known?.profile && { email: known.profile.email }) },
     cloudProjects: ids ?? [],
     cloudProjectsLoaded: Boolean(known && online),
     features: known?.features ?? null,

@@ -1,5 +1,4 @@
 import {
-  accountScopedPath,
   type ManagedExtension,
   managedExtensionSchema,
   managedPackageDescriptorSchema,
@@ -8,9 +7,8 @@ import {
 } from "pstdio-sync-contracts";
 import { z } from "zod";
 import { AccountRequestError } from "./account-errors";
-import { managedPackageRequest, readManagedPackageBytes } from "./managed-package-client";
+import { managedPackageRequest, readManagedPackageBytes, readManagedProjectGrant } from "./managed-package-client";
 import { openManagedPackage, sealManagedPackage } from "./managed-package-crypto";
-import { managerWorkbenchesSchema } from "./manager-account";
 import { ManagerRequestDenied } from "./manager-client";
 import type { createNativeManagerCall } from "./native-manager-call";
 import { type DeviceLogin, matchesDeviceLogin } from "./native-store";
@@ -29,6 +27,11 @@ const cacheSchema = z.strictObject({
   ),
 });
 const teamPath = (accountId: string) => `/v1/teams/${encodeURIComponent(accountId)}/managed-extensions`;
+const canUseOfflinePolicy = (error: unknown) =>
+  error instanceof TypeError || (error instanceof ManagerRequestDenied && error.status >= 500);
+const accessDenied = (error: unknown) =>
+  error instanceof AccountRequestError ||
+  (error instanceof ManagerRequestDenied && (error.status === 401 || error.status === 403));
 export type ManagedPackageSource = { extensionId: string; name: string; version: string; bytes: Blob };
 type Manage = Extract<TeamMembershipWrite, { op: "manageExtension" }>;
 
@@ -36,7 +39,10 @@ export const createNativeManagedExtensions = (input: {
   file: string;
   current: () => Promise<DeviceLogin>;
   readLogin: () => Promise<DeviceLogin | null>;
-  copies: Pick<ReturnType<typeof createProjectCopyStore>, "teamProjects">;
+  copies: Pick<
+    ReturnType<typeof createProjectCopyStore>,
+    "teamProjects" | "teamAdmissions" | "recordTeamAdmissionAccess"
+  >;
   call: ReturnType<typeof createNativeManagerCall>;
   signal: AbortSignal;
   refresh: () => Promise<void>;
@@ -56,6 +62,24 @@ export const createNativeManagedExtensions = (input: {
   const readCache = () => readPrivateFile(file, cacheSchema, { teams: [] });
   const binding = async (projectId: string) =>
     (await input.copies.teamProjects()).find((row) => row.projectId === projectId);
+  const admittedCache = async (
+    projectId: string,
+    owner: { managerOrigin: string; accountId: string },
+    login: DeviceLogin,
+  ) => {
+    const admission = (await input.copies.teamAdmissions(login)).find(
+      (row) => row.projectId === projectId && row.accountId === owner.accountId && !row.revoked,
+    );
+    if (!admission) throw new AccountRequestError("Connect to Cloud to verify this project's access first");
+    const cached = (await readCache()).teams.find(
+      (row) =>
+        row.managerOrigin === owner.managerOrigin &&
+        row.accountId === owner.accountId &&
+        row.userId === login.accountId,
+    );
+    await assertCurrent(login);
+    return cached?.policy;
+  };
   const prune = () =>
     serializeNativeWrite(file, async () => {
       const needed = new Set(
@@ -74,11 +98,21 @@ export const createNativeManagedExtensions = (input: {
     if (login.managerOrigin !== owner.managerOrigin)
       throw new AccountRequestError("Sign in to this project's Cloud service first");
     try {
+      const grantId = await readManagedProjectGrant({
+        call: input.call,
+        login,
+        accountId: owner.accountId,
+        projectId,
+        signal,
+      });
+      await assertCurrent(login);
+      await input.copies.recordTeamAdmissionAccess(login, projectId, grantId);
       const policy = policySchema.parse(
         await input.call(`${teamPath(owner.accountId)}/policy`, undefined, login.token, signal, login, true),
       );
       await assertCurrent(login);
       await serializeNativeWrite(file, async () => {
+        await assertCurrent(login);
         const cached = await readCache();
         const teams = cached.teams.filter(
           (row) => row.managerOrigin !== owner.managerOrigin || row.accountId !== owner.accountId,
@@ -91,16 +125,25 @@ export const createNativeManagedExtensions = (input: {
     } catch (error) {
       if (signal?.aborted || input.signal.aborted) throw error;
       await assertCurrent(login);
-      if (!(error instanceof TypeError || (error instanceof ManagerRequestDenied && error.status >= 500))) throw error;
-      const cached = (await readCache()).teams.find(
-        (row) =>
-          row.managerOrigin === owner.managerOrigin &&
-          row.accountId === owner.accountId &&
-          row.userId === login.accountId,
-      );
+      if (accessDenied(error)) await input.copies.recordTeamAdmissionAccess(login, projectId, null);
+      if (!canUseOfflinePolicy(error)) throw error;
+      const cached = await admittedCache(projectId, owner, login);
       if (!cached) throw new AccountRequestError("Connect to Cloud to load this team's extension policy first");
-      return cached.policy;
+      return cached;
     }
+  };
+  // Account refresh updates this native decision snapshot. Individual data mutations must not
+  // issue manager requests; activation and package downloads still verify current project grants.
+  const cachedProjectPolicy = async (projectId: string) => {
+    input.signal.throwIfAborted();
+    const owner = await binding(projectId);
+    if (!owner) return [];
+    const login = await input.current();
+    if (login.managerOrigin !== owner.managerOrigin)
+      throw new AccountRequestError("Sign in to this project's Cloud service first");
+    const cached = await admittedCache(projectId, owner, login);
+    input.signal.throwIfAborted();
+    return cached ?? projectPolicy(projectId);
   };
   const manage = async (request: Manage, login: DeviceLogin) => {
     if (!exportPackage) throw new AccountRequestError("Extension packaging is unavailable on this host");
@@ -134,18 +177,14 @@ export const createNativeManagedExtensions = (input: {
     const login = await input.current();
     if (!owner || owner.managerOrigin !== login.managerOrigin)
       throw new AccountRequestError("This team project is unavailable");
-    const projects = managerWorkbenchesSchema.parse(
-      await input.call(
-        accountScopedPath("/v1/workbenches", owner.accountId),
-        undefined,
-        login.token,
-        signal,
-        login,
-        true,
-      ),
-    );
-    const grantId = projects.find(({ workbenchId }) => workbenchId === projectId)?.grantId;
-    if (!grantId) throw new AccountRequestError("Current project access is required to install managed extensions");
+    const grantId = await readManagedProjectGrant({
+      call: input.call,
+      login,
+      accountId: owner.accountId,
+      projectId,
+      signal,
+    });
+    await assertCurrent(login);
     const query = new URLSearchParams({ workbenchId: projectId, grantId, selectionId: required.selectionId });
     const response = await managedPackageRequest(
       login,
@@ -173,6 +212,7 @@ export const createNativeManagedExtensions = (input: {
   };
   return {
     projectPolicy,
+    cachedProjectPolicy,
     download,
     manage,
     prune,

@@ -1,5 +1,5 @@
 import type { ReportFailure } from "pstdio-service-telemetry";
-import { identitySchema } from "pstdio-sync-contracts";
+import { identitySchema, managedExtensionHostHeader, managedExtensionHostVersion } from "pstdio-sync-contracts";
 import { z } from "zod";
 import { deviceHttp } from "./device-http";
 import type { createManagerAuthentication } from "./manager-authentication";
@@ -34,7 +34,15 @@ const renewAccess = async (auth: Authentication, request: Request, log: RenewalL
     return unauthorized();
   }
   try {
-    return json(await auth.renew(token, input.workbenchId, input.accountId, input.grantId));
+    return json(
+      await auth.renew(
+        token,
+        input.workbenchId,
+        input.accountId,
+        input.grantId,
+        request.headers.get(managedExtensionHostHeader) === managedExtensionHostVersion,
+      ),
+    );
   } catch (error) {
     if (error instanceof EnvironmentAccessDenied) return unauthorized();
     const category = error instanceof EnvironmentAccessFailure ? error.category : "service";

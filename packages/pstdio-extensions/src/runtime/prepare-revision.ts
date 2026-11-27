@@ -38,8 +38,8 @@ const identifyRevisionInputs = (
   read: ReturnType<typeof readRevisionInputs>,
   dependencyHash: string,
 ) => {
-  const sourceHash = hashExtensionSource(sourcePath);
-  const contentKey = `${hashRevisionSource(sourcePath)}:${dependencyHash}`;
+  const sourceHash = hashExtensionSource(sourcePath, read.dependencies.readSource);
+  const contentKey = `${hashRevisionSource(sourcePath, undefined, read.dependencies.readSource)}:${dependencyHash}`;
   const id = revisionDigest(`${contentKey}:${preparationHostIdentity()}`);
   // Every input that can change the accepted runtime also changes its live load identity.
   const loadKey = id;

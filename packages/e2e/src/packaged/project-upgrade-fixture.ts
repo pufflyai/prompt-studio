@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readdir, readFile, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, sep } from "node:path";
+import { expect } from "@playwright/test";
 import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import {
   createStackApi,
@@ -493,8 +494,25 @@ export const seedUpgradeProject = async (api: StackApi, input: ProjectUpgradeInp
   } satisfies Seed;
 };
 
-const files = async (api: StackApi, seed: Seed) => {
+const files = async (api: StackApi, seed: Seed, originalProjectFiles?: Record<string, string>) => {
   const { folder } = seed;
+  // The harness writes the enabled catalog skills into the project. A release can change their
+  // bundled contents. Compare every other byte, including customized copies inside this directory.
+  const skills = await api.get<{ name: string; files: { path: string; content: string }[] }[]>(
+    `/projects/${seed.id}/skills`,
+  );
+  const mirrors = skills.flatMap((skill) =>
+    skill.files.map((file) => ({ path: join(".agents/skills", skill.name, file.path), digest: sha256(file.content) })),
+  );
+  if (originalProjectFiles) {
+    // Workspace provisioning follows startup asynchronously. Wait for managed mirrors
+    // before capturing the tree. The separate first-edit clock has already stopped.
+    const managed = mirrors.filter(({ path }) => !Object.hasOwn(originalProjectFiles, path));
+    await expect(async () => {
+      for (const { path, digest } of managed)
+        assert.equal(sha256(await readFile(join(folder, path))), digest, `Provisioning did not update ${path}`);
+    }).toPass({ timeout: PACKAGED_TEST_TIMEOUT });
+  }
   const paths = (await readdir(folder, { recursive: true, withFileTypes: true }))
     .filter(
       (entry) =>
@@ -509,17 +527,9 @@ const files = async (api: StackApi, seed: Seed) => {
   await inParallel(paths, 16, async (path) => {
     digests[path.slice(folder.length + 1)] = sha256(await readFile(path));
   });
-  // The harness writes the enabled catalog skills into the project. A release can change their
-  // bundled contents. Compare every other byte, including customized copies inside this directory.
-  const skills = await api.get<{ name: string; files: { path: string; content: string }[] }[]>(
-    `/projects/${seed.id}/skills`,
-  );
-  for (const skill of skills) {
-    for (const file of skill.files) {
-      const path = join(".agents/skills", skill.name, file.path);
-      assert(Object.hasOwn(digests, path), `Provisioned skill file is missing: ${path}`);
-      if (digests[path] === sha256(file.content)) delete digests[path];
-    }
+  for (const { path, digest } of mirrors) {
+    assert(Object.hasOwn(digests, path), `Provisioned skill file is missing: ${path}`);
+    if (digests[path] === digest) delete digests[path];
   }
   for (const name of ["custom-project", "pstdio"]) {
     const path = join(".agents/skills", name, "SKILL.md");
@@ -528,7 +538,7 @@ const files = async (api: StackApi, seed: Seed) => {
   return digests;
 };
 
-export const readUpgradeProject = async (api: StackApi, seed: Seed) => {
+export const readUpgradeProject = async (api: StackApi, seed: Seed, originalProjectFiles?: Record<string, string>) => {
   const prefix = `/projects/${seed.id}`;
   const projects = await api.get<{ id: string; name: string }[]>("/projects");
   assert.equal(projects.find(({ id }) => id === seed.id)?.name, seed.name, "Original project is missing");
@@ -606,7 +616,7 @@ export const readUpgradeProject = async (api: StackApi, seed: Seed) => {
   const view = await api.get<BoardView>(`${prefix}/board-views/${seed.viewId}`);
   const { defaultViewId } = await api.get<{ defaultViewId: string }>(await plannerViewsPath(api, seed.id));
   assert.equal(defaultViewId, seed.viewId, "Planner's default saved view changed");
-  const tree = await files(api, seed);
+  const tree = await files(api, seed, originalProjectFiles);
   assert(Object.keys(tree).length >= sizes.files, "Project files are missing");
   return {
     tickets,

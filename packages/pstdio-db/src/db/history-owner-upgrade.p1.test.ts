@@ -105,4 +105,37 @@ for (const interruption of ["normal", "schema", "restore", "conflict"])
       await store?.close();
       await rm(root, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
+
+test("the local history cutoff restores values without writing retired pending receipts", async () => {
+  const root = await mkdtemp(join(tmpdir(), "local-history-cutoff-"));
+  const previous = await createTextLogOwnerFixture(root);
+  try {
+    await previous.pglite.exec(`INSERT INTO projects (id,name,shorthand,created_at,updated_at)
+      VALUES ('project-a','A','A',now(),now());
+      INSERT INTO storage_personal_history(workbench_id,extension_id,device_id,kind,record_id,value,seed_id,pending_id)
+      VALUES ('project-a','history','laptop','sessions','one','{"saved":true}','seed-1','pending-1')`);
+    const finish = await prepareHistoryOwnerUpgrade(previous.db, previous.path, true);
+    await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle-0.46") });
+    await finish!();
+    const read = () => previous.pglite.query("SELECT value,seed_id,pending_id FROM history_rows");
+    const saved = [{ value: { saved: true }, seed_id: "seed-1", pending_id: null }];
+    expect((await read()).rows).toEqual(saved);
+    const archive = `${previous.path}-migration-exports/history-rows.jsonl`;
+    expect(JSON.parse((await readFile(archive, "utf8")).trim()).pending_id).toBe("pending-1");
+    // Older builds could stop after restoring the receipt but before the final cutoff.
+    await previous.pglite.exec(
+      "CREATE SCHEMA pstdio_local_upgrade_049; UPDATE history_rows SET pending_id='pending-1'",
+    );
+    await copyFile(archive, `${previous.path}-history-row-owners-upgrade.jsonl`);
+    await (await prepareHistoryOwnerUpgrade(previous.db, previous.path))!();
+    expect((await read()).rows).toEqual(saved);
+    await previous.pglite.exec("UPDATE history_rows SET seed_id='different'");
+    await copyFile(archive, `${previous.path}-history-row-owners-upgrade.jsonl`);
+    const conflicted = await prepareHistoryOwnerUpgrade(previous.db, previous.path);
+    await expect(conflicted!()).rejects.toThrow("Private history restoration conflict");
+  } finally {
+    await previous.close();
+    await rm(root, { recursive: true, force: true });
+  }
+}, 15_000);

@@ -291,6 +291,35 @@ describe("syncRepoExtensionsForProject", () => {
   });
 });
 
+test("rediscovery retains the original release of a catalog install in the project folder", async () => {
+  const project = await projectService.create({ name: "Catalog tool" });
+  const repoPath = join(tempRoot, "repo");
+  const sourcePath = join(repoPath, ".pstdio", "extensions", "home");
+  writeExtension(sourcePath, "home");
+  const sourceRef = `https://github.com/pufflyai/prompt-studio@${"a".repeat(40)}#extensions/pstdio-home`;
+  await extensionService.enableInstalledSourceForProject({
+    displayName: "Home",
+    extensionId: "pstdio.home",
+    installName: "home",
+    manifest: {},
+    name: "home",
+    projectId: project.id,
+    sourcePath,
+    sourceKind: "git",
+    sourceRef,
+  });
+  await syncRepoExtensionsForProject({
+    extensionService,
+    installedExtensionSourcesService,
+    projectId: project.id,
+    repoPath,
+  });
+  expect(await installedExtensionSourcesService.getBySourcePath(sourcePath)).toMatchObject({
+    source_kind: "git",
+    source_ref: sourceRef,
+  });
+});
+
 test("syncs extensions from the default workspace folder", async () => {
   const project = await projectService.create({ name: "Repo Extensions" });
   const repoA = join(tempRoot, "a");

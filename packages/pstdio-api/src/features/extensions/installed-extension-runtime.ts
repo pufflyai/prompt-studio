@@ -170,10 +170,9 @@ export const createInstalledExtensionRuntime = (input: {
       };
   const reconcileWebviewsInBackground = () => {
     if (!input.webviewBuilds) return;
-    webviewBuildManager
-      .reconcile()
-      .then(() => input.projectRuntimeCatalog.invalidate({ reason: "webviews_built" }))
-      .catch(reportError);
+    // Publications and build outcomes invalidate their own source. A no-op check
+    // must leave the project’s command catalog available to the first reader.
+    void webviewBuildManager.reconcile().catch(reportError);
   };
   const candidateInspection = createRuntimeCandidateInspection({
     acceptedId: async (path) => (await readAcceptedRevision(path))?.id,

@@ -61,7 +61,7 @@
         "errorCopied": "错误已复制"
       },
       "upgrade": {
-        "reviewNeeded": "已保留本地文件",
+        "reviewNeeded": "更新已暂停",
         "waiting": "等待升级",
         "action": "升级",
         "current": "扩展已是最新",

@@ -61,7 +61,7 @@
         "errorCopied": "Error copied"
       },
       "upgrade": {
-        "reviewNeeded": "Local files kept",
+        "reviewNeeded": "Update paused",
         "waiting": "Waiting to upgrade",
         "action": "Upgrade",
         "current": "Extension is already current",
@@ -202,7 +202,12 @@
         "enabled": "Enabled"
       },
       "noMatches": "No extensions match your search.",
-      "clearSearch": "Clear search"
+      "clearSearch": "Clear search",
+      "management": {
+        "required": "Required by your team owner. Manage requirements in Settings → Managed extensions.",
+        "source": "This source is required by a team project. Its owner manages updates and removal.",
+        "unavailable": "Connect to Cloud to verify extension controls."
+      }
     },
     "machineTokens": {
       "title": "Machine tokens",

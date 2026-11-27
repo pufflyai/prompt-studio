@@ -9,6 +9,14 @@ export type InstalledSourceWithManifest = {
   updated_at: string;
   source_hash?: string | null;
   source_path: string;
+  last_error_json?: unknown;
+};
+
+export const failedWebviewId = (row: InstalledSourceWithManifest | null) => {
+  const error = row?.last_error_json;
+  if (!error || typeof error !== "object" || !("code" in error) || error.code !== "extension_webview_build_failed")
+    return;
+  return "webviewId" in error && typeof error.webviewId === "string" ? error.webviewId : undefined;
 };
 
 export const expectedWebviewBuildSource = (row: InstalledSourceWithManifest) => ({

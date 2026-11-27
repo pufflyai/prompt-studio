@@ -188,7 +188,7 @@ export const writeExtensionReviewTree = async (root: string, tree: ReviewTree): 
   }
 };
 
-export const readExtensionReviewText = (tree: ReviewTree | undefined, path: string) => {
+const getReviewEntry = (tree: ReviewTree | undefined, path: string) => {
   const names = path.split("/");
   const leaf = names.pop()!;
   let folder = tree;
@@ -196,7 +196,14 @@ export const readExtensionReviewText = (tree: ReviewTree | undefined, path: stri
     const entry = folder?.get(name);
     folder = entry?.kind === "directory" ? entry.children : undefined;
   }
-  const entry = folder?.get(leaf);
+  return folder?.get(leaf);
+};
+
+export const isSameExtensionReviewPath = (before: ReviewTree, after: ReviewTree, path: string) =>
+  equalEntries(getReviewEntry(before, path), getReviewEntry(after, path));
+
+export const readExtensionReviewText = (tree: ReviewTree | undefined, path: string) => {
+  const entry = getReviewEntry(tree, path);
   if (entry?.kind !== "file" || entry.bytes.byteLength > 1024 * 1024 || entry.bytes.includes(0)) return null;
   try {
     return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(entry.bytes);

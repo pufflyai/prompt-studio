@@ -1,7 +1,26 @@
 import { serviceUrl } from "pstdio-sync/relay";
-import { managedPackageMaxBytes } from "pstdio-sync-contracts";
+import { accountScopedPath, managedPackageMaxBytes } from "pstdio-sync-contracts";
+import { AccountRequestError } from "./account-errors";
+import { managerWorkbenchesSchema } from "./manager-account";
 import { ManagerRequestDenied } from "./manager-client";
+import type { createNativeManagerCall } from "./native-manager-call";
 import type { DeviceLogin } from "./native-store";
+
+export const readManagedProjectGrant = async (input: {
+  call: ReturnType<typeof createNativeManagerCall>;
+  login: DeviceLogin;
+  accountId: string;
+  projectId: string;
+  signal?: AbortSignal;
+}) => {
+  const { call, login, accountId, projectId, signal } = input;
+  const projects = managerWorkbenchesSchema.parse(
+    await call(accountScopedPath("/v1/workbenches", accountId), undefined, login.token, signal, login, true),
+  );
+  const grantId = projects.find((row) => row.workbenchId === projectId)?.grantId;
+  if (!grantId) throw new AccountRequestError("Current project access is required to install managed extensions");
+  return grantId;
+};
 
 export const managedPackageRequest = async (
   login: DeviceLogin,

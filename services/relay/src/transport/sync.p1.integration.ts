@@ -7,10 +7,10 @@ import {
   fixtureMicrosoftClient,
   oauthBrowserCookie,
 } from "pstdio-account-manager/testing";
-import { openUpdate, sealUpdate, UnreadableSyncData } from "pstdio-sync/encryption";
+import { openState, openUpdate, sealState, sealUpdate, UnreadableSyncData } from "pstdio-sync/encryption";
 import { fetchSyncSpaces } from "pstdio-sync/relay";
 import {
-  createdTeamInvitationSchema,
+  createdTeamInviteCodeSchema,
   type LiveServerMessage,
   liveProtocolHeader,
   liveProtocolVersion,
@@ -578,15 +578,13 @@ test("two Microsoft work accounts join, share and hand over the private catalogu
     expect((await managerRequest(device.token, `/v1/workbenches/${projectId}?accountId=${accountId}`, {})).status).toBe(
       200,
     );
-    const objectId = crypto.randomUUID();
-    const colleagueSession = await microsoftSession("private-team-colleague", objectId);
-    const teamPath = `/v1/teams/${accountId}`;
-    const invite = await managerRequest(device.token, `${teamPath}/invitations`, { microsoft: { tenantId, objectId } });
-    expect(invite.status).toBe(201);
-    const { url } = createdTeamInvitationSchema.parse(await invite.json());
-    const secret = new URL(url).hash.slice(1);
-    expect((await browserRequest("/v1/team-invitation/accept", { secret }, colleagueSession)).status).toBe(200);
+    const colleagueSession = await microsoftSession("private-team-colleague", crypto.randomUUID());
     const colleague = await enroll(colleagueSession);
+    const teamPath = `/v1/teams/${accountId}`;
+    const invite = await managerRequest(device.token, `${teamPath}/invite-codes`, {});
+    expect(invite.status).toBe(201);
+    const { code } = createdTeamInviteCodeSchema.parse(await invite.json());
+    expect((await managerRequest(colleague.token, "/v1/team-invitations/accept", { secret: code })).status).toBe(200);
     const userId = colleague.accountId;
     const projectList = (token: string) => managerRequest(token, `/v1/workbenches?accountId=${accountId}`);
     expect(await (await projectList(colleague.token)).json()).toEqual([]);
@@ -622,14 +620,21 @@ test("two Microsoft work accounts join, share and hand over the private catalogu
       const documentId = await project.documentId(name);
       const route = { kind: "document", projectId, spaceOwner: null, documentId } as const;
       const update = await sealUpdate(project, documentId, bytes, []);
-      expect((await relay.post({ ...route, operation: "updates" }, update, memberToken)).status).toBe(403);
-      expect((await relay.post({ ...route, operation: "state" }, {}, memberToken)).status).toBe(403);
+      expect((await relay.post({ ...route, operation: "updates" }, update, memberToken)).status).toBe(200);
       expect((await relay.post({ ...route, operation: "updates" }, update, ownerLease.token)).status).toBe(200);
       const read = await relay.post({ ...route, operation: "read" }, { after: 0 }, memberToken);
       const result = readResultSchema.parse(await read.json());
       expect(result.status).toBe("updates");
       if (result.status !== "updates") throw new Error("Expected the owner’s publication");
       expect(await openUpdate(project, documentId, result.updates[0]!)).toEqual(bytes);
+      const state = await sealState(project, documentId, {
+        baseStateId: null,
+        through: result.lastSequence,
+        state: bytes,
+        summary: new Uint8Array(),
+        blobIds: [],
+      });
+      expect((await relay.post({ ...route, operation: "state" }, state, memberToken)).status).toBe(200);
     }
 
     const documentId = await project.documentId("ordinary-shared-project-data");
@@ -658,14 +663,15 @@ test("two Microsoft work accounts join, share and hand over the private catalogu
     expect((await managerRequest(colleague.token, `${teamPath}/ownership/${id}`, { decision: "accept" })).status).toBe(
       200,
     );
-    const [{ token: formerOwnerToken }, { token: successorToken }] = await Promise.all([
+    const [formerOwnerLease, { token: successorToken }] = await Promise.all([
       renew(device.token),
       renew(colleague.token),
     ]);
+    const formerOwnerToken = formerOwnerLease.token;
     const catalogId = await project.documentId(publicationDocumentNames[1]);
     const catalog = { ...route, documentId: catalogId };
     const updated = await sealUpdate(project, catalogId, new TextEncoder().encode("Earlier revision selected"), []);
-    expect((await relay.post(catalog, updated, formerOwnerToken)).status).toBe(403);
+    expect((await relay.post(catalog, updated, formerOwnerToken)).status).toBe(200);
     expect((await relay.post(catalog, updated, successorToken)).status).toBe(200);
     expect((await readPrivate(successorToken)).status).toBe(403);
     expect((await relay.post(privateRoute, privateUpdate, successorToken)).status).toBe(403);
@@ -682,9 +688,9 @@ test("two Microsoft work accounts join, share and hand over the private catalogu
       (await managerRequest(device.token, "/v1/environment-access", { accountId, workbenchId: projectId, grantId }))
         .status,
     ).toBe(401);
-    expect((await relay.post(catalog, updated, formerOwnerToken)).status).toBe(403);
-
-    await Bun.sleep(Math.max(0, Date.parse(ownerLease.expiresAt) - Date.now()) + 50);
+    // Issued leases remain valid until their expiry; renewal above is denied immediately.
+    await Bun.sleep(Math.max(0, Date.parse(formerOwnerLease.expiresAt) - Date.now()) + 50);
+    expect((await relay.post(catalog, updated, formerOwnerToken)).status).toBe(401);
     expect((await managerRequest(device.token, `${teamPath}/leave`, {})).status).toBe(200);
     const { token: remainingOwnerToken } = await renew(colleague.token);
     const { project: rotated } = await colleagueSpaces();
@@ -699,9 +705,29 @@ test("two Microsoft work accounts join, share and hand over the private catalogu
     const currentCatalog = readResultSchema.parse(
       await (await relay.post({ ...catalog, operation: "read" }, { after: 0 }, remainingOwnerToken)).json(),
     );
-    if (currentCatalog.status !== "updates") throw new Error("Expected the retained catalogue");
-    expect(await openUpdate(rotated, catalogId, currentCatalog.updates[0]!)).toEqual(bytes);
-    expect(await openUpdate(rotated, catalogId, currentCatalog.updates.at(-1)!)).toEqual(newRevision);
+    const baseline = currentCatalog.state;
+    if (!baseline) throw new Error("Expected the member's retained catalogue state");
+    const stateBytes = await relay.request(
+      {
+        kind: "state",
+        projectId,
+        spaceOwner: null,
+        documentId: catalogId,
+        stateId: baseline.stateId,
+      },
+      { token: remainingOwnerToken },
+    );
+    expect(stateBytes.status).toBe(200);
+    expect(await openState(rotated, catalogId, baseline, new Uint8Array(await stateBytes.arrayBuffer()))).toEqual(
+      bytes,
+    );
+    const changes = readResultSchema.parse(
+      await (
+        await relay.post({ ...catalog, operation: "read" }, { after: baseline.through }, remainingOwnerToken)
+      ).json(),
+    );
+    if (changes.status !== "updates") throw new Error("Expected the successor's catalogue updates");
+    expect(await openUpdate(rotated, catalogId, changes.updates.at(-1)!)).toEqual(newRevision);
   } finally {
     oauth.close();
     await Promise.all([accountService.stop(true), relay.close()]);
@@ -728,12 +754,11 @@ test("removing a disconnected team member cuts off the old lease and a replaceme
     await manager.setFeature({ accountId, feature: "relay", enabled: true });
     expect((await request(device.token, `/v1/workbenches/${projectId}?accountId=${accountId}`, {})).status).toBe(200);
 
-    const email = `${crypto.randomUUID()}@fixture.test`;
-    const signedIn = await identity.login(crypto.randomUUID(), email);
+    const signedIn = await identity.login(crypto.randomUUID());
     const member = await identity.auth.loginDevice(signedIn.headers, { ...deviceProfile(), deviceId: device.deviceId });
-    const invite = await request(device.token, `${team}/invitations`, { email });
-    const { url } = createdTeamInvitationSchema.parse(await invite.json());
-    const redeemed = await request(member.token, "/v1/team-invitations/accept", { secret: new URL(url).hash.slice(1) });
+    const invite = await request(device.token, `${team}/invite-codes`, {});
+    const { code } = createdTeamInviteCodeSchema.parse(await invite.json());
+    const redeemed = await request(member.token, "/v1/team-invitations/accept", { secret: code });
     expect(redeemed.status).toBe(200);
     expect(
       (await request(device.token, `${team}/projects/${projectId}/access`, { userId: member.accountId, granted: true }))

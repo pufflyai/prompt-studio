@@ -27,19 +27,25 @@ locals {
       S3_BUCKET   = digitalocean_spaces_bucket.relay.name
     }
     manager = {
-      MANAGER_HOST               = "0.0.0.0"
-      MANAGER_PORT               = "8443"
-      MANAGER_ORIGIN             = "https://${var.host}${var.manager_path}"
-      RELAY_AUDIENCE             = "https://${var.host}${var.relay_path}"
-      SESSION_LIFETIME_SECONDS   = "604800"
-      SESSION_UPDATE_AGE_SECONDS = "86400"
-      ACCESS_LIFETIME_SECONDS    = "300"
+      MANAGER_HOST                = "0.0.0.0"
+      MANAGER_PORT                = "8443"
+      MANAGER_ORIGIN              = "https://${var.host}${var.manager_path}"
+      RELAY_AUDIENCE              = "https://${var.host}${var.relay_path}"
+      SESSION_LIFETIME_SECONDS    = "604800"
+      SESSION_UPDATE_AGE_SECONDS  = "86400"
+      ACCESS_LIFETIME_SECONDS     = "300"
+      MANAGED_PACKAGE_S3_ENDPOINT = "https://${var.spaces_region}.digitaloceanspaces.com"
+      MANAGED_PACKAGE_S3_REGION   = var.spaces_region
+      MANAGED_PACKAGE_S3_BUCKET   = digitalocean_spaces_bucket.relay.name
     }
   }
   secrets = {
-    relay   = var.relay_secrets
-    manager = var.manager_secrets
-    psx     = var.psx_secrets
+    relay = var.relay_secrets
+    manager = merge(var.manager_secrets, {
+      MANAGED_PACKAGE_S3_ACCESS_KEY_ID     = var.relay_secrets.S3_ACCESS_KEY_ID
+      MANAGED_PACKAGE_S3_SECRET_ACCESS_KEY = var.relay_secrets.S3_SECRET_ACCESS_KEY
+    })
+    psx = var.psx_secrets
   }
   migrations = {
     relay   = "bun container-entrypoint.ts bun database-migration.js ./storage.js migrateRelayStorage relay"

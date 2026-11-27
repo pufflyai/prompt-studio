@@ -4,6 +4,7 @@ import { selectExtensionUpgradeCandidates } from "pstdio-api-contracts/extension
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { usePendingExtensionSourceChanges } from "@/shared/extensions/use-extension-mutation";
 import { useProjectExtensions } from "@/shared/extensions/use-project-extensions";
+import { canStartExtensionUpgrade } from "./extension-actions";
 import { ExtensionUpgradeProgress } from "./extension-upgrade-progress";
 import { ExtensionsPanelHeader } from "./extensions-panel-header";
 import { useExtensionPanelActions } from "./use-extension-panel-actions";
@@ -17,7 +18,7 @@ export const ExtensionsPageHeader = ({ input }: { input: WorkbenchPanelRenderInp
   const changing = usePendingExtensionSourceChanges(projectId);
   const actions = useExtensionPanelActions(projectId, inventory.data?.upgradeConcurrency);
   const upgradable = selectExtensionUpgradeCandidates(inventory.data?.extensions ?? []).filter(
-    ({ id }) => !changing(id),
+    ({ id }) => !changing(id) && canStartExtensionUpgrade(actions.actions[id]),
   );
   return (
     <ExtensionsPanelHeader
@@ -31,7 +32,7 @@ export const ExtensionsPageHeader = ({ input }: { input: WorkbenchPanelRenderInp
             batch={actions.batch}
             onUpgrade={() => void actions.handleUpgradeAll(upgradable)}
             onDismiss={actions.dismissBatch}
-            canUpgrade={upgradable.length > 0}
+            upgradeCount={upgradable.length}
           />
         )
       }
