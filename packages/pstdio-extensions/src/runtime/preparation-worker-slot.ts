@@ -63,9 +63,8 @@ export const createPreparationWorkerSlots = (
   }));
   const retirements = new WeakMap<Worker, () => Promise<void>>();
   const retire = async (worker: Worker, closeWatches: boolean) => {
-    const commandsStopped = retirements.get(worker)?.();
-    const watchesClosed = closeWatches ? closeWorkerWatches(worker).catch(() => {}) : undefined;
-    await Promise.all([commandsStopped, watchesClosed]);
+    await retirements.get(worker)?.();
+    if (closeWatches) await closeWorkerWatches(worker).catch(() => {});
     await worker.terminate();
   };
   const replace = (slot: PreparationWorkerSlot, resume?: Job, stopping = false) => {
