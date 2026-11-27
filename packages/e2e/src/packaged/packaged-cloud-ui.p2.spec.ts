@@ -152,6 +152,7 @@ test("Cloud settings respect early access and manage devices and project sync th
   await expect(details.getByText("Devices", { exact: true })).toHaveCount(0);
   await details.getByRole("button", { name: "Cloud settings" }).click();
   await expect(settings.getByText("Coming soon", { exact: true })).toBeVisible();
+  // Device ownership is independent of Cloud sync entitlement.
   await expect(settings.getByText("Your devices", { exact: true })).toBeVisible();
   await expect(settings.getByRole("button", { name: "Rename", exact: true })).toHaveCount(1);
   await expect(settings.getByRole("button", { name: "Sync with Cloud" })).toHaveCount(0);
