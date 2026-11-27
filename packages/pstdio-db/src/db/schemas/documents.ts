@@ -34,7 +34,7 @@ export const documents = pgTable(
   (table) => [
     uniqueIndex("documents_owner_key").on(table.owner_id, table.key),
     unique("documents_owner_id").on(table.owner_id, table.id),
-    index("documents_room_of").on(table.owner_id, table.room_of),
+    index("documents_room_parent").on(table.owner_id, table.room_of).where(sql`${table.room_of} IS NOT NULL`),
     foreignKey({ columns: [table.owner_id, table.room_of], foreignColumns: [table.owner_id, table.id] }).onDelete(
       "cascade",
     ),

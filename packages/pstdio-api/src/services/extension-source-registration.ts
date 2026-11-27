@@ -139,6 +139,7 @@ export const registrationValues = (
 type RegistrarDeps = {
   sources: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   emitInstalledSource: (source: unknown) => void;
+  authorizeChange?: (sourceId: string) => Promise<void>;
 };
 const registerRow = async (
   deps: RegistrarDeps,
@@ -221,6 +222,13 @@ const registrationNotification = (
   changed: Boolean(input.installation) || !existing || !hasUnchangedInstalledSourceRegistration(existing, values),
   path: existing ? refreshPathForRegistration(existing.source_path, input) : input.sourcePath,
 });
+const primeReplacedBackend = (
+  input: RegisterInstalledSourceInput,
+  previous: Awaited<ReturnType<typeof readAcceptedRevision>>,
+) => {
+  if (input.preparedRevision?.prebuiltRelease && input.installation && previous)
+    void primeAcceptedExtensionBackend(input.sourcePath, input.preparedRevision).catch(() => {});
+};
 export const createInstalledSourceRegistrar =
   (deps: RegistrarDeps) =>
   async (input: RegisterInstalledSourceInput, notify: (sourcePath?: string) => Promise<void>) => {
@@ -230,6 +238,8 @@ export const createInstalledSourceRegistrar =
     const previousRevision = input.preparedRevision ? await readAcceptedRevision(input.sourcePath) : null;
     const state = { existing, values, previousRevision, registered: null as typeof existing, published: false };
     try {
+      if (existing && (input.installation || !hasUnchangedInstalledSourceRegistration(existing, values)))
+        await deps.authorizeChange?.(existing.id);
       if (input.installation) await activatePreparedInstall(input.installation);
       const { installedSource, created } = await registerRow(deps, input, existing, values);
       if (!installedSource) throw new Error(`Installed extension not found: ${input.installName}`);
@@ -239,8 +249,7 @@ export const createInstalledSourceRegistrar =
       if (notification.changed) await notify(notification.path);
       if (input.installation) await settlePreparedInstall(input.installation, true);
       deps.emitInstalledSource(state.registered);
-      if (input.preparedRevision?.prebuiltRelease && input.installation && previousRevision)
-        void primeAcceptedExtensionBackend(input.sourcePath, input.preparedRevision).catch(() => {});
+      primeReplacedBackend(input, previousRevision);
       return { installedSource, created };
     } catch (error) {
       await rollbackRegistration(deps, input, state, notify);

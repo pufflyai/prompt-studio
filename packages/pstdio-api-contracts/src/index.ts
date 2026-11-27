@@ -1,4 +1,4 @@
-export { accountSignInProviderSchema } from "./account";
+export { accountSignInProviderSchema, teamMembershipReadSchema, teamMembershipWriteSchema } from "./account";
 export * from "./activity";
 export * from "./agents";
 export * from "./artifact-file-projections";

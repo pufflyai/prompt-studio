@@ -39,7 +39,17 @@ test("collection indexes are scoped and ready before the first extension query",
         equality: ["ticketId"],
       },
     ];
+    const schemaObjects = async () =>
+      (
+        await connection.db.execute(sql`
+      SELECT 'relation' AS kind,relname AS name FROM pg_class WHERE relnamespace='public'::regnamespace
+      UNION ALL SELECT 'statistics',stxname FROM pg_statistic_ext WHERE stxnamespace='public'::regnamespace
+      UNION ALL SELECT 'trigger',tgname FROM pg_trigger WHERE NOT tgisinternal
+      ORDER BY 1,2`)
+      ).rows;
+    const before = await schemaObjects();
     await installExtensionStorageIndexes(service, project.id, runtime);
+    expect(await schemaObjects()).toEqual(before);
     const storage = await service.open({ owner: { workbenchId: project.id, extensionId: "example.index-0" } });
     const addresses = [
       ["project", project.id, "collection", "requests", "one"],
@@ -56,6 +66,18 @@ test("collection indexes are scoped and ready before the first extension query",
     });
     expect(page.records.map(({ recordId }) => recordId)).toEqual([addresses[0]]);
     expect(page.records[0].fields).toEqual({ ticketId: "selected" });
+    const scoped = storage.scopedRecords("project", project.id);
+    await scoped.defineIndexes([
+      {
+        name: "byTicket",
+        fields: { ticketId: { type: "string", path: ["value", "ticketId"], derive: { kind: "string" } } },
+        equality: ["ticketId"],
+        countBy: ["ticketId"],
+        alternateOrders: [[{ field: "ticketId", direction: "asc" }]],
+      },
+    ]);
+    expect((await scoped.aggregate({ index: "byTicket", groupBy: "ticketId" })).count).toBe(3);
+    expect(await schemaObjects()).toEqual(before);
   } finally {
     await connection.close();
   }

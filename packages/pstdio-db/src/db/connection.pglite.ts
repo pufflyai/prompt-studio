@@ -8,7 +8,7 @@ import { extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
 import { normalizeEmbeddedFileName } from "pstdio-paths";
 import type { StorageOwner } from "pstdio-sync";
 import { migrateExtensionIdentities } from "../services/extension-identity-migration";
-import { pruneAllDocumentFiles, pruneDocumentFiles } from "../services/extension-storage/document-file-retention";
+import { pruneDocumentFiles } from "../services/extension-storage/document-file-retention";
 import { attachDocumentCollector, documentFilesFor } from "../services/extension-storage/document-files";
 import {
   attachIndexNodeFiles,
@@ -124,6 +124,24 @@ export type DbOpenPhase =
   | "database_opened"
   | "database_migrated"
   | "database_index_nodes";
+
+const createDatabaseCloser = (
+  db: { close(): Promise<void> },
+  cleanup: () => Promise<void>,
+  releaseLock: () => void,
+) => {
+  let closed = false;
+  return async () => {
+    if (closed) return;
+
+    closed = true;
+    try {
+      await cleanup().finally(() => db.close());
+    } finally {
+      releaseLock();
+    }
+  };
+};
 
 export const createDb = async (options?: {
   path?: string;
@@ -314,8 +332,8 @@ export const createDb = async (options?: {
     });
     await finishArtifactProjectionUpgrade?.();
     await restoreArtifactProjectionAdmission(db, dbPath);
-    await pruneAllDocumentFiles(db);
-    // Conversion publishes bounded batches; collect their files once before exposing the database.
+    const cleanup = createStorageCleanup(db, dbPath, deferredOwners, !!deferCleanup);
+    await cleanup.prepare();
     attachDocumentCollector(db, (projectId, ids) => pruneDocumentFiles(db, projectId, ids));
     if (migrated && !deferCleanup)
       await maintainDatabase(openedPglite, db, dbPath, fresh, onPhase, movedNodes || renamed);
@@ -324,24 +342,12 @@ export const createDb = async (options?: {
     if (reimport) await fs.promises.rm(payload, { recursive: true, force: true });
     onPhase("database_migrated");
 
-    let closed = false;
-    const close = async () => {
-      if (closed) return;
-
-      closed = true;
-      try {
-        await openedPglite.close();
-      } finally {
-        releaseLock();
-      }
-    };
-
     return {
-      close,
+      close: createDatabaseCloser(openedPglite, () => cleanup.close(), releaseLock),
       db,
       path: dbPath,
       pglite: openedPglite,
-      cleanupRetiredRows: createStorageCleanup(db, dbPath, deferredOwners, !!deferCleanup),
+      cleanupRetiredRows: cleanup.run,
     };
   } catch (error) {
     await pglite?.close();

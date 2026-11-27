@@ -153,7 +153,7 @@ test("three document-sync clients retain an offline edit across eight pruned lat
       expect(await second.values()).toEqual(await first.values());
     }
     expect(states.size).toBe(8);
-    expect(f.peer.documents.get(`~${documentId}`)!.updates).toEqual([]);
+    expect(f.peer.document(documentId)!.updates).toEqual([]);
     f.peer.blockDevice(third.deviceId, false);
     expect((await third.relay.read(0)).status).toBe("state-required");
     await third.sync.synchronize();
@@ -191,10 +191,10 @@ test("a quiet document-sync client repairs a valid incomplete latest state and a
       blobIds: [],
     });
     f.peer.installSnapshot(documentId, missing);
-    const beforeRepair = f.peer.documents.get(`~${documentId}`)!.updates.length;
+    const beforeRepair = f.peer.document(documentId)!.updates.length;
     // No save on first: synchronization alone notices missing edits in the latest state's summary.
     await first.sync.synchronize();
-    expect(f.peer.documents.get(`~${documentId}`)!.updates.length).toBeGreaterThan(beforeRepair);
+    expect(f.peer.document(documentId)!.updates.length).toBeGreaterThan(beforeRepair);
     const third = await f.device("device-third-reset");
     expect(await third.values()).toEqual({});
     await third.sync.synchronize();

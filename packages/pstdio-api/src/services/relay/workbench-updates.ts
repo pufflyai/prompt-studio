@@ -1,7 +1,8 @@
-import { createLiveConnection, createRelayAccess, type LiveConnection } from "pstdio-sync/relay";
+import { createLiveConnection, type LiveConnection } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
 import type { RelayDeps } from "./deps";
 import type { startRelayExtension } from "./extension-owner";
+import { createNativeRelayAccess } from "./native-relay-access";
 import type { RelayWorkbench } from "./runtime";
 
 type ExtensionConnection = Awaited<ReturnType<typeof startRelayExtension>>;
@@ -14,7 +15,22 @@ export const drainOwnerStarts = async (starts: Promise<void>[]) => {
 export const createWorkbenchAccess = (input: RelayWorkbench, runtime: AbortSignal, denied?: () => void) => {
   const owner = new AbortController();
   const signal = AbortSignal.any([runtime, owner.signal]);
-  return Object.assign(createRelayAccess({ ...input, signal, denied }), { close: () => owner.abort() });
+  const renew = createNativeRelayAccess({ ...input, signal, denied });
+  let socketLease: Awaited<ReturnType<typeof renew>> | undefined;
+  const connect = async () => {
+    socketLease = await renew();
+    return socketLease;
+  };
+  const access = async () => {
+    if (!input.userId) return renew();
+    signal.throwIfAborted();
+    // Team writes use the same lease as their live connection. An old sync pass cannot get
+    // a newly signed token while it still holds the keys from the preceding lease.
+    if (!socketLease || Date.now() >= Date.parse(socketLease.expiresAt))
+      throw new Error("Team Cloud connection is renewing");
+    return socketLease;
+  };
+  return Object.assign(access, { connect, close: () => owner.abort() });
 };
 
 const closeWorkbenchOwners = (
@@ -89,11 +105,13 @@ export const createWorkbenchUpdates = (input: WorkbenchUpdateInput) => {
     for (const [id, connection] of desired)
       if (!workbenches.has(id)) {
         workbenches.set(id, connection);
-        access.set(id, createWorkbenchAccess(connection, signal, denied));
+        const workbenchAccess = createWorkbenchAccess(connection, signal, denied);
+        access.set(id, workbenchAccess);
         const channel = createLiveConnection({
           origin: connection.relayOrigin,
           projectId: id,
-          access: access.get(id)!,
+          access: workbenchAccess.connect,
+          restartSyncOnRenewal: !!connection.userId,
           signal: signal,
           onStatusChange: () => statusChanged(id),
         });

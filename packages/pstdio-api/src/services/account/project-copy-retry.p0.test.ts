@@ -60,11 +60,10 @@ test.each([
     login: async () => login,
     projectLogin: async (actor) => scopeDeviceLogin(actor, team ? "team" : undefined),
     cloud: (actor) => {
-      if (team && !teamGrant) return;
       return {
         ...actor,
         credential: login.token,
-        ids: [id],
+        ids: teamGrant ? [id] : [],
         features: { relay: true },
         projectDeletion: false,
         deletions: [],
@@ -162,8 +161,11 @@ test.each([
       finishRefresh.resolve();
       expect(await until(() => released)).toBe(true);
       expect(attempts).toBe(1);
-      expect(await canDownload()).toBeUndefined();
+      expect(await catalogForCopy()).toMatchObject({ membershipKnown: true, projects: [] });
+      await expect(download()).rejects.toThrow("Connect to Cloud before downloading this project");
+      expect((await copies.forAccount(copyLogin))[0]).toMatchObject({ projectId: id, phase: "downloading" });
       teamGrant = true;
+      expect(await canDownload()).toBe(true);
     }
     if (storedCopy) {
       let preparations = 0;

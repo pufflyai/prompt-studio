@@ -363,7 +363,7 @@ export interface ExtensionDefinition
     /** Optional extension-owned boolean setting. True suppresses automatic setup. */
     hiddenSetting?: string;
   };
-  /** Local query indexes. The host installs these before publishing this extension's runtime. */
+  /** Local record query definitions. The host registers their metadata before publishing this extension's runtime. */
   storageIndexes?: StorageRecordIndex[];
   /** Explicit collaborative text and append-only log declarations. Other record fields are plain values. */
   storage?: ExtensionStorageDeclaration;

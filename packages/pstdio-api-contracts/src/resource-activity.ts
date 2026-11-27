@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { resourceLinkRefSchema } from "./resource-anchors";
 
+export const resourceActivityOwnerId = JSON.stringify(["pstdio", "resource-activity"]);
+
 export const resourceActivityCapabilitiesSchema = z.object({
   comments: z.boolean().optional(),
   changes: z.boolean().optional(),

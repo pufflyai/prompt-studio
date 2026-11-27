@@ -126,6 +126,7 @@ export const toProjectExtensionInstance = (
     enabled: instance.enabled,
     config: (instance.config_json ?? {}) as Record<string, unknown>,
     canUpgrade: options.canUpgrade === true,
+    hasPublishedAlternative: options.hasPublishedAlternative === true,
     updateAvailable: Boolean(
       diskSourceHash && installedSource.source_hash && diskSourceHash !== installedSource.source_hash,
     ),

@@ -5,6 +5,7 @@ import { requestedRecordIndex } from "pstdio-sync/records";
 import type { StorageRecordIndex, StorageRecordQuery } from "pstdio-sync-contracts";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { defineRecordIndexes } from "./record-index-definition";
 import { readQueryOwner } from "./record-query-owner";
 import { predicateSql, recordPageSql, recordScopeSql } from "./record-query-sql";
 
@@ -27,12 +28,15 @@ const index: StorageRecordIndex = {
   ],
 };
 
-test("short string ordered pages read a bounded candidate set even when the leading order ties", async () => {
+test.each([
+  "query",
+  "host-index",
+] as const)("ordered pages use the available query plan when the leading order ties (%s)", async (mode) => {
   const f = await createExtensionStorageFixture();
   try {
     const owner = { workbenchId: f.projectAId, extensionId: "ext.example" };
     const records = createDocumentStorageDBService(f.db).open({ owner }).records;
-    await records.defineIndexes([index]);
+    await defineRecordIndexes(f.db, owner, [index], mode);
     await records.commit({
       operationId: "seed",
       edits: Array.from({ length: 1000 }, (_, n) => ({
@@ -93,7 +97,8 @@ test("short string ordered pages read a bounded candidate set even when the lead
     };
     visit(result.rows[0]["QUERY PLAN"][0].Plan);
     expect(scans.length).toBeGreaterThan(0);
-    expect(Math.max(...scans)).toBeLessThanOrEqual(32);
+    // A metadata-only alternate sort examines the collection once. A maintained order stops at the first page.
+    expect(Math.max(...scans)).toBeLessThanOrEqual(mode === "host-index" ? 32 : 1000);
     const other = createDocumentStorageDBService(f.db).open({ owner: { ...owner, workbenchId: f.projectBId } }).records;
     await other.defineIndexes([index]);
     await other.commit({

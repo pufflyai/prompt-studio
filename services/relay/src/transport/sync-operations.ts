@@ -19,15 +19,32 @@ import { relayResponse } from "./responses";
 const jsonBound = (bytes: number) => Math.ceil((bytes * 4) / 3) + 64 * 1024;
 
 /** Reads a JSON body without buffering more than `limit` bytes. */
-const readJson = async <T extends z.ZodType>(request: Request, schema: T, limit: number) => {
+const readJson = async <T extends z.ZodType>(request: Request, schema: T, limit: number, signal: AbortSignal) => {
   if (Number(request.headers.get("content-length") ?? 0) > limit) throw rejection(413, "too-large");
   const chunks: Uint8Array[] = [];
   let size = 0;
-  for await (const chunk of request.body ?? []) {
-    size += chunk.byteLength;
-    if (size > limit) throw rejection(413, "too-large");
-    chunks.push(chunk);
+  const reader = request.body?.getReader();
+  if (reader) {
+    const cancel = () => void reader.cancel(signal.reason).catch(() => {});
+    signal.addEventListener("abort", cancel, { once: true });
+    try {
+      for (;;) {
+        signal.throwIfAborted();
+        const { value, done } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > limit) throw rejection(413, "too-large");
+        chunks.push(value);
+      }
+    } catch (error) {
+      cancel();
+      throw error;
+    } finally {
+      signal.removeEventListener("abort", cancel);
+      reader.releaseLock();
+    }
   }
+  signal.throwIfAborted();
   let input: unknown;
   try {
     input = JSON.parse(Buffer.concat(chunks).toString("utf8"));
@@ -55,10 +72,10 @@ export const handleSyncOperation = async (
   route: Exclude<SyncRoute, { kind: "live" }>,
   caller: SyncCaller,
   request: Request,
+  signal: AbortSignal = request.signal,
 ) => {
   const { documents, blobs } = owners.sync;
   const { limits } = owners;
-  const signal = request.signal;
   if (route.kind === "capabilities")
     return relayResponse({ protocolVersion: syncProtocolVersion, features: [syncBlobReferencesFeature] });
   const space = { projectKey: projectKey(caller.accountId, route.projectId), spaceOwner: route.spaceOwner };
@@ -70,15 +87,15 @@ export const handleSyncOperation = async (
       return bytes(state.body, { "pstdio-byte-length": String(state.state.byteLength) });
     }
     if (route.operation === "updates") {
-      const envelope = await readJson(request, updateEnvelopeSchema, jsonBound(limits.maxUpdateBytes));
+      const envelope = await readJson(request, updateEnvelopeSchema, jsonBound(limits.maxUpdateBytes), signal);
       return relayResponse(await documents.appendUpdate(address, caller, envelope, signal));
     }
     if (route.operation === "state") {
       const bound = jsonBound(limits.maxStateBytes + limits.maxSummaryBytes);
-      const envelope = await readJson(request, stateEnvelopeSchema, bound);
+      const envelope = await readJson(request, stateEnvelopeSchema, bound, signal);
       return relayResponse(await documents.replaceState(address, caller, envelope, signal));
     }
-    const { after } = await readJson(request, readRequestSchema, jsonBound(0));
+    const { after } = await readJson(request, readRequestSchema, jsonBound(0), signal);
     return relayResponse(await documents.read(address, after, signal));
   }
   const address = { ...space, blobId: route.blobId };
@@ -90,18 +107,18 @@ export const handleSyncOperation = async (
     return relayResponse({});
   }
   if (route.operation === "begin") {
-    const input = await readJson(request, blobBeginSchema, jsonBound(0));
+    const input = await readJson(request, blobBeginSchema, jsonBound(0), signal);
     return relayResponse(await blobs.begin(address, caller, input, signal));
   }
   if (route.operation === "begin-manifest") {
-    const input = await readJson(request, blobManifestBeginSchema, jsonBound(0));
+    const input = await readJson(request, blobManifestBeginSchema, jsonBound(0), signal);
     return relayResponse(await blobs.beginManifest(address, caller, input, signal));
   }
   if (route.operation === "finish") {
     await blobs.finish(address, signal);
     return relayResponse({});
   }
-  const { offset } = await readJson(request, blobReadSchema, jsonBound(0));
+  const { offset } = await readJson(request, blobReadSchema, jsonBound(0), signal);
   const blob = await blobs.read(address, offset, signal);
   return bytes(blob.body, { "pstdio-offset": String(offset), "pstdio-byte-length": String(blob.byteLength - offset) });
 };

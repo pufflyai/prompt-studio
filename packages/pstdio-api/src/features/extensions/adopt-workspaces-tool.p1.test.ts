@@ -68,6 +68,39 @@ const enableSource = async (projectId: string, installName: string, item: Awaite
     version: "0.1.0",
   });
 
+test("consolidation preserves a team-required Git Workspaces tool until the owner releases its policy", async () => {
+  const project = await handle.deps.projectService.create({ name: "Managed predecessor" });
+  const legacy = await source("git-workspaces");
+  const combined = await source("workspaces");
+  const old = await enableSource(project.id, "git-workspaces", legacy);
+  const successor = await enableSource(project.id, "workspaces", combined);
+  await handle.deps.extensionService.setProjectExtensionEnabled(successor.instance.id, false);
+  const catalog = await openPublishedCatalog(handle.deps, project.id);
+  expect((await catalog.read("pstdio.git-workspaces")).value).toBeNull();
+  let required = true;
+  const deps = {
+    ...handle.deps,
+    accountService: {
+      ...handle.deps.accountService,
+      isExtensionManaged: async (projectId: string, extensionId: string) =>
+        required && projectId === project.id && extensionId === "pstdio.git-workspaces",
+    },
+  };
+  await adoptWorkspacesTool(deps, project.id);
+  expect((await deps.extensionService.getProjectExtensionInstance(project.id, old.instance.id))?.instance.enabled).toBe(
+    true,
+  );
+  expect(
+    (await deps.extensionService.getProjectExtensionInstance(project.id, successor.instance.id))?.instance.enabled,
+  ).toBe(false);
+  required = false;
+  await adoptWorkspacesTool(deps, project.id);
+  expect(await deps.extensionService.getProjectExtensionInstance(project.id, old.instance.id)).toBeNull();
+  expect(
+    (await deps.extensionService.getProjectExtensionInstance(project.id, successor.instance.id))?.instance.enabled,
+  ).toBe(true);
+});
+
 test("enabled Git Workspaces becomes one enabled, shared Workspaces tool and retains its source files", async () => {
   const project = await handle.deps.projectService.create({ name: "Migration" });
   const legacy = await source("git-workspaces");

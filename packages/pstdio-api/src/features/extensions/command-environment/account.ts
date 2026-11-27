@@ -21,6 +21,9 @@ export const createAccountApi = (
   const read = createReadBoundary(signal);
   return {
     createTeam: (name, expected) => safe(() => account.createTeam(name, expected)),
+    readTeamMembership: (request, expected) =>
+      read(() => safe(() => account.readTeamMembership(request, expected, signal))),
+    writeTeamMembership: (request, expected) => safe(() => account.writeTeamMembership(request, expected)),
     status: () => read(() => safe(() => account.status())),
     login: (managerOrigin, provider) => safe(() => account.login(managerOrigin, provider)),
     loginStatus: async (id) => account.loginStatus(id).status,

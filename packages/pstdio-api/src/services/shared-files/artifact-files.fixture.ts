@@ -10,6 +10,7 @@ import {
 import { createAssetBytesStorage } from "pstdio-storage";
 import { storageRecordId } from "pstdio-sync/records";
 import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
+import { createTestLocalAccount } from "../../test-utils/create-test-local-account";
 import { createAssetTransferService } from "../asset-transfer-service";
 import { createSharedArtifactMount } from "./artifact-mount";
 import { createFileTree, type FileNode } from "./file-tree";
@@ -27,6 +28,7 @@ export const artifactFilesFixture = async () => {
     bytes: createAssetBytesStorage(join(root, "bytes")),
   });
   const deps = {
+    accountService: createTestLocalAccount(),
     extensionStorageService: createExtensionStorageDBService(connection.db, storageObserver),
     assetTransferService: assets,
   };
@@ -110,6 +112,7 @@ export const artifactFilesFixture = async () => {
     replace,
     close: async () => {
       try {
+        await deps.accountService.close();
         await deps.extensionStorageService.flushStatistics();
       } finally {
         await connection.close();

@@ -6,8 +6,12 @@ import { resource_numbers } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 import { withOrderedOwner } from "./ordered-journal";
+import { defineRecordIndexes } from "./record-index-definition";
 
-test("maintained counts follow both identity halves, field changes, overlong groups and teardown", async () => {
+test.each([
+  "query",
+  "host-index",
+] as const)("counts follow both identity halves, field changes, overlong groups and teardown (%s)", async (kind) => {
   const f = await createExtensionStorageFixture();
   const store = createDocumentStorageDBService(f.db);
   const owner = { workbenchId: f.projectAId, extensionId: "counts.example" };
@@ -29,6 +33,7 @@ test("maintained counts follow both identity halves, field changes, overlong gro
     countBy: [category],
     alternateOrders: [[{ field: category, direction: "desc" }]],
   };
+  const define = (definitions: StorageRecordIndex[]) => defineRecordIndexes(f.db, owner, definitions, kind);
   const group = async () => {
     const selection = { index: "view", groupBy: [category] };
     const actual = await rows.aggregate(selection);
@@ -44,10 +49,7 @@ test("maintained counts follow both identity halves, field changes, overlong gro
       operationId: "before-index",
       edits: [{ recordId: "1", replace: { id: "a", group: "first" } }],
     });
-    await rows.defineIndexes([
-      definition,
-      { ...definition, name: "reference", countBy: undefined, alternateOrders: undefined },
-    ]);
+    await define([definition, { ...definition, name: "reference", countBy: undefined, alternateOrders: undefined }]);
     expect(await group()).toBe(0);
     await withOrderedOwner(f.db, { ...owner, extensionId: "pstdio" }, async (journal) =>
       journal.saveCanonical([
@@ -74,11 +76,8 @@ test("maintained counts follow both identity halves, field changes, overlong gro
     // Backfill and live count triggers must require the core query facet, too.
     expect((await rows.query({ index: "view" })).records).toEqual([]);
     expect(await group()).toBe(0);
-    await rows.defineIndexes([]);
-    await rows.defineIndexes([
-      definition,
-      { ...definition, name: "reference", countBy: undefined, alternateOrders: undefined },
-    ]);
+    await define([]);
+    await define([definition, { ...definition, name: "reference", countBy: undefined, alternateOrders: undefined }]);
     expect(await group()).toBe(0);
     await core.commit({ operationId: "identity-arrives", edits: [{ recordId: "a", replace: allocated }] });
     expect(await group()).toBe(1);
@@ -96,10 +95,10 @@ test("maintained counts follow both identity halves, field changes, overlong gro
     expect(await group()).toBe(1);
     await rows.commit({ operationId: "delete", edits: [{ recordId: "2", deleted: true }] });
     expect(await group()).toBe(0);
-    await rows.defineIndexes([]);
-    expect(
-      (await f.db.execute(sql`select relname from pg_class where relname like 'storage_query_v4_%'`)).rows,
-    ).toEqual([]);
+    await define([]);
+    expect((await f.db.execute(sql`select relname from pg_class where relname like 'storage_host_v4_%'`)).rows).toEqual(
+      [],
+    );
   } finally {
     await f.close();
   }

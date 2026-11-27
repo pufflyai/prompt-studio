@@ -5,6 +5,7 @@ import type { ExtensionsRouteDeps } from "./deps";
 import { getExtensionCatalog } from "./extension-catalog";
 import { runExtensionPreparation } from "./extension-preparation";
 import { publicExtensionVisibility, toProjectExtensionInstance } from "./project-extension-instance";
+import { readProjectExtensionRestrictions } from "./project-extension-restrictions";
 
 export const listProjectExtensionInventory = async (
   deps: ExtensionsRouteDeps,
@@ -39,14 +40,26 @@ export const listProjectExtensionInventory = async (
     // Uninstall retains data-bearing rows for same-path restore.
     installedRecords = records.filter(({ installedSource }) => existsSync(installedSource.source_path));
   }
+  const restrictions = await readProjectExtensionRestrictions(
+    deps,
+    projectId,
+    installedRecords.map(({ installedSource }) => installedSource),
+  );
   const extensions = await Promise.all(
-    installedRecords.map(async ({ instance, installedSource }) =>
-      toProjectExtensionInstance(instance, installedSource, hashes.get(key(installedSource)), {
-        canUpgrade: await deps.extensionUpgradeService?.canUpgrade(installedSource),
-        hasPublishedAlternative:
-          instance.enabled && (await deps.extensionUpgradeService?.hasPublishedAlternative?.(installedSource)),
-      }),
-    ),
+    installedRecords.map(async ({ instance, installedSource }) => {
+      const restriction = restrictions.get(installedSource.id);
+      return {
+        ...toProjectExtensionInstance(instance, installedSource, hashes.get(key(installedSource)), {
+          canUpgrade:
+            !restriction?.sourceRestriction && (await deps.extensionUpgradeService?.canUpgrade(installedSource)),
+          hasPublishedAlternative:
+            !restriction?.sourceRestriction &&
+            instance.enabled &&
+            (await deps.extensionUpgradeService?.hasPublishedAlternative?.(installedSource)),
+        }),
+        ...restriction,
+      };
+    }),
   );
   const installedNames = new Set(installedRecords.map(({ installedSource }) => installedSource.install_name));
   const installedIds = new Set(installedRecords.map(({ installedSource }) => installedSource.extension_id));

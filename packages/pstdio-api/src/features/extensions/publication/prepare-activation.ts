@@ -29,6 +29,7 @@ export const preparePublicationActivation = async (
   signal?: AbortSignal,
   adopt: boolean | string = false,
   beforeCommit?: () => Promise<void>,
+  required = false,
 ) => {
   publication = { ...publication, extensionId: canonicalExtensionId(publication.extensionId) };
   const adopting = adopt === true || adopt === publication.extensionId;
@@ -75,7 +76,7 @@ export const preparePublicationActivation = async (
     enabled: publication.enabled,
     beforeActivate: checkCurrent,
   };
-  if (!adopting && previous && (privateSource || unchanged)) {
+  if (!adopting && previous && ((!required && privateSource) || (unchanged && !privateSource))) {
     return {
       plan:
         previous.instance.enabled !== publication.enabled
@@ -98,7 +99,7 @@ export const preparePublicationActivation = async (
   return {
     plan: {
       ...plan,
-      keepReplacedFolder: adopting,
+      keepReplacedFolder: adopting || (required && Boolean(privateSource)),
       source: { kind: "prepared" as const, ...prepared, revision: publication.revision },
     },
     status: "active",

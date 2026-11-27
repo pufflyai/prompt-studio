@@ -35,6 +35,10 @@ a message that tells the person to update (R29). The token's workbench must be t
 the path. A path for private project data (a `personal` space in the code) must name the
 token's user. Previously issued personal-account tokens use the account ID as their private-space owner. Blob ID lists hold at most 100,000 IDs.
 
+For a team project, the account manager signs the opaque addresses of the two published-extension catalog documents into the device access token. Only a token with the team owner's publication permission can append or replace those documents. A granted member can read the catalog and write ordinary project documents. Relay checks these permissions before reading the write body. It does not need an encryption key or an extension name.
+
+Upgrade the account manager and Relay together before enabling team sharing. Relay rejects shared document writes with older team tokens until the device renews. An issued owner's token retains its permissions until expiry. Preparing a new token checks the owner role again before returning it, and extension publication commands check current authority before saving.
+
 | Route under `/sync/projects/~<project>[/spaces/~<owner>]` | Method | Result |
 | --- | --- | --- |
 | `/documents/~<document>/updates` | POST update | `{ sequence, duplicate }` |
