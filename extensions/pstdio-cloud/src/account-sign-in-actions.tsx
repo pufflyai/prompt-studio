@@ -1,6 +1,6 @@
 import { CloseButton, Stack } from "@chakra-ui/react";
 import type { AccountSignInProvider, AccountStatus } from "@pstdio/sdk/extensions";
-import { Portal, ScopedDialog as Dialog } from "@pstdio/ui";
+import { ScopedDialog as Dialog, Portal } from "@pstdio/ui";
 import { useState } from "react";
 import { Button } from "./button";
 import { useCloudContext } from "./cloud-context";
@@ -54,7 +54,12 @@ export const AccountSignInActions = (props: AccountSignInActionsProps) => {
                   <GoogleIcon />
                   {t("account.signInGoogle", "Sign in with Google")}
                 </Button>
-                <Button variant="outline" disabled={disabled} justifyContent="start" onClick={() => choose("microsoft")}>
+                <Button
+                  variant="outline"
+                  disabled={disabled}
+                  justifyContent="start"
+                  onClick={() => choose("microsoft")}
+                >
                   <MicrosoftIcon />
                   {t("account.signInMicrosoft", "Sign in with Microsoft")}
                 </Button>

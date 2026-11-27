@@ -16,7 +16,10 @@ const client = createWebviewClient<typeof cloudCommands>({
   onEvent: () => () => {},
 });
 
-export default { title: "Cloud/Account sign-in", description: "One sign-in action opens a provider list with Google and Microsoft icons." };
+export default {
+  title: "Cloud/Account sign-in",
+  description: "One sign-in action opens a provider list with Google and Microsoft icons.",
+};
 
 export const AccountSignIn = () => {
   const [provider, setProvider] = useState<AccountSignInProvider>();
