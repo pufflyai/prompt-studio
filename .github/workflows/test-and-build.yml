@@ -33,12 +33,16 @@ on:
       test_file:
         type: string
         default: ""
-        description: Optional single test file; runs its owning runner instead of a full profile
+        description: Optional test file or JSON array of files; runs their owning runners instead of a full profile
       test_os:
         type: choice
-        options: [ubuntu-latest, windows-latest, macos-15, macos-15-intel]
+        options: [ubuntu-24.04, ubuntu-latest, windows-latest, macos-15, macos-15-intel]
         default: windows-latest
         description: Host for a single-file owning-runner diagnostic
+      prebuilt_desktop:
+        type: boolean
+        default: false
+        description: Build a desktop package first, then exercise cached-package setup in the selected desktop tests
       release_channel:
         type: choice
         options: [stable, nightly]
@@ -109,14 +113,7 @@ jobs:
           docker info
           docker compose version
           bunx playwright@1.60.0 install --with-deps chromium firefox
-      - name: Prepare the pinned Electron sandbox for disposable review checkouts
-        run: |
-          bun clients/desktop/node_modules/electron/install.js
-          sandbox="$(cd clients/desktop && bun -e 'console.log(require("node:path").join(require("node:path").dirname(require("electron")), "chrome-sandbox"))')"
-          sudo chown root:root "$sandbox"
-          sudo chmod 4755 "$sandbox"
-          test "$(stat -c '%U:%G %a' "$sandbox")" = "root:root 4755"
-          printf 'CHROME_DEVEL_SANDBOX=%s\n' "$sandbox" >> "$GITHUB_ENV"
+          sudo apt-get install -y openbox x11-utils
       - name: Run every check selected by the isolated review gate
         env:
           TMPDIR: ${{ runner.temp }}
@@ -143,6 +140,7 @@ jobs:
       CI_PROFILE: production
       GH_TOKEN: ${{ github.token }}
       DIAGNOSTIC_FILE: ${{ inputs.test_file }}
+      DIAGNOSTIC_PREBUILT_DESKTOP: ${{ inputs.prebuilt_desktop }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -158,19 +156,36 @@ jobs:
         with:
           install-strategy: native
           windows-dev-drive: "true"
-      # Use the owning plan for prerequisites as well as execution. Packaged CLI
-      # files can exercise Chromium UI, even though Bun owns their test process.
+      # Derive browser/display prerequisites and cached-package eligibility from the owning plan.
       - name: Prepare the selected native file plan
         id: native_plan
-        run: >-
-          bun -e 'const child = Bun.spawnSync(["bun", "scripts/test.ts", "--file", process.env.DIAGNOSTIC_FILE, "--list", "--out", "test-results/ci/native-file-plan.json"], { stdio: ["inherit", "inherit", "inherit"] }); if (child.exitCode) process.exit(child.exitCode); const plan = await Bun.file("test-results/ci/native-file-plan.json").json(); await Bun.write(process.env.GITHUB_OUTPUT, "chromium=" + plan.runs.some((run) => run.runner === "packaged-cli") + String.fromCharCode(10));'
-      - name: Install native Chromium for packaged CLI UI
+        run: |
+          bun -e '
+            const input = process.env.DIAGNOSTIC_FILE;
+            const files = input.trimStart().startsWith("[") ? JSON.parse(input) : [input];
+            if (!Array.isArray(files) || !files.length || files.some((file) => typeof file !== "string"))
+              throw new Error("Choose a test file or a JSON array of test files.");
+            const child = Bun.spawnSync(["bun", "scripts/test.ts", ...files.flatMap((file) => ["--file", file]), "--list", "--out", "test-results/ci/native-file-plan.json"], { stdio: ["inherit", "inherit", "inherit"] });
+            if (child.exitCode) process.exit(child.exitCode);
+            const plan = await Bun.file("test-results/ci/native-file-plan.json").json();
+            const desktop = plan.runs.some((run) => run.runner === "desktop");
+            if (process.env.DIAGNOSTIC_PREBUILT_DESKTOP === "true" && !plan.runs.every((run) => run.runner === "desktop"))
+              throw new Error("Cached desktop diagnostics require desktop test files.");
+            const chromium = plan.runs.some((run) => run.runner === "packaged-cli" || (run.runner === "desktop" && process.platform === "linux"));
+            await Bun.write(process.env.GITHUB_OUTPUT, `chromium=${chromium}\ndesktop=${desktop}\n`);
+          '
+      - name: Install Chromium prerequisites for the selected tests
         if: steps.native_plan.outputs.chromium == 'true'
-        run: bunx playwright@1.60.0 install chromium
-      # Direct argv preserves the native shell's signal behavior and keeps the input out of shell syntax.
+        run: bunx playwright@1.60.0 install --with-deps chromium
+      - name: Build the cached desktop diagnostic package
+        if: inputs.prebuilt_desktop
+        run: bun run --cwd clients/desktop package
+      # Direct argv preserves the native shell and keeps file inputs out of shell syntax.
       - name: Run the selected native file with its owning runner
+        env:
+          PLAN_DISPLAY: ${{ runner.os == 'Linux' && steps.native_plan.outputs.desktop == 'true' && 'true' || 'false' }}
         run: >-
-          bun -e 'const child = Bun.spawnSync(["bun", "scripts/test.ts", "--plan", "test-results/ci/native-file-plan.json"], { stdio: ["inherit", "inherit", "inherit"] }); process.exit(child.exitCode);'
+          bun -e 'const args = ["bun", "scripts/test.ts", "--plan", "test-results/ci/native-file-plan.json"]; if (process.env.DIAGNOSTIC_PREBUILT_DESKTOP === "true") args.push("--prebuilt"); const child = Bun.spawnSync(args, { stdio: ["inherit", "inherit", "inherit"] }); process.exit(child.exitCode);'
       - name: Preserve native file execution
         if: always()
         uses: actions/upload-artifact@v4
