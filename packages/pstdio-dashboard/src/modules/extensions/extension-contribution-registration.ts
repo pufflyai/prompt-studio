@@ -229,6 +229,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         renderWebview: (renderInput) => createElement(ExtensionViewWidget, { input: renderInput }),
         settingsSectionId: "project",
         settingsSectionTitle: "Project",
+        publishesCommandRefreshEvents: true,
         subscribeRefreshEvents: (listener) => {
           const unsubscribe = subscribeToExtensionEventFeed((event) => {
             if (event.projectId === input.projectId || event.id === accountEvents.changed.id) listener(event);
