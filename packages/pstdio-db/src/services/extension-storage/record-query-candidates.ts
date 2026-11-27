@@ -1,6 +1,5 @@
 import { type SQL, sql } from "drizzle-orm";
 import { canonicalJson, type StoragePredicate, type StorageRecordIndex } from "pstdio-sync-contracts";
-import { createLookupSetIndex } from "./record-lookup-set";
 import { encodeProjectionValue } from "./record-projection-codec";
 import { createQueryFieldCache, queryFieldCacheSourceSql } from "./record-query-field-cache";
 import { pageOrderSql, type QuerySqlOwner, queryOwnerKey, recordEqualitySql, recordFieldSql } from "./record-query-sql";
@@ -19,12 +18,10 @@ export const recordRelatedOrderCandidatesSql = (
   resolve: ((name: string) => StorageRecordIndex) | undefined,
   owner: QuerySqlOwner | undefined,
 ) => {
-  const orderBy = index.orderBy;
-  if (!owner || !orderBy?.length) return;
-  index = createLookupSetIndex(index, owner);
+  if (!owner || !index.orderBy?.length) return;
   const cache = createQueryFieldCache(
     index,
-    orderBy.map(({ field }) => field),
+    index.orderBy.map(({ field }) => field),
   );
   const order = pageOrderSql(cache.index, resolve, owner);
   if (

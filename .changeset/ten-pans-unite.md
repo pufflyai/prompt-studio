@@ -14,5 +14,3 @@ Reduce repeated relationship checks and metadata reads when a bundled Planner pa
 Load Planner request and Auto Build dialogs on interaction, and avoid rereading saved-view schemas for ticket windows.
 
 Reuse declared webview entries across a panel’s chunks while retaining source admission and per-request publication checks.
-
-Share scalar relationship keys within broad ordering and aggregate queries so large panels avoid repeated prefix scans after a project grows.
