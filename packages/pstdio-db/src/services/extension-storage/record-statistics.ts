@@ -58,6 +58,7 @@ export const aggregateRecordStatistics = async (
     const field = recordFieldSql(index, statistic.field, undefined, resolve, owner);
     const source = sql`SELECT record_id, ${field} AS value FROM records
       WHERE ${where} AND ${field} IS NOT NULL AND ${field} NOT IN ('null'::jsonb, '""'::jsonb)`;
+    await owner?.firstMatches?.prepare(tx);
     if (statistic.type === "unique") {
       const result = await tx.execute<{ count: string }>(
         sql`SELECT count(DISTINCT value)::text AS count FROM (${source}) selected`,

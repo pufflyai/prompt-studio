@@ -18,7 +18,8 @@ export const recordVisibilitySql = async (
   if (
     !identity ||
     !declared.countBy?.length ||
-    !physicalName?.startsWith("storage_query_v4_") ||
+    !physicalName ||
+    physicalName.startsWith("storage_view_") ||
     physicalName !== (await recordIndexName(owner, declared))
   )
     return recordScopeSql(owner, index);

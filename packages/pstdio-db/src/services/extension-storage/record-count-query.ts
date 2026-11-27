@@ -22,7 +22,8 @@ export const countIndexSource = async (
 ) => {
   const { name, declared, owner } = candidate;
   if (
-    !name?.startsWith("storage_query_v4_") ||
+    !name ||
+    name.startsWith("storage_view_") ||
     !declared.countBy?.length ||
     name !== (await recordIndexName(owner, declared))
   )

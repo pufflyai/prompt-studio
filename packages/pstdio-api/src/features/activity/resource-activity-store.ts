@@ -7,6 +7,7 @@ import {
   publishResourceActivitySchema,
   type ResourceActivityEntry,
   resourceActivityEntrySchema,
+  resourceActivityOwnerId,
 } from "pstdio-api-contracts";
 import { type ResourceRef, resourceKey } from "pstdio-api-contracts/extension-kernel";
 import type { createExtensionStorageDBService } from "pstdio-db";
@@ -15,7 +16,7 @@ import { initialRecordRevision } from "pstdio-sync/records";
 import { canonicalJson, type Json, type StorageRecordIndex } from "pstdio-sync-contracts";
 import { activityEntryLinks } from "./resource-activity-links";
 
-export const resourceActivityOwnerId = JSON.stringify(["pstdio", "resource-activity"]);
+export { resourceActivityOwnerId };
 export const activityStorageOwner = (projectId: string) => ({
   workbenchId: projectId,
   extensionId: resourceActivityOwnerId,
@@ -91,7 +92,7 @@ export const createResourceActivityStore = (
   const records = async () => {
     opened ??= service.open({ owner, assets: content?.assets });
     const store = (await opened).records;
-    ready ??= store.defineIndexes(resourceActivityIndexes);
+    ready ??= service.installIndexes([{ owner, definitions: resourceActivityIndexes, hostManaged: true }]);
     await ready;
     return store;
   };

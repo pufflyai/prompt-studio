@@ -84,6 +84,25 @@ export const relatedRecordPredicateSql = (
           // Null/missing joins have no relationship. JSON comparisons preserve encoded strings.
           return sql`(${left} IS NOT NULL AND ${left} <> 'null'::jsonb AND ${right} IS NOT NULL AND ${right} <> 'null'::jsonb AND ${matches})`;
         });
+        const [join] = selection.on;
+        if (
+          owner.firstMatches &&
+          selection.on.length === 1 &&
+          join.op === "contains" &&
+          !selection.every &&
+          !selection.where
+        ) {
+          const probe = owner.firstMatches.firstRecordByField(
+            target,
+            join.relatedField,
+            targetAlias,
+            recordFieldSql(outer, join.sourceField, alias, indexFor, owner),
+            true,
+            (candidate) => recordFieldSql(target, join.relatedField, candidate, indexFor, owner),
+            (candidate) => recordScopeSql(owner, target, candidate),
+          );
+          joins.push(probe ?? sql`true`);
+        }
         const each = selection.every;
         const itemAlias = sql.identifier(`related_item_${statement}_${depth}`);
         const names = each ? new Map(variables).set(each.as, sql`${itemAlias}.value`) : variables;
