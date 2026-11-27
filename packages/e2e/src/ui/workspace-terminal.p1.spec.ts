@@ -330,6 +330,8 @@ test("keeps tab-menu focus when the terminal renderer finishes loading", async (
     await header.getByRole("button", { name: "Add panel", exact: true }).click();
     await page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
     await requested.promise;
+    // The previous click can leave the pointer inside the keyboard-opened menu as it animates.
+    await page.mouse.move(0, 0);
     const tab = header.getByRole("tab").first();
     await tab.focus();
     await page.keyboard.press("Shift+F10");
