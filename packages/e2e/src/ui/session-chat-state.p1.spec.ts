@@ -46,7 +46,9 @@ test("keeps the unsent draft after editing a queued follow-up", async ({ page, r
     });
     await expect(resumed).toBeOK();
     await expect(
-      header.getByRole("tab", { name: session.title, exact: true }).locator('[aria-label="Session status: in_progress"]'),
+      header
+        .getByRole("tab", { name: session.title, exact: true })
+        .locator('[aria-label="Session status: in_progress"]'),
     ).toBeVisible();
 
     await editor.fill("Queued note");
