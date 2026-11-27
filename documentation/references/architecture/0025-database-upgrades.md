@@ -53,7 +53,7 @@ in place. Future schema changes build on the single 0.49 migration.
 When upgrading from 0.46, 0.47 or 0.48, the host refreshes incompatible release-managed first-party
 tools from its catalog. The installer preserves project selections, installation
 IDs and settings. Local and third-party sources stay under the user's control.
-The complete upgrade includes a successful saved project edit within 25 seconds.
+The complete upgrade includes a successful saved project edit within 40 seconds.
 The [baseline decision](../../adrs/0168-squash-the-0-49-database-baseline.md#removal)
 defines when support for older database formats can be removed.
 

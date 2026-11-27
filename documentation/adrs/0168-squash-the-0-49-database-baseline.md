@@ -11,7 +11,7 @@ the 0.49 journal in one transaction. A fully converted database can adopt that j
 Future releases append to the 0.49 journal.
 
 The pre-0.46 retirement policy still applies to unsupported older engines. The 0.48 upgrade
-preserves saved projects and has a 25-second limit through the first saved edit.
+preserves saved projects and has a 40-second limit through the first saved edit.
 
 ## Proposed follow-up for update ownership
 
