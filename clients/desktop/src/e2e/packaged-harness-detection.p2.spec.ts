@@ -92,6 +92,8 @@ for (const shell of environments) {
       await app.page.emulateMedia({ reducedMotion: "reduce" });
       const sidenav = app.page.locator('[data-workbench-region="sidenav"]');
       await sidenav.getByRole("option", { name: "Sessions", exact: true }).click();
+      await expect(sidenav.getByRole("button", { name: "Back to project", exact: true })).toBeVisible();
+      await sidenav.getByText("Sessions", { exact: true }).hover();
       await sidenav.getByRole("button", { name: "New session", exact: true }).click();
       const main = app.page.getByLabel("Main", { exact: true });
       const modelMenu = main.getByRole("button", { name: "Select model", exact: true });
