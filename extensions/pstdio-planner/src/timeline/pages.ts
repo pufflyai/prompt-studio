@@ -1,11 +1,4 @@
-import {
-  defineNavigationItem,
-  definePage,
-  defineView,
-  l10n,
-  packageAsset,
-  workbenchModes,
-} from "@pstdio/sdk/extensions";
+import { definePage, defineView, l10n, packageAsset, workbenchModes } from "@pstdio/sdk/extensions";
 import { attentionPanel } from "../attention-panel";
 import { ticketPreviewPanel } from "./ticket-preview";
 
@@ -67,14 +60,4 @@ export const timelinePage = definePage({
   mode: workbenchModes.project,
   main: { kind: "view", presentation: "page", view: timelineView.ref, cardinality: "one" },
   slots: [ticketPreviewPanel, attentionPanel],
-});
-
-export const timelineNavigation = defineNavigationItem({
-  id: "timeline",
-  owner: workbenchModes.project,
-  slot: "content",
-  group: "Project Planning",
-  label: l10n("timeline.page.title", "Project Timeline"),
-  icon: "chart-no-axes-gantt",
-  action: { kind: "page", page: timelinePage.ref },
 });

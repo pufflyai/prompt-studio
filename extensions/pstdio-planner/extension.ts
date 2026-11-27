@@ -32,14 +32,7 @@ import { ticketText } from "./src/text-source";
 import { readStatusSettings, saveStatusSettings } from "./src/ticket-status-settings";
 import { commands as timelineCommands } from "./src/timeline/commands";
 import { gateCleanup } from "./src/timeline/commands/gate-cleanup";
-import {
-  autoBuildPage,
-  autoBuildView,
-  timelineActionsView,
-  timelineNavigation,
-  timelinePage,
-  timelineView,
-} from "./src/timeline/pages";
+import { autoBuildPage, autoBuildView, timelineActionsView, timelinePage, timelineView } from "./src/timeline/pages";
 import { createPlannerUi, ticketResourceKind } from "./src/ui-contributions";
 
 const plannerUi = createPlannerUi(import.meta.url);
@@ -162,7 +155,6 @@ export default defineExtension({
   placements: plannerUi.placements,
   viewMenus: plannerUi.viewMenus,
   resourceKinds: [ticketResourceKind],
-  navigationItems: [...plannerUi.navigationItems, timelineNavigation],
   keybindings: [
     ...plannerShortcuts,
     defineKeybinding({ id: "go-tickets", layer: "go", key: "K", sticky: true, action: ticketsPageTarget }),

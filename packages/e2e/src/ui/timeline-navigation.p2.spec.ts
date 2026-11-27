@@ -25,7 +25,25 @@ test("returning to the timeline after creating a ticket refreshes without a clos
     });
     await page.setViewportSize({ width: 1440, height: 1000 });
     const timelinePath = `/projects/${id}/extensions/pstdio.planner/ticket-timeline`;
-    await page.goto(timelinePath);
+    await page.goto(`/projects/${id}`);
+    const sidenav = page.locator('[data-workbench-region="sidenav"]');
+    const ticketsEntry = sidenav.getByRole("option", { name: "Tickets", exact: true });
+    const timelineEntry = sidenav.getByRole("option", { name: "Project Timeline", exact: true });
+    await ticketsEntry.click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Hide/show items", exact: true }).click();
+    const planning = page.getByRole("dialog", { name: "Hide/show items" }).getByRole("list", {
+      name: "Project Planning",
+      exact: true,
+    });
+    const showTimeline = planning.getByRole("button", { name: "Show Project Timeline", exact: true });
+    await expect(showTimeline).toBeVisible();
+    await expect(timelineEntry).toHaveCount(0);
+    await showTimeline.click();
+    await page.keyboard.press("Escape");
+    await expect(timelineEntry).toBeVisible();
+    await page.reload();
+    await timelineEntry.click();
+    await expect(page).toHaveURL(timelinePath);
     const timeline = page.frameLocator('iframe[title="Project Timeline"]');
     await expect(
       page
@@ -39,7 +57,7 @@ test("returning to the timeline after creating a ticket refreshes without a clos
     await form.getByRole("button", { name: "Create ticket", exact: true }).click();
     await expect(form).toBeHidden();
     await page.getByRole("button", { name: "Back to project", exact: true }).click();
-    await page.getByRole("option", { name: "Project Timeline", exact: true }).click();
+    await timelineEntry.click();
     await expect(timeline.getByText("Created before returning to the timeline", { exact: true })).toBeVisible();
     await expect(page.getByText("The calling viewer is no longer open", { exact: true })).toHaveCount(0);
     expect(await page.evaluate(() => Reflect.get(window, "timelineViewerErrors"))).toEqual([]);

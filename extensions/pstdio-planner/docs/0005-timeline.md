@@ -1,6 +1,6 @@
 # Project Timeline
 
-Open **Tickets** or **Project Timeline** under **Project Planning** in the project sidebar. The timeline entry uses the timeline icon. Both views are part of Planner and use the same tickets, statuses, tags, and ticket form.
+Open **Tickets** under **Project Planning** in the project sidebar. **Project Timeline** starts hidden. To show it, right-click in the sidebar, choose **Hide/show items**, and select **Show Project Timeline** under **Project Planning**. Both views use the same tickets, statuses, tags, and ticket form.
 
 Both boards use the shared Kanban card. Right-click a card for the same ticket actions, including Implement ticket, Refine ticket, Archive, and Delete. Edit property bubbles directly on either board; both views show the saved changes. Click a card to open its ticket. Click its Needs attention bubble to answer review requests. In Project Timeline, cards open an unpinned preview in the side panel and keep the timeline visible. The selected card stays outlined and highlights its dependency links even when focus moves into the preview. Selecting another ticket moves the outline and replaces the preview; pin a tab to keep it open. Timeline cards keep their full titles. Tickets waiting for unfinished prerequisites appear slightly dimmed. The timeline shows **Blocked** only when prerequisites are complete and the ticket has a blocked status or another recorded blocker.
 
